@@ -118,6 +118,8 @@ See [manual-testing.md](manual-testing.md) for the full checklist.
 10. Confirm the GitHub Release workflow attaches:
     - `velair-custom-component-<version>.zip`
     - `velair-lovelace-resource-<version>.zip`
+11. Confirm the `Validate` workflow passes HACS validation without ignored checks.
+12. Confirm the `Validate` workflow passes Hassfest.
 
 ## GitHub Actions
 
@@ -127,3 +129,18 @@ CI runs on pushes to `main` and pull requests. It executes backend tests, fronte
 - `velair-lovelace-resource`: compiled frontend resource files for advanced manual Lovelace testing.
 
 The release workflow runs manually or when pushing a `v*` tag. It validates that the tag matches the integration version, builds the release frontend bundle, packages installable zips, uploads them as workflow artifacts, and attaches them to the GitHub Release when the workflow was triggered by a tag.
+
+The validate workflow runs HACS validation and Hassfest on pushes, pull requests, a daily schedule, and manual dispatch. These checks are required before requesting inclusion in the HACS default repositories.
+
+## HACS Default Repository Submission
+
+Velair can be installed as a HACS custom repository as soon as the public repository is available. To request inclusion in the default HACS store:
+
+1. Make sure the repository is public, active, has issues enabled, has a useful description, and has GitHub topics.
+2. Verify Velair can be installed as a HACS custom repository.
+3. Run and pass the `CI`, `Validate`, and `Release` workflows.
+4. Create a full GitHub Release, not only a tag.
+5. Fork `hacs/default`.
+6. Create a branch from `master`.
+7. Add `cgonfer/velair` to the `integration` file in alphabetical order.
+8. Open a pull request from your user fork, not from an organization fork, and complete the HACS pull request template honestly.
