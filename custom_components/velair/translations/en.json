@@ -1,0 +1,62 @@
+{
+  "title": "Velair",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Velair",
+        "description": "Climate automation that adapts to your life. Choose the climate entities managed by Velair.",
+        "data": {
+          "climate_entities": "Climate entities",
+          "apply_active_schedule_on_startup": "Apply the active schedule after Home Assistant starts"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Select at least one climate entity."
+    },
+    "abort": {
+      "already_configured": "Velair is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage climate entities",
+        "description": "Climate automation that adapts to your life. Choose the climate entities managed by Velair. Removing an entity stops managing it.",
+        "data": {
+          "climate_entities": "Climate entities",
+          "apply_active_schedule_on_startup": "Apply the active schedule after Home Assistant starts"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Select at least one climate entity."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_climate_event": {
+        "name": "Next scheduled event"
+      },
+      "current_schedule_state": {
+        "name": "Current schedule state"
+      },
+      "scheduler_status": {
+        "name": "Scheduler status"
+      },
+      "zone_active_target_temperature": {
+        "name": "{zone} active target temperature"
+      }
+    },
+    "select": {
+      "scheduler_mode": {
+        "name": "Scheduler mode"
+      }
+    },
+    "switch": {
+      "schedule_enabled": {
+        "name": "Schedule enabled"
+      }
+    }
+  }
+}

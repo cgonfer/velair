@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: npm run test
+
+      - name: Check TypeScript
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build frontend bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload custom component artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: velair-custom-component
+          path: custom_components/velair
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Lovelace resource artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: velair-lovelace-resource
+          path: |
+            custom_components/velair/frontend/velair-card.js
+            custom_components/velair/frontend/velair-card.js.map
+          if-no-files-found: error
+          retention-days: 14

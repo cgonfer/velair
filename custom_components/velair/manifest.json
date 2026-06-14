@@ -1,0 +1,13 @@
+{
+  "domain": "velair",
+  "name": "Velair",
+  "codeowners": ["@cgonfer"],
+  "config_flow": true,
+  "documentation": "https://github.com/cgonfer/velair",
+  "issue_tracker": "https://github.com/cgonfer/velair/issues",
+  "iot_class": "local_push",
+  "integration_type": "service",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.0.0"
+}

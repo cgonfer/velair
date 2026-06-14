@@ -1,0 +1,278 @@
+set_temperature:
+  name: Set temperature
+  description: Set a target temperature for one climate entity through Home Assistant.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    temperature:
+      required: true
+      example: 21
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: C
+    hvac_mode:
+      name: HVAC mode
+      description: Optional mode to apply before setting the temperature. If omitted, the current mode is kept when the climate entity is already on.
+      required: false
+      example: heat
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+            - heat_cool
+            - auto
+            - dry
+            - fan_only
+
+apply_schedule:
+  name: Apply schedule
+  description: Apply the currently active schedule block now.
+  fields:
+    entity_id:
+      required: false
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    hvac_mode:
+      name: HVAC mode
+      description: Optional mode override used while applying the current schedule.
+      required: false
+      example: heat
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+            - heat_cool
+            - auto
+            - dry
+            - fan_only
+
+boost:
+  name: Boost
+  description: Temporarily override one zone, then return that zone to its active schedule.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    temperature:
+      required: true
+      example: 22
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: C
+    duration_minutes:
+      required: true
+      example: 45
+      selector:
+        number:
+          min: 1
+          max: 10080
+          step: 5
+          unit_of_measurement: min
+    hvac_mode:
+      name: HVAC mode
+      description: Optional mode to apply before boost. If omitted, the current mode is kept when the climate entity is already on.
+      required: false
+      example: heat
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+            - heat_cool
+            - auto
+            - dry
+            - fan_only
+
+pause:
+  name: Pause
+  description: Temporarily pause automatic schedule execution.
+  fields:
+    duration_minutes:
+      required: false
+      example: 60
+      selector:
+        number:
+          min: 1
+          max: 10080
+          step: 5
+          unit_of_measurement: min
+
+resume:
+  name: Resume
+  description: Resume automatic schedule execution and apply the current schedule.
+  fields: {}
+
+pause_zone:
+  name: Pause zone
+  description: Pause automatic schedule execution for one managed climate entity. The climate can optionally be turned off when the zone is paused.
+  fields:
+    entity_id:
+      required: true
+      example: climate.guest_room
+      selector:
+        entity:
+          domain: climate
+    duration_minutes:
+      required: false
+      example: 120
+      selector:
+        number:
+          min: 1
+          max: 10080
+          step: 5
+          unit_of_measurement: min
+    action:
+      name: Pause action
+      description: Optional action to apply immediately when the zone is paused.
+      required: false
+      default: none
+      example: turn_off
+      selector:
+        select:
+          options:
+            - none
+            - turn_off
+
+resume_zone:
+  name: Resume zone
+  description: Resume automatic schedule execution for one managed climate entity.
+  fields:
+    entity_id:
+      required: true
+      example: climate.guest_room
+      selector:
+        entity:
+          domain: climate
+    apply_current_schedule:
+      name: Apply current schedule
+      description: Apply the currently active schedule block for this climate after resuming, when one exists.
+      required: false
+      default: true
+      example: true
+      selector:
+        boolean:
+
+set_daily_schedule:
+  name: Set daily schedule
+  description: Replace one weekday schedule for one managed climate entity.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    weekday:
+      required: true
+      example: monday
+      selector:
+        select:
+          options:
+            - monday
+            - tuesday
+            - wednesday
+            - thursday
+            - friday
+            - saturday
+            - sunday
+    blocks:
+      required: true
+      description: List of schedule blocks. Temperature blocks need start and temperature. Turn-off blocks need start and action turn_off.
+      example:
+        - start: "06:00"
+          action: set_temperature
+          temperature: 21
+          hvac_mode: heat
+        - start: "09:00"
+          action: turn_off
+        - start: "15:00"
+          action: set_temperature
+          temperature: 18
+        - start: "18:00"
+          action: set_temperature
+          temperature: 24
+          hvac_mode: cool
+      selector:
+        object:
+
+copy_day_schedule:
+  name: Copy day schedule
+  description: Copy one weekday schedule to one or more target weekdays for one managed climate entity.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    source_weekday:
+      required: true
+      example: monday
+      selector:
+        select:
+          options:
+            - monday
+            - tuesday
+            - wednesday
+            - thursday
+            - friday
+            - saturday
+            - sunday
+    target_weekdays:
+      required: true
+      example:
+        - tuesday
+        - wednesday
+        - thursday
+      selector:
+        select:
+          multiple: true
+          options:
+            - monday
+            - tuesday
+            - wednesday
+            - thursday
+            - friday
+            - saturday
+            - sunday
+
+clear_schedule:
+  name: Clear schedule
+  description: Clear one weekday schedule, or all weekdays if weekday is omitted, for one managed climate entity.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    weekday:
+      required: false
+      example: sunday
+      selector:
+        select:
+          options:
+            - monday
+            - tuesday
+            - wednesday
+            - thursday
+            - friday
+            - saturday
+            - sunday

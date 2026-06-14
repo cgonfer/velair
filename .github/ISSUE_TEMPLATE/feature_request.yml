@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an improvement for Velair.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Velair is maintained as a community project. Clear use cases make it much easier to design features that remain simple and local-first.
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What problem would this solve in your daily Home Assistant setup?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention any workaround or simpler approach you have tried.
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project fit
+      options:
+        - label: This can work fully locally without a cloud dependency.
+        - label: This does not require continuous polling when Home Assistant events or scheduled callbacks can solve it.
