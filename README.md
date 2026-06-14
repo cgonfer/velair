@@ -123,19 +123,48 @@ See [docs/user/usage.md](docs/user/usage.md) for the full workflow.
 
 The sidebar panel is the main Velair experience. The Lovelace card is optional.
 
-If you want to use the card in a dashboard, add this resource:
+Before adding a card, install and configure the Velair integration first. The Lovelace resource is served by the integration, so it is available after Home Assistant has loaded Velair.
+
+### Add The Lovelace Resource
+
+1. Open Home Assistant.
+2. Go to **Settings > Dashboards**.
+3. Open the three-dot menu.
+4. Select **Resources**.
+5. Select **Add resource**.
+6. Use this URL:
+
+```text
+/velair_frontend/velair-card.js
+```
+
+7. Select **JavaScript module** as the resource type.
+8. Save the resource.
+9. Reload the browser or the Home Assistant companion app.
+
+The resource can also be represented as YAML:
 
 ```yaml
 url: /velair_frontend/velair-card.js
 type: module
 ```
 
-Then add one or more Velair cards. Each card reuses the same panel rendering and backend data as the sidebar experience.
+### Add Your First Card
+
+1. Open a dashboard.
+2. Select **Edit dashboard**.
+3. Select **Add card**.
+4. Select **Manual**.
+5. Paste this example:
 
 ```yaml
 type: custom:velair-card
 view: overview-status
 ```
+
+6. Save the card.
+
+This first card shows the scheduler status and pause/stop/resume controls. You can add more Velair cards to the same dashboard by changing the `view` value.
 
 Supported `view` values:
 
@@ -145,6 +174,8 @@ Supported `view` values:
 - `overview-timeline`: today's timeline.
 - `overview-zones`: zone overview.
 - `schedules`: full schedule editor.
+
+If Home Assistant shows a custom element error, confirm that Velair is installed, the resource URL is exactly `/velair_frontend/velair-card.js`, and the browser or companion app has been reloaded after adding the resource.
 
 ## Documentation
 
