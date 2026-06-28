@@ -73,6 +73,7 @@ Supported `view` values:
 - `overview-timeline`: today's timeline.
 - `overview-zones`: zone overview.
 - `schedules`: full schedule editor.
+- `preconditioning`: adaptive preconditioning configuration and local learning status.
 
 ## Updating
 

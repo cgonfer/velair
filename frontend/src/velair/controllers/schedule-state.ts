@@ -34,6 +34,7 @@ type ScheduleStateHost = {
   _loadSchedule(): Promise<void>;
   _markDirty(): void;
   _orderedZoneIds(entityIds: string[]): string[];
+  _visibleZoneIds(entityIds: string[]): string[];
   _resetDraftBlocks(): void;
   _resetTemplateDraft(template?: ScheduleTemplate): void;
   _scheduleTemplates(): ScheduleTemplate[];
@@ -103,8 +104,12 @@ export function applyScheduleData(
     host._selectedWeekday = data.settings.first_weekday;
   }
   const zoneIds = host._orderedZoneIds(data.configured_entities);
+  const visibleZoneIds = host._visibleZoneIds(data.configured_entities);
   if (!host._selectedEntity || !data.configured_entities.includes(host._selectedEntity)) {
     host._selectedEntity = zoneIds[0];
+  }
+  if (visibleZoneIds.length && host._selectedEntity && !visibleZoneIds.includes(host._selectedEntity)) {
+    host._selectedEntity = visibleZoneIds[0];
   }
   if (host._selectedTemplateKey && !host._scheduleTemplates().some((template: { key: string }) => template.key === host._selectedTemplateKey)) {
     host._selectedTemplateKey = "";

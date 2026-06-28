@@ -15,6 +15,7 @@ from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.util import dt as dt_util
 
 from .const import (
     ACTION_OPTIONS,
@@ -40,7 +41,12 @@ from .config_helpers import (
 from .models import (
     WEEKDAYS,
     ClimateEvent,
+    MIN_PRECONDITIONING_COMPLETE_SAMPLES,
     normalize_panel_settings,
+    normalize_preconditioning_data,
+    normalize_preconditioning_learning_data,
+    preconditioning_comfort_percentile,
+    preconditioning_observations_for_direction,
     normalize_schedule_blocks,
     normalize_schedule_data,
     normalize_schedule_templates,
@@ -51,7 +57,7 @@ from .storage import STORAGE_VERSION
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
 EXPORT_MODEL_VERSION = 1
-EXPORT_SECTIONS = ("zones", "templates", "settings")
+EXPORT_SECTIONS = ("zones", "templates", "settings", "preconditioning_learning")
 EXPORT_SECTION_SCHEMA = vol.All(
     cv.ensure_list,
     [vol.In(EXPORT_SECTIONS)],
@@ -74,6 +80,51 @@ SCHEDULE_BLOCK_SCHEMA = vol.Schema(
     }
 )
 
+PRECONDITIONING_SCHEMA = vol.Schema(
+    {
+        vol.Optional("enabled"): bool,
+        vol.Optional("max_lead_minutes"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=0, max=1440),
+        ),
+        vol.Optional("minimum_delta_temperature"): vol.All(
+            vol.Coerce(float),
+            vol.Range(min=0, max=5),
+        ),
+        vol.Optional("learning_history_size"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=10, max=500),
+        ),
+        vol.Optional("similar_sample_count"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=5, max=100),
+        ),
+        vol.Optional("comfort_percentile"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=50, max=95),
+        ),
+        vol.Optional("adaptive_percentile_enabled"): bool,
+        vol.Optional("partial_expiry_days"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=1, max=365),
+        ),
+        vol.Optional("recency_decay_days"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=1, max=365),
+        ),
+        vol.Optional("min_start_minutes"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=0, max=1440),
+        ),
+        vol.Optional("fallback_minutes_per_degree"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=1, max=120),
+        ),
+        vol.Optional("use_outdoor_temperature"): bool,
+        vol.Optional("outdoor_temperature_entity_id"): vol.Any(None, cv.entity_id),
+    }
+)
+
 
 def async_setup_api(hass: HomeAssistant) -> None:
     """Register WebSocket API commands."""
@@ -87,6 +138,9 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_schedule_template)
     websocket_api.async_register_command(hass, ws_delete_schedule_template)
     websocket_api.async_register_command(hass, ws_update_settings)
+    websocket_api.async_register_command(hass, ws_update_zone_preconditioning)
+    websocket_api.async_register_command(hass, ws_reset_zone_preconditioning_settings)
+    websocket_api.async_register_command(hass, ws_reset_zone_preconditioning_learning)
     websocket_api.async_register_command(hass, ws_export_data)
     websocket_api.async_register_command(hass, ws_import_data)
     websocket_api.async_register_command(hass, ws_reset_data)
@@ -361,6 +415,100 @@ async def ws_update_settings(
 
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/update_zone_preconditioning",
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required("preconditioning"): PRECONDITIONING_SCHEMA,
+    }
+)
+@websocket_api.async_response
+async def ws_update_zone_preconditioning(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Handle persisted zone preconditioning setting updates."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+
+    scheduler = runtime["scheduler"]
+    try:
+        await scheduler.async_update_zone_preconditioning(
+            msg[ATTR_ENTITY_ID],
+            msg["preconditioning"],
+        )
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_preconditioning", str(err))
+        return
+
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/reset_zone_preconditioning_settings",
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+    }
+)
+@websocket_api.async_response
+async def ws_reset_zone_preconditioning_settings(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Restore default preconditioning settings without deleting learning data."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+
+    scheduler = runtime["scheduler"]
+    try:
+        await scheduler.async_reset_zone_preconditioning_settings(
+            msg[ATTR_ENTITY_ID]
+        )
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_preconditioning", str(err))
+        return
+
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/reset_zone_preconditioning_learning",
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required("direction"): vol.In(("heat", "cool")),
+    }
+)
+@websocket_api.async_response
+async def ws_reset_zone_preconditioning_learning(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Delete local adaptive preconditioning observations for one zone."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+
+    scheduler = runtime["scheduler"]
+    try:
+        await scheduler.async_reset_zone_preconditioning_learning(
+            msg[ATTR_ENTITY_ID],
+            msg["direction"],
+        )
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_preconditioning", str(err))
+        return
+
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/export_data",
         vol.Required("sections"): EXPORT_SECTION_SCHEMA,
     }
@@ -511,8 +659,15 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         "zones": stored_data["zones"],
         "operational_status": scheduler.get_operational_status(),
         "next_event": _serialize_event(scheduler.next_event),
-        "next_events": [_serialize_event(event) for event in scheduler.next_events],
+        "next_events": [
+            _serialize_event(event)
+            for event in _schedule_response_next_events(scheduler)
+        ],
         "active_overrides": scheduler.get_active_overrides(),
+        "preconditioning_learning": _build_preconditioning_learning_response(
+            stored_data,
+            _runtime_climate_manager(runtime),
+        ),
         "templates": stored_data.get("templates", []),
         "versions": {
             "export_format": EXPORT_FORMAT,
@@ -545,6 +700,10 @@ def _build_export_payload(
                 should_apply_active_schedule_on_startup(entry)
             ),
         }
+    if "preconditioning_learning" in sections:
+        exported_sections["preconditioning_learning"] = (
+            _export_preconditioning_learning(stored_data)
+        )
 
     return {
         "format": EXPORT_FORMAT,
@@ -595,6 +754,13 @@ def _build_import_data(
             import_data[CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP] = bool(
                 raw_settings[CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP]
             )
+    if "preconditioning_learning" in sections:
+        import_data["preconditioning_learning"] = (
+            _normalize_import_preconditioning_learning(
+                payload_sections["preconditioning_learning"],
+                current_zones,
+            )
+        )
 
     return import_data
 
@@ -623,9 +789,242 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
         entity_id: {
             "enabled": bool(zone.get("enabled", True)),
             "schedule": deepcopy(zone.get("schedule", {})),
+            "preconditioning": normalize_preconditioning_data(
+                zone.get("preconditioning")
+            ),
         }
         for entity_id, zone in zones.items()
     }
+
+
+def _export_preconditioning_learning(
+    stored_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Export normalized learning only for managed climates with samples."""
+    zones = stored_data["zones"]
+    history_sizes = {
+        entity_id: normalize_preconditioning_data(zone.get("preconditioning"))[
+            "learning_history_size"
+        ]
+        for entity_id, zone in zones.items()
+    }
+    normalized = normalize_preconditioning_learning_data(
+        stored_data.get("preconditioning_learning"),
+        list(zones),
+        history_sizes,
+    )
+    return {
+        entity_id: learning
+        for entity_id, learning in normalized.items()
+        if any(
+            learning[direction]["observations"]
+            for direction in ("heat", "cool")
+        )
+    }
+
+
+def _normalize_import_preconditioning_learning(
+    raw_learning: Any,
+    current_zones: dict[str, Any],
+) -> dict[str, Any]:
+    """Normalize learning for matching managed climates and ignore the rest."""
+    if not isinstance(raw_learning, dict):
+        raise ValueError("Preconditioning learning section is not valid")
+
+    matched_entities = [
+        entity_id for entity_id in current_zones if entity_id in raw_learning
+    ]
+    history_sizes = {
+        entity_id: normalize_preconditioning_data(
+            current_zones[entity_id].get("preconditioning")
+        )["learning_history_size"]
+        for entity_id in matched_entities
+    }
+    normalized = normalize_preconditioning_learning_data(
+        raw_learning,
+        matched_entities,
+        history_sizes,
+    )
+    for entity_id, learning in normalized.items():
+        for direction in ("heat", "cool"):
+            for observation in learning[direction]["observations"]:
+                observation["entity_id"] = entity_id
+    return {
+        entity_id: learning
+        for entity_id, learning in normalized.items()
+        if any(
+            learning[direction]["observations"]
+            for direction in ("heat", "cool")
+        )
+    }
+
+
+def _build_preconditioning_learning_response(
+    stored_data: dict[str, Any],
+    climate_manager,
+) -> dict[str, Any]:
+    """Build non-portable local adaptive preconditioning status."""
+    zones = stored_data["zones"]
+    learning = stored_data.get("preconditioning_learning", {})
+    return {
+        entity_id: _build_zone_preconditioning_learning_summary(
+            zone,
+            learning.get(entity_id, {}),
+            climate_manager.supported_hvac_modes(entity_id),
+        )
+        for entity_id, zone in zones.items()
+    }
+
+
+def _runtime_climate_manager(runtime: dict[str, Any]):
+    """Return the climate manager from current or legacy runtime data."""
+    climate_manager = runtime.get("climate_manager")
+    if climate_manager is not None:
+        return climate_manager
+
+    entry = runtime.get("entry")
+    runtime_data = getattr(entry, "runtime_data", None)
+    climate_manager = getattr(runtime_data, "climate_manager", None)
+    if climate_manager is not None:
+        return climate_manager
+
+    return getattr(runtime["scheduler"], "_climate_manager")
+
+
+def _schedule_response_next_events(scheduler) -> list[ClimateEvent]:
+    """Return upcoming events intended for the UI response."""
+    calculate_by_zone = getattr(scheduler, "calculate_next_events_by_zone", None)
+    if callable(calculate_by_zone):
+        return calculate_by_zone(dt_util.now())
+
+    return list(getattr(scheduler, "next_events", []))
+
+
+def _build_zone_preconditioning_learning_summary(
+    zone: dict[str, Any],
+    learning: dict[str, Any],
+    supported_hvac_modes: list[str],
+) -> dict[str, Any]:
+    """Build learning status for one zone."""
+    heat_observations = preconditioning_observations_for_direction(learning, "heat")
+    cool_observations = preconditioning_observations_for_direction(learning, "cool")
+
+    heat_supported = _supports_preconditioning_direction(supported_hvac_modes, "heat")
+    cool_supported = _supports_preconditioning_direction(supported_hvac_modes, "cool")
+    preconditioning = normalize_preconditioning_data(zone.get("preconditioning"))
+    heat = _build_preconditioning_direction_summary(
+        heat_observations,
+        preconditioning,
+        direction="heat",
+        supported=heat_supported,
+    )
+    cool = _build_preconditioning_direction_summary(
+        cool_observations,
+        preconditioning,
+        direction="cool",
+        supported=cool_supported,
+    )
+    ready = heat["status"] == "ready" or cool["status"] == "ready"
+
+    return {
+        "status": "ready" if ready else ("learning" if preconditioning["enabled"] else "disabled"),
+        "required_samples": MIN_PRECONDITIONING_COMPLETE_SAMPLES,
+        "total_samples": len(heat_observations) + len(cool_observations),
+        "heat": heat,
+        "cool": cool,
+    }
+
+
+def _build_preconditioning_direction_summary(
+    observations: list[Any],
+    preconditioning: dict[str, Any],
+    *,
+    direction: str,
+    supported: bool,
+) -> dict[str, Any]:
+    """Build learning status for one preconditioning direction."""
+    directional = [
+        observation
+        for observation in observations
+        if isinstance(observation, dict)
+    ]
+    complete_count = sum(
+        1
+        for observation in directional
+        if observation.get("quality") == "complete" and observation.get("reached") is True
+    )
+    partial_count = sum(
+        1
+        for observation in directional
+        if observation.get("quality") == "partial" and observation.get("reached") is False
+    )
+    invalid_count = sum(
+        1 for observation in directional if observation.get("quality") == "invalid"
+    )
+    status = (
+        "ready"
+        if complete_count >= MIN_PRECONDITIONING_COMPLETE_SAMPLES
+        else "learning"
+    )
+    model_source = "history" if status == "ready" else "initial_model"
+    last_observation = directional[-1] if directional else None
+    active_comfort_percentile = preconditioning_comfort_percentile(
+        directional,
+        direction,
+        preconditioning,
+    )
+    if not supported:
+        return {
+            "status": "unsupported",
+            "sample_count": complete_count,
+            "total_samples": len(directional),
+            "required_samples": MIN_PRECONDITIONING_COMPLETE_SAMPLES,
+            "effective_lead_minutes": None,
+            "effective_lead_source": "unsupported",
+            "partial_sample_count": partial_count,
+            "complete_sample_count": complete_count,
+            "invalid_sample_count": invalid_count,
+            "lead_limited_by_max": False,
+            "last_quality": None,
+            "model_source": None,
+            "comfort_percentile": active_comfort_percentile,
+            "similar_sample_count": preconditioning["similar_sample_count"],
+        }
+
+    return {
+        "status": status,
+        "sample_count": complete_count,
+        "total_samples": len(directional),
+        "required_samples": MIN_PRECONDITIONING_COMPLETE_SAMPLES,
+        "effective_lead_minutes": None,
+        "effective_lead_source": model_source,
+        "partial_sample_count": partial_count,
+        "complete_sample_count": complete_count,
+        "invalid_sample_count": invalid_count,
+        "lead_limited_by_max": False,
+        "last_quality": (
+            last_observation.get("quality")
+            if isinstance(last_observation, dict)
+            else None
+        ),
+        "model_source": model_source,
+        "comfort_percentile": active_comfort_percentile,
+        "similar_sample_count": preconditioning["similar_sample_count"],
+    }
+
+
+def _supports_preconditioning_direction(
+    supported_hvac_modes: list[str],
+    direction: str,
+) -> bool:
+    """Return whether a climate supports a preconditioning direction."""
+    if not supported_hvac_modes:
+        return True
+
+    supported_modes = set(supported_hvac_modes)
+    if direction == "heat":
+        return bool({"heat", "heat_cool", "auto"}.intersection(supported_modes))
+    return bool({"cool", "heat_cool", "auto"}.intersection(supported_modes))
 
 
 def _normalize_import_zones(
@@ -671,4 +1070,7 @@ def _serialize_event(event: ClimateEvent | None) -> dict[str, Any] | None:
         "hvac_mode": event.hvac_mode,
         "weekday": event.weekday,
         "start": event.start,
+        "target_when": (
+            event.target_when.isoformat() if event.target_when is not None else None
+        ),
     }

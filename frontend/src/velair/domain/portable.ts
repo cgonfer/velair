@@ -49,7 +49,7 @@ export function portableSectionsFromPayload(payload?: VelairPortablePayload): Po
 
 export function portableExportSummaryItems(
   sections: Set<PortableSection>,
-  counts: { zones: number; templates: number },
+  counts: { zones: number; templates: number; preconditioningLearning: number },
 ): PortableSummaryItem[] {
   const items: PortableSummaryItem[] = [];
   if (sections.has("zones")) {
@@ -60,6 +60,12 @@ export function portableExportSummaryItems(
   }
   if (sections.has("settings")) {
     items.push({ section: "settings", value: "included" });
+  }
+  if (sections.has("preconditioning_learning")) {
+    items.push({
+      section: "preconditioning_learning",
+      value: counts.preconditioningLearning,
+    });
   }
   return items;
 }
@@ -88,5 +94,27 @@ export function portableImportSummaryItems(payload?: VelairPortablePayload): Por
   if (Object.prototype.hasOwnProperty.call(sections, "settings")) {
     items.push({ section: "settings", value: "included" });
   }
+  if (Object.prototype.hasOwnProperty.call(sections, "preconditioning_learning")) {
+    const learning = sections.preconditioning_learning;
+    items.push({
+      section: "preconditioning_learning",
+      value: learning && typeof learning === "object" && !Array.isArray(learning)
+        ? Object.keys(learning).length
+        : 0,
+    });
+  }
   return items;
+}
+
+export function unmatchedPreconditioningLearningEntities(
+  payload: VelairPortablePayload | undefined,
+  configuredEntities: string[],
+): string[] {
+  const learning = payload?.sections?.preconditioning_learning;
+  if (!learning || typeof learning !== "object" || Array.isArray(learning)) {
+    return [];
+  }
+
+  const configured = new Set(configuredEntities);
+  return Object.keys(learning).filter((entityId) => !configured.has(entityId));
 }

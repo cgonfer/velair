@@ -36,11 +36,77 @@ export const responsiveStyles = css`
   }
 
   @container (max-width: 760px) {
+    .overview-timeline-empty {
+      bottom: auto;
+      height: 100%;
+      left: calc(var(--overview-timeline-name-column) + 10px);
+      position: sticky;
+      top: 0;
+    }
+
+    .overview-timeline-block,
+    .overview-timeline-boost,
+    .overview-timeline-pause {
+      overflow: visible;
+    }
+
+    .overview-timeline-block-main {
+      left: calc(var(--overview-timeline-name-column) + 12px);
+      max-width: min(150px, calc(100vw - var(--overview-timeline-name-column) - 32px));
+      position: sticky;
+    }
+
+    .next .event {
+      grid-template-columns: minmax(110px, 150px) max-content;
+      min-width: max-content;
+    }
+
+    .next .event-details,
+    .next .event-details.preconditioned {
+      grid-template-columns: 18ch 8ch 12ch;
+    }
+
+    .next .event-list.has-preconditioning .event-details,
+    .next .event-list.has-preconditioning .event-details.preconditioned {
+      grid-template-columns: 40ch 8ch 12ch;
+    }
+
+    .next .event-time {
+      justify-content: flex-start;
+    }
+
+    .next .event-list.has-preconditioning .event-time-flow {
+      display: grid;
+      grid-template-columns: 16px 17ch 16px 17ch;
+      justify-content: start;
+    }
+
+    .next .event-list.has-preconditioning .event-time-single .target-time {
+      grid-column: 4;
+    }
+
+    .next .event-identity {
+      align-items: center;
+      align-self: stretch;
+      background: var(--secondary-background-color);
+      box-shadow: 1px 0 0 var(--divider-color);
+      display: flex;
+      left: 0;
+      padding-right: 10px;
+      position: sticky;
+      z-index: 4;
+    }
+
     .settings-zone-main {
       grid-template-columns: minmax(0, 1fr);
     }
 
     .settings-capability-composite {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .preconditioning-config-sections,
+    .preconditioning-directions {
       grid-template-columns: minmax(0, 1fr);
     }
 
@@ -74,6 +140,46 @@ export const responsiveStyles = css`
     }
   }
 
+  @container (max-width: 600px) {
+    .preconditioning-zone-heading {
+      align-items: center;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .preconditioning-zone-actions {
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .preconditioning-enable-control.unavailable {
+      justify-content: flex-end;
+    }
+
+    .preconditioning-unavailable-message {
+      display: block;
+      grid-column: 1 / -1;
+      text-align: right;
+    }
+
+    .preconditioning-config-row,
+    .preconditioning-sensor-row {
+      grid-template-columns: minmax(0, 1fr) minmax(110px, 42%);
+    }
+
+    .preconditioning-help {
+      position: static;
+    }
+
+    .preconditioning-help-tooltip {
+      left: 0;
+      max-width: none;
+      right: 0;
+      top: calc(100% - 2px);
+      transform: none;
+      width: auto;
+    }
+  }
+
   @media (max-width: 600px) {
     ha-card {
       --ha-card-background: transparent;
@@ -93,8 +199,48 @@ export const responsiveStyles = css`
     }
 
     .maintenance-grid,
+    .preconditioning-config-sections,
+    .preconditioning-directions,
     .settings-reset {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .preconditioning-zone-heading {
+      align-items: center;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .preconditioning-zone-actions {
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .preconditioning-enable-control.unavailable {
+      justify-content: flex-end;
+    }
+
+    .preconditioning-unavailable-message {
+      display: block;
+      grid-column: 1 / -1;
+      text-align: right;
+    }
+
+    .preconditioning-config-row,
+    .preconditioning-sensor-row {
+      grid-template-columns: minmax(0, 1fr) minmax(110px, 42%);
+    }
+
+    .preconditioning-help {
+      position: static;
+    }
+
+    .preconditioning-help-tooltip {
+      left: 0;
+      max-width: none;
+      right: 0;
+      top: calc(100% - 2px);
+      transform: none;
+      width: auto;
     }
 
     .settings-reset-icon {
@@ -272,7 +418,7 @@ export const responsiveStyles = css`
       grid-template-columns: 28px minmax(0, 1fr);
     }
 
-    .settings-zone-row > ha-icon {
+    .settings-zone-row > .settings-drag-handle {
       grid-column: 1;
       grid-row: 1;
       justify-self: center;

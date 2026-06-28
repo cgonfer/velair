@@ -483,7 +483,7 @@ export function renderCopyDayTarget(host: ScheduleViewHost, weekday: string) {
 }
 
 export function renderZoneTargets(host: ScheduleViewHost) {
-  const targets = host._orderedZoneIds(host._data?.configured_entities ?? []).filter(
+  const targets = host._visibleZoneIds(host._data?.configured_entities ?? []).filter(
     (entityId: string) => entityId !== host._selectedEntity,
   );
 

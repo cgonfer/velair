@@ -94,6 +94,10 @@ export function overviewNextEvents(host: OverviewDataHost): ScheduleEvent[] {
     return [];
   }
 
+  if (host._data.next_events.length) {
+    return host._data.next_events;
+  }
+
   const calculatedEvents = host._orderedZoneIds(host._data.configured_entities)
     .map((entityId: string) => nextEventForEntity(host, entityId, host._data?.zones[entityId]))
     .filter((event: ScheduleEvent | undefined): event is ScheduleEvent => Boolean(event))

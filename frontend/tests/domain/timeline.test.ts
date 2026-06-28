@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
 import {
+  overviewTimelineInitialScrollLeft,
   timelineBlocksFromDrafts,
   timelineBoostBlockFromOverride,
   timelineModeClass,
@@ -58,5 +59,15 @@ describe("timeline domain helpers", () => {
     expect(timelineModeClass({ action: ACTION_TURN_OFF })).toBe("off");
     expect(timelineModeClass({ action: ACTION_SET_TEMPERATURE, hvac_mode: "heat_cool" })).toBe("heat-cool");
     expect(timelineModeClass({ action: ACTION_SET_TEMPERATURE })).toBe("keep");
+  });
+
+  it("positions the current time toward the start of the visible timeline", () => {
+    expect(overviewTimelineInitialScrollLeft(50, 620, 320, 140)).toBeCloseTo(177);
+    expect(overviewTimelineInitialScrollLeft(75, 620, 320, 140)).toBeCloseTo(297);
+    expect(overviewTimelineInitialScrollLeft(100, 620, 320, 140)).toBe(300);
+  });
+
+  it("does not scroll timelines that already fit in the viewport", () => {
+    expect(overviewTimelineInitialScrollLeft(50, 620, 620, 140)).toBe(0);
   });
 });

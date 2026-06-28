@@ -22,7 +22,7 @@ url: /velair_frontend/velair-card.js
 type: module
 ```
 
-Browser custom elements cannot be redefined once loaded, so a stale resource can keep old code active until the page is fully reloaded.
+Velair serves this resource with no-cache headers. The sidebar uses an automatically versioned URL and isolated internal elements so an older cached Lovelace card cannot block a panel update. An integration update only requires the normal Home Assistant restart and browser refresh; users should not add build identifiers or edit the resource URL between releases.
 
 ## A Climate Entity Is Missing
 

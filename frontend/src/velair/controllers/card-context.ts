@@ -11,6 +11,7 @@ import {
   firstWeekdayFromConfig,
   orderedWeekdays,
   orderedZoneIds,
+  visibleZoneIds,
 } from "../domain/settings";
 import type {
   HomeAssistant,
@@ -67,7 +68,7 @@ export function shouldUpdateForHass(
   if (!oldValue) {
     return true;
   }
-  const entityIds = host._data?.configured_entities ?? [];
+  const entityIds = visibleZoneIds(host._data?.configured_entities ?? [], host._config);
   if (!entityIds.length) {
     return false;
   }
@@ -75,6 +76,47 @@ export function shouldUpdateForHass(
     (entityId) =>
       climateStateSignature(value.states?.[entityId]) !== climateStateSignature(oldValue.states?.[entityId]),
   );
+}
+
+export function preconditioningInputsChanged(
+  host: CardContextHost,
+  value?: HomeAssistant,
+  oldValue?: HomeAssistant,
+): boolean {
+  if (!value || !oldValue || !host._data) {
+    return false;
+  }
+
+  const visibleEntities = new Set(visibleZoneIds(host._data.configured_entities, host._config));
+  return Object.entries(host._data.zones).some(([entityId, zone]) => {
+    if (!visibleEntities.has(entityId)) {
+      return false;
+    }
+
+    const preconditioning = zone.preconditioning;
+    if (!preconditioning?.enabled) {
+      return false;
+    }
+
+    if (
+      currentTemperatureValue(value, entityId) !==
+      currentTemperatureValue(oldValue, entityId)
+    ) {
+      return true;
+    }
+
+    const outdoorEntityId = preconditioning.use_outdoor_temperature
+      ? preconditioning.outdoor_temperature_entity_id
+      : null;
+    return Boolean(
+      outdoorEntityId &&
+      value.states?.[outdoorEntityId]?.state !== oldValue.states?.[outdoorEntityId]?.state,
+    );
+  });
+}
+
+function currentTemperatureValue(hass: HomeAssistant, entityId: string): number | null {
+  return hass.states?.[entityId]?.attributes?.current_temperature ?? null;
 }
 
 export function languageForHost(host: CardContextHost): SupportedLanguage {
@@ -115,4 +157,8 @@ export function orderedWeekdaysForHost(host: CardContextHost): string[] {
 
 export function orderedZoneIdsForHost(host: CardContextHost, entityIds: string[]): string[] {
   return orderedZoneIds(entityIds, host._config.zone_order);
+}
+
+export function visibleZoneIdsForHost(host: CardContextHost, entityIds: string[]): string[] {
+  return visibleZoneIds(entityIds, host._config);
 }

@@ -1,6 +1,6 @@
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
-import type { PanelSettings, ScheduleResponse, VelairCardConfig } from "../types";
+import type { PanelSettings, PreconditioningSettings, ScheduleResponse, VelairCardConfig } from "../types";
 
 type SettingsActionsHost = {
   _config: VelairCardConfig;
@@ -18,7 +18,8 @@ type SettingsActionsHost = {
   _orderedZoneIds(entityIds: string[]): string[];
   _resetDraftBlocks(): void;
   _saveSettings(settings: Partial<PanelSettings>): Promise<void>;
-  _t(key: string): string;
+  _showSuccess(message: string): void;
+  _t(key: string, replacements?: Record<string, string | number>): string;
   _updateSettingsZoneOrder(entityIds: string[]): void;
 };
 
@@ -57,6 +58,85 @@ export async function saveSettings(host: SettingsActionsHost, settings: Partial<
     host._applyScheduleData(data);
   } catch (error) {
     host._error = error instanceof Error ? error.message : host._t("unableReset");
+  } finally {
+    host._settingsSaving = false;
+  }
+}
+
+export async function saveZonePreconditioning(
+  host: SettingsActionsHost,
+  entityId: string,
+  preconditioning: Partial<PreconditioningSettings>,
+): Promise<void> {
+  const api = host._api();
+  if (!api || host._hasExternalConfig) {
+    return;
+  }
+
+  host._settingsSaving = true;
+  host._error = undefined;
+  host._saveMessage = undefined;
+  try {
+    const data = await api.updateZonePreconditioning(entityId, preconditioning);
+    host._applyScheduleData(data);
+  } catch (error) {
+    host._error = error instanceof Error ? error.message : host._t("unableSaveSettings");
+  } finally {
+    host._settingsSaving = false;
+  }
+}
+
+export async function resetZonePreconditioningLearning(
+  host: SettingsActionsHost,
+  entityId: string,
+  direction: "heat" | "cool",
+  directionLabel: string,
+): Promise<void> {
+  const api = host._api();
+  if (!api || host._hasExternalConfig) {
+    return;
+  }
+
+  if (!window.confirm(host._t("confirmResetPreconditioningLearning", { direction: directionLabel }))) {
+    return;
+  }
+
+  host._settingsSaving = true;
+  host._error = undefined;
+  host._saveMessage = undefined;
+  try {
+    const data = await api.resetZonePreconditioningLearning(entityId, direction);
+    host._applyScheduleData(data);
+    host._showSuccess(host._t("preconditioningLearningResetDone", { direction: directionLabel }));
+  } catch (error) {
+    host._error = error instanceof Error ? error.message : host._t("unableSaveSettings");
+  } finally {
+    host._settingsSaving = false;
+  }
+}
+
+export async function resetZonePreconditioningSettings(
+  host: SettingsActionsHost,
+  entityId: string,
+): Promise<void> {
+  const api = host._api();
+  if (!api || host._hasExternalConfig) {
+    return;
+  }
+
+  if (!window.confirm(host._t("confirmResetPreconditioningSettings"))) {
+    return;
+  }
+
+  host._settingsSaving = true;
+  host._error = undefined;
+  host._saveMessage = undefined;
+  try {
+    const data = await api.resetZonePreconditioningSettings(entityId);
+    host._applyScheduleData(data);
+    host._showSuccess(host._t("preconditioningSettingsResetDone"));
+  } catch (error) {
+    host._error = error instanceof Error ? error.message : host._t("unableSaveSettings");
   } finally {
     host._settingsSaving = false;
   }

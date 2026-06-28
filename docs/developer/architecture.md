@@ -26,8 +26,8 @@ custom_components/velair/
   const.py             constants and service keys
   entity.py            shared entity base
   frontend.py          panel and static frontend registration
-  models.py            typed model normalization and serialization
-  scheduler.py         event calculation, timers, overrides, logbook entries
+  models.py            typed normalization, preconditioning prediction, serialization
+  scheduler.py         event calculation, timers, overrides, preconditioning runtime
   sensor.py            diagnostic/status sensors
   services.py          Home Assistant service actions
   services.yaml        service descriptions
@@ -61,7 +61,10 @@ The storage model is intentionally simple and versioned:
           }
         ]
       },
-      "override": null
+      "override": null,
+      "preconditioning": {
+        "enabled": true
+      }
     }
   },
   "global": {
@@ -76,6 +79,16 @@ The storage model is intentionally simple and versioned:
     "max_temperature": 35.0
   },
   "templates": [],
+  "preconditioning_learning": {
+    "climate.living_room": {
+      "heat": {
+        "observations": []
+      },
+      "cool": {
+        "observations": []
+      }
+    }
+  },
   "templates_seeded": true
 }
 ```
@@ -97,10 +110,14 @@ Timer callback
 |
 +-- Clear expired global pause, zone boost, or zone pause
 +-- Resolve due schedule events
++-- Predict and apply any due preconditioning action
 +-- Apply climate action
++-- Open, complete, or discard preconditioning learning sessions
 +-- Log operational action to Home Assistant logbook when available
 +-- Recalculate and schedule the next event
 ```
+
+Before an early start begins, relevant climate temperature changes are debounced and may recalculate the next action. During an active learning session, emitted temperature changes can complete the observation as soon as the target threshold is reached. Velair uses Home Assistant state listeners and timers rather than continuous polling.
 
 Velair stores temporary modes as timestamps:
 
@@ -217,7 +234,10 @@ The current export format is:
   "sections": {
     "zones": {},
     "templates": [],
-    "settings": {}
+    "settings": {},
+    "preconditioning_learning": {}
   }
 }
 ```
+
+`preconditioning_learning` is an optional incremental section keyed by the exact climate entity ID. Import replaces learning only for matching managed climates contained in the section. Unknown IDs are ignored, while existing learning for local climates absent from the file is preserved.

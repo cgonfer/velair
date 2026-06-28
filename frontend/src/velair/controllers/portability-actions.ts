@@ -160,6 +160,8 @@ export function portableExportItems(host: PortabilityHost): PortableSummaryViewI
   return portableExportSummaryItems(new Set(PORTABLE_SECTIONS), {
     zones: host._data?.configured_entities.length ?? 0,
     templates: host._scheduleTemplates().length,
+    preconditioningLearning: Object.values(host._data?.preconditioning_learning ?? {})
+      .filter((learning) => learning.total_samples > 0).length,
   }).map((item) => host._portableSummaryItem(item));
 }
 
@@ -182,6 +184,8 @@ export function portableSummaryItem(
 
 export function portableSectionLabel(host: PortabilityHost, section: PortableSection): string {
   switch (section) {
+    case "preconditioning_learning":
+      return host._t("portabilityPreconditioningLearningSection");
     case "templates":
       return host._t("portabilityTemplatesSection");
     case "settings":

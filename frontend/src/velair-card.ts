@@ -6,6 +6,8 @@ import { VelairPanel } from "./velair/views/panel";
 
 export { VelairCard } from "./velair/components/velair-card-element";
 
+class VelairPanelCard extends VelairCard {}
+
 registerVelairFrontend({
   build: VELAIR_FRONTEND_BUILD,
   customCard: {
@@ -16,7 +18,8 @@ registerVelairFrontend({
   elements: {
     "velair-card": VelairCard,
     "velair-card-editor": VelairCardEditor,
-    "velair-main-panel": VelairPanel,
+    "velair-panel-card": VelairPanelCard,
+    "velair-sidebar-panel": VelairPanel,
   },
   version: VELAIR_RELEASE_VERSION,
 });
@@ -25,6 +28,7 @@ declare global {
   interface HTMLElementTagNameMap {
     "velair-card": VelairCard;
     "velair-card-editor": VelairCardEditor;
-    "velair-main-panel": VelairPanel;
+    "velair-panel-card": VelairPanelCard;
+    "velair-sidebar-panel": VelairPanel;
   }
 }

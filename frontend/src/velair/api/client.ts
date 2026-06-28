@@ -3,6 +3,7 @@ import type {
   HomeAssistant,
   PanelSettings,
   PortableSection,
+  PreconditioningSettings,
   ScheduleBlock,
   ScheduleResponse,
   ScheduleUpdateMessage,
@@ -89,6 +90,32 @@ export class VelairApiClient {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/update_settings",
       ...settings,
+    });
+  }
+
+  public updateZonePreconditioning(
+    entityId: string,
+    preconditioning: Partial<PreconditioningSettings>,
+  ): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/update_zone_preconditioning",
+      entity_id: entityId,
+      preconditioning,
+    });
+  }
+
+  public resetZonePreconditioningLearning(entityId: string, direction: "heat" | "cool"): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/reset_zone_preconditioning_learning",
+      entity_id: entityId,
+      direction,
+    });
+  }
+
+  public resetZonePreconditioningSettings(entityId: string): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/reset_zone_preconditioning_settings",
+      entity_id: entityId,
     });
   }
 

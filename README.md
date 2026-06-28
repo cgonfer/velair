@@ -1,7 +1,7 @@
 # Velair
 Climate automation that adapts to your life.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge)](#)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](#)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](#)
 [![HACS](https://img.shields.io/badge/HACS-custom-orange?style=for-the-badge)](https://www.hacs.xyz/docs/faq/custom_repositories/)
@@ -38,24 +38,21 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
 - Overview tab with scheduler status, active boosts, next events, and zone summaries.
-- Settings tab with startup behavior, thermostat diagnostics, portability tools, and maintenance information.
+- Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
+- Settings tab with climate ordering, startup behavior, thermostat diagnostics, portability tools, and maintenance information.
 - Global pause, stop, and resume controls, plus per-zone pause and resume.
-- Velair-scoped services for boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
-- Automation events through `velair_event` for scheduler mode changes, climate targets applied by Velair, boosts, and per-zone pause/resume lifecycle changes.
+- Velair-scoped services for starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
+- Automation events through `velair_event` for scheduler mode changes, adaptive preconditioning plans, climate targets applied by Velair, boosts, and per-zone pause/resume lifecycle changes.
 - Push updates through Home Assistant WebSocket events, without frontend polling.
 - English and Spanish UI translations.
 
 ## Screenshots
 
-The following examples are captured from a real Home Assistant instance. See the screenshot guide for the complete public screenshot set.
-
-### Overview
+The following examples are captured from a real Home Assistant instance. See [more screenshots](docs/project/screenshots.md) for the complete screenshot set.
 
 | Desktop | Mobile |
 | --- | --- |
 | ![Velair overview desktop](screenshots/overview-desktop.png) | ![Velair overview mobile](screenshots/overview-mobile.png) |
-
-[View more screenshots](docs/project/screenshots.md)
 
 ## Installation
 
@@ -166,6 +163,19 @@ view: overview-status
 
 This first card shows the scheduler status and pause/stop/resume controls. You can add more Velair cards to the same dashboard by changing the `view` value.
 
+You can also limit a Lovelace card to specific thermostats. This only changes what that card displays; it does not change the scheduler or stored schedules.
+
+```yaml
+type: custom:velair-card
+view: overview-events
+entities:
+  - climate.living_room
+  - climate.bedroom
+zone_order:
+  - climate.bedroom
+  - climate.living_room
+```
+
 Supported `view` values:
 
 - `overview-status`: scheduler state and pause/stop/resume controls.
@@ -174,6 +184,7 @@ Supported `view` values:
 - `overview-timeline`: today's timeline.
 - `overview-zones`: zone overview.
 - `schedules`: full schedule editor.
+- `preconditioning`: adaptive preconditioning configuration and local learning status.
 
 If Home Assistant shows a custom element error, confirm that Velair is installed, the resource URL is exactly `/velair_frontend/velair-card.js`, and the browser or companion app has been reloaded after adding the resource.
 

@@ -11,9 +11,11 @@ import {
   languageForHost,
   orderedWeekdaysForHost,
   orderedZoneIdsForHost,
+  preconditioningInputsChanged,
   shortWeekdayNameForHost,
   shouldUpdateForHass,
   translateForHost,
+  visibleZoneIdsForHost,
   weekdayNameForHost,
 } from "../controllers/card-context";
 import type {
@@ -28,6 +30,7 @@ import type {
   ScheduleEvent,
   ScheduleResponse,
   ScheduleTemplate,
+  PreconditioningSettings,
   VelairCardConfig,
   VelairCardView,
   VelairPortablePayload,
@@ -36,8 +39,13 @@ import type { SupportedLanguage, TranslationKey } from "../translations";
 import { cardStyles } from "../styles/card-styles";
 import { VelairApiClient } from "../api/client";
 import type { PortableSummaryItem } from "../domain/portable";
+import { changedPreconditioningEventEntityIds } from "../domain/schedule-events";
 import { scheduleTemplatesFromStored, templateLabel } from "../domain/templates";
-import type { TimelineBlock } from "../domain/timeline";
+import {
+  overviewTimelineInitialScrollLeft,
+  timelineNowMarker,
+  type TimelineBlock,
+} from "../domain/timeline";
 import {
   asSchedulerControlsHost,
   canResumeScheduler,
@@ -96,6 +104,9 @@ import {
   handleSettingsZoneDrop,
   moveSettingsZone,
   saveSettings,
+  saveZonePreconditioning,
+  resetZonePreconditioningLearning,
+  resetZonePreconditioningSettings,
   updateSettingsFirstWeekday,
   updateSettingsZoneOrder,
 } from "../controllers/settings-actions";
@@ -190,9 +201,17 @@ export class VelairCard extends LitElement {
 
   public set hass(value: HomeAssistant | undefined) {
     const oldValue = this._hass;
+    const refreshPreconditioning = preconditioningInputsChanged(
+      asCardContextHost(this),
+      value,
+      oldValue,
+    );
     this._hass = value;
     if (this._shouldUpdateForHass(value, oldValue)) {
       this.requestUpdate("hass", oldValue);
+    }
+    if (refreshPreconditioning) {
+      this._schedulePreconditioningRefresh();
     }
   }
 
@@ -203,6 +222,7 @@ export class VelairCard extends LitElement {
   @property({ type: String }) public view: VelairCardView = "overview-status";
 
   @state() private _config: VelairCardConfig = {};
+  @state() private _changedNextEventIds = new Set<string>();
   @state() private _data?: ScheduleResponse;
   @state() private _error?: string;
   @state() private _loading = false;
@@ -233,6 +253,7 @@ export class VelairCard extends LitElement {
   @state() private _maintenanceAction?: "reset";
   @state() private _portabilityAction?: "export" | "import";
   @state() private _exportSections = new Set<PortableSection>(PORTABLE_SECTIONS);
+  @state() private _expandedPreconditioningZones = new Set<string>();
   @state() private _importSections = new Set<PortableSection>();
   @state() private _importPayload?: VelairPortablePayload;
   @state() private _importFileName = "";
@@ -240,6 +261,7 @@ export class VelairCard extends LitElement {
   @state() private _controlAction?: "pause" | "resume";
   @state() private _schedulerMenuOpen = false;
   @state() private _nextEventsOpen = false;
+  @state() private _nextEventChangeRevision = 0;
   @state() private _overviewTimelineDetail?: string;
   @state() private _overviewTimelineDetailAnchor?: number;
   @state() private _overviewTimelineDetailEntityId?: string;
@@ -251,7 +273,10 @@ export class VelairCard extends LitElement {
   private _successNoticeTimeout?: number;
   private _pauseTick?: number;
   private _pauseTickDelay?: number;
+  private _preconditioningRefreshTimer?: number;
+  private _nextEventChangeTimeout?: number;
   private _timelineNowTick?: number;
+  private _overviewTimelineScrollInitialized = false;
   private _draggedTimelineIndex?: number;
   private _timelineResize?: {
     edge: "start" | "end";
@@ -266,9 +291,19 @@ export class VelairCard extends LitElement {
 
   public setConfig(config: VelairCardConfig): void {
     this._hasExternalConfig = true;
+    const previousSelectedEntity = this._selectedEntity;
     this._config = config ?? {};
     this._selectedEntity = config?.selected_entity;
+    if (this._data) {
+      const visibleZoneIds = this._visibleZoneIds(this._data.configured_entities);
+      if (!this._selectedEntity || !visibleZoneIds.includes(this._selectedEntity)) {
+        this._selectedEntity = visibleZoneIds[0];
+      }
+    }
     this._selectedWeekday = this._firstWeekday();
+    if (this._selectedEntity !== previousSelectedEntity) {
+      this._resetDraftBlocks();
+    }
   }
 
   public connectedCallback(): void {
@@ -285,6 +320,8 @@ export class VelairCard extends LitElement {
       this._unsubscribeUpdates = undefined;
     }
     this._clearSuccessNoticeTimer();
+    this._clearNextEventChangeTimer();
+    this._clearPreconditioningRefreshTimer();
     this._clearOverviewTimelineDetail();
     this._stopPauseTick();
     this._stopTimelineNowTick();
@@ -337,6 +374,14 @@ export class VelairCard extends LitElement {
     if (changedProperties.has("view") || changedProperties.has("_data")) {
       this._syncTimelineNowTick();
     }
+    const effectiveView = this._effectiveView();
+    const showsOverviewTimeline = effectiveView === "overview" || effectiveView === "overview-timeline";
+    if (!showsOverviewTimeline) {
+      this._overviewTimelineScrollInitialized = false;
+    } else if (this._data && !this._overviewTimelineScrollInitialized) {
+      this._overviewTimelineScrollInitialized = true;
+      window.requestAnimationFrame(() => this._scrollOverviewTimelineToNow());
+    }
   }
 
   protected render() {
@@ -387,6 +432,22 @@ export class VelairCard extends LitElement {
 
   private _currentTimelineNow(): Date {
     return this._timelineNow;
+  }
+
+  private _scrollOverviewTimelineToNow(): void {
+    const scroller = this.renderRoot.querySelector<HTMLElement>(".overview-timeline-scroll");
+    const stickyNames = scroller?.querySelector<HTMLElement>(".overview-timeline-names");
+    if (!scroller || !stickyNames || scroller.scrollWidth <= scroller.clientWidth + 1) {
+      return;
+    }
+
+    const marker = timelineNowMarker(this._currentTimelineNow());
+    scroller.scrollLeft = overviewTimelineInitialScrollLeft(
+      marker.left,
+      scroller.scrollWidth,
+      scroller.clientWidth,
+      stickyNames.offsetWidth,
+    );
   }
 
   private _showOverviewTimelineDetail(
@@ -490,7 +551,53 @@ export class VelairCard extends LitElement {
   }
 
   private _applyScheduleData(data: ScheduleResponse, options: { forceDraft?: boolean } = {}): void {
+    const changedEntityIds = changedPreconditioningEventEntityIds(
+      this._data?.next_events ?? [],
+      data.next_events,
+    );
     applyScheduleData(asScheduleStateHost(this), data, options);
+    this._markChangedNextEvents(changedEntityIds);
+  }
+
+  private _schedulePreconditioningRefresh(): void {
+    if (this._preconditioningRefreshTimer !== undefined || !this.isConnected) {
+      return;
+    }
+    this._preconditioningRefreshTimer = window.setTimeout(() => {
+      this._preconditioningRefreshTimer = undefined;
+      void this._loadSchedule();
+    }, 1200);
+  }
+
+  private _clearPreconditioningRefreshTimer(): void {
+    if (this._preconditioningRefreshTimer === undefined) {
+      return;
+    }
+    window.clearTimeout(this._preconditioningRefreshTimer);
+    this._preconditioningRefreshTimer = undefined;
+  }
+
+  private _markChangedNextEvents(entityIds: string[]): void {
+    if (!entityIds.length) {
+      return;
+    }
+    this._clearNextEventChangeTimer(false);
+    this._changedNextEventIds = new Set(entityIds);
+    this._nextEventChangeRevision += 1;
+    this._nextEventChangeTimeout = window.setTimeout(() => {
+      this._nextEventChangeTimeout = undefined;
+      this._changedNextEventIds = new Set();
+    }, 2200);
+  }
+
+  private _clearNextEventChangeTimer(clearIds = true): void {
+    if (this._nextEventChangeTimeout !== undefined) {
+      window.clearTimeout(this._nextEventChangeTimeout);
+      this._nextEventChangeTimeout = undefined;
+    }
+    if (clearIds && this._changedNextEventIds.size) {
+      this._changedNextEventIds = new Set();
+    }
   }
 
   private _resetDraftBlocks(): void {
@@ -766,12 +873,45 @@ export class VelairCard extends LitElement {
     return orderedZoneIdsForHost(asCardContextHost(this), entityIds);
   }
 
+  private _visibleZoneIds(entityIds: string[]): string[] {
+    return visibleZoneIdsForHost(asCardContextHost(this), entityIds);
+  }
+
   private async _updateSettingsFirstWeekday(value: string): Promise<void> {
     await updateSettingsFirstWeekday(asSettingsActionsHost(this), value);
   }
 
   private async _saveSettings(settings: Partial<PanelSettings>): Promise<void> {
     await saveSettings(asSettingsActionsHost(this), settings);
+  }
+
+  private async _saveZonePreconditioning(
+    entityId: string,
+    preconditioning: Partial<PreconditioningSettings>,
+  ): Promise<void> {
+    await saveZonePreconditioning(asSettingsActionsHost(this), entityId, preconditioning);
+  }
+
+  private _togglePreconditioningZone(entityId: string): void {
+    const expandedZones = new Set(this._expandedPreconditioningZones);
+    if (expandedZones.has(entityId)) {
+      expandedZones.delete(entityId);
+    } else {
+      expandedZones.add(entityId);
+    }
+    this._expandedPreconditioningZones = expandedZones;
+  }
+
+  private async _resetZonePreconditioningLearning(
+    entityId: string,
+    direction: "heat" | "cool",
+    directionLabel: string,
+  ): Promise<void> {
+    await resetZonePreconditioningLearning(asSettingsActionsHost(this), entityId, direction, directionLabel);
+  }
+
+  private async _resetZonePreconditioningSettings(entityId: string): Promise<void> {
+    await resetZonePreconditioningSettings(asSettingsActionsHost(this), entityId);
   }
 
   private _togglePortableSection(target: "export" | "import", section: PortableSection, checked: boolean): void {
