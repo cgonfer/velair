@@ -11,6 +11,7 @@ export type HassState = {
   attributes?: {
     current_temperature?: number;
     current_humidity?: number;
+    device_class?: string;
     fan_modes?: string[];
     friendly_name?: string;
     hvac_action?: string;
@@ -45,6 +46,7 @@ export type HomeAssistant = {
 };
 
 export type VelairCardConfig = {
+  entities?: string[];
   first_weekday?: string;
   title?: string;
   selected_entity?: string;
@@ -66,7 +68,7 @@ export type VelairPanelRoute = {
   prefix?: string;
 };
 
-export type VelairPanelView = "overview" | "schedules" | "templates" | "settings";
+export type VelairPanelView = "overview" | "schedules" | "templates" | "preconditioning" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
   | "overview-boosts"
@@ -101,10 +103,52 @@ export type StoredScheduleTemplate = {
   blocks: ScheduleBlock[];
 };
 
+export type PreconditioningSettings = {
+  enabled: boolean;
+  max_lead_minutes: number;
+  minimum_delta_temperature: number;
+  learning_history_size: number;
+  similar_sample_count: number;
+  comfort_percentile: number;
+  adaptive_percentile_enabled: boolean;
+  partial_expiry_days: number;
+  recency_decay_days: number;
+  min_start_minutes: number;
+  fallback_minutes_per_degree: number;
+  use_outdoor_temperature: boolean;
+  outdoor_temperature_entity_id: string | null;
+};
+
+export type PreconditioningDirectionLearning = {
+  status: "learning" | "ready" | "unsupported";
+  sample_count: number;
+  total_samples: number;
+  required_samples: number;
+  effective_lead_minutes?: number | null;
+  effective_lead_source?: "history" | "initial_model" | "unsupported" | null;
+  partial_sample_count?: number;
+  complete_sample_count?: number;
+  invalid_sample_count?: number;
+  lead_limited_by_max?: boolean;
+  last_quality?: "complete" | "partial" | "invalid" | null;
+  model_source?: "history" | "initial_model" | null;
+  comfort_percentile?: number;
+  similar_sample_count?: number;
+};
+
+export type PreconditioningLearningSummary = {
+  status: "disabled" | "learning" | "ready";
+  required_samples: number;
+  total_samples: number;
+  heat: PreconditioningDirectionLearning;
+  cool: PreconditioningDirectionLearning;
+};
+
 export type ScheduleZone = {
   enabled: boolean;
   schedule: Record<string, ScheduleBlock[]>;
   override?: Record<string, unknown> | null;
+  preconditioning?: PreconditioningSettings;
 };
 
 export type ScheduleEvent = {
@@ -115,6 +159,7 @@ export type ScheduleEvent = {
   hvac_mode?: string | null;
   weekday: string;
   start: string;
+  target_when?: string | null;
 };
 
 export type PanelSettings = {
@@ -138,6 +183,7 @@ export type ScheduleResponse = {
   next_event: ScheduleEvent | null;
   next_events: ScheduleEvent[];
   active_overrides: Record<string, Record<string, unknown>>;
+  preconditioning_learning?: Record<string, PreconditioningLearningSummary>;
   templates?: StoredScheduleTemplate[];
   versions?: {
     export_format?: string;
@@ -153,7 +199,11 @@ export type ScheduleUpdateMessage = {
   schedule?: ScheduleResponse;
 };
 
-export type PortableSection = "zones" | "templates" | "settings";
+export type PortableSection =
+  | "zones"
+  | "templates"
+  | "settings"
+  | "preconditioning_learning";
 
 export type VelairPortablePayload = {
   format?: string;

@@ -1,6 +1,6 @@
 {
   "name": "velair-frontend",
-  "version": "1.0.0",
+  "version": "1.1.0-beta.1",
   "description": "Climate automation that adapts to your life.",
   "private": true,
   "type": "module",

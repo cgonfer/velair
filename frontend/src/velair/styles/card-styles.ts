@@ -3,12 +3,13 @@ import { baseStyles } from "./base-styles";
 import { noticeStyles } from "./notice-styles";
 import { overviewStyles } from "./overview-styles";
 import { portabilityStyles } from "./portability-styles";
+import { preconditioningStyles } from "./preconditioning-styles";
 import { settingsStyles } from "./settings-styles";
 import { templateStyles } from "./template-styles";
 import { timelineStyles } from "./timeline-styles";
 import { responsiveStyles } from "./responsive-styles";
 
-export const cardStyles = [baseStyles, noticeStyles, overviewStyles, portabilityStyles, settingsStyles, templateStyles, timelineStyles, css`
+export const cardStyles = [baseStyles, noticeStyles, overviewStyles, portabilityStyles, preconditioningStyles, settingsStyles, templateStyles, timelineStyles, css`
     .summary {
       display: grid;
       gap: 8px;

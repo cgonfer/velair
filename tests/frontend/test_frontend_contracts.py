@@ -32,6 +32,7 @@ FRONTEND_OVERVIEW_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles
 FRONTEND_PORTABILITY_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "portability-styles.ts"
 FRONTEND_RESPONSIVE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "responsive-styles.ts"
 FRONTEND_SETTINGS_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "settings-styles.ts"
+FRONTEND_PRECONDITIONING_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "preconditioning-styles.ts"
 FRONTEND_TEMPLATE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "template-styles.ts"
 FRONTEND_TIMELINE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "timeline-styles.ts"
 FRONTEND_CLIMATE_DOMAIN_SOURCE = ROOT / "frontend" / "src" / "velair" / "domain" / "climate.ts"
@@ -46,6 +47,7 @@ FRONTEND_PANEL_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "panel.
 FRONTEND_OVERVIEW_VIEW_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "overview-view.ts"
 FRONTEND_SCHEDULE_VIEW_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "schedule-view.ts"
 FRONTEND_SETTINGS_VIEW_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "settings-view.ts"
+FRONTEND_PRECONDITIONING_VIEW_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "preconditioning-view.ts"
 FRONTEND_TEMPLATES_VIEW_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "templates-view.ts"
 FRONTEND_CARD_CONTEXT_SOURCE = ROOT / "frontend" / "src" / "velair" / "controllers" / "card-context.ts"
 FRONTEND_CLIMATE_DISPLAY_SOURCE = ROOT / "frontend" / "src" / "velair" / "controllers" / "climate-display.ts"
@@ -76,6 +78,7 @@ def _frontend_implementation_source() -> str:
             FRONTEND_OVERVIEW_VIEW_SOURCE,
             FRONTEND_SCHEDULE_VIEW_SOURCE,
             FRONTEND_SETTINGS_VIEW_SOURCE,
+            FRONTEND_PRECONDITIONING_VIEW_SOURCE,
             FRONTEND_TEMPLATES_VIEW_SOURCE,
             FRONTEND_CARD_CONTEXT_SOURCE,
             FRONTEND_CLIMATE_DISPLAY_SOURCE,
@@ -105,6 +108,28 @@ def _install_homeassistant_stubs() -> dict[str, list]:
     homeassistant = sys.modules.setdefault("homeassistant", ModuleType("homeassistant"))
     homeassistant.__path__ = []
 
+    aiohttp = ModuleType("aiohttp")
+    aiohttp.hdrs = SimpleNamespace(
+        CACHE_CONTROL="Cache-Control",
+        PRAGMA="Pragma",
+    )
+    aiohttp_web = ModuleType("aiohttp.web")
+
+    class FileResponse:
+        def __init__(self, path, headers=None) -> None:
+            self.path = path
+            self.headers = dict(headers or {})
+
+    class HTTPNotFound(Exception):
+        pass
+
+    aiohttp_web.FileResponse = FileResponse
+    aiohttp_web.HTTPNotFound = HTTPNotFound
+    aiohttp_web.Request = object
+    aiohttp.web = aiohttp_web
+    sys.modules["aiohttp"] = aiohttp
+    sys.modules["aiohttp.web"] = aiohttp_web
+
     components = ModuleType("homeassistant.components")
     components.__path__ = []
     sys.modules["homeassistant.components"] = components
@@ -116,15 +141,19 @@ def _install_homeassistant_stubs() -> dict[str, list]:
     sys.modules["homeassistant.components.frontend"] = frontend
 
     http = ModuleType("homeassistant.components.http")
-
-    class StaticPathConfig:
-        def __init__(self, url_path: str, path: str, cache_headers: bool) -> None:
-            self.url_path = url_path
-            self.path = path
-            self.cache_headers = cache_headers
-
-    http.StaticPathConfig = StaticPathConfig
     sys.modules["homeassistant.components.http"] = http
+
+    helpers = ModuleType("homeassistant.helpers")
+    helpers.__path__ = []
+    sys.modules["homeassistant.helpers"] = helpers
+
+    helpers_http = ModuleType("homeassistant.helpers.http")
+
+    class HomeAssistantView:
+        pass
+
+    helpers_http.HomeAssistantView = HomeAssistantView
+    sys.modules["homeassistant.helpers.http"] = helpers_http
 
     panel_custom = ModuleType("homeassistant.components.panel_custom")
 
@@ -162,13 +191,13 @@ def _install_custom_component_package_stub() -> None:
 
 
 class FakeHttp:
-    """Capture static path registrations."""
+    """Capture frontend view registrations."""
 
     def __init__(self) -> None:
-        self.static_paths = []
+        self.views = []
 
-    async def async_register_static_paths(self, paths) -> None:
-        self.static_paths.extend(paths)
+    def register_view(self, view) -> None:
+        self.views.append(view)
 
 
 class FakeHass:
@@ -191,7 +220,7 @@ class FrontendRegistrationTest(unittest.TestCase):
             fromlist=["frontend"],
         )
 
-    def test_setup_registers_panel_with_missing_bundle_marker(self) -> None:
+    def test_setup_registers_stable_panel_url_when_bundle_is_missing(self) -> None:
         """Panel registration never falls back to the Lovelace /local bundle."""
         with TemporaryDirectory() as temp_dir:
             self.frontend.FRONTEND_DIR = Path(temp_dir) / "missing"
@@ -203,11 +232,11 @@ class FrontendRegistrationTest(unittest.TestCase):
             self.calls["panels"][0][1]["module_url"],
             "/velair_frontend/velair-card.js?v=missing",
         )
-        self.assertEqual(self.calls["panels"][0][1]["webcomponent_name"], "velair-main-panel")
+        self.assertEqual(self.calls["panels"][0][1]["webcomponent_name"], "velair-sidebar-panel")
         self.assertEqual(self.calls["panels"][0][1]["frontend_url_path"], "velair")
 
-    def test_setup_serves_integration_bundle_when_available(self) -> None:
-        """Panel registration serves the bundled integration frontend when present."""
+    def test_setup_serves_cache_busted_isolated_sidebar_module(self) -> None:
+        """The sidebar bypasses stale external resources and custom elements."""
         with TemporaryDirectory() as temp_dir:
             frontend_dir = Path(temp_dir)
             (frontend_dir / "velair-card.js").write_text("", encoding="utf-8")
@@ -216,10 +245,32 @@ class FrontendRegistrationTest(unittest.TestCase):
 
             asyncio.run(self.frontend.async_setup_frontend(hass))
 
-        module_url = self.calls["panels"][0][1]["module_url"]
-        self.assertTrue(module_url.startswith("/velair_frontend/velair-card.js?v="))
-        self.assertEqual(hass.http.static_paths[0].url_path, "/velair_frontend")
-        self.assertFalse(hass.http.static_paths[0].cache_headers)
+            response = asyncio.run(hass.http.views[0].get(None, "velair-card.js"))
+
+        self.assertTrue(
+            self.calls["panels"][0][1]["module_url"].startswith(
+                "/velair_frontend/velair-card.js?v="
+            )
+        )
+        self.assertEqual(
+            self.calls["panels"][0][1]["webcomponent_name"],
+            "velair-sidebar-panel",
+        )
+        self.assertEqual(len(hass.http.views), 1)
+        self.assertEqual(
+            response.headers["Cache-Control"],
+            "no-store, no-cache, must-revalidate",
+        )
+        self.assertEqual(response.headers["Pragma"], "no-cache")
+
+    def test_setup_registers_frontend_route_only_once(self) -> None:
+        """Config entry reloads should not register duplicate HTTP routes."""
+        hass = FakeHass()
+
+        asyncio.run(self.frontend.async_setup_frontend(hass))
+        asyncio.run(self.frontend.async_setup_frontend(hass))
+
+        self.assertEqual(len(hass.http.views), 1)
 
     def test_unload_removes_panel_and_extra_module(self) -> None:
         """Unload cleans up the sidebar panel and registered module."""
@@ -241,6 +292,18 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertNotIn("max: 1440", services_source)
         self.assertGreaterEqual(services_source.count("max: 10080"), 3)
 
+    def test_cancel_boost_service_has_a_managed_climate_selector(self) -> None:
+        """Manual boost cancellation must target one explicit climate entity."""
+        services_source = SERVICES_YAML_SOURCE.read_text(encoding="utf-8")
+
+        self.assertIn("cancel_boost:", services_source)
+        cancel_boost = services_source.split("cancel_boost:", 1)[1].split(
+            "\npause:",
+            1,
+        )[0]
+        self.assertIn("entity_id:", cancel_boost)
+        self.assertIn("domain: climate", cancel_boost)
+
     def test_frontend_has_modular_foundation_files(self) -> None:
         """Shared types, constants, and time helpers should stay outside the main element."""
         source = _frontend_implementation_source()
@@ -255,6 +318,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         portability_styles_source = FRONTEND_PORTABILITY_STYLES_SOURCE.read_text(encoding="utf-8")
         responsive_styles_source = FRONTEND_RESPONSIVE_STYLES_SOURCE.read_text(encoding="utf-8")
         settings_styles_source = FRONTEND_SETTINGS_STYLES_SOURCE.read_text(encoding="utf-8")
+        preconditioning_styles_source = FRONTEND_PRECONDITIONING_STYLES_SOURCE.read_text(encoding="utf-8")
         template_styles_source = FRONTEND_TEMPLATE_STYLES_SOURCE.read_text(encoding="utf-8")
         timeline_styles_source = FRONTEND_TIMELINE_STYLES_SOURCE.read_text(encoding="utf-8")
         editor_source = FRONTEND_CARD_EDITOR_SOURCE.read_text(encoding="utf-8")
@@ -283,7 +347,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('from "./velair/views/panel"', source)
         self.assertIn("export type ScheduleResponse", types_source)
         self.assertIn(
-            "export const cardStyles = [baseStyles, noticeStyles, overviewStyles, portabilityStyles, settingsStyles, templateStyles, timelineStyles, css`",
+            "export const cardStyles = [baseStyles, noticeStyles, overviewStyles, portabilityStyles, preconditioningStyles, settingsStyles, templateStyles, timelineStyles, css`",
             styles_source,
         )
         self.assertIn("`, responsiveStyles];", styles_source)
@@ -301,6 +365,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("export const portabilityStyles = css`", portability_styles_source)
         self.assertIn("export const responsiveStyles = css`", responsive_styles_source)
         self.assertIn("export const settingsStyles = css`", settings_styles_source)
+        self.assertIn("export const preconditioningStyles = css`", preconditioning_styles_source)
         self.assertIn("export const templateStyles = css`", template_styles_source)
         self.assertIn("export const timelineStyles = css`", timeline_styles_source)
         self.assertIn("export class VelairCardEditor", editor_source)
@@ -333,6 +398,7 @@ class FrontendSourceContractTest(unittest.TestCase):
             FRONTEND_OVERVIEW_VIEW_SOURCE,
             FRONTEND_SCHEDULE_VIEW_SOURCE,
             FRONTEND_SETTINGS_VIEW_SOURCE,
+            FRONTEND_PRECONDITIONING_VIEW_SOURCE,
             FRONTEND_TEMPLATES_VIEW_SOURCE,
         ):
             view_source = view_source_path.read_text(encoding="utf-8")
@@ -355,6 +421,26 @@ class FrontendSourceContractTest(unittest.TestCase):
         ):
             self.assertNotIn("Host = any", controller_source_path.read_text(encoding="utf-8"))
 
+    def test_preconditioning_has_a_dedicated_panel_view(self) -> None:
+        """Preconditioning controls should stay out of the general Settings view."""
+        constants_source = FRONTEND_CONSTANTS_SOURCE.read_text(encoding="utf-8")
+        content_source = FRONTEND_CARD_CONTENT_SOURCE.read_text(encoding="utf-8")
+        responsive_styles_source = FRONTEND_RESPONSIVE_STYLES_SOURCE.read_text(encoding="utf-8")
+        settings_source = FRONTEND_SETTINGS_VIEW_SOURCE.read_text(encoding="utf-8")
+        tabs_source = FRONTEND_TABS_SOURCE.read_text(encoding="utf-8")
+
+        self.assertIn('"preconditioning"', constants_source)
+        self.assertIn('view: "preconditioning"', tabs_source)
+        self.assertIn('view === "preconditioning"', content_source)
+        self.assertIn("renderPreconditioningView(host, visibleZoneIds)", content_source)
+        self.assertNotIn("renderPreconditioningView", settings_source)
+        self.assertNotIn("preconditioning-config", settings_source)
+        self.assertNotIn("_saveZonePreconditioning", settings_source)
+        self.assertIn("@container (max-width: 760px)", responsive_styles_source)
+        self.assertIn(".preconditioning-config-sections,\n    .preconditioning-directions", responsive_styles_source)
+        self.assertIn("@container (max-width: 600px)", responsive_styles_source)
+        self.assertIn(".preconditioning-config-row,\n    .preconditioning-sensor-row", responsive_styles_source)
+
     def test_panel_passes_active_view_to_card(self) -> None:
         """The sidebar panel must pass the selected view to the rendered card."""
         source = _frontend_implementation_source()
@@ -367,7 +453,8 @@ class FrontendSourceContractTest(unittest.TestCase):
 
         self.assertIn(".view=${this._activeView}", panel_source)
         self.assertIn("view=${this._activeView}", panel_source)
-        self.assertIn("<velair-card", panel_source)
+        self.assertIn("<velair-panel-card", panel_source)
+        self.assertNotIn("<velair-card", panel_source)
         self.assertNotIn("<velair-scheduler-view", panel_source)
         self.assertIn("registerVelairFrontend({", source)
         self.assertNotIn('"velair-scheduler-view"', source)
@@ -412,6 +499,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('"overview-timeline"', constants_source)
         self.assertIn('"overview-zones"', constants_source)
         self.assertIn('"schedules"', constants_source)
+        self.assertIn('"preconditioning"', constants_source)
         self.assertIn('view: "overview-status"', source)
         self.assertIn("this._config.view", source)
         self.assertIn('if (view === "overview-status")', source)
@@ -419,6 +507,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('if (view === "overview-events")', source)
         self.assertIn('if (view === "overview-timeline")', source)
         self.assertIn('if (view === "overview-zones")', source)
+        self.assertIn('if (view === "preconditioning")', source)
         self.assertNotIn('view === "full"', source)
         self.assertIn("LOVELACE_CARD_VIEWS.map", editor_source)
         self.assertIn("cardViewOverviewStatus", editor_source)
@@ -437,10 +526,11 @@ class FrontendSourceContractTest(unittest.TestCase):
         template_source = (FRONTEND_TRANSLATIONS_DIR / "template.ts").read_text(encoding="utf-8")
 
         self.assertIn("renderOverviewSummary(host, zoneIds)", source)
-        self.assertIn("renderOverviewActiveBoosts(host)", source)
-        self.assertIn("renderNextEvents(host)", source)
-        self.assertIn("renderOverviewTimelines(host, zoneIds)", source)
-        self.assertIn("renderOverviewZones(host, zoneIds)", source)
+        self.assertIn("renderOverviewActiveBoosts(host, visibleZoneIds)", source)
+        self.assertIn("renderNextEvents(host, visibleZoneIds)", source)
+        self.assertIn("renderOverviewTimelines(host, visibleZoneIds)", source)
+        self.assertIn("renderOverviewZones(host, visibleZoneIds)", source)
+        self.assertIn("const visibleZoneIds = host._visibleZoneIds", source)
         self.assertIn("function renderOverviewSectionHeading", source)
         self.assertIn('class="overview-section-title section-heading"', source)
         self.assertIn('"mdi:calendar-clock"', source)
@@ -590,7 +680,8 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("padding-bottom: 8px", overview_styles_source)
         self.assertIn("scrollbar-gutter: stable", overview_styles_source)
         self.assertIn("position: sticky", overview_styles_source)
-        self.assertIn("grid-template-columns: minmax(128px, 168px) minmax(480px, 1fr)", overview_styles_source)
+        self.assertIn("grid-template-columns: var(--overview-timeline-name-column) minmax(480px, 1fr)", overview_styles_source)
+        self.assertIn("min-width: calc(var(--overview-timeline-name-column) + 480px)", overview_styles_source)
         self.assertIn(".overview-timeline-block-main", overview_styles_source)
         self.assertIn(".overview-scheduler-state", overview_styles_source)
         self.assertIn(".overview-scheduler-detail", overview_styles_source)
@@ -619,8 +710,23 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("--ha-card-background: transparent", responsive_styles_source)
         self.assertIn(".card {\n      padding: 0;", responsive_styles_source)
         self.assertNotIn(".overview-boost-chip", overview_styles_source)
+        self.assertIn(".overview-empty-state", overview_styles_source)
+        self.assertIn("grid-template-columns: 28px minmax(0, 1fr)", overview_styles_source)
         self.assertIn(".next .event-list", overview_styles_source)
-        self.assertIn("margin-top: 10px", overview_styles_source)
+        self.assertIn("margin-top: 14px", overview_styles_source)
+        self.assertIn("grid-template-columns: minmax(110px, 150px) max-content", responsive_styles_source)
+        self.assertIn("grid-template-columns: 18ch 8ch 12ch", responsive_styles_source)
+        self.assertIn(".next .event-list.has-preconditioning .event-details", responsive_styles_source)
+        self.assertIn("grid-template-columns: 40ch 8ch 12ch", responsive_styles_source)
+        self.assertIn("grid-template-columns: 16px 17ch 16px 17ch", responsive_styles_source)
+        self.assertIn(".next .event-list.has-preconditioning .event-time-single .target-time", responsive_styles_source)
+        self.assertIn("grid-column: 4", responsive_styles_source)
+        self.assertIn("justify-content: flex-start", responsive_styles_source)
+        self.assertIn("grid-template-columns: 42ch 8ch 12ch", overview_styles_source)
+        self.assertIn("--overview-timeline-name-column: 168px", overview_styles_source)
+        self.assertIn("left: calc(var(--overview-timeline-name-column) + 10px)", responsive_styles_source)
+        self.assertIn(".overview-timeline-block-main {\n      left: calc(var(--overview-timeline-name-column) + 12px);", responsive_styles_source)
+        self.assertIn("max-width: min(150px, calc(100vw - var(--overview-timeline-name-column) - 32px))", responsive_styles_source)
         self.assertIn(".overview-timeline-boost", overview_styles_source)
         self.assertIn(".overview-timeline-pause", overview_styles_source)
         self.assertIn(".overview-timeline-name.paused", overview_styles_source)
@@ -893,7 +999,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("PanelSettings", source)
         self.assertIn("export type PanelSettings", types_source)
         self.assertIn("settings: PanelSettings", types_source)
-        self.assertIn("return renderSettingsView(host, zoneIds)", source)
+        self.assertIn("return renderSettingsView(host, visibleZoneIds)", source)
         self.assertIn("export function renderSettingsView", source)
         self.assertIn("settings-zone-order", source)
         self.assertIn('icon="mdi:sort"', source)
@@ -950,7 +1056,9 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("settings-capability-row", source)
         self.assertIn(".settings-capability-row {\n      align-items: start;", responsive_styles_source)
         self.assertIn("grid-template-columns: minmax(104px, 0.8fr) minmax(0, 1fr)", responsive_styles_source)
-        self.assertIn(".settings-zone-row > ha-icon", responsive_styles_source)
+        self.assertIn(".settings-zone-row > .settings-drag-handle", responsive_styles_source)
+        self.assertIn('class="settings-drag-handle"', source)
+        self.assertNotIn('class="settings-zone-row"\n      draggable="true"', source)
         self.assertIn("flex-direction: column", responsive_styles_source)
         self.assertNotIn('class="settings-entity-status warning"', source)
         self.assertIn("settings-mode-tags", source)

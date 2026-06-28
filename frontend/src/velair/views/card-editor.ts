@@ -49,7 +49,14 @@ export class VelairCardEditor extends LitElement {
             .value=${this._config.view ?? "overview-status"}
             @change=${(event: Event) => this._updateView(this._inputValue(event))}
           >
-            ${LOVELACE_CARD_VIEWS.map((view) => html`<option value=${view}>${this._viewLabel(view)}</option>`)}
+            ${LOVELACE_CARD_VIEWS.map((view) => html`
+              <option
+                value=${view}
+                ?selected=${view === (this._config.view ?? "overview-status")}
+              >
+                ${this._viewLabel(view)}
+              </option>
+            `)}
           </select>
         </label>
 
@@ -65,8 +72,8 @@ export class VelairCardEditor extends LitElement {
 
         <section class="zone-order">
           <div>
-            <span class="section-label">${this._t("zoneOrder")}</span>
-            <p>${this._t("reorderZones")}</p>
+            <span class="section-label">${this._t("cardThermostats")}</span>
+            <p>${this._t("cardThermostatsDescription")}</p>
           </div>
           <div class="zone-list">
             ${orderedEntities.length
@@ -79,6 +86,7 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _renderZoneOrderRow(entityId: string, index: number, total: number) {
+    const checked = this._selectedEntities().includes(entityId);
     return html`
       <div
         class="zone-row"
@@ -89,6 +97,19 @@ export class VelairCardEditor extends LitElement {
         @dragend=${this._handleZoneDragEnd}
       >
         <ha-icon icon="mdi:drag"></ha-icon>
+        <label
+          class="zone-visibility"
+          title=${this._t(checked ? "cardThermostatVisible" : "cardThermostatHidden")}
+          @click=${(event: Event) => event.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            .checked=${checked}
+            ?disabled=${checked && this._selectedEntities().length <= 1}
+            @change=${(event: Event) =>
+              this._toggleEntityVisibility(entityId, Boolean((event.currentTarget as HTMLInputElement).checked))}
+          />
+        </label>
         <span>${this._friendlyEntityName(entityId)}</span>
         <div class="row-actions">
           <button
@@ -145,6 +166,12 @@ export class VelairCardEditor extends LitElement {
     const orderedEntities = (this._config.zone_order ?? []).filter((entityId) => knownEntities.has(entityId));
     const unorderedEntities = entities.filter((entityId) => !orderedEntities.includes(entityId));
     return [...orderedEntities, ...unorderedEntities];
+  }
+
+  private _selectedEntities(): string[] {
+    const entities = this._orderedEntities();
+    const selectedEntities = this._config.entities?.filter((entityId) => entities.includes(entityId)) ?? [];
+    return selectedEntities.length ? selectedEntities : entities;
   }
 
   private _updateConfig(field: "title", value: string): void {
@@ -226,6 +253,28 @@ export class VelairCardEditor extends LitElement {
     this._emitConfig(nextConfig);
   }
 
+  private _toggleEntityVisibility(entityId: string, checked: boolean): void {
+    const entities = this._orderedEntities();
+    const selectedEntities = new Set(this._selectedEntities());
+    if (checked) {
+      selectedEntities.add(entityId);
+    } else if (selectedEntities.size > 1) {
+      selectedEntities.delete(entityId);
+    }
+
+    const orderedSelection = entities.filter((candidate) => selectedEntities.has(candidate));
+    const nextConfig: VelairCardConfig = { ...this._config };
+    if (orderedSelection.length === entities.length) {
+      delete nextConfig.entities;
+    } else {
+      nextConfig.entities = orderedSelection;
+    }
+    if (nextConfig.selected_entity && !orderedSelection.includes(nextConfig.selected_entity)) {
+      delete nextConfig.selected_entity;
+    }
+    this._emitConfig(nextConfig);
+  }
+
   private _emitConfig(nextConfig: VelairCardConfig): void {
     this._config = nextConfig;
     this.dispatchEvent(
@@ -279,6 +328,7 @@ export class VelairCardEditor extends LitElement {
       "overview-zones": "cardViewOverviewZones",
       "schedules": "cardViewSchedules",
       "templates": "templates",
+      "preconditioning": "preconditioning",
       "settings": "settings",
     };
     return this._t(labels[view]);
@@ -353,7 +403,7 @@ export class VelairCardEditor extends LitElement {
       cursor: grab;
       display: grid;
       gap: 8px;
-      grid-template-columns: 24px minmax(0, 1fr) auto;
+      grid-template-columns: 24px 24px minmax(0, 1fr) auto;
       min-height: 42px;
       padding: 8px;
     }
@@ -366,6 +416,27 @@ export class VelairCardEditor extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .zone-visibility {
+      align-items: center;
+      display: inline-flex;
+      justify-content: center;
+      margin: 0;
+      min-height: 24px;
+    }
+
+    .zone-visibility input {
+      cursor: pointer;
+      height: 16px;
+      margin: 0;
+      min-height: 0;
+      padding: 0;
+      width: 16px;
+    }
+
+    .zone-visibility input:disabled {
+      cursor: default;
     }
 
     .row-actions {

@@ -166,7 +166,7 @@ export function renderTemplateApplyPanel(host: TemplatesViewHost, template: Sche
     return nothing;
   }
 
-  const entities = host._orderedZoneIds(host._data?.configured_entities ?? []);
+  const entities = host._visibleZoneIds(host._data?.configured_entities ?? []);
   const weekdays = host._orderedWeekdays();
   const hasValidationError = host._hasDraftValidationError("template");
   const hasTargets = host._templateApplyTargets.size > 0;

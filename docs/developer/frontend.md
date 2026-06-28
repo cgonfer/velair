@@ -4,11 +4,12 @@ Velair ships a Home Assistant sidebar panel and an optional Lovelace card. Both 
 
 ## Runtime Elements
 
-- `velair-main-panel`: sidebar panel element registered by Home Assistant.
+- `velair-sidebar-panel`: sidebar panel element registered by Home Assistant.
+- `velair-panel-card`: internal card element used only by the sidebar panel.
 - `velair-card`: optional Lovelace card.
 - `velair-card-editor`: optional Lovelace card editor.
 
-The sidebar panel renders the shared `velair-card` element with the active panel view. This keeps the sidebar panel and optional Lovelace cards on the same composition path while avoiding unused private custom-element aliases.
+The sidebar panel renders `velair-panel-card` with the active panel view. It uses the same class and composition path as `velair-card`, but a distinct custom-element name prevents an older cached Lovelace resource from blocking a newer sidebar implementation.
 
 ## Source Of Truth
 
@@ -68,11 +69,26 @@ url: /velair_frontend/velair-card.js
 type: module
 ```
 
+Velair serves this resource with `no-store` response headers. The sidebar adds its own automatic build identifier and uses isolated internal element names, so users must not append manual build identifiers or edit the Lovelace resource between releases.
+
 Then add one or more Velair cards. The card does not carry an independent UI; it selects one panel view fragment and renders it with the same data model as the sidebar panel.
 
 ```yaml
 type: custom:velair-card
 view: overview-status
+```
+
+Cards can use an optional `entities` list to show only selected Velair-managed climates in that dashboard card. This is local Lovelace configuration only; it does not persist through Velair storage and does not change scheduler behavior. Per-climate views, lists, copy targets, template apply targets, next events, boosts, timelines, settings rows, and preconditioning rows use the filtered list. Global views such as `overview-status` continue to show the scheduler state normally.
+
+```yaml
+type: custom:velair-card
+view: overview-events
+entities:
+  - climate.living_room
+  - climate.bedroom
+zone_order:
+  - climate.bedroom
+  - climate.living_room
 ```
 
 Supported Lovelace `view` values:
@@ -83,8 +99,9 @@ Supported Lovelace `view` values:
 - `overview-timeline`
 - `overview-zones`
 - `schedules`
+- `preconditioning`
 
-Do not keep an old `/local/velair-card.js` resource active while testing an installed or HACS-style build. Browser custom elements cannot be redefined in place, so stale local resources can keep old code loaded until the page is fully reloaded.
+Do not keep an old `/local/velair-card.js` resource active while testing an installed or HACS-style build. Browser custom elements cannot be redefined in place, so a second resource URL can still register obsolete elements before Velair's canonical module loads.
 
 ## Architecture Reference
 

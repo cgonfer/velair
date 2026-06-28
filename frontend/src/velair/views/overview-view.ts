@@ -125,25 +125,28 @@ export function renderOverviewSummary(host: OverviewViewHost, _zoneIds: string[]
   `;
 }
 
-export function renderOverviewActiveBoosts(host: OverviewViewHost) {
+export function renderOverviewActiveBoosts(host: OverviewViewHost, zoneIds?: string[]) {
   if (!host._data) {
     return nothing;
   }
 
   const overviewHost = asOverviewDataHost(host);
-  const activeBoosts = activeOverrideEntityIds(overviewHost);
+  const visibleEntities = zoneIds ? new Set(zoneIds) : undefined;
+  const activeBoosts = activeOverrideEntityIds(overviewHost).filter(
+    (entityId: string) => !visibleEntities || visibleEntities.has(entityId),
+  );
   return html`
     <section class="overview-boost-panel">
-      ${renderOverviewSectionHeading(host._t("activeBoosts"), "mdi:lightning-bolt")}
       ${activeBoosts.length
         ? html`
+            ${renderOverviewSectionHeading(host._t("activeBoosts"), "mdi:lightning-bolt")}
             <div class="event-list overview-boost-list">
               ${activeBoosts.map((entityId: string) => {
                 const override = activeOverrideForEntity(overviewHost, entityId, host._data?.zones[entityId]);
                 return html`
                   <div class="event">
                     <div>
-                      <strong>${host._friendlyEntityName(entityId)}</strong>
+                      <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>
                     </div>
                     ${override ? renderBoostEventDetails(host, entityId, override) : html`<span>${host._t("boostActive")}</span>`}
                   </div>
@@ -151,7 +154,11 @@ export function renderOverviewActiveBoosts(host: OverviewViewHost) {
               })}
             </div>
           `
-        : html`<span class="overview-muted">${host._t("noActiveBoosts")}</span>`}
+        : renderOverviewEmptyState(
+            host._t("activeBoosts"),
+            "mdi:lightning-bolt",
+            host._t("noActiveBoosts"),
+          )}
     </section>
   `;
 }
@@ -213,7 +220,7 @@ function renderOverviewZoneRow(host: OverviewViewHost, entityId: string, zone?: 
   return html`
     <div class="overview-zone-table-row" role="row">
       <div class="overview-zone-cell sticky name" role="cell">
-        <strong>${host._friendlyEntityName(entityId)}</strong>
+        <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>
         <span>${entityId}</span>
       </div>
       <div class="overview-zone-cell" role="cell">
@@ -500,7 +507,7 @@ export function renderOverviewTimelineName(host: OverviewViewHost, entityId: str
       title=${pauseOverride ? `${label} - ${host._t("pauseActive")} - ${detail}` : label}
     >
       ${pauseOverride ? html`<ha-icon icon="mdi:pause-circle" aria-hidden="true"></ha-icon>` : nothing}
-      <span>${label}</span>
+      <span class="overview-climate-name">${label}</span>
     </div>
   `;
 }
@@ -644,13 +651,22 @@ function overviewTimelineDetailPlacementClass(anchorPercent: number): string {
   return "align-center";
 }
 
-export function renderNextEvents(host: OverviewViewHost) {
-  const nextEvents = overviewNextEvents(asOverviewDataHost(host));
+export function renderNextEvents(host: OverviewViewHost, zoneIds?: string[]) {
+  const visibleEntities = zoneIds ? new Set(zoneIds) : undefined;
+  const nextEvents = overviewNextEvents(asOverviewDataHost(host)).filter(
+    (event: ScheduleEvent) => !visibleEntities || visibleEntities.has(event.entity_id),
+  );
+  const hasPreconditionedEvent = nextEvents.some(
+    (event) => event.target_when && event.target_when !== event.when,
+  );
   if (!nextEvents.length) {
     return html`
       <section class="next">
-        ${renderOverviewSectionHeading(host._t("nextEvent"), "mdi:calendar-clock")}
-        <p>${host._t("noUpcomingEvent")}</p>
+        ${renderOverviewEmptyState(
+          host._t("nextEvent"),
+          "mdi:calendar-clock",
+          host._t("noUpcomingEvent"),
+        )}
       </section>
     `;
   }
@@ -661,7 +677,7 @@ export function renderNextEvents(host: OverviewViewHost) {
         host._t(nextEvents.length === 1 ? "nextEvent" : "nextEvents"),
         "mdi:calendar-clock",
       )}
-      <div class="event-list">
+      <div class=${`event-list ${hasPreconditionedEvent ? "has-preconditioning" : ""}`}>
         ${nextEvents.map((event: ScheduleEvent) => renderEvent(host, event))}
       </div>
     </section>
@@ -680,8 +696,8 @@ function renderOverviewSectionHeading(label: string, icon: string) {
 export function renderEvent(host: OverviewViewHost, event: ScheduleEvent) {
   return html`
     <div class="event">
-      <div>
-        <strong>${host._friendlyEntityName(event.entity_id)}</strong>
+      <div class="event-identity">
+        <strong class="overview-climate-name">${host._friendlyEntityName(event.entity_id)}</strong>
       </div>
       ${renderEventDetails(host, event)}
     </div>
@@ -689,11 +705,52 @@ export function renderEvent(host: OverviewViewHost, event: ScheduleEvent) {
 }
 
 export function renderEventDetails(host: OverviewViewHost, event: ScheduleEvent) {
+  const hasPreconditioningTarget = Boolean(event.target_when && event.target_when !== event.when);
+  const changed = Boolean(host._changedNextEventIds?.has(event.entity_id));
+  const changeClass = changed
+    ? `next-event-updated update-${host._nextEventChangeRevision % 2 === 0 ? "even" : "odd"}`
+    : "";
   return html`
-    <div class="event-details">
-      <span class="event-time">${host._formatDateTime(event.when)}</span>
+    <div class=${`event-details ${hasPreconditioningTarget ? "preconditioned" : ""}`}>
+      ${hasPreconditioningTarget
+        ? html`
+            <span class="event-time event-time-sequence">
+              <span class=${`event-time-flow ${changeClass}`}>
+                <ha-icon
+                  class="preconditioning-icon"
+                  icon="mdi:clock-fast"
+                  title=${host._t("preconditioning")}
+                  aria-label=${host._t("preconditioning")}
+                ></ha-icon>
+                <span class="preconditioning-start">${host._formatDateTime(event.when)}</span>
+                <ha-icon
+                  class="preconditioning-arrow"
+                  icon="mdi:arrow-left"
+                  aria-hidden="true"
+                ></ha-icon>
+                <span class="target-time">${host._formatDateTime(String(event.target_when))}</span>
+              </span>
+            </span>
+          `
+        : html`
+            <span class="event-time">
+              <span class=${`event-time-flow event-time-single ${changeClass}`}><span class="target-time">${host._formatDateTime(event.when)}</span></span>
+            </span>
+          `}
       <strong class="event-target">${host._formatEventAction(event)}</strong>
       <span class="event-mode">${host._formatEventMode(event)}</span>
+    </div>
+  `;
+}
+
+function renderOverviewEmptyState(label: string, icon: string, message: string) {
+  return html`
+    <div class="overview-empty-state">
+      <ha-icon icon=${icon}></ha-icon>
+      <div class="overview-empty-copy">
+        <span class="section-label">${label}</span>
+        <span class="overview-muted">${message}</span>
+      </div>
     </div>
   `;
 }

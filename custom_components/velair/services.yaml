@@ -100,6 +100,17 @@ boost:
             - dry
             - fan_only
 
+cancel_boost:
+  name: Cancel boost
+  description: Cancel one active boost and immediately return the climate to its current explicit schedule target or its state before the boost.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+
 pause:
   name: Pause
   description: Temporarily pause automatic schedule execution.

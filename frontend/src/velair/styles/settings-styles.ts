@@ -128,7 +128,6 @@ export const settingsStyles = css`
   background: var(--card-background-color);
   border: 1px solid var(--divider-color);
   border-radius: 8px;
-  cursor: grab;
   display: grid;
   gap: 8px;
   grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -136,8 +135,26 @@ export const settingsStyles = css`
   padding: 10px;
 }
 
-.settings-zone-row:active {
+.settings-drag-handle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--secondary-text-color);
+  cursor: grab;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  margin: -2px;
+  padding: 0;
+  width: 28px;
+}
+
+.settings-drag-handle:active {
   cursor: grabbing;
+}
+
+.settings-drag-handle ha-icon {
+  --mdc-icon-size: 18px;
 }
 
 .settings-zone-main {
@@ -195,6 +212,29 @@ export const settingsStyles = css`
 
 .settings-zone-identity .settings-diagnostic-text {
   white-space: normal;
+}
+
+.settings-zone-identity .settings-feature-badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--card-background-color));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--divider-color));
+  border-radius: 999px;
+  color: var(--primary-text-color);
+  display: inline-flex;
+  font-size: 11px;
+  gap: 4px;
+  justify-self: start;
+  line-height: 1;
+  margin-top: 4px;
+  max-width: 100%;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.settings-feature-badge ha-icon {
+  --mdc-icon-size: 14px;
+  color: var(--primary-color);
+  flex: 0 0 auto;
 }
 
 .settings-diagnostic-text.warning {

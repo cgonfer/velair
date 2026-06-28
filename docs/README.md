@@ -12,6 +12,7 @@ Velair documentation is grouped by audience and topic.
 
 - [Architecture](developer/architecture.md): backend and frontend module boundaries, persistence model and scheduler flow.
 - [WebSocket API](developer/api.md): frontend/backend API contract.
+- [Adaptive preconditioning](developer/adaptive-preconditioning.md): local learning states, examples, storage, and API output.
 - [Frontend](developer/frontend.md): frontend runtime elements, build commands, Lovelace resource, translations, UI principles, and frontend workflow.
 - [Development](developer/development.md): local checks, generated files, coding guidelines, and contribution workflow.
 - [Manual testing](developer/manual-testing.md): release and behavior verification checklist.

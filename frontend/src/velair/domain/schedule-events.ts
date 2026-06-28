@@ -109,3 +109,30 @@ export function dateMs(value: unknown): number | undefined {
   const timestamp = new Date(value).getTime();
   return Number.isNaN(timestamp) ? undefined : timestamp;
 }
+
+export function changedPreconditioningEventEntityIds(
+  previousEvents: ScheduleEvent[],
+  nextEvents: ScheduleEvent[],
+): string[] {
+  const previousByEntity = new Map(
+    previousEvents.map((event) => [event.entity_id, event]),
+  );
+
+  return nextEvents
+    .filter((event) => {
+      const previous = previousByEntity.get(event.entity_id);
+      if (!previous || (!previous.target_when && !event.target_when)) {
+        return false;
+      }
+
+      const previousTarget = previous.target_when ?? previous.when;
+      const nextTarget = event.target_when ?? event.when;
+      return (
+        previous.weekday === event.weekday &&
+        previous.start === event.start &&
+        previousTarget === nextTarget &&
+        previous.when !== event.when
+      );
+    })
+    .map((event) => event.entity_id);
+}

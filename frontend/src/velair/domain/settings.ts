@@ -21,6 +21,17 @@ export function orderedZoneIds(entityIds: string[], zoneOrder: string[] = []): s
   return [...orderedEntities, ...unorderedEntities];
 }
 
+export function visibleZoneIds(entityIds: string[], config: Pick<VelairCardConfig, "entities" | "zone_order">): string[] {
+  const orderedEntities = orderedZoneIds(entityIds, config.zone_order);
+  const visibleEntities = config.entities?.filter(Boolean) ?? [];
+  if (!visibleEntities.length) {
+    return orderedEntities;
+  }
+
+  const visibleEntitySet = new Set(visibleEntities);
+  return orderedEntities.filter((entityId) => visibleEntitySet.has(entityId));
+}
+
 export function combinedTemperatureLimits(limits: Array<[number, number]>): [number, number] {
   if (!limits.length) {
     return [5, 35];

@@ -51,11 +51,11 @@ export class VelairPanel extends LitElement {
   private _renderActiveView() {
     return keyed(
       this._activeView,
-      html`<velair-card
+      html`<velair-panel-card
         .hass=${this.hass}
         .view=${this._activeView}
         view=${this._activeView}
-      ></velair-card>`,
+      ></velair-panel-card>`,
     );
   }
 
@@ -147,7 +147,7 @@ export class VelairPanel extends LitElement {
       position: fixed;
       top: 0;
       width: 100%;
-      z-index: 2;
+      z-index: 30;
     }
 
     .toolbar {
@@ -249,7 +249,7 @@ export class VelairPanel extends LitElement {
       width: 100%;
     }
 
-    velair-card {
+    velair-panel-card {
       display: block;
     }
 

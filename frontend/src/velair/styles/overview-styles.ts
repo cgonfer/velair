@@ -195,7 +195,7 @@ export const overviewStyles = css`
   border: 1px solid var(--divider-color);
   border-radius: 8px;
   display: grid;
-  gap: 10px;
+  gap: 14px;
   margin-top: 14px;
   min-width: 0;
   padding: 12px;
@@ -210,6 +210,32 @@ export const overviewStyles = css`
 .overview-muted {
   color: var(--secondary-text-color);
   font-size: 13px;
+}
+
+.overview-empty-state {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.overview-empty-state > ha-icon {
+  --mdc-icon-size: 20px;
+  color: var(--primary-color);
+  justify-self: center;
+}
+
+.overview-empty-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.overview-climate-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .overview-timeline-panel {
@@ -236,9 +262,10 @@ export const overviewStyles = css`
 }
 
 .overview-timeline-layout {
+  --overview-timeline-name-column: 168px;
   display: grid;
-  grid-template-columns: minmax(128px, 168px) minmax(480px, 1fr);
-  min-width: 620px;
+  grid-template-columns: var(--overview-timeline-name-column) minmax(480px, 1fr);
+  min-width: calc(var(--overview-timeline-name-column) + 480px);
 }
 
 .overview-timeline-names,
@@ -350,8 +377,6 @@ export const overviewStyles = css`
   border-bottom: 1px solid var(--divider-color);
   display: flex;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -633,11 +658,17 @@ export const overviewStyles = css`
 
 .overview-timeline-empty {
   align-items: center;
+  background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
+  bottom: 0;
   color: var(--secondary-text-color);
   display: flex;
   font-size: 12px;
-  height: 100%;
+  left: 10px;
   padding: 0 10px;
+  position: absolute;
+  top: 0;
+  width: max-content;
+  z-index: 6;
 }
 
 .overview-zones {
@@ -721,6 +752,7 @@ export const overviewStyles = css`
   align-items: start;
   flex-direction: column;
   gap: 2px;
+  justify-content: center;
 }
 
 .overview-zone-cell.name strong,
@@ -902,7 +934,14 @@ export const overviewStyles = css`
 }
 
 .next .event-list {
-  margin-top: 10px;
+  margin-top: 14px;
+  padding-inline-start: 2px;
+}
+
+.next .event {
+  box-sizing: border-box;
+  min-width: calc(150px + 62ch + 24px);
+  width: 100%;
 }
 
 .draft-empty {
@@ -948,6 +987,11 @@ export const overviewStyles = css`
   width: max-content;
 }
 
+.next .event-details,
+.next .event-details.preconditioned {
+  grid-template-columns: 42ch 8ch 12ch;
+}
+
 .event-details strong,
 .event-details span {
   min-width: 0;
@@ -966,6 +1010,47 @@ export const overviewStyles = css`
   color: var(--secondary-text-color);
 }
 
+.next .event-time {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  overflow: visible;
+  width: 100%;
+}
+
+.event-time-flow {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  justify-content: flex-end;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.event-time-sequence ha-icon {
+  --mdc-icon-size: 16px;
+  color: var(--secondary-text-color);
+  flex: 0 0 auto;
+}
+
+.event-time-sequence .preconditioning-icon {
+  color: var(--primary-color);
+}
+
+.event-time-sequence .preconditioning-arrow {
+  color: var(--primary-text-color);
+}
+
+.event-time-sequence .target-time {
+  color: var(--secondary-text-color);
+  font-weight: 400;
+}
+
+.event-time-sequence .preconditioning-start {
+  color: var(--primary-text-color);
+  font-weight: 700;
+}
+
 .event-target {
   justify-self: end;
 }
@@ -982,6 +1067,49 @@ export const overviewStyles = css`
 .event:first-of-type {
   border-top: 0;
   padding-top: 0;
+}
+
+.event-time-flow.next-event-updated {
+  border-radius: 3px;
+}
+
+.event-time-flow.next-event-updated.update-odd {
+  animation: velair-next-event-updated-odd 2.2s ease-out;
+}
+
+.event-time-flow.next-event-updated.update-even {
+  animation: velair-next-event-updated-even 2.2s ease-out;
+}
+
+@keyframes velair-next-event-updated-odd {
+  0% {
+    background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 18%, transparent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+@keyframes velair-next-event-updated-even {
+  0% {
+    background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 18%, transparent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-time-flow.next-event-updated.update-odd,
+  .event-time-flow.next-event-updated.update-even {
+    animation: none;
+    background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 18%, transparent);
+  }
 }
 
 .summary-icon-button {

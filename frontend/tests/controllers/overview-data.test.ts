@@ -86,6 +86,7 @@ describe("overview data controller", () => {
   });
 
   it("calculates next events after boost resume and formats current climate state", () => {
+    vi.setSystemTime(new Date(2026, 5, 8, 10, 0));
     const until = new Date(2026, 5, 8, 14, 0).toISOString();
     const state = host(baseData(until));
 
@@ -96,5 +97,24 @@ describe("overview data controller", () => {
     });
     expect(currentTemperature(state, "climate.office")).toBe("20.5 °C");
     expect(climateMode(state, "climate.office")).toBe("heat - heating");
+    vi.useRealTimers();
+  });
+
+  it("uses backend next events when the schedule response provides them", () => {
+    const data = baseData(new Date(Date.now() + 3_600_000).toISOString());
+    data.next_events = [
+      {
+        action: ACTION_SET_TEMPERATURE,
+        entity_id: "climate.bedroom",
+        hvac_mode: "heat",
+        start: "22:00",
+        temperature: 19,
+        weekday: "monday",
+        when: "2026-06-15T22:00:00+00:00",
+      },
+    ];
+    const state = host(data);
+
+    expect(overviewNextEvents(state)).toEqual(data.next_events);
   });
 });

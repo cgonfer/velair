@@ -47,6 +47,11 @@ function host() {
     _orderedZoneIds(entityIds: string[]) {
       return ["climate.office", ...entityIds.filter((entityId) => entityId !== "climate.office")];
     },
+    _visibleZoneIds(entityIds: string[]) {
+      const ordered = this._orderedZoneIds(entityIds);
+      const selected = this._config.entities ?? [];
+      return selected.length ? ordered.filter((entityId: string) => selected.includes(entityId)) : ordered;
+    },
     _resetDraftBlocks() {
       const zone = this._selectedEntity ? this._data?.zones[this._selectedEntity] : undefined;
       this._draftBlocks = (zone?.schedule?.[this._selectedWeekday] ?? []).map((block: any) => ({
@@ -107,5 +112,16 @@ describe("schedule state controller", () => {
 
     expect(state._selectedTemplateKey).toBe("");
     expect(state._templateDraftBlocks).toEqual([]);
+  });
+
+  it("moves selection to a visible thermostat when a Lovelace card filters entities", () => {
+    const state = host();
+    state._config = { entities: ["climate.bedroom"] };
+    state._hasExternalConfig = true;
+    state._selectedEntity = "climate.office";
+
+    applyScheduleData(state, scheduleResponse());
+
+    expect(state._selectedEntity).toBe("climate.bedroom");
   });
 });

@@ -51,6 +51,7 @@ async def async_setup_entry(
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
+        "climate_manager": climate_manager,
         "entry": entry,
         "scheduler": scheduler,
         "storage": storage,

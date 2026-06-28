@@ -20,6 +20,7 @@ export const portabilityStyles = css`
   }
 
   .portability-grid {
+    align-items: start;
     display: grid;
     gap: 10px;
     grid-template-columns: repeat(2, minmax(0, 1fr));

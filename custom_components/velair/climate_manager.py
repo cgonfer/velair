@@ -195,6 +195,15 @@ class ClimateManager:
 
         return min_temperature, max_temperature
 
+    def supported_hvac_modes(self, entity_id: str) -> list[str]:
+        """Return supported HVAC modes for one climate entity."""
+        state = self._hass.states.get(entity_id)
+        supported_modes = state.attributes.get("hvac_modes") if state is not None else None
+        if not isinstance(supported_modes, list):
+            return []
+
+        return [mode for mode in supported_modes if isinstance(mode, str)]
+
 
 def _coerce_temperature(value: object, fallback: float) -> float:
     """Return a valid numeric temperature."""

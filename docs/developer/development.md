@@ -114,7 +114,7 @@ See [manual-testing.md](manual-testing.md) for the full checklist.
 6. Run `npm.cmd run build:release`.
 7. Verify the generated integration bundle is updated.
 8. Update documentation and screenshots.
-9. Create and push a matching release tag, such as `v1.0.0`.
+9. Create and push a matching release tag, such as `v<version>`.
 10. Confirm the GitHub Release workflow attaches:
     - `velair-custom-component-<version>.zip`
     - `velair-lovelace-resource-<version>.zip`

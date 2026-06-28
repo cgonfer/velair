@@ -2,6 +2,7 @@ import { html, nothing } from "lit";
 import { VELAIR_FRONTEND_BUILD, VELAIR_RELEASE_VERSION } from "../build-info";
 import { PORTABLE_MODEL_VERSION, PORTABLE_SECTIONS, WEEKDAYS } from "../constants";
 import { modeClassName } from "../domain/climate";
+import { unmatchedPreconditioningLearningEntities } from "../domain/portable";
 import type { VelairViewHost } from "../host-types";
 import type { PortableSection } from "../types";
 
@@ -130,6 +131,12 @@ export function renderPortabilitySettings(host: SettingsViewHost) {
   const canImport = Boolean(host._importPayload) && host._importSections.size > 0 && !host._portabilityAction;
   const exportItems = new Map(host._portableExportSummaryItems().map((item) => [item.section, item]));
   const importItems = new Map(host._portableImportSummaryItems().map((item) => [item.section, item]));
+  const unmatchedLearningEntities = host._importSections.has("preconditioning_learning")
+    ? unmatchedPreconditioningLearningEntities(
+        host._importPayload,
+        host._data?.configured_entities ?? [],
+      )
+    : [];
 
   return html`
     <section class="settings-portability">
@@ -188,6 +195,19 @@ export function renderPortabilitySettings(host: SettingsViewHost) {
                 <div class="portable-warning" role="alert">
                   <ha-icon icon="mdi:alert-outline"></ha-icon>
                   <span>${host._t("importOverwriteWarning")}</span>
+                </div>
+              `
+            : nothing}
+          ${unmatchedLearningEntities.length
+            ? html`
+                <div class="portable-warning" role="alert">
+                  <ha-icon icon="mdi:thermometer-alert"></ha-icon>
+                  <span>
+                    ${host._t("preconditioningImportSkipped", {
+                      count: unmatchedLearningEntities.length,
+                      entities: unmatchedLearningEntities.join(", "),
+                    })}
+                  </span>
                 </div>
               `
             : nothing}
@@ -256,17 +276,28 @@ export function renderSettingsZoneOrderRow(
   const modes = host._climateSupportedModes(entityId);
   const providedData = host._climateProvidedData(entityId);
   const diagnostic = host._entityDiagnostic(entityId);
+  const preconditioningEnabled = Boolean(
+    host._data?.zones[entityId]?.preconditioning?.enabled,
+  );
 
   return html`
     <div
       class="settings-zone-row"
-      draggable="true"
-      @dragstart=${(event: DragEvent) => host._handleSettingsZoneDragStart(entityId, event)}
       @dragover=${(event: DragEvent) => host._handleSettingsZoneDragOver(event)}
       @drop=${(event: DragEvent) => host._handleSettingsZoneDrop(entityId, event)}
       @dragend=${host._handleSettingsZoneDragEnd}
     >
-      <ha-icon icon="mdi:drag"></ha-icon>
+      <button
+        class="settings-drag-handle"
+        type="button"
+        title=${host._t("reorderZones")}
+        aria-label=${host._t("reorderZones")}
+        draggable="true"
+        @dragstart=${(event: DragEvent) => host._handleSettingsZoneDragStart(entityId, event)}
+        @dragend=${host._handleSettingsZoneDragEnd}
+      >
+        <ha-icon icon="mdi:drag"></ha-icon>
+      </button>
       <div class="settings-zone-main">
         <div class="settings-zone-identity">
           <div class="settings-zone-title">
@@ -278,6 +309,18 @@ export function renderSettingsZoneOrderRow(
             <strong title=${host._friendlyEntityName(entityId)}>${host._friendlyEntityName(entityId)}</strong>
           </div>
           <span>${entityId}</span>
+          ${preconditioningEnabled
+            ? html`
+                <span
+                  class="settings-feature-badge preconditioning"
+                  title=${host._t("preconditioningEnabled")}
+                  aria-label=${host._t("preconditioningEnabled")}
+                >
+                  <ha-icon icon="mdi:clock-fast"></ha-icon>
+                  ${host._t("preconditioning")}
+                </span>
+              `
+            : nothing}
           ${diagnostic.status === "ok"
             ? nothing
             : html`<span class=${`settings-diagnostic-text ${diagnostic.status}`}>${diagnostic.messages.join(" \u00b7 ")}</span>`}

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
-import { eventDateTime, nextEventForZone, scheduledEventAt, weekdayForDate } from "../../src/velair/domain/schedule-events";
-import type { ScheduleZone } from "../../src/velair/types";
+import { changedPreconditioningEventEntityIds, eventDateTime, nextEventForZone, scheduledEventAt, weekdayForDate } from "../../src/velair/domain/schedule-events";
+import type { ScheduleEvent, ScheduleZone } from "../../src/velair/types";
 
 const emptySchedule = () => ({
   monday: [],
@@ -81,5 +81,40 @@ describe("schedule event calculations", () => {
     expect(weekdayForDate(new Date(2026, 5, 14))).toBe("sunday");
     expect(eventDateTime(new Date(2026, 5, 8), "07:30")?.getHours()).toBe(7);
     expect(eventDateTime(new Date(2026, 5, 8), "24:00")).toBeUndefined();
+  });
+
+  it("detects a changed early start for the same scheduled target", () => {
+    const previous: ScheduleEvent = {
+      entity_id: "climate.office",
+      hvac_mode: "heat",
+      start: "08:00",
+      target_when: "2026-06-22T08:00:00+02:00",
+      temperature: 21,
+      weekday: "monday",
+      when: "2026-06-22T06:30:00+02:00",
+    };
+    const next = { ...previous, when: "2026-06-22T07:15:00+02:00" };
+
+    expect(changedPreconditioningEventEntityIds([previous], [next])).toEqual([
+      "climate.office",
+    ]);
+  });
+
+  it("does not flag a different scheduled block as a recalculation", () => {
+    const previous: ScheduleEvent = {
+      entity_id: "climate.office",
+      start: "08:00",
+      target_when: "2026-06-22T08:00:00+02:00",
+      weekday: "monday",
+      when: "2026-06-22T06:30:00+02:00",
+    };
+    const next: ScheduleEvent = {
+      ...previous,
+      start: "18:00",
+      target_when: "2026-06-22T18:00:00+02:00",
+      when: "2026-06-22T17:00:00+02:00",
+    };
+
+    expect(changedPreconditioningEventEntityIds([previous], [next])).toEqual([]);
   });
 });

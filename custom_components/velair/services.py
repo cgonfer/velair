@@ -30,6 +30,7 @@ from .const import (
     MODE_PAUSED,
     SERVICE_APPLY_SCHEDULE,
     SERVICE_BOOST,
+    SERVICE_CANCEL_BOOST,
     SERVICE_CLEAR_SCHEDULE,
     SERVICE_COPY_DAY_SCHEDULE,
     SERVICE_PAUSE,
@@ -73,6 +74,12 @@ BOOST_SCHEMA = vol.Schema(
         vol.Required(ATTR_TEMPERATURE): vol.Coerce(float),
         vol.Required(ATTR_DURATION_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
+    }
+)
+
+CANCEL_BOOST_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
     }
 )
 
@@ -143,6 +150,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 ensure_on=True,
                 hvac_mode=call.data.get(ATTR_HVAC_MODE),
                 log_action=False,
+                event_source="service_set_temperature",
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
@@ -166,12 +174,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         ).isoformat()
 
         try:
-            await scheduler.async_set_temperature(
-                entity_id,
-                call.data[ATTR_TEMPERATURE],
-                ensure_on=True,
-                hvac_mode=call.data.get(ATTR_HVAC_MODE),
-            )
             await scheduler.async_set_zone_boost(
                 entity_id,
                 call.data[ATTR_TEMPERATURE],
@@ -180,6 +182,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
+
+    async def async_cancel_boost(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        entity_id = call.data[ATTR_ENTITY_ID]
+        _ensure_managed_entity(scheduler, entity_id)
+        await scheduler.async_cancel_zone_boost(entity_id)
 
     async def async_pause(call: ServiceCall) -> None:
         scheduler = _get_scheduler(hass)
@@ -283,6 +291,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_CANCEL_BOOST,
+        async_cancel_boost,
+        schema=CANCEL_BOOST_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_PAUSE,
         async_pause,
         schema=PAUSE_SCHEMA,
@@ -330,6 +344,7 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_SET_TEMPERATURE,
         SERVICE_APPLY_SCHEDULE,
         SERVICE_BOOST,
+        SERVICE_CANCEL_BOOST,
         SERVICE_PAUSE,
         SERVICE_PAUSE_ZONE,
         SERVICE_RESUME,

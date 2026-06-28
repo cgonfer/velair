@@ -62,6 +62,25 @@ export function timelineNowMarker(value: Date): TimelineNowMarker {
   };
 }
 
+export function overviewTimelineInitialScrollLeft(
+  currentPercent: number,
+  scrollWidth: number,
+  clientWidth: number,
+  stickyWidth: number,
+): number {
+  const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
+  if (maxScrollLeft <= 1) {
+    return 0;
+  }
+
+  const boundedPercent = Math.max(0, Math.min(100, currentPercent));
+  const timelineWidth = Math.max(0, scrollWidth - stickyWidth);
+  const visibleTimelineWidth = Math.max(0, clientWidth - stickyWidth);
+  const currentPosition = stickyWidth + timelineWidth * (boundedPercent / 100);
+  const preferredPosition = stickyWidth + visibleTimelineWidth * 0.35;
+  return Math.max(0, Math.min(maxScrollLeft, currentPosition - preferredPosition));
+}
+
 export function timelineBlocksFromDrafts(drafts: DraftScheduleBlock[]): TimelineBlock[] {
   const blocks = drafts
     .map((draft, index) => ({
