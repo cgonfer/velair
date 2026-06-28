@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20260628102217", r = "1.1.0-beta.1", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
+}, n = "20260628194915", r = "1.1.0-beta.2", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
 	constructor(e, t, n) {
 		if (this._$cssResult$ = !0, n !== o) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
 		this.cssText = e, this.t = t;
@@ -8678,7 +8678,7 @@ function Ho(e) {
         ${Uo(e._t("frontendBuild"), n)}
         ${Uo(e._t("portableFormatVersion"), `v${r}`)}
         ${Uo(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${Uo(e._t("integrationVersion"), "1.1.0-beta.1")}
+        ${Uo(e._t("integrationVersion"), "1.1.0-beta.2")}
       </div>
     </section>
 

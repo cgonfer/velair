@@ -8,7 +8,7 @@ from datetime import datetime, time, timedelta
 import logging
 from uuid import uuid4
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_time,
@@ -1410,6 +1410,7 @@ class VelairScheduler:
                     return True
         return False
 
+    @callback
     def _handle_preconditioning_replan_state_change(self, event) -> None:
         """Debounce scheduler recalculation after relevant temperature changes."""
         entity_id = event.data.get("entity_id")
@@ -1454,6 +1455,7 @@ class VelairScheduler:
             dt_util.now() + PRECONDITIONING_REPLAN_DEBOUNCE,
         )
 
+    @callback
     def _handle_preconditioning_replan_timer(self, now: datetime) -> None:
         """Recalculate the next scheduler timer after debounced temperature changes."""
         self._unsub_preconditioning_replan_timer = None

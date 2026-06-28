@@ -47,7 +47,7 @@ def _install_homeassistant_stubs() -> None:
     core = ModuleType("homeassistant.core")
     core.CALLBACK_TYPE = object
     core.HomeAssistant = object
-    core.callback = lambda func: func
+    core.callback = _callback
     sys.modules["homeassistant.core"] = core
 
     config_entries = ModuleType("homeassistant.config_entries")
@@ -159,6 +159,11 @@ def _ensure_list(value):
     if isinstance(value, list):
         return value
     return [value]
+
+
+def _callback(func):
+    func.__velair_test_callback__ = True
+    return func
 
 
 _install_homeassistant_stubs()

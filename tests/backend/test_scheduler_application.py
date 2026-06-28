@@ -1893,6 +1893,22 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         )
         write_state.assert_called_once_with()
 
+    def test_preconditioning_replan_callbacks_run_on_event_loop(self) -> None:
+        self.assertTrue(
+            getattr(
+                self.scheduler._handle_preconditioning_replan_state_change.__func__,
+                "__velair_test_callback__",
+                False,
+            )
+        )
+        self.assertTrue(
+            getattr(
+                self.scheduler._handle_preconditioning_replan_timer.__func__,
+                "__velair_test_callback__",
+                False,
+            )
+        )
+
     def test_preconditioning_temperature_change_ignores_small_movements(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
             state="heat",
