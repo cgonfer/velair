@@ -15,8 +15,10 @@ export const ACTION_SET_TEMPERATURE = "set_temperature";
 export const ACTION_TURN_OFF = "turn_off";
 export const DOMAIN = "velair";
 export const NOTICE_AUTO_DISMISS_MS = 5_000;
+export const PROFILE_DESCRIPTION_MAX_LENGTH = 500;
 export const PANEL_VIEWS: VelairPanelView[] = [
   "overview",
+  "profiles",
   "schedules",
   "templates",
   "sensors",
@@ -36,10 +38,11 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "preconditioning",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 3;
+export const PORTABLE_MODEL_VERSION = 4;
 export const PORTABLE_SECTIONS: PortableSection[] = [
   "zones",
   "templates",
   "settings",
   "preconditioning_learning",
+  "profiles",
 ];

@@ -85,7 +85,7 @@ export type VelairPanelRoute = {
   prefix?: string;
 };
 
-export type VelairPanelView = "overview" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "settings";
+export type VelairPanelView = "overview" | "profiles" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
   | "overview-boosts"
@@ -104,6 +104,29 @@ export type ScheduleBlock = {
   preset_mode?: string;
   swing_horizontal_mode?: string;
   swing_mode?: string;
+};
+
+export type ClimateProfileZone =
+  | { behavior: "normal" }
+  | { behavior: "schedule"; schedule: Record<string, ScheduleBlock[]> }
+  | { behavior: "pause"; action: "none" | "turn_off" };
+
+export type ClimateProfile = {
+  key: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  zones: Record<string, ClimateProfileZone>;
+};
+
+export type ClimateProfileInput = {
+  key?: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  zones: Record<string, ClimateProfileZone>;
 };
 
 export type DraftScheduleBlock = {
@@ -321,6 +344,7 @@ export type PanelSettings = {
 };
 
 export type ScheduleResponse = {
+  profile_id?: string;
   configured_entities: string[];
   temperature_unit: "°C" | "°F";
   home_assistant_temperature_unit: "°C" | "°F";
@@ -345,6 +369,7 @@ export type ScheduleResponse = {
   } | null;
   global: {
     mode: string;
+    active_profile_id?: string | null;
     paused_started_at?: string | null;
     paused_until?: string | null;
   };
@@ -359,6 +384,7 @@ export type ScheduleResponse = {
   zone_runtime?: Record<string, ZoneRuntimeStatus>;
   preconditioning_learning?: Record<string, PreconditioningLearningSummary>;
   templates?: StoredScheduleTemplate[];
+  profiles?: ClimateProfile[];
   versions?: {
     export_format?: string;
     integration?: string;
@@ -377,7 +403,8 @@ export type PortableSection =
   | "zones"
   | "templates"
   | "settings"
-  | "preconditioning_learning";
+  | "preconditioning_learning"
+  | "profiles";
 
 export type VelairPortablePayload = {
   format?: string;

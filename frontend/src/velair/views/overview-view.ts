@@ -22,6 +22,11 @@ import {
   type TimelineBoostBlock,
   type TimelinePauseBlock,
 } from "../domain/timeline";
+import {
+  activeClimateProfileZoneEffect,
+  climateProfileAccentColor,
+  effectiveClimateSchedule,
+} from "../domain/climate-profiles";
 import { scheduledEventAt } from "../domain/schedule-events";
 import { signedAssistDelta } from "../domain/room-assist";
 import type { VelairViewHost } from "../host-types";
@@ -239,6 +244,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
       && Math.abs(appliedTemperature - targetTemperature) >= 0.05);
   return html`
     <article class=${`overview-zone-card state-${status.state}`}>
+      ${renderOverviewZoneProfile(host, entityId)}
       <div class="overview-zone-card-heading">
         <div class="overview-zone-card-name">
           <strong>${host._friendlyEntityName(entityId)}</strong><span>${entityId}</span>
@@ -264,6 +270,28 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
         </div>`}
       </div>` : nothing}
     </article>`;
+}
+
+function renderOverviewZoneProfile(host: OverviewViewHost, entityId: string) {
+  const effect = activeClimateProfileZoneEffect(host._data, entityId);
+  if (!effect) {
+    return nothing;
+  }
+  const accent = climateProfileAccentColor(effect.profile.key, effect.profile.color);
+  const icon = effect.profile.icon || "mdi:account-outline";
+  return html`
+    <div
+      class="overview-zone-profile"
+      style=${`--overview-profile-accent: ${accent}`}
+      title=${`${host._t("profileOverviewLabel")}: ${effect.profile.name}`}
+    >
+      <span class="overview-zone-profile-accent">
+        <ha-icon icon=${icon}></ha-icon>
+        <small>${host._t("profileOverviewLabel")}</small>
+      </span>
+      <strong>${effect.profile.name}</strong>
+    </div>
+  `;
 }
 
 function renderOverviewStateBadge(host: OverviewViewHost, entityId: string, status: ZoneRuntimeStatus, presentation: { icon: string; key: string }) {
@@ -612,7 +640,7 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
             </div>
             <div class="overview-timeline-now-line" aria-label=${host._t("currentTime", { time: marker.label })}></div>
             ${zoneIds.map((entityId: string) =>
-              renderOverviewTimelineTrack(host, entityId, host._data?.zones[entityId]?.schedule?.[weekday] ?? []))}
+              renderOverviewTimelineTrack(host, entityId, effectiveClimateSchedule(host._data, entityId)?.[weekday] ?? []))}
           </div>
         </div>
       </div>
@@ -629,7 +657,8 @@ export function renderOverviewTimelineTrack(
   const overviewHost = asOverviewDataHost(host);
   const zone = host._data?.zones[entityId];
   const override = activeOverrideForEntity(overviewHost, entityId, host._data?.zones[entityId]);
-  const pauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone);
+  const pauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone)
+    ?? globalTimelinePause(host);
   const boostBlock = override ? timelineBoostBlockFromOverride(override, host._currentTimelineNow()) : undefined;
   const pauseBlock = pauseOverride ? timelinePauseBlockFromOverride(pauseOverride, host._currentTimelineNow()) : undefined;
   const trackClass = pauseBlock?.indefinite ? "overview-timeline-track paused-indefinite" : "overview-timeline-track";
@@ -668,19 +697,47 @@ export function renderOverviewTimelineTrack(
 
 export function renderOverviewTimelineName(host: OverviewViewHost, entityId: string) {
   const overviewHost = asOverviewDataHost(host);
-  const pauseOverride = activePauseOverrideForEntity(overviewHost, entityId, host._data?.zones[entityId]);
+  const zone = host._data?.zones[entityId];
+  const boostOverride = activeOverrideForEntity(overviewHost, entityId, zone);
+  const pauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone)
+    ?? globalTimelinePause(host);
+  const effect = activeClimateProfileZoneEffect(host._data, entityId);
+  const showProfile = Boolean(effect && !boostOverride && !pauseOverride);
   const label = host._friendlyEntityName(entityId);
   const detail = pauseOverride ? pauseDetailText(overviewHost, pauseOverride) : "";
+  const profileDetail = effect ? `${host._t("profileOverviewLabel")}: ${effect.profile.name}` : "";
+  const title = pauseOverride
+    ? `${label} - ${host._t("pauseActive")} - ${detail}`
+    : showProfile
+      ? `${label} - ${profileDetail}`
+      : label;
 
   return html`
     <div
-      class=${pauseOverride ? "overview-timeline-name paused" : "overview-timeline-name"}
-      title=${pauseOverride ? `${label} - ${host._t("pauseActive")} - ${detail}` : label}
+      class=${pauseOverride ? "overview-timeline-name paused" : showProfile ? "overview-timeline-name profiled" : "overview-timeline-name"}
+      style=${showProfile && effect
+        ? `--overview-profile-accent: ${climateProfileAccentColor(effect.profile.key, effect.profile.color)}`
+        : ""}
+      title=${title}
     >
       ${pauseOverride ? html`<ha-icon icon="mdi:pause-circle" aria-hidden="true"></ha-icon>` : nothing}
+      ${showProfile && effect
+        ? html`<ha-icon icon=${effect.profile.icon || "mdi:account-outline"} aria-hidden="true"></ha-icon>`
+        : nothing}
       <span class="overview-climate-name">${label}</span>
     </div>
   `;
+}
+
+function globalTimelinePause(host: OverviewViewHost): Record<string, unknown> | undefined {
+  if (host._data?.global?.mode !== "paused") {
+    return undefined;
+  }
+  return {
+    type: "pause",
+    started_at: host._data.global.paused_started_at,
+    until: host._data.global.paused_until,
+  };
 }
 
 export function renderOverviewTimelineBlock(

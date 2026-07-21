@@ -32,8 +32,27 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
   "global": {
     "mode": "auto",
     "paused_started_at": null,
-    "paused_until": null
+    "paused_until": null,
+    "active_profile_id": "away"
   },
+  "active_profile_id": "away",
+  "profiles": [
+    {
+      "key": "away",
+      "name": "Away",
+      "icon": "mdi:home-export-outline",
+      "color": "#546e7a",
+      "description": "Lower demand while nobody is home",
+      "zones": {
+        "climate.living_room": {
+          "behavior": "schedule",
+          "schedule": {
+            "monday": []
+          }
+        }
+      }
+    }
+  ],
   "settings": {
     "first_weekday": "monday",
     "zone_order": ["climate.living_room"],
@@ -432,6 +451,53 @@ await hass.connection.sendMessagePromise({
 
 Comfort settings are per managed climate. The scheduler only listens to comfort-related entities for climates where `comfort.enabled` is true. See [Environmental Comfort internals](comfort.md) for source selection, assessment calculation, runtime listener behavior, and event payloads.
 
+## Climate Profiles
+
+Create or replace a complete profile definition. Omitting `key` creates a new
+stable key; including it updates that profile. Profile zones are sparse:
+omitted zones keep their Normal schedule.
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/set_profile",
+  profile: {
+    name: "Away",
+    icon: "mdi:home-export-outline",
+    color: "#546e7a",
+    description: "Lower demand while nobody is home",
+    zones: {
+      "climate.living_room": {
+        behavior: "pause",
+        action: "turn_off"
+      }
+    }
+  }
+});
+```
+
+The response is the full schedule response plus `profile_id`, containing the
+created or updated key. Delete a profile with:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/delete_profile",
+  key: "away"
+});
+```
+
+Deleting the active profile returns Velair to Normal. Activate a profile, or
+return to Normal with `null`, using:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/activate_profile",
+  profile_id: "away"
+});
+```
+
+Activation applies the current effective schedule immediately, cancels Boost
+on affected zones, and preserves global or per-zone manual pauses.
+
 ## Reset Zone Preconditioning Settings
 
 ```ts
@@ -460,7 +526,7 @@ Deletes local adaptive preconditioning observations for one managed climate dire
 ```ts
 await hass.connection.sendMessagePromise({
   type: "velair/export_data",
-  sections: ["zones", "templates", "settings", "preconditioning_learning"],
+  sections: ["zones", "templates", "settings", "preconditioning_learning", "profiles"],
 });
 ```
 
@@ -469,7 +535,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 3,
+  "model_version": 4,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -486,9 +552,11 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Selected sections overwrite existing data.
+Selected sections overwrite existing data. Profile definitions are portable,
+but the active profile is never exported or selected by import. If replacing
+definitions removes the active profile, Velair returns to Normal.
 
-Portable model v3 payloads declare `temperature_unit`. Models created before
+Portable model v4 payloads declare `temperature_unit`. Models created before
 unit metadata existed may omit it; the backend treats those values as Celsius.
 If the source differs from Velair's current Home Assistant unit, selected thermal
 data is converted before normalization. Managed climates with known limits and

@@ -22,6 +22,18 @@ triggers:
 
 Every payload contains `domain: velair` and one of the event names below.
 
+## Profile Changed
+
+`profile_changed` is emitted after a different climate profile, or Normal, has
+been persisted. Re-selecting the current profile is a no-op and emits nothing.
+
+```yaml
+domain: velair
+event: profile_changed
+profile_id: away
+previous_profile_id: null
+```
+
 ## Scheduler Mode Changed
 
 `scheduler_mode_changed` is emitted when the global mode or pause expiry changes,

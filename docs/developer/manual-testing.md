@@ -71,7 +71,7 @@ Restart Home Assistant.
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v3 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v4 records the
    effective `temperature_unit`.
 2. Import into the opposite unit and confirm selected thermal sections convert.
 3. Import a unitless legacy backup and confirm the UI warns that Celsius is
@@ -135,8 +135,37 @@ Confirm these services are available in Developer Tools > Actions:
 - `velair.set_daily_schedule`
 - `velair.copy_day_schedule`
 - `velair.clear_schedule`
+- `velair.activate_profile`
 
 Services with `entity_id` must reject climates that were not selected during setup.
+
+## Climate Profiles Smoke Test
+
+1. Create a profile with a name, icon, and description.
+2. Give one zone an alternate heat or cool schedule, pause a second zone, and
+   leave a third zone on Normal.
+3. Copy template blocks into one profile day, edit the draft, and confirm the
+   template itself is unchanged.
+4. Start Boost on an affected zone, activate the profile, and confirm Boost is
+   cancelled and the block valid at the current time is applied immediately.
+5. Confirm the omitted zone continues its Normal schedule.
+6. Activate the profile while Global Pause and then Zone Pause are active;
+   confirm selection persists without overriding either pause and applies after
+   resume.
+7. Activate Normal from Overview and through `velair.activate_profile` with an
+   empty `profile_id`.
+8. Restart Home Assistant with startup application disabled and enabled. In both
+   cases confirm the selection persists; only the enabled case should force the
+   current target during startup.
+9. Export and import the `profiles` section and confirm definitions move without
+   activating an imported profile. If the replacement omits the active profile,
+   confirm Velair returns to Normal.
+10. Repeat the editor and active selector checks at desktop, tablet, and mobile
+    widths in English and Spanish.
+11. Listen for `velair_event` and confirm profile activation, return to Normal,
+    and deletion of the active profile emit `profile_changed` with the expected
+    `profile_id` and `previous_profile_id`. Re-selecting the current profile must
+    not emit a duplicate event.
 
 ## Scheduler Smoke Test
 
@@ -214,7 +243,7 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 ## Frontend Smoke Test
 
 1. Open the sidebar panel.
-2. Confirm the Overview, Schedules, Templates, Room Assist, Comfort, Preconditioning, and Settings tabs render.
+2. Confirm the Overview, Schedules, Profiles, Templates, Room Assist, Comfort, Preconditioning, and Settings tabs render.
 3. Confirm Preconditioning lists climates in the order configured in Settings and contains no general Settings sections.
 4. Confirm mobile and desktop layouts do not overflow.
 5. Add, edit, drag, resize, and delete blocks.

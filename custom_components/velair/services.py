@@ -23,6 +23,7 @@ from .const import (
     ATTR_HVAC_MODE,
     ATTR_HUMIDITY,
     ATTR_PRESET_MODE,
+    ATTR_PROFILE_ID,
     ATTR_SOURCE_WEEKDAY,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
@@ -34,6 +35,7 @@ from .const import (
     MODE_AUTO,
     MODE_PAUSED,
     SERVICE_APPLY_SCHEDULE,
+    SERVICE_ACTIVATE_PROFILE,
     SERVICE_BOOST,
     SERVICE_CANCEL_BOOST,
     SERVICE_CLEAR_SCHEDULE,
@@ -161,6 +163,12 @@ ROOM_SENSOR_ASSIST_SCHEMA = vol.Schema(
     }
 )
 
+ACTIVATE_PROFILE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_PROFILE_ID): vol.Any(None, cv.string),
+    }
+)
+
 
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Register integration services."""
@@ -197,6 +205,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             entity_id,
             hvac_mode=call.data.get(ATTR_HVAC_MODE),
         )
+
+    async def async_activate_profile(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        try:
+            await scheduler.async_activate_profile(call.data.get(ATTR_PROFILE_ID))
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
 
     async def async_boost(call: ServiceCall) -> None:
         scheduler = _get_scheduler(hass)
@@ -341,6 +356,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_ACTIVATE_PROFILE,
+        async_activate_profile,
+        schema=ACTIVATE_PROFILE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_BOOST,
         async_boost,
         schema=BOOST_SCHEMA,
@@ -411,6 +432,7 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     for service in (
         SERVICE_SET_TEMPERATURE,
         SERVICE_APPLY_SCHEDULE,
+        SERVICE_ACTIVATE_PROFILE,
         SERVICE_BOOST,
         SERVICE_CANCEL_BOOST,
         SERVICE_PAUSE,

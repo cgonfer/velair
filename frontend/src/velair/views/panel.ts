@@ -13,6 +13,7 @@ export class VelairPanel extends LitElement {
   @property({ attribute: false }) public panel?: VelairPanelInfo;
   @property({ attribute: false }) public route?: VelairPanelRoute;
   @state() private _activeView: VelairPanelView = "overview";
+  @state() private _profileDirty = false;
 
   protected render() {
     return html`
@@ -55,6 +56,9 @@ export class VelairPanel extends LitElement {
         .hass=${this.hass}
         .view=${this._activeView}
         view=${this._activeView}
+        @profile-dirty-changed=${(event: CustomEvent<boolean>) => {
+          this._profileDirty = event.detail;
+        }}
       ></velair-panel-card>`,
     );
   }
@@ -69,7 +73,18 @@ export class VelairPanel extends LitElement {
     if (!PANEL_VIEWS.includes(view)) {
       return;
     }
+    if (
+      this._activeView === "profiles"
+      && view !== "profiles"
+      && this._profileDirty
+      && !window.confirm(this._t("profileDiscardChanges"))
+    ) {
+      return;
+    }
 
+    if (view !== "profiles") {
+      this._profileDirty = false;
+    }
     this._activeView = view;
     this._syncTabGroupActive(view, source);
   }
@@ -144,7 +159,9 @@ export class VelairPanel extends LitElement {
       color: var(--app-header-text-color, var(--primary-text-color));
       box-sizing: border-box;
       min-height: 104px;
-      position: fixed;
+      max-width: 100%;
+      min-width: 0;
+      position: sticky;
       top: 0;
       width: 100%;
       z-index: 30;
@@ -181,6 +198,8 @@ export class VelairPanel extends LitElement {
       color: var(--primary-text-color);
       display: block;
       height: 48px;
+      max-width: 100%;
+      min-width: 0;
       --track-width: 2px;
       width: 100%;
     }
@@ -245,7 +264,7 @@ export class VelairPanel extends LitElement {
       margin: 0 auto;
       max-width: 1120px;
       min-width: 0;
-      padding: 120px 24px 24px;
+      padding: 16px 24px 24px;
       width: 100%;
     }
 
@@ -295,7 +314,7 @@ export class VelairPanel extends LitElement {
       }
 
       .panel-content {
-        padding-top: 120px;
+        padding-top: 16px;
       }
     }
 
@@ -310,7 +329,7 @@ export class VelairPanel extends LitElement {
       }
 
       .panel-content {
-        padding: 112px 8px 16px;
+        padding: 8px 8px 16px;
       }
     }
   `;

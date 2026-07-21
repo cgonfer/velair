@@ -93,6 +93,18 @@ apply_schedule:
             - dry
             - fan_only
 
+activate_profile:
+  name: Activate climate profile
+  description: Activate a saved climate profile. Leave the profile ID empty to return to Normal schedules.
+  fields:
+    profile_id:
+      name: Profile ID
+      description: Stable key of the profile to activate. Empty selects Normal.
+      required: false
+      example: away
+      selector:
+        text:
+
 boost:
   name: Boost
   description: Temporarily override one zone, then return that zone to its active schedule.

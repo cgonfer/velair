@@ -2,6 +2,7 @@ import { DOMAIN } from "../constants";
 import type {
   HomeAssistant,
   ComfortSettings,
+  ClimateProfileInput,
   PanelSettings,
   PortableSection,
   PreconditioningSettings,
@@ -75,6 +76,27 @@ export class VelairApiClient {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/delete_schedule_template",
       key,
+    });
+  }
+
+  public setClimateProfile(profile: ClimateProfileInput): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/set_profile",
+      profile,
+    });
+  }
+
+  public deleteClimateProfile(key: string): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/delete_profile",
+      key,
+    });
+  }
+
+  public activateProfile(key?: string | null): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/activate_profile",
+      profile_id: key ?? null,
     });
   }
 

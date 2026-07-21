@@ -456,6 +456,37 @@ def _snap_migrated_editable_temperatures(
                         block["temperature"], template_step or 0.1
                     )
 
+    profiles = data.get("profiles")
+    if isinstance(profiles, list):
+        for profile in profiles:
+            profile_zones = profile.get("zones") if isinstance(profile, dict) else None
+            if not isinstance(profile_zones, dict):
+                continue
+            for entity_id, profile_zone in profile_zones.items():
+                if not isinstance(profile_zone, dict):
+                    continue
+                minimum, maximum, step = _entity_target_grid(
+                    hass, entity_id, unit, source_unit=source_unit
+                )
+                target_step = step or 0.1
+                first = math.ceil((minimum / target_step) - 0.000001) * target_step
+                last = math.floor((maximum / target_step) + 0.000001) * target_step
+                schedule = profile_zone.get("schedule")
+                if not isinstance(schedule, dict):
+                    continue
+                for blocks in schedule.values():
+                    if not isinstance(blocks, list):
+                        continue
+                    for block in blocks:
+                        if not isinstance(block, dict) or not isinstance(
+                            block.get("temperature"), (int, float)
+                        ):
+                            continue
+                        bounded = max(first, min(last, float(block["temperature"])))
+                        block["temperature"] = max(
+                            first, min(last, _nearest_step(bounded, target_step))
+                        )
+
     settings = data.get("settings")
     if isinstance(settings, dict):
         for key in ("min_temperature", "max_temperature"):
@@ -554,6 +585,17 @@ def _convert_scheduler_temperatures(
         for template in templates:
             if isinstance(template, dict):
                 _convert_blocks(template.get("blocks"), source, target)
+    profiles = data.get("profiles", [])
+    if isinstance(profiles, list):
+        for profile in profiles:
+            profile_zones = profile.get("zones") if isinstance(profile, dict) else None
+            if not isinstance(profile_zones, dict):
+                continue
+            for profile_zone in profile_zones.values():
+                schedule = profile_zone.get("schedule") if isinstance(profile_zone, dict) else None
+                if isinstance(schedule, dict):
+                    for blocks in schedule.values():
+                        _convert_blocks(blocks, source, target)
     settings = data.get("settings")
     if isinstance(settings, dict):
         for key in ("min_temperature", "max_temperature"):

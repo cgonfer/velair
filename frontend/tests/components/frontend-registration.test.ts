@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { VelairPanel } from "../../src/velair/views/panel";
 
 describe("frontend entrypoint", () => {
   beforeEach(() => {
@@ -32,12 +33,44 @@ describe("frontend entrypoint", () => {
 
     expect(panel.shadowRoot?.querySelector(".main-title")?.textContent).toContain("Velair");
     expect(panel.shadowRoot?.querySelector(".version")).toBeNull();
-    expect(panel.shadowRoot?.querySelectorAll("ha-tab-group-tab")).toHaveLength(7);
+    expect(panel.shadowRoot?.querySelectorAll("ha-tab-group-tab")).toHaveLength(8);
+    expect(panel.shadowRoot?.textContent).toContain("Profiles");
     expect(panel.shadowRoot?.textContent).toContain("Comfort");
     expect(panel.shadowRoot?.textContent).toContain("Room Assist");
     expect(panel.shadowRoot?.textContent).toContain("Preconditioning");
     expect(panel.shadowRoot?.querySelector("velair-panel-card")?.getAttribute("view")).toBe("overview");
 
+    panel.remove();
+  });
+
+  it("sizes the sticky tab header from the real panel width", () => {
+    const cssText = VelairPanel.styles.cssText;
+
+    expect(cssText).toMatch(/\.header\s*\{[^}]*position:\s*sticky/);
+    expect(cssText).toMatch(/\.header\s*\{[^}]*max-width:\s*100%/);
+    expect(cssText).toMatch(/\.panel-tabs\s*\{[^}]*max-width:\s*100%/);
+    expect(cssText).not.toMatch(/\.header\s*\{[^}]*position:\s*fixed/);
+    expect(cssText).toMatch(/\.panel-content\s*\{[^}]*padding:\s*16px 24px 24px/);
+  });
+
+  it("keeps a dirty profile draft when tab navigation is cancelled", async () => {
+    await import("../../src/velair-card");
+    const panel = document.createElement("velair-sidebar-panel") as HTMLElement & { updateComplete?: Promise<boolean> };
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    document.body.append(panel);
+    await panel.updateComplete;
+
+    const tabs = panel.shadowRoot?.querySelectorAll("ha-tab-group-tab");
+    (tabs?.[1] as HTMLElement | undefined)?.click();
+    await panel.updateComplete;
+    const card = panel.shadowRoot?.querySelector("velair-panel-card");
+    card?.dispatchEvent(new CustomEvent("profile-dirty-changed", { bubbles: true, composed: true, detail: true }));
+    (tabs?.[2] as HTMLElement | undefined)?.click();
+    await panel.updateComplete;
+
+    expect(panel.shadowRoot?.querySelector("velair-panel-card")?.getAttribute("view")).toBe("profiles");
+    expect(confirm).toHaveBeenCalledOnce();
+    confirm.mockRestore();
     panel.remove();
   });
 

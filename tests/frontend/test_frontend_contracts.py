@@ -284,6 +284,17 @@ class FrontendRegistrationTest(unittest.TestCase):
 
 
 class FrontendSourceContractTest(unittest.TestCase):
+    def test_typescript_sources_do_not_contain_mojibake(self) -> None:
+        """UTF-8 user-facing text must not contain common double-encoding markers."""
+        source_root = ROOT / "frontend" / "src"
+        failures = [
+            str(path.relative_to(ROOT))
+            for path in source_root.rglob("*.ts")
+            if any(marker in path.read_text(encoding="utf-8") for marker in ("Ã", "Â"))
+        ]
+
+        self.assertEqual(failures, [])
+
     """Guard the panel/card contract that keeps tab views independent."""
 
     def test_service_duration_selectors_allow_week_long_overrides(self) -> None:
@@ -582,7 +593,8 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("export function currentTemperature", source)
         self.assertIn("export function overviewNextEvents", source)
         self.assertIn("export function nextEventForEntity", source)
-        self.assertIn("nextEventForZone(entityId, zone", source)
+        self.assertIn("effectiveClimateSchedule(host._data, entityId)", source)
+        self.assertIn("nextEventForZone(", source)
         self.assertIn("export function scheduledEventAt", schedule_events_source)
         self.assertIn("export function nextScheduleEventAfter", schedule_events_source)
         self.assertIn("activeOverrideForEntity(overviewHost, entityId, zone)", source)

@@ -14,6 +14,11 @@ export const PANEL_TABS: PanelTabDefinition[] = [
     view: "overview",
   },
   {
+    icon: "mdi:account-switch-outline",
+    labelKey: "profiles",
+    view: "profiles",
+  },
+  {
     icon: "mdi:calendar-clock",
     labelKey: "schedules",
     view: "schedules",

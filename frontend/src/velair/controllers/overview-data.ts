@@ -1,4 +1,5 @@
 import { modeClassName } from "../domain/climate";
+import { effectiveClimateSchedule } from "../domain/climate-profiles";
 import { isActiveBoostOverride, isActivePauseOverride } from "../domain/overrides";
 import { dateMs, nextEventForZone, weekdayForDate } from "../domain/schedule-events";
 import type { HomeAssistant, ScheduleEvent, ScheduleResponse, ScheduleZone } from "../types";
@@ -112,7 +113,15 @@ export function nextEventForEntity(
   entityId: string,
   zone?: ScheduleZone,
 ): ScheduleEvent | undefined {
-  return nextEventForZone(entityId, zone, activeOverrideForEntity(host, entityId, zone));
+  const schedule = effectiveClimateSchedule(host._data, entityId);
+  if (!zone || !schedule) {
+    return undefined;
+  }
+  return nextEventForZone(
+    entityId,
+    { ...zone, schedule },
+    activeOverrideForEntity(host, entityId, zone),
+  );
 }
 
 export function todayWeekday(): string {

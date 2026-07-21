@@ -37,6 +37,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Drag and resize interactions on a 24-hour timeline.
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
+- Climate profiles with coordinated per-zone schedules, pauses, manual activation, and Home Assistant automation support.
 - Overview tab with scheduler status, active boosts, next events, and responsive zone cards that surface current intent and relevant attention signals.
 - Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
 - Dedicated Room Assist tab for setups that need a separate room temperature sensor.
@@ -44,7 +45,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Optional climate controls per block where supported, including fan mode, preset mode, swing mode, horizontal swing mode, and target humidity.
 - Settings tab with climate ordering, startup behavior, thermostat diagnostics, portability tools, and maintenance information.
 - Global pause, stop, and resume controls, plus per-zone pause and resume.
-- Velair-scoped services for starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
+- Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
 - Automation events through `velair_event` for scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
 - Push updates through Home Assistant WebSocket events, without frontend polling.
 - English and Spanish UI translations.
@@ -219,6 +220,7 @@ If Home Assistant shows a custom element error, confirm that Velair is installed
 
 - [Documentation index](docs/README.md)
 - [Usage guide](docs/user/usage.md)
+- [Climate Profiles](docs/user/climate-profiles.md)
 - [Adaptive Preconditioning](docs/user/adaptive-preconditioning.md)
 - [Room Assist](docs/user/room-assist.md)
 - [Environmental Comfort](docs/user/comfort.md)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timezone
 import importlib
 from types import SimpleNamespace
@@ -12,6 +13,157 @@ from . import helpers
 
 
 api_module = importlib.import_module("custom_components.velair.api")
+
+
+class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
+    """Verify the WebSocket boundary for profile lifecycle operations."""
+
+    def setUp(self) -> None:
+        self.scheduler = SimpleNamespace(
+            async_set_profile=AsyncMock(return_value="away"),
+            async_delete_profile=AsyncMock(),
+            async_activate_profile=AsyncMock(),
+        )
+        self.runtime = {
+            "scheduler": self.scheduler,
+            "storage": SimpleNamespace(temperature_migration_required=False),
+            "operation_active": None,
+            "operation_recovery": None,
+        }
+        self.connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        original_get_runtime = api_module._get_runtime
+        original_build_response = api_module._build_schedule_response
+        api_module._get_runtime = lambda _hass: self.runtime
+        api_module._build_schedule_response = lambda _runtime: {"profiles": []}
+        self.addCleanup(setattr, api_module, "_get_runtime", original_get_runtime)
+        self.addCleanup(
+            setattr,
+            api_module,
+            "_build_schedule_response",
+            original_build_response,
+        )
+
+    async def test_profile_handlers_forward_payloads_and_return_schedule_state(self) -> None:
+        await api_module.ws_set_profile(
+            SimpleNamespace(),
+            self.connection,
+            {"id": 1, "type": "velair/set_profile", "profile": {"name": "Away"}},
+        )
+        self.scheduler.async_set_profile.assert_awaited_once_with({"name": "Away"})
+        self.connection.send_result.assert_called_with(
+            1,
+            {"profiles": [], "profile_id": "away"},
+        )
+
+        await api_module.ws_activate_profile(
+            SimpleNamespace(),
+            self.connection,
+            {"id": 2, "type": "velair/activate_profile"},
+        )
+        self.scheduler.async_activate_profile.assert_awaited_once_with(None)
+        self.connection.send_result.assert_called_with(2, {"profiles": []})
+
+        await api_module.ws_delete_profile(
+            SimpleNamespace(),
+            self.connection,
+            {"id": 3, "type": "velair/delete_profile", "key": "away"},
+        )
+        self.scheduler.async_delete_profile.assert_awaited_once_with("away")
+        self.connection.send_result.assert_called_with(3, {"profiles": []})
+        self.connection.send_error.assert_not_called()
+
+    async def test_profile_handlers_map_validation_and_migration_errors(self) -> None:
+        self.scheduler.async_activate_profile.side_effect = ValueError("unknown")
+        await api_module.ws_activate_profile(
+            SimpleNamespace(),
+            self.connection,
+            {
+                "id": 4,
+                "type": "velair/activate_profile",
+                "profile_id": "missing",
+            },
+        )
+        self.connection.send_error.assert_called_once_with(
+            4,
+            "invalid_profile",
+            "unknown",
+        )
+
+        self.connection.send_error.reset_mock()
+        self.runtime["storage"].temperature_migration_required = True
+        await api_module.ws_set_profile(
+            SimpleNamespace(),
+            self.connection,
+            {"id": 5, "type": "velair/set_profile", "profile": {"name": "Away"}},
+        )
+        self.connection.send_error.assert_called_once_with(
+            5,
+            "temperature_migration_required",
+            "The Velair scheduler is stopped until the existing temperature unit is confirmed",
+        )
+        self.scheduler.async_set_profile.assert_not_awaited()
+
+        self.connection.send_error.reset_mock()
+        self.runtime["storage"].temperature_migration_required = False
+        self.scheduler.async_set_profile.side_effect = ValueError("invalid profile data")
+        await api_module.ws_set_profile(
+            SimpleNamespace(),
+            self.connection,
+            {"id": 6, "type": "velair/set_profile", "profile": {"name": "Away"}},
+        )
+        self.connection.send_error.assert_called_once_with(
+            6,
+            "invalid_profile",
+            "invalid profile data",
+        )
+
+
+class ClimateProfileImportValidationTest(unittest.TestCase):
+    """Reject malformed profiles before portable temperature conversion."""
+
+    def test_import_rejects_duplicate_keys_and_null_temperatures(self) -> None:
+        data = helpers.normalize_schedule_data(None, ["climate.salon"])
+        runtime = {
+            "storage": SimpleNamespace(
+                data=data,
+                effective_temperature_unit=api_module.CELSIUS,
+            )
+        }
+        schedule = {weekday: [] for weekday in api_module.WEEKDAYS}
+        schedule["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": "set_temperature",
+                "temperature": 18,
+                "hvac_mode": "heat",
+            }
+        ]
+        profile = {
+            "key": "away",
+            "name": "Away",
+            "zones": {
+                "climate.salon": {
+                    "behavior": "schedule",
+                    "schedule": schedule,
+                }
+            },
+        }
+
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": api_module.EXPORT_MODEL_VERSION,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {"profiles": [profile, deepcopy(profile)]},
+        }
+        with self.assertRaisesRegex(ValueError, "Duplicate climate profile key"):
+            api_module._build_import_data(runtime, payload, ["profiles"])
+
+        payload["sections"]["profiles"] = [profile]
+        profile["zones"]["climate.salon"]["schedule"]["tuesday"][0][
+            "temperature"
+        ] = None
+        with self.assertRaisesRegex(ValueError, "finite number"):
+            api_module._build_import_data(runtime, payload, ["profiles"])
 
 
 class ResetDataOrderingTest(unittest.IsolatedAsyncioTestCase):

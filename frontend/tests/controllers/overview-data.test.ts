@@ -117,4 +117,34 @@ describe("overview data controller", () => {
 
     expect(overviewNextEvents(state)).toEqual(data.next_events);
   });
+
+  it("uses the effective profile schedule for the frontend fallback", () => {
+    vi.setSystemTime(new Date(2026, 5, 8, 10, 0));
+    const data = baseData(new Date(2026, 5, 8, 14, 0).toISOString());
+    data.zones["climate.office"].override = undefined;
+    data.global.active_profile_id = "away";
+    data.profiles = [{
+      key: "away",
+      name: "Away",
+      zones: {
+        "climate.office": {
+          behavior: "schedule",
+          schedule: {
+            monday: [{ action: ACTION_SET_TEMPERATURE, hvac_mode: "cool", start: "11:00", temperature: 24 }],
+          } as any,
+        },
+      },
+    }];
+
+    expect(overviewNextEvents(host(data))[0]).toMatchObject({
+      entity_id: "climate.office",
+      hvac_mode: "cool",
+      start: "11:00",
+      temperature: 24,
+    });
+
+    data.profiles[0].zones["climate.office"] = { behavior: "pause", action: "none" };
+    expect(overviewNextEvents(host(data))).toEqual([]);
+    vi.useRealTimers();
+  });
 });

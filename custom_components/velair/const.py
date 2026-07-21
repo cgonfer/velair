@@ -4,6 +4,7 @@ from homeassistant.const import Platform
 
 DOMAIN = "velair"
 NAME = "Velair"
+MAX_PROFILE_DESCRIPTION_LENGTH = 500
 
 CONF_CLIMATE_ENTITIES = "climate_entities"
 CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP = "apply_active_schedule_on_startup"
@@ -20,6 +21,7 @@ EVENT_TYPE_PRECONDITIONING_OBSERVATION_RECORDED = (
 )
 EVENT_TYPE_PRECONDITIONING_PLAN_CANCELLED = "preconditioning_plan_cancelled"
 EVENT_TYPE_PRECONDITIONING_PLAN_UPDATED = "preconditioning_plan_updated"
+EVENT_TYPE_PROFILE_CHANGED = "profile_changed"
 EVENT_TYPE_ROOM_SENSOR_ASSIST_RESTORED = "room_sensor_assist_restored"
 EVENT_TYPE_ROOM_SENSOR_ASSIST_STATE_CHANGED = "room_sensor_assist_state_changed"
 EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED = "room_sensor_assist_updated"
@@ -28,6 +30,7 @@ EVENT_TYPE_ZONE_PAUSED = "zone_paused"
 EVENT_TYPE_ZONE_RESUMED = "zone_resumed"
 
 SERVICE_APPLY_SCHEDULE = "apply_schedule"
+SERVICE_ACTIVATE_PROFILE = "activate_profile"
 SERVICE_BOOST = "boost"
 SERVICE_CANCEL_BOOST = "cancel_boost"
 SERVICE_CLEAR_SCHEDULE = "clear_schedule"
@@ -49,6 +52,7 @@ ATTR_FAN_MODE = "fan_mode"
 ATTR_HVAC_MODE = "hvac_mode"
 ATTR_HUMIDITY = "humidity"
 ATTR_KEY = "key"
+ATTR_PROFILE_ID = "profile_id"
 ATTR_NAME = "name"
 ATTR_PRESET_MODE = "preset_mode"
 ATTR_SOURCE_WEEKDAY = "source_weekday"

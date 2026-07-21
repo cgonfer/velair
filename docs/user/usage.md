@@ -204,7 +204,7 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Portable model v3 exports preserve raw values and declare their unit. Imports
+Portable model v4 exports preserve raw values and declare their unit. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
 Velair versions that produced those files stored Celsius values. Export remains
@@ -273,6 +273,14 @@ When applying a template to a climate, Velair validates HVAC modes and temperatu
 
 Templates can include every optional climate setting available across the managed climates. This makes one template useful for mixed installations. When a template is applied to a specific climate, Velair keeps only the options that climate supports. For example, a template can contain `fan_mode: quiet` for an AC, but that field is dropped automatically when the same template is applied to a TRV that does not expose fan modes.
 
+## Climate Profiles
+
+Climate profiles switch several zones between coordinated weekly plans without overwriting their Normal schedules. Each profile can give a zone an alternate weekly schedule, pause it, pause and turn it off, or leave it on Normal. Zones omitted from a profile continue using Normal.
+
+Only one profile is active at a time, but its behavior can differ for every zone. Activating a profile applies the block active at the current time and cancels Boosts in affected zones. Global and per-zone pauses retain priority. Home Assistant automations can activate a profile through `velair.activate_profile`; conditions and helper state remain owned by Home Assistant.
+
+See [Climate Profiles](climate-profiles.md) for setup, automation, restart, interaction, and portability details.
+
 ## Clone Schedules
 
 Below the editor, Velair can clone the current day:
@@ -334,8 +342,9 @@ The file can contain:
 - templates;
 - panel settings;
 - adaptive preconditioning learning.
+- climate profile definitions.
 
-When importing, Velair lets you choose which sections to overwrite. Importing replaces selected data, so export first if you need a recovery point.
+When importing, Velair lets you choose which sections to overwrite. Importing replaces selected data, so export first if you need a recovery point. Profile definitions are portable, but their active selection is not. If an imported replacement no longer contains the active profile, Velair returns to Normal.
 
 Every new export records its temperature unit. When importing a file from the
 other unit system, Velair converts the selected thermal values to the current
@@ -367,6 +376,7 @@ Velair exposes Home Assistant services for automations and scripts:
 - `velair.apply_schedule`
 - `velair.boost`
 - `velair.cancel_boost`
+- `velair.activate_profile`
 - `velair.enable_room_sensor_assist`
 - `velair.disable_room_sensor_assist`
 - `velair.pause`
@@ -378,6 +388,16 @@ Velair exposes Home Assistant services for automations and scripts:
 - `velair.clear_schedule`
 
 Services that target an entity only work with climates selected during setup. If an unmanaged climate entity is passed, Velair rejects the service call before changing anything.
+
+### `velair.activate_profile`
+
+Activate one stored climate profile and immediately apply the effective current behavior. Use the stable profile ID shown by Velair rather than its editable display name. Omit `profile_id` to return to Normal.
+
+```yaml
+action: velair.activate_profile
+data:
+  profile_id: vacation
+```
 
 ### `velair.set_temperature`
 

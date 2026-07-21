@@ -64,7 +64,7 @@ until the integration reloads or Home Assistant restarts.
 
 ## Portable Data
 
-Portable model v3 exports raw stored values and declares `temperature_unit`.
+Portable model v4 exports raw stored values and declares `temperature_unit`.
 Imports convert selected sections from that unit to the effective Home Assistant
 unit. Unitless model v1 files are interpreted as Celsius; model v2 is also Celsius
 for compatibility with the format that produced it.

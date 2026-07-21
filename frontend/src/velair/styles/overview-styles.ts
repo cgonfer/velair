@@ -391,9 +391,16 @@ export const overviewStyles = css`
 
 .overview-timeline-name ha-icon {
   --mdc-icon-size: 16px;
+  align-items: center;
   color: var(--secondary-text-color);
+  display: inline-flex;
   flex: 0 0 auto;
+  height: 100%;
+  justify-content: center;
+  line-height: 1;
 }
+
+.overview-timeline-name .overview-climate-name { align-items: center; display: inline-flex; height: 100%; line-height: 1.2; }
 
 .overview-timeline-name.paused {
   color: var(--secondary-text-color);
@@ -401,6 +408,10 @@ export const overviewStyles = css`
 
 .overview-timeline-name.paused ha-icon {
   color: var(--warning-color, #c99500);
+}
+
+.overview-timeline-name.profiled ha-icon {
+  color: var(--overview-profile-accent, var(--primary-color));
 }
 
 .overview-timeline-track {
@@ -689,6 +700,11 @@ export const overviewStyles = css`
 
 .overview-zone-cards { display: grid; gap: 10px; }
 .overview-zone-card { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; container-name: overview-zone-card; container-type: inline-size; display: grid; gap: 10px; padding: 12px; }
+.overview-zone-profile { align-items: center; background: var(--secondary-background-color); border: 1px solid var(--overview-profile-accent, var(--primary-color)); border-radius: 8px; box-sizing: border-box; display: inline-flex; gap: 7px; justify-self: start; max-width: 100%; min-height: 28px; min-width: 0; overflow: hidden; padding: 0 9px 0 0; }
+.overview-zone-profile-accent { align-items: center; align-self: stretch; background: var(--overview-profile-accent, var(--primary-color)); color: white; display: inline-flex; flex: 0 0 auto; gap: 5px; justify-content: center; padding: 4px 8px; }
+.overview-zone-profile ha-icon { --mdc-icon-size: 17px; align-items: center; display: inline-flex; justify-content: center; line-height: 1; }
+.overview-zone-profile small { color: inherit; font-size: 10px; font-weight: 600; letter-spacing: .02em; line-height: 1; }
+.overview-zone-profile strong { color: var(--primary-text-color); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .overview-zone-card-heading { align-items: center; display: grid; gap: 12px; grid-template-columns: minmax(150px, .75fr) minmax(0, 1.5fr) 220px; min-width: 0; }
 .overview-zone-card-name { display: grid; gap: 2px; min-width: 0; }
 .overview-zone-card-name strong, .overview-zone-card-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

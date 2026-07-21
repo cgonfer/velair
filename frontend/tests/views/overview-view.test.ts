@@ -13,6 +13,7 @@ import {
   renderOverviewActiveBoosts,
   renderOverviewTimelineName,
   renderOverviewTimelineTrack,
+  renderOverviewTimelines,
   renderOverviewZones,
 } from "../../src/velair/views/overview-view";
 
@@ -680,5 +681,87 @@ describe("overview timeline", () => {
     render(renderOverviewTimelineTrack(timelineHost, "climate.office", []), container);
 
     expect(container.querySelector(".overview-timeline-empty")?.textContent).toBe("noBlocks");
+  });
+
+  it("renders the active profile schedule and identifies affected zones", () => {
+    const container = document.createElement("div");
+    const week = (start: string, temperature: number) => Object.fromEntries([
+      "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    ].map((day) => [day, [{ start, action: "set_temperature", temperature, hvac_mode: "heat" }]]));
+    const timelineHost = {
+      ...host(),
+      _currentTimelineNow: () => new Date("2026-07-21T12:00:00+02:00"),
+      _formatTemperature: (value: number) => `${value} C`,
+      _modeLabel: (mode: string) => mode,
+      _showOverviewTimelineDetail: () => undefined,
+      _data: {
+        global: { mode: "auto", active_profile_id: "away" },
+        configured_entities: ["climate.office"],
+        zones: { "climate.office": { enabled: true, schedule: week("08:00", 21) } },
+        profiles: [{
+          key: "away",
+          name: "Away",
+          icon: "mdi:briefcase-outline",
+          color: "#123456",
+          zones: { "climate.office": { behavior: "schedule", schedule: week("09:00", 18) } },
+        }],
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewTimelines(timelineHost, ["climate.office"]), container);
+
+    expect(container.querySelector(".overview-timeline-name.profiled ha-icon")?.getAttribute("icon"))
+      .toBe("mdi:briefcase-outline");
+    expect(container.querySelector(".overview-timeline-block")?.getAttribute("title"))
+      .toContain("time:09:00");
+    expect(container.querySelector(".overview-timeline-block")?.getAttribute("title"))
+      .not.toContain("time:08:00");
+  });
+
+  it("lets a temporary override replace the profile marker while keeping the zone badge", () => {
+    const container = document.createElement("div");
+    const data = {
+      global: { mode: "auto", active_profile_id: "away" },
+      zones: {
+        "climate.office": {
+          enabled: true,
+          schedule: {},
+          override: { type: "boost", temperature: 22, until: "2027-07-21T12:00:00+02:00" },
+        },
+      },
+      profiles: [{
+        key: "away",
+        name: "Away",
+        icon: "mdi:briefcase-outline",
+        color: "#123456",
+        zones: { "climate.office": { behavior: "pause", action: "none" } },
+      }],
+      zone_runtime: { "climate.office": { state: "boost" } },
+    } as never;
+    const timelineHost = {
+      ...host(),
+      _data: data,
+      _formatTemperature: (value: number) => `${value} C`,
+      _modeLabel: (mode: string) => mode,
+    } as unknown as VelairViewHost;
+
+    render(html`
+      ${renderOverviewTimelineName(timelineHost, "climate.office")}
+      ${renderOverviewZones(timelineHost, ["climate.office"])}
+    `, container);
+
+    expect(container.querySelector(".overview-timeline-name.profiled")).toBeNull();
+    expect(container.querySelector(".overview-zone-profile")?.textContent).toContain("Away");
+    expect(container.querySelector(".overview-zone-profile ha-icon")?.getAttribute("icon"))
+      .toBe("mdi:briefcase-outline");
+    expect(container.querySelector(".overview-zone-profile")?.getAttribute("style"))
+      .toContain("--overview-profile-accent: #123456");
+    expect(container.querySelector(".overview-zone-profile-accent")).not.toBeNull();
+    expect(overviewStyles.cssText).toMatch(/\.overview-zone-profile-accent\s*\{[^}]*background:\s*var\(--overview-profile-accent/);
+    expect(overviewStyles.cssText).toMatch(/\.overview-zone-profile-accent\s*\{[^}]*align-items:\s*center/);
+    expect(overviewStyles.cssText).toMatch(/\.overview-zone-profile\s*\{[^}]*border-radius:\s*8px/);
+    expect(overviewStyles.cssText).not.toMatch(/\.overview-zone-profile\s*\{[^}]*border-radius:\s*999px/);
+    expect(overviewStyles.cssText).toMatch(/\.overview-timeline-name ha-icon\s*\{[^}]*display:\s*inline-flex/);
+    expect(overviewStyles.cssText).toMatch(/\.overview-timeline-name ha-icon\s*\{[^}]*height:\s*100%/);
   });
 });

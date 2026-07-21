@@ -5,7 +5,8 @@ Velair documentation is grouped by audience and topic.
 ## User Documentation
 
 - [Installation](user/installation.md): install Velair through HACS or manually.
-- [Usage](user/usage.md): configure climates, schedules, templates, boosts, pauses, import/export, and services.
+- [Usage](user/usage.md): configure climates, schedules, templates, profiles, boosts, pauses, import/export, and services.
+- [Climate Profiles](user/climate-profiles.md): coordinate alternate schedules and pause behavior while Home Assistant decides when profiles change.
 - [Automation Events](user/automation-events.md): use complete runtime event payloads in Home Assistant automations.
 - [Adaptive Preconditioning](user/adaptive-preconditioning.md): start scheduled comfort targets early with local learning.
 - [Room Assist](user/room-assist.md): use a separate room temperature sensor for TRVs, thermostats, and AC units.

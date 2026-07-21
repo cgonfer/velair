@@ -27,6 +27,7 @@ from .const import (
     ATTR_HUMIDITY,
     ATTR_KEY,
     ATTR_NAME,
+    ATTR_PROFILE_ID,
     ATTR_PRESET_MODE,
     ATTR_SOURCE_WEEKDAY,
     ATTR_SWING_HORIZONTAL_MODE,
@@ -64,6 +65,7 @@ from .models import (
     normalize_schedule_data,
     normalize_schedule_templates,
     serialize_schedule_data,
+    validate_climate_profiles,
 )
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .temperature import (
@@ -79,8 +81,14 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 3
-EXPORT_SECTIONS = ("zones", "templates", "settings", "preconditioning_learning")
+EXPORT_MODEL_VERSION = 4
+EXPORT_SECTIONS = (
+    "zones",
+    "templates",
+    "settings",
+    "preconditioning_learning",
+    "profiles",
+)
 EXPORT_SECTION_SCHEMA = vol.All(
     cv.ensure_list,
     [vol.In(EXPORT_SECTIONS)],
@@ -214,6 +222,9 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_clear_schedule)
     websocket_api.async_register_command(hass, ws_set_schedule_template)
     websocket_api.async_register_command(hass, ws_delete_schedule_template)
+    websocket_api.async_register_command(hass, ws_set_profile)
+    websocket_api.async_register_command(hass, ws_delete_profile)
+    websocket_api.async_register_command(hass, ws_activate_profile)
     websocket_api.async_register_command(hass, ws_update_settings)
     websocket_api.async_register_command(hass, ws_update_zone_preconditioning)
     websocket_api.async_register_command(hass, ws_update_zone_comfort)
@@ -443,6 +454,89 @@ async def ws_set_schedule_template(
         connection.send_error(msg["id"], "invalid_template", str(err))
         return
 
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/set_profile",
+        vol.Required("profile"): dict,
+    }
+)
+@websocket_api.async_response
+async def ws_set_profile(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Create or update one persisted climate profile."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        key = await runtime["scheduler"].async_set_profile(msg["profile"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_profile", str(err))
+        return
+    response = _build_schedule_response(runtime)
+    response["profile_id"] = key
+    connection.send_result(msg["id"], response)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/delete_profile",
+        vol.Required(ATTR_KEY): cv.string,
+    }
+)
+@websocket_api.async_response
+async def ws_delete_profile(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Delete one persisted climate profile."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        await runtime["scheduler"].async_delete_profile(msg[ATTR_KEY])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_profile", str(err))
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/activate_profile",
+        vol.Optional(ATTR_PROFILE_ID): vol.Any(None, cv.string),
+    }
+)
+@websocket_api.async_response
+async def ws_activate_profile(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Select a profile, with a missing/empty key selecting Normal."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        await runtime["scheduler"].async_activate_profile(msg.get(ATTR_PROFILE_ID))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_profile", str(err))
+        return
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
 
@@ -1039,6 +1133,8 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         ),
         "operation_recovery": runtime.get("operation_recovery"),
         "global": stored_data["global"],
+        "profiles": stored_data.get("profiles", []),
+        "active_profile_id": stored_data["global"].get("active_profile_id"),
         "settings": settings,
         "zones": stored_data["zones"],
         "operational_status": scheduler.get_operational_status(),
@@ -1105,6 +1201,8 @@ def _build_export_payload(
         exported_sections["preconditioning_learning"] = (
             _export_preconditioning_learning(stored_data)
         )
+    if "profiles" in sections:
+        exported_sections["profiles"] = deepcopy(stored_data.get("profiles", []))
 
     return {
         "format": EXPORT_FORMAT,
@@ -1139,6 +1237,11 @@ def _build_import_data(
     selected_payload = {
         section: deepcopy(payload_sections[section]) for section in sections
     }
+    if "profiles" in sections:
+        validate_climate_profiles(
+            selected_payload["profiles"],
+            list(current_zones),
+        )
     _hydrate_portable_temperature_defaults(selected_payload, payload_unit)
     payload_sections = convert_portable_temperature_data(
         selected_payload,
@@ -1175,6 +1278,14 @@ def _build_import_data(
                 payload_sections["preconditioning_learning"],
                 current_zones,
             )
+        )
+    if "profiles" in sections:
+        raw_profiles = payload_sections["profiles"]
+        if not isinstance(raw_profiles, list):
+            raise ValueError("Profiles section is not valid")
+        import_data["profiles"] = validate_climate_profiles(
+            raw_profiles,
+            list(current_zones),
         )
 
     return import_data

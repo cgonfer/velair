@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from math import ceil, exp
+from math import ceil, exp, isfinite
+import re
 from typing import Any, NotRequired, TypedDict
 
 from .const import (
@@ -70,6 +71,17 @@ CLIMATE_OPTION_STRING_FIELDS = (
 )
 CLIMATE_OPTION_NUMERIC_FIELDS = (ATTR_HUMIDITY,)
 CLIMATE_OPTION_FIELDS = CLIMATE_OPTION_STRING_FIELDS + CLIMATE_OPTION_NUMERIC_FIELDS
+PROFILE_ACCENT_COLORS = (
+    "#3949ab",
+    "#00897b",
+    "#7b1fa2",
+    "#d84315",
+    "#00838f",
+    "#c2185b",
+    "#5d4037",
+    "#2e7d32",
+)
+PROFILE_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 class ScheduleBlock(TypedDict):
@@ -261,6 +273,26 @@ class GlobalData(TypedDict):
     mode: str
     paused_until: NotRequired[str | None]
     paused_started_at: NotRequired[str | None]
+    active_profile_id: NotRequired[str | None]
+
+
+class ClimateProfileZoneData(TypedDict):
+    """One sparse zone behavior stored in a climate profile."""
+
+    behavior: str
+    schedule: NotRequired[dict[str, list[ScheduleBlock]]]
+    action: NotRequired[str]
+
+
+class ClimateProfileData(TypedDict):
+    """A reusable whole-home climate profile."""
+
+    key: str
+    name: str
+    icon: str
+    color: str
+    description: str
+    zones: dict[str, ClimateProfileZoneData]
 
 
 class SchedulerData(TypedDict):
@@ -274,6 +306,7 @@ class SchedulerData(TypedDict):
     templates_seeded: bool
     templates_seeded_version: int
     preconditioning_learning: dict[str, PreconditioningLearningData]
+    profiles: list[ClimateProfileData]
 
 
 DEFAULT_SCHEDULE_TEMPLATES: list[ScheduleTemplateData] = [
@@ -568,13 +601,20 @@ def normalize_schedule_data(
         )
         templates_seeded_version = DEFAULT_SCHEDULE_TEMPLATES_VERSION
 
+    profiles = normalize_climate_profiles(data.get("profiles"), climate_entities)
+    profile_keys = {profile["key"] for profile in profiles}
+    active_profile_id = global_data.get("active_profile_id")
+    if not isinstance(active_profile_id, str) or active_profile_id not in profile_keys:
+        active_profile_id = None
+
     return {
-        "version": 1,
+        "version": 2,
         "zones": zones,
         "global_": {
             "mode": mode,
             "paused_until": global_data.get("paused_until"),
             "paused_started_at": global_data.get("paused_started_at"),
+            "active_profile_id": active_profile_id,
         },
         "settings": normalize_panel_settings(data.get("settings"), climate_entities),
         "templates": _dedupe_schedule_templates(templates),
@@ -588,6 +628,7 @@ def normalize_schedule_data(
                 for entity_id, zone in zones.items()
             },
         ),
+        "profiles": profiles,
     }
 
 
@@ -615,7 +656,283 @@ def serialize_schedule_data(data: SchedulerData) -> dict[str, Any]:
                 },
             ),
         ),
+        "profiles": data.get("profiles", []),
     }
+
+
+def normalize_climate_profiles(
+    raw_profiles: Any,
+    climate_entities: list[str],
+) -> list[ClimateProfileData]:
+    """Normalize profiles and discard duplicate, malformed, or unmanaged data."""
+    if not isinstance(raw_profiles, list):
+        return []
+
+    managed = set(climate_entities)
+    profiles: list[ClimateProfileData] = []
+    seen_keys: set[str] = set()
+    for raw_profile in raw_profiles:
+        if not isinstance(raw_profile, dict):
+            continue
+        key = raw_profile.get("key")
+        name = raw_profile.get("name")
+        if not isinstance(key, str) or not key.strip() or key.strip() in seen_keys:
+            continue
+        if not isinstance(name, str) or not name.strip():
+            continue
+
+        zones: dict[str, ClimateProfileZoneData] = {}
+        raw_zones = raw_profile.get("zones")
+        if isinstance(raw_zones, dict):
+            for entity_id, raw_zone in raw_zones.items():
+                if entity_id not in managed or not isinstance(raw_zone, dict):
+                    continue
+                behavior = raw_zone.get("behavior", "normal")
+                if behavior == "normal":
+                    zones[entity_id] = {"behavior": "normal"}
+                    continue
+                if behavior == "pause":
+                    action = raw_zone.get("action", ZONE_PAUSE_ACTION_NONE)
+                    if action not in ZONE_PAUSE_ACTION_OPTIONS:
+                        action = ZONE_PAUSE_ACTION_NONE
+                    zones[entity_id] = {"behavior": "pause", "action": action}
+                    continue
+                if behavior != "schedule":
+                    continue
+
+                schedule = empty_week_schedule()
+                raw_schedule = raw_zone.get("schedule")
+                if isinstance(raw_schedule, dict):
+                    for weekday in WEEKDAYS:
+                        blocks = raw_schedule.get(weekday, [])
+                        if not isinstance(blocks, list):
+                            continue
+                        valid_blocks = [
+                            block
+                            for block in blocks
+                            if isinstance(block, dict)
+                            and "start" in block
+                            and (
+                                "temperature" in block
+                                or block.get("action") == ACTION_TURN_OFF
+                            )
+                        ]
+                        try:
+                            schedule[weekday] = normalize_schedule_blocks(valid_blocks)
+                        except ValueError:
+                            schedule[weekday] = []
+                zones[entity_id] = {"behavior": "schedule", "schedule": schedule}
+
+        color = raw_profile.get("color")
+        if not isinstance(color, str) or not PROFILE_COLOR_PATTERN.fullmatch(color):
+            color = climate_profile_color(key.strip())
+
+        profiles.append(
+            {
+                "key": key.strip(),
+                "name": name.strip(),
+                "icon": str(raw_profile.get("icon", "")).strip(),
+                "color": color.lower(),
+                "description": str(raw_profile.get("description", "")).strip(),
+                "zones": zones,
+            }
+        )
+        seen_keys.add(key.strip())
+    return profiles
+
+
+def validate_climate_profiles(
+    raw_profiles: Any,
+    climate_entities: list[str],
+) -> list[ClimateProfileData]:
+    """Strictly validate profile input before using tolerant normalization."""
+    if not isinstance(raw_profiles, list):
+        raise ValueError("Profiles must be a list")
+
+    managed = set(climate_entities)
+    seen_keys: set[str] = set()
+    prepared: list[dict[str, Any]] = []
+    profile_fields = {"key", "name", "icon", "color", "description", "zones"}
+    zone_fields = {"behavior", "action", "schedule"}
+    block_fields = {
+        "start",
+        "action",
+        "temperature",
+        "hvac_mode",
+        *CLIMATE_OPTION_FIELDS,
+    }
+
+    for index, raw_profile in enumerate(raw_profiles):
+        if not isinstance(raw_profile, dict):
+            raise ValueError(f"Profile at index {index} must be an object")
+        unknown_profile_fields = set(raw_profile) - profile_fields
+        if unknown_profile_fields:
+            raise ValueError(
+                f"Profile contains unsupported fields: {', '.join(sorted(unknown_profile_fields))}"
+            )
+
+        key = raw_profile.get("key")
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("Profile key is required")
+        key = key.strip()
+        if key in seen_keys:
+            raise ValueError(f"Duplicate climate profile key: {key}")
+        seen_keys.add(key)
+
+        name = raw_profile.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"Profile name is required for {key}")
+        for field in ("icon", "description"):
+            value = raw_profile.get(field, "")
+            if not isinstance(value, str):
+                raise ValueError(f"Profile {field} must be text for {key}")
+        color = raw_profile.get("color")
+        if "color" in raw_profile and not is_valid_climate_profile_color(color):
+            raise ValueError("Profile color must use the #RRGGBB format")
+
+        raw_zones = raw_profile.get("zones", {})
+        if not isinstance(raw_zones, dict):
+            raise ValueError(f"Profile zones must be an object for {key}")
+        prepared_zones: dict[str, ClimateProfileZoneData] = {}
+        for entity_id, raw_zone in raw_zones.items():
+            if not isinstance(entity_id, str) or entity_id not in managed:
+                raise ValueError(
+                    f"Climate entity is not managed by Velair: {entity_id}"
+                )
+            if not isinstance(raw_zone, dict):
+                raise ValueError(f"Invalid profile behavior for {entity_id}")
+            unknown_zone_fields = set(raw_zone) - zone_fields
+            if unknown_zone_fields:
+                raise ValueError(
+                    f"Profile zone {entity_id} contains unsupported fields: "
+                    f"{', '.join(sorted(unknown_zone_fields))}"
+                )
+
+            behavior = raw_zone.get("behavior")
+            if behavior not in ("normal", "schedule", "pause"):
+                raise ValueError(f"Invalid profile behavior for {entity_id}: {behavior}")
+            if behavior == "normal":
+                if set(raw_zone) != {"behavior"}:
+                    raise ValueError(f"Normal profile behavior has extra data for {entity_id}")
+                prepared_zones[entity_id] = {"behavior": "normal"}
+                continue
+            if behavior == "pause":
+                if set(raw_zone) - {"behavior", "action"}:
+                    raise ValueError(f"Pause profile behavior has extra data for {entity_id}")
+                action = raw_zone.get("action", ZONE_PAUSE_ACTION_NONE)
+                if action not in ZONE_PAUSE_ACTION_OPTIONS:
+                    raise ValueError(f"Invalid profile pause action for {entity_id}")
+                prepared_zones[entity_id] = {
+                    "behavior": "pause",
+                    "action": action,
+                }
+                continue
+
+            if set(raw_zone) != {"behavior", "schedule"}:
+                raise ValueError(f"Schedule profile behavior is invalid for {entity_id}")
+            raw_schedule = raw_zone.get("schedule")
+            if not isinstance(raw_schedule, dict) or set(raw_schedule) != set(WEEKDAYS):
+                raise ValueError(
+                    f"Profile schedule for {entity_id} must include every weekday"
+                )
+            schedule = empty_week_schedule()
+            for weekday in WEEKDAYS:
+                raw_blocks = raw_schedule[weekday]
+                if not isinstance(raw_blocks, list):
+                    raise ValueError(f"Invalid {weekday} schedule for {entity_id}")
+                for block_index, block in enumerate(raw_blocks):
+                    if not isinstance(block, dict):
+                        raise ValueError(
+                            f"Invalid block {block_index} in {weekday} for {entity_id}"
+                        )
+                    unknown_block_fields = set(block) - block_fields
+                    if unknown_block_fields:
+                        raise ValueError(
+                            f"Schedule block contains unsupported fields for {entity_id}: "
+                            f"{', '.join(sorted(unknown_block_fields))}"
+                        )
+                    if not isinstance(block.get("start"), str):
+                        raise ValueError(
+                            f"Schedule block start must be text for {entity_id}"
+                        )
+                    action = block.get("action", ACTION_SET_TEMPERATURE)
+                    if not isinstance(action, str):
+                        raise ValueError(f"Invalid schedule action for {entity_id}")
+                    if action == ACTION_TURN_OFF:
+                        if set(block) - {"start", "action"}:
+                            raise ValueError(
+                                f"Turn Off block has unsupported targets for {entity_id}"
+                            )
+                        continue
+                    if action != ACTION_SET_TEMPERATURE:
+                        raise ValueError(f"Invalid schedule action for {entity_id}: {action}")
+                    temperature = block.get("temperature")
+                    if (
+                        not isinstance(temperature, (int, float))
+                        or isinstance(temperature, bool)
+                        or not isfinite(float(temperature))
+                    ):
+                        raise ValueError(
+                            f"Schedule block temperature must be a finite number for {entity_id}"
+                        )
+                    for field in ("hvac_mode", *CLIMATE_OPTION_STRING_FIELDS):
+                        if field in block and (
+                            not isinstance(block[field], str) or not block[field]
+                        ):
+                            raise ValueError(
+                                f"Schedule block {field} must be non-empty text for {entity_id}"
+                            )
+                    if ATTR_HUMIDITY in block:
+                        humidity = block[ATTR_HUMIDITY]
+                        if (
+                            not isinstance(humidity, (int, float))
+                            or isinstance(humidity, bool)
+                            or not isfinite(float(humidity))
+                        ):
+                            raise ValueError(
+                                f"Schedule block humidity must be a finite number for {entity_id}"
+                            )
+                try:
+                    schedule[weekday] = normalize_schedule_blocks(raw_blocks)
+                except (KeyError, TypeError, ValueError, OverflowError) as err:
+                    raise ValueError(
+                        f"Invalid {weekday} schedule for {entity_id}: {err}"
+                    ) from err
+            prepared_zones[entity_id] = {
+                "behavior": "schedule",
+                "schedule": schedule,
+            }
+
+        prepared.append(
+            {
+                "key": key,
+                "name": name.strip(),
+                "icon": raw_profile.get("icon", "").strip(),
+                **({"color": color} if color is not None else {}),
+                "description": raw_profile.get("description", "").strip(),
+                "zones": prepared_zones,
+            }
+        )
+
+    normalized = normalize_climate_profiles(prepared, climate_entities)
+    if len(normalized) != len(prepared):
+        raise ValueError("Profiles could not be normalized without data loss")
+    return normalized
+
+
+def climate_profile_color(key: str) -> str:
+    """Return the stable default accent color for a profile key."""
+    hash_value = 0
+    for character in key:
+        hash_value = ((hash_value << 5) - hash_value + ord(character)) & 0xFFFFFFFF
+    if hash_value >= 0x80000000:
+        hash_value -= 0x100000000
+    return PROFILE_ACCENT_COLORS[abs(hash_value) % len(PROFILE_ACCENT_COLORS)]
+
+
+def is_valid_climate_profile_color(value: Any) -> bool:
+    """Return whether a value is a supported persisted profile color."""
+    return isinstance(value, str) and PROFILE_COLOR_PATTERN.fullmatch(value) is not None
 
 
 def normalize_panel_settings(

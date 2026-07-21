@@ -1,6 +1,6 @@
 import { html, nothing } from "lit";
 import type { VelairViewHost } from "../host-types";
-import type { ScheduleZone, VelairCardView } from "../types";
+import type { ScheduleResponse, ScheduleZone, VelairCardView } from "../types";
 import { incompatibleScheduleTargetCount } from "../domain/schedule-compatibility";
 import { renderNotice } from "./notice-view";
 import { renderComfortView, type ComfortViewOptions } from "./comfort-view";
@@ -16,6 +16,7 @@ import { renderSchedulesView } from "./schedule-view";
 import { renderSensorsView, type RoomSensorViewOptions } from "./sensors-view";
 import { renderSettingsView } from "./settings-view";
 import { renderTemplatesView } from "./templates-view";
+import "../components/profiles-view-element";
 
 type CardContentHost = VelairViewHost;
 
@@ -110,6 +111,13 @@ function renderViewContent(
   if (view === "overview") {
     return html`
       ${renderOverviewSummary(host, zoneIds)}
+      <velair-profiles-view
+        compact
+        .hass=${host.hass}
+        .data=${host._data}
+        @profile-data-changed=${(event: CustomEvent<ScheduleResponse>) => host._applyScheduleData(event.detail, { forceDraft: false })}
+        @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
+      ></velair-profiles-view>
       ${renderOverviewActiveBoosts(host, visibleZoneIds)}
       ${renderNextEvents(host, visibleZoneIds)}
       ${renderOverviewTimelines(host, visibleZoneIds)}
@@ -117,8 +125,26 @@ function renderViewContent(
     `;
   }
 
+  if (view === "profiles") {
+    return html`<velair-profiles-view
+      .hass=${host.hass}
+      .data=${host._data}
+      @profile-data-changed=${(event: CustomEvent<ScheduleResponse>) => host._applyScheduleData(event.detail, { forceDraft: false })}
+      @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
+    ></velair-profiles-view>`;
+  }
+
   if (view === "overview-status") {
-    return renderOverviewSummary(host, zoneIds);
+    return html`
+      ${renderOverviewSummary(host, zoneIds)}
+      <velair-profiles-view
+        compact
+        .hass=${host.hass}
+        .data=${host._data}
+        @profile-data-changed=${(event: CustomEvent<ScheduleResponse>) => host._applyScheduleData(event.detail, { forceDraft: false })}
+        @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
+      ></velair-profiles-view>
+    `;
   }
 
   if (view === "overview-boosts") {

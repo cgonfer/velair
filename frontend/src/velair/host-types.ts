@@ -83,6 +83,7 @@ export type VelairViewHost = {
   _addBlock(source?: BlockDraftSource): void;
   _api(): VelairApiClient | undefined;
   _applySelectedDayToZones(): Promise<void>;
+  _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
   _applyTemplateToTargets(template: ScheduleTemplate): Promise<void>;
   _canResumeScheduler(): boolean;
   _clearOverviewTimelineDetail(): void;
@@ -94,6 +95,7 @@ export type VelairViewHost = {
   _currentTimelineNow(): Date;
   _deleteSelectedTemplate(): Promise<void>;
   _dismissNotice(type: "error" | "success"): void;
+  _showSuccess(message: string): void;
   _effectiveView(): VelairCardView;
   _entityDiagnostic(entityId: string): EntityDiagnostic;
   _entityExists(entityId: string): boolean;
