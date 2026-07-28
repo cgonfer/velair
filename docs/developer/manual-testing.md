@@ -71,9 +71,10 @@ Restart Home Assistant.
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v4 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v5 records the
    effective `temperature_unit`.
-2. Import into the opposite unit and confirm selected thermal sections convert.
+2. Import the portable V5 file into the opposite unit and confirm selected
+   thermal sections convert. V4 files must remain compatible.
 3. Import a unitless legacy backup and confirm the UI warns that Celsius is
    assumed before the backend converts it when required.
 4. Confirm known climate targets use exact published steps and standalone values
@@ -94,7 +95,7 @@ The integration should create scheduler status/control entities. Exact entity ID
 
 Expected entity types include:
 
-- one Automatic scheduling switch and no scheduler mode selector;
+- one Automatic scheduling switch and one Mode select entity;
 - one next scheduled event sensor;
 - one scheduler status sensor;
 - one active target temperature sensor per managed climate;
@@ -136,6 +137,7 @@ Confirm these services are available in Developer Tools > Actions:
 - `velair.copy_day_schedule`
 - `velair.clear_schedule`
 - `velair.activate_profile`
+- `velair.deactivate_profile`
 
 Services with `entity_id` must reject climates that were not selected during setup.
 
@@ -143,29 +145,68 @@ Services with `entity_id` must reject climates that were not selected during set
 
 1. Create a profile with a name, icon, and description.
 2. Give one zone an alternate heat or cool schedule, pause a second zone, and
-   leave a third zone on Normal.
+   leave a third zone on its default schedule.
 3. Copy template blocks into one profile day, edit the draft, and confirm the
    template itself is unchanged.
 4. Start Boost on an affected zone, activate the profile, and confirm Boost is
    cancelled and the block valid at the current time is applied immediately.
-5. Confirm the omitted zone continues its Normal schedule.
+5. Confirm the omitted zone continues its default schedule.
 6. Activate the profile while Global Pause and then Zone Pause are active;
    confirm selection persists without overriding either pause and applies after
    resume.
-7. Activate Normal from Overview and through `velair.activate_profile` with an
-   empty `profile_id`.
+7. Select Default from Overview and through
+   `velair.deactivate_profile`. Confirm an empty `profile_id` on
+   `velair.activate_profile` remains a compatibility alias.
 8. Restart Home Assistant with startup application disabled and enabled. In both
    cases confirm the selection persists; only the enabled case should force the
    current target during startup.
-9. Export and import the `profiles` section and confirm definitions move without
-   activating an imported profile. If the replacement omits the active profile,
-   confirm Velair returns to Normal.
+9. Export and import the `profiles` and `modes` sections and confirm
+   definitions move without activating an imported profile. If the replacement
+   omits the active profile, confirm Velair returns to default schedules.
 10. Repeat the editor and active selector checks at desktop, tablet, and mobile
     widths in English and Spanish.
-11. Listen for `velair_event` and confirm profile activation, return to Normal,
+11. Listen for `velair_event` and confirm profile activation, return to Default,
     and deletion of the active profile emit `profile_changed` with the expected
-    `profile_id` and `previous_profile_id`. Re-selecting the current profile must
+    `profile_ids` and `previous_profile_ids`. Re-selecting the current set must
     not emit a duplicate event.
+12. In Profiles, create two custom Modes and map them to stored Profiles.
+    Confirm each mode row shows every mapped Profile icon and exact color, and
+    that Default and Manual have short explanatory descriptions.
+13. In both Overview and Profiles, confirm the shared **Active setup** card
+    shows the current Mode and its applied Profiles as one relationship. Open
+    its single chooser and confirm Modes and manual Profile activation appear
+    in separate groups. A Mode must activate its mapped set, while a direct
+    Profile selection must replace it with one Profile and switch the Mode to
+    Manual. Confirm the chooser closes after selection, with Escape, and after
+    focus leaves it. Repeat at desktop and mobile widths.
+    Confirm `Default` and `Manual` cannot be renamed or deleted.
+14. Select each custom value through `select.velair_mode` and confirm its
+    mapped Profiles change once. Select Manual and confirm the current set
+    remains active; select Default and confirm it is emptied.
+15. Change profile from the panel and through `velair.activate_profile`; confirm
+    the native selector reports Manual, including direct reactivation of the
+    already active profile without repeating climate calls or events.
+    Confirm this direct selection replaces every other active Profile instead
+    of extending the set.
+16. Rename a selected Mode and confirm selection survives without reapplying
+    Profiles. Remap it and confirm the new set applies atomically. Delete it and
+    confirm the previous set remains active under Manual.
+17. Add one `overview-status` Lovelace card and confirm that it contains only
+    scheduler state and pause/stop/resume controls. Add three independent
+    `active-setup` cards with
+    `active_setup_controls` set to `modes`, `profiles`, and `both`. Confirm each
+    chooser exposes only the requested actions, all three keep the current Mode
+    and applied Profiles visible, and Profiles-only still provides Default.
+18. Create two Profiles that configure different zones and map both to one Mode.
+    Confirm both timelines, next events, and zone labels use their controlling
+    Profile. Then attempt to select two Profiles that configure the same zone
+    and confirm the editor and backend reject the conflict.
+19. Restart with a custom mode selected and test both values of **Apply active
+    schedule after startup**. The profile and mode must remain selected in both
+    cases, but climate commands must only be sent when the setting is enabled.
+20. Confirm duplicate, reserved, empty, over-255-character, control-character,
+    and orphan profile mappings are rejected. Confirm portable V4 data without
+    Modes remains importable.
 
 ## Scheduler Smoke Test
 

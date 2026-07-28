@@ -122,7 +122,7 @@ describe("overview data controller", () => {
     vi.setSystemTime(new Date(2026, 5, 8, 10, 0));
     const data = baseData(new Date(2026, 5, 8, 14, 0).toISOString());
     data.zones["climate.office"].override = undefined;
-    data.global.active_profile_id = "away";
+    data.global.active_profile_ids = ["away"];
     data.profiles = [{
       key: "away",
       name: "Away",

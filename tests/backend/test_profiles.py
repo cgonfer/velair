@@ -94,14 +94,14 @@ class ProfileNormalizationTest(unittest.TestCase):
             {"global": {"mode": "auto", "active_profile_id": "away"}, "profiles": [_profile()]},
             ["climate.salon"],
         )
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
-        self.assertEqual(data["version"], 2)
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
+        self.assertEqual(data["version"], 3)
 
         missing = normalize_schedule_data(
             {"global": {"mode": "auto", "active_profile_id": "missing"}, "profiles": [_profile()]},
             ["climate.salon"],
         )
-        self.assertIsNone(missing["global_"]["active_profile_id"])
+        self.assertEqual(missing["global_"]["active_profile_ids"], [])
 
     def test_profile_schedule_temperatures_convert_and_snap(self) -> None:
         profile = _profile(temperature=20)
@@ -189,7 +189,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         await scheduler.async_activate_profile("away")
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertIn(("set_temperature", "climate.salon", 18.0, True, "heat"), manager.calls)
         self.assertEqual(scheduler.get_current_event("climate.bedroom").temperature, 20.0)
         self.assertTrue(
@@ -234,7 +234,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         await scheduler.async_set_profile(_profile(temperature=19))
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertIn(
             ("set_temperature", "climate.salon", 19.0, True, "heat"),
             manager.calls,
@@ -263,7 +263,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         with self.assertLogs("custom_components.velair.scheduler", level="ERROR") as logs:
             await scheduler.async_activate_profile("away")
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertTrue(saves)
         self.assertIn("Failed to apply profile behavior for climate.salon", logs.output[0])
         self.assertIn(
@@ -272,7 +272,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_next_events_use_profile_schedule_normal_fallback_and_pause(self) -> None:
-        scheduler, _data, _manager, _saves = self._scheduler()
+        scheduler, _data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(temperature=18))
         await scheduler.async_activate_profile("away")
 
@@ -284,15 +284,48 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events["climate.salon"].hvac_mode, "heat")
         self.assertEqual(events["climate.bedroom"].temperature, 20.0)
 
+        manager.calls.clear()
         await scheduler.async_set_profile(
             _profile(behavior="pause", action="none")
         )
+        self.assertEqual(manager.calls, [])
         events = {
             event.entity_id: event
             for event in scheduler.calculate_next_events_by_zone(NOW)
         }
         self.assertNotIn("climate.salon", events)
         self.assertEqual(events["climate.bedroom"].temperature, 20.0)
+
+    async def test_next_events_resolve_disjoint_heating_and_cooling_profiles(self) -> None:
+        scheduler, _data, _manager, _saves = self._scheduler()
+        heating = _profile(key="heating", temperature=18)
+        cooling = _profile(key="cooling", temperature=25)
+        cooling["zones"]["climate.bedroom"] = cooling["zones"].pop(
+            "climate.salon"
+        )
+        for blocks in cooling["zones"]["climate.bedroom"]["schedule"].values():
+            for block in blocks:
+                block["hvac_mode"] = "cool"
+        await scheduler.async_set_profile(heating)
+        await scheduler.async_set_profile(cooling)
+        await scheduler.async_set_velair_mode(
+            {
+                "key": "mixed",
+                "name": "Mixed",
+                "profile_ids": ["heating", "cooling"],
+            }
+        )
+        await scheduler.async_select_velair_mode("mixed")
+
+        events = {
+            event.entity_id: event
+            for event in scheduler.calculate_next_events_by_zone(NOW)
+        }
+
+        self.assertEqual(events["climate.salon"].temperature, 18.0)
+        self.assertEqual(events["climate.salon"].hvac_mode, "heat")
+        self.assertEqual(events["climate.bedroom"].temperature, 25.0)
+        self.assertEqual(events["climate.bedroom"].hvac_mode, "cool")
 
     async def test_preconditioning_replan_candidates_use_profile_schedule(self) -> None:
         scheduler, data, _manager, _saves = self._scheduler()
@@ -330,6 +363,24 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(manager.calls, [])
         self.assertEqual(saves, [])
 
+    async def test_profile_write_rejects_unsupported_hvac_mode_without_mutation(
+        self,
+    ) -> None:
+        scheduler, data, manager, saves = self._scheduler()
+        manager.supported_hvac_modes = lambda _entity_id: ["off", "heat"]
+        profile = _profile(temperature=24)
+        for blocks in profile["zones"]["climate.salon"]["schedule"].values():
+            for block in blocks:
+                block["hvac_mode"] = "cool"
+        before = deepcopy(data)
+
+        with self.assertRaisesRegex(ValueError, "not supported"):
+            await scheduler.async_set_profile(profile)
+
+        self.assertEqual(data, before)
+        self.assertEqual(manager.calls, [])
+        self.assertEqual(saves, [])
+
     async def test_profile_write_rejects_an_explicit_invalid_key(self) -> None:
         scheduler, data, _manager, saves = self._scheduler()
         profile = _profile()
@@ -350,7 +401,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(ValueError, "Unknown climate profile"):
             await scheduler.async_delete_profile("missing")
 
-        self.assertIsNone(data["global_"]["active_profile_id"])
+        self.assertEqual(data["global_"]["active_profile_ids"], [])
         self.assertEqual(manager.calls, [])
         self.assertEqual(saves, [])
 
@@ -411,7 +462,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(RuntimeError, "storage unavailable"):
             await scheduler.async_activate_profile("away")
 
-        self.assertIsNone(data["global_"]["active_profile_id"])
+        self.assertEqual(data["global_"]["active_profile_ids"], [])
         self.assertEqual(manager.calls, [])
 
     async def test_profile_definition_mutations_roll_back_when_storage_fails(self) -> None:
@@ -434,7 +485,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
     async def test_startup_applies_persisted_profile_pause_off_when_enabled(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(behavior="pause", action="turn_off"))
-        data["global_"]["active_profile_id"] = "away"
+        data["global_"]["active_profile_ids"] = ["away"]
         manager.calls.clear()
 
         await scheduler.async_start(apply_current_schedule=True)
@@ -444,24 +495,24 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
     async def test_startup_keeps_persisted_profile_without_forcing_climates_when_disabled(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(temperature=18))
-        data["global_"]["active_profile_id"] = "away"
+        data["global_"]["active_profile_ids"] = ["away"]
         manager.calls.clear()
 
         await scheduler.async_start(apply_current_schedule=False)
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertEqual(manager.calls, [])
         self.assertEqual(scheduler.get_current_event("climate.salon").temperature, 18.0)
 
     async def test_startup_applies_persisted_profile_schedule_when_enabled(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(temperature=18))
-        data["global_"]["active_profile_id"] = "away"
+        data["global_"]["active_profile_ids"] = ["away"]
         manager.calls.clear()
 
         await scheduler.async_start(apply_current_schedule=True)
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertIn(
             ("set_temperature", "climate.salon", 18.0, True, "heat"),
             manager.calls,
@@ -492,7 +543,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         release_first_save.set()
         await asyncio.gather(first, second)
 
-        self.assertEqual(data["global_"]["active_profile_id"], "summer")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["summer"])
         self.assertEqual(save_count, 2)
 
     async def test_profile_pause_restores_room_assist_target_before_holding(self) -> None:
@@ -529,13 +580,13 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         )
         await scheduler.async_replace_portable_data(profiles=imported)
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertIn(("set_temperature", "climate.salon", 24.0, True, "heat"), manager.calls)
 
         manager.calls.clear()
         await scheduler.async_replace_portable_data(profiles=[])
 
-        self.assertIsNone(data["global_"]["active_profile_id"])
+        self.assertEqual(data["global_"]["active_profile_ids"], [])
         self.assertIn(("set_temperature", "climate.salon", 21.0, True, None), manager.calls)
 
     async def test_profile_pause_turns_off_and_clears_boost_without_restoration(self) -> None:
@@ -568,6 +619,22 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
             bedroom_boost,
         )
 
+    async def test_changing_profile_owner_clears_boost_with_identical_behavior(self) -> None:
+        scheduler, data, _manager, _saves = self._scheduler()
+        await scheduler.async_set_profile(_profile(key="away", temperature=18))
+        await scheduler.async_set_profile(_profile(key="summer", temperature=18))
+        await scheduler.async_activate_profile("away")
+        data["zones"]["climate.salon"]["override"] = {
+            "type": "boost",
+            "temperature": 23,
+            "previous_state": {},
+        }
+
+        await scheduler.async_activate_profile("summer")
+
+        self.assertEqual(data["global_"]["active_profile_ids"], ["summer"])
+        self.assertIsNone(data["zones"]["climate.salon"]["override"])
+
     async def test_zone_pause_outranks_profile_activation(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(temperature=18))
@@ -581,7 +648,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         await scheduler.async_activate_profile("away")
 
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertEqual(manager.calls, [])
 
     async def test_global_pause_outranks_profile_activation(self) -> None:
@@ -592,7 +659,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         await scheduler.async_activate_profile("away")
 
         self.assertEqual(manager.calls, [])
-        self.assertEqual(data["global_"]["active_profile_id"], "away")
+        self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
 
     async def test_deactivation_is_idempotent_and_applies_normal_schedule(self) -> None:
         scheduler, data, manager, saves = self._scheduler()
@@ -604,7 +671,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         await scheduler.async_activate_profile(None)
         await scheduler.async_activate_profile(None)
 
-        self.assertEqual(data["global_"]["active_profile_id"], None)
+        self.assertEqual(data["global_"]["active_profile_ids"], [])
         self.assertIn(("set_temperature", "climate.salon", 21.0, True, None), manager.calls)
         self.assertEqual(len(saves), before + 1)
 
@@ -628,19 +695,21 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
                 {
                     "domain": "velair",
                     "event": "profile_changed",
-                    "profile_id": "away",
-                    "previous_profile_id": None,
+                    "profile_ids": ["away"],
+                    "previous_profile_ids": [],
+                    "source": "service",
                 },
                 {
                     "domain": "velair",
                     "event": "profile_changed",
-                    "profile_id": None,
-                    "previous_profile_id": "away",
+                    "profile_ids": [],
+                    "previous_profile_ids": ["away"],
+                    "source": "profile_deleted",
                 },
             ],
         )
         self.assertEqual(data["profiles"], [])
-        self.assertIsNone(data["global_"]["active_profile_id"])
+        self.assertEqual(data["global_"]["active_profile_ids"], [])
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ from homeassistant.const import Platform
 DOMAIN = "velair"
 NAME = "Velair"
 MAX_PROFILE_DESCRIPTION_LENGTH = 500
+MODE_DEFAULT_OPTION = "Default"
+MODE_MANUAL_OPTION = "Manual"
 
 CONF_CLIMATE_ENTITIES = "climate_entities"
 CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP = "apply_active_schedule_on_startup"
@@ -31,6 +33,7 @@ EVENT_TYPE_ZONE_RESUMED = "zone_resumed"
 
 SERVICE_APPLY_SCHEDULE = "apply_schedule"
 SERVICE_ACTIVATE_PROFILE = "activate_profile"
+SERVICE_DEACTIVATE_PROFILE = "deactivate_profile"
 SERVICE_BOOST = "boost"
 SERVICE_CANCEL_BOOST = "cancel_boost"
 SERVICE_CLEAR_SCHEDULE = "clear_schedule"
@@ -91,6 +94,7 @@ MODE_PAUSED = "paused"
 
 PLATFORMS: tuple[Platform, ...] = (
     Platform.SENSOR,
+    Platform.SELECT,
     Platform.SWITCH,
 )
 

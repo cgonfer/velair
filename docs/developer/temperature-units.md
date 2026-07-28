@@ -36,7 +36,7 @@ Defaults and normal schedule editing use each climate's exact
 unit to another. During migration or import, values tied to a known climate are
 aligned to that exact step. Migrated editable targets without a usable exact step
 are range-limited and rounded to safe `0.1` precision; this normalization is not
-treated as a reported device step. Normal schedule validation and Room Assist
+treated as a reported device step. Default schedule validation and Room Assist
 still require the real `target_temp_step` where their behavior depends on it.
 Editable Room Assist, Adaptive Preconditioning, and rate fields use their own
 valid precision rules.
@@ -64,7 +64,9 @@ until the integration reloads or Home Assistant restarts.
 
 ## Portable Data
 
-Portable model v4 exports raw stored values and declares `temperature_unit`.
+Portable model v5 exports raw stored values and declares `temperature_unit`.
+The only V5 addition is the non-thermal `modes` section; V4 files remain
+supported.
 Imports convert selected sections from that unit to the effective Home Assistant
 unit. Unitless model v1 files are interpreted as Celsius; model v2 is also Celsius
 for compatibility with the format that produced it.

@@ -3,9 +3,16 @@ import { property, state } from "lit/decorators.js";
 import { LOVELACE_CARD_VIEWS, WEEKDAYS } from "../constants";
 import { languageFromHass, translate, weekdayName } from "../i18n";
 import type { SupportedLanguage, TranslationKey } from "../translations";
-import type { HomeAssistant, ScheduleResponse, VelairCardConfig, VelairCardView } from "../types";
+import type {
+  ActiveSetupControls,
+  HomeAssistant,
+  ScheduleResponse,
+  VelairCardConfig,
+  VelairCardView,
+} from "../types";
 
 const FIRST_WEEKDAY_CARD_VIEWS = new Set<VelairCardView>(["schedules"]);
+const ACTIVE_SETUP_CONTROL_CARD_VIEWS = new Set<VelairCardView>(["active-setup"]);
 const THERMOSTAT_FILTER_CARD_VIEWS = new Set<VelairCardView>([
   "comfort",
   "overview",
@@ -65,6 +72,7 @@ export class VelairCardEditor extends LitElement {
 
   protected render() {
     const firstWeekday = this._firstWeekday();
+    const showActiveSetupControls = this._showsActiveSetupControls();
     const orderedEntities = this._orderedEntities();
     const showFirstWeekday = this._showsFirstWeekdayOption();
     const showComfortVisibilityOptions = this._showsComfortVisibilityOptions();
@@ -102,6 +110,23 @@ export class VelairCardEditor extends LitElement {
             `)}
           </select>
         </label>
+
+        ${showActiveSetupControls
+          ? html`
+              <label class="active-setup-controls-option">
+                <span>${this._t("activeSetupCardControls")}</span>
+                <select
+                  .value=${this._activeSetupControls()}
+                  @change=${(event: Event) => this._updateActiveSetupControls(this._inputValue(event))}
+                >
+                  <option value="both">${this._t("activeSetupCardControlsBoth")}</option>
+                  <option value="modes">${this._t("activeSetupCardControlsModes")}</option>
+                  <option value="profiles">${this._t("activeSetupCardControlsProfiles")}</option>
+                </select>
+                <small>${this._t("activeSetupCardControlsDescription")}</small>
+              </label>
+            `
+          : nothing}
 
         ${showFirstWeekday
           ? html`
@@ -297,6 +322,21 @@ export class VelairCardEditor extends LitElement {
     this._emitConfig(nextConfig);
   }
 
+  private _updateActiveSetupControls(value: string): void {
+    const nextConfig: VelairCardConfig = { ...this._config };
+    if (value === "modes" || value === "profiles") {
+      nextConfig.active_setup_controls = value as ActiveSetupControls;
+    } else {
+      delete nextConfig.active_setup_controls;
+    }
+    this._emitConfig(nextConfig);
+  }
+
+  private _activeSetupControls(): ActiveSetupControls {
+    const value = this._config.active_setup_controls;
+    return value === "modes" || value === "profiles" ? value : "both";
+  }
+
   private _toggleBooleanConfig(field: CardVisibilityField, checked: boolean): void {
     const nextConfig: VelairCardConfig = { ...this._config };
     if (checked) {
@@ -440,11 +480,12 @@ export class VelairCardEditor extends LitElement {
       "overview-events": "cardViewOverviewEvents",
       "overview-timeline": "cardViewOverviewTimeline",
       "overview-zones": "cardViewOverviewZones",
+      "active-setup": "cardViewActiveSetup",
       "schedules": "cardViewSchedules",
       "templates": "templates",
       "sensors": "cardViewSensors",
       "comfort": "cardViewComfort",
-      "preconditioning": "preconditioning",
+      "preconditioning": "cardViewPreconditioning",
       "settings": "settings",
     };
     return this._t(labels[view]);
@@ -459,6 +500,10 @@ export class VelairCardEditor extends LitElement {
 
   private _showsFirstWeekdayOption(): boolean {
     return FIRST_WEEKDAY_CARD_VIEWS.has(this._selectedView());
+  }
+
+  private _showsActiveSetupControls(): boolean {
+    return ACTIVE_SETUP_CONTROL_CARD_VIEWS.has(this._selectedView());
   }
 
   private _showsComfortVisibilityOptions(): boolean {

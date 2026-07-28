@@ -95,15 +95,19 @@ apply_schedule:
 
 activate_profile:
   name: Activate climate profile
-  description: Activate a saved climate profile. Leave the profile ID empty to return to Normal schedules.
+  description: Activate one saved climate profile as the Manual selection. Leave the profile ID empty to deactivate all profiles and return to default schedules.
   fields:
     profile_id:
       name: Profile ID
-      description: Stable key of the profile to activate. Empty selects Normal.
+      description: Stable key of the profile to activate. Empty clears the active set and selects Default.
       required: false
       example: away
       selector:
         text:
+
+deactivate_profile:
+  name: Deactivate climate profile
+  description: Return to default schedules by deactivating all climate profiles.
 
 boost:
   name: Boost

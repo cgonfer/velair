@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
 
 function translationStrings(value: unknown): string[] {
@@ -29,5 +30,25 @@ describe("Spanish translations", () => {
     expect(translations).not.toMatch(/[ÃÂ�]/);
     expect(values.filter((value) => value.includes("?")))
       .toEqual(values.filter((value) => value.includes("?") && value.startsWith("¿")));
+  });
+
+  it("uses the same section-prefixed naming convention for Lovelace views", () => {
+    const keys = [
+      "cardViewOverviewStatus",
+      "cardViewOverviewBoosts",
+      "cardViewOverviewEvents",
+      "cardViewOverviewTimeline",
+      "cardViewOverviewZones",
+      "cardViewActiveSetup",
+      "cardViewSchedules",
+      "cardViewSensors",
+      "cardViewComfort",
+      "cardViewPreconditioning",
+    ] as const;
+
+    for (const key of keys) {
+      expect(en[key].split(":")).toHaveLength(2);
+      expect(es[key].split(":")).toHaveLength(2);
+    }
   });
 });

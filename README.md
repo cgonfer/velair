@@ -1,7 +1,7 @@
 # Velair
 Climate automation that adapts to your life.
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge)](#)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](#)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394/4)
 [![HACS](https://img.shields.io/badge/HACS-custom-orange?style=for-the-badge)](https://www.hacs.xyz/docs/faq/custom_repositories/)
@@ -37,7 +37,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Drag and resize interactions on a 24-hour timeline.
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
-- Climate profiles with coordinated per-zone schedules, pauses, manual activation, and Home Assistant automation support.
+- Climate profiles with coordinated per-zone schedules, pauses, configurable Modes, and a native Home Assistant select entity for automations.
 - Overview tab with scheduler status, active boosts, next events, and responsive zone cards that surface current intent and relevant attention signals.
 - Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
 - Dedicated Room Assist tab for setups that need a separate room temperature sensor.
@@ -46,7 +46,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Settings tab with climate ordering, startup behavior, thermostat diagnostics, portability tools, and maintenance information.
 - Global pause, stop, and resume controls, plus per-zone pause and resume.
 - Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
-- Automation events through `velair_event` for scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
+- Automation events through `velair_event` for Profile changes, scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
 - Push updates through Home Assistant WebSocket events, without frontend polling.
 - English and Spanish UI translations.
 - Native Celsius and Fahrenheit workflows using Home Assistant's configured unit, including unit-aware defaults, explicit stored-data migration, and legacy backup conversion.
@@ -174,6 +174,22 @@ view: overview-status
 
 This first card shows the scheduler status and pause/stop/resume controls. You can add more Velair cards to the same dashboard by changing the `view` value.
 
+The Active setup card can allow changes through Modes, direct Profiles, or
+both. The visual card editor exposes the same choice. Omit
+`active_setup_controls` to keep both:
+
+```yaml
+type: custom:velair-card
+view: active-setup
+active_setup_controls: modes
+```
+
+Supported values are `modes`, `profiles`, and `both`. The current Mode and
+applied Profiles remain visible in every variant. Directly activating a Profile
+replaces every previously active Profile and changes the Mode to Manual. To
+activate additional non-overlapping Profiles together, create and select a Mode.
+The `profiles` variant also keeps a Default schedules action available.
+
 You can also limit a Lovelace card to specific thermostats. This only changes what that card displays; it does not change the scheduler or stored schedules.
 
 ```yaml
@@ -207,6 +223,7 @@ Supported `view` values:
 - `overview-events`: next events.
 - `overview-timeline`: today's timeline.
 - `overview-zones`: zone overview.
+- `active-setup`: current Mode and Profiles, with optional controls.
 - `schedules`: full schedule editor.
 - `sensors`: Room Assist configuration and live status.
 - `comfort`: environmental comfort configuration and status.
@@ -221,6 +238,7 @@ If Home Assistant shows a custom element error, confirm that Velair is installed
 - [Documentation index](docs/README.md)
 - [Usage guide](docs/user/usage.md)
 - [Climate Profiles](docs/user/climate-profiles.md)
+- [Automation Events](docs/user/automation-events.md)
 - [Adaptive Preconditioning](docs/user/adaptive-preconditioning.md)
 - [Room Assist](docs/user/room-assist.md)
 - [Environmental Comfort](docs/user/comfort.md)

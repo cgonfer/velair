@@ -82,6 +82,7 @@ Supported `view` values:
 - `overview-events`: next events.
 - `overview-timeline`: today's timeline.
 - `overview-zones`: zone overview.
+- `active-setup`: current Mode and Profiles, with optional controls.
 - `schedules`: full schedule editor.
 - `sensors`: Room Assist configuration and live status.
 - `comfort`: environmental comfort configuration and status.

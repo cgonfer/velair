@@ -36,6 +36,7 @@ describe("portable preconditioning learning", () => {
       templates: 2,
       preconditioningLearning: 2,
       profiles: 1,
+      modes: 1,
     })).toEqual([{ section: "preconditioning_learning", value: 2 }]);
     expect(portableImportSummaryItems(payload)).toEqual([
       { section: "preconditioning_learning", value: 2 },
@@ -50,6 +51,23 @@ describe("portable preconditioning learning", () => {
     };
     expect(validatePortablePayload(profilesPayload)).toEqual({ ok: true, sections: ["profiles"] });
     expect(portableImportSummaryItems(profilesPayload)).toEqual([{ section: "profiles", value: 1 }]);
+  });
+
+  it("accepts and summarizes portable model v5 modes", () => {
+    const modesPayload: VelairPortablePayload = {
+      ...payload,
+      model_version: 5,
+      sections: { modes: [{ key: "vacation", name: "Vacation", profile_ids: ["away"] }] },
+    };
+    expect(validatePortablePayload(modesPayload)).toEqual({ ok: true, sections: ["modes"] });
+    expect(portableImportSummaryItems(modesPayload)).toEqual([{ section: "modes", value: 1 }]);
+    expect(portableExportSummaryItems(new Set(["modes"]), {
+      zones: 0,
+      templates: 0,
+      preconditioningLearning: 0,
+      profiles: 0,
+      modes: 2,
+    })).toEqual([{ section: "modes", value: 2 }]);
   });
 
   it("identifies learning entries that cannot match a managed climate", () => {

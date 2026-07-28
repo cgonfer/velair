@@ -74,7 +74,7 @@ describe("frontend entrypoint", () => {
     panel.remove();
   });
 
-  it("offers preconditioning as an individual Lovelace card view", async () => {
+  it("keeps Lovelace view IDs stable and orders consistently named options by panel", async () => {
     await import("../../src/velair-card");
     const editor = document.createElement("velair-card-editor") as HTMLElement & {
       setConfig(config: { view: string }): void;
@@ -86,10 +86,24 @@ describe("frontend entrypoint", () => {
     await editor.updateComplete;
 
     const viewSelect = editor.shadowRoot?.querySelector("select");
-    const views = [...(viewSelect?.querySelectorAll("option") ?? [])].map(
-      (option) => option.getAttribute("value"),
+    const options = [...(viewSelect?.querySelectorAll("option") ?? [])].map(
+      (option) => ({
+        label: option.textContent?.trim(),
+        value: option.getAttribute("value"),
+      }),
     );
-    expect(views).toContain("preconditioning");
+    expect(options).toEqual([
+      { label: "Overview: scheduler status", value: "overview-status" },
+      { label: "Overview: active boosts", value: "overview-boosts" },
+      { label: "Overview: next events", value: "overview-events" },
+      { label: "Overview: today's timeline", value: "overview-timeline" },
+      { label: "Overview: zone overview", value: "overview-zones" },
+      { label: "Profiles: active setup", value: "active-setup" },
+      { label: "Schedules: editor", value: "schedules" },
+      { label: "Room Assist: configuration and status", value: "sensors" },
+      { label: "Comfort: configuration and status", value: "comfort" },
+      { label: "Preconditioning: configuration and status", value: "preconditioning" },
+    ]);
     expect((viewSelect as HTMLSelectElement | null)?.value).toBe("preconditioning");
 
     editor.remove();
@@ -114,6 +128,70 @@ describe("frontend entrypoint", () => {
     expect(editor.shadowRoot?.querySelector(".zone-order")).toBeNull();
     expect(editor.shadowRoot?.querySelector(".first-weekday-option")).toBeNull();
     expect(sendMessagePromise).not.toHaveBeenCalled();
+
+    editor.setConfig({ view: "active-setup" });
+    await editor.updateComplete;
+    expect(editor.shadowRoot?.querySelector(".zone-order")).toBeNull();
+    expect(editor.shadowRoot?.querySelector(".first-weekday-option")).toBeNull();
+    expect(sendMessagePromise).not.toHaveBeenCalled();
+
+    editor.remove();
+  });
+
+  it("configures whether the Active setup card can change Modes, Profiles, or both", async () => {
+    await import("../../src/velair-card");
+    const editor = document.createElement("velair-card-editor") as HTMLElement & {
+      setConfig(config: { active_setup_controls?: string; view: string }): void;
+      updateComplete?: Promise<boolean>;
+    };
+
+    editor.setConfig({ view: "active-setup" });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const control = editor.shadowRoot?.querySelector(
+      ".active-setup-controls-option select",
+    ) as HTMLSelectElement;
+    expect(control).not.toBeNull();
+    expect(control.value).toBe("both");
+    expect([...control.options].map((option) => option.value))
+      .toEqual(["both", "modes", "profiles"]);
+    expect(editor.shadowRoot?.textContent).toContain("Active setup controls");
+
+    const changed = new Promise<Record<string, unknown>>((resolve) => {
+      editor.addEventListener("config-changed", ((event: CustomEvent) => {
+        resolve(event.detail.config);
+      }) as EventListener, { once: true });
+    });
+    control.value = "profiles";
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(await changed).toMatchObject({
+      active_setup_controls: "profiles",
+      view: "active-setup",
+    });
+
+    await editor.updateComplete;
+    const updatedControl = editor.shadowRoot?.querySelector(
+      ".active-setup-controls-option select",
+    ) as HTMLSelectElement;
+    const reset = new Promise<Record<string, unknown>>((resolve) => {
+      editor.addEventListener("config-changed", ((event: CustomEvent) => {
+        resolve(event.detail.config);
+      }) as EventListener, { once: true });
+    });
+    updatedControl.value = "both";
+    updatedControl.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(await reset).toEqual({ view: "active-setup" });
+
+    editor.setConfig({ active_setup_controls: "invalid", view: "active-setup" });
+    await editor.updateComplete;
+    expect((editor.shadowRoot?.querySelector(
+      ".active-setup-controls-option select",
+    ) as HTMLSelectElement).value).toBe("both");
+
+    editor.setConfig({ active_setup_controls: "modes", view: "overview-status" });
+    await editor.updateComplete;
+    expect(editor.shadowRoot?.querySelector(".active-setup-controls-option")).toBeNull();
 
     editor.remove();
   });

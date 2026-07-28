@@ -14,6 +14,7 @@ USAGE_DOC = ROOT / "docs" / "user" / "usage.md"
 CONSTANTS = ROOT / "custom_components" / "velair" / "const.py"
 
 PUBLIC_EVENTS = (
+    "profile_changed",
     "scheduler_mode_changed",
     "climate_target_applied",
     "preconditioning_plan_updated",

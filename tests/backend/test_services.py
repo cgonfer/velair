@@ -6,7 +6,11 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock
 
-from custom_components.velair.const import DOMAIN, SERVICE_ACTIVATE_PROFILE
+from custom_components.velair.const import (
+    DOMAIN,
+    SERVICE_ACTIVATE_PROFILE,
+    SERVICE_DEACTIVATE_PROFILE,
+)
 from custom_components.velair.services import (
     HomeAssistantError,
     async_setup_services,
@@ -35,6 +39,7 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.scheduler = SimpleNamespace(
             async_activate_profile=AsyncMock(),
+            async_deactivate_profile=AsyncMock(),
             set_temperature_migration_blocked=Mock(),
             temperature_migration_blocked=False,
         )
@@ -62,16 +67,33 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
         await handler(SimpleNamespace(data=schema({"profile_id": "away"})))
         await handler(SimpleNamespace(data=schema({})))
 
+        deactivate_handler, _schema = self.services.handlers[
+            (DOMAIN, SERVICE_DEACTIVATE_PROFILE)
+        ]
+        await deactivate_handler(SimpleNamespace(data={}))
+
         self.assertEqual(
             self.scheduler.async_activate_profile.await_args_list[0].args,
             ("away",),
         )
         self.assertEqual(
+            self.scheduler.async_activate_profile.await_args_list[0].kwargs,
+            {"source": "service"},
+        )
+        self.assertEqual(
             self.scheduler.async_activate_profile.await_args_list[1].args,
             (None,),
         )
+        self.assertEqual(
+            self.scheduler.async_activate_profile.await_args_list[1].kwargs,
+            {"source": "service"},
+        )
+        self.scheduler.async_deactivate_profile.assert_awaited_once_with(
+            source="service"
+        )
         await async_unload_services(self.hass)
         self.assertIn((DOMAIN, SERVICE_ACTIVATE_PROFILE), self.services.removed)
+        self.assertIn((DOMAIN, SERVICE_DEACTIVATE_PROFILE), self.services.removed)
 
     async def test_activate_profile_service_maps_scheduler_validation_errors(self) -> None:
         await async_setup_services(self.hass)

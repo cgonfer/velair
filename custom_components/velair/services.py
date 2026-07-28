@@ -36,6 +36,7 @@ from .const import (
     MODE_PAUSED,
     SERVICE_APPLY_SCHEDULE,
     SERVICE_ACTIVATE_PROFILE,
+    SERVICE_DEACTIVATE_PROFILE,
     SERVICE_BOOST,
     SERVICE_CANCEL_BOOST,
     SERVICE_CLEAR_SCHEDULE,
@@ -209,7 +210,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def async_activate_profile(call: ServiceCall) -> None:
         scheduler = _get_scheduler(hass)
         try:
-            await scheduler.async_activate_profile(call.data.get(ATTR_PROFILE_ID))
+            await scheduler.async_activate_profile(
+                call.data.get(ATTR_PROFILE_ID), source="service"
+            )
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_deactivate_profile(_call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        try:
+            await scheduler.async_deactivate_profile(source="service")
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
 
@@ -362,6 +372,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_DEACTIVATE_PROFILE,
+        async_deactivate_profile,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_BOOST,
         async_boost,
         schema=BOOST_SCHEMA,
@@ -433,6 +448,7 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_SET_TEMPERATURE,
         SERVICE_APPLY_SCHEDULE,
         SERVICE_ACTIVATE_PROFILE,
+        SERVICE_DEACTIVATE_PROFILE,
         SERVICE_BOOST,
         SERVICE_CANCEL_BOOST,
         SERVICE_PAUSE,

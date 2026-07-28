@@ -105,6 +105,11 @@
         }
       }
     },
+    "select": {
+      "mode": {
+        "name": "Modo"
+      }
+    },
     "switch": {
       "automatic_scheduling": {
         "name": "Planificación automática"

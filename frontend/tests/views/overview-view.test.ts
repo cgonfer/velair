@@ -695,7 +695,7 @@ describe("overview timeline", () => {
       _modeLabel: (mode: string) => mode,
       _showOverviewTimelineDetail: () => undefined,
       _data: {
-        global: { mode: "auto", active_profile_id: "away" },
+        global: { mode: "auto", active_profile_ids: ["away"] },
         configured_entities: ["climate.office"],
         zones: { "climate.office": { enabled: true, schedule: week("08:00", 21) } },
         profiles: [{
@@ -721,7 +721,7 @@ describe("overview timeline", () => {
   it("lets a temporary override replace the profile marker while keeping the zone badge", () => {
     const container = document.createElement("div");
     const data = {
-      global: { mode: "auto", active_profile_id: "away" },
+      global: { mode: "auto", active_profile_ids: ["away"] },
       zones: {
         "climate.office": {
           enabled: true,

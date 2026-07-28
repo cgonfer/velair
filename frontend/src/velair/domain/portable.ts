@@ -55,7 +55,7 @@ export function portableSectionsFromPayload(payload?: VelairPortablePayload): Po
 
 export function portableExportSummaryItems(
   sections: Set<PortableSection>,
-  counts: { zones: number; templates: number; preconditioningLearning: number; profiles: number },
+  counts: { zones: number; templates: number; preconditioningLearning: number; profiles: number; modes: number },
 ): PortableSummaryItem[] {
   const items: PortableSummaryItem[] = [];
   if (sections.has("zones")) {
@@ -75,6 +75,9 @@ export function portableExportSummaryItems(
   }
   if (sections.has("profiles")) {
     items.push({ section: "profiles", value: counts.profiles });
+  }
+  if (sections.has("modes")) {
+    items.push({ section: "modes", value: counts.modes });
   }
   return items;
 }
@@ -116,6 +119,12 @@ export function portableImportSummaryItems(payload?: VelairPortablePayload): Por
     items.push({
       section: "profiles",
       value: Array.isArray(sections.profiles) ? sections.profiles.length : 0,
+    });
+  }
+  if (Object.prototype.hasOwnProperty.call(sections, "modes")) {
+    items.push({
+      section: "modes",
+      value: Array.isArray(sections.modes) ? sections.modes.length : 0,
     });
   }
   return items;

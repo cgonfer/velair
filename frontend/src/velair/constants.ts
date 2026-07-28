@@ -16,6 +16,7 @@ export const ACTION_TURN_OFF = "turn_off";
 export const DOMAIN = "velair";
 export const NOTICE_AUTO_DISMISS_MS = 5_000;
 export const PROFILE_DESCRIPTION_MAX_LENGTH = 500;
+export const MODE_NAME_MAX_LENGTH = 255;
 export const PANEL_VIEWS: VelairPanelView[] = [
   "overview",
   "profiles",
@@ -32,17 +33,19 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "overview-events",
   "overview-timeline",
   "overview-zones",
+  "active-setup",
   "schedules",
   "sensors",
   "comfort",
   "preconditioning",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 4;
+export const PORTABLE_MODEL_VERSION = 5;
 export const PORTABLE_SECTIONS: PortableSection[] = [
   "zones",
   "templates",
   "settings",
   "preconditioning_learning",
   "profiles",
+  "modes",
 ];

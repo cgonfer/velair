@@ -4,6 +4,7 @@ import type {
   ComfortSettings,
   ClimateProfileInput,
   PanelSettings,
+  VelairModeInput,
   PortableSection,
   PreconditioningSettings,
   ScheduleBlock,
@@ -97,6 +98,29 @@ export class VelairApiClient {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/activate_profile",
       profile_id: key ?? null,
+    });
+  }
+
+  public setVelairMode(mode: VelairModeInput): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/set_mode",
+      mode,
+    });
+  }
+
+  public deleteVelairMode(key: string): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/delete_mode",
+      key,
+    });
+  }
+
+  public selectVelairMode(
+    selection: { kind: "default" | "manual" } | { kind: "custom"; key: string },
+  ): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/select_mode",
+      selection,
     });
   }
 

@@ -53,7 +53,10 @@ export type HomeAssistant = {
   states?: Record<string, HassState>;
 };
 
+export type ActiveSetupControls = "both" | "modes" | "profiles";
+
 export type VelairCardConfig = {
+  active_setup_controls?: ActiveSetupControls;
   entities?: string[];
   first_weekday?: string;
   show_comfort_co2?: boolean;
@@ -88,6 +91,7 @@ export type VelairPanelRoute = {
 export type VelairPanelView = "overview" | "profiles" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
+  | "active-setup"
   | "overview-boosts"
   | "overview-events"
   | "overview-timeline"
@@ -127,6 +131,18 @@ export type ClimateProfileInput = {
   color?: string;
   description?: string;
   zones: Record<string, ClimateProfileZone>;
+};
+
+export type VelairMode = {
+  key: string;
+  name: string;
+  profile_ids: string[];
+};
+
+export type VelairModeInput = {
+  key?: string;
+  name: string;
+  profile_ids: string[];
 };
 
 export type DraftScheduleBlock = {
@@ -345,6 +361,7 @@ export type PanelSettings = {
 
 export type ScheduleResponse = {
   profile_id?: string;
+  mode_id?: string;
   configured_entities: string[];
   temperature_unit: "°C" | "°F";
   home_assistant_temperature_unit: "°C" | "°F";
@@ -369,7 +386,7 @@ export type ScheduleResponse = {
   } | null;
   global: {
     mode: string;
-    active_profile_id?: string | null;
+    active_profile_ids?: string[];
     paused_started_at?: string | null;
     paused_until?: string | null;
   };
@@ -385,6 +402,8 @@ export type ScheduleResponse = {
   preconditioning_learning?: Record<string, PreconditioningLearningSummary>;
   templates?: StoredScheduleTemplate[];
   profiles?: ClimateProfile[];
+  modes?: VelairMode[];
+  active_mode_id?: string | null;
   versions?: {
     export_format?: string;
     integration?: string;
@@ -404,7 +423,8 @@ export type PortableSection =
   | "templates"
   | "settings"
   | "preconditioning_learning"
-  | "profiles";
+  | "profiles"
+  | "modes";
 
 export type VelairPortablePayload = {
   format?: string;

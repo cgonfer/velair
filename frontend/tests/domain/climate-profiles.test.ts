@@ -14,7 +14,7 @@ import {
 } from "../../src/velair/domain/climate-profiles";
 
 describe("climate profiles domain", () => {
-  it("omits Normal zones and sends a complete week for scheduled zones", () => {
+  it("omits default-schedule zones and sends a complete week for scheduled zones", () => {
     let draft = createClimateProfileDraft();
     draft = { ...draft, name: "Away" };
     draft = withProfileZoneBehavior(draft, "climate.office", "normal");
@@ -129,7 +129,7 @@ describe("climate profiles domain", () => {
     const normalSchedule = { monday: [{ start: "08:00", action: "set_temperature", temperature: 21 }] };
     const profileSchedule = { monday: [{ start: "09:00", action: "set_temperature", temperature: 18 }] };
     const data = {
-      global: { mode: "auto", active_profile_id: "away" },
+      global: { mode: "auto", active_profile_ids: ["away", "sleep"] },
       zones: {
         "climate.normal": { enabled: true, schedule: normalSchedule },
         "climate.profiled": { enabled: true, schedule: normalSchedule },
@@ -140,6 +140,11 @@ describe("climate profiles domain", () => {
         name: "Away",
         zones: {
           "climate.profiled": { behavior: "schedule", schedule: profileSchedule },
+        },
+      }, {
+        key: "sleep",
+        name: "Sleep",
+        zones: {
           "climate.paused": { behavior: "pause", action: "none" },
         },
       }],
@@ -150,5 +155,6 @@ describe("climate profiles domain", () => {
     expect(effectiveClimateSchedule(data, "climate.paused")).toBeUndefined();
     expect(activeClimateProfileZoneEffect(data, "climate.normal")).toBeUndefined();
     expect(activeClimateProfileZoneEffect(data, "climate.profiled")?.profile.name).toBe("Away");
+    expect(activeClimateProfileZoneEffect(data, "climate.paused")?.profile.name).toBe("Sleep");
   });
 });

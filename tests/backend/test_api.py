@@ -23,6 +23,11 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
             async_set_profile=AsyncMock(return_value="away"),
             async_delete_profile=AsyncMock(),
             async_activate_profile=AsyncMock(),
+            async_set_velair_mode=AsyncMock(return_value="away-mode"),
+            async_delete_velair_mode=AsyncMock(),
+            async_select_velair_mode=AsyncMock(),
+            async_clear_velair_mode=AsyncMock(),
+            async_deactivate_profile=AsyncMock(),
         )
         self.runtime = {
             "scheduler": self.scheduler,
@@ -60,7 +65,9 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
             self.connection,
             {"id": 2, "type": "velair/activate_profile"},
         )
-        self.scheduler.async_activate_profile.assert_awaited_once_with(None)
+        self.scheduler.async_activate_profile.assert_awaited_once_with(
+            None, source="panel"
+        )
         self.connection.send_result.assert_called_with(2, {"profiles": []})
 
         await api_module.ws_delete_profile(
@@ -71,6 +78,88 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
         self.scheduler.async_delete_profile.assert_awaited_once_with("away")
         self.connection.send_result.assert_called_with(3, {"profiles": []})
         self.connection.send_error.assert_not_called()
+
+    async def test_mode_handlers_forward_and_validate(self) -> None:
+        mode = {"name": "Away", "profile_ids": ["away"]}
+        await api_module.ws_set_mode(
+            SimpleNamespace(),
+            self.connection,
+            {
+                "id": 8,
+                "type": "velair/set_mode",
+                "mode": mode,
+            },
+        )
+        self.scheduler.async_set_velair_mode.assert_awaited_once_with(mode)
+        self.connection.send_result.assert_called_with(
+            8, {"profiles": [], "mode_id": "away-mode"}
+        )
+
+        await api_module.ws_delete_mode(
+            SimpleNamespace(),
+            self.connection,
+            {
+                "id": 9,
+                "type": "velair/delete_mode",
+                "key": "away-mode",
+            },
+        )
+        self.scheduler.async_delete_velair_mode.assert_awaited_once_with("away-mode")
+
+        self.scheduler.async_delete_velair_mode.side_effect = ValueError("bad mode")
+        await api_module.ws_delete_mode(
+            SimpleNamespace(),
+            self.connection,
+            {"id": 10, "type": "velair/delete_mode", "key": "bad"},
+        )
+        self.connection.send_error.assert_called_with(
+            10, "invalid_mode", "bad mode"
+        )
+
+    async def test_panel_mode_selection_uses_structured_stable_values(self) -> None:
+        selections = (
+            ({"kind": "custom", "key": " away-mode "}, 11),
+            ({"kind": "manual"}, 12),
+            ({"kind": "default"}, 13),
+        )
+        for selection, message_id in selections:
+            await api_module.ws_select_mode(
+                SimpleNamespace(),
+                self.connection,
+                {
+                    "id": message_id,
+                    "type": "velair/select_mode",
+                    "selection": selection,
+                },
+            )
+
+        self.scheduler.async_select_velair_mode.assert_awaited_once_with(
+            "away-mode", source="panel"
+        )
+        self.scheduler.async_clear_velair_mode.assert_awaited_once_with()
+        self.scheduler.async_deactivate_profile.assert_awaited_once_with(
+            source="panel"
+        )
+        self.connection.send_result.assert_called_with(13, {"profiles": []})
+
+    async def test_panel_mode_selection_rejects_invalid_shapes(self) -> None:
+        for message_id, selection in (
+            (14, {"kind": "custom"}),
+            (15, {"kind": "manual", "key": "unexpected"}),
+        ):
+            await api_module.ws_select_mode(
+                SimpleNamespace(),
+                self.connection,
+                {
+                    "id": message_id,
+                    "type": "velair/select_mode",
+                    "selection": selection,
+                },
+            )
+            self.assertEqual(
+                self.connection.send_error.call_args.args[:2],
+                (message_id, "invalid_mode"),
+            )
 
     async def test_profile_handlers_map_validation_and_migration_errors(self) -> None:
         self.scheduler.async_activate_profile.side_effect = ValueError("unknown")
@@ -550,6 +639,21 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
     def test_schedule_response_uses_entry_runtime_climate_manager(self) -> None:
         entity_id = "climate.salon"
         data = helpers.normalize_schedule_data(None, [entity_id])
+        data["profiles"] = [
+            {
+                "key": "away",
+                "name": "Away",
+                "icon": "mdi:home-export-outline",
+                "color": "#546e7a",
+                "description": "",
+                "zones": {},
+            }
+        ]
+        data["modes"] = [
+            {"key": "away-mode", "name": "Away", "profile_ids": ["away"]}
+        ]
+        data["global_"]["active_profile_ids"] = ["away"]
+        data["global_"]["active_mode_id"] = "away-mode"
         runtime = {
             "entry": SimpleNamespace(
                 data={},
@@ -604,6 +708,13 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
         )
         self.assertEqual(response["zone_runtime"][entity_id]["state"], "scheduled")
         self.assertEqual(response["zone_runtime"][entity_id]["applied_temperature"], 21.5)
+        self.assertEqual(response["active_profile_ids"], ["away"])
+        self.assertEqual(response["profiles"][0]["key"], "away")
+        self.assertEqual(
+            response["modes"],
+            [{"key": "away-mode", "name": "Away", "profile_ids": ["away"]}],
+        )
+        self.assertEqual(response["active_mode_id"], "away-mode")
 
     def test_schedule_response_serializes_next_events_by_zone_for_ui(self) -> None:
         data = helpers.normalize_schedule_data(None, ["climate.salon", "climate.bedroom"])

@@ -78,7 +78,23 @@ type: custom:velair-card
 view: overview-status
 ```
 
-Cards can use an optional `entities` list to show only selected Velair-managed climates in that dashboard card. This is local Lovelace configuration only; it does not persist through Velair storage and does not change scheduler behavior. Per-climate views, lists, copy targets, template apply targets, next events, boosts, timelines, settings rows, and preconditioning rows use the filtered list. Global views such as `overview-status` continue to show the scheduler state normally.
+Cards can use an optional `entities` list to show only selected Velair-managed climates in that dashboard card. This is local Lovelace configuration only; it does not persist through Velair storage and does not change scheduler behavior. Per-climate views, lists, copy targets, template apply targets, next events, boosts, timelines, settings rows, and preconditioning rows use the filtered list. Global views such as `overview-status` and `active-setup` do not use an entity filter.
+
+The independent `active-setup` card accepts a local `active_setup_controls`
+presentation option:
+
+```yaml
+type: custom:velair-card
+view: active-setup
+active_setup_controls: both
+```
+
+Valid values are `modes`, `profiles`, and `both`; omission and invalid values
+fall back to `both`. This setting filters only the available Active setup
+actions. The current Mode and active Profile summary always remain visible, and
+no value is persisted through Velair storage. Profiles-only cards retain a
+Default action because direct Profile activation replaces the complete active
+set; composing several non-overlapping Profiles remains a Mode responsibility.
 
 ```yaml
 type: custom:velair-card
@@ -130,6 +146,7 @@ Supported Lovelace `view` values:
 - `overview-events`
 - `overview-timeline`
 - `overview-zones`
+- `active-setup`
 - `schedules`
 - `sensors`
 - `comfort`

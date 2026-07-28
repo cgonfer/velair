@@ -11,6 +11,111 @@ from homeassistant.const import UnitOfTemperature
 from custom_components.velair.climate_manager import ClimateManager
 
 
+class _ServiceRecorder:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, dict, bool]] = []
+
+    async def async_call(
+        self,
+        domain: str,
+        service: str,
+        data: dict,
+        *,
+        blocking: bool = False,
+    ) -> None:
+        self.calls.append((domain, service, data, blocking))
+
+
+class ClimateManagerHvacFallbackTest(unittest.IsolatedAsyncioTestCase):
+    """Verify the public HVAC fallback contract against service calls."""
+
+    def _manager(
+        self,
+        state_value: str,
+        supported_modes: list[str] | None,
+    ) -> tuple[ClimateManager, _ServiceRecorder]:
+        attributes = {
+            "unit_of_measurement": UnitOfTemperature.CELSIUS,
+            "min_temp": 5,
+            "max_temp": 35,
+        }
+        if supported_modes is not None:
+            attributes["hvac_modes"] = supported_modes
+        state = SimpleNamespace(state=state_value, attributes=attributes)
+        services = _ServiceRecorder()
+        hass = SimpleNamespace(
+            states=SimpleNamespace(get=lambda _entity_id: state),
+            services=services,
+            config=SimpleNamespace(
+                units=SimpleNamespace(
+                    temperature_unit=UnitOfTemperature.CELSIUS
+                )
+            ),
+        )
+        return ClimateManager(hass), services
+
+    async def test_omitted_mode_preserves_an_already_running_mode(self) -> None:
+        manager, services = self._manager("cool", ["off", "heat", "cool"])
+
+        await manager.async_set_temperature(
+            "climate.room",
+            24,
+            ensure_on=True,
+        )
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["set_temperature"],
+        )
+
+    async def test_omitted_mode_uses_first_supported_non_off_mode_when_off(
+        self,
+    ) -> None:
+        manager, services = self._manager("off", ["off", "cool", "heat"])
+
+        await manager.async_set_temperature(
+            "climate.room",
+            24,
+            ensure_on=True,
+        )
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["set_hvac_mode", "set_temperature"],
+        )
+        self.assertEqual(services.calls[0][2]["hvac_mode"], "cool")
+
+    async def test_explicit_mode_wins_over_current_mode(self) -> None:
+        manager, services = self._manager("heat", ["off", "heat", "cool"])
+
+        await manager.async_set_temperature(
+            "climate.room",
+            24,
+            ensure_on=True,
+            hvac_mode="cool",
+        )
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["set_hvac_mode", "set_temperature"],
+        )
+        self.assertEqual(services.calls[0][2]["hvac_mode"], "cool")
+
+    async def test_missing_supported_modes_falls_back_to_turn_on(self) -> None:
+        manager, services = self._manager("off", None)
+
+        await manager.async_set_temperature(
+            "climate.room",
+            24,
+            ensure_on=True,
+        )
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["turn_on", "set_temperature"],
+        )
+
+
 class ClimateManagerTemperatureLimitsTest(unittest.TestCase):
     """Verify fallback limits use the climate's effective unit."""
 

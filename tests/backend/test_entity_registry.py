@@ -35,6 +35,7 @@ class FakeRegistry:
     def __init__(self, entities: dict[str, SimpleNamespace]) -> None:
         self.entities = entities
         self.removed: list[str] = []
+        self.updated: list[tuple[str, dict[str, str]]] = []
 
     def async_get_entity_id(
         self,
@@ -53,6 +54,9 @@ class FakeRegistry:
 
     def async_remove(self, entity_id: str) -> None:
         self.removed.append(entity_id)
+
+    def async_update_entity(self, entity_id: str, **changes: str) -> None:
+        self.updated.append((entity_id, changes))
 
 
 def _entry(
@@ -138,6 +142,57 @@ class EntityRegistryCleanupTest(unittest.TestCase):
         )
 
         self.assertEqual(registry.removed, [])
+
+    def test_cleanup_migrates_default_mode_select_entity_id_and_unique_id(self) -> None:
+        registry = FakeRegistry(
+            {
+                "select.velair_profile_mode": _entry("entry_profile_mode"),
+            }
+        )
+        entity_registry_module.async_get = lambda hass: registry
+
+        registry_module.cleanup_entity_registry(
+            SimpleNamespace(),
+            SimpleNamespace(entry_id="entry"),
+            [],
+        )
+
+        self.assertEqual(
+            registry.updated,
+            [
+                (
+                    "select.velair_profile_mode",
+                    {
+                        "new_unique_id": "entry_mode",
+                        "new_entity_id": "select.velair_mode",
+                    },
+                )
+            ],
+        )
+
+    def test_cleanup_preserves_customized_mode_select_entity_id(self) -> None:
+        registry = FakeRegistry(
+            {
+                "select.house_state": _entry("entry_profile_mode"),
+            }
+        )
+        entity_registry_module.async_get = lambda hass: registry
+
+        registry_module.cleanup_entity_registry(
+            SimpleNamespace(),
+            SimpleNamespace(entry_id="entry"),
+            [],
+        )
+
+        self.assertEqual(
+            registry.updated,
+            [
+                (
+                    "select.house_state",
+                    {"new_unique_id": "entry_mode"},
+                )
+            ],
+        )
 
 
 if __name__ == "__main__":

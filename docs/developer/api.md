@@ -33,9 +33,10 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
     "mode": "auto",
     "paused_started_at": null,
     "paused_until": null,
-    "active_profile_id": "away"
+    "active_profile_ids": ["away"],
+    "active_mode_id": "away-mode"
   },
-  "active_profile_id": "away",
+  "active_profile_ids": ["away"],
   "profiles": [
     {
       "key": "away",
@@ -53,6 +54,14 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
       }
     }
   ],
+  "modes": [
+    {
+      "key": "away-mode",
+      "name": "Away",
+      "profile_ids": ["away"]
+    }
+  ],
+  "active_mode_id": "away-mode",
   "settings": {
     "first_weekday": "monday",
     "zone_order": ["climate.living_room"],
@@ -197,10 +206,10 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 3,
+    "portable_model": 5,
     "storage": 1,
-    "model": 1,
-    "integration": "1.2.0"
+    "model": 3,
+    "integration": "1.3.0"
   }
 }
 ```
@@ -455,7 +464,7 @@ Comfort settings are per managed climate. The scheduler only listens to comfort-
 
 Create or replace a complete profile definition. Omitting `key` creates a new
 stable key; including it updates that profile. Profile zones are sparse:
-omitted zones keep their Normal schedule.
+omitted zones keep their default schedule.
 
 ```ts
 await hass.connection.sendMessagePromise({
@@ -485,8 +494,9 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Deleting the active profile returns Velair to Normal. Activate a profile, or
-return to Normal with `null`, using:
+Deleting an active Profile removes only that ID from the active set; its zones
+return to Default and other active Profiles remain. Activate one Profile as a
+Manual singleton, or empty the active set with `null` for compatibility, using:
 
 ```ts
 await hass.connection.sendMessagePromise({
@@ -496,7 +506,57 @@ await hass.connection.sendMessagePromise({
 ```
 
 Activation applies the current effective schedule immediately, cancels Boost
-on affected zones, and preserves global or per-zone manual pauses.
+on affected zones, and preserves global or per-zone manual pauses. Direct
+activation clears `active_mode_id`, so the native selector reports
+`Manual`. New automations should use `velair.deactivate_profile` explicitly to
+return to default schedules.
+
+Create or update one Mode with:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/set_mode",
+  mode: {
+    name: "Away",
+    profile_ids: ["away"]
+  }
+});
+```
+
+Omit `key` when creating a mode; include the stable returned key when updating
+one. Names are trimmed, limited to 255 characters, case-insensitively unique,
+cannot contain control characters, and cannot use the built-in names `Default`
+or `Manual`, translated built-in labels such as `Predeterminado`, nor the Home
+Assistant states `unknown` and `unavailable`.
+Every Mode must provide one or more unique existing IDs in `profile_ids`.
+Selected Profiles must not explicitly configure the same zone; conflicting
+compositions are rejected. Delete a Mode with:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/delete_mode",
+  key: "away-mode"
+});
+```
+
+The schedule response contains `modes` and `active_mode_id`.
+Automations select a configured value through Home Assistant's standard
+`select.select_option` action on `select.velair_mode`.
+
+The Velair panel changes the active Mode through a structured WebSocket
+command so it does not depend on the user-editable Home Assistant entity ID:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/select_mode",
+  selection: { kind: "custom", key: "away-mode" }
+});
+```
+
+Custom selections use the stable mode `key`. The built-in selections are
+`{ kind: "default" }` and `{ kind: "manual" }`. Panel custom selections report
+`panel` as their profile-change source; changes made through the native select
+entity continue to report `select`.
 
 ## Reset Zone Preconditioning Settings
 
@@ -526,7 +586,7 @@ Deletes local adaptive preconditioning observations for one managed climate dire
 ```ts
 await hass.connection.sendMessagePromise({
   type: "velair/export_data",
-  sections: ["zones", "templates", "settings", "preconditioning_learning", "profiles"],
+  sections: ["zones", "templates", "settings", "preconditioning_learning", "profiles", "modes"],
 });
 ```
 
@@ -535,7 +595,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 4,
+  "model_version": 5,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -552,11 +612,13 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Selected sections overwrite existing data. Profile definitions are portable,
-but the active profile is never exported or selected by import. If replacing
-definitions removes the active profile, Velair returns to Normal.
+Selected sections overwrite existing data. Profile and Mode definitions are
+portable, but the active Profile set and selected Mode are never exported or
+selected by import. Replacing definitions retains active IDs that still exist
+and returns to default schedules only when the active set becomes empty.
 
-Portable model v4 payloads declare `temperature_unit`. Models created before
+Portable model v5 payloads add the optional `modes` section. V4 payloads
+remain valid. Portable payloads declare `temperature_unit`; models created before
 unit metadata existed may omit it; the backend treats those values as Celsius.
 If the source differs from Velair's current Home Assistant unit, selected thermal
 data is converted before normalization. Managed climates with known limits and

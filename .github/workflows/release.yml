@@ -55,6 +55,14 @@ jobs:
           VERSION="$(node -p "require('./custom_components/velair/manifest.json').version")"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Validate versioned release notes
+        run: |
+          RELEASE_NOTES=".github/release-notes/v${{ steps.version.outputs.version }}.md"
+          if [ ! -f "$RELEASE_NOTES" ]; then
+            echo "Missing release notes for version ${{ steps.version.outputs.version }}: $RELEASE_NOTES"
+            exit 1
+          fi
+
       - name: Validate tag version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -80,9 +88,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          RELEASE_NOTES=".github/release-notes/v${{ steps.version.outputs.version }}.md"
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" \
               --title "Velair ${{ steps.version.outputs.version }}" \
-              --notes "Release artifacts are attached below. Install through HACS when possible, or use the custom component zip for manual installation."
+              --notes-file "$RELEASE_NOTES"
           fi
           gh release upload "$GITHUB_REF_NAME" .release/artifacts/*.zip --clobber

@@ -533,7 +533,10 @@ class SensorTranslationTest(unittest.TestCase):
                     set(sensors["scheduler_status"]["state"]),
                     expected_states,
                 )
-                self.assertNotIn("select", translation["entity"])
+                self.assertEqual(
+                    set(translation["entity"]["select"]),
+                    {"mode"},
+                )
                 self.assertEqual(
                     set(translation["entity"]["switch"]),
                     {"automatic_scheduling"},

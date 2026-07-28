@@ -59,6 +59,7 @@ from .models import (
     ComfortData,
     DEFAULT_SCHEDULE_TEMPLATES_VERSION,
     PanelSettingsData,
+    VelairModeData,
     PreconditioningData,
     PreconditioningPrediction,
     PreconditioningPredictionDiagnostics,
@@ -74,7 +75,9 @@ from .models import (
     empty_preconditioning_learning_data,
     is_valid_climate_profile_color,
     normalize_panel_settings,
+    normalize_modes,
     validate_climate_profiles,
+    validate_modes,
     normalize_comfort_data,
     normalize_preconditioning_data,
     preconditioning_observations_for_direction,
@@ -433,13 +436,22 @@ class VelairScheduler:
         return events[0] if events else None
 
     @property
-    def active_profile_id(self) -> str | None:
-        """Return the stable key of the active profile, or Normal as null."""
-        return self._data["global_"].get("active_profile_id")
+    def active_profile_ids(self) -> list[str]:
+        """Return the stable keys of all active profiles."""
+        return list(self._data["global_"].get("active_profile_ids", []))
+
+    @property
+    def active_mode_id(self) -> str | None:
+        """Return the selected custom mode key, if any."""
+        return self._data["global_"].get("active_mode_id")
 
     def get_profiles(self) -> list[ClimateProfileData]:
         """Return a detached profile list for API consumers."""
         return deepcopy(self._data.get("profiles", []))
+
+    def get_modes(self) -> list[VelairModeData]:
+        """Return detached custom modes for API and entity consumers."""
+        return deepcopy(self._data.get("modes", []))
 
     def _profile_by_id(self, profile_id: str | None) -> ClimateProfileData | None:
         if profile_id is None:
@@ -449,15 +461,37 @@ class VelairScheduler:
             None,
         )
 
+    def _active_profiles(self) -> list[ClimateProfileData]:
+        """Return active profiles in their persisted activation order."""
+        profiles_by_id = {
+            profile["key"]: profile
+            for profile in self._data.get("profiles", [])
+        }
+        return [
+            profiles_by_id[profile_id]
+            for profile_id in self.active_profile_ids
+            if profile_id in profiles_by_id
+        ]
+
+    def _active_profile_for_zone(
+        self, entity_id: str
+    ) -> ClimateProfileData | None:
+        """Resolve the single active profile that explicitly owns a zone."""
+        return next(
+            (
+                profile
+                for profile in self._active_profiles()
+                if entity_id in profile["zones"]
+            ),
+            None,
+        )
+
     def _profile_zone_behavior(
         self,
         entity_id: str,
-        profile_id: str | None = None,
     ) -> ClimateProfileZoneData:
-        """Resolve sparse profile behavior; omitted zones always mean Normal."""
-        profile = self._profile_by_id(
-            self.active_profile_id if profile_id is None else profile_id
-        )
+        """Resolve sparse profile behavior; omitted zones use the default schedule."""
+        profile = self._active_profile_for_zone(entity_id)
         if profile is None:
             return {"behavior": "normal"}
         return profile["zones"].get(entity_id, {"behavior": "normal"})
@@ -1266,6 +1300,95 @@ class VelairScheduler:
         await self._async_save_data()
         self._async_write_state()
 
+    async def async_set_velair_mode(self, mode: dict) -> str:
+        """Create or replace one user-named mode."""
+        async with self._profile_mutation_lock:
+            if not isinstance(mode, dict):
+                raise ValueError("Mode must be an object")
+            raw_mode = deepcopy(mode)
+            key = raw_mode.get("key", uuid4().hex)
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError("Mode key must be non-empty text")
+            key = key.strip()
+            raw_mode["key"] = key
+            modes = self._data.setdefault("modes", [])
+            existing = next((item for item in modes if item["key"] == key), None)
+            candidate = [
+                raw_mode if item["key"] == key else item for item in modes
+            ]
+            if existing is None:
+                candidate.append(raw_mode)
+            validated = validate_modes(
+                candidate,
+                {
+                    profile["key"]: set(profile["zones"])
+                    for profile in self._data.get("profiles", [])
+                },
+            )
+            next_mode = next(item for item in validated if item["key"] == key)
+            if modes == validated:
+                return key
+            previous_data = deepcopy(self._data)
+            self._data["modes"] = validated
+            if (
+                existing is not None
+                and self.active_mode_id == key
+                and existing["profile_ids"] != next_mode["profile_ids"]
+            ):
+                await self._async_activate_profiles_locked(
+                    next_mode["profile_ids"],
+                    source="mode_updated",
+                    mode_id=key,
+                    rollback_data=previous_data,
+                )
+                return key
+            await self._async_save_profile_mutation(previous_data)
+            self._async_write_state()
+            return next_mode["key"]
+
+    async def async_delete_velair_mode(self, key: str) -> None:
+        """Delete one custom mode while retaining its active profile set."""
+        async with self._profile_mutation_lock:
+            modes = self._data.setdefault("modes", [])
+            next_modes = [mode for mode in modes if mode["key"] != key]
+            if len(next_modes) == len(modes):
+                raise ValueError(f"Unknown mode: {key}")
+            previous_data = deepcopy(self._data)
+            self._data["modes"] = next_modes
+            if self.active_mode_id == key:
+                self._data["global_"]["active_mode_id"] = None
+            await self._async_save_profile_mutation(previous_data)
+            self._async_write_state()
+
+    async def async_select_velair_mode(
+        self, key: str, *, source: str = "select"
+    ) -> None:
+        """Atomically select a custom mode and its mapped climate profile."""
+        async with self._profile_mutation_lock:
+            mode = next(
+                (
+                    item
+                    for item in self._data.get("modes", [])
+                    if item["key"] == key
+                ),
+                None,
+            )
+            if mode is None:
+                raise ValueError(f"Unknown mode: {key}")
+            await self._async_activate_profiles_locked(
+                mode["profile_ids"], source=source, mode_id=key
+            )
+
+    async def async_clear_velair_mode(self) -> None:
+        """Select Manual by clearing only the custom mode marker."""
+        async with self._profile_mutation_lock:
+            if self.active_mode_id is None:
+                return
+            previous_data = deepcopy(self._data)
+            self._data["global_"]["active_mode_id"] = None
+            await self._async_save_profile_mutation(previous_data)
+            self._async_write_state()
+
     async def async_set_profile(self, profile: dict) -> str:
         """Serialize creation and replacement of climate profiles."""
         async with self._profile_mutation_lock:
@@ -1288,7 +1411,7 @@ class VelairScheduler:
             raise ValueError("Profile color must use the #RRGGBB format")
         if "color" not in raw_profile and existing is not None:
             raw_profile["color"] = existing["color"]
-        old_active = deepcopy(self._profile_by_id(self.active_profile_id))
+        old_active = deepcopy(self._active_profiles())
         next_profile = validate_climate_profiles(
             [raw_profile],
             list(self._data["zones"]),
@@ -1297,16 +1420,34 @@ class VelairScheduler:
         self._validate_profile(next_profile)
         if existing == next_profile:
             return key
-        previous_data = deepcopy(self._data)
-        self._data["profiles"] = [
-            next_profile if item["key"] == key else item for item in profiles
+        candidate_profiles = [
+            next_profile if item["key"] == key else item
+            for item in profiles
         ]
         if existing is None:
-            self._data["profiles"].append(next_profile)
-        if self.active_profile_id == key:
+            candidate_profiles.append(next_profile)
+        validate_modes(
+            self._data.get("modes", []),
+            {
+                item["key"]: set(item["zones"])
+                for item in candidate_profiles
+            },
+        )
+        conflicting_active_zones = self._conflicting_profile_zones(
+            candidate_profiles,
+            self.active_profile_ids,
+        )
+        if conflicting_active_zones:
+            raise ValueError(
+                "Active profiles cannot configure the same zone: "
+                + ", ".join(sorted(conflicting_active_zones))
+            )
+        previous_data = deepcopy(self._data)
+        self._data["profiles"] = candidate_profiles
+        if key in self.active_profile_ids:
             await self._async_apply_profile_transition(
                 old_active,
-                next_profile,
+                deepcopy(self._active_profiles()),
                 source="profile_updated",
                 persist_change=True,
                 rollback_data=previous_data,
@@ -1322,60 +1463,123 @@ class VelairScheduler:
             await self._async_delete_profile_locked(key)
 
     async def _async_delete_profile_locked(self, key: str) -> None:
-        """Delete a profile, returning to Normal when it was active."""
+        """Delete a profile, returning to Default when it was active."""
         profiles = self._data.setdefault("profiles", [])
         old_profile = next((profile for profile in profiles if profile["key"] == key), None)
         if old_profile is None:
             raise ValueError(f"Unknown climate profile: {key}")
-        was_active = self.active_profile_id == key
+        was_active = key in self.active_profile_ids
+        previous_profile_ids = self.active_profile_ids
+        previous_active_profiles = deepcopy(self._active_profiles())
         previous_data = deepcopy(self._data)
         self._data["profiles"] = [profile for profile in profiles if profile["key"] != key]
+        removed_mode_keys = {
+            mode["key"]
+            for mode in self._data.get("modes", [])
+            if key in mode["profile_ids"]
+        }
+        self._data["modes"] = [
+            mode
+            for mode in self._data.get("modes", [])
+            if key not in mode["profile_ids"]
+        ]
+        if self.active_mode_id in removed_mode_keys:
+            self._data["global_"]["active_mode_id"] = None
         if was_active:
-            self._data["global_"]["active_profile_id"] = None
+            self._data["global_"]["active_profile_ids"] = [
+                profile_id
+                for profile_id in previous_profile_ids
+                if profile_id != key
+            ]
         if was_active:
             await self._async_apply_profile_transition(
-                old_profile,
-                None,
+                previous_active_profiles,
+                deepcopy(self._active_profiles()),
                 source="profile_deleted",
                 persist_change=True,
                 rollback_data=previous_data,
             )
-            self._async_fire_profile_changed(None, previous_profile_id=key)
+            self._async_fire_profile_changed(
+                self.active_profile_ids,
+                previous_profile_ids=previous_profile_ids,
+                source="profile_deleted",
+            )
         else:
             await self._async_save_profile_mutation(previous_data)
             self._async_write_state()
 
-    async def async_activate_profile(self, profile_id: str | None) -> None:
+    async def async_activate_profile(
+        self, profile_id: str | None, *, source: str = "service"
+    ) -> None:
         """Serialize profile selection and its runtime transition."""
         async with self._profile_mutation_lock:
-            await self._async_activate_profile_locked(profile_id)
+            await self._async_activate_profiles_locked(
+                [profile_id] if isinstance(profile_id, str) and profile_id.strip() else [],
+                source=source,
+            )
 
-    async def _async_activate_profile_locked(self, profile_id: str | None) -> None:
-        """Activate a profile atomically; null selects the built-in Normal state."""
-        normalized_id = profile_id.strip() if isinstance(profile_id, str) else None
-        if not normalized_id:
-            normalized_id = None
-        if normalized_id == self.active_profile_id:
+    async def async_deactivate_profile(self, *, source: str = "service") -> None:
+        """Return to default schedules through the public profile API."""
+        await self.async_activate_profile(None, source=source)
+
+    async def _async_activate_profiles_locked(
+        self,
+        profile_ids: list[str],
+        *,
+        source: str,
+        mode_id: str | None = None,
+        rollback_data: SchedulerData | None = None,
+    ) -> None:
+        """Activate a conflict-free profile set atomically; empty selects Default."""
+        normalized_ids = [
+            profile_id.strip()
+            for profile_id in profile_ids
+            if isinstance(profile_id, str) and profile_id.strip()
+        ]
+        if len(set(normalized_ids)) != len(normalized_ids):
+            raise ValueError("Active profile IDs must be unique")
+        if (
+            normalized_ids == self.active_profile_ids
+            and mode_id == self.active_mode_id
+        ):
             return
-        next_profile = self._profile_by_id(normalized_id)
-        if normalized_id is not None and next_profile is None:
-            raise ValueError(f"Unknown climate profile: {normalized_id}")
-        if next_profile is not None:
-            self._validate_profile(next_profile)
-        previous_id = self.active_profile_id
-        previous_profile = deepcopy(self._profile_by_id(previous_id))
-        previous_data = deepcopy(self._data)
-        self._data["global_"]["active_profile_id"] = normalized_id
+        next_profiles: list[ClimateProfileData] = []
+        claimed_zones: set[str] = set()
+        for profile_id in normalized_ids:
+            profile = self._profile_by_id(profile_id)
+            if profile is None:
+                raise ValueError(f"Unknown climate profile: {profile_id}")
+            self._validate_profile(profile)
+            duplicate_zones = claimed_zones.intersection(profile["zones"])
+            if duplicate_zones:
+                raise ValueError(
+                    "Active profiles cannot configure the same zone: "
+                    + ", ".join(sorted(duplicate_zones))
+                )
+            claimed_zones.update(profile["zones"])
+            next_profiles.append(profile)
+        previous_ids = self.active_profile_ids
+        previous_profiles = deepcopy(self._active_profiles())
+        previous_data = (
+            deepcopy(self._data) if rollback_data is None else rollback_data
+        )
+        self._data["global_"]["active_profile_ids"] = normalized_ids
+        self._data["global_"]["active_mode_id"] = mode_id
+        if normalized_ids == previous_ids:
+            await self._async_save_profile_mutation(previous_data)
+            self._async_write_state()
+            return
         await self._async_apply_profile_transition(
-            previous_profile,
-            next_profile,
-            source="profile_activated" if normalized_id else "profile_deactivated",
+            previous_profiles,
+            deepcopy(next_profiles),
+            source="profile_activated" if normalized_ids else "profile_deactivated",
             persist_change=True,
             rollback_data=previous_data,
         )
         self._async_fire_profile_changed(
-            normalized_id,
-            previous_profile_id=previous_id,
+            normalized_ids,
+            previous_profile_ids=previous_ids,
+            source=source,
         )
 
     def _validate_profile(self, profile: ClimateProfileData) -> None:
@@ -1409,17 +1613,44 @@ class VelairScheduler:
                 schedule[weekday] = self._snap_blocks_for_entity(entity_id, blocks)
 
     @staticmethod
-    def _behavior_from_profile(
-        profile: ClimateProfileData | None, entity_id: str
-    ) -> ClimateProfileZoneData:
-        if profile is None:
-            return {"behavior": "normal"}
-        return profile["zones"].get(entity_id, {"behavior": "normal"})
+    def _conflicting_profile_zones(
+        profiles: list[ClimateProfileData],
+        profile_ids: list[str],
+    ) -> set[str]:
+        """Return zones explicitly claimed by more than one selected profile."""
+        profiles_by_id = {profile["key"]: profile for profile in profiles}
+        claimed_zones: set[str] = set()
+        conflicting_zones: set[str] = set()
+        for profile_id in profile_ids:
+            profile = profiles_by_id.get(profile_id)
+            if profile is None:
+                continue
+            profile_zones = set(profile["zones"])
+            conflicting_zones.update(claimed_zones.intersection(profile_zones))
+            claimed_zones.update(profile_zones)
+        return conflicting_zones
+
+    @staticmethod
+    def _profile_effect_from_profiles(
+        profiles: list[ClimateProfileData], entity_id: str
+    ) -> tuple[str | None, ClimateProfileZoneData]:
+        profile = next(
+            (profile for profile in profiles if entity_id in profile["zones"]),
+            None,
+        )
+        return (
+            (
+                profile["key"],
+                profile["zones"][entity_id],
+            )
+            if profile is not None
+            else (None, {"behavior": "normal"})
+        )
 
     async def _async_apply_profile_transition(
         self,
-        previous_profile: ClimateProfileData | None,
-        next_profile: ClimateProfileData | None,
+        previous_profiles: list[ClimateProfileData],
+        next_profiles: list[ClimateProfileData],
         *,
         source: str,
         persist_change: bool = False,
@@ -1429,8 +1660,8 @@ class VelairScheduler:
         affected = {
             entity_id
             for entity_id in self._data["zones"]
-            if self._behavior_from_profile(previous_profile, entity_id)
-            != self._behavior_from_profile(next_profile, entity_id)
+            if self._profile_effect_from_profiles(previous_profiles, entity_id)
+            != self._profile_effect_from_profiles(next_profiles, entity_id)
         }
         now = dt_util.now()
         cancelled_boosts: list[tuple[str, ZoneOverride]] = []
@@ -1522,6 +1753,7 @@ class VelairScheduler:
         preconditioning_learning: dict[str, PreconditioningLearningData]
         | None = None,
         profiles: list[ClimateProfileData] | None = None,
+        modes: list[VelairModeData] | None = None,
     ) -> None:
         """Serialize portable replacement with profile mutations."""
         async with self._profile_mutation_lock:
@@ -1531,6 +1763,7 @@ class VelairScheduler:
                 settings=settings,
                 preconditioning_learning=preconditioning_learning,
                 profiles=profiles,
+                modes=modes,
             )
 
     async def _async_replace_portable_data_locked(
@@ -1542,6 +1775,7 @@ class VelairScheduler:
         preconditioning_learning: dict[str, PreconditioningLearningData]
         | None = None,
         profiles: list[ClimateProfileData] | None = None,
+        modes: list[VelairModeData] | None = None,
     ) -> None:
         """Replace persisted sections from a portable import."""
         if profiles is not None:
@@ -1553,9 +1787,33 @@ class VelairScheduler:
             )
             for profile in profiles:
                 self._validate_profile(profile)
+        target_profiles = (
+            profiles if profiles is not None else self._data.get("profiles", [])
+        )
+        target_profile_zones = {
+            profile["key"]: set(profile["zones"])
+            for profile in target_profiles
+        }
+        if modes is not None:
+            modes = validate_modes(modes, target_profile_zones)
+        if profiles is not None:
+            retained_active_profile_ids = [
+                profile_id
+                for profile_id in self.active_profile_ids
+                if profile_id in target_profile_zones
+            ]
+            duplicate_zones = self._conflicting_profile_zones(
+                target_profiles,
+                retained_active_profile_ids,
+            )
+            if duplicate_zones:
+                raise ValueError(
+                    "Imported profiles would make the active set configure "
+                    "the same zone: " + ", ".join(sorted(duplicate_zones))
+                )
         previous_data = deepcopy(self._data)
-        previous_profile_id = self.active_profile_id
-        previous_active_profile = deepcopy(self._profile_by_id(previous_profile_id))
+        previous_profile_ids = self.active_profile_ids
+        previous_active_profiles = deepcopy(self._active_profiles())
         if zones is not None:
             self._clear_preconditioning_sessions()
             self._applied_preconditioning_targets.clear()
@@ -1583,27 +1841,58 @@ class VelairScheduler:
             self._refresh_preconditioning_listener()
         if profiles is not None:
             self._data["profiles"] = profiles
-            active_id = self.active_profile_id
-            if active_id is not None and not any(
-                profile["key"] == active_id for profile in profiles
-            ):
-                # Portable data deliberately never selects a profile.
-                self._data["global_"]["active_profile_id"] = None
-            next_active_profile = deepcopy(
-                self._profile_by_id(self.active_profile_id)
+            imported_profile_ids = {profile["key"] for profile in profiles}
+            if modes is None:
+                self._data["modes"] = normalize_modes(
+                    self._data.get("modes", []),
+                    {
+                        profile["key"]: set(profile["zones"])
+                        for profile in profiles
+                    },
+                )
+            # Portable data deliberately never selects new profiles. Retain
+            # only active definitions that still exist after replacement.
+            self._data["global_"]["active_profile_ids"] = [
+                profile_id
+                for profile_id in self.active_profile_ids
+                if profile_id in imported_profile_ids
+            ]
+        if modes is not None:
+            self._data["modes"] = modes
+        if profiles is not None or modes is not None:
+            selected_mode = next(
+                (
+                    mode
+                    for mode in self._data.get("modes", [])
+                    if mode["key"] == self.active_mode_id
+                ),
+                None,
             )
+            if (
+                selected_mode is None
+                or selected_mode["profile_ids"] != self.active_profile_ids
+            ):
+                self._data["global_"]["active_mode_id"] = None
+        if profiles is not None:
+            next_active_profiles = deepcopy(self._active_profiles())
             await self._async_apply_profile_transition(
-                previous_active_profile,
-                next_active_profile,
+                previous_active_profiles,
+                next_active_profiles,
                 source="portable_import",
                 persist_change=True,
                 rollback_data=previous_data,
             )
-            if previous_profile_id != self.active_profile_id:
+            if previous_profile_ids != self.active_profile_ids:
                 self._async_fire_profile_changed(
-                    self.active_profile_id,
-                    previous_profile_id=previous_profile_id,
+                    self.active_profile_ids,
+                    previous_profile_ids=previous_profile_ids,
+                    source="portable_import",
                 )
+            return
+
+        if modes is not None:
+            await self._async_save_profile_mutation(previous_data)
+            self._async_write_state()
             return
 
         await self._async_save_data()
@@ -4387,16 +4676,18 @@ class VelairScheduler:
 
     def _async_fire_profile_changed(
         self,
-        profile_id: str | None,
+        profile_ids: list[str],
         *,
-        previous_profile_id: str | None,
+        previous_profile_ids: list[str],
+        source: str = "internal",
     ) -> None:
         """Fire the stable automation event for profile selection changes."""
         self._async_fire_event(
             EVENT_TYPE_PROFILE_CHANGED,
             {
-                "profile_id": profile_id,
-                "previous_profile_id": previous_profile_id,
+                "profile_ids": list(profile_ids),
+                "previous_profile_ids": list(previous_profile_ids),
+                "source": source,
             },
         )
 

@@ -44,10 +44,12 @@ automation events:
   temperature, and HVAC mode.
 - **Room Assist** exposes the current Room Assist runtime state and compact
   target context without duplicating the original room and climate readings.
-- **Automatic scheduling** is the only writable entity. Turning it off stops
-  automatic scheduling indefinitely; turning it on resumes Velair and applies
-  the currently active schedule. Use the `velair.pause` action when a temporary
-  pause with a duration is required.
+- **Automatic scheduling** and **Mode** are Velair's writable control entities.
+  Turning Automatic scheduling off stops scheduling indefinitely; turning it
+  on resumes the active schedule. Selecting a Mode option activates its mapped
+  Profiles; **Default** clears the active set, while **Manual** retains Profiles
+  chosen directly. Use the `velair.pause` action when a temporary pause with a
+  duration is required.
 
 These entities reuse backend snapshots, use dispatcher updates, and do not poll
 Home Assistant. Events are useful for reacting to transitions; entities are
@@ -81,12 +83,29 @@ The Lovelace card supports these `view` values:
 - `overview-events`;
 - `overview-timeline`;
 - `overview-zones`;
+- `active-setup`;
 - `schedules`;
 - `sensors`;
 - `comfort`;
 - `preconditioning`.
 
-Zone-based Lovelace cards can also limit which thermostats they show. This is only a dashboard display filter; it does not change Velair's stored schedules or the scheduler behavior. Global cards such as `overview-status` do not show thermostat selection or weekday options in the card editor because they are not tied to one thermostat or schedule editor.
+Zone-based Lovelace cards can also limit which thermostats they show. This is only a dashboard display filter; it does not change Velair's stored schedules or the scheduler behavior. Global cards such as `overview-status` and `active-setup` do not show thermostat selection or weekday options in the card editor because they are not tied to one thermostat or schedule editor.
+
+Add `view: active-setup` independently from the scheduler status card. Use the visual editor or
+`active_setup_controls` to choose whether Active setup can change `modes`,
+`profiles`, or `both`:
+
+```yaml
+type: custom:velair-card
+view: active-setup
+active_setup_controls: profiles
+```
+
+The option defaults to `both`, and every variant still shows the current Mode
+and applied Profiles. The Profiles-only control retains a Default schedules
+action. Selecting a Profile directly replaces all previously active Profiles
+and changes the Mode to Manual; use a Mode when several non-overlapping
+Profiles should be activated together.
 
 ```yaml
 type: custom:velair-card
@@ -204,7 +223,8 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Portable model v4 exports preserve raw values and declare their unit. Imports
+Portable model v5 exports preserve raw values and declare their unit. V4 files
+remain supported. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
 Velair versions that produced those files stored Celsius values. Export remains
@@ -275,9 +295,15 @@ Templates can include every optional climate setting available across the manage
 
 ## Climate Profiles
 
-Climate profiles switch several zones between coordinated weekly plans without overwriting their Normal schedules. Each profile can give a zone an alternate weekly schedule, pause it, pause and turn it off, or leave it on Normal. Zones omitted from a profile continue using Normal.
+Climate profiles switch several zones between coordinated weekly plans without overwriting their default schedules. Each profile can give a zone an alternate weekly schedule, pause it, pause and turn it off, or leave it on its Default schedule. Zones omitted from a profile continue using their default schedules.
 
-Only one profile is active at a time, but its behavior can differ for every zone. Activating a profile applies the block active at the current time and cancels Boosts in affected zones. Global and per-zone pauses retain priority. Home Assistant automations can activate a profile through `velair.activate_profile`; conditions and helper state remain owned by Home Assistant.
+A Mode can activate several Profiles together when their configured zones do
+not overlap. Direct activation replaces the active set with one Profile and
+selects Manual. Activation applies the blocks active at the current time and
+cancels Boosts in affected zones. Global and per-zone pauses retain priority.
+Home Assistant automations can activate one Profile through
+`velair.activate_profile` or select a configurable value from Velair's native
+`select.velair_mode` entity.
 
 See [Climate Profiles](climate-profiles.md) for setup, automation, restart, interaction, and portability details.
 
@@ -343,8 +369,13 @@ The file can contain:
 - panel settings;
 - adaptive preconditioning learning.
 - climate profile definitions.
+- mode definitions.
 
-When importing, Velair lets you choose which sections to overwrite. Importing replaces selected data, so export first if you need a recovery point. Profile definitions are portable, but their active selection is not. If an imported replacement no longer contains the active profile, Velair returns to Normal.
+When importing, Velair lets you choose which sections to overwrite. Importing
+replaces selected data, so export first if you need a recovery point. Profile
+and Mode definitions are portable, but their active selection is not. Velair
+retains active Profile IDs that still exist and returns to default schedules
+only when none remain.
 
 Every new export records its temperature unit. When importing a file from the
 other unit system, Velair converts the selected thermal values to the current
@@ -377,6 +408,7 @@ Velair exposes Home Assistant services for automations and scripts:
 - `velair.boost`
 - `velair.cancel_boost`
 - `velair.activate_profile`
+- `velair.deactivate_profile`
 - `velair.enable_room_sensor_assist`
 - `velair.disable_room_sensor_assist`
 - `velair.pause`
@@ -391,12 +423,20 @@ Services that target an entity only work with climates selected during setup. If
 
 ### `velair.activate_profile`
 
-Activate one stored climate profile and immediately apply the effective current behavior. Use the stable profile ID shown by Velair rather than its editable display name. Omit `profile_id` to return to Normal.
+Activate one stored climate profile and immediately apply the effective current behavior. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `Manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
 
 ```yaml
 action: velair.activate_profile
 data:
   profile_id: vacation
+```
+
+### `velair.deactivate_profile`
+
+Deactivate all active Profiles and immediately return every zone to its default schedule.
+
+```yaml
+action: velair.deactivate_profile
 ```
 
 ### `velair.set_temperature`
@@ -585,7 +625,7 @@ All runtime events use the same Home Assistant event type:
 velair_event
 ```
 
-The payload field `event` identifies scheduler mode changes, applied targets,
+The payload field `event` identifies Profile set changes, scheduler mode changes, applied targets,
 Adaptive Preconditioning plans and observations, Environmental Comfort changes,
 Room Assist state and target changes, boosts, and zone pauses.
 

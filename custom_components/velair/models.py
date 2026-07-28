@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from math import ceil, exp, isfinite
 import re
+import unicodedata
 from typing import Any, NotRequired, TypedDict
 
 from .const import (
@@ -18,6 +19,8 @@ from .const import (
     ATTR_SWING_MODE,
     MODE_AUTO,
     MODE_PAUSED,
+    MODE_MANUAL_OPTION,
+    MODE_DEFAULT_OPTION,
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_OPTIONS,
 )
@@ -82,6 +85,14 @@ PROFILE_ACCENT_COLORS = (
     "#2e7d32",
 )
 PROFILE_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
+MODE_RESERVED_NAMES = (
+    MODE_DEFAULT_OPTION,
+    MODE_MANUAL_OPTION,
+    "Predeterminado",
+    "unknown",
+    "unavailable",
+)
+MAX_MODE_NAME_LENGTH = 255
 
 
 class ScheduleBlock(TypedDict):
@@ -273,7 +284,8 @@ class GlobalData(TypedDict):
     mode: str
     paused_until: NotRequired[str | None]
     paused_started_at: NotRequired[str | None]
-    active_profile_id: NotRequired[str | None]
+    active_profile_ids: NotRequired[list[str]]
+    active_mode_id: NotRequired[str | None]
 
 
 class ClimateProfileZoneData(TypedDict):
@@ -295,6 +307,14 @@ class ClimateProfileData(TypedDict):
     zones: dict[str, ClimateProfileZoneData]
 
 
+class VelairModeData(TypedDict):
+    """One user-named selector option mapped to a climate profile."""
+
+    key: str
+    name: str
+    profile_ids: list[str]
+
+
 class SchedulerData(TypedDict):
     """Stored scheduler data."""
 
@@ -307,6 +327,7 @@ class SchedulerData(TypedDict):
     templates_seeded_version: int
     preconditioning_learning: dict[str, PreconditioningLearningData]
     profiles: list[ClimateProfileData]
+    modes: list[VelairModeData]
 
 
 DEFAULT_SCHEDULE_TEMPLATES: list[ScheduleTemplateData] = [
@@ -603,18 +624,59 @@ def normalize_schedule_data(
 
     profiles = normalize_climate_profiles(data.get("profiles"), climate_entities)
     profile_keys = {profile["key"] for profile in profiles}
-    active_profile_id = global_data.get("active_profile_id")
-    if not isinstance(active_profile_id, str) or active_profile_id not in profile_keys:
-        active_profile_id = None
+    raw_active_profile_ids = global_data.get("active_profile_ids")
+    if not isinstance(raw_active_profile_ids, list):
+        legacy_active_profile_id = global_data.get("active_profile_id")
+        raw_active_profile_ids = (
+            [legacy_active_profile_id]
+            if isinstance(legacy_active_profile_id, str)
+            else []
+        )
+    active_profile_ids = list(
+        dict.fromkeys(
+            profile_id
+            for profile_id in raw_active_profile_ids
+            if isinstance(profile_id, str) and profile_id in profile_keys
+        )
+    )
+    profile_zones = {
+        profile["key"]: set(profile["zones"])
+        for profile in profiles
+    }
+    claimed_active_zones: set[str] = set()
+    for profile_id in active_profile_ids:
+        profile_claimed_zones = profile_zones[profile_id]
+        if claimed_active_zones.intersection(profile_claimed_zones):
+            active_profile_ids = []
+            break
+        claimed_active_zones.update(profile_claimed_zones)
+    raw_modes = data.get("modes", data.get("profile_modes"))
+    modes = normalize_modes(raw_modes, profile_zones)
+    modes_by_key = {mode["key"]: mode for mode in modes}
+    active_mode_id = global_data.get(
+        "active_mode_id",
+        global_data.get("active_profile_mode_id"),
+    )
+    selected_mode = (
+        modes_by_key.get(active_mode_id)
+        if isinstance(active_mode_id, str)
+        else None
+    )
+    if (
+        selected_mode is None
+        or selected_mode["profile_ids"] != active_profile_ids
+    ):
+        active_mode_id = None
 
     return {
-        "version": 2,
+        "version": 3,
         "zones": zones,
         "global_": {
             "mode": mode,
             "paused_until": global_data.get("paused_until"),
             "paused_started_at": global_data.get("paused_started_at"),
-            "active_profile_id": active_profile_id,
+            "active_profile_ids": active_profile_ids,
+            "active_mode_id": active_mode_id,
         },
         "settings": normalize_panel_settings(data.get("settings"), climate_entities),
         "templates": _dedupe_schedule_templates(templates),
@@ -629,6 +691,7 @@ def normalize_schedule_data(
             },
         ),
         "profiles": profiles,
+        "modes": modes,
     }
 
 
@@ -657,7 +720,105 @@ def serialize_schedule_data(data: SchedulerData) -> dict[str, Any]:
             ),
         ),
         "profiles": data.get("profiles", []),
+        "modes": data.get("modes", []),
     }
+
+
+def normalize_modes(
+    raw_modes: Any, profile_zones: dict[str, set[str]] | set[str]
+) -> list[VelairModeData]:
+    """Normalize valid modes, discarding duplicates and orphan mappings."""
+    return _normalize_modes(raw_modes, profile_zones, allow_legacy=True)
+
+
+def _normalize_modes(
+    raw_modes: Any,
+    profile_zones: dict[str, set[str]] | set[str],
+    *,
+    allow_legacy: bool,
+) -> list[VelairModeData]:
+    """Normalize modes, optionally accepting the unpublished singular mapping."""
+    if not isinstance(raw_modes, list):
+        return []
+    normalized: list[VelairModeData] = []
+    zones_by_profile = (
+        profile_zones
+        if isinstance(profile_zones, dict)
+        else {profile_id: set() for profile_id in profile_zones}
+    )
+    profile_keys = set(zones_by_profile)
+    seen_keys: set[str] = set()
+    seen_names = {name.casefold() for name in MODE_RESERVED_NAMES}
+    for raw_mode in raw_modes:
+        if not isinstance(raw_mode, dict):
+            continue
+        fields = set(raw_mode)
+        if fields == {"key", "name", "profile_ids"}:
+            raw_profile_ids = raw_mode.get("profile_ids")
+        elif allow_legacy and fields == {"key", "name", "profile_id"}:
+            raw_profile_ids = [raw_mode.get("profile_id")]
+        else:
+            continue
+        key = raw_mode.get("key")
+        name = raw_mode.get("name")
+        if (
+            not isinstance(key, str)
+            or not isinstance(name, str)
+            or not isinstance(raw_profile_ids, list)
+            or not raw_profile_ids
+            or any(not isinstance(profile_id, str) for profile_id in raw_profile_ids)
+        ):
+            continue
+        name_has_control_characters = any(
+            unicodedata.category(character) == "Cc" for character in name
+        )
+        key = key.strip()
+        name = name.strip()
+        profile_ids = [profile_id.strip() for profile_id in raw_profile_ids]
+        folded_name = name.casefold()
+        if (
+            not key
+            or not name
+            or any(not profile_id for profile_id in profile_ids)
+            or len(name) > MAX_MODE_NAME_LENGTH
+            or name_has_control_characters
+            or key in seen_keys
+            or folded_name in seen_names
+            or len(set(profile_ids)) != len(profile_ids)
+            or any(profile_id not in profile_keys for profile_id in profile_ids)
+        ):
+            continue
+        claimed_zones: set[str] = set()
+        has_zone_conflict = False
+        for profile_id in profile_ids:
+            zones = zones_by_profile[profile_id]
+            if claimed_zones.intersection(zones):
+                has_zone_conflict = True
+                break
+            claimed_zones.update(zones)
+        if has_zone_conflict:
+            continue
+        normalized.append({"key": key, "name": name, "profile_ids": profile_ids})
+        seen_keys.add(key)
+        seen_names.add(folded_name)
+    return normalized
+
+
+def validate_modes(
+    raw_modes: Any, profile_zones: dict[str, set[str]] | set[str]
+) -> list[VelairModeData]:
+    """Strictly validate modes without silently dropping input."""
+    if not isinstance(raw_modes, list):
+        raise ValueError("Modes must be a list")
+    normalized = _normalize_modes(raw_modes, profile_zones, allow_legacy=False)
+    if len(normalized) != len(raw_modes):
+        raise ValueError(
+            "Modes require unique keys and names, non-empty text, "
+            "names of 255 characters or fewer without control characters, "
+            "non-reserved names, one or more unique profile IDs, existing profile mappings, "
+            "and no zone configured explicitly by more than one mapped profile"
+        )
+    return normalized
 
 
 def normalize_climate_profiles(
@@ -813,7 +974,7 @@ def validate_climate_profiles(
                 raise ValueError(f"Invalid profile behavior for {entity_id}: {behavior}")
             if behavior == "normal":
                 if set(raw_zone) != {"behavior"}:
-                    raise ValueError(f"Normal profile behavior has extra data for {entity_id}")
+                    raise ValueError(f"Default profile behavior has extra data for {entity_id}")
                 prepared_zones[entity_id] = {"behavior": "normal"}
                 continue
             if behavior == "pause":

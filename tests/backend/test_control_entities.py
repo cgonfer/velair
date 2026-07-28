@@ -96,10 +96,10 @@ class AutomaticSchedulingSwitchTest(unittest.IsolatedAsyncioTestCase):
         scheduler.temperature_migration_blocked = True
         self.assertFalse(entity.available)
 
-    def test_platforms_do_not_include_a_scheduler_mode_select(self) -> None:
+    def test_platforms_include_the_native_mode_select(self) -> None:
         self.assertEqual(
             helpers.const_module.PLATFORMS,
-            ("sensor", "switch"),
+            ("sensor", "select", "switch"),
         )
 
 

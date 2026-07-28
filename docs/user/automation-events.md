@@ -24,15 +24,48 @@ Every payload contains `domain: velair` and one of the event names below.
 
 ## Profile Changed
 
-`profile_changed` is emitted after a different climate profile, or Normal, has
-been persisted. Re-selecting the current profile is a no-op and emits nothing.
+`profile_changed` is emitted after a different set of climate profiles, or
+Default schedules, has been persisted. Directly selecting the same active set
+can move the native Mode entity to Manual, but emits no `profile_changed` event
+because the effective profiles did not change.
 
 ```yaml
 domain: velair
 event: profile_changed
-profile_id: away
-previous_profile_id: null
+profile_ids:
+  - away
+  - bedrooms
+previous_profile_ids: []
+source: select
 ```
+
+`source` identifies where the effective selection originated. Public values are
+`panel`, `service`, and `select`; internal lifecycle operations may publish a
+more specific value such as `profile_deleted` or `mode_updated`.
+The ordered ID lists describe the complete new and previous active sets. An
+empty `profile_ids` list represents Default.
+
+For example, this automation reacts when the Profile with ID `away` becomes
+part of the active set:
+
+```yaml
+alias: Notify when Away profile becomes active
+triggers:
+  - trigger: event
+    event_type: velair_event
+    event_data:
+      event: profile_changed
+conditions:
+  - condition: template
+    value_template: "{{ 'away' in trigger.event.data.profile_ids }}"
+actions:
+  - action: notify.notify
+    data:
+      message: Away profile is active
+```
+
+To react when Velair returns to Default schedules, use a template condition that
+checks `trigger.event.data.profile_ids == []`.
 
 ## Scheduler Mode Changed
 

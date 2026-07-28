@@ -50,16 +50,22 @@ export function createClimateProfileDraft(profile?: ClimateProfile): ClimateProf
   };
 }
 
-export function activeClimateProfile(data?: ScheduleResponse): ClimateProfile | undefined {
-  const key = data?.global?.active_profile_id;
-  return key ? data?.profiles?.find((profile) => profile.key === key) : undefined;
+export function activeClimateProfiles(data?: ScheduleResponse): ClimateProfile[] {
+  const profilesById = new Map(
+    (data?.profiles ?? []).map((profile) => [profile.key, profile]),
+  );
+  return (data?.global?.active_profile_ids ?? [])
+    .map((profileId) => profilesById.get(profileId))
+    .filter((profile): profile is ClimateProfile => Boolean(profile));
 }
 
 export function activeClimateProfileZoneEffect(
   data: ScheduleResponse | undefined,
   entityId: string,
 ): { profile: ClimateProfile; zone: Exclude<ClimateProfileZone, { behavior: "normal" }> } | undefined {
-  const profile = activeClimateProfile(data);
+  const profile = activeClimateProfiles(data).find(
+    (activeProfile) => entityId in activeProfile.zones,
+  );
   const zone = profile?.zones[entityId];
   if (!profile || !zone || zone.behavior === "normal") {
     return undefined;

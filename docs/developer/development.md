@@ -108,18 +108,23 @@ See [manual-testing.md](manual-testing.md) for the full checklist.
 
 1. Update `custom_components/velair/manifest.json` version.
 2. Update `frontend/package.json` version if needed.
-3. Run backend tests.
-4. Run frontend unit tests.
-5. Run TypeScript check.
-6. Run `npm.cmd run build:release`.
-7. Verify the generated integration bundle is updated.
-8. Update documentation and screenshots.
-9. Create and push a matching release tag, such as `v<version>`.
-10. Confirm the GitHub Release workflow attaches:
+3. Create `.github/release-notes/v<version>.md` from the approved release-notes
+   draft. Keep the versioned title, include only changes users can observe
+   relative to the previous published version, and use the standard
+   icon-prefixed headings only for sections that apply.
+4. Run backend and documentation tests.
+5. Run frontend unit tests.
+6. Run TypeScript check.
+7. Run `npm.cmd run build:release`.
+8. Verify the generated integration bundle is updated.
+9. Update documentation and screenshots.
+10. Create and push a matching release tag, such as `v<version>`.
+11. Confirm the GitHub Release workflow publishes the versioned release notes
+    and attaches:
     - `velair-custom-component-<version>.zip`
     - `velair-lovelace-resource-<version>.zip`
-11. Confirm the `Validate` workflow passes HACS validation without ignored checks.
-12. Confirm the `Validate` workflow passes Hassfest.
+12. Confirm the `Validate` workflow passes HACS validation without ignored checks.
+13. Confirm the `Validate` workflow passes Hassfest.
 
 ## GitHub Actions
 
@@ -128,7 +133,11 @@ CI runs on pushes to `main` and pull requests. It executes backend tests, fronte
 - `velair-custom-component`: complete integration folder for copying to Home Assistant `custom_components`.
 - `velair-lovelace-resource`: compiled frontend resource files for advanced manual Lovelace testing.
 
-The release workflow runs manually or when pushing a `v*` tag. It validates that the tag matches the integration version, builds the release frontend bundle, packages installable zips, uploads them as workflow artifacts, and attaches them to the GitHub Release when the workflow was triggered by a tag.
+The release workflow runs manually or when pushing a `v*` tag. It requires
+`.github/release-notes/v<version>.md`, validates that the notes and tag match the
+integration version, builds the release frontend bundle, packages installable
+zips, uploads them as workflow artifacts, and publishes the versioned notes and
+assets when the workflow was triggered by a tag.
 
 The validate workflow runs HACS validation and Hassfest on pushes, pull requests, a daily schedule, and manual dispatch. These checks are required before requesting inclusion in the HACS default repositories.
 

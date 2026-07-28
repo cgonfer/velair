@@ -66,6 +66,7 @@ from .models import (
     normalize_schedule_templates,
     serialize_schedule_data,
     validate_climate_profiles,
+    validate_modes,
 )
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .temperature import (
@@ -81,13 +82,14 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 4
+EXPORT_MODEL_VERSION = 5
 EXPORT_SECTIONS = (
     "zones",
     "templates",
     "settings",
     "preconditioning_learning",
     "profiles",
+    "modes",
 )
 EXPORT_SECTION_SCHEMA = vol.All(
     cv.ensure_list,
@@ -225,6 +227,9 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_profile)
     websocket_api.async_register_command(hass, ws_delete_profile)
     websocket_api.async_register_command(hass, ws_activate_profile)
+    websocket_api.async_register_command(hass, ws_set_mode)
+    websocket_api.async_register_command(hass, ws_delete_mode)
+    websocket_api.async_register_command(hass, ws_select_mode)
     websocket_api.async_register_command(hass, ws_update_settings)
     websocket_api.async_register_command(hass, ws_update_zone_preconditioning)
     websocket_api.async_register_command(hass, ws_update_zone_comfort)
@@ -525,7 +530,7 @@ async def ws_activate_profile(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Select a profile, with a missing/empty key selecting Normal."""
+    """Select a profile, with a missing/empty key selecting Default."""
     runtime = _get_runtime(hass)
     if runtime is None:
         connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
@@ -533,9 +538,111 @@ async def ws_activate_profile(
     try:
         if _reject_temperature_migration_mutation(runtime, connection, msg):
             return
-        await runtime["scheduler"].async_activate_profile(msg.get(ATTR_PROFILE_ID))
+        await runtime["scheduler"].async_activate_profile(
+            msg.get(ATTR_PROFILE_ID), source="panel"
+        )
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_profile", str(err))
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/set_mode",
+        vol.Required("mode"): dict,
+    }
+)
+@websocket_api.async_response
+async def ws_set_mode(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Create or update one native mode."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        key = await runtime["scheduler"].async_set_velair_mode(msg["mode"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_mode", str(err))
+        return
+    response = _build_schedule_response(runtime)
+    response["mode_id"] = key
+    connection.send_result(msg["id"], response)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/delete_mode",
+        vol.Required(ATTR_KEY): cv.string,
+    }
+)
+@websocket_api.async_response
+async def ws_delete_mode(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Delete one native mode."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        await runtime["scheduler"].async_delete_velair_mode(msg[ATTR_KEY])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_mode", str(err))
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/select_mode",
+        vol.Required("selection"): {
+            vol.Required("kind"): vol.In(("default", "manual", "custom")),
+            vol.Optional(ATTR_KEY): cv.string,
+        },
+    }
+)
+@websocket_api.async_response
+async def ws_select_mode(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Select a built-in or custom Mode from the Velair panel."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        selection = msg["selection"]
+        kind = selection["kind"]
+        key = selection.get(ATTR_KEY)
+        if kind == "custom":
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError("Custom Mode selection requires a key")
+            await runtime["scheduler"].async_select_velair_mode(
+                key.strip(), source="panel"
+            )
+        elif key is not None:
+            raise ValueError("Built-in Mode selection cannot include a key")
+        elif kind == "default":
+            await runtime["scheduler"].async_deactivate_profile(source="panel")
+        else:
+            await runtime["scheduler"].async_clear_velair_mode()
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_mode", str(err))
         return
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
@@ -1134,7 +1241,11 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         "operation_recovery": runtime.get("operation_recovery"),
         "global": stored_data["global"],
         "profiles": stored_data.get("profiles", []),
-        "active_profile_id": stored_data["global"].get("active_profile_id"),
+        "active_profile_ids": stored_data["global"].get("active_profile_ids", []),
+        "modes": stored_data.get("modes", []),
+        "active_mode_id": stored_data["global"].get(
+            "active_mode_id"
+        ),
         "settings": settings,
         "zones": stored_data["zones"],
         "operational_status": scheduler.get_operational_status(),
@@ -1203,6 +1314,10 @@ def _build_export_payload(
         )
     if "profiles" in sections:
         exported_sections["profiles"] = deepcopy(stored_data.get("profiles", []))
+    if "modes" in sections:
+        exported_sections["modes"] = deepcopy(
+            stored_data.get("modes", [])
+        )
 
     return {
         "format": EXPORT_FORMAT,
@@ -1237,10 +1352,25 @@ def _build_import_data(
     selected_payload = {
         section: deepcopy(payload_sections[section]) for section in sections
     }
+    validated_selected_profiles = None
     if "profiles" in sections:
-        validate_climate_profiles(
+        validated_selected_profiles = validate_climate_profiles(
             selected_payload["profiles"],
             list(current_zones),
+        )
+    target_profiles = (
+        validated_selected_profiles
+        if validated_selected_profiles is not None
+        else storage.data.get("profiles", [])
+    )
+    if "modes" in sections:
+        validate_modes(
+            selected_payload["modes"],
+            {
+                profile["key"]: set(profile.get("zones", {}))
+                for profile in target_profiles
+                if isinstance(profile, dict) and isinstance(profile.get("key"), str)
+            },
         )
     _hydrate_portable_temperature_defaults(selected_payload, payload_unit)
     payload_sections = convert_portable_temperature_data(
@@ -1286,6 +1416,17 @@ def _build_import_data(
         import_data["profiles"] = validate_climate_profiles(
             raw_profiles,
             list(current_zones),
+        )
+    if "modes" in sections:
+        raw_modes = payload_sections["modes"]
+        profile_zones = {
+            profile["key"]: set(profile.get("zones", {}))
+            for profile in import_data.get(
+                "profiles", storage.data.get("profiles", [])
+            )
+        }
+        import_data["modes"] = validate_modes(
+            raw_modes, profile_zones
         )
 
     return import_data
