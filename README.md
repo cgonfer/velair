@@ -1,7 +1,7 @@
 # Velair
 Climate automation that adapts to your life.
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.4.0--beta.1-blue?style=for-the-badge)](#)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](#)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394/4)
 [![HACS](https://img.shields.io/badge/HACS-custom-orange?style=for-the-badge)](https://www.hacs.xyz/docs/faq/custom_repositories/)
@@ -37,8 +37,8 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Drag and resize interactions on a 24-hour timeline.
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
-- Climate profiles with coordinated per-zone schedules, pauses, configurable Modes, and a native Home Assistant select entity for automations.
-- Overview tab with scheduler status, active boosts, next events, and responsive zone cards that surface current intent and relevant attention signals.
+- Climate profiles with coordinated per-zone schedules, in-editor day cloning, pauses, configurable Modes, and a native Home Assistant select entity for automations.
+- Overview tab with scheduler status, active boosts, next events, and responsive zone cards that separate Velair intent from live device activity.
 - Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
 - Dedicated Room Assist tab for setups that need a separate room temperature sensor.
 - Dedicated Comfort tab with readable temperature/humidity conditions, independent CO2 air quality, data-quality warnings, and responsive live visualizations.

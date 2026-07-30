@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
+import importlib.util
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
@@ -11,6 +13,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
+INTEGRATION_SOURCE = ROOT / "custom_components" / "velair" / "__init__.py"
 FRONTEND_SOURCE = ROOT / "frontend" / "src" / "velair-card.ts"
 FRONTEND_CARD_ELEMENT_SOURCE = ROOT / "frontend" / "src" / "velair" / "components" / "velair-card-element.ts"
 FRONTEND_API_SOURCE = ROOT / "frontend" / "src" / "velair" / "api" / "client.ts"
@@ -192,6 +195,117 @@ def _install_custom_component_package_stub() -> None:
     sys.modules.setdefault("custom_components.velair", package)
 
 
+@contextmanager
+def _loaded_velair_integration(frontend_module):
+    """Load the real integration package with isolated import dependencies."""
+    dependency_names = (
+        "custom_components.velair",
+        "custom_components.velair.api",
+        "custom_components.velair.climate_manager",
+        "custom_components.velair.config_helpers",
+        "custom_components.velair.entity_registry",
+        "custom_components.velair.scheduler",
+        "custom_components.velair.services",
+        "custom_components.velair.storage",
+        "custom_components.velair.temperature_migration",
+        "homeassistant.config_entries",
+        "homeassistant.const",
+        "homeassistant.core",
+        "homeassistant.helpers.event",
+        "homeassistant.helpers.typing",
+    )
+    missing = object()
+    previous = {
+        name: sys.modules.get(name, missing)
+        for name in dependency_names
+    }
+
+    def install_module(name: str, **attributes) -> ModuleType:
+        module = ModuleType(name)
+        for attribute, value in attributes.items():
+            setattr(module, attribute, value)
+        sys.modules[name] = module
+        return module
+
+    class ConfigEntry:
+        @classmethod
+        def __class_getitem__(cls, _item):
+            return cls
+
+    class RuntimePlaceholder:
+        pass
+
+    async def async_noop(*_args, **_kwargs):
+        return None
+
+    install_module("homeassistant.config_entries", ConfigEntry=ConfigEntry)
+    install_module("homeassistant.const", EVENT_CORE_CONFIG_UPDATE="core_config_updated")
+    install_module(
+        "homeassistant.core",
+        Event=object,
+        HomeAssistant=object,
+        callback=lambda function: function,
+    )
+    install_module(
+        "homeassistant.helpers.event",
+        async_track_state_change_event=lambda *_args, **_kwargs: lambda: None,
+    )
+    install_module("homeassistant.helpers.typing", ConfigType=dict)
+    install_module("custom_components.velair.api", async_setup_api=lambda *_args: None)
+    install_module(
+        "custom_components.velair.climate_manager",
+        ClimateManager=RuntimePlaceholder,
+    )
+    install_module(
+        "custom_components.velair.config_helpers",
+        get_configured_climate_entities=lambda _entry: [],
+        should_apply_active_schedule_on_startup=lambda _entry: False,
+    )
+    install_module(
+        "custom_components.velair.entity_registry",
+        cleanup_entity_registry=lambda *_args: None,
+    )
+    install_module(
+        "custom_components.velair.scheduler",
+        VelairScheduler=RuntimePlaceholder,
+    )
+    install_module(
+        "custom_components.velair.services",
+        async_setup_services=async_noop,
+        async_unload_services=async_noop,
+    )
+    install_module(
+        "custom_components.velair.storage",
+        VelairStorage=RuntimePlaceholder,
+    )
+    install_module(
+        "custom_components.velair.temperature_migration",
+        async_dismiss_temperature_migration_notification=async_noop,
+        async_notify_temperature_migration=async_noop,
+    )
+    sys.modules["custom_components.velair.frontend"] = frontend_module
+
+    spec = importlib.util.spec_from_file_location(
+        "custom_components.velair",
+        INTEGRATION_SOURCE,
+        submodule_search_locations=[str(INTEGRATION_SOURCE.parent)],
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Unable to load the Velair integration")
+    integration = importlib.util.module_from_spec(spec)
+    sys.modules["custom_components.velair"] = integration
+
+    try:
+        spec.loader.exec_module(integration)
+        yield integration
+    finally:
+        for name, module in previous.items():
+            if module is missing:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+
+
 class FakeHttp:
     """Capture frontend view registrations."""
 
@@ -265,14 +379,22 @@ class FrontendRegistrationTest(unittest.TestCase):
         )
         self.assertEqual(response.headers["Pragma"], "no-cache")
 
-    def test_setup_registers_frontend_route_only_once(self) -> None:
-        """Config entry reloads should not register duplicate HTTP routes."""
+    def test_early_setup_registers_frontend_route_only_once(self) -> None:
+        """Startup exposes the Lovelace resource before the panel setup."""
         hass = FakeHass()
 
-        asyncio.run(self.frontend.async_setup_frontend(hass))
-        asyncio.run(self.frontend.async_setup_frontend(hass))
+        with _loaded_velair_integration(self.frontend) as integration:
+            self.assertTrue(asyncio.run(integration.async_setup(hass, {})))
+            self.assertTrue(asyncio.run(integration.async_setup(hass, {})))
 
         self.assertEqual(len(hass.http.views), 1)
+        self.assertEqual(self.calls["panels"], [])
+
+        asyncio.run(self.frontend.async_setup_frontend(hass))
+        asyncio.run(self.frontend.async_setup_frontend_route(hass))
+
+        self.assertEqual(len(hass.http.views), 1)
+        self.assertEqual(len(self.calls["panels"]), 1)
 
     def test_unload_removes_panel_and_extra_module(self) -> None:
         """Unload cleans up the sidebar panel and registered module."""
@@ -377,7 +499,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('from "./velair/views/panel"', source)
         self.assertIn("export type ScheduleResponse", types_source)
         self.assertIn(
-            "export const cardStyles = [baseStyles, comfortStyles, noticeStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
+            "export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
             styles_source,
         )
         self.assertIn("`, responsiveStyles];", styles_source)

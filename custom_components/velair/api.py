@@ -307,6 +307,7 @@ def ws_subscribe_updates(
         _send_update,
     )
     connection.send_result(msg["id"])
+    _send_update()
 
 
 @websocket_api.websocket_command(
@@ -1239,6 +1240,7 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
             else {"required": False, "reason": None}
         ),
         "operation_recovery": runtime.get("operation_recovery"),
+        "operation_status": getattr(scheduler, "operation_status", None),
         "global": stored_data["global"],
         "profiles": stored_data.get("profiles", []),
         "active_profile_ids": stored_data["global"].get("active_profile_ids", []),

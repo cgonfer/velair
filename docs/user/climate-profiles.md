@@ -45,11 +45,20 @@ For each managed climate, choose one behavior:
 
 Zones that are not configured in a profile continue using their default
 schedules. Schedule templates can be copied into profile days as editing aids,
-but profiles do not keep live links to templates. Each profile day also uses
-the same editable timeline as default schedules and templates, including drag
-and resize interactions for adjusting block times. Climate editors are collapsed
-by default and show both their friendly name and entity ID; expand only the zones
-you need while editing a profile.
+but profiles do not keep live links to templates. A configured profile day can
+also be cloned to one or more other weekdays in the same zone. The copied
+blocks keep their complete climate configuration, including supported HVAC,
+fan, preset, swing, and humidity options.
+
+Each profile day uses the same editable timeline as default schedules and
+templates, including drag and resize interactions for adjusting block times.
+While a Profile remains open for editing, temporarily changing a zone from
+**Alternate schedule** to **Default schedule** or **Pause** keeps its draft
+weekly schedule. Selecting **Alternate schedule** again restores those
+unsaved blocks. Saving the Profile with Default or Pause still stores only that
+selected behavior; the hidden draft schedule is not persisted. Climate editors
+are collapsed by default and show both their friendly name and entity ID;
+expand only the zones you need while editing a profile.
 
 Several profiles can be active together when a Mode coordinates them. Their
 configured zones must not overlap: each managed climate always has at most one
@@ -139,6 +148,18 @@ label with its icon and name, while
 temporary Boost or Pause state remains visually in control until it ends.
 Profile save, activation, and deletion confirmations use Velair's standard
 temporary notification with a dismiss button and countdown bar.
+
+Mode changes and Profile activations also show a global operation strip while
+Velair processes the affected zones. It remains visible when moving between
+panel tabs. In Lovelace, the strip appears only in the Active setup card, where
+Mode and Profile activations are performed. The counter reports zones that
+Velair has finished processing,
+including zones whose current pause or override means that no climate command
+is required; it does not claim that a physical room has already reached its target.
+The final state distinguishes complete success from a transition that finished
+with one or more zone errors. Successful results disappear automatically after
+a short confirmation period; partial and failed results remain available until
+they are dismissed, including while moving between panel tabs.
 
 Automations and scripts can use:
 

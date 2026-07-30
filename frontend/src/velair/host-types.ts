@@ -42,12 +42,14 @@ export type VelairViewHost = {
   _copyTargets: Set<string>;
   _data?: ScheduleResponse;
   _dirty: boolean;
+  _dismissedOperationId?: string;
   _dirtyEntityId?: string;
   _draftBlocks: DraftScheduleBlock[];
   _error?: string;
   _expandedComfortZones: Set<string>;
   _expandedPreconditioningZones: Set<string>;
   _exportSections: Set<PortableSection>;
+  _hasExternalConfig: boolean;
   _importFileName: string;
   _importPayload?: VelairPortablePayload;
   _importSections: Set<PortableSection>;
@@ -95,6 +97,7 @@ export type VelairViewHost = {
   _currentTimelineNow(): Date;
   _deleteSelectedTemplate(): Promise<void>;
   _dismissNotice(type: "error" | "success"): void;
+  _dismissOperationStatus(): void;
   _showSuccess(message: string): void;
   _effectiveView(): VelairCardView;
   _entityDiagnostic(entityId: string): EntityDiagnostic;

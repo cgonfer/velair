@@ -1,5 +1,22 @@
 # Troubleshooting
 
+## A Lovelace Card Shows Configuration Error
+
+Confirm that Velair is installed and configured before the dashboard loads the
+card. The integration exposes its frontend resource early during Home Assistant
+startup so normal restarts do not leave cards waiting for the module.
+
+If the error remains:
+
+1. Confirm that the dashboard resource URL is exactly
+   `/velair_frontend/velair-card.js` and its type is **JavaScript module**.
+2. Remove duplicate or old resources such as `/local/velair-card.js`.
+3. Restart Home Assistant after updating the integration.
+4. Reload the browser or Home Assistant companion app.
+
+The browser console or network panel should show whether the module request
+failed. Include that complete error when reporting a reproducible problem.
+
 ## Velair Does Not Appear In The Sidebar
 
 Restart Home Assistant after installing or updating the integration. The sidebar panel is registered during integration setup.

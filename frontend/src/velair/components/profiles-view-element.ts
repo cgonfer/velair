@@ -7,6 +7,7 @@ import {
   activeClimateProfiles,
   climateProfileAccentColor,
   climateProfileValidationError,
+  cloneProfileScheduleDay,
   createClimateProfileDraft,
   nextProfileBlockStart,
   profileZoneBehavior,
@@ -85,6 +86,7 @@ export class VelairProfilesView extends LitElement {
   @state() private _selectedKey = "";
   @state() private _draft: ClimateProfileDraft = createClimateProfileDraft();
   @state() private _selectedDays: Record<string, string> = {};
+  @state() private _cloneDayTargets: Record<string, Set<string>> = {};
   @state() private _busy?: "activate" | "save" | "delete" | "mode-save" | "mode-delete" | "mode-activate";
   @state() private _dirty = false;
   @state() private _error?: string;
@@ -280,7 +282,10 @@ export class VelairProfilesView extends LitElement {
   private _renderListItem(profile: ClimateProfile) {
     const active = this.data?.global.active_profile_ids?.includes(profile.key) ?? false;
     const selectedByMode = active && Boolean(this.data?.active_mode_id);
-    const activationDisabled = (active && !selectedByMode) || Boolean(this._busy) || this._dirty;
+    const activationDisabled = (active && !selectedByMode)
+      || Boolean(this._busy)
+      || this._operationRunning()
+      || this._dirty;
     return html`
       <div
         class=${profile.key === this._selectedKey ? "template-item active" : "template-item"}
@@ -352,7 +357,10 @@ export class VelairProfilesView extends LitElement {
         : this._t("modeCustomDescription", {
           profile: mappedProfiles.map((profile) => profile.name).join(", "),
         });
-    const disabled = Boolean(this._busy) || this._dirty || this._modeDirty;
+    const disabled = Boolean(this._busy)
+      || this._operationRunning()
+      || this._dirty
+      || this._modeDirty;
     const controls = this.activeSetupControls === "modes" || this.activeSetupControls === "profiles"
       ? this.activeSetupControls
       : "both";
@@ -580,7 +588,6 @@ export class VelairProfilesView extends LitElement {
 
   private _renderModes() {
     const modes = this.data?.modes ?? [];
-    const selected = modes.find((mode) => mode.key === this._selectedModeKey);
     return html`
       <section class="template-library mode-library" aria-label=${this._t("modesTitle")}>
         <div class="library-concept-note">
@@ -613,7 +620,7 @@ export class VelairProfilesView extends LitElement {
           </div>
           <div class="template-detail mode-detail">
             ${this._modeEditorOpen
-              ? this._renderModeEditor(selected)
+              ? this._renderModeEditor()
               : html`<div class="template-placeholder compact"><span>${this._t("modeSelectToBegin")}</span></div>`}
           </div>
         </div>
@@ -692,22 +699,28 @@ export class VelairProfilesView extends LitElement {
     `;
   }
 
-  private _renderModeEditor(selected?: VelairMode) {
+  private _renderModeEditor() {
     const profiles = this.data?.profiles ?? [];
     const error = modeValidationError(this._modeDraft, this.data?.modes ?? [], profiles);
     return html`
       <section class="mode-editor">
-        <div class="template-detail-heading mode-editor-heading">
-          <strong>${selected ? this._t("modeEdit") : this._t("modeCreate")}</strong>
-          <button class="icon-button primary mode-save" type="button" ?disabled=${Boolean(this._busy) || !this._modeDirty || Boolean(error)} @click=${() => void this._saveMode()} title=${this._t("save")}>
-            <ha-icon icon="mdi:content-save"></ha-icon>
-          </button>
-        </div>
-        <label class="mode-field">
-          <span>${this._t("modeName")}</span>
-          <input maxlength=${MODE_NAME_MAX_LENGTH} .value=${this._modeDraft.name} aria-invalid=${String(Boolean(error && error !== "profile"))} @input=${(event: Event) => this._updateModeDraft("name", (event.currentTarget as HTMLInputElement).value)} />
+        <div class="mode-field mode-name-field">
+          <label for="mode-name-input">${this._t("modeName")}</label>
+          <div class="mode-name-row">
+            <input id="mode-name-input" maxlength=${MODE_NAME_MAX_LENGTH} .value=${this._modeDraft.name} aria-invalid=${String(Boolean(error && error !== "profile"))} @input=${(event: Event) => this._updateModeDraft("name", (event.currentTarget as HTMLInputElement).value)} />
+            <button
+              class="icon-button primary mode-save"
+              type="button"
+              ?disabled=${Boolean(this._busy) || !this._modeDirty || Boolean(error)}
+              @click=${() => void this._saveMode()}
+              title=${this._t("save")}
+              aria-label=${this._t("save")}
+            >
+              <ha-icon icon="mdi:content-save"></ha-icon>
+            </button>
+          </div>
           <small>${error === "name" ? this._t("modeNameRequired") : error === "length" ? this._t("modeNameTooLong", { count: MODE_NAME_MAX_LENGTH }) : error === "duplicate" ? this._t("modeNameDuplicate") : this._t("modeNameHelp")}</small>
-        </label>
+        </div>
         <fieldset class="mode-field mode-profile-choices" aria-invalid=${String(error === "profile")}>
           <legend>${this._t("modeProfiles")}</legend>
           ${profiles.map((profile) => html`
@@ -927,6 +940,9 @@ export class VelairProfilesView extends LitElement {
     const weekdays = orderedWeekdays(this.data?.settings?.first_weekday ?? WEEKDAYS[0]);
     const weekday = this._selectedDays[entityId] ?? weekdays[0];
     const blocks = zone.schedule[weekday] ?? [];
+    const cloneTargets = new Set(
+      [...(this._cloneDayTargets[entityId] ?? [])].filter((day) => day !== weekday),
+    );
     const blockHost = this._blockEditorHost(entityId, weekday);
     return html`
       <div class="profile-week">
@@ -978,6 +994,43 @@ export class VelairProfilesView extends LitElement {
               `
             : renderAddBlockButton(blockHost, "template")}
         </div>
+        <div class="copy-panel profile-day-copy">
+          <div class="copy-header">
+            <div>
+              <span class="label">${this._t("cloneDayToDays")}</span>
+              <strong>${this._t("otherDays")}</strong>
+            </div>
+          </div>
+          <div class="copy-targets">
+            ${weekdays
+              .filter((day) => day !== weekday)
+              .map((day) => html`
+                <label class="check-target" title=${weekdayName(languageFromHass(this.hass), day)}>
+                  <input
+                    type="checkbox"
+                    .checked=${cloneTargets.has(day)}
+                    @change=${(event: Event) => this._toggleCloneDayTarget(
+                      entityId,
+                      day,
+                      (event.currentTarget as HTMLInputElement).checked,
+                    )}
+                  />
+                  <span>${weekdayName(languageFromHass(this.hass), day).slice(0, 3)}</span>
+                </label>
+              `)}
+          </div>
+          <div class="copy-actions">
+            <button
+              class="command-button success"
+              type="button"
+              ?disabled=${cloneTargets.size === 0 || this._hasScheduleValidationError()}
+              @click=${() => this._cloneSelectedDay(entityId, weekday, cloneTargets)}
+            >
+              <ha-icon icon="mdi:content-copy"></ha-icon>
+              <span>${this._t("cloneAction")}</span>
+            </button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -985,6 +1038,8 @@ export class VelairProfilesView extends LitElement {
   private _clearSelection = (): void => {
     this._selectedKey = "";
     this._draft = createClimateProfileDraft();
+    this._selectedDays = {};
+    this._cloneDayTargets = {};
     this._expandedZones = new Set();
     this._setDirty(false);
     this._clearNotices();
@@ -1007,6 +1062,8 @@ export class VelairProfilesView extends LitElement {
       if (created) {
         this._selectedKey = created.key;
         this._draft = createClimateProfileDraft(created);
+        this._selectedDays = {};
+        this._cloneDayTargets = {};
         this._expandedZones = new Set();
       }
       this._setDirty(false);
@@ -1024,6 +1081,8 @@ export class VelairProfilesView extends LitElement {
     }
     this._selectedKey = profile.key;
     this._draft = createClimateProfileDraft(profile);
+    this._selectedDays = {};
+    this._cloneDayTargets = {};
     this._expandedZones = new Set();
     this._setDirty(false);
     this._clearNotices();
@@ -1046,6 +1105,37 @@ export class VelairProfilesView extends LitElement {
 
   private _selectDay(entityId: string, weekday: string): void {
     this._selectedDays = { ...this._selectedDays, [entityId]: weekday };
+    const targets = new Set(this._cloneDayTargets[entityId] ?? []);
+    targets.delete(weekday);
+    this._cloneDayTargets = { ...this._cloneDayTargets, [entityId]: targets };
+  }
+
+  private _toggleCloneDayTarget(entityId: string, weekday: string, checked: boolean): void {
+    const targets = new Set(this._cloneDayTargets[entityId] ?? []);
+    if (checked) targets.add(weekday);
+    else targets.delete(weekday);
+    this._cloneDayTargets = { ...this._cloneDayTargets, [entityId]: targets };
+  }
+
+  private _cloneSelectedDay(
+    entityId: string,
+    weekday: string,
+    targetWeekdays: Set<string>,
+  ): void {
+    const zone = this._draft.zones[entityId];
+    if (zone?.behavior !== "schedule" || targetWeekdays.size === 0) return;
+    this._draft = {
+      ...this._draft,
+      zones: {
+        ...this._draft.zones,
+        [entityId]: {
+          ...zone,
+          schedule: cloneProfileScheduleDay(zone.schedule, weekday, targetWeekdays),
+        },
+      },
+    };
+    this._cloneDayTargets = { ...this._cloneDayTargets, [entityId]: new Set() };
+    this._setDirty(true);
   }
 
   private _toggleZone(entityId: string): void {
@@ -1321,20 +1411,25 @@ export class VelairProfilesView extends LitElement {
 
   private async _activate(key?: string | null): Promise<void> {
     const api = this.hass ? new VelairApiClient(this.hass) : undefined;
-    if (!api || this._busy) return;
+    if (!api || this._busy || this._operationRunning()) return;
+    const operationIdBeforeRequest = this.data?.operation_status?.id;
     this._busy = "activate";
     this._clearNotices();
     try {
       this._emitData(await activateClimateProfile(api, key));
-      this._showSuccess(this._t("profileActivated"));
     } catch (error) {
-      this._error = this._errorMessage(error, "profileUnableActivate");
+      const operationStatus = this.data?.operation_status;
+      const globallyReportedFailure = operationStatus?.state === "failed"
+        && operationStatus.id !== operationIdBeforeRequest;
+      if (!globallyReportedFailure) {
+        this._error = this._errorMessage(error, "profileUnableActivate");
+      }
     } finally { this._busy = undefined; }
   }
 
   private async _selectActiveMode(value: string): Promise<void> {
     const api = this.hass ? new VelairApiClient(this.hass) : undefined;
-    if (!api || this._busy) return;
+    if (!api || this._busy || this._operationRunning()) return;
     const selection = value === "default"
       ? { kind: "default" as const }
       : value === "manual"
@@ -1343,13 +1438,18 @@ export class VelairProfilesView extends LitElement {
           ? { kind: "custom" as const, key: value.slice(7) }
           : undefined;
     if (!selection) return;
+    const operationIdBeforeRequest = this.data?.operation_status?.id;
     this._busy = "mode-activate";
     this._clearNotices();
     try {
       this._emitData(await api.selectVelairMode(selection));
-      this._showSuccess(this._t("modeActivated"));
     } catch (error) {
-      this._error = this._errorMessage(error, "modeUnableActivate");
+      const operationStatus = this.data?.operation_status;
+      const globallyReportedFailure = operationStatus?.state === "failed"
+        && operationStatus.id !== operationIdBeforeRequest;
+      if (!globallyReportedFailure) {
+        this._error = this._errorMessage(error, "modeUnableActivate");
+      }
     } finally {
       this._busy = undefined;
     }
@@ -1365,7 +1465,12 @@ export class VelairProfilesView extends LitElement {
       this._emitData(data);
       const saved = data.profiles?.find((profile) => profile.key === (this._draft.key ?? data.profile_id))
         ?? data.profiles?.find((profile) => profile.name === this._draft.name.trim());
-      if (saved) { this._selectedKey = saved.key; this._draft = createClimateProfileDraft(saved); }
+      if (saved) {
+        this._selectedKey = saved.key;
+        this._draft = createClimateProfileDraft(saved);
+        this._selectedDays = {};
+        this._cloneDayTargets = {};
+      }
       this._setDirty(false);
       this._showSuccess(this._t("profileSaved"));
     } catch (error) {
@@ -1400,6 +1505,10 @@ export class VelairProfilesView extends LitElement {
   private _emitData(data: ScheduleResponse): void {
     this.data = data;
     this.dispatchEvent(new CustomEvent("profile-data-changed", { bubbles: true, composed: true, detail: data }));
+  }
+
+  private _operationRunning(): boolean {
+    return this.data?.operation_status?.state === "running";
   }
 
   private _showSuccess(message: string): void {

@@ -269,6 +269,7 @@ export class VelairPanel extends LitElement {
     }
 
     velair-panel-card {
+      --velair-operation-sticky-top: 112px;
       display: block;
     }
 

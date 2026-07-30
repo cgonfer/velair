@@ -52,7 +52,7 @@ class VelairFrontendView(HomeAssistantView):
 
 async def async_setup_frontend(hass: HomeAssistant) -> None:
     """Register the Velair sidebar panel."""
-    _register_frontend_route(hass)
+    await async_setup_frontend_route(hass)
     module_url = _frontend_module_url()
 
     await async_register_panel(
@@ -74,7 +74,7 @@ async def async_unload_frontend(hass: HomeAssistant) -> None:
     async_remove_panel(hass, PANEL_URL_PATH, warn_if_unknown=False)
 
 
-def _register_frontend_route(hass: HomeAssistant) -> None:
+async def async_setup_frontend_route(hass: HomeAssistant) -> None:
     """Register the stable frontend route once for the Home Assistant runtime."""
     if hass.data.get(FRONTEND_ROUTE_REGISTERED):
         return

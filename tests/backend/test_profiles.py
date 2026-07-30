@@ -23,6 +23,7 @@ from custom_components.velair.models import (
 )
 from custom_components.velair.const import MAX_PROFILE_DESCRIPTION_LENGTH
 from custom_components.velair.scheduler import _RoomSensorAssistState
+import custom_components.velair.scheduler as scheduler_module
 from custom_components.velair.storage import convert_portable_temperature_data
 from custom_components.velair.temperature import CELSIUS, FAHRENHEIT
 
@@ -270,6 +271,114 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
             ("set_temperature", "climate.bedroom", 19.0, True, "heat"),
             manager.calls,
         )
+        self.assertEqual(scheduler.operation_status["state"], "completed_with_errors")
+        self.assertEqual(scheduler.operation_status["completed"], 2)
+        self.assertEqual(scheduler.operation_status["total"], 2)
+        self.assertEqual(
+            scheduler.operation_status["failed_entity_ids"],
+            ["climate.salon"],
+        )
+        self.assertIsNone(scheduler.operation_status["error_code"])
+        self.assertIsNone(scheduler.operation_status["error_message"])
+
+    async def test_activation_publishes_start_each_processed_climate_and_finish(
+        self,
+    ) -> None:
+        scheduler, _data, _manager, _saves = self._scheduler()
+        profile = _profile(temperature=18)
+        profile["zones"]["climate.bedroom"] = deepcopy(
+            profile["zones"]["climate.salon"]
+        )
+        await scheduler.async_set_profile(profile)
+        snapshots = []
+        original_dispatcher = scheduler_module.async_dispatcher_send
+
+        def capture_operation(*_args) -> None:
+            snapshots.append(scheduler.operation_status)
+
+        scheduler_module.async_dispatcher_send = capture_operation
+        self.addCleanup(
+            setattr,
+            scheduler_module,
+            "async_dispatcher_send",
+            original_dispatcher,
+        )
+
+        await scheduler.async_activate_profile("away")
+
+        operation_updates = [
+            snapshot for snapshot in snapshots if snapshot is not None
+        ]
+        self.assertTrue(
+            all(
+                snapshot["state"] == "running"
+                for snapshot in operation_updates[:-1]
+            )
+        )
+        self.assertEqual(operation_updates[-1]["state"], "completed")
+        completed_updates = [
+            snapshot["completed"] for snapshot in operation_updates
+        ]
+        self.assertEqual(completed_updates, sorted(completed_updates))
+        self.assertEqual(completed_updates[0], 0)
+        self.assertEqual(completed_updates[-1], 2)
+        self.assertEqual(operation_updates[0]["kind"], "profile_activation")
+        self.assertEqual(operation_updates[0]["target_id"], "away")
+        self.assertEqual(operation_updates[0]["total"], 2)
+        self.assertEqual(
+            {
+                snapshot["current_entity_id"]
+                for snapshot in operation_updates
+                if snapshot["state"] == "running"
+                and snapshot["current_entity_id"] is not None
+            },
+            {"climate.salon", "climate.bedroom"},
+        )
+        self.assertIsNone(operation_updates[-1]["current_entity_id"])
+        self.assertIsNotNone(operation_updates[-1]["finished_at"])
+        self.assertIsNone(operation_updates[-1]["error_code"])
+        self.assertIsNone(operation_updates[-1]["error_message"])
+
+    async def test_cancelled_climate_application_finishes_operation_and_releases_lock(
+        self,
+    ) -> None:
+        scheduler, _data, manager, _saves = self._scheduler()
+        await scheduler.async_set_profile(_profile(temperature=18))
+        climate_started = asyncio.Event()
+        block_climate = asyncio.Event()
+        original_set_temperature = manager.async_set_temperature
+
+        async def blocked_set_temperature(entity_id, temperature, **kwargs):
+            climate_started.set()
+            await block_climate.wait()
+            await original_set_temperature(entity_id, temperature, **kwargs)
+
+        manager.async_set_temperature = blocked_set_temperature
+        activation = asyncio.create_task(
+            scheduler.async_activate_profile("away")
+        )
+        await climate_started.wait()
+
+        activation.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await activation
+
+        self.assertEqual(scheduler.operation_status["state"], "failed")
+        self.assertEqual(scheduler.operation_status["completed"], 0)
+        self.assertEqual(scheduler.operation_status["error_code"], "cancelled")
+        self.assertIsNone(scheduler.operation_status["error_message"])
+        self.assertEqual(
+            scheduler.operation_status["current_entity_id"],
+            None,
+        )
+        self.assertIsNotNone(scheduler.operation_status["finished_at"])
+
+        manager.async_set_temperature = original_set_temperature
+        await asyncio.wait_for(
+            scheduler.async_activate_profile(None),
+            timeout=1,
+        )
+        self.assertEqual(scheduler.operation_status["state"], "completed")
 
     async def test_next_events_use_profile_schedule_normal_fallback_and_pause(self) -> None:
         scheduler, _data, manager, _saves = self._scheduler()
@@ -464,6 +573,17 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(data["global_"]["active_profile_ids"], [])
         self.assertEqual(manager.calls, [])
+        self.assertEqual(scheduler.operation_status["state"], "failed")
+        self.assertEqual(scheduler.operation_status["completed"], 0)
+        self.assertEqual(
+            scheduler.operation_status["error_code"],
+            "operation_failed",
+        )
+        self.assertEqual(
+            scheduler.operation_status["error_message"],
+            "storage unavailable",
+        )
+        self.assertIsNotNone(scheduler.operation_status["finished_at"])
 
     async def test_profile_definition_mutations_roll_back_when_storage_fails(self) -> None:
         scheduler, data, _manager, _saves = self._scheduler()

@@ -15,6 +15,7 @@ export const ACTION_SET_TEMPERATURE = "set_temperature";
 export const ACTION_TURN_OFF = "turn_off";
 export const DOMAIN = "velair";
 export const NOTICE_AUTO_DISMISS_MS = 5_000;
+export const OPERATION_SUCCESS_VISIBLE_MS = 5_000;
 export const PROFILE_DESCRIPTION_MAX_LENGTH = 500;
 export const MODE_NAME_MAX_LENGTH = 255;
 export const PANEL_VIEWS: VelairPanelView[] = [

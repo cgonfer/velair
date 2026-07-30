@@ -287,6 +287,9 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_select_velair_mode("away-mode")
         self.assertEqual(self.scheduler.active_profile_ids, ["away"])
         self.assertEqual(self.scheduler.active_mode_id, "away-mode")
+        self.assertEqual(self.scheduler.operation_status["kind"], "mode_change")
+        self.assertEqual(self.scheduler.operation_status["target_id"], "away-mode")
+        self.assertEqual(self.scheduler.operation_status["state"], "completed")
         profile_events = [
             event
             for event_type, event in self.scheduler._hass.bus.events
@@ -312,10 +315,17 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_clear_velair_mode()
         self.assertEqual(self.scheduler.active_profile_ids, ["away"])
         self.assertIsNone(self.scheduler.active_mode_id)
+        self.assertEqual(self.scheduler.operation_status["kind"], "mode_change")
+        self.assertEqual(self.scheduler.operation_status["target_id"], "manual")
+        self.assertEqual(self.scheduler.operation_status["total"], 0)
 
         await self.scheduler.async_activate_profile(None, source="service")
         self.assertEqual(self.scheduler.active_profile_ids, [])
         self.assertIsNone(self.scheduler.active_mode_id)
+        self.assertEqual(
+            self.scheduler.operation_status["kind"],
+            "profile_activation",
+        )
 
     async def test_reselect_and_two_modes_for_same_profile_do_not_reapply(self) -> None:
         await self._add_away()

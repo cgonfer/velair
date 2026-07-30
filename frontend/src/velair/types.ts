@@ -359,6 +359,21 @@ export type PanelSettings = {
   apply_active_schedule_on_startup?: boolean;
 };
 
+export type OperationStatus = {
+  id: string;
+  kind: "mode_change" | "profile_activation";
+  state: "running" | "completed" | "completed_with_errors" | "failed";
+  target_id?: string | null;
+  completed: number;
+  total: number;
+  current_entity_id?: string | null;
+  failed_entity_ids: string[];
+  error_code?: "cancelled" | "operation_failed" | null;
+  error_message?: string | null;
+  started_at: string;
+  finished_at?: string | null;
+};
+
 export type ScheduleResponse = {
   profile_id?: string;
   mode_id?: string;
@@ -384,6 +399,7 @@ export type ScheduleResponse = {
     persisted: boolean;
     message: string;
   } | null;
+  operation_status?: OperationStatus | null;
   global: {
     mode: string;
     active_profile_ids?: string[];

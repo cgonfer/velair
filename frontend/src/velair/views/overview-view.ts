@@ -6,11 +6,13 @@ import {
   activeOverrideForEntity,
   asOverviewDataHost,
   boostDetailText,
+  climateHvacAction,
   climateMode,
   currentTemperature,
   overviewNextEvents,
   pauseDetailText,
   todayWeekday,
+  type ClimateHvacAction,
 } from "../controllers/overview-data";
 import {
   timelineBlocksFromScheduleBlocks,
@@ -206,12 +208,12 @@ export function renderOverviewZones(host: OverviewViewHost, zoneIds: string[]) {
 }
 
 const zoneStatePresentation: Record<ZoneRuntimeStatus["state"], { icon: string; key: string }> = {
-  stopped: { icon: "mdi:stop-circle-outline", key: "overviewZoneStopped" },
+  stopped: { icon: "mdi:stop-circle-outline", key: "overviewZoneAutomationOff" },
   paused: { icon: "mdi:pause-circle", key: "overviewZonePaused" },
   boost: { icon: "mdi:lightning-bolt", key: "overviewZoneBoost" },
   preconditioning: { icon: "mdi:clock-fast", key: "overviewZonePreconditioning" },
   scheduled: { icon: "mdi:calendar-clock", key: "overviewZoneScheduled" },
-  idle: { icon: "mdi:hand-back-right-outline", key: "overviewZoneIdle" },
+  idle: { icon: "mdi:hand-back-right-outline", key: "overviewZoneManual" },
 };
 
 function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
@@ -244,12 +246,12 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
       && Math.abs(appliedTemperature - targetTemperature) >= 0.05);
   return html`
     <article class=${`overview-zone-card state-${status.state}`}>
-      ${renderOverviewZoneProfile(host, entityId)}
       <div class="overview-zone-card-heading">
         <div class="overview-zone-card-name">
           <strong>${host._friendlyEntityName(entityId)}</strong><span>${entityId}</span>
         </div>
         <div class="overview-zone-signals">
+          ${renderOverviewZoneProfile(host, entityId)}
           ${renderRoomAssistSignal(host, assist)}
           ${renderOverviewComfortSignals(host, comfort)}
         </div>
@@ -295,23 +297,44 @@ function renderOverviewZoneProfile(host: OverviewViewHost, entityId: string) {
 }
 
 function renderOverviewStateBadge(host: OverviewViewHost, entityId: string, status: ZoneRuntimeStatus, presentation: { icon: string; key: string }) {
-  let context = "";
-  if (status.state === "paused") context = status.until ? host._t("overviewZoneResumes", { time: host._formatDateTime(status.until) }) : host._t("overviewZoneUntilResumed");
-  if (status.state === "boost" && status.until) context = host._t("overviewZoneUntil", { time: host._formatDateTime(status.until) });
-  if (status.state === "preconditioning" && status.target_when) context = host._t("overviewZoneReadyAt", { time: host._formatDateTime(status.target_when) });
+  let detail = "";
+  if (status.state === "paused") detail = status.until ? host._t("overviewZoneResumes", { time: host._formatDateTime(status.until) }) : host._t("overviewZoneUntilResumed");
+  if (status.state === "boost" && status.until) detail = host._t("overviewZoneUntil", { time: host._formatDateTime(status.until) });
+  if (status.state === "preconditioning" && status.target_when) detail = host._t("overviewZoneReadyAt", { time: host._formatDateTime(status.target_when) });
   if (status.state === "scheduled") {
     const next = host._data?.next_events?.find((event) => event.entity_id === entityId);
-    context = next?.when ? host._t("overviewZoneNextAt", { time: host._formatDateTime(next.when) }) : status.hvac_mode ? host._modeLabel(status.hvac_mode) : "";
+    detail = next?.when ? host._t("overviewZoneNextAt", { time: host._formatDateTime(next.when) }) : "";
   }
-  if (status.state === "idle" && status.hvac_mode) context = host._t("overviewZoneManualMode", { mode: host._modeLabel(status.hvac_mode) });
-  if (status.state === "stopped") context = host._t("overviewZoneAutomationOff");
-  const label = host._t(presentation.key as never);
-  return html`<section class=${`overview-zone-activity state-${status.state}`} aria-label=${context ? `${label}: ${context}` : label} title=${context || label}>
-    <span class="overview-zone-activity-icon"><ha-icon icon=${presentation.icon}></ha-icon></span>
+  const stateLabel = host._t(presentation.key as never);
+  const action = climateHvacAction(asOverviewDataHost(host), entityId);
+  const actionPresentation = action ? hvacActionPresentation[action] : undefined;
+  const activityIcon = action === "idle"
+    ? presentation.icon
+    : actionPresentation?.icon ?? presentation.icon;
+  const primaryLabel = action ? asOverviewDataHost(host)._hvacActionLabel(action) : stateLabel;
+  const context = [
+    ...(action ? [stateLabel] : []),
+    ...(status.hvac_mode ? [host._modeLabel(status.hvac_mode)] : []),
+  ].join(" · ");
+  const accessibleParts = [primaryLabel, context, detail].filter(Boolean);
+  const actionClasses = action
+    ? ` action-${action}${actionPresentation?.styleAction ? ` action-${actionPresentation.styleAction}` : ""}`
+    : "";
+  return html`<section
+    class=${`overview-zone-activity state-${status.state}${actionClasses}`}
+    aria-label=${accessibleParts.join(". ")}
+    title=${accessibleParts.join(" · ")}
+  >
+    <span class="overview-zone-activity-icon"><ha-icon icon=${activityIcon}></ha-icon></span>
     <span class="overview-zone-activity-copy">
-      <small class="overview-zone-activity-eyebrow">${host._t("overviewZoneCurrentState")}</small>
-      <strong>${label}</strong>
-      <small class="overview-zone-activity-context" aria-hidden=${context ? "false" : "true"}>${context || "\u00a0"}</small>
+      <span class="overview-zone-activity-summary">
+        <strong>${primaryLabel}</strong>
+        ${context ? html`
+          <span class="overview-zone-activity-separator" aria-hidden="true">·</span>
+          <span class="overview-zone-activity-context">${context}</span>
+        ` : nothing}
+      </span>
+      ${detail ? html`<small class="overview-zone-activity-detail">${detail}</small>` : nothing}
     </span>
   </section>`;
 }
@@ -359,6 +382,17 @@ function renderRoomAssistSignal(host: OverviewViewHost, assist?: RoomSensorAssis
   return renderOverviewSignal("room-assist", "mdi:thermometer-auto", host._t("roomSensorAssistBadge"), value);
 }
 
+const hvacActionPresentation: Record<ClimateHvacAction, { icon: string; styleAction?: string }> = {
+  heating: { icon: "mdi:fire" },
+  cooling: { icon: "mdi:snowflake" },
+  drying: { icon: "mdi:water-percent" },
+  fan: { icon: "mdi:fan" },
+  idle: { icon: "mdi:pause-circle-outline" },
+  off: { icon: "mdi:power" },
+  preheating: { icon: "mdi:radiator", styleAction: "heating" },
+  defrosting: { icon: "mdi:snowflake-melt", styleAction: "drying" },
+};
+
 function numericTemperature(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -403,7 +437,7 @@ function renderOverviewComfortSignals(host: OverviewViewHost, comfort?: ComfortA
 }
 
 function renderOverviewSignal(category: string, icon: string, label: string, value: string, severity = "normal") {
-  return html`<span class=${`overview-zone-signal ${category} ${severity}`} title=${`${label}: ${value}`}><ha-icon icon=${icon}></ha-icon><span><small>${label}:</small><strong>${value}</strong></span></span>`;
+  return html`<span class=${`overview-zone-signal ${category} ${severity}`} aria-label=${`${label}: ${value}`} title=${`${label}: ${value}`}><ha-icon icon=${icon}></ha-icon><span><small>${label}:</small><strong>${value}</strong></span></span>`;
 }
 
 function renderOverviewZoneRow(host: OverviewViewHost, entityId: string, zone?: ScheduleZone) {

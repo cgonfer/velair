@@ -22,6 +22,7 @@ export type ClimateProfileDraftZone =
 export type ClimateProfileDraft = Omit<ClimateProfile, "key" | "zones"> & {
   key?: string;
   zones: Record<string, ClimateProfileDraftZone>;
+  rememberedSchedules: Record<string, Record<string, DraftScheduleBlock[]>>;
 };
 
 export function emptyProfileSchedule(): Record<string, DraftScheduleBlock[]> {
@@ -30,23 +31,40 @@ export function emptyProfileSchedule(): Record<string, DraftScheduleBlock[]> {
 
 export function createClimateProfileDraft(profile?: ClimateProfile): ClimateProfileDraft {
   if (!profile) {
-    return { name: "", icon: "mdi:account-outline", description: "", zones: {} };
+    return {
+      name: "",
+      icon: "mdi:account-outline",
+      description: "",
+      zones: {},
+      rememberedSchedules: {},
+    };
   }
+  const zones = Object.fromEntries(Object.entries(profile.zones).map(([entityId, zone]) => [
+    entityId,
+    zone.behavior === "schedule"
+      ? {
+          behavior: "schedule",
+          schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
+            weekday,
+            draftBlocksFromScheduleBlocks(zone.schedule[weekday] ?? []),
+          ])),
+        }
+      : structuredClone(zone),
+  ])) as Record<string, ClimateProfileDraftZone>;
   return {
     ...structuredClone(profile),
     color: profile.color || climateProfileAccentColor(profile.key),
-    zones: Object.fromEntries(Object.entries(profile.zones).map(([entityId, zone]) => [
-      entityId,
-      zone.behavior === "schedule"
-        ? {
-            behavior: "schedule",
-            schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
-              weekday,
-              draftBlocksFromScheduleBlocks(zone.schedule[weekday] ?? []),
-            ])),
-          }
-        : structuredClone(zone),
-    ])),
+    zones,
+    rememberedSchedules: Object.fromEntries(
+      Object.entries(zones)
+        .filter(([, zone]) => zone.behavior === "schedule")
+        .map(([entityId, zone]) => [
+          entityId,
+          cloneProfileSchedule(
+            (zone as Extract<ClimateProfileDraftZone, { behavior: "schedule" }>).schedule,
+          ),
+        ]),
+    ),
   };
 }
 
@@ -118,26 +136,49 @@ export function withProfileZoneBehavior(
   behavior: ClimateProfileDraftZone["behavior"],
 ): ClimateProfileDraft {
   const zones = { ...draft.zones };
+  const rememberedSchedules = { ...draft.rememberedSchedules };
+  const existing = zones[entityId];
+  if (existing?.behavior === "schedule") {
+    rememberedSchedules[entityId] = cloneProfileSchedule(existing.schedule);
+  }
   if (behavior === "normal") {
     delete zones[entityId];
   } else if (behavior === "schedule") {
-    const existing = zones[entityId];
     zones[entityId] = {
       behavior,
-      schedule: existing?.behavior === "schedule"
-        ? completeProfileSchedule(existing.schedule)
-        : emptyProfileSchedule(),
+      schedule: cloneProfileSchedule(
+        existing?.behavior === "schedule"
+          ? existing.schedule
+          : rememberedSchedules[entityId],
+      ),
     };
   } else {
     zones[entityId] = { behavior, action: "none" };
   }
-  return { ...draft, zones };
+  return { ...draft, zones, rememberedSchedules };
 }
 
-export function completeProfileSchedule(
+export function cloneProfileSchedule(
   schedule?: Record<string, DraftScheduleBlock[]>,
 ): Record<string, DraftScheduleBlock[]> {
-  return Object.fromEntries(WEEKDAYS.map((weekday) => [weekday, [...(schedule?.[weekday] ?? [])]]));
+  return Object.fromEntries(WEEKDAYS.map((weekday) => [
+    weekday,
+    structuredClone(schedule?.[weekday] ?? []),
+  ]));
+}
+
+export function cloneProfileScheduleDay(
+  schedule: Record<string, DraftScheduleBlock[]>,
+  sourceWeekday: string,
+  targetWeekdays: Iterable<string>,
+): Record<string, DraftScheduleBlock[]> {
+  const nextSchedule = cloneProfileSchedule(schedule);
+  for (const weekday of targetWeekdays) {
+    if (weekday !== sourceWeekday && weekday in nextSchedule) {
+      nextSchedule[weekday] = structuredClone(schedule[sourceWeekday] ?? []);
+    }
+  }
+  return nextSchedule;
 }
 
 export function nextProfileBlockStart(blocks: Array<Pick<ScheduleBlock, "start">>): string {

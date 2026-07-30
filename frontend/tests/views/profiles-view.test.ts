@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { profileStyles } from "../../src/velair/styles/profile-styles";
+import type { ClimateProfileDraft } from "../../src/velair/domain/climate-profiles";
 import type { ScheduleResponse } from "../../src/velair/types";
 import { VelairProfilesView } from "../../src/velair/components/profiles-view-element";
 
@@ -87,6 +88,36 @@ describe("profiles view", () => {
     expect(setup?.querySelector('[data-mode-selection="manual"]')?.getAttribute("aria-current")).toBe("true");
     expect(setup?.querySelector('[data-profile-id="away"]')?.getAttribute("aria-current")).toBe("true");
     expect(element.shadowRoot?.querySelector(".profile-editor")).toBeNull();
+    element.remove();
+  });
+
+  it("disables conflicting activation controls while a global operation is running", async () => {
+    const element = new VelairProfilesView();
+    element.compact = true;
+    element.data = {
+      ...data,
+      operation_status: {
+        id: "operation-1",
+        kind: "mode_change",
+        state: "running",
+        target_id: "away-mode",
+        completed: 1,
+        total: 2,
+        current_entity_id: "climate.office",
+        failed_entity_ids: [],
+        started_at: "2026-07-29T12:00:00+00:00",
+        finished_at: null,
+      },
+    } as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(element.shadowRoot?.querySelector(".active-setup-change")?.getAttribute("aria-disabled"))
+      .toBe("true");
+    expect((element.shadowRoot?.querySelector('[data-mode-selection="default"]') as HTMLButtonElement).disabled)
+      .toBe(true);
+    expect((element.shadowRoot?.querySelector('[data-profile-id="away"]') as HTMLButtonElement).disabled)
+      .toBe(true);
     element.remove();
   });
 
@@ -496,6 +527,13 @@ describe("profiles view", () => {
     await element.updateComplete;
     const name = element.shadowRoot?.querySelector(".mode-field input") as HTMLInputElement;
     const profile = element.shadowRoot?.querySelector(".mode-profile-choice input") as HTMLInputElement;
+    const nameRow = element.shadowRoot?.querySelector(".mode-name-row");
+    expect(element.shadowRoot?.querySelector(".mode-editor-heading")).toBeNull();
+    expect(nameRow?.querySelector("input")).toBe(name);
+    expect(nameRow?.querySelector(".mode-save")).not.toBeNull();
+    expect(profileStyles.cssText).toMatch(
+      /\.mode-name-row\s*\{[^}]*gap:\s*12px[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/,
+    );
     expect(name.value).toBe("");
     expect(profile.checked).toBe(false);
     expect((element.shadowRoot?.querySelector(".mode-save") as HTMLButtonElement).disabled).toBe(true);
@@ -765,7 +803,7 @@ describe("profiles view", () => {
     element.remove();
   });
 
-  it("activates a saved profile from the list action", async () => {
+  it("activates a saved profile without duplicating the global operation notice", async () => {
     const inactive = {
       ...data,
       global: { mode: "running", active_profile_ids: [] },
@@ -788,8 +826,7 @@ describe("profiles view", () => {
     await element.updateComplete;
     expect(element.shadowRoot?.querySelector(".profile-item-activate")?.getAttribute("aria-pressed")).toBe("true");
     expect(profileStyles.cssText).toMatch(/\.profile-item-activate\.active\s*\{[^}]*background:\s*#2e7d32 !important[^}]*color:\s*#ffffff/);
-    expect(success).toHaveBeenCalledOnce();
-    expect((success.mock.calls[0][0] as CustomEvent<string>).detail).toBe("Profile activated");
+    expect(success).not.toHaveBeenCalled();
     expect(element.shadowRoot?.querySelector(".notice.success")).toBeNull();
     element.remove();
   });
@@ -934,6 +971,283 @@ describe("profiles view", () => {
     expect(templateSelect.value).toBe("");
     expect([...element.shadowRoot!.querySelectorAll<HTMLSelectElement>(".advanced-climate-options-fields select")]
       .map((select) => select.value)).toEqual(expect.arrayContaining(["auto", "eco", "on", "middle"]));
+    element.remove();
+  });
+
+  it("shows a rejected retry when the global failure belongs to an earlier operation", async () => {
+    const sendMessagePromise = vi.fn().mockRejectedValue(new Error("Activation rejected"));
+    const element = new VelairProfilesView();
+    element.compact = true;
+    element.hass = { connection: { sendMessagePromise }, states: {} } as never;
+    element.data = {
+      ...data,
+      operation_status: {
+        id: "operation-1",
+        kind: "profile_activation",
+        state: "failed",
+        target_id: "away",
+        completed: 0,
+        total: 1,
+        current_entity_id: null,
+        failed_entity_ids: [],
+        started_at: "2026-07-29T12:00:00+00:00",
+        finished_at: "2026-07-29T12:00:01+00:00",
+      },
+    } as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+
+    (element.shadowRoot?.querySelector('[data-profile-id="away"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalled());
+    await element.updateComplete;
+
+    expect(element.shadowRoot?.querySelector('[role="alert"]')?.textContent).toContain("Activation rejected");
+    element.remove();
+  });
+
+  it("does not duplicate an activation failure reported by a new global operation", async () => {
+    let rejectRequest: ((error: Error) => void) | undefined;
+    const sendMessagePromise = vi.fn().mockImplementation(() => new Promise((_resolve, reject) => {
+      rejectRequest = reject;
+    }));
+    const element = new VelairProfilesView();
+    element.compact = true;
+    element.hass = { connection: { sendMessagePromise }, states: {} } as never;
+    element.data = data;
+    document.body.append(element);
+    await element.updateComplete;
+
+    (element.shadowRoot?.querySelector('[data-profile-id="away"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalled());
+    element.data = {
+      ...data,
+      operation_status: {
+        id: "operation-2",
+        kind: "profile_activation",
+        state: "failed",
+        target_id: "away",
+        completed: 0,
+        total: 1,
+        current_entity_id: null,
+        failed_entity_ids: [],
+        started_at: "2026-07-29T12:01:00+00:00",
+        finished_at: "2026-07-29T12:01:01+00:00",
+      },
+    } as ScheduleResponse;
+    rejectRequest?.(new Error("Activation rejected"));
+    await vi.waitFor(() => expect(element.shadowRoot?.querySelector('[role="alert"]')).toBeNull());
+    element.remove();
+  });
+
+  it("restores the in-session schedule after changing pause actions", async () => {
+    const scheduled = {
+      ...data,
+      global: { mode: "running", active_profile_ids: [] },
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+      profiles: [{
+        key: "seasonal",
+        name: "Seasonal",
+        zones: {
+          "climate.office": {
+            behavior: "schedule",
+            schedule: {
+              monday: [
+                {
+                  start: "07:00",
+                  action: "set_temperature",
+                  temperature: 20.5,
+                  hvac_mode: "heat",
+                  fan_mode: "auto",
+                },
+                {
+                  start: "15:00",
+                  action: "set_temperature",
+                  temperature: 24,
+                  hvac_mode: "cool",
+                  preset_mode: "comfort",
+                },
+              ],
+            },
+          },
+        },
+      }],
+    } as unknown as ScheduleResponse;
+    const element = new VelairProfilesView();
+    element.data = scheduled;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const behaviorSelect = element.shadowRoot?.querySelector(
+      ".profile-zone-actions select",
+    ) as HTMLSelectElement;
+    behaviorSelect.value = "pause";
+    behaviorSelect.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+
+    (element.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
+    await element.updateComplete;
+    const pauseAction = element.shadowRoot?.querySelector(
+      ".profile-pause-action select",
+    ) as HTMLSelectElement;
+    pauseAction.value = "turn_off";
+    pauseAction.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+
+    const pausedBehaviorSelect = element.shadowRoot?.querySelector(
+      ".profile-zone-actions select",
+    ) as HTMLSelectElement;
+    pausedBehaviorSelect.value = "schedule";
+    pausedBehaviorSelect.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+
+    const draft = (element as unknown as { _draft: ClimateProfileDraft })._draft;
+    expect(draft.zones["climate.office"]).toMatchObject({
+      behavior: "schedule",
+      schedule: {
+        monday: [
+          {
+            start: "07:00",
+            temperature: 20.5,
+            hvac_mode: "heat",
+            fan_mode: "auto",
+          },
+          {
+            start: "15:00",
+            temperature: 24,
+            hvac_mode: "cool",
+            preset_mode: "comfort",
+          },
+        ],
+      },
+    });
+    element.remove();
+  });
+
+  it("deep-clones the selected profile day to multiple draft-only targets", async () => {
+    const mondayBlocks = [
+      {
+        start: "07:00",
+        action: "set_temperature",
+        temperature: 20.5,
+        hvac_mode: "heat",
+        fan_mode: "auto",
+        preset_mode: "eco",
+        swing_mode: "on",
+        swing_horizontal_mode: "middle",
+        humidity: 45,
+      },
+      {
+        start: "15:00",
+        action: "set_temperature",
+        temperature: 24,
+        hvac_mode: "cool",
+        fan_mode: "quiet",
+        preset_mode: "comfort",
+        swing_mode: "off",
+        swing_horizontal_mode: "left",
+        humidity: 55,
+      },
+    ];
+    const scheduled = {
+      ...data,
+      global: { mode: "running", active_profile_ids: [] },
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+      profiles: [{
+        key: "seasonal",
+        name: "Seasonal",
+        zones: {
+          "climate.office": {
+            behavior: "schedule",
+            schedule: { monday: mondayBlocks },
+          },
+        },
+      }],
+    } as unknown as ScheduleResponse;
+    const element = new VelairProfilesView();
+    element.hass = {
+      language: "en",
+      states: {
+        "climate.office": {
+          state: "heat",
+          attributes: {
+            hvac_modes: ["off", "heat", "cool"],
+            fan_modes: ["auto", "quiet"],
+            preset_modes: ["eco", "comfort"],
+            swing_modes: ["on", "off"],
+            swing_horizontal_modes: ["middle", "left"],
+            min_humidity: 30,
+            max_humidity: 70,
+            min_temp: 7,
+            max_temp: 35,
+            target_temp_step: 0.5,
+          },
+        },
+      },
+    } as never;
+    element.data = scheduled;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+    (element.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
+    await element.updateComplete;
+
+    const profileWeek = element.shadowRoot!.querySelector(".profile-week")!;
+    const profileWeekChildren = [...profileWeek.children];
+    expect(profileWeekChildren.indexOf(
+      element.shadowRoot!.querySelector(".profile-day-copy")!,
+    )).toBeGreaterThan(profileWeekChildren.indexOf(
+      element.shadowRoot!.querySelector(".profile-block-list")!,
+    ));
+
+    const targets = [...element.shadowRoot!.querySelectorAll<HTMLInputElement>(
+      ".profile-day-copy input[type=checkbox]",
+    )];
+    expect(targets).toHaveLength(6);
+    targets[0].checked = true;
+    targets[0].dispatchEvent(new Event("change"));
+    targets[1].checked = true;
+    targets[1].dispatchEvent(new Event("change"));
+    await element.updateComplete;
+
+    const cloneButton = element.shadowRoot?.querySelector(
+      ".profile-day-copy .command-button",
+    ) as HTMLButtonElement;
+    expect(cloneButton.disabled).toBe(false);
+    cloneButton.click();
+    await element.updateComplete;
+
+    const viewState = element as unknown as {
+      _draft: ClimateProfileDraft;
+      _dirty: boolean;
+    };
+    const zone = viewState._draft.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected a schedule draft");
+    expect(zone.schedule.tuesday).toEqual(zone.schedule.monday);
+    expect(zone.schedule.wednesday).toEqual(zone.schedule.monday);
+    expect(zone.schedule.tuesday).not.toBe(zone.schedule.monday);
+    expect(zone.schedule.tuesday[0]).not.toBe(zone.schedule.monday[0]);
+    expect(zone.schedule.tuesday[0]).toMatchObject({
+      hvac_mode: "heat",
+      fan_mode: "auto",
+      preset_mode: "eco",
+      swing_mode: "on",
+      swing_horizontal_mode: "middle",
+      humidity: 45,
+    });
+    expect(zone.schedule.wednesday[1]).toMatchObject({
+      hvac_mode: "cool",
+      fan_mode: "quiet",
+      preset_mode: "comfort",
+      swing_mode: "off",
+      swing_horizontal_mode: "left",
+      humidity: 55,
+    });
+    expect(viewState._dirty).toBe(true);
+    expect((scheduled.profiles?.[0].zones["climate.office"] as {
+      schedule: Record<string, unknown[]>;
+    }).schedule.tuesday).toBeUndefined();
+    expect(cloneButton.disabled).toBe(true);
     element.remove();
   });
 

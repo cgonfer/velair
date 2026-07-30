@@ -16,6 +16,27 @@ type OverviewDataHost = {
   _t(key: string): string;
 };
 
+export type ClimateHvacAction =
+  | "heating"
+  | "cooling"
+  | "drying"
+  | "fan"
+  | "idle"
+  | "off"
+  | "preheating"
+  | "defrosting";
+
+const CLIMATE_HVAC_ACTIONS = new Set<ClimateHvacAction>([
+  "heating",
+  "cooling",
+  "drying",
+  "fan",
+  "idle",
+  "off",
+  "preheating",
+  "defrosting",
+]);
+
 export function asOverviewDataHost(host: unknown): OverviewDataHost {
   return host as OverviewDataHost;
 }
@@ -136,6 +157,16 @@ export function currentTemperature(host: OverviewDataHost, entityId: string): st
   }
 
   return host._formatTemperature(currentTemperatureValue, entityId);
+}
+
+export function climateHvacAction(
+  host: OverviewDataHost,
+  entityId: string,
+): ClimateHvacAction | undefined {
+  const action = host.hass?.states?.[entityId]?.attributes?.hvac_action;
+  return typeof action === "string" && CLIMATE_HVAC_ACTIONS.has(action as ClimateHvacAction)
+    ? action as ClimateHvacAction
+    : undefined;
 }
 
 export function climateMode(host: OverviewDataHost, entityId: string): string | undefined {

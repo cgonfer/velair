@@ -621,13 +621,20 @@ export const profileStyles = css`
     color: var(--mode-profile-color);
   }
 
-  .mode-editor-heading {
+  .mode-name-row {
     align-items: center;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
   }
 
-  .mode-field > span:first-child {
+  .mode-name-row input {
+    min-width: 0;
+  }
+
+  .mode-field > span:first-child,
+  .mode-name-field > label {
     font-size: 12px;
     font-weight: 600;
   }

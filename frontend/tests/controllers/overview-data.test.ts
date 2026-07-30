@@ -6,6 +6,7 @@ import {
   activeOverrideForEntity,
   activePauseOverrideForEntity,
   boostDetailText,
+  climateHvacAction,
   climateMode,
   currentTemperature,
   overviewNextEvents,
@@ -98,6 +99,33 @@ describe("overview data controller", () => {
     expect(currentTemperature(state, "climate.office")).toBe("20.5 °C");
     expect(climateMode(state, "climate.office")).toBe("heat - heating");
     vi.useRealTimers();
+  });
+
+  it("accepts only supported live HVAC actions", () => {
+    const state = host();
+    const climateState = state.hass.states["climate.office"];
+
+    for (const action of [
+      "heating",
+      "cooling",
+      "drying",
+      "fan",
+      "idle",
+      "off",
+      "preheating",
+      "defrosting",
+    ]) {
+      climateState.attributes.hvac_action = action;
+      expect(climateHvacAction(state, "climate.office")).toBe(action);
+    }
+
+    for (const action of ["unknown", "unavailable", ""]) {
+      climateState.attributes.hvac_action = action;
+      expect(climateHvacAction(state, "climate.office")).toBeUndefined();
+    }
+    climateState.attributes.hvac_action = undefined as unknown as string;
+    expect(climateHvacAction(state, "climate.office")).toBeUndefined();
+    expect(climateHvacAction(state, "climate.missing")).toBeUndefined();
   });
 
   it("uses backend next events when the schedule response provides them", () => {

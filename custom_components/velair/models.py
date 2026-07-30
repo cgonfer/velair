@@ -7,7 +7,7 @@ from datetime import datetime
 from math import ceil, exp, isfinite
 import re
 import unicodedata
-from typing import Any, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 from .const import (
     ACTION_SET_TEMPERATURE,
@@ -313,6 +313,23 @@ class VelairModeData(TypedDict):
     key: str
     name: str
     profile_ids: list[str]
+
+
+class OperationStatus(TypedDict):
+    """Runtime-only progress for a profile or Mode transition."""
+
+    id: str
+    kind: Literal["mode_change", "profile_activation"]
+    state: Literal["running", "completed", "completed_with_errors", "failed"]
+    target_id: str | None
+    completed: int
+    total: int
+    current_entity_id: str | None
+    failed_entity_ids: list[str]
+    started_at: str
+    finished_at: str | None
+    error_code: Literal["cancelled", "operation_failed"] | None
+    error_message: str | None
 
 
 class SchedulerData(TypedDict):

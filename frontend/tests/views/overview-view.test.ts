@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { overviewStyles } from "../../src/velair/styles/overview-styles";
+import { en } from "../../src/velair/translations/en";
+import { es } from "../../src/velair/translations/es";
+import { translationTemplate } from "../../src/velair/translations/template";
 import type { ScheduleEvent } from "../../src/velair/types";
 import {
   renderEvent,
@@ -25,6 +28,8 @@ function host() {
     _formatEventMode: (event: ScheduleEvent) => String(event.hvac_mode),
     _formatScheduleTime: (value: string) => `time:${value}`,
     _friendlyEntityName: () => "Office",
+    _hvacActionLabel: (action: string) => `action:${action}`,
+    _modeLabel: (mode: string) => `mode:${mode}`,
     _nextEventChangeRevision: 1,
     _t: (key: string, params?: Record<string, string>) => `${key}${Object.values(params ?? {}).join("")}`,
   } as unknown as VelairViewHost;
@@ -53,7 +58,7 @@ describe("overview next events", () => {
     expect(container.querySelector(".overview-zone-card")).not.toBeNull();
     expect(container.querySelector(".overview-zone-details .overview-zone-metrics")).not.toBeNull();
     expect(container.querySelector(".overview-zone-activity")?.textContent).toContain("overviewZoneScheduled");
-    expect(container.querySelector(".overview-zone-activity-eyebrow")?.textContent).toBe("overviewZoneCurrentState");
+    expect(container.querySelector(".overview-zone-activity-eyebrow")).toBeNull();
     expect(container.querySelectorAll(".overview-zone-metric")).toHaveLength(2);
     expect(container.querySelectorAll(".overview-zone-signal")).toHaveLength(2);
     expect(container.querySelector(".comfort-environment.normal")?.textContent)
@@ -225,7 +230,7 @@ describe("overview next events", () => {
     expect(container.querySelector(".room-assist")?.textContent).not.toContain("-2 °C");
   });
 
-  it("reserves the state badge context line with the same internal structure", () => {
+  it("keeps a compact status structure without a fixed heading or empty context row", () => {
     const container = document.createElement("div");
     const overviewHost = { ...host(), _data: {
       zones: {
@@ -243,10 +248,92 @@ describe("overview next events", () => {
     const badges = [...container.querySelectorAll(".overview-zone-activity")];
     expect(badges).toHaveLength(2);
     expect(badges.every((badge) => badge.querySelector(".overview-zone-activity-icon")
-      && badge.querySelector(".overview-zone-activity-eyebrow")
-      && badge.querySelector(".overview-zone-activity-copy strong")
-      && badge.querySelector(".overview-zone-activity-context"))).toBe(true);
-    expect(badges[1].querySelector(".overview-zone-activity-context")?.textContent).toBe("\u00a0");
+      && badge.querySelector(".overview-zone-activity-copy strong"))).toBe(true);
+    expect(badges.every((badge) => !badge.querySelector(".overview-zone-activity-eyebrow"))).toBe(true);
+    expect(badges[1].querySelector(".overview-zone-activity-context")).toBeNull();
+  });
+
+  it("shows activity, Velair control, HVAC mode, and timing once in the status summary", () => {
+    const manualContainer = document.createElement("div");
+    const manualHost = {
+      ...host(),
+      hass: {
+        states: {
+          "climate.office": {
+            state: "off",
+            attributes: { hvac_action: "idle" },
+          },
+        },
+      },
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: { "climate.office": { state: "idle", hvac_mode: "off" } },
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(manualHost, ["climate.office"]), manualContainer);
+
+    const manualActivity = manualContainer.querySelector(".overview-zone-activity");
+    expect(manualActivity?.querySelector("strong")?.textContent).toBe("action:idle");
+    expect(manualActivity?.querySelector("ha-icon")?.getAttribute("icon"))
+      .toBe("mdi:hand-back-right-outline");
+    expect(manualActivity?.querySelector(".overview-zone-activity-context")?.textContent)
+      .toBe("overviewZoneManual · mode:off");
+    expect(manualContainer.querySelector(".overview-zone-signal.hvac-action")).toBeNull();
+
+    const scheduledContainer = document.createElement("div");
+    const scheduledHost = {
+      ...host(),
+      hass: {
+        states: {
+          "climate.office": {
+            state: "heat",
+            attributes: { hvac_action: "heating" },
+          },
+        },
+      },
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: { "climate.office": { state: "scheduled", hvac_mode: "heat" } },
+        next_events: [{ entity_id: "climate.office", when: "2026-07-30T16:30:00Z" }],
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(scheduledHost, ["climate.office"]), scheduledContainer);
+
+    const scheduledActivity = scheduledContainer.querySelector(".overview-zone-activity");
+    expect(scheduledActivity?.querySelector("strong")?.textContent).toBe("action:heating");
+    expect(scheduledActivity?.querySelector(".overview-zone-activity-context")?.textContent)
+      .toBe("overviewZoneScheduled · mode:heat");
+    expect(scheduledActivity?.querySelector(".overview-zone-activity-detail")?.textContent)
+      .toBe("overviewZoneNextAtdate:2026-07-30T16:30:00Z");
+  });
+
+  it("uses the scheduled icon when a scheduled climate reports idle activity", () => {
+    const container = document.createElement("div");
+    const overviewHost = {
+      ...host(),
+      hass: {
+        states: {
+          "climate.office": {
+            state: "off",
+            attributes: { hvac_action: "idle" },
+          },
+        },
+      },
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: { "climate.office": { state: "scheduled", hvac_mode: "off" } },
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+    const activity = container.querySelector(".overview-zone-activity");
+    expect(activity?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:calendar-clock");
+    expect(activity?.querySelector("strong")?.textContent).toBe("action:idle");
+    expect(activity?.querySelector(".overview-zone-activity-context")?.textContent)
+      .toBe("overviewZoneScheduled · mode:off");
   });
 
   it("omits missing Room Assist fields and empty groups without changing field order", () => {
@@ -270,8 +357,16 @@ describe("overview next events", () => {
     expect(container.querySelector(".overview-assist-offset")?.textContent).toContain("+1 °C");
   });
 
-  it("keeps secondary signals in Room Assist, Comfort, Air, Data order", () => {
+  it("merges device activity into Now and keeps the remaining secondary signals ordered", () => {
     const container = document.createElement("div");
+    const climate = {
+      states: {
+        "climate.office": {
+          state: "heat",
+          attributes: { hvac_action: "heating" },
+        },
+      },
+    };
     const overviewHost = { ...host(), _formatTemperature: (value: number) => `${value} °C`, _data: {
       zones: { "climate.office": { enabled: true, schedule: {} } },
       zone_runtime: { "climate.office": { state: "scheduled" } },
@@ -283,24 +378,138 @@ describe("overview next events", () => {
         data_quality: "partial",
         data_issues: ["humidity_missing"],
       } },
-    } } as unknown as VelairViewHost;
+    }, hass: climate } as unknown as VelairViewHost;
 
     render(renderOverviewZones(overviewHost, ["climate.office"]), container);
 
+    const activity = container.querySelector(".overview-zone-activity");
+    expect(activity?.classList).toContain("action-heating");
+    expect(activity?.querySelector("strong")?.textContent).toBe("action:heating");
+    expect(activity?.querySelector(".overview-zone-activity-context")?.textContent)
+      .toBe("overviewZoneScheduled");
     expect([...container.querySelectorAll(".overview-zone-signal")].map((node) =>
       ["room-assist", "comfort-environment", "comfort-air", "comfort-data"]
         .find((className) => node.classList.contains(className)),
     )).toEqual(["room-assist", "comfort-environment", "comfort-air", "comfort-data"]);
   });
 
-  it("wraps complete secondary-signal chips instead of shrinking or scrolling them", () => {
+  it("renders accessible icons and localized values for every live HVAC action", () => {
+    const presentations = {
+      heating: "mdi:fire",
+      cooling: "mdi:snowflake",
+      drying: "mdi:water-percent",
+      fan: "mdi:fan",
+      idle: "mdi:calendar-clock",
+      off: "mdi:power",
+      preheating: "mdi:radiator",
+      defrosting: "mdi:snowflake-melt",
+    };
+
+    for (const [action, icon] of Object.entries(presentations)) {
+      const container = document.createElement("div");
+      const overviewHost = {
+        ...host(),
+        hass: {
+          states: {
+            "climate.office": {
+              state: action === "off" ? "off" : "heat",
+              attributes: { hvac_action: action },
+            },
+          },
+        },
+        _data: {
+          zones: { "climate.office": { enabled: true, schedule: {} } },
+          zone_runtime: { "climate.office": { state: "scheduled" } },
+        },
+      } as unknown as VelairViewHost;
+
+      render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+      const activity = container.querySelector(".overview-zone-activity");
+      expect(activity?.classList).toContain(`action-${action}`);
+      if (action === "preheating") expect(activity?.classList).toContain("action-heating");
+      if (action === "defrosting") expect(activity?.classList).toContain("action-drying");
+      expect(activity?.querySelector("ha-icon")?.getAttribute("icon")).toBe(icon);
+      expect(activity?.querySelector("strong")?.textContent).toBe(`action:${action}`);
+      expect(activity?.querySelector(".overview-zone-activity-context")?.textContent)
+        .toBe("overviewZoneScheduled");
+      expect(activity?.getAttribute("aria-label")).toBe(
+        `action:${action}. overviewZoneScheduled`,
+      );
+    }
+  });
+
+  it("does not infer device activity when HVAC action is invalid or missing", () => {
+    for (const action of [undefined, "unknown", "unavailable", 42]) {
+      const container = document.createElement("div");
+      const overviewHost = {
+        ...host(),
+        hass: {
+          states: {
+            "climate.office": {
+              state: "heat",
+              attributes: { ...(action ? { hvac_action: action } : {}) },
+            },
+          },
+        },
+        _data: {
+          zones: { "climate.office": { enabled: true, schedule: {} } },
+          zone_runtime: { "climate.office": { state: "scheduled" } },
+        },
+      } as unknown as VelairViewHost;
+
+      render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+      const activity = container.querySelector(".overview-zone-activity");
+      expect(activity?.className).toBe("overview-zone-activity state-scheduled");
+      expect(activity?.querySelector("strong")?.textContent).toBe("overviewZoneScheduled");
+      expect(activity?.querySelector(".overview-zone-activity-context")).toBeNull();
+    }
+  });
+
+  it("provides concise manual-state translations alongside HVAC action dictionaries", () => {
+    expect(en.overviewZoneManual).toBe("Manual");
+    expect(es.overviewZoneManual).toBe("Manual");
+    expect(translationTemplate).toHaveProperty("overviewZoneManual");
+    for (const action of [
+      "heating",
+      "cooling",
+      "drying",
+      "fan",
+      "idle",
+      "off",
+      "preheating",
+      "defrosting",
+    ] as const) {
+      expect(en.hvacActions[action]).toBeTruthy();
+      expect(es.hvacActions[action]).toBeTruthy();
+      expect(translationTemplate.hvacActions).toHaveProperty(action);
+    }
+  });
+
+  it("uses restrained activity colors in Now and wraps the remaining secondary signals", () => {
     const cssText = overviewStyles.cssText;
 
     expect(cssText).toMatch(/\.overview-zone-signals\s*\{[^}]*flex-wrap:\s*wrap/);
     expect(cssText).toMatch(/\.overview-zone-signals\s*\{[^}]*overflow:\s*visible/);
     expect(cssText).toMatch(/\.overview-zone-signal\s*\{[^}]*flex:\s*0 0 auto/);
     expect(cssText).toMatch(/\.overview-zone-signal\s*\{[^}]*white-space:\s*nowrap/);
+    expect(cssText).toMatch(/\.overview-zone-card-heading\s*\{[^}]*grid-template-columns:\s*minmax\(150px, \.75fr\) minmax\(0, 1\.5fr\) minmax\(160px, 220px\)/);
+    expect(cssText).toMatch(/\.overview-zone-activity\s*\{[^}]*align-self:\s*start[^}]*grid-column:\s*3[^}]*grid-template-columns:\s*32px minmax\(0, max-content\)[^}]*width:\s*fit-content/);
+    expect(cssText).toMatch(/\.overview-zone-activity-summary\s*\{[^}]*flex-wrap:\s*wrap/);
+    expect(cssText).toMatch(/\.overview-zone-activity-summary strong\s*\{[^}]*font-size:\s*13px/);
+    expect(cssText).toMatch(/\.overview-zone-activity-context,\s*\.overview-zone-activity-separator\s*\{[^}]*font-size:\s*12px/);
+    expect(cssText).toMatch(/\.overview-zone-activity-detail\s*\{[^}]*font-size:\s*11px/);
+    expect(cssText).not.toMatch(/\.overview-zone-activity-eyebrow/);
+    expect(cssText).toMatch(/\.overview-zone-activity\.action-heating \.overview-zone-activity-icon\s*\{[^}]*#e65100/);
+    expect(cssText).toMatch(/\.overview-zone-activity\.action-cooling \.overview-zone-activity-icon\s*\{[^}]*#0277bd/);
+    expect(cssText).toMatch(/\.overview-zone-activity\.action-drying \.overview-zone-activity-icon,[\s\S]*var\(--primary-color\)/);
+    expect(cssText).toMatch(/\.overview-zone-activity\.action-idle \.overview-zone-activity-icon,[\s\S]*var\(--secondary-text-color\)/);
     expect(cssText).not.toMatch(/\.overview-zone-signals\s*\{[^}]*overflow-x:\s*auto/);
+    expect(cssText).not.toMatch(/\.overview-zone-signal\.hvac-action/);
+    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 1120px\)[\s\S]*\.overview-zone-signals\s*\{[^}]*grid-column:\s*1 \/ -1[^}]*grid-row:\s*2/);
+    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 600px\)[\s\S]*\.overview-zone-card-heading\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(120px, 46%\)/);
+    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 600px\)[\s\S]*\.overview-zone-activity\s*\{[^}]*grid-column:\s*2[^}]*grid-row:\s*1[^}]*grid-template-columns:\s*32px minmax\(0, 1fr\)[^}]*width:\s*100%/);
   });
 
   it("surfaces environmental comfort and monitored air quality as separate signals", () => {
@@ -737,6 +946,22 @@ describe("overview timeline", () => {
         zones: { "climate.office": { behavior: "pause", action: "none" } },
       }],
       zone_runtime: { "climate.office": { state: "boost" } },
+      room_sensor_assist: {
+        "climate.office": {
+          status: "assisting",
+          assist_delta: 1,
+          direction: "heat",
+        },
+      },
+      comfort: {
+        "climate.office": {
+          enabled: true,
+          condition: "comfortable",
+          air_quality: "good",
+          data_quality: "partial",
+          data_issues: ["humidity_missing"],
+        },
+      },
     } as never;
     const timelineHost = {
       ...host(),
@@ -752,6 +977,18 @@ describe("overview timeline", () => {
 
     expect(container.querySelector(".overview-timeline-name.profiled")).toBeNull();
     expect(container.querySelector(".overview-zone-profile")?.textContent).toContain("Away");
+    expect(container.querySelector(".overview-zone-profile")?.parentElement?.classList)
+      .toContain("overview-zone-signals");
+    expect(container.querySelector(".overview-zone-card-heading")?.firstElementChild?.classList)
+      .toContain("overview-zone-card-name");
+    expect([...container.querySelector(".overview-zone-signals")!.children].map((element) => element.className))
+      .toEqual([
+        "overview-zone-profile",
+        "overview-zone-signal room-assist normal",
+        "overview-zone-signal comfort-environment normal",
+        "overview-zone-signal comfort-air normal",
+        "overview-zone-signal comfort-data warning",
+      ]);
     expect(container.querySelector(".overview-zone-profile ha-icon")?.getAttribute("icon"))
       .toBe("mdi:briefcase-outline");
     expect(container.querySelector(".overview-zone-profile")?.getAttribute("style"))

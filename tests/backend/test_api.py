@@ -206,6 +206,64 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
             "invalid profile data",
         )
 
+    def test_subscription_immediately_sends_current_operation_snapshot(self) -> None:
+        operation = {
+            "id": "operation-1",
+            "kind": "mode_change",
+            "state": "running",
+            "target_id": "away-mode",
+            "completed": 1,
+            "total": 2,
+            "current_entity_id": "climate.salon",
+            "failed_entity_ids": [],
+            "started_at": "2026-05-19T18:00:00+00:00",
+            "finished_at": None,
+            "error_code": None,
+            "error_message": None,
+        }
+        connection = SimpleNamespace(
+            subscriptions={},
+            send_result=Mock(),
+            send_message=Mock(),
+        )
+        original_connect = api_module.async_dispatcher_connect
+        original_build_response = api_module._build_schedule_response
+        api_module.async_dispatcher_connect = (
+            lambda _hass, _signal, _callback: (lambda: None)
+        )
+        api_module._build_schedule_response = (
+            lambda _runtime: {"operation_status": operation}
+        )
+        self.addCleanup(
+            setattr,
+            api_module,
+            "async_dispatcher_connect",
+            original_connect,
+        )
+        self.addCleanup(
+            setattr,
+            api_module,
+            "_build_schedule_response",
+            original_build_response,
+        )
+
+        api_module.ws_subscribe_updates(
+            SimpleNamespace(),
+            connection,
+            {"id": 7, "type": "velair/subscribe_updates"},
+        )
+
+        connection.send_result.assert_called_once_with(7)
+        connection.send_message.assert_called_once_with(
+            {
+                "id": 7,
+                "event": {
+                    "loaded": True,
+                    "schedule": {"operation_status": operation},
+                },
+            }
+        )
+
 
 class ClimateProfileImportValidationTest(unittest.TestCase):
     """Reject malformed profiles before portable temperature conversion."""
@@ -715,6 +773,7 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
             [{"key": "away-mode", "name": "Away", "profile_ids": ["away"]}],
         )
         self.assertEqual(response["active_mode_id"], "away-mode")
+        self.assertIsNone(response["operation_status"])
 
     def test_schedule_response_serializes_next_events_by_zone_for_ui(self) -> None:
         data = helpers.normalize_schedule_data(None, ["climate.salon", "climate.bedroom"])

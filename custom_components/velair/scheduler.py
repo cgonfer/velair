@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 import logging
 import math
+from typing import Literal
 from uuid import uuid4
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
@@ -59,6 +60,7 @@ from .models import (
     ComfortData,
     DEFAULT_SCHEDULE_TEMPLATES_VERSION,
     PanelSettingsData,
+    OperationStatus,
     VelairModeData,
     PreconditioningData,
     PreconditioningPrediction,
@@ -202,6 +204,7 @@ class VelairScheduler:
         self._next_event_by_entity: dict[str, ClimateEvent] = {}
         self._temperature_migration_blocked = False
         self._profile_mutation_lock = asyncio.Lock()
+        self._operation_status: OperationStatus | None = None
 
     @property
     def mode(self) -> str:
@@ -212,6 +215,11 @@ class VelairScheduler:
     def temperature_migration_blocked(self) -> bool:
         """Return whether temperature migration blocks scheduler operations."""
         return self._temperature_migration_blocked
+
+    @property
+    def operation_status(self) -> OperationStatus | None:
+        """Return an isolated snapshot of the latest runtime operation."""
+        return deepcopy(self._operation_status)
 
     async def async_start(self, *, apply_current_schedule: bool = False) -> None:
         """Start scheduling events."""
@@ -1376,7 +1384,11 @@ class VelairScheduler:
             if mode is None:
                 raise ValueError(f"Unknown mode: {key}")
             await self._async_activate_profiles_locked(
-                mode["profile_ids"], source=source, mode_id=key
+                mode["profile_ids"],
+                source=source,
+                mode_id=key,
+                operation_kind="mode_change",
+                operation_target_id=key,
             )
 
     async def async_clear_velair_mode(self) -> None:
@@ -1384,10 +1396,22 @@ class VelairScheduler:
         async with self._profile_mutation_lock:
             if self.active_mode_id is None:
                 return
+            self._begin_operation("mode_change", "manual", 0)
             previous_data = deepcopy(self._data)
-            self._data["global_"]["active_mode_id"] = None
-            await self._async_save_profile_mutation(previous_data)
-            self._async_write_state()
+            try:
+                self._data["global_"]["active_mode_id"] = None
+                await self._async_save_profile_mutation(previous_data)
+            except asyncio.CancelledError:
+                self._finish_operation(failed=True, error_code="cancelled")
+                raise
+            except Exception as err:
+                self._finish_operation(
+                    failed=True,
+                    error_code="operation_failed",
+                    error_message=str(err) or type(err).__name__,
+                )
+                raise
+            self._finish_operation()
 
     async def async_set_profile(self, profile: dict) -> str:
         """Serialize creation and replacement of climate profiles."""
@@ -1516,11 +1540,27 @@ class VelairScheduler:
             await self._async_activate_profiles_locked(
                 [profile_id] if isinstance(profile_id, str) and profile_id.strip() else [],
                 source=source,
+                operation_kind="profile_activation",
+                operation_target_id=(
+                    profile_id.strip()
+                    if isinstance(profile_id, str) and profile_id.strip()
+                    else None
+                ),
             )
 
     async def async_deactivate_profile(self, *, source: str = "service") -> None:
         """Return to default schedules through the public profile API."""
-        await self.async_activate_profile(None, source=source)
+        async with self._profile_mutation_lock:
+            await self._async_activate_profiles_locked(
+                [],
+                source=source,
+                operation_kind=(
+                    "mode_change" if source in ("panel", "select") else "profile_activation"
+                ),
+                operation_target_id=(
+                    "default" if source in ("panel", "select") else None
+                ),
+            )
 
     async def _async_activate_profiles_locked(
         self,
@@ -1529,6 +1569,8 @@ class VelairScheduler:
         source: str,
         mode_id: str | None = None,
         rollback_data: SchedulerData | None = None,
+        operation_kind: Literal["mode_change", "profile_activation"] | None = None,
+        operation_target_id: str | None = None,
     ) -> None:
         """Activate a conflict-free profile set atomically; empty selects Default."""
         normalized_ids = [
@@ -1563,19 +1605,46 @@ class VelairScheduler:
         previous_data = (
             deepcopy(self._data) if rollback_data is None else rollback_data
         )
+        affected = {
+            entity_id
+            for entity_id in self._data["zones"]
+            if self._profile_effect_from_profiles(previous_profiles, entity_id)
+            != self._profile_effect_from_profiles(next_profiles, entity_id)
+        }
+        if operation_kind is None:
+            operation_kind = "mode_change" if mode_id is not None else "profile_activation"
+        if operation_target_id is None:
+            operation_target_id = mode_id or (
+                normalized_ids[0] if len(normalized_ids) == 1 else None
+            )
+        self._begin_operation(operation_kind, operation_target_id, len(affected))
         self._data["global_"]["active_profile_ids"] = normalized_ids
         self._data["global_"]["active_mode_id"] = mode_id
+        try:
+            if normalized_ids == previous_ids:
+                await self._async_save_profile_mutation(previous_data)
+            else:
+                await self._async_apply_profile_transition(
+                    previous_profiles,
+                    deepcopy(next_profiles),
+                    source="profile_activated" if normalized_ids else "profile_deactivated",
+                    persist_change=True,
+                    rollback_data=previous_data,
+                    track_operation=True,
+                )
+        except asyncio.CancelledError:
+            self._finish_operation(failed=True, error_code="cancelled")
+            raise
+        except Exception as err:
+            self._finish_operation(
+                failed=True,
+                error_code="operation_failed",
+                error_message=str(err) or type(err).__name__,
+            )
+            raise
+        self._finish_operation()
         if normalized_ids == previous_ids:
-            await self._async_save_profile_mutation(previous_data)
-            self._async_write_state()
             return
-        await self._async_apply_profile_transition(
-            previous_profiles,
-            deepcopy(next_profiles),
-            source="profile_activated" if normalized_ids else "profile_deactivated",
-            persist_change=True,
-            rollback_data=previous_data,
-        )
         self._async_fire_profile_changed(
             normalized_ids,
             previous_profile_ids=previous_ids,
@@ -1655,6 +1724,7 @@ class VelairScheduler:
         source: str,
         persist_change: bool = False,
         rollback_data: SchedulerData | None = None,
+        track_operation: bool = False,
     ) -> None:
         """Reset affected runtime state and immediately enact effective behavior."""
         affected = {
@@ -1701,6 +1771,8 @@ class VelairScheduler:
                     reason="profile_changed",
                 )
             except Exception:
+                if track_operation:
+                    self._mark_operation_entity_failed(entity_id)
                 _LOGGER.exception(
                     "Failed to clear Room Assist after profile change for %s",
                     entity_id,
@@ -1708,7 +1780,11 @@ class VelairScheduler:
 
         if self.mode == MODE_AUTO and not self._temperature_migration_blocked:
             for entity_id in affected:
+                if track_operation:
+                    self._start_operation_entity(entity_id)
                 if self._is_zone_override_active(entity_id, now):
+                    if track_operation:
+                        self._advance_operation(entity_id)
                     continue
                 try:
                     behavior = self._profile_zone_behavior(entity_id)
@@ -1726,19 +1802,31 @@ class VelairScheduler:
                                     "source": source,
                                 }
                             )
-                        continue
-                    await self.async_apply_current_schedule(entity_id, source=source)
+                    else:
+                        await self.async_apply_current_schedule(entity_id, source=source)
                 except Exception:
+                    if track_operation:
+                        self._mark_operation_entity_failed(entity_id)
                     _LOGGER.exception(
                         "Failed to apply profile behavior for %s",
                         entity_id,
                     )
+                if track_operation:
+                    self._advance_operation(entity_id)
+        elif track_operation:
+            for entity_id in affected:
+                self._start_operation_entity(entity_id)
+                self._advance_operation(entity_id)
         self.async_schedule_next_event()
 
     async def _async_save_profile_mutation(self, previous_data: SchedulerData) -> None:
         """Persist a profile mutation, restoring runtime state if storage fails."""
         try:
             await self._async_save_data()
+        except asyncio.CancelledError:
+            self._data.clear()
+            self._data.update(previous_data)
+            raise
         except Exception:
             self._data.clear()
             self._data.update(previous_data)
@@ -4645,6 +4733,83 @@ class VelairScheduler:
     def _async_write_state(self) -> None:
         """Notify entities that scheduler state changed."""
         async_dispatcher_send(self._hass, SIGNAL_SCHEDULER_UPDATED)
+
+    def _begin_operation(
+        self,
+        kind: Literal["mode_change", "profile_activation"],
+        target_id: str | None,
+        total: int,
+    ) -> None:
+        """Publish the start of one runtime-only sequential operation."""
+        self._operation_status = {
+            "id": uuid4().hex,
+            "kind": kind,
+            "state": "running",
+            "target_id": target_id,
+            "completed": 0,
+            "total": total,
+            "current_entity_id": None,
+            "failed_entity_ids": [],
+            "started_at": dt_util.now().isoformat(),
+            "finished_at": None,
+            "error_code": None,
+            "error_message": None,
+        }
+        self._async_write_state()
+
+    def _mark_operation_entity_failed(self, entity_id: str) -> None:
+        """Record one per-climate processing failure without stopping the operation."""
+        operation = self._operation_status
+        if operation is None or operation["state"] != "running":
+            return
+        if entity_id not in operation["failed_entity_ids"]:
+            operation["failed_entity_ids"].append(entity_id)
+
+    def _start_operation_entity(self, entity_id: str) -> None:
+        """Publish the climate currently being processed."""
+        operation = self._operation_status
+        if operation is None or operation["state"] != "running":
+            return
+        operation["current_entity_id"] = entity_id
+        self._async_write_state()
+
+    def _advance_operation(self, entity_id: str) -> None:
+        """Publish that one climate has been processed."""
+        operation = self._operation_status
+        if operation is None or operation["state"] != "running":
+            return
+        operation["current_entity_id"] = entity_id
+        operation["completed"] = min(
+            operation["completed"] + 1,
+            operation["total"],
+        )
+        self._async_write_state()
+
+    def _finish_operation(
+        self,
+        *,
+        failed: bool = False,
+        error_code: Literal["cancelled", "operation_failed"] | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """Publish the terminal state of the current runtime-only operation."""
+        operation = self._operation_status
+        if operation is None or operation["state"] != "running":
+            return
+        operation["state"] = (
+            "failed"
+            if failed
+            else (
+                "completed_with_errors"
+                if operation["failed_entity_ids"]
+                else "completed"
+            )
+        )
+        operation["current_entity_id"] = None
+        operation["finished_at"] = dt_util.now().isoformat()
+        operation["error_code"] = error_code if failed else None
+        operation["error_message"] = error_message if failed else None
+        self._async_write_state()
 
     def _async_fire_event(self, event_name: str, event_data: dict) -> None:
         """Fire a Home Assistant event for automation triggers."""

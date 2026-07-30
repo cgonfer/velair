@@ -1,6 +1,6 @@
 import { LitElement } from "lit";
 import { property, state } from "lit/decorators.js";
-import { PORTABLE_SECTIONS } from "../constants";
+import { OPERATION_SUCCESS_VISIBLE_MS, PORTABLE_SECTIONS } from "../constants";
 import {
   asCardContextHost,
   dictionaryLabelForHost,
@@ -204,6 +204,10 @@ import {
 } from "../controllers/template-actions";
 import { asVelairViewHost } from "../host-types";
 import { renderCardContent } from "../views/card-content";
+import {
+  dismissOperationStatusAcrossViews,
+  OPERATION_STATUS_DISMISSED_EVENT,
+} from "../views/operation-status-view";
 
 export class VelairCard extends LitElement {
   private _hass?: HomeAssistant;
@@ -255,6 +259,7 @@ export class VelairCard extends LitElement {
   @state() private _selectedWeekday = "monday";
   @state() private _draftBlocks: DraftScheduleBlock[] = [];
   @state() private _dirty = false;
+  @state() private _dismissedOperationId?: string;
   @state() private _dirtyEntityId?: string;
   @state() private _copyTargets = new Set<string>();
   @state() private _copying = false;
@@ -296,6 +301,7 @@ export class VelairCard extends LitElement {
   private _subscribing = false;
   private _successNoticeTick?: number;
   private _successNoticeTimeout?: number;
+  private _operationStatusTimeout?: number;
   private _pauseTick?: number;
   private _pauseTickDelay?: number;
   private _preconditioningRefreshTimer?: number;
@@ -314,6 +320,14 @@ export class VelairCard extends LitElement {
   private _hasExternalConfig = false;
   private _previousBodyCursor?: string;
   private _previousDocumentCursor?: string;
+  private readonly _handleOperationStatusDismissed = (event: Event): void => {
+    const operationId = (event as CustomEvent<string>).detail;
+    if (operationId !== this._data?.operation_status?.id) {
+      return;
+    }
+    this._dismissedOperationId = operationId;
+    this._clearOperationStatusTimer();
+  };
 
   public setConfig(config: VelairCardConfig): void {
     this._hasExternalConfig = true;
@@ -337,6 +351,10 @@ export class VelairCard extends LitElement {
     void this._loadSchedule();
     void this._subscribeUpdates();
     this._syncTimelineNowTick();
+    window.addEventListener(
+      OPERATION_STATUS_DISMISSED_EVENT,
+      this._handleOperationStatusDismissed,
+    );
   }
 
   public disconnectedCallback(): void {
@@ -346,11 +364,16 @@ export class VelairCard extends LitElement {
       this._unsubscribeUpdates = undefined;
     }
     this._clearSuccessNoticeTimer();
+    this._clearOperationStatusTimer();
     this._clearNextEventChangeTimer();
     this._clearPreconditioningRefreshTimer();
     this._clearOverviewTimelineDetail();
     this._stopPauseTick();
     this._stopTimelineNowTick();
+    window.removeEventListener(
+      OPERATION_STATUS_DISMISSED_EVENT,
+      this._handleOperationStatusDismissed,
+    );
   }
 
   public getCardSize(): number {
@@ -387,6 +410,9 @@ export class VelairCard extends LitElement {
     if (changedProperties.has("_saveMessage") && !this._saveMessage) {
       this._clearSuccessNoticeTimer();
     }
+    if (changedProperties.has("_data")) {
+      this._syncOperationStatusTimer();
+    }
     if (
       this._effectiveView() === "templates" &&
       (changedProperties.has("view") ||
@@ -412,6 +438,49 @@ export class VelairCard extends LitElement {
 
   protected render() {
     return renderCardContent(asVelairViewHost(this));
+  }
+
+  private _dismissOperationStatus(): void {
+    const operationId = this._data?.operation_status?.id;
+    if (!operationId) {
+      return;
+    }
+    dismissOperationStatusAcrossViews(operationId);
+  }
+
+  private _syncOperationStatusTimer(): void {
+    this._clearOperationStatusTimer();
+    const operation = this._data?.operation_status;
+    if (!operation || operation.state === "running") {
+      if (operation?.id !== this._dismissedOperationId) {
+        this._dismissedOperationId = undefined;
+      }
+      return;
+    }
+    if (operation.state !== "completed" || !operation.finished_at) {
+      return;
+    }
+    const finishedAt = Date.parse(operation.finished_at);
+    const remaining = Number.isFinite(finishedAt)
+      ? OPERATION_SUCCESS_VISIBLE_MS - (Date.now() - finishedAt)
+      : OPERATION_SUCCESS_VISIBLE_MS;
+    if (remaining <= 0) {
+      this._dismissedOperationId = operation.id;
+      return;
+    }
+    this._operationStatusTimeout = window.setTimeout(() => {
+      if (this._data?.operation_status?.id === operation.id) {
+        this._dismissedOperationId = operation.id;
+      }
+      this._operationStatusTimeout = undefined;
+    }, remaining);
+  }
+
+  private _clearOperationStatusTimer(): void {
+    if (this._operationStatusTimeout !== undefined) {
+      window.clearTimeout(this._operationStatusTimeout);
+      this._operationStatusTimeout = undefined;
+    }
   }
 
   private _effectiveView(): VelairCardView {

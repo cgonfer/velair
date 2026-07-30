@@ -53,22 +53,32 @@ jobs:
         id: version
         run: |
           VERSION="$(node -p "require('./custom_components/velair/manifest.json').version")"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          case "$VERSION" in
+            *-*) PRERELEASE="true" ;;
+            *) PRERELEASE="false" ;;
+          esac
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+          printf 'prerelease=%s\n' "$PRERELEASE" >> "$GITHUB_OUTPUT"
 
       - name: Validate versioned release notes
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          RELEASE_NOTES=".github/release-notes/v${{ steps.version.outputs.version }}.md"
+          RELEASE_NOTES=".github/release-notes/v${RELEASE_VERSION}.md"
           if [ ! -f "$RELEASE_NOTES" ]; then
-            echo "Missing release notes for version ${{ steps.version.outputs.version }}: $RELEASE_NOTES"
+            echo "Missing release notes for version ${RELEASE_VERSION}: $RELEASE_NOTES"
             exit 1
           fi
 
       - name: Validate tag version
         if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          EXPECTED_TAG="v${{ steps.version.outputs.version }}"
-          if [ "$GITHUB_REF_NAME" != "$EXPECTED_TAG" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match manifest version $EXPECTED_TAG"
+          EXPECTED_TAG="v${RELEASE_VERSION}"
+          if [ "$RELEASE_TAG" != "$EXPECTED_TAG" ]; then
+            echo "Tag $RELEASE_TAG does not match manifest version $EXPECTED_TAG"
             exit 1
           fi
 
@@ -87,11 +97,20 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          RELEASE_NOTES=".github/release-notes/v${{ steps.version.outputs.version }}.md"
-          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" \
-              --title "Velair ${{ steps.version.outputs.version }}" \
+          RELEASE_NOTES=".github/release-notes/v${RELEASE_VERSION}.md"
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            CREATE_ARGS=(
+              "$RELEASE_TAG"
+              --title "Velair ${RELEASE_VERSION}"
               --notes-file "$RELEASE_NOTES"
+            )
+            if [ "$RELEASE_PRERELEASE" = "true" ]; then
+              CREATE_ARGS+=(--prerelease)
+            fi
+            gh release create "${CREATE_ARGS[@]}"
           fi
-          gh release upload "$GITHUB_REF_NAME" .release/artifacts/*.zip --clobber
+          gh release upload "$RELEASE_TAG" .release/artifacts/*.zip --clobber

@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CORE_CONFIG_UPDATE
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.typing import ConfigType
 
 from .api import async_setup_api
 from .climate_manager import ClimateManager
@@ -17,7 +18,11 @@ from .config_helpers import (
 )
 from .const import DOMAIN, PLATFORMS
 from .entity_registry import cleanup_entity_registry
-from .frontend import async_setup_frontend, async_unload_frontend
+from .frontend import (
+    async_setup_frontend,
+    async_setup_frontend_route,
+    async_unload_frontend,
+)
 from .scheduler import VelairScheduler
 from .services import async_setup_services, async_unload_services
 from .storage import VelairStorage
@@ -37,6 +42,12 @@ class VelairData:
 
 
 type VelairConfigEntry = ConfigEntry[VelairData]
+
+
+async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
+    """Set up Velair before config entries are loaded."""
+    await async_setup_frontend_route(hass)
+    return True
 
 
 async def async_setup_entry(

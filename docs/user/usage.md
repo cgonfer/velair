@@ -74,7 +74,27 @@ The sidebar panel is the recommended interface. The optional Lovelace card is us
 
 The Overview next-events list shows the next planned event for each managed climate, including events moved earlier by preconditioning. This list is for user visibility; Velair still schedules the earliest due action internally.
 
-Zone overview uses compact responsive cards to answer what Velair is doing now in each room. At very wide card widths, the climate name, ordered Room Assist/Comfort/air/data signals, and activity summary share the first row. At narrower desktop, tablet, and mobile widths, the climate and activity stay together while signals move intact to a horizontally scrollable second row instead of truncating their meaning. The activity summary uses a consistent icon, current state, and relevant timing or mode context without a decorative outer badge. When Room Assist is active or holding, details are grouped as Temperature (Climate, then Sensor), Setpoint (Climate, then Scheduled), and the direction-aware Offset. Missing values are omitted. Neutral signals stay understated; warning color is reserved for conditions that need attention.
+Zone overview uses compact responsive cards to answer what Velair and the
+climate device are doing now in each room. When the climate entity reports
+`hvac_action`, the status summary uses its live Heating, Cooling, Drying, Fan,
+Idle, Off, Preheating, or Defrosting value as the main status. The same summary
+then identifies Velair's scheduled, manual, boost, pause, preconditioning, or
+automation-off state, the reported HVAC mode, and relevant timing without
+repeating the activity in a separate signal. If `hvac_action` is missing or
+invalid, Velair shows its own runtime state without inferring what the climate
+device is doing. Each card presents the climate name and entity ID first,
+followed by its active Profile and the ordered Room Assist/Comfort/air/data
+signals. At very wide card widths these signals and the compact status summary
+share the card header. In narrow cards, including mobile and compact Lovelace
+layouts, the climate identity and compact status remain aligned side by side,
+while complete Profile/Comfort signals use the full row below instead of
+shrinking or truncating their meaning. The summary uses a consistent icon,
+balanced text, and restrained activity accent without a fixed heading or
+decorative outer badge. When Room Assist is active or holding, details are
+grouped as
+Temperature (Climate, then Sensor), Setpoint (Climate, then Scheduled), and the
+direction-aware Offset. Missing values are omitted. Neutral signals stay
+understated; warning color is reserved for conditions that need attention.
 
 The Lovelace card supports these `view` values:
 
@@ -301,6 +321,15 @@ A Mode can activate several Profiles together when their configured zones do
 not overlap. Direct activation replaces the active set with one Profile and
 selects Manual. Activation applies the blocks active at the current time and
 cancels Boosts in affected zones. Global and per-zone pauses retain priority.
+While Velair processes the affected zones, a global operation strip shows the
+current zone, processed count, and final success or partial-error result across
+panel tabs. In Lovelace, it appears only in the Active setup card, where Mode
+and Profile activations are performed. Processed means that Home Assistant and
+Velair have finished handling that zone, including cases where a pause or
+override means no climate command is needed. It does not mean that the room has
+already reached its target temperature.
+Successful operation results disappear automatically after a short confirmation
+period. Partial and failed results remain visible until dismissed.
 Home Assistant automations can activate one Profile through
 `velair.activate_profile` or select a configurable value from Velair's native
 `select.velair_mode` entity.

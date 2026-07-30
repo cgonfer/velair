@@ -4,6 +4,7 @@ import type { ScheduleResponse, ScheduleZone, VelairCardView } from "../types";
 import type { ActiveSetupControls } from "../types";
 import { incompatibleScheduleTargetCount } from "../domain/schedule-compatibility";
 import { renderNotice } from "./notice-view";
+import { operationStatusIsVisible, renderOperationStatus } from "./operation-status-view";
 import { renderComfortView, type ComfortViewOptions } from "./comfort-view";
 import {
   renderOverviewActiveBoosts,
@@ -23,6 +24,7 @@ type CardContentHost = VelairViewHost;
 
 export function renderCardContent(host: CardContentHost) {
   const view = host._effectiveView();
+  const showOperationStatus = !host._hasExternalConfig || view === "active-setup";
   const zoneIds = host._orderedZoneIds(host._data?.configured_entities ?? []);
   const visibleZoneIds = host._visibleZoneIds(host._data?.configured_entities ?? []);
   const selectedEntity = host._selectedEntity && visibleZoneIds.includes(host._selectedEntity)
@@ -47,6 +49,14 @@ export function renderCardContent(host: CardContentHost) {
           ? html`<button class="card-scrim" type="button" @click=${host._closeSchedulerMenu}></button>`
           : nothing}
 
+        ${showOperationStatus
+          && host._data?.operation_status
+          && operationStatusIsVisible(
+            host._data.operation_status,
+            host._dismissedOperationId,
+          )
+          ? renderOperationStatus(host, host._data.operation_status)
+          : nothing}
         ${host._error ? renderNotice(host, "error", host._error) : nothing}
         ${host._saveMessage ? renderNotice(host, "success", host._saveMessage) : nothing}
         ${host._loading && !host._data ? html`<div class="notice">${host._t("loading")}</div>` : nothing}

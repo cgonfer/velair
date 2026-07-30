@@ -37,9 +37,10 @@ class ReleaseMetadataTest(unittest.TestCase):
         readme = README.read_text(encoding="utf-8")
         api_guide = API_GUIDE.read_text(encoding="utf-8")
 
-        self.assertIn(f"version-{version}-blue", readme)
+        badge_version = version.replace("-", "--")
+        self.assertIn(f"version-{badge_version}-blue", readme)
         self.assertIn(f'"integration": "{version}"', api_guide)
-        self.assertIsNotNone(re.search(rf"\b{re.escape(version)}\b", readme))
+        self.assertIn(version, readme.replace("--", "-"))
 
     def test_release_workflow_publishes_the_versioned_notes(self) -> None:
         version = json.loads(MANIFEST.read_text(encoding="utf-8"))["version"]
@@ -75,11 +76,26 @@ class ReleaseMetadataTest(unittest.TestCase):
                 f"{heading} must contain user-facing release information",
             )
         self.assertIn(
-            'RELEASE_NOTES=".github/release-notes/v${{ steps.version.outputs.version }}.md"',
+            'RELEASE_NOTES=".github/release-notes/v${RELEASE_VERSION}.md"',
             workflow,
         )
         self.assertIn('if [ ! -f "$RELEASE_NOTES" ]', workflow)
         self.assertIn('--notes-file "$RELEASE_NOTES"', workflow)
+
+    def test_release_workflow_marks_hyphenated_versions_as_prereleases(
+        self,
+    ) -> None:
+        workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn('*-*) PRERELEASE="true"', workflow)
+        self.assertIn('*) PRERELEASE="false"', workflow)
+        self.assertIn(
+            "RELEASE_PRERELEASE: ${{ steps.version.outputs.prerelease }}",
+            workflow,
+        )
+        self.assertIn('if [ "$RELEASE_PRERELEASE" = "true" ]; then', workflow)
+        self.assertIn("CREATE_ARGS+=(--prerelease)", workflow)
+        self.assertIn('gh release create "${CREATE_ARGS[@]}"', workflow)
 
 
 if __name__ == "__main__":

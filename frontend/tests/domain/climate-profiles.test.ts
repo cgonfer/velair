@@ -6,6 +6,7 @@ import {
   climateProfileInput,
   climateProfileAccentColor,
   climateProfileValidationError,
+  cloneProfileScheduleDay,
   createClimateProfileDraft,
   effectiveClimateSchedule,
   nextProfileBlockStart,
@@ -45,6 +46,102 @@ describe("climate profiles domain", () => {
     let draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "pause");
     draft = { ...draft, name: "Sleep", zones: { "climate.office": { behavior: "pause", action: "turn_off" } } };
     expect(climateProfileInput(draft).zones["climate.office"]).toEqual({ behavior: "pause", action: "turn_off" });
+  });
+
+  it("restores the exact draft schedule after pause and default transitions", () => {
+    let draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "schedule");
+    const zone = draft.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected a schedule draft");
+    zone.schedule.monday = [
+      {
+        action: "set_temperature",
+        start: "07:00",
+        temperature: "20.5",
+        hvac_mode: "heat",
+        fan_mode: "auto",
+        preset_mode: "eco",
+        swing_mode: "on",
+        swing_horizontal_mode: "middle",
+        humidity: "45",
+      },
+      {
+        action: "set_temperature",
+        start: "15:00",
+        temperature: "24",
+        hvac_mode: "cool",
+        fan_mode: "quiet",
+        preset_mode: "comfort",
+        swing_mode: "off",
+        swing_horizontal_mode: "left",
+        humidity: "55",
+      },
+    ];
+    const expected = structuredClone(zone.schedule);
+
+    draft = withProfileZoneBehavior(draft, "climate.office", "pause");
+    draft = {
+      ...draft,
+      zones: {
+        ...draft.zones,
+        "climate.office": { behavior: "pause", action: "turn_off" },
+      },
+    };
+    const pausedInput = climateProfileInput({ ...draft, name: "Seasonal" });
+    expect(pausedInput.zones["climate.office"]).toEqual({
+      behavior: "pause",
+      action: "turn_off",
+    });
+    expect(pausedInput).not.toHaveProperty("rememberedSchedules");
+    draft = withProfileZoneBehavior(draft, "climate.office", "schedule");
+    expect(draft.zones["climate.office"]).toEqual({
+      behavior: "schedule",
+      schedule: expected,
+    });
+
+    draft = withProfileZoneBehavior(draft, "climate.office", "normal");
+    expect(climateProfileInput({ ...draft, name: "Seasonal" }).zones).toEqual({});
+    draft = withProfileZoneBehavior(draft, "climate.office", "schedule");
+    expect(draft.zones["climate.office"]).toEqual({
+      behavior: "schedule",
+      schedule: expected,
+    });
+    expect(climateProfileInput({ ...draft, name: "Seasonal" })).not.toHaveProperty(
+      "rememberedSchedules",
+    );
+  });
+
+  it("deep-clones every schedule block field to selected days only", () => {
+    const sourceBlocks = [{
+      action: "set_temperature" as const,
+      start: "08:00",
+      temperature: "23.5",
+      hvac_mode: "cool",
+      fan_mode: "auto",
+      preset_mode: "eco",
+      swing_mode: "on",
+      swing_horizontal_mode: "middle",
+      humidity: "50",
+    }];
+    const schedule = Object.fromEntries(WEEKDAYS.map((weekday) => [
+      weekday,
+      weekday === "monday" ? sourceBlocks : [],
+    ]));
+
+    const cloned = cloneProfileScheduleDay(
+      schedule,
+      "monday",
+      ["tuesday", "friday"],
+    );
+
+    expect(cloned.tuesday).toEqual(sourceBlocks);
+    expect(cloned.friday).toEqual(sourceBlocks);
+    expect(cloned.wednesday).toEqual([]);
+    expect(cloned.monday).toEqual(sourceBlocks);
+    expect(cloned.tuesday).not.toBe(sourceBlocks);
+    expect(cloned.tuesday[0]).not.toBe(sourceBlocks[0]);
+    cloned.tuesday[0].hvac_mode = "heat";
+    expect(cloned.monday[0].hvac_mode).toBe("cool");
+    expect(cloned.friday[0].hvac_mode).toBe("cool");
   });
 
   it("chooses a distinct default time for consecutive blocks", () => {
