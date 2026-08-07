@@ -16,6 +16,9 @@ README = ROOT / "README.md"
 API_GUIDE = ROOT / "docs" / "developer" / "api.md"
 RELEASE_NOTES_DIR = ROOT / ".github" / "release-notes"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
+INSTALLATION_GUIDE = ROOT / "docs" / "user" / "installation.md"
+DEVELOPMENT_GUIDE = ROOT / "docs" / "developer" / "development.md"
+BUG_REPORT_TEMPLATE = ROOT / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml"
 
 
 class ReleaseMetadataTest(unittest.TestCase):
@@ -96,6 +99,20 @@ class ReleaseMetadataTest(unittest.TestCase):
         self.assertIn('if [ "$RELEASE_PRERELEASE" = "true" ]; then', workflow)
         self.assertIn("CREATE_ARGS+=(--prerelease)", workflow)
         self.assertIn('gh release create "${CREATE_ARGS[@]}"', workflow)
+
+    def test_installation_docs_use_the_default_hacs_store(self) -> None:
+        readme = README.read_text(encoding="utf-8")
+        installation = INSTALLATION_GUIDE.read_text(encoding="utf-8")
+        development = DEVELOPMENT_GUIDE.read_text(encoding="utf-8")
+        bug_report = BUG_REPORT_TEMPLATE.read_text(encoding="utf-8")
+
+        self.assertIn("HACS-default", readme)
+        self.assertIn("available in the default HACS store", readme)
+        self.assertIn("available in the default HACS store", installation)
+        self.assertIn("`cgonfer/velair`", development)
+        self.assertIn("- HACS", bug_report)
+        for document in (readme, installation, bug_report):
+            self.assertNotIn("HACS custom repository", document)
 
 
 if __name__ == "__main__":

@@ -104,6 +104,10 @@ class ClimateProfilesDocumentationTest(unittest.TestCase):
             "Create a Mode that maps",
             guide,
         )
+        self.assertIn("included in the newly activated Profile immediately return", guide)
+        self.assertIn("they do not retain the previous configuration", guide)
+        self.assertIn("no custom Mode currently controls the active Profile", guide)
+        self.assertIn("selecting it keeps the active Profiles", guide)
 
     def test_api_example_keeps_selected_mode_and_active_profiles_consistent(
         self,

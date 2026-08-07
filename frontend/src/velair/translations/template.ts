@@ -195,7 +195,6 @@ export const translationTemplate = {
   "activeSetupNoProfiles": "",
   "activeSetupManualProfile": "",
   "activeSetupManualProfileHelp": "",
-  "activeSetupManualUnavailable": "",
   "profilesPanelIntro": "",
   "profileLibrarySelectorLabel": "",
   "profilesLibraryDescription": "",

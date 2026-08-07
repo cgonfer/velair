@@ -97,6 +97,22 @@ export class VelairProfilesView extends LitElement {
   @state() private _modeDirty = false;
   @state() private _activeLibrary: "profiles" | "modes" = "profiles";
 
+  private readonly _handleDocumentClick = (event: MouseEvent): void => {
+    const menu = this.shadowRoot?.querySelector<HTMLDetailsElement>(".active-setup-menu");
+    if (!menu?.open || event.composedPath().includes(menu)) return;
+    menu.open = false;
+  };
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.ownerDocument.addEventListener("click", this._handleDocumentClick);
+  }
+
+  public disconnectedCallback(): void {
+    this.ownerDocument.removeEventListener("click", this._handleDocumentClick);
+    super.disconnectedCallback();
+  }
+
   protected willUpdate(changed: Map<string, unknown>): void {
     if (!changed.has("data")) {
       return;
@@ -376,7 +392,6 @@ export class VelairProfilesView extends LitElement {
           <details
             class="active-setup-menu"
             @keydown=${this._handleActiveSetupMenuKeydown}
-            @focusout=${this._handleActiveSetupMenuFocusout}
           >
             <summary
               class="command-button secondary active-setup-change"
@@ -405,17 +420,6 @@ export class VelairProfilesView extends LitElement {
                   modeValue === "default",
                   [],
                   disabled,
-                )}
-                ${this._renderActiveModeOption(
-                  "manual",
-                  this._t("modeManual"),
-                  activeProfileIds.length
-                    ? this._t("modeManualDescription")
-                    : this._t("activeSetupManualUnavailable"),
-                  "mdi:gesture-tap",
-                  modeValue === "manual",
-                  [],
-                  disabled || activeProfileIds.length === 0,
                 )}
                 ${modes.map((mode) => {
                   const linkedProfiles = mode.profile_ids
@@ -577,13 +581,6 @@ export class VelairProfilesView extends LitElement {
     event.preventDefault();
     menu.open = false;
     menu.querySelector<HTMLElement>("summary")?.focus();
-  }
-
-  private _handleActiveSetupMenuFocusout(event: FocusEvent): void {
-    const menu = event.currentTarget as HTMLDetailsElement;
-    const next = event.relatedTarget;
-    if (next instanceof Node && menu.contains(next)) return;
-    menu.open = false;
   }
 
   private _renderModes() {

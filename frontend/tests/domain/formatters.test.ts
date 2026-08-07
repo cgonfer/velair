@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
 import {
+  dateLocale,
   formatDateTime,
   formatEventAction,
   formatEventMode,
@@ -22,6 +23,15 @@ const baseEvent: ScheduleEvent = {
 };
 
 describe("formatters", () => {
+  it("uses the regional locale for every supported language", () => {
+    expect(dateLocale("de")).toBe("de-DE");
+    expect(dateLocale("en")).toBe("en");
+    expect(dateLocale("es")).toBe("es-ES");
+    expect(dateLocale("fr")).toBe("fr-FR");
+    expect(dateLocale("nl")).toBe("nl-NL");
+    expect(dateLocale("unsupported")).toBe("en");
+  });
+
   it("formats remaining durations without exposing seconds once minutes apply", () => {
     expect(formatRemaining(1_000)).toBe("1 s");
     expect(formatRemaining(60_000)).toBe("1 min");

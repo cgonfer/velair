@@ -143,11 +143,12 @@ Backend-owned `modes` map stable mode keys and user-editable names to
 stable profile IDs. A single native `SelectEntity` projects this state as
 `select.velair_mode`. Its canonical built-ins are `Default`, which deactivates
 profiles and restores each zone's default schedule, and `Manual`, which clears
-the selected mode marker while retaining profiles chosen directly. Custom
+the selected mode marker while retaining the current active profiles. Custom
 selection atomically activates the mapped profile set and records its mode key.
 Direct panel or service activation clears the marker to Manual, including
 same-profile activation without repeating climate actions or emitting a
-duplicate profile change event.
+duplicate profile change event. Direct activation also replaces the complete
+active set with one Profile, so zones no longer covered resolve to Default.
 
 The select entity is dispatcher-driven and does not use `RestoreEntity`, polling,
 or an external state listener. Storage remains canonical across startup.

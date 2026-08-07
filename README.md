@@ -1,10 +1,10 @@
 # Velair
 Climate automation that adapts to your life.
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue?style=for-the-badge)](#)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](#)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394/4)
-[![HACS](https://img.shields.io/badge/HACS-custom-orange?style=for-the-badge)](https://www.hacs.xyz/docs/faq/custom_repositories/)
+[![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
 [![Buy me a Coffee](https://img.shields.io/badge/Donate-Buy%20me%20a%20coffee-yellow?logo=buy-me-a-coffee&style=for-the-badge)](https://www.buymeacoffee.com/cgonfer)
 [![PayPal](https://img.shields.io/badge/Donate-PayPal-blue?logo=paypal&style=for-the-badge)](https://www.paypal.me/cristiangonfer94)
 
@@ -48,7 +48,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
 - Automation events through `velair_event` for Profile changes, scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
 - Push updates through Home Assistant WebSocket events, without frontend polling.
-- English and Spanish UI translations.
+- English, Spanish, German, French, and Dutch UI translations.
 - Native Celsius and Fahrenheit workflows using Home Assistant's configured unit, including unit-aware defaults, explicit stored-data migration, and legacy backup conversion.
 
 ## Screenshots
@@ -61,22 +61,17 @@ The following examples are captured from a real Home Assistant instance. See [mo
 
 ## Installation
 
-Velair is designed for HACS and manual installation.
+Velair is available in the default HACS store and can also be installed manually.
 
 <details>
   <summary>HACS</summary>
 
   <br>
-  Until Velair is accepted into the default HACS store, add it as a custom repository:
-
   1. Open HACS.
-  2. Open the three-dot menu.
-  3. Select **Custom repositories**.
-  4. Add this repository URL: `https://github.com/cgonfer/velair`.
-  5. Select **Integration** as the category.
-  6. Install Velair.
-  7. Restart Home Assistant.
-  8. Add Velair from **Settings > Devices & services**.
+  2. Search for **Velair** in the available integrations.
+  3. Open Velair and select **Download**.
+  4. Restart Home Assistant.
+  5. Add Velair from **Settings > Devices & services**.
 
   [![Open Velair on Home Assistant Community Store (HACS).](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cgonfer&repository=velair&category=integration)
 </details>
@@ -186,8 +181,10 @@ active_setup_controls: modes
 
 Supported values are `modes`, `profiles`, and `both`. The current Mode and
 applied Profiles remain visible in every variant. Directly activating a Profile
-replaces every previously active Profile and changes the Mode to Manual. To
-activate additional non-overlapping Profiles together, create and select a Mode.
+replaces every previously active Profile and changes the Mode to Manual. Zones
+not covered by that Profile return to their Default schedules instead of
+keeping the previous Mode's configuration. To activate additional
+non-overlapping Profiles together, create and select a Mode.
 The `profiles` variant also keeps a Default schedules action available.
 
 You can also limit a Lovelace card to specific thermostats. This only changes what that card displays; it does not change the scheduler or stored schedules.

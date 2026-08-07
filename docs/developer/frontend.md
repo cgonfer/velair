@@ -168,7 +168,7 @@ This page focuses on frontend-specific operational guidance: runtime elements, b
 - Add layout and Lit templates in `views/`.
 - Add state or lifecycle integration in `components/velair-card-element.ts` only when the state belongs to the element itself.
 - Add CSS in the closest `styles/*-styles.ts` file, and only touch `card-styles.ts` when composing a new style module.
-- Add translations in `translations/en.ts`, `translations/es.ts`, and `translations/template.ts`.
+- Add source strings to `translations/en.ts` and `translations/template.ts`, then translate them in every supported language file.
 
 ## Translations
 

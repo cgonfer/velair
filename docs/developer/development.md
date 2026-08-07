@@ -70,7 +70,7 @@ The integration-served bundle under `custom_components/velair/frontend/` must be
 - Validate climate targets against configured entities before applying any action.
 - Preserve heating and cooling support.
 - Keep frontend configuration persisted through the backend, not browser storage.
-- Keep user-facing strings translated in English and Spanish.
+- Keep user-facing strings translated in every supported language.
 - Prefer small modules with focused responsibilities.
 - Add or update tests when changing behavior.
 
@@ -139,17 +139,18 @@ integration version, builds the release frontend bundle, packages installable
 zips, uploads them as workflow artifacts, and publishes the versioned notes and
 assets when the workflow was triggered by a tag.
 
-The validate workflow runs HACS validation and Hassfest on pushes, pull requests, a daily schedule, and manual dispatch. These checks are required before requesting inclusion in the HACS default repositories.
+The validate workflow runs HACS validation and Hassfest on pushes, pull
+requests, a daily schedule, and manual dispatch. These checks protect Velair's
+compatibility with the default HACS store.
 
-## HACS Default Repository Submission
+## HACS Default Repository
 
-Velair can be installed as a HACS custom repository as soon as the public repository is available. To request inclusion in the default HACS store:
+Velair is listed in the default HACS integration registry as
+[`cgonfer/velair`](https://github.com/hacs/default/blob/master/integration).
+Users should install it by searching for **Velair** in HACS; adding it as a
+custom repository is no longer required.
 
-1. Make sure the repository is public, active, has issues enabled, has a useful description, and has GitHub topics.
-2. Verify Velair can be installed as a HACS custom repository.
-3. Run and pass the `CI`, `Validate`, and `Release` workflows.
-4. Create a full GitHub Release, not only a tag.
-5. Fork `hacs/default`.
-6. Create a branch from `master`.
-7. Add `cgonfer/velair` to the `integration` file in alphabetical order.
-8. Open a pull request from your user fork, not from an organization fork, and complete the HACS pull request template honestly.
+For every release, keep HACS validation and Hassfest green, include every
+runtime file under `custom_components/velair/`, publish the versioned release
+notes, and verify that the packaged integration installs without requiring a
+custom repository override.

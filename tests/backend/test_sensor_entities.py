@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import importlib
 import json
 from pathlib import Path
+import re
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
@@ -121,6 +122,15 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertFalse(sensor.available)
+
+    def test_zone_sensors_default_to_available_without_migration_state(self) -> None:
+        scheduler = SimpleNamespace()
+        entry = self._entry(scheduler, ["climate.living_room"])
+        sensor = sensor_module.ZoneActiveTargetTemperatureSensor(
+            entry, "climate.living_room"
+        )
+
+        self.assertTrue(sensor.available)
 
     async def test_setup_creates_two_global_and_six_sensors_per_climate(
         self,
@@ -490,7 +500,7 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
 
 
 class SensorTranslationTest(unittest.TestCase):
-    """Verify sensor names and states have complete EN/ES translations."""
+    """Verify sensor names and states have complete translations."""
 
     def test_sensor_translation_keys_and_states_match(self) -> None:
         translations = {
@@ -503,7 +513,7 @@ class SensorTranslationTest(unittest.TestCase):
                     / f"{language}.json"
                 ).read_text(encoding="utf-8")
             )
-            for language in ("en", "es")
+            for language in ("de", "en", "es", "fr", "nl")
         }
         expected_states = {
             "paused",
@@ -546,6 +556,29 @@ class SensorTranslationTest(unittest.TestCase):
             translations["es"]["entity"]["sensor"]["next_climate_event"]["name"],
             "Próximo evento programado",
         )
+
+        def flatten(value, prefix=""):
+            entries = {}
+            for key, child in value.items():
+                path = f"{prefix}.{key}" if prefix else key
+                if isinstance(child, dict):
+                    entries.update(flatten(child, path))
+                else:
+                    entries[path] = child
+            return entries
+
+        source_entries = flatten(translations["en"])
+        for language, translation in translations.items():
+            with self.subTest(language=language, contract="complete"):
+                entries = flatten(translation)
+                self.assertEqual(set(entries), set(source_entries))
+                for key, source_value in source_entries.items():
+                    self.assertTrue(entries[key])
+                    self.assertEqual(
+                        sorted(re.findall(r"\{([^}]+)\}", entries[key])),
+                        sorted(re.findall(r"\{([^}]+)\}", source_value)),
+                        f"Placeholder mismatch in {language}.{key}",
+                    )
 
     def test_user_guide_explains_generated_entities_and_language_behavior(
         self,

@@ -209,7 +209,7 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
     "portable_model": 5,
     "storage": 1,
     "model": 3,
-    "integration": "1.4.0"
+    "integration": "1.5.0"
   }
 }
 ```
@@ -505,8 +505,10 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Activation applies the current effective schedule immediately, cancels Boost
-on affected zones, and preserves global or per-zone manual pauses. Direct
+Activation replaces the complete active set with that Profile. Zones present in
+the previous set but not covered by the selected Profile resolve immediately to
+their Default schedules. It applies the current effective schedule, cancels
+Boost on affected zones, and preserves global or per-zone manual pauses. Direct
 activation clears `active_mode_id`, so the native selector reports
 `Manual`. New automations should use `velair.deactivate_profile` explicitly to
 return to default schedules.

@@ -85,7 +85,7 @@ describe("profiles view", () => {
     expect(setup?.querySelector(".active-setup-profile ha-icon")?.getAttribute("icon")).toBe("mdi:account-outline");
     expect(setup?.querySelector("details")).not.toBeNull();
     expect(setup?.querySelector("summary")?.textContent).toContain("Change");
-    expect(setup?.querySelector('[data-mode-selection="manual"]')?.getAttribute("aria-current")).toBe("true");
+    expect(setup?.querySelector('[data-mode-selection="manual"]')).toBeNull();
     expect(setup?.querySelector('[data-profile-id="away"]')?.getAttribute("aria-current")).toBe("true");
     expect(element.shadowRoot?.querySelector(".profile-editor")).toBeNull();
     element.remove();
@@ -221,7 +221,7 @@ describe("profiles view", () => {
     const setup = element.shadowRoot?.querySelector(".active-setup-card");
     expect(setup?.querySelector(".active-setup-mode")?.textContent).toContain("Manual");
     expect(setup?.querySelectorAll(".active-setup-profile")).toHaveLength(2);
-    expect(setup?.querySelector('[data-mode-selection="manual"]')?.getAttribute("aria-current")).toBe("true");
+    expect(setup?.querySelector('[data-mode-selection="manual"]')).toBeNull();
     expect(setup?.querySelectorAll('[data-profile-id][aria-current="true"]')).toHaveLength(0);
     element.remove();
   });
@@ -236,9 +236,7 @@ describe("profiles view", () => {
     document.body.append(element);
     await element.updateComplete;
     expect(element.shadowRoot?.querySelector(".active-setup-no-profiles")?.textContent).toContain("No Profiles applied");
-    const manual = element.shadowRoot?.querySelector('[data-mode-selection="manual"]') as HTMLButtonElement;
-    expect(manual.disabled).toBe(true);
-    expect(manual.textContent).toContain("Manual keeps the current Profiles, but none are active.");
+    expect(element.shadowRoot?.querySelector('[data-mode-selection="manual"]')).toBeNull();
 
     element.data = data;
     await element.updateComplete;
@@ -280,7 +278,8 @@ describe("profiles view", () => {
     document.body.append(element);
     await element.updateComplete;
 
-    expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).toContain("native Home Assistant select entity");
+    expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).toContain("select.velair_mode");
+    expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).toContain("velair.activate_profile");
     expect(element.shadowRoot?.querySelector(".mode-entity-note code")).toBeNull();
     expect([...element.shadowRoot!.querySelectorAll(".mode-item.built-in")].map((item) => item.textContent))
       .toEqual(expect.arrayContaining([expect.stringContaining("Default"), expect.stringContaining("Manual")]));
@@ -288,7 +287,8 @@ describe("profiles view", () => {
     const helpButtons = element.shadowRoot?.querySelectorAll<HTMLButtonElement>(".mode-item.built-in .mode-help");
     expect(helpButtons).toHaveLength(2);
     expect(helpButtons?.[0]?.querySelector('[role="tooltip"]')?.textContent).toContain("Deactivates profiles");
-    expect(helpButtons?.[1]?.querySelector('[role="tooltip"]')?.textContent).toContain("chosen directly");
+    expect(helpButtons?.[1]?.querySelector('[role="tooltip"]')?.textContent)
+      .toContain("Active Profiles are not controlled by a Mode.");
     expect(helpButtons?.[0]?.getAttribute("aria-label")).toBe("About Default");
     expect(helpButtons?.[0]?.getAttribute("aria-label")).not.toBe(
       helpButtons?.[0]?.querySelector('[role="tooltip"]')?.textContent,
@@ -299,7 +299,7 @@ describe("profiles view", () => {
     element.remove();
   });
 
-  it("changes built-in and custom Modes through the grouped selector and closes after each selection", async () => {
+  it("changes Default and custom Modes without offering Manual as an action", async () => {
     const custom = {
       ...data,
       modes: [{ key: "vacation-key", name: "Vacation", profile_ids: ["away"] }],
@@ -307,7 +307,6 @@ describe("profiles view", () => {
     } as ScheduleResponse;
     const sendMessagePromise = vi.fn()
       .mockResolvedValueOnce({ ...custom, active_mode_id: "vacation-key" })
-      .mockResolvedValueOnce(custom)
       .mockResolvedValueOnce({
         ...custom,
         global: { ...custom.global, active_profile_ids: [] },
@@ -332,16 +331,7 @@ describe("profiles view", () => {
     expect(element.shadowRoot?.querySelector(".active-setup-mode")?.textContent).toContain("Vacation");
 
     menu = element.shadowRoot?.querySelector(".active-setup-menu") as HTMLDetailsElement;
-    menu.open = true;
-    (menu.querySelector('[data-mode-selection="manual"]') as HTMLButtonElement).click();
-    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledWith({
-      type: "velair/select_mode",
-      selection: { kind: "manual" },
-    }));
-    await vi.waitFor(() => expect((element.shadowRoot?.querySelector(".active-setup-menu") as HTMLDetailsElement).open).toBe(false));
-    expect(element.shadowRoot?.querySelector(".active-setup-mode")?.textContent).toContain("Manual");
-
-    menu = element.shadowRoot?.querySelector(".active-setup-menu") as HTMLDetailsElement;
+    expect(menu.querySelector('[data-mode-selection="manual"]')).toBeNull();
     menu.open = true;
     (menu.querySelector('[data-mode-selection="default"]') as HTMLButtonElement).click();
     await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledWith({
@@ -352,7 +342,7 @@ describe("profiles view", () => {
     element.remove();
   });
 
-  it("closes the active setup chooser with Escape or when focus leaves it", async () => {
+  it("closes the active setup chooser with Escape or an outside click but not on explanatory text", async () => {
     const element = new VelairProfilesView();
     element.compact = true;
     element.data = data;
@@ -367,12 +357,17 @@ describe("profiles view", () => {
     expect(element.shadowRoot?.activeElement).toBe(summary);
 
     menu.open = true;
-    summary.dispatchEvent(new FocusEvent("focusout", {
-      bubbles: true,
-      relatedTarget: document.body,
-    }));
+    const explanatoryText = menu.querySelector(".active-setup-group-heading small") as HTMLElement;
+    explanatoryText.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    expect(menu.open).toBe(true);
+
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
     expect(menu.open).toBe(false);
+
+    menu.open = true;
     element.remove();
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    expect(menu.open).toBe(true);
   });
 
   it("groups manual Profile activation separately and reuses the direct activation payload", async () => {

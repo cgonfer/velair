@@ -158,11 +158,6 @@ class _ZoneSensor(VelairEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Hide unit-bound zone values while thermal data is blocked."""
-        return not self.scheduler.temperature_migration_blocked
-
-    @property
-    def available(self) -> bool:
         """Hide unit-bound zone projections while scheduler data is blocked."""
         return not bool(
             getattr(self.scheduler, "temperature_migration_blocked", False)

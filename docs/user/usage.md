@@ -46,9 +46,11 @@ automation events:
   target context without duplicating the original room and climate readings.
 - **Automatic scheduling** and **Mode** are Velair's writable control entities.
   Turning Automatic scheduling off stops scheduling indefinitely; turning it
-  on resumes the active schedule. Selecting a Mode option activates its mapped
-  Profiles; **Default** clears the active set, while **Manual** retains Profiles
-  chosen directly. Use the `velair.pause` action when a temporary pause with a
+  on resumes the active schedule. Selecting a custom Mode activates its mapped
+  Profiles, while **Default** clears the active set. **Manual** means no custom
+  Mode controls the active Profile set; direct activation normally enters that
+  state. Velair shows it instead of offering it as an action. Use the
+  `velair.pause` action when a temporary pause with a
   duration is required.
 
 These entities reuse backend snapshots, use dispatcher updates, and do not poll
@@ -124,8 +126,10 @@ active_setup_controls: profiles
 The option defaults to `both`, and every variant still shows the current Mode
 and applied Profiles. The Profiles-only control retains a Default schedules
 action. Selecting a Profile directly replaces all previously active Profiles
-and changes the Mode to Manual; use a Mode when several non-overlapping
-Profiles should be activated together.
+and changes the Mode to Manual. Zones no longer covered by the new Profile
+return to their Default schedules instead of keeping the previous Mode's
+configuration. Use a Mode when several non-overlapping Profiles should be
+activated together.
 
 ```yaml
 type: custom:velair-card
@@ -315,12 +319,17 @@ Templates can include every optional climate setting available across the manage
 
 ## Climate Profiles
 
-Climate profiles switch several zones between coordinated weekly plans without overwriting their default schedules. Each profile can give a zone an alternate weekly schedule, pause it, pause and turn it off, or leave it on its Default schedule. Zones omitted from a profile continue using their default schedules.
+Climate profiles switch several zones between coordinated weekly plans without
+overwriting their default schedules. Each profile can give a zone an alternate
+weekly schedule, pause it, pause and turn it off, or leave it on its Default
+schedule. Zones omitted from a profile continue using their default schedules.
 
 A Mode can activate several Profiles together when their configured zones do
 not overlap. Direct activation replaces the active set with one Profile and
-selects Manual. Activation applies the blocks active at the current time and
-cancels Boosts in affected zones. Global and per-zone pauses retain priority.
+selects Manual. Zones that were covered by the previous active set but not by
+that Profile return to their Default schedules. Activation applies the blocks
+active at the current time and cancels Boosts in affected zones. Global and
+per-zone pauses retain priority.
 While Velair processes the affected zones, a global operation strip shows the
 current zone, processed count, and final success or partial-error result across
 panel tabs. In Lovelace, it appears only in the Active setup card, where Mode
@@ -452,7 +461,7 @@ Services that target an entity only work with climates selected during setup. If
 
 ### `velair.activate_profile`
 
-Activate one stored climate profile and immediately apply the effective current behavior. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `Manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
+Activate one stored climate profile and immediately apply the effective current behavior. This replaces the complete active Profile set; zones not covered by the selected Profile return to their Default schedules. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `Manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
 
 ```yaml
 action: velair.activate_profile

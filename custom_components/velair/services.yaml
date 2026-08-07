@@ -95,7 +95,7 @@ apply_schedule:
 
 activate_profile:
   name: Activate climate profile
-  description: Activate one saved climate profile as the Manual selection. Leave the profile ID empty to deactivate all profiles and return to default schedules.
+  description: Replace the active set with one saved climate profile. Zones not covered by it return to their default schedules. Leave the profile ID empty to return every zone to default schedules.
   fields:
     profile_id:
       name: Profile ID

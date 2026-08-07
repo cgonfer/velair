@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { languageFromHass } from "../../src/velair/i18n";
+import { de } from "../../src/velair/translations/de";
 import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
+import { fr } from "../../src/velair/translations/fr";
+import { nl } from "../../src/velair/translations/nl";
 
 function translationStrings(value: unknown): string[] {
   if (typeof value === "string") {
@@ -12,6 +16,54 @@ function translationStrings(value: unknown): string[] {
   }
   return Object.values(value).flatMap(translationStrings);
 }
+
+function translationEntries(value: unknown, prefix = ""): Array<[string, string]> {
+  if (typeof value === "string") {
+    return [[prefix, value]];
+  }
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, child]) =>
+    translationEntries(child, prefix ? `${prefix}.${key}` : key),
+  );
+}
+
+function placeholders(value: string): string[] {
+  return [...value.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]).sort();
+}
+
+const supportedTranslations = { de, en, es, fr, nl };
+
+describe("supported translations", () => {
+  it("provide every source key with matching placeholders", () => {
+    const sourceEntries = new Map(translationEntries(en));
+
+    for (const [language, dictionary] of Object.entries(supportedTranslations)) {
+      const entries = new Map(translationEntries(dictionary));
+      expect([...entries.keys()].sort(), `${language} keys`)
+        .toEqual([...sourceEntries.keys()].sort());
+      for (const [key, source] of sourceEntries) {
+        expect(entries.get(key), `${language}.${key}`).not.toBe("");
+        expect(placeholders(entries.get(key) ?? ""), `${language}.${key} placeholders`)
+          .toEqual(placeholders(source));
+      }
+    }
+  });
+
+  it("contains no broken UTF-8 text", () => {
+    for (const [language, dictionary] of Object.entries(supportedTranslations)) {
+      expect(translationStrings(dictionary).join("\n"), language)
+        .not.toMatch(/(?:Ã.|Â[°·«»¿¡ ])/);
+    }
+  });
+
+  it("selects new languages and their regional variants", () => {
+    expect(languageFromHass({ language: "de-DE" })).toBe("de");
+    expect(languageFromHass({ language: "fr-CA" })).toBe("fr");
+    expect(languageFromHass({ language: "nl-BE" })).toBe("nl");
+  });
+});
 
 describe("Spanish translations", () => {
   it("uses correct Castilian spelling and punctuation", () => {

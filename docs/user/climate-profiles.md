@@ -6,6 +6,11 @@ the decision layer: presence, windows, seasons, selectors, sensors, or other
 automations decide when a profile changes, while Velair stores, applies, and
 shows the resulting climate behavior.
 
+A **Profile** defines one alternative climate routine for its configured zones.
+A **Mode** activates one or more non-overlapping Profiles together as a single
+household state. Activate a Profile directly when only that routine is needed;
+use a Mode when several areas should change together.
+
 Examples include Home, Away, Vacation, Summer, Guest, or Sleep. Profiles also
 support installations whose heating and cooling schedules use different block
 times, targets, and HVAC modes.
@@ -135,8 +140,11 @@ the block that is active at the current time instead of waiting for the next
 scheduled boundary.
 
 Direct activation never adds a Profile to the existing set, even when its zones
-would not overlap. Create a Mode that maps every required non-overlapping
-Profile when they should be activated together.
+would not overlap. Zones controlled by the previous Mode or Profile set but not
+included in the newly activated Profile immediately return to their Default
+schedules; they do not retain the previous configuration.
+Create a Mode that maps every required non-overlapping Profile when they should
+be activated together.
 
 Activation cancels active Boosts in zones whose effective profile behavior
 changes. An existing global pause or per-zone pause remains in control; Velair
@@ -169,6 +177,11 @@ data:
   profile_id: vacation
 ```
 
+In Home Assistant's visual automation editor, add an action and search for
+**Velair: Activate climate profile**. This integration action is separate from
+the switch and select actions shown when filtering by the Velair device. Enter
+the Profile's **Automation ID**, shown below its name in Velair.
+
 Use the explicit deactivation service to return to default schedules:
 
 ```yaml
@@ -190,9 +203,12 @@ another Home Assistant helper.
 Two built-in values always exist and cannot be renamed or deleted:
 
 - **Default** deactivates profiles and restores each zone's default schedule.
-- **Manual** retains profiles chosen directly and indicates that no custom Mode
-  controls the selection. When no profile is active, the selector resolves to
-  **Default** instead.
+- **Manual** means that no custom Mode currently controls the active Profile
+  set. Direct Profile activation normally enters this state. It is shown as the
+  current state but is not an action in Velair's chooser. Select **Default** or
+  a custom Mode to leave it. The native Home Assistant entity retains its
+  Manual option for compatibility; selecting it keeps the active Profiles but
+  detaches them from their custom Mode.
 
 Create custom values such as Away, Vacation, or Home and map each one to one or
 more stored Climate Profiles. In the Profiles tab, switch the library control
@@ -207,13 +223,14 @@ either built-in name or Home Assistant's reserved `unknown` and `unavailable`
 states.
 
 The Profiles tab shows the active Mode and applied Climate Profiles together in
-one **Active setup** card. Its single grouped chooser lists Modes first and
-manual Profile activation separately. Selecting a Mode activates all its mapped
-Profiles, while selecting a Profile directly replaces the active set with that
-single Profile and changes the Mode to **Manual**. Mode rows show the mapped
-Profiles' icons and colors, so Modes and Profiles remain distinguishable even
-when they share a name. The built-in rows include a short explanation of when
-they apply.
+one **Active setup** card. Its single grouped chooser lists Default and custom
+Modes first, with direct Profile activation separately. Manual remains visible
+as a state but cannot be selected from this chooser. Selecting a Mode activates
+all its mapped Profiles, while selecting a Profile directly replaces the active
+set with that single Profile and changes the Mode to **Manual**. Mode rows show
+the mapped Profiles' icons and colors, so Modes and Profiles remain
+distinguishable even when they share a name. The built-in rows include a short
+explanation of when they apply.
 
 Use Home Assistant's standard select action in automations:
 

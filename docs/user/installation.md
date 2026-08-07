@@ -1,18 +1,17 @@
 # Installation
 
-Velair can be installed through HACS as a custom repository or manually by copying the integration folder.
+Velair is available in the default HACS store. Manual installation remains
+available for users who do not use HACS or who need to test a specific build.
 
-## HACS Custom Repository
+## HACS
 
 1. Open HACS.
-2. Open **Custom repositories** from the menu.
-3. Add the Velair repository URL: `https://github.com/cgonfer/velair`.
-4. Select **Integration**.
-5. Install Velair.
-6. Restart Home Assistant.
-7. Go to **Settings > Devices & services**.
-8. Add the Velair integration.
-9. Select the `climate.*` entities Velair may manage.
+2. Search for **Velair** in the available integrations.
+3. Open Velair and select **Download**.
+4. Restart Home Assistant.
+5. Go to **Settings > Devices & services**.
+6. Add the Velair integration.
+7. Select the `climate.*` entities Velair may manage.
 
 Velair uses the temperature unit selected in Home Assistant. A new installation
 creates schedules, templates, Comfort thresholds, Room Assist settings, and

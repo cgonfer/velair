@@ -3,7 +3,14 @@ import type { ScheduleEvent } from "../types";
 import type { SupportedLanguage } from "../translations";
 
 export function dateLocale(language: SupportedLanguage): string {
-  return language === "es" ? "es-ES" : "en";
+  const locales: Record<string, string> = {
+    de: "de-DE",
+    en: "en",
+    es: "es-ES",
+    fr: "fr-FR",
+    nl: "nl-NL",
+  };
+  return locales[language] ?? "en";
 }
 
 function timeOptions(timeFormat?: string): Intl.DateTimeFormatOptions {

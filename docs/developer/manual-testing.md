@@ -11,7 +11,7 @@ Use this checklist before publishing a release or after changing scheduler behav
 
 ## Install
 
-Install through HACS custom repository or copy:
+Install through the default HACS store or copy:
 
 ```text
 custom_components/velair
@@ -118,7 +118,7 @@ Confirm that:
 - removing a climate through the integration options removes its generated zone
   sensors after the integration reloads, without removing global Velair
   entities or entities from other integrations;
-- scheduler status values are translated in English and Spanish;
+- scheduler status values are translated in every supported language;
 - changing only a user profile language does not rename existing entities,
   because Home Assistant stores their original names at entity creation.
 
@@ -164,7 +164,7 @@ Services with `entity_id` must reject climates that were not selected during set
    definitions move without activating an imported profile. If the replacement
    omits the active profile, confirm Velair returns to default schedules.
 10. Repeat the editor and active selector checks at desktop, tablet, and mobile
-    widths in English and Spanish.
+    widths in every supported language.
 11. Listen for `velair_event` and confirm profile activation, return to Default,
     and deletion of the active profile emit `profile_changed` with the expected
     `profile_ids` and `previous_profile_ids`. Re-selecting the current set must
@@ -174,15 +174,19 @@ Services with `entity_id` must reject climates that were not selected during set
     that Default and Manual have short explanatory descriptions.
 13. In both Overview and Profiles, confirm the shared **Active setup** card
     shows the current Mode and its applied Profiles as one relationship. Open
-    its single chooser and confirm Modes and manual Profile activation appear
-    in separate groups. A Mode must activate its mapped set, while a direct
-    Profile selection must replace it with one Profile and switch the Mode to
-    Manual. Confirm the chooser closes after selection, with Escape, and after
-    focus leaves it. Repeat at desktop and mobile widths.
+    its single chooser and confirm Default and custom Modes appear separately
+    from direct Profile activation. Confirm Manual is visible as the current
+    state when applicable but is never offered as a chooser action. A Mode must
+    activate its mapped set, while a direct Profile selection must replace it
+    with one Profile and switch the Mode to Manual. Confirm explanatory text
+    inside the chooser can be clicked without closing or crashing the browser.
+    Confirm the chooser closes after selection, with Escape, and when clicking
+    outside it. Repeat at desktop and mobile widths.
     Confirm `Default` and `Manual` cannot be renamed or deleted.
 14. Select each custom value through `select.velair_mode` and confirm its
-    mapped Profiles change once. Select Manual and confirm the current set
-    remains active; select Default and confirm it is emptied.
+    mapped Profiles change once. For compatibility, select Manual through the
+    native entity and confirm the current set remains active; select Default
+    and confirm it is emptied.
 15. Change profile from the panel and through `velair.activate_profile`; confirm
     the native selector reports Manual, including direct reactivation of the
     already active profile without repeating climate calls or events.

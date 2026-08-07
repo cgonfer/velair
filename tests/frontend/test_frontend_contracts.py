@@ -412,7 +412,10 @@ class FrontendSourceContractTest(unittest.TestCase):
         failures = [
             str(path.relative_to(ROOT))
             for path in source_root.rglob("*.ts")
-            if any(marker in path.read_text(encoding="utf-8") for marker in ("Ã", "Â"))
+            if any(
+                marker in path.read_text(encoding="utf-8")
+                for marker in ("Ã", "Â°", "Â·", "Â«", "Â»", "Â¿", "Â¡", "Â ")
+            )
         ]
 
         self.assertEqual(failures, [])

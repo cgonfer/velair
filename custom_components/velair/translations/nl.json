@@ -1,0 +1,119 @@
+{
+  "title": "Velair",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Velair instellen",
+        "description": "Klimaatautomatisering die zich aanpast aan je leven. Kies de klimaatentiteiten die Velair beheert.",
+        "data": {
+          "climate_entities": "Klimaatentiteiten",
+          "apply_active_schedule_on_startup": "Het actieve schema toepassen nadat Home Assistant is gestart"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Selecteer minimaal één klimaatentiteit."
+    },
+    "abort": {
+      "already_configured": "Velair is al geconfigureerd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Klimaatentiteiten beheren",
+        "description": "Klimaatautomatisering die zich aanpast aan je leven. Kies de klimaatentiteiten die Velair beheert. Als je een entiteit verwijdert, wordt deze niet meer beheerd.",
+        "data": {
+          "climate_entities": "Klimaatentiteiten",
+          "apply_active_schedule_on_startup": "Het actieve schema toepassen nadat Home Assistant is gestart"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Selecteer minimaal één klimaatentiteit."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_climate_event": {
+        "name": "Volgende geplande gebeurtenis"
+      },
+      "scheduler_status": {
+        "name": "Plannerstatus",
+        "state": {
+          "paused": "Gepauzeerd",
+          "override_active": "Tijdelijke aanpassing actief",
+          "scheduled": "Gepland",
+          "idle": "Inactief",
+          "temperature_migration_required": "Temperatuurupdate vereist"
+        }
+      },
+      "zone_active_target_temperature": {
+        "name": "Actieve doeltemperatuur {zone}"
+      },
+      "zone_environmental_condition": {
+        "name": "Omgevingsconditie {zone}",
+        "state": {
+          "monitoring_off": "Niet bewaakt",
+          "no_readings": "Geen metingen",
+          "temperature_comfortable": "Temperatuur comfortabel",
+          "humidity_comfortable": "Luchtvochtigheid comfortabel",
+          "comfortable": "Comfortabel",
+          "cold": "Koud",
+          "hot": "Warm",
+          "dry": "Droog",
+          "humid": "Vochtig",
+          "cold_and_dry": "Koud en droog",
+          "cold_and_humid": "Koud en vochtig",
+          "hot_and_dry": "Warm en droog",
+          "hot_and_humid": "Warm en vochtig"
+        }
+      },
+      "zone_air_quality": {
+        "name": "Luchtkwaliteit {zone}",
+        "state": {
+          "not_monitored": "Niet bewaakt",
+          "unavailable": "Niet beschikbaar",
+          "good": "Goed",
+          "elevated": "Verhoogd",
+          "poor": "Slecht"
+        }
+      },
+      "zone_override_state": {
+        "name": "Tijdelijke aanpassing {zone}",
+        "state": {
+          "none": "Geen tijdelijke aanpassing",
+          "boost": "Boost",
+          "paused": "Gepauzeerd",
+          "disabled": "Uitgeschakeld"
+        }
+      },
+      "zone_preconditioning_start": {
+        "name": "Start voorconditionering {zone}"
+      },
+      "zone_room_assist_state": {
+        "name": "Room Assist {zone}",
+        "state": {
+          "unavailable": "Niet beschikbaar",
+          "not_configured": "Niet geconfigureerd",
+          "disabled": "Uitgeschakeld",
+          "blocked": "Geblokkeerd",
+          "idle": "Inactief",
+          "holding": "Vasthouden",
+          "assisting": "Ondersteunt",
+          "ready": "Gereed"
+        }
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus"
+      }
+    },
+    "switch": {
+      "automatic_scheduling": {
+        "name": "Automatische planning"
+      }
+    }
+  }
+}

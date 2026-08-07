@@ -27,7 +27,7 @@ body:
     attributes:
       label: Installation method
       options:
-        - HACS custom repository
+        - HACS
         - Manual installation
         - Development checkout
     validations:
