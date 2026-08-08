@@ -1,12 +1,12 @@
-export const en = {
+export const ru = {
   "addBlock": "Добавить блок",
   "apply": "Применить",
   "cloneDayToDays": "Копировать день в",
   "cloneDayToThermostats": "Копировать день в",
   "cloneAction": "Копировать",
-  "appliedDays": "Cloned to {count} day{suffix}",
-  "appliedTemplateTargets": "Applied to {count} targets",
-  "appliedThermostats": "Cloned to {count} thermostat{suffix}",
+  "appliedDays": "Скопировано на {count} день{suffix}",
+  "appliedTemplateTargets": "Применено к {count} целям",
+  "appliedThermostats": "Скопировано на {count} термостат{suffix}",
   "applying": "Применение",
   "applyTemplate": "Применить шаблон",
   "applyTo": "Применить к",
