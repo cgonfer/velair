@@ -141,6 +141,33 @@ export const responsiveStyles = css`
   }
 
   @container (max-width: 600px) {
+    .draft-list {
+      column-gap: 3px;
+      grid-template-columns: minmax(58px, 0.8fr) minmax(70px, 1.05fr) minmax(64px, 0.75fr) 30px 30px;
+      padding: 8px;
+    }
+
+    .temperature-range-control {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .editable-block .range-temperature-field input {
+      font-size: 12px;
+      padding-inline: 1px;
+    }
+
+    .range-input-label {
+      font-size: 8px;
+    }
+
+    .editable-block .icon-button,
+    .editable-block .icon-button.danger,
+    .advanced-climate-options summary,
+    .advanced-climate-options-placeholder {
+      height: 30px;
+      width: 30px;
+    }
+
     .preconditioning-zone-heading {
       align-items: center;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -294,7 +321,22 @@ export const responsiveStyles = css`
     }
 
     .draft-list {
-      grid-template-columns: minmax(66px, 0.9fr) minmax(76px, 1fr) minmax(62px, 0.7fr) 34px 34px;
+      column-gap: 3px;
+      grid-template-columns: minmax(58px, 0.8fr) minmax(70px, 1.05fr) minmax(64px, 0.75fr) 30px 30px;
+      padding: 8px;
+    }
+
+    .temperature-range-control {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .editable-block .range-temperature-field input {
+      font-size: 12px;
+      padding-inline: 1px;
+    }
+
+    .range-input-label {
+      font-size: 8px;
     }
 
     .overview-status-heading {
@@ -453,17 +495,22 @@ export const responsiveStyles = css`
     }
 
     .editable-block .icon-button {
-      width: 34px;
+      width: 30px;
+    }
+
+    .editable-block .icon-button.danger {
+      height: 30px;
+      width: 30px;
     }
 
     .advanced-climate-options summary {
-      height: 34px;
-      width: 34px;
+      height: 30px;
+      width: 30px;
     }
 
     .advanced-climate-options-placeholder {
-      height: 34px;
-      width: 34px;
+      height: 30px;
+      width: 30px;
     }
 
     .settings-zone-row {

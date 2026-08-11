@@ -63,6 +63,13 @@ describe("supported translations", () => {
     expect(languageFromHass({ language: "fr-CA" })).toBe("fr");
     expect(languageFromHass({ language: "nl-BE" })).toBe("nl");
   });
+
+  it("explains maximum Room Assist correction for both heating and cooling", () => {
+    expect(en.roomSensorAssistMaxDeltaHelp).toContain("stop heating or cooling");
+    expect(en.roomSensorAssistMaxDeltaHelp).toContain("only used when needed");
+    expect(en.roomSensorAssistMaxDeltaHelp).not.toContain("valve");
+    expect(es.roomSensorAssistMaxDeltaHelp).toContain("dejar de calentar o enfriar");
+  });
 });
 
 describe("Spanish translations", () => {

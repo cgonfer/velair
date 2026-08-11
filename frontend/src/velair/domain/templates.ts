@@ -10,9 +10,14 @@ export function scheduleTemplatesFromStored(templates: StoredScheduleTemplate[] 
       const draft: DraftScheduleBlock = {
         action: block.action ?? ACTION_SET_TEMPERATURE,
         start: block.start,
-        temperature: Number(block.temperature ?? defaultTargetTemperature(unit)),
         hvac_mode: block.hvac_mode ?? "",
       };
+      if (block.target_temp_low != null || block.target_temp_high != null) {
+        draft.target_temp_low = block.target_temp_low ?? "";
+        draft.target_temp_high = block.target_temp_high ?? "";
+      } else {
+        draft.temperature = Number(block.temperature ?? defaultTargetTemperature(unit));
+      }
       if (block.fan_mode) {
         draft.fan_mode = block.fan_mode;
       }

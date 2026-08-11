@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
-import { addBlock, setDraftBlockStart, toggleCopyTarget, toggleZoneTarget } from "../../src/velair/controllers/draft-actions";
+import { addBlock, setDraftBlockStart, toggleCopyTarget, toggleZoneTarget, updateDraftBlock } from "../../src/velair/controllers/draft-actions";
 import type { BlockDraftSource, DraftScheduleBlock } from "../../src/velair/types";
 
 function host() {
   const state = {
     _copyTargets: new Set<string>(),
+    hass: { states: {} as Record<string, any> },
     _data: { configured_entities: ["climate.office", "climate.bedroom"] },
     _dirty: false,
     _draftBlocks: [{ action: ACTION_SET_TEMPERATURE, hvac_mode: "heat", start: "08:00", temperature: 20 }],
@@ -80,5 +81,67 @@ describe("draft actions controller", () => {
 
     expect([...state._copyTargets]).toEqual(["tuesday"]);
     expect([...state._zoneTargets]).toEqual(["climate.bedroom"]);
+  });
+
+  it("uses the live range for a new block on a range-only climate", () => {
+    const state = host();
+    state._draftBlocks = [];
+    state.hass.states["climate.office"] = {
+      attributes: { supported_features: 2, target_temp_low: 19, target_temp_high: 24 },
+    };
+
+    addBlock(state);
+
+    expect(state._draftBlocks[0]).toMatchObject({ target_temp_low: 19, target_temp_high: 24 });
+    expect(state._draftBlocks[0].temperature).toBeUndefined();
+  });
+
+  it("uses the live range as a draft when heat/cool is selected", () => {
+    const state = host();
+    state.hass.states["climate.office"] = {
+      attributes: { supported_features: 3, target_temp_low: 19, target_temp_high: 24 },
+    };
+
+    updateDraftBlock(state, 0, "hvac_mode", "heat_cool");
+
+    expect(state._draftBlocks[0]).toMatchObject({
+      hvac_mode: "heat_cool",
+      target_temp_low: 19,
+      target_temp_high: 24,
+    });
+    expect(state._draftBlocks[0].temperature).toBeUndefined();
+  });
+
+  it("does not rewrite an existing scalar heat/cool block", () => {
+    const state = host();
+    state._draftBlocks[0] = {
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      temperature: 21,
+    };
+    updateDraftBlock(state, 0, "temperature", "22");
+    expect(state._draftBlocks[0]).toMatchObject({ temperature: "22", hvac_mode: "heat_cool" });
+    expect(state._draftBlocks[0].target_temp_low).toBeUndefined();
+  });
+
+  it("returns a range draft to one target when a non-range mode is selected", () => {
+    const state = host();
+    state.hass.states["climate.office"] = {
+      attributes: { supported_features: 3, temperature: 22 },
+    };
+    state._draftBlocks[0] = {
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: 19,
+      target_temp_high: 24,
+    };
+
+    updateDraftBlock(state, 0, "hvac_mode", "dry");
+
+    expect(state._draftBlocks[0]).toMatchObject({ temperature: 22, hvac_mode: "dry" });
+    expect(state._draftBlocks[0].target_temp_low).toBeUndefined();
+    expect(state._draftBlocks[0].target_temp_high).toBeUndefined();
   });
 });

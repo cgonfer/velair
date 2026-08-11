@@ -17,11 +17,13 @@ import {
 import {
   timelineBlocksFromScheduleBlocks,
   timelineBoostBlockFromOverride,
+  timelineCarryOverFromWeeklySchedule,
   timelineModeClass,
   timelineNowMarker,
   timelinePauseBlockFromOverride,
   type ReadonlyTimelineBlock,
   type TimelineBoostBlock,
+  type TimelineCarryOverBlock,
   type TimelinePauseBlock,
 } from "../domain/timeline";
 import {
@@ -30,7 +32,12 @@ import {
   effectiveClimateSchedule,
 } from "../domain/climate-profiles";
 import { scheduledEventAt } from "../domain/schedule-events";
-import { signedAssistDelta } from "../domain/room-assist";
+import {
+  appliedAssistOffset,
+  appliedAssistRange,
+  roomAssistRangeShift,
+  scheduledAssistRange,
+} from "../domain/room-assist";
 import type { VelairViewHost } from "../host-types";
 import type { ComfortAssessment, RoomSensorAssistStatus, ScheduleBlock, ScheduleEvent, ScheduleZone, ZoneRuntimeStatus } from "../types";
 
@@ -177,6 +184,8 @@ export function renderBoostEventDetails(
   override: Record<string, unknown>,
 ) {
   const temperature = Number(override.temperature);
+  const low = Number(override.target_temp_low);
+  const high = Number(override.target_temp_high);
   const untilMs = typeof override.until === "string" ? new Date(override.until).getTime() : undefined;
   const hvacMode = typeof override.hvac_mode === "string" ? override.hvac_mode : "";
   const timing = untilMs && !Number.isNaN(untilMs)
@@ -186,7 +195,11 @@ export function renderBoostEventDetails(
   return html`
     <div class="event-details">
       <span class="event-time">${timing}</span>
-      <strong class="event-target">${Number.isFinite(temperature) ? host._formatTemperature(temperature, entityId) : "-"}</strong>
+      <strong class="event-target">${Number.isFinite(temperature)
+        ? host._formatTemperature(temperature, entityId)
+        : Number.isFinite(low) && Number.isFinite(high)
+          ? formatOverviewRange(host, low, high, entityId)
+          : "-"}</strong>
       <span class="event-mode">${hvacMode ? host._modeLabel(hvacMode) : host._t("keepMode")}</span>
     </div>
   `;
@@ -234,6 +247,13 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     ?? (!hasRuntime ? numericTemperature(climateState?.attributes?.current_temperature) : undefined);
   const targetTemperature = numericTemperature(status.target_temperature)
     ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.temperature) : undefined);
+  const targetLow = numericTemperature(status.target_temp_low)
+    ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.target_temp_low) : undefined);
+  const targetHigh = numericTemperature(status.target_temp_high)
+    ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.target_temp_high) : undefined);
+  const targetRange = targetLow !== undefined && targetHigh !== undefined
+    ? formatOverviewRange(host, targetLow, targetHigh, entityId)
+    : undefined;
   const appliedTemperature = numericTemperature(status.applied_temperature);
   const presentation = zoneStatePresentation[status.state];
   const assist = host._data?.room_sensor_assist?.[entityId];
@@ -242,6 +262,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     && hasRoomAssistThermalData(assist));
   const hasStandardDetails = roomTemperature !== undefined
     || targetTemperature !== undefined
+    || targetRange !== undefined
     || (appliedTemperature !== undefined && targetTemperature !== undefined
       && Math.abs(appliedTemperature - targetTemperature) >= 0.05);
   return html`
@@ -264,6 +285,8 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
             : nothing}
           ${targetTemperature !== undefined
             ? renderOverviewMetric(host._t("overviewZoneTarget"), targetTemperature, host, entityId)
+            : targetRange !== undefined
+              ? renderOverviewTextMetric(host._t("overviewZoneTarget"), targetRange)
             : nothing}
           ${appliedTemperature !== undefined && targetTemperature !== undefined
             && Math.abs(appliedTemperature - targetTemperature) >= 0.05
@@ -340,24 +363,46 @@ function renderOverviewStateBadge(host: OverviewViewHost, entityId: string, stat
 }
 
 function hasRoomAssistThermalData(assist: RoomSensorAssistStatus): boolean {
-  return [assist.room_temperature, assist.climate_temperature, assist.target_temperature, assist.climate_target_temperature, assist.applied_temperature, assist.assist_delta].some((value) => numericTemperature(value) !== undefined);
+  return [
+    assist.room_temperature,
+    assist.climate_temperature,
+    assist.target_temperature,
+    assist.climate_target_temperature,
+    assist.applied_temperature,
+    assist.applied_offset,
+    assist.assist_delta,
+    assist.target_temp_low,
+    assist.target_temp_high,
+    assist.applied_target_temp_low,
+    assist.applied_target_temp_high,
+    assist.climate_target_temp_low,
+    assist.climate_target_temp_high,
+    assist.range_shift,
+  ].some((value) => numericTemperature(value) !== undefined);
 }
 
 function renderRoomAssistThermalFlow(host: OverviewViewHost, entityId: string, assist: RoomSensorAssistStatus) {
+  const scheduledRange = scheduledAssistRange(assist);
+  const appliedRange = appliedAssistRange(assist);
   const applied = assist.status === "assisting" || assist.status === "holding"
     ? numericTemperature(assist.applied_temperature) ?? numericTemperature(assist.climate_target_temperature)
     : numericTemperature(assist.climate_target_temperature) ?? numericTemperature(assist.applied_temperature);
-  const delta = numericTemperature(assist.assist_delta);
+  const rangeShift = roomAssistRangeShift(assist);
+  const delta = scheduledRange ? rangeShift : appliedAssistOffset(assist);
   return html`<div class="overview-assist-flow" aria-label=${host._t("overviewZoneRoomAssistThermalFlow")}>
     ${renderAssistGroup(host._t("overviewZoneTemperature"), [
       renderOptionalAssistMetric(host, entityId, "overviewZoneClimate", assist.climate_temperature),
       renderOptionalAssistMetric(host, entityId, "overviewZoneSensor", assist.room_temperature),
     ])}
     ${renderAssistGroup(host._t("overviewZoneSetpoint"), [
-      renderOptionalAssistMetric(host, entityId, "overviewZoneClimate", applied),
-      renderOptionalAssistMetric(host, entityId, "overviewZoneScheduledSetpoint", assist.target_temperature),
+      appliedRange
+        ? renderAssistRangeMetric(host, entityId, "overviewZoneAppliedRange", appliedRange.low, appliedRange.high)
+        : renderOptionalAssistMetric(host, entityId, "overviewZoneClimate", applied),
+      scheduledRange
+        ? renderAssistRangeMetric(host, entityId, "overviewZoneScheduledRange", scheduledRange.low, scheduledRange.high)
+        : renderOptionalAssistMetric(host, entityId, "overviewZoneScheduledSetpoint", assist.target_temperature),
     ])}
-    ${delta !== undefined ? html`<span class="overview-assist-offset"><small>${host._t("overviewZoneOffset")}</small><strong>${formatSignedAssistDelta(host, entityId, signedAssistDelta(delta, assist.direction))}</strong></span>` : nothing}
+    ${delta !== undefined ? html`<span class="overview-assist-offset"><small>${host._t(rangeShift !== undefined ? "overviewZoneRangeShift" : "overviewZoneOffset")}</small><strong>${formatSignedAssistDelta(host, entityId, delta)}</strong></span>` : nothing}
   </div>`;
 }
 
@@ -378,7 +423,13 @@ function formatSignedAssistDelta(host: OverviewViewHost, entityId: string, value
 
 function renderRoomAssistSignal(host: OverviewViewHost, assist?: RoomSensorAssistStatus) {
   if (!assist || !["assisting", "holding"].includes(assist.status)) return nothing;
-  const value = host._t(assist.status === "holding" ? "overviewZoneRoomAssistHolding" : "overviewZoneRoomAssistActive");
+  const value = host._t(
+    assist.scheduled_target_guard
+      ? "overviewZoneRoomAssistGuarded"
+      : assist.status === "holding"
+        ? "overviewZoneRoomAssistHolding"
+        : "overviewZoneRoomAssistActive",
+  );
   return renderOverviewSignal("room-assist", "mdi:thermometer-auto", host._t("roomSensorAssistBadge"), value);
 }
 
@@ -572,9 +623,15 @@ function overviewZoneTargetState(
 
   if (override.type === "boost") {
     const boostTemperature = Number(override.temperature);
+    const low = Number(override.target_temp_low);
+    const high = Number(override.target_temp_high);
     return {
       base,
-      effective: Number.isFinite(boostTemperature) ? host._formatTemperature(boostTemperature, entityId) : currentTarget,
+      effective: Number.isFinite(boostTemperature)
+        ? host._formatTemperature(boostTemperature, entityId)
+        : Number.isFinite(low) && Number.isFinite(high)
+          ? formatOverviewRange(host, low, high, entityId)
+          : currentTarget,
     };
   }
 
@@ -618,6 +675,11 @@ function currentTargetTemperature(host: OverviewViewHost, entityId: string): str
     return host._t("off");
   }
 
+  const low = state.attributes?.target_temp_low;
+  const high = state.attributes?.target_temp_high;
+  if (state.state === "heat_cool" && typeof low === "number" && typeof high === "number") {
+    return formatOverviewRange(host, low, high, entityId);
+  }
   const temperature = state.attributes?.temperature;
   if (typeof temperature === "number") {
     return host._formatTemperature(temperature, entityId);
@@ -632,6 +694,9 @@ function eventTargetLabel(host: OverviewViewHost, event: ScheduleEvent): string 
   }
   if (typeof event.temperature === "number") {
     return host._formatTemperature(event.temperature, event.entity_id);
+  }
+  if (typeof event.target_temp_low === "number" && typeof event.target_temp_high === "number") {
+    return formatOverviewRange(host, event.target_temp_low, event.target_temp_high, event.entity_id);
   }
 
   return "-";
@@ -649,8 +714,9 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
     return nothing;
   }
 
-  const marker = timelineNowMarker(host._currentTimelineNow());
-  const weekday = todayWeekday();
+  const now = host._currentTimelineNow();
+  const marker = timelineNowMarker(now, host.hass?.config?.time_zone);
+  const weekday = todayWeekday(host.hass, now);
 
   return html`
     <section class="overview-timeline-panel">
@@ -673,8 +739,16 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
               </div>
             </div>
             <div class="overview-timeline-now-line" aria-label=${host._t("currentTime", { time: marker.label })}></div>
-            ${zoneIds.map((entityId: string) =>
-              renderOverviewTimelineTrack(host, entityId, effectiveClimateSchedule(host._data, entityId)?.[weekday] ?? []))}
+            ${zoneIds.map((entityId: string) => {
+              const schedule = effectiveClimateSchedule(host._data, entityId);
+              return renderOverviewTimelineTrack(
+                host,
+                entityId,
+                schedule?.[weekday] ?? [],
+                schedule,
+                weekday,
+              );
+            })}
           </div>
         </div>
       </div>
@@ -686,8 +760,13 @@ export function renderOverviewTimelineTrack(
   host: OverviewViewHost,
   entityId: string,
   blocks: ScheduleBlock[],
+  weeklySchedule?: Partial<Record<string, readonly ScheduleBlock[]>>,
+  weekday = todayWeekday(),
 ) {
   const timelineBlocks = timelineBlocksFromScheduleBlocks(blocks);
+  const carryOver = weeklySchedule
+    ? timelineCarryOverFromWeeklySchedule(weeklySchedule, weekday)
+    : undefined;
   const overviewHost = asOverviewDataHost(host);
   const zone = host._data?.zones[entityId];
   const override = activeOverrideForEntity(overviewHost, entityId, host._data?.zones[entityId]);
@@ -699,8 +778,11 @@ export function renderOverviewTimelineTrack(
 
   return html`
     <div class=${trackClass}>
-      ${timelineBlocks.length || boostBlock || pauseBlock
-        ? timelineBlocks.map((block: ReadonlyTimelineBlock) => renderOverviewTimelineBlock(host, entityId, block))
+      ${timelineBlocks.length || carryOver || boostBlock || pauseBlock
+        ? html`
+            ${carryOver ? renderOverviewTimelineCarryOver(host, entityId, carryOver) : nothing}
+            ${timelineBlocks.map((block: ReadonlyTimelineBlock) => renderOverviewTimelineBlock(host, entityId, block))}
+          `
         : html`<span class="overview-timeline-empty">${host._t("noBlocks")}</span>`}
       ${boostBlock && override ? renderOverviewTimelineBoost(host, entityId, boostBlock, override) : nothing}
       ${pauseBlock && pauseOverride ? renderOverviewTimelinePause(host, entityId, pauseBlock, pauseOverride) : nothing}
@@ -834,7 +916,14 @@ export function renderOverviewTimelineBoost(
         <ha-icon icon="mdi:lightning-bolt"></ha-icon>
         ${Number.isFinite(boostBlock.block.temperature)
           ? html`<span>${host._formatTemperature(Number(boostBlock.block.temperature), entityId)}</span>`
-          : nothing}
+          : Number.isFinite(boostBlock.block.target_temp_low) && Number.isFinite(boostBlock.block.target_temp_high)
+            ? html`<span>${formatOverviewRange(
+                host,
+                Number(boostBlock.block.target_temp_low),
+                Number(boostBlock.block.target_temp_high),
+                entityId,
+              )}</span>`
+            : nothing}
       </span>
     </button>
   `;
@@ -891,9 +980,69 @@ function overviewTimelineEvent(entityId: string, block: ScheduleBlock): Schedule
     hvac_mode: block.hvac_mode ?? null,
     start: block.start,
     temperature: block.temperature ?? null,
+    target_temp_low: block.target_temp_low ?? null,
+    target_temp_high: block.target_temp_high ?? null,
     weekday: todayWeekday(),
     when: new Date().toISOString(),
   };
+}
+
+export function renderOverviewTimelineCarryOver(
+  host: OverviewViewHost,
+  entityId: string,
+  carryOver: TimelineCarryOverBlock,
+) {
+  const label = overviewTimelineBlockLabel(host, entityId, carryOver.block);
+  const modeLabel = overviewTimelineBlockModeLabel(host, entityId, carryOver.block);
+  const continuation = host._t("timelineContinuesFrom", {
+    day: host._shortWeekdayName(carryOver.sourceWeekday),
+    time: host._formatScheduleTime(carryOver.block.start),
+  });
+  const detail = [continuation, label, modeLabel].filter(Boolean).join(" - ");
+  const blockClass = [
+    "overview-timeline-block",
+    "overview-timeline-carry-over",
+    `mode-${timelineModeClass(carryOver.block)}`,
+    carryOver.width < 12 ? "compact" : "",
+    carryOver.width < 6 ? "tiny" : "",
+  ].filter(Boolean).join(" ");
+
+  return html`
+    <button
+      class=${blockClass}
+      type="button"
+      style=${`left: 0%; width: ${carryOver.width}%;`}
+      title=${detail}
+      aria-label=${detail}
+      @click=${(event: Event) =>
+        host._showOverviewTimelineDetail(entityId, detail, carryOver.width / 2, event)}
+    >
+      <span class="overview-timeline-block-main">
+        <span>${continuation}</span>
+        <small>${label}</small>
+        ${modeLabel ? html`<small>${modeLabel}</small>` : nothing}
+      </span>
+    </button>
+  `;
+}
+
+function renderAssistRangeMetric(
+  host: OverviewViewHost,
+  entityId: string,
+  key: string,
+  low: number,
+  high: number,
+) {
+  return html`<span class="overview-assist-metric"><small>${host._t(key as never)}</small><strong>${formatOverviewRange(host, low, high, entityId)}</strong></span>`;
+}
+
+function renderOverviewTextMetric(label: string, value: string) {
+  return html`<span class="overview-zone-metric"><small>${label}</small><strong>${value}</strong></span>`;
+}
+
+function formatOverviewRange(host: OverviewViewHost, low: number, high: number, entityId?: string): string {
+  const formattedLow = host._formatTemperature(low, entityId).replace(/\s+[^\s]+$/, "");
+  return `${formattedLow}–${host._formatTemperature(high, entityId)}`;
 }
 
 function timeFromBoostEnd(endMinute: number): string {

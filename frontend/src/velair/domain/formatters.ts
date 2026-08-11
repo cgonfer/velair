@@ -83,6 +83,11 @@ export function formatTemperature(value: number, unit: string): string {
   return `${value.toFixed(value % 1 === 0 ? 0 : 1)} ${unit}`;
 }
 
+export function formatTemperatureRange(low: number, high: number, unit: string): string {
+  const formatValue = (value: number) => value.toFixed(value % 1 === 0 ? 0 : 1);
+  return `${formatValue(low)}–${formatValue(high)} ${unit}`;
+}
+
 export function temperatureUnit(entityUnit?: string, systemUnit?: string): string {
   return entityUnit ?? systemUnit ?? "\u00b0C";
 }
@@ -96,6 +101,11 @@ export function formatEventAction(
     return labels.off;
   }
   if (event.temperature == null) {
+    if (event.target_temp_low != null && event.target_temp_high != null) {
+      const low = formatEventTemperature(Number(event.target_temp_low), event.entity_id).replace(/\s+[^\s]+$/, "");
+      const high = formatEventTemperature(Number(event.target_temp_high), event.entity_id);
+      return `${low}–${high}`;
+    }
     return labels.setTemperature;
   }
 

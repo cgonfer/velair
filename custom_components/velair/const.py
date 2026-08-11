@@ -63,6 +63,8 @@ ATTR_SWING_HORIZONTAL_MODE = "swing_horizontal_mode"
 ATTR_SWING_MODE = "swing_mode"
 ATTR_TARGET_WEEKDAYS = "target_weekdays"
 ATTR_TEMPERATURE = "temperature"
+ATTR_TARGET_TEMP_LOW = "target_temp_low"
+ATTR_TARGET_TEMP_HIGH = "target_temp_high"
 ATTR_WEEKDAY = "weekday"
 
 ACTION_SET_TEMPERATURE = "set_temperature"

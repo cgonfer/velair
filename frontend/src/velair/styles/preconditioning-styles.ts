@@ -549,6 +549,14 @@ export const preconditioningStyles = css`
   font-size: 11px;
 }
 
+.preconditioning-preview-block .preconditioning-range-boundary {
+  color: var(--secondary-text-color);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .preconditioning-calculation-details {
   background: color-mix(in srgb, var(--card-background-color) 78%, transparent);
   border: 1px solid color-mix(in srgb, var(--preconditioning-accent, var(--primary-color)) 14%, var(--divider-color));

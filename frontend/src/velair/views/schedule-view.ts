@@ -1,10 +1,17 @@
 import { html, nothing } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 import { firstTemperatureStepAtOrAbove } from "../domain/climate";
+import { draftBlockUsesRange } from "../domain/draft-blocks";
 import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import { isActiveBoostOverride } from "../domain/overrides";
 import { dateMs } from "../domain/schedule-events";
-import { timelineModeClass, timelineNowMarker, type TimelineBlock } from "../domain/timeline";
+import {
+  timelineCarryOverFromWeeklySchedule,
+  timelineModeClass,
+  timelineNowMarker,
+  type TimelineBlock,
+  type TimelineCarryOverBlock,
+} from "../domain/timeline";
 import type { VelairViewHost } from "../host-types";
 import type { BlockDraftSource, DraftScheduleBlock, ScheduleBlock, ScheduleTemplate, ScheduleZone } from "../types";
 
@@ -86,7 +93,10 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
         <strong>${host._t("scheduleStepConfigure")}</strong>
       </div>
       <div class="editor">
-        ${renderTimeline(host, entityId, "schedule")}
+        ${renderTimeline(host, entityId, "schedule", {
+          schedule: zone.schedule,
+          weekday: host._selectedWeekday,
+        })}
         <div class="schedule-config-helper">${host._t("templateOptionalHint")}</div>
         <div class="schedule-config-row">
           ${renderTemplatePanel(host)}
@@ -141,6 +151,8 @@ export function renderBoostStatus(host: ScheduleViewHost, entityId: string, zone
   }
 
   const temperature = Number(override.temperature);
+  const low = Number(override.target_temp_low);
+  const high = Number(override.target_temp_high);
   const untilMs = dateMs(override.until);
   const hvacMode = typeof override.hvac_mode === "string" ? override.hvac_mode : "";
   return html`
@@ -151,6 +163,8 @@ export function renderBoostStatus(host: ScheduleViewHost, entityId: string, zone
         <span>
           ${Number.isFinite(temperature)
             ? html`${host._t("boostTarget")}: ${host._formatTemperature(temperature, entityId)}`
+            : Number.isFinite(low) && Number.isFinite(high)
+              ? html`${host._t("boostTarget")}: ${formatRange(host, low, high, entityId)}`
             : nothing}
           ${hvacMode ? html` - ${host._modeLabel(hvacMode)}` : nothing}
           ${untilMs
@@ -179,8 +193,18 @@ export function renderTimeline(
   host: ScheduleViewHost,
   entityId: string | undefined,
   source: BlockDraftSource = "schedule",
+  weekly?: {
+    schedule: Partial<Record<string, readonly (ScheduleBlock | DraftScheduleBlock)[]>>;
+    weekday: string;
+  },
 ) {
   const timelineBlocks = host._timelineBlocks(source);
+  const carryOver = weekly
+    ? timelineCarryOverFromWeeklySchedule({
+        ...weekly.schedule,
+        [weekly.weekday]: timelineBlocks.map((block) => block.draft),
+      }, weekly.weekday)
+    : undefined;
 
   return html`
     <div class="timeline-panel">
@@ -200,8 +224,11 @@ export function renderTimeline(
         @dragover=${host._handleTimelineDragOver}
         @drop=${(event: DragEvent) => host._handleTimelineDrop(event, source)}
       >
-        ${timelineBlocks.length
-          ? timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))
+        ${timelineBlocks.length || carryOver
+          ? html`
+              ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId) : nothing}
+              ${timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))}
+            `
           : html`<span class="empty timeline-empty">${host._t("noBlocks")}</span>`}
       </div>
     </div>
@@ -231,9 +258,13 @@ export function renderTimelineBlock(
 ) {
   const isTurnOff = block.draft.action === ACTION_TURN_OFF;
   const temperature = Number(block.draft.temperature);
+  const low = Number(block.draft.target_temp_low);
+  const high = Number(block.draft.target_temp_high);
   const label = isTurnOff
     ? host._t("off")
-    : Number.isFinite(temperature)
+    : draftBlockUsesRange(block.draft) && Number.isFinite(low) && Number.isFinite(high)
+      ? formatRange(host, low, high, entityId)
+      : Number.isFinite(temperature)
       ? host._formatTemperature(temperature, entityId)
       : host._t("invalidTemperatureRange");
   const displayStart = host._formatScheduleTime(block.draft.start);
@@ -330,7 +361,7 @@ export function renderDraftListHeader(host: ScheduleViewHost, source: BlockDraft
     <div class="draft-list-header" aria-hidden="true">
       <span>${host._t("time")}</span>
       <span>${host._t("mode")}</span>
-      <span>${host._t("temp")} (${unit})</span>
+      <span>${host._t("target")} (${unit})</span>
       <span></span>
       <span></span>
     </div>
@@ -363,6 +394,7 @@ export function renderEditableBlock(
   const isTurnOff = action === ACTION_TURN_OFF;
   const selectedMode = isTurnOff ? "off" : block.hvac_mode ?? "";
   const temperatureError = host._temperatureError(block, source);
+  const usesRange = draftBlockUsesRange(block);
   const [minTemperature, maxTemperature] = host._temperatureLimits(source);
   const temperatureStep = host._temperatureStep(source);
   const inputMinTemperature = firstTemperatureStepAtOrAbove(minTemperature, temperatureStep);
@@ -421,22 +453,21 @@ export function renderEditableBlock(
           )}
         </span>
       </label>
-      <label>
-        <span class="label">${host._t("temp")} (${temperatureUnit})</span>
-        <input
-          class=${temperatureError ? "invalid" : ""}
-          type="number"
-          min=${String(inputMinTemperature)}
-          max=${String(maxTemperature)}
-          step=${temperatureStep === undefined ? "any" : String(temperatureStep)}
-          ?disabled=${isTurnOff}
-          placeholder=${isTurnOff ? host._t("off") : ""}
-          .value=${isTurnOff ? "" : String(block.temperature)}
-          @input=${(event: Event) => host._updateDraftBlock(index, "temperature", host._inputValue(event), source)}
-          @change=${(event: Event) => host._updateDraftBlock(index, "temperature", host._inputValue(event), source)}
-        />
-        ${temperatureError ? html`<small class="field-error">${temperatureError}</small>` : nothing}
-      </label>
+      ${usesRange
+        ? renderRangeTargetInputs(
+            host,
+            block,
+            index,
+            source,
+            inputMinTemperature,
+            maxTemperature,
+            temperatureStep,
+            isTurnOff,
+            temperatureError,
+            temperatureUnit,
+          )
+        : renderTargetInput(host, block, index, source, "temperature", "temp", temperatureUnit,
+            inputMinTemperature, maxTemperature, temperatureStep, isTurnOff, temperatureError)}
       ${hasClimateOptions
         ? html`
             <details class="advanced-climate-options" @toggle=${handleClimateOptionsToggle}>
@@ -538,6 +569,178 @@ export function renderEditableBlock(
         : nothing}
     </div>
   `;
+}
+
+export function renderTimelineCarryOverBlock(
+  host: ScheduleViewHost,
+  carryOver: TimelineCarryOverBlock<ScheduleBlock | DraftScheduleBlock>,
+  entityId?: string,
+) {
+  const block = carryOver.block;
+  const isTurnOff = block.action === ACTION_TURN_OFF;
+  const temperature = Number(block.temperature);
+  const low = Number(block.target_temp_low);
+  const high = Number(block.target_temp_high);
+  const label = isTurnOff
+    ? host._t("off")
+    : draftBlockUsesRange(block) && Number.isFinite(low) && Number.isFinite(high)
+      ? formatRange(host, low, high, entityId)
+      : Number.isFinite(temperature)
+        ? host._formatTemperature(temperature, entityId)
+        : host._t("invalidTemperatureRange");
+  const mode = isTurnOff ? "" : block.hvac_mode || host._t("keep");
+  const continuation = host._t("timelineContinuesFrom", {
+    day: host._shortWeekdayName(carryOver.sourceWeekday),
+    time: host._formatScheduleTime(block.start),
+  });
+  const detail = [continuation, label, mode ? `${host._t("mode")}: ${mode}` : ""]
+    .filter(Boolean)
+    .join(" - ");
+  const blockClass = [
+    "timeline-block",
+    "timeline-carry-over",
+    isTurnOff ? "off" : "",
+    `mode-${timelineModeClass(block)}`,
+    carryOver.width < 5 ? "compact" : "",
+    carryOver.width < 2.5 ? "tiny" : "",
+  ].filter(Boolean).join(" ");
+
+  return html`
+    <div
+      class=${blockClass}
+      draggable="false"
+      role="img"
+      style=${`left: 0%; width: ${carryOver.width}%;`}
+      title=${detail}
+      aria-label=${detail}
+    >
+      <strong>${continuation}</strong>
+      <span>${label}</span>
+      ${mode ? html`<small>${mode}</small>` : nothing}
+    </div>
+  `;
+}
+
+function renderTargetInput(
+  host: ScheduleViewHost,
+  block: DraftScheduleBlock,
+  index: number,
+  source: BlockDraftSource,
+  field: "temperature" | "target_temp_low" | "target_temp_high",
+  labelKey: "temp" | "heatBelow" | "coolAbove",
+  unit: string,
+  minimum: number,
+  maximum: number,
+  step: number | undefined,
+  disabled: boolean,
+  error?: string,
+) {
+  return html`
+    <label class=${field === "temperature" ? "single-temperature-field" : "range-temperature-field"}>
+      <span class="label">${host._t(labelKey)} (${unit})</span>
+      <input
+        class=${error ? "invalid" : ""}
+        type="number"
+        min=${String(minimum)}
+        max=${String(maximum)}
+        step=${step === undefined ? "any" : String(step)}
+        ?disabled=${disabled}
+        placeholder=${disabled ? host._t("off") : ""}
+        .value=${disabled ? "" : String(block[field] ?? "")}
+        @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
+        @change=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
+      />
+      ${field === "temperature" && error ? html`<small class="field-error">${error}</small>` : nothing}
+    </label>
+  `;
+}
+
+function renderRangeTargetInputs(
+  host: ScheduleViewHost,
+  block: DraftScheduleBlock,
+  index: number,
+  source: BlockDraftSource,
+  minimum: number,
+  maximum: number,
+  step: number | undefined,
+  disabled: boolean,
+  error?: string,
+  unit = "°C",
+) {
+  return html`
+    <div class="temperature-range-fields" role="group" aria-label=${host._t("temperatureRange")}>
+      <div class=${error ? "temperature-range-control invalid" : "temperature-range-control"}>
+        ${renderRangeTargetInput(
+          host,
+          block,
+          index,
+          source,
+          "target_temp_low",
+          "minimumShort",
+          "heatBelow",
+          minimum,
+          maximum,
+          step,
+          disabled,
+          unit,
+        )}
+        ${renderRangeTargetInput(
+          host,
+          block,
+          index,
+          source,
+          "target_temp_high",
+          "maximumShort",
+          "coolAbove",
+          minimum,
+          maximum,
+          step,
+          disabled,
+          unit,
+        )}
+      </div>
+      ${error ? html`<small class="field-error range-error">${error}</small>` : nothing}
+    </div>
+  `;
+}
+
+function renderRangeTargetInput(
+  host: ScheduleViewHost,
+  block: DraftScheduleBlock,
+  index: number,
+  source: BlockDraftSource,
+  field: "target_temp_low" | "target_temp_high",
+  shortLabelKey: "minimumShort" | "maximumShort",
+  accessibleLabelKey: "heatBelow" | "coolAbove",
+  minimum: number,
+  maximum: number,
+  step: number | undefined,
+  disabled: boolean,
+  unit: string,
+) {
+  return html`
+    <label class="range-temperature-field">
+      <span class="range-input-label" aria-hidden="true">${host._t(shortLabelKey)}</span>
+      <input
+        type="number"
+        inputmode="decimal"
+        min=${String(minimum)}
+        max=${String(maximum)}
+        step=${step === undefined ? "any" : String(step)}
+        ?disabled=${disabled}
+        placeholder=${disabled ? host._t("off") : ""}
+        aria-label=${`${host._t(accessibleLabelKey)} (${unit})`}
+        .value=${disabled ? "" : String(block[field] ?? "")}
+        @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
+        @change=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
+      />
+    </label>
+  `;
+}
+
+function formatRange(host: ScheduleViewHost, low: number, high: number, entityId?: string): string {
+  const formattedLow = host._formatTemperature(low, entityId).replace(/\s+[^\s]+$/, "");
+  return `${formattedLow}–${host._formatTemperature(high, entityId)}`;
 }
 
 function handleClimateOptionsSummaryClick(event: Event): void {

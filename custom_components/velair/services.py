@@ -27,6 +27,8 @@ from .const import (
     ATTR_SOURCE_WEEKDAY,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_WEEKDAYS,
     ATTR_TEMPERATURE,
     ATTR_WEEKDAY,
@@ -54,11 +56,28 @@ from .const import (
 )
 from .models import WEEKDAYS, normalize_schedule_blocks
 
+
+def _validate_temperature_target_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Require exactly one scalar or complete range target."""
+    has_temperature = ATTR_TEMPERATURE in data
+    has_low = ATTR_TARGET_TEMP_LOW in data
+    has_high = ATTR_TARGET_TEMP_HIGH in data
+    if has_temperature == (has_low or has_high) or has_low != has_high:
+        raise vol.Invalid(
+            "Use either temperature or target_temp_low and target_temp_high"
+        )
+    if has_low and float(data[ATTR_TARGET_TEMP_LOW]) > float(data[ATTR_TARGET_TEMP_HIGH]):
+        raise vol.Invalid("target_temp_low must not be greater than target_temp_high")
+    return data
+
+
 SCHEDULE_BLOCK_SCHEMA = vol.Schema(
     {
         vol.Required("start"): cv.string,
         vol.Optional(ATTR_ACTION, default=ACTION_SET_TEMPERATURE): vol.In(ACTION_OPTIONS),
         vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
+        vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
+        vol.Optional(ATTR_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
         vol.Optional(ATTR_FAN_MODE): cv.string,
         vol.Optional(ATTR_PRESET_MODE): cv.string,
@@ -68,17 +87,24 @@ SCHEDULE_BLOCK_SCHEMA = vol.Schema(
     }
 )
 
-SET_TEMPERATURE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_TEMPERATURE): vol.Coerce(float),
-        vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
-        vol.Optional(ATTR_FAN_MODE): cv.string,
-        vol.Optional(ATTR_PRESET_MODE): cv.string,
-        vol.Optional(ATTR_SWING_MODE): cv.string,
-        vol.Optional(ATTR_SWING_HORIZONTAL_MODE): cv.string,
-        vol.Optional(ATTR_HUMIDITY): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
-    }
+SET_TEMPERATURE_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+            vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
+            vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
+            vol.Optional(ATTR_TARGET_TEMP_HIGH): vol.Coerce(float),
+            vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
+            vol.Optional(ATTR_FAN_MODE): cv.string,
+            vol.Optional(ATTR_PRESET_MODE): cv.string,
+            vol.Optional(ATTR_SWING_MODE): cv.string,
+            vol.Optional(ATTR_SWING_HORIZONTAL_MODE): cv.string,
+            vol.Optional(ATTR_HUMIDITY): vol.All(
+                vol.Coerce(float), vol.Range(min=0, max=100)
+            ),
+        }
+    ),
+    _validate_temperature_target_data,
 )
 
 APPLY_SCHEDULE_SCHEMA = vol.Schema(
@@ -88,10 +114,12 @@ APPLY_SCHEDULE_SCHEMA = vol.Schema(
     }
 )
 
-BOOST_SCHEMA = vol.Schema(
-    {
+BOOST_SCHEMA = vol.All(
+    vol.Schema({
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_TEMPERATURE): vol.Coerce(float),
+        vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
+        vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
+        vol.Optional(ATTR_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Required(ATTR_DURATION_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
         vol.Optional(ATTR_FAN_MODE): cv.string,
@@ -99,7 +127,8 @@ BOOST_SCHEMA = vol.Schema(
         vol.Optional(ATTR_SWING_MODE): cv.string,
         vol.Optional(ATTR_SWING_HORIZONTAL_MODE): cv.string,
         vol.Optional(ATTR_HUMIDITY): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
-    }
+    }),
+    _validate_temperature_target_data,
 )
 
 CANCEL_BOOST_SCHEMA = vol.Schema(
@@ -183,7 +212,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         try:
             await scheduler.async_set_temperature(
                 entity_id,
-                call.data[ATTR_TEMPERATURE],
+                call.data.get(ATTR_TEMPERATURE),
+                target_temp_low=call.data.get(ATTR_TARGET_TEMP_LOW),
+                target_temp_high=call.data.get(ATTR_TARGET_TEMP_HIGH),
                 ensure_on=True,
                 fan_mode=call.data.get(ATTR_FAN_MODE),
                 hvac_mode=call.data.get(ATTR_HVAC_MODE),
@@ -234,9 +265,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         try:
             await scheduler.async_set_zone_boost(
                 entity_id,
-                call.data[ATTR_TEMPERATURE],
+                call.data.get(ATTR_TEMPERATURE),
                 paused_until,
                 call.data.get(ATTR_HVAC_MODE),
+                target_temp_low=call.data.get(ATTR_TARGET_TEMP_LOW),
+                target_temp_high=call.data.get(ATTR_TARGET_TEMP_HIGH),
                 fan_mode=call.data.get(ATTR_FAN_MODE),
                 humidity=call.data.get(ATTR_HUMIDITY),
                 preset_mode=call.data.get(ATTR_PRESET_MODE),

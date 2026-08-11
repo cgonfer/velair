@@ -6,8 +6,10 @@ import { activateClimateProfile, deleteClimateProfile, saveClimateProfile } from
 import {
   activeClimateProfiles,
   climateProfileAccentColor,
+  climateProfileInput,
   climateProfileValidationError,
   cloneProfileScheduleDay,
+  cloneProfileDayToClimates,
   createClimateProfileDraft,
   nextProfileBlockStart,
   profileZoneBehavior,
@@ -16,11 +18,16 @@ import {
   type ClimateProfileDraft,
   type ClimateProfileDraftZone,
 } from "../domain/climate-profiles";
+import { newTemplateKey } from "../domain/templates";
 import {
   climateFanModeOptions,
   climateHumidityLimits,
   climatePresetModeOptions,
+  climateRequiresRangeTarget,
+  climateTargetCompatibleForEnsureOn,
   climateSupportedModes,
+  climateSupportsRangeTarget,
+  climateSupportsSingleTarget,
   climateSwingHorizontalModeOptions,
   climateSwingModeOptions,
   entityTemperatureLimits,
@@ -29,6 +36,7 @@ import {
 import {
   addDraftBlock,
   draftBlockTemperatureError,
+  draftBlockUsesRange,
   draftBlocksFromScheduleBlocks,
   firstUnsupportedModeBlock,
   removeDraftBlock,
@@ -53,7 +61,7 @@ import {
   sortDraftBlocks,
   timelineBlocks,
 } from "../controllers/timeline-interactions";
-import { dictionaryLabel, languageFromHass, translate, weekdayName } from "../i18n";
+import { dictionaryLabel, languageFromHass, shortWeekdayName, translate, weekdayName } from "../i18n";
 import { PROFILE_DESCRIPTION_MAX_LENGTH, MODE_NAME_MAX_LENGTH, WEEKDAYS } from "../constants";
 import { orderedWeekdays, orderedZoneIds } from "../domain/settings";
 import { cardStyles } from "../styles/card-styles";
@@ -86,8 +94,9 @@ export class VelairProfilesView extends LitElement {
   @state() private _selectedKey = "";
   @state() private _draft: ClimateProfileDraft = createClimateProfileDraft();
   @state() private _selectedDays: Record<string, string> = {};
-  @state() private _cloneDayTargets: Record<string, Set<string>> = {};
-  @state() private _busy?: "activate" | "save" | "delete" | "mode-save" | "mode-delete" | "mode-activate";
+  @state() private _cloneWeekdayTargets: Record<string, Set<string>> = {};
+  @state() private _cloneClimateTargets: Record<string, Set<string>> = {};
+  @state() private _busy?: "activate" | "save" | "delete" | "mode-save" | "mode-delete" | "mode-activate" | "template-save";
   @state() private _dirty = false;
   @state() private _error?: string;
   @state() private _expandedZones = new Set<string>();
@@ -96,6 +105,10 @@ export class VelairProfilesView extends LitElement {
   @state() private _modeDraft: VelairModeDraft = createVelairModeDraft();
   @state() private _modeDirty = false;
   @state() private _activeLibrary: "profiles" | "modes" = "profiles";
+  @state() private _templateDialog?: { entityId: string; weekday: string; name: string; error?: string };
+  @state() private _climateCloneDialog?: { entityId: string; weekday: string; targets: Set<string>; error?: string };
+  private _dialogTrigger?: HTMLElement;
+  private _templateSaveToken?: symbol;
 
   private readonly _handleDocumentClick = (event: MouseEvent): void => {
     const menu = this.shadowRoot?.querySelector<HTMLDetailsElement>(".active-setup-menu");
@@ -173,7 +186,60 @@ export class VelairProfilesView extends LitElement {
       >
         ${this._renderModes()}
       </div>
+      ${this._renderTemplateDialog()}
+      ${this._renderClimateCloneDialog()}
     `;
+  }
+
+  private _renderTemplateDialog() {
+    const dialog = this._templateDialog;
+    if (!dialog) return nothing;
+    return html`
+      <div class="profile-dialog-backdrop" @click=${(event: Event) => { if (event.target === event.currentTarget) this._closeTemplateDialog(); }}>
+        <section class="profile-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-template-dialog-title" @keydown=${(event: KeyboardEvent) => this._handleDialogKeydown(event, this._closeTemplateDialog)}>
+          <h3 id="profile-template-dialog-title">${this._t("profileSaveDayTemplateTitle")}</h3>
+          <p>${this._t("profileSaveDayTemplateDescription", { day: weekdayName(languageFromHass(this.hass), dialog.weekday) })}</p>
+          <label for="profile-template-name">${this._t("customTemplateName")}</label>
+          <input id="profile-template-name" .value=${dialog.name} @input=${(event: Event) => {
+            this._templateDialog = { ...dialog, name: (event.currentTarget as HTMLInputElement).value, error: undefined };
+          }} />
+          ${dialog.error ? html`<div class="notice error profile-dialog-error" role="alert">${dialog.error}</div>` : nothing}
+          <div class="profile-dialog-actions">
+            <button type="button" @click=${this._closeTemplateDialog}>${this._t("cancel")}</button>
+            <button class="command-button success" type="button" ?disabled=${!dialog.name.trim() || this._busy === "template-save"} @click=${this._saveDayAsTemplate}>${this._t("save")}</button>
+          </div>
+        </section>
+      </div>`;
+  }
+
+  private _renderClimateCloneDialog() {
+    const dialog = this._climateCloneDialog;
+    if (!dialog) return nothing;
+    const sourceName = this.hass?.states?.[dialog.entityId]?.attributes?.friendly_name ?? dialog.entityId;
+    const targetNames = [...dialog.targets].map(
+      (entityId) => this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
+    );
+    const changed = [...dialog.targets].filter(
+      (entityId) => profileZoneBehavior(this._draft.zones[entityId]) !== "schedule",
+    );
+    return html`
+      <div class="profile-dialog-backdrop" @click=${(event: Event) => { if (event.target === event.currentTarget) this._closeClimateCloneDialog(); }}>
+        <section class="profile-dialog profile-climate-clone-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-climate-clone-title" @keydown=${(event: KeyboardEvent) => this._handleDialogKeydown(event, this._closeClimateCloneDialog)}>
+          <h3 id="profile-climate-clone-title">${this._t("profileCloneDayClimatesTitle")}</h3>
+          <p>${this._t("profileCloneDayClimatesDescription", { day: weekdayName(languageFromHass(this.hass), dialog.weekday), source: sourceName })}</p>
+          <p class="profile-dialog-target-summary">
+            <strong>${this._t("profileCloneDayClimatesTargets")}:</strong>
+            <span>${targetNames.join(", ")}</span>
+          </p>
+          <p class="profile-dialog-warning">${this._t("profileCloneDayClimatesOverwrite")}</p>
+          ${changed.length ? html`<p class="profile-dialog-warning">${this._t("profileCloneDayClimatesBehaviorChange", { targets: changed.map((id) => this.hass?.states?.[id]?.attributes?.friendly_name ?? id).join(", ") })}</p>` : nothing}
+          ${dialog.error ? html`<div class="notice error profile-dialog-error" role="alert">${dialog.error}</div>` : nothing}
+          <div class="profile-dialog-actions">
+            <button type="button" @click=${this._closeClimateCloneDialog}>${this._t("cancel")}</button>
+            <button class="command-button success" type="button" ?disabled=${dialog.targets.size === 0} @click=${this._confirmCloneDayToClimates}>${this._t("cloneAction")}</button>
+          </div>
+        </section>
+      </div>`;
   }
 
   private _renderLibrarySelector() {
@@ -937,8 +1003,16 @@ export class VelairProfilesView extends LitElement {
     const weekdays = orderedWeekdays(this.data?.settings?.first_weekday ?? WEEKDAYS[0]);
     const weekday = this._selectedDays[entityId] ?? weekdays[0];
     const blocks = zone.schedule[weekday] ?? [];
-    const cloneTargets = new Set(
-      [...(this._cloneDayTargets[entityId] ?? [])].filter((day) => day !== weekday),
+    const cloneWeekdayTargets = new Set(
+      [...(this._cloneWeekdayTargets[entityId] ?? [])].filter((day) => day !== weekday),
+    );
+    const otherClimates = orderedZoneIds(
+      this.data?.configured_entities ?? [],
+      this.data?.settings?.zone_order ?? [],
+    ).filter((targetEntityId) => targetEntityId !== entityId);
+    const cloneClimateTargets = new Set(
+      [...(this._cloneClimateTargets[entityId] ?? [])].filter((targetEntityId) =>
+        otherClimates.includes(targetEntityId)),
     );
     const blockHost = this._blockEditorHost(entityId, weekday);
     return html`
@@ -956,7 +1030,10 @@ export class VelairProfilesView extends LitElement {
             </button>
           `)}
         </div>
-        ${renderTimeline(blockHost, entityId, "template")}
+        ${renderTimeline(blockHost, entityId, "template", {
+          schedule: zone.schedule,
+          weekday,
+        })}
         <div class="schedule-config-helper">${this._t("templateOptionalHint")}</div>
         <div class="schedule-config-row profile-schedule-config-row">
           <div class="template-panel">
@@ -977,6 +1054,16 @@ export class VelairProfilesView extends LitElement {
                 </select>
               </span>
             </div>
+          </div>
+          <div class="profile-day-actions">
+            <button
+              type="button"
+              class="command-button primary"
+              title=${this._t("saveTemplate")}
+              @click=${(event: Event) => this._openTemplateDialog(entityId, weekday, event.currentTarget as HTMLElement)}
+            >
+              <ha-icon icon="mdi:content-save-plus"></ha-icon><span>${this._t("saveTemplate")}</span>
+            </button>
           </div>
         </div>
         <div class="draft-list profile-block-list">
@@ -1005,7 +1092,7 @@ export class VelairProfilesView extends LitElement {
                 <label class="check-target" title=${weekdayName(languageFromHass(this.hass), day)}>
                   <input
                     type="checkbox"
-                    .checked=${cloneTargets.has(day)}
+                    .checked=${cloneWeekdayTargets.has(day)}
                     @change=${(event: Event) => this._toggleCloneDayTarget(
                       entityId,
                       day,
@@ -1020,14 +1107,56 @@ export class VelairProfilesView extends LitElement {
             <button
               class="command-button success"
               type="button"
-              ?disabled=${cloneTargets.size === 0 || this._hasScheduleValidationError()}
-              @click=${() => this._cloneSelectedDay(entityId, weekday, cloneTargets)}
+              ?disabled=${cloneWeekdayTargets.size === 0 || this._hasScheduleValidationError()}
+              @click=${() => this._cloneSelectedDay(entityId, weekday, cloneWeekdayTargets)}
             >
               <ha-icon icon="mdi:content-copy"></ha-icon>
               <span>${this._t("cloneAction")}</span>
             </button>
           </div>
         </div>
+        ${otherClimates.length ? html`
+          <div class="copy-panel profile-climate-copy">
+            <div class="copy-header">
+              <div>
+                <span class="label">${this._t("cloneDayToThermostats")}</span>
+                <strong>${this._t("otherThermostats")}</strong>
+              </div>
+            </div>
+            <div class="copy-targets wide">
+              ${otherClimates.map((targetEntityId) => html`
+                <label class="check-target">
+                  <input
+                    type="checkbox"
+                    .checked=${cloneClimateTargets.has(targetEntityId)}
+                    @change=${(event: Event) => this._toggleCloneClimateTarget(
+                      entityId,
+                      targetEntityId,
+                      (event.currentTarget as HTMLInputElement).checked,
+                    )}
+                  />
+                  <span>${this.hass?.states?.[targetEntityId]?.attributes?.friendly_name ?? targetEntityId}</span>
+                </label>
+              `)}
+            </div>
+            <div class="copy-actions">
+              <button
+                class="command-button success"
+                type="button"
+                ?disabled=${cloneClimateTargets.size === 0 || this._hasScheduleValidationError()}
+                @click=${(event: Event) => this._openClimateCloneDialog(
+                  entityId,
+                  weekday,
+                  cloneClimateTargets,
+                  event.currentTarget as HTMLElement,
+                )}
+              >
+                <ha-icon icon="mdi:content-copy"></ha-icon>
+                <span>${this._t("cloneAction")}</span>
+              </button>
+            </div>
+          </div>
+        ` : nothing}
       </div>
     `;
   }
@@ -1036,7 +1165,8 @@ export class VelairProfilesView extends LitElement {
     this._selectedKey = "";
     this._draft = createClimateProfileDraft();
     this._selectedDays = {};
-    this._cloneDayTargets = {};
+    this._cloneWeekdayTargets = {};
+    this._cloneClimateTargets = {};
     this._expandedZones = new Set();
     this._setDirty(false);
     this._clearNotices();
@@ -1060,7 +1190,8 @@ export class VelairProfilesView extends LitElement {
         this._selectedKey = created.key;
         this._draft = createClimateProfileDraft(created);
         this._selectedDays = {};
-        this._cloneDayTargets = {};
+        this._cloneWeekdayTargets = {};
+        this._cloneClimateTargets = {};
         this._expandedZones = new Set();
       }
       this._setDirty(false);
@@ -1079,7 +1210,8 @@ export class VelairProfilesView extends LitElement {
     this._selectedKey = profile.key;
     this._draft = createClimateProfileDraft(profile);
     this._selectedDays = {};
-    this._cloneDayTargets = {};
+    this._cloneWeekdayTargets = {};
+    this._cloneClimateTargets = {};
     this._expandedZones = new Set();
     this._setDirty(false);
     this._clearNotices();
@@ -1092,6 +1224,8 @@ export class VelairProfilesView extends LitElement {
 
   private _setZoneBehavior(entityId: string, behavior: ClimateProfileDraftZone["behavior"]): void {
     this._draft = withProfileZoneBehavior(this._draft, entityId, behavior);
+    this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: new Set() };
+    this._cloneClimateTargets = { ...this._cloneClimateTargets, [entityId]: new Set() };
     this._setDirty(true);
   }
 
@@ -1102,16 +1236,24 @@ export class VelairProfilesView extends LitElement {
 
   private _selectDay(entityId: string, weekday: string): void {
     this._selectedDays = { ...this._selectedDays, [entityId]: weekday };
-    const targets = new Set(this._cloneDayTargets[entityId] ?? []);
+    const targets = new Set(this._cloneWeekdayTargets[entityId] ?? []);
     targets.delete(weekday);
-    this._cloneDayTargets = { ...this._cloneDayTargets, [entityId]: targets };
+    this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: targets };
+    this._cloneClimateTargets = { ...this._cloneClimateTargets, [entityId]: new Set() };
   }
 
   private _toggleCloneDayTarget(entityId: string, weekday: string, checked: boolean): void {
-    const targets = new Set(this._cloneDayTargets[entityId] ?? []);
+    const targets = new Set(this._cloneWeekdayTargets[entityId] ?? []);
     if (checked) targets.add(weekday);
     else targets.delete(weekday);
-    this._cloneDayTargets = { ...this._cloneDayTargets, [entityId]: targets };
+    this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: targets };
+  }
+
+  private _toggleCloneClimateTarget(entityId: string, targetEntityId: string, checked: boolean): void {
+    const targets = new Set(this._cloneClimateTargets[entityId] ?? []);
+    if (checked) targets.add(targetEntityId);
+    else targets.delete(targetEntityId);
+    this._cloneClimateTargets = { ...this._cloneClimateTargets, [entityId]: targets };
   }
 
   private _cloneSelectedDay(
@@ -1131,7 +1273,7 @@ export class VelairProfilesView extends LitElement {
         },
       },
     };
-    this._cloneDayTargets = { ...this._cloneDayTargets, [entityId]: new Set() };
+    this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: new Set() };
     this._setDirty(true);
   }
 
@@ -1156,10 +1298,20 @@ export class VelairProfilesView extends LitElement {
 
   private _addBlock(entityId: string, weekday: string): void {
     const blocks = this._blocks(entityId, weekday);
+    let updated = addDraftBlock(blocks, nextProfileBlockStart(blocks), this.data?.temperature_unit);
+    const state = this.hass?.states?.[entityId];
+    if (!blocks.length && climateSupportsRangeTarget(state) && !climateSupportsSingleTarget(state)) {
+      updated = updated.map((block, index) => index === updated.length - 1 ? {
+        ...block,
+        temperature: undefined,
+        target_temp_low: state?.attributes?.target_temp_low ?? "",
+        target_temp_high: state?.attributes?.target_temp_high ?? "",
+      } : block);
+    }
     this._setBlocks(
       entityId,
       weekday,
-      addDraftBlock(blocks, nextProfileBlockStart(blocks), this.data?.temperature_unit),
+      updated,
     );
   }
 
@@ -1168,7 +1320,33 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _updateBlock(entityId: string, weekday: string, index: number, field: keyof DraftScheduleBlock, value: string): void {
-    this._setBlocks(entityId, weekday, updateDraftBlock(this._blocks(entityId, weekday), index, field, value));
+    const blocks = this._blocks(entityId, weekday);
+    const previous = blocks[index];
+    let updated = updateDraftBlock(blocks, index, field, value);
+    if (previous && field === "hvac_mode") {
+      const state = this.hass?.states?.[entityId];
+      if (value === "heat_cool" && previous.hvac_mode !== "heat_cool"
+        && climateSupportsRangeTarget(state) && !draftBlockUsesRange(previous)) {
+        updated = updated.map((block, blockIndex) => blockIndex === index ? {
+          ...block,
+          temperature: undefined,
+          target_temp_low: state?.attributes?.target_temp_low ?? "",
+          target_temp_high: state?.attributes?.target_temp_high ?? "",
+        } : block);
+      } else if (
+        value !== ""
+        && value !== "heat_cool"
+        && draftBlockUsesRange(previous)
+      ) {
+        updated = updated.map((block, blockIndex) => blockIndex === index ? {
+          ...block,
+          target_temp_low: undefined,
+          target_temp_high: undefined,
+          temperature: state?.attributes?.temperature ?? "",
+        } : block);
+      }
+    }
+    this._setBlocks(entityId, weekday, updated);
   }
 
   private _copyTemplate(entityId: string, weekday: string, select: HTMLSelectElement): void {
@@ -1185,11 +1363,161 @@ export class VelairProfilesView extends LitElement {
     select.value = "";
   }
 
+  private _saveDayAsTemplate = async (): Promise<void> => {
+    const dialog = this._templateDialog;
+    const api = this.hass ? new VelairApiClient(this.hass) : undefined;
+    if (!dialog || !api || !dialog.name.trim() || this._busy) return;
+    const zone = this._draft.zones[dialog.entityId];
+    if (zone?.behavior !== "schedule") return;
+    const draftBlocks = zone.schedule[dialog.weekday] ?? [];
+    const starts = new Set<string>();
+    const invalid = draftBlocks.some((block) => {
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(block.start) || starts.has(block.start)) return true;
+      starts.add(block.start);
+      if (block.action === "turn_off") return false;
+      return Boolean(this._temperatureError(dialog.entityId, block))
+        || (draftBlockUsesRange(block)
+          ? !Number.isFinite(Number(block.target_temp_low)) || !Number.isFinite(Number(block.target_temp_high))
+          : !Number.isFinite(Number(block.temperature)));
+    });
+    if (invalid) {
+      this._templateDialog = { ...dialog, error: this._t("profileInvalidSchedule") };
+      return;
+    }
+    const inputZone = climateProfileInput(this._draft).zones[dialog.entityId];
+    if (inputZone.behavior !== "schedule") return;
+    this._busy = "template-save";
+    const token = Symbol("profile-template-save");
+    this._templateSaveToken = token;
+    this._clearNotices();
+    try {
+      const response = await api.setScheduleTemplate(newTemplateKey(), dialog.name.trim(), inputZone.schedule[dialog.weekday] ?? []);
+      this.data = response;
+      this.dispatchEvent(new CustomEvent("profile-data-changed", { bubbles: true, composed: true, detail: response }));
+      if (this._templateSaveToken === token && this._templateDialog === dialog) {
+        this._closeTemplateDialog();
+        this._showSuccess(this._t("templateSaved"));
+      }
+    } catch (error) {
+      if (this._templateSaveToken === token && this._templateDialog === dialog) {
+        this._templateDialog = { ...dialog, error: this._errorMessage(error, "unableSaveTemplate") };
+      }
+    } finally {
+      if (this._templateSaveToken === token) {
+        this._templateSaveToken = undefined;
+        this._busy = undefined;
+      }
+    }
+  };
+
+  private _confirmCloneDayToClimates = (): void => {
+    const dialog = this._climateCloneDialog;
+    if (!dialog?.targets.size) return;
+    const source = this._draft.zones[dialog.entityId];
+    if (source?.behavior !== "schedule") return;
+    const blocks = source.schedule[dialog.weekday] ?? [];
+    for (const entityId of dialog.targets) {
+      const error = this._cloneCompatibilityError(blocks, entityId);
+      if (error) { this._climateCloneDialog = { ...dialog, error }; return; }
+    }
+    this._draft = cloneProfileDayToClimates(this._draft, dialog.entityId, dialog.weekday, dialog.targets);
+    this._cloneClimateTargets = {
+      ...this._cloneClimateTargets,
+      [dialog.entityId]: new Set(),
+    };
+    this._closeClimateCloneDialog();
+    this._setDirty(true);
+  };
+
+  private _openTemplateDialog(entityId: string, weekday: string, trigger: HTMLElement): void {
+    this._dialogTrigger = trigger;
+    this._templateDialog = { entityId, weekday, name: "" };
+    void this.updateComplete.then(() => this.shadowRoot?.querySelector<HTMLInputElement>("#profile-template-name")?.focus());
+  }
+
+  private _openClimateCloneDialog(
+    entityId: string,
+    weekday: string,
+    targets: Set<string>,
+    trigger: HTMLElement,
+  ): void {
+    if (!targets.size) return;
+    this._dialogTrigger = trigger;
+    this._climateCloneDialog = { entityId, weekday, targets: new Set(targets) };
+    void this.updateComplete.then(() => this.shadowRoot
+      ?.querySelector<HTMLButtonElement>(".profile-climate-clone-dialog .profile-dialog-actions button")
+      ?.focus());
+  }
+
+  private _closeTemplateDialog = (): void => {
+    this._templateDialog = undefined;
+    const trigger = this._dialogTrigger;
+    this._dialogTrigger = undefined;
+    void this.updateComplete.then(() => trigger?.focus());
+  };
+
+  private _closeClimateCloneDialog = (): void => {
+    this._climateCloneDialog = undefined;
+    const trigger = this._dialogTrigger;
+    this._dialogTrigger = undefined;
+    void this.updateComplete.then(() => trigger?.focus());
+  };
+
+  private _handleDialogKeydown(event: KeyboardEvent, close: () => void): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const dialog = event.currentTarget as HTMLElement;
+    const focusable = [...dialog.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )].filter((element) => !element.hidden);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = this.shadowRoot?.activeElement ?? null;
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private _cloneCompatibilityError(blocks: DraftScheduleBlock[], entityId: string): string | undefined {
+    const state = this.hass?.states?.[entityId];
+    const name = state?.attributes?.friendly_name ?? entityId;
+    for (const block of blocks) {
+      if (block.action === "turn_off") continue;
+      if (!climateTargetCompatibleForEnsureOn(
+        state,
+        draftBlockUsesRange(block) ? "range" : "scalar",
+        block.hvac_mode,
+      )) {
+        return this._t("profileCloneDayIncompatibleTarget", { entity: name, start: block.start });
+      }
+      if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
+      const optionSets: Array<[string | undefined, string[]]> = [[block.fan_mode, climateFanModeOptions(state)], [block.preset_mode, climatePresetModeOptions(state)], [block.swing_mode, climateSwingModeOptions(state)], [block.swing_horizontal_mode, climateSwingHorizontalModeOptions(state)]];
+      if (optionSets.some(([value, options]) => value && !options.includes(value))) return this._t("profileCloneDayIncompatibleOptions", { entity: name, start: block.start });
+      if (String(block.humidity ?? "").trim()) {
+        const limits = climateHumidityLimits(state);
+        const humidity = Number(block.humidity);
+        if (!limits || humidity < limits[0] || humidity > limits[1]) return this._t("profileCloneDayIncompatibleOptions", { entity: name, start: block.start });
+      }
+      if (this._temperatureError(entityId, block)) return this._t("profileCloneDayIncompatibleTemperature", { entity: name, start: block.start });
+    }
+    return undefined;
+  }
+
   private _blockEditorHost(entityId: string, weekday: string): VelairViewHost {
     const state = this.hass?.states?.[entityId];
     const temperatureLimits = entityTemperatureLimits(state, this.data?.temperature_unit);
     const temperatureStep = entityTemperatureStep(state);
     const host: Record<string, unknown> = {
+      hass: this.hass,
       classList: this.classList,
       renderRoot: this.renderRoot,
       _selectedEntity: entityId,
@@ -1206,6 +1534,8 @@ export class VelairProfilesView extends LitElement {
       _swingHorizontalModeOptions: () => climateSwingHorizontalModeOptions(state),
       _humidityLimits: () => climateHumidityLimits(state),
       _modeLabel: (mode: string) => dictionaryLabel(languageFromHass(this.hass), "hvacModes", mode),
+      _shortWeekdayName: (day: string) => shortWeekdayName(languageFromHass(this.hass), day),
+      _weekdayName: (day: string) => weekdayName(languageFromHass(this.hass), day),
       _updateDraftBlock: (index: number, field: keyof DraftScheduleBlock, value: string) =>
         this._updateBlock(entityId, weekday, index, field, value),
       _removeBlock: (index: number) => this._removeBlock(entityId, weekday, index),
@@ -1276,6 +1606,7 @@ export class VelairProfilesView extends LitElement {
         min: this._formatTemperatureLimit(minTemperature),
         max: this._formatTemperatureLimit(maxTemperature),
       }),
+      rangeOrderError: this._t("invalidTargetRangeOrder"),
       stepError: this._t("invalidTemperatureStep", {
         step: this._formatTemperatureLimit(temperatureStep ?? 1),
       }),
@@ -1297,10 +1628,43 @@ export class VelairProfilesView extends LitElement {
       if (zone.behavior !== "schedule") continue;
       const state = this.hass?.states?.[entityId];
       for (const weekday of WEEKDAYS) {
-        const unsupported = firstUnsupportedModeBlock(
-          zone.schedule[weekday] ?? [],
-          climateSupportedModes(state),
-        );
+        const blocks = zone.schedule[weekday] ?? [];
+        const unsupportedRange = blocks.find((block) =>
+          draftBlockUsesRange(block) && !climateSupportsRangeTarget(state));
+        if (unsupportedRange) {
+          return this._t("unsupportedRangeTargetForClimate", {
+            entity: state?.attributes?.friendly_name ?? entityId,
+            start: unsupportedRange.start,
+          });
+        }
+        const unsupportedRangeMode = blocks.find((block) =>
+          draftBlockUsesRange(block)
+          && block.hvac_mode !== undefined
+          && block.hvac_mode !== "heat_cool");
+        if (unsupportedRangeMode?.hvac_mode) {
+          return this._t("unsupportedModeForClimate", {
+            entity: state?.attributes?.friendly_name ?? entityId,
+            mode: dictionaryLabel(
+              languageFromHass(this.hass),
+              "hvacModes",
+              unsupportedRangeMode.hvac_mode,
+            ),
+            start: unsupportedRangeMode.start,
+          });
+        }
+        const unsupportedScalar = blocks.find((block) =>
+          block.action !== "turn_off" && !draftBlockUsesRange(block)
+          && (
+            !climateSupportsSingleTarget(state)
+            || climateRequiresRangeTarget(state, block.hvac_mode)
+          ));
+        if (unsupportedScalar) {
+          return this._t("unsupportedSingleTargetForClimate", {
+            entity: state?.attributes?.friendly_name ?? entityId,
+            start: unsupportedScalar.start,
+          });
+        }
+        const unsupported = firstUnsupportedModeBlock(blocks, climateSupportedModes(state));
         if (!unsupported?.hvac_mode) continue;
         return this._t("unsupportedModeForClimate", {
           entity: state?.attributes?.friendly_name ?? entityId,
@@ -1466,7 +1830,8 @@ export class VelairProfilesView extends LitElement {
         this._selectedKey = saved.key;
         this._draft = createClimateProfileDraft(saved);
         this._selectedDays = {};
-        this._cloneDayTargets = {};
+        this._cloneWeekdayTargets = {};
+        this._cloneClimateTargets = {};
       }
       this._setDirty(false);
       this._showSuccess(this._t("profileSaved"));

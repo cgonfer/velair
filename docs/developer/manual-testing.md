@@ -228,6 +228,25 @@ Services with `entity_id` must reject climates that were not selected during set
 12. Pause one zone with `velair.pause_zone` and confirm other zones keep scheduling normally.
 13. Resume the paused zone and confirm Velair applies its active block only when one exists.
 
+## Room Assist Smoke Test
+
+Prefer a simulated or template-backed climate so its internal temperature can
+be changed independently from the external room sensor.
+
+1. Configure a `22 °C` cooling block, select an external temperature sensor, and enable Room Assist.
+2. Set the external sensor to `22 °C` and the climate reading to `21 °C`. Confirm the applied cooling target is not below `22 °C`, the status is Holding, and the inline protection message shows the calculated and applied targets.
+3. Lower only the climate reading to `19 °C`. Confirm the applied target remains `22 °C` instead of following the internal reading downward, and Overview shows Scheduled protection.
+4. Lower the external sensor to `21 °C` while the climate reads `25 °C`. Confirm the signed inverse correction can apply a target above `22 °C`.
+5. Repeat symmetrically with a heating block: once the external room no longer requests heat, the applied heating target must not rise above the schedule, while a stronger inverse target below it remains allowed.
+6. For a native `heat_cool` range, place the external room inside the scheduled band and note the first applied holding range.
+7. Move only the climate entity's internal reading while keeping the external room inside the band. Confirm the complete applied range remains unchanged.
+8. Move the external room below the lower boundary and then above the upper boundary. Confirm Room Assist resumes boundary-based heating and cooling calculations and always preserves the range width.
+9. Change the active block or target while holding. Confirm the previous scalar target or range is not reused for the new block.
+10. Simulate a heating entity that reports `16.5 °C` while the external room and schedule are both `18 °C`. Confirm Velair reports zero logical correction and does not claim that scheduled protection guarantees an immediate HVAC stop. If the simulated device exposes `hvac_action`, changing that attribute alone must not make Velair invent a device-specific neutral margin.
+11. Repeat a protected scalar case with a non-zero minimum delta. Confirm the scheduled heating ceiling or cooling floor also applies at the deadband boundary and is not reported as a physical thermostat limit.
+12. Repeat the scalar protection and inverse-correction cases with a Fahrenheit climate, for example a `72 °F` cooling schedule, a `70 °F` external reading, and internal readings of `68 °F` and `76 °F`. Confirm Velair applies the scheduled `72 °F` floor in the first case and the stronger inverse `78 °F` target in the second.
+13. Configure a Fahrenheit `68–75 °F` native range with a `1 °F` target step. Confirm Room Assist preserves the `7 °F` width, the graph and any physical-limit warning remain in Fahrenheit, and Maximum assist delta is treated as a temperature difference rather than an absolute Celsius conversion.
+
 ## Adaptive Preconditioning Smoke Test
 
 Prefer a non-critical test climate. Do not use real heating or cooling hardware when an unexpected target change would waste energy or create discomfort.

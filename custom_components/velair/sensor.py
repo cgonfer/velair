@@ -401,8 +401,13 @@ class ZonePreconditioningStartSensor(_ZoneSensor):
                     (event.target_when - event.when).total_seconds() / 60
                 ),
                 "direction": diagnostics.get("direction"),
+                "target_kind": diagnostics.get("target_kind"),
+                "target_boundary": diagnostics.get("target_boundary"),
+                "boundary_temperature": diagnostics.get("boundary_temperature"),
                 "model_source": diagnostics.get("source"),
                 "target_temperature": event.temperature,
+                "target_temp_low": event.target_temp_low,
+                "target_temp_high": event.target_temp_high,
                 "hvac_mode": event.hvac_mode,
             }
         )
@@ -471,6 +476,16 @@ class ZoneRoomAssistStateSensor(_ZoneSensor):
                 "room_temperature_entity_id",
                 "target_temperature",
                 "applied_temperature",
+                "applied_offset",
+                "calculated_temperature",
+                "scheduled_target_guard",
+                "target_temp_low",
+                "target_temp_high",
+                "applied_target_temp_low",
+                "applied_target_temp_high",
+                "climate_target_temp_low",
+                "climate_target_temp_high",
+                "range_shift",
                 "direction",
                 "hvac_mode",
                 "active_from",
@@ -485,7 +500,7 @@ class ZoneRoomAssistStateSensor(_ZoneSensor):
 
 def _serialize_event(event) -> dict[str, str | float | None]:
     """Serialize a climate event for entity attributes."""
-    return {
+    payload = {
         "entity_id": event.entity_id,
         "action": event.action,
         "hvac_mode": event.hvac_mode,
@@ -499,6 +514,12 @@ def _serialize_event(event) -> dict[str, str | float | None]:
             else None
         ),
     }
+    target_temp_low = getattr(event, "target_temp_low", None)
+    target_temp_high = getattr(event, "target_temp_high", None)
+    if target_temp_low is not None and target_temp_high is not None:
+        payload["target_temp_low"] = target_temp_low
+        payload["target_temp_high"] = target_temp_high
+    return payload
 
 
 def _metric_entity_id(metric: object) -> str | None:

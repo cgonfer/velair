@@ -202,6 +202,13 @@ When applying a temperature:
 
 This keeps schedule blocks useful across heating-only, cooling-only, and mixed systems.
 
+Physical delivery is coordinated in runtime memory per managed entity.
+Blocking Home Assistant calls expose invocation failures; generation
+invalidation and an async lock prevent obsolete or overlapping commits.
+Availability recovery is state-event driven, and every delayed attempt resolves
+current scheduler intent rather than retaining an old payload. See
+[Climate delivery coordination](climate-delivery.md) and ADR 0015.
+
 ## Frontend Contract
 
 The frontend communicates with the backend through `api.py` WebSocket commands. The frontend edits and validates user input, but the backend remains the source of truth for:
@@ -319,7 +326,7 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 5,
+  "model_version": 6,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {

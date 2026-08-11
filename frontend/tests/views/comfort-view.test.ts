@@ -14,6 +14,7 @@ import type {
   HomeAssistant,
 } from "../../src/velair/types";
 import { defaultComfortSettings } from "../../src/velair/domain/comfort";
+import { comfortStyles } from "../../src/velair/styles/comfort-styles";
 import { renderComfortView } from "../../src/velair/views/comfort-view";
 
 function host(
@@ -101,6 +102,20 @@ function host(
 }
 
 describe("comfort view", () => {
+  it("keeps configuration help tooltips inside the mobile label width", () => {
+    const styles = comfortStyles.cssText;
+
+    expect(styles).toMatch(
+      /@media \(max-width:\s*680px\)[\s\S]*\.comfort-config-label\s*\{[^}]*position:\s*relative;[^}]*width:\s*100%;/,
+    );
+    expect(styles).toMatch(
+      /\.comfort-config-label \.comfort-help\s*\{[^}]*position:\s*static;/,
+    );
+    expect(styles).toMatch(
+      /\.comfort-config-label \.comfort-help-tooltip\s*\{[^}]*left:\s*0;[^}]*max-width:\s*100%;[^}]*right:\s*0;[^}]*width:\s*auto;/,
+    );
+  });
+
   it("uses the physically equivalent Fahrenheit comfort range", () => {
     const defaults = defaultComfortSettings("°F");
     expect(defaults.temperature_min).toBe(68);

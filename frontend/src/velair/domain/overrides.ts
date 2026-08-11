@@ -9,8 +9,12 @@ export function isActiveBoostOverride(
   }
 
   const temperature = Number(override.temperature);
+  const low = Number(override.target_temp_low);
+  const high = Number(override.target_temp_high);
   const untilMs = dateMs(override.until);
-  return Number.isFinite(temperature) && Boolean(untilMs && untilMs > nowMs);
+  const hasTarget = Number.isFinite(temperature)
+    || (Number.isFinite(low) && Number.isFinite(high) && low <= high);
+  return hasTarget && Boolean(untilMs && untilMs > nowMs);
 }
 
 export function isActivePauseOverride(

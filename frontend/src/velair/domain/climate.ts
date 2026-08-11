@@ -22,6 +22,9 @@ export function climateStateSignature(state?: HassState): string {
     state?.state ?? "",
     attributes?.current_temperature ?? null,
     attributes?.temperature ?? null,
+    attributes?.target_temp_low ?? null,
+    attributes?.target_temp_high ?? null,
+    attributes?.supported_features ?? null,
     attributes?.hvac_action ?? "",
     attributes?.friendly_name ?? "",
     attributes?.unit_of_measurement ?? "",
@@ -101,6 +104,72 @@ export function climateSupportedModes(state?: HassState): string[] {
   }
 
   return modes.filter((mode): mode is string => typeof mode === "string");
+}
+
+export function climateSupportsSingleTarget(state?: HassState): boolean {
+  const attributes = state?.attributes;
+  if (!attributes) {
+    return true;
+  }
+  const supportedFeatures = Number(attributes.supported_features ?? 0);
+  if (Number.isFinite(supportedFeatures) && supportedFeatures > 0) {
+    return (supportedFeatures & 1) !== 0;
+  }
+  return typeof attributes.temperature === "number"
+    || !("target_temp_low" in attributes && "target_temp_high" in attributes);
+}
+
+export function climateSupportsRangeTarget(state?: HassState): boolean {
+  const attributes = state?.attributes;
+  if (!attributes) {
+    return false;
+  }
+  const supportedFeatures = Number(attributes.supported_features ?? 0);
+  if (Number.isFinite(supportedFeatures) && supportedFeatures > 0) {
+    return (supportedFeatures & 2) !== 0;
+  }
+  return typeof attributes.target_temp_low === "number"
+    && Number.isFinite(attributes.target_temp_low)
+    && typeof attributes.target_temp_high === "number"
+    && Number.isFinite(attributes.target_temp_high);
+}
+
+export function climateRequiresRangeTarget(
+  state?: HassState,
+  requestedMode?: string,
+): boolean {
+  const effectiveMode = requestedMode || state?.state;
+  return effectiveMode === "heat_cool" && climateSupportsRangeTarget(state);
+}
+
+export function effectiveClimateHvacModeForEnsureOn(
+  state?: HassState,
+  requestedMode?: string,
+  target: "scalar" | "range" = "scalar",
+): string | undefined {
+  if (requestedMode) return requestedMode;
+  if (!state) return undefined;
+  if (state.state !== "off") return state.state;
+  const nonOffModes = climateSupportedModes(state).filter((mode) => mode !== "off");
+  if (target === "range") {
+    return nonOffModes.find((mode) => mode === "heat_cool");
+  }
+  return nonOffModes.find(
+    (mode) => !(mode === "heat_cool" && climateSupportsRangeTarget(state)),
+  ) ?? nonOffModes[0];
+}
+
+export function climateTargetCompatibleForEnsureOn(
+  state: HassState | undefined,
+  target: "scalar" | "range",
+  requestedMode?: string,
+): boolean {
+  const effectiveMode = effectiveClimateHvacModeForEnsureOn(state, requestedMode, target);
+  if (target === "range") {
+    return climateSupportsRangeTarget(state) && effectiveMode === "heat_cool";
+  }
+  return climateSupportsSingleTarget(state)
+    && !(effectiveMode === "heat_cool" && climateSupportsRangeTarget(state));
 }
 
 export function climateFanModeOptions(state?: HassState): string[] {

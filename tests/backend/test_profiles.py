@@ -28,6 +28,16 @@ from custom_components.velair.storage import convert_portable_temperature_data
 from custom_components.velair.temperature import CELSIUS, FAHRENHEIT
 
 
+def _available_hass(*entity_ids: str) -> FakeHass:
+    """Return a fake Home Assistant with explicit available climates."""
+    hass = FakeHass()
+    for entity_id in entity_ids:
+        hass.states[entity_id] = SimpleNamespace(
+            state="heat", attributes={"current_temperature": 20}
+        )
+    return hass
+
+
 def _profile(
     *,
     key: str = "away",
@@ -96,7 +106,7 @@ class ProfileNormalizationTest(unittest.TestCase):
             ["climate.salon"],
         )
         self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
-        self.assertEqual(data["version"], 3)
+        self.assertEqual(data["version"], 4)
 
         missing = normalize_schedule_data(
             {"global": {"mode": "auto", "active_profile_id": "missing"}, "profiles": [_profile()]},
@@ -181,7 +191,12 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         async def save() -> None:
             saves.append(True)
 
-        scheduler = VelairScheduler(FakeHass(), data, manager, save)
+        scheduler = VelairScheduler(
+            _available_hass("climate.salon", "climate.bedroom"),
+            data,
+            manager,
+            save,
+        )
         return scheduler, data, manager, saves
 
     async def test_activation_uses_profile_schedule_and_omitted_zone_normal(self) -> None:
@@ -227,6 +242,26 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
             manager.calls,
         )
 
+    async def test_activation_applies_profile_block_inherited_from_previous_day(
+        self,
+    ) -> None:
+        scheduler, _data, manager, _saves = self._scheduler()
+        profile = _profile(temperature=18)
+        schedule = profile["zones"]["climate.salon"]["schedule"]
+        schedule["monday"] = schedule["tuesday"]
+        schedule["tuesday"] = []
+        await scheduler.async_set_profile(profile)
+
+        await scheduler.async_activate_profile("away")
+
+        self.assertIn(
+            ("set_temperature", "climate.salon", 18.0, True, "heat"),
+            manager.calls,
+        )
+        event = scheduler.get_current_event("climate.salon")
+        self.assertEqual(event.weekday, "monday")
+        self.assertEqual(event.start, "17:00")
+
     async def test_updating_the_active_profile_reapplies_its_changed_schedule(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(temperature=18))
@@ -261,23 +296,22 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         manager.async_set_temperature = fail_salon
 
-        with self.assertLogs("custom_components.velair.scheduler", level="ERROR") as logs:
-            await scheduler.async_activate_profile("away")
+        await scheduler.async_activate_profile("away")
 
         self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertTrue(saves)
-        self.assertIn("Failed to apply profile behavior for climate.salon", logs.output[0])
         self.assertIn(
             ("set_temperature", "climate.bedroom", 19.0, True, "heat"),
             manager.calls,
         )
-        self.assertEqual(scheduler.operation_status["state"], "completed_with_errors")
+        self.assertEqual(scheduler.operation_status["state"], "completed")
         self.assertEqual(scheduler.operation_status["completed"], 2)
         self.assertEqual(scheduler.operation_status["total"], 2)
         self.assertEqual(
-            scheduler.operation_status["failed_entity_ids"],
+            scheduler.operation_status["deferred_entity_ids"],
             ["climate.salon"],
         )
+        self.assertEqual(scheduler.operation_status["failed_entity_ids"], [])
         self.assertIsNone(scheduler.operation_status["error_code"])
         self.assertIsNone(scheduler.operation_status["error_message"])
 
@@ -612,9 +646,15 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn(("turn_off", "climate.salon"), manager.calls)
 
-    async def test_startup_keeps_persisted_profile_without_forcing_climates_when_disabled(self) -> None:
+    async def test_startup_keeps_inherited_profile_without_forcing_when_disabled(
+        self,
+    ) -> None:
         scheduler, data, manager, _saves = self._scheduler()
-        await scheduler.async_set_profile(_profile(temperature=18))
+        profile = _profile(temperature=18)
+        schedule = profile["zones"]["climate.salon"]["schedule"]
+        schedule["monday"] = schedule["tuesday"]
+        schedule["tuesday"] = []
+        await scheduler.async_set_profile(profile)
         data["global_"]["active_profile_ids"] = ["away"]
         manager.calls.clear()
 
@@ -622,11 +662,17 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
         self.assertEqual(manager.calls, [])
-        self.assertEqual(scheduler.get_current_event("climate.salon").temperature, 18.0)
+        event = scheduler.get_current_event("climate.salon")
+        self.assertEqual(event.temperature, 18.0)
+        self.assertEqual(event.weekday, "monday")
 
-    async def test_startup_applies_persisted_profile_schedule_when_enabled(self) -> None:
+    async def test_startup_applies_inherited_profile_schedule_when_enabled(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
-        await scheduler.async_set_profile(_profile(temperature=18))
+        profile = _profile(temperature=18)
+        schedule = profile["zones"]["climate.salon"]["schedule"]
+        schedule["monday"] = schedule["tuesday"]
+        schedule["tuesday"] = []
+        await scheduler.async_set_profile(profile)
         data["global_"]["active_profile_ids"] = ["away"]
         manager.calls.clear()
 
@@ -673,6 +719,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
             entity_id="climate.salon",
             target_temperature=21.0,
             applied_temperature=23.0,
+            applied_offset=2.0,
             direction="heat",
             hvac_mode="heat",
             room_temperature_entity_id="sensor.salon_temperature",
@@ -738,6 +785,57 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
             data["zones"]["climate.bedroom"]["override"],
             bedroom_boost,
         )
+
+    async def test_active_profile_future_edit_preserves_boost_and_current_intent(
+        self,
+    ) -> None:
+        scheduler, data, manager, _saves = self._scheduler()
+        profile = _profile(temperature=18)
+        await scheduler.async_set_profile(profile)
+        await scheduler.async_activate_profile("away")
+        boost = {"type": "boost", "temperature": 23, "previous_state": {}}
+        data["zones"]["climate.salon"]["override"] = deepcopy(boost)
+        manager.calls.clear()
+        profile["zones"]["climate.salon"]["schedule"]["wednesday"] = [
+            {"start": "09:00", "temperature": 20, "hvac_mode": "heat"}
+        ]
+
+        await scheduler.async_set_profile(profile)
+
+        self.assertEqual(data["zones"]["climate.salon"]["override"], boost)
+        self.assertEqual(manager.calls, [])
+
+    async def test_active_profile_future_edit_preserves_room_assist_runtime(
+        self,
+    ) -> None:
+        scheduler, _data, manager, _saves = self._scheduler()
+        profile = _profile(temperature=18)
+        await scheduler.async_set_profile(profile)
+        await scheduler.async_activate_profile("away")
+        state = _RoomSensorAssistState(
+            entity_id="climate.salon",
+            target_temperature=18.0,
+            applied_temperature=20.0,
+            applied_offset=2.0,
+            direction="heat",
+            hvac_mode="heat",
+            room_temperature_entity_id="sensor.salon_temperature",
+            weekday="tuesday",
+            start="17:00",
+        )
+        scheduler._room_sensor_assist_states["climate.salon"] = state
+        manager.calls.clear()
+        profile["zones"]["climate.salon"]["schedule"]["wednesday"] = [
+            {"start": "09:00", "temperature": 20, "hvac_mode": "heat"}
+        ]
+
+        await scheduler.async_set_profile(profile)
+
+        self.assertIs(
+            scheduler._room_sensor_assist_states["climate.salon"],
+            state,
+        )
+        self.assertEqual(manager.calls, [])
 
     async def test_changing_profile_owner_clears_boost_with_identical_behavior(self) -> None:
         scheduler, data, _manager, _saves = self._scheduler()

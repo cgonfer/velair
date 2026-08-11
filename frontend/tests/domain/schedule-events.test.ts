@@ -59,6 +59,27 @@ describe("schedule event calculations", () => {
     });
   });
 
+  it("keeps both limits in events created from range blocks", () => {
+    const zone: ScheduleZone = {
+      enabled: true,
+      schedule: {
+        ...emptySchedule(),
+        monday: [{
+          action: ACTION_SET_TEMPERATURE,
+          start: "08:00",
+          hvac_mode: "heat_cool",
+          target_temp_low: 19,
+          target_temp_high: 24,
+        }],
+      },
+    };
+    expect(scheduledEventAt("climate.office", zone, new Date(2026, 5, 8, 13, 30))).toMatchObject({
+      temperature: null,
+      target_temp_low: 19,
+      target_temp_high: 24,
+    });
+  });
+
   it("skips disabled zones and invalid event times", () => {
     const zone: ScheduleZone = {
       enabled: true,

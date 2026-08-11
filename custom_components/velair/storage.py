@@ -315,10 +315,13 @@ def _convert_blocks(blocks: Any, source: str, target: str) -> None:
     if not isinstance(blocks, list):
         return
     for block in blocks:
-        if isinstance(block, dict) and isinstance(block.get("temperature"), (int, float)):
-            block["temperature"] = round(
-                absolute_temperature(block["temperature"], source, target), 6
-            )
+        if not isinstance(block, dict):
+            continue
+        for key in ("temperature", "target_temp_low", "target_temp_high"):
+            if isinstance(block.get(key), (int, float)):
+                block[key] = round(
+                    absolute_temperature(block[key], source, target), 6
+                )
 
 
 def _round_fahrenheit_defaults(data: dict[str, Any]) -> None:
@@ -334,10 +337,11 @@ def _round_fahrenheit_defaults(data: dict[str, Any]) -> None:
             if not isinstance(template, dict):
                 continue
             for block in template.get("blocks", []):
-                if isinstance(block, dict) and isinstance(
-                    block.get("temperature"), (int, float)
-                ):
-                    block["temperature"] = float(round(block["temperature"]))
+                if not isinstance(block, dict):
+                    continue
+                for key in ("temperature", "target_temp_low", "target_temp_high"):
+                    if isinstance(block.get(key), (int, float)):
+                        block[key] = float(round(block[key]))
 
     zones = data.get("zones")
     if not isinstance(zones, dict):
@@ -451,10 +455,11 @@ def _snap_migrated_editable_temperatures(
             if not isinstance(template, dict):
                 continue
             for block in template.get("blocks", []):
-                if isinstance(block, dict) and isinstance(block.get("temperature"), (int, float)):
-                    block["temperature"] = _nearest_step(
-                        block["temperature"], template_step or 0.1
-                    )
+                if not isinstance(block, dict):
+                    continue
+                for key in ("temperature", "target_temp_low", "target_temp_high"):
+                    if isinstance(block.get(key), (int, float)):
+                        block[key] = _nearest_step(block[key], template_step or 0.1)
 
     profiles = data.get("profiles")
     if isinstance(profiles, list):
@@ -478,14 +483,15 @@ def _snap_migrated_editable_temperatures(
                     if not isinstance(blocks, list):
                         continue
                     for block in blocks:
-                        if not isinstance(block, dict) or not isinstance(
-                            block.get("temperature"), (int, float)
-                        ):
+                        if not isinstance(block, dict):
                             continue
-                        bounded = max(first, min(last, float(block["temperature"])))
-                        block["temperature"] = max(
-                            first, min(last, _nearest_step(bounded, target_step))
-                        )
+                        for key in ("temperature", "target_temp_low", "target_temp_high"):
+                            if not isinstance(block.get(key), (int, float)):
+                                continue
+                            bounded = max(first, min(last, float(block[key])))
+                            block[key] = max(
+                                first, min(last, _nearest_step(bounded, target_step))
+                            )
 
     settings = data.get("settings")
     if isinstance(settings, dict):
@@ -521,11 +527,14 @@ def _snap_migrated_editable_temperatures(
             for blocks in schedule.values():
                 if isinstance(blocks, list):
                     for block in blocks:
-                        snap_target(block, "temperature")
+                        for key in ("temperature", "target_temp_low", "target_temp_high"):
+                            snap_target(block, key)
         override = zone.get("override")
-        snap_target(override, "temperature")
+        for key in ("temperature", "target_temp_low", "target_temp_high"):
+            snap_target(override, key)
         if isinstance(override, dict):
-            snap_target(override.get("previous_state"), "temperature")
+            for key in ("temperature", "target_temp_low", "target_temp_high"):
+                snap_target(override.get("previous_state"), key)
 
         comfort = zone.get("comfort")
         if isinstance(comfort, dict):
@@ -560,14 +569,17 @@ def _convert_scheduler_temperatures(
                 for blocks in schedule.values():
                     _convert_blocks(blocks, source, target)
             override = zone.get("override")
-            if isinstance(override, dict) and isinstance(override.get("temperature"), (int, float)):
-                override["temperature"] = round(absolute_temperature(override["temperature"], source, target), 6)
+            if isinstance(override, dict):
+                for key in ("temperature", "target_temp_low", "target_temp_high"):
+                    if isinstance(override.get(key), (int, float)):
+                        override[key] = round(absolute_temperature(override[key], source, target), 6)
             previous_state = override.get("previous_state") if isinstance(override, dict) else None
-            if isinstance(previous_state, dict) and isinstance(previous_state.get("temperature"), (int, float)):
-                previous_state["temperature"] = round(
-                    absolute_temperature(previous_state["temperature"], source, target),
-                    6,
-                )
+            if isinstance(previous_state, dict):
+                for key in ("temperature", "target_temp_low", "target_temp_high"):
+                    if isinstance(previous_state.get(key), (int, float)):
+                        previous_state[key] = round(
+                            absolute_temperature(previous_state[key], source, target), 6
+                        )
             pre = zone.get("preconditioning")
             if isinstance(pre, dict):
                 for key in ("minimum_delta_temperature", "room_sensor_assist_max_delta"):
@@ -614,6 +626,8 @@ def _convert_scheduler_temperatures(
                         continue
                     for key in (
                         "target_temp",
+                        "target_temp_low",
+                        "target_temp_high",
                         "initial_temp",
                         "observed_temp",
                         "outdoor_temp_start",

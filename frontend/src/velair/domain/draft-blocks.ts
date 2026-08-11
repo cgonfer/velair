@@ -6,6 +6,7 @@ type TemperatureErrorOptions = {
   maxTemperature: number;
   minTemperature: number;
   rangeError: string;
+  rangeOrderError?: string;
   stepError: string;
   temperatureStep?: number;
 };
@@ -22,9 +23,14 @@ export function draftBlocksFromScheduleBlocks(blocks: ScheduleBlock[], unit?: st
     const draft: DraftScheduleBlock = {
       action: block.action ?? ACTION_SET_TEMPERATURE,
       start: block.start,
-      temperature: Number(block.temperature ?? defaultTargetTemperature(unit)),
       hvac_mode: block.hvac_mode ?? "",
     };
+    if (block.target_temp_low != null || block.target_temp_high != null) {
+      draft.target_temp_low = block.target_temp_low ?? "";
+      draft.target_temp_high = block.target_temp_high ?? "";
+    } else {
+      draft.temperature = Number(block.temperature ?? defaultTargetTemperature(unit));
+    }
     if (block.fan_mode) {
       draft.fan_mode = block.fan_mode;
     }
@@ -46,12 +52,18 @@ export function draftBlocksFromScheduleBlocks(blocks: ScheduleBlock[], unit?: st
 
 export function addDraftBlock(blocks: DraftScheduleBlock[], nextStart: string, unit?: string): DraftScheduleBlock[] {
   const lastBlock = blocks[blocks.length - 1];
+  const target = draftBlockUsesRange(lastBlock)
+    ? {
+        target_temp_low: lastBlock?.target_temp_low ?? "",
+        target_temp_high: lastBlock?.target_temp_high ?? "",
+      }
+    : { temperature: Number(lastBlock?.temperature || defaultTargetTemperature(unit)) };
   return [
     ...blocks,
     {
       action: ACTION_SET_TEMPERATURE,
       start: nextStart,
-      temperature: Number(lastBlock?.temperature || defaultTargetTemperature(unit)),
+      ...target,
       hvac_mode: "",
     },
   ];
@@ -99,25 +111,33 @@ export function draftBlockTemperatureError(
     return undefined;
   }
 
-  const rawValue = String(block.temperature ?? "").trim();
-  if (!rawValue || !/^\d+(\.\d+)?$/.test(rawValue)) {
-    return options.rangeError;
+  const values = draftBlockUsesRange(block)
+    ? [block.target_temp_low, block.target_temp_high]
+    : [block.temperature];
+  const parsed: number[] = [];
+  for (const value of values) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue || !/^-?\d+(\.\d+)?$/.test(rawValue)) {
+      return options.rangeError;
+    }
+    const temperature = Number(rawValue);
+    if (
+      !Number.isFinite(temperature)
+      || temperature < options.minTemperature
+      || temperature > options.maxTemperature
+    ) {
+      return options.rangeError;
+    }
+    if (
+      options.temperatureStep !== undefined
+      && Math.abs(temperature / options.temperatureStep - Math.round(temperature / options.temperatureStep)) > 0.0001
+    ) {
+      return options.stepError;
+    }
+    parsed.push(temperature);
   }
-
-  const temperature = Number(rawValue);
-  if (
-    !Number.isFinite(temperature) ||
-    temperature < options.minTemperature ||
-    temperature > options.maxTemperature
-  ) {
-    return options.rangeError;
-  }
-
-  if (
-    options.temperatureStep !== undefined
-    && Math.abs(temperature / options.temperatureStep - Math.round(temperature / options.temperatureStep)) > 0.0001
-  ) {
-    return options.stepError;
+  if (parsed.length === 2 && parsed[0] > parsed[1]) {
+    return options.rangeOrderError ?? options.rangeError;
   }
 
   return undefined;
@@ -160,8 +180,13 @@ export function normalizeDraftBlocks(
     const normalizedBlock: ScheduleBlock = {
       action: ACTION_SET_TEMPERATURE,
       start,
-      temperature: Number(block.temperature),
     };
+    if (draftBlockUsesRange(block)) {
+      normalizedBlock.target_temp_low = Number(block.target_temp_low);
+      normalizedBlock.target_temp_high = Number(block.target_temp_high);
+    } else {
+      normalizedBlock.temperature = Number(block.temperature);
+    }
 
     if (block.hvac_mode) {
       normalizedBlock.hvac_mode = block.hvac_mode;
@@ -201,15 +226,25 @@ export function clampBlocksToTemperatureLimits(
   maxTemperature: number,
 ): ScheduleBlock[] {
   return blocks.map((block) => {
-    if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF || block.temperature == null) {
+    if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF) {
       return { ...block };
     }
-
-    return {
-      ...block,
-      temperature: Math.min(maxTemperature, Math.max(minTemperature, Number(block.temperature))),
-    };
+    const clamped = { ...block };
+    if (block.temperature != null) {
+      clamped.temperature = Math.min(maxTemperature, Math.max(minTemperature, Number(block.temperature)));
+    }
+    if (block.target_temp_low != null) {
+      clamped.target_temp_low = Math.min(maxTemperature, Math.max(minTemperature, Number(block.target_temp_low)));
+    }
+    if (block.target_temp_high != null) {
+      clamped.target_temp_high = Math.min(maxTemperature, Math.max(minTemperature, Number(block.target_temp_high)));
+    }
+    return clamped;
   });
+}
+
+export function draftBlockUsesRange(block?: Pick<DraftScheduleBlock, "target_temp_low" | "target_temp_high">): boolean {
+  return Boolean(block && (block.target_temp_low !== undefined || block.target_temp_high !== undefined));
 }
 
 export function firstUnsupportedModeBlock(

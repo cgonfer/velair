@@ -888,6 +888,25 @@ export const comfortStyles = css`
     width: 100%;
   }
 
+  .comfort-config-label {
+    box-sizing: border-box;
+    position: relative;
+    width: 100%;
+  }
+
+  .comfort-config-label .comfort-help {
+    position: static;
+  }
+
+  .comfort-config-label .comfort-help-tooltip {
+    bottom: auto;
+    left: 0;
+    max-width: 100%;
+    right: 0;
+    top: calc(100% + 6px);
+    width: auto;
+  }
+
   .comfort-number-field {
     flex: 1 1 0;
   }

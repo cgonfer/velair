@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
-import { applySelectedDayToZones, clampBlocksForEntity, saveSelectedDay } from "../../src/velair/controllers/schedule-actions";
-import type { ScheduleBlock, ScheduleResponse } from "../../src/velair/types";
+import { applySelectedDayToZones, clampBlocksForEntity, saveSelectedDay, unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
+import type { DraftScheduleBlock, ScheduleBlock, ScheduleResponse } from "../../src/velair/types";
 
 const response = { configured_entities: [], zones: {}, settings: { first_weekday: "monday", zone_order: [] } } as unknown as ScheduleResponse;
 
@@ -47,7 +47,7 @@ function host(normalizedBlocks: ScheduleBlock[] = [{ action: ACTION_SET_TEMPERAT
     },
     _t: (key: string, replacements?: Record<string, string | number>) => replacements ? `${key}:${JSON.stringify(replacements)}` : key,
     _temperatureError: () => undefined,
-    _unsupportedModeError(blocks: Array<Pick<ScheduleBlock, "action" | "hvac_mode" | "start">>, entityId: string) {
+    _unsupportedModeError(blocks: Array<ScheduleBlock | DraftScheduleBlock>, entityId: string) {
       const unsupported = blocks.find((block) => block.hvac_mode && !this._climateSupportedModes(entityId).includes(block.hvac_mode));
       return unsupported ? `unsupported ${unsupported.hvac_mode} for ${entityId}` : undefined;
     },
@@ -56,6 +56,71 @@ function host(normalizedBlocks: ScheduleBlock[] = [{ action: ACTION_SET_TEMPERAT
 }
 
 describe("schedule actions controller", () => {
+  it("accepts supported range modes and Keep on an active range-only climate", () => {
+    const { state } = host();
+    (state as any).hass = {
+      states: {
+        "climate.office": {
+          state: "heat_cool",
+          attributes: { supported_features: 2 },
+        },
+      },
+    };
+    state._climateSupportedModes = () => ["heat", "cool", "heat_cool", "off"];
+
+    expect(unsupportedModeError(state as any, [
+      { action: ACTION_SET_TEMPERATURE, start: "08:00", hvac_mode: "heat_cool" },
+    ], "climate.office")).toBeUndefined();
+    expect(unsupportedModeError(state as any, [
+      { action: ACTION_SET_TEMPERATURE, start: "08:00" },
+    ], "climate.office")).toBeUndefined();
+  });
+
+  it("rejects a target shape not supported by the climate", () => {
+    const { state } = host();
+    (state as any).hass = {
+      states: {
+        "climate.office": { attributes: { friendly_name: "Office", supported_features: 2 } },
+      },
+    };
+    state._climateSupportedModes = () => ["heat_cool"];
+
+    expect(unsupportedModeError(state as any, [{
+      action: ACTION_SET_TEMPERATURE,
+      start: "08:00",
+      temperature: 21,
+      hvac_mode: "heat_cool",
+    }], "climate.office")).toContain("unsupportedSingleTargetForClimate");
+
+    (state as any).hass.states["climate.office"].attributes.supported_features = 1;
+    expect(unsupportedModeError(state as any, [{
+      action: ACTION_SET_TEMPERATURE,
+      start: "08:00",
+      target_temp_low: 19,
+      target_temp_high: 24,
+    }], "climate.office")).toContain("unsupportedRangeTargetForClimate");
+  });
+
+  it("rejects a scalar target in range-capable heat/cool mode", () => {
+    const { state } = host();
+    (state as any).hass = {
+      states: {
+        "climate.office": {
+          state: "heat_cool",
+          attributes: { friendly_name: "Office", supported_features: 3 },
+        },
+      },
+    };
+    state._climateSupportedModes = () => ["heat", "cool", "heat_cool", "off"];
+
+    expect(unsupportedModeError(state as any, [{
+      action: ACTION_SET_TEMPERATURE,
+      start: "08:00",
+      temperature: 22,
+      hvac_mode: "heat_cool",
+    }], "climate.office")).toContain("unsupportedSingleTargetForClimate");
+  });
+
   it("saves the selected day through the API and clears dirty state", async () => {
     const { api, state } = host();
 

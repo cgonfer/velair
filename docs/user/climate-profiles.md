@@ -55,8 +55,24 @@ also be cloned to one or more other weekdays in the same zone. The copied
 blocks keep their complete climate configuration, including supported HVAC,
 fan, preset, swing, and humidity options.
 
+From an edited Alternate schedule day, **Save as template** stores only a
+reusable template through the backend and leaves the unsaved Profile draft
+unchanged. To reuse the day in other managed climates, select them in the
+**Clone day to / Other thermostats** panel and choose **Clone**. The confirmation
+summarizes the selected climates and identifies any Default or Pause zones that
+will change to Alternate schedule. Cloning replaces only the matching weekday,
+preserves all other remembered days, and remains part of the Profile draft.
+Velair validates target type, HVAC mode, optional settings, temperature limits,
+and temperature step for every selected climate first; if one target is
+incompatible, none of the draft changes. Cloned days are persisted only when
+the Profile is saved.
+
 Each profile day uses the same editable timeline as default schedules and
 templates, including drag and resize interactions for adjusting block times.
+Schedule blocks have a start time but no separate end time, so the last block
+continues across midnight and empty weekdays until another block starts. The
+timeline represents the inherited part of the day with a distinct, non-editable
+segment and identifies the weekday where that block is actually configured.
 While a Profile remains open for editing, temporarily changing a zone from
 **Alternate schedule** to **Default schedule** or **Pause** keeps its draft
 weekly schedule. Selecting **Alternate schedule** again restores those
@@ -137,7 +153,8 @@ active set with that Profile and changes the Mode to **Manual**, while
 **Default** means that no alternate Profile is active. Profiles can also be
 activated with the play button in the profile list. Velair applies
 the block that is active at the current time instead of waiting for the next
-scheduled boundary.
+scheduled boundary. This includes the latest block from an earlier day when no
+new block has started yet in the current day.
 
 Direct activation never adds a Profile to the existing set, even when its zones
 would not overlap. Zones controlled by the previous Mode or Profile set but not

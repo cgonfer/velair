@@ -16,15 +16,13 @@ export function incompatibleScheduleTargetCount(
     const [minimum, maximum] = limitsFor(entityId);
     for (const blocks of Object.values(zone.schedule)) {
       for (const block of blocks) {
-        const temperature = block.temperature;
-        if (typeof temperature !== "number" || !Number.isFinite(temperature)) {
-          continue;
-        }
-        const outsideRange = temperature < minimum || temperature > maximum;
-        const offGrid = Math.abs(
-          temperature / step - Math.round(temperature / step),
-        ) > GRID_TOLERANCE;
-        if (outsideRange || offGrid) {
+        const targets = [block.temperature, block.target_temp_low, block.target_temp_high]
+          .filter((temperature): temperature is number => typeof temperature === "number" && Number.isFinite(temperature));
+        if (targets.some((temperature) => (
+          temperature < minimum
+          || temperature > maximum
+          || Math.abs(temperature / step - Math.round(temperature / step)) > GRID_TOLERANCE
+        ))) {
           count += 1;
         }
       }

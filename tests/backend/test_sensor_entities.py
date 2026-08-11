@@ -245,6 +245,31 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
+    def test_active_target_exposes_range_without_inventing_scalar_value(self) -> None:
+        event = helpers.models_module.ClimateEvent(
+            entity_id="climate.living_room",
+            when=datetime(2026, 7, 9, 7, 0, tzinfo=timezone.utc),
+            temperature=None,
+            target_temp_low=20,
+            target_temp_high=24,
+            weekday="thursday",
+            start="07:00",
+            action=helpers.ACTION_SET_TEMPERATURE,
+            hvac_mode="heat_cool",
+        )
+        scheduler = SimpleNamespace(get_active_target_event=lambda _entity_id: event)
+        sensor = sensor_module.ZoneActiveTargetTemperatureSensor(
+            self._entry(scheduler, ["climate.living_room"]),
+            "climate.living_room",
+            temperature_unit="Â°C",
+            zone_name="Living room",
+        )
+
+        self.assertIsNone(sensor.native_value)
+        self.assertIsNone(sensor.extra_state_attributes["temperature"])
+        self.assertEqual(sensor.extra_state_attributes["target_temp_low"], 20)
+        self.assertEqual(sensor.extra_state_attributes["target_temp_high"], 24)
+
     def test_next_event_sensor_exposes_apply_and_target_times(self) -> None:
         event = helpers.models_module.ClimateEvent(
             entity_id="climate.bedroom",
@@ -471,7 +496,10 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
                 "status": "assisting",
                 "room_temperature_entity_id": "sensor.room_temperature",
                 "target_temperature": 21,
-                "applied_temperature": 23,
+                "applied_temperature": 21,
+                "applied_offset": 1,
+                "calculated_temperature": 24,
+                "scheduled_target_guard": "heating_ceiling",
                 "assist_delta": 2,
                 "direction": "heat",
                 "hvac_mode": "heat",
@@ -491,10 +519,53 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             {
                 "room_temperature_entity_id": "sensor.room_temperature",
                 "target_temperature": 21,
-                "applied_temperature": 23,
+                "applied_temperature": 21,
+                "applied_offset": 1,
+                "calculated_temperature": 24,
+                "scheduled_target_guard": "heating_ceiling",
                 "assist_delta": 2,
                 "direction": "heat",
                 "hvac_mode": "heat",
+            },
+        )
+
+    def test_room_assist_exposes_native_range_context_without_scalar_offset(self) -> None:
+        scheduler = SimpleNamespace(
+            get_room_sensor_assist_status=lambda entity_id: {
+                "status": "holding",
+                "room_temperature_entity_id": "sensor.room_temperature",
+                "target_temp_low": 20,
+                "target_temp_high": 24,
+                "applied_target_temp_low": 19.5,
+                "applied_target_temp_high": 23.5,
+                "climate_target_temp_low": 19.5,
+                "climate_target_temp_high": 23.5,
+                "range_shift": -0.5,
+                "applied_offset": None,
+                "assist_delta": 0,
+                "direction": None,
+                "hvac_mode": "heat_cool",
+            },
+        )
+        entry = self._entry(scheduler, ["climate.living_room"])
+        sensor = sensor_module.ZoneRoomAssistStateSensor(
+            entry,
+            "climate.living_room",
+        )
+
+        self.assertEqual(sensor.native_value, "holding")
+        self.assertEqual(
+            sensor.extra_state_attributes,
+            {
+                "room_temperature_entity_id": "sensor.room_temperature",
+                "target_temp_low": 20,
+                "target_temp_high": 24,
+                "applied_target_temp_low": 19.5,
+                "applied_target_temp_high": 23.5,
+                "climate_target_temp_low": 19.5,
+                "climate_target_temp_high": 23.5,
+                "range_shift": -0.5,
+                "hvac_mode": "heat_cool",
             },
         )
 

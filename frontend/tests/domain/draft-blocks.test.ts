@@ -17,6 +17,7 @@ const temperatureError = (block: DraftScheduleBlock) =>
     maxTemperature: 25,
     minTemperature: 10,
     rangeError: "range",
+    rangeOrderError: "order",
     stepError: "step",
     temperatureStep: 0.5,
   });
@@ -74,6 +75,50 @@ describe("draft block domain", () => {
     expect(normalize([
       { action: ACTION_SET_TEMPERATURE, hvac_mode: "heat", start: "08:00", temperature: 20.25 },
     ])).toEqual({ ok: false, error: "invalid-temperature:08:00:step" });
+  });
+
+  it("normalizes temperature ranges without sending a scalar target", () => {
+    expect(normalize([{
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: "19",
+      target_temp_high: "24",
+    }])).toEqual({
+      ok: true,
+      blocks: [{
+        action: ACTION_SET_TEMPERATURE,
+        hvac_mode: "heat_cool",
+        start: "08:00",
+        target_temp_low: 19,
+        target_temp_high: 24,
+      }],
+    });
+    expect(temperatureError({
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: 24,
+      target_temp_high: 19,
+    })).toBe("order");
+  });
+
+  it("copies and clamps both limits of a temperature range", () => {
+    const range = {
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: 5,
+      target_temp_high: 35,
+    };
+    expect(addDraftBlock([range], "12:00")[1]).toMatchObject({
+      target_temp_low: 5,
+      target_temp_high: 35,
+    });
+    expect(clampBlocksToTemperatureLimits([range], 10, 30)[0]).toMatchObject({
+      target_temp_low: 10,
+      target_temp_high: 30,
+    });
   });
 
   it("validates temperature steps against the zero-anchored grid", () => {

@@ -20,6 +20,7 @@ from custom_components.velair.storage import (
     VelairStorage,
     _entity_target_grid,
     _nearest_step,
+    convert_portable_temperature_data,
 )
 from custom_components.velair.temperature import (
     CELSIUS,
@@ -181,6 +182,147 @@ class TemperatureCodecTests(unittest.TestCase):
             _entity_target_grid(hass, "climate.room", FAHRENHEIT),
             (41.0, 95.0, None),
         )
+
+    def test_new_range_and_learning_fields_round_trip_between_units(self) -> None:
+        data = {
+            "zones": {
+                "climate.room": {
+                    "schedule": {
+                        "monday": [
+                            {
+                                "start": "06:00",
+                                "target_temp_low": 20,
+                                "target_temp_high": 24,
+                            }
+                        ]
+                    },
+                    "override": {
+                        "target_temp_low": 19,
+                        "target_temp_high": 23,
+                        "previous_state": {
+                            "target_temp_low": 18,
+                            "target_temp_high": 22,
+                        },
+                    },
+                    "preconditioning": {
+                        "minimum_delta_temperature": 0.5,
+                        "room_sensor_assist_max_delta": 3,
+                        "fallback_minutes_per_degree": 25,
+                    },
+                }
+            },
+            "templates": [
+                {
+                    "key": "range",
+                    "blocks": [
+                        {
+                            "start": "07:00",
+                            "target_temp_low": 20,
+                            "target_temp_high": 24,
+                        }
+                    ],
+                }
+            ],
+            "profiles": [
+                {
+                    "key": "home",
+                    "zones": {
+                        "climate.room": {
+                            "behavior": "schedule",
+                            "schedule": {
+                                "monday": [
+                                    {
+                                        "start": "08:00",
+                                        "target_temp_low": 19,
+                                        "target_temp_high": 23,
+                                    }
+                                ]
+                            },
+                        }
+                    },
+                }
+            ],
+            "preconditioning_learning": {
+                "climate.room": {
+                    "heat": {
+                        "observations": [
+                            {
+                                "target_temp": 20,
+                                "target_temp_low": 20,
+                                "target_temp_high": 24,
+                                "target_boundary": "low",
+                                "initial_temp": 18,
+                                "observed_temp": 20,
+                                "delta_t": 2,
+                            }
+                        ]
+                    }
+                }
+            },
+        }
+
+        fahrenheit = convert_portable_temperature_data(
+            data, CELSIUS, FAHRENHEIT, None
+        )
+        round_trip = convert_portable_temperature_data(
+            fahrenheit, FAHRENHEIT, CELSIUS, None
+        )
+
+        zone = fahrenheit["zones"]["climate.room"]
+        self.assertEqual(
+            (
+                zone["schedule"]["monday"][0]["target_temp_low"],
+                zone["schedule"]["monday"][0]["target_temp_high"],
+            ),
+            (68, 75.2),
+        )
+        self.assertEqual(
+            (
+                zone["override"]["target_temp_low"],
+                zone["override"]["target_temp_high"],
+                zone["override"]["previous_state"]["target_temp_low"],
+                zone["override"]["previous_state"]["target_temp_high"],
+            ),
+            (66.2, 73.4, 64.4, 71.6),
+        )
+        self.assertAlmostEqual(
+            zone["preconditioning"]["minimum_delta_temperature"], 0.9
+        )
+        self.assertAlmostEqual(
+            zone["preconditioning"]["room_sensor_assist_max_delta"], 5.4
+        )
+        self.assertAlmostEqual(
+            zone["preconditioning"]["fallback_minutes_per_degree"],
+            25 * 5 / 9,
+        )
+        self.assertEqual(
+            (
+                fahrenheit["templates"][0]["blocks"][0]["target_temp_low"],
+                fahrenheit["templates"][0]["blocks"][0]["target_temp_high"],
+            ),
+            (68, 75.2),
+        )
+        profile_block = fahrenheit["profiles"][0]["zones"]["climate.room"][
+            "schedule"
+        ]["monday"][0]
+        self.assertEqual(
+            (profile_block["target_temp_low"], profile_block["target_temp_high"]),
+            (66.2, 73.4),
+        )
+        observation = fahrenheit["preconditioning_learning"]["climate.room"][
+            "heat"
+        ]["observations"][0]
+        self.assertEqual(
+            (
+                observation["target_temp"],
+                observation["target_temp_low"],
+                observation["target_temp_high"],
+                observation["delta_t"],
+                observation["target_boundary"],
+            ),
+            (68, 68, 75.2, 3.6, "low"),
+        )
+        self.assertEqual(round_trip, data)
 
 
 class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
@@ -420,6 +562,9 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
             "observations"
         ][0]
         observation["target_temp"] = 20.123456
+        observation["target_temp_low"] = 20
+        observation["target_temp_high"] = 24
+        observation["target_boundary"] = "low"
         state = SimpleNamespace(attributes={"min_temp": 41.04, "max_temp": 95})
         storage = make_storage(FAHRENHEIT, raw)
         storage._hass.states = SimpleNamespace(get=lambda _entity_id: state)
@@ -439,6 +584,12 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
             ][0]["target_temp"],
             68.222221,
         )
+        converted_observation = storage.data["preconditioning_learning"][
+            "climate.room"
+        ]["heat"]["observations"][0]
+        self.assertEqual(converted_observation["target_temp_low"], 68)
+        self.assertEqual(converted_observation["target_temp_high"], 75.2)
+        self.assertEqual(converted_observation["target_boundary"], "low")
 
         raw_boundary = runtime_celsius_data()
         raw_boundary["zones"]["climate.room"]["schedule"]["monday"][0][

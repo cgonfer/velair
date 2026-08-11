@@ -7,6 +7,7 @@ import {
   climateProfileAccentColor,
   climateProfileValidationError,
   cloneProfileScheduleDay,
+  cloneProfileDayToClimates,
   createClimateProfileDraft,
   effectiveClimateSchedule,
   nextProfileBlockStart,
@@ -185,6 +186,65 @@ describe("climate profiles domain", () => {
         }],
       },
     });
+  });
+
+  it("atomically clones one weekday to climates while preserving remembered schedules", () => {
+    let draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.source", "schedule");
+    draft = withProfileZoneBehavior(draft, "climate.default", "schedule");
+    const defaultZone = draft.zones["climate.default"];
+    if (defaultZone.behavior !== "schedule") throw new Error("Expected schedule");
+    defaultZone.schedule.tuesday = [{ action: "turn_off", start: "22:00" }];
+    draft = withProfileZoneBehavior(draft, "climate.default", "normal");
+    draft = withProfileZoneBehavior(draft, "climate.paused", "schedule");
+    const pausedZone = draft.zones["climate.paused"];
+    if (pausedZone.behavior !== "schedule") throw new Error("Expected schedule");
+    pausedZone.schedule.wednesday = [{ action: "set_temperature", start: "09:00", temperature: "19" }];
+    draft = withProfileZoneBehavior(draft, "climate.paused", "pause");
+    const source = draft.zones["climate.source"];
+    if (source.behavior !== "schedule") throw new Error("Expected schedule");
+    source.schedule.monday = [{ action: "set_temperature", start: "08:00", target_temp_low: "18", target_temp_high: "24", hvac_mode: "heat_cool", fan_mode: "auto" }];
+
+    const cloned = cloneProfileDayToClimates(draft, "climate.source", "monday", ["climate.default", "climate.paused"]);
+    for (const entityId of ["climate.default", "climate.paused"]) {
+      const zone = cloned.zones[entityId];
+      expect(zone.behavior).toBe("schedule");
+      if (zone.behavior !== "schedule") throw new Error("Expected schedule");
+      expect(zone.schedule.monday).toEqual(source.schedule.monday);
+      expect(zone.schedule.monday).not.toBe(source.schedule.monday);
+    }
+    const defaultResult = cloned.zones["climate.default"];
+    const pausedResult = cloned.zones["climate.paused"];
+    if (defaultResult.behavior !== "schedule" || pausedResult.behavior !== "schedule") throw new Error("Expected schedules");
+    expect(defaultResult.schedule.tuesday).toEqual([{ action: "turn_off", start: "22:00" }]);
+    expect(pausedResult.schedule.wednesday[0].temperature).toBe("19");
+    expect(cloned.rememberedSchedules["climate.default"].tuesday).toEqual(defaultResult.schedule.tuesday);
+    cloned.rememberedSchedules["climate.default"].monday[0].fan_mode = "quiet";
+    expect(defaultResult.schedule.monday[0].fan_mode).toBe("auto");
+    expect(draft.zones["climate.default"]).toBeUndefined();
+  });
+
+  it("keeps a range target exclusive when converting a profile draft", () => {
+    const draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "schedule");
+    draft.name = "Balanced";
+    const zone = draft.zones["climate.office"];
+    if (zone.behavior === "schedule") {
+      zone.schedule.monday = [{
+        action: "set_temperature",
+        start: "08:00",
+        hvac_mode: "heat_cool",
+        target_temp_low: "19",
+        target_temp_high: "24",
+      }];
+    }
+
+    const inputZone = climateProfileInput(draft).zones["climate.office"];
+    expect(inputZone).toMatchObject({
+      behavior: "schedule",
+      schedule: { monday: [{ target_temp_low: 19, target_temp_high: 24 }] },
+    });
+    if (inputZone.behavior === "schedule") {
+      expect(inputZone.schedule.monday[0]?.temperature).toBeUndefined();
+    }
   });
 
   it("validates icon syntax and creates a unique default name", () => {

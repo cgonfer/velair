@@ -11,6 +11,7 @@ import {
   currentTemperature,
   overviewNextEvents,
   pauseDetailText,
+  todayWeekday,
 } from "../../src/velair/controllers/overview-data";
 import type { ScheduleResponse } from "../../src/velair/types";
 
@@ -61,6 +62,14 @@ const baseData = (until: string): ScheduleResponse => ({
 });
 
 describe("overview data controller", () => {
+  it("resolves today's weekday in the Home Assistant timezone with a safe fallback", () => {
+    const instant = new Date("2026-08-10T00:30:00Z");
+    expect(todayWeekday({ config: { time_zone: "America/Los_Angeles" } } as never, instant))
+      .toBe("sunday");
+    expect(todayWeekday({ config: { time_zone: "Not/A_Timezone" } } as never, instant))
+      .toBe(todayWeekday(undefined, instant));
+  });
+
   it("finds active boost and pause entities separately", () => {
     const state = host(baseData(new Date(Date.now() + 3_600_000).toISOString()));
 
@@ -77,6 +86,13 @@ describe("overview data controller", () => {
     expect(boostDetailText(state, "climate.office", { hvac_mode: "heat", temperature: 23, type: "boost", until })).toBe(
       "23 °C - heat - boostUntil: 90 min",
     );
+    expect(boostDetailText(state, "climate.office", {
+      hvac_mode: "heat_cool",
+      target_temp_low: 19,
+      target_temp_high: 24,
+      type: "boost",
+      until,
+    })).toBe("19–24 °C - heat_cool - boostUntil: 90 min");
     expect(pauseDetailText(state, {
       started_at: new Date(2026, 5, 8, 9, 0).toISOString(),
       type: "pause",

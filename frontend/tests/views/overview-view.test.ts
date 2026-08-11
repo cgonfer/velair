@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
 import { html, render } from "lit";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { overviewStyles } from "../../src/velair/styles/overview-styles";
+import { timelineStyles } from "../../src/velair/styles/timeline-styles";
 import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
 import { translationTemplate } from "../../src/velair/translations/template";
@@ -31,7 +32,9 @@ function host() {
     _hvacActionLabel: (action: string) => `action:${action}`,
     _modeLabel: (mode: string) => `mode:${mode}`,
     _nextEventChangeRevision: 1,
+    _shortWeekdayName: (weekday: string) => weekday.slice(0, 3),
     _t: (key: string, params?: Record<string, string>) => `${key}${Object.values(params ?? {}).join("")}`,
+    _weekdayName: (weekday: string) => weekday,
   } as unknown as VelairViewHost;
 }
 
@@ -96,6 +99,36 @@ describe("overview next events", () => {
       "overviewZoneRoom19.5 °C",
       "overviewZoneTarget21 °C",
     ]);
+  });
+
+  it("ignores stale range attributes outside heat/cool mode", () => {
+    const container = document.createElement("div");
+    const overviewHost = {
+      ...host(),
+      _formatTemperature: (value: number) => `${value} Â°C`,
+      hass: {
+        states: {
+          "climate.office": {
+            state: "heat",
+            attributes: {
+              current_temperature: 19.5,
+              temperature: 21,
+              target_temp_low: 18,
+              target_temp_high: 24,
+            },
+          },
+        },
+      },
+      _data: { zones: { "climate.office": { enabled: true, schedule: {} } } },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+    const metrics = [...container.querySelectorAll(".overview-zone-metric")].map(
+      (node) => node.textContent,
+    );
+    expect(metrics).toContain("overviewZoneTarget21 Â°C");
+    expect(container.textContent).not.toContain("18–24");
   });
 
   it("does not bypass null temperatures from an authoritative zone runtime", () => {
@@ -206,7 +239,7 @@ describe("overview next events", () => {
     expect(container.querySelector(".room-assist")?.textContent).not.toContain("+1 °C");
   });
 
-  it("shows a cooling Room Assist offset with a negative sign while holding", () => {
+  it("shows the signed applied Room Assist offset while holding", () => {
     const container = document.createElement("div");
     const overviewHost = { ...host(), _formatTemperature: (value: number) => `${value} °C`, _data: {
       zones: { "climate.office": { enabled: true, schedule: {} } },
@@ -217,8 +250,9 @@ describe("overview next events", () => {
         climate_temperature: 25,
         target_temperature: 24,
         climate_target_temperature: 22,
+        applied_offset: -2,
         assist_delta: 2,
-        direction: "cool",
+        direction: "heat",
       } },
     } } as unknown as VelairViewHost;
 
@@ -228,6 +262,57 @@ describe("overview next events", () => {
       .toContain("-2 °C");
     expect(container.querySelector(".room-assist")?.textContent).toContain("overviewZoneRoomAssistHolding");
     expect(container.querySelector(".room-assist")?.textContent).not.toContain("-2 °C");
+  });
+
+  it("identifies scheduled target protection in the compact Room Assist signal", () => {
+    const container = document.createElement("div");
+    const overviewHost = { ...host(), _formatTemperature: (value: number) => `${value}`, _data: {
+      zones: { "climate.office": { enabled: true, schedule: {} } },
+      zone_runtime: { "climate.office": { state: "scheduled" } },
+      room_sensor_assist: { "climate.office": {
+        status: "holding",
+        room_temperature: 21,
+        climate_temperature: 19,
+        target_temperature: 22,
+        applied_temperature: 22,
+        calculated_temperature: 20,
+        scheduled_target_guard: "cooling_floor",
+        direction: "cool",
+      } },
+    } } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+    expect(container.querySelector(".room-assist")?.textContent)
+      .toContain("overviewZoneRoomAssistGuarded");
+  });
+
+  it("shows scheduled and applied Room Assist ranges with their signed shift", () => {
+    const container = document.createElement("div");
+    const overviewHost = { ...host(), _formatTemperature: (value: number) => `${value} Â°C`, _data: {
+      zones: { "climate.office": { enabled: true, schedule: {} } },
+      zone_runtime: { "climate.office": { state: "scheduled" } },
+      room_sensor_assist: { "climate.office": {
+        status: "assisting",
+        room_temperature: 18,
+        climate_temperature: 19,
+        target_temp_low: 20,
+        target_temp_high: 24,
+        applied_target_temp_low: 21,
+        applied_target_temp_high: 25,
+        range_shift: 1,
+        applied_offset: 9,
+        direction: "heat",
+      } },
+    } } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+    expect(container.textContent).toContain("overviewZoneScheduledRange20–24 Â°C");
+    expect(container.textContent).toContain("overviewZoneAppliedRange21–25 Â°C");
+    expect(container.querySelector(".overview-assist-offset")?.textContent)
+      .toContain("overviewZoneRangeShift+1 Â°C");
+    expect(container.textContent).not.toContain("overviewZoneOffset9 Â°C");
   });
 
   it("keeps a compact status structure without a fixed heading or empty context row", () => {
@@ -859,6 +944,15 @@ describe("overview next events", () => {
 });
 
 describe("overview timeline", () => {
+  it("keeps editor carry-over informational while Overview carry-over is interactive", () => {
+    expect(timelineStyles.cssText).toMatch(
+      /\.timeline-block\.timeline-carry-over,[\s\S]*pointer-events:\s*none/,
+    );
+    expect(timelineStyles.cssText).toMatch(
+      /\.overview-timeline-block\.overview-timeline-carry-over\s*\{[^}]*cursor:\s*pointer[^}]*pointer-events:\s*auto/,
+    );
+  });
+
   it("uses the shared climate name style", () => {
     const container = document.createElement("div");
     const timelineHost = {
@@ -892,6 +986,82 @@ describe("overview timeline", () => {
     expect(container.querySelector(".overview-timeline-empty")?.textContent).toBe("noBlocks");
   });
 
+  it("renders an interactive carry-over with source, target, and mode details", () => {
+    const container = document.createElement("div");
+    const showDetail = vi.fn();
+    const timelineHost = {
+      ...host(),
+      _currentTimelineNow: () => new Date("2026-08-04T12:00:00"),
+      _formatTemperature: (value: number) => `${value} C`,
+      _showOverviewTimelineDetail: showDetail,
+      _data: { zones: { "climate.office": { enabled: true, schedule: {} } } },
+    } as unknown as VelairViewHost;
+    const week = {
+      monday: [{ start: "22:00", action: "set_temperature", temperature: 19, hvac_mode: "heat" }],
+      tuesday: [{ start: "06:00", action: "set_temperature", temperature: 21 }],
+    };
+
+    render(renderOverviewTimelineTrack(
+      timelineHost,
+      "climate.office",
+      week.tuesday,
+      week,
+      "tuesday",
+    ), container);
+
+    const carry = container.querySelector(".overview-timeline-carry-over");
+    expect(carry?.tagName).toBe("BUTTON");
+    expect(carry?.getAttribute("type")).toBe("button");
+    expect(carry?.getAttribute("title")).toContain("timelineContinuesFrommontime:22:00");
+    expect(carry?.getAttribute("title")).toContain("19");
+    expect(carry?.getAttribute("title")).toContain("heat");
+    expect(carry?.getAttribute("aria-label")).toBe(carry?.getAttribute("title"));
+    expect(carry?.textContent).toContain("heat");
+    expect(carry?.getAttribute("style")).toContain("width: 25%");
+    expect(container.querySelectorAll("button.overview-timeline-block")).toHaveLength(2);
+
+    (carry as HTMLButtonElement).click();
+    expect(showDetail).toHaveBeenCalledWith(
+      "climate.office",
+      carry?.getAttribute("title"),
+      12.5,
+      expect.any(Event),
+    );
+  });
+
+  it("uses Home Assistant time for the selected day, carry-over, and now marker", () => {
+    const container = document.createElement("div");
+    const timelineHost = {
+      ...host(),
+      hass: { config: { time_zone: "America/Los_Angeles" } },
+      _currentTimelineNow: () => new Date("2026-08-10T00:30:00Z"),
+      _data: {
+        configured_entities: ["climate.office"],
+        global: { mode: "auto", active_profile_ids: [] },
+        zones: {
+          "climate.office": {
+            enabled: true,
+            schedule: {
+              saturday: [{ start: "23:00", action: "turn_off" }],
+              sunday: [{ start: "06:00", action: "set_temperature", temperature: 18 }],
+              monday: [{ start: "07:00", action: "set_temperature", temperature: 25 }],
+            },
+          },
+        },
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewTimelines(timelineHost, ["climate.office"]), container);
+
+    expect(container.querySelector(".overview-timeline-now-label")?.textContent?.trim()).toBe("17:30");
+    expect(container.querySelector(".overview-timeline-carry-over")?.getAttribute("title"))
+      .toContain("timelineContinuesFromsattime:23:00");
+    expect(container.querySelector(".overview-timeline-block:not(.overview-timeline-carry-over)")?.getAttribute("title"))
+      .toContain("time:06:00");
+    expect(container.querySelector(".overview-timeline-block:not(.overview-timeline-carry-over)")?.getAttribute("title"))
+      .not.toContain("time:07:00");
+  });
+
   it("renders the active profile schedule and identifies affected zones", () => {
     const container = document.createElement("div");
     const week = (start: string, temperature: number) => Object.fromEntries([
@@ -921,9 +1091,13 @@ describe("overview timeline", () => {
 
     expect(container.querySelector(".overview-timeline-name.profiled ha-icon")?.getAttribute("icon"))
       .toBe("mdi:briefcase-outline");
-    expect(container.querySelector(".overview-timeline-block")?.getAttribute("title"))
+    expect(container.querySelector(".overview-timeline-carry-over")?.getAttribute("title"))
+      .toContain("18 °C");
+    expect(container.querySelector(".overview-timeline-carry-over")?.getAttribute("title"))
+      .not.toContain("21 °C");
+    expect(container.querySelector(".overview-timeline-block:not(.overview-timeline-carry-over)")?.getAttribute("title"))
       .toContain("time:09:00");
-    expect(container.querySelector(".overview-timeline-block")?.getAttribute("title"))
+    expect(container.querySelector(".overview-timeline-block:not(.overview-timeline-carry-over)")?.getAttribute("title"))
       .not.toContain("time:08:00");
   });
 

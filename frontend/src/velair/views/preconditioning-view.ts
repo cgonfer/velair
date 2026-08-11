@@ -398,6 +398,7 @@ function renderPreconditioningPrediction(
           <small>${host._t("preconditioningTargetBy")}</small>
           <strong>${host._formatDateTime(targetWhen)}</strong>
           <span>${host._formatEventAction(event)}</span>
+          ${renderPredictionRangeBoundary(host, event, direction)}
           <span>${host._formatEventMode(event)}</span>
         </div>
       </div>
@@ -405,6 +406,35 @@ function renderPreconditioningPrediction(
         ? renderPreconditioningCalculationDetails(host, event.preconditioning_diagnostics)
         : nothing}
     </section>
+  `;
+}
+
+function renderPredictionRangeBoundary(
+  host: PreconditioningViewHost,
+  event: ScheduleEvent,
+  direction: "heat" | "cool",
+) {
+  if (!hasTemperatureRange(event)) {
+    return nothing;
+  }
+  const diagnosticBoundary = event.preconditioning_diagnostics?.boundary_temperature;
+  const boundaryTemperature = typeof diagnosticBoundary === "number"
+    ? diagnosticBoundary
+    : direction === "heat"
+      ? event.target_temp_low
+      : event.target_temp_high;
+  if (typeof boundaryTemperature !== "number") {
+    return nothing;
+  }
+  return html`
+    <small class="preconditioning-range-boundary">
+      ${host._t(
+        direction === "heat"
+          ? "preconditioningPredictionLowerBoundary"
+          : "preconditioningPredictionUpperBoundary",
+        { temperature: host._formatTemperature(boundaryTemperature, event.entity_id) },
+      )}
+    </small>
   `;
 }
 
@@ -542,8 +572,17 @@ function nextPreconditioningEvent(
   return (host._data?.next_events ?? []).find((event) =>
     event.entity_id === entityId
     && preconditioningEventDirection(event) === direction
-    && typeof event.temperature === "number"
+    && hasPreconditioningTarget(event)
   );
+}
+
+function hasPreconditioningTarget(event: ScheduleEvent): boolean {
+  return typeof event.temperature === "number" || hasTemperatureRange(event);
+}
+
+function hasTemperatureRange(event: ScheduleEvent): boolean {
+  return typeof event.target_temp_low === "number"
+    && typeof event.target_temp_high === "number";
 }
 
 function preconditioningEventDirection(event: ScheduleEvent): "heat" | "cool" | undefined {

@@ -77,8 +77,9 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
           {
             "start": "06:00",
             "action": "set_temperature",
-            "temperature": 21,
-            "hvac_mode": "heat",
+            "target_temp_low": 20,
+            "target_temp_high": 24,
+            "hvac_mode": "heat_cool",
             "fan_mode": "quiet",
             "preset_mode": "eco",
             "swing_mode": "vertical",
@@ -132,14 +133,29 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
       "enabled": true,
       "configured": true,
       "room_temperature_entity_id": "sensor.living_room_temperature",
-      "target_temperature": 21,
-      "applied_temperature": 22.5,
-      "climate_target_temperature": 22.5,
+      "target_temperature": null,
+      "target_temp_low": 20,
+      "target_temp_high": 24,
+      "applied_temperature": null,
+      "applied_target_temp_low": 21,
+      "applied_target_temp_high": 25,
+      "climate_target_temperature": null,
+      "climate_target_temp_low": 21,
+      "climate_target_temp_high": 25,
       "room_temperature": 19.8,
       "climate_temperature": 20.5,
-      "assist_delta": 1.2,
+      "assist_delta": 0.2,
+      "applied_offset": null,
+      "range_shift": 1.0,
+      "limited_by": null,
+      "limit_temperature": null,
+      "requested_temperature": null,
+      "calculated_temperature": null,
+      "scheduled_target_guard": null,
+      "requested_target_temp_low": null,
+      "requested_target_temp_high": null,
       "direction": "heat",
-      "hvac_mode": "heat",
+      "hvac_mode": "heat_cool",
       "weekday": "monday",
       "start": "06:00"
     }
@@ -157,9 +173,11 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
     "climate.living_room": {
       "state": "scheduled",
       "room_temperature": 19.8,
-      "target_temperature": 21,
-      "applied_temperature": 22.5,
-      "hvac_mode": "heat",
+      "target_temperature": null,
+      "target_temp_low": 20,
+      "target_temp_high": 24,
+      "applied_temperature": null,
+      "hvac_mode": "heat_cool",
       "active_from": "2026-05-19T06:00:00+00:00",
       "target_when": null
     }
@@ -206,10 +224,10 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 5,
+    "portable_model": 6,
     "storage": 1,
-    "model": 3,
-    "integration": "1.5.0"
+    "model": 4,
+    "integration": "1.6.0-beta.1"
   }
 }
 ```
@@ -258,11 +276,24 @@ clients.
 
 `next_event` is the scheduler's earliest due action. `next_events` is the UI-oriented list of the next visible event per managed climate, sorted by apply time; preconditioning events include `target_when` so the panel can show both the early start and the comfort target time.
 
+Preconditioned native ranges remain an exclusive target union: serialized
+events include both `target_temp_low` and `target_temp_high` and leave
+`temperature` null. Their diagnostics expose `target_kind: "range"`, the
+effective `target_boundary` (`low` or `high`), and `boundary_temperature`.
+Scalar events retain `target_kind: "scalar"` and `target_boundary:
+"temperature"`.
+
 `preconditioning_learning` is local runtime/storage status used by the panel. It can be included explicitly in portable exports and is never sent outside Home Assistant by Velair. Direction statuses are `learning`, `ready`, or `unsupported` when the climate does not report a compatible HVAC mode. A direction is `ready` when it has at least 5 complete local samples; before that, Adaptive predictions use the initial event-specific model.
 
 The actual lead is calculated per future event from the current temperature delta and the selected local model source (`initial_model` or `history`).
 
 Stored observations are trimmed per climate direction. `learning_history_size` limits useful `complete` and `partial` samples, while only the 10 newest `invalid` diagnostic samples are retained separately. Invalid samples cannot evict useful learning history. Heat and cool keep separate local histories, so seasonal cooling samples cannot evict heating samples, and heating samples cannot evict cooling samples.
+
+Range observations use the effective boundary in the existing `target_temp`
+field and may add `target_temp_low`, `target_temp_high`, and `target_boundary`.
+These fields are optional so existing stored and portable observations remain
+valid. Temperature migration converts both optional boundaries as absolute
+temperatures.
 
 `comfort` is the local runtime Environmental Comfort assessment. It contains the human environmental `condition`, independent CO2 `air_quality`, `data_quality`, `data_issues`, and raw metric payloads. Opening or refreshing the panel does not emit comfort automation events.
 
@@ -302,8 +333,9 @@ await hass.connection.sendMessagePromise({
     {
       start: "06:00",
       action: "set_temperature",
-      temperature: 21,
-      hvac_mode: "heat",
+      target_temp_low: 20,
+      target_temp_high: 24,
+      hvac_mode: "heat_cool",
       fan_mode: "quiet",
       preset_mode: "eco"
     },
@@ -314,7 +346,13 @@ await hass.connection.sendMessagePromise({
 
 If `action` is omitted, the backend treats the block as `set_temperature` for compatibility with older schedules.
 
-Temperature blocks may include optional climate settings: `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode`, and `humidity`. The scheduler filters these fields against the target climate capabilities before persisting or applying them. Unsupported fields are dropped; `turn_off` blocks never keep optional climate settings.
+Temperature blocks contain either `temperature`, or the complete
+`target_temp_low` and `target_temp_high` pair. The two representations are
+mutually exclusive. Blocks may also include optional climate settings:
+`fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode`, and
+`humidity`. The scheduler filters these fields against the target climate
+capabilities before persisting or applying them. Unsupported fields are
+dropped; `turn_off` blocks never keep target or optional climate settings.
 
 ## Copy Day Schedule
 
@@ -429,9 +467,23 @@ Preconditioning is adaptive. The scheduler predicts a lead for each concrete fut
 
 Outdoor temperature context is optional and local. In the Preconditioning tab, `outdoor_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Velair reads the selected sensor's numeric state, stores it with learning samples, and uses it only to compare similar preconditioning samples once enough history exists. It does not call external weather services and does not apply fixed weather-based adjustments to the initial model.
 
-Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust the target sent to the thermostat by at most `room_sensor_assist_max_delta` while the real scheduled target remains unchanged. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
+Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. `room_sensor_assist_max_delta` caps the active scalar or range-boundary correction. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native-range holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
+
+When the thermostat's physical minimum or maximum changes the target that Room
+Assist actually applied, `limited_by` is `minimum` or `maximum` and
+`limit_temperature` identifies that boundary. Scalar status then includes
+`requested_temperature`; native ranges instead include
+`requested_target_temp_low` and `requested_target_temp_high`. These optional
+fields are `null` when the last applied runtime target was not limited.
+
+For scalar targets, `scheduled_target_guard` is `cooling_floor` or
+`heating_ceiling` when the scheduled target prevented a non-driving calculation
+from crossing onto the demanding side. `calculated_temperature` contains the
+step-aligned candidate before that protection, while `applied_temperature`
+remains the target actually sent. Both fields are optional and runtime-only;
+clients must treat their absence as an unguarded or older compatible payload.
 
 See [Adaptive preconditioning](adaptive-preconditioning.md) for the full learning lifecycle, input/output examples, prediction rules, storage behavior, and known limitations. See [Room Assist](room-assist.md) for the room sensor assistance lifecycle, target calculation, runtime status, restoration behavior, and events.
 
@@ -597,7 +649,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 5,
+  "model_version": 6,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -658,3 +710,9 @@ This deletes all stored Velair data, including schedules, templates, panel prefe
 - `operation_recovery_required`: data was persisted, but runtime cleanup or option updates failed. The scheduler remains stopped until the integration is reloaded or Home Assistant restarts.
 - `temperature_migration_required`: thermal writes remain stopped until the stored unit is resolved.
 - `temperature_migration_failed`: the migration could not be persisted; its write guard was released and scheduling remains governed by the still-stored unit metadata.
+
+Climate actions use blocking Home Assistant calls so explicit invocation
+failures are observable. Scheduler-owned intentions may complete later through
+bounded runtime recovery; delayed attempts always resolve current backend state
+instead of replaying the original service payload. Manual temperature actions
+remain one-shot and report an unavailable or rejected call to their caller.

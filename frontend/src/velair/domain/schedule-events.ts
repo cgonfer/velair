@@ -74,6 +74,8 @@ export function scheduleEventFromBlock(
     when: eventWhen.toISOString(),
     action: block.action ?? ACTION_SET_TEMPERATURE,
     temperature: block.temperature ?? null,
+    target_temp_low: block.target_temp_low ?? null,
+    target_temp_high: block.target_temp_high ?? null,
     hvac_mode: block.hvac_mode ?? null,
     weekday,
     start: block.start,

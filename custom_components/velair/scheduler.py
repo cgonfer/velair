@@ -6,13 +6,14 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 import logging
 import math
 from typing import Literal
 from uuid import uuid4
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_time,
@@ -20,6 +21,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .climate_delivery import ClimateDeliveryCoordinator, CurrentGuard, Delivery
 from .climate_manager import ClimateManager
 from .const import (
     ACTION_SET_TEMPERATURE,
@@ -29,6 +31,8 @@ from .const import (
     ATTR_PRESET_MODE,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     DOMAIN,
     EVENT_TYPE_BOOST_ENDED,
     EVENT_TYPE_BOOST_STARTED,
@@ -82,6 +86,7 @@ from .models import (
     validate_modes,
     normalize_comfort_data,
     normalize_preconditioning_data,
+    temperature_target_from_mapping,
     preconditioning_observations_for_direction,
     predict_preconditioning_lead,
     trim_preconditioning_observations,
@@ -92,6 +97,10 @@ from .temperature import (
     absolute_temperature,
     state_temperature_unit,
     temperature_delta,
+)
+from .room_assist_notifications import (
+    async_dismiss_room_assist_limit_notification,
+    async_notify_room_assist_limit,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -121,6 +130,7 @@ HVAC_MODE_LABELS_ES = {
 PRECONDITIONING_HEATING_MODES = {"heat"}
 PRECONDITIONING_COOLING_MODES = {"cool"}
 PRECONDITIONING_AUTO_MODES = {"auto", "heat_cool"}
+RANGE_TARGET_HVAC_MODES = {"heat_cool"}
 PRECONDITIONING_REPLAN_DEBOUNCE = timedelta(seconds=30)
 PRECONDITIONING_REPLAN_MIN_TEMPERATURE_CHANGE = 0.2
 
@@ -136,10 +146,24 @@ class _PreconditioningSession:
     weekday: str
     start: str
     target_temperature: float
+    target_kind: Literal["scalar", "range"]
+    target_boundary: Literal["temperature", "low", "high"]
     start_temperature: float
     hvac_mode: str | None
     startup_minutes: int
     outdoor_temp_start: float | None
+    target_temp_low: float | None = None
+    target_temp_high: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedPreconditioningTarget:
+    """One scalar prediction boundary resolved from a scalar or range target."""
+
+    kind: Literal["scalar", "range"]
+    direction: Literal["heat", "cool"]
+    boundary_temperature: float
+    boundary: Literal["temperature", "low", "high"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,13 +171,54 @@ class _RoomSensorAssistState:
     """Runtime-only state for one assisted climate target."""
 
     entity_id: str
-    target_temperature: float
-    applied_temperature: float
-    direction: str
+    target_temperature: float | None
+    applied_temperature: float | None
+    applied_offset: float | None
+    direction: str | None
     hvac_mode: str | None
     room_temperature_entity_id: str
     weekday: str | None
     start: str | None
+    target_temp_low: float | None = None
+    target_temp_high: float | None = None
+    applied_target_temp_low: float | None = None
+    applied_target_temp_high: float | None = None
+    range_shift: float | None = None
+    limited_by: Literal["minimum", "maximum"] | None = None
+    limit_temperature: float | None = None
+    requested_temperature: float | None = None
+    calculated_temperature: float | None = None
+    scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None = None
+    requested_target_temp_low: float | None = None
+    requested_target_temp_high: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _RoomSensorAssistTargetResult:
+    """Calculated scalar target before and after physical climate limits."""
+
+    applied_temperature: float
+    assist_delta: float
+    applied_offset: float
+    requested_temperature: float
+    calculated_temperature: float
+    scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None
+    limited_by: Literal["minimum", "maximum"] | None
+    limit_temperature: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class _RoomSensorAssistRangeResult:
+    """Calculated range target before and after physical climate limits."""
+
+    applied_low: float
+    applied_high: float
+    assist_delta: float
+    range_shift: float
+    requested_low: float
+    requested_high: float
+    limited_by: Literal["minimum", "maximum"] | None
+    limit_temperature: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,11 +238,13 @@ class VelairScheduler:
         data: SchedulerData,
         climate_manager: ClimateManager,
         async_save_data: Callable[[], Awaitable[None]],
+        climate_delivery: ClimateDeliveryCoordinator | None = None,
     ) -> None:
         """Initialize the scheduler."""
         self._hass = hass
         self._data = data
         self._climate_manager = climate_manager
+        self._climate_delivery = climate_delivery or ClimateDeliveryCoordinator(hass)
         self._async_save_data = async_save_data
         self._unsub_timer: CALLBACK_TYPE | None = None
         self._unsub_preconditioning_listener: CALLBACK_TYPE | None = None
@@ -195,7 +262,13 @@ class VelairScheduler:
         self._preconditioning_replan_temperatures: dict[str, float] = {}
         self._preconditioning_plan_snapshots: dict[str, tuple] = {}
         self._room_sensor_assist_states: dict[str, _RoomSensorAssistState] = {}
+        self._room_sensor_assist_inflight: dict[str, _RoomSensorAssistState] = {}
         self._room_sensor_assist_entities: tuple[str, ...] = ()
+        self._room_sensor_assist_locks: dict[str, asyncio.Lock] = {}
+        self._room_sensor_assist_generations: dict[str, int] = {}
+        self._room_sensor_assist_suppressed: set[str] = set()
+        self._room_sensor_assist_limit_notifications: dict[str, tuple[object, ...]] = {}
+        self._room_sensor_assist_notification_cleanup_done: set[str] = set()
         self._comfort_entities: tuple[str, ...] = ()
         self._comfort_assessment_snapshots: dict[str, tuple[object, ...]] = {}
         self.next_event: ClimateEvent | None = None
@@ -203,6 +276,7 @@ class VelairScheduler:
         self.next_events_by_zone: list[ClimateEvent] = []
         self._next_event_by_entity: dict[str, ClimateEvent] = {}
         self._temperature_migration_blocked = False
+        self._stopped = False
         self._profile_mutation_lock = asyncio.Lock()
         self._operation_status: OperationStatus | None = None
 
@@ -223,6 +297,14 @@ class VelairScheduler:
 
     async def async_start(self, *, apply_current_schedule: bool = False) -> None:
         """Start scheduling events."""
+        self._stopped = False
+        for entity_id in sorted(self._data["zones"]):
+            if entity_id in self._room_sensor_assist_notification_cleanup_done:
+                continue
+            if await async_dismiss_room_assist_limit_notification(
+                self._hass, entity_id
+            ):
+                self._room_sensor_assist_notification_cleanup_done.add(entity_id)
         if self._temperature_migration_blocked:
             self.async_schedule_next_event()
             return
@@ -232,15 +314,26 @@ class VelairScheduler:
 
     async def async_stop(self) -> None:
         """Stop scheduling events."""
-        await self._async_clear_room_sensor_assist(restore=True, reason="scheduler_stopped")
-        self._clear_timer()
-        self._clear_preconditioning_sessions()
-        self._clear_preconditioning_replan_listener()
-        self._clear_preconditioning_replan_timer()
-        self._clear_room_sensor_assist_listener()
-        self._clear_room_sensor_assist_timer()
-        self._clear_comfort_listener()
-        self._preconditioning_plan_snapshots.clear()
+        self._stopped = True
+        for entity_id in self._data["zones"]:
+            self._invalidate_climate_delivery(entity_id)
+        try:
+            await self._async_clear_room_sensor_assist(
+                restore=True, reason="scheduler_stopped"
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Failed to restore Room Assist while stopping the scheduler"
+            )
+        finally:
+            self._clear_timer()
+            self._clear_preconditioning_sessions()
+            self._clear_preconditioning_replan_listener()
+            self._clear_preconditioning_replan_timer()
+            self._clear_room_sensor_assist_listener()
+            self._clear_room_sensor_assist_timer()
+            self._clear_comfort_listener()
+            self._preconditioning_plan_snapshots.clear()
 
     def handle_temperature_unit_change(self) -> None:
         """Discard unit-bound runtime caches and rebuild scheduler projections."""
@@ -267,10 +360,11 @@ class VelairScheduler:
         *,
         hvac_mode: str | None = None,
         source: str = "current_schedule",
-    ) -> None:
+    ) -> bool:
         """Apply the effective profile behavior or last schedule block now."""
-        if self._temperature_migration_blocked:
-            return
+        if self._temperature_migration_blocked or self._stopped:
+            return False
+        delivery_success = True
         now = dt_util.now()
         target_entities = (
             [entity_id] if entity_id is not None else list(self._data["zones"])
@@ -289,35 +383,39 @@ class VelairScheduler:
             behavior = self._profile_zone_behavior(target_entity_id)
             if behavior["behavior"] == "pause":
                 if behavior.get("action") == ZONE_PAUSE_ACTION_TURN_OFF:
-                    await self._climate_manager.async_turn_off(target_entity_id)
-                    self._async_fire_climate_target_applied_data(
-                        {
-                            "entity_id": target_entity_id,
-                            "action": ACTION_TURN_OFF,
-                            "temperature": None,
-                            "hvac_mode": None,
-                            "weekday": None,
-                            "start": None,
-                            "source": source,
-                        }
+                    applied = await self._async_apply_event(
+                        ClimateEvent(
+                            entity_id=target_entity_id,
+                            when=now,
+                            temperature=None,
+                            weekday=None,
+                            start=None,
+                            action=ACTION_TURN_OFF,
+                        ),
+                        source=source,
                     )
+                    delivery_success = delivery_success and applied
                 continue
 
             event = current_events.get(target_entity_id)
             if event is None:
                 continue
 
-            await self._async_apply_event(
+            applied = await self._async_apply_event(
                 event,
                 hvac_mode=hvac_mode or event.hvac_mode,
                 source=source,
             )
+            delivery_success = delivery_success and applied
+        return delivery_success
 
     async def async_set_temperature(
         self,
         entity_id: str,
-        temperature: float,
+        temperature: float | None,
         *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
         ensure_on: bool = False,
         fan_mode: str | None = None,
         hvac_mode: str | None = None,
@@ -331,7 +429,38 @@ class VelairScheduler:
         """Apply a manual temperature."""
         if self._temperature_migration_blocked:
             raise ValueError("Temperature migration must be resolved before changing targets")
-        temperature = self.normalize_target_temperature(entity_id, temperature)
+        target = temperature_target_from_mapping(
+            {
+                **({"temperature": temperature} if temperature is not None else {}),
+                **(
+                    {ATTR_TARGET_TEMP_LOW: target_temp_low}
+                    if target_temp_low is not None
+                    else {}
+                ),
+                **(
+                    {ATTR_TARGET_TEMP_HIGH: target_temp_high}
+                    if target_temp_high is not None
+                    else {}
+                ),
+            }
+        )
+        normalized_target = {
+            key: self.normalize_target_temperature(entity_id, value)
+            for key, value in target.items()
+        }
+        if (
+            ATTR_TARGET_TEMP_LOW in normalized_target
+            and normalized_target[ATTR_TARGET_TEMP_LOW]
+            > normalized_target[ATTR_TARGET_TEMP_HIGH]
+        ):
+            raise ValueError("target_temp_low must not be greater than target_temp_high")
+        is_range = ATTR_TARGET_TEMP_LOW in normalized_target
+        self._climate_manager.validate_temperature_target(
+            entity_id,
+            range_target=is_range,
+            hvac_mode=hvac_mode,
+            ensure_on=ensure_on,
+        )
         climate_options = self._climate_options_for_entity(
             entity_id,
             _climate_options(
@@ -342,37 +471,71 @@ class VelairScheduler:
                 swing_horizontal_mode=swing_horizontal_mode,
             ),
         )
+        if self._temperature_migration_blocked:
+            raise ValueError("Temperature migration must be resolved before changing targets")
+        self._invalidate_climate_delivery(entity_id)
         await self._async_clear_room_sensor_assist(
             entity_id,
             restore=False,
             reason="manual_target",
         )
-        if self._temperature_migration_blocked:
-            raise ValueError("Temperature migration must be resolved before changing targets")
-        await self._climate_manager.async_set_temperature(
+
+        def resolve_manual() -> Delivery:
+            async def apply() -> None:
+                if "temperature" in normalized_target:
+                    await self._climate_manager.async_set_temperature(
+                        entity_id,
+                        normalized_target["temperature"],
+                        ensure_on=ensure_on,
+                        hvac_mode=hvac_mode,
+                        **climate_options,
+                    )
+                else:
+                    await self._climate_manager.async_set_temperature_range(
+                        entity_id,
+                        normalized_target[ATTR_TARGET_TEMP_LOW],
+                        normalized_target[ATTR_TARGET_TEMP_HIGH],
+                        ensure_on=ensure_on,
+                        hvac_mode=hvac_mode,
+                        **climate_options,
+                    )
+
+            async def commit(is_current: CurrentGuard) -> None:
+                if not is_current():
+                    return
+                if log_action:
+                    await self._async_log_climate_temperature(
+                        entity_id,
+                        normalized_target.get("temperature"),
+                        target_temp_low=normalized_target.get(ATTR_TARGET_TEMP_LOW),
+                        target_temp_high=normalized_target.get(ATTR_TARGET_TEMP_HIGH),
+                        hvac_mode=hvac_mode,
+                        scheduled=False,
+                    )
+                if not is_current():
+                    return
+                if event_source is not None:
+                    self._async_fire_climate_target_applied_data(
+                        {
+                            "entity_id": entity_id,
+                            "action": ACTION_SET_TEMPERATURE,
+                            **normalized_target,
+                            "hvac_mode": hvac_mode,
+                            **climate_options,
+                            "source": event_source,
+                        }
+                    )
+
+            return Delivery(apply, commit)
+
+        applied = await self._climate_delivery.async_deliver(
             entity_id,
-            temperature,
-            ensure_on=ensure_on,
-            hvac_mode=hvac_mode,
-            **climate_options,
+            resolve_manual,
+            resilient=False,
         )
-        if log_action:
-            await self._async_log_climate_temperature(
-                entity_id,
-                temperature,
-                hvac_mode=hvac_mode,
-                scheduled=False,
-            )
-        if event_source is not None:
-            self._async_fire_climate_target_applied_data(
-                {
-                    "entity_id": entity_id,
-                    "action": ACTION_SET_TEMPERATURE,
-                    "temperature": temperature,
-                    "hvac_mode": hvac_mode,
-                    **climate_options,
-                    "source": event_source,
-                }
+        if not applied:
+            raise HomeAssistantError(
+                f"Cannot apply manual target while {entity_id} is unavailable"
             )
 
     async def async_set_mode(
@@ -389,23 +552,45 @@ class VelairScheduler:
             )
         previous_mode = self._data["global_"]["mode"]
         previous_paused_until = self._data["global_"].get("paused_until")
-        if mode != MODE_AUTO:
-            self._clear_preconditioning_sessions()
-            await self._async_clear_room_sensor_assist(
-                restore=True,
-                reason="scheduler_mode_changed",
-            )
-        self._data["global_"]["mode"] = mode
-        self._data["global_"]["paused_until"] = paused_until
-        self._data["global_"]["paused_started_at"] = (
-            dt_util.now().isoformat()
-            if mode == MODE_PAUSED and paused_until is not None
-            else None
+        previous_paused_started_at = self._data["global_"].get("paused_started_at")
+        previous_preconditioning_sessions = deepcopy(
+            self._preconditioning_sessions
         )
-        await self._async_save_data()
+        intent_changed = (
+            previous_mode != mode or previous_paused_until != paused_until
+        )
+        if intent_changed:
+            for entity_id in self._data["zones"]:
+                self._invalidate_climate_delivery(entity_id)
+        try:
+            if mode != MODE_AUTO:
+                self._clear_preconditioning_sessions()
+                await self._async_clear_room_sensor_assist(
+                    restore=True,
+                    reason="scheduler_mode_changed",
+                )
+            self._data["global_"]["mode"] = mode
+            self._data["global_"]["paused_until"] = paused_until
+            self._data["global_"]["paused_started_at"] = (
+                dt_util.now().isoformat()
+                if mode == MODE_PAUSED and paused_until is not None
+                else None
+            )
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["global_"]["mode"] = previous_mode
+            self._data["global_"]["paused_until"] = previous_paused_until
+            self._data["global_"]["paused_started_at"] = previous_paused_started_at
+            self._preconditioning_sessions = previous_preconditioning_sessions
+            if previous_mode == MODE_AUTO:
+                for entity_id in self._data["zones"]:
+                    await self._async_restore_delivery_after_failed_mutation(
+                        entity_id
+                    )
+            raise
         self.async_schedule_next_event()
 
-        if previous_mode != mode or previous_paused_until != paused_until:
+        if intent_changed:
             self._async_fire_scheduler_mode_changed(
                 mode,
                 previous_mode=previous_mode,
@@ -427,14 +612,17 @@ class VelairScheduler:
 
         override = self._get_active_zone_override(entity_id, dt_util.now())
         if _is_boost_override(override):
+            target = temperature_target_from_mapping(override)
             return ClimateEvent(
                 entity_id=entity_id,
                 when=dt_util.now(),
-                temperature=float(override["temperature"]),
+                temperature=target.get("temperature"),
                 weekday="override",
                 start=override["type"],
                 action=ACTION_SET_TEMPERATURE,
                 hvac_mode=override.get("hvac_mode"),
+                target_temp_low=target.get(ATTR_TARGET_TEMP_LOW),
+                target_temp_high=target.get(ATTR_TARGET_TEMP_HIGH),
                 **_climate_options_from_mapping(override),
             )
         if _is_pause_override(override):
@@ -619,11 +807,16 @@ class VelairScheduler:
 
         climate_state = self._hass.states.get(entity_id)
         reported_target_temperature = self._climate_target_temperature(entity_id)
+        reported_target_range = self._climate_target_range(entity_id)
         target_temperature = (
             event.temperature if event is not None else reported_target_temperature
         )
         if _is_boost_override(override):
-            target_temperature = float(override["temperature"])
+            target_temperature = (
+                float(override["temperature"])
+                if "temperature" in override
+                else None
+            )
         applied_temperature = assist.get("applied_temperature")
         if not isinstance(applied_temperature, int | float):
             applied_temperature = reported_target_temperature
@@ -636,6 +829,14 @@ class VelairScheduler:
             "applied_temperature": applied_temperature,
             "hvac_mode": self._current_hvac_mode(entity_id),
         }
+        if event is not None and getattr(event, "target_temp_low", None) is not None:
+            result["target_temp_low"] = event.target_temp_low
+            result["target_temp_high"] = event.target_temp_high
+        elif _is_boost_override(override) and ATTR_TARGET_TEMP_LOW in override:
+            result["target_temp_low"] = override[ATTR_TARGET_TEMP_LOW]
+            result["target_temp_high"] = override[ATTR_TARGET_TEMP_HIGH]
+        elif event is None and not _is_boost_override(override) and reported_target_range:
+            result["target_temp_low"], result["target_temp_high"] = reported_target_range
         if event is not None:
             result["target_when"] = event.target_when.isoformat() if event.target_when else None
             result["active_from"] = event.when.isoformat()
@@ -796,9 +997,19 @@ class VelairScheduler:
         for block in blocks:
             next_block = block.copy()
             if next_block.get("action", ACTION_SET_TEMPERATURE) != ACTION_TURN_OFF:
-                next_block["temperature"] = self.normalize_target_temperature(
-                    entity_id, float(next_block["temperature"])
-                )
+                for key in ("temperature", ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+                    if key in next_block:
+                        next_block[key] = self.normalize_target_temperature(
+                            entity_id, float(next_block[key])
+                        )
+                if (
+                    ATTR_TARGET_TEMP_LOW in next_block
+                    and next_block[ATTR_TARGET_TEMP_LOW]
+                    > next_block[ATTR_TARGET_TEMP_HIGH]
+                ):
+                    raise ValueError(
+                        "target_temp_low must not be greater than target_temp_high"
+                    )
             snapped.append(next_block)
         return snapped
 
@@ -812,16 +1023,65 @@ class VelairScheduler:
             if block.get("action", ACTION_SET_TEMPERATURE) == ACTION_TURN_OFF:
                 continue
 
-            temperature = block.get("temperature")
-            if temperature is None:
-                raise ValueError(f"Missing temperature for {block['start']}")
-
-            self.ensure_temperature_in_limits(entity_id, float(temperature))
+            target = temperature_target_from_mapping(block)
+            for temperature in target.values():
+                self.ensure_temperature_in_limits(entity_id, float(temperature))
+            validate_target = getattr(
+                self._climate_manager, "validate_temperature_target", None
+            )
+            if callable(validate_target):
+                validate_target(
+                    entity_id,
+                    range_target=ATTR_TARGET_TEMP_LOW in target,
+                    hvac_mode=block.get("hvac_mode"),
+                    ensure_on=True,
+                )
+            if ATTR_TARGET_TEMP_LOW in target:
+                explicit_mode = block.get("hvac_mode")
+                if explicit_mode is not None and explicit_mode not in RANGE_TARGET_HVAC_MODES:
+                    raise ValueError(
+                        f"{entity_id} cannot use a temperature range in "
+                        f"{explicit_mode} mode"
+                    )
+                supports_range = getattr(
+                    self._climate_manager, "supports_temperature_range_target", None
+                )
+                if not callable(supports_range) or not supports_range(entity_id):
+                    raise ValueError(
+                        f"{entity_id} does not support a temperature range target"
+                    )
+            else:
+                supports_single = getattr(
+                    self._climate_manager, "supports_single_temperature_target", None
+                )
+                if callable(supports_single) and not supports_single(
+                    entity_id, block.get("hvac_mode"), ensure_on=True
+                ):
+                    raise ValueError(
+                        f"{entity_id} does not support a single temperature target"
+                    )
 
     def ensure_managed_entity(self, entity_id: str) -> None:
         """Raise if an entity is not managed by this scheduler."""
         if entity_id not in self._data["zones"]:
             raise ValueError(f"{entity_id} is not managed by Velair")
+
+    def _invalidate_climate_delivery(self, entity_id: str) -> None:
+        """Synchronously supersede physical and Room Assist work."""
+        self._climate_delivery.cancel(entity_id)
+        self._room_sensor_assist_generations[entity_id] = (
+            self._room_sensor_assist_generation(entity_id) + 1
+        )
+
+    def _invalidate_changed_schedule_delivery(
+        self,
+        entity_id: str,
+        previous_event: ClimateEvent | None,
+    ) -> None:
+        if _event_control_intent(self.get_active_target_event(entity_id)) != (
+            _event_control_intent(previous_event)
+        ):
+            self._invalidate_climate_delivery(entity_id)
 
     def _blocks_for_entity_capabilities(
         self,
@@ -860,10 +1120,12 @@ class VelairScheduler:
     async def async_set_zone_boost(
         self,
         entity_id: str,
-        temperature: float,
+        temperature: float | None,
         until: str,
         hvac_mode: str | None = None,
         *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
         fan_mode: str | None = None,
         humidity: float | None = None,
         preset_mode: str | None = None,
@@ -872,7 +1134,24 @@ class VelairScheduler:
     ) -> None:
         """Set a temporary boost override for one zone."""
         self.ensure_managed_entity(entity_id)
-        temperature = self.normalize_target_temperature(entity_id, temperature)
+        target = temperature_target_from_mapping(
+            {
+                **({"temperature": temperature} if temperature is not None else {}),
+                **({ATTR_TARGET_TEMP_LOW: target_temp_low} if target_temp_low is not None else {}),
+                **({ATTR_TARGET_TEMP_HIGH: target_temp_high} if target_temp_high is not None else {}),
+            }
+        )
+        normalized_target = {
+            key: self.normalize_target_temperature(entity_id, value)
+            for key, value in target.items()
+        }
+        is_range = ATTR_TARGET_TEMP_LOW in normalized_target
+        self._climate_manager.validate_temperature_target(
+            entity_id,
+            range_target=is_range,
+            hvac_mode=hvac_mode,
+            ensure_on=True,
+        )
         climate_options = self._climate_options_for_entity(
             entity_id,
             _climate_options(
@@ -883,62 +1162,120 @@ class VelairScheduler:
                 swing_horizontal_mode=swing_horizontal_mode,
             ),
         )
+        previous_override = deepcopy(
+            self._data["zones"][entity_id].get("override")
+        )
+        previous_session = self._preconditioning_sessions.get(entity_id)
         self._discard_preconditioning_session(entity_id)
-        await self._async_clear_room_sensor_assist(
-            entity_id,
-            restore=True,
-            reason="boost_started",
-        )
-        current_override = self._data["zones"][entity_id].get("override")
-        stored_previous_state = (
-            current_override.get("previous_state")
-            if _is_boost_override(current_override)
-            else None
-        )
-        previous_state = (
-            dict(stored_previous_state)
-            if isinstance(stored_previous_state, dict)
-            else self._climate_manager.climate_state_snapshot(entity_id)
-        )
-        if not previous_state:
-            raise ValueError(
-                f"Cannot start boost while {entity_id} state is unavailable"
+        self._invalidate_climate_delivery(entity_id)
+        try:
+            await self._async_clear_room_sensor_assist(
+                entity_id,
+                restore=True,
+                reason="boost_started",
+            )
+            stored_previous_state = (
+                previous_override.get("previous_state")
+                if _is_boost_override(previous_override)
+                else None
+            )
+            previous_state = (
+                dict(stored_previous_state)
+                if isinstance(stored_previous_state, dict)
+                else self._climate_manager.climate_state_snapshot(entity_id)
+            )
+            if not previous_state:
+                raise ValueError(
+                    f"Cannot start boost while {entity_id} state is unavailable"
+                )
+
+            override = {
+                "type": "boost",
+                "started_at": dt_util.now().isoformat(),
+                "until": until,
+                **normalized_target,
+                "previous_state": previous_state,
+            }
+            if hvac_mode is not None:
+                override["hvac_mode"] = hvac_mode
+            override.update(climate_options)
+
+            self._data["zones"][entity_id]["override"] = override
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["override"] = previous_override
+            if previous_session is not None:
+                self._preconditioning_sessions[entity_id] = previous_session
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
+        self.async_schedule_next_event()
+        announced = False
+
+        def resolve_boost() -> Delivery | None:
+            current = self._get_active_zone_override(entity_id, dt_util.now())
+            if not _is_boost_override(current):
+                return None
+            event = ClimateEvent(
+                entity_id=entity_id,
+                when=dt_util.now(),
+                temperature=current.get("temperature"),
+                target_temp_low=current.get(ATTR_TARGET_TEMP_LOW),
+                target_temp_high=current.get(ATTR_TARGET_TEMP_HIGH),
+                weekday="",
+                start="",
+                action=ACTION_SET_TEMPERATURE,
+                hvac_mode=current.get("hvac_mode"),
+                **_climate_options_from_mapping(current),
             )
 
-        await self.async_set_temperature(
-            entity_id,
-            temperature,
-            ensure_on=True,
-            hvac_mode=hvac_mode,
-            **climate_options,
-        )
-        override = {
-            "type": "boost",
-            "started_at": dt_util.now().isoformat(),
-            "until": until,
-            "temperature": temperature,
-            "previous_state": previous_state,
-        }
-        if hvac_mode is not None:
-            override["hvac_mode"] = hvac_mode
-        override.update(climate_options)
+            async def apply() -> None:
+                await self._async_apply_resolved_event_call(
+                    event,
+                    hvac_mode=event.hvac_mode,
+                    source="boost",
+                )
 
-        self._data["zones"][entity_id]["override"] = override
-        await self._async_save_data()
-        self.async_schedule_next_event()
-        self._async_fire_boost_started(
-            entity_id,
-            temperature,
-            until,
-            hvac_mode=hvac_mode,
-            fan_mode=climate_options.get(ATTR_FAN_MODE),
-            humidity=climate_options.get(ATTR_HUMIDITY),
-            preset_mode=climate_options.get(ATTR_PRESET_MODE),
-            started_at=override["started_at"],
-            swing_mode=climate_options.get(ATTR_SWING_MODE),
-            swing_horizontal_mode=climate_options.get(ATTR_SWING_HORIZONTAL_MODE),
-        )
-        await self._async_log_boost(entity_id, temperature, until, hvac_mode=hvac_mode)
+            async def commit(is_current: CurrentGuard) -> None:
+                nonlocal announced
+                await self._async_commit_resolved_event(
+                    event,
+                    hvac_mode=event.hvac_mode,
+                    source="boost",
+                    is_current=is_current,
+                )
+                if announced or not is_current():
+                    return
+                await self._async_log_boost(
+                    entity_id,
+                    event.temperature,
+                    str(current["until"]),
+                    target_temp_low=event.target_temp_low,
+                    target_temp_high=event.target_temp_high,
+                    hvac_mode=event.hvac_mode,
+                )
+                if not is_current():
+                    return
+                announced = True
+                self._async_fire_boost_started(
+                    entity_id,
+                    event.temperature
+                    if event.temperature is not None
+                    else event.target_temp_low,
+                    str(current["until"]),
+                    target_temp_low=event.target_temp_low,
+                    target_temp_high=event.target_temp_high,
+                    hvac_mode=event.hvac_mode,
+                    fan_mode=event.fan_mode,
+                    humidity=event.humidity,
+                    preset_mode=event.preset_mode,
+                    started_at=current["started_at"],
+                    swing_mode=event.swing_mode,
+                    swing_horizontal_mode=event.swing_horizontal_mode,
+                )
+
+            return Delivery(apply, commit)
+
+        await self._climate_delivery.async_deliver(entity_id, resolve_boost)
 
     async def async_cancel_zone_boost(self, entity_id: str) -> None:
         """Cancel one active boost and restore the scheduled or previous state."""
@@ -947,8 +1284,14 @@ class VelairScheduler:
         if not _is_boost_override(override):
             return
 
+        self._invalidate_climate_delivery(entity_id)
         self._data["zones"][entity_id]["override"] = None
-        await self._async_save_data()
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["override"] = override
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
         await self._async_finish_zone_boost(
             entity_id,
             override,
@@ -969,36 +1312,47 @@ class VelairScheduler:
         if action not in (ZONE_PAUSE_ACTION_NONE, ZONE_PAUSE_ACTION_TURN_OFF):
             raise ValueError(f"Invalid zone pause action: {action}")
 
-        self._discard_preconditioning_session(entity_id)
-        await self._async_clear_room_sensor_assist(
-            entity_id,
-            restore=action != ZONE_PAUSE_ACTION_TURN_OFF,
-            reason="zone_paused",
+        previous_override = deepcopy(
+            self._data["zones"][entity_id].get("override")
         )
-        override: ZoneOverride = {
-            "type": "pause",
-            "started_at": dt_util.now().isoformat(),
-            "action": action,
-        }
-        if until is not None:
-            override["until"] = until
+        previous_session = self._preconditioning_sessions.get(entity_id)
+        self._discard_preconditioning_session(entity_id)
+        self._invalidate_climate_delivery(entity_id)
+        try:
+            await self._async_clear_room_sensor_assist(
+                entity_id,
+                restore=action != ZONE_PAUSE_ACTION_TURN_OFF,
+                reason="zone_paused",
+            )
+            override: ZoneOverride = {
+                "type": "pause",
+                "started_at": dt_util.now().isoformat(),
+                "action": action,
+            }
+            if until is not None:
+                override["until"] = until
 
-        self._data["zones"][entity_id]["override"] = override
-        await self._async_save_data()
+            self._data["zones"][entity_id]["override"] = override
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["override"] = previous_override
+            if previous_session is not None:
+                self._preconditioning_sessions[entity_id] = previous_session
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
         if action == ZONE_PAUSE_ACTION_TURN_OFF:
             if self._temperature_migration_blocked:
                 return
-            await self._climate_manager.async_turn_off(entity_id)
-            self._async_fire_climate_target_applied_data(
-                {
-                    "entity_id": entity_id,
-                    "action": ACTION_TURN_OFF,
-                    "temperature": None,
-                    "hvac_mode": None,
-                    "weekday": None,
-                    "start": None,
-                    "source": "zone_paused",
-                }
+            await self._async_apply_event(
+                ClimateEvent(
+                    entity_id=entity_id,
+                    when=dt_util.now(),
+                    temperature=None,
+                    weekday=None,
+                    start=None,
+                    action=ACTION_TURN_OFF,
+                ),
+                source="zone_paused",
             )
 
         self.async_schedule_next_event()
@@ -1017,8 +1371,14 @@ class VelairScheduler:
         if not _is_pause_override(override):
             return
 
+        self._invalidate_climate_delivery(entity_id)
         self._data["zones"][entity_id]["override"] = None
-        await self._async_save_data()
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["override"] = override
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
         self._async_fire_zone_resumed(entity_id, override, reason="manual")
         await self._async_log_zone_resume(entity_id, reason="manual")
 
@@ -1041,17 +1401,25 @@ class VelairScheduler:
         blocks = self._blocks_for_entity_capabilities(entity_id, blocks)
         self.ensure_blocks_in_temperature_limits(entity_id, blocks)
         blocks = self._snap_blocks_for_entity(entity_id, blocks)
-        self._discard_preconditioning_session(entity_id)
-        self._clear_applied_preconditioning_targets_for_entity(entity_id)
-        await self._async_clear_room_sensor_assist(
+        now = dt_util.now()
+        previous_event = self.get_active_target_event(entity_id)
+        previous_schedule = deepcopy(self._data["zones"][entity_id]["schedule"])
+        self._data["zones"][entity_id]["schedule"][weekday] = blocks
+        self._invalidate_changed_schedule_delivery(entity_id, previous_event)
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["schedule"] = previous_schedule
+            await self._async_restore_delivery_after_failed_mutation(
+                entity_id
+            )
+            raise
+        await self._async_finalize_schedule_mutation(
             entity_id,
-            restore=True,
+            previous_event,
+            now,
             reason="schedule_changed",
         )
-        self._data["zones"][entity_id]["schedule"][weekday] = blocks
-        await self._async_save_data()
-        self.async_schedule_next_event()
-        await self._async_apply_saved_schedule_if_current(entity_id, weekday)
 
     async def async_copy_day_schedule(
         self,
@@ -1067,24 +1435,29 @@ class VelairScheduler:
         ]
         source_blocks = self._blocks_for_entity_capabilities(entity_id, source_blocks)
         self.ensure_blocks_in_temperature_limits(entity_id, source_blocks)
+        now = dt_util.now()
+        previous_event = self.get_active_target_event(entity_id)
+        previous_schedule = deepcopy(self._data["zones"][entity_id]["schedule"])
 
         for weekday in target_weekdays:
             self._data["zones"][entity_id]["schedule"][weekday] = [
                 block.copy() for block in source_blocks
             ]
-        self._discard_preconditioning_session(entity_id)
-        self._clear_applied_preconditioning_targets_for_entity(entity_id)
-        await self._async_clear_room_sensor_assist(
+        self._invalidate_changed_schedule_delivery(entity_id, previous_event)
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["schedule"] = previous_schedule
+            await self._async_restore_delivery_after_failed_mutation(
+                entity_id
+            )
+            raise
+        await self._async_finalize_schedule_mutation(
             entity_id,
-            restore=True,
+            previous_event,
+            now,
             reason="schedule_changed",
         )
-
-        await self._async_save_data()
-        self.async_schedule_next_event()
-        today = self._today_weekday()
-        if today in target_weekdays:
-            await self._async_apply_saved_schedule_if_current(entity_id, today)
 
     async def async_clear_schedule(
         self,
@@ -1093,22 +1466,30 @@ class VelairScheduler:
     ) -> None:
         """Clear a zone schedule."""
         self.ensure_managed_entity(entity_id)
-        self._discard_preconditioning_session(entity_id)
-        self._clear_applied_preconditioning_targets_for_entity(entity_id)
-        await self._async_clear_room_sensor_assist(
-            entity_id,
-            restore=True,
-            reason="schedule_cleared",
-        )
-
+        now = dt_util.now()
+        previous_event = self.get_active_target_event(entity_id)
+        previous_schedule = deepcopy(self._data["zones"][entity_id]["schedule"])
         if weekday is None:
             for day in WEEKDAYS:
                 self._data["zones"][entity_id]["schedule"][day] = []
         else:
             self._data["zones"][entity_id]["schedule"][weekday] = []
 
-        await self._async_save_data()
-        self.async_schedule_next_event()
+        self._invalidate_changed_schedule_delivery(entity_id, previous_event)
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["schedule"] = previous_schedule
+            await self._async_restore_delivery_after_failed_mutation(
+                entity_id
+            )
+            raise
+        await self._async_finalize_schedule_mutation(
+            entity_id,
+            previous_event,
+            now,
+            reason="schedule_cleared",
+        )
 
     async def async_set_schedule_template(
         self,
@@ -1158,9 +1539,12 @@ class VelairScheduler:
         """Update persisted preconditioning settings for one zone."""
         self.ensure_managed_entity(entity_id)
         self._validate_preconditioning_update(entity_id, preconditioning)
+        previous_stored_preconditioning = deepcopy(
+            self._data["zones"][entity_id].get("preconditioning")
+        )
         previous_preconditioning = self._normalize_preconditioning_for_entity(
             entity_id,
-            self._data["zones"][entity_id].get("preconditioning")
+            previous_stored_preconditioning,
         )
         next_preconditioning = self._normalize_preconditioning_for_entity(
             entity_id,
@@ -1169,7 +1553,20 @@ class VelairScheduler:
                 **preconditioning,
             }
         )
-        self._data["zones"][entity_id]["preconditioning"] = next_preconditioning
+        self._invalidate_climate_delivery(entity_id)
+        try:
+            self._data["zones"][entity_id]["preconditioning"] = next_preconditioning
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["preconditioning"] = (
+                previous_stored_preconditioning
+            )
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
+        # Persistence establishes the new authority. Register it before any
+        # physical Room Assist reconciliation so a recoverable restore failure
+        # cannot leave the entity without an eligible current intent.
+        await self._async_restore_delivery_after_failed_mutation(entity_id)
         self._clear_applied_preconditioning_targets_for_entity(entity_id)
         self._clear_room_sensor_assist_timer()
         if not next_preconditioning["enabled"]:
@@ -1178,12 +1575,21 @@ class VelairScheduler:
             not next_preconditioning["room_sensor_assist_enabled"]
             or not next_preconditioning.get("room_temperature_entity_id")
         ):
-            await self._async_clear_room_sensor_assist(
-                entity_id,
-                restore=True,
-                reason="settings_updated",
-            )
-        await self._async_save_data()
+            try:
+                await self._async_clear_room_sensor_assist(
+                    entity_id,
+                    restore=True,
+                    reason="settings_updated",
+                )
+            except HomeAssistantError:
+                if not self._climate_delivery.retry_current(entity_id):
+                    raise
+                _LOGGER.warning(
+                    "Room Assist restore failed for %s after preconditioning "
+                    "settings were saved; current climate intent will retry",
+                    entity_id,
+                    exc_info=True,
+                )
         if (
             previous_preconditioning["room_sensor_assist_enabled"]
             != next_preconditioning["room_sensor_assist_enabled"]
@@ -1202,6 +1608,7 @@ class VelairScheduler:
             and self.mode == MODE_AUTO
             and not self._is_zone_override_active(entity_id, dt_util.now())
         ):
+            self._room_sensor_assist_suppressed.discard(entity_id)
             await self._async_refresh_room_sensor_assist_from_current_event(entity_id)
         return next_preconditioning
 
@@ -1256,15 +1663,27 @@ class VelairScheduler:
         if direction not in ("heat", "cool"):
             raise ValueError(f"Unsupported preconditioning direction: {direction}")
 
-        session = self._preconditioning_sessions.get(entity_id)
-        if session is not None and session.direction == direction:
-            self._discard_preconditioning_session(entity_id)
+        previous_learning = deepcopy(self._data.get("preconditioning_learning", {}))
+        previous_session = self._preconditioning_sessions.get(entity_id)
+        self._invalidate_climate_delivery(entity_id)
+        try:
+            session = self._preconditioning_sessions.get(entity_id)
+            if session is not None and session.direction == direction:
+                self._discard_preconditioning_session(entity_id)
 
-        learning = self._data.setdefault("preconditioning_learning", {})
-        zone_learning = learning.get(entity_id)
-        if isinstance(zone_learning, dict):
-            zone_learning[direction] = {"observations": []}
-        await self._async_save_data()
+            learning = self._data.setdefault("preconditioning_learning", {})
+            zone_learning = learning.get(entity_id)
+            if isinstance(zone_learning, dict):
+                zone_learning[direction] = {"observations": []}
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["preconditioning_learning"] = previous_learning
+            if previous_session is not None:
+                self._preconditioning_sessions[entity_id] = previous_session
+                self._refresh_preconditioning_listener()
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
+        await self._async_restore_delivery_after_failed_mutation(entity_id)
         self.async_schedule_next_event()
 
     async def async_reset_zone_preconditioning_settings(
@@ -1273,9 +1692,12 @@ class VelairScheduler:
     ) -> PreconditioningData:
         """Restore tuning defaults without changing enablement or learning data."""
         self.ensure_managed_entity(entity_id)
+        previous_stored_preconditioning = deepcopy(
+            self._data["zones"][entity_id].get("preconditioning")
+        )
         current = self._normalize_preconditioning_for_entity(
             entity_id,
-            self._data["zones"][entity_id].get("preconditioning")
+            previous_stored_preconditioning,
         )
         defaults = self._normalize_preconditioning_for_entity(entity_id, None)
         defaults["enabled"] = current["enabled"]
@@ -1289,9 +1711,24 @@ class VelairScheduler:
         defaults["room_sensor_assist_debounce_seconds"] = current[
             "room_sensor_assist_debounce_seconds"
         ]
-        self._data["zones"][entity_id]["preconditioning"] = defaults
-        self._clear_applied_preconditioning_targets_for_entity(entity_id)
-        await self._async_save_data()
+        previous_session = self._preconditioning_sessions.get(entity_id)
+        previous_applied_targets = deepcopy(self._applied_preconditioning_targets)
+        self._invalidate_climate_delivery(entity_id)
+        try:
+            self._data["zones"][entity_id]["preconditioning"] = defaults
+            self._clear_applied_preconditioning_targets_for_entity(entity_id)
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["zones"][entity_id]["preconditioning"] = (
+                previous_stored_preconditioning
+            )
+            self._applied_preconditioning_targets = previous_applied_targets
+            if previous_session is not None:
+                self._preconditioning_sessions[entity_id] = previous_session
+                self._refresh_preconditioning_listener()
+            await self._async_restore_delivery_after_failed_mutation(entity_id)
+            raise
+        await self._async_restore_delivery_after_failed_mutation(entity_id)
         self.async_schedule_next_event()
         return defaults
 
@@ -1618,6 +2055,8 @@ class VelairScheduler:
                 normalized_ids[0] if len(normalized_ids) == 1 else None
             )
         self._begin_operation(operation_kind, operation_target_id, len(affected))
+        for entity_id in affected:
+            self._invalidate_climate_delivery(entity_id)
         self._data["global_"]["active_profile_ids"] = normalized_ids
         self._data["global_"]["active_mode_id"] = mode_id
         try:
@@ -1633,9 +2072,17 @@ class VelairScheduler:
                     track_operation=True,
                 )
         except asyncio.CancelledError:
+            for entity_id in affected:
+                await self._async_restore_delivery_after_failed_mutation(
+                    entity_id
+                )
             self._finish_operation(failed=True, error_code="cancelled")
             raise
         except Exception as err:
+            for entity_id in affected:
+                await self._async_restore_delivery_after_failed_mutation(
+                    entity_id
+                )
             self._finish_operation(
                 failed=True,
                 error_code="operation_failed",
@@ -1716,6 +2163,28 @@ class VelairScheduler:
             else (None, {"behavior": "normal"})
         )
 
+    def _profile_transition_effect(
+        self,
+        profiles: list[ClimateProfileData],
+        entity_id: str,
+        now: datetime,
+    ) -> tuple[str | None, str, str | None, ClimateEvent | None]:
+        """Return owner, behavior and current intent for transition decisions."""
+        owner, behavior = self._profile_effect_from_profiles(profiles, entity_id)
+        behavior_kind = behavior["behavior"]
+        pause_action = (
+            behavior.get("action") if behavior_kind == "pause" else None
+        )
+        zone = self._data["zones"][entity_id]
+        if behavior_kind == "pause":
+            schedule = None
+        elif behavior_kind == "schedule":
+            schedule = behavior.get("schedule")
+        else:
+            schedule = zone["schedule"]
+        event = self._current_schedule_event_for_schedule(entity_id, schedule, now)
+        return owner, behavior_kind, pause_action, event
+
     async def _async_apply_profile_transition(
         self,
         previous_profiles: list[ClimateProfileData],
@@ -1727,24 +2196,56 @@ class VelairScheduler:
         track_operation: bool = False,
     ) -> None:
         """Reset affected runtime state and immediately enact effective behavior."""
-        affected = {
-            entity_id
-            for entity_id in self._data["zones"]
-            if self._profile_effect_from_profiles(previous_profiles, entity_id)
-            != self._profile_effect_from_profiles(next_profiles, entity_id)
-        }
         now = dt_util.now()
+        affected: set[str] = set()
+        metadata_only: set[str] = set()
+        for entity_id in self._data["zones"]:
+            previous_effect = self._profile_transition_effect(
+                previous_profiles, entity_id, now
+            )
+            next_effect = self._profile_transition_effect(
+                next_profiles, entity_id, now
+            )
+            previous_owner, previous_kind, previous_pause, previous_event = (
+                previous_effect
+            )
+            next_owner, next_kind, next_pause, next_event = next_effect
+            behavior_changed = (
+                previous_owner != next_owner
+                or previous_kind != next_kind
+                or previous_pause != next_pause
+            )
+            if behavior_changed or _event_control_intent(
+                previous_event
+            ) != _event_control_intent(next_event):
+                affected.add(entity_id)
+            elif (
+                previous_event is not None
+                and next_event is not None
+                and (previous_event.weekday, previous_event.start)
+                != (next_event.weekday, next_event.start)
+            ):
+                metadata_only.add(entity_id)
+
         cancelled_boosts: list[tuple[str, ZoneOverride]] = []
         for entity_id in affected:
+            self._invalidate_climate_delivery(entity_id)
             override = self._data["zones"][entity_id].get("override")
             if _is_boost_override(override):
                 self._data["zones"][entity_id]["override"] = None
                 cancelled_boosts.append((entity_id, override))
         if affected or persist_change:
-            if rollback_data is None:
-                await self._async_save_data()
-            else:
-                await self._async_save_profile_mutation(rollback_data)
+            try:
+                if rollback_data is None:
+                    await self._async_save_data()
+                else:
+                    await self._async_save_profile_mutation(rollback_data)
+            except (asyncio.CancelledError, Exception):
+                for entity_id in affected:
+                    await self._async_restore_delivery_after_failed_mutation(
+                        entity_id
+                    )
+                raise
 
         for entity_id in affected:
             self._discard_preconditioning_session(entity_id)
@@ -1778,6 +2279,15 @@ class VelairScheduler:
                     entity_id,
                 )
 
+        for entity_id in metadata_only:
+            if (
+                self.mode == MODE_AUTO
+                and entity_id in self._room_sensor_assist_states
+            ):
+                await self._async_refresh_room_sensor_assist_from_current_event(
+                    entity_id
+                )
+
         if self.mode == MODE_AUTO and not self._temperature_migration_blocked:
             for entity_id in affected:
                 if track_operation:
@@ -1790,20 +2300,31 @@ class VelairScheduler:
                     behavior = self._profile_zone_behavior(entity_id)
                     if behavior["behavior"] == "pause":
                         if behavior.get("action") == ZONE_PAUSE_ACTION_TURN_OFF:
-                            await self._climate_manager.async_turn_off(entity_id)
-                            self._async_fire_climate_target_applied_data(
-                                {
-                                    "entity_id": entity_id,
-                                    "action": ACTION_TURN_OFF,
-                                    "temperature": None,
-                                    "hvac_mode": None,
-                                    "weekday": None,
-                                    "start": None,
-                                    "source": source,
-                                }
+                            applied = await self._async_apply_event(
+                                ClimateEvent(
+                                    entity_id=entity_id,
+                                    when=now,
+                                    temperature=None,
+                                    weekday=None,
+                                    start=None,
+                                    action=ACTION_TURN_OFF,
+                                ),
+                                source=source,
                             )
+                            if not applied and self._climate_delivery.is_deferred(
+                                entity_id
+                            ):
+                                if track_operation:
+                                    self._mark_operation_entity_deferred(entity_id)
                     else:
-                        await self.async_apply_current_schedule(entity_id, source=source)
+                        applied = await self.async_apply_current_schedule(
+                            entity_id, source=source
+                        )
+                        if not applied and self._climate_delivery.is_deferred(
+                            entity_id
+                        ):
+                            if track_operation:
+                                self._mark_operation_entity_deferred(entity_id)
                 except Exception:
                     if track_operation:
                         self._mark_operation_entity_failed(entity_id)
@@ -1866,6 +2387,17 @@ class VelairScheduler:
         modes: list[VelairModeData] | None = None,
     ) -> None:
         """Replace persisted sections from a portable import."""
+        if zones is not None:
+            validated_zones = deepcopy(zones)
+            for entity_id, zone in validated_zones.items():
+                for weekday in WEEKDAYS:
+                    blocks = zone["schedule"][weekday]
+                    self.ensure_blocks_in_temperature_limits(entity_id, blocks)
+                    zone["schedule"][weekday] = self._blocks_for_entity_capabilities(
+                        entity_id,
+                        self._snap_blocks_for_entity(entity_id, blocks),
+                    )
+            zones = validated_zones
         if profiles is not None:
             # Validate the complete profile section before mutating any other
             # imported section so a rejected import remains atomic in memory.
@@ -1902,15 +2434,49 @@ class VelairScheduler:
         previous_data = deepcopy(self._data)
         previous_profile_ids = self.active_profile_ids
         previous_active_profiles = deepcopy(self._active_profiles())
+        previous_preconditioning_sessions = deepcopy(
+            self._preconditioning_sessions
+        )
+        previous_applied_preconditioning_targets = deepcopy(
+            self._applied_preconditioning_targets
+        )
+        previous_comfort_snapshots = deepcopy(
+            self._comfort_assessment_snapshots
+        )
+        portable_delivery_entities = (
+            set(previous_data["zones"])
+            if zones is not None or profiles is not None
+            else set()
+        )
+
+        async def rollback_portable_mutation() -> None:
+            self._data.clear()
+            self._data.update(previous_data)
+            self._preconditioning_sessions = previous_preconditioning_sessions
+            self._applied_preconditioning_targets = (
+                previous_applied_preconditioning_targets
+            )
+            self._comfort_assessment_snapshots = previous_comfort_snapshots
+            for restored_entity_id in portable_delivery_entities:
+                await self._async_restore_delivery_after_failed_mutation(
+                    restored_entity_id
+                )
+
         if zones is not None:
+            for entity_id in portable_delivery_entities | set(zones):
+                self._invalidate_climate_delivery(entity_id)
             self._clear_preconditioning_sessions()
             self._applied_preconditioning_targets.clear()
             self._comfort_assessment_snapshots.clear()
             if not self._temperature_migration_blocked:
-                await self._async_clear_room_sensor_assist(
-                    restore=True,
-                    reason="portable_import",
-                )
+                try:
+                    await self._async_clear_room_sensor_assist(
+                        restore=True,
+                        reason="portable_import",
+                    )
+                except (asyncio.CancelledError, Exception):
+                    await rollback_portable_mutation()
+                    raise
             self._data["zones"] = zones
         if templates is not None:
             self._data["templates"] = templates
@@ -1963,13 +2529,17 @@ class VelairScheduler:
                 self._data["global_"]["active_mode_id"] = None
         if profiles is not None:
             next_active_profiles = deepcopy(self._active_profiles())
-            await self._async_apply_profile_transition(
-                previous_active_profiles,
-                next_active_profiles,
-                source="portable_import",
-                persist_change=True,
-                rollback_data=previous_data,
-            )
+            try:
+                await self._async_apply_profile_transition(
+                    previous_active_profiles,
+                    next_active_profiles,
+                    source="portable_import",
+                    persist_change=True,
+                    rollback_data=previous_data,
+                )
+            except (asyncio.CancelledError, Exception):
+                await rollback_portable_mutation()
+                raise
             if previous_profile_ids != self.active_profile_ids:
                 self._async_fire_profile_changed(
                     self.active_profile_ids,
@@ -1979,23 +2549,25 @@ class VelairScheduler:
             return
 
         if modes is not None:
-            await self._async_save_profile_mutation(previous_data)
+            try:
+                await self._async_save_profile_mutation(previous_data)
+            except (asyncio.CancelledError, Exception):
+                await rollback_portable_mutation()
+                raise
             self._async_write_state()
             return
 
-        await self._async_save_data()
-        self.async_schedule_next_event()
-
-    async def async_reset_data(self, data: SchedulerData) -> None:
-        """Replace all persisted scheduler data with a fresh default model."""
-        await self.async_prepare_data_reset()
-        self._data.clear()
-        self._data.update(data)
-        await self._async_save_data()
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            await rollback_portable_mutation()
+            raise
         self.async_schedule_next_event()
 
     async def async_prepare_data_reset(self) -> None:
         """Clear runtime-only state before storage-owned reset replacement."""
+        for entity_id in self._data["zones"]:
+            self._invalidate_climate_delivery(entity_id)
         self._clear_preconditioning_sessions()
         self._applied_preconditioning_targets.clear()
         self._comfort_assessment_snapshots.clear()
@@ -2004,21 +2576,47 @@ class VelairScheduler:
                 restore=True, reason="data_reset"
             )
 
-    async def _async_apply_saved_schedule_if_current(
+    async def _async_finalize_schedule_mutation(
         self,
         entity_id: str,
-        weekday: str,
+        previous_event: ClimateEvent | None,
+        now: datetime,
+        *,
+        reason: str,
     ) -> None:
-        """Apply a saved schedule when it changes the active block for a zone."""
-        if self.mode != MODE_AUTO:
-            return
+        """Reconcile runtime state after one persisted schedule mutation."""
+        event = self.get_active_target_event(entity_id)
+        intent_changed = _event_control_intent(event) != _event_control_intent(
+            previous_event
+        )
+        source_changed = (
+            event is not None
+            and previous_event is not None
+            and (event.weekday, event.start)
+            != (previous_event.weekday, previous_event.start)
+        )
 
-        today = self._today_weekday()
-        if weekday != today:
-            return
+        if intent_changed:
+            self._invalidate_climate_delivery(entity_id)
+            self._discard_preconditioning_session(entity_id)
+            self._clear_applied_preconditioning_targets_for_entity(entity_id)
+            await self._async_clear_room_sensor_assist(
+                entity_id,
+                restore=event is None,
+                reason=reason,
+            )
+        elif (
+            source_changed
+            and self.mode == MODE_AUTO
+            and entity_id in self._room_sensor_assist_states
+        ):
+            # The physical target is unchanged, but Room Assist must follow the
+            # new authoritative source block without restoring or resending it.
+            await self._async_refresh_room_sensor_assist_from_current_event(entity_id)
 
-        event = self.get_current_event(entity_id)
-        if event is None or event.weekday != weekday:
+        self.async_schedule_next_event()
+
+        if not intent_changed or event is None or self.mode != MODE_AUTO:
             return
 
         try:
@@ -2028,14 +2626,42 @@ class VelairScheduler:
             )
         except Exception:
             _LOGGER.exception(
-                "Failed to apply current schedule after saving %s for %s",
-                weekday,
+                "Failed to apply current schedule after saving a schedule for %s",
                 entity_id,
             )
 
-    def _today_weekday(self) -> str:
-        """Return the current local weekday key."""
-        return WEEKDAYS[dt_util.now().weekday()]
+    async def _async_restore_delivery_after_failed_mutation(
+        self,
+        entity_id: str,
+    ) -> None:
+        """Re-register restored intent after save rollback without reapplying it."""
+        if self.mode != MODE_AUTO:
+            return
+
+        def resolve_restored() -> Delivery | None:
+            restored_event = self._resolve_authoritative_delivery_event(entity_id)
+            if restored_event is None:
+                return None
+
+            async def apply() -> None:
+                await self._async_apply_resolved_event_call(
+                    restored_event,
+                    hvac_mode=restored_event.hvac_mode,
+                    source="mutation_rollback",
+                )
+
+            async def commit(is_current: CurrentGuard) -> None:
+                await self._async_commit_resolved_event(
+                    restored_event,
+                    hvac_mode=restored_event.hvac_mode,
+                    source="mutation_rollback",
+                    is_current=is_current,
+                )
+
+            return Delivery(apply, commit)
+
+        if resolve_restored() is not None:
+            self._climate_delivery.register_current(entity_id, resolve_restored)
 
     def async_schedule_next_event(self) -> None:
         """Schedule the next scheduler action."""
@@ -2129,7 +2755,7 @@ class VelairScheduler:
 
     async def _handle_timer(self, now: datetime) -> None:
         """Handle the next scheduler action."""
-        if self._temperature_migration_blocked:
+        if self._temperature_migration_blocked or self._stopped:
             return
         expired_overrides = await self._async_clear_expired_zone_overrides(now)
         await self._async_clear_expired_global_mode(now)
@@ -2179,28 +2805,34 @@ class VelairScheduler:
         reason: str,
     ) -> None:
         """Finalize a boost through the same path for expiry and cancellation."""
-        await self._async_logbook(
-            self._message(
-                "Boost cancelled" if reason == "manual" else "Boost ended",
-                "Refuerzo cancelado" if reason == "manual" else "Refuerzo finalizado",
-            ),
-            entity_id=entity_id,
-        )
         restoration, scheduled_event = self._resolve_ended_zone_boost_restoration(
             entity_id,
             override,
             now,
         )
-        self._async_fire_boost_ended(
-            entity_id,
-            override,
-            reason=reason,
-            restoration=restoration,
-        )
+
+        async def announce(is_current: CurrentGuard) -> None:
+            await self._async_logbook(
+                self._message(
+                    "Boost cancelled" if reason == "manual" else "Boost ended",
+                    "Refuerzo cancelado" if reason == "manual" else "Refuerzo finalizado",
+                ),
+                entity_id=entity_id,
+            )
+            if not is_current():
+                return
+            self._async_fire_boost_ended(
+                entity_id,
+                override,
+                reason=reason,
+                restoration=restoration,
+            )
+
         await self._async_apply_ended_zone_boost(
             entity_id,
             override,
             scheduled_event=scheduled_event,
+            on_success=announce,
         )
 
     def _resolve_ended_zone_boost_restoration(
@@ -2220,7 +2852,7 @@ class VelairScheduler:
                         "source": "boost_ended",
                         "target": {
                             "action": event.action,
-                            "temperature": event.temperature,
+                            **_event_target_mapping(event),
                             "hvac_mode": event.hvac_mode,
                             **_climate_options_from_event(event),
                             "weekday": event.weekday,
@@ -2247,13 +2879,25 @@ class VelairScheduler:
         override: ZoneOverride,
         *,
         scheduled_event: ClimateEvent | None,
+        on_success: Callable[[CurrentGuard], Awaitable[None]],
     ) -> None:
         """Apply the correct target after one temporary zone override ends."""
         if scheduled_event is not None:
-            await self._async_apply_event(scheduled_event, source="boost_ended")
+            await self._async_apply_event(
+                scheduled_event,
+                source="boost_ended",
+                on_success=on_success,
+            )
             return
 
-        await self._async_restore_previous_climate_state(entity_id, override)
+        if override.get("previous_state"):
+            await self._async_restore_previous_climate_state(
+                entity_id,
+                override,
+                on_success=on_success,
+            )
+            return
+        await on_success(lambda: True)
 
     async def _async_apply_expired_zone_pause(self, entity_id: str) -> None:
         """Apply the current schedule after a temporary zone pause ends."""
@@ -2269,13 +2913,53 @@ class VelairScheduler:
         self,
         entity_id: str,
         override: ZoneOverride,
+        *,
+        on_success: Callable[[CurrentGuard], Awaitable[None]] | None = None,
     ) -> None:
         """Restore the climate state captured before a temporary override."""
         previous_state = override.get("previous_state")
         if not previous_state:
             return
 
-        await self._climate_manager.async_restore_state(entity_id, previous_state)
+        def resolve_restore() -> Delivery | None:
+            current_event = self._resolve_authoritative_delivery_event(entity_id)
+            if current_event is not None and _event_has_explicit_target(current_event):
+                async def apply_current() -> None:
+                    await self._async_apply_resolved_event_call(
+                        current_event,
+                        hvac_mode=current_event.hvac_mode,
+                        source="boost_ended",
+                    )
+
+                async def commit_current(is_current: CurrentGuard) -> None:
+                    await self._async_commit_resolved_event(
+                        current_event,
+                        hvac_mode=current_event.hvac_mode,
+                        source="boost_ended",
+                        is_current=is_current,
+                    )
+
+                async def commit_and_announce(is_current: CurrentGuard) -> None:
+                    await commit_current(is_current)
+                    if on_success is not None and is_current():
+                        await on_success(is_current)
+
+                return Delivery(apply_current, commit_and_announce)
+            if (
+                self._stopped
+                or self._temperature_migration_blocked
+                or self.mode != MODE_AUTO
+            ):
+                return None
+
+            async def deliver_previous() -> None:
+                await self._climate_manager.async_restore_state(
+                    entity_id, previous_state
+                )
+
+            return Delivery(deliver_previous, on_success)
+
+        await self._climate_delivery.async_deliver(entity_id, resolve_restore)
 
     async def _async_clear_expired_global_mode(self, now: datetime) -> None:
         """Return to auto mode when a temporary global mode expires."""
@@ -2286,10 +2970,22 @@ class VelairScheduler:
 
         previous_mode = self._data["global_"]["mode"]
         paused_started_at = self._data["global_"].get("paused_started_at")
+        for entity_id in self._data["zones"]:
+            self._invalidate_climate_delivery(entity_id)
         self._data["global_"]["mode"] = MODE_AUTO
         self._data["global_"]["paused_until"] = None
         self._data["global_"]["paused_started_at"] = None
-        await self._async_save_data()
+        try:
+            await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            self._data["global_"]["mode"] = previous_mode
+            self._data["global_"]["paused_until"] = paused_until
+            self._data["global_"]["paused_started_at"] = paused_started_at
+            for entity_id in self._data["zones"]:
+                await self._async_restore_delivery_after_failed_mutation(
+                    entity_id
+                )
+            raise
         self._async_fire_scheduler_mode_changed(
             MODE_AUTO,
             previous_mode=previous_mode,
@@ -2303,11 +2999,17 @@ class VelairScheduler:
             )
         )
 
-    def _iter_future_events(self, now: datetime) -> list[ClimateEvent]:
+    def _iter_future_events(
+        self,
+        now: datetime,
+        *,
+        clear_applied: bool = True,
+    ) -> list[ClimateEvent]:
         """Return upcoming events in the next seven days."""
         events: list[ClimateEvent] = []
         today = now.date()
-        self._clear_applied_preconditioning_targets(now)
+        if clear_applied:
+            self._clear_applied_preconditioning_targets(now)
 
         for day_offset in range(8):
             event_date = today + timedelta(days=day_offset)
@@ -2328,13 +3030,18 @@ class VelairScheduler:
                     if event_time is None:
                         continue
 
-                    target_when = dt_util.as_local(
-                        datetime.combine(event_date, event_time).replace(
-                            tzinfo=now.tzinfo
-                        )
+                    occurrences = _local_schedule_occurrences(
+                        event_date,
+                        event_time,
+                        now.tzinfo,
                     )
-                    if target_when <= now:
+                    now_utc = dt_util.as_utc(now)
+                    # An ambiguous wall time is one weekly transition, not two.
+                    # Once its first occurrence has passed, do not schedule the
+                    # repeated fold as a second climate action.
+                    if any(dt_util.as_utc(item) <= now_utc for item in occurrences):
                         continue
+                    target_when = min(occurrences, key=dt_util.as_utc)
 
                     event_when, preconditioning_diagnostics = (
                         self._preconditioned_event_details(
@@ -2352,6 +3059,7 @@ class VelairScheduler:
                             entity_id=entity_id,
                             when=event_when,
                             temperature=_event_temperature(block),
+                            **_event_temperature_range(block),
                             weekday=weekday,
                             start=block["start"],
                             action=block.get("action", ACTION_SET_TEMPERATURE),
@@ -2366,7 +3074,24 @@ class VelairScheduler:
                         )
                     )
 
-        return events
+        # Several wall times inside a spring-forward gap normalize to the same
+        # real instant. They remain ordered schedule changes, so only the last
+        # wall-clock block may remain effective at that instant.
+        coalesced: dict[tuple[str, datetime], ClimateEvent] = {}
+        for event in events:
+            target_instant = event.target_when or event.when
+            key = (event.entity_id, dt_util.as_utc(target_instant))
+            current = coalesced.get(key)
+            event_start = _parse_start_time(event.start)
+            current_start = _parse_start_time(current.start) if current else None
+            if (
+                current is None
+                or current_start is None
+                or (event_start is not None and event_start >= current_start)
+            ):
+                coalesced[key] = event
+
+        return list(coalesced.values())
 
     def _iter_current_events(
         self,
@@ -2375,7 +3100,6 @@ class VelairScheduler:
     ) -> list[ClimateEvent]:
         """Return the active schedule block for each zone."""
         current_events: list[ClimateEvent] = []
-        today = now.date()
 
         for entity_id, zone in self._data["zones"].items():
             if entity_id_filter is not None and entity_id != entity_id_filter:
@@ -2384,40 +3108,91 @@ class VelairScheduler:
             if not zone["enabled"]:
                 continue
 
-            schedule = self._effective_schedule(entity_id, zone)
-            if schedule is None:
-                continue
+            candidate = self._current_schedule_event(entity_id, now)
+            if candidate is not None:
+                current_events.append(candidate)
 
+        return current_events
+
+    def _current_schedule_event(
+        self,
+        entity_id: str,
+        now: datetime,
+    ) -> ClimateEvent | None:
+        """Resolve the latest effective block at or before ``now``.
+
+        Schedules repeat weekly and blocks have no explicit end. Looking back
+        through the same weekday in the previous week therefore covers every
+        possible carry-over without polling or additional persisted state.
+        """
+        zone = self._data["zones"].get(entity_id)
+        if zone is None or not zone["enabled"]:
+            return None
+
+        schedule = self._effective_schedule(entity_id, zone)
+        return self._current_schedule_event_for_schedule(entity_id, schedule, now)
+
+    def _current_schedule_event_for_schedule(
+        self,
+        entity_id: str,
+        schedule: dict[str, list[ScheduleBlock]] | None,
+        now: datetime,
+    ) -> ClimateEvent | None:
+        """Resolve one current event from an explicit effective schedule."""
+        if schedule is None:
+            return None
+
+        today = now.date()
+        now_utc = dt_util.as_utc(now)
+        for days_ago in range(8):
+            source_date = today - timedelta(days=days_ago)
+            weekday = WEEKDAYS[source_date.weekday()]
             candidate: ClimateEvent | None = None
-            weekday = WEEKDAYS[today.weekday()]
             for block in schedule[weekday]:
                 event_time = _parse_start_time(block["start"])
                 if event_time is None:
                     continue
 
-                event_when = dt_util.as_local(
-                    datetime.combine(today, event_time).replace(tzinfo=now.tzinfo)
+                occurrences = _local_schedule_occurrences(
+                    source_date,
+                    event_time,
+                    now.tzinfo,
                 )
-                if event_when > now:
+                # One wall-clock block is one weekly transition. During a
+                # fall-back overlap, its first valid occurrence is canonical;
+                # the repeated fold must not change the event's active time.
+                event_when = min(occurrences, key=dt_util.as_utc)
+                if dt_util.as_utc(event_when) > now_utc:
                     continue
 
                 event = ClimateEvent(
                     entity_id=entity_id,
                     when=event_when,
                     temperature=_event_temperature(block),
+                    **_event_temperature_range(block),
                     weekday=weekday,
                     start=block["start"],
                     action=block.get("action", ACTION_SET_TEMPERATURE),
                     hvac_mode=block.get("hvac_mode"),
                     **_event_climate_options(block),
                 )
-                if candidate is None or event.when > candidate.when:
+                candidate_start = (
+                    _parse_start_time(candidate.start) if candidate is not None else None
+                )
+                if (
+                    candidate is None
+                    or dt_util.as_utc(event.when) > dt_util.as_utc(candidate.when)
+                    or (
+                        dt_util.as_utc(event.when) == dt_util.as_utc(candidate.when)
+                        and (candidate_start is None or event_time >= candidate_start)
+                    )
+                ):
                     candidate = event
 
             if candidate is not None:
-                current_events.append(candidate)
+                return candidate
 
-        return current_events
+        return None
 
     def _preconditioning_event_key(
         self,
@@ -2476,22 +3251,6 @@ class VelairScheduler:
             in self._applied_preconditioning_targets
         )
 
-    def _preconditioned_event_when(
-        self,
-        entity_id: str,
-        zone: ZoneData,
-        block: ScheduleBlock,
-        target_when: datetime,
-    ) -> datetime:
-        """Return the apply time for a scheduled block."""
-        event_when, _diagnostics = self._preconditioned_event_details(
-            entity_id,
-            zone,
-            block,
-            target_when,
-        )
-        return event_when
-
     def _preconditioned_event_details(
         self,
         entity_id: str,
@@ -2505,18 +3264,15 @@ class VelairScheduler:
             return target_when, None
         if block.get("action", ACTION_SET_TEMPERATURE) == ACTION_TURN_OFF:
             return target_when, None
-        if "temperature" not in block:
-            return target_when, None
-
-        direction = self._preconditioning_direction(entity_id, config, block)
-        if direction is None:
+        resolved_target = self._resolve_preconditioning_target(entity_id, config, block)
+        if resolved_target is None:
             return target_when, None
 
         prediction = self._adaptive_preconditioning_prediction(
             entity_id,
             config,
             block,
-            direction,
+            resolved_target,
         )
         lead_minutes = (
             prediction["recommended_lead_minutes"] if prediction is not None else 0
@@ -2529,70 +3285,27 @@ class VelairScheduler:
             prediction["diagnostics"] if prediction is not None else None,
         )
 
-    def _preconditioning_lead_minutes(
-        self,
-        entity_id: str,
-        config: PreconditioningData,
-        block: ScheduleBlock,
-    ) -> int:
-        """Return an early-start lead time for one block."""
-        if not config["enabled"]:
-            return 0
-        if block.get("action", ACTION_SET_TEMPERATURE) == ACTION_TURN_OFF:
-            return 0
-        if "temperature" not in block:
-            return 0
-
-        direction = self._preconditioning_direction(entity_id, config, block)
-        if direction is None:
-            return 0
-
-        adaptive_lead = self._adaptive_preconditioning_lead_minutes(
-            entity_id,
-            config,
-            block,
-            direction,
-        )
-        return adaptive_lead if adaptive_lead is not None else 0
-
-    def _adaptive_preconditioning_lead_minutes(
-        self,
-        entity_id: str,
-        config: PreconditioningData,
-        block: ScheduleBlock,
-        direction: str,
-    ) -> int | None:
-        """Return adaptive lead time for one direction."""
-        prediction = self._adaptive_preconditioning_prediction(
-            entity_id,
-            config,
-            block,
-            direction,
-        )
-        return prediction["recommended_lead_minutes"] if prediction is not None else None
-
     def _adaptive_preconditioning_prediction(
         self,
         entity_id: str,
         config: PreconditioningData,
         block: ScheduleBlock,
-        direction: str,
+        resolved_target: _ResolvedPreconditioningTarget,
     ) -> PreconditioningPrediction | None:
         """Return adaptive prediction data for one direction."""
-        target_temperature = _event_temperature(block)
         current_temperature = self._current_temperature(entity_id)
-        if target_temperature is None or current_temperature is None:
+        if current_temperature is None:
             return None
         learning = self._data.get("preconditioning_learning", {}).get(entity_id, {})
         raw_observations = preconditioning_observations_for_direction(
             learning,
-            direction,
+            resolved_target.direction,
         )
 
-        return predict_preconditioning_lead(
+        prediction = predict_preconditioning_lead(
             raw_observations,
-            direction,
-            target_temp=target_temperature,
+            resolved_target.direction,
+            target_temp=resolved_target.boundary_temperature,
             current_temp=current_temperature,
             config=config,
             now=dt_util.now(),
@@ -2601,6 +3314,18 @@ class VelairScheduler:
                 entity_id
             ),
         )
+        diagnostics = prediction.get("diagnostics")
+        if diagnostics is not None:
+            diagnostics.update(
+                {
+                    "target_kind": resolved_target.kind,
+                    "target_boundary": resolved_target.boundary,
+                    "boundary_temperature": round(
+                        resolved_target.boundary_temperature, 3
+                    ),
+                }
+            )
+        return prediction
 
     def _preconditioning_temperature_delta_scale(self, entity_id: str) -> float:
         """Return the scale that expresses runtime deltas as Celsius deltas."""
@@ -2608,35 +3333,68 @@ class VelairScheduler:
         unit = unit_getter(entity_id) if callable(unit_getter) else CELSIUS
         return 5 / 9 if unit == FAHRENHEIT else 1.0
 
-    def _preconditioning_direction(
+    def _resolve_preconditioning_target(
         self,
         entity_id: str,
         config: PreconditioningData,
         block: ScheduleBlock,
-    ) -> str | None:
-        """Return whether the block should start early for heating or cooling."""
+        *,
+        current_temperature: float | None = None,
+        hvac_mode: str | None = None,
+    ) -> _ResolvedPreconditioningTarget | None:
+        """Resolve the scalar boundary used to predict a scalar or range target."""
+        if current_temperature is None:
+            current_temperature = self._current_temperature(entity_id)
+        if current_temperature is None:
+            return None
+
+        target_range = _event_temperature_range(block)
+        requested_mode = hvac_mode or block.get("hvac_mode")
+        effective_mode_getter = getattr(
+            self._climate_manager, "effective_hvac_mode", None
+        )
+        mode = (
+            effective_mode_getter(
+                entity_id,
+                requested_mode,
+                ensure_on=True,
+                range_target=bool(target_range),
+            )
+            if callable(effective_mode_getter)
+            else requested_mode or self._current_hvac_mode(entity_id)
+        )
+        minimum_delta = config["minimum_delta_temperature"]
+        if target_range:
+            if mode != "heat_cool":
+                return None
+            low = target_range["target_temp_low"]
+            high = target_range["target_temp_high"]
+            if low is None or high is None:
+                return None
+            if current_temperature < low - minimum_delta:
+                return _ResolvedPreconditioningTarget("range", "heat", low, "low")
+            if current_temperature > high + minimum_delta:
+                return _ResolvedPreconditioningTarget("range", "cool", high, "high")
+            return None
+
         target_temperature = _event_temperature(block)
         if target_temperature is None:
             return None
 
-        current_temperature = self._current_temperature(entity_id)
-        mode = block.get("hvac_mode") or self._current_hvac_mode(entity_id)
-        minimum_delta = config["minimum_delta_temperature"]
-
         if mode in PRECONDITIONING_HEATING_MODES:
-            if current_temperature is None:
-                return None
             return (
-                "heat"
+                _ResolvedPreconditioningTarget(
+                    "scalar", "heat", target_temperature, "temperature"
+                )
                 if current_temperature < target_temperature - minimum_delta
                 else None
             )
 
         if mode in PRECONDITIONING_COOLING_MODES:
-            if current_temperature is None:
-                return None
             return (
-                "cool"
+                _ResolvedPreconditioningTarget(
+                    "scalar", "cool", target_temperature, "temperature"
+                )
                 if current_temperature > target_temperature + minimum_delta
                 else None
             )
@@ -2644,12 +3402,14 @@ class VelairScheduler:
         if mode not in PRECONDITIONING_AUTO_MODES:
             return None
 
-        if current_temperature is None:
-            return None
         if current_temperature < target_temperature - minimum_delta:
-            return "heat"
+            return _ResolvedPreconditioningTarget(
+                "scalar", "heat", target_temperature, "temperature"
+            )
         if current_temperature > target_temperature + minimum_delta:
-            return "cool"
+            return _ResolvedPreconditioningTarget(
+                "scalar", "cool", target_temperature, "temperature"
+            )
 
         return None
 
@@ -2690,6 +3450,32 @@ class VelairScheduler:
             "range: %s (expected %s..%s)",
             entity_id,
             temperature,
+            minimum,
+            maximum,
+        )
+        return None
+
+    def _climate_target_range(self, entity_id: str) -> tuple[float, float] | None:
+        """Return a valid native target range reported by Home Assistant."""
+        state = self._hass.states.get(entity_id)
+        if state is None or state.state != "heat_cool":
+            return None
+        try:
+            low = float(state.attributes[ATTR_TARGET_TEMP_LOW])
+            high = float(state.attributes[ATTR_TARGET_TEMP_HIGH])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not math.isfinite(low) or not math.isfinite(high):
+            return None
+        minimum, maximum = self.get_temperature_limits(entity_id)
+        if minimum <= low <= high <= maximum:
+            return low, high
+        _LOGGER.debug(
+            "Ignoring target temperature range reported by %s outside its supported "
+            "range: %s..%s (expected %s..%s)",
+            entity_id,
+            low,
+            high,
             minimum,
             maximum,
         )
@@ -2773,9 +3559,236 @@ class VelairScheduler:
         hvac_mode: str | None = None,
         source: str = "schedule",
         applied_at: datetime | None = None,
+        on_success: Callable[[CurrentGuard], Awaitable[None]] | None = None,
+    ) -> bool:
+        """Deliver the current authoritative scheduler event."""
+        def delivery_for(
+            resolved: ClimateEvent | None,
+            mode_override: str | None,
+        ) -> Delivery | None:
+            if resolved is None:
+                return None
+
+            async def apply() -> None:
+                await self._async_apply_resolved_event_call(
+                    resolved,
+                    hvac_mode=mode_override or resolved.hvac_mode,
+                    source=source,
+                )
+
+            async def commit(is_current: CurrentGuard) -> None:
+                await self._async_commit_resolved_event(
+                    resolved,
+                    hvac_mode=mode_override or resolved.hvac_mode,
+                    source=source,
+                    applied_at=applied_at,
+                    is_current=is_current,
+                )
+                if on_success is not None and is_current():
+                    await on_success(is_current)
+
+            return Delivery(apply, commit)
+
+        def resolve_initial() -> Delivery | None:
+            return delivery_for(
+                self._resolve_authoritative_delivery_event(
+                    event.entity_id,
+                    requested_event=event,
+                    requested_at=applied_at,
+                ),
+                hvac_mode,
+            )
+
+        def resolve_current() -> Delivery | None:
+            return delivery_for(
+                self._resolve_authoritative_delivery_event(
+                    event.entity_id,
+                    requested_event=event,
+                    requested_at=applied_at,
+                ),
+                None,
+            )
+
+        return await self._climate_delivery.async_deliver(
+            event.entity_id,
+            resolve_initial,
+            recovery_resolver=resolve_current,
+        )
+
+    def _resolve_authoritative_delivery_event(
+        self,
+        entity_id: str,
+        *,
+        requested_event: ClimateEvent | None = None,
+        requested_at: datetime | None = None,
+    ) -> ClimateEvent | None:
+        """Resolve the physical intent that currently owns one climate."""
+        if (
+            self._temperature_migration_blocked
+            or self._stopped
+            or self.mode != MODE_AUTO
+        ):
+            return None
+        now = dt_util.now()
+        override = self._get_active_zone_override(entity_id, now)
+        if _is_pause_override(override):
+            if override.get("action") != ZONE_PAUSE_ACTION_TURN_OFF:
+                return None
+            return ClimateEvent(
+                entity_id=entity_id,
+                when=now,
+                temperature=None,
+                weekday=None,
+                start=None,
+                action=ACTION_TURN_OFF,
+            )
+        if _is_boost_override(override):
+            return ClimateEvent(
+                entity_id=entity_id,
+                when=now,
+                temperature=override.get("temperature"),
+                target_temp_low=override.get(ATTR_TARGET_TEMP_LOW),
+                target_temp_high=override.get(ATTR_TARGET_TEMP_HIGH),
+                weekday=None,
+                start=None,
+                action=ACTION_SET_TEMPERATURE,
+                hvac_mode=override.get("hvac_mode"),
+                **_climate_options_from_mapping(override),
+            )
+        behavior = self._profile_zone_behavior(entity_id)
+        if behavior["behavior"] == "pause":
+            if behavior.get("action") != ZONE_PAUSE_ACTION_TURN_OFF:
+                return None
+            return ClimateEvent(
+                entity_id=entity_id,
+                when=now,
+                temperature=None,
+                weekday=None,
+                start=None,
+                action=ACTION_TURN_OFF,
+            )
+        authority_now = dt_util.now()
+        if (
+            requested_at is not None
+            and dt_util.as_utc(requested_at) > dt_util.as_utc(authority_now)
+        ):
+            # Timer callbacks pass their scheduled instant. Test clocks and a
+            # delayed HA callback can otherwise lag behind that authoritative
+            # instant; retries still use a freshly recalculated plan.
+            authority_now = requested_at
+        if (
+            requested_event is not None
+            and requested_event.target_when is not None
+            and requested_event.target_when > authority_now
+        ):
+            fresh_due = next(
+                (
+                    candidate
+                    for candidate in self._iter_future_events(
+                        authority_now - timedelta(minutes=1),
+                        clear_applied=False,
+                    )
+                    if candidate.entity_id == entity_id
+                    and candidate.weekday == requested_event.weekday
+                    and candidate.start == requested_event.start
+                    and candidate.target_when == requested_event.target_when
+                    and _is_due_preconditioning_event(candidate, authority_now)
+                ),
+                None,
+            )
+            # A captured early-start event is authoritative only while the
+            # current schedule and freshly calculated preconditioning plan say
+            # that exact source block is due now.
+            return fresh_due
+        if requested_event is not None and requested_at is not None:
+            # A timer-delivered regular block is resolved at the callback's
+            # authoritative instant (or the later live clock above), not at a
+            # potentially frozen/lagging test or HA clock.
+            return self._current_schedule_event(entity_id, authority_now)
+        return self._room_sensor_assist_target_event(entity_id)
+
+    async def _async_apply_resolved_event_call(
+        self,
+        event: ClimateEvent,
+        *,
+        hvac_mode: str | None = None,
+        source: str,
     ) -> None:
-        """Apply one resolved schedule event."""
-        if self._temperature_migration_blocked:
+        """Apply the physical call sequence without publishing success effects."""
+        if self._temperature_migration_blocked or self._stopped:
+            return
+        if event.action == ACTION_TURN_OFF:
+            await self._climate_manager.async_turn_off(event.entity_id)
+            return
+
+        is_range = (
+            event.target_temp_low is not None and event.target_temp_high is not None
+        )
+        if event.temperature is None and not is_range:
+            raise ValueError(f"Missing temperature target for {event.entity_id} schedule event")
+
+        target_mode = hvac_mode or event.hvac_mode
+        if is_range:
+            self._climate_manager.validate_temperature_target(
+                event.entity_id,
+                range_target=True,
+                hvac_mode=target_mode,
+                ensure_on=True,
+            )
+            await self._climate_manager.async_set_temperature_range(
+                event.entity_id,
+                event.target_temp_low,
+                event.target_temp_high,
+                ensure_on=True,
+                fan_mode=event.fan_mode,
+                hvac_mode=target_mode,
+                humidity=event.humidity,
+                preset_mode=event.preset_mode,
+                swing_mode=event.swing_mode,
+                swing_horizontal_mode=event.swing_horizontal_mode,
+            )
+        else:
+            await self._climate_manager.async_set_temperature(
+                event.entity_id,
+                event.temperature,
+                ensure_on=True,
+                fan_mode=event.fan_mode,
+                hvac_mode=target_mode,
+                humidity=event.humidity,
+                preset_mode=event.preset_mode,
+                swing_mode=event.swing_mode,
+                swing_horizontal_mode=event.swing_horizontal_mode,
+            )
+        await self._async_refresh_room_sensor_assist(
+            event.entity_id,
+            target_temperature=event.temperature,
+            target_temp_low=event.target_temp_low,
+            target_temp_high=event.target_temp_high,
+            hvac_mode=target_mode or event.hvac_mode,
+            weekday=event.weekday,
+            start=event.start,
+            reason=source,
+            force_apply=True,
+        )
+
+    async def _async_commit_resolved_event(
+        self,
+        event: ClimateEvent,
+        *,
+        hvac_mode: str | None,
+        source: str,
+        applied_at: datetime | None = None,
+        is_current: CurrentGuard,
+    ) -> None:
+        """Publish effects only after the complete physical call succeeds."""
+        def delivery_is_current() -> bool:
+            return (
+                is_current()
+                and not self._stopped
+                and not self._temperature_migration_blocked
+            )
+
+        if not delivery_is_current():
             return
         if event.action == ACTION_TURN_OFF:
             await self._async_clear_room_sensor_assist(
@@ -2783,9 +3796,8 @@ class VelairScheduler:
                 restore=False,
                 reason="turn_off",
             )
-            if self._temperature_migration_blocked:
+            if not delivery_is_current():
                 return
-            await self._climate_manager.async_turn_off(event.entity_id)
             await self._async_logbook(
                 self._message(
                     f"Turned off {self._friendly_entity_name(event.entity_id)}",
@@ -2793,6 +3805,8 @@ class VelairScheduler:
                 ),
                 entity_id=event.entity_id,
             )
+            if not delivery_is_current():
+                return
             self._async_fire_climate_target_applied(
                 event,
                 hvac_mode=None,
@@ -2800,29 +3814,28 @@ class VelairScheduler:
             )
             return
 
-        if event.temperature is None:
-            raise ValueError(f"Missing temperature for {event.entity_id} schedule event")
-
+        is_range = (
+            event.target_temp_low is not None and event.target_temp_high is not None
+        )
         target_mode = hvac_mode or event.hvac_mode
-        if self._temperature_migration_blocked:
+        if is_range:
+            await self._async_log_climate_temperature(
+                event.entity_id,
+                None,
+                target_temp_low=event.target_temp_low,
+                target_temp_high=event.target_temp_high,
+                hvac_mode=target_mode,
+                scheduled=True,
+            )
+        else:
+            await self._async_log_climate_temperature(
+                event.entity_id,
+                event.temperature,
+                hvac_mode=target_mode,
+                scheduled=True,
+            )
+        if not delivery_is_current():
             return
-        await self._climate_manager.async_set_temperature(
-            event.entity_id,
-            event.temperature,
-            ensure_on=True,
-            fan_mode=event.fan_mode,
-            hvac_mode=target_mode,
-            humidity=event.humidity,
-            preset_mode=event.preset_mode,
-            swing_mode=event.swing_mode,
-            swing_horizontal_mode=event.swing_horizontal_mode,
-        )
-        await self._async_log_climate_temperature(
-            event.entity_id,
-            event.temperature,
-            hvac_mode=target_mode,
-            scheduled=True,
-        )
         self._async_fire_climate_target_applied(
             event,
             hvac_mode=target_mode,
@@ -2834,14 +3847,6 @@ class VelairScheduler:
             target_mode,
             applied_at or dt_util.now(),
         )
-        await self._async_refresh_room_sensor_assist(
-            event.entity_id,
-            target_temperature=event.temperature,
-            hvac_mode=target_mode or event.hvac_mode,
-            weekday=event.weekday,
-            start=event.start,
-            reason=source,
-        )
 
     def _start_preconditioning_session(
         self,
@@ -2850,7 +3855,7 @@ class VelairScheduler:
         started_at: datetime,
     ) -> None:
         """Start a runtime learning session for one preconditioning event."""
-        if event.target_when is None or event.temperature is None:
+        if event.target_when is None:
             return
         config = normalize_preconditioning_data(
             self._data["zones"][event.entity_id].get("preconditioning")
@@ -2862,12 +3867,21 @@ class VelairScheduler:
         if start_temperature is None:
             return
 
-        direction = self._preconditioning_session_direction(
-            event,
-            hvac_mode,
-            start_temperature,
+        block: ScheduleBlock = {
+            "start": event.start,
+            "action": event.action,
+            **_event_target_mapping(event),
+        }
+        if event.hvac_mode is not None:
+            block["hvac_mode"] = event.hvac_mode
+        resolved_target = self._resolve_preconditioning_target(
+            event.entity_id,
+            config,
+            block,
+            current_temperature=start_temperature,
+            hvac_mode=hvac_mode,
         )
-        if direction is None:
+        if resolved_target is None:
             return
         startup_minutes = max(
             0,
@@ -2878,12 +3892,14 @@ class VelairScheduler:
 
         self._preconditioning_sessions[event.entity_id] = _PreconditioningSession(
             entity_id=event.entity_id,
-            direction=direction,
+            direction=resolved_target.direction,
             started_at=started_at,
             target_when=event.target_when,
             weekday=event.weekday,
             start=event.start,
-            target_temperature=event.temperature,
+            target_temperature=resolved_target.boundary_temperature,
+            target_kind=resolved_target.kind,
+            target_boundary=resolved_target.boundary,
             start_temperature=start_temperature,
             hvac_mode=hvac_mode or event.hvac_mode,
             startup_minutes=startup_minutes,
@@ -2891,34 +3907,10 @@ class VelairScheduler:
                 event.entity_id,
                 config,
             ),
+            target_temp_low=event.target_temp_low,
+            target_temp_high=event.target_temp_high,
         )
         self._refresh_preconditioning_listener()
-
-    def _preconditioning_session_direction(
-        self,
-        event: ClimateEvent,
-        hvac_mode: str | None,
-        start_temperature: float,
-    ) -> str | None:
-        """Return the learning direction for one preconditioning session."""
-        if event.temperature is None:
-            return None
-
-        mode = hvac_mode or event.hvac_mode or self._current_hvac_mode(event.entity_id)
-        if mode in PRECONDITIONING_HEATING_MODES:
-            minimum_delta = self._preconditioning_minimum_delta(event.entity_id)
-            return "heat" if event.temperature - start_temperature > minimum_delta else None
-        if mode in PRECONDITIONING_COOLING_MODES:
-            minimum_delta = self._preconditioning_minimum_delta(event.entity_id)
-            return "cool" if start_temperature - event.temperature > minimum_delta else None
-        if mode not in PRECONDITIONING_AUTO_MODES:
-            return None
-        minimum_delta = self._preconditioning_minimum_delta(event.entity_id)
-        if event.temperature - start_temperature > minimum_delta:
-            return "heat"
-        if start_temperature - event.temperature > minimum_delta:
-            return "cool"
-        return None
 
     def _refresh_preconditioning_listener(self) -> None:
         """Subscribe to climate state changes while learning sessions are active."""
@@ -3031,7 +4023,10 @@ class VelairScheduler:
             for block in schedule[weekday]:
                 if block.get("action", ACTION_SET_TEMPERATURE) == ACTION_TURN_OFF:
                     continue
-                if "temperature" not in block:
+                if not any(
+                    key in block
+                    for key in ("temperature", ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+                ):
                     continue
                 event_time = _parse_start_time(block["start"])
                 if event_time is None:
@@ -3213,6 +4208,14 @@ class VelairScheduler:
             "minutes_to_reach": minutes_observed if reached else None,
             "quality": quality,
         }
+        if (
+            session.target_kind == "range"
+            and session.target_temp_low is not None
+            and session.target_temp_high is not None
+        ):
+            observation["target_temp_low"] = session.target_temp_low
+            observation["target_temp_high"] = session.target_temp_high
+            observation["target_boundary"] = session.target_boundary
         temperature_source_entity_id = self._temperature_source_entity_id(
             session.entity_id
         )
@@ -3259,6 +4262,11 @@ class VelairScheduler:
             return
         self._temperature_migration_blocked = blocked
         if blocked:
+            for entity_id in self._data["zones"]:
+                self._climate_delivery.cancel(entity_id)
+                self._room_sensor_assist_generations[entity_id] = (
+                    self._room_sensor_assist_generation(entity_id) + 1
+                )
             self._applied_preconditioning_targets.clear()
             self._comfort_assessment_snapshots.clear()
             self._preconditioning_plan_snapshots.clear()
@@ -3278,42 +4286,122 @@ class VelairScheduler:
         reason: str,
     ) -> None:
         """Restore assisted climates to their scheduled target, then clear state."""
-        for state in list(self._room_sensor_assist_states.values()):
-            target = self.normalize_target_temperature(
+        entity_ids = sorted(
+            set(self._data["zones"])
+            | set(self._room_sensor_assist_states)
+            | set(self._room_sensor_assist_locks)
+            | set(self._room_sensor_assist_limit_notifications)
+        )
+        for entity_id in entity_ids:
+            self._room_sensor_assist_generations[entity_id] = (
+                self._room_sensor_assist_generation(entity_id) + 1
+            )
+
+            async def restore(assisted_entity_id: str = entity_id) -> None:
+                async with self._room_sensor_assist_lock(assisted_entity_id):
+                    inflight = self._room_sensor_assist_inflight.pop(
+                        assisted_entity_id, None
+                    )
+                    state = inflight or self._room_sensor_assist_states.get(
+                        assisted_entity_id
+                    )
+                    if inflight is not None:
+                        self._room_sensor_assist_states.pop(assisted_entity_id, None)
+                    if state is None:
+                        await self._async_dismiss_room_sensor_assist_limit_notification(
+                            assisted_entity_id
+                        )
+                        return
+                    await self._async_restore_room_sensor_assist_state_after_temperature_operation(
+                        state,
+                        source_unit,
+                        target_unit,
+                        reason=reason,
+                    )
+                    self._room_sensor_assist_generations[assisted_entity_id] = (
+                        self._room_sensor_assist_generation(assisted_entity_id) + 1
+                    )
+
+            await self._climate_delivery.async_serialize(entity_id, restore)
+        self._refresh_room_sensor_assist_listener()
+
+    async def _async_restore_room_sensor_assist_state_after_temperature_operation(
+        self,
+        state: _RoomSensorAssistState,
+        source_unit: str,
+        target_unit: str,
+        *,
+        reason: str,
+    ) -> None:
+        """Restore one migrated target while holding its entity assist lock."""
+        climate_options = (
+            self._room_sensor_assist_scheduled_target_options(
+                state.entity_id, state.weekday, state.start
+            )
+            if state.weekday is not None and state.start is not None
+            else {}
+        )
+        target = None
+        target_low = None
+        target_high = None
+        if state.target_temp_low is not None and state.target_temp_high is not None:
+            target_low = self.normalize_target_temperature(
                 state.entity_id,
-                absolute_temperature(
-                    state.target_temperature, source_unit, target_unit
+                absolute_temperature(state.target_temp_low, source_unit, target_unit),
+            )
+            target_high = self.normalize_target_temperature(
+                state.entity_id,
+                absolute_temperature(state.target_temp_high, source_unit, target_unit),
+            )
+            await self._climate_delivery.async_serialize(
+                state.entity_id,
+                lambda: self._climate_manager.async_set_temperature_range(
+                    state.entity_id,
+                    target_low,
+                    target_high,
+                    ensure_on=False,
+                    hvac_mode=state.hvac_mode,
+                    **climate_options,
                 ),
             )
-            climate_options = (
-                self._room_sensor_assist_scheduled_target_options(
-                    state.entity_id, state.weekday, state.start
-                )
-                if state.weekday is not None and state.start is not None
-                else {}
-            )
-            await self._climate_manager.async_set_temperature(
+        elif state.target_temperature is not None:
+            target = self.normalize_target_temperature(
                 state.entity_id,
-                target,
-                ensure_on=False,
-                hvac_mode=state.hvac_mode,
-                **climate_options,
+                absolute_temperature(state.target_temperature, source_unit, target_unit),
             )
-            self._room_sensor_assist_states.pop(state.entity_id, None)
-            self._async_fire_room_sensor_assist_event(
-                EVENT_TYPE_ROOM_SENSOR_ASSIST_RESTORED,
-                entity_id=state.entity_id,
-                room_temperature_entity_id=state.room_temperature_entity_id,
-                target_temperature=target,
-                applied_temperature=target,
-                room_temperature=self._current_temperature(state.entity_id),
-                climate_temperature=self._climate_current_temperature(state.entity_id),
-                assist_delta=0.0,
-                direction=state.direction,
-                hvac_mode=state.hvac_mode,
-                reason=reason,
+            await self._climate_delivery.async_serialize(
+                state.entity_id,
+                lambda: self._climate_manager.async_set_temperature(
+                    state.entity_id,
+                    target,
+                    ensure_on=False,
+                    hvac_mode=state.hvac_mode,
+                    **climate_options,
+                ),
             )
-        self._refresh_room_sensor_assist_listener()
+        self._room_sensor_assist_states.pop(state.entity_id, None)
+        await self._async_dismiss_room_sensor_assist_limit_notification(
+            state.entity_id
+        )
+        self._async_fire_room_sensor_assist_event(
+            EVENT_TYPE_ROOM_SENSOR_ASSIST_RESTORED,
+            entity_id=state.entity_id,
+            room_temperature_entity_id=state.room_temperature_entity_id,
+            target_temperature=target,
+            applied_temperature=target,
+            target_temp_low=target_low,
+            target_temp_high=target_high,
+            applied_target_temp_low=target_low,
+            applied_target_temp_high=target_high,
+            range_shift=0.0 if target_low is not None else None,
+            room_temperature=self._current_temperature(state.entity_id),
+            climate_temperature=self._climate_current_temperature(state.entity_id),
+            assist_delta=0.0,
+            applied_offset=None if target_low is not None else 0.0,
+            direction=state.direction,
+            hvac_mode=state.hvac_mode,
+            reason=reason,
+        )
 
     def _preconditioning_session_reached_target(
         self,
@@ -3391,7 +4479,13 @@ class VelairScheduler:
     ) -> None:
         """Refresh room sensor assist from the active schedule block."""
         current_event = self._room_sensor_assist_target_event(entity_id)
-        if current_event is None or current_event.temperature is None:
+        if current_event is None or (
+            current_event.temperature is None
+            and (
+                current_event.target_temp_low is None
+                or current_event.target_temp_high is None
+            )
+        ):
             _LOGGER.debug(
                 "Room Sensor Assist skipped for %s: no active scheduled target",
                 entity_id,
@@ -3405,6 +4499,8 @@ class VelairScheduler:
         await self._async_refresh_room_sensor_assist(
             entity_id,
             target_temperature=current_event.temperature,
+            target_temp_low=current_event.target_temp_low,
+            target_temp_high=current_event.target_temp_high,
             hvac_mode=current_event.hvac_mode,
             weekday=current_event.weekday,
             start=current_event.start,
@@ -3420,8 +4516,10 @@ class VelairScheduler:
                 entity_id,
                 session.weekday,
                 session.start,
-                session.target_temperature,
+                session.target_temperature if session.target_kind == "scalar" else None,
                 session.hvac_mode,
+                target_temp_low=session.target_temp_low,
+                target_temp_high=session.target_temp_high,
             ):
                 self._preconditioning_sessions.pop(entity_id, None)
             else:
@@ -3430,8 +4528,10 @@ class VelairScheduler:
                         entity_id,
                         session.weekday,
                         session.start,
-                        session.target_temperature,
+                        session.target_temperature if session.target_kind == "scalar" else None,
                         session.hvac_mode,
+                        target_temp_low=session.target_temp_low,
+                        target_temp_high=session.target_temp_high,
                     )
                 )
                 if applied_preconditioning_event is not None:
@@ -3440,7 +4540,13 @@ class VelairScheduler:
                 return ClimateEvent(
                     entity_id=entity_id,
                     when=session.started_at,
-                    temperature=session.target_temperature,
+                    temperature=(
+                        session.target_temperature
+                        if session.target_kind == "scalar"
+                        else None
+                    ),
+                    target_temp_low=session.target_temp_low,
+                    target_temp_high=session.target_temp_high,
                     weekday=session.weekday,
                     start=session.start,
                     action=ACTION_SET_TEMPERATURE,
@@ -3460,6 +4566,7 @@ class VelairScheduler:
         state = self._room_sensor_assist_states.get(entity_id)
         if (
             state is not None
+            and state.target_temperature is not None
             and state.weekday is not None
             and state.start is not None
             and self._room_sensor_assist_scheduled_target_exists(
@@ -3482,21 +4589,6 @@ class VelairScheduler:
             if applied_preconditioning_event is not None:
                 return applied_preconditioning_event
 
-            return ClimateEvent(
-                entity_id=entity_id,
-                when=now,
-                temperature=state.target_temperature,
-                weekday=state.weekday,
-                start=state.start,
-                action=ACTION_SET_TEMPERATURE,
-                hvac_mode=state.hvac_mode,
-                **self._room_sensor_assist_scheduled_target_options(
-                    entity_id,
-                    state.weekday,
-                    state.start,
-                ),
-            )
-
         return self.get_current_event(entity_id)
 
     def _room_sensor_assist_applied_preconditioning_event(
@@ -3504,8 +4596,11 @@ class VelairScheduler:
         entity_id: str,
         weekday: str,
         start: str,
-        target_temperature: float,
+        target_temperature: float | None,
         hvac_mode: str | None,
+        *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
     ) -> ClimateEvent | None:
         """Return an already applied early-start event for a Room Assist state."""
         if not self._room_sensor_assist_scheduled_target_exists(
@@ -3514,6 +4609,8 @@ class VelairScheduler:
             start,
             target_temperature,
             hvac_mode,
+            target_temp_low=target_temp_low,
+            target_temp_high=target_temp_high,
         ):
             return None
 
@@ -3525,6 +4622,8 @@ class VelairScheduler:
                 entity_id=entity_id,
                 when=marker.active_from,
                 temperature=target_temperature,
+                target_temp_low=target_temp_low,
+                target_temp_high=target_temp_high,
                 weekday=weekday,
                 start=start,
                 action=ACTION_SET_TEMPERATURE,
@@ -3578,8 +4677,11 @@ class VelairScheduler:
         entity_id: str,
         weekday: str,
         start: str,
-        target_temperature: float,
+        target_temperature: float | None,
         hvac_mode: str | None,
+        *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
     ) -> bool:
         """Return whether a runtime Room Sensor Assist target still exists."""
         zone = self._data["zones"].get(entity_id)
@@ -3594,12 +4696,23 @@ class VelairScheduler:
                 continue
             if block.get("action", ACTION_SET_TEMPERATURE) != ACTION_SET_TEMPERATURE:
                 continue
-            block_temperature = _event_temperature(block)
-            if (
-                block_temperature is None
-                or abs(block_temperature - target_temperature) >= 0.000001
-            ):
-                continue
+            if target_temp_low is not None and target_temp_high is not None:
+                block_range = _event_temperature_range(block)
+                if (
+                    block_range.get(ATTR_TARGET_TEMP_LOW) is None
+                    or block_range.get(ATTR_TARGET_TEMP_HIGH) is None
+                    or abs(block_range[ATTR_TARGET_TEMP_LOW] - target_temp_low) >= 0.000001
+                    or abs(block_range[ATTR_TARGET_TEMP_HIGH] - target_temp_high) >= 0.000001
+                ):
+                    continue
+            else:
+                block_temperature = _event_temperature(block)
+                if (
+                    block_temperature is None
+                    or target_temperature is None
+                    or abs(block_temperature - target_temperature) >= 0.000001
+                ):
+                    continue
             block_hvac_mode = block.get("hvac_mode")
             if (
                 block_hvac_mode is not None
@@ -3617,11 +4730,23 @@ class VelairScheduler:
         target_event: ClimateEvent | None,
     ) -> bool:
         """Return whether a runtime assist state belongs to a target event."""
-        if state is None or target_event is None or target_event.temperature is None:
+        if state is None or target_event is None:
             return False
         if state.weekday != target_event.weekday or state.start != target_event.start:
             return False
-        return abs(state.target_temperature - target_event.temperature) < 0.000001
+        if target_event.temperature is not None:
+            return (
+                state.target_temperature is not None
+                and abs(state.target_temperature - target_event.temperature) < 0.000001
+            )
+        return (
+            target_event.target_temp_low is not None
+            and target_event.target_temp_high is not None
+            and state.target_temp_low is not None
+            and state.target_temp_high is not None
+            and abs(state.target_temp_low - target_event.target_temp_low) < 0.000001
+            and abs(state.target_temp_high - target_event.target_temp_high) < 0.000001
+        )
 
     def _room_sensor_assist_status(self, entity_id: str) -> dict[str, object]:
         """Return a user-facing Room Sensor Assist runtime snapshot."""
@@ -3647,6 +4772,16 @@ class VelairScheduler:
             else None
         )
         hvac_mode = target_event.hvac_mode if target_event is not None else None
+        target_temp_low = target_event.target_temp_low if target_event is not None else None
+        target_temp_high = target_event.target_temp_high if target_event is not None else None
+        range_target = target_temp_low is not None and target_temp_high is not None
+        single_target_supported = (
+            not range_target
+            and self._room_sensor_assist_supports_single_target(
+                entity_id,
+                hvac_mode,
+            )
+        )
         room_temperature = (
             self._external_temperature(entity_id, room_entity_id)
             if room_entity_id
@@ -3654,39 +4789,66 @@ class VelairScheduler:
         )
         climate_temperature = self._climate_current_temperature(entity_id)
         climate_target_temperature = self._climate_target_temperature(entity_id)
+        climate_target_range = self._climate_target_range(entity_id)
         direction = (
-            runtime_state.direction
-            if runtime_state is not None
-            else (
-                self._room_sensor_assist_direction(
-                    entity_id,
-                    target_temperature,
-                    hvac_mode,
-                )
-                if target_step_available and target_temperature is not None
-                else None
+            self._room_sensor_assist_range_direction(
+                config,
+                target_temp_low,
+                target_temp_high,
+                room_temperature,
             )
+            if range_target and room_temperature is not None
+            else self._room_sensor_assist_direction(
+                entity_id, target_temperature, hvac_mode
+            )
+            if (
+                target_step_available
+                and single_target_supported
+                and target_temperature is not None
+            )
+            else None
         )
-        calculated_temperature: float | None = None
+        candidate_temperature: float | None = None
+        calculated_low: float | None = None
+        calculated_high: float | None = None
         assist_delta = 0.0
+        calculated_offset = 0.0
+        calculated_range_shift: float | None = None
         if (
             config["room_sensor_assist_enabled"]
-            and
-            target_step_available
-            and
-            target_temperature is not None
-            and direction is not None
+            and target_step_available
             and room_temperature is not None
             and climate_temperature is not None
         ):
-            calculated_temperature, assist_delta = self._room_sensor_assist_target(
-                entity_id,
-                config,
-                direction,
-                target_temperature,
-                room_temperature,
-                climate_temperature,
-            )
+            if range_target:
+                range_result = self._room_sensor_assist_range_target(
+                    entity_id,
+                    config,
+                    target_temp_low,
+                    target_temp_high,
+                    room_temperature,
+                    climate_temperature,
+                    holding_state=runtime_state,
+                )
+                calculated_low = range_result.applied_low
+                calculated_high = range_result.applied_high
+                assist_delta = range_result.assist_delta
+                calculated_range_shift = range_result.range_shift
+            elif single_target_supported and target_temperature is not None and direction:
+                target_result = self._room_sensor_assist_target(
+                    entity_id,
+                    config,
+                    direction,
+                    target_temperature,
+                    room_temperature,
+                    climate_temperature,
+                    fixed_direction=self._room_sensor_assist_uses_fixed_direction(
+                        entity_id, hvac_mode
+                    ),
+                )
+                candidate_temperature = target_result.applied_temperature
+                assist_delta = target_result.assist_delta
+                calculated_offset = target_result.applied_offset
 
         if not zone or not zone["enabled"]:
             status = "unavailable"
@@ -3696,24 +4858,46 @@ class VelairScheduler:
             status = "disabled"
         elif not target_step_available:
             status = "unavailable"
+        elif not range_target and not single_target_supported:
+            status = "unavailable"
         elif self.mode != MODE_AUTO or self._is_zone_override_active(entity_id, dt_util.now()):
             status = "blocked"
-        elif target_temperature is None:
+        elif target_temperature is None and not range_target:
             status = "idle"
-        elif runtime_state is not None and calculated_temperature is None:
+        elif runtime_state is not None and (
+            assist_delta == 0 or runtime_state.scheduled_target_guard is not None
+        ):
             status = "holding"
         elif runtime_state is not None:
             status = "assisting"
-        elif calculated_temperature is not None:
+        elif candidate_temperature is not None or calculated_low is not None:
             status = "ready"
         else:
             status = "idle"
 
-        return {
+        if range_target:
+            visible_applied_offset = None
+        elif runtime_state is not None and climate_temperature is not None:
+            visible_applied_offset = round(
+                runtime_state.applied_temperature - climate_temperature,
+                3,
+            )
+        elif runtime_state is not None:
+            visible_applied_offset = runtime_state.applied_offset
+        else:
+            visible_applied_offset = calculated_offset
+
+        status_data = {
             "status": status,
             "reason": (
                 "missing_target_step"
                 if config["room_sensor_assist_enabled"] and not target_step_available
+                else "unsupported_temperature_range"
+                if (
+                    config["room_sensor_assist_enabled"]
+                    and not range_target
+                    and not single_target_supported
+                )
                 else None
             ),
             "enabled": config["room_sensor_assist_enabled"],
@@ -3729,7 +4913,21 @@ class VelairScheduler:
             "room_temperature": room_temperature,
             "climate_temperature": climate_temperature,
             "assist_delta": assist_delta,
+            "applied_offset": visible_applied_offset,
             "direction": direction,
+            "limited_by": runtime_state.limited_by if runtime_state is not None else None,
+            "limit_temperature": (
+                runtime_state.limit_temperature if runtime_state is not None else None
+            ),
+            "requested_temperature": (
+                runtime_state.requested_temperature if runtime_state is not None else None
+            ),
+            "calculated_temperature": (
+                runtime_state.calculated_temperature if runtime_state is not None else None
+            ),
+            "scheduled_target_guard": (
+                runtime_state.scheduled_target_guard if runtime_state is not None else None
+            ),
             "hvac_mode": hvac_mode,
             "weekday": target_event.weekday if target_event is not None else None,
             "start": target_event.start if target_event is not None else None,
@@ -3742,22 +4940,257 @@ class VelairScheduler:
                 else None
             ),
         }
+        if range_target:
+            status_data.update(
+                {
+                    "target_temp_low": target_temp_low,
+                    "target_temp_high": target_temp_high,
+                    "applied_target_temp_low": (
+                        runtime_state.applied_target_temp_low
+                        if runtime_state is not None
+                        else None
+                    ),
+                    "applied_target_temp_high": (
+                        runtime_state.applied_target_temp_high
+                        if runtime_state is not None
+                        else None
+                    ),
+                    "climate_target_temp_low": (
+                        climate_target_range[0]
+                        if climate_target_range is not None
+                        else None
+                    ),
+                    "climate_target_temp_high": (
+                        climate_target_range[1]
+                        if climate_target_range is not None
+                        else None
+                    ),
+                    "range_shift": (
+                        runtime_state.range_shift
+                        if runtime_state is not None
+                        else calculated_range_shift
+                    ),
+                    "requested_target_temp_low": (
+                        runtime_state.requested_target_temp_low
+                        if runtime_state is not None
+                        else None
+                    ),
+                    "requested_target_temp_high": (
+                        runtime_state.requested_target_temp_high
+                        if runtime_state is not None
+                        else None
+                    ),
+                }
+            )
+        return status_data
+
+    def _room_sensor_assist_lock(self, entity_id: str) -> asyncio.Lock:
+        """Return the per-climate lock that serializes Room Assist services."""
+        return self._room_sensor_assist_locks.setdefault(entity_id, asyncio.Lock())
+
+    async def _async_update_room_sensor_assist_limit_notification(
+        self,
+        state: _RoomSensorAssistState,
+    ) -> None:
+        """Synchronize one event-driven persistent target-limit notification."""
+        current_fingerprint = self._room_sensor_assist_limit_notifications.get(
+            state.entity_id
+        )
+        if state.limited_by is None:
+            if current_fingerprint is None:
+                return
+            if await async_dismiss_room_assist_limit_notification(
+                self._hass, state.entity_id
+            ):
+                self._room_sensor_assist_limit_notifications.pop(state.entity_id, None)
+            return
+
+        fingerprint = (
+            state.limited_by,
+            state.weekday,
+            state.start,
+            "range" if state.target_temp_low is not None else "scalar",
+            state.target_temperature,
+            state.target_temp_low,
+            state.target_temp_high,
+            state.requested_temperature,
+            state.requested_target_temp_low,
+            state.requested_target_temp_high,
+            state.applied_temperature,
+            state.applied_target_temp_low,
+            state.applied_target_temp_high,
+            state.limit_temperature,
+        )
+        if current_fingerprint == fingerprint:
+            return
+        unit_getter = getattr(self._climate_manager, "temperature_unit", None)
+        unit = unit_getter(state.entity_id) if unit_getter else CELSIUS
+        if (
+            state.requested_target_temp_low is not None
+            and state.requested_target_temp_high is not None
+            and state.applied_target_temp_low is not None
+            and state.applied_target_temp_high is not None
+        ):
+            requested = (
+                f"{state.requested_target_temp_low:g}–"
+                f"{state.requested_target_temp_high:g} {unit}"
+            )
+            applied = (
+                f"{state.applied_target_temp_low:g}–"
+                f"{state.applied_target_temp_high:g} {unit}"
+            )
+        else:
+            requested_value = state.requested_temperature
+            applied_value = state.applied_temperature
+            if requested_value is None or applied_value is None:
+                return
+            requested = f"{requested_value:g} {unit}"
+            applied = f"{applied_value:g} {unit}"
+        if state.limit_temperature is None:
+            return
+        limit = f"{state.limit_temperature:g} {unit}"
+        if await async_notify_room_assist_limit(
+            self._hass,
+            state.entity_id,
+            state.limited_by,
+            requested=requested,
+            applied=applied,
+            limit=limit,
+        ):
+            self._room_sensor_assist_limit_notifications[state.entity_id] = fingerprint
+            self._room_sensor_assist_notification_cleanup_done.add(state.entity_id)
+
+    async def _async_dismiss_room_sensor_assist_limit_notification(
+        self,
+        entity_id: str,
+    ) -> None:
+        """Dismiss a tracked target-limit notification after Room Assist clears."""
+        if entity_id not in self._room_sensor_assist_limit_notifications:
+            return
+        if await async_dismiss_room_assist_limit_notification(self._hass, entity_id):
+            self._room_sensor_assist_limit_notifications.pop(entity_id, None)
+            self._room_sensor_assist_notification_cleanup_done.add(entity_id)
+
+    def _room_sensor_assist_generation(self, entity_id: str) -> int:
+        """Return the current invalidation generation for one climate."""
+        return self._room_sensor_assist_generations.get(entity_id, 0)
+
+    def _room_sensor_assist_request_is_authoritative(
+        self,
+        entity_id: str,
+        *,
+        target_temperature: float | None,
+        target_temp_low: float | None,
+        target_temp_high: float | None,
+        hvac_mode: str | None,
+        weekday: str | None,
+        start: str | None,
+    ) -> bool:
+        """Return whether a queued refresh still describes the active target."""
+        zone = self._data["zones"].get(entity_id)
+        if (
+            zone is None
+            or not zone["enabled"]
+            or self.mode != MODE_AUTO
+            or self._stopped
+            or self._temperature_migration_blocked
+            or self._is_zone_override_active(entity_id, dt_util.now())
+        ):
+            return False
+        event = self._room_sensor_assist_target_event(entity_id)
+        if (
+            event is None
+            or event.weekday != weekday
+            or event.start != start
+            or event.hvac_mode != hvac_mode
+        ):
+            return False
+        if target_temperature is not None:
+            return (
+                event.temperature is not None
+                and abs(event.temperature - target_temperature) < 0.000001
+                and event.target_temp_low is None
+                and event.target_temp_high is None
+            )
+        return (
+            target_temp_low is not None
+            and target_temp_high is not None
+            and event.target_temp_low is not None
+            and event.target_temp_high is not None
+            and abs(event.target_temp_low - target_temp_low) < 0.000001
+            and abs(event.target_temp_high - target_temp_high) < 0.000001
+        )
 
     async def _async_refresh_room_sensor_assist(
         self,
         entity_id: str,
         *,
-        target_temperature: float,
+        target_temperature: float | None,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
         hvac_mode: str | None,
         weekday: str | None = None,
         start: str | None = None,
         reason: str,
+        force_apply: bool = False,
     ) -> None:
-        """Apply or restore a dynamic TRV target using an external room sensor."""
+        """Serialize and revalidate one queued Room Assist refresh."""
+        generation = self._room_sensor_assist_generation(entity_id)
+
+        async def refresh() -> None:
+            async with self._room_sensor_assist_lock(entity_id):
+                if generation != self._room_sensor_assist_generation(entity_id):
+                    return
+                if force_apply:
+                    self._room_sensor_assist_suppressed.discard(entity_id)
+                elif entity_id in self._room_sensor_assist_suppressed:
+                    return
+                if not self._room_sensor_assist_request_is_authoritative(
+                    entity_id,
+                    target_temperature=target_temperature,
+                    target_temp_low=target_temp_low,
+                    target_temp_high=target_temp_high,
+                    hvac_mode=hvac_mode,
+                    weekday=weekday,
+                    start=start,
+                ):
+                    return
+                await self._async_refresh_room_sensor_assist_locked(
+                    entity_id,
+                    target_temperature=target_temperature,
+                    target_temp_low=target_temp_low,
+                    target_temp_high=target_temp_high,
+                    hvac_mode=hvac_mode,
+                    weekday=weekday,
+                    start=start,
+                    reason=reason,
+                    force_apply=force_apply,
+                )
+
+        # Always acquire delivery before the Room Assist lock. The coordinator
+        # treats calls made by its current owner as reentrant, so schedule
+        # delivery and listener refreshes share one physical-call boundary
+        # without lock inversion.
+        await self._climate_delivery.async_serialize(entity_id, refresh)
+
+    async def _async_refresh_room_sensor_assist_locked(
+        self,
+        entity_id: str,
+        *,
+        target_temperature: float | None,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
+        hvac_mode: str | None,
+        weekday: str | None = None,
+        start: str | None = None,
+        reason: str,
+        force_apply: bool = False,
+    ) -> None:
+        """Apply a dynamic target while holding the entity Room Assist lock."""
         zone = self._data["zones"].get(entity_id)
         if zone is None or not zone["enabled"]:
             _LOGGER.debug("Room Sensor Assist skipped for %s: zone unavailable", entity_id)
-            await self._async_clear_room_sensor_assist(
+            await self._async_clear_room_sensor_assist_locked(
                 entity_id,
                 restore=True,
                 reason="zone_unavailable",
@@ -3765,7 +5198,7 @@ class VelairScheduler:
             return
         if self.mode != MODE_AUTO or self._is_zone_override_active(entity_id, dt_util.now()):
             _LOGGER.debug("Room Sensor Assist skipped for %s: scheduler not auto", entity_id)
-            await self._async_clear_room_sensor_assist(
+            await self._async_clear_room_sensor_assist_locked(
                 entity_id,
                 restore=True,
                 reason="not_auto",
@@ -3779,7 +5212,7 @@ class VelairScheduler:
             or not room_entity_id
         ):
             _LOGGER.debug("Room Sensor Assist skipped for %s: assist disabled", entity_id)
-            await self._async_clear_room_sensor_assist(
+            await self._async_clear_room_sensor_assist_locked(
                 entity_id,
                 restore=True,
                 reason="assist_disabled",
@@ -3791,10 +5224,47 @@ class VelairScheduler:
                 "Room Sensor Assist skipped for %s: climate has no valid target_temp_step",
                 entity_id,
             )
-            await self._async_clear_room_sensor_assist(
+            await self._async_clear_room_sensor_assist_locked(
                 entity_id,
                 restore=True,
                 reason="missing_target_step",
+            )
+            return
+
+        if target_temp_low is not None and target_temp_high is not None:
+            await self._async_refresh_room_sensor_assist_range(
+                entity_id,
+                config=config,
+                room_entity_id=room_entity_id,
+                target_temp_low=target_temp_low,
+                target_temp_high=target_temp_high,
+                hvac_mode=hvac_mode,
+                weekday=weekday,
+                start=start,
+                reason=reason,
+                force_apply=force_apply,
+            )
+            return
+
+        if target_temperature is None:
+            await self._async_clear_room_sensor_assist_locked(
+                entity_id, restore=True, reason="missing_target"
+            )
+            return
+
+        if not self._room_sensor_assist_supports_single_target(
+            entity_id,
+            hvac_mode,
+        ):
+            _LOGGER.debug(
+                "Room Sensor Assist skipped for %s: effective mode requires a "
+                "temperature range",
+                entity_id,
+            )
+            await self._async_clear_room_sensor_assist_locked(
+                entity_id,
+                restore=False,
+                reason="unsupported_temperature_range",
             )
             return
 
@@ -3805,7 +5275,7 @@ class VelairScheduler:
         )
         if direction is None:
             _LOGGER.debug("Room Sensor Assist skipped for %s: unsupported mode", entity_id)
-            await self._async_clear_room_sensor_assist(
+            await self._async_clear_room_sensor_assist_locked(
                 entity_id,
                 restore=True,
                 reason="unsupported_mode",
@@ -3822,141 +5292,90 @@ class VelairScheduler:
                 room_temperature,
                 climate_temperature,
             )
-            await self._async_clear_room_sensor_assist(
+            await self._async_clear_room_sensor_assist_locked(
                 entity_id,
                 restore=True,
                 reason="missing_temperature",
             )
             return
 
-        desired_temperature, assist_delta = self._room_sensor_assist_target(
+        target_result = self._room_sensor_assist_target(
             entity_id,
             config,
             direction,
             target_temperature,
             room_temperature,
             climate_temperature,
+            fixed_direction=self._room_sensor_assist_uses_fixed_direction(
+                entity_id, hvac_mode
+            ),
         )
-        if desired_temperature is None:
-            await self._async_hold_room_sensor_assist_target(
-                entity_id,
-                target_temperature=target_temperature,
-                room_temperature=room_temperature,
-                climate_temperature=climate_temperature,
-                direction=direction,
-                hvac_mode=hvac_mode,
-                room_temperature_entity_id=room_entity_id,
-                weekday=weekday,
-                start=start,
-                reason="target_reached",
-            )
-            return
+        desired_temperature = target_result.applied_temperature
+        assist_delta = target_result.assist_delta
+        applied_offset = target_result.applied_offset
 
         current_state = self._room_sensor_assist_states.get(entity_id)
-        temperature_step = self.get_temperature_step(entity_id)
-        movement_threshold = temperature_step or 0.000001
-        if (
-            current_state is not None
-            and abs(desired_temperature - current_state.applied_temperature)
-            < movement_threshold - 0.000001
-        ):
-            self._refresh_room_sensor_assist_listener()
-            return
-
-        if self._temperature_migration_blocked:
-            return
-        await self._climate_manager.async_set_temperature(
-            entity_id,
-            desired_temperature,
-            ensure_on=True,
-            **(
-                self._room_sensor_assist_scheduled_target_options(
-                    entity_id,
-                    weekday,
-                    start,
-                )
-                if weekday is not None and start is not None
-                else {}
-            ),
-            hvac_mode=hvac_mode,
-        )
-        _LOGGER.debug(
-            "Room Sensor Assist set %s to %s "
-            "(target=%s, room=%s, climate=%s, assist_delta=%s)",
-            entity_id,
-            desired_temperature,
-            target_temperature,
-            room_temperature,
-            climate_temperature,
-            assist_delta,
-        )
-        self._room_sensor_assist_states[entity_id] = _RoomSensorAssistState(
+        refreshed_state = _RoomSensorAssistState(
             entity_id=entity_id,
             target_temperature=target_temperature,
             applied_temperature=desired_temperature,
+            applied_offset=applied_offset,
             direction=direction,
             hvac_mode=hvac_mode,
             room_temperature_entity_id=room_entity_id,
             weekday=weekday,
             start=start,
+            limited_by=target_result.limited_by,
+            limit_temperature=target_result.limit_temperature,
+            requested_temperature=target_result.requested_temperature,
+            calculated_temperature=target_result.calculated_temperature,
+            scheduled_target_guard=target_result.scheduled_target_guard,
         )
-        self._refresh_room_sensor_assist_listener()
-        self._async_fire_room_sensor_assist_event(
-            EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED,
-            entity_id=entity_id,
-            room_temperature_entity_id=room_entity_id,
-            target_temperature=target_temperature,
-            applied_temperature=desired_temperature,
-            room_temperature=room_temperature,
-            climate_temperature=climate_temperature,
-            assist_delta=assist_delta,
-            direction=direction,
-            hvac_mode=hvac_mode,
-            reason=reason,
-        )
-
-    async def _async_hold_room_sensor_assist_target(
-        self,
-        entity_id: str,
-        *,
-        target_temperature: float,
-        room_temperature: float,
-        climate_temperature: float,
-        direction: str,
-        hvac_mode: str | None,
-        room_temperature_entity_id: str,
-        weekday: str | None,
-        start: str | None,
-        reason: str,
-    ) -> None:
-        """Apply a non-driving target while keeping room sensor assist active."""
-        hold_temperature = self._room_sensor_assist_hold_target(
-            entity_id,
-            direction,
-            climate_temperature,
-        )
-        current_state = self._room_sensor_assist_states.get(entity_id)
         temperature_step = self.get_temperature_step(entity_id)
         movement_threshold = temperature_step or 0.000001
-        should_apply = (
-            abs(
-                hold_temperature
-                - (
-                    current_state.applied_temperature
-                    if current_state is not None
-                    else target_temperature
-                )
+        if (
+            not force_apply
+            and current_state is not None
+            and current_state.applied_temperature is not None
+            and abs(desired_temperature - current_state.applied_temperature)
+            < movement_threshold - 0.000001
+        ):
+            unchanged_state = _RoomSensorAssistState(
+                entity_id=entity_id,
+                target_temperature=target_temperature,
+                applied_temperature=current_state.applied_temperature,
+                applied_offset=round(
+                    current_state.applied_temperature - climate_temperature,
+                    3,
+                ),
+                direction=direction,
+                hvac_mode=hvac_mode,
+                room_temperature_entity_id=room_entity_id,
+                weekday=weekday,
+                start=start,
+                limited_by=target_result.limited_by,
+                limit_temperature=target_result.limit_temperature,
+                requested_temperature=target_result.requested_temperature,
+                calculated_temperature=target_result.calculated_temperature,
+                scheduled_target_guard=target_result.scheduled_target_guard,
             )
-            >= movement_threshold - 0.000001
-        )
+            self._room_sensor_assist_states[entity_id] = unchanged_state
+            await self._async_update_room_sensor_assist_limit_notification(
+                unchanged_state
+            )
+            self._refresh_room_sensor_assist_listener()
+            return
 
-        if should_apply:
-            if self._temperature_migration_blocked:
-                return
-            await self._climate_manager.async_set_temperature(
+        if self._temperature_migration_blocked or self._stopped:
+            return
+        generation = self._room_sensor_assist_generation(entity_id)
+        self._room_sensor_assist_inflight[entity_id] = refreshed_state
+        await self._climate_delivery.async_serialize(
+            entity_id,
+            lambda: self._climate_manager.async_set_temperature(
                 entity_id,
-                hold_temperature,
-                ensure_on=False,
+                desired_temperature,
+                ensure_on=True,
                 **(
                     self._room_sensor_assist_scheduled_target_options(
                         entity_id,
@@ -3967,32 +5386,178 @@ class VelairScheduler:
                     else {}
                 ),
                 hvac_mode=hvac_mode,
-            )
-            self._async_fire_room_sensor_assist_event(
-                EVENT_TYPE_ROOM_SENSOR_ASSIST_RESTORED,
-                entity_id=entity_id,
-                room_temperature_entity_id=room_temperature_entity_id,
-                target_temperature=target_temperature,
-                applied_temperature=hold_temperature,
-                room_temperature=room_temperature,
-                climate_temperature=climate_temperature,
-                assist_delta=0.0,
-                direction=direction,
-                hvac_mode=hvac_mode,
-                reason=reason,
-            )
-
-        self._room_sensor_assist_states[entity_id] = _RoomSensorAssistState(
+            ),
+        )
+        if generation != self._room_sensor_assist_generation(entity_id):
+            return
+        self._room_sensor_assist_inflight.pop(entity_id, None)
+        _LOGGER.debug(
+            "Room Sensor Assist set %s to %s "
+            "(target=%s, room=%s, climate=%s, assist_delta=%s)",
+            entity_id,
+            desired_temperature,
+            target_temperature,
+            room_temperature,
+            climate_temperature,
+            assist_delta,
+        )
+        self._room_sensor_assist_states[entity_id] = refreshed_state
+        await self._async_update_room_sensor_assist_limit_notification(refreshed_state)
+        self._refresh_room_sensor_assist_listener()
+        self._async_fire_room_sensor_assist_event(
+            EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED,
             entity_id=entity_id,
+            room_temperature_entity_id=room_entity_id,
             target_temperature=target_temperature,
-            applied_temperature=hold_temperature,
+            applied_temperature=desired_temperature,
+            room_temperature=room_temperature,
+            climate_temperature=climate_temperature,
+            assist_delta=assist_delta,
+            applied_offset=applied_offset,
+            calculated_temperature=target_result.calculated_temperature,
+            scheduled_target_guard=target_result.scheduled_target_guard,
             direction=direction,
             hvac_mode=hvac_mode,
-            room_temperature_entity_id=room_temperature_entity_id,
+            reason=reason,
+        )
+
+    async def _async_refresh_room_sensor_assist_range(
+        self,
+        entity_id: str,
+        *,
+        config: PreconditioningData,
+        room_entity_id: str,
+        target_temp_low: float,
+        target_temp_high: float,
+        hvac_mode: str | None,
+        weekday: str | None,
+        start: str | None,
+        reason: str,
+        force_apply: bool = False,
+    ) -> None:
+        """Apply a Room Sensor Assist shift to one native target range."""
+        room_temperature = self._external_temperature(entity_id, room_entity_id)
+        climate_temperature = self._climate_current_temperature(entity_id)
+        if room_temperature is None or climate_temperature is None:
+            await self._async_clear_room_sensor_assist_locked(
+                entity_id, restore=True, reason="missing_temperature"
+            )
+            return
+
+        current_state = self._room_sensor_assist_states.get(entity_id)
+        holding_state = (
+            current_state
+            if current_state is not None
+            and current_state.weekday == weekday
+            and current_state.start == start
+            and current_state.target_temp_low is not None
+            and current_state.target_temp_high is not None
+            and abs(current_state.target_temp_low - target_temp_low) < 0.000001
+            and abs(current_state.target_temp_high - target_temp_high) < 0.000001
+            else None
+        )
+        range_result = self._room_sensor_assist_range_target(
+            entity_id,
+            config,
+            target_temp_low,
+            target_temp_high,
+            room_temperature,
+            climate_temperature,
+            holding_state=holding_state,
+        )
+        applied_low = range_result.applied_low
+        applied_high = range_result.applied_high
+        assist_delta = range_result.assist_delta
+        range_shift = range_result.range_shift
+        direction = self._room_sensor_assist_range_direction(
+            config,
+            target_temp_low,
+            target_temp_high,
+            room_temperature,
+        )
+        refreshed_state = _RoomSensorAssistState(
+            entity_id=entity_id,
+            target_temperature=None,
+            applied_temperature=None,
+            applied_offset=None,
+            direction=direction,
+            hvac_mode=hvac_mode,
+            room_temperature_entity_id=room_entity_id,
             weekday=weekday,
             start=start,
+            target_temp_low=target_temp_low,
+            target_temp_high=target_temp_high,
+            applied_target_temp_low=applied_low,
+            applied_target_temp_high=applied_high,
+            range_shift=range_shift,
+            limited_by=range_result.limited_by,
+            limit_temperature=range_result.limit_temperature,
+            requested_target_temp_low=range_result.requested_low,
+            requested_target_temp_high=range_result.requested_high,
         )
+        step = self.get_temperature_step(entity_id) or 0.000001
+        if (
+            not force_apply
+            and current_state is not None
+            and current_state.applied_target_temp_low is not None
+            and current_state.applied_target_temp_high is not None
+            and abs(applied_low - current_state.applied_target_temp_low)
+            < step - 0.000001
+            and abs(applied_high - current_state.applied_target_temp_high)
+            < step - 0.000001
+        ):
+            self._room_sensor_assist_states[entity_id] = refreshed_state
+            await self._async_update_room_sensor_assist_limit_notification(
+                refreshed_state
+            )
+            self._refresh_room_sensor_assist_listener()
+            return
+
+        if self._temperature_migration_blocked or self._stopped:
+            return
+        climate_options = (
+            self._room_sensor_assist_scheduled_target_options(entity_id, weekday, start)
+            if weekday is not None and start is not None
+            else {}
+        )
+        generation = self._room_sensor_assist_generation(entity_id)
+        self._room_sensor_assist_inflight[entity_id] = refreshed_state
+        await self._climate_delivery.async_serialize(
+            entity_id,
+            lambda: self._climate_manager.async_set_temperature_range(
+                entity_id,
+                applied_low,
+                applied_high,
+                ensure_on=True,
+                hvac_mode=hvac_mode,
+                **climate_options,
+            ),
+        )
+        if generation != self._room_sensor_assist_generation(entity_id):
+            return
+        self._room_sensor_assist_inflight.pop(entity_id, None)
+        self._room_sensor_assist_states[entity_id] = refreshed_state
+        await self._async_update_room_sensor_assist_limit_notification(refreshed_state)
         self._refresh_room_sensor_assist_listener()
+        self._async_fire_room_sensor_assist_event(
+            EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED,
+            entity_id=entity_id,
+            room_temperature_entity_id=room_entity_id,
+            target_temperature=None,
+            applied_temperature=None,
+            target_temp_low=target_temp_low,
+            target_temp_high=target_temp_high,
+            applied_target_temp_low=applied_low,
+            applied_target_temp_high=applied_high,
+            range_shift=range_shift,
+            room_temperature=room_temperature,
+            climate_temperature=climate_temperature,
+            assist_delta=assist_delta,
+            applied_offset=None,
+            direction=direction,
+            hvac_mode=hvac_mode,
+            reason=reason,
+        )
 
     def _room_sensor_assist_direction(
         self,
@@ -4001,7 +5566,7 @@ class VelairScheduler:
         hvac_mode: str | None,
     ) -> str | None:
         """Return heat/cool direction for a room sensor assist target."""
-        mode = hvac_mode or self._current_hvac_mode(entity_id)
+        mode = self._room_sensor_assist_effective_hvac_mode(entity_id, hvac_mode)
         if mode in PRECONDITIONING_HEATING_MODES:
             return "heat"
         if mode in PRECONDITIONING_COOLING_MODES:
@@ -4010,14 +5575,59 @@ class VelairScheduler:
             return None
 
         room_temperature = self._current_temperature(entity_id)
-        minimum_delta = self._preconditioning_minimum_delta(entity_id)
         if room_temperature is None:
             return None
-        if room_temperature < target_temperature - minimum_delta:
+        minimum_delta = self._preconditioning_minimum_delta(entity_id)
+        error = target_temperature - room_temperature
+        if error > minimum_delta:
             return "heat"
-        if room_temperature > target_temperature + minimum_delta:
+        if error < -minimum_delta:
             return "cool"
-        return None
+
+        current_state = self._room_sensor_assist_states.get(entity_id)
+        if current_state is not None:
+            return current_state.direction
+        if error > 0:
+            return "heat"
+        if error < 0:
+            return "cool"
+
+        state = self._hass.states.get(entity_id)
+        hvac_action = getattr(state, "attributes", {}).get("hvac_action")
+        if hvac_action in ("heating", "heat"):
+            return "heat"
+        if hvac_action in ("cooling", "cool"):
+            return "cool"
+        return "heat"
+
+    def _room_sensor_assist_effective_hvac_mode(
+        self,
+        entity_id: str,
+        hvac_mode: str | None,
+    ) -> str | None:
+        """Return the mode a scalar Room Assist operation would use."""
+        effective_mode_getter = getattr(
+            self._climate_manager,
+            "effective_hvac_mode",
+            None,
+        )
+        if callable(effective_mode_getter):
+            return effective_mode_getter(
+                entity_id,
+                hvac_mode,
+                ensure_on=True,
+                range_target=False,
+            )
+        return hvac_mode or self._current_hvac_mode(entity_id)
+
+    def _room_sensor_assist_uses_fixed_direction(
+        self,
+        entity_id: str,
+        hvac_mode: str | None,
+    ) -> bool:
+        """Return whether one scalar target has a single safe HVAC side."""
+        mode = self._room_sensor_assist_effective_hvac_mode(entity_id, hvac_mode)
+        return mode in PRECONDITIONING_HEATING_MODES | PRECONDITIONING_COOLING_MODES
 
     def _room_sensor_assist_target(
         self,
@@ -4027,57 +5637,304 @@ class VelairScheduler:
         target_temperature: float,
         room_temperature: float,
         climate_temperature: float,
-    ) -> tuple[float | None, float]:
-        """Return the assisted target temperature and applied delta."""
+        *,
+        fixed_direction: bool = True,
+    ) -> _RoomSensorAssistTargetResult:
+        """Return the scalar target before and after physical climate limits."""
         minimum_delta = config["minimum_delta_temperature"]
-        if direction == "heat":
-            pending_delta = target_temperature - room_temperature
-            if pending_delta <= minimum_delta:
-                return None, 0.0
-            assist_delta = min(pending_delta, config["room_sensor_assist_max_delta"])
-            desired_temperature = climate_temperature + assist_delta
-        else:
-            pending_delta = room_temperature - target_temperature
-            if pending_delta <= minimum_delta:
-                return None, 0.0
-            assist_delta = min(pending_delta, config["room_sensor_assist_max_delta"])
-            desired_temperature = climate_temperature - assist_delta
+        error = target_temperature - room_temperature
+        correction = 0.0
+        if abs(error) > minimum_delta:
+            max_delta = config["room_sensor_assist_max_delta"]
+            correction = max(-max_delta, min(max_delta, error))
+        desired_temperature = climate_temperature + correction
+        temperature_step = self.get_temperature_step(entity_id)
+        neutral_auto_target = not fixed_direction and correction == 0
+        calculated_temperature = (
+            _room_sensor_assist_nearest_step_temperature(
+                desired_temperature,
+                temperature_step,
+            )
+            if neutral_auto_target
+            else _room_sensor_assist_step_temperature(
+                desired_temperature,
+                temperature_step,
+                direction,
+            )
+        )
+        scheduled_target_guard: Literal[
+            "heating_ceiling", "cooling_floor"
+        ] | None = None
+
+        # Once the external room no longer requests this HVAC direction, do
+        # not let a drifting climate sensor move the non-driving target across
+        # the user's scheduled target. The signed correction is intentionally
+        # kept: it can still move farther into the safe side after an overshoot.
+        if (
+            fixed_direction
+            and direction == "cool"
+            and error >= -minimum_delta
+            and calculated_temperature < target_temperature - 0.000001
+        ):
+            scheduled_target_guard = "cooling_floor"
+            desired_temperature = max(desired_temperature, target_temperature)
+        elif (
+            fixed_direction
+            and direction == "heat"
+            and error <= minimum_delta
+            and calculated_temperature > target_temperature + 0.000001
+        ):
+            scheduled_target_guard = "heating_ceiling"
+            desired_temperature = min(desired_temperature, target_temperature)
 
         min_temperature, max_temperature = self.get_temperature_limits(entity_id)
+        requested = (
+            _room_sensor_assist_nearest_step_temperature(
+                desired_temperature,
+                temperature_step,
+            )
+            if neutral_auto_target
+            else _room_sensor_assist_step_temperature(
+                desired_temperature,
+                temperature_step,
+                direction,
+            )
+        )
+        if requested > max_temperature + 0.000001:
+            limited_by: Literal["minimum", "maximum"] | None = "maximum"
+            limit_temperature: float | None = max_temperature
+        elif requested < min_temperature - 0.000001:
+            limited_by = "minimum"
+            limit_temperature = min_temperature
+        else:
+            limited_by = None
+            limit_temperature = None
         bounded = max(min_temperature, min(max_temperature, desired_temperature))
-        stepped = _room_sensor_assist_step_temperature(
-            bounded,
-            self.get_temperature_step(entity_id),
-            direction,
+        stepped = (
+            _room_sensor_assist_nearest_step_temperature(
+                bounded,
+                temperature_step,
+            )
+            if neutral_auto_target
+            else _room_sensor_assist_step_temperature(
+                bounded,
+                temperature_step,
+                direction,
+            )
         )
         bounded_stepped = max(min_temperature, min(max_temperature, stepped))
-        return round(bounded_stepped, 3), round(abs(assist_delta), 3)
+        applied_temperature = round(bounded_stepped, 3)
+        return _RoomSensorAssistTargetResult(
+            applied_temperature=applied_temperature,
+            assist_delta=round(abs(correction), 3),
+            applied_offset=round(applied_temperature - climate_temperature, 3),
+            requested_temperature=round(requested, 6),
+            calculated_temperature=round(calculated_temperature, 6),
+            scheduled_target_guard=scheduled_target_guard,
+            limited_by=limited_by,
+            limit_temperature=limit_temperature,
+        )
 
-    def _room_sensor_assist_hold_target(
+    def _room_sensor_assist_range_direction(
+        self,
+        config: PreconditioningData,
+        target_temp_low: float,
+        target_temp_high: float,
+        room_temperature: float,
+    ) -> str | None:
+        """Return the active range boundary, or None while holding the band."""
+        deadband = config["minimum_delta_temperature"]
+        if room_temperature < target_temp_low - deadband:
+            return "heat"
+        if room_temperature > target_temp_high + deadband:
+            return "cool"
+        return None
+
+    def _room_sensor_assist_stable_holding_range(
         self,
         entity_id: str,
-        direction: str,
-        climate_temperature: float,
-    ) -> float:
-        """Return a target that avoids driving the climate past the room target."""
-        min_temperature, max_temperature = self.get_temperature_limits(entity_id)
-        bounded = max(min_temperature, min(max_temperature, climate_temperature))
-        stepped = _room_sensor_assist_step_temperature(
-            bounded,
-            self.get_temperature_step(entity_id),
-            direction,
+        target_temp_low: float,
+        target_temp_high: float,
+        holding_state: _RoomSensorAssistState | None,
+    ) -> _RoomSensorAssistRangeResult | None:
+        """Return the existing valid holding band without following sensor drift."""
+        if (
+            holding_state is None
+            or holding_state.direction is not None
+            or holding_state.limited_by is not None
+            or holding_state.target_temp_low is None
+            or holding_state.target_temp_high is None
+            or holding_state.applied_target_temp_low is None
+            or holding_state.applied_target_temp_high is None
+            or abs(holding_state.target_temp_low - target_temp_low) >= 0.000001
+            or abs(holding_state.target_temp_high - target_temp_high) >= 0.000001
+        ):
+            return None
+
+        applied_low = holding_state.applied_target_temp_low
+        applied_high = holding_state.applied_target_temp_high
+        width = target_temp_high - target_temp_low
+        minimum, maximum = self.get_temperature_limits(entity_id)
+        if not (
+            minimum - 0.000001 <= applied_low <= applied_high <= maximum + 0.000001
+            and abs((applied_high - applied_low) - width) < 0.000001
+            and abs(
+                self.normalize_target_temperature(entity_id, applied_low) - applied_low
+            )
+            < 0.000001
+            and abs(
+                self.normalize_target_temperature(entity_id, applied_high) - applied_high
+            )
+            < 0.000001
+        ):
+            return None
+
+        return _RoomSensorAssistRangeResult(
+            applied_low=applied_low,
+            applied_high=applied_high,
+            assist_delta=0.0,
+            range_shift=round(applied_low - target_temp_low, 6),
+            requested_low=applied_low,
+            requested_high=applied_high,
+            limited_by=None,
+            limit_temperature=None,
         )
-        bounded_stepped = max(min_temperature, min(max_temperature, stepped))
-        return round(bounded_stepped, 3)
+
+    def _room_sensor_assist_range_target(
+        self,
+        entity_id: str,
+        config: PreconditioningData,
+        target_temp_low: float,
+        target_temp_high: float,
+        room_temperature: float,
+        climate_temperature: float,
+        holding_state: _RoomSensorAssistState | None = None,
+    ) -> _RoomSensorAssistRangeResult:
+        """Return one width-preserving, step-aligned assisted target band."""
+        step = self.get_temperature_step(entity_id)
+        if step is None:
+            return _RoomSensorAssistRangeResult(
+                applied_low=target_temp_low,
+                applied_high=target_temp_high,
+                assist_delta=0.0,
+                range_shift=0.0,
+                requested_low=target_temp_low,
+                requested_high=target_temp_high,
+                limited_by=None,
+                limit_temperature=None,
+            )
+
+        width = target_temp_high - target_temp_low
+        minimum, maximum = self.get_temperature_limits(entity_id)
+        lower_shift = math.ceil(
+            ((minimum - target_temp_low) / step) - 0.000001
+        ) * step
+        upper_shift = math.floor(
+            ((maximum - target_temp_high) / step) + 0.000001
+        ) * step
+        direction = self._room_sensor_assist_range_direction(
+            config, target_temp_low, target_temp_high, room_temperature
+        )
+        assist_delta = 0.0
+
+        if direction is None:
+            # The climate sensor can move as a consequence of the unit
+            # running (for example in a split AC return-air path). Following
+            # that reading while holding creates a feedback loop that walks
+            # the complete range. Keep the first valid holding band stable
+            # until the external room leaves the scheduled band.
+            stable_holding_range = self._room_sensor_assist_stable_holding_range(
+                entity_id,
+                target_temp_low,
+                target_temp_high,
+                holding_state,
+            )
+            if stable_holding_range is not None:
+                return stable_holding_range
+
+        if direction == "heat":
+            boundary_error = target_temp_low - room_temperature
+            correction = min(config["room_sensor_assist_max_delta"], boundary_error)
+            anchor = _room_sensor_assist_step_temperature(
+                climate_temperature + correction, step, "heat"
+            )
+            desired_shift = anchor - target_temp_low
+            assist_delta = correction
+        elif direction == "cool":
+            boundary_error = room_temperature - target_temp_high
+            correction = -min(config["room_sensor_assist_max_delta"], boundary_error)
+            anchor = _room_sensor_assist_step_temperature(
+                climate_temperature + correction, step, "cool"
+            )
+            desired_shift = anchor - target_temp_high
+            assist_delta = abs(correction)
+        else:
+            interior_lower = math.ceil(
+                ((climate_temperature + step - target_temp_high) / step)
+                - 0.000001
+            ) * step
+            interior_upper = math.floor(
+                ((climate_temperature - step - target_temp_low) / step)
+                + 0.000001
+            ) * step
+            feasible_lower = max(lower_shift, interior_lower)
+            feasible_upper = min(upper_shift, interior_upper)
+            if feasible_lower <= feasible_upper + 0.000001:
+                desired_shift = max(feasible_lower, min(feasible_upper, 0.0))
+            elif interior_lower > upper_shift + 0.000001:
+                # Preserve the unconstrained request needed to place the climate
+                # reading one step below the high boundary. Physical max clamping
+                # is reported after this calculation.
+                desired_shift = interior_lower
+            elif interior_upper < lower_shift - 0.000001:
+                # Preserve the unconstrained request needed to place the climate
+                # reading one step above the low boundary. Physical min clamping
+                # is reported after this calculation.
+                desired_shift = interior_upper
+            else:
+                desired_shift = max(lower_shift, min(upper_shift, 0.0))
+
+        requested_low = round(target_temp_low + desired_shift, 6)
+        requested_high = round(target_temp_high + desired_shift, 6)
+        if desired_shift > upper_shift + 0.000001:
+            limited_by: Literal["minimum", "maximum"] | None = "maximum"
+            limit_temperature: float | None = maximum
+        elif desired_shift < lower_shift - 0.000001:
+            limited_by = "minimum"
+            limit_temperature = minimum
+        else:
+            limited_by = None
+            limit_temperature = None
+        shift = max(lower_shift, min(upper_shift, desired_shift))
+        applied_low = self.normalize_target_temperature(
+            entity_id,
+            target_temp_low + shift,
+        )
+        applied_high = self.normalize_target_temperature(
+            entity_id,
+            applied_low + width,
+        )
+        return _RoomSensorAssistRangeResult(
+            applied_low=applied_low,
+            applied_high=applied_high,
+            assist_delta=round(abs(assist_delta), 3),
+            range_shift=round(applied_low - target_temp_low, 6),
+            requested_low=requested_low,
+            requested_high=requested_high,
+            limited_by=limited_by,
+            limit_temperature=limit_temperature,
+        )
 
     def _room_sensor_assist_candidate_climates(self) -> set[str]:
         """Return active climates that can use room sensor assist."""
-        if self.mode != MODE_AUTO:
+        if self.mode != MODE_AUTO or self._temperature_migration_blocked or self._stopped:
             return set()
 
         now = dt_util.now()
         entity_ids: set[str] = set()
         for entity_id, zone in self._data["zones"].items():
+            if entity_id in self._room_sensor_assist_suppressed:
+                continue
             if not zone["enabled"] or self._is_zone_override_active(entity_id, now):
                 continue
 
@@ -4089,12 +5946,38 @@ class VelairScheduler:
                 continue
 
             current_event = self._room_sensor_assist_target_event(entity_id)
-            if current_event is None or current_event.temperature is None:
+            if current_event is None or (
+                current_event.temperature is None
+                and (
+                    current_event.target_temp_low is None
+                    or current_event.target_temp_high is None
+                )
+            ):
+                continue
+            if current_event.temperature is not None and not self._room_sensor_assist_supports_single_target(
+                entity_id,
+                current_event.hvac_mode,
+            ):
                 continue
 
             entity_ids.add(entity_id)
 
         return entity_ids
+
+    def _room_sensor_assist_supports_single_target(
+        self,
+        entity_id: str,
+        hvac_mode: str | None,
+    ) -> bool:
+        """Return whether Room Assist can apply one target in the effective mode."""
+        checker = getattr(
+            self._climate_manager,
+            "supports_single_temperature_target",
+            None,
+        )
+        if not callable(checker):
+            return True
+        return bool(checker(entity_id, hvac_mode, ensure_on=True))
 
     def _room_sensor_assist_candidate_entities(self) -> set[str]:
         """Return entities that should wake room sensor assist recalculation."""
@@ -4110,6 +5993,10 @@ class VelairScheduler:
 
     def _refresh_room_sensor_assist_listener(self) -> None:
         """Listen only to entities that can affect active room sensor assist."""
+        if self._temperature_migration_blocked:
+            self._clear_room_sensor_assist_listener()
+            self._clear_room_sensor_assist_timer()
+            return
         entity_ids = sorted(
             self._room_sensor_assist_candidate_entities()
             | {
@@ -4197,10 +6084,35 @@ class VelairScheduler:
         if not entity_ids:
             _LOGGER.debug("Room Sensor Assist refresh skipped: no active candidates")
             return
-        for entity_id in entity_ids:
-            self._hass.async_create_task(
-                self._async_refresh_room_sensor_assist_from_current_event(entity_id)
-            )
+        self._hass.async_create_task(
+            self._async_refresh_room_sensor_assist_candidates(entity_ids)
+        )
+
+    async def _async_refresh_room_sensor_assist_candidates(
+        self,
+        entity_ids: list[str],
+    ) -> None:
+        """Refresh one debounced batch and publish its resulting runtime state."""
+        try:
+            for entity_id in entity_ids:
+                try:
+                    await self._async_refresh_room_sensor_assist_from_current_event(
+                        entity_id
+                    )
+                except HomeAssistantError:
+                    if not self._climate_delivery.retry_current(entity_id):
+                        _LOGGER.exception(
+                            "Room Sensor Assist failed for %s without a current "
+                            "recoverable scheduler intent",
+                            entity_id,
+                        )
+                except Exception:  # noqa: BLE001 - isolate one climate integration
+                    _LOGGER.exception(
+                        "Failed to refresh Room Sensor Assist for %s",
+                        entity_id,
+                    )
+        finally:
+            self._async_write_state()
 
     async def _async_clear_room_sensor_assist(
         self,
@@ -4209,47 +6121,154 @@ class VelairScheduler:
         restore: bool,
         reason: str,
     ) -> None:
-        """Clear assisted targets and optionally restore the real target."""
+        """Serialize and invalidate assisted targets before clearing them."""
+        if entity_id is None:
+            entity_ids = sorted(
+                set(self._data["zones"])
+                | set(self._room_sensor_assist_states)
+                | set(self._room_sensor_assist_inflight)
+                | set(self._room_sensor_assist_locks)
+                | set(self._room_sensor_assist_limit_notifications)
+            )
+            first_error: Exception | None = None
+            for assisted_entity_id in entity_ids:
+                try:
+                    await self._async_clear_room_sensor_assist(
+                        assisted_entity_id,
+                        restore=restore,
+                        reason=reason,
+                    )
+                except Exception as err:  # Isolate cleanup across managed climates.
+                    if first_error is None:
+                        first_error = err
+                    _LOGGER.exception(
+                        "Failed to clear Room Sensor Assist for %s",
+                        assisted_entity_id,
+                    )
+            if first_error is not None:
+                raise first_error
+            return
+
+        self._room_sensor_assist_generations[entity_id] = (
+            self._room_sensor_assist_generation(entity_id) + 1
+        )
+        self._room_sensor_assist_suppressed.add(entity_id)
+
+        async def clear() -> None:
+            async with self._room_sensor_assist_lock(entity_id):
+                try:
+                    await self._async_clear_room_sensor_assist_locked(
+                        entity_id,
+                        restore=restore,
+                        reason=reason,
+                    )
+                finally:
+                    self._room_sensor_assist_generations[entity_id] = (
+                        self._room_sensor_assist_generation(entity_id) + 1
+                    )
+
+        await self._climate_delivery.async_serialize(entity_id, clear)
+
+    async def _async_clear_room_sensor_assist_locked(
+        self,
+        entity_id: str,
+        *,
+        restore: bool,
+        reason: str,
+    ) -> None:
+        """Clear one assisted target while holding its entity lock."""
         entity_ids = (
             [entity_id]
             if entity_id is not None
             else list(self._room_sensor_assist_states)
         )
-        for assisted_entity_id in entity_ids:
-            state = self._room_sensor_assist_states.pop(assisted_entity_id, None)
-            if state is None:
-                continue
-            if restore:
-                climate_options = (
-                    self._room_sensor_assist_scheduled_target_options(
-                        assisted_entity_id,
-                        state.weekday,
-                        state.start,
+        try:
+            for assisted_entity_id in entity_ids:
+                inflight = self._room_sensor_assist_inflight.pop(
+                    assisted_entity_id, None
+                )
+                state = inflight or self._room_sensor_assist_states.pop(
+                    assisted_entity_id, None
+                )
+                if inflight is not None:
+                    self._room_sensor_assist_states.pop(assisted_entity_id, None)
+                generation = self._room_sensor_assist_generation(assisted_entity_id)
+                try:
+                    if state is None:
+                        continue
+                    if restore:
+                        climate_options = (
+                            self._room_sensor_assist_scheduled_target_options(
+                                assisted_entity_id,
+                                state.weekday,
+                                state.start,
+                            )
+                            if state.weekday is not None and state.start is not None
+                            else {}
+                        )
+                        if (
+                            state.target_temp_low is not None
+                            and state.target_temp_high is not None
+                        ):
+                            await self._climate_delivery.async_serialize(
+                                assisted_entity_id,
+                                lambda: self._climate_manager.async_set_temperature_range(
+                                    assisted_entity_id,
+                                    state.target_temp_low,
+                                    state.target_temp_high,
+                                    ensure_on=False,
+                                    hvac_mode=state.hvac_mode,
+                                    **climate_options,
+                                ),
+                            )
+                        elif state.target_temperature is not None:
+                            await self._climate_delivery.async_serialize(
+                                assisted_entity_id,
+                                lambda: self._climate_manager.async_set_temperature(
+                                    assisted_entity_id,
+                                    state.target_temperature,
+                                    ensure_on=False,
+                                    hvac_mode=state.hvac_mode,
+                                    **climate_options,
+                                ),
+                            )
+                    if generation != self._room_sensor_assist_generation(
+                        assisted_entity_id
+                    ):
+                        continue
+                    self._async_fire_room_sensor_assist_event(
+                        EVENT_TYPE_ROOM_SENSOR_ASSIST_RESTORED,
+                        entity_id=assisted_entity_id,
+                        room_temperature_entity_id=state.room_temperature_entity_id,
+                        target_temperature=state.target_temperature,
+                        applied_temperature=state.target_temperature,
+                        target_temp_low=state.target_temp_low,
+                        target_temp_high=state.target_temp_high,
+                        applied_target_temp_low=state.target_temp_low,
+                        applied_target_temp_high=state.target_temp_high,
+                        range_shift=(
+                            0.0 if state.target_temp_low is not None else None
+                        ),
+                        room_temperature=self._current_temperature(
+                            assisted_entity_id
+                        ),
+                        climate_temperature=self._climate_current_temperature(
+                            assisted_entity_id
+                        ),
+                        assist_delta=0.0,
+                        applied_offset=(
+                            None if state.target_temp_low is not None else 0.0
+                        ),
+                        direction=state.direction,
+                        hvac_mode=state.hvac_mode,
+                        reason=reason,
                     )
-                    if state.weekday is not None and state.start is not None
-                    else {}
-                )
-                await self._climate_manager.async_set_temperature(
-                    assisted_entity_id,
-                    state.target_temperature,
-                    ensure_on=False,
-                    hvac_mode=state.hvac_mode,
-                    **climate_options,
-                )
-            self._async_fire_room_sensor_assist_event(
-                EVENT_TYPE_ROOM_SENSOR_ASSIST_RESTORED,
-                entity_id=assisted_entity_id,
-                room_temperature_entity_id=state.room_temperature_entity_id,
-                target_temperature=state.target_temperature,
-                applied_temperature=state.target_temperature,
-                room_temperature=self._current_temperature(assisted_entity_id),
-                climate_temperature=self._climate_current_temperature(assisted_entity_id),
-                assist_delta=0.0,
-                direction=state.direction,
-                hvac_mode=state.hvac_mode,
-                reason=reason,
-            )
-        self._refresh_room_sensor_assist_listener()
+                finally:
+                    await self._async_dismiss_room_sensor_assist_limit_notification(
+                        assisted_entity_id
+                    )
+        finally:
+            self._refresh_room_sensor_assist_listener()
 
     def _clear_room_sensor_assist_listener(self) -> None:
         """Stop listening for room sensor assist state changes."""
@@ -4750,6 +6769,7 @@ class VelairScheduler:
             "total": total,
             "current_entity_id": None,
             "failed_entity_ids": [],
+            "deferred_entity_ids": [],
             "started_at": dt_util.now().isoformat(),
             "finished_at": None,
             "error_code": None,
@@ -4764,6 +6784,14 @@ class VelairScheduler:
             return
         if entity_id not in operation["failed_entity_ids"]:
             operation["failed_entity_ids"].append(entity_id)
+
+    def _mark_operation_entity_deferred(self, entity_id: str) -> None:
+        """Record delivery queued for retry/reconnection, not a transition error."""
+        operation = self._operation_status
+        if operation is None or operation["state"] != "running":
+            return
+        if entity_id not in operation["deferred_entity_ids"]:
+            operation["deferred_entity_ids"].append(entity_id)
 
     def _start_operation_entity(self, entity_id: str) -> None:
         """Publish the climate currently being processed."""
@@ -4882,6 +6910,8 @@ class VelairScheduler:
         temperature: float,
         until: str,
         *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
         fan_mode: str | None,
         hvac_mode: str | None,
         humidity: float | None,
@@ -4895,7 +6925,14 @@ class VelairScheduler:
             EVENT_TYPE_BOOST_STARTED,
             {
                 "entity_id": entity_id,
-                "temperature": temperature,
+                **(
+                    {
+                        "target_temp_low": target_temp_low,
+                        "target_temp_high": target_temp_high,
+                    }
+                    if target_temp_low is not None and target_temp_high is not None
+                    else {"temperature": temperature}
+                ),
                 "hvac_mode": hvac_mode,
                 **_climate_options(
                     fan_mode=fan_mode,
@@ -4922,7 +6959,7 @@ class VelairScheduler:
             EVENT_TYPE_BOOST_ENDED,
             {
                 "entity_id": entity_id,
-                "temperature": override.get("temperature"),
+                **temperature_target_from_mapping(override),
                 "hvac_mode": override.get("hvac_mode"),
                 **_climate_options_from_mapping(override),
                 "started_at": override.get("started_at"),
@@ -4978,7 +7015,11 @@ class VelairScheduler:
         data = {
             "entity_id": event.entity_id,
             "action": event.action,
-            "temperature": event.temperature,
+            **(
+                _event_target_mapping(event)
+                if event.action != ACTION_TURN_OFF
+                else {"temperature": None}
+            ),
             "hvac_mode": hvac_mode,
             **_climate_options_from_event(event),
             "weekday": event.weekday,
@@ -5003,31 +7044,58 @@ class VelairScheduler:
         *,
         entity_id: str,
         room_temperature_entity_id: str,
-        target_temperature: float,
-        applied_temperature: float,
+        target_temperature: float | None,
+        applied_temperature: float | None,
         room_temperature: float | None,
         climate_temperature: float | None,
         assist_delta: float,
-        direction: str,
+        applied_offset: float | None,
+        direction: str | None,
         hvac_mode: str | None,
         reason: str,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
+        applied_target_temp_low: float | None = None,
+        applied_target_temp_high: float | None = None,
+        range_shift: float | None = None,
+        calculated_temperature: float | None = None,
+        scheduled_target_guard: Literal[
+            "heating_ceiling", "cooling_floor"
+        ] | None = None,
     ) -> None:
         """Fire a room sensor assist automation event."""
-        self._async_fire_event(
-            event_name,
-            {
-                "entity_id": entity_id,
-                "room_temperature_entity_id": room_temperature_entity_id,
-                "target_temperature": target_temperature,
-                "applied_temperature": applied_temperature,
-                "room_temperature": room_temperature,
-                "climate_temperature": climate_temperature,
-                "assist_delta": assist_delta,
-                "direction": direction,
-                "hvac_mode": hvac_mode,
-                "reason": reason,
-            },
-        )
+        data = {
+            "entity_id": entity_id,
+            "room_temperature_entity_id": room_temperature_entity_id,
+            "room_temperature": room_temperature,
+            "climate_temperature": climate_temperature,
+            "assist_delta": assist_delta,
+            "direction": direction,
+            "hvac_mode": hvac_mode,
+            "reason": reason,
+        }
+        if target_temp_low is not None and target_temp_high is not None:
+            data.update(
+                {
+                    "target_temp_low": target_temp_low,
+                    "target_temp_high": target_temp_high,
+                    "applied_target_temp_low": applied_target_temp_low,
+                    "applied_target_temp_high": applied_target_temp_high,
+                    "range_shift": range_shift,
+                }
+            )
+        else:
+            data.update(
+                {
+                    "target_temperature": target_temperature,
+                    "applied_temperature": applied_temperature,
+                    "applied_offset": applied_offset,
+                }
+            )
+            if scheduled_target_guard is not None:
+                data["scheduled_target_guard"] = scheduled_target_guard
+                data["calculated_temperature"] = calculated_temperature
+        self._async_fire_event(event_name, data)
 
     def _async_fire_room_sensor_assist_state_changed(
         self,
@@ -5114,7 +7182,7 @@ class VelairScheduler:
         event: ClimateEvent,
     ) -> dict | None:
         """Build the available prediction context for one early-start event."""
-        if event.target_when is None or event.temperature is None:
+        if event.target_when is None:
             return None
         zone = self._data["zones"].get(event.entity_id)
         if zone is None:
@@ -5123,37 +7191,11 @@ class VelairScheduler:
         if not config["enabled"]:
             return None
 
-        block: ScheduleBlock = {
-            "start": event.start,
-            "action": event.action,
-            "temperature": event.temperature,
-        }
-        if event.hvac_mode is not None:
-            block["hvac_mode"] = event.hvac_mode
-        block.update(_climate_options_from_event(event))
-        direction = self._preconditioning_direction(event.entity_id, config, block)
-        current_temperature = self._current_temperature(event.entity_id)
-        if direction is None or current_temperature is None:
+        diagnostics = event.preconditioning_diagnostics
+        if diagnostics is None:
             return None
 
         outdoor_temperature = self._outdoor_temperature(event.entity_id, config)
-        learning = self._data.get("preconditioning_learning", {}).get(
-            event.entity_id,
-            {},
-        )
-        prediction = predict_preconditioning_lead(
-            preconditioning_observations_for_direction(learning, direction),
-            direction,
-            target_temp=event.temperature,
-            current_temp=current_temperature,
-            config=config,
-            now=dt_util.now(),
-            outdoor_temp_target=outdoor_temperature,
-            temperature_delta_scale=self._preconditioning_temperature_delta_scale(
-                event.entity_id
-            ),
-        )
-        diagnostics = event.preconditioning_diagnostics or prediction["diagnostics"]
         lead_minutes = max(
             0,
             int(round((event.target_when - event.when).total_seconds() / 60)),
@@ -5163,45 +7205,33 @@ class VelairScheduler:
             "scheduled_when": event.target_when.isoformat(),
             "preconditioning_when": event.when.isoformat(),
             "lead_minutes": lead_minutes,
-            "direction": direction,
-            "target_temperature": event.temperature,
-            "current_temperature": current_temperature,
-            "temperature_delta": round(abs(event.temperature - current_temperature), 3),
+            "direction": diagnostics["direction"],
+            "target_kind": diagnostics["target_kind"],
+            "target_boundary": diagnostics["target_boundary"],
+            "boundary_temperature": diagnostics["boundary_temperature"],
+            "target_temperature": (
+                event.temperature if event.temperature is not None else None
+            ),
+            **(
+                {
+                    ATTR_TARGET_TEMP_LOW: event.target_temp_low,
+                    ATTR_TARGET_TEMP_HIGH: event.target_temp_high,
+                }
+                if event.target_temp_low is not None
+                and event.target_temp_high is not None
+                else {}
+            ),
+            "current_temperature": diagnostics["current_temperature"],
+            "temperature_delta": diagnostics["delta_temperature"],
             "hvac_mode": event.hvac_mode,
             **_climate_options_from_event(event),
-            "model_source": (
-                diagnostics["source"] if diagnostics is not None else prediction["source"]
-            ),
-            "complete_sample_count": (
-                diagnostics["complete_sample_count"]
-                if diagnostics is not None
-                else prediction["complete_sample_count"]
-            ),
-            "partial_sample_count": (
-                diagnostics["partial_sample_count"]
-                if diagnostics is not None
-                else prediction["partial_sample_count"]
-            ),
-            "invalid_sample_count": (
-                diagnostics["invalid_sample_count"]
-                if diagnostics is not None
-                else prediction["invalid_sample_count"]
-            ),
-            "similar_sample_count": (
-                diagnostics["similar_sample_count"]
-                if diagnostics is not None
-                else prediction["similar_sample_count"]
-            ),
-            "comfort_percentile": (
-                diagnostics["comfort_percentile"]
-                if diagnostics is not None
-                else prediction["comfort_percentile"]
-            ),
-            "used_outdoor_temperature": (
-                diagnostics["used_outdoor_temperature"]
-                if diagnostics is not None
-                else prediction["used_outdoor_temperature"]
-            ),
+            "model_source": diagnostics["source"],
+            "complete_sample_count": diagnostics["complete_sample_count"],
+            "partial_sample_count": diagnostics["partial_sample_count"],
+            "invalid_sample_count": diagnostics["invalid_sample_count"],
+            "similar_sample_count": diagnostics["similar_sample_count"],
+            "comfort_percentile": diagnostics["comfort_percentile"],
+            "used_outdoor_temperature": diagnostics["used_outdoor_temperature"],
             "preconditioning_diagnostics": diagnostics,
             "outdoor_temperature": outdoor_temperature,
             "weekday": event.weekday,
@@ -5239,13 +7269,20 @@ class VelairScheduler:
     async def _async_log_boost(
         self,
         entity_id: str,
-        temperature: float,
+        temperature: float | None,
         until: str,
         *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
         hvac_mode: str | None = None,
     ) -> None:
         """Write a boost action to the Home Assistant logbook."""
-        target = self._format_temperature(entity_id, temperature)
+        target = self._format_temperature_target(
+            entity_id,
+            temperature,
+            target_temp_low=target_temp_low,
+            target_temp_high=target_temp_high,
+        )
         mode = (
             f" ({self._format_hvac_mode(hvac_mode)})"
             if hvac_mode is not None
@@ -5305,13 +7342,20 @@ class VelairScheduler:
     async def _async_log_climate_temperature(
         self,
         entity_id: str,
-        temperature: float,
+        temperature: float | None,
         *,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
         hvac_mode: str | None = None,
         scheduled: bool,
     ) -> None:
         """Write an applied climate target to the Home Assistant logbook."""
-        target = self._format_temperature(entity_id, temperature)
+        target = self._format_temperature_target(
+            entity_id,
+            temperature,
+            target_temp_low=target_temp_low,
+            target_temp_high=target_temp_high,
+        )
         mode = (
             f" ({self._format_hvac_mode(hvac_mode)})"
             if hvac_mode is not None
@@ -5383,6 +7427,23 @@ class VelairScheduler:
         unit_getter = getattr(self._climate_manager, "temperature_unit", None)
         unit = unit_getter(entity_id) if unit_getter else "°C"
         return f"{temperature:g} {unit}"
+
+    def _format_temperature_target(
+        self,
+        entity_id: str,
+        temperature: float | None,
+        *,
+        target_temp_low: float | None,
+        target_temp_high: float | None,
+    ) -> str:
+        """Return a compact scalar or range target label."""
+        if temperature is not None:
+            return self._format_temperature(entity_id, temperature)
+        if target_temp_low is None or target_temp_high is None:
+            raise ValueError("A complete temperature target is required for logbook output")
+        unit_getter = getattr(self._climate_manager, "temperature_unit", None)
+        unit = unit_getter(entity_id) if unit_getter else "°C"
+        return f"{target_temp_low:g}–{target_temp_high:g} {unit}"
 
     def _calculate_next_action_time(self, now: datetime) -> datetime | None:
         """Return the next timer action."""
@@ -5456,12 +7517,22 @@ class VelairScheduler:
                 continue
 
             override = self._data["zones"][entity_id].get("override")
+            self._invalidate_climate_delivery(entity_id)
             self._data["zones"][entity_id]["override"] = None
             if isinstance(override, dict):
                 expired[entity_id] = override
 
         if expired:
-            await self._async_save_data()
+            try:
+                await self._async_save_data()
+            except (asyncio.CancelledError, Exception):
+                for entity_id, override in expired.items():
+                    self._data["zones"][entity_id]["override"] = override
+                for entity_id in expired:
+                    await self._async_restore_delivery_after_failed_mutation(
+                        entity_id
+                    )
+                raise
             for entity_id, override in expired.items():
                 if _is_pause_override(override):
                     await self._async_log_zone_resume(entity_id, reason="expired")
@@ -5515,12 +7586,91 @@ def _parse_start_time(value: str) -> time | None:
         return None
 
 
+def _local_schedule_occurrences(
+    event_date,
+    event_time: time,
+    local_tz,
+) -> tuple[datetime, ...]:
+    """Return valid instants for a local schedule wall time.
+
+    Fall-back overlaps expose both folds so callers can choose relative to
+    ``now`` using UTC instants. Spring-forward gaps advance minute by minute to
+    the first valid local instant, matching Velair's minute-resolution blocks.
+    """
+    naive = datetime.combine(event_date, event_time)
+    if local_tz is None:
+        return (naive,)
+
+    for minute_offset in range(181):
+        wall_time = naive + timedelta(minutes=minute_offset)
+        occurrences: dict[datetime, datetime] = {}
+        for fold in (0, 1):
+            candidate = wall_time.replace(tzinfo=local_tz, fold=fold)
+            utc_candidate = candidate.astimezone(timezone.utc)
+            normalized = utc_candidate.astimezone(local_tz)
+            if normalized.replace(tzinfo=None) != wall_time:
+                continue
+            occurrences[utc_candidate] = normalized
+        if occurrences:
+            return tuple(
+                occurrences[key]
+                for key in sorted(occurrences)
+            )
+
+    # Timezone transitions are much shorter than three hours in supported
+    # Home Assistant zones. Keep a defensive fallback for custom tzinfo types.
+    return (naive.replace(tzinfo=local_tz),)
+
+
 def _event_temperature(block: ScheduleBlock) -> float | None:
     """Return a block temperature when the block uses one."""
     if block.get("action", ACTION_SET_TEMPERATURE) == ACTION_TURN_OFF:
         return None
 
-    return float(block["temperature"])
+    temperature = block.get("temperature")
+    return float(temperature) if temperature is not None else None
+
+
+def _event_control_intent(event: ClimateEvent | None) -> tuple[object, ...] | None:
+    """Return normalized physical climate intent without schedule metadata."""
+    if event is None:
+        return None
+    return (
+        event.action,
+        event.temperature,
+        event.target_temp_low,
+        event.target_temp_high,
+        event.hvac_mode,
+        event.fan_mode,
+        event.preset_mode,
+        event.swing_mode,
+        event.swing_horizontal_mode,
+        event.humidity,
+    )
+
+
+def _event_temperature_range(block: ScheduleBlock) -> dict[str, float | None]:
+    """Return range fields for a schedule event without mixing scalar targets."""
+    if block.get("action", ACTION_SET_TEMPERATURE) == ACTION_TURN_OFF:
+        return {}
+    if "target_temp_low" not in block or "target_temp_high" not in block:
+        return {}
+    return {
+        "target_temp_low": float(block["target_temp_low"]),
+        "target_temp_high": float(block["target_temp_high"]),
+    }
+
+
+def _event_target_mapping(event: ClimateEvent) -> dict[str, float]:
+    """Return the event's exclusive scalar or range target fields."""
+    if event.temperature is not None:
+        return {"temperature": event.temperature}
+    if event.target_temp_low is not None and event.target_temp_high is not None:
+        return {
+            "target_temp_low": event.target_temp_low,
+            "target_temp_high": event.target_temp_high,
+        }
+    return {}
 
 
 def _event_climate_options(block: ScheduleBlock) -> dict[str, object]:
@@ -5583,7 +7733,7 @@ def _block_without_climate_options(block: ScheduleBlock) -> ScheduleBlock:
         "action": block.get("action", ACTION_SET_TEMPERATURE),
     }
     if block.get("action", ACTION_SET_TEMPERATURE) != ACTION_TURN_OFF:
-        clean_block["temperature"] = float(block["temperature"])
+        clean_block.update(temperature_target_from_mapping(block))
         if block.get("hvac_mode"):
             clean_block["hvac_mode"] = block["hvac_mode"]
     return clean_block
@@ -5647,6 +7797,17 @@ def _room_sensor_assist_step_temperature(
     if direction == "heat":
         return math.floor(units + 0.000001) * step
     return math.ceil(units - 0.000001) * step
+
+
+def _room_sensor_assist_nearest_step_temperature(
+    temperature: float,
+    step: float | None,
+) -> float:
+    """Align an auto-mode holding target to the nearest supported step."""
+    if not isinstance(step, int | float) or not math.isfinite(step) or step <= 0:
+        return temperature
+
+    return math.floor((temperature / step) + 0.5 + 0.000000001) * step
 
 
 def _state_temperature(state) -> float | None:
@@ -5743,11 +7904,13 @@ def _is_due_preconditioning_event(event: ClimateEvent, now: datetime) -> bool:
 
 def _is_boost_override(override: ZoneOverride | dict | None) -> bool:
     """Return whether a zone override is a boost."""
-    return (
-        isinstance(override, dict)
-        and override.get("type") == "boost"
-        and "temperature" in override
-    )
+    if not isinstance(override, dict) or override.get("type") != "boost":
+        return False
+    try:
+        temperature_target_from_mapping(override)
+    except ValueError:
+        return False
+    return True
 
 
 def _is_pause_override(override: ZoneOverride | dict | None) -> bool:

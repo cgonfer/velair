@@ -17,6 +17,8 @@ from .const import (
     ATTR_PRESET_MODE,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
     HVAC_MODE_OFF,
 )
@@ -52,6 +54,9 @@ DEFAULT_MIN_TEMPERATURE = 5.0
 DEFAULT_MAX_TEMPERATURE = 35.0
 STATE_UNAVAILABLE = "unavailable"
 STATE_UNKNOWN = "unknown"
+RANGE_HVAC_MODES = {"heat_cool"}
+FEATURE_TARGET_TEMPERATURE = 1
+FEATURE_TARGET_TEMPERATURE_RANGE = 2
 
 
 class ClimateManager:
@@ -66,7 +71,7 @@ class ClimateManager:
         entity_id: str,
         temperature: float,
         *,
-        blocking: bool = False,
+        blocking: bool = True,
         ensure_on: bool = False,
         fan_mode: str | None = None,
         hvac_mode: str | None = None,
@@ -77,6 +82,12 @@ class ClimateManager:
     ) -> None:
         """Set the target temperature for a climate entity."""
         temperature = self.normalize_target_temperature(entity_id, temperature)
+        self.validate_temperature_target(
+            entity_id,
+            range_target=False,
+            hvac_mode=hvac_mode,
+            ensure_on=ensure_on,
+        )
         if hvac_mode is not None:
             await self.async_set_hvac_mode(entity_id, hvac_mode)
         elif ensure_on:
@@ -88,6 +99,55 @@ class ClimateManager:
             {
                 ATTR_ENTITY_ID: entity_id,
                 ATTR_TEMPERATURE: temperature,
+            },
+            blocking=blocking,
+        )
+        await self.async_apply_climate_options(
+            entity_id,
+            fan_mode=fan_mode,
+            humidity=humidity,
+            preset_mode=preset_mode,
+            swing_mode=swing_mode,
+            swing_horizontal_mode=swing_horizontal_mode,
+        )
+
+    async def async_set_temperature_range(
+        self,
+        entity_id: str,
+        target_temp_low: float,
+        target_temp_high: float,
+        *,
+        blocking: bool = True,
+        ensure_on: bool = False,
+        fan_mode: str | None = None,
+        hvac_mode: str | None = None,
+        humidity: float | None = None,
+        preset_mode: str | None = None,
+        swing_mode: str | None = None,
+        swing_horizontal_mode: str | None = None,
+    ) -> None:
+        """Set a native lower and upper target temperature range."""
+        low = self.normalize_target_temperature(entity_id, target_temp_low)
+        high = self.normalize_target_temperature(entity_id, target_temp_high)
+        if low > high:
+            raise ValueError("target_temp_low must not be greater than target_temp_high")
+        self.validate_temperature_target(
+            entity_id,
+            range_target=True,
+            hvac_mode=hvac_mode,
+            ensure_on=ensure_on,
+        )
+        if hvac_mode is not None:
+            await self.async_set_hvac_mode(entity_id, hvac_mode)
+        elif ensure_on:
+            await self.async_ensure_on(entity_id, range_target=True)
+        await self._hass.services.async_call(
+            CLIMATE_DOMAIN,
+            CLIMATE_SERVICE_SET_TEMPERATURE,
+            {
+                ATTR_ENTITY_ID: entity_id,
+                ATTR_TARGET_TEMP_LOW: low,
+                ATTR_TARGET_TEMP_HIGH: high,
             },
             blocking=blocking,
         )
@@ -143,17 +203,32 @@ class ClimateManager:
         snapshot: dict[str, Any] = {}
         snapshot[ATTR_HVAC_MODE] = state.state
 
-        try:
-            temperature = float(state.attributes[ATTR_TEMPERATURE])
-        except (KeyError, TypeError, ValueError):
-            temperature = None
         minimum, maximum = self.temperature_limits(entity_id)
-        if (
-            temperature is not None
-            and math.isfinite(temperature)
-            and minimum <= temperature <= maximum
-        ):
-            snapshot[ATTR_TEMPERATURE] = temperature
+        low = _coerce_optional_float(state.attributes.get(ATTR_TARGET_TEMP_LOW))
+        high = _coerce_optional_float(state.attributes.get(ATTR_TARGET_TEMP_HIGH))
+        valid_range = (
+            low is not None
+            and high is not None
+            and minimum <= low <= high <= maximum
+        )
+        supports_range = self._supports_target_feature(entity_id, range_target=True)
+        if state.state == "heat_cool" and valid_range and supports_range:
+            snapshot[ATTR_TARGET_TEMP_LOW] = low
+            snapshot[ATTR_TARGET_TEMP_HIGH] = high
+        else:
+            try:
+                temperature = float(state.attributes[ATTR_TEMPERATURE])
+            except (KeyError, TypeError, ValueError):
+                temperature = None
+            if (
+                temperature is not None
+                and math.isfinite(temperature)
+                and minimum <= temperature <= maximum
+            ):
+                snapshot[ATTR_TEMPERATURE] = temperature
+            elif valid_range and supports_range:
+                snapshot[ATTR_TARGET_TEMP_LOW] = low
+                snapshot[ATTR_TARGET_TEMP_HIGH] = high
         for attr in CLIMATE_MODE_ATTRIBUTES:
             value = state.attributes.get(attr)
             if isinstance(value, str) and value:
@@ -175,6 +250,8 @@ class ClimateManager:
         """Restore a climate entity from a stored state snapshot."""
         hvac_mode = snapshot.get(ATTR_HVAC_MODE)
         temperature = snapshot.get(ATTR_TEMPERATURE)
+        target_temp_low = snapshot.get(ATTR_TARGET_TEMP_LOW)
+        target_temp_high = snapshot.get(ATTR_TARGET_TEMP_HIGH)
         climate_options = self._climate_options_from_snapshot(snapshot)
 
         if hvac_mode == HVAC_MODE_OFF:
@@ -191,6 +268,17 @@ class ClimateManager:
             )
             return
 
+        if target_temp_low is not None and target_temp_high is not None:
+            await self.async_set_temperature_range(
+                entity_id,
+                float(target_temp_low),
+                float(target_temp_high),
+                ensure_on=hvac_mode is not None,
+                hvac_mode=hvac_mode,
+                **climate_options,
+            )
+            return
+
         if hvac_mode is not None:
             await self.async_set_hvac_mode(entity_id, str(hvac_mode))
         await self.async_apply_climate_options(entity_id, **climate_options)
@@ -200,13 +288,16 @@ class ClimateManager:
         entity_id: str,
         *,
         hvac_mode: str | None = None,
+        range_target: bool = False,
     ) -> None:
         """Ensure a climate entity is not off before setting temperature."""
         state = self._hass.states.get(entity_id)
         if state is None or state.state != HVAC_MODE_OFF:
             return
 
-        target_mode = hvac_mode or self._resolve_first_non_off_hvac_mode(entity_id)
+        target_mode = hvac_mode or self._resolve_first_non_off_hvac_mode(
+            entity_id, range_target=range_target
+        )
         if target_mode is None:
             await self._hass.services.async_call(
                 CLIMATE_DOMAIN,
@@ -247,7 +338,9 @@ class ClimateManager:
             blocking=True,
         )
 
-    def _resolve_first_non_off_hvac_mode(self, entity_id: str) -> str | None:
+    def _resolve_first_non_off_hvac_mode(
+        self, entity_id: str, *, range_target: bool = False
+    ) -> str | None:
         """Resolve the first supported HVAC mode that is not off."""
         state = self._hass.states.get(entity_id)
         if state is None:
@@ -257,13 +350,161 @@ class ClimateManager:
         if not isinstance(supported_modes, list):
             return None
 
-        return next(
-            (
-                mode
-                for mode in supported_modes
-                if isinstance(mode, str) and mode != HVAC_MODE_OFF
-            ),
-            None,
+        non_off_modes = [
+            mode
+            for mode in supported_modes
+            if isinstance(mode, str) and mode != HVAC_MODE_OFF
+        ]
+        if range_target and "heat_cool" in non_off_modes:
+            return "heat_cool"
+        for mode in non_off_modes:
+            if range_target:
+                if mode in RANGE_HVAC_MODES:
+                    return mode
+                continue
+            if not self._requires_temperature_range(entity_id, mode):
+                return mode
+        return None if range_target else (non_off_modes[0] if non_off_modes else None)
+
+    def effective_hvac_mode(
+        self,
+        entity_id: str,
+        requested_hvac_mode: str | None,
+        *,
+        ensure_on: bool,
+        range_target: bool = False,
+    ) -> str | None:
+        """Return the mode that a temperature operation would effectively use."""
+        if requested_hvac_mode is not None:
+            return requested_hvac_mode
+        state = self._hass.states.get(entity_id)
+        if state is None:
+            return None
+        if ensure_on and state.state == HVAC_MODE_OFF:
+            return self._resolve_first_non_off_hvac_mode(
+                entity_id, range_target=range_target
+            )
+        return state.state
+
+    def supports_single_temperature_target(
+        self,
+        entity_id: str,
+        requested_hvac_mode: str | None,
+        *,
+        ensure_on: bool = False,
+    ) -> bool:
+        """Return whether one temperature can represent the effective mode."""
+        if not self._supports_target_feature(entity_id, range_target=False):
+            return False
+        effective_hvac_mode = self.effective_hvac_mode(
+            entity_id,
+            requested_hvac_mode,
+            ensure_on=ensure_on,
+        )
+        return not self._requires_temperature_range(entity_id, effective_hvac_mode)
+
+    def _requires_temperature_range(
+        self,
+        entity_id: str,
+        effective_hvac_mode: str | None,
+    ) -> bool:
+        """Return whether one target cannot represent the active climate range."""
+        if effective_hvac_mode not in RANGE_HVAC_MODES:
+            return False
+        state = self._hass.states.get(entity_id)
+        attributes = state.attributes if state is not None else {}
+        try:
+            supported_features = int(attributes.get("supported_features", 0))
+        except (TypeError, ValueError):
+            supported_features = 0
+        if supported_features:
+            return bool(supported_features & FEATURE_TARGET_TEMPERATURE_RANGE)
+        return (
+            ATTR_TARGET_TEMP_LOW in attributes
+            and ATTR_TARGET_TEMP_HIGH in attributes
+        )
+
+    def supports_temperature_range_target(self, entity_id: str) -> bool:
+        """Return whether the entity supports a native target range."""
+        return self._supports_target_feature(entity_id, range_target=True)
+
+    def validate_temperature_target(
+        self,
+        entity_id: str,
+        *,
+        range_target: bool,
+        hvac_mode: str | None,
+        ensure_on: bool,
+    ) -> None:
+        """Validate one target kind and effective mode without changing state."""
+        if hvac_mode is not None and hvac_mode not in self.supported_hvac_modes(entity_id):
+            raise ValueError(f"{entity_id} does not support HVAC mode {hvac_mode}")
+        effective_mode = self.effective_hvac_mode(
+            entity_id,
+            hvac_mode,
+            ensure_on=ensure_on,
+            range_target=range_target,
+        )
+        if range_target:
+            self._validate_target_feature(entity_id, range_target=True)
+            if ensure_on and effective_mode in (None, HVAC_MODE_OFF):
+                raise ValueError(
+                    f"{entity_id} has no compatible non-off mode for a range target"
+                )
+            if effective_mode not in RANGE_HVAC_MODES:
+                raise ValueError(
+                    f"{entity_id} cannot apply a temperature range while in "
+                    f"{effective_mode or 'unknown'} mode"
+                )
+            return
+        if self._requires_temperature_range(entity_id, effective_mode):
+            raise ValueError(
+                f"{entity_id} requires separate target_temp_low and "
+                f"target_temp_high values in {effective_mode} mode"
+            )
+        self._validate_target_feature(entity_id, range_target=False)
+
+    def _target_features(self, entity_id: str) -> int:
+        """Return Home Assistant climate target feature flags."""
+        state = self._hass.states.get(entity_id)
+        attributes = state.attributes if state is not None else {}
+        try:
+            return int(attributes.get("supported_features", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _validate_target_feature(self, entity_id: str, *, range_target: bool) -> None:
+        """Reject target kinds the entity does not advertise or expose."""
+        if self._supports_target_feature(entity_id, range_target=range_target):
+            return
+        kind = "temperature range" if range_target else "single temperature"
+        raise ValueError(f"{entity_id} does not support a {kind} target")
+
+    def _supports_target_feature(self, entity_id: str, *, range_target: bool) -> bool:
+        """Return target support, using attributes only when no feature mask exists."""
+        features = self._target_features(entity_id)
+        required = (
+            FEATURE_TARGET_TEMPERATURE_RANGE
+            if range_target
+            else FEATURE_TARGET_TEMPERATURE
+        )
+        if features:
+            return bool(features & required)
+        state = self._hass.states.get(entity_id)
+        attrs = state.attributes if state is not None else {}
+        return (
+            ATTR_TARGET_TEMP_LOW in attrs and ATTR_TARGET_TEMP_HIGH in attrs
+            if range_target
+            else (
+                ATTR_TEMPERATURE in attrs
+                or not (
+                    features & FEATURE_TARGET_TEMPERATURE_RANGE
+                    or (
+                        ATTR_TARGET_TEMP_LOW in attrs
+                        and ATTR_TARGET_TEMP_HIGH in attrs
+                    )
+                )
+            )
         )
 
     def temperature_limits(self, entity_id: str) -> tuple[float, float]:

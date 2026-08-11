@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CORE_CONFIG_UPDATE
@@ -11,6 +12,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.typing import ConfigType
 
 from .api import async_setup_api
+from .climate_delivery import ClimateDeliveryCoordinator
 from .climate_manager import ClimateManager
 from .config_helpers import (
     get_configured_climate_entities,
@@ -31,11 +33,13 @@ from .temperature_migration import (
     async_notify_temperature_migration,
 )
 
+_LOGGER = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class VelairData:
     """Runtime data for Velair."""
 
+    climate_delivery: ClimateDeliveryCoordinator
     climate_manager: ClimateManager
     scheduler: VelairScheduler
     storage: VelairStorage
@@ -59,12 +63,20 @@ async def async_setup_entry(
     storage = VelairStorage(hass, entry.entry_id)
     data = await storage.async_load(climate_entities)
     climate_manager = ClimateManager(hass)
-    scheduler = VelairScheduler(hass, data, climate_manager, storage.async_save)
+    climate_delivery = ClimateDeliveryCoordinator(hass)
+    scheduler = VelairScheduler(
+        hass,
+        data,
+        climate_manager,
+        storage.async_save,
+        climate_delivery,
+    )
     scheduler.set_temperature_migration_blocked(
         storage.temperature_migration_required
     )
 
     entry.runtime_data = VelairData(
+        climate_delivery=climate_delivery,
         climate_manager=climate_manager,
         scheduler=scheduler,
         storage=storage,
@@ -72,6 +84,7 @@ async def async_setup_entry(
 
     hass.data.setdefault(DOMAIN, {})
     runtime = {
+        "climate_delivery": climate_delivery,
         "climate_manager": climate_manager,
         "entry": entry,
         "operation_active": None,
@@ -151,17 +164,25 @@ async def async_unload_entry(
     entry: VelairConfigEntry,
 ) -> bool:
     """Unload a Velair config entry."""
-    await entry.runtime_data.scheduler.async_stop()
+    if PLATFORMS and not await hass.config_entries.async_unload_platforms(
+        entry, PLATFORMS
+    ):
+        return False
 
-    unload_ok = True
+    try:
+        try:
+            await entry.runtime_data.scheduler.async_stop()
+        except Exception:  # Keep unload recoverable after best-effort RA restore.
+            _LOGGER.exception("Failed to stop the Velair scheduler cleanly")
+    finally:
+        try:
+            await entry.runtime_data.climate_delivery.async_stop()
+        except Exception:
+            _LOGGER.exception("Failed to stop Velair climate delivery cleanly")
 
-    if PLATFORMS:
-        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    await async_unload_frontend(hass)
+    hass.data[DOMAIN].pop(entry.entry_id, None)
+    if not hass.data[DOMAIN]:
+        await async_unload_services(hass)
 
-    if unload_ok:
-        await async_unload_frontend(hass)
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-        if not hass.data[DOMAIN]:
-            await async_unload_services(hass)
-
-    return unload_ok
+    return True

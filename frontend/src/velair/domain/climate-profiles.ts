@@ -4,7 +4,7 @@ import {
   ACTION_TURN_OFF,
   PROFILE_DESCRIPTION_MAX_LENGTH,
 } from "../constants";
-import { draftBlocksFromScheduleBlocks } from "./draft-blocks";
+import { draftBlocksFromScheduleBlocks, draftBlockUsesRange } from "./draft-blocks";
 import type {
   ClimateProfile,
   ClimateProfileInput,
@@ -181,6 +181,31 @@ export function cloneProfileScheduleDay(
   return nextSchedule;
 }
 
+export function cloneProfileDayToClimates(
+  draft: ClimateProfileDraft,
+  sourceEntityId: string,
+  weekday: string,
+  targetEntityIds: Iterable<string>,
+): ClimateProfileDraft {
+  const sourceZone = draft.zones[sourceEntityId];
+  if (sourceZone?.behavior !== "schedule" || !WEEKDAYS.includes(weekday)) return draft;
+  const zones = { ...draft.zones };
+  const rememberedSchedules = { ...draft.rememberedSchedules };
+  for (const entityId of targetEntityIds) {
+    if (entityId === sourceEntityId) continue;
+    const existing = zones[entityId];
+    const schedule = cloneProfileSchedule(
+      existing?.behavior === "schedule"
+        ? existing.schedule
+        : rememberedSchedules[entityId],
+    );
+    schedule[weekday] = structuredClone(sourceZone.schedule[weekday] ?? []);
+    zones[entityId] = { behavior: "schedule", schedule };
+    rememberedSchedules[entityId] = cloneProfileSchedule(schedule);
+  }
+  return { ...draft, zones, rememberedSchedules };
+}
+
 export function nextProfileBlockStart(blocks: Array<Pick<ScheduleBlock, "start">>): string {
   const used = new Set(blocks.map((block) => block.start));
   const preferred = ["08:00", "18:00", "22:00", "12:00", "06:00", "16:00", "20:00"];
@@ -229,8 +254,13 @@ export function climateProfileValidationError(draft: ClimateProfileDraft): strin
           return "schedule";
         }
         starts.add(block.start);
-        if (block.action !== ACTION_TURN_OFF && !Number.isFinite(Number(block.temperature))) {
-          return "schedule";
+        if (block.action !== ACTION_TURN_OFF) {
+          const validTarget = draftBlockUsesRange(block)
+            ? Number.isFinite(Number(block.target_temp_low))
+              && Number.isFinite(Number(block.target_temp_high))
+              && Number(block.target_temp_low) <= Number(block.target_temp_high)
+            : Number.isFinite(Number(block.temperature));
+          if (!validTarget) return "schedule";
         }
       }
     }
@@ -269,7 +299,12 @@ function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock {
   return {
     start: block.start,
     action: ACTION_SET_TEMPERATURE,
-    temperature: Number(block.temperature),
+    ...(draftBlockUsesRange(block)
+      ? {
+          target_temp_low: Number(block.target_temp_low),
+          target_temp_high: Number(block.target_temp_high),
+        }
+      : { temperature: Number(block.temperature) }),
     ...(block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
     ...(block.fan_mode ? { fan_mode: block.fan_mode } : {}),
     ...(block.preset_mode ? { preset_mode: block.preset_mode } : {}),

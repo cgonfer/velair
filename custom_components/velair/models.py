@@ -101,6 +101,8 @@ class ScheduleBlock(TypedDict):
     start: str
     action: NotRequired[str]
     temperature: NotRequired[float]
+    target_temp_low: NotRequired[float]
+    target_temp_high: NotRequired[float]
     hvac_mode: NotRequired[str]
     fan_mode: NotRequired[str]
     preset_mode: NotRequired[str]
@@ -116,6 +118,8 @@ class ZoneOverride(TypedDict):
     started_at: NotRequired[str]
     until: NotRequired[str]
     temperature: NotRequired[float]
+    target_temp_low: NotRequired[float]
+    target_temp_high: NotRequired[float]
     hvac_mode: NotRequired[str]
     fan_mode: NotRequired[str]
     preset_mode: NotRequired[str]
@@ -131,6 +135,8 @@ class ClimateStateSnapshot(TypedDict, total=False):
 
     hvac_mode: str
     temperature: float
+    target_temp_low: float
+    target_temp_high: float
     fan_mode: str
     preset_mode: str
     swing_mode: str
@@ -186,6 +192,9 @@ class PreconditioningObservation(TypedDict, total=False):
     scheduled_time: str
     start_time: str
     target_temp: float
+    target_temp_low: float
+    target_temp_high: float
+    target_boundary: str
     initial_temp: float
     observed_temp: float
     outdoor_temp_start: float | None
@@ -204,6 +213,10 @@ class PreconditioningPredictionDiagnostics(TypedDict):
     """Intermediate adaptive preconditioning prediction values."""
 
     direction: str
+    target_kind: str
+    target_boundary: str
+    boundary_temperature: float
+    current_temperature: float
     delta_temperature: float
     complete_sample_count: int
     partial_sample_count: int
@@ -326,6 +339,7 @@ class OperationStatus(TypedDict):
     total: int
     current_entity_id: str | None
     failed_entity_ids: list[str]
+    deferred_entity_ids: list[str]
     started_at: str
     finished_at: str | None
     error_code: Literal["cancelled", "operation_failed"] | None
@@ -456,6 +470,8 @@ class ClimateEvent:
     swing_mode: str | None = None
     swing_horizontal_mode: str | None = None
     humidity: float | None = None
+    target_temp_low: float | None = None
+    target_temp_high: float | None = None
     target_when: datetime | None = None
     preconditioning_diagnostics: PreconditioningPredictionDiagnostics | None = None
 
@@ -489,10 +505,7 @@ def normalize_schedule_blocks(raw_blocks: list[dict[str, Any]]) -> list[Schedule
         if action != ACTION_SET_TEMPERATURE:
             raise ValueError(f"Invalid schedule action: {action}")
 
-        if "temperature" not in block:
-            raise ValueError(f"Missing temperature for schedule block: {start}")
-
-        normalized_block["temperature"] = float(block["temperature"])
+        _copy_temperature_target(block, normalized_block, context=f"schedule block: {start}")
         hvac_mode = block.get("hvac_mode")
         if isinstance(hvac_mode, str) and hvac_mode:
             normalized_block["hvac_mode"] = hvac_mode
@@ -517,6 +530,58 @@ def normalize_start_time(value: str) -> str:
         raise ValueError(f"Invalid schedule start time: {value}")
 
     return f"{hour:02d}:{minute:02d}"
+
+
+def temperature_target_from_mapping(
+    source: ScheduleBlock | dict[str, Any],
+) -> dict[str, float]:
+    """Return one exclusive, validated scalar or range temperature target."""
+    has_temperature = "temperature" in source
+    has_low = "target_temp_low" in source
+    has_high = "target_temp_high" in source
+    if has_temperature and (has_low or has_high):
+        raise ValueError(
+            "Use either temperature or target_temp_low and target_temp_high, not both"
+        )
+    if has_low != has_high:
+        raise ValueError(
+            "target_temp_low and target_temp_high must be provided together"
+        )
+    if not has_temperature and not has_low:
+        raise ValueError("Missing temperature target")
+
+    if has_temperature:
+        try:
+            temperature = float(source["temperature"])
+        except (TypeError, ValueError) as err:
+            raise ValueError("Temperature must be a finite number") from err
+        if not isfinite(temperature):
+            raise ValueError("Temperature must be a finite number")
+        return {"temperature": temperature}
+
+    try:
+        low = float(source["target_temp_low"])
+        high = float(source["target_temp_high"])
+    except (TypeError, ValueError) as err:
+        raise ValueError("Temperature range values must be finite numbers") from err
+    if not isfinite(low) or not isfinite(high):
+        raise ValueError("Temperature range values must be finite numbers")
+    if low > high:
+        raise ValueError("target_temp_low must not be greater than target_temp_high")
+    return {"target_temp_low": low, "target_temp_high": high}
+
+
+def _copy_temperature_target(
+    source: ScheduleBlock | dict[str, Any],
+    target: ScheduleBlock | dict[str, Any],
+    *,
+    context: str,
+) -> None:
+    """Copy a validated temperature target into another mapping."""
+    try:
+        target.update(temperature_target_from_mapping(source))
+    except (KeyError, TypeError, ValueError) as err:
+        raise ValueError(f"Invalid temperature target for {context}: {err}") from err
 
 
 def climate_options_from_block(block: ScheduleBlock | dict[str, Any]) -> dict[str, Any]:
@@ -578,6 +643,8 @@ def normalize_schedule_data(
                     and "start" in block
                     and (
                         "temperature" in block
+                        or "target_temp_low" in block
+                        or "target_temp_high" in block
                         or block.get("action") == ACTION_TURN_OFF
                     )
                 ]
@@ -686,7 +753,7 @@ def normalize_schedule_data(
         active_mode_id = None
 
     return {
-        "version": 3,
+        "version": 4,
         "zones": zones,
         "global_": {
             "mode": mode,
@@ -892,6 +959,8 @@ def normalize_climate_profiles(
                             and "start" in block
                             and (
                                 "temperature" in block
+                                or "target_temp_low" in block
+                                or "target_temp_high" in block
                                 or block.get("action") == ACTION_TURN_OFF
                             )
                         ]
@@ -936,6 +1005,8 @@ def validate_climate_profiles(
         "start",
         "action",
         "temperature",
+        "target_temp_low",
+        "target_temp_high",
         "hvac_mode",
         *CLIMATE_OPTION_FIELDS,
     }
@@ -1044,15 +1115,24 @@ def validate_climate_profiles(
                         continue
                     if action != ACTION_SET_TEMPERATURE:
                         raise ValueError(f"Invalid schedule action for {entity_id}: {action}")
-                    temperature = block.get("temperature")
-                    if (
-                        not isinstance(temperature, (int, float))
-                        or isinstance(temperature, bool)
-                        or not isfinite(float(temperature))
+                    if any(
+                        isinstance(block.get(field), bool)
+                        for field in (
+                            "temperature",
+                            "target_temp_low",
+                            "target_temp_high",
+                        )
+                        if field in block
                     ):
                         raise ValueError(
-                            f"Schedule block temperature must be a finite number for {entity_id}"
+                            f"Schedule block temperatures must be numbers for {entity_id}"
                         )
+                    try:
+                        target = temperature_target_from_mapping(block)
+                    except (KeyError, TypeError, ValueError) as err:
+                        raise ValueError(
+                            f"Invalid schedule block target for {entity_id}: {err}"
+                        ) from err
                     for field in ("hvac_mode", *CLIMATE_OPTION_STRING_FIELDS):
                         if field in block and (
                             not isinstance(block[field], str) or not block[field]
@@ -1437,6 +1517,10 @@ def predict_preconditioning_lead(
     recommended_lead = final_estimate if final_estimate > 0 else None
     diagnostics: PreconditioningPredictionDiagnostics = {
         "direction": mode,
+        "target_kind": "scalar",
+        "target_boundary": "temperature",
+        "boundary_temperature": round(target_temp, 3),
+        "current_temperature": round(current_temp, 3),
         "delta_temperature": round(delta_t, 3),
         "complete_sample_count": len(complete_samples),
         "partial_sample_count": len(partial_samples),
@@ -1877,6 +1961,19 @@ def _normalize_preconditioning_observation(
         "quality": quality,
     }
 
+    optional_low = _optional_float(raw_observation.get("target_temp_low"))
+    optional_high = _optional_float(raw_observation.get("target_temp_high"))
+    target_boundary = raw_observation.get("target_boundary")
+    if (
+        optional_low is not None
+        and optional_high is not None
+        and optional_low <= optional_high
+        and target_boundary in ("low", "high")
+    ):
+        observation["target_temp_low"] = optional_low
+        observation["target_temp_high"] = optional_high
+        observation["target_boundary"] = target_boundary
+
     temperature_source = raw_observation.get("temperature_source")
     if isinstance(temperature_source, str) and temperature_source:
         observation["temperature_source"] = temperature_source
@@ -2014,6 +2111,8 @@ def normalize_schedule_templates(raw_templates: Any) -> list[ScheduleTemplateDat
             and "start" in block
             and (
                 "temperature" in block
+                or "target_temp_low" in block
+                or "target_temp_high" in block
                 or block.get("action") == ACTION_TURN_OFF
             )
         ]
@@ -2100,7 +2199,7 @@ def _normalize_zone_override(raw_override: Any) -> ZoneOverride | None:
     if override_type != "boost":
         return None
 
-    if "until" not in raw_override or "temperature" not in raw_override:
+    if "until" not in raw_override:
         return None
 
     override: ZoneOverride = {
@@ -2109,8 +2208,8 @@ def _normalize_zone_override(raw_override: Any) -> ZoneOverride | None:
     }
 
     try:
-        override["temperature"] = float(raw_override["temperature"])
-    except (TypeError, ValueError):
+        override.update(temperature_target_from_mapping(raw_override))
+    except (KeyError, TypeError, ValueError):
         return None
 
     started_at = raw_override.get("started_at")
@@ -2161,11 +2260,15 @@ def _normalize_climate_state_snapshot(raw_state: Any) -> ClimateStateSnapshot | 
     if isinstance(hvac_mode, str) and hvac_mode:
         snapshot["hvac_mode"] = hvac_mode
 
-    try:
-        temperature = float(raw_state["temperature"])
-    except (KeyError, TypeError, ValueError):
-        temperature = None
-    if temperature is not None:
-        snapshot["temperature"] = temperature
+    if any(
+        key in raw_state
+        for key in ("temperature", "target_temp_low", "target_temp_high")
+    ):
+        try:
+            snapshot.update(temperature_target_from_mapping(raw_state))
+        except (KeyError, TypeError, ValueError):
+            pass
+
+    _copy_climate_options(raw_state, snapshot)
 
     return snapshot or None

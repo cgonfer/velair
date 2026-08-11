@@ -32,6 +32,8 @@ from .const import (
     ATTR_SOURCE_WEEKDAY,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_WEEKDAYS,
     ATTR_TEMPERATURE,
     ATTR_WEEKDAY,
@@ -82,7 +84,7 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 5
+EXPORT_MODEL_VERSION = 6
 EXPORT_SECTIONS = (
     "zones",
     "templates",
@@ -109,6 +111,8 @@ SCHEDULE_BLOCK_SCHEMA = vol.Schema(
         vol.Required("start"): cv.string,
         vol.Optional(ATTR_ACTION, default=ACTION_SET_TEMPERATURE): vol.In(ACTION_OPTIONS),
         vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
+        vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
+        vol.Optional(ATTR_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
         vol.Optional(ATTR_FAN_MODE): cv.string,
         vol.Optional(ATTR_PRESET_MODE): cv.string,
@@ -1374,6 +1378,10 @@ def _build_import_data(
                 if isinstance(profile, dict) and isinstance(profile.get("key"), str)
             },
         )
+    if "zones" in sections:
+        _validate_portable_zone_schedules(selected_payload["zones"], current_zones)
+    if "templates" in sections:
+        _validate_portable_templates(selected_payload["templates"])
     _hydrate_portable_temperature_defaults(selected_payload, payload_unit)
     payload_sections = convert_portable_temperature_data(
         selected_payload,
@@ -1792,6 +1800,60 @@ def _normalize_import_zones(
     }
 
 
+def _validate_portable_zone_schedules(
+    raw_zones: Any,
+    current_zones: dict[str, Any],
+) -> None:
+    """Reject malformed imported schedules instead of silently dropping blocks."""
+    if not isinstance(raw_zones, dict):
+        raise ValueError("Thermostat schedules section is not valid")
+    for entity_id in set(raw_zones).intersection(current_zones):
+        zone = raw_zones[entity_id]
+        if not isinstance(zone, dict):
+            raise ValueError(f"Schedule for {entity_id} is not valid")
+        raw_schedule = zone.get("schedule", {})
+        if not isinstance(raw_schedule, dict):
+            raise ValueError(f"Schedule for {entity_id} is not valid")
+        for weekday, raw_blocks in raw_schedule.items():
+            if weekday not in WEEKDAYS:
+                continue
+            _validate_portable_blocks(raw_blocks, context=f"{entity_id} {weekday}")
+
+
+def _validate_portable_templates(raw_templates: Any) -> None:
+    """Reject malformed imported templates instead of silently dropping them."""
+    if not isinstance(raw_templates, list):
+        raise ValueError("Templates section is not valid")
+    seen_keys: set[str] = set()
+    for index, template in enumerate(raw_templates):
+        if not isinstance(template, dict):
+            raise ValueError(f"Template {index + 1} is not valid")
+        key = template.get("key")
+        name = template.get("name")
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError(f"Template {index + 1} has no valid key")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"Template {key} has no valid name")
+        if key in seen_keys:
+            raise ValueError(f"Template key is duplicated: {key}")
+        seen_keys.add(key)
+        _validate_portable_blocks(template.get("blocks"), context=f"template {key}")
+
+
+def _validate_portable_blocks(raw_blocks: Any, *, context: str) -> None:
+    """Validate every imported block with contextual errors."""
+    if not isinstance(raw_blocks, list):
+        raise ValueError(f"Blocks for {context} are not valid")
+    if any(not isinstance(block, dict) for block in raw_blocks):
+        raise ValueError(f"Blocks for {context} are not valid")
+    try:
+        normalized = normalize_schedule_blocks(raw_blocks)
+    except ValueError as err:
+        raise ValueError(f"Invalid block in {context}: {err}") from err
+    if len(normalized) != len(raw_blocks):
+        raise ValueError(f"Invalid block in {context}")
+
+
 def _serialize_event(event: ClimateEvent | None) -> dict[str, Any] | None:
     """Serialize a scheduler event for the API."""
     if event is None:
@@ -1809,6 +1871,11 @@ def _serialize_event(event: ClimateEvent | None) -> dict[str, Any] | None:
             event.target_when.isoformat() if event.target_when is not None else None
         ),
     }
+    target_temp_low = getattr(event, "target_temp_low", None)
+    target_temp_high = getattr(event, "target_temp_high", None)
+    if target_temp_low is not None and target_temp_high is not None:
+        payload[ATTR_TARGET_TEMP_LOW] = target_temp_low
+        payload[ATTR_TARGET_TEMP_HIGH] = target_temp_high
     for attr in (
         ATTR_FAN_MODE,
         ATTR_PRESET_MODE,

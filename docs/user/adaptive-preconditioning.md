@@ -16,6 +16,14 @@ Everything runs locally inside Home Assistant. Velair stores settings and learni
 
 Preconditioning is configured per climate. Heat and cool learning are tracked separately, so cooling samples do not replace heating samples and heating samples do not replace cooling samples.
 
+Native `heat_cool` ranges are supported. If the room is below the lower target
+by more than Minimum temperature delta, Velair predicts from the lower boundary
+and starts the complete range early for heating. If the room is above the upper
+target by more than that delta, it predicts from the upper boundary and starts
+the complete range early for cooling. Readings inside the range or its boundary
+deadbands keep the normal scheduled time. Velair always sends both range limits;
+it never collapses a range into one temperature.
+
 When a climate is expanded, each supported mode shows a live prediction card. It uses the same backend next-event data as the Overview tab, so pauses, boosts, unsupported modes, and blocks that cannot be preconditioned are handled consistently. When a matching future block exists, the card shows the calculated start time, the target time, the lead time, the scheduled temperature and mode, and whether Velair is using the initial model or similar local history.
 
 If you want to verify a specific calculation, open **Calculation details** in the live prediction card. This optional section shows the backend values used for that prediction, including sample counts, the estimate from completed observations, the partial lower bound, the combined estimate, rounding, and the final lead. It is hidden by default so the normal view stays simple.
@@ -23,6 +31,9 @@ If you want to verify a specific calculation, open **Calculation details** in th
 ## How It Starts
 
 Velair calculates the current temperature gap for the next scheduled temperature block.
+
+For a `heat_cool` range, "target temperature" below means the lower boundary
+while heating and the upper boundary while cooling.
 
 For heating:
 

@@ -109,6 +109,14 @@ Common `source` values are `scheduled_event`, `current_schedule`,
 `schedule_saved`, `scheduler_resumed`, `startup`, `service_set_temperature`,
 `boost_ended`, `zone_paused`, `zone_resumed`, and `zone_pause_expired`.
 
+For a range target, `temperature` is omitted and the event contains both limits:
+
+```yaml
+target_temp_low: 20
+target_temp_high: 24
+hvac_mode: heat_cool
+```
+
 ## Preconditioning Plan Updated
 
 `preconditioning_plan_updated` is emitted when a new early-start plan is
@@ -124,6 +132,9 @@ scheduled_when: "2026-01-15T07:00:00+01:00"
 preconditioning_when: "2026-01-15T05:35:00+01:00"
 lead_minutes: 85
 direction: heat
+target_kind: scalar
+target_boundary: temperature
+boundary_temperature: 21
 target_temperature: 21
 current_temperature: 17.8
 temperature_delta: 3.2
@@ -141,6 +152,10 @@ weekday: thursday
 start: "07:00"
 preconditioning_diagnostics:
   direction: heat
+  target_kind: scalar
+  target_boundary: temperature
+  boundary_temperature: 21
+  current_temperature: 17.8
   delta_temperature: 3.2
   complete_sample_count: 12
   partial_sample_count: 3
@@ -160,6 +175,28 @@ preconditioning_diagnostics:
   initial_model_lead_minutes: 110
 ```
 
+For a native range plan, `target_temperature` is `null` and the payload includes
+the complete `target_temp_low` and `target_temp_high` pair. `target_kind` is
+`range`, `target_boundary` is `low` or `high`, and `boundary_temperature` is the
+single effective boundary used by the predictor. `temperature_delta` is measured
+against that boundary. Scalar plans keep `target_kind: scalar` and
+`target_boundary: temperature`.
+
+For example, a heating prediction for a `20–24 °C` range includes:
+
+```yaml
+direction: heat
+target_kind: range
+target_boundary: low
+boundary_temperature: 20
+target_temperature: null
+target_temp_low: 20
+target_temp_high: 24
+current_temperature: 18
+temperature_delta: 2
+hvac_mode: heat_cool
+```
+
 ## Preconditioning Plan Cancelled
 
 `preconditioning_plan_cancelled` is emitted once when a previously published
@@ -175,6 +212,9 @@ scheduled_when: "2026-01-15T07:00:00+01:00"
 preconditioning_when: "2026-01-15T05:35:00+01:00"
 lead_minutes: 85
 direction: heat
+target_kind: scalar
+target_boundary: temperature
+boundary_temperature: 21
 target_temperature: 21
 current_temperature: 17.8
 temperature_delta: 3.2
@@ -192,6 +232,10 @@ weekday: thursday
 start: "07:00"
 preconditioning_diagnostics:
   direction: heat
+  target_kind: scalar
+  target_boundary: temperature
+  boundary_temperature: 21
+  current_temperature: 17.8
   delta_temperature: 3.2
   complete_sample_count: 12
   partial_sample_count: 3
@@ -322,16 +366,51 @@ applied_temperature: 23.5
 room_temperature: 18
 climate_temperature: 20.5
 assist_delta: 3
+applied_offset: 3
 direction: heat
 hvac_mode: heat
 reason: scheduled_event
 ```
 
+When the scheduled target protects a fixed heating or cooling result, the
+scalar update adds two optional fields:
+
+```yaml
+target_temperature: 22
+calculated_temperature: 20
+applied_temperature: 22
+scheduled_target_guard: cooling_floor
+direction: cool
+```
+
+`calculated_temperature` is the supported target before scheduled protection.
+Existing event automations remain compatible because the fields are additive
+and omitted when the protection is not active.
+
+For a native range, scalar target fields are omitted and both complete bands
+are reported:
+
+```yaml
+target_temp_low: 19
+target_temp_high: 24
+applied_target_temp_low: 23
+applied_target_temp_high: 28
+room_temperature: 18
+climate_temperature: 22
+assist_delta: 1
+range_shift: 4
+direction: heat
+hvac_mode: heat_cool
+```
+
 ## Room Sensor Assist Restored
 
-`room_sensor_assist_restored` is emitted when assistance stops driving the
-climate or applies a neutral hold target after the room reaches its target.
-`reason` explains the transition.
+`room_sensor_assist_restored` is emitted when Room Assist stops managing its
+temporary target and restores the normal scheduled target where possible.
+Crossing the room target remains part of `room_sensor_assist_updated`; it can
+produce an inverse signed `applied_offset`. In fixed heating or cooling modes,
+the scheduled target remains the safety boundary for a non-driving result even
+if the climate entity's own reading drifts. `reason` explains the transition.
 
 ```yaml
 domain: velair
@@ -339,25 +418,31 @@ event: room_sensor_assist_restored
 entity_id: climate.living_room
 room_temperature_entity_id: sensor.living_room_temperature
 target_temperature: 21
-applied_temperature: 20.5
+applied_temperature: 21
 room_temperature: 21.1
 climate_temperature: 20.5
 assist_delta: 0
+applied_offset: 0
 direction: heat
 hvac_mode: heat
-reason: target_reached
+reason: assist_disabled
 ```
 
 Other reasons include `assist_disabled`, `boost_started`, `manual_target`,
 `missing_temperature`, `no_active_target`, `not_auto`, `schedule_changed`,
 `schedule_cleared`, `scheduler_mode_changed`, `scheduler_stopped`,
 `settings_updated`, `turn_off`, `unsupported_mode`, `zone_paused`, and
-`zone_unavailable`.
+`zone_unavailable`. `unsupported_temperature_range` remains possible for a
+legacy scalar target that cannot be applied while the effective climate mode
+requires a native range; valid range blocks are supported.
 
 ## Boost Started
 
 `boost_started` is emitted after a boost target and override have been applied
 and persisted. Replacing an active boost emits another `boost_started`.
+
+Range boosts use `target_temp_low` and `target_temp_high` instead of
+`temperature`. Their restoration payload preserves the same target form.
 
 ```yaml
 domain: velair
@@ -449,3 +534,11 @@ settings update configuration but do not emit runtime automation events.
 Schedule edits do not have a dedicated configuration event, although they can
 produce plan cancellation/update events or `climate_target_applied` when they
 change the currently active target.
+
+## Delivery Meaning
+
+An applied event is emitted only after Home Assistant accepts the complete
+mode, target, and supported-option call sequence for the current Velair
+intention. Failed or superseded attempts do not emit it. The event confirms
+command acceptance, not that the physical equipment has already reached the
+requested temperature or HVAC state.

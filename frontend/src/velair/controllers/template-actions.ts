@@ -44,7 +44,7 @@ type TemplateActionsHost = {
   _templateLabel(template: ScheduleTemplate): string;
   _templateNameInputValue(template: ScheduleTemplate): string;
   _uniqueTemplateName(baseName: string): string;
-  _unsupportedModeError(blocks: Array<Pick<ScheduleBlock, "action" | "hvac_mode" | "start">>, entityId: string): string | undefined;
+  _unsupportedModeError(blocks: Array<ScheduleBlock | DraftScheduleBlock>, entityId: string): string | undefined;
   _weekdayName(weekday: string): string;
 };
 
@@ -329,8 +329,13 @@ function normalizeTemplateDraftBlocks(blocks: DraftScheduleBlock[]): DraftSchedu
       action: block.action,
       hvac_mode: block.hvac_mode ?? "",
       start: block.start,
-      temperature: block.temperature,
     };
+    if (block.target_temp_low !== undefined || block.target_temp_high !== undefined) {
+      draft.target_temp_low = block.target_temp_low;
+      draft.target_temp_high = block.target_temp_high;
+    } else {
+      draft.temperature = block.temperature;
+    }
     if (block.fan_mode) {
       draft.fan_mode = block.fan_mode;
     }

@@ -4,6 +4,8 @@ export const sensorsStyles = css`
 .sensors-view {
   display: grid;
   gap: 12px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .sensors-intro {
@@ -146,6 +148,8 @@ export const sensorsStyles = css`
   background: var(--card-background-color);
   border: 1px solid var(--divider-color);
   border-radius: 8px;
+  max-width: 100%;
+  min-width: 0;
   overflow: visible;
   position: relative;
 }
@@ -360,32 +364,144 @@ export const sensorsStyles = css`
 }
 
 .sensor-temperature-scale {
-  --sensor-scale-line-end: #2d7dd2;
+  --sensor-scale-applied-color: color-mix(
+    in srgb,
+    var(--primary-color) 68%,
+    var(--secondary-text-color)
+  );
+  --sensor-scale-room-color: color-mix(
+    in srgb,
+    var(--success-color, #43a047) 68%,
+    var(--secondary-text-color)
+  );
+  --sensor-scale-scheduled-color: color-mix(
+    in srgb,
+    var(--error-color, #d93025) 68%,
+    var(--secondary-text-color)
+  );
+  --sensor-scale-line-end: var(--sensor-scale-applied-color);
   --sensor-scale-line-start: color-mix(in srgb, var(--secondary-text-color) 22%, transparent);
   background: var(--secondary-background-color);
   border: 1px solid var(--divider-color);
   border-radius: 8px;
+  box-sizing: border-box;
   display: grid;
   gap: 6px;
+  max-width: 100%;
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   padding: 12px 12px 10px;
+  width: 100%;
 }
 
 .sensor-temperature-scale.mode-heat {
-  --sensor-scale-line-end: #d95f24;
+  --sensor-scale-line-end: var(--sensor-scale-scheduled-color);
+}
+
+.sensor-limit-warning {
+  align-items: start;
+  background: color-mix(in srgb, var(--warning-color, #f9a825) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning-color, #f9a825) 42%, var(--divider-color));
+  border-radius: 8px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  padding: 10px 11px;
+}
+
+.sensor-limit-warning ha-icon {
+  --mdc-icon-size: 19px;
+  color: var(--warning-color, #f9a825);
+  margin-top: 1px;
+}
+
+.sensor-limit-warning span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sensor-config-label-stacked {
+  align-items: start;
+  display: grid;
+  gap: 3px;
+}
+
+.sensor-config-help-text {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.sensor-limit-warning strong {
+  color: var(--primary-text-color);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.sensor-limit-warning small {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sensor-safety-info {
+  align-items: start;
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, var(--divider-color));
+  border-radius: 8px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+  padding: 10px 11px;
+}
+
+.sensor-safety-info ha-icon {
+  --mdc-icon-size: 19px;
+  color: var(--primary-color);
+  margin-top: 1px;
+}
+
+.sensor-safety-info span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sensor-safety-info strong {
+  color: var(--primary-text-color);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.sensor-safety-info small {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .sensor-temperature-scale.mode-heat-cool {
-  --sensor-scale-line-end: #2d7dd2;
-  --sensor-scale-line-start: color-mix(in srgb, #d95f24 62%, transparent);
+  --sensor-scale-line-end: var(--sensor-scale-applied-color);
+  --sensor-scale-line-start: color-mix(
+    in srgb,
+    var(--sensor-scale-scheduled-color) 62%,
+    transparent
+  );
 }
 
 .sensor-scale-track {
   min-height: 136px;
   min-width: 640px;
   position: relative;
+}
+
+.sensor-temperature-scale.has-range .sensor-scale-track {
+  min-height: 204px;
 }
 
 .sensor-scale-line {
@@ -419,8 +535,20 @@ export const sensorsStyles = css`
   top: 108px;
 }
 
+.sensor-temperature-scale.has-range .sensor-scale-room-gap {
+  top: 150px;
+}
+
+.sensor-temperature-scale.has-range .sensor-scale-assist-offset {
+  top: 178px;
+}
+
 .sensor-scale-assist-offset.assist-offset-active {
-  border-top: 3px dashed color-mix(in srgb, var(--success-color, #43a047) 74%, transparent);
+  border-top: 3px dashed color-mix(
+    in srgb,
+    var(--sensor-scale-room-color) 74%,
+    transparent
+  );
 }
 
 .sensor-scale-assist-offset.assist-offset-holding {
@@ -452,8 +580,12 @@ export const sensorsStyles = css`
 }
 
 .sensor-scale-assist-offset.assist-offset-active span {
-  border-color: color-mix(in srgb, var(--success-color, #43a047) 38%, var(--divider-color));
-  color: var(--success-color, #43a047);
+  border-color: color-mix(
+    in srgb,
+    var(--sensor-scale-room-color) 38%,
+    var(--divider-color)
+  );
+  color: var(--sensor-scale-room-color);
 }
 
 .sensor-scale-assist-offset.assist-offset-holding span,
@@ -469,6 +601,82 @@ export const sensorsStyles = css`
   transform: translateX(-50%);
   width: 0;
   z-index: 1;
+}
+
+.sensor-scale-range-band {
+  color: var(--secondary-text-color);
+  display: block;
+  height: 0;
+  min-width: 2px;
+  position: absolute;
+  z-index: 2;
+}
+
+.sensor-scale-range-band.range-band-scheduled {
+  color: var(--sensor-scale-scheduled-color);
+  top: 92px;
+}
+
+.sensor-scale-range-band.range-band-applied {
+  color: var(--sensor-scale-applied-color);
+  top: 122px;
+}
+
+.sensor-scale-range-bracket {
+  border-top: 2px solid currentColor;
+  display: block;
+  height: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.sensor-scale-range-bracket::before,
+.sensor-scale-range-bracket::after {
+  border-left: 2px solid currentColor;
+  content: "";
+  height: 8px;
+  position: absolute;
+  top: -4px;
+}
+
+.sensor-scale-range-bracket::before {
+  left: 0;
+}
+
+.sensor-scale-range-bracket::after {
+  right: 0;
+}
+
+.sensor-scale-range-label {
+  align-items: baseline;
+  background: var(--secondary-background-color);
+  border: 1px solid color-mix(in srgb, currentColor 42%, var(--divider-color));
+  border-radius: 999px;
+  color: currentColor;
+  display: inline-flex;
+  gap: 5px;
+  left: 50%;
+  line-height: 1;
+  max-width: 190px;
+  min-width: max-content;
+  padding: 3px 7px;
+  position: absolute;
+  top: 6px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.sensor-scale-range-label small {
+  color: var(--secondary-text-color);
+  font-size: 10px;
+}
+
+.sensor-scale-range-label strong {
+  color: currentColor;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .sensor-scale-callout-marker {
@@ -551,7 +759,7 @@ export const sensorsStyles = css`
 
 .sensor-scale-offset {
   align-items: center;
-  color: var(--primary-color);
+  color: var(--sensor-scale-applied-color);
   display: inline-flex;
   font-size: 10px;
   font-weight: 700;
@@ -632,30 +840,30 @@ export const sensorsStyles = css`
 }
 
 .sensor-scale-marker.marker-target .sensor-scale-dot {
-  background: var(--error-color, #d93025);
-  border-color: var(--error-color, #d93025);
+  background: var(--sensor-scale-scheduled-color);
+  border-color: var(--sensor-scale-scheduled-color);
   height: 14px;
   width: 14px;
 }
 
 .sensor-scale-callout-marker.marker-target .sensor-scale-callout {
-  border-left-color: var(--error-color, #d93025);
+  border-left-color: var(--sensor-scale-scheduled-color);
 }
 
 .sensor-scale-marker.marker-room .sensor-scale-dot {
-  border-color: var(--success-color, #43a047);
+  border-color: var(--sensor-scale-room-color);
 }
 
 .sensor-scale-callout-marker.marker-room .sensor-scale-callout {
-  border-left-color: var(--success-color, #43a047);
+  border-left-color: var(--sensor-scale-room-color);
 }
 
 .sensor-scale-marker.marker-climateTarget .sensor-scale-dot {
-  border-color: var(--primary-color);
+  border-color: var(--sensor-scale-applied-color);
 }
 
 .sensor-scale-callout-marker.marker-climateTarget .sensor-scale-callout {
-  border-left-color: var(--primary-color);
+  border-left-color: var(--sensor-scale-applied-color);
 }
 
 .sensor-scale-marker.marker-climate .sensor-scale-dot {
@@ -734,6 +942,24 @@ export const sensorsStyles = css`
   .sensor-config-row {
     align-items: stretch;
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sensor-config-label {
+    box-sizing: border-box;
+    position: relative;
+    width: 100%;
+  }
+
+  .sensor-config-label .sensor-help {
+    position: static;
+  }
+
+  .sensor-config-label .sensor-help-tooltip {
+    left: 0;
+    max-width: 100%;
+    right: 0;
+    transform: none;
+    width: auto;
   }
 
   .sensor-block-summary {

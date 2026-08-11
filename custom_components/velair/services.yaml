@@ -1,6 +1,6 @@
 set_temperature:
   name: Set temperature
-  description: Set a target temperature for one climate entity through Home Assistant.
+  description: Set a single target or a lower and upper target range for one climate entity through Home Assistant.
   fields:
     entity_id:
       required: true
@@ -9,8 +9,26 @@ set_temperature:
         entity:
           domain: climate
     temperature:
-      required: true
+      name: Target temperature
+      description: Single target temperature. Leave empty when using a lower and upper target range.
+      required: false
       example: 21
+      selector:
+        number:
+          mode: box
+    target_temp_low:
+      name: Lower target temperature
+      description: Lower target for a temperature range. Use together with the upper target and leave the single target empty.
+      required: false
+      example: 20
+      selector:
+        number:
+          mode: box
+    target_temp_high:
+      name: Upper target temperature
+      description: Upper target for a temperature range. Use together with the lower target and leave the single target empty.
+      required: false
+      example: 24
       selector:
         number:
           mode: box
@@ -111,7 +129,7 @@ deactivate_profile:
 
 boost:
   name: Boost
-  description: Temporarily override one zone, then return that zone to its active schedule.
+  description: Temporarily override one zone with a single target or target range, then return that zone to its active schedule.
   fields:
     entity_id:
       required: true
@@ -120,8 +138,26 @@ boost:
         entity:
           domain: climate
     temperature:
-      required: true
+      name: Target temperature
+      description: Single boost target. Leave empty when using a lower and upper target range.
+      required: false
       example: 22
+      selector:
+        number:
+          mode: box
+    target_temp_low:
+      name: Lower target temperature
+      description: Lower boost target for a temperature range. Use together with the upper target and leave the single target empty.
+      required: false
+      example: 20
+      selector:
+        number:
+          mode: box
+    target_temp_high:
+      name: Upper target temperature
+      description: Upper boost target for a temperature range. Use together with the lower target and leave the single target empty.
+      required: false
+      example: 24
       selector:
         number:
           mode: box

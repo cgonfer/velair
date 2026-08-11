@@ -216,6 +216,7 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
             "total": 2,
             "current_entity_id": "climate.salon",
             "failed_entity_ids": [],
+            "deferred_entity_ids": [],
             "started_at": "2026-05-19T18:00:00+00:00",
             "finished_at": None,
             "error_code": None,
@@ -482,6 +483,114 @@ class PortableTemperatureContractTest(unittest.TestCase):
             imported["zones"]["climate.salon"]["comfort"]["temperature_min"],
             68,
         )
+
+    def test_import_rejects_incomplete_or_mixed_range_without_dropping_day(self) -> None:
+        for invalid_block in (
+            {"start": "09:00", "target_temp_low": 20},
+            {
+                "start": "09:00",
+                "temperature": 22,
+                "target_temp_low": 20,
+                "target_temp_high": 24,
+            },
+        ):
+            with self.subTest(invalid_block=invalid_block):
+                payload = {
+                    "format": api_module.EXPORT_FORMAT,
+                    "model_version": 6,
+                    "temperature_unit": api_module.CELSIUS,
+                    "sections": {
+                        "zones": {
+                            "climate.salon": {
+                                "schedule": {
+                                    "monday": [
+                                        {"start": "08:00", "temperature": 21},
+                                        invalid_block,
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                }
+
+                with self.assertRaisesRegex(ValueError, "climate.salon monday"):
+                    api_module._build_import_data(
+                        self._runtime(api_module.CELSIUS), payload, ["zones"]
+                    )
+
+    def test_import_rejects_template_with_incomplete_range(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 6,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "templates": [
+                    {
+                        "key": "workday",
+                        "name": "Workday",
+                        "blocks": [{"start": "08:00", "target_temp_high": 24}],
+                    }
+                ]
+            },
+        }
+
+        with self.assertRaisesRegex(ValueError, "template workday"):
+            api_module._build_import_data(
+                self._runtime(api_module.CELSIUS), payload, ["templates"]
+            )
+
+    def test_v6_import_preserves_and_converts_ranges_across_sections(self) -> None:
+        zone_schedule = helpers.empty_week_schedule()
+        zone_schedule["monday"] = [{
+            "start": "08:00",
+            "action": "set_temperature",
+            "target_temp_low": 20,
+            "target_temp_high": 24,
+            "hvac_mode": "heat_cool",
+        }]
+        profile_schedule = deepcopy(zone_schedule)
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 6,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {"schedule": zone_schedule},
+                },
+                "templates": [{
+                    "key": "comfort",
+                    "name": "Comfort",
+                    "blocks": deepcopy(zone_schedule["monday"]),
+                }],
+                "profiles": [{
+                    "key": "comfort",
+                    "name": "Comfort",
+                    "color": "#336699",
+                    "zones": {
+                        "climate.salon": {
+                            "behavior": "schedule",
+                            "schedule": profile_schedule,
+                        }
+                    },
+                }],
+            },
+        }
+
+        imported = api_module._build_import_data(
+            self._runtime(api_module.FAHRENHEIT),
+            payload,
+            ["zones", "templates", "profiles"],
+        )
+
+        blocks = (
+            imported["zones"]["climate.salon"]["schedule"]["monday"],
+            imported["templates"][0]["blocks"],
+            imported["profiles"][0]["zones"]["climate.salon"]["schedule"]["monday"],
+        )
+        for section_blocks in blocks:
+            self.assertNotIn("temperature", section_blocks[0])
+            self.assertEqual(section_blocks[0]["target_temp_low"], 68)
+            self.assertIn(section_blocks[0]["target_temp_high"], (75, 75.2))
 
     def test_cross_unit_import_does_not_convert_unselected_local_zones(self) -> None:
         runtime = self._runtime(api_module.FAHRENHEIT)
@@ -829,6 +938,24 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
             ],
             35,
         )
+
+    def test_serialize_event_preserves_native_temperature_range(self) -> None:
+        event = helpers.models_module.ClimateEvent(
+            entity_id="climate.salon",
+            when=datetime(2026, 5, 19, 18, 30, tzinfo=timezone.utc),
+            temperature=None,
+            target_temp_low=20.0,
+            target_temp_high=24.0,
+            hvac_mode="heat_cool",
+            weekday="tuesday",
+            start="18:30",
+        )
+
+        payload = api_module._serialize_event(event)
+
+        self.assertIsNone(payload["temperature"])
+        self.assertEqual(payload["target_temp_low"], 20.0)
+        self.assertEqual(payload["target_temp_high"], 24.0)
 
     def test_learning_response_reports_disabled_without_enabled_preconditioning(
         self,

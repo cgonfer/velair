@@ -75,12 +75,17 @@ export function boostDetailText(
   override: Record<string, unknown>,
 ): string {
   const temperature = Number(override.temperature);
+  const low = Number(override.target_temp_low);
+  const high = Number(override.target_temp_high);
   const untilMs = dateMs(override.until);
   const hvacMode = typeof override.hvac_mode === "string" ? override.hvac_mode : "";
   const parts: string[] = [];
 
   if (Number.isFinite(temperature)) {
     parts.push(host._formatTemperature(temperature, entityId));
+  } else if (Number.isFinite(low) && Number.isFinite(high)) {
+    const formattedLow = host._formatTemperature(low, entityId).replace(/\s+[^\s]+$/, "");
+    parts.push(`${formattedLow}–${host._formatTemperature(high, entityId)}`);
   }
   if (hvacMode) {
     parts.push(host._modeLabel(hvacMode));
@@ -145,8 +150,22 @@ export function nextEventForEntity(
   );
 }
 
-export function todayWeekday(): string {
-  return weekdayForDate(new Date());
+export function todayWeekday(hass?: HomeAssistant, value = new Date()): string {
+  const timeZone = hass?.config?.time_zone;
+  if (timeZone) {
+    try {
+      const weekday = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        weekday: "long",
+      }).format(value).toLowerCase();
+      if (["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].includes(weekday)) {
+        return weekday;
+      }
+    } catch {
+      // Fall back to the browser calendar when Home Assistant reports an invalid zone.
+    }
+  }
+  return weekdayForDate(value);
 }
 
 export function currentTemperature(host: OverviewDataHost, entityId: string): string | undefined {

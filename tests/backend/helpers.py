@@ -92,6 +92,7 @@ def _install_homeassistant_stubs() -> None:
     dt = ModuleType("homeassistant.util.dt")
     dt.now = lambda: NOW
     dt.as_local = lambda value: value
+    dt.as_utc = lambda value: value.astimezone(timezone.utc)
     dt.parse_datetime = _parse_datetime
     sys.modules["homeassistant.util.dt"] = dt
 
@@ -283,6 +284,10 @@ class FakeClimateManager:
         self.snapshots: dict[str, dict] = {}
         self.steps: dict[str, float] = {}
         self.climate_options: dict[str, dict[str, list[str]]] = {}
+        self.single_temperature_support: dict[tuple[str, str | None], bool] = {}
+        self.temperature_range_support: dict[str, bool] = {}
+        self.hvac_modes: dict[str, list[str]] = {}
+        self.current_hvac_modes: dict[str, str] = {}
 
     async def async_set_temperature(
         self,
@@ -316,6 +321,31 @@ class FakeClimateManager:
             return
         self.calls.append(("set_temperature", entity_id, temperature, ensure_on, hvac_mode))
 
+    async def async_set_temperature_range(
+        self,
+        entity_id: str,
+        target_temp_low: float,
+        target_temp_high: float,
+        *,
+        ensure_on: bool = False,
+        fan_mode: str | None = None,
+        hvac_mode: str | None = None,
+        humidity: float | None = None,
+        preset_mode: str | None = None,
+        swing_mode: str | None = None,
+        swing_horizontal_mode: str | None = None,
+    ) -> None:
+        self.calls.append(
+            (
+                "set_temperature_range",
+                entity_id,
+                target_temp_low,
+                target_temp_high,
+                ensure_on,
+                hvac_mode,
+            )
+        )
+
     async def async_turn_off(self, entity_id: str) -> None:
         self.calls.append(("turn_off", entity_id))
 
@@ -332,10 +362,65 @@ class FakeClimateManager:
         return self.steps.get(entity_id, 0.5)
 
     def supported_hvac_modes(self, entity_id: str) -> list[str]:
-        return ["off", "heat", "cool"]
+        return self.hvac_modes.get(entity_id, ["off", "heat", "cool"])
 
     def supported_climate_options(self, entity_id: str) -> dict[str, list[str]]:
         return self.climate_options.get(entity_id, {})
+
+    def effective_hvac_mode(
+        self,
+        entity_id: str,
+        requested_hvac_mode: str | None,
+        *,
+        ensure_on: bool,
+        range_target: bool = False,
+    ) -> str | None:
+        """Mirror the fallback used by ClimateManager for scheduler tests."""
+        if requested_hvac_mode is not None:
+            return requested_hvac_mode
+        current_mode = self.current_hvac_modes.get(entity_id)
+        if current_mode is not None and (not ensure_on or current_mode != "off"):
+            return current_mode
+        modes = [mode for mode in self.supported_hvac_modes(entity_id) if mode != "off"]
+        if range_target:
+            return "heat_cool" if "heat_cool" in modes else None
+        return modes[0] if modes else None
+
+    def supports_single_temperature_target(
+        self,
+        entity_id: str,
+        requested_hvac_mode: str | None,
+        *,
+        ensure_on: bool = False,
+    ) -> bool:
+        return self.single_temperature_support.get(
+            (entity_id, requested_hvac_mode),
+            True,
+        )
+
+    def supports_temperature_range_target(self, entity_id: str) -> bool:
+        return self.temperature_range_support.get(entity_id, False)
+
+    def validate_temperature_target(
+        self,
+        entity_id: str,
+        *,
+        range_target: bool,
+        hvac_mode: str | None,
+        ensure_on: bool,
+    ) -> None:
+        if range_target:
+            if not self.supports_temperature_range_target(entity_id):
+                raise ValueError(f"{entity_id} does not support a temperature range target")
+            if hvac_mode is not None and hvac_mode != "heat_cool":
+                raise ValueError(
+                    f"{entity_id} cannot apply a temperature range while in {hvac_mode} mode"
+                )
+            return
+        if not self.supports_single_temperature_target(
+            entity_id, hvac_mode, ensure_on=ensure_on
+        ):
+            raise ValueError(f"{entity_id} does not support a single temperature target")
 
 
 def _scheduler_data_for_zones(entity_ids: list[str]):

@@ -1074,7 +1074,58 @@ export const profileStyles = css`
   }
 
   .profile-schedule-config-row {
-    grid-template-columns: minmax(180px, 340px);
+    grid-template-columns: minmax(180px, 340px) minmax(0, 1fr);
+  }
+
+  .profile-day-actions,
+  .profile-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .profile-dialog-backdrop {
+    align-items: center;
+    background: rgb(0 0 0 / 45%);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 16px;
+    position: fixed;
+    z-index: 20;
+  }
+
+  .profile-dialog {
+    background: var(--card-background-color);
+    border-radius: 12px;
+    box-sizing: border-box;
+    display: grid;
+    gap: 12px;
+    max-height: calc(100dvh - 32px);
+    max-width: min(520px, calc(100vw - 32px));
+    overflow: auto;
+    padding: 20px;
+    width: 100%;
+  }
+
+  .profile-dialog h3,
+  .profile-dialog p { margin: 0; }
+
+  .profile-dialog input:not([type="checkbox"]) {
+    box-sizing: border-box;
+    min-height: 42px;
+    width: 100%;
+  }
+
+  .profile-dialog-target-summary {
+    display: grid;
+    gap: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-dialog-warning {
+    color: var(--secondary-text-color);
+    font-size: 13px;
   }
 
   .profile-block-list {
@@ -1209,6 +1260,15 @@ export const profileStyles = css`
 
     .profile-template-select {
       width: 100%;
+    }
+
+    .profile-schedule-config-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .profile-day-actions > button,
+    .profile-dialog-actions > button {
+      flex: 1 1 auto;
     }
 
     .active-setup-option {

@@ -1,4 +1,4 @@
-import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
+import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF, WEEKDAYS } from "../constants";
 import { minutesFromTime, timeFromMinutes } from "../schedule-time";
 import type { DraftScheduleBlock, ScheduleBlock } from "../types";
 import { isActiveBoostOverride, isActivePauseOverride } from "./overrides";
@@ -28,6 +28,15 @@ export type ReadonlyTimelineBlock = {
   width: number;
 };
 
+export type TimelineCarryOverBlock<T extends { start: string } = ScheduleBlock> = {
+  block: T;
+  endMinute: number;
+  left: 0;
+  sourceWeekday: string;
+  startMinute: 0;
+  width: number;
+};
+
 export type TimelineBoostBlock = {
   block: ScheduleBlock;
   endMinute: number;
@@ -49,12 +58,29 @@ type TimelineModeBlock = {
   hvac_mode?: string;
 };
 
-export function timelineMinuteFromDate(value: Date): number {
+export function timelineMinuteFromDate(value: Date, timeZone?: string): number {
+  if (timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        hour: "2-digit",
+        hourCycle: "h23",
+        minute: "2-digit",
+        timeZone,
+      }).formatToParts(value);
+      const hour = Number(parts.find((part) => part.type === "hour")?.value);
+      const minute = Number(parts.find((part) => part.type === "minute")?.value);
+      if (Number.isInteger(hour) && Number.isInteger(minute)) {
+        return hour * 60 + minute;
+      }
+    } catch {
+      // Fall back to the browser-local clock when Home Assistant reports an invalid zone.
+    }
+  }
   return value.getHours() * 60 + value.getMinutes();
 }
 
-export function timelineNowMarker(value: Date): TimelineNowMarker {
-  const minute = timelineMinuteFromDate(value);
+export function timelineNowMarker(value: Date, timeZone?: string): TimelineNowMarker {
+  const minute = timelineMinuteFromDate(value, timeZone);
   return {
     label: timeFromMinutes(minute),
     left: (minute / 1440) * 100,
@@ -140,6 +166,49 @@ export function timelineBlocksFromScheduleBlocks(blocks: ScheduleBlock[]): Reado
   });
 }
 
+export function timelineCarryOverFromWeeklySchedule<T extends { start: string }>(
+  schedule: Partial<Record<string, readonly T[]>>,
+  weekday: string,
+): TimelineCarryOverBlock<T> | undefined {
+  const weekdayIndex = WEEKDAYS.indexOf(weekday);
+  if (weekdayIndex < 0) {
+    return undefined;
+  }
+
+  const firstCurrentStart = validTimelineBlocks(schedule[weekday] ?? [])[0]?.startMinute ?? 1440;
+  if (firstCurrentStart <= 0) {
+    return undefined;
+  }
+
+  for (let distance = 1; distance <= WEEKDAYS.length; distance += 1) {
+    const sourceWeekday = WEEKDAYS[
+      (weekdayIndex - distance + WEEKDAYS.length) % WEEKDAYS.length
+    ];
+    const sourceBlocks = validTimelineBlocks(schedule[sourceWeekday] ?? []);
+    const previous = sourceBlocks[sourceBlocks.length - 1];
+    if (!previous) {
+      continue;
+    }
+    return {
+      block: previous.block,
+      endMinute: firstCurrentStart,
+      left: 0,
+      sourceWeekday,
+      startMinute: 0,
+      width: (firstCurrentStart / 1440) * 100,
+    };
+  }
+
+  return undefined;
+}
+
+function validTimelineBlocks<T extends { start: string }>(blocks: readonly T[]) {
+  return blocks
+    .map((block) => ({ block, startMinute: minutesFromTime(block.start) }))
+    .filter((item): item is { block: T; startMinute: number } => item.startMinute !== undefined)
+    .sort((left, right) => left.startMinute - right.startMinute);
+}
+
 export function timelineBoostBlockFromOverride(
   override: Record<string, unknown>,
   now = new Date(),
@@ -170,6 +239,8 @@ export function timelineBoostBlockFromOverride(
   const left = (startMinute / 1440) * 100;
   const width = ((endMinute - startMinute) / 1440) * 100;
   const temperature = Number(override.temperature);
+  const low = Number(override.target_temp_low);
+  const high = Number(override.target_temp_high);
   const hvacMode = typeof override.hvac_mode === "string" ? override.hvac_mode : undefined;
 
   return {
@@ -177,6 +248,9 @@ export function timelineBoostBlockFromOverride(
       action: ACTION_SET_TEMPERATURE,
       start: timeFromMinutes(startMinute),
       ...(Number.isFinite(temperature) ? { temperature } : {}),
+      ...(Number.isFinite(low) && Number.isFinite(high)
+        ? { target_temp_low: low, target_temp_high: high }
+        : {}),
       ...(hvacMode ? { hvac_mode: hvacMode } : {}),
     },
     endMinute,

@@ -198,7 +198,7 @@ export type VelairViewHost = {
   _updateSettingsFirstWeekday(value: string): Promise<void>;
   _updateTemplateNameDraft(key: string, value: string): void;
   _weekdayName(weekday: string): string;
-  _unsupportedModeError(blocks: Array<Pick<ScheduleBlock, "action" | "hvac_mode" | "start">>, entityId: string): string | undefined;
+  _unsupportedModeError(blocks: Array<ScheduleBlock | DraftScheduleBlock>, entityId: string): string | undefined;
   _normalizeDraftBlocks(source?: BlockDraftSource): NormalizedBlocks;
 };
 

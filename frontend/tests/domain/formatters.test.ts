@@ -63,6 +63,12 @@ describe("formatters", () => {
     const modeLabel = (mode: string) => mode.toUpperCase();
 
     expect(formatEventAction(baseEvent, labels, formatEventTemperature)).toBe("21 °C");
+    expect(formatEventAction({
+      ...baseEvent,
+      temperature: null,
+      target_temp_low: 19,
+      target_temp_high: 24,
+    }, labels, formatEventTemperature)).toBe("19–24 °C");
     expect(formatEventAction({ ...baseEvent, action: ACTION_TURN_OFF, temperature: null }, labels, formatEventTemperature)).toBe("Off");
     expect(formatEventMode(baseEvent, keepLabels, modeLabel)).toBe("Keep mode");
     expect(formatEventMode({ ...baseEvent, hvac_mode: "heat" }, keepLabels, modeLabel)).toBe("HEAT");

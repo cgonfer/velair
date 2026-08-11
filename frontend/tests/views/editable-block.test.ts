@@ -96,6 +96,29 @@ describe("editable schedule block view", () => {
     expect(input?.value).toBe("42.17");
   });
 
+  it("renders separate heating and cooling targets for a range block", () => {
+    const container = document.createElement("div");
+    render(renderEditableBlock(host(), {
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: 19,
+      target_temp_high: 24,
+    }, 0), container);
+
+    const inputs = [...container.querySelectorAll<HTMLInputElement>('.temperature-range-fields input')];
+    expect(inputs.map((input) => input.value)).toEqual(["19", "24"]);
+    expect(inputs.map((input) => input.getAttribute("aria-label"))).toEqual([
+      "heatBelow (°C)",
+      "coolAbove (°C)",
+    ]);
+    expect([...container.querySelectorAll(".range-input-label")].map((label) => label.textContent))
+      .toEqual(["minimumShort", "maximumShort"]);
+    expect(container.querySelector(".temperature-range-control")).not.toBeNull();
+    expect(container.querySelector(".temperature-range-help")).toBeNull();
+    expect(container.querySelector(".temperature-range-fields")?.textContent).not.toContain("Â°C");
+  });
+
   it("renders optional climate controls when supported by the selected source", async () => {
     const container = document.createElement("div");
 

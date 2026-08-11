@@ -107,7 +107,8 @@ export function climateSupportedModesForHost(host: ClimateDisplayHost, entityId:
 
 export function hvacModeOptions(host: ClimateDisplayHost, source: BlockDraftSource = "schedule"): string[] {
   if (source === "template") {
-    return host._uniqueModes((host._data?.configured_entities ?? [])
+    const entityIds = host._data?.configured_entities ?? [];
+    return host._uniqueModes(entityIds
       .flatMap((entityId: string) => host._climateSupportedModes(entityId)));
   }
 

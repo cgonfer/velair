@@ -920,7 +920,10 @@ describe("profiles view", () => {
 
     expect(element.shadowRoot?.querySelector(".editable-block")).not.toBeNull();
     expect(element.shadowRoot?.querySelector(".profile-week .timeline-panel")).not.toBeNull();
-    expect(element.shadowRoot?.querySelector(".profile-week .timeline-block")?.getAttribute("draggable")).toBe("true");
+    expect(element.shadowRoot?.querySelector(".profile-week .timeline-carry-over")?.getAttribute("draggable")).toBe("false");
+    expect(element.shadowRoot?.querySelector(".profile-week .timeline-carry-over")?.getAttribute("title"))
+      .toContain("From Sun,");
+    expect(element.shadowRoot?.querySelector(".profile-week .timeline-block:not(.timeline-carry-over)")?.getAttribute("draggable")).toBe("true");
     expect(element.shadowRoot?.querySelector(".day-tabs .day-tab.active")?.textContent).toContain("Sun");
     expect(element.shadowRoot?.querySelector(".day-tabs .day-tab.active strong")?.textContent).toBe("1");
     expect(element.shadowRoot?.querySelector(".advanced-climate-options")).not.toBeNull();
@@ -942,7 +945,7 @@ describe("profiles view", () => {
       y: 0,
       toJSON: () => ({}),
     });
-    element.shadowRoot?.querySelector(".profile-week .timeline-block")
+    element.shadowRoot?.querySelector(".profile-week .timeline-block:not(.timeline-carry-over)")
       ?.dispatchEvent(new Event("dragstart", { bubbles: true }));
     timelineTrack.dispatchEvent(new MouseEvent("drop", {
       bubbles: true,
@@ -1301,6 +1304,181 @@ describe("profiles view", () => {
     element.remove();
   });
 
+  it("uses an accessible name dialog to save only the edited Profile day as a template", async () => {
+    const scheduled = {
+      ...data,
+      configured_entities: ["climate.office"],
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+      profiles: [{ key: "away", name: "Away", zones: { "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 21, hvac_mode: "heat", fan_mode: "auto" }] } } } }],
+    } as unknown as ScheduleResponse;
+    const sendMessagePromise = vi.fn().mockResolvedValue({ ...scheduled, templates: [] });
+    const element = new VelairProfilesView();
+    element.hass = { language: "en", connection: { sendMessagePromise }, states: { "climate.office": { state: "heat", attributes: { friendly_name: "Office", supported_features: 1, hvac_modes: ["off", "heat"], fan_modes: ["auto"], min_temp: 5, max_temp: 35, target_temp_step: 0.5 } } } } as never;
+    element.data = scheduled;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+    (element.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
+    await element.updateComplete;
+    const trigger = [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-day-actions button")][0];
+    expect(trigger.classList.contains("primary")).toBe(true);
+    expect(trigger.title).toBe("Save as template");
+    expect(trigger.textContent).toContain("Save as template");
+    expect(trigger.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:content-save-plus");
+    trigger.click();
+    await element.updateComplete;
+    const dialog = element.shadowRoot!.querySelector<HTMLElement>('[role="dialog"]')!;
+    const input = dialog.querySelector<HTMLInputElement>("#profile-template-name")!;
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(dialog.getAttribute("aria-labelledby")).toBe("profile-template-dialog-title");
+    await vi.waitFor(() => expect(element.shadowRoot?.activeElement).toBe(input));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }));
+    expect(element.shadowRoot?.activeElement).toBe(dialog.querySelector(".profile-dialog-actions button"));
+    (element.shadowRoot?.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(element.shadowRoot?.activeElement).toBe(input);
+    dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await element.updateComplete;
+    await vi.waitFor(() => expect(element.shadowRoot?.querySelector('[role="dialog"]')).toBeNull());
+    await vi.waitFor(() => expect(element.shadowRoot?.activeElement).toBe(trigger));
+
+    trigger.click();
+    await element.updateComplete;
+    const draftBefore = structuredClone((element as unknown as { _draft: ClimateProfileDraft })._draft);
+    const name = element.shadowRoot!.querySelector<HTMLInputElement>("#profile-template-name")!;
+    name.value = "Workday";
+    name.dispatchEvent(new Event("input"));
+    await element.updateComplete;
+    [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledWith(expect.objectContaining({
+      type: "velair/set_schedule_template",
+      name: "Workday",
+      blocks: [{ start: "08:00", action: "set_temperature", temperature: 21, hvac_mode: "heat", fan_mode: "auto" }],
+    })));
+    expect((element as unknown as { _draft: ClimateProfileDraft })._draft).toEqual(draftBefore);
+    await vi.waitFor(() => expect(element.shadowRoot?.querySelector('[role="dialog"]')).toBeNull());
+    element.remove();
+  });
+
+  it("does not restore stale Profile state when a template request settles after its dialog closes", async () => {
+    const scheduled = {
+      ...data,
+      configured_entities: ["climate.office"],
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+      profiles: [{ key: "away", name: "Away", zones: { "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 21, hvac_mode: "heat" }] } } } }],
+    } as unknown as ScheduleResponse;
+    let settle!: (value: ScheduleResponse) => void;
+    const sendMessagePromise = vi.fn().mockImplementation(() => new Promise<ScheduleResponse>((resolve) => { settle = resolve; }));
+    const changed = vi.fn();
+    const element = new VelairProfilesView();
+    element.hass = { language: "en", connection: { sendMessagePromise }, states: { "climate.office": { state: "heat", attributes: { supported_features: 1, hvac_modes: ["off", "heat"], min_temp: 5, max_temp: 35, target_temp_step: 0.5 } } } } as never;
+    element.data = scheduled;
+    element.addEventListener("profile-data-changed", changed);
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+    (element.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
+    await element.updateComplete;
+    const open = [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-day-actions button")][0];
+    open.click(); await element.updateComplete;
+    const name = element.shadowRoot!.querySelector<HTMLInputElement>("#profile-template-name")!;
+    name.value = "Deferred"; name.dispatchEvent(new Event("input")); await element.updateComplete;
+    [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledTimes(1));
+    element.shadowRoot!.querySelector<HTMLElement>(".profile-dialog")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await element.updateComplete;
+    const profileName = element.shadowRoot!.querySelector<HTMLInputElement>(".profile-name-input-wrap input")!;
+    profileName.value = "Edited while saving"; profileName.dispatchEvent(new Event("input")); await element.updateComplete;
+    settle({ ...scheduled, templates: [] });
+    await vi.waitFor(() => expect(changed).toHaveBeenCalled());
+    expect((element as unknown as { _draft: ClimateProfileDraft })._draft.name).toBe("Edited while saving");
+    expect(element.shadowRoot?.querySelector(".profile-dialog")).toBeNull();
+
+    let reject!: (reason: Error) => void;
+    sendMessagePromise.mockImplementationOnce(() => new Promise((_resolve, rejectPromise) => { reject = rejectPromise; }));
+    open.click(); await element.updateComplete;
+    const secondName = element.shadowRoot!.querySelector<HTMLInputElement>("#profile-template-name")!;
+    secondName.value = "Rejected"; secondName.dispatchEvent(new Event("input")); await element.updateComplete;
+    [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledTimes(2));
+    (element.shadowRoot!.querySelector(".profile-dialog-backdrop") as HTMLElement).click();
+    await element.updateComplete;
+    profileName.value = "Edited before rejection"; profileName.dispatchEvent(new Event("input")); await element.updateComplete;
+    reject(new Error("late failure"));
+    await vi.waitFor(() => expect((element as unknown as { _busy?: string })._busy).toBeUndefined());
+    expect((element as unknown as { _draft: ClimateProfileDraft })._draft.name).toBe("Edited before rejection");
+    expect(element.shadowRoot?.querySelector(".profile-dialog-error")).toBeNull();
+    element.remove();
+  });
+
+  it("confirms cross-climate cloning, changes behaviors in draft, and rejects incompatible targets atomically", async () => {
+    const scheduled = {
+      ...data,
+      configured_entities: ["climate.office", "climate.default", "climate.paused"],
+      settings: { first_weekday: "monday", zone_order: ["climate.office", "climate.default", "climate.paused"] },
+      profiles: [{ key: "away", name: "Away", zones: {
+        "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 21, hvac_mode: "heat" }] } },
+        "climate.paused": { behavior: "pause", action: "none" },
+      } }],
+    } as unknown as ScheduleResponse;
+    const climate = (name: string, modes = ["off", "heat"]) => ({ state: "heat", attributes: { friendly_name: name, supported_features: 1, hvac_modes: modes, min_temp: 5, max_temp: 35, target_temp_step: 0.5 } });
+    const element = new VelairProfilesView();
+    element.hass = { language: "en", states: { "climate.office": climate("Office"), "climate.default": climate("Default room"), "climate.paused": climate("Paused room") } } as never;
+    element.data = scheduled;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+    (element.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
+    await element.updateComplete;
+    const targetChecks = [...element.shadowRoot!.querySelectorAll<HTMLInputElement>(
+      ".profile-climate-copy input[type=checkbox]",
+    )];
+    expect(targetChecks).toHaveLength(2);
+    for (const check of targetChecks) {
+      check.checked = true;
+      check.dispatchEvent(new Event("change"));
+    }
+    await element.updateComplete;
+    (element.shadowRoot!.querySelector(".profile-climate-copy .command-button") as HTMLButtonElement).click();
+    await element.updateComplete;
+    const dialog = element.shadowRoot!.querySelector<HTMLElement>(".profile-climate-clone-dialog")!;
+    expect(dialog.textContent).toContain("replaces only that weekday");
+    expect(dialog.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(dialog.textContent).toContain("Default room, Paused room");
+    expect(element.shadowRoot!.querySelector(".profile-climate-clone-dialog")!.textContent).toContain("Default room, Paused room");
+    [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await element.updateComplete;
+    const state = element as unknown as { _draft: ClimateProfileDraft; _dirty: boolean };
+    expect(state._draft.zones["climate.default"].behavior).toBe("schedule");
+    expect(state._draft.zones["climate.paused"].behavior).toBe("schedule");
+    expect(state._dirty).toBe(true);
+    expect([...element.shadowRoot!.querySelectorAll<HTMLInputElement>(
+      ".profile-climate-copy input[type=checkbox]",
+    )].every((check) => !check.checked)).toBe(true);
+
+    const incompatible = new VelairProfilesView();
+    incompatible.hass = { language: "en", states: { "climate.office": climate("Office"), "climate.default": climate("Cooling only", ["off", "cool"]), "climate.paused": climate("Paused room") } } as never;
+    incompatible.data = scheduled;
+    document.body.append(incompatible);
+    await incompatible.updateComplete;
+    await selectFirstProfile(incompatible);
+    (incompatible.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
+    await incompatible.updateComplete;
+    const first = incompatible.shadowRoot!.querySelector<HTMLInputElement>('.profile-climate-copy input')!;
+    first.checked = true;
+    first.dispatchEvent(new Event("change"));
+    await incompatible.updateComplete;
+    (incompatible.shadowRoot!.querySelector(".profile-climate-copy .command-button") as HTMLButtonElement).click();
+    await incompatible.updateComplete;
+    const before = structuredClone((incompatible as unknown as { _draft: ClimateProfileDraft })._draft);
+    [...incompatible.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await incompatible.updateComplete;
+    expect(incompatible.shadowRoot?.querySelector(".profile-dialog-error")?.textContent).toContain("does not support mode heat");
+    expect((incompatible as unknown as { _draft: ClimateProfileDraft })._draft).toEqual(before);
+    expect(incompatible.shadowRoot?.querySelector(".profile-climate-clone-dialog")).not.toBeNull();
+    incompatible.remove();
+    element.remove();
+  });
+
   it("includes tablet and narrow-phone responsive contracts", () => {
     expect(profileStyles.cssText).toContain("@media (max-width: 760px)");
     expect(profileStyles.cssText).toContain("@media (max-width: 480px)");
@@ -1328,5 +1506,7 @@ describe("profiles view", () => {
     expect(profileStyles.cssText).toMatch(/\.active-setup-profile-list\s*\{[^}]*flex-wrap:\s*wrap/);
     expect(profileStyles.cssText).not.toContain(".profile-context-picker");
     expect(profileStyles.cssText).not.toContain("mode-origin");
+    expect(profileStyles.cssText).toMatch(/\.profile-dialog\s*\{[^}]*max-width:\s*min\(520px, calc\(100vw - 32px\)\)/);
+    expect(profileStyles.cssText).toMatch(/\.profile-dialog\s*\{[^}]*max-height:\s*calc\(100dvh - 32px\)[^}]*overflow:\s*auto/);
   });
 });

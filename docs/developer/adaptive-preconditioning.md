@@ -8,7 +8,8 @@ This page documents implementation details. User-facing setup and examples are d
 
 ## Scope
 
-Adaptive preconditioning currently works for managed `climate.*` entities and schedule blocks that set a target temperature with a heat or cool direction.
+Adaptive preconditioning works for managed `climate.*` entities and both scalar
+targets and native `heat_cool` ranges with a resolvable heat or cool direction.
 
 It does not apply to `Off` blocks, unsupported HVAC directions, blocks where Velair cannot determine whether heat or cool is needed, or sessions interrupted by boosts, pauses, scheduler stop/resume, schedule changes, or disabled preconditioning.
 
@@ -69,11 +70,28 @@ delta_t = current_temp - target_temp
 
 If `delta_t <= minimum_delta_temperature`, Velair returns no preconditioning lead and does not start a learning session.
 
+For a native range `[low, high]`, target resolution is exclusive:
+
+- below `low - minimum_delta_temperature`: `heat`, boundary `low`;
+- above `high + minimum_delta_temperature`: `cool`, boundary `high`;
+- otherwise: no early start or learning session.
+
+The existing predictor receives that effective boundary as `target_temp`.
+Runtime application still sends the complete `target_temp_low` /
+`target_temp_high` union. Range observations retain `target_temp` for backwards
+compatibility and may additionally store both boundaries plus
+`target_boundary`. Older observations without those optional fields remain
+valid. Absolute boundary values are converted during Celsius/Fahrenheit
+migration; `delta_t` keeps delta conversion semantics.
+
 ## Room Assist Interaction
 
 By default, Adaptive Preconditioning uses the climate entity's `current_temperature`.
 
 When Room Sensor Assist is enabled with a selected room sensor, Adaptive Preconditioning uses that sensor as the effective room temperature for decisions, learning, and active temperature listeners. Stored observations record `temperature_source: "room_sensor"` and `room_temperature_entity_id` when that happens, so climate-temperature and room-sensor observations remain distinguishable.
+
+When a range starts early, Room Sensor Assist follows that future complete band
+and uses its existing range-shift rules. No polling is introduced.
 
 The detailed source-selection rules, actuator-side target adjustment, runtime status, restoration behavior, and Room Assist events are documented in [Room Assist internals](room-assist.md).
 
@@ -120,7 +138,11 @@ The payload contains the prediction context already available at planning time:
 - `preconditioning_when`, the calculated early start;
 - `lead_minutes`;
 - `direction`, `heat` or `cool`;
-- `target_temperature`, `current_temperature`, and `temperature_delta`;
+- `target_kind`, `target_boundary`, and `boundary_temperature`;
+- either scalar `target_temperature` or the complete `target_temp_low` and
+  `target_temp_high` range;
+- `current_temperature` and `temperature_delta`, measured against the effective
+  boundary;
 - `hvac_mode`;
 - `model_source`, `initial_model` or `history`;
 - `complete_sample_count`, `partial_sample_count`, `invalid_sample_count`, and `similar_sample_count`;
@@ -131,6 +153,8 @@ The payload contains the prediction context already available at planning time:
 
 `lead_minutes` is the authoritative result to use in automations. `preconditioning_diagnostics` is intended for inspection and UI explainability. It includes:
 
+- `direction`, `target_kind`, `target_boundary`, `boundary_temperature`, and
+  the captured `current_temperature`;
 - `delta_temperature`;
 - selected `complete_sample_count`, `partial_sample_count`, `invalid_sample_count`, and `similar_sample_count`;
 - `comfort_percentile`;

@@ -70,6 +70,22 @@ describe("portable preconditioning learning", () => {
     })).toEqual([{ section: "modes", value: 2 }]);
   });
 
+  it("accepts portable model v6 temperature ranges", () => {
+    const rangePayload: VelairPortablePayload = {
+      ...payload,
+      model_version: 6,
+      sections: {
+        zones: {
+          "climate.office": {
+            enabled: true,
+            schedule: { monday: [{ start: "08:00", target_temp_low: 19, target_temp_high: 24 }] },
+          },
+        },
+      },
+    };
+    expect(validatePortablePayload(rangePayload)).toEqual({ ok: true, sections: ["zones"] });
+  });
+
   it("identifies learning entries that cannot match a managed climate", () => {
     expect(unmatchedPreconditioningLearningEntities(payload, ["climate.office"])).toEqual([
       "climate.removed",

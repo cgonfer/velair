@@ -178,6 +178,7 @@ def _install_homeassistant_stubs() -> dict[str, list]:
     sys.modules["homeassistant.const"] = const
 
     core = ModuleType("homeassistant.core")
+    core.CALLBACK_TYPE = object
     core.HomeAssistant = object
     sys.modules["homeassistant.core"] = core
 
@@ -201,6 +202,7 @@ def _loaded_velair_integration(frontend_module):
     dependency_names = (
         "custom_components.velair",
         "custom_components.velair.api",
+        "custom_components.velair.climate_delivery",
         "custom_components.velair.climate_manager",
         "custom_components.velair.config_helpers",
         "custom_components.velair.entity_registry",
@@ -242,6 +244,7 @@ def _loaded_velair_integration(frontend_module):
     install_module("homeassistant.const", EVENT_CORE_CONFIG_UPDATE="core_config_updated")
     install_module(
         "homeassistant.core",
+        CALLBACK_TYPE=object,
         Event=object,
         HomeAssistant=object,
         callback=lambda function: function,
@@ -252,6 +255,10 @@ def _loaded_velair_integration(frontend_module):
     )
     install_module("homeassistant.helpers.typing", ConfigType=dict)
     install_module("custom_components.velair.api", async_setup_api=lambda *_args: None)
+    install_module(
+        "custom_components.velair.climate_delivery",
+        ClimateDeliveryCoordinator=RuntimePlaceholder,
+    )
     install_module(
         "custom_components.velair.climate_manager",
         ClimateManager=RuntimePlaceholder,
@@ -1025,7 +1032,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('"currentTime": "Current time: {time}"', en_source)
         self.assertIn(".draft-list {", card_styles_source)
         self.assertIn(".zones {\n      display: flex;\n      gap: 8px;\n      overflow-x: auto;\n      padding-bottom: 8px;", card_styles_source)
-        self.assertIn("grid-template-columns: minmax(94px, 1fr) minmax(112px, 1fr) minmax(90px, 0.8fr) 40px", card_styles_source)
+        self.assertIn("grid-template-columns: minmax(106px, 0.95fr) minmax(130px, 1.15fr) minmax(78px, 0.7fr) 40px", card_styles_source)
         self.assertIn("column-gap: 4px", card_styles_source)
         self.assertIn("padding: 12px", card_styles_source)
         self.assertIn("row-gap: 10px", card_styles_source)
@@ -1054,7 +1061,13 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn(".draft-list-header span", card_styles_source)
         self.assertIn("padding: 2px 8px 4px", card_styles_source)
         self.assertIn("min-width: 0", card_styles_source)
-        self.assertIn("grid-template-columns: minmax(66px, 0.9fr) minmax(76px, 1fr) minmax(62px, 0.7fr) 34px 34px", responsive_styles_source)
+        self.assertIn(
+            "grid-template-columns: minmax(58px, 0.8fr) minmax(70px, 1.05fr) "
+            "minmax(64px, 0.75fr) 30px 30px",
+            responsive_styles_source,
+        )
+        self.assertIn(".temperature-range-control", card_styles_source)
+        self.assertIn(".range-temperature-field + .range-temperature-field", card_styles_source)
         self.assertIn(".editable-block .icon-button.danger", card_styles_source)
         self.assertIn("color: var(--error-color, #c62828)", card_styles_source)
         self.assertIn(".editable-block .icon-button", responsive_styles_source)

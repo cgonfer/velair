@@ -1,7 +1,7 @@
 # Velair
 Climate automation that adapts to your life.
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.6.0--beta.1-blue?style=for-the-badge)](#)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](#)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394/4)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -31,16 +31,17 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Optional Lovelace card using the same bundled frontend.
 - Visual schedule editor for managed `climate.*` entities.
 - Weekly schedules per climate zone.
+- Weekly continuity across midnight and empty days, with inherited periods identified in the timeline.
 - Schedule blocks for temperature targets or turning a climate entity off.
-- Optional HVAC mode per block, with a `Keep` option when the mode should not be changed.
-- Support for heating, cooling, heat/cool, auto, dry, fan-only, and off modes where the climate entity supports them.
+- Optional HVAC mode per block. `Keep current mode` still applies the block target; it preserves the running mode, or starts an off climate with its first supported non-off mode.
+- Support for heating, cooling, dry, fan-only, and off modes where the climate entity supports them. Climate entities can use either a single target or separate lower and upper targets for range-based modes such as `heat_cool`.
 - Drag and resize interactions on a 24-hour timeline.
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
 - Climate profiles with coordinated per-zone schedules, in-editor day cloning, pauses, configurable Modes, and a native Home Assistant select entity for automations.
 - Overview tab with scheduler status, active boosts, next events, and responsive zone cards that separate Velair intent from live device activity.
 - Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
-- Dedicated Room Assist tab for setups that need a separate room temperature sensor.
+- Dedicated Room Assist tab for setups that need a separate room temperature sensor, including width-preserving assistance for native `heat_cool` ranges.
 - Dedicated Comfort tab with readable temperature/humidity conditions, independent CO2 air quality, data-quality warnings, and responsive live visualizations.
 - Optional climate controls per block where supported, including fan mode, preset mode, swing mode, horizontal swing mode, and target humidity.
 - Settings tab with climate ordering, startup behavior, thermostat diagnostics, portability tools, and maintenance information.
@@ -238,6 +239,7 @@ If Home Assistant shows a custom element error, confirm that Velair is installed
 - [Automation Events](docs/user/automation-events.md)
 - [Adaptive Preconditioning](docs/user/adaptive-preconditioning.md)
 - [Room Assist](docs/user/room-assist.md)
+- [Resilient climate delivery](docs/user/resilient-climate-delivery.md)
 - [Environmental Comfort](docs/user/comfort.md)
 - [Temperature Units and Migration](docs/user/temperature-units.md)
 - [Installation](docs/user/installation.md)
@@ -249,6 +251,7 @@ If Home Assistant shows a custom element error, confirm that Velair is installed
 - [WebSocket API](docs/developer/api.md)
 - [Adaptive preconditioning internals](docs/developer/adaptive-preconditioning.md)
 - [Room Assist internals](docs/developer/room-assist.md)
+- [Climate delivery internals](docs/developer/climate-delivery.md)
 - [Environmental Comfort internals](docs/developer/comfort.md)
 - [Temperature unit internals](docs/developer/temperature-units.md)
 - [Frontend development](docs/developer/frontend.md)

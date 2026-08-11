@@ -291,4 +291,26 @@ export const timelineStyles = css`
     position: absolute;
     top: 12px;
   }
+
+  .timeline-block.timeline-carry-over,
+  .overview-timeline-block.overview-timeline-carry-over {
+    background:
+      repeating-linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--secondary-background-color) 88%, var(--secondary-text-color) 12%) 0 7px,
+        color-mix(in srgb, var(--secondary-background-color) 72%, var(--secondary-text-color) 28%) 7px 9px
+      );
+    border-color: color-mix(in srgb, var(--secondary-text-color) 55%, var(--divider-color));
+    border-style: dashed;
+    color: var(--secondary-text-color);
+    cursor: default;
+    opacity: 0.82;
+    pointer-events: none;
+  }
+
+  .overview-timeline-block.overview-timeline-carry-over {
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 2;
+  }
 `;

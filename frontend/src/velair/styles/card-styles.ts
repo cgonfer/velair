@@ -571,7 +571,7 @@ export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationSta
       border-radius: 8px;
       column-gap: 4px;
       display: grid;
-      grid-template-columns: minmax(94px, 1fr) minmax(112px, 1fr) minmax(90px, 0.8fr) 40px 40px;
+      grid-template-columns: minmax(106px, 0.95fr) minmax(130px, 1.15fr) minmax(78px, 0.7fr) 40px 40px;
       overflow: visible;
       padding: 12px;
       row-gap: 10px;
@@ -604,6 +604,80 @@ export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationSta
 
     .editable-block label {
       min-width: 0;
+    }
+
+    .temperature-range-fields {
+      min-width: 0;
+      position: relative;
+    }
+
+    .temperature-range-control {
+      align-items: stretch;
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      height: 38px;
+      min-width: 0;
+      overflow: visible;
+    }
+
+    .temperature-range-control.invalid {
+      border-color: var(--error-color, #c62828);
+      box-shadow: 0 0 0 1px var(--error-color, #c62828);
+    }
+
+    .range-temperature-field {
+      display: block;
+      min-width: 0;
+      position: relative;
+    }
+
+    .range-temperature-field + .range-temperature-field {
+      border-inline-start: 1px solid var(--divider-color);
+    }
+
+    .range-input-label {
+      color: var(--secondary-text-color);
+      font-size: 9px;
+      font-weight: 600;
+      inset-inline: 4px;
+      line-height: 1;
+      pointer-events: none;
+      position: absolute;
+      text-align: center;
+      text-transform: uppercase;
+      top: 4px;
+      z-index: 1;
+    }
+
+    .editable-block .range-temperature-field input {
+      appearance: textfield;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      height: 100%;
+      min-width: 0;
+      padding: 13px 3px 1px;
+      text-align: center;
+      width: 100%;
+    }
+
+    .editable-block .range-temperature-field input::-webkit-inner-spin-button,
+    .editable-block .range-temperature-field input::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+
+    .editable-block .range-temperature-field input:focus {
+      box-shadow: inset 0 0 0 2px var(--primary-color);
+      outline: 0;
+    }
+
+    .temperature-range-fields .range-error {
+      margin-top: 0;
     }
 
     .editable-block > label > .label {

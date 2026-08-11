@@ -1,5 +1,11 @@
 import { html, nothing } from "lit";
-import { signedAssistDelta } from "../domain/room-assist";
+import {
+  appliedAssistOffset,
+  appliedAssistRange,
+  hasRoomAssistScheduledTarget,
+  roomAssistRangeShift,
+  scheduledAssistRange,
+} from "../domain/room-assist";
 import { modeClassName } from "../domain/climate";
 import { preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
 import { temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
@@ -18,7 +24,7 @@ export type RoomSensorViewOptions = {
 };
 
 type TemperatureMarker = {
-  key: "target" | "room" | "climateTarget" | "climate";
+  key: "target" | "scheduledLow" | "scheduledHigh" | "room" | "climateTarget" | "appliedLow" | "appliedHigh" | "climate";
   label: string;
   value: number;
   calloutPosition: number;
@@ -33,18 +39,34 @@ type TemperatureMarkerGroup = {
   position: number;
 };
 
+type TemperatureRangeBand = {
+  kind: "scheduled" | "applied";
+  label: string;
+  formatted: string;
+  left: number;
+  width: number;
+};
+
 const TEMPERATURE_MARKER_COLOR: Record<TemperatureMarker["key"], string> = {
+  appliedHigh: "var(--sensor-scale-applied-color)",
+  appliedLow: "var(--sensor-scale-applied-color)",
   climate: "var(--secondary-text-color)",
-  climateTarget: "var(--primary-color)",
-  room: "var(--success-color, #43a047)",
-  target: "var(--error-color, #d93025)",
+  climateTarget: "var(--sensor-scale-applied-color)",
+  room: "var(--sensor-scale-room-color)",
+  scheduledHigh: "var(--sensor-scale-scheduled-color)",
+  scheduledLow: "var(--sensor-scale-scheduled-color)",
+  target: "var(--sensor-scale-scheduled-color)",
 };
 
 const TEMPERATURE_MARKER_ORDER: Record<TemperatureMarker["key"], number> = {
   target: 0,
-  room: 1,
-  climateTarget: 2,
-  climate: 3,
+  scheduledLow: 0,
+  scheduledHigh: 1,
+  room: 2,
+  climateTarget: 3,
+  appliedLow: 3,
+  appliedHigh: 4,
+  climate: 5,
 };
 
 const TEMPERATURE_MARKER_DOT_GROUP_DISTANCE_PERCENT = 1.25;
@@ -273,7 +295,7 @@ function renderSensorRuntime(
   }
 
   const markers = buildTemperatureMarkers(host, entityId, status);
-  const hasActiveBlock = typeof status.target_temperature === "number" && Boolean(status.start);
+  const hasActiveBlock = hasRoomAssistScheduledTarget(status) && Boolean(status.start);
 
   return html`
     <section class="sensor-runtime-section">
@@ -288,6 +310,8 @@ function renderSensorRuntime(
         ${hasActiveBlock
           ? renderSensorActiveBlockSummary(host, entityId, status)
           : renderSensorIdleState(host)}
+        ${hasActiveBlock ? renderRoomAssistLimitWarning(host, entityId, status) : nothing}
+        ${hasActiveBlock ? renderRoomAssistScheduledGuard(host, entityId, status) : nothing}
         ${hasActiveBlock && markers.length
           ? renderTemperatureScale(host, entityId, markers, status)
           : nothing}
@@ -325,9 +349,12 @@ function renderSensorActiveBlockSummary(
   const scheduledTime = status.start ? host._formatScheduleTime(status.start) : "";
   const activeFrom = formatTimeForDisplay(host, status.active_from);
   const startedEarly = Boolean(status.target_when && status.active_from);
+  const scheduledRange = scheduledAssistRange(status);
   const target = typeof status.target_temperature === "number"
     ? host._formatTemperature(status.target_temperature, entityId)
-    : host._t("roomSensorValueUnavailable");
+    : scheduledRange
+      ? formatTemperatureRange(host, entityId, scheduledRange.low, scheduledRange.high)
+      : host._t("roomSensorValueUnavailable");
   const mode = status.hvac_mode ? host._modeLabel(status.hvac_mode) : host._t("roomSensorValueUnavailable");
 
   return html`
@@ -373,11 +400,18 @@ function renderTemperatureScale(
 ) {
   const orderedMarkers = [...markers].sort((first, second) => first.value - second.value);
   const modeClass = status.hvac_mode ? `mode-${modeClassName(status.hvac_mode)}` : "mode-keep";
-  const roomGap = buildRoomTargetGap(host, entityId, markers);
+  const roomGap = buildRoomTargetGap(host, entityId, markers, status);
   const assistOffset = buildAssistOffset(host, entityId, markers, status);
+  const rangeBands = buildTemperatureRangeBands(host, entityId, markers, status);
+  const hasRangeBands = rangeBands.length === 2;
   const markerGroups = buildTemperatureMarkerGroups(markers);
+  const calloutMarkers = hasRangeBands
+    ? applyTemperatureMarkerCalloutOffsets(
+        markers.filter((marker) => !isTemperatureRangeBoundary(marker.key)),
+      )
+    : markers;
   return html`
-    <div class=${`sensor-temperature-scale ${modeClass}`}>
+    <div class=${`sensor-temperature-scale ${modeClass} ${hasRangeBands ? "has-range" : ""}`}>
       <div
         class="sensor-scale-track"
         role="group"
@@ -428,10 +462,26 @@ function renderTemperatureScale(
             </span>
           `,
         )}
-        ${markers.map(
+        ${rangeBands.map(
+          (band) => html`
+            <span
+              class=${`sensor-scale-range-band range-band-${band.kind}`}
+              style=${`left: ${band.left.toFixed(2)}%; width: ${band.width.toFixed(2)}%;`}
+              role="img"
+              aria-label=${`${band.label}: ${band.formatted}`}
+            >
+              <span class="sensor-scale-range-bracket"></span>
+              <span class="sensor-scale-range-label">
+                <small>${band.label}</small>
+                <strong>${band.formatted}</strong>
+              </span>
+            </span>
+          `,
+        )}
+        ${calloutMarkers.map(
           (marker) => html`
             <span
-              class=${`sensor-scale-callout-marker marker-${marker.key} lane-${marker.lane} ${temperatureMarkerCalloutEdgeClass(marker)} ${marker.shifted ? "shifted" : ""}`}
+              class=${`sensor-scale-callout-marker marker-${marker.key} marker-${temperatureMarkerFamily(marker.key)} lane-${marker.lane} ${temperatureMarkerCalloutEdgeClass(marker)} ${marker.shifted ? "shifted" : ""}`}
               style=${`--callout-left: ${marker.calloutPosition.toFixed(2)}%;`}
             >
               ${renderTemperatureMarkerCallout(host, entityId, marker, status)}
@@ -445,6 +495,131 @@ function renderTemperatureScale(
       </div>
     </div>
   `;
+}
+
+function renderRoomAssistLimitWarning(
+  host: SensorsViewHost,
+  entityId: string,
+  status: RoomSensorAssistStatus,
+) {
+  if (!status.limited_by || typeof status.limit_temperature !== "number") {
+    return nothing;
+  }
+
+  const requestedRange = status.requested_target_temp_low != null
+    && status.requested_target_temp_high != null
+    ? formatTemperatureRange(
+        host,
+        entityId,
+        status.requested_target_temp_low,
+        status.requested_target_temp_high,
+      )
+    : undefined;
+  const appliedRange = status.applied_target_temp_low != null
+    && status.applied_target_temp_high != null
+    ? formatTemperatureRange(
+        host,
+        entityId,
+        status.applied_target_temp_low,
+        status.applied_target_temp_high,
+      )
+    : undefined;
+  const requested = requestedRange
+    ?? formatOptionalTemperature(host, entityId, status.requested_temperature);
+  const applied = appliedRange
+    ?? formatOptionalTemperature(host, entityId, status.applied_temperature);
+  const limit = host._formatTemperature(status.limit_temperature, entityId);
+  const titleKey: TranslationKey = status.limited_by === "maximum"
+    ? "roomSensorLimitMaximumTitle"
+    : "roomSensorLimitMinimumTitle";
+  const detailKey: TranslationKey = status.limited_by === "maximum"
+    ? "roomSensorLimitMaximumDetail"
+    : "roomSensorLimitMinimumDetail";
+
+  return html`
+    <div class="sensor-limit-warning" role="status">
+      <ha-icon icon="mdi:alert-outline"></ha-icon>
+      <span>
+        <strong>${host._t(titleKey)}</strong>
+        <small>${host._t(detailKey, { requested, applied, limit })}</small>
+      </span>
+    </div>
+  `;
+}
+
+function renderRoomAssistScheduledGuard(
+  host: SensorsViewHost,
+  entityId: string,
+  status: RoomSensorAssistStatus,
+) {
+  if (
+    !status.scheduled_target_guard
+    || typeof status.calculated_temperature !== "number"
+    || typeof status.applied_temperature !== "number"
+  ) {
+    return nothing;
+  }
+
+  const calculated = host._formatTemperature(status.calculated_temperature, entityId);
+  const applied = host._formatTemperature(status.applied_temperature, entityId);
+  const detailKey: TranslationKey = status.scheduled_target_guard === "cooling_floor"
+    ? "roomSensorScheduledGuardCoolingDetail"
+    : "roomSensorScheduledGuardHeatingDetail";
+
+  return html`
+    <div class="sensor-safety-info" role="status">
+      <ha-icon icon="mdi:shield-check-outline"></ha-icon>
+      <span>
+        <strong>${host._t("roomSensorScheduledGuardTitle")}</strong>
+        <small>${host._t(detailKey, { calculated, applied })}</small>
+      </span>
+    </div>
+  `;
+}
+
+function buildTemperatureRangeBands(
+  host: SensorsViewHost,
+  entityId: string,
+  markers: TemperatureMarker[],
+  status: RoomSensorAssistStatus,
+): TemperatureRangeBand[] {
+  const scheduled = scheduledAssistRange(status);
+  const applied = appliedAssistRange(status);
+  if (!scheduled || !applied) {
+    return [];
+  }
+
+  const scheduledLow = markers.find((marker) => marker.key === "scheduledLow");
+  const scheduledHigh = markers.find((marker) => marker.key === "scheduledHigh");
+  const appliedLow = markers.find((marker) => marker.key === "appliedLow");
+  const appliedHigh = markers.find((marker) => marker.key === "appliedHigh");
+  if (!scheduledLow || !scheduledHigh || !appliedLow || !appliedHigh) {
+    return [];
+  }
+
+  return [
+    {
+      kind: "scheduled",
+      label: host._t("roomSensorScheduledRange"),
+      formatted: formatTemperatureRange(host, entityId, scheduled.low, scheduled.high),
+      left: Math.min(scheduledLow.position, scheduledHigh.position),
+      width: Math.abs(scheduledHigh.position - scheduledLow.position),
+    },
+    {
+      kind: "applied",
+      label: host._t("roomSensorAppliedRange"),
+      formatted: formatTemperatureRange(host, entityId, applied.low, applied.high),
+      left: Math.min(appliedLow.position, appliedHigh.position),
+      width: Math.abs(appliedHigh.position - appliedLow.position),
+    },
+  ];
+}
+
+function isTemperatureRangeBoundary(key: TemperatureMarker["key"]): boolean {
+  return key === "scheduledLow"
+    || key === "scheduledHigh"
+    || key === "appliedLow"
+    || key === "appliedHigh";
 }
 
 function buildTemperatureMarkerGroups(
@@ -489,7 +664,14 @@ function temperatureMarkerGroupClass(group: TemperatureMarkerGroup): string {
     "sensor-scale-marker",
     `count-${group.markers.length}`,
     ...group.markers.map((marker) => `marker-${marker.key}`),
+    ...new Set(group.markers.map((marker) => `marker-${temperatureMarkerFamily(marker.key)}`)),
   ].join(" ");
+}
+
+function temperatureMarkerFamily(key: TemperatureMarker["key"]): "target" | "room" | "climateTarget" | "climate" {
+  if (key === "scheduledLow" || key === "scheduledHigh") return "target";
+  if (key === "appliedLow" || key === "appliedHigh") return "climateTarget";
+  return key;
 }
 
 function temperatureMarkerGroupStyle(group: TemperatureMarkerGroup): string {
@@ -541,13 +723,22 @@ function renderTemperatureMarkerCallout(
   marker: TemperatureMarker,
   status: RoomSensorAssistStatus,
 ) {
-  const assistOffset = marker.key === "climateTarget" && typeof status.assist_delta === "number"
-    ? signedAssistDelta(status.assist_delta, status.direction)
-    : null;
+  const appliedOffset = appliedAssistOffset(status);
+  const rangeShift = roomAssistRangeShift(status);
+  const rangeShiftMarker = rangeBoundaryMarkerKey(status, "applied");
+  const assistOffset = marker.key === "climateTarget"
+    ? appliedOffset
+    : marker.key === rangeShiftMarker
+      ? rangeShift
+      : null;
   const assistOffsetLabel = typeof assistOffset === "number"
     ? formatSignedTemperatureDelta(host, entityId, assistOffset)
     : "";
-  const assistOffsetHelp = host._t("roomSensorAssistOffsetHelp");
+  const assistOffsetHelp = host._t(
+    rangeShiftMarker && marker.key === rangeShiftMarker
+      ? "roomSensorRangeShiftHelp"
+      : "roomSensorAssistOffsetHelp",
+  );
 
   return html`
     <span class="sensor-scale-callout">
@@ -580,9 +771,21 @@ function renderTemperatureMarkerCallout(
   `;
 }
 
-function renderSensorLabel(host: SensorsViewHost, labelKey: TranslationKey) {
+function renderSensorLabel(
+  host: SensorsViewHost,
+  labelKey: TranslationKey,
+  options: { persistentHelp?: boolean } = {},
+) {
   const helpKey = SENSOR_HELP_KEYS[labelKey];
   const help = helpKey ? host._t(helpKey) : "";
+  if (helpKey && options.persistentHelp) {
+    return html`
+      <span class="sensor-config-label sensor-config-label-stacked">
+        <span>${host._t(labelKey)}</span>
+        <small class="sensor-config-help-text">${help}</small>
+      </span>
+    `;
+  }
   return html`
     <span class="label sensor-config-label">
       <span>${host._t(labelKey)}</span>
@@ -666,9 +869,10 @@ function renderSensorNumber(
   options: { inactive?: boolean } = {},
 ) {
   const disabled = host._settingsSaving || Boolean(options.inactive);
+  const persistentHelp = field === "room_sensor_assist_max_delta";
   return html`
     <label class=${`sensor-config-row ${options.inactive ? "inactive" : ""}`}>
-      ${renderSensorLabel(host, labelKey)}
+      ${renderSensorLabel(host, labelKey, { persistentHelp })}
       <span class="sensor-number-input">
         <input
           type="number"
@@ -720,9 +924,18 @@ function buildRoomTargetGap(
   host: SensorsViewHost,
   entityId: string,
   markers: TemperatureMarker[],
+  status: RoomSensorAssistStatus,
 ) {
-  const targetMarker = markers.find((marker) => marker.key === "target");
   const roomMarker = markers.find((marker) => marker.key === "room");
+  const scheduledRange = scheduledAssistRange(status);
+  const boundaryKey = scheduledRange && roomMarker
+    ? roomMarker.value < scheduledRange.low
+      ? "scheduledLow"
+      : roomMarker.value > scheduledRange.high
+        ? "scheduledHigh"
+        : undefined
+    : "target";
+  const targetMarker = markers.find((marker) => marker.key === boundaryKey);
   if (!targetMarker || !roomMarker) {
     return null;
   }
@@ -753,36 +966,56 @@ function buildAssistOffset(
   markers: TemperatureMarker[],
   status: RoomSensorAssistStatus,
 ) {
+  const rangeShift = roomAssistRangeShift(status);
+  const scheduledRangeCenter = rangeShift !== undefined
+    ? temperatureRangeCenter(markers, "scheduledLow", "scheduledHigh")
+    : undefined;
+  const appliedRangeCenter = rangeShift !== undefined
+    ? temperatureRangeCenter(markers, "appliedLow", "appliedHigh")
+    : undefined;
   const climateMarker = markers.find((marker) => marker.key === "climate");
   const climateTargetMarker = markers.find((marker) => marker.key === "climateTarget");
-  if (!climateMarker || !climateTargetMarker || typeof status.assist_delta !== "number") {
+  const signedDelta = rangeShift ?? appliedAssistOffset(status);
+  const startPosition = rangeShift !== undefined
+    ? scheduledRangeCenter
+    : climateMarker?.position;
+  const endPosition = rangeShift !== undefined
+    ? appliedRangeCenter
+    : climateTargetMarker?.position;
+  if (startPosition === undefined || endPosition === undefined || signedDelta === undefined) {
     return null;
   }
 
   const unit = host._temperatureUnit(entityId);
   const minimumVisibleDelta = unit.toUpperCase().includes("F") ? 0.1 : 0.05;
-  const signedDelta = typeof status.assist_delta === "number"
-    ? signedAssistDelta(status.assist_delta, status.direction)
-    : null;
-  const offsetIsActive = typeof signedDelta === "number"
-    && Math.abs(signedDelta) >= minimumVisibleDelta;
-  const offsetState = typeof signedDelta !== "number"
-    ? "unknown"
-    : offsetIsActive ? "active" : "holding";
-  const correction = typeof signedDelta === "number"
-    ? formatSignedTemperatureDelta(host, entityId, signedDelta)
-    : "";
+  const offsetIsActive = Math.abs(signedDelta) >= minimumVisibleDelta;
+  const offsetState = offsetIsActive ? "active" : "holding";
+  const correction = formatSignedTemperatureDelta(host, entityId, signedDelta);
   return {
-    label: offsetState === "active"
-      ? host._t("roomSensorAssistCorrectionValue", { value: correction })
+    label: rangeShift !== undefined
+      ? host._t("roomSensorRangeShiftValue", { value: correction })
+      : offsetState === "active"
+        ? host._t("roomSensorAssistCorrectionValue", { value: correction })
       : host._t("roomSensorAssistNoCorrection"),
-    left: Math.min(climateMarker.position, climateTargetMarker.position),
+    left: Math.min(startPosition, endPosition),
     state: offsetState,
-    title: offsetState === "active"
-      ? host._t("roomSensorAssistCorrectionActiveHelp")
+    title: rangeShift !== undefined
+      ? host._t("roomSensorRangeShiftHelp")
+      : offsetState === "active"
+        ? host._t("roomSensorAssistCorrectionActiveHelp")
       : host._t("roomSensorAssistNoCorrectionHelp"),
-    width: Math.abs(climateMarker.position - climateTargetMarker.position),
+    width: Math.abs(startPosition - endPosition),
   };
+}
+
+function temperatureRangeCenter(
+  markers: TemperatureMarker[],
+  lowKey: TemperatureMarker["key"],
+  highKey: TemperatureMarker["key"],
+): number | undefined {
+  const low = markers.find((marker) => marker.key === lowKey);
+  const high = markers.find((marker) => marker.key === highKey);
+  return low && high ? (low.position + high.position) / 2 : undefined;
 }
 
 function formatTemperatureDelta(
@@ -813,8 +1046,11 @@ function buildTemperatureMarkers(
   entityId: string,
   status: RoomSensorAssistStatus,
 ): TemperatureMarker[] {
-  const effectiveClimateTarget =
-    status.status === "assisting" || status.status === "holding"
+  const scheduledRange = scheduledAssistRange(status);
+  const appliedRange = appliedAssistRange(status);
+  const effectiveClimateTarget = scheduledRange
+    ? undefined
+    : status.status === "assisting" || status.status === "holding"
       ? (status.applied_temperature ?? status.climate_target_temperature)
       : (status.climate_target_temperature ?? status.applied_temperature);
   const markerInputs = [
@@ -822,6 +1058,16 @@ function buildTemperatureMarkers(
       key: "target" as const,
       label: host._t("roomSensorScheduledTarget"),
       value: status.target_temperature,
+    },
+    {
+      key: "scheduledLow" as const,
+      label: host._t("roomSensorScheduledLow"),
+      value: scheduledRange?.low,
+    },
+    {
+      key: "scheduledHigh" as const,
+      label: host._t("roomSensorScheduledHigh"),
+      value: scheduledRange?.high,
     },
     {
       key: "room" as const,
@@ -832,6 +1078,16 @@ function buildTemperatureMarkers(
       key: "climateTarget" as const,
       label: host._t("roomSensorClimateTarget"),
       value: effectiveClimateTarget,
+    },
+    {
+      key: "appliedLow" as const,
+      label: host._t("roomSensorAppliedLow"),
+      value: appliedRange?.low,
+    },
+    {
+      key: "appliedHigh" as const,
+      label: host._t("roomSensorAppliedHigh"),
+      value: appliedRange?.high,
     },
     {
       key: "climate" as const,
@@ -878,6 +1134,31 @@ function buildTemperatureMarkers(
   });
 
   return applyTemperatureMarkerCalloutOffsets(positionedMarkers);
+}
+
+function rangeBoundaryMarkerKey(
+  status: RoomSensorAssistStatus,
+  kind: "scheduled" | "applied",
+): TemperatureMarker["key"] | undefined {
+  const scheduled = scheduledAssistRange(status);
+  if (!scheduled) {
+    return undefined;
+  }
+  const room = typeof status.room_temperature === "number" ? status.room_temperature : undefined;
+  const boundary = status.direction === "cool" || (room !== undefined && room > scheduled.high)
+    ? "High"
+    : "Low";
+  return `${kind}${boundary}` as TemperatureMarker["key"];
+}
+
+function formatTemperatureRange(
+  host: SensorsViewHost,
+  entityId: string,
+  low: number,
+  high: number,
+): string {
+  const formattedLow = host._formatTemperature(low, entityId).replace(/\s+[^\s]+$/, "");
+  return `${formattedLow}–${host._formatTemperature(high, entityId)}`;
 }
 
 function applyTemperatureMarkerCalloutOffsets(
@@ -935,7 +1216,9 @@ function calloutPositionsForCluster(count: number, centerPosition: number): numb
     return [clamp(centerPosition, TEMPERATURE_MARKER_CALLOUT_EDGE_PERCENT, 100 - TEMPERATURE_MARKER_CALLOUT_EDGE_PERCENT)];
   }
 
-  const span = (count - 1) * TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT;
+  const availableSpan = 100 - 2 * TEMPERATURE_MARKER_CALLOUT_EDGE_PERCENT;
+  const gap = Math.min(TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT, availableSpan / (count - 1));
+  const span = (count - 1) * gap;
   let firstPosition = centerPosition - span / 2;
   const minPosition = TEMPERATURE_MARKER_CALLOUT_EDGE_PERCENT;
   const maxPosition = 100 - TEMPERATURE_MARKER_CALLOUT_EDGE_PERCENT;
@@ -949,7 +1232,7 @@ function calloutPositionsForCluster(count: number, centerPosition: number): numb
   return Array.from(
     { length: count },
     (_, index) => clamp(
-      firstPosition + index * TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT,
+      firstPosition + index * gap,
       minPosition,
       maxPosition,
     ),

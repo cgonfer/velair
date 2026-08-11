@@ -15,7 +15,7 @@ from .helpers import (
     VelairScheduler,
     normalize_schedule_data,
 )
-from .test_profiles import _profile
+from .test_profiles import _available_hass, _profile
 from custom_components.velair.models import normalize_modes, validate_modes
 from custom_components.velair.models import serialize_schedule_data
 from custom_components.velair import api as api_module
@@ -217,7 +217,9 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
             self.saves += 1
 
         self.manager = FakeClimateManager()
-        self.scheduler = VelairScheduler(FakeHass(), self.data, self.manager, save)
+        self.scheduler = VelairScheduler(
+            _available_hass("climate.salon"), self.data, self.manager, save
+        )
 
     async def _add_away(self) -> None:
         await self.scheduler.async_set_profile(_profile())
@@ -230,7 +232,12 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
             None, ["climate.salon", "climate.bedroom"]
         )
         manager = FakeClimateManager()
-        scheduler = VelairScheduler(FakeHass(), data, manager, AsyncMock())
+        scheduler = VelairScheduler(
+            _available_hass("climate.salon", "climate.bedroom"),
+            data,
+            manager,
+            AsyncMock(),
+        )
         away = _profile(key="away", temperature=18)
         bedroom = _profile(key="bedroom", temperature=19)
         bedroom["name"] = "Bedroom"
@@ -327,6 +334,21 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
             "profile_activation",
         )
 
+    async def test_offline_mode_target_is_completed_with_deferred_delivery(self) -> None:
+        await self._add_away()
+        self.scheduler._hass.states["climate.salon"] = SimpleNamespace(
+            state="unavailable", attributes={}
+        )
+
+        await self.scheduler.async_select_velair_mode("away-mode")
+
+        self.assertEqual(self.scheduler.operation_status["state"], "completed")
+        self.assertEqual(
+            self.scheduler.operation_status["deferred_entity_ids"],
+            ["climate.salon"],
+        )
+        self.assertEqual(self.scheduler.operation_status["failed_entity_ids"], [])
+
     async def test_reselect_and_two_modes_for_same_profile_do_not_reapply(self) -> None:
         await self._add_away()
         await self.scheduler.async_set_velair_mode(
@@ -362,6 +384,26 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual(profile_events[-1]["source"], "panel")
 
+    async def test_mode_applies_profile_block_inherited_from_previous_day(self) -> None:
+        profile = _profile(temperature=18)
+        schedule = profile["zones"]["climate.salon"]["schedule"]
+        schedule["monday"] = schedule["tuesday"]
+        schedule["tuesday"] = []
+        await self.scheduler.async_set_profile(profile)
+        await self.scheduler.async_set_velair_mode(
+            {"key": "away-mode", "name": "Away", "profile_ids": ["away"]}
+        )
+
+        await self.scheduler.async_select_velair_mode("away-mode")
+
+        self.assertIn(
+            ("set_temperature", "climate.salon", 18.0, True, "heat"),
+            self.manager.calls,
+        )
+        event = self.scheduler.get_current_event("climate.salon")
+        self.assertEqual(event.weekday, "monday")
+        self.assertEqual(event.start, "17:00")
+
     async def test_selected_mode_survives_startup_without_bypassing_apply_setting(self) -> None:
         for apply_current_schedule in (False, True):
             with self.subTest(apply_current_schedule=apply_current_schedule):
@@ -371,7 +413,9 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
                     return None
 
                 manager = FakeClimateManager()
-                scheduler = VelairScheduler(FakeHass(), data, manager, save)
+                scheduler = VelairScheduler(
+                    _available_hass(*data["zones"]), data, manager, save
+                )
                 await scheduler.async_set_profile(_profile(temperature=18))
                 await scheduler.async_set_velair_mode(
                     {"key": "away-mode", "name": "Away", "profile_ids": ["away"]}
@@ -451,7 +495,9 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
         async def save() -> None:
             return None
 
-        scheduler = VelairScheduler(FakeHass(), data, FakeClimateManager(), save)
+        scheduler = VelairScheduler(
+            _available_hass(*data["zones"]), data, FakeClimateManager(), save
+        )
         away = _profile(key="away")
         bedroom = _profile(key="bedroom")
         bedroom["zones"]["climate.bedroom"] = bedroom["zones"].pop(
@@ -489,7 +535,9 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
         async def save() -> None:
             return None
 
-        scheduler = VelairScheduler(FakeHass(), data, FakeClimateManager(), save)
+        scheduler = VelairScheduler(
+            _available_hass(*data["zones"]), data, FakeClimateManager(), save
+        )
         away = _profile(key="away")
         bedroom = _profile(key="bedroom")
         bedroom["zones"]["climate.bedroom"] = bedroom["zones"].pop(
@@ -529,7 +577,9 @@ class VelairModeSchedulerTest(unittest.IsolatedAsyncioTestCase):
                     return None
 
                 manager = FakeClimateManager()
-                scheduler = VelairScheduler(FakeHass(), data, manager, save)
+                scheduler = VelairScheduler(
+                    _available_hass(*data["zones"]), data, manager, save
+                )
                 await scheduler.async_set_profile(_profile())
                 await scheduler.async_set_velair_mode(
                     {"key": "away-mode", "name": "Away", "profile_ids": ["away"]}
@@ -719,9 +769,9 @@ class VelairModeSelectEntityTest(unittest.IsolatedAsyncioTestCase):
 
 
 class VelairModePortableApiTest(unittest.TestCase):
-    """Verify portable v5 mode sections and v4 compatibility."""
+    """Verify portable v6 mode sections and older-model compatibility."""
 
-    def test_v5_exports_modes_and_v4_remains_valid(self) -> None:
+    def test_v6_exports_modes_and_v4_remains_valid(self) -> None:
         data = normalize_schedule_data(
             {
                 "profiles": [_profile()],
@@ -744,7 +794,7 @@ class VelairModePortableApiTest(unittest.TestCase):
             "entry": SimpleNamespace(options={}),
         }
         payload = api_module._build_export_payload(runtime, ["modes"])
-        self.assertEqual(payload["model_version"], 5)
+        self.assertEqual(payload["model_version"], 6)
         self.assertEqual(payload["sections"]["modes"], data["modes"])
 
         self.assertEqual(

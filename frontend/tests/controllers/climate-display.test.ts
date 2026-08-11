@@ -4,6 +4,7 @@ import {
   fanModeOptions,
   entityTemperatureStepForHost,
   humidityLimits,
+  hvacModeOptions,
   presetModeOptions,
   swingHorizontalModeOptions,
   swingModeOptions,
@@ -89,5 +90,24 @@ describe("climate display controller", () => {
     expect(swingModeOptions(viewHost, "template")).toEqual(["off", "vertical"]);
     expect(swingHorizontalModeOptions(viewHost, "template")).toEqual(["left"]);
     expect(humidityLimits(viewHost, "template")).toEqual([30, 70]);
+  });
+
+  it("keeps range modes available for a selected range-only climate", () => {
+    const viewHost = host() as any;
+    viewHost._climateSupportedModes = () => ["heat", "cool", "heat_cool", "auto", "off"];
+    viewHost._uniqueModes = (modes: string[]) => [...new Set(modes)];
+    viewHost.hass.states["climate.living_room"].attributes.supported_features = 2;
+
+    expect(hvacModeOptions(viewHost, "schedule")).toEqual(["heat", "cool", "heat_cool", "auto", "off"]);
+    expect(hvacModeOptions(viewHost, "template")).toEqual(["heat", "cool", "heat_cool", "auto", "off"]);
+  });
+
+  it("keeps range modes when the climate also supports a single target", () => {
+    const viewHost = host() as any;
+    viewHost._climateSupportedModes = () => ["heat", "cool", "heat_cool", "auto", "off"];
+    viewHost._uniqueModes = (modes: string[]) => [...new Set(modes)];
+    viewHost.hass.states["climate.living_room"].attributes.supported_features = 3;
+
+    expect(hvacModeOptions(viewHost, "schedule")).toEqual(["heat", "cool", "heat_cool", "auto", "off"]);
   });
 });

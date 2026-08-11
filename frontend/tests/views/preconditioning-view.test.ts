@@ -5,7 +5,66 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { renderPreconditioningView } from "../../src/velair/views/preconditioning-view";
-import type { ScheduleEvent } from "../../src/velair/types";
+import type {
+  PreconditioningDiagnostics,
+  PreconditioningLearningSummary,
+  ScheduleEvent,
+} from "../../src/velair/types";
+
+function diagnostics(
+  direction: "heat" | "cool",
+  boundaryTemperature: number,
+): PreconditioningDiagnostics {
+  return {
+    direction,
+    boundary_temperature: boundaryTemperature,
+    target_boundary: direction === "heat" ? "low" : "high",
+    delta_temperature: 2,
+    complete_sample_count: 0,
+    partial_sample_count: 0,
+    invalid_sample_count: 0,
+    similar_sample_count: 0,
+    comfort_percentile: 80,
+    complete_estimate_minutes: 60,
+    partial_floor_minutes: 0,
+    combined_estimate_minutes: 60,
+    rounded_estimate_minutes: 60,
+    final_lead_minutes: 60,
+    limited_by_min_start: false,
+    limited_by_max_lead: false,
+    source: "initial_model",
+    used_outdoor_temperature: false,
+    initial_model_lead_minutes: 60,
+  };
+}
+
+function learningBothDirections(): PreconditioningLearningSummary {
+  return {
+    status: "learning",
+    required_samples: 5,
+    total_samples: 0,
+    heat: {
+      status: "learning",
+      sample_count: 0,
+      total_samples: 0,
+      required_samples: 5,
+      complete_sample_count: 0,
+      partial_sample_count: 0,
+      invalid_sample_count: 0,
+      model_source: "initial_model",
+    },
+    cool: {
+      status: "learning",
+      sample_count: 0,
+      total_samples: 0,
+      required_samples: 5,
+      complete_sample_count: 0,
+      partial_sample_count: 0,
+      invalid_sample_count: 0,
+      model_source: "initial_model",
+    },
+  };
+}
 
 function host(options: {
   entityExists?: boolean;
@@ -60,8 +119,12 @@ function host(options: {
     _friendlyEntityName: (entityId: string) =>
       entityId === "climate.first" ? "First" : "Second",
     _formatDateTime: (value: string) => `date:${value}`,
-    _formatEventAction: (event: ScheduleEvent) => `${event.temperature} C`,
+    _formatEventAction: (event: ScheduleEvent) =>
+      typeof event.temperature === "number"
+        ? `${event.temperature} C`
+        : `${event.target_temp_low}–${event.target_temp_high} C`,
     _formatEventMode: (event: ScheduleEvent) => String(event.hvac_mode),
+    _formatTemperature: (value: number) => `${value} C`,
     _orderedZoneIds: (entityIds: string[]) => entityIds,
     _resetZonePreconditioningLearning: resetZonePreconditioningLearning,
     _resetZonePreconditioningSettings: resetZonePreconditioningSettings,
@@ -498,6 +561,95 @@ describe("preconditioning view", () => {
       .toContain("mode-cool");
     expect(coolPrediction?.textContent).toContain("heat_cool");
     expect(coolPrediction?.textContent).toContain("date:2026-06-22T06:40:00+02:00");
+  });
+
+  it("shows native heat_cool ranges for heat and cool using their prediction boundaries", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const container = document.createElement("div");
+    if (viewHost._data) {
+      viewHost._data.next_events = [
+        {
+          entity_id: "climate.second",
+          when: "2026-06-22T06:30:00+02:00",
+          target_when: "2026-06-22T08:00:00+02:00",
+          weekday: "monday",
+          start: "08:00",
+          target_temp_low: 19,
+          target_temp_high: 23,
+          hvac_mode: "heat_cool",
+          preconditioning_diagnostics: diagnostics("heat", 19),
+        },
+        {
+          entity_id: "climate.second",
+          when: "2026-06-22T18:00:00+02:00",
+          target_when: "2026-06-22T18:00:00+02:00",
+          weekday: "monday",
+          start: "18:00",
+          target_temp_low: 20,
+          target_temp_high: 24,
+          hvac_mode: "heat_cool",
+          preconditioning_diagnostics: diagnostics("cool", 24),
+        },
+      ];
+      viewHost._data.preconditioning_learning = {
+        "climate.second": learningBothDirections(),
+      };
+    }
+
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+
+    const heatPrediction = container.querySelector(
+      ".preconditioning-direction.heat .preconditioning-prediction",
+    );
+    const coolPrediction = container.querySelector(
+      ".preconditioning-direction.cool .preconditioning-prediction",
+    );
+    expect(heatPrediction?.classList).toContain("early");
+    expect(heatPrediction?.textContent).toContain("19–23 C");
+    expect(heatPrediction?.querySelector(".preconditioning-range-boundary")?.textContent)
+      .toContain("preconditioningPredictionLowerBoundary:19 C");
+    expect(coolPrediction?.classList).toContain("normal");
+    expect(coolPrediction?.querySelector(".preconditioning-prestart")).toBeNull();
+    expect(coolPrediction?.textContent).toContain("20–24 C");
+    expect(coolPrediction?.querySelector(".preconditioning-range-boundary")?.textContent)
+      .toContain("preconditioningPredictionUpperBoundary:24 C");
+
+    const boundaryLabels = [
+      ...container.querySelectorAll(".preconditioning-range-boundary"),
+    ];
+    expect(boundaryLabels).toHaveLength(2);
+    expect(boundaryLabels.every((label) =>
+      label.parentElement?.classList.contains("preconditioning-preview-block"),
+    )).toBe(true);
+    expect(container.querySelector(".preconditioning-range-notice")).toBeNull();
+    expect(container.textContent).not.toContain("preconditioningRangeUnsupported");
+  });
+
+  it("does not select an incomplete temperature range as a prediction candidate", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const container = document.createElement("div");
+    if (viewHost._data) {
+      viewHost._data.next_events = [
+        {
+          entity_id: "climate.second",
+          when: "2026-06-22T06:30:00+02:00",
+          target_when: "2026-06-22T08:00:00+02:00",
+          weekday: "monday",
+          start: "08:00",
+          target_temp_low: 19,
+          hvac_mode: "heat_cool",
+          preconditioning_diagnostics: diagnostics("heat", 19),
+        },
+      ];
+      viewHost._data.preconditioning_learning = {
+        "climate.second": learningBothDirections(),
+      };
+    }
+
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelectorAll(".preconditioning-prediction.empty")).toHaveLength(2);
+    expect(container.querySelector(".preconditioning-range-boundary")).toBeNull();
   });
 
   it("keeps preconditioning calculation details collapsed behind a user action", () => {

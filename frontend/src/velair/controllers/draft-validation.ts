@@ -34,6 +34,7 @@ export function temperatureError(
       min: host._formatTemperatureLimit(minTemperature),
       max: host._formatTemperatureLimit(maxTemperature),
     }),
+    rangeOrderError: host._t("invalidTargetRangeOrder"),
     stepError: host._t("invalidTemperatureStep", {
       step: temperatureStep === undefined ? "" : host._formatTemperatureLimit(temperatureStep),
     }),

@@ -28,6 +28,7 @@ export type HassState = {
     swing_horizontal_modes?: string[];
     swing_mode?: string;
     swing_modes?: string[];
+    supported_features?: number;
     target_temp_high?: number;
     target_temp_low?: number;
     target_temp_step?: number;
@@ -40,6 +41,7 @@ export type HomeAssistant = {
   callService(domain: string, service: string, serviceData?: Record<string, unknown>): Promise<void>;
   connection: HassConnection;
   config?: {
+    time_zone?: string;
     unit_system?: {
       temperature?: string;
     };
@@ -103,6 +105,8 @@ export type ScheduleBlock = {
   fan_mode?: string;
   start: string;
   temperature?: number;
+  target_temp_low?: number;
+  target_temp_high?: number;
   hvac_mode?: string;
   humidity?: number;
   preset_mode?: string;
@@ -149,7 +153,9 @@ export type DraftScheduleBlock = {
   action: string;
   fan_mode?: string;
   start: string;
-  temperature: number | string;
+  temperature?: number | string;
+  target_temp_low?: number | string;
+  target_temp_high?: number | string;
   hvac_mode: string;
   humidity?: number | string;
   preset_mode?: string;
@@ -278,13 +284,28 @@ export type RoomSensorAssistStatus = {
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;
-  reason?: "missing_target_step" | null;
+  reason?: "missing_target_step" | "unsupported_temperature_range" | null;
   room_temperature_entity_id?: string | null;
   target_temperature?: number | null;
+  target_temp_low?: number | null;
+  target_temp_high?: number | null;
   applied_temperature?: number | null;
+  applied_target_temp_low?: number | null;
+  applied_target_temp_high?: number | null;
   climate_target_temperature?: number | null;
+  climate_target_temp_low?: number | null;
+  climate_target_temp_high?: number | null;
   room_temperature?: number | null;
   climate_temperature?: number | null;
+  applied_offset?: number | null;
+  range_shift?: number | null;
+  limited_by?: "minimum" | "maximum" | null;
+  limit_temperature?: number | null;
+  requested_temperature?: number | null;
+  calculated_temperature?: number | null;
+  scheduled_target_guard?: "heating_ceiling" | "cooling_floor" | null;
+  requested_target_temp_low?: number | null;
+  requested_target_temp_high?: number | null;
   assist_delta?: number | null;
   direction?: "heat" | "cool" | null;
   hvac_mode?: string | null;
@@ -306,6 +327,8 @@ export type ZoneRuntimeStatus = {
   state: "stopped" | "paused" | "boost" | "preconditioning" | "scheduled" | "idle";
   room_temperature?: number | null;
   target_temperature?: number | null;
+  target_temp_low?: number | null;
+  target_temp_high?: number | null;
   applied_temperature?: number | null;
   hvac_mode?: string | null;
   active_from?: string | null;
@@ -315,6 +338,10 @@ export type ZoneRuntimeStatus = {
 
 export type PreconditioningDiagnostics = {
   direction?: "heat" | "cool" | string;
+  target_kind?: "scalar" | "range" | string;
+  boundary_temperature?: number | null;
+  target_boundary?: "low" | "high" | string | null;
+  current_temperature?: number | null;
   delta_temperature: number;
   complete_sample_count: number;
   partial_sample_count: number;
@@ -340,6 +367,8 @@ export type ScheduleEvent = {
   action?: string;
   fan_mode?: string | null;
   temperature?: number | null;
+  target_temp_low?: number | null;
+  target_temp_high?: number | null;
   hvac_mode?: string | null;
   humidity?: number | null;
   preset_mode?: string | null;

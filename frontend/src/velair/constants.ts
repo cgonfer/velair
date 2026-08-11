@@ -41,7 +41,7 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "preconditioning",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 5;
+export const PORTABLE_MODEL_VERSION = 6;
 export const PORTABLE_SECTIONS: PortableSection[] = [
   "zones",
   "templates",

@@ -888,7 +888,7 @@ export class VelairCard extends LitElement {
     return clampBlocksForEntity(asScheduleActionsHost(this), blocks, entityId);
   }
 
-  private _unsupportedModeError(blocks: Array<Pick<ScheduleBlock, "action" | "hvac_mode" | "start">>, entityId: string): string | undefined {
+  private _unsupportedModeError(blocks: Array<ScheduleBlock | DraftScheduleBlock>, entityId: string): string | undefined {
     return unsupportedModeError(asScheduleActionsHost(this), blocks, entityId);
   }
 

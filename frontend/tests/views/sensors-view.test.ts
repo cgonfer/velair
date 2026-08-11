@@ -4,16 +4,26 @@ import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
+import { sensorsStyles } from "../../src/velair/styles/sensors-styles";
 import { renderSensorsView } from "../../src/velair/views/sensors-view";
 
 function host(options: {
   activeFrom?: string | null;
+  appliedOffset?: number | null;
+  appliedRange?: [number, number];
   appliedTemperature?: number;
+  calculatedTemperature?: number;
+  climateRange?: [number, number];
   climateTargetTemperature?: number;
   entityExists?: boolean;
   expandedZoneIds?: string[];
   hvacMode?: string;
   maxDelta?: number;
+  limitedBy?: "minimum" | "maximum";
+  limitTemperature?: number;
+  requestedRange?: [number, number];
+  requestedTemperature?: number;
+  scheduledTargetGuard?: "heating_ceiling" | "cooling_floor";
   debounceSeconds?: number;
   roomTemperatureEntityId?: string | null;
   assistEnabled?: boolean;
@@ -21,7 +31,9 @@ function host(options: {
   direction?: "heat" | "cool";
   roomAssistStatus?: "assisting" | "holding" | "idle" | "ready";
   roomTemperature?: number;
+  scheduledRange?: [number, number];
   scheduledTargetTemperature?: number;
+  rangeShift?: number;
   targetWhen?: string | null;
   thermostatTemperature?: number;
 } = {}) {
@@ -58,17 +70,36 @@ function host(options: {
           enabled: true,
           configured: true,
           room_temperature_entity_id: "sensor.bedroom_temperature",
-          target_temperature:
+          target_temperature: options.scheduledRange
+            ? null
+            :
             options.roomAssistStatus === "idle"
               ? null
               : (options.scheduledTargetTemperature ?? 25),
-          applied_temperature:
+          target_temp_low: options.scheduledRange?.[0],
+          target_temp_high: options.scheduledRange?.[1],
+          applied_temperature: options.appliedRange
+            ? null
+            :
             options.roomAssistStatus === "idle"
               ? null
               : (options.appliedTemperature ?? 22),
+          applied_target_temp_low: options.appliedRange?.[0],
+          applied_target_temp_high: options.appliedRange?.[1],
           climate_target_temperature: options.climateTargetTemperature ?? 21,
+          climate_target_temp_low: options.climateRange?.[0],
+          climate_target_temp_high: options.climateRange?.[1],
           room_temperature: options.roomTemperature ?? 20,
           climate_temperature: options.thermostatTemperature ?? 17.1,
+          applied_offset: options.appliedOffset,
+          range_shift: options.rangeShift,
+          limited_by: options.limitedBy,
+          limit_temperature: options.limitTemperature,
+          requested_temperature: options.requestedTemperature,
+          calculated_temperature: options.calculatedTemperature,
+          scheduled_target_guard: options.scheduledTargetGuard,
+          requested_target_temp_low: options.requestedRange?.[0],
+          requested_target_temp_high: options.requestedRange?.[1],
           assist_delta: options.assistDelta ?? 5,
           direction: options.direction ?? "heat",
           hvac_mode: options.hvacMode ?? "heat",
@@ -127,6 +158,33 @@ function host(options: {
 }
 
 describe("sensors view", () => {
+  it("contains the wide temperature track inside the Room Assist card", () => {
+    const styles = sensorsStyles.cssText;
+
+    expect(styles).toMatch(/\.sensors-view\s*\{[^}]*max-width:\s*100%;[^}]*min-width:\s*0;/s);
+    expect(styles).toMatch(
+      /\.sensor-config-section,\s*\.sensor-runtime-section\s*\{[^}]*max-width:\s*100%;[^}]*min-width:\s*0;/s,
+    );
+    expect(styles).toMatch(
+      /\.sensor-temperature-scale\s*\{[^}]*box-sizing:\s*border-box;[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto;[^}]*width:\s*100%;/s,
+    );
+    expect(styles).toMatch(/\.sensor-scale-track\s*\{[^}]*min-width:\s*640px;/s);
+  });
+
+  it("keeps Room Assist help tooltips inside the mobile label width", () => {
+    const styles = sensorsStyles.cssText;
+
+    expect(styles).toMatch(
+      /@media \(max-width:\s*720px\)[\s\S]*\.sensor-config-label\s*\{[^}]*position:\s*relative;[^}]*width:\s*100%;/,
+    );
+    expect(styles).toMatch(
+      /\.sensor-config-label \.sensor-help\s*\{[^}]*position:\s*static;/,
+    );
+    expect(styles).toMatch(
+      /\.sensor-config-label \.sensor-help-tooltip\s*\{[^}]*left:\s*0;[^}]*max-width:\s*100%;[^}]*right:\s*0;[^}]*transform:\s*none;[^}]*width:\s*auto;/,
+    );
+  });
+
   it("renders climates in the provided user order", () => {
     const { viewHost } = host();
     const container = document.createElement("div");
@@ -422,6 +480,274 @@ describe("sensors view", () => {
       .toBe("roomSensorAssistCorrectionValue:value=-2 °C. roomSensorAssistCorrectionActiveHelp");
   });
 
+  it("uses the signed applied offset while markers follow live applied and climate values", () => {
+    const { viewHost } = host({
+      appliedOffset: -2,
+      appliedTemperature: 23,
+      assistDelta: 2,
+      climateTargetTemperature: 27,
+      direction: "heat",
+      expandedZoneIds: ["climate.second"],
+      thermostatTemperature: 25,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".sensor-scale-assist-offset")?.textContent)
+      .toContain("roomSensorAssistCorrectionValue:value=-2 °C");
+    expect(container.querySelector(".sensor-scale-callout-marker.marker-climateTarget")?.textContent)
+      .toContain("23 °C");
+    expect(container.querySelector(".sensor-scale-callout-marker.marker-climate")?.textContent)
+      .toContain("25 °C");
+  });
+
+  it("relates a room below the scheduled range to the low boundaries", () => {
+    const { viewHost } = host({
+      appliedRange: [21, 25],
+      direction: "heat",
+      expandedZoneIds: ["climate.second"],
+      rangeShift: 1,
+      roomTemperature: 18,
+      scheduledRange: [20, 24],
+      thermostatTemperature: 19,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.textContent).toContain("roomSensorBlockTarget:target=20–24 °C");
+    expect(container.textContent).not.toContain("roomSensorRangeUnsupported");
+    expect(container.querySelector(".sensor-scale-room-gap")?.textContent)
+      .toContain("roomSensorGapBelowTarget:value=2 °C");
+    expect(container.querySelector(".sensor-scale-assist-offset")?.textContent)
+      .toContain("roomSensorRangeShiftValue:value=+1 °C");
+    const scheduledBand = container.querySelector<HTMLElement>(".range-band-scheduled");
+    const appliedBand = container.querySelector<HTMLElement>(".range-band-applied");
+    expect(scheduledBand?.textContent).toContain("roomSensorScheduledRange");
+    expect(scheduledBand?.textContent).toContain("20–24 °C");
+    expect(appliedBand?.textContent).toContain("roomSensorAppliedRange");
+    expect(appliedBand?.textContent).toContain("21–25 °C");
+    expect(container.querySelector(".sensor-scale-callout-marker.marker-scheduledLow"))
+      .toBeNull();
+    expect(container.querySelector(".sensor-scale-callout-marker.marker-appliedLow"))
+      .toBeNull();
+
+    const center = (element: HTMLElement) =>
+      Number.parseFloat(element.style.left) + Number.parseFloat(element.style.width) / 2;
+    const offset = container.querySelector<HTMLElement>(".sensor-scale-assist-offset");
+    const scheduledCenter = center(scheduledBand!);
+    const appliedCenter = center(appliedBand!);
+    expect(Number.parseFloat(offset!.style.left)).toBeCloseTo(
+      Math.min(scheduledCenter, appliedCenter),
+      2,
+    );
+    expect(Number.parseFloat(offset!.style.width)).toBeCloseTo(
+      Math.abs(scheduledCenter - appliedCenter),
+      1,
+    );
+  });
+
+  it("shows a responsive warning before the graph when a range reaches a physical limit", () => {
+    const { viewHost } = host({
+      appliedRange: [21, 25],
+      direction: "heat",
+      expandedZoneIds: ["climate.second"],
+      limitedBy: "maximum",
+      limitTemperature: 25,
+      rangeShift: 1,
+      requestedRange: [29, 33],
+      roomTemperature: 18,
+      scheduledRange: [20, 24],
+      thermostatTemperature: 24,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const warning = container.querySelector(".sensor-limit-warning");
+    const graph = container.querySelector(".sensor-temperature-scale");
+    expect(warning).not.toBeNull();
+    expect(warning?.getAttribute("role")).toBe("status");
+    expect(warning?.textContent).toContain("roomSensorLimitMaximumTitle");
+    expect(warning?.textContent).toContain("requested=29–33 °C");
+    expect(warning?.textContent).toContain("applied=21–25 °C");
+    expect(warning?.textContent).toContain("limit=25 °C");
+    expect(warning?.compareDocumentPosition(graph!) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+  });
+
+  it("renders Fahrenheit range movement and limit details without converting native values", () => {
+    const { viewHost } = host({
+      appliedRange: [88, 95],
+      direction: "heat",
+      expandedZoneIds: ["climate.second"],
+      limitedBy: "maximum",
+      limitTemperature: 95,
+      rangeShift: 20,
+      requestedRange: [92, 99],
+      roomTemperature: 64,
+      scheduledRange: [68, 75],
+      thermostatTemperature: 77,
+    });
+    (viewHost as unknown as { _temperatureUnit: () => string })._temperatureUnit =
+      () => "°F";
+    (viewHost as unknown as {
+      _formatTemperature: (value: number) => string;
+    })._formatTemperature = (value: number) => `${value} °F`;
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.textContent).toContain("target=68–75 °F");
+    expect(container.querySelector(".sensor-scale-assist-offset")?.textContent)
+      .toContain("value=+20 °F");
+    const warning = container.querySelector(".sensor-limit-warning");
+    expect(warning?.textContent).toContain("requested=92–99 °F");
+    expect(warning?.textContent).toContain("applied=88–95 °F");
+    expect(warning?.textContent).toContain("limit=95 °F");
+  });
+
+  it("explains when the scheduled cooling target protects against further cooling", () => {
+    const { viewHost } = host({
+      appliedTemperature: 22,
+      calculatedTemperature: 20,
+      direction: "cool",
+      expandedZoneIds: ["climate.second"],
+      roomAssistStatus: "holding",
+      roomTemperature: 21,
+      scheduledTargetGuard: "cooling_floor",
+      scheduledTargetTemperature: 22,
+      thermostatTemperature: 19,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const info = container.querySelector(".sensor-safety-info");
+    const graph = container.querySelector(".sensor-temperature-scale");
+    expect(info).not.toBeNull();
+    expect(info?.getAttribute("role")).toBe("status");
+    expect(info?.textContent).toContain("roomSensorScheduledGuardTitle");
+    expect(info?.textContent).toContain("calculated=20");
+    expect(info?.textContent).toContain("applied=22");
+    expect(info?.compareDocumentPosition(graph!) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+  });
+
+  it("uses the symmetric heating explanation and stays hidden for old payloads", () => {
+    const guarded = host({
+      appliedTemperature: 20,
+      calculatedTemperature: 23,
+      direction: "heat",
+      expandedZoneIds: ["climate.second"],
+      roomAssistStatus: "holding",
+      scheduledTargetGuard: "heating_ceiling",
+      scheduledTargetTemperature: 20,
+    });
+    const legacy = host({
+      appliedTemperature: 20,
+      expandedZoneIds: ["climate.second"],
+      roomAssistStatus: "holding",
+      scheduledTargetTemperature: 20,
+    });
+    const guardedContainer = document.createElement("div");
+    const legacyContainer = document.createElement("div");
+
+    render(renderSensorsView(guarded.viewHost, ["climate.second"]), guardedContainer);
+    render(renderSensorsView(legacy.viewHost, ["climate.second"]), legacyContainer);
+
+    expect(guardedContainer.querySelector(".sensor-safety-info")?.textContent)
+      .toContain("roomSensorScheduledGuardHeatingDetail");
+    expect(legacyContainer.querySelector(".sensor-safety-info")).toBeNull();
+  });
+
+  it("holds inside the scheduled range without inventing a room gap", () => {
+    const { viewHost } = host({
+      appliedRange: [20, 24],
+      expandedZoneIds: ["climate.second"],
+      rangeShift: 0,
+      roomAssistStatus: "holding",
+      roomTemperature: 22,
+      scheduledRange: [20, 24],
+      thermostatTemperature: 22.5,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".sensor-scale-room-gap")).toBeNull();
+    expect(container.querySelector(".sensor-scale-assist-offset")?.classList)
+      .toContain("assist-offset-holding");
+    expect(container.querySelector(".sensor-scale-assist-offset")?.textContent)
+      .toContain("roomSensorRangeShiftValue:value=0 °C");
+  });
+
+  it("relates a room above the scheduled range to the high boundaries", () => {
+    const { viewHost } = host({
+      appliedRange: [19, 23],
+      direction: "cool",
+      expandedZoneIds: ["climate.second"],
+      rangeShift: -1,
+      roomTemperature: 26,
+      scheduledRange: [20, 24],
+      thermostatTemperature: 25,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".sensor-scale-room-gap")?.textContent)
+      .toContain("roomSensorGapAboveTarget:value=2 °C");
+    expect(container.querySelector(".sensor-scale-assist-offset")?.textContent)
+      .toContain("roomSensorRangeShiftValue:value=-1 °C");
+    expect(container.querySelector(".range-band-scheduled")?.textContent)
+      .toContain("20–24 °C");
+    expect(container.querySelector(".range-band-applied")?.textContent)
+      .toContain("19–23 °C");
+    expect(container.querySelector(".sensor-scale-callout-marker.marker-scheduledHigh"))
+      .toBeNull();
+    expect(container.querySelector(".sensor-scale-callout-marker.marker-appliedHigh"))
+      .toBeNull();
+  });
+
+  it("falls back to the reported climate range when no applied range is present", () => {
+    const { viewHost } = host({
+      climateRange: [20.5, 24.5],
+      expandedZoneIds: ["climate.second"],
+      rangeShift: 0.5,
+      scheduledRange: [20, 24],
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".range-band-applied")?.textContent)
+      .toContain("20.5–24.5 °C");
+  });
+
+  it("uses two range brackets and keeps only live-reading callouts when values coincide", () => {
+    const { viewHost } = host({
+      appliedRange: [21, 21],
+      expandedZoneIds: ["climate.second"],
+      rangeShift: 0,
+      roomTemperature: 21,
+      scheduledRange: [21, 21],
+      thermostatTemperature: 21,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const calloutPositions = [
+      ...container.querySelectorAll<HTMLElement>(".sensor-scale-callout-marker"),
+    ].map((marker) => marker.style.getPropertyValue("--callout-left"));
+    expect(calloutPositions).toHaveLength(2);
+    expect(new Set(calloutPositions).size).toBe(2);
+    expect(container.querySelectorAll(".sensor-scale-range-band")).toHaveLength(2);
+    expect(container.querySelectorAll(".sensor-scale-range-bracket")).toHaveLength(2);
+  });
+
   it("explains when a block is active early because of preconditioning", () => {
     const { viewHost } = host({
       activeFrom: "2026-05-19T16:30:00",
@@ -516,9 +842,9 @@ describe("sensors view", () => {
     expect(marker?.classList).toContain("marker-climate");
     expect(dot?.classList).toContain("segmented");
     expect(segmentStyle).toContain("var(--secondary-text-color) 0deg 90deg");
-    expect(segmentStyle).toContain("var(--primary-color) 90deg 180deg");
-    expect(segmentStyle).toContain("var(--success-color, #43a047) 180deg 270deg");
-    expect(segmentStyle).toContain("var(--error-color, #d93025) 270deg 360deg");
+    expect(segmentStyle).toContain("var(--sensor-scale-applied-color) 90deg 180deg");
+    expect(segmentStyle).toContain("var(--sensor-scale-room-color) 180deg 270deg");
+    expect(segmentStyle).toContain("var(--sensor-scale-scheduled-color) 270deg 360deg");
     const calloutOrder = [...container.querySelectorAll<HTMLElement>(".sensor-scale-callout-marker")]
       .sort(
         (first, second) =>
@@ -531,9 +857,9 @@ describe("sensors view", () => {
         ),
       );
     const segmentColorToMarker: Record<string, string> = {
-      "--error-color, #d93025": "target",
-      "--success-color, #43a047": "room",
-      "--primary-color": "climateTarget",
+      "--sensor-scale-scheduled-color": "target",
+      "--sensor-scale-room-color": "room",
+      "--sensor-scale-applied-color": "climateTarget",
       "--secondary-text-color": "climate",
     };
     const segmentOrder = [...segmentStyle.matchAll(/var\((--[^)]+)\)/g)].map(
@@ -645,6 +971,26 @@ describe("sensors view", () => {
     const input = container.querySelector<HTMLInputElement>("input[type='number']");
     expect(input?.max).toBe("18");
     expect(container.textContent).toContain("°F");
+  });
+
+  it("keeps maximum assist delta sizing guidance visible without a tooltip", () => {
+    const { viewHost } = host({
+      expandedZoneIds: ["climate.first"],
+      roomTemperatureEntityId: "sensor.bedroom_temperature",
+      assistEnabled: true,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.first"]), container);
+
+    const help = container.querySelector<HTMLElement>(".sensor-config-help-text");
+    expect(help).not.toBeNull();
+    expect(help?.textContent).toBe("roomSensorAssistMaxDeltaHelp");
+    expect(
+      container.querySelector(
+        ".sensor-help[aria-label='roomSensorAssistMaxDeltaHelp']",
+      ),
+    ).toBeNull();
   });
 
   it("does not show runtime metrics before a room sensor is configured", () => {
