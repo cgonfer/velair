@@ -384,7 +384,14 @@ class FakeClimateManager:
         modes = [mode for mode in self.supported_hvac_modes(entity_id) if mode != "off"]
         if range_target:
             return "heat_cool" if "heat_cool" in modes else None
-        return modes[0] if modes else None
+        for mode in modes:
+            if mode != "heat_cool" or self.supports_single_temperature_target(
+                entity_id,
+                mode,
+                ensure_on=ensure_on,
+            ):
+                return mode
+        return None
 
     def supports_single_temperature_target(
         self,
@@ -419,6 +426,66 @@ class FakeClimateManager:
             return
         if not self.supports_single_temperature_target(
             entity_id, hvac_mode, ensure_on=ensure_on
+        ) and not (
+            ensure_on
+            and self.current_hvac_modes.get(entity_id) == "off"
+            and hvac_mode != "heat_cool"
+        ):
+            raise ValueError(f"{entity_id} does not support a single temperature target")
+
+    def validate_configured_temperature_target(
+        self,
+        entity_id: str,
+        *,
+        range_target: bool,
+        hvac_mode: str | None,
+    ) -> None:
+        modes = self.supported_hvac_modes(entity_id)
+        candidates = [hvac_mode] if hvac_mode is not None else [
+            mode for mode in modes if mode != "off"
+        ]
+        if hvac_mode is not None and hvac_mode not in modes:
+            raise ValueError(f"HVAC mode {hvac_mode} is not supported by {entity_id}")
+        if range_target:
+            if not self.supports_temperature_range_target(entity_id):
+                raise ValueError(f"{entity_id} does not support a temperature range target")
+            if "heat_cool" not in candidates:
+                raise ValueError(f"{entity_id} has no compatible range target mode")
+            return
+        compatible = any(
+            mode != "off"
+            and (
+                (
+                    mode != "heat_cool"
+                    and (
+                        self.current_hvac_modes.get(entity_id) == "off"
+                        or self.supports_single_temperature_target(
+                            entity_id,
+                            mode,
+                            ensure_on=True,
+                        )
+                    )
+                )
+                or self.supports_single_temperature_target(
+                    entity_id,
+                    mode,
+                    ensure_on=True,
+                )
+            )
+            for mode in candidates
+        )
+        if not compatible:
+            raise ValueError(f"{entity_id} has no compatible single temperature target mode")
+        if (
+            self.current_hvac_modes.get(entity_id) != "off"
+            and not any(
+                self.supports_single_temperature_target(
+                    entity_id,
+                    mode,
+                    ensure_on=True,
+                )
+                for mode in candidates
+            )
         ):
             raise ValueError(f"{entity_id} does not support a single temperature target")
 

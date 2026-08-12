@@ -1062,10 +1062,12 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("padding: 2px 8px 4px", card_styles_source)
         self.assertIn("min-width: 0", card_styles_source)
         self.assertIn(
-            "grid-template-columns: minmax(58px, 0.8fr) minmax(70px, 1.05fr) "
-            "minmax(64px, 0.75fr) 30px 30px",
+            "grid-template-columns: minmax(88px, 0.9fr) minmax(64px, 1fr) "
+            "minmax(58px, 0.7fr) 30px 30px",
             responsive_styles_source,
         )
+        self.assertIn('.editable-block input[type="time"]', responsive_styles_source)
+        self.assertIn("min-width: 88px", responsive_styles_source)
         self.assertIn(".temperature-range-control", card_styles_source)
         self.assertIn(".range-temperature-field + .range-temperature-field", card_styles_source)
         self.assertIn(".editable-block .icon-button.danger", card_styles_source)

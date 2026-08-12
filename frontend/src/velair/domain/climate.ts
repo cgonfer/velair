@@ -154,9 +154,10 @@ export function effectiveClimateHvacModeForEnsureOn(
   if (target === "range") {
     return nonOffModes.find((mode) => mode === "heat_cool");
   }
-  return nonOffModes.find(
-    (mode) => !(mode === "heat_cool" && climateSupportsRangeTarget(state)),
-  ) ?? nonOffModes[0];
+  return nonOffModes.find((mode) => (
+    !climateRequiresRangeTarget(state, mode)
+    && (mode !== "heat_cool" || climateSupportsSingleTarget(state))
+  ));
 }
 
 export function climateTargetCompatibleForEnsureOn(
@@ -165,11 +166,56 @@ export function climateTargetCompatibleForEnsureOn(
   requestedMode?: string,
 ): boolean {
   const effectiveMode = effectiveClimateHvacModeForEnsureOn(state, requestedMode, target);
+  if (state?.state === "off") {
+    return target === "range"
+      ? climateSupportsRangeTarget(state) && effectiveMode === "heat_cool"
+      : Boolean(
+        effectiveMode
+        && !climateRequiresRangeTarget(state, effectiveMode)
+        && (effectiveMode !== "heat_cool" || climateSupportsSingleTarget(state))
+      );
+  }
   if (target === "range") {
     return climateSupportsRangeTarget(state) && effectiveMode === "heat_cool";
   }
   return climateSupportsSingleTarget(state)
-    && !(effectiveMode === "heat_cool" && climateSupportsRangeTarget(state));
+    && Boolean(
+      effectiveMode
+      && effectiveMode !== "off"
+      && !climateRequiresRangeTarget(state, effectiveMode)
+    );
+}
+
+/**
+ * Return whether a target can be stored for a climate independently of its
+ * transient active mode. Keep may later preserve the current mode, so a
+ * persisted block is valid when the entity advertises at least one compatible
+ * non-off mode. Runtime delivery still validates the actual effective mode.
+ */
+export function climateTargetCompatibleForConfiguration(
+  state: HassState | undefined,
+  target: "scalar" | "range",
+  requestedMode?: string,
+): boolean {
+  const supportsTarget = target === "range"
+    ? climateSupportsRangeTarget(state)
+    : climateSupportsSingleTarget(state);
+  if ((target === "range" || state?.state !== "off") && !supportsTarget) return false;
+
+  const compatibleMode = (mode: string): boolean => target === "range"
+    ? mode === "heat_cool"
+    : mode !== "off"
+      && !climateRequiresRangeTarget(state, mode)
+      && (
+        state?.state !== "off"
+        || supportsTarget
+        || mode !== "heat_cool"
+      );
+  const supportedModes = climateSupportedModes(state);
+  if (requestedMode) {
+    return supportedModes.includes(requestedMode) && compatibleMode(requestedMode);
+  }
+  return supportedModes.some((mode) => mode !== "off" && compatibleMode(mode));
 }
 
 export function climateFanModeOptions(state?: HassState): string[] {

@@ -44,6 +44,17 @@ function modeSelect(container: HTMLElement): HTMLSelectElement {
 }
 
 describe("editable schedule block view", () => {
+  it.each(["00:00", "00:30", "18:00", "23:00"])(
+    "preserves the native time value %s",
+    (start) => {
+      const container = document.createElement("div");
+
+      render(renderEditableBlock(host(), { ...block("heat"), start }, 0), container);
+
+      expect(container.querySelector<HTMLInputElement>('input[type="time"]')?.value).toBe(start);
+    },
+  );
+
   it("keeps the mode selector in sync when a reused row receives another mode", async () => {
     const container = document.createElement("div");
     const viewHost = host();

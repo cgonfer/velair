@@ -5,9 +5,7 @@ import {
   normalizeDraftBlocks as normalizeDraftBlocksDomain,
 } from "../domain/draft-blocks";
 import {
-  climateRequiresRangeTarget,
-  climateSupportsRangeTarget,
-  climateSupportsSingleTarget,
+  climateTargetCompatibleForConfiguration,
 } from "../domain/climate";
 import type { VelairApiClient } from "../api/client";
 import type {
@@ -219,15 +217,6 @@ export function unsupportedModeError(
   entityId: string,
 ): string | undefined {
   const state = host.hass?.states?.[entityId];
-  const unsupportedRange = blocks.find((block) =>
-    (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
-    && !climateSupportsRangeTarget(state));
-  if (unsupportedRange) {
-    return host._t("unsupportedRangeTargetForClimate", {
-      entity: host._friendlyEntityName(entityId),
-      start: unsupportedRange.start,
-    });
-  }
   const unsupportedRangeMode = blocks.find((block) =>
     (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
     && block.hvac_mode !== undefined
@@ -239,26 +228,30 @@ export function unsupportedModeError(
       start: unsupportedRangeMode.start,
     });
   }
-  const unsupportedScalar = blocks.find((block) =>
-    block.temperature !== undefined
-    && (
-      !climateSupportsSingleTarget(state)
-      || climateRequiresRangeTarget(state, block.hvac_mode)
-    ));
-  if (unsupportedScalar) {
-    return host._t("unsupportedSingleTargetForClimate", {
+  const unsupportedRange = blocks.find((block) =>
+    (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
+    && !climateTargetCompatibleForConfiguration(state, "range", block.hvac_mode));
+  if (unsupportedRange) {
+    return host._t("unsupportedRangeTargetForClimate", {
       entity: host._friendlyEntityName(entityId),
-      start: unsupportedScalar.start,
+      start: unsupportedRange.start,
     });
   }
   const unsupportedBlock = firstUnsupportedModeBlock(blocks, host._climateSupportedModes(entityId));
-  if (!unsupportedBlock?.hvac_mode) {
-    return undefined;
+  if (unsupportedBlock?.hvac_mode) {
+    return host._t("unsupportedModeForClimate", {
+      entity: host._friendlyEntityName(entityId),
+      mode: host._modeLabel(unsupportedBlock.hvac_mode),
+      start: unsupportedBlock.start,
+    });
   }
-
-  return host._t("unsupportedModeForClimate", {
-    entity: host._friendlyEntityName(entityId),
-    mode: host._modeLabel(unsupportedBlock.hvac_mode),
-    start: unsupportedBlock.start,
-  });
+  const unsupportedScalar = blocks.find((block) =>
+    block.temperature !== undefined
+    && !climateTargetCompatibleForConfiguration(state, "scalar", block.hvac_mode));
+  return unsupportedScalar
+    ? host._t("unsupportedSingleTargetForClimate", {
+      entity: host._friendlyEntityName(entityId),
+      start: unsupportedScalar.start,
+    })
+    : undefined;
 }

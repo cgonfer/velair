@@ -179,6 +179,53 @@ class ClimateManagerHvacFallbackTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(services.calls, [])
 
+    def test_stored_keep_scalar_ignores_transient_heat_cool_mode(self) -> None:
+        manager, _services = self._manager(
+            "heat_cool",
+            ["off", "heat", "cool", "heat_cool"],
+            extra_attributes={"supported_features": 3},
+        )
+
+        manager.validate_configured_temperature_target(
+            "climate.room",
+            range_target=False,
+            hvac_mode=None,
+        )
+
+    def test_stored_target_shape_rejects_explicit_incompatible_modes(self) -> None:
+        manager, _services = self._manager(
+            "heat",
+            ["off", "heat", "cool", "heat_cool"],
+            extra_attributes={"supported_features": 3},
+        )
+
+        with self.assertRaisesRegex(ValueError, "single temperature target"):
+            manager.validate_configured_temperature_target(
+                "climate.room",
+                range_target=False,
+                hvac_mode="heat_cool",
+            )
+        with self.assertRaisesRegex(ValueError, "range target"):
+            manager.validate_configured_temperature_target(
+                "climate.room",
+                range_target=True,
+                hvac_mode="cool",
+            )
+
+    def test_stored_keep_range_requires_a_heat_cool_mode(self) -> None:
+        manager, _services = self._manager(
+            "heat",
+            ["off", "heat", "cool"],
+            extra_attributes={"supported_features": 3},
+        )
+
+        with self.assertRaisesRegex(ValueError, "range target"):
+            manager.validate_configured_temperature_target(
+                "climate.room",
+                range_target=True,
+                hvac_mode=None,
+            )
+
     async def test_single_target_heat_cool_keeps_temperature_payload(self) -> None:
         manager, services = self._manager(
             "heat_cool",
@@ -203,6 +250,77 @@ class ClimateManagerHvacFallbackTest(unittest.IsolatedAsyncioTestCase):
                 )
             ],
         )
+
+    async def test_explicit_heat_scalar_starts_off_dynamic_feature_climate_first(self) -> None:
+        manager, services = self._manager(
+            "off",
+            ["off", "heat", "cool", "heat_cool"],
+            extra_attributes={"supported_features": 392},
+        )
+
+        await manager.async_set_temperature(
+            "climate.room",
+            20,
+            ensure_on=True,
+            hvac_mode="heat",
+        )
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["set_hvac_mode", "set_temperature"],
+        )
+        self.assertEqual(services.calls[0][2]["hvac_mode"], "heat")
+
+    async def test_keep_scalar_off_chooses_compatible_mode_before_temperature(self) -> None:
+        manager, services = self._manager(
+            "off",
+            ["off", "heat_cool", "heat", "cool"],
+            extra_attributes={"supported_features": 392},
+        )
+
+        await manager.async_set_temperature("climate.room", 20, ensure_on=True)
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["set_hvac_mode", "set_temperature"],
+        )
+        self.assertEqual(services.calls[0][2]["hvac_mode"], "heat")
+
+    async def test_scalar_without_ensure_on_still_requires_current_feature(self) -> None:
+        manager, services = self._manager(
+            "off",
+            ["off", "heat", "cool"],
+            extra_attributes={"supported_features": 392},
+        )
+
+        with self.assertRaisesRegex(ValueError, "single temperature target"):
+            await manager.async_set_temperature(
+                "climate.room",
+                20,
+                ensure_on=False,
+            )
+
+        self.assertEqual(services.calls, [])
+
+    async def test_keep_range_off_chooses_heat_cool_before_range(self) -> None:
+        manager, services = self._manager(
+            "off",
+            ["off", "heat", "heat_cool"],
+            extra_attributes={"supported_features": 394},
+        )
+
+        await manager.async_set_temperature_range(
+            "climate.room",
+            20,
+            24,
+            ensure_on=True,
+        )
+
+        self.assertEqual(
+            [call[1] for call in services.calls],
+            ["set_hvac_mode", "set_temperature"],
+        )
+        self.assertEqual(services.calls[0][2]["hvac_mode"], "heat_cool")
 
     async def test_range_target_uses_exact_home_assistant_payload(self) -> None:
         manager, services = self._manager(

@@ -121,6 +121,55 @@ describe("schedule actions controller", () => {
     }], "climate.office")).toContain("unsupportedSingleTargetForClimate");
   });
 
+  it("accepts an explicit scalar mode while an off climate hides its target feature", () => {
+    const { state } = host();
+    (state as any).hass = {
+      states: {
+        "climate.office": {
+          state: "off",
+          attributes: {
+            friendly_name: "Office",
+            hvac_modes: ["off", "heat", "cool", "heat_cool"],
+            supported_features: 392,
+          },
+        },
+      },
+    };
+    state._climateSupportedModes = () => ["off", "heat", "cool", "heat_cool"];
+
+    expect(unsupportedModeError(state as any, [{
+      action: ACTION_SET_TEMPERATURE,
+      start: "00:00",
+      temperature: 20,
+      hvac_mode: "heat",
+    }], "climate.office")).toBeUndefined();
+  });
+
+  it("keeps scalar-only heat/cool climates compatible", () => {
+    const { state } = host();
+    (state as any).hass = {
+      states: {
+        "climate.office": {
+          state: "heat_cool",
+          attributes: {
+            friendly_name: "Office",
+            hvac_modes: ["off", "heat_cool"],
+            supported_features: 1,
+            temperature: 20,
+          },
+        },
+      },
+    };
+    state._climateSupportedModes = () => ["off", "heat_cool"];
+
+    expect(unsupportedModeError(state as any, [{
+      action: ACTION_SET_TEMPERATURE,
+      start: "00:00",
+      temperature: 20,
+      hvac_mode: "heat_cool",
+    }], "climate.office")).toBeUndefined();
+  });
+
   it("saves the selected day through the API and clears dirty state", async () => {
     const { api, state } = host();
 

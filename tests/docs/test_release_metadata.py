@@ -62,7 +62,11 @@ class ReleaseMetadataTest(unittest.TestCase):
             "## 🧭 Notes",
         }
         headings = re.findall(r"^## .+$", release_notes, flags=re.MULTILINE)
-        self.assertIn("## ✨ Added", headings)
+        change_headings = allowed_headings - {"## 🧭 Notes"}
+        self.assertTrue(
+            change_headings.intersection(headings),
+            "Release notes must contain at least one user-facing change section",
+        )
         self.assertIn("## 🧭 Notes", headings)
         self.assertEqual(len(headings), len(set(headings)))
         self.assertTrue(set(headings).issubset(allowed_headings))

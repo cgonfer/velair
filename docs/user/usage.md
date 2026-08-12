@@ -180,7 +180,7 @@ show_comfort_co2: true
 
 Velair uses the selected climate entity capabilities when editing a schedule. Unsupported modes are not offered for that climate, and temperatures are constrained to the climate entity range.
 
-`Keep current mode` still applies the target and any climate options in the block. If the climate is already running, Velair preserves its current HVAC mode and checks that it accepts the selected target type. If it is off, Velair starts it using the first compatible mode other than `off`.
+`Keep current mode` still applies the target and any climate options in the block. A Keep block can be saved when the climate advertises at least one non-off mode compatible with its target type; this does not change merely because the device is temporarily off while the schedule is edited. Some integrations only advertise their single-temperature target feature after a mode starts, so Velair selects the compatible mode before sending that target and lets the Home Assistant service report any device-specific failure. If the climate is already running, Velair preserves its current HVAC mode. Native ranges still require explicit range support, and Velair never converts a single target into a range or a range into a single target.
 
 Velair blocks contain either one target temperature or a complete lower and upper target range. The editor uses the capabilities published by the climate entity and defaults new `heat_cool` blocks to a range when supported. A range is shown as, for example, `20–24 °C`. Velair never invents a range from one temperature and rejects incomplete, inverted, or incompatible targets before sending a command.
 

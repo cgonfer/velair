@@ -1299,7 +1299,66 @@ describe("profiles view", () => {
     ) as HTMLButtonElement;
     const error = element.shadowRoot?.querySelector(".profile-schedule-error");
     expect(save.disabled).toBe(true);
-    expect(error?.textContent).toContain("Office does not support Cool at 08:00");
+    expect(error?.textContent).toContain("Office does not support Cool on Monday at 08:00");
+
+    element.remove();
+  });
+
+  it("allows a midnight Heat Profile block while an off climate hides target support", async () => {
+    const scheduled = {
+      ...data,
+      zones: {
+        "climate.office": { schedule: {} },
+      },
+      global: { mode: "running", active_profile_ids: [] },
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+      profiles: [{
+        key: "winter",
+        name: "Winter",
+        icon: "mdi:radiator",
+        zones: {
+          "climate.office": {
+            behavior: "schedule",
+            schedule: {
+              monday: [{
+                start: "00:00",
+                action: "set_temperature",
+                temperature: 20,
+                hvac_mode: "heat",
+              }],
+            },
+          },
+        },
+      }],
+    } as unknown as ScheduleResponse;
+    const element = new VelairProfilesView();
+    element.hass = {
+      language: "en",
+      states: {
+        "climate.office": {
+          state: "off",
+          attributes: {
+            friendly_name: "Office",
+            hvac_modes: ["off", "heat", "cool", "dry", "fan_only"],
+            supported_features: 392,
+            min_temp: 10,
+            max_temp: 31,
+            target_temp_step: 0.5,
+          },
+        },
+      },
+    } as never;
+    element.data = scheduled;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const save = element.shadowRoot?.querySelector(
+      ".profile-editor .template-detail-actions button",
+    ) as HTMLButtonElement;
+    const error = element.shadowRoot?.querySelector(".profile-schedule-error");
+    expect(save.disabled).toBe(false);
+    expect(error).toBeNull();
 
     element.remove();
   });

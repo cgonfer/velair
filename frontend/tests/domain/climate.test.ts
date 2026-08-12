@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  climateTargetCompatibleForConfiguration,
   climateTargetCompatibleForEnsureOn,
   effectiveClimateHvacModeForEnsureOn,
   climateRequiresRangeTarget,
@@ -41,6 +42,26 @@ describe("climate target capabilities", () => {
     expect(climateRequiresRangeTarget(state, "heat_cool")).toBe(true);
     expect(climateRequiresRangeTarget(state, "heat")).toBe(false);
     expect(climateRequiresRangeTarget({ ...state, state: "auto" })).toBe(false);
+    expect(climateRequiresRangeTarget({
+      ...state,
+      attributes: { supported_features: 1, temperature: 20 },
+    })).toBe(false);
+  });
+
+  it("uses advertised modes while an off climate hides its scalar target feature", () => {
+    const off = {
+      state: "off",
+      attributes: {
+        supported_features: 392,
+        hvac_modes: ["off", "heat", "cool", "heat_cool"],
+      },
+    } as any;
+
+    expect(climateTargetCompatibleForConfiguration(off, "scalar", "heat")).toBe(true);
+    expect(climateTargetCompatibleForConfiguration(off, "scalar")).toBe(true);
+    expect(effectiveClimateHvacModeForEnsureOn(off, "", "scalar")).toBe("heat");
+    expect(climateTargetCompatibleForConfiguration(off, "scalar", "heat_cool")).toBe(false);
+    expect(climateTargetCompatibleForConfiguration(off, "range", "heat")).toBe(false);
   });
 
   it("resolves Keep like ensure_on for on and off climates", () => {
@@ -91,5 +112,41 @@ describe("climate target capabilities", () => {
     } as any;
     expect(climateTargetCompatibleForEnsureOn(rangeWithoutHeatCool, "range")).toBe(false);
     expect(climateTargetCompatibleForEnsureOn(scalarWithoutScalarMode, "scalar")).toBe(false);
+    expect(climateTargetCompatibleForEnsureOn({
+      state: "off",
+      attributes: { supported_features: 1, hvac_modes: ["off", "heat_cool"] },
+    } as any, "range")).toBe(false);
+  });
+
+  it("keeps scalar heat/cool targets valid on scalar-only entities", () => {
+    const state = {
+      state: "heat_cool",
+      attributes: {
+        supported_features: 1,
+        temperature: 20,
+        hvac_modes: ["off", "heat_cool"],
+      },
+    } as any;
+
+    expect(climateTargetCompatibleForEnsureOn(state, "scalar")).toBe(true);
+    expect(climateTargetCompatibleForConfiguration(state, "scalar", "heat_cool")).toBe(true);
+  });
+
+  it.each([
+    ["scalar Keep ignores active heat_cool", "heat_cool", 3, "", "scalar", true],
+    ["range Keep ignores active heat", "heat", 3, "", "range", true],
+    ["scalar explicit heat", "heat_cool", 3, "heat", "scalar", true],
+    ["scalar explicit heat_cool", "heat", 3, "heat_cool", "scalar", false],
+    ["range explicit heat_cool", "heat", 3, "heat_cool", "range", true],
+    ["range explicit cool", "heat_cool", 3, "cool", "range", false],
+  ] as const)("validates stored targets: %s", (_label, activeMode, features, requested, target, expected) => {
+    const state = {
+      state: activeMode,
+      attributes: {
+        supported_features: features,
+        hvac_modes: ["off", "heat", "cool", "heat_cool"],
+      },
+    } as any;
+    expect(climateTargetCompatibleForConfiguration(state, target, requested)).toBe(expected);
   });
 });

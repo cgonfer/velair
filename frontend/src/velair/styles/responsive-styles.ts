@@ -143,8 +143,15 @@ export const responsiveStyles = css`
   @container (max-width: 600px) {
     .draft-list {
       column-gap: 3px;
-      grid-template-columns: minmax(58px, 0.8fr) minmax(70px, 1.05fr) minmax(64px, 0.75fr) 30px 30px;
+      grid-template-columns: minmax(88px, 0.9fr) minmax(64px, 1fr) minmax(58px, 0.7fr) 30px 30px;
       padding: 8px;
+    }
+
+    .editable-block input[type="time"] {
+      direction: ltr;
+      font-size: 12px;
+      min-width: 88px;
+      padding-inline: 3px;
     }
 
     .temperature-range-control {
@@ -322,8 +329,15 @@ export const responsiveStyles = css`
 
     .draft-list {
       column-gap: 3px;
-      grid-template-columns: minmax(58px, 0.8fr) minmax(70px, 1.05fr) minmax(64px, 0.75fr) 30px 30px;
+      grid-template-columns: minmax(88px, 0.9fr) minmax(64px, 1fr) minmax(58px, 0.7fr) 30px 30px;
       padding: 8px;
+    }
+
+    .editable-block input[type="time"] {
+      direction: ltr;
+      font-size: 12px;
+      min-width: 88px;
+      padding-inline: 3px;
     }
 
     .temperature-range-control {

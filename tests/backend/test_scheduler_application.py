@@ -7634,6 +7634,78 @@ class VelairSchedulerTemperatureRangeTest(unittest.IsolatedAsyncioTestCase):
             self.hass, self.data, self.climate, async_save
         )
 
+    async def test_resume_applies_explicit_heat_when_off_climate_hides_scalar_feature(self) -> None:
+        schedule = empty_week_schedule()
+        schedule["tuesday"] = [
+            {
+                "start": "00:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 20,
+                "hvac_mode": "heat",
+            }
+        ]
+        self.climate.current_hvac_modes[self.entity_id] = "off"
+        self.climate.single_temperature_support[(self.entity_id, "heat")] = False
+        await self.scheduler.async_set_profile(
+            {
+                "key": "melview",
+                "name": "Melview",
+                "color": "#336699",
+                "zones": {
+                    self.entity_id: {
+                        "behavior": "schedule",
+                        "schedule": schedule,
+                    }
+                },
+            }
+        )
+        await self.scheduler.async_activate_profile("melview")
+        self.climate.calls.clear()
+        self.data["global_"]["mode"] = MODE_PAUSED
+
+        await self.scheduler.async_set_mode(MODE_AUTO, apply_current_schedule=True)
+
+        self.assertIn(
+            ("set_temperature", self.entity_id, 20.0, True, "heat"),
+            self.climate.calls,
+        )
+
+    async def test_profile_scalar_schedule_can_be_saved_while_off_feature_is_hidden(self) -> None:
+        schedule = empty_week_schedule()
+        schedule["tuesday"] = [
+            {
+                "start": "00:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 20,
+                "hvac_mode": "heat",
+            }
+        ]
+        self.climate.current_hvac_modes[self.entity_id] = "off"
+        self.climate.single_temperature_support[(self.entity_id, "heat")] = False
+
+        await self.scheduler.async_set_profile(
+            {
+                "key": "melview",
+                "name": "Melview",
+                "color": "#336699",
+                "zones": {
+                    self.entity_id: {
+                        "behavior": "schedule",
+                        "schedule": schedule,
+                    }
+                },
+            }
+        )
+
+        stored = next(
+            profile for profile in self.data["profiles"]
+            if profile["key"] == "melview"
+        )
+        block = stored["zones"][self.entity_id]["schedule"]["tuesday"][0]
+        self.assertEqual(block["start"], "00:00")
+        self.assertEqual(block["temperature"], 20.0)
+        self.assertEqual(block["hvac_mode"], "heat")
+
     async def test_saved_range_is_snapped_and_applied_as_range(self) -> None:
         await self.scheduler.async_set_daily_schedule(
             self.entity_id,

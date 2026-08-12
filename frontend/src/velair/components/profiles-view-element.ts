@@ -23,8 +23,7 @@ import {
   climateFanModeOptions,
   climateHumidityLimits,
   climatePresetModeOptions,
-  climateRequiresRangeTarget,
-  climateTargetCompatibleForEnsureOn,
+  climateTargetCompatibleForConfiguration,
   climateSupportedModes,
   climateSupportsRangeTarget,
   climateSupportsSingleTarget,
@@ -1492,14 +1491,14 @@ export class VelairProfilesView extends LitElement {
     const name = state?.attributes?.friendly_name ?? entityId;
     for (const block of blocks) {
       if (block.action === "turn_off") continue;
-      if (!climateTargetCompatibleForEnsureOn(
+      if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
+      if (!climateTargetCompatibleForConfiguration(
         state,
         draftBlockUsesRange(block) ? "range" : "scalar",
         block.hvac_mode,
       )) {
         return this._t("profileCloneDayIncompatibleTarget", { entity: name, start: block.start });
       }
-      if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
       const optionSets: Array<[string | undefined, string[]]> = [[block.fan_mode, climateFanModeOptions(state)], [block.preset_mode, climatePresetModeOptions(state)], [block.swing_mode, climateSwingModeOptions(state)], [block.swing_horizontal_mode, climateSwingHorizontalModeOptions(state)]];
       if (optionSets.some(([value, options]) => value && !options.includes(value))) return this._t("profileCloneDayIncompatibleOptions", { entity: name, start: block.start });
       if (String(block.humidity ?? "").trim()) {
@@ -1629,20 +1628,12 @@ export class VelairProfilesView extends LitElement {
       const state = this.hass?.states?.[entityId];
       for (const weekday of WEEKDAYS) {
         const blocks = zone.schedule[weekday] ?? [];
-        const unsupportedRange = blocks.find((block) =>
-          draftBlockUsesRange(block) && !climateSupportsRangeTarget(state));
-        if (unsupportedRange) {
-          return this._t("unsupportedRangeTargetForClimate", {
-            entity: state?.attributes?.friendly_name ?? entityId,
-            start: unsupportedRange.start,
-          });
-        }
         const unsupportedRangeMode = blocks.find((block) =>
           draftBlockUsesRange(block)
           && block.hvac_mode !== undefined
           && block.hvac_mode !== "heat_cool");
         if (unsupportedRangeMode?.hvac_mode) {
-          return this._t("unsupportedModeForClimate", {
+          return this._t("unsupportedModeForClimateOnWeekday", {
             entity: state?.attributes?.friendly_name ?? entityId,
             mode: dictionaryLabel(
               languageFromHass(this.hass),
@@ -1650,31 +1641,50 @@ export class VelairProfilesView extends LitElement {
               unsupportedRangeMode.hvac_mode,
             ),
             start: unsupportedRangeMode.start,
+            weekday: weekdayName(languageFromHass(this.hass), weekday),
+          });
+        }
+        const unsupportedRange = blocks.find((block) =>
+          draftBlockUsesRange(block)
+          && !climateTargetCompatibleForConfiguration(
+            state,
+            "range",
+            block.hvac_mode,
+          ));
+        if (unsupportedRange) {
+          return this._t("unsupportedRangeTargetForClimateOnWeekday", {
+            entity: state?.attributes?.friendly_name ?? entityId,
+            start: unsupportedRange.start,
+            weekday: weekdayName(languageFromHass(this.hass), weekday),
+          });
+        }
+        const unsupported = firstUnsupportedModeBlock(blocks, climateSupportedModes(state));
+        if (unsupported?.hvac_mode) {
+          return this._t("unsupportedModeForClimateOnWeekday", {
+            entity: state?.attributes?.friendly_name ?? entityId,
+            mode: dictionaryLabel(
+              languageFromHass(this.hass),
+              "hvacModes",
+              unsupported.hvac_mode,
+            ),
+            start: unsupported.start,
+            weekday: weekdayName(languageFromHass(this.hass), weekday),
           });
         }
         const unsupportedScalar = blocks.find((block) =>
           block.action !== "turn_off" && !draftBlockUsesRange(block)
-          && (
-            !climateSupportsSingleTarget(state)
-            || climateRequiresRangeTarget(state, block.hvac_mode)
+          && !climateTargetCompatibleForConfiguration(
+            state,
+            "scalar",
+            block.hvac_mode,
           ));
         if (unsupportedScalar) {
-          return this._t("unsupportedSingleTargetForClimate", {
+          return this._t("unsupportedSingleTargetForClimateOnWeekday", {
             entity: state?.attributes?.friendly_name ?? entityId,
             start: unsupportedScalar.start,
+            weekday: weekdayName(languageFromHass(this.hass), weekday),
           });
         }
-        const unsupported = firstUnsupportedModeBlock(blocks, climateSupportedModes(state));
-        if (!unsupported?.hvac_mode) continue;
-        return this._t("unsupportedModeForClimate", {
-          entity: state?.attributes?.friendly_name ?? entityId,
-          mode: dictionaryLabel(
-            languageFromHass(this.hass),
-            "hvacModes",
-            unsupported.hvac_mode,
-          ),
-          start: unsupported.start,
-        });
       }
     }
     return undefined;

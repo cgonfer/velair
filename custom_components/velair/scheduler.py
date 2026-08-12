@@ -1026,16 +1026,28 @@ class VelairScheduler:
             target = temperature_target_from_mapping(block)
             for temperature in target.values():
                 self.ensure_temperature_in_limits(entity_id, float(temperature))
-            validate_target = getattr(
-                self._climate_manager, "validate_temperature_target", None
+            validate_configured_target = getattr(
+                self._climate_manager,
+                "validate_configured_temperature_target",
+                None,
             )
-            if callable(validate_target):
-                validate_target(
+            if callable(validate_configured_target):
+                validate_configured_target(
                     entity_id,
                     range_target=ATTR_TARGET_TEMP_LOW in target,
                     hvac_mode=block.get("hvac_mode"),
-                    ensure_on=True,
                 )
+            else:
+                validate_target = getattr(
+                    self._climate_manager, "validate_temperature_target", None
+                )
+                if callable(validate_target):
+                    validate_target(
+                        entity_id,
+                        range_target=ATTR_TARGET_TEMP_LOW in target,
+                        hvac_mode=block.get("hvac_mode"),
+                        ensure_on=True,
+                    )
             if ATTR_TARGET_TEMP_LOW in target:
                 explicit_mode = block.get("hvac_mode")
                 if explicit_mode is not None and explicit_mode not in RANGE_TARGET_HVAC_MODES:
@@ -1043,14 +1055,15 @@ class VelairScheduler:
                         f"{entity_id} cannot use a temperature range in "
                         f"{explicit_mode} mode"
                     )
-                supports_range = getattr(
-                    self._climate_manager, "supports_temperature_range_target", None
-                )
-                if not callable(supports_range) or not supports_range(entity_id):
-                    raise ValueError(
-                        f"{entity_id} does not support a temperature range target"
+                if not callable(validate_configured_target):
+                    supports_range = getattr(
+                        self._climate_manager, "supports_temperature_range_target", None
                     )
-            else:
+                    if not callable(supports_range) or not supports_range(entity_id):
+                        raise ValueError(
+                            f"{entity_id} does not support a temperature range target"
+                        )
+            elif not callable(validate_configured_target):
                 supports_single = getattr(
                     self._climate_manager, "supports_single_temperature_target", None
                 )

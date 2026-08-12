@@ -90,8 +90,8 @@ class ClimateManager:
         )
         if hvac_mode is not None:
             await self.async_set_hvac_mode(entity_id, hvac_mode)
-        elif ensure_on:
-            await self.async_ensure_on(entity_id, hvac_mode=hvac_mode)
+        elif ensure_on and self._current_hvac_mode(entity_id) == HVAC_MODE_OFF:
+            await self.async_ensure_on(entity_id, range_target=False)
 
         await self._hass.services.async_call(
             CLIMATE_DOMAIN,
@@ -139,7 +139,7 @@ class ClimateManager:
         )
         if hvac_mode is not None:
             await self.async_set_hvac_mode(entity_id, hvac_mode)
-        elif ensure_on:
+        elif ensure_on and self._current_hvac_mode(entity_id) == HVAC_MODE_OFF:
             await self.async_ensure_on(entity_id, range_target=True)
         await self._hass.services.async_call(
             CLIMATE_DOMAIN,
@@ -362,7 +362,13 @@ class ClimateManager:
                 if mode in RANGE_HVAC_MODES:
                     return mode
                 continue
-            if not self._requires_temperature_range(entity_id, mode):
+            if (
+                not self._requires_temperature_range(entity_id, mode)
+                and (
+                    mode not in RANGE_HVAC_MODES
+                    or self._supports_target_feature(entity_id, range_target=False)
+                )
+            ):
                 return mode
         return None if range_target else (non_off_modes[0] if non_off_modes else None)
 
@@ -409,19 +415,9 @@ class ClimateManager:
         effective_hvac_mode: str | None,
     ) -> bool:
         """Return whether one target cannot represent the active climate range."""
-        if effective_hvac_mode not in RANGE_HVAC_MODES:
-            return False
-        state = self._hass.states.get(entity_id)
-        attributes = state.attributes if state is not None else {}
-        try:
-            supported_features = int(attributes.get("supported_features", 0))
-        except (TypeError, ValueError):
-            supported_features = 0
-        if supported_features:
-            return bool(supported_features & FEATURE_TARGET_TEMPERATURE_RANGE)
         return (
-            ATTR_TARGET_TEMP_LOW in attributes
-            and ATTR_TARGET_TEMP_HIGH in attributes
+            effective_hvac_mode in RANGE_HVAC_MODES
+            and self._supports_target_feature(entity_id, range_target=True)
         )
 
     def supports_temperature_range_target(self, entity_id: str) -> bool:
@@ -445,24 +441,94 @@ class ClimateManager:
             ensure_on=ensure_on,
             range_target=range_target,
         )
+        feature_may_be_hidden_while_off = (
+            not range_target
+            and ensure_on
+            and self._current_hvac_mode(entity_id) == HVAC_MODE_OFF
+            and effective_mode not in RANGE_HVAC_MODES
+        )
+        if (
+            ensure_on
+            and effective_mode in (None, HVAC_MODE_OFF)
+            and self.supported_hvac_modes(entity_id)
+        ):
+            target_kind = "range" if range_target else "single temperature"
+            raise ValueError(
+                f"{entity_id} has no compatible non-off mode for a "
+                f"{target_kind} target"
+            )
         if range_target:
-            self._validate_target_feature(entity_id, range_target=True)
-            if ensure_on and effective_mode in (None, HVAC_MODE_OFF):
-                raise ValueError(
-                    f"{entity_id} has no compatible non-off mode for a range target"
-                )
             if effective_mode not in RANGE_HVAC_MODES:
                 raise ValueError(
                     f"{entity_id} cannot apply a temperature range while in "
                     f"{effective_mode or 'unknown'} mode"
                 )
+            self._validate_target_feature(entity_id, range_target=True)
             return
         if self._requires_temperature_range(entity_id, effective_mode):
             raise ValueError(
                 f"{entity_id} requires separate target_temp_low and "
                 f"target_temp_high values in {effective_mode} mode"
             )
-        self._validate_target_feature(entity_id, range_target=False)
+        if not feature_may_be_hidden_while_off:
+            self._validate_target_feature(entity_id, range_target=False)
+
+    def validate_configured_temperature_target(
+        self,
+        entity_id: str,
+        *,
+        range_target: bool,
+        hvac_mode: str | None,
+    ) -> None:
+        """Validate a stored target without depending on transient climate state.
+
+        An explicit mode must itself accept the target shape. Keep is valid when
+        the entity advertises at least one compatible non-off mode; runtime
+        delivery validates the actual effective mode again before applying it.
+        """
+        supported_modes = self.supported_hvac_modes(entity_id)
+        if hvac_mode is not None:
+            if hvac_mode not in supported_modes:
+                raise ValueError(
+                    f"HVAC mode {hvac_mode} is not supported by {entity_id}"
+                )
+            candidate_modes = [hvac_mode]
+        else:
+            candidate_modes = [
+                mode for mode in supported_modes if mode != HVAC_MODE_OFF
+            ]
+
+        if range_target:
+            if not any(mode in RANGE_HVAC_MODES for mode in candidate_modes):
+                raise ValueError(
+                    f"{entity_id} has no compatible non-off mode for a range target"
+                )
+            self._validate_target_feature(entity_id, range_target=True)
+            return
+
+        if not any(
+            mode != HVAC_MODE_OFF
+            and not self._requires_temperature_range(entity_id, mode)
+            for mode in candidate_modes
+        ):
+            raise ValueError(
+                f"{entity_id} has no compatible non-off mode for a single "
+                "temperature target"
+            )
+        scalar_feature_may_be_hidden_while_off = (
+            self._current_hvac_mode(entity_id) == HVAC_MODE_OFF
+            and any(
+                mode != HVAC_MODE_OFF and mode not in RANGE_HVAC_MODES
+                for mode in candidate_modes
+            )
+        )
+        if not scalar_feature_may_be_hidden_while_off:
+            self._validate_target_feature(entity_id, range_target=False)
+
+    def _current_hvac_mode(self, entity_id: str) -> str | None:
+        """Return the current Home Assistant state for one climate entity."""
+        state = self._hass.states.get(entity_id)
+        return state.state if state is not None else None
 
     def _target_features(self, entity_id: str) -> int:
         """Return Home Assistant climate target feature flags."""
