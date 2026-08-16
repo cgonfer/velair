@@ -353,7 +353,10 @@ class ZoneOverrideStateSensor(_ZoneSensor):
         return _compact_attributes(
             {
                 key: status.get(key)
-                for key in ("started_at", "until", "action")
+                for key in (
+                    "started_at", "until", "action", "pause_id",
+                    "pause_count", "pause_ids", "manual",
+                )
             }
         )
 

@@ -9,6 +9,7 @@ export function dateLocale(language: SupportedLanguage): string {
     es: "es-ES",
     fr: "fr-FR",
     nl: "nl-NL",
+    ru: "ru-RU",
   };
   return locales[language] ?? "en";
 }

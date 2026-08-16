@@ -190,7 +190,7 @@ Velair stores temporary modes as timestamps:
 
 - Global pause suspends every schedule until it expires or the scheduler is resumed.
 - Zone boost stores an override on one zone and suppresses scheduled events only for that zone until the boost expires.
-- Zone pause stores an override on one zone and suppresses scheduled events only for that zone until it expires or that zone is resumed. A zone pause may optionally turn the climate off when it starts.
+- Zone pause stores one or more independent reasons on a zone and suppresses scheduled events until the final reason expires or is removed. A reason may optionally turn the climate off. Automated callers can attach a `pause_id`; an identified resume removes only the matching reason, while legacy/manual calls without an ID retain full resume authority. See [Pause, Stop, And Resume](../user/usage.md#pause-stop-and-resume) for the public service contract.
 
 ## Climate Application Rules
 
@@ -207,7 +207,7 @@ Blocking Home Assistant calls expose invocation failures; generation
 invalidation and an async lock prevent obsolete or overlapping commits.
 Availability recovery is state-event driven, and every delayed attempt resolves
 current scheduler intent rather than retaining an old payload. See
-[Climate delivery coordination](climate-delivery.md) and ADR 0015.
+[Climate delivery coordination](climate-delivery.md).
 
 ## Frontend Contract
 

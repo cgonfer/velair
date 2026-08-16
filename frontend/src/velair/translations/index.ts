@@ -1,9 +1,9 @@
-import type { TranslationDictionary } from "./types";
+import type { PartialTranslationDictionary, TranslationDictionary } from "./types";
 
 export { translationTemplate } from "./template";
-export type { SupportedLanguage, TranslationDictionary, TranslationKey } from "./types";
+export type { PartialTranslationDictionary, SupportedLanguage, TranslationDictionary, TranslationKey } from "./types";
 
-type TranslationModule = Record<string, TranslationDictionary>;
+type TranslationModule = Record<string, PartialTranslationDictionary>;
 
 const translationModules = import.meta.glob<TranslationModule>("./*.ts", {
   eager: true,
@@ -18,4 +18,4 @@ export const TRANSLATIONS = Object.fromEntries(
     .filter(([language, dictionary]) =>
       Boolean(language && dictionary && language !== "index" && language !== "template" && language !== "types"),
     ),
-) as Record<string, TranslationDictionary>;
+) as Record<string, PartialTranslationDictionary> & { en: TranslationDictionary };

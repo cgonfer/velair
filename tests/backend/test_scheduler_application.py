@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import sys
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 from zoneinfo import ZoneInfo
 
 from .helpers import (
@@ -1335,6 +1335,12 @@ class VelairSchedulerSavedScheduleTest(unittest.IsolatedAsyncioTestCase):
             "started_at": NOW.isoformat(),
             "action": ZONE_PAUSE_ACTION_TURN_OFF,
         }
+        self.data["zones"][self.entity_id]["pauses"] = [
+            {
+                "started_at": NOW.isoformat(),
+                "action": ZONE_PAUSE_ACTION_TURN_OFF,
+            }
+        ]
         self.data["zones"][self.entity_id]["override"] = override
 
         async def fail_save() -> None:
@@ -1750,6 +1756,15 @@ class VelairSchedulerSavedScheduleTest(unittest.IsolatedAsyncioTestCase):
                 "started_at": NOW.isoformat(),
                 "until": None,
                 "action": "none",
+                "pause_count": 1,
+                "pause_ids": [],
+                "manual": True,
+                "pauses": [
+                    {
+                        "started_at": NOW.isoformat(),
+                        "action": "none",
+                    }
+                ],
             },
         )
         self.assertIn(
@@ -1766,6 +1781,606 @@ class VelairSchedulerSavedScheduleTest(unittest.IsolatedAsyncioTestCase):
             ),
             self.hass.bus.events,
         )
+
+    async def test_owned_zone_pause_is_persisted_and_exposed(self) -> None:
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id=" window_guard ",
+        )
+
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["pause_id"],
+            "window_guard",
+        )
+        self.assertEqual(
+            self.scheduler.get_zone_override_status(self.entity_id)["pause_id"],
+            "window_guard",
+        )
+        self.assertIn(
+            (
+                EVENT_VELAIR,
+                {
+                    "domain": "velair",
+                    "event": EVENT_TYPE_ZONE_PAUSED,
+                    "entity_id": self.entity_id,
+                    "started_at": NOW.isoformat(),
+                    "until": None,
+                    "action": "none",
+                    "pause_id": "window_guard",
+                },
+            ),
+            self.hass.bus.events,
+        )
+
+    async def test_owned_pause_upserts_without_replacing_other_reasons(
+        self,
+    ) -> None:
+        clear_assist = AsyncMock()
+        invalidate_delivery = Mock()
+        self.scheduler._async_clear_room_sensor_assist = clear_assist
+        self.scheduler._invalidate_climate_delivery = invalidate_delivery
+
+        for current_pause_id in (None, "same_owner", "other_owner"):
+            with self.subTest(current_pause_id=current_pause_id):
+                override = {
+                    "type": "pause",
+                    "started_at": "2026-05-19T17:00:00+00:00",
+                    "action": "none",
+                }
+                if current_pause_id is not None:
+                    override["pause_id"] = current_pause_id
+                self.data["zones"][self.entity_id]["override"] = override.copy()
+                self.data["zones"][self.entity_id]["pauses"] = [
+                    {key: value for key, value in override.items() if key != "type"}
+                ]
+                previous_save_count = self.save_count
+                previous_event_count = len(self.hass.bus.events)
+
+                await self.scheduler.async_pause_zone(
+                    self.entity_id,
+                    until="2026-05-19T22:00:00+00:00",
+                    action=ZONE_PAUSE_ACTION_TURN_OFF,
+                    pause_id=(
+                        "same_owner"
+                        if current_pause_id == "same_owner"
+                        else "new_owner"
+                    ),
+                )
+
+                reasons = self.data["zones"][self.entity_id]["pauses"]
+                expected_count = 1 if current_pause_id == "same_owner" else 2
+                self.assertEqual(len(reasons), expected_count)
+                self.assertEqual(self.save_count, previous_save_count + 1)
+                self.assertGreater(len(self.hass.bus.events), previous_event_count)
+
+        self.assertEqual(clear_assist.await_count, 3)
+        self.assertEqual(invalidate_delivery.call_count, 3)
+
+    async def test_manual_pause_can_replace_owned_pause(self) -> None:
+        self.data["zones"][self.entity_id]["override"] = {
+            "type": "pause",
+            "started_at": "2026-05-19T17:00:00+00:00",
+            "action": "none",
+            "pause_id": "window_guard",
+        }
+
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            action=ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+
+        override = self.data["zones"][self.entity_id]["override"]
+        self.assertEqual(override["action"], ZONE_PAUSE_ACTION_TURN_OFF)
+        self.assertNotIn("pause_id", override)
+
+    async def test_concurrent_owned_pauses_are_serialized(self) -> None:
+        save_started = asyncio.Event()
+        allow_save = asyncio.Event()
+
+        async def blocking_save() -> None:
+            self.save_count += 1
+            save_started.set()
+            await allow_save.wait()
+
+        self.scheduler._async_save_data = blocking_save
+        first = asyncio.create_task(
+            self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="first_owner",
+            )
+        )
+        await save_started.wait()
+        second = asyncio.create_task(
+            self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="second_owner",
+            )
+        )
+        await asyncio.sleep(0)
+        self.assertFalse(second.done())
+
+        allow_save.set()
+        await asyncio.gather(first, second)
+
+        self.assertEqual(self.save_count, 2)
+        self.assertEqual(
+            [item["pause_id"] for item in self.data["zones"][self.entity_id]["pauses"]],
+            ["first_owner", "second_owner"],
+        )
+
+    async def test_selective_resume_keeps_other_pause_without_reapplying_schedule(self) -> None:
+        await self.scheduler.async_pause_zone(self.entity_id, pause_id="window")
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="occupancy",
+            action=ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+        self.climate.calls.clear()
+
+        await self.scheduler.async_resume_zone(self.entity_id, pause_id="window")
+
+        self.assertEqual(
+            [item["pause_id"] for item in self.data["zones"][self.entity_id]["pauses"]],
+            ["occupancy"],
+        )
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["action"],
+            ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+        self.assertEqual(self.climate.calls, [])
+
+    async def test_manual_pause_reports_owned_reasons_it_replaces(self) -> None:
+        await self.scheduler.async_pause_zone(self.entity_id, pause_id="window")
+        await self.scheduler.async_pause_zone(self.entity_id, pause_id="occupancy")
+        self.hass.bus.events.clear()
+
+        await self.scheduler.async_pause_zone(self.entity_id)
+
+        removed = [
+            data
+            for event_type, data in self.hass.bus.events
+            if event_type == EVENT_VELAIR and data.get("event") == "zone_pause_removed"
+        ]
+        self.assertEqual(
+            {(item["pause_id"], item["reason"]) for item in removed},
+            {("window", "replaced"), ("occupancy", "replaced")},
+        )
+        added = [
+            data
+            for event_type, data in self.hass.bus.events
+            if event_type == EVENT_VELAIR and data.get("event") == "zone_pause_added"
+        ]
+        self.assertEqual(len(added), 1)
+        self.assertNotIn("pause_id", added[0])
+
+    async def test_same_pause_id_replay_is_noop_and_changed_reason_updates(self) -> None:
+        await self.scheduler.async_pause_zone(self.entity_id, pause_id="window")
+        saves = self.save_count
+        await self.scheduler.async_pause_zone(self.entity_id, pause_id="window")
+        self.assertEqual(self.save_count, saves)
+
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="window",
+            action=ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+        self.assertEqual(self.save_count, saves + 1)
+        self.assertEqual(len(self.data["zones"][self.entity_id]["pauses"]), 1)
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["pauses"][0]["action"],
+            ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+
+    async def test_additional_turn_off_reason_does_not_repeat_physical_off(self) -> None:
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="window",
+            action=ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+        self.assertEqual(self.climate.calls, [("turn_off", self.entity_id)])
+        self.climate.calls.clear()
+
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="occupancy",
+            action=ZONE_PAUSE_ACTION_TURN_OFF,
+        )
+
+        self.assertEqual(self.climate.calls, [])
+        self.assertEqual(len(self.data["zones"][self.entity_id]["pauses"]), 2)
+
+    async def test_expiry_removes_only_due_pause_reason(self) -> None:
+        self.data["zones"][self.entity_id]["pauses"] = [
+            {
+                "started_at": "2026-05-19T16:00:00+00:00",
+                "until": "2026-05-19T17:00:00+00:00",
+                "action": "none",
+                "pause_id": "window",
+            },
+            {
+                "started_at": "2026-05-19T16:30:00+00:00",
+                "until": "2026-05-19T19:00:00+00:00",
+                "action": "none",
+                "pause_id": "occupancy",
+            },
+        ]
+        self.data["zones"][self.entity_id]["override"] = {
+            "type": "pause",
+            "started_at": "2026-05-19T16:00:00+00:00",
+            "until": "2026-05-19T19:00:00+00:00",
+            "action": "none",
+        }
+
+        expired = await self.scheduler._async_clear_expired_zone_overrides(NOW)
+
+        self.assertEqual(expired, {})
+        self.assertEqual(
+            [item["pause_id"] for item in self.data["zones"][self.entity_id]["pauses"]],
+            ["occupancy"],
+        )
+
+    async def test_pause_waits_for_concurrent_boost_mutation(self) -> None:
+        self.climate.snapshots[self.entity_id] = {
+            "hvac_mode": "heat",
+            "temperature": 20,
+        }
+        save_started = asyncio.Event()
+        allow_save = asyncio.Event()
+
+        async def blocking_save() -> None:
+            self.save_count += 1
+            if self.save_count == 1:
+                save_started.set()
+                await allow_save.wait()
+
+        self.scheduler._async_save_data = blocking_save
+        boost = asyncio.create_task(
+            self.scheduler.async_set_zone_boost(
+                self.entity_id,
+                23,
+                "2026-05-19T20:00:00+00:00",
+                hvac_mode="heat",
+            )
+        )
+        await save_started.wait()
+        pause = asyncio.create_task(
+            self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="window_guard",
+            )
+        )
+        await asyncio.sleep(0)
+        self.assertFalse(pause.done())
+
+        allow_save.set()
+        await asyncio.gather(boost, pause)
+
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["pause_id"],
+            "window_guard",
+        )
+        self.assertTrue(
+            any(
+                event_type == EVENT_VELAIR
+                and data.get("event") == EVENT_TYPE_BOOST_ENDED
+                and data.get("reason") == "zone_paused"
+                for event_type, data in self.hass.bus.events
+            )
+        )
+
+    async def test_pause_waits_for_concurrent_boost_cancellation(self) -> None:
+        self.climate.snapshots[self.entity_id] = {
+            "hvac_mode": "heat",
+            "temperature": 20,
+        }
+        await self.scheduler.async_set_zone_boost(
+            self.entity_id,
+            23,
+            "2026-05-19T20:00:00+00:00",
+            hvac_mode="heat",
+        )
+        save_started = asyncio.Event()
+        allow_save = asyncio.Event()
+
+        async def blocking_save() -> None:
+            self.save_count += 1
+            save_started.set()
+            await allow_save.wait()
+
+        self.scheduler._async_save_data = blocking_save
+        cancel = asyncio.create_task(
+            self.scheduler.async_cancel_zone_boost(self.entity_id)
+        )
+        await save_started.wait()
+        pause = asyncio.create_task(
+            self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="window_guard",
+            )
+        )
+        await asyncio.sleep(0)
+        self.assertFalse(pause.done())
+
+        allow_save.set()
+        await asyncio.gather(cancel, pause)
+
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["pause_id"],
+            "window_guard",
+        )
+
+    async def test_expiry_rechecks_after_concurrent_pause_mutation(self) -> None:
+        self.data["zones"][self.entity_id]["override"] = {
+            "type": "pause",
+            "started_at": "2026-05-19T16:00:00+00:00",
+            "until": "2026-05-19T17:00:00+00:00",
+            "action": "none",
+        }
+        save_started = asyncio.Event()
+        allow_save = asyncio.Event()
+
+        async def blocking_save() -> None:
+            self.save_count += 1
+            save_started.set()
+            await allow_save.wait()
+
+        self.scheduler._async_save_data = blocking_save
+        pause = asyncio.create_task(
+            self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="window_guard",
+            )
+        )
+        await save_started.wait()
+        expiry = asyncio.create_task(
+            self.scheduler._async_clear_expired_zone_overrides(NOW)
+        )
+        await asyncio.sleep(0)
+        self.assertTrue(expiry.done())
+
+        allow_save.set()
+        await pause
+        expired = await expiry
+
+        self.assertEqual(expired, {})
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["pause_id"],
+            "window_guard",
+        )
+
+    async def test_expiry_waits_for_concurrent_resume_mutation(self) -> None:
+        self.data["zones"][self.entity_id]["override"] = {
+            "type": "pause",
+            "started_at": "2026-05-19T16:00:00+00:00",
+            "until": "2026-05-19T17:00:00+00:00",
+            "action": "none",
+        }
+        save_started = asyncio.Event()
+        allow_save = asyncio.Event()
+
+        async def blocking_save() -> None:
+            self.save_count += 1
+            save_started.set()
+            await allow_save.wait()
+
+        self.scheduler._async_save_data = blocking_save
+        resume = asyncio.create_task(
+            self.scheduler.async_resume_zone(
+                self.entity_id,
+                apply_current_schedule=False,
+            )
+        )
+        await save_started.wait()
+        expiry = asyncio.create_task(
+            self.scheduler._async_clear_expired_zone_overrides(NOW)
+        )
+        await asyncio.sleep(0)
+        self.assertTrue(expiry.done())
+
+        allow_save.set()
+        await resume
+        expired = await expiry
+
+        self.assertEqual(expired, {})
+        self.assertIsNone(self.data["zones"][self.entity_id]["override"])
+
+    async def test_expiry_does_not_wait_for_unrelated_zone_lock(self) -> None:
+        second_entity_id = "climate.second"
+        self.data["zones"][second_entity_id] = deepcopy(
+            self.data["zones"][self.entity_id]
+        )
+        self.data["zones"][second_entity_id]["override"] = {
+            "type": "pause",
+            "started_at": "2026-05-19T16:00:00+00:00",
+            "until": "2026-05-19T17:00:00+00:00",
+            "action": "none",
+        }
+        unrelated_lock = self.scheduler._zone_override_lock(self.entity_id)
+        await unrelated_lock.acquire()
+        try:
+            expired = await asyncio.wait_for(
+                self.scheduler._async_clear_expired_zone_overrides(NOW),
+                timeout=0.1,
+            )
+        finally:
+            unrelated_lock.release()
+
+        self.assertEqual(set(expired), {second_entity_id})
+        self.assertIsNone(self.data["zones"][second_entity_id]["override"])
+
+    async def test_expired_pause_does_not_apply_schedule_over_new_pause(self) -> None:
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 21,
+                "hvac_mode": "heat",
+            }
+        ]
+        self.data["zones"][self.entity_id]["override"] = {
+            "type": "pause",
+            "started_at": "2026-05-19T16:00:00+00:00",
+            "until": "2026-05-19T17:00:00+00:00",
+            "action": "none",
+        }
+        clear_expired = self.scheduler._async_clear_expired_zone_overrides
+
+        async def clear_then_establish_new_pause(now):
+            expired = await clear_expired(now)
+            await self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="window_guard",
+            )
+            return expired
+
+        self.scheduler._async_clear_expired_zone_overrides = (
+            clear_then_establish_new_pause
+        )
+
+        await self.scheduler._handle_timer(NOW)
+
+        self.assertEqual(self.climate.calls, [])
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["pause_id"],
+            "window_guard",
+        )
+
+    async def test_expired_boost_does_not_restore_state_over_new_pause(self) -> None:
+        self.data["zones"][self.entity_id]["override"] = {
+            "type": "boost",
+            "started_at": "2026-05-19T16:00:00+00:00",
+            "until": "2026-05-19T17:00:00+00:00",
+            "temperature": 23,
+            "previous_state": {"hvac_mode": "heat", "temperature": 20},
+        }
+        clear_expired = self.scheduler._async_clear_expired_zone_overrides
+
+        async def clear_then_establish_new_pause(now):
+            expired = await clear_expired(now)
+            await self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="window_guard",
+            )
+            return expired
+
+        self.scheduler._async_clear_expired_zone_overrides = (
+            clear_then_establish_new_pause
+        )
+
+        await self.scheduler._handle_timer(NOW)
+
+        self.assertEqual(self.climate.calls, [])
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["override"]["pause_id"],
+            "window_guard",
+        )
+
+    async def test_owned_resume_only_clears_matching_pause(self) -> None:
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="window_guard",
+        )
+        previous_save_count = self.save_count
+        previous_event_count = len(self.hass.bus.events)
+
+        await self.scheduler.async_resume_zone(
+            self.entity_id,
+            pause_id="other_owner",
+        )
+
+        self.assertIsNotNone(self.data["zones"][self.entity_id]["override"])
+        self.assertEqual(self.save_count, previous_save_count)
+        self.assertEqual(len(self.hass.bus.events), previous_event_count)
+
+        await self.scheduler.async_resume_zone(
+            self.entity_id,
+            apply_current_schedule=False,
+            pause_id="window_guard",
+        )
+
+        self.assertIsNone(self.data["zones"][self.entity_id]["override"])
+        self.assertIn(
+            (
+                EVENT_VELAIR,
+                {
+                    "domain": "velair",
+                    "event": EVENT_TYPE_ZONE_RESUMED,
+                    "entity_id": self.entity_id,
+                    "started_at": NOW.isoformat(),
+                    "until": None,
+                    "action": "none",
+                    "reason": "manual",
+                    "pause_id": "window_guard",
+                },
+            ),
+            self.hass.bus.events,
+        )
+
+    async def test_owned_resume_does_not_clear_manual_pause(self) -> None:
+        await self.scheduler.async_pause_zone(self.entity_id)
+        previous_save_count = self.save_count
+
+        await self.scheduler.async_resume_zone(
+            self.entity_id,
+            pause_id="window_guard",
+        )
+
+        self.assertIsNotNone(self.data["zones"][self.entity_id]["override"])
+        self.assertEqual(self.save_count, previous_save_count)
+
+    async def test_service_resume_uses_explicit_event_and_logbook_reason(self) -> None:
+        self.hass.services.logbook_enabled = True
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="window_guard",
+        )
+        self.hass.bus.events.clear()
+        self.hass.services.calls.clear()
+
+        await self.scheduler.async_resume_zone(
+            self.entity_id,
+            apply_current_schedule=False,
+            pause_id="window_guard",
+            reason="service",
+        )
+
+        resumed = [
+            event
+            for event in self.hass.bus.events
+            if event[1].get("event") == EVENT_TYPE_ZONE_RESUMED
+        ]
+        self.assertEqual(resumed[0][1]["reason"], "service")
+        self.assertEqual(
+            self.hass.services.calls[-1][2]["message"],
+            "Resumed climate.salon through a service or automation",
+        )
+
+    async def test_manual_resume_remains_compatible_with_owned_pause(self) -> None:
+        await self.scheduler.async_pause_zone(
+            self.entity_id,
+            pause_id="window_guard",
+        )
+
+        await self.scheduler.async_resume_zone(
+            self.entity_id,
+            apply_current_schedule=False,
+        )
+
+        self.assertIsNone(self.data["zones"][self.entity_id]["override"])
+
+    async def test_invalid_pause_id_is_rejected_before_side_effects(self) -> None:
+        clear_assist = AsyncMock()
+        self.scheduler._async_clear_room_sensor_assist = clear_assist
+
+        with self.assertRaises(ValueError):
+            await self.scheduler.async_pause_zone(
+                self.entity_id,
+                pause_id="invalid owner",
+            )
+
+        self.assertIsNone(self.data["zones"][self.entity_id]["override"])
+        self.assertEqual(self.save_count, 0)
+        clear_assist.assert_not_awaited()
 
     async def test_zone_pause_skips_current_schedule_application(self) -> None:
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [

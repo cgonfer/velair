@@ -26,8 +26,11 @@ Default immediately applies the default block that is active at that time.
 
 ## Configure A Profile
 
-Open the Profiles tab and use the add button to create an empty profile, then
-select it from the list to edit its color, icon, name, description, and zone behavior.
+Open **Schedules**, choose **Profile schedules**, and use the add button to
+create an empty Profile. Select it from the list to edit its color, icon, name,
+description, and thermostat behavior. The Profile workspace shows one selected
+thermostat at a time so the full editor remains usable on desktop, tablet, and
+mobile.
 The profile name is edited from the heading, beside the pencil icon. Its stable
 automation ID appears directly below the name and in the profile list so it can
 be copied into services, scripts, and automations without confusing it with the
@@ -44,9 +47,11 @@ its fixed color.
 For each managed climate, choose one behavior:
 
 - **Default schedule**: keep using that zone's regular weekly schedule.
-- **Alternate schedule**: use a complete weekly schedule stored in the profile.
-- **Pause**: stop scheduled changes and leave the climate as it is.
-- **Pause and turn off**: stop scheduled changes and turn the climate off.
+- **Profile schedule**: use a complete weekly schedule stored in the Profile.
+- **Pause** with **Leave thermostat unchanged**: stop scheduled changes and
+  leave the climate as it is.
+- **Pause** with **Turn thermostat off**: stop scheduled changes and turn the
+  climate off.
 
 Zones that are not configured in a profile continue using their default
 schedules. Schedule templates can be copied into profile days as editing aids,
@@ -55,12 +60,12 @@ also be cloned to one or more other weekdays in the same zone. The copied
 blocks keep their complete climate configuration, including supported HVAC,
 fan, preset, swing, and humidity options.
 
-From an edited Alternate schedule day, **Save as template** stores only a
+From an edited Profile schedule day, **Save as template** stores only a
 reusable template through the backend and leaves the unsaved Profile draft
 unchanged. To reuse the day in other managed climates, select them in the
 **Clone day to / Other thermostats** panel and choose **Clone**. The confirmation
 summarizes the selected climates and identifies any Default or Pause zones that
-will change to Alternate schedule. Cloning replaces only the matching weekday,
+will change to **Profile schedule**. Cloning replaces only the matching weekday,
 preserves all other remembered days, and remains part of the Profile draft.
 Velair validates target type, HVAC mode, optional settings, temperature limits,
 and temperature step for every selected climate first; if one target is
@@ -74,12 +79,13 @@ continues across midnight and empty weekdays until another block starts. The
 timeline represents the inherited part of the day with a distinct, non-editable
 segment and identifies the weekday where that block is actually configured.
 While a Profile remains open for editing, temporarily changing a zone from
-**Alternate schedule** to **Default schedule** or **Pause** keeps its draft
-weekly schedule. Selecting **Alternate schedule** again restores those
+**Profile schedule** to **Default schedule** or **Pause** keeps its draft
+weekly schedule. Selecting **Profile schedule** again restores those
 unsaved blocks. Saving the Profile with Default or Pause still stores only that
-selected behavior; the hidden draft schedule is not persisted. Climate editors
-are collapsed by default and show both their friendly name and entity ID;
-expand only the zones you need while editing a profile.
+selected behavior; the hidden draft schedule is not persisted. The thermostat
+selector shows friendly names, while the active editor also shows the entity
+ID. Profile metadata and schedules are still saved together as one atomic
+Profile; changing the selected thermostat does not save a partial draft.
 
 Several profiles can be active together when a Mode coordinates them. Their
 configured zones must not overlap: each managed climate always has at most one
@@ -98,8 +104,8 @@ behavior while nobody is home:
    another alternate schedule, **Pause**, or **Pause and turn off**.
 3. Leave any unaffected zones out of both Profiles. They will continue using
    their Default schedules.
-4. In the Profiles tab, switch the library control to **Modes**, choose
-   **New mode**, name it **Away**, select both Profiles, and save.
+4. Open **Modes**, choose **New mode**, name it **Away**, select both Profiles,
+   and save.
 5. In **Active setup**, choose **Change**, then select **Away**. Velair applies
    both Profiles as one atomic selection.
 
@@ -145,13 +151,16 @@ its visible option.
 
 ## Activate A Profile
 
-Use the shared **Active setup** card in Overview or at the top of the Profiles
-tab. It shows the current Mode and the Profiles that it applies as one
+Use the play button on a Profile row in **Schedules > Profile schedules** for
+direct activation, or use the shared **Active setup** card in Overview or at
+the top of **Modes**. It
+shows the current Mode and the Profiles that it applies as one
 relationship. Select **Change** to choose a Mode or use the separate
 **Activate a Profile manually** group. A direct Profile choice replaces the
 active set with that Profile and changes the Mode to **Manual**, while
 **Default** means that no alternate Profile is active. Profiles can also be
-activated with the play button in the profile list. Velair applies
+activated directly from its Profile row, from Active setup, or with the
+`velair.activate_profile` action. Velair applies
 the block that is active at the current time instead of waiting for the next
 scheduled boundary. This includes the latest block from an earlier day when no
 new block has started yet in the current day.
@@ -214,7 +223,7 @@ selector to `Manual`, including when the same profile was already active.
 
 A profile does not contain arbitrary conditions. Home Assistant remains the
 decision layer. Velair owns a native `select.velair_mode` entity so the
-values used by automations can be managed from the Profiles tab without creating
+values used by automations can be managed from the Modes tab without creating
 another Home Assistant helper.
 
 Two built-in values always exist and cannot be renamed or deleted:
@@ -228,8 +237,8 @@ Two built-in values always exist and cannot be renamed or deleted:
   detaches them from their custom Mode.
 
 Create custom values such as Away, Vacation, or Home and map each one to one or
-more stored Climate Profiles. In the Profiles tab, switch the library control
-to **Modes**, choose **New mode**, enter the option name that Home Assistant
+more stored Climate Profiles. In **Modes**, choose **New mode**, enter the
+option name that Home Assistant
 will show, select one or more non-overlapping Profiles, and save. Selecting a
 custom value activates the complete set atomically. Profiles in the same Mode
 must configure different zones;
@@ -239,7 +248,7 @@ limited to 255 characters, unique without regard to letter case, and cannot use
 either built-in name or Home Assistant's reserved `unknown` and `unavailable`
 states.
 
-The Profiles tab shows the active Mode and applied Climate Profiles together in
+The Modes tab shows the active Mode and applied Climate Profiles together in
 one **Active setup** card. Its single grouped chooser lists Default and custom
 Modes first, with direct Profile activation separately. Manual remains visible
 as a state but cannot be selected from this chooser. Selecting a Mode activates

@@ -136,6 +136,28 @@ describe("comfort view", () => {
     expect(saveZoneComfort).toHaveBeenCalledWith("climate.first", { enabled: true });
   });
 
+  it("does not show assessment chips when monitoring is disabled", () => {
+    const { viewHost } = host({
+      enabled: false,
+      expanded: true,
+      assessment: {
+        enabled: true,
+        condition: "comfortable",
+        air_quality: "good",
+        data_quality: "complete",
+        data_issues: [],
+      },
+    });
+    const container = document.createElement("div");
+
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    expect(container.querySelector(".comfort-assessment-summary")).toBeNull();
+    expect(container.querySelector(".comfort-condition-pill")).toBeNull();
+    expect(container.querySelector(".comfort-air-pill")).toBeNull();
+    expect(container.textContent).toContain("comfortDisabledDetail");
+  });
+
   it("marks the comfort assessment as partial when a configured reading is unavailable", () => {
     const { viewHost } = host({
       enabled: true,

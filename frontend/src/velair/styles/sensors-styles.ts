@@ -695,6 +695,7 @@ export const sensorsStyles = css`
   border: 1px solid var(--divider-color);
   border-left: 3px solid var(--secondary-text-color);
   border-radius: 6px;
+  box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   bottom: 18px;
   display: grid;
@@ -757,6 +758,15 @@ export const sensorsStyles = css`
   white-space: nowrap;
 }
 
+.sensor-scale-callout.has-offset {
+  width: max-content;
+}
+
+.sensor-scale-callout.has-offset .sensor-scale-value-row > strong {
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .sensor-scale-offset {
   align-items: center;
   color: var(--sensor-scale-applied-color);
@@ -783,6 +793,8 @@ export const sensorsStyles = css`
 
 .sensor-scale-offset-help ha-icon {
   --mdc-icon-size: 12px;
+  height: 12px;
+  width: 12px;
 }
 
 .sensor-scale-offset-tooltip {

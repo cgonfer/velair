@@ -54,6 +54,7 @@ export type VelairViewHost = {
   _importPayload?: VelairPortablePayload;
   _importSections: Set<PortableSection>;
   _loading: boolean;
+  _showInitialLoading: boolean;
   _maintenanceAction?: "reset";
   _nextEventsOpen: boolean;
   _nextEventChangeRevision: number;
@@ -65,6 +66,8 @@ export type VelairViewHost = {
   _saveMessage?: string;
   _saving: boolean;
   _schedulerMenuOpen: boolean;
+  _scheduleSource: "default" | "profile";
+  _profileScheduleDirty: boolean;
   _selectedEntity?: string;
   _selectedTemplateKey: string;
   _selectedWeekday: string;
@@ -138,6 +141,7 @@ export type VelairViewHost = {
   _importAvailableSections(): PortableSection[];
   _importPortableData(): Promise<void>;
   _inputValue(event: Event): string;
+  _initialScheduleWeekday(firstWeekday: string): string;
   _language(): SupportedLanguage;
   _modeLabel(mode: string): string;
   _moveSettingsZone(entityId: string, direction: -1 | 1): void;
@@ -173,6 +177,8 @@ export type VelairViewHost = {
   _selectScheduleTemplate(key: string): void;
   _selectTemplate(key: string): void;
   _selectWeekday(weekday: string): void;
+  _selectScheduleSource(source: "default" | "profile"): void;
+  _setProfileScheduleDirty(dirty: boolean): void;
   _shortWeekdayName(weekday: string): string;
   _showOverviewTimelineDetail(entityId: string, detail: string, anchorPercent: number, event: Event): void;
   _successNoticeProgress(): number;

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "blueprints": [
+    {
+      "id": "occupancy_home_away",
+      "name": "Velair - Occupancy home and away",
+      "domain": "automation",
+      "file": "automation/velair/occupancy_home_away.yaml",
+      "version": "1.0.0",
+      "released_with_velair": "1.6.0",
+      "minimum_velair": null,
+      "minimum_home_assistant": "2024.6.0",
+      "source_url": "https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/occupancy_home_away.yaml",
+      "changelog": "changelogs/occupancy_home_away.md"
+    },
+    {
+      "id": "window_pause",
+      "name": "Velair - Pause a zone while windows are open",
+      "domain": "automation",
+      "file": "automation/velair/window_pause.yaml",
+      "version": "1.0.0",
+      "released_with_velair": "1.6.0",
+      "minimum_velair": "1.6.0",
+      "minimum_home_assistant": "2024.6.0",
+      "source_url": "https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/window_pause.yaml",
+      "changelog": "changelogs/window_pause.md"
+    }
+  ]
+}

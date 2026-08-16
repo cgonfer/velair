@@ -434,6 +434,7 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
                 "started_at": "2026-07-09T10:00:00+00:00",
                 "until": "2026-07-09T11:00:00+00:00",
                 "action": "turn_off",
+                "pause_id": "window_guard",
             },
         )
         entry = self._entry(scheduler, ["climate.living_room"])
@@ -449,6 +450,7 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
                 "started_at": "2026-07-09T10:00:00+00:00",
                 "until": "2026-07-09T11:00:00+00:00",
                 "action": "turn_off",
+                "pause_id": "window_guard",
             },
         )
 
@@ -584,7 +586,7 @@ class SensorTranslationTest(unittest.TestCase):
                     / f"{language}.json"
                 ).read_text(encoding="utf-8")
             )
-            for language in ("de", "en", "es", "fr", "nl")
+            for language in ("de", "en", "es", "fr", "nl", "ru")
         }
         expected_states = {
             "paused",

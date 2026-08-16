@@ -11,6 +11,15 @@ Velair ships a Home Assistant sidebar panel and an optional Lovelace card. Both 
 
 The sidebar panel renders `velair-panel-card` with the active panel view. It uses the same class and composition path as `velair-card`, but a distinct custom-element name prevents an older cached Lovelace resource from blocking a newer sidebar implementation.
 
+The sidebar **Schedules** view is the canonical planning workspace. Its local
+source selector composes either the existing Default schedule adapter or the
+Profile draft editor. Default schedules continue to use per-day backend writes;
+Profile schedules keep a complete temporary Profile draft and persist it through
+the Profile API as one atomic value. The selector is deliberately absent from
+the Lovelace `schedules` card, whose established meaning remains the Default
+schedule editor. The canonical panel view for composition is `modes`; the
+legacy `profiles` route is normalized to `modes` for cached links.
+
 ## Source Of Truth
 
 The TypeScript source is under:
@@ -168,7 +177,7 @@ This page focuses on frontend-specific operational guidance: runtime elements, b
 - Add layout and Lit templates in `views/`.
 - Add state or lifecycle integration in `components/velair-card-element.ts` only when the state belongs to the element itself.
 - Add CSS in the closest `styles/*-styles.ts` file, and only touch `card-styles.ts` when composing a new style module.
-- Add source strings to `translations/en.ts` and `translations/template.ts`, then translate them in every supported language file.
+- Add source strings to `translations/en.ts` and `translations/template.ts`, then update every complete language. Reviewed community languages may omit uncertain strings and use the tested English fallback.
 
 ## Translations
 
@@ -179,7 +188,8 @@ frontend/src/velair/translations/
 ```
 
 - `en.ts` is the source language and defines the complete key set.
-- `es.ts` must satisfy the same key set.
+- `de.ts`, `es.ts`, `fr.ts`, and `nl.ts` satisfy the complete source key set.
+- A staged community translation such as `ru.ts` may contain only reviewed keys. Missing keys fall back to English.
 - `template.ts` contains the same keys with empty string values and can be copied when adding a new language.
 - `index.ts` automatically builds the language map from every translation file in this folder.
 - `types.ts` defines the translation dictionary shape from `en.ts`.
@@ -192,6 +202,7 @@ The file name must be the Home Assistant language code in lowercase. Use ISO-sty
 | French | `fr.ts` | `fr` |
 | Italian | `it.ts` | `it` |
 | Portuguese | `pt.ts` | `pt` |
+| Russian | `ru.ts` | `ru` |
 
 For example, to add German:
 
@@ -212,7 +223,7 @@ For example, to add German:
    } as const satisfies TranslationDictionary;
    ```
 
-4. Fill every value. Keep all keys unchanged.
+4. Fill every value for a complete translation, or include only reviewed values for a staged community translation. Keep all included keys unchanged.
 5. Run the checks:
 
    ```powershell
@@ -224,6 +235,14 @@ For example, to add German:
    ```
 
 No manual registration is needed. The frontend build scans `frontend/src/velair/translations/*.ts`, ignores `index.ts`, `template.ts`, and `types.ts`, and uses each remaining file name as the Home Assistant language code. The exported constant must match the file name.
+
+Complete translations are checked against every English key and placeholder. Staged community translations are checked as a strict subset: every included key must exist in English and use the same placeholders, while omitted keys are rendered from `en.ts`. Prefer an English fallback over publishing a translation whose technical meaning has not been reviewed.
+
+Keep product and technical identifiers stable when translating. In particular,
+do not translate `Velair`, `Home Assistant`, `Room Assist`, entity IDs, service
+names, attribute names, HVAC mode values, or placeholders such as `{entity}`.
+Labels such as Profile, Mode, Boost, Comfort, and Preconditioning may use the
+established term for the target language when that is clearer to its users.
 
 The frontend language detector matches exact language codes and regional variants by prefix. For example, adding `de` also matches `de-DE`, `de-AT`, and `de-CH`. No extra detection code is needed for normal language codes.
 

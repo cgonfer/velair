@@ -6,13 +6,19 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock
 
+import voluptuous as vol
+
 from custom_components.velair.const import (
     DOMAIN,
     SERVICE_ACTIVATE_PROFILE,
     SERVICE_DEACTIVATE_PROFILE,
+    SERVICE_PAUSE_ZONE,
+    SERVICE_RESUME_ZONE,
 )
 from custom_components.velair.services import (
     HomeAssistantError,
+    _validate_pause_id,
+    RESUME_ZONE_SCHEMA,
     async_setup_services,
     async_unload_services,
 )
@@ -40,6 +46,9 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
         self.scheduler = SimpleNamespace(
             async_activate_profile=AsyncMock(),
             async_deactivate_profile=AsyncMock(),
+            async_pause_zone=AsyncMock(),
+            async_resume_zone=AsyncMock(),
+            ensure_managed_entity=Mock(),
             set_temperature_migration_blocked=Mock(),
             temperature_migration_blocked=False,
         )
@@ -102,3 +111,69 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaisesRegex(HomeAssistantError, "unknown profile"):
             await handler(SimpleNamespace(data=schema({"profile_id": "missing"})))
+
+    async def test_pause_and_resume_zone_forward_optional_pause_id(self) -> None:
+        await async_setup_services(self.hass)
+        pause_handler, pause_schema = self.services.handlers[
+            (DOMAIN, SERVICE_PAUSE_ZONE)
+        ]
+        resume_handler, resume_schema = self.services.handlers[
+            (DOMAIN, SERVICE_RESUME_ZONE)
+        ]
+
+        await pause_handler(
+            SimpleNamespace(
+                data=pause_schema(
+                    {
+                        "entity_id": "climate.salon",
+                        "action": "none",
+                        "pause_id": "window_guard",
+                    }
+                )
+            )
+        )
+        await resume_handler(
+            SimpleNamespace(
+                data=resume_schema(
+                    {
+                        "entity_id": "climate.salon",
+                        "apply_current_schedule": True,
+                        "pause_id": "window_guard",
+                    }
+                )
+            )
+        )
+
+        self.scheduler.async_pause_zone.assert_awaited_once_with(
+            "climate.salon",
+            until=None,
+            action="none",
+            pause_id="window_guard",
+        )
+        self.scheduler.async_resume_zone.assert_awaited_once_with(
+            "climate.salon",
+            apply_current_schedule=True,
+            pause_id="window_guard",
+            reason="service",
+        )
+
+    def test_pause_id_service_validation(self) -> None:
+        self.assertEqual(_validate_pause_id(" owner:zone-1 "), "owner:zone-1")
+        for value in ("", "_owner", "owner with spaces", "x" * 129):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    _validate_pause_id(value)
+
+    def test_resume_zone_rejects_ambiguous_resume_all_values(self) -> None:
+        with self.assertRaises(vol.Invalid):
+            RESUME_ZONE_SCHEMA(
+                {
+                    "entity_id": "climate.salon",
+                    "pause_id": "window",
+                    "resume_all": True,
+                }
+            )
+        with self.assertRaises(vol.Invalid):
+            RESUME_ZONE_SCHEMA(
+                {"entity_id": "climate.salon", "resume_all": False}
+            )

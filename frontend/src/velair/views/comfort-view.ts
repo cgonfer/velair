@@ -124,7 +124,7 @@ function renderComfortZone(
           </span>
         </button>
         <div class="comfort-zone-actions" @click=${(event: Event) => event.stopPropagation()}>
-          ${renderComfortAssessmentSummary(host, assessment)}
+          ${settings.enabled ? renderComfortAssessmentSummary(host, assessment) : nothing}
           <ha-switch
             .checked=${settings.enabled}
             ?disabled=${host._settingsSaving || !exists}

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
 import { applyScheduleData, selectEntity, selectWeekday } from "../../src/velair/controllers/schedule-state";
@@ -45,10 +45,12 @@ function host() {
     _templateDraftKey: "",
     _zoneTargets: new Set<string>(),
     _api: () => undefined,
+    _confirmDiscardChanges: vi.fn(() => true),
     _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }) {
       applyScheduleData(this, data, options);
     },
     _loadSchedule: async () => undefined,
+    _initialScheduleWeekday: (firstWeekday: string) => firstWeekday,
     _markDirty() {
       this._dirty = true;
     },
@@ -109,6 +111,58 @@ describe("schedule state controller", () => {
 
     expect(state._selectedWeekday).toBe("sunday");
     expect(state._selectedEntity).toBe("climate.bedroom");
+  });
+
+  it("uses today's weekday only for the initial Schedules load", () => {
+    const state = host();
+    state._initialScheduleWeekday = vi.fn(() => "wednesday");
+
+    applyScheduleData(state, scheduleResponse());
+    expect(state._selectedWeekday).toBe("wednesday");
+
+    selectWeekday(state, "sunday");
+    applyScheduleData(state, scheduleResponse());
+
+    expect(state._selectedWeekday).toBe("sunday");
+    expect(state._initialScheduleWeekday).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a dirty Default draft when changing thermostat or day is cancelled", () => {
+    const state = host();
+    applyScheduleData(state, scheduleResponse());
+    state._dirty = true;
+    state._dirtyEntityId = "climate.office";
+    state._draftBlocks = [{ action: ACTION_SET_TEMPERATURE, start: "09:00", temperature: 23 }];
+    state._confirmDiscardChanges.mockReturnValue(false);
+
+    expect(selectEntity(state, "climate.bedroom")).toBe(false);
+    expect(selectWeekday(state, "sunday")).toBe(false);
+    expect(state._selectedEntity).toBe("climate.office");
+    expect(state._selectedWeekday).toBe("saturday");
+    expect(state._draftBlocks[0].temperature).toBe(23);
+    expect(state._dirty).toBe(true);
+    expect(state._confirmDiscardChanges).toHaveBeenCalledTimes(2);
+  });
+
+  it("discards a dirty Default draft only after confirmation", () => {
+    const state = host();
+    applyScheduleData(state, scheduleResponse());
+    state._dirty = true;
+    state._dirtyEntityId = "climate.office";
+    state._draftBlocks = [{ action: ACTION_SET_TEMPERATURE, start: "09:00", temperature: 23 }];
+
+    expect(selectWeekday(state, "sunday")).toBe(true);
+    expect(state._selectedWeekday).toBe("sunday");
+    expect(state._draftBlocks).toEqual([]);
+    expect(state._dirty).toBe(false);
+
+    state._dirty = true;
+    state._draftBlocks = [{ action: ACTION_SET_TEMPERATURE, start: "10:00", temperature: 24 }];
+    expect(selectEntity(state, "climate.bedroom")).toBe(true);
+    expect(state._selectedEntity).toBe("climate.bedroom");
+    expect(state._draftBlocks).toEqual([]);
+    expect(state._dirty).toBe(false);
+    expect(state._confirmDiscardChanges).toHaveBeenCalledTimes(2);
   });
 
   it("preserves a dirty stored-unit draft when mismatch data reloads", () => {

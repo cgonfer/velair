@@ -27,6 +27,9 @@ PUBLIC_EVENTS = (
     "boost_started",
     "boost_ended",
     "zone_paused",
+    "zone_pause_added",
+    "zone_pause_updated",
+    "zone_pause_removed",
     "zone_resumed",
 )
 

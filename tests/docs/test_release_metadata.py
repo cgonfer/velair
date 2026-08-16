@@ -19,6 +19,12 @@ RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 INSTALLATION_GUIDE = ROOT / "docs" / "user" / "installation.md"
 DEVELOPMENT_GUIDE = ROOT / "docs" / "developer" / "development.md"
 BUG_REPORT_TEMPLATE = ROOT / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml"
+PUBLIC_DOCUMENTATION_ROOTS = (
+    ROOT / "docs",
+    ROOT / ".github" / "release-notes",
+    ROOT / "blueprints",
+    ROOT / "website" / "public",
+)
 
 
 class ReleaseMetadataTest(unittest.TestCase):
@@ -117,6 +123,29 @@ class ReleaseMetadataTest(unittest.TestCase):
         self.assertIn("- HACS", bug_report)
         for document in (readme, installation, bug_report):
             self.assertNotIn("HACS custom repository", document)
+
+    def test_public_documentation_does_not_reference_private_context(self) -> None:
+        public_files = [README]
+        for root in PUBLIC_DOCUMENTATION_ROOTS:
+            if root.is_dir():
+                public_files.extend(
+                    path
+                    for path in root.rglob("*")
+                    if path.is_file()
+                    and path.suffix.lower()
+                    in {".css", ".html", ".js", ".json", ".md", ".yaml", ".yml"}
+                )
+
+        private_references = re.compile(
+            r"(?:\bADR(?:[- _]?\d+)?\b|architecture decision record|\.codex[/\\]|\.private[/\\])",
+            flags=re.IGNORECASE,
+        )
+        for path in public_files:
+            self.assertNotRegex(
+                path.read_text(encoding="utf-8"),
+                private_references,
+                f"Public documentation must not reference private context: {path}",
+            )
 
 
 if __name__ == "__main__":

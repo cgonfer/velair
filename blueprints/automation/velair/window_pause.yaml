@@ -1,0 +1,352 @@
+# Velair blueprint version: 1.0.0
+# Minimum Velair version: 1.6.0
+# Minimum Home Assistant version: 2024.6.0
+blueprint:
+  name: Velair - Pause a zone while windows are open
+  description: >-
+    Pause one or more Velair-managed climates after any selected window or door
+    remains open, then resume them only after every selected contact is closed.
+    Unavailable contacts block resumption and produce one delayed diagnostic
+    notification for the selected thermostats. Blueprint version 1.0.0.
+    Requires Velair 1.6.0 or newer and Home Assistant 2024.6.0 or newer.
+  domain: automation
+  author: Cristian Gonzalez Fernandez
+  source_url: https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/window_pause.yaml
+  homeassistant:
+    min_version: 2024.6.0
+  input:
+    climate_entity:
+      name: Managed thermostats
+      description: Every selected climate entity must already be managed by Velair.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: climate
+    opening_entities:
+      name: Windows and doors
+      description: Select every opening that should pause these thermostats.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - domain: binary_sensor
+              device_class: window
+            - domain: binary_sensor
+              device_class: door
+            - domain: binary_sensor
+              device_class: opening
+    behavior:
+      name: Pause behavior
+      icon: mdi:window-open-variant
+      input:
+        pause_action:
+          name: Climate action while paused
+          description: Keep the current climate state or turn it off when pausing.
+          default: turn_off
+          selector:
+            select:
+              options:
+                - label: Keep current state
+                  value: none
+                - label: Turn off
+                  value: turn_off
+              mode: dropdown
+        pause_id:
+          name: Pause ID
+          description: Stable identifier used to add and remove only this automation's pause reason.
+          default: velair_window_guard
+          selector:
+            text:
+    timing:
+      name: Timing and diagnostics
+      icon: mdi:timer-outline
+      collapsed: true
+      input:
+        open_delay:
+          name: Open delay
+          description: How long an opening must remain open before pausing the zone.
+          default:
+            minutes: 2
+          selector:
+            duration: {}
+        close_delay:
+          name: Close delay
+          description: How long every opening must remain closed before resuming the zone.
+          default:
+            seconds: 30
+          selector:
+            duration: {}
+        availability_warning_delay:
+          name: Availability warning delay
+          description: >-
+            How long to wait before warning when a window or door sensor remains
+            unknown or unavailable, for example because it is offline or its
+            battery has run out.
+          default:
+            minutes: 5
+          selector:
+            duration: {}
+
+mode: parallel
+max: 50
+max_exceeded: warning
+
+trigger_variables:
+  opening_entities: !input opening_entities
+
+variables:
+  opening_entities: !input opening_entities
+  managed_climates: !input climate_entity
+  owned_pause_id: !input pause_id
+  availability_notification_id: >-
+    velair_window_guard_{{ this.entity_id | replace('.', '_') | replace('-', '_') }}
+
+trigger:
+  - platform: template
+    value_template: >-
+      {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count > 0 }}
+    for: !input open_delay
+    id: opened_due
+  - platform: template
+    value_template: >-
+      {{ expand(opening_entities) | count > 0 and
+         expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count == 0 }}
+    for: !input close_delay
+    id: closed_due
+  - platform: template
+    value_template: >-
+      {{ expand(opening_entities)
+         | selectattr('state', 'in', ['unknown', 'unavailable'])
+         | list | count > 0 }}
+    for: !input availability_warning_delay
+    id: availability_due
+  - platform: template
+    value_template: >-
+      {{ expand(opening_entities)
+         | selectattr('state', 'in', ['unknown', 'unavailable'])
+         | list | count == 0 }}
+    id: availability_recovered
+  - platform: homeassistant
+    event: start
+    id: startup
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'opened_due' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count > 0 }}
+          - repeat:
+              for_each: "{{ managed_climates }}"
+              sequence:
+                - condition: template
+                  value_template: >-
+                    {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count > 0 }}
+                - service: velair.pause_zone
+                  continue_on_error: true
+                  data:
+                    entity_id: "{{ repeat.item }}"
+                    action: !input pause_action
+                    pause_id: "{{ owned_pause_id }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'closed_due' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ expand(opening_entities) | count > 0 and
+                 expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count == 0 }}
+          - repeat:
+              for_each: "{{ managed_climates }}"
+              sequence:
+                - condition: template
+                  value_template: >-
+                    {{ expand(opening_entities) | count > 0 and
+                       expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count == 0 }}
+                - service: velair.resume_zone
+                  continue_on_error: true
+                  data:
+                    entity_id: "{{ repeat.item }}"
+                    apply_current_schedule: true
+                    pause_id: "{{ owned_pause_id }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'availability_due' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ expand(opening_entities)
+                 | selectattr('state', 'in', ['unknown', 'unavailable'])
+                 | list | count > 0 }}
+          - service: persistent_notification.create
+            data:
+              notification_id: "{{ availability_notification_id }}"
+              title: "Velair cannot safely resume {{ managed_climates | count }} managed thermostat{{ '' if managed_climates | count == 1 else 's' }}"
+              message: >-
+                {% set contacts = expand(opening_entities)
+                   | selectattr('state', 'in', ['unknown', 'unavailable'])
+                   | list %}
+                One or more window or door contacts cannot confirm that the zone is closed:
+
+                {% for contact in contacts -%}
+                - {{ contact.name or contact.entity_id }} ({{ contact.entity_id }}): {{ contact.state }}
+                {% endfor %}
+
+                Affected thermostats:
+
+                {% for climate in managed_climates -%}
+                - {{ state_attr(climate, 'friendly_name') or climate }} ({{ climate }})
+                {% endfor %}
+
+                Velair will not resume these climates until every selected contact
+                reports closed (`off`). Climate control still reacts to contacts
+                that reliably report open (`on`).
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ expand(opening_entities)
+                     | selectattr('state', 'in', ['unknown', 'unavailable'])
+                     | list | count == 0 }}
+            then:
+              - service: persistent_notification.dismiss
+                data:
+                  notification_id: "{{ availability_notification_id }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'availability_recovered' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ expand(opening_entities)
+                 | selectattr('state', 'in', ['unknown', 'unavailable'])
+                 | list | count == 0 }}
+          - service: persistent_notification.dismiss
+            data:
+              notification_id: "{{ availability_notification_id }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'startup' }}"
+        sequence:
+          - parallel:
+              - sequence:
+                  - condition: template
+                    value_template: >-
+                      {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count > 0 }}
+                  - wait_for_trigger:
+                      - platform: template
+                        value_template: >-
+                          {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count == 0 }}
+                    timeout: !input open_delay
+                    continue_on_timeout: true
+                  - condition: template
+                    value_template: "{{ not wait.completed }}"
+                  - condition: template
+                    value_template: >-
+                      {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count > 0 }}
+                  - repeat:
+                      for_each: "{{ managed_climates }}"
+                      sequence:
+                        - condition: template
+                          value_template: >-
+                            {{ expand(opening_entities) | selectattr('state', 'eq', 'on') | list | count > 0 }}
+                        - service: velair.pause_zone
+                          continue_on_error: true
+                          data:
+                            entity_id: "{{ repeat.item }}"
+                            action: !input pause_action
+                            pause_id: "{{ owned_pause_id }}"
+              - sequence:
+                  - condition: template
+                    value_template: >-
+                      {{ expand(opening_entities) | count > 0 and
+                         expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count == 0 }}
+                  - wait_for_trigger:
+                      - platform: template
+                        value_template: >-
+                          {{ expand(opening_entities) | count == 0 or
+                             expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count > 0 }}
+                    timeout: !input close_delay
+                    continue_on_timeout: true
+                  - condition: template
+                    value_template: "{{ not wait.completed }}"
+                  - condition: template
+                    value_template: >-
+                      {{ expand(opening_entities) | count > 0 and
+                         expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count == 0 }}
+                  - repeat:
+                      for_each: "{{ managed_climates }}"
+                      sequence:
+                        - condition: template
+                          value_template: >-
+                            {{ expand(opening_entities) | count > 0 and
+                               expand(opening_entities) | rejectattr('state', 'eq', 'off') | list | count == 0 }}
+                        - service: velair.resume_zone
+                          continue_on_error: true
+                          data:
+                            entity_id: "{{ repeat.item }}"
+                            apply_current_schedule: true
+                            pause_id: "{{ owned_pause_id }}"
+              - sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: >-
+                              {{ expand(opening_entities)
+                                 | selectattr('state', 'in', ['unknown', 'unavailable'])
+                                 | list | count > 0 }}
+                        sequence:
+                          - wait_for_trigger:
+                              - platform: template
+                                value_template: >-
+                                  {{ expand(opening_entities)
+                                     | selectattr('state', 'in', ['unknown', 'unavailable'])
+                                     | list | count == 0 }}
+                            timeout: !input availability_warning_delay
+                            continue_on_timeout: true
+                          - condition: template
+                            value_template: "{{ not wait.completed }}"
+                          - condition: template
+                            value_template: >-
+                              {{ expand(opening_entities)
+                                 | selectattr('state', 'in', ['unknown', 'unavailable'])
+                                 | list | count > 0 }}
+                          - service: persistent_notification.create
+                            data:
+                              notification_id: "{{ availability_notification_id }}"
+                              title: "Velair cannot safely resume {{ managed_climates | count }} managed thermostat{{ '' if managed_climates | count == 1 else 's' }}"
+                              message: >-
+                                {% set contacts = expand(opening_entities)
+                                   | selectattr('state', 'in', ['unknown', 'unavailable'])
+                                   | list %}
+                                One or more window or door contacts cannot confirm that the zone is closed:
+
+                                {% for contact in contacts -%}
+                                - {{ contact.name or contact.entity_id }} ({{ contact.entity_id }}): {{ contact.state }}
+                                {% endfor %}
+
+                                Affected thermostats:
+
+                                {% for climate in managed_climates -%}
+                                - {{ state_attr(climate, 'friendly_name') or climate }} ({{ climate }})
+                                {% endfor %}
+
+                                Velair will not resume these climates until every
+                                selected contact reports closed (`off`).
+                          - if:
+                              - condition: template
+                                value_template: >-
+                                  {{ expand(opening_entities)
+                                     | selectattr('state', 'in', ['unknown', 'unavailable'])
+                                     | list | count == 0 }}
+                            then:
+                              - service: persistent_notification.dismiss
+                                data:
+                                  notification_id: "{{ availability_notification_id }}"
+                    default:
+                      - service: persistent_notification.dismiss
+                        data:
+                          notification_id: "{{ availability_notification_id }}"

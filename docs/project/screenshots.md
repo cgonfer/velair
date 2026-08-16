@@ -1,66 +1,141 @@
 # Screenshot Assets
 
-The following screenshots are captured from a real Home Assistant instance.
+The screenshots below use the same deterministic English demo data and dark Home Assistant theme.
 
 ### Overview
 
-| Desktop | Mobile |
+See scheduler status, upcoming events, today's timeline and current zone conditions at a glance.
+
+**Desktop**
+
+![Velair overview desktop](../../screenshots/overview-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair overview desktop](../../screenshots/overview-desktop.png) | ![Velair overview mobile](../../screenshots/overview-mobile.png) |
+| ![Velair overview tablet](../../screenshots/overview-tablet.png) | ![Velair overview mobile](../../screenshots/overview-mobile.png) |
 
-### Profiles and modes
-* Desktop
+### Schedule workspace
 
-| Profiles | Modes |
+Use one full-size workspace for both the normal weekly plan and reusable Profile schedules.
+
+#### Default schedules
+
+**Desktop**
+
+![Velair default schedules desktop](../../screenshots/schedules-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair profiles desktop](../../screenshots/profiles-desktop.png) | ![Velair modes dektop](../../screenshots/modes-desktop.png) |
+| ![Velair default schedules tablet](../../screenshots/schedules-tablet.png) | ![Velair default schedules mobile](../../screenshots/schedules-mobile.png) |
 
-* Mobile
+#### Profile schedules
 
-| Profiles | Modes |
+**Desktop**
+
+![Velair profile schedules desktop](../../screenshots/profiles-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair profiles mobile](../../screenshots/profiles-mobile.png) | ![Velair modes mobile](../../screenshots/modes-mobile.png) |
+| ![Velair profile schedules tablet](../../screenshots/profiles-tablet.png) | ![Velair profile schedules mobile](../../screenshots/profiles-mobile.png) |
 
-* Change active setup: mode / profile
+### Modes
 
-| Desktop | Mobile |
+Compose one or more non-overlapping Profiles and choose which setup currently controls the home.
+
+#### Modes
+
+**Desktop**
+
+![Velair modes desktop](../../screenshots/modes-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair change active setup desktop](../../screenshots/active-setup-change-desktop.png) | ![Velair change active setup mobile](../../screenshots/active-setup-change-mobile.png) |
+| ![Velair modes tablet](../../screenshots/modes-tablet.png) | ![Velair modes mobile](../../screenshots/modes-mobile.png) |
 
-### Schedule editor
-| Desktop | Mobile |
+#### Change active setup
+
+Switch between the Default schedule, a Mode or a Profile from one place.
+
+**Desktop**
+
+![Velair change active setup desktop](../../screenshots/active-setup-change-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair schedule editor desktop](../../screenshots/schedules-desktop.png) | ![Velair schedule editor mobile](../../screenshots/schedules-mobile.png) |
+| ![Velair change active setup tablet](../../screenshots/active-setup-change-tablet.png) | ![Velair change active setup mobile](../../screenshots/active-setup-change-mobile.png) |
 
 ### Templates
-| Desktop | Mobile |
+
+Create reusable daily schedules and apply them where they are needed.
+
+**Desktop**
+
+![Velair templates desktop](../../screenshots/templates-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair templates desktop](../../screenshots/templates-desktop.png) | ![Velair templates mobile](../../screenshots/templates-mobile.png) |
+| ![Velair templates tablet](../../screenshots/templates-tablet.png) | ![Velair templates mobile](../../screenshots/templates-mobile.png) |
 
-### Room assist
-* Desktop
+### Room Assist
 
-| Active | Inactive |
+Compare the scheduled target, external room sensor, climate reading and target applied to the thermostat.
+
+#### Assisting
+
+Room Assist adjusts the thermostat while the room is still moving towards the scheduled target.
+
+**Desktop**
+
+![Velair assisting desktop](../../screenshots/room-assist-desktop-1.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair room assist active desktop](../../screenshots/room-assist-desktop-1.png) | ![Velair room assist inactive desktop](../../screenshots/room-assist-desktop-2.png) |
+| ![Velair assisting tablet](../../screenshots/room-assist-tablet-1.png) | ![Velair assisting mobile](../../screenshots/room-assist-mobile-1.png) |
 
-* Mobile
+#### Holding
 
-| Active | Inactive |
+Once the room reaches its target, the same graph shows the safe target used to avoid driving it further.
+
+**Desktop**
+
+![Velair holding desktop](../../screenshots/room-assist-desktop-2.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair room assist active mobile](../../screenshots/room-assist-mobile-1.png) | ![Velair room assist inactive mobile](../../screenshots/room-assist-mobile-2.png) |
+| ![Velair holding tablet](../../screenshots/room-assist-tablet-2.png) | ![Velair holding mobile](../../screenshots/room-assist-mobile-2.png) |
 
 ### Comfort
-| Desktop | Mobile |
-| --- | --- |
-| ![Velair comfort desktop](../../screenshots/comfort-desktop.png) | ![Velair comfort mobile](../../screenshots/comfort-mobile.png) |
 
-### Preconditioning
-| Desktop | Mobile |
+Review room comfort, air quality and the sensor thresholds used for local evaluation.
+
+**Desktop**
+
+![Velair comfort desktop](../../screenshots/comfort-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair preconditioning desktop](../../screenshots/preconditioning-desktop.png) | ![Velair preconditioning mobile](../../screenshots/preconditioning-mobile.png) |
+| ![Velair comfort tablet](../../screenshots/comfort-tablet.png) | ![Velair comfort mobile](../../screenshots/comfort-mobile.png) |
+
+### Adaptive Preconditioning
+
+Follow local learning progress and understand when Velair plans to start before a scheduled block.
+
+**Desktop**
+
+![Velair adaptive preconditioning desktop](../../screenshots/preconditioning-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair adaptive preconditioning tablet](../../screenshots/preconditioning-tablet.png) | ![Velair adaptive preconditioning mobile](../../screenshots/preconditioning-mobile.png) |
 
 ### Settings
-| Desktop | Mobile |
+
+Manage ordering, startup behavior, portability and the capabilities detected for each thermostat.
+
+**Desktop**
+
+![Velair settings desktop](../../screenshots/settings-desktop.png)
+
+| Tablet | Mobile |
 | --- | --- |
-| ![Velair settings desktop](../../screenshots/settings-desktop.png) | ![Velair settings mobile](../../screenshots/settings-mobile.png) |
+| ![Velair settings tablet](../../screenshots/settings-tablet.png) | ![Velair settings mobile](../../screenshots/settings-mobile.png) |

@@ -29,6 +29,9 @@ EVENT_TYPE_ROOM_SENSOR_ASSIST_STATE_CHANGED = "room_sensor_assist_state_changed"
 EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED = "room_sensor_assist_updated"
 EVENT_TYPE_SCHEDULER_MODE_CHANGED = "scheduler_mode_changed"
 EVENT_TYPE_ZONE_PAUSED = "zone_paused"
+EVENT_TYPE_ZONE_PAUSE_ADDED = "zone_pause_added"
+EVENT_TYPE_ZONE_PAUSE_UPDATED = "zone_pause_updated"
+EVENT_TYPE_ZONE_PAUSE_REMOVED = "zone_pause_removed"
 EVENT_TYPE_ZONE_RESUMED = "zone_resumed"
 
 SERVICE_APPLY_SCHEDULE = "apply_schedule"
@@ -57,6 +60,8 @@ ATTR_HUMIDITY = "humidity"
 ATTR_KEY = "key"
 ATTR_PROFILE_ID = "profile_id"
 ATTR_NAME = "name"
+ATTR_PAUSE_ID = "pause_id"
+ATTR_RESUME_ALL = "resume_all"
 ATTR_PRESET_MODE = "preset_mode"
 ATTR_SOURCE_WEEKDAY = "source_weekday"
 ATTR_SWING_HORIZONTAL_MODE = "swing_horizontal_mode"
@@ -80,6 +85,9 @@ ZONE_PAUSE_ACTION_OPTIONS = [
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_TURN_OFF,
 ]
+
+MAX_PAUSE_ID_LENGTH = 128
+PAUSE_ID_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.:-]*"
 
 HVAC_MODE_OFF = "off"
 HVAC_MODE_OPTIONS = [

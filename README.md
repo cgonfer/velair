@@ -1,9 +1,11 @@
 # Velair
 Climate automation that adapts to your life.
 
-[![Version](https://img.shields.io/badge/version-1.6.0--beta.2-blue?style=for-the-badge)](#)
-[![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](#)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394/4)
+[Explore Velair on the project website](https://cgonfer.github.io/velair/)
+
+[![Version](https://img.shields.io/badge/version-1.6.0-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases/tag/v1.6.0)
+[![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
 [![Buy me a Coffee](https://img.shields.io/badge/Donate-Buy%20me%20a%20coffee-yellow?logo=buy-me-a-coffee&style=for-the-badge)](https://www.buymeacoffee.com/cgonfer)
 [![PayPal](https://img.shields.io/badge/Donate-PayPal-blue?logo=paypal&style=for-the-badge)](https://www.paypal.me/cristiangonfer94)
@@ -38,7 +40,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Drag and resize interactions on a 24-hour timeline.
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
-- Climate profiles with coordinated per-zone schedules, in-editor day cloning, pauses, configurable Modes, and a native Home Assistant select entity for automations.
+- One schedule workspace for Default and Profile schedules, with coordinated per-zone behavior, in-editor day cloning, pauses, configurable Modes, and a native Home Assistant select entity for automations.
 - Overview tab with scheduler status, active boosts, next events, and responsive zone cards that separate Velair intent from live device activity.
 - Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
 - Dedicated Room Assist tab for setups that need a separate room temperature sensor, including width-preserving assistance for native `heat_cool` ranges.
@@ -49,12 +51,14 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
 - Automation events through `velair_event` for Profile changes, scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
 - Push updates through Home Assistant WebSocket events, without frontend polling.
-- English, Spanish, German, French, and Dutch UI translations.
+- English, Spanish, German, French, Dutch, and community-reviewed Russian UI coverage, with English fallback for strings that still need review.
 - Native Celsius and Fahrenheit workflows using Home Assistant's configured unit, including unit-aware defaults, explicit stored-data migration, and legacy backup conversion.
 
 ## Screenshots
 
-The following examples are captured from a real Home Assistant instance. See [more screenshots](docs/project/screenshots.md) for the complete screenshot set.
+The following examples use Velair's deterministic English demo data and dark
+Home Assistant theme. See [more screenshots](docs/project/screenshots.md) for
+the complete desktop, tablet, and mobile set.
 
 | Desktop | Mobile |
 | --- | --- |
@@ -116,6 +120,11 @@ For development builds, see [docs/developer/development.md](docs/developer/devel
 7. Clone the day or create templates when useful.
 
 See [docs/user/usage.md](docs/user/usage.md) for the full workflow.
+
+Optional Home Assistant blueprints can connect Velair to occupancy or pause a
+zone while windows remain open. They keep the automation logic in Home
+Assistant and run from state changes rather than polling. See
+[Automation Blueprints](docs/user/blueprints.md).
 
 Velair uses the temperature unit configured in Home Assistant. New installations
 receive matching defaults automatically. If you are upgrading older Velair data
@@ -237,6 +246,7 @@ If Home Assistant shows a custom element error, confirm that Velair is installed
 - [Usage guide](docs/user/usage.md)
 - [Climate Profiles](docs/user/climate-profiles.md)
 - [Automation Events](docs/user/automation-events.md)
+- [Automation Blueprints](docs/user/blueprints.md)
 - [Adaptive Preconditioning](docs/user/adaptive-preconditioning.md)
 - [Room Assist](docs/user/room-assist.md)
 - [Resilient climate delivery](docs/user/resilient-climate-delivery.md)

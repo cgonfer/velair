@@ -31,7 +31,9 @@ type ScheduleStateHost = {
   _zoneTargets: Set<string>;
   _api(): VelairApiClient | undefined;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
+  _confirmDiscardChanges(): boolean;
   _loadSchedule(): Promise<void>;
+  _initialScheduleWeekday(firstWeekday: string): string;
   _markDirty(): void;
   _orderedZoneIds(entityIds: string[]): string[];
   _visibleZoneIds(entityIds: string[]): string[];
@@ -102,7 +104,7 @@ export function applyScheduleData(
     };
   }
   if (isInitialDataLoad) {
-    host._selectedWeekday = data.settings.first_weekday;
+    host._selectedWeekday = host._initialScheduleWeekday(data.settings.first_weekday);
   }
   const zoneIds = host._orderedZoneIds(data.configured_entities);
   const visibleZoneIds = host._visibleZoneIds(data.configured_entities);
@@ -140,24 +142,30 @@ export function resetDraftBlocks(host: ScheduleStateHost): void {
   host._dirtyEntityId = undefined;
 }
 
-export function selectEntity(host: ScheduleStateHost, entityId: string): void {
+export function selectEntity(host: ScheduleStateHost, entityId: string): boolean {
+  if (entityId === host._selectedEntity) return true;
+  if (host._dirty && !host._confirmDiscardChanges()) return false;
   host._selectedEntity = entityId;
   host._saveMessage = undefined;
   host._copyTargets = new Set();
   host._zoneTargets = new Set();
   host._resetDraftBlocks();
+  return true;
 }
 
-export function selectWeekday(host: ScheduleStateHost, weekday: string): void {
+export function selectWeekday(host: ScheduleStateHost, weekday: string): boolean {
   if (!WEEKDAYS.includes(weekday)) {
-    return;
+    return false;
   }
+  if (weekday === host._selectedWeekday) return true;
+  if (host._dirty && !host._confirmDiscardChanges()) return false;
 
   host._selectedWeekday = weekday;
   host._saveMessage = undefined;
   host._copyTargets = new Set();
   host._zoneTargets = new Set();
   host._resetDraftBlocks();
+  return true;
 }
 
 export function blocksForSource(host: ScheduleStateHost, source: BlockDraftSource): DraftScheduleBlock[] {

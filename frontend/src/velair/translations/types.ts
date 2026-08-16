@@ -9,5 +9,10 @@ type WidenTranslationValues<T> = {
 };
 
 export type TranslationDictionary = WidenTranslationValues<typeof en>;
+export type PartialTranslationDictionary = {
+  readonly [Key in keyof TranslationDictionary]?: TranslationDictionary[Key] extends Record<string, unknown>
+    ? Partial<TranslationDictionary[Key]>
+    : TranslationDictionary[Key];
+};
 export type TranslationKey = keyof TranslationDictionary;
 export type SupportedLanguage = string;

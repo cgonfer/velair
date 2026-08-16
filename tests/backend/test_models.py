@@ -21,6 +21,8 @@ from custom_components.velair.models import (
     MIN_PRECONDITIONING_COMPLETE_SAMPLES,
     normalize_preconditioning_data,
     predict_preconditioning_lead,
+    validate_pause_id,
+    zone_pause_override_from_reasons,
 )
 
 
@@ -157,6 +159,86 @@ def _preconditioning_learning(
 
 class ScheduleBlockNormalizationTest(unittest.TestCase):
     """Verify storage-facing schedule block normalization."""
+
+    def test_pause_id_validation_trims_and_rejects_unsafe_values(self) -> None:
+        self.assertEqual(
+            validate_pause_id("  window_guard:living-room  "),
+            "window_guard:living-room",
+        )
+        for value in ("", "_leading", "contains space", "x" * 129):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    validate_pause_id(value)
+
+    def test_normalize_schedule_preserves_only_valid_pause_id(self) -> None:
+        for stored, expected in (
+            (" window_guard ", "window_guard"),
+            ("contains space", None),
+        ):
+            with self.subTest(stored=stored):
+                data = normalize_schedule_data(
+                    {
+                        "zones": {
+                            "climate.salon": {
+                                "enabled": True,
+                                "schedule": empty_week_schedule(),
+                                "override": {
+                                    "type": "pause",
+                                    "action": "none",
+                                    "pause_id": stored,
+                                },
+                            }
+                        }
+                    },
+                    ["climate.salon"],
+                )
+
+                override = data["zones"]["climate.salon"]["override"]
+                self.assertIsNotNone(override)
+                self.assertEqual(override.get("pause_id"), expected)
+
+    def test_explicit_empty_pauses_wins_over_legacy_pause_mirror(self) -> None:
+        data = normalize_schedule_data(
+            {
+                "zones": {
+                    "climate.salon": {
+                        "enabled": True,
+                        "schedule": empty_week_schedule(),
+                        "pauses": [],
+                        "override": {
+                            "type": "pause",
+                            "action": "turn_off",
+                            "pause_id": "stale_owner",
+                        },
+                    }
+                }
+            },
+            ["climate.salon"],
+        )
+
+        self.assertEqual(data["zones"]["climate.salon"]["pauses"], [])
+        self.assertIsNone(data["zones"]["climate.salon"]["override"])
+
+    def test_pause_projection_compares_mixed_offsets_by_absolute_time(self) -> None:
+        override = zone_pause_override_from_reasons(
+            [
+                {
+                    "started_at": "2026-08-12T10:00:00+02:00",
+                    "until": "2026-08-12T12:00:00+02:00",
+                    "action": "none",
+                    "pause_id": "first",
+                },
+                {
+                    "started_at": "2026-08-12T07:30:00+00:00",
+                    "until": "2026-08-12T10:30:00+00:00",
+                    "action": "none",
+                    "pause_id": "second",
+                },
+            ]
+        )
+
+        self.assertEqual(override["started_at"], "2026-08-12T07:30:00+00:00")
+        self.assertEqual(override["until"], "2026-08-12T10:30:00+00:00")
 
     def test_normalize_blocks_sorts_times_and_preserves_mode(self) -> None:
         blocks = normalize_schedule_blocks(

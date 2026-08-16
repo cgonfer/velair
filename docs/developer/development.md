@@ -70,7 +70,7 @@ The integration-served bundle under `custom_components/velair/frontend/` must be
 - Validate climate targets against configured entities before applying any action.
 - Preserve heating and cooling support.
 - Keep frontend configuration persisted through the backend, not browser storage.
-- Keep user-facing strings translated in every supported language.
+- Keep complete language dictionaries aligned with English. Staged community translations may use the documented English fallback for strings that have not been reviewed yet.
 - Prefer small modules with focused responsibilities.
 - Add or update tests when changing behavior.
 
@@ -142,6 +142,12 @@ assets when the workflow was triggered by a tag.
 The validate workflow runs HACS validation and Hassfest on pushes, pull
 requests, a daily schedule, and manual dispatch. These checks protect Velair's
 compatibility with the default HACS store.
+
+The separate Pages workflow publishes only `website/public` after website
+changes reach `main`. Before the first deployment, enable **GitHub Actions** as
+the publishing source under **Settings > Pages** in the repository. The static
+site uses relative asset paths and does not include the ignored local Screenshot
+Lab or website tests.
 
 ## HACS Default Repository
 

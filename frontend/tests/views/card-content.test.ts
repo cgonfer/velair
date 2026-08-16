@@ -7,6 +7,38 @@ import type { VelairViewHost } from "../../src/velair/host-types";
 import { renderCardContent } from "../../src/velair/views/card-content";
 
 describe("card content", () => {
+  it("shows the branded initial state only after its loading delay is released", () => {
+    const container = document.createElement("div");
+    const host = {
+      _data: undefined,
+      _effectiveView: () => "overview",
+      _error: undefined,
+      _hasExternalConfig: false,
+      _loading: true,
+      _orderedZoneIds: (ids: string[]) => ids,
+      _saveMessage: undefined,
+      _schedulerMenuOpen: false,
+      _showInitialLoading: false,
+      _t: (key: string) => key,
+      _visibleZoneIds: (ids: string[]) => ids,
+    } as unknown as VelairViewHost;
+
+    render(renderCardContent(host), container);
+    expect(container.querySelector(".initial-loading")).toBeNull();
+    expect(container.querySelector(".notice")).toBeNull();
+
+    host._showInitialLoading = true;
+    render(renderCardContent(host), container);
+
+    const loading = container.querySelector(".initial-loading");
+    const logo = loading?.querySelector("img");
+    expect(loading?.getAttribute("role")).toBe("status");
+    expect(loading?.textContent).toContain("Velair");
+    expect(loading?.textContent).toContain("loading");
+    expect(logo?.getAttribute("src")).toBe("/velair_frontend/velair-icon.png");
+    expect(logo?.getAttribute("alt")).toBe("");
+  });
+
   it("hides operation status from Lovelace views other than Active setup", () => {
     const container = document.createElement("div");
     const host = {

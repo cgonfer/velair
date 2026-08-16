@@ -4,8 +4,14 @@ import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
+import { VelairCard } from "../../src/velair/components/velair-card-element";
 import { timelineBlocksFromDrafts } from "../../src/velair/domain/timeline";
-import { renderTemplatePanel, renderTimeline } from "../../src/velair/views/schedule-view";
+import { renderSchedulesView, renderTemplatePanel, renderTimeline } from "../../src/velair/views/schedule-view";
+
+const TEST_SCHEDULE_CARD_TAG = "test-velair-schedule-workspace-card";
+if (!customElements.get(TEST_SCHEDULE_CARD_TAG)) {
+  customElements.define(TEST_SCHEDULE_CARD_TAG, VelairCard);
+}
 
 function host() {
   const state = {
@@ -22,6 +28,83 @@ function host() {
 }
 
 describe("schedule view", () => {
+  it("derives the initial Schedules day from the local date", () => {
+    const element = document.createElement(TEST_SCHEDULE_CARD_TAG) as VelairCard;
+    element.setConfig({ view: "schedules" });
+    const internal = element as unknown as {
+      _initialScheduleWeekday: (firstWeekday: string) => string;
+      _timelineNow: Date;
+    };
+    internal._timelineNow = new Date(2026, 7, 12, 12, 0, 0);
+
+    expect(internal._initialScheduleWeekday("saturday")).toBe("wednesday");
+  });
+
+  it("keeps or discards the active source draft according to confirmation", () => {
+    const element = document.createElement(TEST_SCHEDULE_CARD_TAG) as VelairCard;
+    const internal = element as unknown as {
+      _dirty: boolean;
+      _profileScheduleDirty: boolean;
+      _scheduleSource: "default" | "profile";
+      _selectScheduleSource: (source: "default" | "profile") => void;
+      _resetDraftBlocks: ReturnType<typeof vi.fn>;
+    };
+    internal._dirty = true;
+    internal._scheduleSource = "default";
+    internal._resetDraftBlocks = vi.fn(() => { internal._dirty = false; });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+    internal._selectScheduleSource("profile");
+    expect(internal._scheduleSource).toBe("default");
+    expect(internal._resetDraftBlocks).not.toHaveBeenCalled();
+
+    internal._selectScheduleSource("profile");
+    expect(internal._scheduleSource).toBe("profile");
+    expect(internal._resetDraftBlocks).toHaveBeenCalledOnce();
+    expect(internal._profileScheduleDirty).toBe(false);
+    confirm.mockRestore();
+  });
+
+  it("offers Default and Profile schedules only in the sidebar workspace", () => {
+    const container = document.createElement("div");
+    const selectSource = vi.fn();
+    const viewHost = {
+      _data: { profiles: [] },
+      _hasExternalConfig: false,
+      _scheduleSource: "default",
+      _selectScheduleSource: selectSource,
+      _t: (key: string) => key,
+    } as unknown as VelairViewHost;
+
+    render(renderSchedulesView(viewHost, []), container);
+
+    const group = container.querySelector<HTMLElement>('.schedule-source-selector[role="group"]');
+    const tabs = group?.querySelectorAll<HTMLElement>("button") ?? [];
+    expect(group?.getAttribute("aria-label")).toBe("scheduleSourceLabel");
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0]?.getAttribute("aria-pressed")).toBe("true");
+    expect(tabs[1]?.getAttribute("aria-pressed")).toBe("false");
+    expect(tabs[0]?.textContent).toContain("defaultSchedules");
+    expect(tabs[1]?.textContent).toContain("profileSchedules");
+    tabs[1]?.click();
+    expect(selectSource).toHaveBeenCalledWith("profile");
+  });
+
+  it("keeps the Lovelace schedules view on Default schedules", () => {
+    const container = document.createElement("div");
+    const viewHost = {
+      _hasExternalConfig: true,
+      _scheduleSource: "profile",
+      _t: (key: string) => key,
+    } as unknown as VelairViewHost;
+
+    render(renderSchedulesView(viewHost, []), container);
+
+    expect(container.querySelector(".schedule-source-selector")).toBeNull();
+    expect(container.querySelector("velair-profiles-view")).toBeNull();
+    expect(container.textContent).toContain("noManagedEntities");
+  });
+
   it("resets the template selector visually after applying a schedule template", () => {
     const container = document.createElement("div");
     const viewHost = host();

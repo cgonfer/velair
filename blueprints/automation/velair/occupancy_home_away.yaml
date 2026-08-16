@@ -1,0 +1,249 @@
+# Velair blueprint version: 1.0.0
+# Released with Velair: 1.6.0 (Velair is only required by configured actions)
+# Minimum Home Assistant version: 2024.6.0
+blueprint:
+  name: Velair - Occupancy home and away
+  description: >-
+    Run chosen Home Assistant actions when one consolidated occupancy entity
+    becomes occupied or empty. Build people, guest, and household rules in a
+    group, template binary sensor, or helper before selecting it here.
+    Blueprint version 1.0.0. Requires Home Assistant 2024.6.0 or newer.
+    Released with Velair 1.6.0; this blueprint itself does not require Velair
+    unless the actions you configure call Velair entities or services.
+  domain: automation
+  author: Cristian Gonzalez Fernandez
+  source_url: https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/occupancy_home_away.yaml
+  homeassistant:
+    min_version: 2024.6.0
+  input:
+    occupancy:
+      name: Consolidated occupancy state
+      description: >-
+        One entity with on/home for occupied and off/not_home for empty. Use a
+        Home Assistant group, template binary sensor, or helper to combine
+        people and guests.
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+            - domain: input_boolean
+            - domain: group
+    occupied_actions:
+      name: When occupied
+      description: Actions to run after the occupied delay.
+      default: []
+      selector:
+        action: {}
+    empty_actions:
+      name: When empty
+      description: Actions to run after the empty delay.
+      default: []
+      selector:
+        action: {}
+    timing:
+      name: Timing and diagnostics
+      icon: mdi:timer-outline
+      collapsed: true
+      input:
+        occupied_delay:
+          name: Occupied delay
+          description: How long occupancy must remain on or home before running occupied actions.
+          default:
+            seconds: 0
+          selector:
+            duration: {}
+        empty_delay:
+          name: Empty delay
+          description: How long occupancy must remain off or not_home before running empty actions.
+          default:
+            minutes: 10
+          selector:
+            duration: {}
+        availability_warning_delay:
+          name: Availability warning delay
+          description: >-
+            How long occupancy must remain unknown or unavailable before Home
+            Assistant shows a diagnostic notification.
+          default:
+            minutes: 5
+          selector:
+            duration: {}
+
+mode: parallel
+max: 20
+max_exceeded: warning
+
+trigger_variables:
+  occupancy_entity: !input occupancy
+
+variables:
+  occupancy_entity: !input occupancy
+  availability_notification_id: >-
+    velair_occupancy_{{ this.entity_id | replace('.', '_') | replace('-', '_') }}
+
+trigger:
+  - platform: state
+    entity_id: !input occupancy
+    to: "on"
+    for: !input occupied_delay
+    id: occupied
+  - platform: state
+    entity_id: !input occupancy
+    to: "home"
+    for: !input occupied_delay
+    id: occupied
+  - platform: state
+    entity_id: !input occupancy
+    to: "off"
+    for: !input empty_delay
+    id: empty
+  - platform: state
+    entity_id: !input occupancy
+    to: "not_home"
+    for: !input empty_delay
+    id: empty
+  - platform: template
+    value_template: >-
+      {{ states(occupancy_entity) in ['unknown', 'unavailable'] }}
+    for: !input availability_warning_delay
+    id: availability_due
+  - platform: template
+    value_template: >-
+      {{ states(occupancy_entity) in ['on', 'home', 'off', 'not_home'] }}
+    id: availability_recovered
+  - platform: homeassistant
+    event: start
+    id: startup
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'occupied' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ states(occupancy_entity) in ['on', 'home'] }}
+          - choose: []
+            default: !input occupied_actions
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'empty' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ states(occupancy_entity) in ['off', 'not_home'] }}
+          - choose: []
+            default: !input empty_actions
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'availability_due' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ states(occupancy_entity) in ['unknown', 'unavailable'] }}
+          - service: persistent_notification.create
+            data:
+              notification_id: "{{ availability_notification_id }}"
+              title: Velair occupancy state is unavailable
+              message: >-
+                {{ state_attr(occupancy_entity, 'friendly_name') or occupancy_entity }}
+                ({{ occupancy_entity }}) reports `{{ states(occupancy_entity) }}`.
+                Velair Home and Away actions are not run until this entity reports
+                a valid occupied (`on`/`home`) or empty (`off`/`not_home`) state.
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ states(occupancy_entity) in ['on', 'home', 'off', 'not_home'] }}
+            then:
+              - service: persistent_notification.dismiss
+                data:
+                  notification_id: "{{ availability_notification_id }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'availability_recovered' }}"
+        sequence:
+          - condition: template
+            value_template: >-
+              {{ states(occupancy_entity) in ['on', 'home', 'off', 'not_home'] }}
+          - service: persistent_notification.dismiss
+            data:
+              notification_id: "{{ availability_notification_id }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'startup' }}"
+        sequence:
+          - parallel:
+              - sequence:
+                  - condition: template
+                    value_template: >-
+                      {{ states(occupancy_entity) in ['on', 'home'] }}
+                  - wait_for_trigger:
+                      - platform: template
+                        value_template: >-
+                          {{ states(occupancy_entity) not in ['on', 'home'] }}
+                    timeout: !input occupied_delay
+                    continue_on_timeout: true
+                  - condition: template
+                    value_template: "{{ not wait.completed }}"
+                  - condition: template
+                    value_template: >-
+                      {{ states(occupancy_entity) in ['on', 'home'] }}
+                  - choose: []
+                    default: !input occupied_actions
+              - sequence:
+                  - condition: template
+                    value_template: >-
+                      {{ states(occupancy_entity) in ['off', 'not_home'] }}
+                  - wait_for_trigger:
+                      - platform: template
+                        value_template: >-
+                          {{ states(occupancy_entity) not in ['off', 'not_home'] }}
+                    timeout: !input empty_delay
+                    continue_on_timeout: true
+                  - condition: template
+                    value_template: "{{ not wait.completed }}"
+                  - condition: template
+                    value_template: >-
+                      {{ states(occupancy_entity) in ['off', 'not_home'] }}
+                  - choose: []
+                    default: !input empty_actions
+              - sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: >-
+                              {{ states(occupancy_entity) in ['unknown', 'unavailable'] }}
+                        sequence:
+                          - wait_for_trigger:
+                              - platform: template
+                                value_template: >-
+                                  {{ states(occupancy_entity) in ['on', 'home', 'off', 'not_home'] }}
+                            timeout: !input availability_warning_delay
+                            continue_on_timeout: true
+                          - condition: template
+                            value_template: "{{ not wait.completed }}"
+                          - condition: template
+                            value_template: >-
+                              {{ states(occupancy_entity) in ['unknown', 'unavailable'] }}
+                          - service: persistent_notification.create
+                            data:
+                              notification_id: "{{ availability_notification_id }}"
+                              title: Velair occupancy state is unavailable
+                              message: >-
+                                {{ state_attr(occupancy_entity, 'friendly_name') or occupancy_entity }}
+                                ({{ occupancy_entity }}) reports `{{ states(occupancy_entity) }}`.
+                                Home and Away actions are not run until it reports
+                                occupied (`on`/`home`) or empty (`off`/`not_home`).
+                          - if:
+                              - condition: template
+                                value_template: >-
+                                  {{ states(occupancy_entity) in ['on', 'home', 'off', 'not_home'] }}
+                            then:
+                              - service: persistent_notification.dismiss
+                                data:
+                                  notification_id: "{{ availability_notification_id }}"
+                    default:
+                      - service: persistent_notification.dismiss
+                        data:
+                          notification_id: "{{ availability_notification_id }}"

@@ -8,17 +8,14 @@ export const profileStyles = css`
 
   .profile-intro {
     align-items: center;
-    background: var(--secondary-background-color);
-    border: 1px solid var(--divider-color);
-    border-radius: 10px;
     display: grid;
-    gap: 12px;
-    grid-template-columns: 32px minmax(0, 1fr);
-    margin-bottom: 12px;
-    padding: 12px 14px;
+    gap: 10px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    padding: 2px 4px 4px;
   }
 
   .profile-intro > ha-icon {
+    --mdc-icon-size: 22px;
     color: var(--primary-color);
   }
 
@@ -29,12 +26,25 @@ export const profileStyles = css`
   }
 
   .profile-intro strong {
+    color: var(--primary-text-color);
     font-size: 14px;
+    line-height: 1.25;
   }
 
   .profile-intro small {
     color: var(--secondary-text-color);
+    font-size: 12px;
     line-height: 1.35;
+  }
+
+  .modes-view {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .modes-view .profile-library-selector {
+    margin: 4px 0;
   }
 
   .profile-library-selector {
@@ -784,6 +794,84 @@ export const profileStyles = css`
     min-width: 0;
   }
 
+  .profile-workspace-zone-picker {
+    margin-bottom: 2px;
+  }
+
+  .profile-workspace-zone-option {
+    align-items: stretch;
+    display: flex;
+    min-width: 150px;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .profile-workspace-zone-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .profile-workspace-zone-copy strong,
+  .profile-workspace-zone-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-workspace-zone-copy small {
+    color: var(--secondary-text-color);
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .profile-workspace-zone-option.active .profile-workspace-zone-copy small {
+    color: inherit;
+    opacity: 0.82;
+  }
+
+  .profile-workspace-zone {
+    border: 1px solid var(--divider-color);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .profile-workspace-zone.error,
+  .profile-zone.error {
+    border-color: var(--error-color);
+  }
+
+  .profile-workspace-zone-picker .zone.error {
+    border-color: var(--error-color);
+    color: var(--error-color);
+  }
+
+  .profile-zone-error {
+    margin: 0;
+  }
+
+  .profile-zone-static {
+    cursor: default;
+  }
+
+  .profile-zone-static > ha-icon {
+    color: var(--primary-color);
+  }
+
+  .profile-workspace-save {
+    background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
+    bottom: 8px;
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 0;
+    position: sticky;
+    z-index: 5;
+  }
+
+  .profile-workspace-save .command-button {
+    min-width: min(220px, 100%);
+  }
+
   .profile-actions,
   .zone-heading,
   .week-heading {
@@ -1150,6 +1238,18 @@ export const profileStyles = css`
   }
 
   @media (max-width: 600px) {
+    .profile-workspace-zone {
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+    }
+
+    .profile-week {
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+    }
+
     .profile-library-selector {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1208,6 +1308,18 @@ export const profileStyles = css`
   }
 
   @container (max-width: 600px) {
+    .profile-workspace-zone {
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+    }
+
+    .profile-week {
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+    }
+
     .active-setup-heading {
       align-items: stretch;
       grid-template-columns: minmax(0, 1fr);

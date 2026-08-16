@@ -29,6 +29,7 @@ describe("formatters", () => {
     expect(dateLocale("es")).toBe("es-ES");
     expect(dateLocale("fr")).toBe("fr-FR");
     expect(dateLocale("nl")).toBe("nl-NL");
+    expect(dateLocale("ru")).toBe("ru-RU");
     expect(dateLocale("unsupported")).toBe("en");
   });
 

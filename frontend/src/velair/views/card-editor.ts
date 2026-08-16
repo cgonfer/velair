@@ -475,6 +475,7 @@ export class VelairCardEditor extends LitElement {
     const labels: Record<VelairCardView, TranslationKey> = {
       "overview": "overview",
       "profiles": "profiles",
+      "modes": "modesTitle",
       "overview-status": "cardViewOverviewStatus",
       "overview-boosts": "cardViewOverviewBoosts",
       "overview-events": "cardViewOverviewEvents",

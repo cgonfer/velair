@@ -14,26 +14,31 @@ export function renderTemplatesView(host: TemplatesViewHost, selectedEntity?: st
   const templateDraftBlocks = selectedTemplate ? host._templateDraftBlocks : [];
   if (!templates.length) {
     return html`
-      <section class="template-library">
-        <div class="template-placeholder compact">
-          <span>${host._t("noTemplates")}</span>
-          <button
-            class="icon-button primary"
-            type="button"
-            ?disabled=${host._templateAction === "save"}
-            @click=${() => host._createTemplate()}
-            title=${host._t("createTemplate")}
-          >
-            <ha-icon icon="mdi:plus"></ha-icon>
-          </button>
+      <section class="templates-view">
+        ${renderTemplatesIntro(host)}
+        <div class="template-library">
+          <div class="template-placeholder compact">
+            <span>${host._t("noTemplates")}</span>
+            <button
+              class="icon-button primary"
+              type="button"
+              ?disabled=${host._templateAction === "save"}
+              @click=${() => host._createTemplate()}
+              title=${host._t("createTemplate")}
+            >
+              <ha-icon icon="mdi:plus"></ha-icon>
+            </button>
+          </div>
         </div>
       </section>
     `;
   }
 
   return html`
-    <section class="template-library">
-      <div class="template-library-layout">
+    <section class="templates-view">
+      ${renderTemplatesIntro(host)}
+      <div class="template-library">
+        <div class="template-library-layout">
         <div class=${host._templateListClass(templates.length)}>
           <div class="template-list-heading">
             <div class="section-heading">
@@ -148,8 +153,21 @@ export function renderTemplatesView(host: TemplatesViewHost, selectedEntity?: st
                 </div>
               `}
         </div>
+        </div>
       </div>
     </section>
+  `;
+}
+
+function renderTemplatesIntro(host: TemplatesViewHost) {
+  return html`
+    <header class="template-intro">
+      <ha-icon icon="mdi:content-copy"></ha-icon>
+      <span>
+        <strong>${host._t("templates")}</strong>
+        <small>${host._t("templatesPanelIntro")}</small>
+      </span>
+    </header>
   `;
 }
 

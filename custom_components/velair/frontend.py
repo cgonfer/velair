@@ -21,8 +21,10 @@ PANEL_TITLE = "Velair"
 PANEL_ICON = "mdi:home-thermometer-outline"
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
+BRAND_DIR = Path(__file__).parent / "brand"
 FRONTEND_URL = f"/{DOMAIN}_frontend"
 FRONTEND_MODULE_URL = f"{FRONTEND_URL}/velair-card.js"
+FRONTEND_ICON_FILENAME = "velair-icon.png"
 FRONTEND_ROUTE_REGISTERED = f"{DOMAIN}_frontend_route_registered"
 FRONTEND_FILES = {"velair-card.js", "velair-card.js.map"}
 NO_CACHE_HEADERS = {
@@ -40,10 +42,13 @@ class VelairFrontendView(HomeAssistantView):
 
     async def get(self, request: web.Request, filename: str) -> web.FileResponse:
         """Return a supported frontend asset with explicit no-cache headers."""
-        if filename not in FRONTEND_FILES:
+        if filename in FRONTEND_FILES:
+            path = FRONTEND_DIR / filename
+        elif filename == FRONTEND_ICON_FILENAME:
+            path = BRAND_DIR / "icon.png"
+        else:
             raise web.HTTPNotFound
 
-        path = FRONTEND_DIR / filename
         if not path.is_file():
             raise web.HTTPNotFound
 

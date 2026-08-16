@@ -66,7 +66,8 @@ export function activePauseOverrideForEntity(
   _entityId: string,
   zone?: ScheduleZone,
 ): Record<string, unknown> | undefined {
-  return isActivePauseOverride(zone?.override) ? zone?.override ?? undefined : undefined;
+  if (!isActivePauseOverride(zone?.override)) return undefined;
+  return { ...(zone?.override ?? {}), pause_count: zone?.pauses?.length ?? 1 };
 }
 
 export function boostDetailText(
@@ -101,6 +102,10 @@ export function pauseDetailText(host: OverviewDataHost, override: Record<string,
   const startedMs = dateMs(override.started_at);
   const untilMs = dateMs(override.until);
   const parts: string[] = [];
+  const count = Number(override.pause_count);
+  if (Number.isFinite(count) && count > 1) {
+    parts.push(`${host._t("pauseReasons")}: ${count}`);
+  }
 
   if (startedMs) {
     parts.push(`${host._t("pauseFrom")}: ${host._formatDateTime(new Date(startedMs).toISOString())}`);

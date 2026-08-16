@@ -1,0 +1,119 @@
+{
+  "title": "Velair",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Настройка Velair",
+        "description": "Автоматизация климата, которая подстраивается под ваш образ жизни. Выберите климатические устройства, которыми управляет Velair.",
+        "data": {
+          "climate_entities": "Климатические устройства",
+          "apply_active_schedule_on_startup": "Применять активное расписание после запуска Home Assistant"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Выберите хотя бы одно климатическое устройство."
+    },
+    "abort": {
+      "already_configured": "Velair уже настроен."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Управление климатическими устройствами",
+        "description": "Автоматизация климата, которая подстраивается под ваш образ жизни. Выберите климатические устройства, которыми управляет Velair. Удаление устройства прекращает управление им.",
+        "data": {
+          "climate_entities": "Климатические устройства",
+          "apply_active_schedule_on_startup": "Применять активное расписание после запуска Home Assistant"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Выберите хотя бы одно климатическое устройство."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_climate_event": {
+        "name": "Следующее запланированное событие"
+      },
+      "scheduler_status": {
+        "name": "Состояние планировщика",
+        "state": {
+          "paused": "Приостановлен",
+          "override_active": "Активно ручное переопределение",
+          "scheduled": "По расписанию",
+          "idle": "Простой",
+          "temperature_migration_required": "Требуется обновление единиц температуры"
+        }
+      },
+      "zone_active_target_temperature": {
+        "name": "{zone}: текущая целевая температура"
+      },
+      "zone_environmental_condition": {
+        "name": "{zone}: состояние окружающей среды",
+        "state": {
+          "monitoring_off": "Не отслеживается",
+          "no_readings": "Нет показаний",
+          "temperature_comfortable": "Комфортная температура",
+          "humidity_comfortable": "Комфортная влажность",
+          "comfortable": "Комфортно",
+          "cold": "Холодно",
+          "hot": "Жарко",
+          "dry": "Сухо",
+          "humid": "Влажно",
+          "cold_and_dry": "Холодно и сухо",
+          "cold_and_humid": "Холодно и влажно",
+          "hot_and_dry": "Жарко и сухо",
+          "hot_and_humid": "Жарко и влажно"
+        }
+      },
+      "zone_air_quality": {
+        "name": "{zone}: качество воздуха",
+        "state": {
+          "not_monitored": "Не отслеживается",
+          "unavailable": "Недоступно",
+          "good": "Хорошее",
+          "elevated": "Повышенное",
+          "poor": "Плохое"
+        }
+      },
+      "zone_override_state": {
+        "name": "{zone}: переопределение",
+        "state": {
+          "none": "Нет переопределения",
+          "boost": "Форсированный режим",
+          "paused": "Приостановлен",
+          "disabled": "Отключено"
+        }
+      },
+      "zone_preconditioning_start": {
+        "name": "{zone}: начало предварительного прогрева"
+      },
+      "zone_room_assist_state": {
+        "name": "{zone}: Room Assist",
+        "state": {
+          "unavailable": "Недоступно",
+          "not_configured": "Не настроено",
+          "disabled": "Отключено",
+          "blocked": "Заблокировано",
+          "idle": "Простой",
+          "holding": "Удержание",
+          "assisting": "Корректирует",
+          "ready": "Готов"
+        }
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Режим"
+      }
+    },
+    "switch": {
+      "automatic_scheduling": {
+        "name": "Автоматическое расписание"
+      }
+    }
+  }
+}

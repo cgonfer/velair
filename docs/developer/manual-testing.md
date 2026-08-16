@@ -118,7 +118,7 @@ Confirm that:
 - removing a climate through the integration options removes its generated zone
   sensors after the integration reloads, without removing global Velair
   entities or entities from other integrations;
-- scheduler status values are translated in every supported language;
+- scheduler status values are translated in every complete language and in the reviewed Russian backend catalog;
 - changing only a user profile language does not rename existing entities,
   because Home Assistant stores their original names at entity creation.
 
@@ -143,36 +143,59 @@ Services with `entity_id` must reject climates that were not selected during set
 
 ## Climate Profiles Smoke Test
 
-1. Create a profile with a name, icon, and description.
-2. Give one zone an alternate heat or cool schedule, pause a second zone, and
+1. Open **Schedules** and switch between **Default schedules** and **Profile
+   schedules**. Confirm the current local weekday is selected on entry, remains
+   selected while navigating within the workspace, and Lovelace
+   `view: schedules` remains Default-only.
+2. Edit a Default day, then try to change thermostat, weekday, schedule source,
+   and top-level tab. Cancel each prompt and confirm the draft remains exactly
+   unchanged. Repeat and accept each prompt; confirm the stored destination is
+   loaded and the discarded draft does not return after a WebSocket update.
+3. In **Profile schedules**, create a Profile with a name, icon, and description.
+   Confirm Profile rows provide create, edit, delete, and direct activation.
+   The activation and delete buttons must remain aligned with the create button
+   above the list.
+4. Give one zone an alternate heat or cool schedule, pause a second zone, and
    leave a third zone on its default schedule.
-3. Copy template blocks into one profile day, edit the draft, and confirm the
+5. Copy template blocks into one profile day, edit the draft, and confirm the
    template itself is unchanged.
-4. Start Boost on an affected zone, activate the profile, and confirm Boost is
+6. Confirm Default and Profile weekly editors present the same sequence:
+   weekday, timeline, template, blocks, save actions, cloning to days, and
+   cloning to thermostats. Exercise scalar targets, heat/cool ranges, Off
+   blocks, and supported fan, preset, swing, horizontal swing, and humidity
+   options. Save once and confirm all Profile metadata and thermostat schedules
+   are sent as one Profile operation.
+7. Enter an invalid target in a non-selected thermostat. Confirm its selector
+   is marked as invalid, the visible message names that thermostat/day/block,
+   and Save Profile is disabled with an explanation.
+8. Start Boost on an affected zone, activate the profile from **Modes**, and confirm Boost is
    cancelled and the block valid at the current time is applied immediately.
-5. Confirm the omitted zone continues its default schedule.
-6. Activate the profile while Global Pause and then Zone Pause are active;
+9. Confirm the omitted zone continues its default schedule.
+10. Activate the profile while Global Pause and then Zone Pause are active;
    confirm selection persists without overriding either pause and applies after
    resume.
-7. Select Default from Overview and through
+11. Select Default from Overview and through
    `velair.deactivate_profile`. Confirm an empty `profile_id` on
    `velair.activate_profile` remains a compatibility alias.
-8. Restart Home Assistant with startup application disabled and enabled. In both
+12. Restart Home Assistant with startup application disabled and enabled. In both
    cases confirm the selection persists; only the enabled case should force the
    current target during startup.
-9. Export and import the `profiles` and `modes` sections and confirm
+13. Export and import the `profiles` and `modes` sections and confirm
    definitions move without activating an imported profile. If the replacement
    omits the active profile, confirm Velair returns to default schedules.
-10. Repeat the editor and active selector checks at desktop, tablet, and mobile
-    widths in every supported language.
-11. Listen for `velair_event` and confirm profile activation, return to Default,
+14. Repeat the editor and active selector checks at desktop, tablet, and mobile
+    widths in every supported language. At a typical 390 px mobile width,
+    confirm each schedule block keeps time, mode, target, options, and delete
+    controls in one compact row without horizontal overflow. At exceptionally
+    narrow widths, confirm the fallback layout remains readable and usable.
+15. Listen for `velair_event` and confirm profile activation, return to Default,
     and deletion of the active profile emit `profile_changed` with the expected
     `profile_ids` and `previous_profile_ids`. Re-selecting the current set must
     not emit a duplicate event.
-12. In Profiles, create two custom Modes and map them to stored Profiles.
+16. In **Modes**, create two custom Modes and map them to stored Profiles.
     Confirm each mode row shows every mapped Profile icon and exact color, and
     that Default and Manual have short explanatory descriptions.
-13. In both Overview and Profiles, confirm the shared **Active setup** card
+17. In both Overview and Modes, confirm the shared **Active setup** card
     shows the current Mode and its applied Profiles as one relationship. Open
     its single chooser and confirm Default and custom Modes appear separately
     from direct Profile activation. Confirm Manual is visible as the current
@@ -183,32 +206,32 @@ Services with `entity_id` must reject climates that were not selected during set
     Confirm the chooser closes after selection, with Escape, and when clicking
     outside it. Repeat at desktop and mobile widths.
     Confirm `Default` and `Manual` cannot be renamed or deleted.
-14. Select each custom value through `select.velair_mode` and confirm its
+18. Select each custom value through `select.velair_mode` and confirm its
     mapped Profiles change once. For compatibility, select Manual through the
     native entity and confirm the current set remains active; select Default
     and confirm it is emptied.
-15. Change profile from the panel and through `velair.activate_profile`; confirm
+19. Change Profile through **Modes** and through `velair.activate_profile`; confirm
     the native selector reports Manual, including direct reactivation of the
     already active profile without repeating climate calls or events.
     Confirm this direct selection replaces every other active Profile instead
     of extending the set.
-16. Rename a selected Mode and confirm selection survives without reapplying
+20. Rename a selected Mode and confirm selection survives without reapplying
     Profiles. Remap it and confirm the new set applies atomically. Delete it and
     confirm the previous set remains active under Manual.
-17. Add one `overview-status` Lovelace card and confirm that it contains only
+21. Add one `overview-status` Lovelace card and confirm that it contains only
     scheduler state and pause/stop/resume controls. Add three independent
     `active-setup` cards with
     `active_setup_controls` set to `modes`, `profiles`, and `both`. Confirm each
     chooser exposes only the requested actions, all three keep the current Mode
     and applied Profiles visible, and Profiles-only still provides Default.
-18. Create two Profiles that configure different zones and map both to one Mode.
+22. Create two Profiles that configure different zones and map both to one Mode.
     Confirm both timelines, next events, and zone labels use their controlling
     Profile. Then attempt to select two Profiles that configure the same zone
     and confirm the editor and backend reject the conflict.
-19. Restart with a custom mode selected and test both values of **Apply active
+23. Restart with a custom mode selected and test both values of **Apply active
     schedule after startup**. The profile and mode must remain selected in both
     cases, but climate commands must only be sent when the setting is enabled.
-20. Confirm duplicate, reserved, empty, over-255-character, control-character,
+24. Confirm duplicate, reserved, empty, over-255-character, control-character,
     and orphan profile mappings are rejected. Confirm portable V4 data without
     Modes remains importable.
 
@@ -307,19 +330,26 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 ## Frontend Smoke Test
 
 1. Open the sidebar panel.
-2. Confirm the Overview, Schedules, Profiles, Templates, Room Assist, Comfort, Preconditioning, and Settings tabs render.
-3. Confirm Preconditioning lists climates in the order configured in Settings and contains no general Settings sections.
-4. Confirm mobile and desktop layouts do not overflow.
-5. Add, edit, drag, resize, and delete blocks.
-6. Save a schedule.
-7. Clone the schedule to other days.
-8. Clone the schedule to another managed climate.
-9. Create, rename, edit, apply, and delete a template.
-10. Export data on desktop.
-10. Import selected sections.
-11. Confirm import warns that selected data will be overwritten.
-12. Confirm Settings diagnostics show climate capabilities.
-13. Confirm Reset Velair asks for confirmation and restores defaults.
+2. With the initial schedule response completing in under 300 ms, confirm no
+   loading message flashes. Throttle the response beyond 300 ms and confirm a
+   small local Velair icon with a static **Loading...** label appears inline,
+   without a floating notice or animation. Existing content must remain visible
+   during later refreshes.
+3. Confirm the Overview, Schedules, Modes, Templates, Room Assist, Comfort,
+   Preconditioning, and Settings tabs render in that order. Confirm existing
+   links and Lovelace `view` values still open the same named views.
+4. Confirm Preconditioning lists climates in the order configured in Settings and contains no general Settings sections.
+5. Confirm mobile and desktop layouts do not overflow.
+6. Add, edit, drag, resize, and delete blocks.
+7. Save a schedule.
+8. Clone the schedule to other days.
+9. Clone the schedule to another managed climate.
+10. Create, rename, edit, apply, and delete a template.
+11. Export data on desktop.
+12. Import selected sections.
+13. Confirm import warns that selected data will be overwritten.
+14. Confirm Settings diagnostics show climate capabilities.
+15. Confirm Reset Velair asks for confirmation and restores defaults.
 
 ## Startup Behavior
 

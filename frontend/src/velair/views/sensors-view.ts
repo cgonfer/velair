@@ -72,7 +72,7 @@ const TEMPERATURE_MARKER_ORDER: Record<TemperatureMarker["key"], number> = {
 const TEMPERATURE_MARKER_DOT_GROUP_DISTANCE_PERCENT = 1.25;
 const TEMPERATURE_MARKER_COLLISION_DISTANCE_PERCENT = 22;
 const TEMPERATURE_MARKER_CALLOUT_EDGE_PERCENT = 10;
-const TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT = 20;
+const TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT = 24;
 
 const SENSOR_HELP_KEYS: Partial<Record<TranslationKey, TranslationKey>> = {
   roomSensorAssist: "roomSensorAssistHelp",
@@ -741,7 +741,7 @@ function renderTemperatureMarkerCallout(
   );
 
   return html`
-    <span class="sensor-scale-callout">
+    <span class=${assistOffsetLabel ? "sensor-scale-callout has-offset" : "sensor-scale-callout"}>
       <small>${marker.label}</small>
       <span class="sensor-scale-value-row">
         <strong>${marker.formatted}</strong>
@@ -1170,23 +1170,13 @@ function applyTemperatureMarkerCalloutOffsets(
     Pick<TemperatureMarker, "calloutPosition" | "lane" | "shifted">
   >();
 
+  const clusters: TemperatureMarker[][] = [];
   let cluster: TemperatureMarker[] = [];
   const flushCluster = () => {
-    if (!cluster.length) {
-      return;
+    if (cluster.length) {
+      clusters.push(cluster);
+      cluster = [];
     }
-    const centerPosition =
-      cluster.reduce((total, marker) => total + marker.position, 0) / cluster.length;
-    const calloutPositions = calloutPositionsForCluster(cluster.length, centerPosition);
-    cluster.forEach((marker, index) => {
-      const calloutPosition = calloutPositions[index] ?? marker.position;
-      offsetsByKey.set(marker.key, {
-        calloutPosition,
-        lane: index,
-        shifted: Math.abs(calloutPosition - marker.position) > 0.5,
-      });
-    });
-    cluster = [];
   };
 
   for (const marker of sortedMarkers) {
@@ -1201,6 +1191,31 @@ function applyTemperatureMarkerCalloutOffsets(
   }
   flushCluster();
 
+  for (let index = 0; index < clusters.length - 1;) {
+    const currentPositions = calloutPositionsForMarkers(clusters[index]);
+    const nextPositions = calloutPositionsForMarkers(clusters[index + 1]);
+    const currentRight = currentPositions[currentPositions.length - 1];
+    const nextLeft = nextPositions[0];
+    if (nextLeft - currentRight < TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT) {
+      clusters.splice(index, 2, [...clusters[index], ...clusters[index + 1]]);
+      index = Math.max(0, index - 1);
+      continue;
+    }
+    index += 1;
+  }
+
+  for (const markerCluster of clusters) {
+    const calloutPositions = calloutPositionsForMarkers(markerCluster);
+    markerCluster.forEach((marker, index) => {
+      const calloutPosition = calloutPositions[index] ?? marker.position;
+      offsetsByKey.set(marker.key, {
+        calloutPosition,
+        lane: index,
+        shifted: Math.abs(calloutPosition - marker.position) > 0.5,
+      });
+    });
+  }
+
   return markers.map((marker) => ({
     ...marker,
     ...(offsetsByKey.get(marker.key) ?? {
@@ -1209,6 +1224,12 @@ function applyTemperatureMarkerCalloutOffsets(
       shifted: false,
     }),
   }));
+}
+
+function calloutPositionsForMarkers(markers: TemperatureMarker[]): number[] {
+  const centerPosition =
+    markers.reduce((total, marker) => total + marker.position, 0) / markers.length;
+  return calloutPositionsForCluster(markers.length, centerPosition);
 }
 
 function calloutPositionsForCluster(count: number, centerPosition: number): number[] {

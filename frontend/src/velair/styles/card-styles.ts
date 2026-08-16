@@ -1,6 +1,7 @@
 import { css } from "lit";
 import { baseStyles } from "./base-styles";
 import { comfortStyles } from "./comfort-styles";
+import { loadingStyles } from "./loading-styles";
 import { noticeStyles } from "./notice-styles";
 import { operationStatusStyles } from "./operation-status-styles";
 import { overviewStyles } from "./overview-styles";
@@ -12,7 +13,7 @@ import { templateStyles } from "./template-styles";
 import { timelineStyles } from "./timeline-styles";
 import { responsiveStyles } from "./responsive-styles";
 
-export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
+export const cardStyles = [baseStyles, comfortStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
     .temperature-migration-banner {
       align-items: start;
       background: color-mix(in srgb, var(--warning-color, #c99500) 12%, var(--card-background-color));
@@ -99,6 +100,54 @@ export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationSta
       display: grid;
       gap: 8px;
       margin-top: 0;
+    }
+
+    .schedule-source-selector {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .schedule-source-selector > button {
+      align-items: center;
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 10px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 24px minmax(0, 1fr);
+      min-width: 0;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .schedule-source-selector > button.active {
+      background: color-mix(in srgb, var(--primary-color) 10%, var(--card-background-color));
+      border-color: var(--primary-color);
+    }
+
+    .schedule-source-selector ha-icon {
+      color: var(--primary-color);
+    }
+
+    .schedule-source-selector span {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .schedule-source-selector small {
+      color: var(--secondary-text-color);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 600px) {
+      .schedule-source-selector {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
 
     .schedule-zone-picker .zones {
@@ -190,7 +239,8 @@ export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationSta
       position: relative;
     }
 
-    .zone.dirty::after {
+    .zone.dirty::after,
+    .day-tab.dirty::after {
       background: var(--warning-color, #f9a825);
       border: 2px solid var(--card-background-color);
       border-radius: 999px;
@@ -216,6 +266,7 @@ export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationSta
       justify-items: center;
       min-width: 0;
       padding: 8px 6px;
+      position: relative;
     }
 
     .day-tab span {

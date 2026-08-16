@@ -2,6 +2,7 @@ import { html, nothing } from "lit";
 import type { VelairViewHost } from "../host-types";
 import type { ScheduleResponse, ScheduleZone, VelairCardView } from "../types";
 import type { ActiveSetupControls } from "../types";
+import { VELAIR_LOADING_ICON_URL } from "../constants";
 import { incompatibleScheduleTargetCount } from "../domain/schedule-compatibility";
 import { renderNotice } from "./notice-view";
 import { operationStatusIsVisible, renderOperationStatus } from "./operation-status-view";
@@ -59,7 +60,23 @@ export function renderCardContent(host: CardContentHost) {
           : nothing}
         ${host._error ? renderNotice(host, "error", host._error) : nothing}
         ${host._saveMessage ? renderNotice(host, "success", host._saveMessage) : nothing}
-        ${host._loading && !host._data ? html`<div class="notice">${host._t("loading")}</div>` : nothing}
+        ${host._showInitialLoading && host._loading && !host._data
+          ? html`
+              <div class="initial-loading" role="status" aria-live="polite">
+                <img
+                  class="initial-loading-logo"
+                  src=${VELAIR_LOADING_ICON_URL}
+                  alt=""
+                  width="40"
+                  height="40"
+                >
+                <div class="initial-loading-copy">
+                  <strong>Velair</strong>
+                  <span>${host._t("loading")}</span>
+                </div>
+              </div>
+            `
+          : nothing}
         ${host._data?.temperature_migration?.required
           ? html`
               <div class="temperature-migration-banner" role="alert">
@@ -130,8 +147,9 @@ function renderViewContent(
     `;
   }
 
-  if (view === "profiles") {
+  if (view === "modes" || view === "profiles") {
     return html`<velair-profiles-view
+      workspace="modes"
       .hass=${host.hass}
       .data=${host._data}
       @profile-data-changed=${(event: CustomEvent<ScheduleResponse>) => host._applyScheduleData(event.detail, { forceDraft: false })}

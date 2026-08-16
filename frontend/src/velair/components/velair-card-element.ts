@@ -1,6 +1,10 @@
 import { LitElement } from "lit";
 import { property, state } from "lit/decorators.js";
-import { OPERATION_SUCCESS_VISIBLE_MS, PORTABLE_SECTIONS } from "../constants";
+import {
+  INITIAL_LOADING_DELAY_MS,
+  OPERATION_SUCCESS_VISIBLE_MS,
+  PORTABLE_SECTIONS,
+} from "../constants";
 import {
   asCardContextHost,
   dictionaryLabelForHost,
@@ -40,7 +44,7 @@ import type { SupportedLanguage, TranslationKey } from "../translations";
 import { cardStyles } from "../styles/card-styles";
 import { VelairApiClient } from "../api/client";
 import type { PortableSummaryItem } from "../domain/portable";
-import { changedPreconditioningEventEntityIds } from "../domain/schedule-events";
+import { changedPreconditioningEventEntityIds, weekdayForDate } from "../domain/schedule-events";
 import { scheduleTemplatesFromStored, templateLabel } from "../domain/templates";
 import {
   overviewTimelineInitialScrollLeft,
@@ -253,9 +257,12 @@ export class VelairCard extends LitElement {
   @state() private _data?: ScheduleResponse;
   @state() private _error?: string;
   @state() private _loading = false;
+  @state() private _showInitialLoading = false;
   @state() private _saving = false;
   @state() private _saveMessage?: string;
   @state() private _selectedEntity?: string;
+  @state() private _scheduleSource: "default" | "profile" = "default";
+  @state() private _profileScheduleDirty = false;
   @state() private _selectedWeekday = "monday";
   @state() private _draftBlocks: DraftScheduleBlock[] = [];
   @state() private _dirty = false;
@@ -307,6 +314,7 @@ export class VelairCard extends LitElement {
   private _preconditioningRefreshTimer?: number;
   private _nextEventChangeTimeout?: number;
   private _timelineNowTick?: number;
+  private _initialLoadingTimer?: number;
   private _temperatureUnitReloadPending = false;
   private _overviewTimelineScrollInitialized = false;
   private _draggedTimelineIndex?: number;
@@ -349,6 +357,7 @@ export class VelairCard extends LitElement {
   public connectedCallback(): void {
     super.connectedCallback();
     void this._loadSchedule();
+    this._syncInitialLoadingState();
     void this._subscribeUpdates();
     this._syncTimelineNowTick();
     window.addEventListener(
@@ -368,6 +377,7 @@ export class VelairCard extends LitElement {
     this._clearNextEventChangeTimer();
     this._clearPreconditioningRefreshTimer();
     this._clearOverviewTimelineDetail();
+    this._clearInitialLoadingTimer();
     this._stopPauseTick();
     this._stopTimelineNowTick();
     window.removeEventListener(
@@ -413,6 +423,9 @@ export class VelairCard extends LitElement {
     if (changedProperties.has("_data")) {
       this._syncOperationStatusTimer();
     }
+    if (changedProperties.has("_loading") || changedProperties.has("_data")) {
+      this._syncInitialLoadingState();
+    }
     if (
       this._effectiveView() === "templates" &&
       (changedProperties.has("view") ||
@@ -425,6 +438,16 @@ export class VelairCard extends LitElement {
     }
     if (changedProperties.has("view") || changedProperties.has("_data")) {
       this._syncTimelineNowTick();
+    }
+    if (changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty")) {
+      this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          dirty: this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty,
+          scope: this._scheduleSource === "profile" ? "profile" : "default-schedule",
+        },
+      }));
     }
     const effectiveView = this._effectiveView();
     const showsOverviewTimeline = effectiveView === "overview" || effectiveView === "overview-timeline";
@@ -480,6 +503,29 @@ export class VelairCard extends LitElement {
     if (this._operationStatusTimeout !== undefined) {
       window.clearTimeout(this._operationStatusTimeout);
       this._operationStatusTimeout = undefined;
+    }
+  }
+
+  private _syncInitialLoadingState(): void {
+    this._clearInitialLoadingTimer();
+    if (!this._loading || this._data) {
+      this._showInitialLoading = false;
+      return;
+    }
+
+    this._showInitialLoading = false;
+    this._initialLoadingTimer = window.setTimeout(() => {
+      this._initialLoadingTimer = undefined;
+      if (this.isConnected && this._loading && !this._data) {
+        this._showInitialLoading = true;
+      }
+    }, INITIAL_LOADING_DELAY_MS);
+  }
+
+  private _clearInitialLoadingTimer(): void {
+    if (this._initialLoadingTimer !== undefined) {
+      window.clearTimeout(this._initialLoadingTimer);
+      this._initialLoadingTimer = undefined;
     }
   }
 
@@ -711,6 +757,30 @@ export class VelairCard extends LitElement {
 
   private _selectWeekday(weekday: string): void {
     selectWeekday(asScheduleStateHost(this), weekday);
+  }
+
+  private _confirmDiscardChanges(): boolean {
+    return window.confirm(this._t("discardUnsavedChanges"));
+  }
+
+  private _selectScheduleSource(source: "default" | "profile"): void {
+    if (source === this._scheduleSource || this._hasExternalConfig) return;
+    const dirty = this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty;
+    if (dirty && !window.confirm(this._t(
+      this._scheduleSource === "profile" ? "profileDiscardChanges" : "discardUnsavedChanges",
+    ))) return;
+    if (this._scheduleSource === "default" && this._dirty) this._resetDraftBlocks();
+    this._profileScheduleDirty = false;
+    this._scheduleSource = source;
+    this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
+      bubbles: true,
+      composed: true,
+      detail: { dirty: false, scope: source === "profile" ? "profile" : "default-schedule" },
+    }));
+  }
+
+  private _setProfileScheduleDirty(dirty: boolean): void {
+    this._profileScheduleDirty = dirty;
   }
 
   private _blocksForSource(source: BlockDraftSource): DraftScheduleBlock[] {
@@ -964,6 +1034,12 @@ export class VelairCard extends LitElement {
 
   private _firstWeekday(): string {
     return firstWeekdayForHost(asCardContextHost(this));
+  }
+
+  private _initialScheduleWeekday(firstWeekday: string): string {
+    return this._effectiveView() === "schedules"
+      ? weekdayForDate(this._currentTimelineNow())
+      : firstWeekday;
   }
 
   private _orderedWeekdays(): string[] {

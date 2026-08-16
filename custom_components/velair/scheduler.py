@@ -47,6 +47,9 @@ from .const import (
     EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED,
     EVENT_TYPE_SCHEDULER_MODE_CHANGED,
     EVENT_TYPE_ZONE_PAUSED,
+    EVENT_TYPE_ZONE_PAUSE_ADDED,
+    EVENT_TYPE_ZONE_PAUSE_REMOVED,
+    EVENT_TYPE_ZONE_PAUSE_UPDATED,
     EVENT_TYPE_ZONE_RESUMED,
     EVENT_VELAIR,
     MODE_AUTO,
@@ -75,6 +78,7 @@ from .models import (
     ScheduleTemplateData,
     SchedulerData,
     ZoneOverride,
+    ZonePauseReason,
     ZoneData,
     WEEKDAYS,
     climate_options_from_block,
@@ -90,6 +94,8 @@ from .models import (
     preconditioning_observations_for_direction,
     predict_preconditioning_lead,
     trim_preconditioning_observations,
+    validate_pause_id,
+    zone_pause_override_from_reasons,
 )
 from .temperature import (
     CELSIUS,
@@ -265,6 +271,7 @@ class VelairScheduler:
         self._room_sensor_assist_inflight: dict[str, _RoomSensorAssistState] = {}
         self._room_sensor_assist_entities: tuple[str, ...] = ()
         self._room_sensor_assist_locks: dict[str, asyncio.Lock] = {}
+        self._zone_override_locks: dict[str, asyncio.Lock] = {}
         self._room_sensor_assist_generations: dict[str, int] = {}
         self._room_sensor_assist_suppressed: set[str] = set()
         self._room_sensor_assist_limit_notifications: dict[str, tuple[object, ...]] = {}
@@ -730,12 +737,28 @@ class VelairScheduler:
         else:
             return {"state": "none"}
 
-        return {
+        status: dict[str, object] = {
             "state": state,
             "started_at": override.get("started_at"),
             "until": override.get("until"),
             "action": override.get("action"),
         }
+        if state == "paused":
+            reasons = self._active_zone_pause_reasons(entity_id, dt_util.now())
+            status.update(
+                {
+                    "pause_count": len(reasons),
+                    "pause_ids": [
+                        value for item in reasons
+                        if isinstance((value := item.get("pause_id")), str)
+                    ],
+                    "manual": any("pause_id" not in item for item in reasons),
+                    "pauses": deepcopy(reasons),
+                }
+            )
+        if pause_id := override.get("pause_id"):
+            status["pause_id"] = pause_id
+        return status
 
     def get_operational_status(self) -> str:
         """Return a human-readable operational status."""
@@ -842,6 +865,14 @@ class VelairScheduler:
             result["active_from"] = event.when.isoformat()
         if override is not None:
             result["until"] = override.get("until")
+            if _is_pause_override(override):
+                reasons = self._active_zone_pause_reasons(entity_id, now)
+                result["pause_count"] = len(reasons)
+                result["pause_ids"] = [
+                    value for item in reasons
+                    if isinstance((value := item.get("pause_id")), str)
+                ]
+                result["manual_pause"] = any("pause_id" not in item for item in reasons)
         elif self.mode == MODE_PAUSED:
             result["until"] = self._data["global_"].get("paused_until")
         return result
@@ -1147,6 +1178,10 @@ class VelairScheduler:
     ) -> None:
         """Set a temporary boost override for one zone."""
         self.ensure_managed_entity(entity_id)
+        # Expiry owns removal and lifecycle events. Do not overwrite even an
+        # already-due canonical reason before that transaction completes.
+        if self._zone_pause_reasons(entity_id):
+            raise ValueError(f"Cannot start boost while {entity_id} is paused")
         target = temperature_target_from_mapping(
             {
                 **({"temperature": temperature} if temperature is not None else {}),
@@ -1175,52 +1210,14 @@ class VelairScheduler:
                 swing_horizontal_mode=swing_horizontal_mode,
             ),
         )
-        previous_override = deepcopy(
-            self._data["zones"][entity_id].get("override")
-        )
-        previous_session = self._preconditioning_sessions.get(entity_id)
-        self._discard_preconditioning_session(entity_id)
-        self._invalidate_climate_delivery(entity_id)
-        try:
-            await self._async_clear_room_sensor_assist(
+        async with self._zone_override_lock(entity_id):
+            await self._async_store_zone_boost(
                 entity_id,
-                restore=True,
-                reason="boost_started",
+                until=until,
+                target=normalized_target,
+                hvac_mode=hvac_mode,
+                climate_options=climate_options,
             )
-            stored_previous_state = (
-                previous_override.get("previous_state")
-                if _is_boost_override(previous_override)
-                else None
-            )
-            previous_state = (
-                dict(stored_previous_state)
-                if isinstance(stored_previous_state, dict)
-                else self._climate_manager.climate_state_snapshot(entity_id)
-            )
-            if not previous_state:
-                raise ValueError(
-                    f"Cannot start boost while {entity_id} state is unavailable"
-                )
-
-            override = {
-                "type": "boost",
-                "started_at": dt_util.now().isoformat(),
-                "until": until,
-                **normalized_target,
-                "previous_state": previous_state,
-            }
-            if hvac_mode is not None:
-                override["hvac_mode"] = hvac_mode
-            override.update(climate_options)
-
-            self._data["zones"][entity_id]["override"] = override
-            await self._async_save_data()
-        except (asyncio.CancelledError, Exception):
-            self._data["zones"][entity_id]["override"] = previous_override
-            if previous_session is not None:
-                self._preconditioning_sessions[entity_id] = previous_session
-            await self._async_restore_delivery_after_failed_mutation(entity_id)
-            raise
         self.async_schedule_next_event()
         announced = False
 
@@ -1290,41 +1287,18 @@ class VelairScheduler:
 
         await self._climate_delivery.async_deliver(entity_id, resolve_boost)
 
-    async def async_cancel_zone_boost(self, entity_id: str) -> None:
-        """Cancel one active boost and restore the scheduled or previous state."""
-        self.ensure_managed_entity(entity_id)
-        override = self._data["zones"][entity_id].get("override")
-        if not _is_boost_override(override):
-            return
-
-        self._invalidate_climate_delivery(entity_id)
-        self._data["zones"][entity_id]["override"] = None
-        try:
-            await self._async_save_data()
-        except (asyncio.CancelledError, Exception):
-            self._data["zones"][entity_id]["override"] = override
-            await self._async_restore_delivery_after_failed_mutation(entity_id)
-            raise
-        await self._async_finish_zone_boost(
-            entity_id,
-            override,
-            dt_util.now(),
-            reason="manual",
-        )
-        self.async_schedule_next_event()
-
-    async def async_pause_zone(
+    async def _async_store_zone_boost(
         self,
         entity_id: str,
         *,
-        until: str | None = None,
-        action: str = ZONE_PAUSE_ACTION_NONE,
+        until: str,
+        target: dict[str, float],
+        hvac_mode: str | None,
+        climate_options: dict[str, object],
     ) -> None:
-        """Pause automatic schedule execution for one zone."""
-        self.ensure_managed_entity(entity_id)
-        if action not in (ZONE_PAUSE_ACTION_NONE, ZONE_PAUSE_ACTION_TURN_OFF):
-            raise ValueError(f"Invalid zone pause action: {action}")
-
+        """Persist one boost while the shared zone-override lock is held."""
+        if self._zone_pause_reasons(entity_id):
+            raise ValueError(f"Cannot start boost while {entity_id} is paused")
         previous_override = deepcopy(
             self._data["zones"][entity_id].get("override")
         )
@@ -1334,16 +1308,34 @@ class VelairScheduler:
         try:
             await self._async_clear_room_sensor_assist(
                 entity_id,
-                restore=action != ZONE_PAUSE_ACTION_TURN_OFF,
-                reason="zone_paused",
+                restore=True,
+                reason="boost_started",
             )
+            stored_previous_state = (
+                previous_override.get("previous_state")
+                if _is_boost_override(previous_override)
+                else None
+            )
+            previous_state = (
+                dict(stored_previous_state)
+                if isinstance(stored_previous_state, dict)
+                else self._climate_manager.climate_state_snapshot(entity_id)
+            )
+            if not previous_state:
+                raise ValueError(
+                    f"Cannot start boost while {entity_id} state is unavailable"
+                )
+
             override: ZoneOverride = {
-                "type": "pause",
+                "type": "boost",
                 "started_at": dt_util.now().isoformat(),
-                "action": action,
+                "until": until,
+                **target,
+                "previous_state": previous_state,
             }
-            if until is not None:
-                override["until"] = until
+            if hvac_mode is not None:
+                override["hvac_mode"] = hvac_mode
+            override.update(climate_options)
 
             self._data["zones"][entity_id]["override"] = override
             await self._async_save_data()
@@ -1353,55 +1345,228 @@ class VelairScheduler:
                 self._preconditioning_sessions[entity_id] = previous_session
             await self._async_restore_delivery_after_failed_mutation(entity_id)
             raise
-        if action == ZONE_PAUSE_ACTION_TURN_OFF:
-            if self._temperature_migration_blocked:
+
+    async def async_cancel_zone_boost(self, entity_id: str) -> None:
+        """Cancel one active boost and restore the scheduled or previous state."""
+        self.ensure_managed_entity(entity_id)
+        async with self._zone_override_lock(entity_id):
+            override = self._data["zones"][entity_id].get("override")
+            if not _is_boost_override(override):
                 return
-            await self._async_apply_event(
-                ClimateEvent(
-                    entity_id=entity_id,
-                    when=dt_util.now(),
-                    temperature=None,
-                    weekday=None,
-                    start=None,
-                    action=ACTION_TURN_OFF,
-                ),
-                source="zone_paused",
+
+            self._invalidate_climate_delivery(entity_id)
+            self._data["zones"][entity_id]["override"] = None
+            try:
+                await self._async_save_data()
+            except (asyncio.CancelledError, Exception):
+                self._data["zones"][entity_id]["override"] = override
+                await self._async_restore_delivery_after_failed_mutation(entity_id)
+                raise
+            await self._async_finish_zone_boost(
+                entity_id,
+                override,
+                dt_util.now(),
+                reason="manual",
+            )
+            self.async_schedule_next_event()
+
+    async def async_pause_zone(
+        self,
+        entity_id: str,
+        *,
+        until: str | None = None,
+        action: str = ZONE_PAUSE_ACTION_NONE,
+        pause_id: str | None = None,
+    ) -> None:
+        """Add or update one independently owned zone-pause reason."""
+        self.ensure_managed_entity(entity_id)
+        if action not in (ZONE_PAUSE_ACTION_NONE, ZONE_PAUSE_ACTION_TURN_OFF):
+            raise ValueError(f"Invalid zone pause action: {action}")
+        if pause_id is not None:
+            pause_id = validate_pause_id(pause_id)
+
+        async with self._zone_override_lock(entity_id):
+            now = dt_util.now()
+            current_reasons = self._active_zone_pause_reasons(entity_id, now)
+            previous_override = deepcopy(
+                self._data["zones"][entity_id].get("override")
+            )
+            previous_reasons = deepcopy(self._data["zones"][entity_id].get("pauses", []))
+            had_pauses_key = "pauses" in self._data["zones"][entity_id]
+            was_paused = bool(current_reasons)
+            previous_effective_action = (
+                zone_pause_override_from_reasons(current_reasons) or {}
+            ).get("action")
+            operation = "added"
+            replaced_reasons: list[ZonePauseReason] = []
+            started_at = now.isoformat()
+            next_reason: ZonePauseReason = {
+                "started_at": started_at,
+                "action": action,
+            }
+            if until is not None:
+                next_reason["until"] = until
+            if pause_id is not None:
+                next_reason["pause_id"] = pause_id
+                existing_index = next(
+                    (index for index, reason in enumerate(current_reasons)
+                     if reason.get("pause_id") == pause_id),
+                    None,
+                )
+                if existing_index is not None:
+                    existing = current_reasons[existing_index]
+                    if existing.get("action") == action and existing.get("until") == until:
+                        return
+                    next_reason["started_at"] = existing["started_at"]
+                    current_reasons[existing_index] = next_reason
+                    operation = "updated"
+                else:
+                    current_reasons.append(next_reason)
+            else:
+                # Calls without an ID retain their published manual authority.
+                replaced_reasons = current_reasons
+                current_reasons = [next_reason]
+
+            override = zone_pause_override_from_reasons(current_reasons)
+            next_effective_action = (override or {}).get("action")
+            delivery_changed = (
+                not was_paused
+                or previous_effective_action != next_effective_action
             )
 
-        self.async_schedule_next_event()
-        self._async_fire_zone_paused(entity_id, override)
-        await self._async_log_zone_pause(entity_id, override)
+            previous_session = self._preconditioning_sessions.get(entity_id)
+            if not was_paused:
+                self._discard_preconditioning_session(entity_id)
+            if delivery_changed:
+                self._invalidate_climate_delivery(entity_id)
+            try:
+                if not was_paused:
+                    await self._async_clear_room_sensor_assist(
+                        entity_id,
+                        restore=action != ZONE_PAUSE_ACTION_TURN_OFF,
+                        reason="zone_paused",
+                    )
+                self._data["zones"][entity_id]["pauses"] = current_reasons
+                self._data["zones"][entity_id]["override"] = override
+                await self._async_save_data()
+            except (asyncio.CancelledError, Exception):
+                if had_pauses_key:
+                    self._data["zones"][entity_id]["pauses"] = previous_reasons
+                else:
+                    self._data["zones"][entity_id].pop("pauses", None)
+                self._data["zones"][entity_id]["override"] = previous_override
+                if previous_session is not None:
+                    self._preconditioning_sessions[entity_id] = previous_session
+                if delivery_changed:
+                    await self._async_restore_delivery_after_failed_mutation(entity_id)
+                raise
+            if _is_boost_override(previous_override):
+                await self._async_logbook(
+                    self._message(
+                        "Boost ended because the zone was paused",
+                        "Refuerzo finalizado porque se pausó la zona",
+                    ),
+                    entity_id=entity_id,
+                )
+                self._async_fire_boost_ended(
+                    entity_id,
+                    previous_override,
+                    reason="zone_paused",
+                    restoration={"type": "none"},
+                )
+            if (
+                next_effective_action == ZONE_PAUSE_ACTION_TURN_OFF
+                and previous_effective_action != ZONE_PAUSE_ACTION_TURN_OFF
+            ):
+                if self._temperature_migration_blocked:
+                    return
+                await self._async_apply_event(
+                    ClimateEvent(
+                        entity_id=entity_id,
+                        when=dt_util.now(),
+                        temperature=None,
+                        weekday=None,
+                        start=None,
+                        action=ACTION_TURN_OFF,
+                    ),
+                    source="zone_paused",
+                )
+
+            self.async_schedule_next_event()
+            for replaced_reason in replaced_reasons:
+                self._async_fire_zone_pause_reason(
+                    entity_id,
+                    replaced_reason,
+                    operation="removed",
+                    reason="replaced",
+                )
+            self._async_fire_zone_pause_reason(entity_id, next_reason, operation=operation)
+            if not was_paused:
+                self._async_fire_zone_paused(entity_id, override)
+                await self._async_log_zone_pause(entity_id, override)
 
     async def async_resume_zone(
         self,
         entity_id: str,
         *,
         apply_current_schedule: bool = True,
+        pause_id: str | None = None,
+        resume_all: bool | None = None,
+        reason: str = "manual",
     ) -> None:
         """Resume automatic schedule execution for one zone."""
         self.ensure_managed_entity(entity_id)
-        override = self._data["zones"][entity_id].get("override")
-        if not _is_pause_override(override):
-            return
+        if pause_id is not None:
+            pause_id = validate_pause_id(pause_id)
+        if pause_id is not None and resume_all is not None:
+            raise ValueError("pause_id and resume_all cannot be used together")
+        if pause_id is None and resume_all is False:
+            raise ValueError("resume_all: false requires pause_id")
 
-        self._invalidate_climate_delivery(entity_id)
-        self._data["zones"][entity_id]["override"] = None
-        try:
-            await self._async_save_data()
-        except (asyncio.CancelledError, Exception):
-            self._data["zones"][entity_id]["override"] = override
-            await self._async_restore_delivery_after_failed_mutation(entity_id)
-            raise
-        self._async_fire_zone_resumed(entity_id, override, reason="manual")
-        await self._async_log_zone_resume(entity_id, reason="manual")
+        async with self._zone_override_lock(entity_id):
+            reasons = self._zone_pause_reasons(entity_id)
+            if not reasons:
+                return
+            previous_override = deepcopy(self._data["zones"][entity_id].get("override"))
+            previous_reasons = deepcopy(self._data["zones"][entity_id].get("pauses", []))
+            had_pauses_key = "pauses" in self._data["zones"][entity_id]
+            if pause_id is not None:
+                removed = [item for item in reasons if item.get("pause_id") == pause_id]
+                remaining = [item for item in reasons if item.get("pause_id") != pause_id]
+            else:
+                removed = reasons
+                remaining = []
+            if not removed:
+                return
 
-        if apply_current_schedule and self.mode == MODE_AUTO:
-            await self.async_apply_current_schedule(
-                entity_id,
-                source="zone_resumed",
-            )
+            self._invalidate_climate_delivery(entity_id)
+            self._data["zones"][entity_id]["pauses"] = remaining
+            self._data["zones"][entity_id]["override"] = zone_pause_override_from_reasons(remaining)
+            try:
+                await self._async_save_data()
+            except (asyncio.CancelledError, Exception):
+                if had_pauses_key:
+                    self._data["zones"][entity_id]["pauses"] = previous_reasons
+                else:
+                    self._data["zones"][entity_id].pop("pauses", None)
+                self._data["zones"][entity_id]["override"] = previous_override
+                await self._async_restore_delivery_after_failed_mutation(entity_id)
+                raise
+            for removed_reason in removed:
+                self._async_fire_zone_pause_reason(
+                    entity_id, removed_reason, operation="removed", reason=reason
+                )
 
-        self.async_schedule_next_event()
+            if not remaining:
+                self._async_fire_zone_resumed(entity_id, previous_override, reason=reason)
+                await self._async_log_zone_resume(entity_id, reason=reason)
+            if not remaining and apply_current_schedule and self.mode == MODE_AUTO:
+                await self.async_apply_current_schedule(
+                    entity_id,
+                    source="zone_resumed",
+                )
+
+            self.async_schedule_next_event()
 
     async def async_set_daily_schedule(
         self,
@@ -2240,25 +2405,38 @@ class VelairScheduler:
             ):
                 metadata_only.add(entity_id)
 
+        locks = [
+            self._zone_override_lock(entity_id)
+            for entity_id in sorted(affected)
+        ]
+        acquired: list[asyncio.Lock] = []
         cancelled_boosts: list[tuple[str, ZoneOverride]] = []
-        for entity_id in affected:
-            self._invalidate_climate_delivery(entity_id)
-            override = self._data["zones"][entity_id].get("override")
-            if _is_boost_override(override):
-                self._data["zones"][entity_id]["override"] = None
-                cancelled_boosts.append((entity_id, override))
-        if affected or persist_change:
-            try:
+        try:
+            for lock in locks:
+                await lock.acquire()
+                acquired.append(lock)
+            for entity_id in affected:
+                self._invalidate_climate_delivery(entity_id)
+                override = self._data["zones"][entity_id].get("override")
+                if _is_boost_override(override):
+                    self._data["zones"][entity_id]["override"] = None
+                    cancelled_boosts.append((entity_id, override))
+            if affected or persist_change:
                 if rollback_data is None:
                     await self._async_save_data()
                 else:
                     await self._async_save_profile_mutation(rollback_data)
-            except (asyncio.CancelledError, Exception):
-                for entity_id in affected:
-                    await self._async_restore_delivery_after_failed_mutation(
-                        entity_id
-                    )
-                raise
+        except (asyncio.CancelledError, Exception):
+            for entity_id, override in cancelled_boosts:
+                self._data["zones"][entity_id]["override"] = override
+            for entity_id in affected:
+                await self._async_restore_delivery_after_failed_mutation(
+                    entity_id
+                )
+            raise
+        finally:
+            for lock in reversed(acquired):
+                lock.release()
 
         for entity_id in affected:
             self._discard_preconditioning_session(entity_id)
@@ -2358,13 +2536,26 @@ class VelairScheduler:
         try:
             await self._async_save_data()
         except asyncio.CancelledError:
-            self._data.clear()
-            self._data.update(previous_data)
+            self._restore_profile_mutation_data(previous_data)
             raise
         except Exception:
-            self._data.clear()
-            self._data.update(previous_data)
+            self._restore_profile_mutation_data(previous_data)
             raise
+
+    def _restore_profile_mutation_data(self, previous_data: SchedulerData) -> None:
+        """Roll back only fields owned by Profile and Mode mutations."""
+        for key in ("profiles", "modes"):
+            if key in previous_data:
+                self._data[key] = deepcopy(previous_data[key])
+            else:
+                self._data.pop(key, None)
+        current_global = self._data.setdefault("global_", {})
+        previous_global = previous_data.get("global_", {})
+        for key in ("active_profile_ids", "active_mode_id"):
+            if key in previous_global:
+                current_global[key] = deepcopy(previous_global[key])
+            else:
+                current_global.pop(key, None)
 
     async def async_replace_portable_data(
         self,
@@ -2797,15 +2988,20 @@ class VelairScheduler:
                 _LOGGER.exception("Failed to apply climate event for %s", event.entity_id)
 
         for entity_id, override in expired_overrides.items():
-            if _is_boost_override(override):
-                await self._async_finish_zone_boost(
-                    entity_id,
-                    override,
-                    now,
-                    reason="expired",
-                )
-            elif _is_pause_override(override):
-                await self._async_apply_expired_zone_pause(entity_id)
+            async with self._zone_override_lock(entity_id):
+                # Another action may have established a new authoritative
+                # override after the expired one was persisted as cleared.
+                if self._data["zones"][entity_id].get("override") is not None:
+                    continue
+                if _is_boost_override(override):
+                    await self._async_finish_zone_boost(
+                        entity_id,
+                        override,
+                        now,
+                        reason="expired",
+                    )
+                elif _is_pause_override(override):
+                    await self._async_apply_expired_zone_pause(entity_id)
 
         self.async_schedule_next_event()
 
@@ -5001,6 +5197,10 @@ class VelairScheduler:
         """Return the per-climate lock that serializes Room Assist services."""
         return self._room_sensor_assist_locks.setdefault(entity_id, asyncio.Lock())
 
+    def _zone_override_lock(self, entity_id: str) -> asyncio.Lock:
+        """Return the per-zone lock that serializes pause and resume services."""
+        return self._zone_override_locks.setdefault(entity_id, asyncio.Lock())
+
     async def _async_update_room_sensor_assist_limit_notification(
         self,
         state: _RoomSensorAssistState,
@@ -6988,15 +7188,41 @@ class VelairScheduler:
         override: ZoneOverride,
     ) -> None:
         """Fire an event when one zone scheduler is paused."""
-        self._async_fire_event(
-            EVENT_TYPE_ZONE_PAUSED,
-            {
-                "entity_id": entity_id,
-                "started_at": override.get("started_at"),
-                "until": override.get("until"),
-                "action": override.get("action", ZONE_PAUSE_ACTION_NONE),
-            },
-        )
+        data: dict[str, object] = {
+            "entity_id": entity_id,
+            "started_at": override.get("started_at"),
+            "until": override.get("until"),
+            "action": override.get("action", ZONE_PAUSE_ACTION_NONE),
+        }
+        if pause_id := override.get("pause_id"):
+            data["pause_id"] = pause_id
+        self._async_fire_event(EVENT_TYPE_ZONE_PAUSED, data)
+
+    def _async_fire_zone_pause_reason(
+        self,
+        entity_id: str,
+        pause: ZonePauseReason | dict,
+        *,
+        operation: str,
+        reason: str | None = None,
+    ) -> None:
+        """Fire one reason-level pause lifecycle event."""
+        event_types = {
+            "added": EVENT_TYPE_ZONE_PAUSE_ADDED,
+            "updated": EVENT_TYPE_ZONE_PAUSE_UPDATED,
+            "removed": EVENT_TYPE_ZONE_PAUSE_REMOVED,
+        }
+        data: dict[str, object] = {
+            "entity_id": entity_id,
+            "started_at": pause.get("started_at"),
+            "until": pause.get("until"),
+            "action": pause.get("action", ZONE_PAUSE_ACTION_NONE),
+        }
+        if pause_id := pause.get("pause_id"):
+            data["pause_id"] = pause_id
+        if reason is not None:
+            data["reason"] = reason
+        self._async_fire_event(event_types[operation], data)
 
     def _async_fire_zone_resumed(
         self,
@@ -7006,16 +7232,16 @@ class VelairScheduler:
         reason: str,
     ) -> None:
         """Fire an event when one zone scheduler resumes."""
-        self._async_fire_event(
-            EVENT_TYPE_ZONE_RESUMED,
-            {
-                "entity_id": entity_id,
-                "started_at": override.get("started_at"),
-                "until": override.get("until"),
-                "action": override.get("action", ZONE_PAUSE_ACTION_NONE),
-                "reason": reason,
-            },
-        )
+        data: dict[str, object] = {
+            "entity_id": entity_id,
+            "started_at": override.get("started_at"),
+            "until": override.get("until"),
+            "action": override.get("action", ZONE_PAUSE_ACTION_NONE),
+            "reason": reason,
+        }
+        if pause_id := override.get("pause_id"):
+            data["pause_id"] = pause_id
+        self._async_fire_event(EVENT_TYPE_ZONE_RESUMED, data)
 
     def _async_fire_climate_target_applied(
         self,
@@ -7342,8 +7568,15 @@ class VelairScheduler:
         reason: str,
     ) -> None:
         """Write a zone resume action to the Home Assistant logbook."""
-        reason_text = "automatically" if reason == "expired" else "manually"
-        reason_text_es = "automaticamente" if reason == "expired" else "manualmente"
+        if reason == "expired":
+            reason_text = "automatically"
+            reason_text_es = "automáticamente"
+        elif reason == "service":
+            reason_text = "through a service or automation"
+            reason_text_es = "mediante un servicio o automatización"
+        else:
+            reason_text = "manually"
+            reason_text_es = "manualmente"
         await self._async_logbook(
             self._message(
                 f"Resumed {self._friendly_entity_name(entity_id)} {reason_text}",
@@ -7507,14 +7740,17 @@ class VelairScheduler:
 
     def _get_next_zone_override_expiration(self) -> datetime | None:
         """Return the next zone override expiration time."""
-        expirations = [
-            expiration
-            for expiration in (
-                self._parse_zone_override_expiration(entity_id)
-                for entity_id in self._data["zones"]
-            )
-            if expiration is not None
-        ]
+        expirations = []
+        for entity_id, zone in self._data["zones"].items():
+            override_expiration = self._parse_zone_override_expiration(entity_id)
+            if _is_boost_override(zone.get("override")) and override_expiration is not None:
+                expirations.append(override_expiration)
+            if _is_pause_override(zone.get("override")):
+                for pause in zone.get("pauses", []):
+                    until = pause.get("until")
+                    parsed = dt_util.parse_datetime(until) if isinstance(until, str) else None
+                    if parsed is not None:
+                        expirations.append(dt_util.as_local(parsed))
         return min(expirations) if expirations else None
 
     async def _async_clear_expired_zone_overrides(
@@ -7522,34 +7758,68 @@ class VelairScheduler:
         now: datetime,
     ) -> dict[str, ZoneOverride]:
         """Clear expired zone overrides and return affected entity overrides."""
+        candidates = []
+        for entity_id, zone in self._data["zones"].items():
+            override = zone.get("override")
+            if _is_pause_override(override):
+                if any(
+                    self._pause_reason_expired(item, now)
+                    for item in self._zone_pause_reasons(entity_id)
+                ):
+                    candidates.append(entity_id)
+            else:
+                expiration = self._parse_zone_override_expiration(entity_id)
+                if expiration is not None and expiration <= now:
+                    candidates.append(entity_id)
         expired: dict[str, ZoneOverride] = {}
 
-        for entity_id in self._data["zones"]:
-            expiration = self._parse_zone_override_expiration(entity_id)
-            if expiration is None or expiration > now:
-                continue
-
-            override = self._data["zones"][entity_id].get("override")
-            self._invalidate_climate_delivery(entity_id)
-            self._data["zones"][entity_id]["override"] = None
-            if isinstance(override, dict):
-                expired[entity_id] = override
-
-        if expired:
-            try:
-                await self._async_save_data()
-            except (asyncio.CancelledError, Exception):
-                for entity_id, override in expired.items():
+        for entity_id in candidates:
+            async with self._zone_override_lock(entity_id):
+                override = self._data["zones"][entity_id].get("override")
+                if not isinstance(override, dict):
+                    continue
+                if _is_pause_override(override):
+                    reasons = self._zone_pause_reasons(entity_id)
+                    expired_reasons = [item for item in reasons if self._pause_reason_expired(item, now)]
+                    if not expired_reasons:
+                        continue
+                    remaining = [item for item in reasons if item not in expired_reasons]
+                else:
+                    expiration = self._parse_zone_override_expiration(entity_id)
+                    if expiration is None or expiration > now:
+                        continue
+                    expired_reasons = []
+                    remaining = []
+                self._invalidate_climate_delivery(entity_id)
+                previous_reasons = deepcopy(self._data["zones"][entity_id].get("pauses", []))
+                had_pauses_key = "pauses" in self._data["zones"][entity_id]
+                self._data["zones"][entity_id]["pauses"] = remaining
+                self._data["zones"][entity_id]["override"] = (
+                    zone_pause_override_from_reasons(remaining)
+                    if _is_pause_override(override) else None
+                )
+                try:
+                    await self._async_save_data()
+                except (asyncio.CancelledError, Exception):
+                    if had_pauses_key:
+                        self._data["zones"][entity_id]["pauses"] = previous_reasons
+                    else:
+                        self._data["zones"][entity_id].pop("pauses", None)
                     self._data["zones"][entity_id]["override"] = override
-                for entity_id in expired:
                     await self._async_restore_delivery_after_failed_mutation(
                         entity_id
                     )
-                raise
-            for entity_id, override in expired.items():
+                    raise
                 if _is_pause_override(override):
+                    for pause in expired_reasons:
+                        self._async_fire_zone_pause_reason(
+                            entity_id, pause, operation="removed", reason="expired"
+                        )
+                    if remaining:
+                        continue
                     await self._async_log_zone_resume(entity_id, reason="expired")
                     self._async_fire_zone_resumed(entity_id, override, reason="expired")
+                expired[entity_id] = override
 
         return expired
 
@@ -7559,11 +7829,47 @@ class VelairScheduler:
         if not isinstance(override, dict):
             return False
 
+        if _is_pause_override(override):
+            return bool(self._active_zone_pause_reasons(entity_id, now))
         expiration = self._parse_zone_override_expiration(entity_id)
         if expiration is None:
             return _is_pause_override(override)
 
         return expiration > now
+
+    def _active_zone_pause_reasons(
+        self, entity_id: str, now: datetime
+    ) -> list[ZonePauseReason]:
+        """Return canonical reasons that have not independently expired."""
+        reasons = self._zone_pause_reasons(entity_id)
+        return [item for item in reasons if not self._pause_reason_expired(item, now)]
+
+    def _zone_pause_reasons(self, entity_id: str) -> list[ZonePauseReason]:
+        """Return canonical reasons with a legacy runtime-fixture fallback."""
+        zone = self._data["zones"][entity_id]
+        reasons = zone.get("pauses")
+        if isinstance(reasons, list):
+            return list(reasons)
+        override = zone.get("override")
+        if not _is_pause_override(override):
+            return []
+        legacy: ZonePauseReason = {
+            "started_at": str(override.get("started_at", dt_util.now().isoformat())),
+            "action": str(override.get("action", ZONE_PAUSE_ACTION_NONE)),
+        }
+        if isinstance(override.get("until"), str):
+            legacy["until"] = override["until"]
+        if isinstance(override.get("pause_id"), str):
+            legacy["pause_id"] = override["pause_id"]
+        return [legacy]
+
+    @staticmethod
+    def _pause_reason_expired(pause: dict, now: datetime) -> bool:
+        until = pause.get("until")
+        if not isinstance(until, str) or not until:
+            return False
+        expiration = dt_util.parse_datetime(until)
+        return expiration is not None and dt_util.as_local(expiration) <= now
 
     def _get_active_zone_override(
         self,
@@ -7571,10 +7877,15 @@ class VelairScheduler:
         now: datetime,
     ) -> ZoneOverride | None:
         """Return an active zone override."""
+        override = self._data["zones"][entity_id].get("override")
+        if _is_pause_override(override):
+            return zone_pause_override_from_reasons(
+                self._active_zone_pause_reasons(entity_id, now)
+            )
         if not self._is_zone_override_active(entity_id, now):
             return None
 
-        return self._data["zones"][entity_id].get("override")
+        return override
 
     def _parse_zone_override_expiration(self, entity_id: str) -> datetime | None:
         """Return a zone override expiration datetime."""

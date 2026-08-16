@@ -95,9 +95,10 @@ describe("overview data controller", () => {
     })).toBe("19–24 °C - heat_cool - boostUntil: 90 min");
     expect(pauseDetailText(state, {
       started_at: new Date(2026, 5, 8, 9, 0).toISOString(),
+      pause_count: 2,
       type: "pause",
       until,
-    })).toContain("pauseRemaining: 90 min");
+    })).toContain("pauseReasons: 2");
     expect(pauseDetailText(state, { type: "pause" })).toBe("pauseIndefinite");
     vi.useRealTimers();
   });

@@ -90,7 +90,7 @@ export type VelairPanelRoute = {
   prefix?: string;
 };
 
-export type VelairPanelView = "overview" | "profiles" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "settings";
+export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
   | "active-setup"
@@ -98,7 +98,9 @@ export type VelairOverviewCardView =
   | "overview-events"
   | "overview-timeline"
   | "overview-zones";
-export type VelairCardView = VelairPanelView | VelairOverviewCardView;
+// `profiles` remains accepted as a legacy panel/card route. New navigation
+// exposes Profiles through the Schedules workspace and uses `modes` here.
+export type VelairCardView = VelairPanelView | VelairOverviewCardView | "profiles";
 
 export type ScheduleBlock = {
   action?: string;
@@ -319,6 +321,12 @@ export type ScheduleZone = {
   enabled: boolean;
   schedule: Record<string, ScheduleBlock[]>;
   override?: Record<string, unknown> | null;
+  pauses?: Array<{
+    started_at: string;
+    action: string;
+    until?: string;
+    pause_id?: string;
+  }>;
   preconditioning?: PreconditioningSettings;
   comfort?: ComfortSettings;
 };
@@ -334,6 +342,9 @@ export type ZoneRuntimeStatus = {
   active_from?: string | null;
   target_when?: string | null;
   until?: string | null;
+  pause_count?: number;
+  pause_ids?: string[];
+  manual_pause?: boolean;
 };
 
 export type PreconditioningDiagnostics = {

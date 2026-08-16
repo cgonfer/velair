@@ -256,7 +256,7 @@ resume:
 
 pause_zone:
   name: Pause zone
-  description: Pause automatic schedule execution for one managed climate entity. The climate can optionally be turned off when the zone is paused.
+  description: Add or update a reason that pauses automatic schedule execution for one managed climate entity. The climate can optionally be turned off while any reason remains.
   fields:
     entity_id:
       required: true
@@ -284,10 +284,17 @@ pause_zone:
           options:
             - none
             - turn_off
+    pause_id:
+      name: Pause ID
+      description: Optional stable reason identifier for an automation. Reusing it updates only that reason; omitting it replaces all reasons with one manual pause.
+      required: false
+      example: velair_window_guard
+      selector:
+        text:
 
 resume_zone:
   name: Resume zone
-  description: Resume automatic schedule execution for one managed climate entity.
+  description: Remove one identified pause reason, or remove all reasons when pause_id is omitted for legacy compatibility.
   fields:
     entity_id:
       required: true
@@ -300,6 +307,20 @@ resume_zone:
       description: Apply the currently active schedule block for this climate after resuming, when one exists.
       required: false
       default: true
+      example: true
+      selector:
+        boolean:
+    pause_id:
+      name: Pause ID
+      description: Optional stable reason identifier. When provided, only that reason is removed.
+      required: false
+      example: velair_window_guard
+      selector:
+        text:
+    resume_all:
+      name: Resume all
+      description: Explicitly remove every pause reason. Cannot be combined with Pause ID; omitting both retains legacy resume-all behavior.
+      required: false
       example: true
       selector:
         boolean:

@@ -13,7 +13,7 @@ export class VelairPanel extends LitElement {
   @property({ attribute: false }) public panel?: VelairPanelInfo;
   @property({ attribute: false }) public route?: VelairPanelRoute;
   @state() private _activeView: VelairPanelView = "overview";
-  @state() private _profileDirty = false;
+  @state() private _activeViewDirty = false;
 
   protected render() {
     return html`
@@ -36,7 +36,7 @@ export class VelairPanel extends LitElement {
                   ?active=${view === this._activeView}
                   @click=${(event: Event) => this._handleTabClick(view, event)}
                 >
-                  ${this._t(view)}
+                  ${this._t(view === "modes" ? "modesTitle" : view)}
                 </ha-tab-group-tab>
               `,
             )}
@@ -56,8 +56,12 @@ export class VelairPanel extends LitElement {
         .hass=${this.hass}
         .view=${this._activeView}
         view=${this._activeView}
+        @velair-dirty-changed=${(event: CustomEvent<{ dirty: boolean }>) => {
+          this._activeViewDirty = Boolean(event.detail?.dirty);
+        }}
         @profile-dirty-changed=${(event: CustomEvent<boolean>) => {
-          this._profileDirty = event.detail;
+          // Compatibility for an already-rendered 1.5/early-1.6 Profile view.
+          this._activeViewDirty = Boolean(event.detail);
         }}
       ></velair-panel-card>`,
     );
@@ -74,17 +78,14 @@ export class VelairPanel extends LitElement {
       return;
     }
     if (
-      this._activeView === "profiles"
-      && view !== "profiles"
-      && this._profileDirty
-      && !window.confirm(this._t("profileDiscardChanges"))
+      view !== this._activeView
+      && this._activeViewDirty
+      && !window.confirm(this._t("discardUnsavedChanges"))
     ) {
       return;
     }
 
-    if (view !== "profiles") {
-      this._profileDirty = false;
-    }
+    this._activeViewDirty = false;
     this._activeView = view;
     this._syncTabGroupActive(view, source);
   }
@@ -113,6 +114,7 @@ export class VelairPanel extends LitElement {
   }
 
   private _toPanelView(value?: string | null): VelairPanelView | undefined {
+    if (value === "profiles") return "modes";
     return this._isPanelView(value) ? value : undefined;
   }
 

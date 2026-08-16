@@ -20,6 +20,345 @@ async function selectFirstProfile(element: VelairProfilesView): Promise<void> {
 }
 
 describe("profiles view", () => {
+  it("separates the Profile schedules and Modes workspaces", async () => {
+    const profiles = new VelairProfilesView();
+    profiles.workspace = "profiles";
+    profiles.scheduleWorkspace = true;
+    profiles.data = data;
+    document.body.append(profiles);
+    await profiles.updateComplete;
+
+    expect(profiles.shadowRoot?.querySelector(".profile-intro")).toBeNull();
+    expect(profiles.shadowRoot?.querySelector(".profile-library > .library-concept-note")).toBeNull();
+    expect(profiles.shadowRoot?.querySelector(".profile-library")).not.toBeNull();
+    expect(profiles.shadowRoot?.querySelector(".mode-library")).toBeNull();
+    expect(profiles.shadowRoot?.querySelector(".profile-library-selector")).toBeNull();
+    expect(profiles.shadowRoot?.querySelector(".profile-item-activate")).not.toBeNull();
+
+    const modes = new VelairProfilesView();
+    modes.workspace = "modes";
+    modes.data = data;
+    document.body.append(modes);
+    await modes.updateComplete;
+
+    expect(modes.shadowRoot?.querySelector(".mode-library")).not.toBeNull();
+    expect(modes.shadowRoot?.querySelector(".profile-library")).toBeNull();
+    expect(modes.shadowRoot?.querySelector(".active-setup-card")).not.toBeNull();
+    expect(modes.shadowRoot?.querySelector(".modes-view > .profile-intro")?.textContent)
+      .toContain("Automations can select a Mode through the Velair Mode entity");
+    expect(modes.shadowRoot?.querySelector(".mode-library > .library-concept-note")).toBeNull();
+    expect(modes.shadowRoot?.querySelector(".mode-entity-note")).toBeNull();
+    profiles.remove();
+    modes.remove();
+  });
+
+  it("edits one selected thermostat at a time in the Profile schedules workspace", async () => {
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.hass = {
+      connection: {} as never,
+      states: {
+        "climate.office": { state: "heat", attributes: { friendly_name: "Office" } },
+        "climate.bedroom": { state: "cool", attributes: { friendly_name: "Bedroom" } },
+      },
+    };
+    element.data = {
+      ...data,
+      configured_entities: ["climate.office", "climate.bedroom"],
+      profiles: [{
+        ...(data.profiles ?? [])[0],
+        zones: {
+          "climate.office": { behavior: "normal" },
+          "climate.bedroom": { behavior: "pause", action: "turn_off" },
+        },
+      }],
+    } as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    expect(element.shadowRoot?.querySelectorAll(".profile-workspace-zone")).toHaveLength(1);
+    expect(element.shadowRoot?.querySelectorAll(".profile-workspace-zone-picker .zone")).toHaveLength(2);
+    expect(element.shadowRoot?.querySelectorAll(".profile-workspace-zone-copy small")[0]?.textContent)
+      .toBe("Default schedule");
+    expect(element.shadowRoot?.querySelectorAll(".profile-workspace-zone-copy small")[1]?.textContent)
+      .toBe("Pause: Turn climate off");
+    expect(element.shadowRoot?.querySelector(".profile-zone-actions select")?.textContent)
+      .toContain("Profile schedule");
+
+    (element.shadowRoot?.querySelectorAll<HTMLButtonElement>(".profile-workspace-zone-picker .zone")[1])?.click();
+    await element.updateComplete;
+    expect((element.shadowRoot?.querySelector(".profile-zone-actions select") as HTMLSelectElement).value).toBe("pause");
+    expect(element.shadowRoot?.querySelector(".profile-pause-action")).not.toBeNull();
+    expect(element.shadowRoot?.querySelector(".profile-workspace-zone-picker .zone.dirty")).toBeNull();
+    element.remove();
+  });
+
+  it("marks the thermostat and weekday whose atomic Profile draft changed", async () => {
+    const profile = {
+      key: "workday",
+      name: "Workday",
+      zones: {
+        "climate.office": {
+          behavior: "schedule",
+          schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 20, hvac_mode: "heat" }] },
+        },
+      },
+    };
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.initialWeekday = "wednesday";
+    element.timelineNow = new Date(2026, 7, 12, 12, 20, 0);
+    element.hass = {
+      language: "en",
+      states: { "climate.office": { state: "heat", attributes: { friendly_name: "Office" } } },
+    } as never;
+    element.data = {
+      ...data,
+      configured_entities: ["climate.office"],
+      profiles: [profile],
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+    } as unknown as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    expect(element.shadowRoot?.querySelector(".day-tab.active")?.textContent).toContain("Wed");
+    expect(element.shadowRoot?.querySelector(".timeline-now-marker span")?.textContent).toBe("12:20");
+    expect(element.shadowRoot?.querySelector(".profile-workspace-zone-option.dirty")).toBeNull();
+    expect(element.shadowRoot?.querySelector(".day-tab.dirty")).toBeNull();
+
+    const state = element as unknown as { _draft: ClimateProfileDraft };
+    const zone = state._draft.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected schedule zone");
+    zone.schedule.monday[0].temperature = "21";
+    element.requestUpdate();
+    await element.updateComplete;
+
+    expect(element.shadowRoot?.querySelector(".profile-workspace-zone-option.dirty")).not.toBeNull();
+    expect(element.shadowRoot?.querySelector(".day-tab.dirty")?.getAttribute("aria-label"))
+      .toContain("unsaved");
+
+    zone.schedule.monday[0].temperature = "20";
+    (element as unknown as { _setDirty: (dirty: boolean) => void })._setDirty(true);
+    element.requestUpdate();
+    await element.updateComplete;
+    expect((element as unknown as { _dirty: boolean })._dirty).toBe(false);
+    expect(element.shadowRoot?.querySelector(".profile-workspace-zone-option.dirty")).toBeNull();
+    expect(element.shadowRoot?.querySelector(".day-tab.dirty")).toBeNull();
+    element.remove();
+  });
+
+  it("uses the persisted Profile payload when detecting reverted scalar, range, humidity, and Off edits", async () => {
+    const profile = {
+      key: "canonical",
+      name: "Canonical",
+      zones: {
+        "climate.office": {
+          behavior: "schedule",
+          schedule: { monday: [
+            { start: "06:00", action: "set_temperature", temperature: 20, hvac_mode: "heat", humidity: 45 },
+            { start: "12:00", action: "set_temperature", target_temp_low: 19, target_temp_high: 24, hvac_mode: "heat_cool" },
+            { start: "22:00", action: "turn_off" },
+          ] },
+        },
+      },
+    };
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.hass = {
+      language: "en",
+      states: { "climate.office": { state: "heat", attributes: { friendly_name: "Office" } } },
+    } as never;
+    element.data = {
+      ...data,
+      configured_entities: ["climate.office"],
+      profiles: [profile],
+      settings: { first_weekday: "monday", zone_order: ["climate.office"] },
+    } as unknown as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const state = element as unknown as {
+      _draft: ClimateProfileDraft;
+      _dirty: boolean;
+      _setDirty: (dirty: boolean) => void;
+    };
+    const zone = state._draft.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected schedule zone");
+    const [scalar, range, off] = zone.schedule.monday;
+
+    scalar.temperature = "20";
+    scalar.humidity = "45";
+    range.target_temp_low = "19";
+    range.target_temp_high = "24";
+    off.temperature = "99";
+    off.hvac_mode = "heat";
+    state._setDirty(true);
+    expect(state._dirty).toBe(false);
+
+    range.target_temp_high = "25";
+    state._setDirty(true);
+    await element.updateComplete;
+    expect(state._dirty).toBe(true);
+    expect(element.shadowRoot?.querySelector(".profile-workspace-zone-option.dirty")).not.toBeNull();
+
+    range.target_temp_high = "24";
+    state._setDirty(true);
+    await element.updateComplete;
+    expect(state._dirty).toBe(false);
+    element.remove();
+  });
+
+  it("uses the shared weekly section order and saves scalar, range, Off, and options atomically", async () => {
+    const profile = {
+      key: "mixed",
+      name: "Mixed",
+      zones: {
+        "climate.office": {
+          behavior: "schedule",
+          schedule: {
+            monday: [
+              { start: "00:00", action: "set_temperature", temperature: 20, hvac_mode: "heat", fan_mode: "auto", preset_mode: "eco", swing_mode: "on", swing_horizontal_mode: "middle", humidity: 45 },
+              { start: "08:00", action: "set_temperature", target_temp_low: 19, target_temp_high: 24, hvac_mode: "heat_cool" },
+              { start: "22:00", action: "turn_off", hvac_mode: "off" },
+            ],
+          },
+        },
+      },
+    };
+    const response = { ...data, profiles: [profile], settings: { first_weekday: "monday", zone_order: [] } } as unknown as ScheduleResponse;
+    const sendMessagePromise = vi.fn().mockResolvedValue(response);
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.hass = {
+      language: "en",
+      connection: { sendMessagePromise },
+      states: {
+        "climate.office": {
+          state: "heat",
+          attributes: {
+            friendly_name: "Office",
+            supported_features: 3,
+            hvac_modes: ["off", "heat", "cool", "heat_cool"],
+            fan_modes: ["auto"], preset_modes: ["eco"], swing_modes: ["on"],
+            swing_horizontal_modes: ["middle"], min_humidity: 30, max_humidity: 70,
+            min_temp: 7, max_temp: 35, target_temp_step: 0.5,
+          },
+        },
+      },
+    } as never;
+    element.data = response;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const week = element.shadowRoot!.querySelector(".profile-week")!;
+    const ordered = [".day-tabs", ".timeline-panel", ".schedule-config-row", ".profile-block-list", ".schedule-save-actions", ".profile-day-copy"]
+      .map((selector) => week.querySelector(selector)!);
+    ordered.slice(0, -1).forEach((node, index) => {
+      expect(node.compareDocumentPosition(ordered[index + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+    expect(element.shadowRoot?.querySelector(".temperature-range-fields")).not.toBeNull();
+    expect(element.shadowRoot?.querySelectorAll(".editable-block")).toHaveLength(3);
+    expect(element.shadowRoot?.querySelector(".advanced-climate-options")).not.toBeNull();
+
+    const name = element.shadowRoot!.querySelector<HTMLInputElement>(".profile-name-field input")!;
+    name.value = "Mixed updated";
+    name.dispatchEvent(new Event("input"));
+    await element.updateComplete;
+    element.shadowRoot!.querySelector<HTMLButtonElement>(".profile-workspace-save button")!.click();
+
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledTimes(1));
+    const message = sendMessagePromise.mock.calls[0][0];
+    expect(message.type).toBe("velair/set_profile");
+    expect(message.profile.name).toBe("Mixed updated");
+    expect(message.profile.zones["climate.office"].schedule.monday).toEqual([
+      profile.zones["climate.office"].schedule.monday[0],
+      profile.zones["climate.office"].schedule.monday[1],
+      { start: "22:00", action: "turn_off" },
+    ]);
+    element.remove();
+  });
+
+  it("marks a non-selected thermostat whose Profile schedule is invalid", async () => {
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.hass = {
+      language: "en",
+      states: {
+        "climate.office": { state: "heat", attributes: { friendly_name: "Office", supported_features: 1, hvac_modes: ["off", "heat"], min_temp: 5, max_temp: 35, target_temp_step: 0.5 } },
+        "climate.bedroom": { state: "cool", attributes: { friendly_name: "Bedroom", supported_features: 1, hvac_modes: ["off", "cool"], min_temp: 10, max_temp: 30, target_temp_step: 1 } },
+      },
+    } as never;
+    element.data = {
+      ...data,
+      configured_entities: ["climate.office", "climate.bedroom"],
+      settings: { first_weekday: "monday", zone_order: [] },
+      profiles: [{
+        key: "invalid", name: "Invalid", zones: {
+          "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 20, hvac_mode: "heat" }] } },
+          "climate.bedroom": { behavior: "schedule", schedule: { monday: [{ start: "09:00", action: "set_temperature", temperature: 35, hvac_mode: "cool" }] } },
+        },
+      }],
+    } as unknown as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const buttons = element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-workspace-zone-picker .zone");
+    expect(buttons[0].classList).not.toContain("error");
+    expect(buttons[1].classList).toContain("error");
+    expect(buttons[1].getAttribute("aria-invalid")).toBe("true");
+    expect(buttons[1].title).toContain("Bedroom, Monday at 09:00");
+    expect(element.shadowRoot?.querySelector(".profile-schedule-error")?.textContent).toContain("Bedroom");
+    expect(element.shadowRoot!.querySelector<HTMLButtonElement>(".profile-workspace-save button")!.disabled).toBe(true);
+    element.remove();
+  });
+
+  it("identifies a non-selected thermostat with duplicate Profile block times", async () => {
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.hass = {
+      language: "en",
+      states: {
+        "climate.office": { state: "heat", attributes: { friendly_name: "Office", supported_features: 1, hvac_modes: ["off", "heat"], min_temp: 5, max_temp: 35, target_temp_step: 0.5 } },
+        "climate.bedroom": { state: "cool", attributes: { friendly_name: "Bedroom", supported_features: 1, hvac_modes: ["off", "cool"], min_temp: 10, max_temp: 30, target_temp_step: 1 } },
+      },
+    } as never;
+    element.data = {
+      ...data,
+      configured_entities: ["climate.office", "climate.bedroom"],
+      settings: { first_weekday: "monday", zone_order: [] },
+      profiles: [{
+        key: "duplicate", name: "Duplicate", zones: {
+          "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 20, hvac_mode: "heat" }] } },
+          "climate.bedroom": { behavior: "schedule", schedule: { monday: [
+            { start: "09:00", action: "set_temperature", temperature: 24, hvac_mode: "cool" },
+            { start: "09:00", action: "set_temperature", temperature: 23, hvac_mode: "cool" },
+          ] } },
+        },
+      }],
+    } as unknown as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const bedroom = element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-workspace-zone-picker .zone")[1];
+    expect(bedroom.classList).toContain("error");
+    expect(bedroom.title).toContain("Duplicate start time: 09:00");
+    expect(element.shadowRoot?.querySelector(".profile-schedule-error")?.textContent).toContain("Bedroom");
+    expect(element.shadowRoot!.querySelector<HTMLButtonElement>(".profile-workspace-save button")!.disabled).toBe(true);
+    element.remove();
+  });
+
   it("starts in the Profiles library and exposes an accessible Profiles and Modes switcher", async () => {
     const element = new VelairProfilesView();
     element.data = {
@@ -278,7 +617,8 @@ describe("profiles view", () => {
     document.body.append(element);
     await element.updateComplete;
 
-    expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).toContain("select.velair_mode");
+    expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).toContain("Velair Mode entity");
+    expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).not.toContain("select.velair_mode");
     expect(element.shadowRoot?.querySelector(".mode-entity-note")?.textContent).toContain("velair.activate_profile");
     expect(element.shadowRoot?.querySelector(".mode-entity-note code")).toBeNull();
     expect([...element.shadowRoot!.querySelectorAll(".mode-item.built-in")].map((item) => item.textContent))
@@ -805,6 +1145,8 @@ describe("profiles view", () => {
     } as unknown as ScheduleResponse;
     const sendMessagePromise = vi.fn().mockResolvedValue(data);
     const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
     element.hass = { connection: { sendMessagePromise }, states: {} } as never;
     element.data = inactive;
     document.body.append(element);
@@ -1190,13 +1532,9 @@ describe("profiles view", () => {
     (element.shadowRoot?.querySelector(".profile-zone-toggle") as HTMLButtonElement).click();
     await element.updateComplete;
 
-    const profileWeek = element.shadowRoot!.querySelector(".profile-week")!;
-    const profileWeekChildren = [...profileWeek.children];
-    expect(profileWeekChildren.indexOf(
-      element.shadowRoot!.querySelector(".profile-day-copy")!,
-    )).toBeGreaterThan(profileWeekChildren.indexOf(
-      element.shadowRoot!.querySelector(".profile-block-list")!,
-    ));
+    const blockList = element.shadowRoot!.querySelector(".profile-block-list")!;
+    const dayCopy = element.shadowRoot!.querySelector(".profile-day-copy")!;
+    expect(blockList.compareDocumentPosition(dayCopy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     const targets = [...element.shadowRoot!.querySelectorAll<HTMLInputElement>(
       ".profile-day-copy input[type=checkbox]",
@@ -1553,6 +1891,8 @@ describe("profiles view", () => {
     expect(profileStyles.cssText).toMatch(/\.profile-item-copy code\s*\{[^}]*font-size:\s*11px/);
     expect(profileStyles.cssText).toMatch(/\.profile-heading-id\s*\{[^}]*font-size:\s*12px/);
     expect(profileStyles.cssText).toMatch(/@media \(max-width: 600px\)[\s\S]*\.profile-detail-heading\s*\{[^}]*display:\s*grid/);
+    expect(profileStyles.cssText).toMatch(/@media \(max-width: 600px\)[\s\S]*\.profile-workspace-zone\s*\{[^}]*border:\s*0[^}]*padding:\s*0/);
+    expect(profileStyles.cssText).toMatch(/@container \(max-width: 600px\)[\s\S]*\.profile-week\s*\{[^}]*background:\s*transparent[^}]*padding:\s*0/);
     expect(profileStyles.cssText).toMatch(/\.profile-detail-heading\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
     expect(profileStyles.cssText).toMatch(/\.active-setup-popover\s*\{[^}]*position:\s*absolute/);
     expect(profileStyles.cssText).toMatch(/\.active-setup-popover\s*\{[^}]*right:\s*0/);

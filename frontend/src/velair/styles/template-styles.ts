@@ -1,6 +1,43 @@
 import { css } from "lit";
 
 export const templateStyles = css`
+.templates-view {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.template-intro {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  padding: 2px 4px 4px;
+}
+
+.template-intro > ha-icon {
+  --mdc-icon-size: 22px;
+  color: var(--primary-color);
+}
+
+.template-intro > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.template-intro strong {
+  color: var(--primary-text-color);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.template-intro small {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .template-library {
   display: grid;
   gap: 12px;

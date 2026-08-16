@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from math import ceil, exp, isfinite
 import re
 import unicodedata
@@ -21,7 +21,10 @@ from .const import (
     MODE_PAUSED,
     MODE_MANUAL_OPTION,
     MODE_DEFAULT_OPTION,
+    MAX_PAUSE_ID_LENGTH,
+    PAUSE_ID_PATTERN,
     ZONE_PAUSE_ACTION_NONE,
+    ZONE_PAUSE_ACTION_TURN_OFF,
     ZONE_PAUSE_ACTION_OPTIONS,
 )
 
@@ -127,7 +130,17 @@ class ZoneOverride(TypedDict):
     swing_horizontal_mode: NotRequired[str]
     humidity: NotRequired[float]
     action: NotRequired[str]
+    pause_id: NotRequired[str]
     previous_state: NotRequired["ClimateStateSnapshot"]
+
+
+class ZonePauseReason(TypedDict):
+    """One independently owned reason that keeps a zone paused."""
+
+    started_at: str
+    action: str
+    until: NotRequired[str]
+    pause_id: NotRequired[str]
 
 
 class ClimateStateSnapshot(TypedDict, total=False):
@@ -270,6 +283,7 @@ class ZoneData(TypedDict):
     enabled: bool
     schedule: dict[str, list[ScheduleBlock]]
     override: NotRequired[ZoneOverride | None]
+    pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
     comfort: ComfortData
 
@@ -653,10 +667,19 @@ def normalize_schedule_data(
                 except ValueError:
                     schedule[weekday] = []
 
+        pauses = _normalize_zone_pauses(zone_data)
+        override = _normalize_zone_override(zone_data.get("override"))
+        if pauses or (
+            isinstance(zone_data.get("pauses"), list)
+            and isinstance(override, dict)
+            and override.get("type") == "pause"
+        ):
+            override = zone_pause_override_from_reasons(pauses)
         zones[entity_id] = {
             "enabled": bool(zone_data.get("enabled", True)),
             "schedule": schedule,
-            "override": _normalize_zone_override(zone_data.get("override")),
+            "override": override,
+            "pauses": pauses,
             "preconditioning": normalize_preconditioning_data(
                 zone_data.get("preconditioning")
             ),
@@ -670,6 +693,7 @@ def normalize_schedule_data(
                 "enabled": True,
                 "schedule": empty_week_schedule(),
                 "override": None,
+                "pauses": [],
                 "preconditioning": normalize_preconditioning_data(None),
                 "comfort": normalize_comfort_data(None),
             },
@@ -753,7 +777,7 @@ def normalize_schedule_data(
         active_mode_id = None
 
     return {
-        "version": 4,
+        "version": 5,
         "zones": zones,
         "global_": {
             "mode": mode,
@@ -2246,7 +2270,125 @@ def _normalize_zone_pause_override(raw_override: dict[str, Any]) -> ZoneOverride
         action if action in ZONE_PAUSE_ACTION_OPTIONS else ZONE_PAUSE_ACTION_NONE
     )
 
+    pause_id = raw_override.get("pause_id")
+    if isinstance(pause_id, str):
+        try:
+            override["pause_id"] = validate_pause_id(pause_id)
+        except ValueError:
+            pass
+
     return override
+
+
+def _normalize_zone_pauses(raw_zone: dict[str, Any]) -> list[ZonePauseReason]:
+    """Normalize canonical reasons, migrating one legacy pause override."""
+    raw_pauses = raw_zone.get("pauses")
+    if isinstance(raw_pauses, list):
+        # Once the canonical field exists it is authoritative, including an
+        # explicitly empty list. The legacy override is only a downgrade mirror
+        # and must not resurrect a pause that a newer Velair already removed.
+        candidates = raw_pauses
+    else:
+        legacy = _normalize_zone_override(raw_zone.get("override"))
+        candidates = [legacy] if legacy and legacy.get("type") == "pause" else []
+
+    reasons: list[ZonePauseReason] = []
+    seen_ids: set[str] = set()
+    manual_seen = False
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        started_at = candidate.get("started_at")
+        if not isinstance(started_at, str) or not started_at:
+            continue
+        action = str(candidate.get("action", ZONE_PAUSE_ACTION_NONE))
+        if action not in ZONE_PAUSE_ACTION_OPTIONS:
+            action = ZONE_PAUSE_ACTION_NONE
+        reason: ZonePauseReason = {"started_at": started_at, "action": action}
+        until = candidate.get("until")
+        if isinstance(until, str) and until:
+            reason["until"] = until
+        raw_pause_id = candidate.get("pause_id")
+        if isinstance(raw_pause_id, str):
+            try:
+                pause_id = validate_pause_id(raw_pause_id)
+            except ValueError:
+                pause_id = None
+            if pause_id is not None:
+                if pause_id in seen_ids:
+                    continue
+                seen_ids.add(pause_id)
+                reason["pause_id"] = pause_id
+        elif manual_seen:
+            continue
+        else:
+            manual_seen = True
+        reasons.append(reason)
+    return reasons
+
+
+def zone_pause_override_from_reasons(
+    reasons: list[ZonePauseReason] | list[dict[str, Any]],
+) -> ZoneOverride | None:
+    """Build the compatibility pause projection from canonical reasons."""
+    if not reasons:
+        return None
+    started_values = [
+        value for reason in reasons
+        if isinstance((value := reason.get("started_at")), str) and value
+    ]
+    until_values = [
+        value for reason in reasons
+        if isinstance((value := reason.get("until")), str) and value
+    ]
+    override: ZoneOverride = {
+        "type": "pause",
+        "action": (
+            ZONE_PAUSE_ACTION_TURN_OFF
+            if any(reason.get("action") == ZONE_PAUSE_ACTION_TURN_OFF for reason in reasons)
+            else ZONE_PAUSE_ACTION_NONE
+        ),
+    }
+    if started_values:
+        override["started_at"] = _pause_timestamp_extreme(started_values, latest=False)
+    if len(until_values) == len(reasons):
+        override["until"] = _pause_timestamp_extreme(until_values, latest=True)
+    if len(reasons) == 1 and isinstance(reasons[0].get("pause_id"), str):
+        override["pause_id"] = reasons[0]["pause_id"]
+    return override
+
+
+def _pause_timestamp_extreme(values: list[str], *, latest: bool) -> str:
+    """Return an ISO timestamp extreme by absolute time, not text offset."""
+    parsed: list[tuple[datetime, str]] = []
+    for value in values:
+        try:
+            instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if instant.tzinfo is None:
+            instant = instant.replace(tzinfo=timezone.utc)
+        parsed.append((instant.astimezone(timezone.utc), value))
+    if parsed:
+        return (max if latest else min)(parsed, key=lambda item: item[0])[1]
+    return (max if latest else min)(values)
+
+
+def validate_pause_id(value: Any) -> str:
+    """Validate and normalize an automation-owned pause identifier."""
+    if not isinstance(value, str):
+        raise ValueError("pause_id must be a string")
+    pause_id = value.strip()
+    if not pause_id or len(pause_id) > MAX_PAUSE_ID_LENGTH:
+        raise ValueError(
+            f"pause_id must contain between 1 and {MAX_PAUSE_ID_LENGTH} characters"
+        )
+    if re.fullmatch(PAUSE_ID_PATTERN, pause_id) is None:
+        raise ValueError(
+            "pause_id must start with an alphanumeric character and contain only "
+            "letters, numbers, dots, underscores, colons, or hyphens"
+        )
+    return pause_id
 
 
 def _normalize_climate_state_snapshot(raw_state: Any) -> ClimateStateSnapshot | None:

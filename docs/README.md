@@ -8,6 +8,7 @@ Velair documentation is grouped by audience and topic.
 - [Usage](user/usage.md): configure climates, schedules, templates, profiles, boosts, pauses, import/export, and services.
 - [Climate Profiles](user/climate-profiles.md): coordinate alternate schedules and expose configurable Modes to Home Assistant automations.
 - [Automation Events](user/automation-events.md): use complete runtime event payloads in Home Assistant automations.
+- [Automation Blueprints](user/blueprints.md): import optional occupancy and open-window helpers without polling.
 - [Adaptive Preconditioning](user/adaptive-preconditioning.md): start scheduled comfort targets early with local learning.
 - [Room Assist](user/room-assist.md): use a separate room temperature sensor for TRVs, thermostats, and AC units.
 - [Resilient climate delivery](user/resilient-climate-delivery.md): understand deferred retries and reconnection behavior when a climate is temporarily unavailable.
@@ -18,6 +19,7 @@ Velair documentation is grouped by audience and topic.
 ## Developer Documentation
 
 - [Architecture](developer/architecture.md): backend and frontend module boundaries, persistence model and scheduler flow.
+- [Blueprint maintenance](developer/blueprints.md): add blueprint YAML, catalog entries, consistent detail pages, translations, and tests.
 - [WebSocket API](developer/api.md): frontend/backend API contract.
 - [Adaptive preconditioning internals](developer/adaptive-preconditioning.md): local learning states, similarity weighting, storage, and API output.
 - [Room Assist internals](developer/room-assist.md): room sensor source selection, assisted target calculation, runtime status, restoration, and events.

@@ -33,8 +33,19 @@ describe("frontend entrypoint", () => {
 
     expect(panel.shadowRoot?.querySelector(".main-title")?.textContent).toContain("Velair");
     expect(panel.shadowRoot?.querySelector(".version")).toBeNull();
-    expect(panel.shadowRoot?.querySelectorAll("ha-tab-group-tab")).toHaveLength(8);
-    expect(panel.shadowRoot?.textContent).toContain("Profiles");
+    const tabs = [...(panel.shadowRoot?.querySelectorAll("ha-tab-group-tab") ?? [])];
+    expect(tabs).toHaveLength(8);
+    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
+      "Overview",
+      "Schedules",
+      "Modes",
+      "Templates",
+      "Room Assist",
+      "Comfort",
+      "Preconditioning",
+      "Settings",
+    ]);
+    expect(panel.shadowRoot?.textContent).toContain("Modes");
     expect(panel.shadowRoot?.textContent).toContain("Comfort");
     expect(panel.shadowRoot?.textContent).toContain("Room Assist");
     expect(panel.shadowRoot?.textContent).toContain("Preconditioning");
@@ -60,15 +71,16 @@ describe("frontend entrypoint", () => {
     document.body.append(panel);
     await panel.updateComplete;
 
-    const tabs = panel.shadowRoot?.querySelectorAll("ha-tab-group-tab");
-    (tabs?.[1] as HTMLElement | undefined)?.click();
+    const modesTab = panel.shadowRoot?.querySelector<HTMLElement>('ha-tab-group-tab[panel="modes"]');
+    const schedulesTab = panel.shadowRoot?.querySelector<HTMLElement>('ha-tab-group-tab[panel="schedules"]');
+    modesTab?.click();
     await panel.updateComplete;
     const card = panel.shadowRoot?.querySelector("velair-panel-card");
     card?.dispatchEvent(new CustomEvent("profile-dirty-changed", { bubbles: true, composed: true, detail: true }));
-    (tabs?.[2] as HTMLElement | undefined)?.click();
+    schedulesTab?.click();
     await panel.updateComplete;
 
-    expect(panel.shadowRoot?.querySelector("velair-panel-card")?.getAttribute("view")).toBe("profiles");
+    expect(panel.shadowRoot?.querySelector("velair-panel-card")?.getAttribute("view")).toBe("modes");
     expect(confirm).toHaveBeenCalledOnce();
     confirm.mockRestore();
     panel.remove();

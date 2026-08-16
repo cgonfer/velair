@@ -14,6 +14,8 @@ import {
 } from "../domain/timeline";
 import type { VelairViewHost } from "../host-types";
 import type { BlockDraftSource, DraftScheduleBlock, ScheduleBlock, ScheduleTemplate, ScheduleZone } from "../types";
+import "../components/profiles-view-element";
+import { renderWeeklyScheduleEditor } from "./weekly-schedule-editor";
 
 type ScheduleViewHost = VelairViewHost;
 
@@ -23,11 +25,56 @@ export function renderSchedulesView(
   selectedEntity?: string,
   selectedZone?: ScheduleZone,
 ) {
+  if (!host._hasExternalConfig && host._scheduleSource === "profile") {
+    return html`
+      ${renderScheduleSourceSelector(host)}
+      <velair-profiles-view
+        workspace="profiles"
+        schedule-workspace
+        .initialWeekday=${host._selectedWeekday}
+        .timelineNow=${host._currentTimelineNow()}
+        .hass=${host.hass}
+        .data=${host._data}
+        @velair-dirty-changed=${(event: CustomEvent<{ dirty: boolean }>) => {
+          event.stopPropagation();
+          host._setProfileScheduleDirty(Boolean(event.detail?.dirty));
+        }}
+        @profile-data-changed=${(event: CustomEvent) => host._applyScheduleData(event.detail, { forceDraft: false })}
+        @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
+      ></velair-profiles-view>
+    `;
+  }
   return html`
+    ${host._hasExternalConfig ? nothing : renderScheduleSourceSelector(host)}
     ${renderScheduleZonePicker(host, zoneIds, selectedEntity)}
     ${selectedEntity && selectedZone
       ? renderScheduleEditor(host, selectedEntity, selectedZone)
       : html`<div class="notice">${host._t("noManagedEntities")}</div>`}
+  `;
+}
+
+export function renderScheduleSourceSelector(host: ScheduleViewHost) {
+  return html`
+    <div class="schedule-source-selector" role="group" aria-label=${host._t("scheduleSourceLabel")}>
+      <button
+        type="button"
+        aria-pressed=${String(host._scheduleSource === "default")}
+        class=${host._scheduleSource === "default" ? "active" : ""}
+        @click=${() => host._selectScheduleSource("default")}
+      >
+        <ha-icon icon="mdi:calendar-clock"></ha-icon>
+        <span><strong>${host._t("defaultSchedules")}</strong><small>${host._t("defaultSchedulesDescription")}</small></span>
+      </button>
+      <button
+        type="button"
+        aria-pressed=${String(host._scheduleSource === "profile")}
+        class=${host._scheduleSource === "profile" ? "active" : ""}
+        @click=${() => host._selectScheduleSource("profile")}
+      >
+        <ha-icon icon="mdi:account-switch-outline"></ha-icon>
+        <span><strong>${host._t("profileSchedules")}</strong><small>${host._t("profileSchedulesDescription")}</small></span>
+      </button>
+    </div>
   `;
 }
 
@@ -86,22 +133,18 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
         </div>
       </div>
       ${renderBoostStatus(host, entityId, zone)}
-      <div class="day-tabs">
-        ${host._orderedWeekdays().map((weekday: string) => renderDayTab(host, weekday, zone.schedule[weekday] ?? []))}
-      </div>
-      <div class="schedule-step-heading">
-        <strong>${host._t("scheduleStepConfigure")}</strong>
-      </div>
-      <div class="editor">
-        ${renderTimeline(host, entityId, "schedule", {
+      ${renderWeeklyScheduleEditor({
+        dayTabs: html`<div class="day-tabs">
+          ${host._orderedWeekdays().map((weekday: string) => renderDayTab(host, weekday, zone.schedule[weekday] ?? []))}
+        </div>`,
+        timeline: renderTimeline(host, entityId, "schedule", {
           schedule: zone.schedule,
           weekday: host._selectedWeekday,
-        })}
-        <div class="schedule-config-helper">${host._t("templateOptionalHint")}</div>
-        <div class="schedule-config-row">
-          ${renderTemplatePanel(host)}
-        </div>
-        <div class="draft-list">
+        }),
+        configureHeading: host._t("scheduleStepConfigure"),
+        helper: host._t("templateOptionalHint"),
+        templatePanel: renderTemplatePanel(host),
+        blockList: html`<div class="draft-list">
           ${host._draftBlocks.length
             ? html`
                 ${renderDraftListHeader(host, "schedule")}
@@ -114,8 +157,8 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
                 ${renderAddBlockButton(host, "schedule")}
               `
             : renderAddBlockButton(host, "schedule")}
-        </div>
-        <div class="schedule-save-actions">
+        </div>`,
+        primaryActions: html`<div class="schedule-save-actions">
           <button
             class="command-button primary"
             type="button"
@@ -135,11 +178,13 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
             <ha-icon icon="mdi:content-save"></ha-icon>
             <span>${host._t(host._saving ? "saving" : "save")}</span>
           </button>
-        </div>
-        <div class="schedule-copy-helper">${host._t("scheduleCopyHint")}</div>
-        ${renderCopyTargets(host)}
-        ${renderZoneTargets(host)}
-      </div>
+        </div>`,
+        copyPanels: html`
+          <div class="schedule-copy-helper">${host._t("scheduleCopyHint")}</div>
+          ${renderCopyTargets(host)}
+          ${renderZoneTargets(host)}
+        `,
+      })}
     </section>
   `;
 }

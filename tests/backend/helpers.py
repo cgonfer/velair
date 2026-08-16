@@ -100,6 +100,7 @@ def _install_homeassistant_stubs() -> None:
 def _install_voluptuous_stub() -> None:
     """Install the tiny voluptuous surface needed to import api.py."""
     voluptuous = ModuleType("voluptuous")
+    voluptuous.Invalid = ValueError
     voluptuous.All = lambda *validators, **kwargs: (
         lambda value: _apply_validators(value, validators)
     )

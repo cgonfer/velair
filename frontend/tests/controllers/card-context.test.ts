@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { preconditioningInputsChanged } from "../../src/velair/controllers/card-context";
+import { effectiveView, preconditioningInputsChanged } from "../../src/velair/controllers/card-context";
 import type { HomeAssistant, ScheduleResponse } from "../../src/velair/types";
 
 function data(): ScheduleResponse {
@@ -76,6 +76,11 @@ function hass(currentTemperature: number, outdoorTemperature = "10"): HomeAssist
 }
 
 describe("preconditioning input changes", () => {
+  it("normalizes the legacy Profiles view to Modes", () => {
+    expect(effectiveView("profiles", "overview-status")).toBe("modes");
+    expect(effectiveView(null, "overview-status", "profiles")).toBe("modes");
+  });
+
   it("detects managed climate temperature changes", () => {
     expect(preconditioningInputsChanged({ _data: data(), _config: {} }, hass(19), hass(18))).toBe(true);
   });

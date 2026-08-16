@@ -26,7 +26,7 @@ export function translate(
   key: TranslationKey,
   replacements: Record<string, string | number> = {},
 ): string {
-  const dictionary = TRANSLATIONS[language];
+  const dictionary = TRANSLATIONS[language] ?? TRANSLATIONS.en;
   const value = dictionary[key] ?? TRANSLATIONS.en[key];
   if (typeof value !== "string") {
     return key;
@@ -40,10 +40,10 @@ export function translate(
 }
 
 export function weekdayName(language: SupportedLanguage, weekday: string): string {
-  const dictionary = TRANSLATIONS[language];
-  const localizedWeekdays = dictionary.weekdays as Record<string, string>;
+  const dictionary = TRANSLATIONS[language] ?? TRANSLATIONS.en;
+  const localizedWeekdays = dictionary.weekdays as Record<string, string> | undefined;
   const fallbackWeekdays = TRANSLATIONS.en.weekdays as Record<string, string>;
-  return localizedWeekdays[weekday] ?? fallbackWeekdays[weekday] ?? capitalize(weekday);
+  return localizedWeekdays?.[weekday] ?? fallbackWeekdays[weekday] ?? capitalize(weekday);
 }
 
 export function shortWeekdayName(language: SupportedLanguage, weekday: string): string {
@@ -51,9 +51,9 @@ export function shortWeekdayName(language: SupportedLanguage, weekday: string): 
 }
 
 export function dictionaryLabel(language: SupportedLanguage, group: DictionaryGroup, key: string): string {
-  const dictionary = TRANSLATIONS[language][group] as Record<string, string>;
+  const dictionary = TRANSLATIONS[language]?.[group] as Record<string, string> | undefined;
   const fallback = TRANSLATIONS.en[group] as Record<string, string>;
-  return dictionary[key] ?? fallback[key] ?? humanizeKey(key);
+  return dictionary?.[key] ?? fallback[key] ?? humanizeKey(key);
 }
 
 export function humanizeKey(value: string): string {

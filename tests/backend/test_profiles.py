@@ -106,7 +106,7 @@ class ProfileNormalizationTest(unittest.TestCase):
             ["climate.salon"],
         )
         self.assertEqual(data["global_"]["active_profile_ids"], ["away"])
-        self.assertEqual(data["version"], 4)
+        self.assertEqual(data["version"], 5)
 
         missing = normalize_schedule_data(
             {"global": {"mode": "auto", "active_profile_id": "missing"}, "profiles": [_profile()]},
@@ -226,6 +226,43 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
                 None,
             )
         )
+
+    async def test_failed_profile_save_preserves_concurrent_owned_pause(self) -> None:
+        data = normalize_schedule_data(None, ["climate.salon"])
+        manager = FakeClimateManager()
+        profile_save_started = asyncio.Event()
+        release_profile_save = asyncio.Event()
+        save_calls = 0
+
+        async def save() -> None:
+            nonlocal save_calls
+            save_calls += 1
+            if save_calls == 1:
+                profile_save_started.set()
+                await release_profile_save.wait()
+                raise RuntimeError("profile save failed")
+
+        scheduler = VelairScheduler(
+            _available_hass("climate.salon"),
+            data,
+            manager,
+            save,
+        )
+        profile_task = asyncio.create_task(
+            scheduler.async_set_profile(_profile(temperature=18))
+        )
+        await profile_save_started.wait()
+
+        await scheduler.async_pause_zone("climate.salon", pause_id="window_guard")
+        release_profile_save.set()
+        with self.assertRaisesRegex(RuntimeError, "profile save failed"):
+            await profile_task
+
+        self.assertEqual(
+            data["zones"]["climate.salon"]["pauses"][0]["pause_id"],
+            "window_guard",
+        )
+        self.assertEqual(data["zones"]["climate.salon"]["override"]["type"], "pause")
 
     async def test_activation_applies_a_cooling_profile_schedule(self) -> None:
         scheduler, _data, manager, _saves = self._scheduler()
@@ -856,6 +893,11 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
     async def test_zone_pause_outranks_profile_activation(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(temperature=18))
+        pause = {
+            "started_at": NOW.isoformat(),
+            "action": "none",
+        }
+        data["zones"]["climate.salon"]["pauses"] = [pause]
         data["zones"]["climate.salon"]["override"] = {
             "type": "pause",
             "started_at": NOW.isoformat(),

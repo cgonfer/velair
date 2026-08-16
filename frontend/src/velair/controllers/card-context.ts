@@ -37,7 +37,9 @@ export function inputValue(event: Event): string {
 }
 
 export function isCardView(value?: string | null): value is VelairCardView {
-  return PANEL_VIEWS.includes(value as VelairPanelView) || LOVELACE_CARD_VIEWS.includes(value as VelairCardView);
+  return value === "profiles"
+    || PANEL_VIEWS.includes(value as VelairPanelView)
+    || LOVELACE_CARD_VIEWS.includes(value as VelairCardView);
 }
 
 export function effectiveView(
@@ -46,13 +48,13 @@ export function effectiveView(
   configView?: string | null,
 ): VelairCardView {
   if (isCardView(attributeView)) {
-    return attributeView;
+    return attributeView === "profiles" ? "modes" : attributeView;
   }
   if (isCardView(configView)) {
-    return configView;
+    return configView === "profiles" ? "modes" : configView;
   }
   if (isCardView(propertyView)) {
-    return propertyView;
+    return propertyView === "profiles" ? "modes" : propertyView;
   }
   return "overview-status";
 }

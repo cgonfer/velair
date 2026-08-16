@@ -169,6 +169,10 @@ show_comfort_co2: true
 
 ## Create A Daily Schedule
 
+When you enter **Schedules**, Velair opens the current local weekday. Your
+selection is then preserved while you move between thermostats, Default and
+Profile schedules, or refreshed backend data.
+
 1. Select the climate you want to configure.
 2. Select the weekday.
 3. Choose a template or configure the blocks manually.
@@ -330,7 +334,7 @@ The Templates tab lets you:
 - apply a template to selected climates and weekdays;
 - delete templates.
 
-The Schedule tab can also save the current day as a new template.
+The Schedules tab can also save the current day as a new template.
 
 When applying a template to a climate, Velair validates HVAC modes and temperature limits. If a template temperature is outside the target climate range, Velair clamps it to the climate minimum or maximum. If a template uses an unsupported HVAC mode, Velair shows an error so the user can change the block to `Keep` or a supported mode.
 
@@ -350,6 +354,16 @@ that Profile return to their Default schedules. Activation applies the blocks
 active at the current time, including blocks that started on an earlier day,
 and cancels Boosts in affected zones. Global and
 per-zone pauses retain priority.
+
+The sidebar uses **Schedules** as the complete planning workspace. Choose
+**Default schedules** to edit the normal weekly plan, or **Profile schedules**
+to create a Profile and configure one thermostat at a time with **Default
+schedule**, **Profile schedule**, or **Pause**. Both sources expose the same
+timeline, block options, templates, and cloning tools, but their save semantics
+remain intentional: a Default day is saved directly, while Profile metadata and
+thermostat behavior are saved atomically as one Profile. A Profile can still be
+activated directly from its row. The separate **Modes** tab composes Profiles
+into reusable setups and does not duplicate their schedule editor.
 While Velair processes the affected zones, a global operation strip shows the
 current zone, processed count, and final success or partial-error result across
 panel tabs. In Lovelace, it appears only in the Active setup card, where Mode
@@ -415,6 +429,24 @@ This means a boost should not cause Velair to invent a new heating or cooling ta
 By default, Velair restores its stored scheduler state after Home Assistant starts but does not force climate devices to a schedule target.
 
 From Settings, you can enable **Apply active schedule after startup**. When enabled, Velair applies the current active schedule block to managed climates after Home Assistant starts, as long as the scheduler is in automatic mode. A block that started on an earlier day still counts as the active block until the next weekly block starts. Active boosts are respected.
+
+## Automation Blueprints
+
+Velair provides two optional Home Assistant blueprints through its documentation:
+
+- switch between chosen Home/Away actions from one consolidated occupancy entity;
+- pause one or more managed climates while any selected window or door remains open.
+
+They use Home Assistant state events and configurable delays, not polling. The
+occupancy blueprint can report when its consolidated group, template sensor, or
+helper remains unavailable, without running either Home or Away actions. The
+window blueprint identifies the pause it creates, so closing a window cannot
+remove a manual pause or a pause owned by another automation. If a contact
+remains unknown or unavailable, Home Assistant shows one delayed diagnostic
+notification for the thermostat set and dismisses it automatically after recovery;
+the affected contact still blocks resumption. See
+[Automation Blueprints](blueprints.md) for setup, examples, startup behavior,
+and the one-automation-per-zone rule for window contacts.
 
 ## Portability
 
@@ -620,23 +652,41 @@ The optional `action` field can be:
 - `none`: leave the climate exactly as it is and only stop Velair from changing it automatically;
 - `turn_off`: turn the climate off immediately and keep it paused.
 
+Automations may also send an optional `pause_id` containing 1 to 128 letters,
+numbers, dots, underscores, colons, or hyphens, beginning with a letter or
+number. An identified pause adds a reason without replacing reasons with other
+IDs. Reusing the ID updates only that reason; an exact replay has no effect.
+Calls without `pause_id` retain manual authority and replace every reason with
+one manual pause.
+
 ```yaml
 action: velair.pause_zone
 data:
   entity_id: climate.guest_room
   duration_minutes: 120
   action: turn_off
+  pause_id: window_guard
 ```
 
 ### `velair.resume_zone`
 
 Resume automatic schedule execution for one managed climate entity. By default, Velair applies the currently active schedule block for that climate when one exists. If no block applies at that moment, Velair leaves the climate untouched.
 
+When `pause_id` is provided, Velair removes only that reason. Other reasons keep
+the zone paused, and the schedule is applied only after the last reason ends.
+Use `resume_all: true` to explicitly clear every reason. Omitting both fields
+retains legacy resume-all behavior. The fields cannot be combined, and
+`resume_all: false` without an ID is rejected.
+
+Reasons expire independently. If any remaining reason uses `turn_off`, the
+effective pause action remains off. Boosts are rejected while a zone is paused.
+
 ```yaml
 action: velair.resume_zone
 data:
   entity_id: climate.guest_room
   apply_current_schedule: true
+  pause_id: window_guard
 ```
 
 ### `velair.set_daily_schedule`

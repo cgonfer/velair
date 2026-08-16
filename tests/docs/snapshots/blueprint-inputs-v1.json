@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "blueprints": {
+    "automation/velair/occupancy_home_away.yaml": {
+      "major_version": 1,
+      "inputs": {
+        "occupancy": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  entity:\n    filter:\n      - domain: binary_sensor\n      - domain: input_boolean\n      - domain: group",
+          "required": true
+        },
+        "occupied_actions": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  action: {}",
+          "default": "[]"
+        },
+        "empty_actions": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  action: {}",
+          "default": "[]"
+        },
+        "occupied_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "seconds: 0"
+        },
+        "empty_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "minutes: 10"
+        },
+        "availability_warning_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "minutes: 5"
+        }
+      }
+    },
+    "automation/velair/window_pause.yaml": {
+      "major_version": 1,
+      "inputs": {
+        "climate_entity": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  entity:\n    multiple: true\n    filter:\n      domain: climate",
+          "required": true
+        },
+        "opening_entities": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  entity:\n    multiple: true\n    filter:\n      - domain: binary_sensor\n        device_class: window\n      - domain: binary_sensor\n        device_class: door\n      - domain: binary_sensor\n        device_class: opening",
+          "required": true
+        },
+        "pause_action": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  select:\n    options:\n      - value: none\n      - value: turn_off\n    mode: dropdown",
+          "default": "turn_off"
+        },
+        "pause_id": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  text:",
+          "default": "velair_window_guard"
+        },
+        "open_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "minutes: 2"
+        },
+        "close_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "seconds: 30"
+        },
+        "availability_warning_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "minutes: 5"
+        }
+      }
+    }
+  }
+}

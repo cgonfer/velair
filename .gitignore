@@ -24,6 +24,9 @@ pnpm-debug.log*
 
 # Generated frontend development output
 frontend/dist/
+frontend/demo/
+website/tests/
+website/public/.vite/
 .release/
 
 # Local Home Assistant/runtime data

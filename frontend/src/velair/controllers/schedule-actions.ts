@@ -122,7 +122,6 @@ export async function copySelectedDay(host: ScheduleActionsHost): Promise<void> 
     host._applyScheduleData(data, { forceDraft: true });
     host._showSuccess(host._t("appliedDays", {
       count: targetWeekdays.length,
-      suffix: targetWeekdays.length === 1 ? "" : "s",
     }));
   } catch (error) {
     host._error = error instanceof Error ? error.message : host._t("unableCopy");
@@ -177,7 +176,6 @@ export async function applySelectedDayToZones(host: ScheduleActionsHost): Promis
     }
     host._showSuccess(host._t("appliedThermostats", {
       count: targetEntities.length,
-      suffix: targetEntities.length === 1 ? "" : "s",
     }));
   } catch (error) {
     host._error = error instanceof Error ? error.message : host._t("unableApplyThermostats");

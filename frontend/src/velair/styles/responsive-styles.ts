@@ -142,16 +142,45 @@ export const responsiveStyles = css`
 
   @container (max-width: 600px) {
     .draft-list {
-      column-gap: 3px;
-      grid-template-columns: minmax(88px, 0.9fr) minmax(64px, 1fr) minmax(58px, 0.7fr) 30px 30px;
-      padding: 8px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      column-gap: 4px;
+      grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) minmax(70px, 0.72fr) 30px 30px;
+      padding: 0;
+      row-gap: 8px;
+    }
+
+    .draft-list-header {
+      display: contents;
+    }
+
+    .editable-block {
+      display: contents;
+    }
+
+    .editable-block > .climate-options-inline-summary {
+      grid-column: 1 / -1;
+    }
+
+    .editable-block > label > .label {
+      display: none;
     }
 
     .editable-block input[type="time"] {
       direction: ltr;
       font-size: 12px;
-      min-width: 88px;
+      min-width: 0;
       padding-inline: 3px;
+      width: 100%;
+    }
+
+    .template-detail,
+    .template-editor {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
     }
 
     .temperature-range-control {
@@ -328,16 +357,45 @@ export const responsiveStyles = css`
     }
 
     .draft-list {
-      column-gap: 3px;
-      grid-template-columns: minmax(88px, 0.9fr) minmax(64px, 1fr) minmax(58px, 0.7fr) 30px 30px;
-      padding: 8px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      column-gap: 4px;
+      grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) minmax(70px, 0.72fr) 30px 30px;
+      padding: 0;
+      row-gap: 8px;
+    }
+
+    .draft-list-header {
+      display: contents;
+    }
+
+    .editable-block {
+      display: contents;
+    }
+
+    .editable-block > .climate-options-inline-summary {
+      grid-column: 1 / -1;
+    }
+
+    .editable-block > label > .label {
+      display: none;
     }
 
     .editable-block input[type="time"] {
       direction: ltr;
       font-size: 12px;
-      min-width: 88px;
+      min-width: 0;
       padding-inline: 3px;
+      width: 100%;
+    }
+
+    .template-detail,
+    .template-editor {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
     }
 
     .temperature-range-control {
@@ -550,5 +608,67 @@ export const responsiveStyles = css`
       justify-content: flex-start;
       justify-self: center;
     }
+  }
+
+  @container (max-width: 340px) {
+    .draft-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .draft-list-header {
+      display: none;
+    }
+
+    .editable-block {
+      column-gap: 6px;
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-areas:
+        "time time options delete"
+        "mode mode target target";
+      grid-template-columns: repeat(2, minmax(0, 1fr)) 30px 30px;
+      min-width: 0;
+      row-gap: 8px;
+    }
+
+    .editable-block > label:first-child { grid-area: time; }
+    .editable-block > label:nth-child(2) { grid-area: mode; }
+    .editable-block > .single-temperature-field,
+    .editable-block > .temperature-range-fields { grid-area: target; }
+    .editable-block > .advanced-climate-options,
+    .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
+    .editable-block > .icon-button.danger { grid-area: delete; }
+    .editable-block > label > .label { display: block; }
+  }
+
+  @media (max-width: 340px) {
+    .draft-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .draft-list-header {
+      display: none;
+    }
+
+    .editable-block {
+      column-gap: 6px;
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-areas:
+        "time time options delete"
+        "mode mode target target";
+      grid-template-columns: repeat(2, minmax(0, 1fr)) 30px 30px;
+      min-width: 0;
+      row-gap: 8px;
+    }
+
+    .editable-block > label:first-child { grid-area: time; }
+    .editable-block > label:nth-child(2) { grid-area: mode; }
+    .editable-block > .single-temperature-field,
+    .editable-block > .temperature-range-fields { grid-area: target; }
+    .editable-block > .advanced-climate-options,
+    .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
+    .editable-block > .icon-button.danger { grid-area: delete; }
+    .editable-block > label > .label { display: block; }
   }
 `;

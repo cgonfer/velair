@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Velair is a local-first climate scheduler for Home Assistant climate entities, with Profiles, Modes, Room Assist and Adaptive Preconditioning.">
+    <meta name="theme-color" content="#0f1418">
+    <title>Velair</title>
+    <link rel="icon" href="assets/velair-icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem("velair-site-theme");
+          const theme = stored === "light" || stored === "dark"
+            ? stored
+            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Velair home">
+        <img src="assets/velair-icon.png" alt="" width="42" height="42">
+        <span>Velair</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" aria-controls="site-navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="site-navigation" aria-label="Main navigation">
+        <a href="#schedules">Schedules</a>
+        <a href="#profiles-modes">Profiles &amp; Modes</a>
+        <a href="#room-assist">Room Assist</a>
+        <a href="#preconditioning">Preconditioning</a>
+        <a href="#installation">Install</a>
+        <a href="#about">About</a>
+        <a href="https://github.com/cgonfer/velair/tree/main/docs" target="_blank" rel="noreferrer">Docs</a>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="true">
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path></svg>
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.5A8.5 8.5 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.4 15.5Z"></path></svg>
+        <span class="theme-label">Light</span>
+      </button>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" data-reveal>
+        <div class="hero-copy">
+          <p class="eyebrow">For Home Assistant</p>
+          <h1>Climate schedules that follow how your home actually works.</h1>
+          <p class="hero-lead">Velair adds weekly scheduling to the <code>climate.*</code> entities already in Home Assistant, with one panel for planning the week and seeing what is active now.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=cgonfer&amp;repository=velair&amp;category=integration"><svg class="button-icon icon-fill" data-icon-source="Simple Icons: Home Assistant Community Store" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.63.47a.393.393 0 0 0-.39.39v2.417c0 .212.177.39.39.39h20.74c.213 0 .39-.178.39-.39V.859a.393.393 0 0 0-.39-.39zm-.045 4.126a.41.41 0 0 0-.407.337l-1.17 6.314C0 11.274 0 11.3 0 11.327v2.117c0 .23.186.416.416.416h23.168c.23 0 .416-.186.416-.416v-2.126c0-.027 0-.053-.009-.08l-1.169-6.305a.41.41 0 0 0-.407-.337zM1.7 14.781a.457.457 0 0 0-.46.46v7.829c0 .257.203.46.46.46h14.108c.257 0 .46-.203.46-.46v-6.589c0-.257.204-.46.461-.46h4.02c.258 0 .461.203.461.46v6.589c0 .257.204.46.46.46h.62a.456.456 0 0 0 .461-.46v-7.829a.458.458 0 0 0-.46-.46zm1.842 1.55h7.847c.212 0 .39.177.39.39V21.6c0 .212-.178.39-.39.39H3.542a.393.393 0 0 1-.39-.39v-4.88c0-.221.178-.39.39-.39Z"></path></svg>Install with HACS</a>
+            <a class="button secondary" href="https://github.com/cgonfer/velair"><svg class="button-icon icon-fill" data-icon-source="Simple Icons: GitHub" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>View on GitHub</a>
+          </div>
+          <ul class="fact-list" aria-label="Velair principles">
+            <li><strong>Local-first</strong><span>No Velair cloud or account</span></li>
+            <li><strong>Event-driven</strong><span>Reacts to Home Assistant changes</span></li>
+            <li><strong>Heating &amp; cooling</strong><span>Single targets and ranges</span></li>
+          </ul>
+        </div>
+        <figure class="hero-visual screenshot-frame">
+          <img class="theme-image" src="assets/screenshots/dark/overview-desktop.png" data-dark-src="assets/screenshots/dark/overview-desktop.png" data-light-src="assets/screenshots/light/overview-desktop.png" alt="Velair Overview showing scheduler status, active setup, timeline and climate zones" width="2880" height="3600">
+          <figcaption>Deterministic demonstration data · no private Home Assistant information</figcaption>
+        </figure>
+      </section>
+
+      <section class="section features" id="features" aria-labelledby="features-title">
+        <div class="section-heading" id="schedules" role="group" aria-labelledby="features-title">
+          <p class="eyebrow">Core workflow</p>
+          <h2 id="features-title">Set the week. Change the routine when life changes.</h2>
+          <p>Your weekly schedule stays as the baseline. Profiles, Modes, pauses and Boosts can change what should happen now without making you rebuild it.</p>
+        </div>
+
+        <article class="feature feature-wide" aria-labelledby="schedule-feature-title" data-reveal>
+          <div class="feature-copy">
+            <span class="feature-number">01</span>
+            <h3 id="schedule-feature-title">Visual weekly schedules</h3>
+            <p>For each period, choose a start time, HVAC mode, temperature or native heat/cool range, and any supported climate options. That block stays active until the next one begins.</p>
+            <a class="text-link" href="https://github.com/cgonfer/velair/blob/main/docs/user/usage.md">Read the scheduling guide <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="screenshot-frame feature-shot">
+            <img class="theme-image" src="assets/screenshots/dark/schedules-desktop.png" data-dark-src="assets/screenshots/dark/schedules-desktop.png" data-light-src="assets/screenshots/light/schedules-desktop.png" alt="Velair visual schedule editor with a daily timeline and climate blocks" loading="lazy">
+          </div>
+        </article>
+
+        <div class="feature-grid">
+          <article class="feature" aria-labelledby="profiles-modes" data-reveal>
+            <div class="feature-copy">
+              <span class="feature-number">02</span>
+              <h3 id="profiles-modes">Profiles and Modes</h3>
+              <p>Reuse named schedules such as Workday, Away or Guests, then group them into a Mode that coordinates several zones.</p>
+            </div>
+            <div class="screenshot-frame feature-shot compact-shot">
+              <img class="theme-image" src="assets/screenshots/dark/modes-desktop.png" data-dark-src="assets/screenshots/dark/modes-desktop.png" data-light-src="assets/screenshots/light/modes-desktop.png" alt="Velair Modes editor mapping a Mode to reusable Profiles" loading="lazy">
+            </div>
+          </article>
+
+          <article class="feature" data-reveal>
+            <div class="feature-copy">
+              <span class="feature-number">03</span>
+              <h3>Designed for the sidebar</h3>
+              <p>The main experience adapts to desktop, tablet and phone. The optional Lovelace card uses the same backend-owned configuration.</p>
+            </div>
+            <div class="phone-wrap">
+              <div class="phone-shot">
+                <img class="theme-image" src="assets/screenshots/dark/overview-mobile.png" data-dark-src="assets/screenshots/dark/overview-mobile.png" data-light-src="assets/screenshots/light/overview-mobile.png" alt="Velair responsive Overview on a phone" loading="lazy">
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section assist" aria-labelledby="assist-title" data-reveal>
+        <div class="section-heading" id="room-assist">
+          <p class="eyebrow">Optional room sensor control</p>
+          <h2 id="assist-title">Room Assist makes the external sensor visible.</h2>
+          <p>When a wall thermostat does not represent the room well, Room Assist temporarily adjusts its target using a separate temperature sensor. The graph shows the scheduled target, room reading, climate reading, applied target and current state.</p>
+        </div>
+        <div class="assist-grid">
+          <div class="screenshot-frame feature-shot">
+            <img class="theme-image" src="assets/screenshots/dark/room-assist-desktop.png" data-dark-src="assets/screenshots/dark/room-assist-desktop.png" data-light-src="assets/screenshots/light/room-assist-desktop.png" alt="Room Assist graph while assisting a cooling zone" loading="lazy">
+          </div>
+          <div class="assist-notes">
+            <article><strong>Explicit state</strong><span>Assisting, Holding, scheduled protection and other states explain the current decision.</span></article>
+            <article><strong>Bounded correction</strong><span>The configured maximum delta limits how far Velair may adjust the device target.</span></article>
+            <article><strong>No hidden sensor replacement</strong><span>The thermostat still controls its own hardware; Velair changes only the target exposed through Home Assistant.</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section preconditioning" aria-labelledby="preconditioning-title" data-reveal>
+        <div class="preconditioning-copy" id="preconditioning">
+          <p class="eyebrow">Adaptive Preconditioning</p>
+          <h2 id="preconditioning-title">Start early when local history says the room needs it.</h2>
+          <p>Velair can learn how long a managed zone usually takes to reach a scheduled target. Learning remains local, and the panel shows the planned lead time, learning status and observations behind it.</p>
+          <p class="quiet-note">Adaptive behavior is optional and depends on sufficient observations from the selected room.</p>
+        </div>
+        <div class="screenshot-frame feature-shot">
+          <img class="theme-image" src="assets/screenshots/dark/preconditioning-desktop.png" data-dark-src="assets/screenshots/dark/preconditioning-desktop.png" data-light-src="assets/screenshots/light/preconditioning-desktop.png" alt="Velair Adaptive Preconditioning learning and plan details" loading="lazy">
+        </div>
+      </section>
+
+      <section class="section boundaries" aria-labelledby="boundaries-title" data-reveal>
+        <div>
+          <p class="eyebrow">Before you install</p>
+          <h2 id="boundaries-title">A few practical limits.</h2>
+        </div>
+        <div class="boundary-grid">
+          <article><h3>Your climate integration still matters</h3><p>Velair sends commands through the climate entities already in Home Assistant. The integration behind each entity determines which modes, targets and options it supports.</p></article>
+          <article><h3>Local-first is not the same as offline</h3><p>Schedules and decisions do not require a Velair account or cloud. A device exposed through a vendor cloud still depends on that connection.</p></article>
+          <article><h3>Occupancy stays flexible</h3><p>Use Profiles, Modes and pause actions from regular Home Assistant automations or the optional blueprints. Velair does not try to replace your presence logic.</p></article>
+        </div>
+      </section>
+
+      <section class="section installation" aria-labelledby="installation-title" data-reveal>
+        <div class="installation-copy" id="installation">
+          <p class="eyebrow">Installation</p>
+          <h2 id="installation-title">Available in the default HACS store.</h2>
+          <p>The integration and its sidebar panel are installed together. No separate dashboard card is required.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=cgonfer&amp;repository=velair&amp;category=integration"><svg class="button-icon icon-fill" data-icon-source="Simple Icons: Home Assistant Community Store" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.63.47a.393.393 0 0 0-.39.39v2.417c0 .212.177.39.39.39h20.74c.213 0 .39-.178.39-.39V.859a.393.393 0 0 0-.39-.39zm-.045 4.126a.41.41 0 0 0-.407.337l-1.17 6.314C0 11.274 0 11.3 0 11.327v2.117c0 .23.186.416.416.416h23.168c.23 0 .416-.186.416-.416v-2.126c0-.027 0-.053-.009-.08l-1.169-6.305a.41.41 0 0 0-.407-.337zM1.7 14.781a.457.457 0 0 0-.46.46v7.829c0 .257.203.46.46.46h14.108c.257 0 .46-.203.46-.46v-6.589c0-.257.204-.46.461-.46h4.02c.258 0 .461.203.461.46v6.589c0 .257.204.46.46.46h.62a.456.456 0 0 0 .461-.46v-7.829a.458.458 0 0 0-.46-.46zm1.842 1.55h7.847c.212 0 .39.177.39.39V21.6c0 .212-.178.39-.39.39H3.542a.393.393 0 0 1-.39-.39v-4.88c0-.221.178-.39.39-.39Z"></path></svg>Open in HACS</a>
+            <a class="button secondary" href="https://github.com/cgonfer/velair#installation">Manual instructions</a>
+          </div>
+        </div>
+        <ol class="steps">
+          <li><span>1</span><div><strong>Download</strong><p>Find Velair in HACS and install it.</p></div></li>
+          <li><span>2</span><div><strong>Restart</strong><p>Restart Home Assistant so the custom integration is loaded.</p></div></li>
+          <li><span>3</span><div><strong>Configure</strong><p>Add Velair, select managed climates and open the sidebar panel.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="section author" aria-labelledby="author-title" data-reveal>
+        <div class="author-photo">
+          <img src="assets/cgonfer.jpg" alt="Cristian Gonzalez Fernandez" width="800" height="800" loading="lazy">
+        </div>
+        <div class="author-copy" id="about">
+          <p class="eyebrow">Behind Velair</p>
+          <h2 id="author-title">Built and maintained by Cristian Gonzalez Fernandez.</h2>
+          <p>I like building tools for the small, recurring problems I encounter in daily life.</p>
+          <p>Velair is the first of those projects I have chosen to share openly. I maintain it in my free time, alongside work and daily life, and take care to document and test it for homes beyond my own.</p>
+        </div>
+        <aside class="support-card" aria-labelledby="support-title">
+          <p class="eyebrow">Optional support</p>
+          <h3 id="support-title">Help with the project</h3>
+          <p>Velair remains free and open source. If it is useful in your home, you can support the time I spend maintaining it.</p>
+          <div class="support-links">
+            <a class="support-button coffee" href="https://www.buymeacoffee.com/cgonfer"><svg data-icon-source="Simple Icons: Buy Me A Coffee" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.216 6.415l-.132-.666c-.119-.598-.388-1.163-1.001-1.379-.197-.069-.42-.098-.57-.241-.152-.143-.196-.366-.231-.572-.065-.378-.125-.756-.192-1.133-.057-.325-.102-.69-.25-.987-.195-.4-.597-.634-.996-.788a5.723 5.723 0 0 0-.626-.194c-1-.263-2.05-.36-3.077-.416a25.834 25.834 0 0 0-3.7.062c-.915.083-1.88.184-2.75.5-.318.116-.646.256-.888.501-.297.302-.393.77-.177 1.146.154.267.415.456.692.58.36.162.737.284 1.123.366 1.075.238 2.189.331 3.287.37 1.218.05 2.437.01 3.65-.118.299-.033.598-.073.896-.119.352-.054.578-.513.474-.834-.124-.383-.457-.531-.834-.473-.466.074-.96.108-1.382.146-1.177.08-2.358.082-3.536.006a22.228 22.228 0 0 1-1.157-.107c-.086-.01-.18-.025-.258-.036-.243-.036-.484-.08-.724-.13-.111-.027-.111-.185 0-.212h.005c.277-.06.557-.108.838-.147h.002c.131-.009.263-.032.394-.048a25.076 25.076 0 0 1 3.426-.12c.674.019 1.347.067 2.017.144l.228.031c.267.04.533.088.798.145.392.085.895.113 1.07.542.055.137.08.288.111.431l.319 1.484a.237.237 0 0 1-.199.284h-.003c-.037.006-.075.01-.112.015a36.704 36.704 0 0 1-4.743.295 37.059 37.059 0 0 1-4.699-.304c-.14-.017-.293-.042-.417-.06-.326-.048-.649-.108-.973-.161-.393-.065-.768-.032-1.123.161-.29.16-.527.404-.675.701-.154.316-.199.66-.267 1-.069.34-.176.707-.135 1.056.087.753.613 1.365 1.37 1.502a39.69 39.69 0 0 0 11.343.376.483.483 0 0 1 .535.53l-.071.697-1.018 9.907c-.041.41-.047.832-.125 1.237-.122.637-.553 1.028-1.182 1.171-.577.131-1.165.2-1.756.205-.656.004-1.31-.025-1.966-.022-.699.004-1.556-.06-2.095-.58-.475-.458-.54-1.174-.605-1.793l-.731-7.013-.322-3.094c-.037-.351-.286-.695-.678-.678-.336.015-.718.3-.678.679l.228 2.185.949 9.112c.147 1.344 1.174 2.068 2.446 2.272.742.12 1.503.144 2.257.156.966.016 1.942.053 2.892-.122 1.408-.258 2.465-1.198 2.616-2.657.34-3.332.683-6.663 1.024-9.995l.215-2.087a.484.484 0 0 1 .39-.426c.402-.078.787-.212 1.074-.518.455-.488.546-1.124.385-1.766zm-1.478.772c-.145.137-.363.201-.578.233-2.416.359-4.866.54-7.308.46-1.748-.06-3.477-.254-5.207-.498-.17-.024-.353-.055-.47-.18-.22-.236-.111-.71-.054-.995.052-.26.152-.609.463-.646.484-.057 1.046.148 1.526.22.577.088 1.156.159 1.737.212 2.48.226 5.002.19 7.472-.14.45-.06.899-.13 1.345-.21.399-.072.84-.206 1.08.206.166.281.188.657.162.974a.544.544 0 0 1-.169.364zm-6.159 3.9c-.862.37-1.84.788-3.109.788a5.884 5.884 0 0 1-1.569-.217l.877 9.004c.065.78.717 1.38 1.5 1.38 0 0 1.243.065 1.658.065.447 0 1.786-.065 1.786-.065.783 0 1.434-.6 1.499-1.38l.94-9.95a3.996 3.996 0 0 0-1.322-.238c-.826 0-1.491.284-2.26.613z"></path></svg><span>Buy me a coffee</span></a>
+            <a class="support-button paypal" href="https://www.paypal.me/cristiangonfer94"><svg data-icon-source="Simple Icons: PayPal" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.607 4.653H8.941L6.645 19.251H1.82L4.862 0h7.995c3.754 0 6.375 2.294 6.473 5.513-.648-.478-2.105-.86-3.722-.86m6.57 5.546c0 3.41-3.01 6.853-6.958 6.853h-2.493L11.595 24H6.74l1.845-11.538h3.592c4.208 0 7.346-3.634 7.153-6.949a5.24 5.24 0 0 1 2.848 4.686M9.653 5.546h6.408c.907 0 1.942.222 2.363.541-.195 2.741-2.655 5.483-6.441 5.483H8.714Z"></path></svg><span>Support with PayPal</span></a>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section community" id="community" aria-labelledby="community-title" data-reveal>
+        <div>
+          <p class="eyebrow">Community project</p>
+          <h2 id="community-title">Real homes find the edge cases.</h2>
+          <p>If Velair behaves unexpectedly with your climate integration, include a short description, the relevant entity states and logs in the issue.</p>
+        </div>
+        <div class="community-links">
+          <a href="https://github.com/cgonfer/velair/issues"><span class="community-icon"><svg data-icon-source="GitHub Octicons: issue-opened" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1c6.075 0 11 4.925 11 11s-4.925 11-11 11S1 18.075 1 12 5.925 1 12 1ZM2.5 12a9.5 9.5 0 0 0 9.5 9.5 9.5 9.5 0 0 0 9.5-9.5A9.5 9.5 0 0 0 12 2.5 9.5 9.5 0 0 0 2.5 12Zm9.5 2a2 2 0 1 1-.001-3.999A2 2 0 0 1 12 14Z"></path></svg></span><strong>Report an issue</strong><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/cgonfer/velair/releases"><span class="community-icon"><svg data-icon-source="GitHub Octicons: tag" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"></path><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"></path></svg></span><strong>View releases</strong><span aria-hidden="true">→</span></a>
+          <a href="https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394/4"><span class="community-icon"><svg data-icon-source="GitHub Octicons: comment-discussion" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.75 1h12.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0 1 14.25 14H8.061l-2.574 2.573A1.458 1.458 0 0 1 3 15.543V14H1.75A1.75 1.75 0 0 1 0 12.25v-9.5C0 1.784.784 1 1.75 1ZM1.5 2.75v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25Z"></path><path d="M22.5 8.75a.25.25 0 0 0-.25-.25h-3.5a.75.75 0 0 1 0-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0 1 22.25 20H21v1.543a1.457 1.457 0 0 1-2.487 1.03L15.939 20H10.75A1.75 1.75 0 0 1 9 18.25v-1.465a.75.75 0 0 1 1.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 0 1 .53.22l2.72 2.72v-2.19a.75.75 0 0 1 .75-.75h2a.25.25 0 0 0 .25-.25v-9.5Z"></path></svg></span><strong>Community thread</strong><span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="brand footer-brand"><img src="assets/velair-icon.png" alt="" width="34" height="34"><span>Velair</span></div>
+      <p>Climate automation that adapts to your life.</p>
+      <p class="footer-note">Open source · Local-first · Vendor-neutral</p>
+    </footer>
+  </body>
+</html>

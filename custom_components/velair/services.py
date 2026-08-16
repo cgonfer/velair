@@ -22,8 +22,10 @@ from .const import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     ATTR_HUMIDITY,
+    ATTR_PAUSE_ID,
     ATTR_PRESET_MODE,
     ATTR_PROFILE_ID,
+    ATTR_RESUME_ALL,
     ATTR_SOURCE_WEEKDAY,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
@@ -54,7 +56,26 @@ from .const import (
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_OPTIONS,
 )
-from .models import WEEKDAYS, normalize_schedule_blocks
+from .models import WEEKDAYS, normalize_schedule_blocks, validate_pause_id
+
+
+def _validate_pause_id(value: str) -> str:
+    """Validate an optional pause owner for service schemas."""
+    try:
+        return validate_pause_id(value)
+    except ValueError as err:
+        raise vol.Invalid(str(err)) from err
+
+
+def _validate_resume_zone_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Reject ambiguous selective-resume combinations."""
+    has_id = ATTR_PAUSE_ID in data
+    has_resume_all = ATTR_RESUME_ALL in data
+    if has_id and has_resume_all:
+        raise vol.Invalid("pause_id and resume_all cannot be used together")
+    if not has_id and data.get(ATTR_RESUME_ALL) is False:
+        raise vol.Invalid("resume_all: false requires pause_id")
+    return data
 
 
 def _validate_temperature_target_data(data: dict[str, Any]) -> dict[str, Any]:
@@ -150,14 +171,18 @@ PAUSE_ZONE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_ACTION, default=ZONE_PAUSE_ACTION_NONE): vol.In(
             ZONE_PAUSE_ACTION_OPTIONS
         ),
+        vol.Optional(ATTR_PAUSE_ID): vol.All(cv.string, _validate_pause_id),
     }
 )
 
-RESUME_ZONE_SCHEMA = vol.Schema(
-    {
+RESUME_ZONE_SCHEMA = vol.All(
+    vol.Schema({
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Optional(ATTR_APPLY_CURRENT_SCHEDULE, default=True): cv.boolean,
-    }
+        vol.Optional(ATTR_PAUSE_ID): vol.All(cv.string, _validate_pause_id),
+        vol.Optional(ATTR_RESUME_ALL): cv.boolean,
+    }),
+    _validate_resume_zone_data,
 )
 
 SET_DAILY_SCHEDULE_SCHEMA = vol.Schema(
@@ -315,6 +340,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 entity_id,
                 until=paused_until,
                 action=call.data[ATTR_ACTION],
+                pause_id=call.data.get(ATTR_PAUSE_ID),
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
@@ -323,10 +349,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         scheduler = _get_scheduler(hass)
         entity_id = call.data[ATTR_ENTITY_ID]
         _ensure_managed_entity(scheduler, entity_id)
-        await scheduler.async_resume_zone(
-            entity_id,
-            apply_current_schedule=call.data[ATTR_APPLY_CURRENT_SCHEDULE],
-        )
+        try:
+            resume_kwargs = {
+                "apply_current_schedule": call.data[ATTR_APPLY_CURRENT_SCHEDULE],
+                "pause_id": call.data.get(ATTR_PAUSE_ID),
+                "reason": "service",
+            }
+            if ATTR_RESUME_ALL in call.data:
+                resume_kwargs["resume_all"] = call.data[ATTR_RESUME_ALL]
+            await scheduler.async_resume_zone(entity_id, **resume_kwargs)
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
 
     async def async_set_daily_schedule(call: ServiceCall) -> None:
         scheduler = _get_scheduler(hass)

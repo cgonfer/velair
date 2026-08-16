@@ -437,6 +437,10 @@ describe("sensors view", () => {
     expect(offset?.textContent).toContain("roomSensorAssistNoCorrection");
     expect(offset?.getAttribute("aria-label"))
       .toBe("roomSensorAssistNoCorrection. roomSensorAssistNoCorrectionHelp");
+    expect(
+      container.querySelector(".sensor-scale-callout-marker.marker-climateTarget .sensor-scale-callout")
+        ?.classList,
+    ).toContain("has-offset");
   });
 
   it("shows the reported climate target while assistance is only ready", () => {
@@ -887,6 +891,14 @@ describe("sensors view", () => {
     ].map((marker) => marker.style.getPropertyValue("--callout-left"));
 
     expect(new Set(calloutPositions).size).toBe(4);
+    const numericPositions = calloutPositions
+      .map((position) => Number.parseFloat(position))
+      .sort((first, second) => first - second);
+    expect(
+      numericPositions.slice(1).every(
+        (position, index) => position - numericPositions[index] >= 24,
+      ),
+    ).toBe(true);
     expect(
       container.querySelectorAll(".sensor-scale-callout-marker.shifted").length,
     ).toBeGreaterThan(0);
@@ -896,6 +908,97 @@ describe("sensors view", () => {
         .map((position) => Number.parseFloat(position))
         .every((position) => position >= 10 && position <= 90),
     ).toBe(true);
+  });
+
+  it("merges neighboring callout clusters when shifting coincident values would overlap", () => {
+    const { viewHost } = host({
+      appliedTemperature: 22,
+      climateTargetTemperature: 22,
+      expandedZoneIds: ["climate.second"],
+      roomTemperature: 21.2,
+      scheduledTargetTemperature: 22,
+      thermostatTemperature: 19,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const positions = [
+      ...container.querySelectorAll<HTMLElement>(".sensor-scale-callout-marker"),
+    ]
+      .map((marker) => Number.parseFloat(marker.style.getPropertyValue("--callout-left")))
+      .sort((first, second) => first - second);
+
+    expect(positions).toHaveLength(4);
+    expect(
+      positions.slice(1).every(
+        (position, index) => position - positions[index] >= 24,
+      ),
+    ).toBe(true);
+  });
+
+  it("includes callout padding and borders in the collision-safe maximum width", () => {
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-callout\s*\{[^}]*box-sizing:\s*border-box;[^}]*max-width:\s*144px;/s,
+    );
+  });
+
+  it("keeps an applied decimal target visible when its assist offset is shown", () => {
+    const { viewHost } = host({
+      appliedTemperature: 24.5,
+      climateTargetTemperature: 24.5,
+      expandedZoneIds: ["climate.second"],
+      roomTemperature: 23.4,
+      scheduledTargetTemperature: 23,
+      thermostatTemperature: 24.6,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const appliedCallout = container.querySelector(
+      ".sensor-scale-callout-marker.marker-climateTarget .sensor-scale-callout",
+    );
+    expect(appliedCallout?.classList).toContain("has-offset");
+    expect(appliedCallout?.querySelector("strong")?.textContent).toContain("24.5");
+    expect(appliedCallout?.querySelector(".sensor-scale-offset")?.textContent).toContain("+5");
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-callout\.has-offset\s*\{[^}]*width:\s*max-content;/s,
+    );
+    expect(sensorsStyles.cssText).not.toMatch(
+      /\.sensor-scale-callout\.has-offset \.sensor-scale-value-row\s*\{[^}]*flex-direction:\s*column;/s,
+    );
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-offset-help ha-icon\s*\{[^}]*height:\s*12px;[^}]*width:\s*12px;/s,
+    );
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-callout\.has-offset \.sensor-scale-value-row > strong\s*\{[^}]*overflow:\s*visible;[^}]*text-overflow:\s*clip;/s,
+    );
+  });
+
+  it("uses the same content-sized climate target callout in Fahrenheit", () => {
+    const { viewHost } = host({
+      appliedTemperature: 75.5,
+      climateTargetTemperature: 75.5,
+      expandedZoneIds: ["climate.second"],
+      roomTemperature: 73.4,
+      scheduledTargetTemperature: 74,
+      thermostatTemperature: 76,
+    });
+    (viewHost as unknown as { _temperatureUnit: () => string })._temperatureUnit =
+      () => "°F";
+    (viewHost as unknown as {
+      _formatTemperature: (value: number) => string;
+    })._formatTemperature = (value: number) => `${value} °F`;
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const callout = container.querySelector(
+      ".sensor-scale-callout-marker.marker-climateTarget .sensor-scale-callout",
+    );
+    expect(callout?.classList).toContain("has-offset");
+    expect(callout?.textContent).toContain("75.5 °F");
   });
 
   it("keeps close edge marker callouts inside the available direction", () => {

@@ -69,6 +69,7 @@ import type { VelairViewHost } from "../host-types";
 import type {
   ActiveSetupControls,
   ClimateProfile,
+  ClimateProfileInput,
   DraftScheduleBlock,
   HomeAssistant,
   VelairMode,
@@ -82,13 +83,23 @@ import {
   renderEditableBlock,
   renderTimeline,
 } from "../views/schedule-view";
+import { renderWeeklyScheduleEditor } from "../views/weekly-schedule-editor";
 
 export class VelairProfilesView extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
   @property({ attribute: false }) public data?: ScheduleResponse;
+  @property({ attribute: "initial-weekday" }) public initialWeekday = "";
+  @property({ attribute: false }) public timelineNow?: Date;
   @property({ type: Boolean }) public compact = false;
   @property({ attribute: "active-setup-controls" })
   public activeSetupControls: ActiveSetupControls = "both";
+  /**
+   * Presentation boundary only. Profile and Mode persistence remains owned by
+   * the existing backend APIs, while the panel can place each library in the
+   * workspace where users expect to edit it.
+   */
+  @property({ type: String }) public workspace: "both" | "profiles" | "modes" = "both";
+  @property({ type: Boolean, attribute: "schedule-workspace" }) public scheduleWorkspace = false;
 
   @state() private _selectedKey = "";
   @state() private _draft: ClimateProfileDraft = createClimateProfileDraft();
@@ -104,6 +115,7 @@ export class VelairProfilesView extends LitElement {
   @state() private _modeDraft: VelairModeDraft = createVelairModeDraft();
   @state() private _modeDirty = false;
   @state() private _activeLibrary: "profiles" | "modes" = "profiles";
+  @state() private _selectedEntity = "";
   @state() private _templateDialog?: { entityId: string; weekday: string; name: string; error?: string };
   @state() private _climateCloneDialog?: { entityId: string; weekday: string; targets: Set<string>; error?: string };
   private _dialogTrigger?: HTMLElement;
@@ -138,6 +150,13 @@ export class VelairProfilesView extends LitElement {
       }
     }
     const profiles = this.data?.profiles ?? [];
+    const entityIds = orderedZoneIds(
+      this.data?.configured_entities ?? [],
+      this.data?.settings?.zone_order ?? [],
+    );
+    if (!this._selectedEntity || !entityIds.includes(this._selectedEntity)) {
+      this._selectedEntity = entityIds[0] ?? "";
+    }
     const selected = profiles.find((profile) => profile.key === this._selectedKey);
     if (this._dirty) {
       if (this._selectedKey && !selected) {
@@ -158,7 +177,28 @@ export class VelairProfilesView extends LitElement {
     const notices = this._error
       ? html`<div class="notice error" role="alert">${this._error}</div>`
       : nothing;
-    return this.compact ? html`${selector}${notices}` : html`
+    if (this.compact) return html`${selector}${notices}`;
+    if (this.workspace === "profiles") return html`
+      ${notices}
+      ${this._renderLibrary()}
+      ${this._renderTemplateDialog()}
+      ${this._renderClimateCloneDialog()}
+    `;
+    if (this.workspace === "modes") return html`
+      <section class="modes-view">
+        <header class="profile-intro">
+          <ha-icon icon="mdi:format-list-bulleted"></ha-icon>
+          <span>
+            <strong>${this._t("modesTitle")}</strong>
+            <small>${this._t("modesDescription")} ${this._t("modesEntityNote")}</small>
+          </span>
+        </header>
+        ${selector}
+        ${notices}
+        ${this._renderModes()}
+      </section>
+    `;
+    return html`
       <header class="profile-intro">
         <ha-icon icon="mdi:account-switch-outline"></ha-icon>
         <span>
@@ -320,13 +360,13 @@ export class VelairProfilesView extends LitElement {
     const selected = profiles.find((profile) => profile.key === this._selectedKey);
     return html`
       <section class="template-library profile-library">
-        <div class="library-concept-note">
+        ${this.workspace === "profiles" ? nothing : html`<div class="library-concept-note">
           <ha-icon icon="mdi:account-switch-outline"></ha-icon>
           <span>
             <strong>${this._t("profiles")}</strong>
             <small>${this._t("profilesDescription")}</small>
           </span>
-        </div>
+        </div>`}
         <div class="template-library-layout">
           <div class="template-list-wrap">
             <div class="template-list-heading">
@@ -369,7 +409,11 @@ export class VelairProfilesView extends LitElement {
       || this._dirty;
     return html`
       <div
-        class=${profile.key === this._selectedKey ? "template-item active" : "template-item"}
+        class=${[
+          "template-item",
+          profile.key === this._selectedKey ? "active" : "",
+          this.workspace === "profiles" ? "profile-definition-item" : "",
+        ].filter(Boolean).join(" ")}
         style=${`--profile-item-accent: ${climateProfileAccentColor(profile.key, profile.color)}`}
       >
         <button
@@ -652,17 +696,19 @@ export class VelairProfilesView extends LitElement {
     const modes = this.data?.modes ?? [];
     return html`
       <section class="template-library mode-library" aria-label=${this._t("modesTitle")}>
-        <div class="library-concept-note">
-          <ha-icon icon="mdi:format-list-bulleted"></ha-icon>
-          <span>
-            <strong>${this._t("modesTitle")}</strong>
-            <small>${this._t("modesDescription")}</small>
-          </span>
-        </div>
-        <div class="mode-entity-note">
-          <ha-icon icon="mdi:home-assistant"></ha-icon>
-          <span>${this._t("modesEntityNote")}</span>
-        </div>
+        ${this.workspace === "modes" ? nothing : html`
+          <div class="library-concept-note">
+            <ha-icon icon="mdi:format-list-bulleted"></ha-icon>
+            <span>
+              <strong>${this._t("modesTitle")}</strong>
+              <small>${this._t("modesDescription")}</small>
+            </span>
+          </div>
+          <div class="mode-entity-note">
+            <ha-icon icon="mdi:home-assistant"></ha-icon>
+            <span>${this._t("modesEntityNote")}</span>
+          </div>
+        `}
         <div class="template-library-layout mode-layout">
           <div class="template-list-wrap">
             <div class="template-list-heading">
@@ -816,6 +862,10 @@ export class VelairProfilesView extends LitElement {
     const descriptionValid = descriptionRemaining >= 0;
     const unsupportedModeError = this._unsupportedScheduleModeError();
     const hasScheduleValidationError = this._hasScheduleValidationError();
+    const climateScheduleErrors = orderedZoneIds(
+      this.data?.configured_entities ?? [],
+      this.data?.settings?.zone_order ?? [],
+    ).filter((entityId) => Boolean(this._zoneScheduleError(entityId)));
     return html`
       <section class="profile-editor">
         <div class="template-detail-heading profile-detail-heading">
@@ -851,6 +901,11 @@ export class VelairProfilesView extends LitElement {
         </div>
         ${unsupportedModeError
           ? html`<div class="notice error profile-schedule-error" role="alert">${unsupportedModeError}</div>`
+          : nothing}
+        ${climateScheduleErrors.length && !unsupportedModeError
+          ? html`<div class="notice error profile-schedule-error" role="alert">${this._t("profileScheduleErrorsSummary", {
+              climates: climateScheduleErrors.map((entityId) => this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId).join(", "),
+            })}</div>`
           : nothing}
         <div class="metadata">
           <div class="profile-color-field profile-metadata-row">
@@ -919,20 +974,112 @@ export class VelairProfilesView extends LitElement {
           </div>
         </div>
         <div class="profile-zones">
-          ${(this.data?.configured_entities ?? []).length
+          ${this.scheduleWorkspace
+            ? this._renderWorkspaceZone()
+            : (this.data?.configured_entities ?? []).length
             ? orderedZoneIds(
                 this.data?.configured_entities ?? [],
                 this.data?.settings?.zone_order ?? [],
               ).map((entityId) => this._renderZone(entityId))
             : html`<span class="empty">${this._t("noManagedEntities")}</span>`}
         </div>
+        ${this.scheduleWorkspace ? html`
+          <div class="profile-workspace-save">
+            <button
+              class="command-button primary"
+              type="button"
+              ?disabled=${Boolean(this._busy) || !this._dirty || !this._draft.name.trim() || !iconValid || !colorValid || !descriptionValid || hasScheduleValidationError}
+              @click=${() => void this._save()}
+            >
+              <ha-icon icon="mdi:content-save"></ha-icon>
+              <span>${this._t("profileSave")}</span>
+            </button>
+          </div>
+        ` : nothing}
       </section>
+    `;
+  }
+
+  private _renderWorkspaceZone() {
+    const entityIds = orderedZoneIds(
+      this.data?.configured_entities ?? [],
+      this.data?.settings?.zone_order ?? [],
+    );
+    if (!entityIds.length) return html`<span class="empty">${this._t("noManagedEntities")}</span>`;
+    const entityId = entityIds.includes(this._selectedEntity) ? this._selectedEntity : entityIds[0];
+    const zone = this._draft.zones[entityId];
+    const behavior = profileZoneBehavior(zone);
+    const scheduleError = this._zoneScheduleError(entityId);
+    const currentInput = climateProfileInput(this._draft);
+    const persistedInput = this._persistedProfileInput();
+    return html`
+      <section class="schedule-zone-picker profile-workspace-zone-picker">
+        <div class="schedule-step-heading"><strong>${this._t("scheduleStepClimate")}</strong></div>
+        <div class="zones">
+          ${entityIds.map((id) => {
+            const zoneError = this._zoneScheduleError(id);
+            const dirty = this._profileZoneDirty(id, currentInput, persistedInput);
+            const label = this._profileZoneSummary(id);
+            const climateName = this.hass?.states?.[id]?.attributes?.friendly_name ?? id;
+            return html`
+            <button
+              type="button"
+              class=${["zone", "profile-workspace-zone-option", id === entityId ? "active" : "", zoneError ? "error" : "", dirty ? "dirty" : ""].filter(Boolean).join(" ")}
+              aria-invalid=${String(Boolean(zoneError))}
+              title=${zoneError ?? `${climateName}: ${label}${dirty ? ` (${this._t("unsaved")})` : ""}`}
+              @click=${() => { this._selectedEntity = id; }}
+            >
+              <span class="profile-workspace-zone-copy">
+                <strong>${climateName}</strong>
+                <small>${label}</small>
+              </span>
+            </button>
+          `;})}
+        </div>
+      </section>
+      <article class=${`profile-zone profile-workspace-zone expanded ${scheduleError ? "error" : ""}`}>
+        <div class="zone-heading">
+          <span class="profile-zone-toggle profile-zone-static">
+            <ha-icon icon="mdi:thermostat"></ha-icon>
+            <span class="profile-zone-identity">
+              <strong>${this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId}</strong>
+              <span>${entityId}</span>
+            </span>
+          </span>
+          <label class="profile-zone-actions">
+            <span>${this._t("profileZoneBehavior")}</span>
+            <span class="select-wrap">
+              <select .value=${behavior} @change=${(event: Event) => this._setZoneBehavior(entityId, (event.currentTarget as HTMLSelectElement).value as ClimateProfileDraftZone["behavior"])}>
+                <option value="normal">${this._t("profileBehaviorDefault")}</option>
+                <option value="schedule">${this._t("profileBehaviorSchedule")}</option>
+                <option value="pause">${this._t("profileBehaviorPause")}</option>
+              </select>
+            </span>
+          </label>
+        </div>
+        <div class="profile-zone-content">
+          ${scheduleError ? html`<div class="notice error profile-zone-error" role="alert">${scheduleError}</div>` : nothing}
+          ${zone?.behavior === "pause" ? html`
+            <label class="profile-pause-action"><span>${this._t("profilePauseAction")}</span>
+              <span class="select-wrap">
+                <select .value=${zone.action} @change=${(event: Event) => this._setPauseAction(entityId, (event.currentTarget as HTMLSelectElement).value as "none" | "turn_off")}>
+                  <option value="none">${this._t("profilePauseKeep")}</option>
+                  <option value="turn_off">${this._t("profilePauseTurnOff")}</option>
+                </select>
+              </span>
+            </label>
+          ` : zone?.behavior === "schedule"
+            ? this._renderSchedule(entityId, zone)
+            : html`<div class="library-concept-note compact"><ha-icon icon="mdi:calendar-arrow-right"></ha-icon><span><small>${this._t("profileDefaultScheduleHelp")}</small></span></div>`}
+        </div>
+      </article>
     `;
   }
 
   private _renderZone(entityId: string) {
     const zone = this._draft.zones[entityId];
     const behavior = profileZoneBehavior(zone);
+    const scheduleError = this._zoneScheduleError(entityId);
     const expanded = this._expandedZones.has(entityId);
     const contentId = `profile-zone-content-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
     const climateName = this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
@@ -941,7 +1088,7 @@ export class VelairProfilesView extends LitElement {
     });
     const toggle = () => this._toggleZone(entityId);
     return html`
-      <article class=${`profile-zone ${expanded ? "expanded" : "collapsed"}`}>
+      <article class=${`profile-zone ${expanded ? "expanded" : "collapsed"} ${scheduleError ? "error" : ""}`}>
         <div
           class="zone-heading"
           @click=${(event: Event) => {
@@ -991,6 +1138,7 @@ export class VelairProfilesView extends LitElement {
                 </span>
               </label>
             ` : nothing}
+            ${scheduleError ? html`<div class="notice error profile-zone-error" role="alert">${scheduleError}</div>` : nothing}
             ${zone?.behavior === "schedule" ? this._renderSchedule(entityId, zone) : nothing}
           </div>
         ` : nothing}
@@ -1000,7 +1148,8 @@ export class VelairProfilesView extends LitElement {
 
   private _renderSchedule(entityId: string, zone: Extract<ClimateProfileDraftZone, { behavior: "schedule" }>) {
     const weekdays = orderedWeekdays(this.data?.settings?.first_weekday ?? WEEKDAYS[0]);
-    const weekday = this._selectedDays[entityId] ?? weekdays[0];
+    const initialWeekday = weekdays.includes(this.initialWeekday) ? this.initialWeekday : weekdays[0];
+    const weekday = this._selectedDays[entityId] ?? initialWeekday;
     const blocks = zone.schedule[weekday] ?? [];
     const cloneWeekdayTargets = new Set(
       [...(this._cloneWeekdayTargets[entityId] ?? [])].filter((day) => day !== weekday),
@@ -1014,28 +1163,30 @@ export class VelairProfilesView extends LitElement {
         otherClimates.includes(targetEntityId)),
     );
     const blockHost = this._blockEditorHost(entityId, weekday);
-    return html`
-      <div class="profile-week">
-        <div class="day-tabs">
-          ${weekdays.map((day) => html`
+    const currentInput = climateProfileInput(this._draft);
+    const persistedInput = this._persistedProfileInput();
+    const dayTabs = html`<div class="day-tabs">
+          ${weekdays.map((day) => {
+            const dirty = this._profileDayDirty(entityId, day, currentInput, persistedInput);
+            const dayLabel = weekdayName(languageFromHass(this.hass), day);
+            return html`
             <button
               type="button"
-              class=${day === weekday ? "day-tab active" : "day-tab"}
+              class=${["day-tab", day === weekday ? "active" : "", dirty ? "dirty" : ""].filter(Boolean).join(" ")}
               aria-pressed=${String(day === weekday)}
+              aria-label=${`${dayLabel}${dirty ? `, ${this._t("unsaved")}` : ""}`}
               @click=${() => this._selectDay(entityId, day)}
             >
-              <span>${weekdayName(languageFromHass(this.hass), day).slice(0, 3)}</span>
+              <span>${dayLabel.slice(0, 3)}</span>
               <strong>${zone.schedule[day]?.length ?? 0}</strong>
             </button>
-          `)}
-        </div>
-        ${renderTimeline(blockHost, entityId, "template", {
+          `;})}
+        </div>`;
+    const timeline = renderTimeline(blockHost, entityId, "template", {
           schedule: zone.schedule,
           weekday,
-        })}
-        <div class="schedule-config-helper">${this._t("templateOptionalHint")}</div>
-        <div class="schedule-config-row profile-schedule-config-row">
-          <div class="template-panel">
+        });
+    const templatePanel = html`<div class="template-panel">
             <div>
               <span class="label">${this._t("templates")}</span>
               <span class="select-wrap profile-template-select">
@@ -1053,8 +1204,8 @@ export class VelairProfilesView extends LitElement {
                 </select>
               </span>
             </div>
-          </div>
-          <div class="profile-day-actions">
+          </div>`;
+    const primaryActions = html`<div class="schedule-save-actions profile-day-actions">
             <button
               type="button"
               class="command-button primary"
@@ -1063,9 +1214,8 @@ export class VelairProfilesView extends LitElement {
             >
               <ha-icon icon="mdi:content-save-plus"></ha-icon><span>${this._t("saveTemplate")}</span>
             </button>
-          </div>
-        </div>
-        <div class="draft-list profile-block-list">
+          </div>`;
+    const blockList = html`<div class="draft-list profile-block-list">
           ${blocks.length
             ? html`
                 ${renderDraftListHeader(blockHost, "template")}
@@ -1076,8 +1226,8 @@ export class VelairProfilesView extends LitElement {
                 ${renderAddBlockButton(blockHost, "template")}
               `
             : renderAddBlockButton(blockHost, "template")}
-        </div>
-        <div class="copy-panel profile-day-copy">
+        </div>`;
+    const copyPanels = html`<div class="copy-panel profile-day-copy">
           <div class="copy-header">
             <div>
               <span class="label">${this._t("cloneDayToDays")}</span>
@@ -1155,7 +1305,19 @@ export class VelairProfilesView extends LitElement {
               </button>
             </div>
           </div>
-        ` : nothing}
+        ` : nothing}`;
+    return html`
+      <div class="profile-week">
+        ${renderWeeklyScheduleEditor({
+          dayTabs,
+          timeline,
+          configureHeading: this._t("scheduleStepConfigure"),
+          helper: this._t("templateOptionalHint"),
+          templatePanel,
+          blockList,
+          primaryActions,
+          copyPanels,
+        })}
       </div>
     `;
   }
@@ -1541,7 +1703,7 @@ export class VelairProfilesView extends LitElement {
       _addBlock: () => this._addBlock(entityId, weekday),
       _inputValue: (event: Event) => (event.currentTarget as HTMLInputElement | HTMLSelectElement).value,
       _formatTemperatureLimit: (value: number) => this._formatTemperatureLimit(value),
-      _currentTimelineNow: () => new Date(),
+      _currentTimelineNow: () => this.timelineNow ?? new Date(),
       _formatScheduleTime: (value: string) => formatScheduleTime(
         value,
         dateLocale(languageFromHass(this.hass)),
@@ -1622,8 +1784,9 @@ export class VelairProfilesView extends LitElement {
     );
   }
 
-  private _unsupportedScheduleModeError(): string | undefined {
+  private _unsupportedScheduleModeError(onlyEntityId?: string): string | undefined {
     for (const [entityId, zone] of Object.entries(this._draft.zones)) {
+      if (onlyEntityId && entityId !== onlyEntityId) continue;
       if (zone.behavior !== "schedule") continue;
       const state = this.hass?.states?.[entityId];
       for (const weekday of WEEKDAYS) {
@@ -1683,6 +1846,40 @@ export class VelairProfilesView extends LitElement {
             entity: state?.attributes?.friendly_name ?? entityId,
             start: unsupportedScalar.start,
             weekday: weekdayName(languageFromHass(this.hass), weekday),
+          });
+        }
+      }
+    }
+    return undefined;
+  }
+
+  private _zoneScheduleError(entityId: string): string | undefined {
+    const unsupported = this._unsupportedScheduleModeError(entityId);
+    if (unsupported) return unsupported;
+    const zone = this._draft.zones[entityId];
+    if (zone?.behavior !== "schedule") return undefined;
+    const climate = this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
+    for (const weekday of WEEKDAYS) {
+      const starts = new Set<string>();
+      for (const block of zone.schedule[weekday] ?? []) {
+        const validStart = /^([01]\d|2[0-3]):[0-5]\d$/.test(block.start);
+        const duplicateStart = starts.has(block.start);
+        if (!validStart || duplicateStart) {
+          return this._t("profileScheduleClimateBlockError", {
+            climate,
+            day: weekdayName(languageFromHass(this.hass), weekday),
+            start: block.start,
+            error: this._t(duplicateStart ? "duplicateStart" : "invalidStart", { start: block.start }),
+          });
+        }
+        starts.add(block.start);
+        const error = this._temperatureError(entityId, block);
+        if (error) {
+          return this._t("profileScheduleClimateBlockError", {
+            climate,
+            day: weekdayName(languageFromHass(this.hass), weekday),
+            start: block.start,
+            error,
           });
         }
       }
@@ -1883,6 +2080,62 @@ export class VelairProfilesView extends LitElement {
     return this.data?.operation_status?.state === "running";
   }
 
+  private _persistedProfileInput(): ClimateProfileInput | undefined {
+    const profile = this.data?.profiles?.find((item) => item.key === this._selectedKey);
+    return profile ? climateProfileInput(createClimateProfileDraft(profile)) : undefined;
+  }
+
+  private _profileZoneSummary(entityId: string): string {
+    const zone = this._draft.zones[entityId];
+    const behavior = profileZoneBehavior(zone);
+    if (behavior === "schedule") return this._t("profileBehaviorSchedule");
+    if (behavior === "pause") {
+      const action = zone?.behavior === "pause" && zone.action === "turn_off"
+        ? this._t("profilePauseTurnOff")
+        : this._t("profilePauseKeep");
+      return `${this._t("profileBehaviorPause")}: ${action}`;
+    }
+    return this._t("profileBehaviorDefault");
+  }
+
+  private _profileZoneDirty(
+    entityId: string,
+    currentInput = climateProfileInput(this._draft),
+    persistedInput = this._persistedProfileInput(),
+  ): boolean {
+    const current = currentInput.zones[entityId] ?? { behavior: "normal" };
+    const baseline = persistedInput?.zones[entityId] ?? { behavior: "normal" };
+    return this._canonicalJson(current) !== this._canonicalJson(baseline);
+  }
+
+  private _profileDayDirty(
+    entityId: string,
+    weekday: string,
+    currentInput = climateProfileInput(this._draft),
+    persistedInput = this._persistedProfileInput(),
+  ): boolean {
+    const current = currentInput.zones[entityId];
+    if (current?.behavior !== "schedule") return false;
+    const persisted = persistedInput?.zones[entityId];
+    const baseline = persisted?.behavior === "schedule" ? persisted.schedule[weekday] ?? [] : [];
+    return this._canonicalJson(current.schedule[weekday] ?? []) !== this._canonicalJson(baseline);
+  }
+
+  private _profileDraftChanged(): boolean {
+    const persisted = this._persistedProfileInput();
+    if (!persisted) return false;
+    return this._canonicalJson(climateProfileInput(this._draft)) !== this._canonicalJson(persisted);
+  }
+
+  private _canonicalJson(value: unknown): string {
+    return JSON.stringify(value, (_key, item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      return Object.fromEntries(
+        Object.entries(item as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right)),
+      );
+    });
+  }
+
   private _showSuccess(message: string): void {
     this.dispatchEvent(new CustomEvent("profile-success", {
       bubbles: true,
@@ -1893,8 +2146,9 @@ export class VelairProfilesView extends LitElement {
 
   private _clearNotices(): void { this._error = undefined; }
   private _setDirty(dirty: boolean): void {
-    if (this._dirty === dirty) return;
-    this._dirty = dirty;
+    const nextDirty = dirty && this._profileDraftChanged();
+    if (this._dirty === nextDirty) return;
+    this._dirty = nextDirty;
     this._emitDirtyState();
   }
   private _setModeDirty(dirty: boolean): void {
@@ -1903,10 +2157,16 @@ export class VelairProfilesView extends LitElement {
     this._emitDirtyState();
   }
   private _emitDirtyState(): void {
+    const dirty = this._dirty || this._modeDirty;
     this.dispatchEvent(new CustomEvent("profile-dirty-changed", {
       bubbles: true,
       composed: true,
-      detail: this._dirty || this._modeDirty,
+      detail: dirty,
+    }));
+    this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
+      bubbles: true,
+      composed: true,
+      detail: { dirty, scope: this.workspace === "modes" ? "mode" : "profile" },
     }));
   }
   private _errorMessage(error: unknown, fallback: TranslationKey): string { return error instanceof Error && error.message && error.message !== "schedule" ? error.message : this._t(fallback); }

@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { languageFromHass } from "../../src/velair/i18n";
+import { languageFromHass, translate } from "../../src/velair/i18n";
 import { de } from "../../src/velair/translations/de";
 import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
 import { fr } from "../../src/velair/translations/fr";
 import { nl } from "../../src/velair/translations/nl";
+import { ru } from "../../src/velair/translations/ru";
 
 function translationStrings(value: unknown): string[] {
   if (typeof value === "string") {
@@ -33,13 +34,13 @@ function placeholders(value: string): string[] {
   return [...value.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]).sort();
 }
 
-const supportedTranslations = { de, en, es, fr, nl };
+const completeTranslations = { de, en, es, fr, nl };
 
 describe("supported translations", () => {
   it("provide every source key with matching placeholders", () => {
     const sourceEntries = new Map(translationEntries(en));
 
-    for (const [language, dictionary] of Object.entries(supportedTranslations)) {
+    for (const [language, dictionary] of Object.entries(completeTranslations)) {
       const entries = new Map(translationEntries(dictionary));
       expect([...entries.keys()].sort(), `${language} keys`)
         .toEqual([...sourceEntries.keys()].sort());
@@ -52,7 +53,7 @@ describe("supported translations", () => {
   });
 
   it("contains no broken UTF-8 text", () => {
-    for (const [language, dictionary] of Object.entries(supportedTranslations)) {
+    for (const [language, dictionary] of Object.entries(completeTranslations)) {
       expect(translationStrings(dictionary).join("\n"), language)
         .not.toMatch(/(?:Ã.|Â[°·«»¿¡ ])/);
     }
@@ -62,6 +63,33 @@ describe("supported translations", () => {
     expect(languageFromHass({ language: "de-DE" })).toBe("de");
     expect(languageFromHass({ language: "fr-CA" })).toBe("fr");
     expect(languageFromHass({ language: "nl-BE" })).toBe("nl");
+    expect(languageFromHass({ language: "ru-RU" })).toBe("ru");
+  });
+
+  it("supports reviewed partial community translations with English fallback", () => {
+    const sourceEntries = new Map(translationEntries(en));
+    const russianEntries = translationEntries(ru);
+
+    expect(russianEntries.length).toBeGreaterThan(sourceEntries.size * 0.85);
+    expect(translationStrings(ru).join("\n")).not.toMatch(/[ÃƒÃ‚ï¿½]/);
+    for (const [key, value] of russianEntries) {
+      expect(sourceEntries.has(key), `ru.${key}`).toBe(true);
+      expect(value, `ru.${key}`).not.toBe("");
+      expect(placeholders(value), `ru.${key} placeholders`)
+        .toEqual(placeholders(sourceEntries.get(key) ?? ""));
+    }
+    expect(translate("ru", "legacyImportTemperatureUnit"))
+      .toBe(en.legacyImportTemperatureUnit);
+    expect(translate("ru", "addBlock")).toBe(ru.addBlock);
+    expect(ru.appliedDays).toBe("Обновлено дней: {count}");
+    expect(ru.appliedThermostats).toBe("Обновлено термостатов: {count}");
+    expect(translationStrings(ru).join("\n")).not.toContain("{suffix}");
+    expect(russianEntries.filter(([key, value]) => value === sourceEntries.get(key)))
+      .toEqual([
+        ["preconditioningDirectionSamples", "{count}/{required}"],
+        ["sensors", "Room Assist"],
+        ["roomSensorAssistBadge", "Room Assist"],
+      ]);
   });
 
   it("explains maximum Room Assist correction for both heating and cooling", () => {

@@ -32,6 +32,8 @@ describe("templates view", () => {
 
     render(renderTemplatesView(host()), container);
 
+    expect(container.querySelector(".templates-view > .template-intro")?.textContent)
+      .toContain("templatesPanelIntro");
     const placeholder = container.querySelector(".template-placeholder.compact");
     expect(placeholder?.textContent).toContain("noTemplates");
     expect(
@@ -51,6 +53,7 @@ describe("templates view", () => {
     );
 
     const placeholder = container.querySelector(".template-detail .template-placeholder.compact");
+    expect(container.querySelectorAll(".template-intro")).toHaveLength(1);
     expect(placeholder?.textContent).toContain("selectTemplateToBegin");
     expect(placeholder?.querySelector("ha-icon")).toBeNull();
     expect(placeholder?.querySelector("h2")).toBeNull();

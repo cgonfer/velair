@@ -499,7 +499,8 @@ restoration also emits `climate_target_applied` with `source: boost_ended`.
 
 ## Zone Paused
 
-`zone_paused` is emitted whenever one managed zone is paused. If `action` is
+`zone_paused` is emitted when a managed zone changes from zero reasons to one.
+If `action` is
 `turn_off`, `climate_target_applied` is emitted first for that turn-off.
 
 ```yaml
@@ -509,11 +510,48 @@ entity_id: climate.guest_room
 started_at: "2026-07-09T12:00:00+02:00"
 until: "2026-07-12T18:00:00+02:00"
 action: turn_off
+pause_id: velair_window_guard
+```
+
+`zone_pause_added`, `zone_pause_updated`, and `zone_pause_removed` describe
+individual reason changes and include `pause_id` when identified. An exact
+identified replay emits no event. Legacy and manual reasons omit the ID.
+
+```yaml
+domain: velair
+event: zone_pause_added
+entity_id: climate.guest_room
+started_at: "2026-07-09T12:00:00+02:00"
+until: null
+action: turn_off
+pause_id: velair_window_guard
+```
+
+```yaml
+domain: velair
+event: zone_pause_updated
+entity_id: climate.guest_room
+started_at: "2026-07-09T12:00:00+02:00"
+until: "2026-07-09T18:00:00+02:00"
+action: turn_off
+pause_id: velair_window_guard
+```
+
+```yaml
+domain: velair
+event: zone_pause_removed
+entity_id: climate.guest_room
+started_at: "2026-07-09T12:00:00+02:00"
+until: "2026-07-09T18:00:00+02:00"
+action: turn_off
+pause_id: velair_window_guard
+reason: expired
 ```
 
 ## Zone Resumed
 
-`zone_resumed` is emitted when a zone resumes manually or its pause expires.
+`zone_resumed` is emitted only when the final reason is removed manually or
+expires.
 When the current schedule is reapplied, a later `climate_target_applied` event
 describes that target.
 
@@ -524,6 +562,7 @@ entity_id: climate.guest_room
 started_at: "2026-07-09T12:00:00+02:00"
 until: "2026-07-12T18:00:00+02:00"
 action: turn_off
+pause_id: velair_window_guard
 reason: expired
 ```
 

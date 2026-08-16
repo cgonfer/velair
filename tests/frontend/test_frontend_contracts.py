@@ -30,6 +30,7 @@ FRONTEND_HOST_TYPES_SOURCE = ROOT / "frontend" / "src" / "velair" / "host-types.
 FRONTEND_TRANSLATIONS_DIR = ROOT / "frontend" / "src" / "velair" / "translations"
 FRONTEND_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "card-styles.ts"
 FRONTEND_BASE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "base-styles.ts"
+FRONTEND_LOADING_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "loading-styles.ts"
 FRONTEND_NOTICE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "notice-styles.ts"
 FRONTEND_OVERVIEW_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "overview-styles.ts"
 FRONTEND_PORTABILITY_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "portability-styles.ts"
@@ -386,6 +387,24 @@ class FrontendRegistrationTest(unittest.TestCase):
         )
         self.assertEqual(response.headers["Pragma"], "no-cache")
 
+    def test_setup_serves_the_local_brand_icon_for_slow_initial_loads(self) -> None:
+        """The loading state does not depend on GitHub or another remote host."""
+        with TemporaryDirectory() as temp_dir:
+            brand_dir = Path(temp_dir)
+            icon_path = brand_dir / "icon.png"
+            icon_path.write_bytes(b"velair-icon")
+            self.frontend.BRAND_DIR = brand_dir
+            hass = FakeHass()
+
+            asyncio.run(self.frontend.async_setup_frontend_route(hass))
+            response = asyncio.run(hass.http.views[0].get(None, "velair-icon.png"))
+
+        self.assertEqual(response.path, icon_path)
+        self.assertEqual(
+            response.headers["Cache-Control"],
+            "no-store, no-cache, must-revalidate",
+        )
+
     def test_early_setup_registers_frontend_route_only_once(self) -> None:
         """Startup exposes the Lovelace resource before the panel setup."""
         hass = FakeHass()
@@ -474,6 +493,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         host_types_source = FRONTEND_HOST_TYPES_SOURCE.read_text(encoding="utf-8")
         styles_source = FRONTEND_STYLES_SOURCE.read_text(encoding="utf-8")
         base_styles_source = FRONTEND_BASE_STYLES_SOURCE.read_text(encoding="utf-8")
+        loading_styles_source = FRONTEND_LOADING_STYLES_SOURCE.read_text(encoding="utf-8")
         notice_styles_source = FRONTEND_NOTICE_STYLES_SOURCE.read_text(encoding="utf-8")
         overview_styles_source = FRONTEND_OVERVIEW_STYLES_SOURCE.read_text(encoding="utf-8")
         portability_styles_source = FRONTEND_PORTABILITY_STYLES_SOURCE.read_text(encoding="utf-8")
@@ -509,11 +529,14 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('from "./velair/views/panel"', source)
         self.assertIn("export type ScheduleResponse", types_source)
         self.assertIn(
-            "export const cardStyles = [baseStyles, comfortStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
+            "export const cardStyles = [baseStyles, comfortStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
             styles_source,
         )
         self.assertIn("`, responsiveStyles];", styles_source)
         self.assertIn("export const baseStyles = css`", base_styles_source)
+        self.assertIn("export const loadingStyles = css`", loading_styles_source)
+        self.assertNotIn("animation:", loading_styles_source)
+        self.assertIn("export const INITIAL_LOADING_DELAY_MS = 300", constants_source)
         self.assertIn(".section-heading", base_styles_source)
         self.assertIn(".section-heading ha-icon", base_styles_source)
         self.assertIn(".section-label", base_styles_source)
@@ -974,10 +997,13 @@ class FrontendSourceContractTest(unittest.TestCase):
 
         self.assertIn("export function renderScheduleZonePicker", source)
         self.assertIn("const isInitialDataLoad = !host._data", schedule_state_source)
-        self.assertIn("host._selectedWeekday = data.settings.first_weekday", schedule_state_source)
+        self.assertIn(
+            "host._selectedWeekday = host._initialScheduleWeekday(data.settings.first_weekday)",
+            schedule_state_source,
+        )
+        self.assertIn("weekdayForDate(this._currentTimelineNow())", card_element_source)
         self.assertNotIn("private _previousEffectiveView", card_element_source)
         self.assertNotIn("private _scheduleViewNeedsInitialSelection", card_element_source)
-        self.assertNotIn("todayWeekday()", card_element_source)
         self.assertIn("schedule-zone-picker", source)
         self.assertIn(".schedule-zone-picker {\n      display: grid;\n      gap: 8px;\n      margin-top: 0;", card_styles_source)
         self.assertIn("schedule-editor-heading", source)
@@ -1062,12 +1088,22 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("padding: 2px 8px 4px", card_styles_source)
         self.assertIn("min-width: 0", card_styles_source)
         self.assertIn(
-            "grid-template-columns: minmax(88px, 0.9fr) minmax(64px, 1fr) "
-            "minmax(58px, 0.7fr) 30px 30px",
+            "grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) "
+            "minmax(70px, 0.72fr) 30px 30px",
             responsive_styles_source,
         )
+        self.assertIn("@container (max-width: 340px)", responsive_styles_source)
+        self.assertIn("grid-template-areas:", responsive_styles_source)
+        self.assertIn('"time time options delete"', responsive_styles_source)
+        self.assertIn('"mode mode target target"', responsive_styles_source)
+        self.assertIn(".editable-block > label:nth-child(2)", responsive_styles_source)
+        self.assertIn("grid-area: mode", responsive_styles_source)
+        self.assertIn(".editable-block > .temperature-range-fields", responsive_styles_source)
+        self.assertIn("grid-area: target", responsive_styles_source)
+        self.assertIn(".editable-block > label > .label", responsive_styles_source)
         self.assertIn('.editable-block input[type="time"]', responsive_styles_source)
-        self.assertIn("min-width: 88px", responsive_styles_source)
+        self.assertIn("min-width: 0", responsive_styles_source)
+        self.assertIn(".template-detail,\n    .template-editor", responsive_styles_source)
         self.assertIn(".temperature-range-control", card_styles_source)
         self.assertIn(".range-temperature-field + .range-temperature-field", card_styles_source)
         self.assertIn(".editable-block .icon-button.danger", card_styles_source)
