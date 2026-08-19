@@ -223,8 +223,7 @@ export const settingsStyles = css`
 .settings-zone-title {
   align-items: center;
   display: grid;
-  gap: 7px;
-  grid-template-columns: 10px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
 }
 
@@ -238,60 +237,6 @@ export const settingsStyles = css`
 .settings-zone-identity span {
   color: var(--secondary-text-color);
   font-size: 12px;
-}
-
-.settings-diagnostic-dot {
-  border-radius: 50%;
-  display: inline-block;
-  height: 8px;
-  width: 8px;
-}
-
-.settings-diagnostic-dot.ok {
-  background: var(--success-color, #2e7d32);
-}
-
-.settings-diagnostic-dot.warning {
-  background: var(--warning-color, #c99500);
-}
-
-.settings-diagnostic-dot.error {
-  background: var(--error-color, #c62828);
-}
-
-.settings-zone-identity .settings-diagnostic-text {
-  white-space: normal;
-}
-
-.settings-zone-identity .settings-feature-badge {
-  align-items: center;
-  background: color-mix(in srgb, var(--primary-color) 12%, var(--card-background-color));
-  border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--divider-color));
-  border-radius: 999px;
-  color: var(--primary-text-color);
-  display: inline-flex;
-  font-size: 11px;
-  gap: 4px;
-  justify-self: start;
-  line-height: 1;
-  margin-top: 4px;
-  max-width: 100%;
-  padding: 4px 7px;
-  white-space: nowrap;
-}
-
-.settings-feature-badge ha-icon {
-  --mdc-icon-size: 14px;
-  color: var(--primary-color);
-  flex: 0 0 auto;
-}
-
-.settings-diagnostic-text.warning {
-  color: var(--warning-color, #c99500);
-}
-
-.settings-diagnostic-text.error {
-  color: var(--error-color, #c62828);
 }
 
 .settings-entity-status.ok {

@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
+from typing import Any
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -18,6 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 AsyncStep = Callable[[], Awaitable[None]]
 CurrentGuard = Callable[[], bool]
 CommitStep = Callable[[CurrentGuard], Awaitable[None]]
+DeliveryObserver = Callable[[str, str, dict[str, Any] | None], None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,17 +37,24 @@ RETRY_DELAYS = (2.0, 10.0)
 class ClimateDeliveryCoordinator:
     """Serialize delivery and recover current intent without polling."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        observer: DeliveryObserver | None = None,
+    ) -> None:
         self._hass = hass
         self._generations: dict[str, int] = {}
         self._locks: dict[str, asyncio.Lock] = {}
         self._tasks: dict[str, set[asyncio.Task[None]]] = {}
         self._owners: dict[str, asyncio.Task[object] | None] = {}
+        self._pending_generations: dict[str, int] = {}
+        self._last_cancelled_generation: dict[str, int] = {}
         self._eligible: dict[str, DeliveryResolver] = {}
         self._eligible_generations: dict[str, int] = {}
         self._availability_unsubs: dict[str, CALLBACK_TYPE] = {}
         self._last_available: dict[str, bool] = {}
         self._stopped = False
+        self._observer = observer
 
     async def async_deliver(
         self,
@@ -64,6 +73,7 @@ class ClimateDeliveryCoordinator:
             self._set_eligible(entity_id, generation, current_resolver)
         else:
             self._clear_eligibility(entity_id)
+        self._pending_generations[entity_id] = generation
         try:
             outcome = await self._async_attempt(
                 entity_id,
@@ -74,9 +84,14 @@ class ClimateDeliveryCoordinator:
         except Exception:
             self._clear_eligibility(entity_id, generation)
             raise
+        finally:
+            if self._pending_generations.get(entity_id) == generation:
+                self._pending_generations.pop(entity_id, None)
         if outcome == "success":
+            self._observe(entity_id, "success")
             return True
         if outcome == "cancelled":
+            self._observe_cancelled_once(entity_id, generation)
             self._clear_eligibility(entity_id, generation)
             return False
         if outcome != "failed" or not resilient:
@@ -89,7 +104,7 @@ class ClimateDeliveryCoordinator:
 
     def cancel(self, entity_id: str) -> None:
         """Invalidate pending delivery for one entity."""
-        self._replace(entity_id)
+        self._replace(entity_id, reason="cancelled")
         self._clear_eligibility(entity_id)
 
     def retry_current(self, entity_id: str) -> bool:
@@ -134,6 +149,19 @@ class ClimateDeliveryCoordinator:
     async def async_stop(self) -> None:
         """Cancel every pending delivery and prevent new attempts."""
         self._stopped = True
+        for entity_id in (
+            set(self._eligible)
+            | set(self._tasks)
+            | set(self._owners)
+            | set(self._pending_generations)
+        ):
+            if not self._has_active_work(entity_id):
+                continue
+            self._observe_cancelled_once(
+                entity_id,
+                self._generations.get(entity_id, 0),
+                {"reason": "stopped"},
+            )
         for entity_id in list(self._eligible):
             self._clear_eligibility(entity_id)
         tasks = [task for entity_tasks in self._tasks.values() for task in entity_tasks]
@@ -143,7 +171,23 @@ class ClimateDeliveryCoordinator:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
-    def _replace(self, entity_id: str) -> int:
+    def _replace(
+        self,
+        entity_id: str,
+        *,
+        reason: str = "replaced",
+        notify: bool = True,
+    ) -> int:
+        if (
+            notify
+            and entity_id in self._generations
+            and self._has_active_work(entity_id)
+        ):
+            self._observe_cancelled_once(
+                entity_id,
+                self._generations[entity_id],
+                {"reason": reason},
+            )
         generation = self._generations.get(entity_id, 0) + 1
         self._generations[entity_id] = generation
         current = asyncio.current_task()
@@ -151,6 +195,29 @@ class ClimateDeliveryCoordinator:
             if task is not current:
                 task.cancel()
         return generation
+
+    def _has_active_work(self, entity_id: str) -> bool:
+        """Return whether replacing the intent cancels actual delivery work."""
+        tasks = self._tasks.get(entity_id, ())
+        if any(not task.done() for task in tasks):
+            return True
+        if entity_id in self._owners:
+            return True
+        if entity_id in self._pending_generations:
+            return True
+        return entity_id in self._eligible and not self._is_available(entity_id)
+
+    def _observe_cancelled_once(
+        self,
+        entity_id: str,
+        generation: int,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Publish at most one cancellation event for a delivery generation."""
+        if self._last_cancelled_generation.get(entity_id) == generation:
+            return
+        self._last_cancelled_generation[entity_id] = generation
+        self._observe(entity_id, "cancelled", details)
 
     def _is_current(self, entity_id: str, generation: int) -> bool:
         return not self._stopped and self._generations.get(entity_id) == generation
@@ -178,6 +245,7 @@ class ClimateDeliveryCoordinator:
         if not self._is_current(entity_id, generation):
             return "cancelled"
         if not self._is_available(entity_id):
+            self._observe(entity_id, "unavailable")
             return "unavailable"
         async with self._locks.setdefault(entity_id, asyncio.Lock()):
             if not self._is_current(entity_id, generation):
@@ -199,6 +267,11 @@ class ClimateDeliveryCoordinator:
                         "Climate delivery failed for %s; recovery will re-resolve current intent",
                         entity_id,
                         exc_info=True,
+                    )
+                    self._observe(
+                        entity_id,
+                        "failed",
+                        {"message": "Home Assistant service call failed"},
                     )
                     return "failed"
                 if not self._is_current(entity_id, generation):
@@ -284,7 +357,7 @@ class ClimateDeliveryCoordinator:
         resolver = self._eligible.get(entity_id)
         if resolver is None or self._stopped:
             return
-        generation = self._replace(entity_id)
+        generation = self._replace(entity_id, notify=False)
         self._eligible_generations[entity_id] = generation
         try:
             outcome = await self._async_attempt(entity_id, generation, resolver)
@@ -293,7 +366,14 @@ class ClimateDeliveryCoordinator:
             _LOGGER.exception(
                 "Current climate intent became invalid for %s", entity_id
             )
+            self._observe(
+                entity_id,
+                "invalid_intent",
+                {"message": "Current intent could not be resolved"},
+            )
             return
+        if outcome == "success":
+            self._observe(entity_id, "success")
         if outcome == "failed" and self._is_current(entity_id, generation):
             self._spawn(
                 entity_id,
@@ -311,9 +391,11 @@ class ClimateDeliveryCoordinator:
         try:
             while self._is_current(entity_id, generation):
                 if retry_index >= len(RETRY_DELAYS):
+                    self._observe(entity_id, "exhausted", {"message": "Retry limit reached"})
                     return
                 await asyncio.sleep(RETRY_DELAYS[retry_index])
                 retry_index += 1
+                self._observe(entity_id, "retrying", {"retry_count": retry_index})
                 try:
                     outcome = await self._async_attempt(
                         entity_id, generation, resolver
@@ -323,8 +405,29 @@ class ClimateDeliveryCoordinator:
                     _LOGGER.exception(
                         "Current climate intent became invalid for %s", entity_id
                     )
+                    self._observe(
+                        entity_id,
+                        "invalid_intent",
+                        {"message": "Current intent could not be resolved"},
+                    )
                     return
                 if outcome != "failed":
+                    if outcome == "success":
+                        self._observe(entity_id, "success")
                     return
         except asyncio.CancelledError:
             return
+
+    def _observe(
+        self,
+        entity_id: str,
+        status: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Publish best-effort evidence without changing delivery behavior."""
+        if self._observer is None:
+            return
+        try:
+            self._observer(entity_id, status, details)
+        except Exception:
+            _LOGGER.exception("Velair diagnostics observer failed")

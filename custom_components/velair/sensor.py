@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from . import VelairConfigEntry
 from .config_helpers import get_configured_climate_entities
+from .const import SIGNAL_DIAGNOSTICS_UPDATED
 from .entity import VelairEntity
 
 
@@ -23,6 +26,7 @@ async def async_setup_entry(
     entities: list[SensorEntity] = [
         NextClimateEventSensor(entry),
         CurrentScheduleStateSensor(entry),
+        DiagnosticsStatusSensor(entry),
     ]
     entities.extend(
         sensor
@@ -135,6 +139,56 @@ class CurrentScheduleStateSensor(VelairEntity, SensorEntity):
         attributes["global_mode"] = self.scheduler.mode
 
         return attributes or None
+
+
+class DiagnosticsStatusSensor(VelairEntity, SensorEntity):
+    """Sensor exposing Velair's authoritative diagnostic health."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_options = ["ok", "warning", "error"]
+    _attr_translation_key = "diagnostics_status"
+
+    def __init__(self, entry: VelairConfigEntry) -> None:
+        """Initialize the diagnostics sensor."""
+        super().__init__(entry, "diagnostics_status")
+
+    @property
+    def native_value(self) -> str:
+        """Return the current aggregate diagnostic state."""
+        return self._entry.runtime_data.diagnostics.automation_summary()["status"]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        """Return compact counts and evidence codes without raw error text."""
+        summary = self._entry.runtime_data.diagnostics.automation_summary()
+        unit_counts = summary["unit_counts"]
+        return {
+            "scheduler_mode": summary["scheduler_mode"],
+            "scheduler_status": summary["scheduler_status"],
+            "units_ok": unit_counts["ok"],
+            "units_warning": unit_counts["warning"],
+            "units_error": unit_counts["error"],
+            "issue_count": summary["issue_count"],
+            "warning_count": summary["warning_count"],
+            "error_count": summary["error_count"],
+            "issue_codes": summary["issue_codes"],
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe only to coalesced diagnostic changes."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_DIAGNOSTICS_UPDATED,
+                self._handle_diagnostics_update,
+            )
+        )
+
+    @callback
+    def _handle_diagnostics_update(self) -> None:
+        """Write the latest diagnostic state."""
+        self.async_write_ha_state()
 
 
 class _ZoneSensor(VelairEntity, SensorEntity):

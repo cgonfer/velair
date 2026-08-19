@@ -26,6 +26,7 @@ import type {
   BlockDraftSource,
   ComfortSettings,
   DraftScheduleBlock,
+  DiagnosticsSnapshot,
   EntityDiagnostic,
   HomeAssistant,
   NormalizedBlocks,
@@ -40,6 +41,12 @@ import type {
   VelairCardView,
   VelairPortablePayload,
 } from "../types";
+import { EMPTY_DIAGNOSTIC_HISTORY_FILTERS } from "../domain/diagnostics-history";
+import {
+  DEFAULT_DIAGNOSTICS_LOG_COLUMNS,
+  diagnosticsLogContentWidth,
+  fitDiagnosticsLogColumns,
+} from "../domain/diagnostics-log-layout";
 import type { SupportedLanguage, TranslationKey } from "../translations";
 import { cardStyles } from "../styles/card-styles";
 import { VelairApiClient } from "../api/client";
@@ -285,6 +292,16 @@ export class VelairCard extends LitElement {
   @state() private _templateListCanScrollDown = false;
   @state() private _templateAction?: "save" | "delete";
   @state() private _settingsSaving = false;
+  @state() private _selectedDiagnosticEntity?: string;
+  @state() private _diagnosticsHistorySaving = false;
+  @state() private _diagnosticsHistoryFilters = { ...EMPTY_DIAGNOSTIC_HISTORY_FILTERS };
+  @state() private _diagnosticsSourceFilterOpen = false;
+  @state() private _diagnosticsSourcePlacement: "up" | "down" = "down";
+  @state() private _diagnosticsSourceMaxHeight?: number;
+  @state() private _diagnosticsLogColumns = { ...DEFAULT_DIAGNOSTICS_LOG_COLUMNS };
+  @state() private _diagnosticsLogAvailableWidth = diagnosticsLogContentWidth(900);
+  @state() private _diagnosticsExportOpen = false;
+  @state() private _diagnosticsRedactEntityIds = true;
   @state() private _temperatureMigrationAction?: "°C" | "°F";
   @state() private _maintenanceAction?: "reset";
   @state() private _portabilityAction?: "export" | "import";
@@ -305,6 +322,13 @@ export class VelairCard extends LitElement {
   @state() private _successNoticeStartedAt?: number;
   @state() private _timelineNow = new Date();
   private _unsubscribeUpdates?: () => Promise<void> | void;
+  private _unsubscribeDiagnostics?: () => Promise<void> | void;
+  private _subscribingDiagnostics = false;
+  private _diagnosticsSubscriptionGeneration = 0;
+  private _latestDiagnostics?: DiagnosticsSnapshot;
+  private _diagnosticsSnapshotAuthoritative = false;
+  private _diagnosticsLogResizeObserver?: ResizeObserver;
+  private _diagnosticsLogObservedElement?: Element;
   private _subscribing = false;
   private _successNoticeTick?: number;
   private _successNoticeTimeout?: number;
@@ -328,6 +352,7 @@ export class VelairCard extends LitElement {
   private _hasExternalConfig = false;
   private _previousBodyCursor?: string;
   private _previousDocumentCursor?: string;
+  private _diagnosticsSourcePositionFrame?: number;
   private readonly _handleOperationStatusDismissed = (event: Event): void => {
     const operationId = (event as CustomEvent<string>).detail;
     if (operationId !== this._data?.operation_status?.id) {
@@ -335,6 +360,21 @@ export class VelairCard extends LitElement {
     }
     this._dismissedOperationId = operationId;
     this._clearOperationStatusTimer();
+  };
+  private readonly _handleDiagnosticsOutsidePointerDown = (event: PointerEvent): void => {
+    if (!this._diagnosticsSourceFilterOpen) return;
+    const inside = event.composedPath().some((item) =>
+      item instanceof Element && item.classList.contains("diagnostics-source-filter"));
+    if (!inside) this._setDiagnosticsSourceFilterOpen(false);
+  };
+  private readonly _scheduleDiagnosticsSourcePosition = (): void => {
+    if (this._diagnosticsSourcePositionFrame !== undefined) return;
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    this._diagnosticsSourcePositionFrame = view.requestAnimationFrame(() => {
+      this._diagnosticsSourcePositionFrame = undefined;
+      this._positionDiagnosticsSourceFilter();
+    });
   };
 
   public setConfig(config: VelairCardConfig): void {
@@ -359,6 +399,7 @@ export class VelairCard extends LitElement {
     void this._loadSchedule();
     this._syncInitialLoadingState();
     void this._subscribeUpdates();
+    void this._syncDiagnosticsSubscription();
     this._syncTimelineNowTick();
     window.addEventListener(
       OPERATION_STATUS_DISMISSED_EVENT,
@@ -368,9 +409,23 @@ export class VelairCard extends LitElement {
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.ownerDocument.removeEventListener(
+      "pointerdown", this._handleDiagnosticsOutsidePointerDown, true,
+    );
+    this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleDiagnosticsSourcePosition);
+    this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, true);
+    this._cancelDiagnosticsSourcePosition();
+    this._diagnosticsSourceFilterOpen = false;
+    this._resetDiagnosticsExport();
+    this._disconnectDiagnosticsLogResizeObserver();
+    this._diagnosticsSubscriptionGeneration += 1;
     if (this._unsubscribeUpdates) {
       void this._unsubscribeUpdates();
       this._unsubscribeUpdates = undefined;
+    }
+    if (this._unsubscribeDiagnostics) {
+      void this._unsubscribeDiagnostics();
+      this._unsubscribeDiagnostics = undefined;
     }
     this._clearSuccessNoticeTimer();
     this._clearOperationStatusTimer();
@@ -439,6 +494,10 @@ export class VelairCard extends LitElement {
     if (changedProperties.has("view") || changedProperties.has("_data")) {
       this._syncTimelineNowTick();
     }
+    if (changedProperties.has("view") || changedProperties.has("_config") || changedProperties.has("hass")) {
+      void this._syncDiagnosticsSubscription();
+    }
+    this._syncDiagnosticsLogResizeObserver();
     if (changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty")) {
       this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
         bubbles: true,
@@ -702,8 +761,176 @@ export class VelairCard extends LitElement {
       this._data?.next_events ?? [],
       data.next_events,
     );
-    applyScheduleData(asScheduleStateHost(this), data, options);
+    applyScheduleData(
+      asScheduleStateHost(this),
+      {
+        ...data,
+        diagnostics: this._diagnosticsSnapshotAuthoritative
+          ? this._latestDiagnostics
+          : data.diagnostics ?? this._data?.diagnostics,
+      },
+      options,
+    );
     this._markChangedNextEvents(changedEntityIds);
+  }
+
+  public _applyDiagnosticsSnapshot(diagnostics?: DiagnosticsSnapshot): void {
+    this._diagnosticsSnapshotAuthoritative = true;
+    this._latestDiagnostics = diagnostics;
+    if (this._data) this._data = { ...this._data, diagnostics };
+    else this.requestUpdate();
+  }
+
+  public _setDiagnosticsSourceFilterOpen(open: boolean, returnFocus = false): void {
+    this._diagnosticsSourceFilterOpen = open;
+    this.ownerDocument.removeEventListener(
+      "pointerdown", this._handleDiagnosticsOutsidePointerDown, true,
+    );
+    this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleDiagnosticsSourcePosition);
+    this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, true);
+    if (!open) this._cancelDiagnosticsSourcePosition();
+    if (open) this.ownerDocument.addEventListener(
+      "pointerdown", this._handleDiagnosticsOutsidePointerDown, true,
+    );
+    if (open) {
+      this.ownerDocument.defaultView?.addEventListener("resize", this._scheduleDiagnosticsSourcePosition);
+      this.ownerDocument.addEventListener("scroll", this._scheduleDiagnosticsSourcePosition, true);
+    }
+    this.requestUpdate();
+    if (returnFocus) window.requestAnimationFrame(() => {
+      this.renderRoot.querySelector<HTMLElement>(".diagnostics-source-trigger")?.focus();
+    });
+    if (open) this._scheduleDiagnosticsSourcePosition();
+  }
+
+  private _cancelDiagnosticsSourcePosition(): void {
+    if (this._diagnosticsSourcePositionFrame === undefined) return;
+    this.ownerDocument.defaultView?.cancelAnimationFrame(
+      this._diagnosticsSourcePositionFrame,
+    );
+    this._diagnosticsSourcePositionFrame = undefined;
+  }
+
+  private _positionDiagnosticsSourceFilter(): void {
+    if (!this._diagnosticsSourceFilterOpen) return;
+    const trigger = this.renderRoot.querySelector(".diagnostics-source-trigger");
+    const popover = this.renderRoot.querySelector<HTMLElement>(".diagnostics-source-popover");
+    if ((this.ownerDocument.defaultView?.innerWidth ?? 0) <= 600) {
+      this._diagnosticsSourcePlacement = "down";
+      this._diagnosticsSourceMaxHeight = undefined;
+      return;
+    }
+    if (!trigger || !popover) return;
+    const rect = trigger.getBoundingClientRect();
+    const viewportHeight = this.ownerDocument.defaultView?.innerHeight ?? 800;
+    const below = viewportHeight - rect.bottom - 12;
+    const above = rect.top - 12;
+    const requiredHeight = popover.scrollHeight || 320;
+    this._diagnosticsSourcePlacement = below >= requiredHeight || below >= above
+      ? "down"
+      : "up";
+    const available = this._diagnosticsSourcePlacement === "down" ? below : above;
+    this._diagnosticsSourceMaxHeight = Math.max(0, Math.floor(available));
+  }
+
+  private _syncDiagnosticsLogResizeObserver(): void {
+    if (this._effectiveView() !== "diagnostics") {
+      this._disconnectDiagnosticsLogResizeObserver();
+      if (this._diagnosticsSourceFilterOpen) this._setDiagnosticsSourceFilterOpen(false);
+      this._resetDiagnosticsExport();
+      return;
+    }
+    const element = this.renderRoot.querySelector(".diagnostics-history-table");
+    if (!element) {
+      this._disconnectDiagnosticsLogResizeObserver();
+      return;
+    }
+    if (typeof ResizeObserver === "undefined"
+      || element === this._diagnosticsLogObservedElement) return;
+    this._disconnectDiagnosticsLogResizeObserver();
+    this._diagnosticsLogObservedElement = element;
+    this._diagnosticsLogResizeObserver = new ResizeObserver((entries) => {
+      const outerWidth = entries[0]?.contentRect.width;
+      const width = outerWidth ? diagnosticsLogContentWidth(outerWidth) : 0;
+      if (!width || width === this._diagnosticsLogAvailableWidth) return;
+      this._diagnosticsLogAvailableWidth = width;
+      this._diagnosticsLogColumns = fitDiagnosticsLogColumns(this._diagnosticsLogColumns, width);
+    });
+    this._diagnosticsLogResizeObserver.observe(element);
+  }
+
+  private _resetDiagnosticsExport(): void {
+    this._diagnosticsExportOpen = false;
+    this._diagnosticsRedactEntityIds = true;
+  }
+
+  private _disconnectDiagnosticsLogResizeObserver(): void {
+    this._diagnosticsLogResizeObserver?.disconnect();
+    this._diagnosticsLogResizeObserver = undefined;
+    this._diagnosticsLogObservedElement = undefined;
+  }
+
+  private _handleDiagnosticsSubscriptionMessage(message: {
+    loaded: boolean;
+    diagnostics?: DiagnosticsSnapshot;
+  }): void {
+    if (message.loaded && message.diagnostics) {
+      this._applyDiagnosticsSnapshot(message.diagnostics);
+    } else if (!message.loaded) {
+      this._applyDiagnosticsSnapshot(undefined);
+    }
+  }
+
+  private async _syncDiagnosticsSubscription(): Promise<void> {
+    if (this._effectiveView() !== "diagnostics" || !this.hass) {
+      this._diagnosticsSubscriptionGeneration += 1;
+      const unsubscribe = this._unsubscribeDiagnostics;
+      this._unsubscribeDiagnostics = undefined;
+      if (unsubscribe) await unsubscribe();
+      return;
+    }
+    const api = this._api();
+    if (!api || this._subscribingDiagnostics || this._unsubscribeDiagnostics) return;
+    const generation = ++this._diagnosticsSubscriptionGeneration;
+    this._subscribingDiagnostics = true;
+    try {
+      const diagnostics = await api.getDiagnostics();
+      if (
+        generation !== this._diagnosticsSubscriptionGeneration
+        || !this.isConnected
+        || this._effectiveView() !== "diagnostics"
+      ) return;
+      this._applyDiagnosticsSnapshot(diagnostics);
+      const unsubscribe = await api.subscribeDiagnostics((message) => {
+        if (
+          generation !== this._diagnosticsSubscriptionGeneration
+          || !this.isConnected
+          || this._effectiveView() !== "diagnostics"
+        ) return;
+        this._handleDiagnosticsSubscriptionMessage(message);
+      });
+      if (
+        generation !== this._diagnosticsSubscriptionGeneration
+        || !this.isConnected
+        || this._effectiveView() !== "diagnostics"
+      ) {
+        await unsubscribe();
+        return;
+      }
+      this._unsubscribeDiagnostics = unsubscribe;
+    } catch {
+      if (generation === this._diagnosticsSubscriptionGeneration && this.isConnected) {
+        this._error = this._t("diagnosticsLoadError");
+      }
+    } finally {
+      this._subscribingDiagnostics = false;
+      if (
+        generation !== this._diagnosticsSubscriptionGeneration
+        && this.isConnected
+        && this._effectiveView() === "diagnostics"
+        && !this._unsubscribeDiagnostics
+      ) void this._syncDiagnosticsSubscription();
+    }
   }
 
   private _schedulePreconditioningRefresh(): void {

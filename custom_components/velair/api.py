@@ -38,9 +38,11 @@ from .const import (
     ATTR_TEMPERATURE,
     ATTR_WEEKDAY,
     CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP,
+    DIAGNOSTIC_HISTORY_CATEGORIES,
     DOMAIN,
     HVAC_MODE_OPTIONS,
     SIGNAL_SCHEDULER_UPDATED,
+    SIGNAL_DIAGNOSTICS_UPDATED,
 )
 from .config_helpers import (
     get_configured_climate_entities,
@@ -222,6 +224,11 @@ def async_setup_api(hass: HomeAssistant) -> None:
         return
 
     websocket_api.async_register_command(hass, ws_get_schedule)
+    websocket_api.async_register_command(hass, ws_get_diagnostics)
+    websocket_api.async_register_command(hass, ws_export_diagnostics)
+    websocket_api.async_register_command(hass, ws_subscribe_diagnostics)
+    websocket_api.async_register_command(hass, ws_update_diagnostics_history)
+    websocket_api.async_register_command(hass, ws_clear_diagnostics_history)
     websocket_api.async_register_command(hass, ws_resolve_temperature_migration)
     websocket_api.async_register_command(hass, ws_set_daily_schedule)
     websocket_api.async_register_command(hass, ws_copy_day_schedule)
@@ -264,6 +271,136 @@ def ws_get_schedule(
         return
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/get_diagnostics",
+    }
+)
+@callback
+def ws_get_diagnostics(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return the runtime-only, read-only diagnostics snapshot."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    connection.send_result(msg["id"], runtime["diagnostics"].snapshot(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/export_diagnostics",
+        vol.Optional("redact_entity_ids", default=True): bool,
+    }
+)
+@callback
+def ws_export_diagnostics(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return an entity-redacted report suitable for issue attachments."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    connection.send_result(
+        msg["id"],
+        runtime["diagnostics"].export_snapshot(
+            runtime,
+            redact_entity_ids=msg.get("redact_entity_ids", True),
+        ),
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/update_diagnostics_history",
+        vol.Required("enabled_categories"): vol.All(
+            cv.ensure_list,
+            [vol.In(DIAGNOSTIC_HISTORY_CATEGORIES)],
+        ),
+    }
+)
+@websocket_api.async_response
+async def ws_update_diagnostics_history(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Persist which runtime event categories Diagnostics retains."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    await runtime["diagnostics"].async_update_history_categories(
+        msg["enabled_categories"]
+    )
+    connection.send_result(msg["id"], runtime["diagnostics"].snapshot(runtime))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/clear_diagnostics_history"}
+)
+@callback
+def ws_clear_diagnostics_history(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Clear retained runtime history while keeping current health evidence."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    runtime["diagnostics"].async_clear_history()
+    connection.send_result(msg["id"], runtime["diagnostics"].snapshot(runtime))
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/subscribe_diagnostics"})
+@callback
+def ws_subscribe_diagnostics(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Subscribe only to lightweight diagnostics updates."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+
+    @callback
+    def _send_update(*, cached: bool = True) -> None:
+        current_runtime = _get_runtime(hass)
+        if current_runtime is None:
+            connection.send_message(websocket_api.event_message(msg["id"], {"loaded": False}))
+            return
+        diagnostics = (
+            current_runtime["diagnostics"].cached_snapshot(current_runtime)
+            if cached
+            else current_runtime["diagnostics"].snapshot(current_runtime)
+        )
+        connection.send_message(
+            websocket_api.event_message(
+                msg["id"],
+                {
+                    "loaded": True,
+                    "diagnostics": diagnostics,
+                },
+            )
+        )
+
+    connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+        hass, SIGNAL_DIAGNOSTICS_UPDATED, _send_update
+    )
+    connection.send_result(msg["id"])
+    _send_update(cached=False)
 
 
 @websocket_api.websocket_command(
@@ -1217,6 +1354,9 @@ def _mark_operation_recovery(
     blocker = getattr(runtime["scheduler"], "set_temperature_migration_blocked", None)
     if blocker is not None:
         blocker(True)
+    diagnostics = runtime.get("diagnostics")
+    if diagnostics is not None:
+        diagnostics.async_runtime_changed()
 
 
 def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:

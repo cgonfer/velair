@@ -10,6 +10,7 @@ import re
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 
 from . import helpers
 
@@ -21,6 +22,7 @@ def _load_sensor_module():
     """Load sensor.py with the small Home Assistant entity surface it needs."""
     module_names = (
         "homeassistant.components.sensor",
+        "homeassistant.helpers.entity",
         "homeassistant.helpers.entity_platform",
         "custom_components.velair.entity",
     )
@@ -64,6 +66,10 @@ def _load_sensor_module():
         sensor_platform.SensorEntity = object
         sys.modules["homeassistant.components.sensor"] = sensor_platform
 
+        entity_helper = ModuleType("homeassistant.helpers.entity")
+        entity_helper.EntityCategory = SimpleNamespace(DIAGNOSTIC="diagnostic")
+        sys.modules["homeassistant.helpers.entity"] = entity_helper
+
         entity_platform = ModuleType("homeassistant.helpers.entity_platform")
         entity_platform.AddConfigEntryEntitiesCallback = object
         sys.modules["homeassistant.helpers.entity_platform"] = entity_platform
@@ -102,6 +108,18 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             data={"climate_entities": entity_ids},
             options={},
             runtime_data=SimpleNamespace(
+                diagnostics=SimpleNamespace(
+                    automation_summary=lambda: {
+                        "status": "ok",
+                        "scheduler_mode": "auto",
+                        "scheduler_status": "idle",
+                        "unit_counts": {"ok": len(entity_ids), "warning": 0, "error": 0},
+                        "issue_count": 0,
+                        "warning_count": 0,
+                        "error_count": 0,
+                        "issue_codes": [],
+                    }
+                ),
                 scheduler=scheduler,
                 storage=SimpleNamespace(
                     data={
@@ -132,7 +150,7 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(sensor.available)
 
-    async def test_setup_creates_two_global_and_six_sensors_per_climate(
+    async def test_setup_creates_three_global_and_six_sensors_per_climate(
         self,
     ) -> None:
         scheduler = SimpleNamespace(
@@ -174,7 +192,7 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
 
         await sensor_module.async_setup_entry(hass, entry, entities.extend)
 
-        self.assertEqual(len(entities), 14)
+        self.assertEqual(len(entities), 15)
         target_sensors = [
             entity
             for entity in entities
@@ -324,6 +342,68 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             sensor.extra_state_attributes,
             {"global_mode": "auto"},
         )
+
+    def test_diagnostics_status_exposes_only_compact_safe_attributes(self) -> None:
+        summary = {
+            "status": "error",
+            "scheduler_mode": "auto",
+            "scheduler_status": "scheduled",
+            "unit_counts": {"ok": 1, "warning": 2, "error": 1},
+            "issue_count": 3,
+            "warning_count": 2,
+            "error_count": 1,
+            "issue_codes": ["associated_sensor_unavailable", "delivery_exhausted"],
+        }
+        entry = self._entry(SimpleNamespace(), ["climate.living_room"])
+        entry.runtime_data.diagnostics = SimpleNamespace(
+            automation_summary=lambda: summary
+        )
+        sensor = sensor_module.DiagnosticsStatusSensor(entry)
+
+        self.assertEqual("error", sensor.native_value)
+        self.assertEqual("diagnostic", sensor._attr_entity_category)
+        self.assertFalse(sensor._attr_should_poll)
+        self.assertEqual(
+            sensor.extra_state_attributes,
+            {
+                "scheduler_mode": "auto",
+                "scheduler_status": "scheduled",
+                "units_ok": 1,
+                "units_warning": 2,
+                "units_error": 1,
+                "issue_count": 3,
+                "warning_count": 2,
+                "error_count": 1,
+                "issue_codes": [
+                    "associated_sensor_unavailable",
+                    "delivery_exhausted",
+                ],
+            },
+        )
+
+    async def test_diagnostics_status_subscribes_without_polling(self) -> None:
+        entry = self._entry(SimpleNamespace(), ["climate.living_room"])
+        sensor = sensor_module.DiagnosticsStatusSensor(entry)
+        sensor.hass = SimpleNamespace()
+        sensor.async_on_remove = Mock()
+        sensor.async_write_ha_state = Mock()
+        unsubscribe = Mock()
+
+        with patch.object(
+            sensor_module,
+            "async_dispatcher_connect",
+            return_value=unsubscribe,
+        ) as connect:
+            await sensor.async_added_to_hass()
+
+        connect.assert_called_once_with(
+            sensor.hass,
+            helpers.const_module.SIGNAL_DIAGNOSTICS_UPDATED,
+            sensor._handle_diagnostics_update,
+        )
+        sensor.async_on_remove.assert_called_once_with(unsubscribe)
+        sensor._handle_diagnostics_update()
+        sensor.async_write_ha_state.assert_called_once_with()
 
     def test_temperature_unit_falls_back_to_home_assistant_unit_system(self) -> None:
         hass = SimpleNamespace(
@@ -603,6 +683,7 @@ class SensorTranslationTest(unittest.TestCase):
                     set(sensors),
                     {
                         "next_climate_event",
+                        "diagnostics_status",
                         "scheduler_status",
                         "zone_active_target_temperature",
                         "zone_environmental_condition",
@@ -615,6 +696,10 @@ class SensorTranslationTest(unittest.TestCase):
                 self.assertEqual(
                     set(sensors["scheduler_status"]["state"]),
                     expected_states,
+                )
+                self.assertEqual(
+                    set(sensors["diagnostics_status"]["state"]),
+                    {"ok", "warning", "error"},
                 )
                 self.assertEqual(
                     set(translation["entity"]["select"]),

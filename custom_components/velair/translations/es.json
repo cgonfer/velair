@@ -48,6 +48,14 @@
           "temperature_migration_required": "Actualización de temperatura necesaria"
         }
       },
+      "diagnostics_status": {
+        "name": "Estado de diagnóstico",
+        "state": {
+          "ok": "Correcto",
+          "warning": "Advertencia",
+          "error": "Error"
+        }
+      },
       "zone_active_target_temperature": {
         "name": "Temperatura objetivo activa de {zone}"
       },

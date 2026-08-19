@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
 import {
+  formatDiagnosticDateTime,
   dateLocale,
   formatDateTime,
   formatEventAction,
@@ -23,6 +24,25 @@ const baseEvent: ScheduleEvent = {
 };
 
 describe("formatters", () => {
+  it("keeps seconds in diagnostic timestamps", () => {
+    const localDate = new Date(2026, 7, 18, 14, 45, 37, 246);
+    const value = localDate.toISOString();
+    const formatted = formatDiagnosticDateTime(value, "en-US", "24");
+    expect(formatted).toMatch(/:\d{2}:37/);
+    expect(formatted).toContain(localDate.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }));
+    expect(formatted).toContain(".246");
+  });
+
+  it("keeps milliseconds with the 12-hour Home Assistant preference", () => {
+    const value = new Date(2026, 7, 18, 14, 45, 37, 9).toISOString();
+    const formatted = formatDiagnosticDateTime(value, "en-US", "12");
+
+    expect(formatted).toMatch(/2:45:37\.009 PM/i);
+  });
   it("uses the regional locale for every supported language", () => {
     expect(dateLocale("de")).toBe("de-DE");
     expect(dateLocale("en")).toBe("en");

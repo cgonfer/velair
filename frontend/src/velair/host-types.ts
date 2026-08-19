@@ -5,6 +5,7 @@ import type { SupportedLanguage, TranslationKey } from "./translations";
 import type {
   BlockDraftSource,
   ComfortSettings,
+  DiagnosticsSnapshot,
   DraftScheduleBlock,
   EntityDiagnostic,
   HomeAssistant,
@@ -20,6 +21,8 @@ import type {
   VelairCardView,
   VelairPortablePayload,
 } from "./types";
+import type { DiagnosticHistoryFilters } from "./domain/diagnostics-history";
+import type { DiagnosticsLogColumns } from "./domain/diagnostics-log-layout";
 
 export type PortableSummaryViewItem = {
   label: string;
@@ -72,6 +75,16 @@ export type VelairViewHost = {
   _selectedTemplateKey: string;
   _selectedWeekday: string;
   _settingsSaving: boolean;
+  _selectedDiagnosticEntity?: string;
+  _diagnosticsHistorySaving: boolean;
+  _diagnosticsHistoryFilters: DiagnosticHistoryFilters;
+  _diagnosticsSourceFilterOpen: boolean;
+  _diagnosticsSourcePlacement: "up" | "down";
+  _diagnosticsSourceMaxHeight?: number;
+  _diagnosticsLogColumns: DiagnosticsLogColumns;
+  _diagnosticsLogAvailableWidth: number;
+  _diagnosticsExportOpen: boolean;
+  _diagnosticsRedactEntityIds: boolean;
   _temperatureMigrationAction?: "°C" | "°F";
   _templateAction?: "save" | "delete";
   _templateApplyOpen: boolean;
@@ -89,6 +102,8 @@ export type VelairViewHost = {
   _api(): VelairApiClient | undefined;
   _applySelectedDayToZones(): Promise<void>;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
+  _applyDiagnosticsSnapshot(diagnostics?: DiagnosticsSnapshot): void;
+  _setDiagnosticsSourceFilterOpen(open: boolean, returnFocus?: boolean): void;
   _applyTemplateToTargets(template: ScheduleTemplate): Promise<void>;
   _canResumeScheduler(): boolean;
   _clearOverviewTimelineDetail(): void;

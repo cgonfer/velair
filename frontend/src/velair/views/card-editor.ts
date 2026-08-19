@@ -487,6 +487,7 @@ export class VelairCardEditor extends LitElement {
       "sensors": "cardViewSensors",
       "comfort": "cardViewComfort",
       "preconditioning": "cardViewPreconditioning",
+      "diagnostics": "diagnostics",
       "settings": "settings",
     };
     return this._t(labels[view]);

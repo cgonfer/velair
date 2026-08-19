@@ -45,7 +45,7 @@ Velair serves this resource with no-cache headers. The sidebar uses an automatic
 
 Open the Velair integration options and confirm the entity is selected. Velair only manages `climate.*` entities configured in the integration.
 
-If the entity no longer exists in Home Assistant, Velair will show a diagnostic warning in Settings.
+If the entity no longer exists in Home Assistant, Velair will show the verified problem in **Diagnostics**.
 
 ## A Mode Is Not Available
 

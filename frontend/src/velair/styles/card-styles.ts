@@ -1,6 +1,7 @@
 import { css } from "lit";
 import { baseStyles } from "./base-styles";
 import { comfortStyles } from "./comfort-styles";
+import { diagnosticsStyles } from "./diagnostics-styles";
 import { loadingStyles } from "./loading-styles";
 import { noticeStyles } from "./notice-styles";
 import { operationStatusStyles } from "./operation-status-styles";
@@ -13,7 +14,7 @@ import { templateStyles } from "./template-styles";
 import { timelineStyles } from "./timeline-styles";
 import { responsiveStyles } from "./responsive-styles";
 
-export const cardStyles = [baseStyles, comfortStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
+export const cardStyles = [baseStyles, comfortStyles, diagnosticsStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
     .temperature-migration-banner {
       align-items: start;
       background: color-mix(in srgb, var(--warning-color, #c99500) 12%, var(--card-background-color));

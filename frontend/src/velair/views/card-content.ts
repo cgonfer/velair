@@ -18,6 +18,7 @@ import { renderPreconditioningView } from "./preconditioning-view";
 import { renderSchedulesView } from "./schedule-view";
 import { renderSensorsView, type RoomSensorViewOptions } from "./sensors-view";
 import { renderSettingsView } from "./settings-view";
+import { renderDiagnosticsView } from "./diagnostics-view";
 import { renderTemplatesView } from "./templates-view";
 import "../components/profiles-view-element";
 
@@ -129,7 +130,7 @@ function renderViewContent(
   selectedEntity?: string,
   selectedZone?: ScheduleZone,
 ) {
-  if (host._data?.temperature_migration?.required && view !== "settings") {
+  if (host._data?.temperature_migration?.required && view !== "settings" && view !== "diagnostics") {
     return html`<div class="notice">${host._t(
       host._data.temperature_migration.reason === "legacy_celsius_upgrade_reset_required"
         ? "temperatureLegacyResetStopped"
@@ -199,6 +200,10 @@ function renderViewContent(
 
   if (view === "preconditioning") {
     return renderPreconditioningView(host, visibleZoneIds);
+  }
+
+  if (view === "diagnostics") {
+    return renderDiagnosticsView(host);
   }
 
   if (view === "settings") {

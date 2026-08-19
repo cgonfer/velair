@@ -66,6 +66,46 @@ describe("supported translations", () => {
     expect(languageFromHass({ language: "ru-RU" })).toBe("ru");
   });
 
+  it("uses a concise localized diagnostics report action", () => {
+    expect([
+      en.diagnosticsDownloadAction,
+      es.diagnosticsDownloadAction,
+      de.diagnosticsDownloadAction,
+      fr.diagnosticsDownloadAction,
+      nl.diagnosticsDownloadAction,
+      ru.diagnosticsDownloadAction,
+    ]).toEqual([
+      "Download report…",
+      "Descargar informe…",
+      "Bericht herunterladen…",
+      "Télécharger le rapport…",
+      "Rapport downloaden…",
+      "Скачать отчёт…",
+    ]);
+  });
+
+  it("localizes the complete diagnostics catalogue in every maintained language", () => {
+    const sourceEntries = new Map(translationEntries(en));
+    const reservedTerms = new Set([
+      "Room Assist",
+      "Preconditioning",
+      "Comfort",
+      "Profile",
+      "Mode",
+      "Diagnostics",
+      "Climate",
+    ]);
+
+    for (const [language, dictionary] of Object.entries({ de, es, fr, nl, ru })) {
+      const untranslated = translationEntries(dictionary).filter(([key, value]) =>
+        key.startsWith("diagnostics")
+        && value === sourceEntries.get(key)
+        && !reservedTerms.has(value),
+      );
+      expect(untranslated, `${language} diagnostics strings`).toEqual([]);
+    }
+  });
+
   it("supports reviewed partial community translations with English fallback", () => {
     const sourceEntries = new Map(translationEntries(en));
     const russianEntries = translationEntries(ru);
@@ -84,7 +124,7 @@ describe("supported translations", () => {
     expect(ru.appliedDays).toBe("Обновлено дней: {count}");
     expect(ru.appliedThermostats).toBe("Обновлено термостатов: {count}");
     expect(translationStrings(ru).join("\n")).not.toContain("{suffix}");
-    expect(russianEntries.filter(([key, value]) => value === sourceEntries.get(key)))
+    expect(russianEntries.filter(([key, value]) => value === sourceEntries.get(key) && !key.startsWith("diagnostics")))
       .toEqual([
         ["preconditioningDirectionSamples", "{count}/{required}"],
         ["sensors", "Room Assist"],

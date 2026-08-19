@@ -48,6 +48,14 @@
           "temperature_migration_required": "Требуется обновление единиц температуры"
         }
       },
+      "diagnostics_status": {
+        "name": "Состояние диагностики",
+        "state": {
+          "ok": "В норме",
+          "warning": "Предупреждение",
+          "error": "Ошибка"
+        }
+      },
       "zone_active_target_temperature": {
         "name": "{zone}: текущая целевая температура"
       },

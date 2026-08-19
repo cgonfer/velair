@@ -21,6 +21,7 @@ PUBLIC_EVENTS = (
     "preconditioning_plan_cancelled",
     "preconditioning_observation_recorded",
     "comfort_assessment_changed",
+    "diagnostic_issue_changed",
     "room_sensor_assist_state_changed",
     "room_sensor_assist_updated",
     "room_sensor_assist_restored",

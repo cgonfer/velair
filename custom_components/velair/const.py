@@ -12,12 +12,23 @@ CONF_CLIMATE_ENTITIES = "climate_entities"
 CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP = "apply_active_schedule_on_startup"
 
 SIGNAL_SCHEDULER_UPDATED = f"{DOMAIN}_scheduler_updated"
+SIGNAL_DIAGNOSTICS_UPDATED = f"{DOMAIN}_diagnostics_updated"
+
+DIAGNOSTIC_HISTORY_CATEGORIES = (
+    "control",
+    "room_assist",
+    "preconditioning",
+    "comfort",
+    "delivery",
+    "availability",
+)
 
 EVENT_VELAIR = f"{DOMAIN}_event"
 EVENT_TYPE_BOOST_ENDED = "boost_ended"
 EVENT_TYPE_BOOST_STARTED = "boost_started"
 EVENT_TYPE_CLIMATE_TARGET_APPLIED = "climate_target_applied"
 EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED = "comfort_assessment_changed"
+EVENT_TYPE_DIAGNOSTIC_ISSUE_CHANGED = "diagnostic_issue_changed"
 EVENT_TYPE_PRECONDITIONING_OBSERVATION_RECORDED = (
     "preconditioning_observation_recorded"
 )

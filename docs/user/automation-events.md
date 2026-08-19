@@ -22,6 +22,54 @@ triggers:
 
 Every payload contains `domain: velair` and one of the event names below.
 
+## Diagnostic Issue Changed
+
+`diagnostic_issue_changed` is emitted when a verifiable diagnostic issue is
+detected or resolved. Velair establishes the issues present at startup as a
+baseline, so restarting Home Assistant does not emit a burst of already-active
+issues. Unchanged issues are deduplicated.
+
+The issue identity consists of `code`, an optional managed climate
+`entity_id`, and an optional sensor `purpose`. The payload contains no raw
+exception message, Profile/Mode/pause identifier, or inferred cause. `change`
+is `detected` or `resolved`; `severity` is `warning` or `error`.
+
+```yaml
+domain: velair
+event: diagnostic_issue_changed
+change: detected
+severity: error
+code: delivery_exhausted
+entity_id: climate.living_room
+```
+
+For example, notify whenever Velair detects a new error:
+
+```yaml
+alias: Notify about new Velair errors
+triggers:
+  - trigger: event
+    event_type: velair_event
+    event_data:
+      event: diagnostic_issue_changed
+      change: detected
+      severity: error
+actions:
+  - action: notify.notify
+    data:
+      message: "Velair detected an error. Open Diagnostics for details."
+```
+
+For aggregate health, use the **Diagnostics status** sensor instead. Its entity
+ID can be changed in Home Assistant, so select it from the automation editor:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: sensor.velair_diagnostics_status
+    to: "error"
+```
+
 ## Profile Changed
 
 `profile_changed` is emitted after a different set of climate profiles, or

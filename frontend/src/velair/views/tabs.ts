@@ -44,6 +44,11 @@ export const PANEL_TABS: PanelTabDefinition[] = [
     view: "preconditioning",
   },
   {
+    icon: "mdi:stethoscope",
+    labelKey: "diagnostics",
+    view: "diagnostics",
+  },
+  {
     icon: "mdi:cog-outline",
     labelKey: "settings",
     view: "settings",

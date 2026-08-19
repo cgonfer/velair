@@ -56,6 +56,99 @@ class ClimateDeliveryCoordinatorTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(resolved, [1, 2, 3])
 
+    async def test_observer_failure_does_not_block_delivery_retries(self) -> None:
+        attempts: list[int] = []
+
+        def failing_observer(_entity_id, _status, _details) -> None:
+            raise RuntimeError("diagnostics unavailable")
+
+        coordinator = ClimateDeliveryCoordinator(self.hass, failing_observer)
+
+        def resolver():
+            attempt = len(attempts) + 1
+            attempts.append(attempt)
+
+            async def deliver() -> None:
+                if attempt == 1:
+                    raise HomeAssistantError("temporary")
+
+            return Delivery(deliver)
+
+        with (
+            patch("custom_components.velair.climate_delivery.RETRY_DELAYS", (0,)),
+            patch("custom_components.velair.climate_delivery._LOGGER.exception") as log,
+        ):
+            applied = await coordinator.async_deliver(self.entity_id, resolver)
+            self.assertFalse(applied)
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+
+        self.assertEqual([1, 2], attempts)
+        self.assertGreaterEqual(log.call_count, 2)
+        await coordinator.async_stop()
+
+    async def test_replace_cancel_and_stop_publish_cancelled_evidence(self) -> None:
+        observed = []
+        coordinator = ClimateDeliveryCoordinator(
+            self.hass,
+            lambda entity_id, status, details: observed.append((entity_id, status, details)),
+        )
+
+        async def apply() -> None:
+            return None
+
+        self.hass.states[self.entity_id] = SimpleNamespace(state="unavailable")
+        coordinator.register_current(self.entity_id, lambda: Delivery(apply))
+        coordinator.register_current(self.entity_id, lambda: Delivery(apply))
+        coordinator.cancel(self.entity_id)
+        coordinator.register_current(self.entity_id, lambda: Delivery(apply))
+        await coordinator.async_stop()
+
+        cancelled_reasons = [
+            details.get("reason")
+            for _, status, details in observed
+            if status == "cancelled"
+        ]
+        self.assertIn("replaced", cancelled_reasons)
+        self.assertIn("cancelled", cancelled_reasons)
+        self.assertIn("stopped", cancelled_reasons)
+
+    async def test_inactive_eligible_replacement_does_not_report_cancelled(self) -> None:
+        observed = []
+        coordinator = ClimateDeliveryCoordinator(
+            self.hass,
+            lambda entity_id, status, details: observed.append(
+                (entity_id, status, details)
+            ),
+        )
+
+        async def apply() -> None:
+            return None
+
+        coordinator.register_current(self.entity_id, lambda: Delivery(apply))
+        coordinator.register_current(self.entity_id, lambda: Delivery(apply))
+        coordinator.cancel(self.entity_id)
+        await coordinator.async_stop()
+
+        self.assertFalse(any(status == "cancelled" for _, status, _ in observed))
+
+    async def test_availability_redelivery_reports_success_without_self_cancel(self) -> None:
+        observed = []
+        coordinator = ClimateDeliveryCoordinator(
+            self.hass,
+            lambda entity_id, status, details: observed.append((status, details)),
+        )
+        coordinator.register_current(
+            self.entity_id,
+            lambda: Delivery(lambda: asyncio.sleep(0)),
+        )
+        observed.clear()
+        await coordinator._async_redeliver_current(self.entity_id)
+        self.assertIn(("success", None), observed)
+        self.assertFalse(any(status == "cancelled" for status, _ in observed))
+        await coordinator.async_stop()
+
     async def test_unavailable_waits_for_transition_without_polling(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(state="unavailable")
         callbacks = []
@@ -498,6 +591,46 @@ class ClimateDeliveryCoordinatorTests(unittest.IsolatedAsyncioTestCase):
         await asyncio.gather(old_task, new_task)
 
         self.assertEqual(commits, ["new"])
+
+    async def test_overlapping_replacement_reports_one_cancellation(self) -> None:
+        observed = []
+        coordinator = ClimateDeliveryCoordinator(
+            self.hass,
+            lambda entity_id, status, details: observed.append(
+                (entity_id, status, details)
+            ),
+        )
+        old_started = asyncio.Event()
+        release_old = asyncio.Event()
+
+        def resolver(label: str):
+            def resolve():
+                async def apply() -> None:
+                    if label == "old":
+                        old_started.set()
+                        await release_old.wait()
+
+                return Delivery(apply)
+
+            return resolve
+
+        old_task = asyncio.create_task(
+            coordinator.async_deliver(self.entity_id, resolver("old"))
+        )
+        await old_started.wait()
+        new_task = asyncio.create_task(
+            coordinator.async_deliver(self.entity_id, resolver("new"))
+        )
+        await asyncio.sleep(0)
+        release_old.set()
+        await asyncio.gather(old_task, new_task)
+        await coordinator.async_stop()
+
+        cancellations = [
+            item for item in observed if item[1] == "cancelled"
+        ]
+        self.assertEqual(1, len(cancellations))
+        self.assertEqual("replaced", cancellations[0][2]["reason"])
 
     async def test_reconnect_re_resolves_after_retries_were_exhausted(self) -> None:
         callbacks = []

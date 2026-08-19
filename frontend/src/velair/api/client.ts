@@ -2,6 +2,8 @@ import { DOMAIN } from "../constants";
 import type {
   HomeAssistant,
   ComfortSettings,
+  DiagnosticsSnapshot,
+  DiagnosticHistoryCategory,
   ClimateProfileInput,
   PanelSettings,
   VelairModeInput,
@@ -20,6 +22,38 @@ export class VelairApiClient {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/get_schedule",
     });
+  }
+
+  public getDiagnostics(): Promise<DiagnosticsSnapshot> {
+    return this.hass.connection.sendMessagePromise<DiagnosticsSnapshot>({ type: "velair/get_diagnostics" });
+  }
+
+  public exportDiagnostics(redactEntityIds = true): Promise<Record<string, unknown>> {
+    return this.hass.connection.sendMessagePromise<Record<string, unknown>>({
+      type: "velair/export_diagnostics",
+      redact_entity_ids: redactEntityIds,
+    });
+  }
+
+  public updateDiagnosticsHistory(
+    enabledCategories: DiagnosticHistoryCategory[],
+  ): Promise<DiagnosticsSnapshot> {
+    return this.hass.connection.sendMessagePromise<DiagnosticsSnapshot>({
+      type: "velair/update_diagnostics_history",
+      enabled_categories: enabledCategories,
+    });
+  }
+
+  public clearDiagnosticsHistory(): Promise<DiagnosticsSnapshot> {
+    return this.hass.connection.sendMessagePromise<DiagnosticsSnapshot>({
+      type: "velair/clear_diagnostics_history",
+    });
+  }
+
+  public subscribeDiagnostics(
+    callback: (message: { loaded: boolean; diagnostics?: DiagnosticsSnapshot }) => void,
+  ): Promise<() => Promise<void> | void> {
+    return this.hass.connection.subscribeMessage(callback, { type: "velair/subscribe_diagnostics" });
   }
 
   public subscribeUpdates(

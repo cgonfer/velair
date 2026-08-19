@@ -4,6 +4,7 @@ import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
+import { settingsStyles } from "../../src/velair/styles/settings-styles";
 import { renderSettingsZoneOrderRow } from "../../src/velair/views/settings-view";
 
 function host(
@@ -44,15 +45,22 @@ function host(
 }
 
 describe("settings climate row", () => {
-  it("shows preconditioning when it is enabled for the climate", () => {
+  it("gives the climate name the full identity column", () => {
+    expect(settingsStyles.cssText).toMatch(
+      /\.settings-zone-title\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/,
+    );
+    expect(settingsStyles.cssText).not.toMatch(
+      /\.settings-zone-title\s*\{[^}]*grid-template-columns:\s*10px/,
+    );
+  });
+
+  it("keeps feature badges out of Settings when preconditioning is enabled", () => {
     const container = document.createElement("div");
 
     render(renderSettingsZoneOrderRow(host(true), "climate.office", 0, 1), container);
 
     const badge = container.querySelector(".settings-feature-badge.preconditioning");
-    expect(badge?.textContent).toContain("preconditioning");
-    expect(badge?.getAttribute("aria-label")).toBe("preconditioningEnabled");
-    expect(badge?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:clock-fast");
+    expect(badge).toBeNull();
   });
 
   it("does not show the indicator when preconditioning is disabled", () => {
@@ -63,7 +71,7 @@ describe("settings climate row", () => {
     expect(container.querySelector(".settings-feature-badge.preconditioning")).toBeNull();
   });
 
-  it("shows room assist when a room sensor is configured and assist is enabled", () => {
+  it("keeps feature badges out of Settings when room assist is enabled", () => {
     const container = document.createElement("div");
 
     render(
@@ -77,11 +85,7 @@ describe("settings climate row", () => {
     );
 
     const badge = container.querySelector(".settings-feature-badge.room-assist");
-    expect(badge?.textContent).toContain("roomSensorAssistBadge");
-    expect(badge?.getAttribute("aria-label")).toBe("roomSensorAssistEnabled");
-    expect(badge?.querySelector("ha-icon")?.getAttribute("icon")).toBe(
-      "mdi:home-thermometer-outline",
-    );
+    expect(badge).toBeNull();
   });
 
   it("does not show room assist when no room sensor is configured", () => {
@@ -100,31 +104,14 @@ describe("settings climate row", () => {
     expect(container.querySelector(".settings-feature-badge.room-assist")).toBeNull();
   });
 
-  it("explains when Home Assistant does not report a temperature step", () => {
+  it("keeps climate capability diagnostics out of Settings", () => {
     const container = document.createElement("div");
     const viewHost = host(false);
     viewHost._entityTemperatureStep = () => undefined;
 
     render(renderSettingsZoneOrderRow(viewHost, "climate.office", 0, 1), container);
 
-    const status = container.querySelector(".capability-not-reported");
-    expect(status?.textContent).toContain(
-      "temperatureStep: temperatureStepNotReported",
-    );
-    expect(status?.getAttribute("title")).toBe(
-      "temperatureStepNotReportedDescription",
-    );
-  });
-
-  it("continues to show the exact reported temperature step", () => {
-    const container = document.createElement("div");
-
-    render(renderSettingsZoneOrderRow(host(false), "climate.office", 0, 1), container);
-
-    const step = [...container.querySelectorAll(".settings-facts > span")].find(
-      (item) => item.textContent?.includes("temperatureStep:"),
-    );
-    expect(step?.textContent).toContain("temperatureStep: 0.5");
-    expect(step?.classList.contains("capability-not-reported")).toBe(false);
+    expect(container.querySelector(".capability-not-reported")).toBeNull();
+    expect(container.querySelector(".settings-capability-section")).toBeNull();
   });
 });

@@ -15,6 +15,7 @@ Velair documentation is grouped by audience and topic.
 - [Environmental Comfort](user/comfort.md): understand temperature, humidity, CO2 air quality, and reading freshness through local room assessments.
 - [Temperature Units and Migration](user/temperature-units.md): understand Celsius/Fahrenheit defaults, upgrades, migration, import/export, and recovery.
 - [Troubleshooting](user/troubleshooting.md): common setup, frontend resource, and runtime issues.
+- [Diagnostics](user/diagnostics.md): local runtime health, bounded history, and redacted issue reports.
 
 ## Developer Documentation
 

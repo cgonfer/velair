@@ -50,6 +50,11 @@ def _install_homeassistant_stubs() -> None:
     core.HomeAssistant = object
     core.ServiceCall = object
     core.callback = _callback
+    core.valid_entity_id = lambda value: (
+        isinstance(value, str)
+        and value.count(".") == 1
+        and all(part and " " not in part for part in value.split("."))
+    )
     sys.modules["homeassistant.core"] = core
 
     exceptions = ModuleType("homeassistant.exceptions")

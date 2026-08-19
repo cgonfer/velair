@@ -207,6 +207,7 @@ def _loaded_velair_integration(frontend_module):
         "custom_components.velair.climate_manager",
         "custom_components.velair.config_helpers",
         "custom_components.velair.entity_registry",
+        "custom_components.velair.runtime_diagnostics",
         "custom_components.velair.scheduler",
         "custom_components.velair.services",
         "custom_components.velair.storage",
@@ -272,6 +273,10 @@ def _loaded_velair_integration(frontend_module):
     install_module(
         "custom_components.velair.entity_registry",
         cleanup_entity_registry=lambda *_args: None,
+    )
+    install_module(
+        "custom_components.velair.runtime_diagnostics",
+        RuntimeDiagnosticsManager=RuntimePlaceholder,
     )
     install_module(
         "custom_components.velair.scheduler",
@@ -529,7 +534,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('from "./velair/views/panel"', source)
         self.assertIn("export type ScheduleResponse", types_source)
         self.assertIn(
-            "export const cardStyles = [baseStyles, comfortStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
+            "export const cardStyles = [baseStyles, comfortStyles, diagnosticsStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
             styles_source,
         )
         self.assertIn("`, responsiveStyles];", styles_source)
@@ -1287,17 +1292,13 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('type: "velair/reset_data"', api_source)
         self.assertIn("confirmReset", source)
         self.assertIn("resetVelairDescription", source)
-        self.assertIn("settings-capability-section", source)
-        self.assertIn("settings-capability-row", source)
-        self.assertIn(".settings-capability-row {\n      align-items: start;", responsive_styles_source)
-        self.assertIn("grid-template-columns: minmax(104px, 0.8fr) minmax(0, 1fr)", responsive_styles_source)
+        self.assertNotIn("settings-capability-section", source)
         self.assertIn(".settings-zone-row > .settings-drag-handle", responsive_styles_source)
         self.assertIn('class="settings-drag-handle"', source)
         self.assertNotIn('class="settings-zone-row"\n      draggable="true"', source)
         self.assertIn("flex-direction: column", responsive_styles_source)
         self.assertNotIn('class="settings-entity-status warning"', source)
-        self.assertIn("settings-mode-tags", source)
-        self.assertIn("mode-chip", source)
+        self.assertNotIn("settings-mode-tags", source)
         self.assertIn("export function renderSettingsZoneOrderRow", source)
         self.assertIn("private async _updateSettingsFirstWeekday", source)
         self.assertIn('class="select-wrap"', source)

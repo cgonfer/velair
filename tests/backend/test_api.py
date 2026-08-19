@@ -266,6 +266,167 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
         )
 
 
+class DiagnosticsApiTest(unittest.IsolatedAsyncioTestCase):
+    """Verify diagnostics read, policy and subscription WebSocket boundaries."""
+
+    def setUp(self) -> None:
+        self.snapshot = {"overall": {"status": "ok"}, "history": []}
+        self.manager = SimpleNamespace(
+            snapshot=Mock(return_value=self.snapshot),
+            cached_snapshot=Mock(return_value=self.snapshot),
+            export_snapshot=Mock(return_value={"diagnostics": self.snapshot}),
+            async_update_history_categories=AsyncMock(),
+            async_clear_history=Mock(),
+        )
+        self.runtime = {"diagnostics": self.manager}
+        original_get_runtime = api_module._get_runtime
+        api_module._get_runtime = lambda _hass: self.runtime
+        self.addCleanup(
+            setattr, api_module, "_get_runtime", original_get_runtime
+        )
+
+    async def test_get_export_update_and_clear(self) -> None:
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        api_module.ws_get_diagnostics(
+            SimpleNamespace(), connection, {"id": 1, "type": "velair/get_diagnostics"}
+        )
+        api_module.ws_export_diagnostics(
+            SimpleNamespace(), connection, {"id": 2, "type": "velair/export_diagnostics"}
+        )
+        await api_module.ws_update_diagnostics_history(
+            SimpleNamespace(),
+            connection,
+            {
+                "id": 3,
+                "type": "velair/update_diagnostics_history",
+                "enabled_categories": ["control", "delivery"],
+            },
+        )
+        api_module.ws_clear_diagnostics_history(
+            SimpleNamespace(),
+            connection,
+            {"id": 4, "type": "velair/clear_diagnostics_history"},
+        )
+
+        self.manager.async_update_history_categories.assert_awaited_once_with(
+            ["control", "delivery"]
+        )
+        self.manager.async_clear_history.assert_called_once_with()
+        self.manager.export_snapshot.assert_called_once_with(
+            self.runtime,
+            redact_entity_ids=True,
+        )
+        self.assertEqual(4, connection.send_result.call_count)
+        self.assertEqual(
+            set(api_module.DIAGNOSTIC_HISTORY_CATEGORIES),
+            {
+                "control",
+                "room_assist",
+                "preconditioning",
+                "comfort",
+                "delivery",
+                "availability",
+            },
+        )
+
+    def test_export_can_keep_entity_ids_by_explicit_request(self) -> None:
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+
+        api_module.ws_export_diagnostics(
+            SimpleNamespace(),
+            connection,
+            {
+                "id": 5,
+                "type": "velair/export_diagnostics",
+                "redact_entity_ids": False,
+            },
+        )
+
+        self.manager.export_snapshot.assert_called_once_with(
+            self.runtime,
+            redact_entity_ids=False,
+        )
+        connection.send_result.assert_called_once_with(
+            5,
+            {"diagnostics": self.snapshot},
+        )
+
+    def test_multiple_subscribers_receive_cached_current_snapshot(self) -> None:
+        callbacks = []
+        original_connect = api_module.async_dispatcher_connect
+        api_module.async_dispatcher_connect = (
+            lambda _hass, _signal, callback: callbacks.append(callback)
+            or (lambda: None)
+        )
+        self.addCleanup(
+            setattr,
+            api_module,
+            "async_dispatcher_connect",
+            original_connect,
+        )
+        connections = [
+            SimpleNamespace(
+                subscriptions={}, send_result=Mock(), send_message=Mock()
+            )
+            for _ in range(2)
+        ]
+        for index, connection in enumerate(connections, start=1):
+            api_module.ws_subscribe_diagnostics(
+                SimpleNamespace(),
+                connection,
+                {"id": index, "type": "velair/subscribe_diagnostics"},
+            )
+
+        self.assertEqual(2, len(callbacks))
+        self.assertEqual(2, self.manager.snapshot.call_count)
+        self.manager.cached_snapshot.assert_not_called()
+        for connection in connections:
+            connection.send_message.assert_called_once()
+
+        for callback in callbacks:
+            callback()
+        self.assertEqual(2, self.manager.cached_snapshot.call_count)
+
+    def test_get_and_initial_subscription_each_read_a_fresh_snapshot(self) -> None:
+        self.manager.snapshot.side_effect = [
+            {"revision": "get"},
+            {"revision": "subscribe"},
+        ]
+        callbacks = []
+        original_connect = api_module.async_dispatcher_connect
+        api_module.async_dispatcher_connect = (
+            lambda _hass, _signal, callback: callbacks.append(callback)
+            or (lambda: None)
+        )
+        self.addCleanup(
+            setattr,
+            api_module,
+            "async_dispatcher_connect",
+            original_connect,
+        )
+        get_connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        subscribe_connection = SimpleNamespace(
+            subscriptions={}, send_result=Mock(), send_message=Mock()
+        )
+
+        api_module.ws_get_diagnostics(
+            SimpleNamespace(),
+            get_connection,
+            {"id": 1, "type": "velair/get_diagnostics"},
+        )
+        api_module.ws_subscribe_diagnostics(
+            SimpleNamespace(),
+            subscribe_connection,
+            {"id": 2, "type": "velair/subscribe_diagnostics"},
+        )
+
+        get_connection.send_result.assert_called_once_with(1, {"revision": "get"})
+        message = subscribe_connection.send_message.call_args.args[0]
+        self.assertEqual("subscribe", message["event"]["diagnostics"]["revision"])
+        self.assertEqual(2, self.manager.snapshot.call_count)
+        self.manager.cached_snapshot.assert_not_called()
+
+
 class ClimateProfileImportValidationTest(unittest.TestCase):
     """Reject malformed profiles before portable temperature conversion."""
 
@@ -353,7 +514,9 @@ class ResetDataOrderingTest(unittest.IsolatedAsyncioTestCase):
             set_temperature_migration_blocked=Mock(),
         )
         entry = SimpleNamespace(options={})
+        diagnostics = SimpleNamespace(async_runtime_changed=Mock())
         runtime = {
+            "diagnostics": diagnostics,
             "entry": entry,
             "scheduler": scheduler,
             "storage": storage,
@@ -378,6 +541,7 @@ class ResetDataOrderingTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(runtime["operation_active"])
         self.assertEqual(runtime["operation_recovery"]["operation"], "data_reset")
         scheduler.set_temperature_migration_blocked.assert_called_with(True)
+        diagnostics.async_runtime_changed.assert_called_once_with()
         connection.send_result.assert_not_called()
         self.assertEqual(
             connection.send_error.call_args.args[1], "operation_recovery_required"
@@ -778,7 +942,10 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
                 "preconditioning_learning": {
                     "climate.salon": _learning(
                         [
-                            *[_sample("heat", "complete", minutes=minute) for minute in (40, 50, 60, 70, 80)],
+                            *[
+                                _sample("heat", "complete", minutes=minute)
+                                for minute in (40, 50, 60, 70, 80)
+                            ],
                             _sample("heat", "partial", reached=False, minutes=90),
                             _sample("cool", "partial", reached=False),
                         ]

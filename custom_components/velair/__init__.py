@@ -25,6 +25,7 @@ from .frontend import (
     async_setup_frontend_route,
     async_unload_frontend,
 )
+from .runtime_diagnostics import RuntimeDiagnosticsManager
 from .scheduler import VelairScheduler
 from .services import async_setup_services, async_unload_services
 from .storage import VelairStorage
@@ -41,6 +42,7 @@ class VelairData:
 
     climate_delivery: ClimateDeliveryCoordinator
     climate_manager: ClimateManager
+    diagnostics: RuntimeDiagnosticsManager
     scheduler: VelairScheduler
     storage: VelairStorage
 
@@ -63,7 +65,9 @@ async def async_setup_entry(
     storage = VelairStorage(hass, entry.entry_id)
     data = await storage.async_load(climate_entities)
     climate_manager = ClimateManager(hass)
-    climate_delivery = ClimateDeliveryCoordinator(hass)
+    diagnostics = RuntimeDiagnosticsManager(hass, climate_entities, entry.entry_id)
+    await diagnostics.async_load_policy()
+    climate_delivery = ClimateDeliveryCoordinator(hass, diagnostics.observe_delivery)
     scheduler = VelairScheduler(
         hass,
         data,
@@ -78,6 +82,7 @@ async def async_setup_entry(
     entry.runtime_data = VelairData(
         climate_delivery=climate_delivery,
         climate_manager=climate_manager,
+        diagnostics=diagnostics,
         scheduler=scheduler,
         storage=storage,
     )
@@ -87,6 +92,7 @@ async def async_setup_entry(
         "climate_delivery": climate_delivery,
         "climate_manager": climate_manager,
         "entry": entry,
+        "diagnostics": diagnostics,
         "operation_active": None,
         "operation_recovery": None,
         "scheduler": scheduler,
@@ -97,6 +103,8 @@ async def async_setup_entry(
     async_setup_api(hass)
     await async_setup_frontend(hass)
     await async_setup_services(hass)
+    diagnostics.async_start(runtime)
+    entry.async_on_unload(diagnostics.async_stop)
 
     @callback
     def _handle_temperature_unit_update(_event: Event) -> None:
@@ -151,6 +159,7 @@ async def async_setup_entry(
             apply_current_schedule=should_apply_active_schedule_on_startup(entry)
         )
 
+    diagnostics.async_finish_startup()
     cleanup_entity_registry(hass, entry, climate_entities)
 
     if PLATFORMS:
@@ -179,6 +188,10 @@ async def async_unload_entry(
             await entry.runtime_data.climate_delivery.async_stop()
         except Exception:
             _LOGGER.exception("Failed to stop Velair climate delivery cleanly")
+        try:
+            entry.runtime_data.diagnostics.async_stop()
+        except Exception:
+            _LOGGER.exception("Failed to stop Velair diagnostics cleanly")
 
     await async_unload_frontend(hass)
     hass.data[DOMAIN].pop(entry.entry_id, None)

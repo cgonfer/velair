@@ -44,6 +44,26 @@ export function formatDateTime(
   });
 }
 
+export function formatDiagnosticDateTime(
+  value: string,
+  locale: string,
+  timeFormat?: string,
+): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString(locale, {
+    ...timeOptions(timeFormat),
+    day: "2-digit",
+    month: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+    year: "numeric",
+  });
+}
+
 export function formatScheduleTime(
   value: string,
   locale: string,

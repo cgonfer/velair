@@ -18,6 +18,13 @@ period separately so it is clear where the block was originally configured.
 
 Velair calculates upcoming events in the backend and schedules exact one-shot callbacks through Home Assistant. The frontend subscribes to backend updates over WebSocket, so it does not need continuous polling.
 
+The panel's **Diagnostics** section provides a read-only scheduler and per-zone
+snapshot, a bounded runtime-only history, and a redacted JSON report for issue
+attachments. It does not add polling or depend on Recorder.
+On desktop, the runtime log columns can be resized for the current session;
+their widths reset when the panel reloads and are never persisted. On mobile,
+the same events use a compact responsive layout instead of resize controls.
+
 ## Home Assistant Entities
 
 Velair creates persistent Home Assistant entities that complement its transient
@@ -32,6 +39,11 @@ automation events:
   Its attributes include the global mode and pause expiry. Upcoming event and
   per-zone override details remain in their dedicated sensors to avoid
   duplicating recorder history.
+- **Diagnostics status** is a diagnostic enum sensor with `ok`, `warning`, and
+  `error` states. It exposes only compact attributes: scheduler state, counts
+  of healthy/warning/error units, issue counts, and active issue codes. This
+  makes current health available to dashboards and state-triggered
+  automations without exposing raw exception text.
 - **Active target temperature** is created once per managed climate. It exposes
   the target Velair is currently managing, including boosts and blocks already
   started by Adaptive Preconditioning. Its unit follows that climate entity.

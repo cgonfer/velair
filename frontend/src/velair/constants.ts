@@ -28,6 +28,7 @@ export const PANEL_VIEWS: VelairPanelView[] = [
   "sensors",
   "comfort",
   "preconditioning",
+  "diagnostics",
   "settings",
 ];
 export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
