@@ -40,6 +40,7 @@ export function renderSchedulesView(
           host._setProfileScheduleDirty(Boolean(event.detail?.dirty));
         }}
         @profile-data-changed=${(event: CustomEvent) => host._applyScheduleData(event.detail, { forceDraft: false })}
+        @profile-error=${(event: CustomEvent<string | null>) => host._showError(event.detail ?? undefined)}
         @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
       ></velair-profiles-view>
     `;

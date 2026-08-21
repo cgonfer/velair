@@ -794,7 +794,7 @@ class VelairModePortableApiTest(unittest.TestCase):
             "entry": SimpleNamespace(options={}),
         }
         payload = api_module._build_export_payload(runtime, ["modes"])
-        self.assertEqual(payload["model_version"], 6)
+        self.assertEqual(payload["model_version"], 8)
         self.assertEqual(payload["sections"]["modes"], data["modes"])
 
         self.assertEqual(

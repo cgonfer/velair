@@ -37,6 +37,7 @@ from .const import (
     EVENT_TYPE_BOOST_ENDED,
     EVENT_TYPE_BOOST_STARTED,
     EVENT_TYPE_CLIMATE_TARGET_APPLIED,
+    EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED,
     EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED,
     EVENT_TYPE_PRECONDITIONING_OBSERVATION_RECORDED,
     EVENT_TYPE_PRECONDITIONING_PLAN_CANCELLED,
@@ -51,6 +52,7 @@ from .const import (
     EVENT_TYPE_ZONE_PAUSE_REMOVED,
     EVENT_TYPE_ZONE_PAUSE_UPDATED,
     EVENT_TYPE_ZONE_RESUMED,
+    EVENT_TYPE_ZONE_CONTROL_CHANGED,
     EVENT_VELAIR,
     MODE_AUTO,
     MODE_PAUSED,
@@ -59,6 +61,14 @@ from .const import (
     SIGNAL_SCHEDULER_UPDATED,
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_TURN_OFF,
+    EXTERNAL_CHANGE_FOR_DURATION,
+    EXTERNAL_CHANGE_POLICY_OPTIONS,
+    EXTERNAL_CHANGE_KEEP_AUTOMATIC,
+    EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK,
+    EXTERNAL_CHANGE_UNTIL_RESUMED,
+    DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+    MANUAL_ADJUSTMENT_POLICY_OPTIONS,
+    MANUAL_CONTROL_PAUSE_ID,
 )
 from .models import (
     ClimateEvent,
@@ -84,12 +94,14 @@ from .models import (
     climate_options_from_block,
     empty_preconditioning_learning_data,
     is_valid_climate_profile_color,
+    is_room_sensor_assist_deadband_step_aligned,
     normalize_panel_settings,
     normalize_modes,
     validate_climate_profiles,
     validate_modes,
     normalize_comfort_data,
     normalize_preconditioning_data,
+    normalize_external_change_policy,
     temperature_target_from_mapping,
     preconditioning_observations_for_direction,
     predict_preconditioning_lead,
@@ -139,6 +151,47 @@ PRECONDITIONING_AUTO_MODES = {"auto", "heat_cool"}
 RANGE_TARGET_HVAC_MODES = {"heat_cool"}
 PRECONDITIONING_REPLAN_DEBOUNCE = timedelta(seconds=30)
 PRECONDITIONING_REPLAN_MIN_TEMPERATURE_CHANGE = 0.2
+
+
+class _ReentrantAsyncLock:
+    """Task-reentrant lock used to preserve zone-before-delivery ordering."""
+
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        self._owner: asyncio.Task[object] | None = None
+        self._depth = 0
+
+    async def __aenter__(self) -> _ReentrantAsyncLock:
+        await self.acquire()
+        return self
+
+    async def acquire(self) -> bool:
+        """Acquire the lock, allowing the owning task to reenter."""
+        current = asyncio.current_task()
+        if self._owner is current:
+            self._depth += 1
+            return True
+        await self._lock.acquire()
+        self._owner = current
+        self._depth = 1
+        return True
+
+    async def __aexit__(self, *_args: object) -> None:
+        self.release()
+
+    def release(self) -> None:
+        """Release one acquisition level."""
+        current = asyncio.current_task()
+        if self._owner is not current:
+            raise RuntimeError("Zone override lock released by a non-owner")
+        self._depth -= 1
+        if self._depth == 0:
+            self._owner = None
+            self._lock.release()
+
+    def locked(self) -> bool:
+        """Return whether any task owns the lock."""
+        return self._lock.locked()
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,7 +324,7 @@ class VelairScheduler:
         self._room_sensor_assist_inflight: dict[str, _RoomSensorAssistState] = {}
         self._room_sensor_assist_entities: tuple[str, ...] = ()
         self._room_sensor_assist_locks: dict[str, asyncio.Lock] = {}
-        self._zone_override_locks: dict[str, asyncio.Lock] = {}
+        self._zone_override_locks: dict[str, _ReentrantAsyncLock] = {}
         self._room_sensor_assist_generations: dict[str, int] = {}
         self._room_sensor_assist_suppressed: set[str] = set()
         self._room_sensor_assist_limit_notifications: dict[str, tuple[object, ...]] = {}
@@ -810,6 +863,7 @@ class VelairScheduler:
         zone = self._data["zones"][entity_id]
         override = self._get_active_zone_override(entity_id, now)
         assist = self._room_sensor_assist_status(entity_id)
+        manual_control = self._manual_control_status(entity_id, now)
         target_event = self.get_active_target_event(entity_id)
         current_event = self._iter_current_events(now, entity_id)
         scheduled_event = current_event[0] if current_event else None
@@ -834,6 +888,8 @@ class VelairScheduler:
         target_temperature = (
             event.temperature if event is not None else reported_target_temperature
         )
+        if manual_control is not None:
+            target_temperature = reported_target_temperature
         if _is_boost_override(override):
             target_temperature = (
                 float(override["temperature"])
@@ -847,12 +903,25 @@ class VelairScheduler:
 
         result: dict[str, object] = {
             "state": state,
+            "control_mode": (
+                "manual"
+                if manual_control is not None
+                else "automatic"
+            ),
             "room_temperature": room_temperature,
             "target_temperature": target_temperature,
             "applied_temperature": applied_temperature,
             "hvac_mode": self._current_hvac_mode(entity_id),
         }
-        if event is not None and getattr(event, "target_temp_low", None) is not None:
+        manual_allowed, manual_reason = self._manual_adjustment_availability(
+            entity_id, now, manual_control
+        )
+        result["manual_adjustment_allowed"] = manual_allowed
+        if manual_reason is not None:
+            result["manual_adjustment_unavailable_reason"] = manual_reason
+        if manual_control is not None and reported_target_range:
+            result["target_temp_low"], result["target_temp_high"] = reported_target_range
+        elif manual_control is None and event is not None and getattr(event, "target_temp_low", None) is not None:
             result["target_temp_low"] = event.target_temp_low
             result["target_temp_high"] = event.target_temp_high
         elif _is_boost_override(override) and ATTR_TARGET_TEMP_LOW in override:
@@ -875,7 +944,48 @@ class VelairScheduler:
                 result["manual_pause"] = any("pause_id" not in item for item in reasons)
         elif self.mode == MODE_PAUSED:
             result["until"] = self._data["global_"].get("paused_until")
+        if manual_control is not None:
+            result["manual_control"] = manual_control
         return result
+
+    def _manual_adjustment_availability(
+        self,
+        entity_id: str,
+        now: datetime,
+        manual_control: dict[str, object] | None = None,
+    ) -> tuple[bool, str | None]:
+        """Project whether an explicit Manual adjustment can start now."""
+        if self._manual_control_mutation_blocked():
+            return False, "temperature_migration"
+        if manual_control is not None:
+            return False, "already_manual"
+        climate_state = self._hass.states.get(entity_id)
+        if climate_state is None or climate_state.state in ("unknown", "unavailable"):
+            return False, "unavailable"
+        zone = self._data["zones"][entity_id]
+        if not zone["enabled"]:
+            return False, "disabled"
+        if self.mode != MODE_AUTO:
+            return False, "scheduler_not_auto"
+        if self._profile_zone_behavior(entity_id)["behavior"] == "pause":
+            return False, "profile_paused"
+        if any(
+            reason.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+            for reason in self._active_zone_pause_reasons(entity_id, now)
+        ):
+            return False, "zone_paused"
+        return True, None
+
+    def _manual_control_mutation_blocked(self) -> bool:
+        """Return whether Manual-control state must remain immutable."""
+        return self._temperature_migration_blocked
+
+    def _ensure_manual_control_mutation_allowed(self) -> None:
+        """Reject Manual-control mutations while temperature data is blocked."""
+        if self._manual_control_mutation_blocked():
+            raise ValueError(
+                "Temperature migration must be resolved before changing Manual control"
+            )
 
     def get_next_event_for_zone(self, entity_id: str) -> ClimateEvent | None:
         """Return the cached next event for one managed zone."""
@@ -894,11 +1004,23 @@ class VelairScheduler:
         unit = unit_getter(entity_id) if callable(unit_getter) else CELSIUS
         source = dict(raw_data) if isinstance(raw_data, dict) else {}
         normalized = normalize_preconditioning_data(source)
-        defaults = (1.0, 4.0, 14.0) if unit == FAHRENHEIT else (0.3, 2.0, 25.0)
+        defaults = (
+            (1.0, 1.0, 4.0, 14.0)
+            if unit == FAHRENHEIT
+            else (0.3, 0.3, 2.0, 25.0)
+        )
 
-        def direct_float(key: str, default: float, minimum: float, maximum: float) -> float:
+        def direct_float(
+            key: str,
+            default: float,
+            minimum: float,
+            maximum: float,
+            *,
+            values: dict | None = None,
+        ) -> float:
+            raw_values = source if values is None else values
             try:
-                value = float(source[key])
+                value = float(raw_values[key])
             except (KeyError, TypeError, ValueError):
                 return default
             return value if math.isfinite(value) and minimum <= value <= maximum else default
@@ -907,15 +1029,26 @@ class VelairScheduler:
         normalized["minimum_delta_temperature"] = direct_float(
             "minimum_delta_temperature", defaults[0], *minimum_delta_limits
         )
+        deadband_value = (
+            source["room_sensor_assist_deadband"]
+            if "room_sensor_assist_deadband" in source
+            else source.get("minimum_delta_temperature", defaults[1])
+        )
+        normalized["room_sensor_assist_deadband"] = direct_float(
+            "room_sensor_assist_deadband",
+            defaults[1],
+            *minimum_delta_limits,
+            values={"room_sensor_assist_deadband": deadband_value},
+        )
         normalized["room_sensor_assist_max_delta"] = direct_float(
             "room_sensor_assist_max_delta",
-            defaults[1],
+            defaults[2],
             0.1,
             18.0 if unit == FAHRENHEIT else 10.0,
         )
         rate_limits = (0.6, 66.7) if unit == FAHRENHEIT else (1.0, 120.0)
         normalized["fallback_minutes_per_degree"] = direct_float(
-            "fallback_minutes_per_degree", defaults[2], *rate_limits
+            "fallback_minutes_per_degree", defaults[3], *rate_limits
         )
         return normalized
 
@@ -927,6 +1060,10 @@ class VelairScheduler:
         unit = unit_getter(entity_id) if callable(unit_getter) else CELSIUS
         bounds = {
             "minimum_delta_temperature": (
+                0.0,
+                9.0 if unit == FAHRENHEIT else 5.0,
+            ),
+            "room_sensor_assist_deadband": (
                 0.0,
                 9.0 if unit == FAHRENHEIT else 5.0,
             ),
@@ -950,6 +1087,13 @@ class VelairScheduler:
             if not math.isfinite(value) or value < minimum or value > maximum:
                 raise ValueError(
                     f"{key} must be between {minimum:g} and {maximum:g}"
+                )
+            if (
+                key == "room_sensor_assist_deadband"
+                and not is_room_sensor_assist_deadband_step_aligned(value)
+            ):
+                raise ValueError(
+                    "room_sensor_assist_deadband must use 0.1 degree increments"
                 )
 
     def _normalize_comfort_for_entity(
@@ -1377,6 +1521,12 @@ class VelairScheduler:
         until: str | None = None,
         action: str = ZONE_PAUSE_ACTION_NONE,
         pause_id: str | None = None,
+        preserve_current_climate_state: bool = False,
+        internal: bool = False,
+        manual_policy: str | None = None,
+        manual_source: str | None = None,
+        duration_minutes: int | None = None,
+        changed_fields: list[str] | None = None,
     ) -> None:
         """Add or update one independently owned zone-pause reason."""
         self.ensure_managed_entity(entity_id)
@@ -1384,6 +1534,8 @@ class VelairScheduler:
             raise ValueError(f"Invalid zone pause action: {action}")
         if pause_id is not None:
             pause_id = validate_pause_id(pause_id)
+            if pause_id == MANUAL_CONTROL_PAUSE_ID and not internal:
+                raise ValueError("pause_id is reserved for Velair Manual adjustment")
 
         async with self._zone_override_lock(entity_id):
             now = dt_util.now()
@@ -1408,6 +1560,14 @@ class VelairScheduler:
                 next_reason["until"] = until
             if pause_id is not None:
                 next_reason["pause_id"] = pause_id
+                if pause_id == MANUAL_CONTROL_PAUSE_ID:
+                    next_reason["manual_policy"] = (
+                        manual_policy or EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK
+                    )
+                    next_reason["manual_source"] = manual_source or "external_change"
+                    if duration_minutes is not None:
+                        next_reason["duration_minutes"] = duration_minutes
+                    next_reason["changed_fields"] = list(changed_fields or [])
                 existing_index = next(
                     (index for index, reason in enumerate(current_reasons)
                      if reason.get("pause_id") == pause_id),
@@ -1415,7 +1575,24 @@ class VelairScheduler:
                 )
                 if existing_index is not None:
                     existing = current_reasons[existing_index]
-                    if existing.get("action") == action and existing.get("until") == until:
+                    unchanged = (
+                        existing.get("action") == action
+                        and existing.get("until") == until
+                        and (
+                            pause_id != MANUAL_CONTROL_PAUSE_ID
+                            or (
+                                existing.get("manual_policy")
+                                == next_reason.get("manual_policy")
+                                and existing.get("manual_source")
+                                == next_reason.get("manual_source")
+                                and existing.get("duration_minutes")
+                                == next_reason.get("duration_minutes")
+                                and existing.get("changed_fields", [])
+                                == next_reason.get("changed_fields", [])
+                            )
+                        )
+                    )
+                    if unchanged:
                         return
                     next_reason["started_at"] = existing["started_at"]
                     current_reasons[existing_index] = next_reason
@@ -1424,8 +1601,15 @@ class VelairScheduler:
                     current_reasons.append(next_reason)
             else:
                 # Calls without an ID retain their published manual authority.
-                replaced_reasons = current_reasons
-                current_reasons = [next_reason]
+                reserved_reasons = [
+                    item for item in current_reasons
+                    if item.get("pause_id") == MANUAL_CONTROL_PAUSE_ID
+                ]
+                replaced_reasons = [
+                    item for item in current_reasons
+                    if item.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+                ]
+                current_reasons = [*reserved_reasons, next_reason]
 
             override = zone_pause_override_from_reasons(current_reasons)
             next_effective_action = (override or {}).get("action")
@@ -1443,7 +1627,10 @@ class VelairScheduler:
                 if not was_paused:
                     await self._async_clear_room_sensor_assist(
                         entity_id,
-                        restore=action != ZONE_PAUSE_ACTION_TURN_OFF,
+                        restore=(
+                            action != ZONE_PAUSE_ACTION_TURN_OFF
+                            and not preserve_current_climate_state
+                        ),
                         reason="zone_paused",
                     )
                 self._data["zones"][entity_id]["pauses"] = current_reasons
@@ -1505,6 +1692,386 @@ class VelairScheduler:
                 self._async_fire_zone_paused(entity_id, override)
                 await self._async_log_zone_pause(entity_id, override)
 
+    async def async_update_external_change_policy(
+        self, entity_id: str, policy: dict[str, object]
+    ) -> dict[str, object]:
+        """Serialize policy updates with external control transitions."""
+        async with self._zone_override_lock(entity_id):
+            self._ensure_manual_control_mutation_allowed()
+            return await self._async_update_external_change_policy_locked(
+                entity_id, policy
+            )
+
+    async def _async_update_external_change_policy_locked(
+        self, entity_id: str, policy: dict[str, object]
+    ) -> dict[str, object]:
+        """Persist the default policy used by future external changes."""
+        self.ensure_managed_entity(entity_id)
+        if policy.get("action") not in EXTERNAL_CHANGE_POLICY_OPTIONS:
+            raise ValueError("Invalid external change policy")
+        zone = self._data["zones"][entity_id]
+        previous_policy = deepcopy(zone["external_change_policy"])
+        normalized = normalize_external_change_policy(
+            {
+                **previous_policy,
+                **policy,
+            }
+        )
+        zone["external_change_policy"] = normalized
+        try:
+            await self._async_save_data()
+        except Exception:
+            zone["external_change_policy"] = previous_policy
+            raise
+        self._async_write_state()
+        return normalized
+
+    async def async_enter_manual_adjustment(
+        self,
+        entity_id: str,
+    ) -> None:
+        """Hold live state using this climate's persisted adjustment policy."""
+        async with self._zone_override_lock(entity_id):
+            self._ensure_manual_control_mutation_allowed()
+            self.ensure_managed_entity(entity_id)
+            if self._manual_control_status(entity_id, dt_util.now()) is not None:
+                raise ValueError(f"Manual adjustment is already active for {entity_id}")
+            zone = self._data.get("zones", {}).get(entity_id)
+            persisted_policy = normalize_external_change_policy(
+                zone.get("external_change_policy") if isinstance(zone, dict) else None
+            )
+            if persisted_policy["action"] == EXTERNAL_CHANGE_KEEP_AUTOMATIC:
+                persisted_policy = {
+                    **persisted_policy,
+                    "action": EXTERNAL_CHANGE_UNTIL_RESUMED,
+                }
+            await self._async_enter_manual_adjustment_locked(
+                entity_id,
+                policy=persisted_policy,
+                source="explicit",
+                changed_fields=[],
+                live_snapshot=True,
+            )
+
+    def _manual_control_until(
+        self,
+        entity_id: str,
+        policy: dict[str, object],
+        now: datetime,
+        *,
+        preserve_existing: bool,
+    ) -> str | None:
+        action = policy["action"]
+        if action == EXTERNAL_CHANGE_FOR_DURATION:
+            return (now + timedelta(minutes=int(policy["duration_minutes"]))).isoformat()
+        if action != EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK:
+            return None
+        existing = self._manual_control_status(entity_id, now)
+        if preserve_existing and existing is not None:
+            until = existing.get("until")
+            return until if isinstance(until, str) else None
+
+        zone = self._data["zones"][entity_id]
+        previous_reasons = zone.get("pauses", [])
+        previous_override = zone.get("override")
+        remaining = [
+            item for item in previous_reasons
+            if item.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+        ]
+        zone["pauses"] = remaining
+        zone["override"] = zone_pause_override_from_reasons(remaining)
+        try:
+            next_event = next(
+                (
+                    event for event in self.calculate_next_events_by_zone(now)
+                    if event.entity_id == entity_id
+                ),
+                None,
+            )
+        finally:
+            zone["pauses"] = previous_reasons
+            zone["override"] = previous_override
+        return (
+            (next_event.target_when or next_event.when).isoformat()
+            if next_event is not None
+            else (
+                existing.get("until")
+                if existing is not None and isinstance(existing.get("until"), str)
+                else None
+            )
+        )
+
+    async def async_handle_external_climate_change(
+        self,
+        entity_id: str,
+        *,
+        changed_fields: list[str],
+        previous: dict[str, object],
+        current: dict[str, object],
+        observed_snapshot: dict[str, object] | None = None,
+    ) -> None:
+        """Serialize an external control transition with other zone overrides."""
+        async with self._zone_override_lock(entity_id):
+            if self._manual_control_mutation_blocked():
+                return
+            await self._async_handle_external_climate_change_locked(
+                entity_id,
+                changed_fields=changed_fields,
+                previous=previous,
+                current=current,
+                observed_snapshot=observed_snapshot,
+            )
+
+    async def _async_handle_external_climate_change_locked(
+        self,
+        entity_id: str,
+        *,
+        changed_fields: list[str],
+        previous: dict[str, object],
+        current: dict[str, object],
+        observed_snapshot: dict[str, object] | None = None,
+    ) -> None:
+        """Apply the configured policy to an external climate change."""
+        self.ensure_managed_entity(entity_id)
+        zone = self._data["zones"][entity_id]
+        configured_policy = zone["external_change_policy"]
+        now = dt_util.now()
+        existing_override = self._get_active_zone_override(entity_id, now)
+        existing_manual = self._manual_control_status(entity_id, now)
+        session_policy: dict[str, object] = configured_policy
+        source = "external_change"
+        if existing_manual is not None:
+            session_policy = {
+                "action": existing_manual["policy"],
+                "duration_minutes": existing_manual.get(
+                    "duration_minutes",
+                    configured_policy.get(
+                        "duration_minutes", DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES
+                    ),
+                ),
+            }
+            source = str(existing_manual.get("source", source))
+        self._async_fire_event(
+            EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED,
+            {
+                "entity_id": entity_id,
+                "changed_fields": changed_fields,
+                "previous": previous,
+                "current": current,
+                "policy": session_policy["action"],
+            },
+        )
+        if (
+            existing_manual is None
+            and session_policy["action"] == EXTERNAL_CHANGE_KEEP_AUTOMATIC
+        ):
+            if not zone["enabled"]:
+                return
+            authoritative_event = self._resolve_authoritative_delivery_event(entity_id)
+            if authoritative_event is None:
+                return
+            await self._async_apply_event(
+                authoritative_event,
+                source="external_change_reasserted",
+            )
+            return
+        profile_paused = self._profile_zone_behavior(entity_id)["behavior"] == "pause"
+        eligible = existing_manual is not None or (
+            zone["enabled"]
+            and self.mode == MODE_AUTO
+            and not profile_paused
+        )
+        if (
+            existing_override is not None
+            and existing_manual is None
+            and not _is_boost_override(existing_override)
+        ):
+            if (
+                _is_pause_override(existing_override)
+                and existing_override.get("action") == ZONE_PAUSE_ACTION_TURN_OFF
+            ):
+                await self._climate_delivery.async_serialize(
+                    entity_id,
+                    lambda: self._climate_manager.async_turn_off(entity_id),
+                )
+            return
+        if not eligible:
+            return
+        if observed_snapshot is not None:
+            # Captured in the state-change callback before Room Assist or
+            # another Velair delivery can mutate the live entity state.
+            external_snapshot = dict(observed_snapshot)
+        else:
+            # Compatibility for internal callers: changed event values remain
+            # safer than rebuilding intent from a potentially newer live state.
+            external_snapshot = {
+                field: value for field, value in current.items() if value is not None
+            }
+        await self._async_enter_manual_adjustment_locked(
+            entity_id,
+            policy=session_policy,
+            source=source,
+            changed_fields=changed_fields,
+            observed_snapshot=external_snapshot,
+        )
+
+    async def _async_enter_manual_adjustment_locked(
+        self,
+        entity_id: str,
+        *,
+        policy: dict[str, object],
+        source: str,
+        changed_fields: list[str],
+        observed_snapshot: dict[str, object] | None = None,
+        live_snapshot: bool = False,
+    ) -> None:
+        """Enter Manual adjustment through the shared serialized delivery path."""
+        self.ensure_managed_entity(entity_id)
+        zone = self._data["zones"][entity_id]
+        action = policy.get("action")
+        if action not in MANUAL_ADJUSTMENT_POLICY_OPTIONS:
+            raise ValueError("Invalid Manual adjustment policy")
+        now = dt_util.now()
+        existing_manual = self._manual_control_status(entity_id, now)
+        other_reasons = [
+            reason
+            for reason in self._active_zone_pause_reasons(entity_id, now)
+            if reason.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+        ]
+        if existing_manual is None:
+            if not zone["enabled"]:
+                raise ValueError(f"Manual adjustment is not allowed while {entity_id} is disabled")
+            if self.mode != MODE_AUTO:
+                raise ValueError("Manual adjustment requires Automatic scheduling")
+            if self._profile_zone_behavior(entity_id)["behavior"] == "pause":
+                raise ValueError("Manual adjustment is not allowed while the active Profile pauses this climate")
+            if other_reasons:
+                raise ValueError("Manual adjustment is not allowed while the climate is paused")
+
+        duration_minutes = int(
+            policy.get("duration_minutes", DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES)
+        )
+        until = self._manual_control_until(
+            entity_id,
+            {"action": action, "duration_minutes": duration_minutes},
+            now,
+            preserve_existing=(
+                existing_manual is not None
+                and action == EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK
+            ),
+        )
+
+        async def transition() -> None:
+            snapshot = (
+                self._climate_manager.climate_state_snapshot(entity_id)
+                if live_snapshot
+                else dict(observed_snapshot or {})
+            )
+            if not snapshot:
+                raise ValueError(
+                    f"Manual adjustment is unavailable while {entity_id} is unknown or unavailable"
+                )
+            await self.async_pause_zone(
+                entity_id,
+                until=until,
+                pause_id=MANUAL_CONTROL_PAUSE_ID,
+                preserve_current_climate_state=True,
+                internal=True,
+                manual_policy=str(action),
+                manual_source=source,
+                duration_minutes=(
+                    duration_minutes
+                    if action == EXTERNAL_CHANGE_FOR_DURATION
+                    else None
+                ),
+                changed_fields=changed_fields,
+            )
+            effective = self._get_active_zone_override(entity_id, dt_util.now())
+            if (
+                _is_pause_override(effective)
+                and effective.get("action") == ZONE_PAUSE_ACTION_TURN_OFF
+            ):
+                await self._climate_manager.async_turn_off(entity_id)
+            else:
+                await self._climate_manager.async_restore_state(entity_id, snapshot)
+
+        transition_error: Exception | None = None
+        try:
+            await self._climate_delivery.async_serialize(entity_id, transition)
+        except Exception as err:
+            transition_error = err
+        manual = self._manual_control_status(entity_id, dt_util.now())
+        if transition_error is not None and manual is not None:
+            _LOGGER.error(
+                "Failed to preserve the climate state for %s after Manual adjustment was persisted",
+                entity_id,
+                exc_info=(
+                    type(transition_error),
+                    transition_error,
+                    transition_error.__traceback__,
+                ),
+            )
+        if existing_manual is None and manual is not None:
+            event_data: dict[str, object] = {
+                "entity_id": entity_id,
+                "control_mode": "manual",
+                "previous_control_mode": "automatic",
+                "policy": action,
+                "source": source,
+                "started_at": manual.get("started_at"),
+            }
+            if until is not None:
+                event_data["until"] = until
+            if action == EXTERNAL_CHANGE_FOR_DURATION:
+                event_data["duration_minutes"] = duration_minutes
+            self._async_fire_event(EVENT_TYPE_ZONE_CONTROL_CHANGED, event_data)
+        self._async_write_state()
+        if transition_error is not None:
+            raise transition_error
+
+    async def async_resume_automatic_control(self, entity_id: str) -> None:
+        """Serialize automatic resume with other zone control transitions."""
+        async with self._zone_override_lock(entity_id):
+            self._ensure_manual_control_mutation_allowed()
+            await self._async_resume_automatic_control_locked(entity_id)
+
+    async def _async_resume_automatic_control_locked(self, entity_id: str) -> None:
+        """Return one zone to automatic control and apply current intent."""
+        self.ensure_managed_entity(entity_id)
+        was_active = self._manual_control_status(entity_id, dt_util.now()) is not None
+        await self.async_resume_zone(
+            entity_id,
+            pause_id=MANUAL_CONTROL_PAUSE_ID,
+            apply_current_schedule=False,
+            reason="automatic_control_resumed",
+            internal=True,
+        )
+        if (
+            was_active
+            and self.mode == MODE_AUTO
+            and not self._is_zone_override_active(entity_id, dt_util.now())
+        ):
+            try:
+                await self.async_apply_current_schedule(
+                    entity_id, source="automatic_control_resumed"
+                )
+            except Exception:
+                _LOGGER.exception(
+                    "Failed to reapply current intent after resuming %s",
+                    entity_id,
+                )
+        if was_active:
+            self._async_fire_event(
+                EVENT_TYPE_ZONE_CONTROL_CHANGED,
+                {
+                    "entity_id": entity_id,
+                    "control_mode": "automatic",
+                    "previous_control_mode": "manual",
+                    "reason": "resumed",
+                },
+            )
+        self._async_write_state()
+
     async def async_resume_zone(
         self,
         entity_id: str,
@@ -1513,11 +2080,14 @@ class VelairScheduler:
         pause_id: str | None = None,
         resume_all: bool | None = None,
         reason: str = "manual",
+        internal: bool = False,
     ) -> None:
         """Resume automatic schedule execution for one zone."""
         self.ensure_managed_entity(entity_id)
         if pause_id is not None:
             pause_id = validate_pause_id(pause_id)
+            if pause_id == MANUAL_CONTROL_PAUSE_ID and not internal:
+                raise ValueError("pause_id is reserved for Velair Manual adjustment")
         if pause_id is not None and resume_all is not None:
             raise ValueError("pause_id and resume_all cannot be used together")
         if pause_id is None and resume_all is False:
@@ -1534,8 +2104,14 @@ class VelairScheduler:
                 removed = [item for item in reasons if item.get("pause_id") == pause_id]
                 remaining = [item for item in reasons if item.get("pause_id") != pause_id]
             else:
-                removed = reasons
-                remaining = []
+                removed = [
+                    item for item in reasons
+                    if item.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+                ]
+                remaining = [
+                    item for item in reasons
+                    if item.get("pause_id") == MANUAL_CONTROL_PAUSE_ID
+                ]
             if not removed:
                 return
 
@@ -1883,6 +2459,9 @@ class VelairScheduler:
         defaults["room_sensor_assist_enabled"] = current["room_sensor_assist_enabled"]
         # Room Assist is configured in its own tab and is not reset by the
         # Adaptive Preconditioning restore action.
+        defaults["room_sensor_assist_deadband"] = current[
+            "room_sensor_assist_deadband"
+        ]
         defaults["room_sensor_assist_max_delta"] = current[
             "room_sensor_assist_max_delta"
         ]
@@ -5008,7 +5587,7 @@ class VelairScheduler:
             )
             if range_target and room_temperature is not None
             else self._room_sensor_assist_direction(
-                entity_id, target_temperature, hvac_mode
+                entity_id, config, target_temperature, hvac_mode
             )
             if (
                 target_step_available
@@ -5197,9 +5776,9 @@ class VelairScheduler:
         """Return the per-climate lock that serializes Room Assist services."""
         return self._room_sensor_assist_locks.setdefault(entity_id, asyncio.Lock())
 
-    def _zone_override_lock(self, entity_id: str) -> asyncio.Lock:
+    def _zone_override_lock(self, entity_id: str) -> _ReentrantAsyncLock:
         """Return the per-zone lock that serializes pause and resume services."""
-        return self._zone_override_locks.setdefault(entity_id, asyncio.Lock())
+        return self._zone_override_locks.setdefault(entity_id, _ReentrantAsyncLock())
 
     async def _async_update_room_sensor_assist_limit_notification(
         self,
@@ -5483,6 +6062,7 @@ class VelairScheduler:
 
         direction = self._room_sensor_assist_direction(
             entity_id,
+            config,
             target_temperature,
             hvac_mode,
         )
@@ -5775,6 +6355,7 @@ class VelairScheduler:
     def _room_sensor_assist_direction(
         self,
         entity_id: str,
+        config: PreconditioningData,
         target_temperature: float,
         hvac_mode: str | None,
     ) -> str | None:
@@ -5790,11 +6371,11 @@ class VelairScheduler:
         room_temperature = self._current_temperature(entity_id)
         if room_temperature is None:
             return None
-        minimum_delta = self._preconditioning_minimum_delta(entity_id)
+        deadband = config["room_sensor_assist_deadband"]
         error = target_temperature - room_temperature
-        if error > minimum_delta:
+        if error > deadband:
             return "heat"
-        if error < -minimum_delta:
+        if error < -deadband:
             return "cool"
 
         current_state = self._room_sensor_assist_states.get(entity_id)
@@ -5854,7 +6435,7 @@ class VelairScheduler:
         fixed_direction: bool = True,
     ) -> _RoomSensorAssistTargetResult:
         """Return the scalar target before and after physical climate limits."""
-        minimum_delta = config["minimum_delta_temperature"]
+        minimum_delta = config["room_sensor_assist_deadband"]
         error = target_temperature - room_temperature
         correction = 0.0
         if abs(error) > minimum_delta:
@@ -5956,7 +6537,7 @@ class VelairScheduler:
         room_temperature: float,
     ) -> str | None:
         """Return the active range boundary, or None while holding the band."""
-        deadband = config["minimum_delta_temperature"]
+        deadband = config["room_sensor_assist_deadband"]
         if room_temperature < target_temp_low - deadband:
             return "heat"
         if room_temperature > target_temp_high + deadband:
@@ -7353,6 +7934,7 @@ class VelairScheduler:
                 "room_temperature_entity_id": config.get(
                     "room_temperature_entity_id"
                 ),
+                "deadband": config["room_sensor_assist_deadband"],
                 "max_delta": config["room_sensor_assist_max_delta"],
                 "debounce_seconds": config["room_sensor_assist_debounce_seconds"],
             },
@@ -7798,6 +8380,10 @@ class VelairScheduler:
                     zone_pause_override_from_reasons(remaining)
                     if _is_pause_override(override) else None
                 )
+                manual_expired = any(
+                    item.get("pause_id") == MANUAL_CONTROL_PAUSE_ID
+                    for item in expired_reasons
+                )
                 try:
                     await self._async_save_data()
                 except (asyncio.CancelledError, Exception):
@@ -7814,6 +8400,16 @@ class VelairScheduler:
                     for pause in expired_reasons:
                         self._async_fire_zone_pause_reason(
                             entity_id, pause, operation="removed", reason="expired"
+                        )
+                    if manual_expired:
+                        self._async_fire_event(
+                            EVENT_TYPE_ZONE_CONTROL_CHANGED,
+                            {
+                                "entity_id": entity_id,
+                                "control_mode": "automatic",
+                                "previous_control_mode": "manual",
+                                "reason": "expired",
+                            },
                         )
                     if remaining:
                         continue
@@ -7862,6 +8458,32 @@ class VelairScheduler:
         if isinstance(override.get("pause_id"), str):
             legacy["pause_id"] = override["pause_id"]
         return [legacy]
+
+    def _manual_control_status(
+        self, entity_id: str, now: datetime
+    ) -> dict[str, object] | None:
+        """Project Manual adjustment from its single authoritative pause."""
+        reason = next(
+            (
+                item for item in self._active_zone_pause_reasons(entity_id, now)
+                if item.get("pause_id") == MANUAL_CONTROL_PAUSE_ID
+            ),
+            None,
+        )
+        if reason is None:
+            return None
+        status: dict[str, object] = {
+            "active": True,
+            "started_at": reason["started_at"],
+            "policy": reason.get("manual_policy", EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK),
+            "source": reason.get("manual_source", "external_change"),
+            "changed_fields": list(reason.get("changed_fields", [])),
+        }
+        if isinstance(reason.get("duration_minutes"), int):
+            status["duration_minutes"] = reason["duration_minutes"]
+        if isinstance(reason.get("until"), str):
+            status["until"] = reason["until"]
+        return status
 
     @staticmethod
     def _pause_reason_expired(pause: dict, now: datetime) -> bool:

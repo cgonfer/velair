@@ -34,6 +34,7 @@ from .const import (
     ATTR_TARGET_WEEKDAYS,
     ATTR_TEMPERATURE,
     ATTR_WEEKDAY,
+    ATTR_POLICY,
     DOMAIN,
     HVAC_MODE_OPTIONS,
     MODE_AUTO,
@@ -53,8 +54,12 @@ from .const import (
     SERVICE_RESUME_ZONE,
     SERVICE_SET_DAILY_SCHEDULE,
     SERVICE_SET_TEMPERATURE,
+    SERVICE_SET_EXTERNAL_CHANGE_POLICY,
+    SERVICE_ENTER_MANUAL_ADJUSTMENT,
+    SERVICE_RESUME_AUTOMATIC_CONTROL,
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_OPTIONS,
+    EXTERNAL_CHANGE_POLICY_OPTIONS,
 )
 from .models import WEEKDAYS, normalize_schedule_blocks, validate_pause_id
 
@@ -222,6 +227,25 @@ ACTIVATE_PROFILE_SCHEMA = vol.Schema(
     {
         vol.Optional(ATTR_PROFILE_ID): vol.Any(None, cv.string),
     }
+)
+
+EXTERNAL_CHANGE_POLICY_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_POLICY): vol.In(EXTERNAL_CHANGE_POLICY_OPTIONS),
+        vol.Optional(ATTR_DURATION_MINUTES): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=10080)
+        ),
+    }
+)
+
+RESUME_AUTOMATIC_CONTROL_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_ENTITY_ID): cv.entity_id}
+)
+
+ENTER_MANUAL_ADJUSTMENT_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_ENTITY_ID): cv.entity_id},
+    extra=vol.PREVENT_EXTRA,
 )
 
 
@@ -418,6 +442,33 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
 
+    async def async_set_external_change_policy(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        entity_id = call.data[ATTR_ENTITY_ID]
+        _ensure_managed_entity(scheduler, entity_id)
+        policy = {"action": call.data[ATTR_POLICY]}
+        if ATTR_DURATION_MINUTES in call.data:
+            policy[ATTR_DURATION_MINUTES] = call.data[ATTR_DURATION_MINUTES]
+        try:
+            await scheduler.async_update_external_change_policy(entity_id, policy)
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_resume_automatic_control(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        entity_id = call.data[ATTR_ENTITY_ID]
+        _ensure_managed_entity(scheduler, entity_id)
+        await scheduler.async_resume_automatic_control(entity_id)
+
+    async def async_enter_manual_adjustment(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        entity_id = call.data[ATTR_ENTITY_ID]
+        _ensure_managed_entity(scheduler, entity_id)
+        try:
+            await scheduler.async_enter_manual_adjustment(entity_id)
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_SET_TEMPERATURE,
@@ -506,6 +557,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         async_disable_room_sensor_assist,
         schema=ROOM_SENSOR_ASSIST_SCHEMA,
     )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_EXTERNAL_CHANGE_POLICY,
+        async_set_external_change_policy,
+        schema=EXTERNAL_CHANGE_POLICY_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ENTER_MANUAL_ADJUSTMENT,
+        async_enter_manual_adjustment,
+        schema=ENTER_MANUAL_ADJUSTMENT_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RESUME_AUTOMATIC_CONTROL,
+        async_resume_automatic_control,
+        schema=RESUME_AUTOMATIC_CONTROL_SCHEMA,
+    )
 
 
 async def async_unload_services(hass: HomeAssistant) -> None:
@@ -526,6 +595,9 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_CLEAR_SCHEDULE,
         SERVICE_ENABLE_ROOM_SENSOR_ASSIST,
         SERVICE_DISABLE_ROOM_SENSOR_ASSIST,
+        SERVICE_SET_EXTERNAL_CHANGE_POLICY,
+        SERVICE_ENTER_MANUAL_ADJUSTMENT,
+        SERVICE_RESUME_AUTOMATIC_CONTROL,
     ):
         hass.services.async_remove(DOMAIN, service)
 

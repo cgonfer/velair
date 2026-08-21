@@ -3,6 +3,7 @@ import { preconditioningSettings, temperatureSensorOptions } from "../domain/pre
 import { minutesPerDegreeBounds, temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
 import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
+import { renderInlineHelp } from "./inline-help";
 import type {
   PreconditioningDiagnostics,
   PreconditioningDirectionLearning,
@@ -360,7 +361,7 @@ function renderPreconditioningPrediction(
       <section class="preconditioning-prediction empty">
         <div class="preconditioning-prediction-heading">
           <span>${host._t("preconditioningNextBlock")}</span>
-          ${renderPredictionLiveLabel(host)}
+          ${renderPredictionLiveLabel(host, entityId, direction)}
         </div>
         <div class="preconditioning-prediction-empty">
           <ha-icon icon="mdi:calendar-search"></ha-icon>
@@ -382,7 +383,7 @@ function renderPreconditioningPrediction(
     <section class=${`preconditioning-prediction ${direction} ${hasEarlyStart ? "early" : "normal"}`}>
       <div class="preconditioning-prediction-heading">
         <span>${host._t("preconditioningNextBlock")}</span>
-        ${renderPredictionLiveLabel(host)}
+        ${renderPredictionLiveLabel(host, entityId, direction)}
       </div>
       <div class=${`preconditioning-block-preview ${hasEarlyStart ? "with-prestart" : "normal-start"}`}>
         ${hasEarlyStart
@@ -438,23 +439,17 @@ function renderPredictionRangeBoundary(
   `;
 }
 
-function renderPredictionLiveLabel(host: PreconditioningViewHost) {
+function renderPredictionLiveLabel(
+  host: PreconditioningViewHost,
+  entityId: string,
+  direction: "heat" | "cool",
+) {
   const help = host._t("preconditioningLivePredictionHelp");
+  const key = entityId.replace(/[^a-z0-9_-]/gi, "-");
   return html`
     <span class="preconditioning-live-label">
       <span>${host._t("preconditioningLivePrediction")}</span>
-      <span
-        class="preconditioning-help"
-        tabindex="0"
-        aria-label=${help}
-        @click=${(event: Event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-      >
-        <ha-icon icon="mdi:information-outline"></ha-icon>
-        <span class="preconditioning-help-tooltip" role="tooltip">${help}</span>
-      </span>
+      ${renderInlineHelp(`preconditioning-${key}-${direction}-live-prediction-help`, help, help)}
     </span>
   `;
 }
@@ -637,28 +632,21 @@ function renderLearningChip(
 
 function renderConfigurationLabel(
   host: PreconditioningViewHost,
+  entityId: string,
   labelKey: TranslationKey,
   unit = "",
 ) {
   const helpKey = PRECONDITIONING_HELP_KEYS[labelKey];
   const help = helpKey ? host._t(helpKey) : "";
+  const entityKey = entityId.replace(/[^a-z0-9_-]/gi, "-");
   return html`
     <span class="label preconditioning-config-label">
       <span>${host._t(labelKey)}${unit ? ` (${unit})` : ""}</span>
       ${helpKey
         ? html`
-            <span
-              class="preconditioning-help"
-              tabindex="0"
-              aria-label=${help}
-              @click=${(event: Event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-            >
-              <ha-icon icon="mdi:information-outline"></ha-icon>
-              <span class="preconditioning-help-tooltip" role="tooltip">${help}</span>
-            </span>
+            ${renderInlineHelp(
+              `preconditioning-${entityKey}-${String(labelKey)}-help`, help, help,
+            )}
           `
         : nothing}
     </span>
@@ -705,7 +693,7 @@ function renderPreconditioningNumber(
   const disabled = host._settingsSaving || Boolean(options.inactive);
   return html`
     <label class=${`preconditioning-config-row ${options.inactive ? "inactive" : ""}`}>
-      ${renderConfigurationLabel(host, labelKey, options.labelUnit)}
+      ${renderConfigurationLabel(host, entityId, labelKey, options.labelUnit)}
       <span class="preconditioning-number-input"><input
         type="number"
         min=${String(min)}
@@ -743,7 +731,7 @@ function renderPreconditioningToggle(
   const disabled = host._settingsSaving || Boolean(options.inactive);
   return html`
     <label class=${`preconditioning-config-row preconditioning-toggle-row ${options.inactive ? "inactive" : ""}`}>
-      ${renderConfigurationLabel(host, labelKey)}
+      ${renderConfigurationLabel(host, entityId, labelKey)}
       <ha-switch
         .checked=${checked}
         ?disabled=${disabled}
@@ -769,7 +757,7 @@ function renderPreconditioningEntityPicker(
   const sensors = temperatureSensorOptions(host.hass, value);
   return html`
     <label class=${`preconditioning-config-row preconditioning-sensor-row ${options.inactive ? "inactive" : ""}`}>
-      ${renderConfigurationLabel(host, labelKey)}
+      ${renderConfigurationLabel(host, entityId, labelKey)}
       <span class="select-wrap">
         <select
           .value=${displayValue}

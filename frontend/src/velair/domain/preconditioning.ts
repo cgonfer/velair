@@ -2,6 +2,7 @@ import type { HomeAssistant, PreconditioningSettings } from "../types";
 import {
   defaultMinimumDelta,
   defaultMinutesPerDegree,
+  defaultRoomAssistDeadband,
   defaultRoomAssistDelta,
 } from "./temperature-units";
 
@@ -72,6 +73,11 @@ export function preconditioningSettings(
     outdoor_temperature_entity_id: value?.outdoor_temperature_entity_id ?? null,
     room_temperature_entity_id: value?.room_temperature_entity_id ?? null,
     room_sensor_assist_enabled: value?.room_sensor_assist_enabled ?? false,
+    room_sensor_assist_deadband: Number(
+      value?.room_sensor_assist_deadband
+      ?? value?.minimum_delta_temperature
+      ?? defaultRoomAssistDeadband(temperatureUnit),
+    ),
     room_sensor_assist_max_delta: Number(value?.room_sensor_assist_max_delta ?? defaultRoomAssistDelta(temperatureUnit)),
     room_sensor_assist_debounce_seconds: Number(
       value?.room_sensor_assist_debounce_seconds ?? 20,

@@ -4,6 +4,7 @@ import {
   appliedAssistOffset,
   appliedAssistRange,
   hasRoomAssistScheduledTarget,
+  roomAssistDeadbandZone,
   roomAssistRangeShift,
   scheduledAssistRange,
 } from "../../src/velair/domain/room-assist";
@@ -68,5 +69,27 @@ describe("Room Assist range contract", () => {
     const rangeStatus = status({ applied_offset: 4, range_shift: -1.5 });
     expect(roomAssistRangeShift(rangeStatus)).toBe(-1.5);
     expect(appliedAssistOffset(rangeStatus)).toBe(4);
+  });
+});
+
+describe("Room Assist deadband zone", () => {
+  it("expands equally around a scalar scheduled target", () => {
+    expect(roomAssistDeadbandZone(status({ target_temperature: 21 }), 0.3))
+      .toEqual({ low: 20.7, high: 21.3 });
+  });
+
+  it("expands beyond both boundaries of a native range", () => {
+    expect(roomAssistDeadbandZone(status({
+      target_temp_low: 20,
+      target_temp_high: 24,
+    }), 0.5)).toEqual({ low: 19.5, high: 24.5 });
+  });
+
+  it("preserves a zero-width zone and rejects unusable values", () => {
+    const scalar = status({ target_temperature: 21 });
+    expect(roomAssistDeadbandZone(scalar, 0)).toEqual({ low: 21, high: 21 });
+    expect(roomAssistDeadbandZone(scalar, -0.1)).toBeUndefined();
+    expect(roomAssistDeadbandZone(scalar, Number.NaN)).toBeUndefined();
+    expect(roomAssistDeadbandZone(status({}), 0.3)).toBeUndefined();
   });
 });

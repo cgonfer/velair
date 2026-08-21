@@ -105,6 +105,7 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
         "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
         "room_temperature_entity_id": "sensor.living_room_temperature",
         "room_sensor_assist_enabled": false,
+        "room_sensor_assist_deadband": 0.3,
         "room_sensor_assist_max_delta": 2.0
       },
       "comfort": {
@@ -224,10 +225,10 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 6,
+    "portable_model": 8,
     "storage": 1,
-    "model": 4,
-    "integration": "1.6.0"
+    "model": 7,
+    "integration": "1.7.0-beta.1"
   }
 }
 ```
@@ -304,6 +305,126 @@ await hass.connection.sendMessagePromise({
   type: "velair/get_schedule",
 });
 ```
+
+## Diagnostics
+
+Diagnostics uses a separate read-only snapshot so opening the view cannot
+change scheduler state. History contains at most 100 sanitized runtime events;
+the category selection is persisted, but the events themselves are cleared
+whenever Velair or Home Assistant restarts.
+
+### Read Diagnostics
+
+```ts
+const diagnostics = await hass.connection.sendMessagePromise({
+  type: "velair/get_diagnostics",
+});
+```
+
+The request has no fields beyond `type`. The result has this top-level schema:
+
+```ts
+interface DiagnosticsSnapshot {
+  generated_at: string;
+  history_limit: number;
+  history_policy: {
+    categories: Record<DiagnosticsCategory, boolean>;
+    runtime_only: true;
+    cleared_on_restart: true;
+  };
+  overall: {
+    status: "ok" | "warning" | "error";
+    scheduler_mode: string;
+    scheduler_status: string;
+    unit_counts: { ok: number; warning: number; error: number };
+    issues: Array<Record<string, unknown>>;
+  };
+  units: Record<string, Record<string, unknown>>;
+  history: Array<Record<string, unknown>>;
+}
+
+type DiagnosticsCategory =
+  | "control"
+  | "room_assist"
+  | "preconditioning"
+  | "comfort"
+  | "delivery"
+  | "availability";
+```
+
+The command returns `not_loaded` when the integration runtime is unavailable.
+
+### Export Diagnostics
+
+```ts
+const report = await hass.connection.sendMessagePromise({
+  type: "velair/export_diagnostics",
+  redact_entity_ids: true,
+});
+```
+
+`redact_entity_ids` is an optional boolean and defaults to `true`. The result is
+`{ privacy, diagnostics }`: `diagnostics` has the snapshot schema above and
+`privacy` states whether entity IDs were replaced, confirms that operational
+Profile, Mode, and pause identifiers are always removed, and reminds callers
+that history is runtime-only and the report must be reviewed before sharing.
+Setting `redact_entity_ids` to `false` keeps local entity IDs but does not
+disable operational-identifier redaction. The command returns `not_loaded` if
+Velair is unavailable; a non-boolean option is rejected by WebSocket schema
+validation.
+
+### Configure Diagnostics History
+
+```ts
+const diagnostics = await hass.connection.sendMessagePromise({
+  type: "velair/update_diagnostics_history",
+  enabled_categories: ["control", "room_assist", "delivery"],
+});
+```
+
+`enabled_categories` is a required list containing only the six
+`DiagnosticsCategory` values above. The exact enabled set is persisted in the
+entry-specific diagnostics policy store. Events belonging to a category that
+is disabled are immediately removed from the in-memory history, and future
+events in that category are not retained. Current health calculation and
+automation events are unaffected. The result is the refreshed
+`DiagnosticsSnapshot`. Invalid category names or a missing list fail WebSocket
+schema validation; `not_loaded` means the integration is unavailable. A policy
+storage failure is returned as a command failure and leaves the previous
+in-memory policy active.
+
+### Clear Diagnostics History
+
+```ts
+const diagnostics = await hass.connection.sendMessagePromise({
+  type: "velair/clear_diagnostics_history",
+});
+```
+
+The request has no additional fields. It clears only the bounded in-memory
+event list and returns the refreshed `DiagnosticsSnapshot`. It does not change
+enabled categories, current health evidence, schedules, or climate control.
+The command returns `not_loaded` when Velair is unavailable.
+
+### Subscribe To Diagnostics
+
+```ts
+const unsubscribe = await hass.connection.subscribeMessage(
+  (message) => {
+    if (message.loaded) {
+      renderDiagnostics(message.diagnostics);
+    }
+  },
+  { type: "velair/subscribe_diagnostics" },
+);
+```
+
+The request has no additional fields. Successful registration is acknowledged
+first, followed immediately by an event shaped as
+`{ loaded: true, diagnostics: DiagnosticsSnapshot }`. Later lightweight
+diagnostic revisions use the same event shape. If the integration unloads, the
+subscription receives `{ loaded: false }`; if it is already unavailable when
+subscribing, registration returns `not_loaded`.
 
 ## Subscribe To Updates
 
@@ -442,6 +563,67 @@ await hass.connection.sendMessagePromise({
 
 Templates are capability-neutral storage. They can contain optional climate settings from any managed climate. Filtering happens later when a template is applied to one concrete climate schedule.
 
+### External-change Policy
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/update_external_change_policy",
+  entity_id: "climate.living_room",
+  policy: "for_duration",
+  duration_minutes: 120,
+});
+```
+
+`entity_id` is required and must be managed. `policy` is required and accepts
+`keep_automatic`, `until_next_block`, `for_duration`, or `until_resumed`.
+`duration_minutes` is optional, is meaningful for `for_duration`, and must be
+an integer from 1 through 10080. The policy is the default for future external
+changes; updating it does not alter an already active Manual adjustment. The
+result is the full schedule response.
+
+Errors are `not_loaded`, `temperature_migration_required`,
+`operation_in_progress`, or `invalid_external_change_policy`; malformed fields
+can also fail WebSocket schema validation.
+
+### Enter Manual Adjustment
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/enter_manual_adjustment",
+  entity_id: "climate.living_room",
+});
+```
+
+The only parameter is the required managed `entity_id`. Velair captures the
+live HVAC mode and scalar or native-range target, then starts a persisted
+Manual adjustment using that zone's saved policy. If the saved policy is
+`keep_automatic`, explicit entry uses `until_resumed` without changing the
+saved default. The result is the full schedule response.
+
+Errors are `not_loaded`, `temperature_migration_required`,
+`operation_in_progress`, or `manual_adjustment_not_allowed`. The last includes
+an unmanaged, unavailable, disabled, already-manual, Profile-paused, otherwise
+paused, or non-automatic zone.
+
+### Resume Automatic Control
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/resume_automatic_control",
+  entity_id: "climate.living_room",
+});
+```
+
+The only parameter is the required managed `entity_id`. Velair removes only
+its Manual-adjustment pause reason, resolves the current Profile, Mode,
+schedule, Boost, and remaining pause authority, and applies that intent when
+allowed. It does not remove independent pause reasons. The result is the full
+schedule response; calling it when the zone is already automatic is harmless.
+
+Errors are `not_loaded`, `temperature_migration_required`,
+`operation_in_progress`, or `invalid_entity`. Malformed entity IDs fail
+WebSocket schema validation.
+
 ## Zone Preconditioning
 
 ```ts
@@ -456,6 +638,7 @@ await hass.connection.sendMessagePromise({
     fallback_minutes_per_degree: 25,
     room_temperature_entity_id: "sensor.living_room_temperature",
     room_sensor_assist_enabled: true,
+    room_sensor_assist_deadband: 0.3,
     room_sensor_assist_max_delta: 2.0
   }
 });
@@ -467,7 +650,7 @@ Preconditioning is adaptive. The scheduler predicts a lead for each concrete fut
 
 Outdoor temperature context is optional and local. In the Preconditioning tab, `outdoor_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Velair reads the selected sensor's numeric state, stores it with learning samples, and uses it only to compare similar preconditioning samples once enough history exists. It does not call external weather services and does not apply fixed weather-based adjustments to the initial model.
 
-Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. `room_sensor_assist_max_delta` caps the active scalar or range-boundary correction. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native-range holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
+Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. `room_sensor_assist_deadband` independently suppresses small Room Assist corrections; `room_sensor_assist_max_delta` caps the active scalar or range-boundary correction. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native-range holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
 
@@ -649,7 +832,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 6,
+  "model_version": 8,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -674,6 +857,9 @@ and returns to default schedules only when the active set becomes empty.
 Portable model v5 payloads add the optional `modes` section. V4 payloads
 remain valid. Portable payloads declare `temperature_unit`; models created before
 unit metadata existed may omit it; the backend treats those values as Celsius.
+Portable model v8 adds the independent `room_sensor_assist_deadband`. When a v7
+or older zone omits it, import migrates the legacy
+`minimum_delta_temperature` value before any unit conversion.
 If the source differs from Velair's current Home Assistant unit, selected thermal
 data is converted before normalization. Managed climates with known limits and
 `target_temp_step` are aligned to that exact grid. Standalone template values use
@@ -694,7 +880,14 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-This deletes all stored Velair data, including schedules, templates, panel preferences, active boosts and pauses, Comfort and Room Assist settings, Adaptive Preconditioning settings and learning, and startup behavior. It then recreates unit-aware defaults for the currently managed climates. The frontend must ask the user for confirmation before calling this command.
+This deletes all stored Velair data, including schedules, templates, panel
+preferences, active boosts and pauses, per-zone external-change policies and
+persisted Manual-adjustment state, Comfort and Room Assist settings, Adaptive
+Preconditioning settings and learning, and startup behavior. It then recreates
+unit-aware defaults for the currently managed climates. The separate
+Diagnostics category policy and runtime log are not schedule data reset by this
+command. The frontend must ask the user for confirmation before calling this
+command.
 
 ## Error Behavior
 
@@ -702,6 +895,9 @@ This deletes all stored Velair data, including schedules, templates, panel prefe
 - `invalid_schedule`: a schedule is invalid or targets an unmanaged climate.
 - `invalid_template`: a template is invalid or unknown.
 - `invalid_settings`: settings are invalid.
+- `invalid_external_change_policy`: an external-change policy or target is invalid.
+- `manual_adjustment_not_allowed`: the requested zone cannot enter Manual adjustment in its current state.
+- `invalid_entity`: the requested entity is not managed by Velair.
 - `invalid_preconditioning`: preconditioning settings are invalid or target an unmanaged climate.
 - `invalid_comfort`: Comfort settings are invalid or target an unmanaged climate.
 - `invalid_import`: the import file is invalid or incompatible.

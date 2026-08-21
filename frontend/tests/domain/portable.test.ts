@@ -7,6 +7,7 @@ import {
   unmatchedPreconditioningLearningEntities,
   validatePortablePayload,
 } from "../../src/velair/domain/portable";
+import { PORTABLE_MODEL_VERSION } from "../../src/velair/constants";
 import type { VelairPortablePayload } from "../../src/velair/types";
 
 const payload: VelairPortablePayload = {
@@ -84,6 +85,37 @@ describe("portable preconditioning learning", () => {
       },
     };
     expect(validatePortablePayload(rangePayload)).toEqual({ ok: true, sections: ["zones"] });
+  });
+
+  it("accepts and round-trips v8 zone data but rejects v9", () => {
+    const v7: VelairPortablePayload = {
+      ...payload,
+      model_version: 8,
+      sections: {
+        zones: {
+          "climate.office": {
+            enabled: true,
+            schedule: {},
+            preconditioning: {
+              room_sensor_assist_deadband: 0.3,
+            },
+            external_change_policy: {
+              action: "for_duration",
+              duration_minutes: 90,
+            },
+          },
+        },
+      },
+    };
+    const roundTrip = JSON.parse(JSON.stringify(v7)) as VelairPortablePayload;
+
+    expect(PORTABLE_MODEL_VERSION).toBe(8);
+    expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
+    expect(roundTrip.sections.zones).toEqual(v7.sections.zones);
+    expect(validatePortablePayload({ ...roundTrip, model_version: 9 })).toEqual({
+      ok: false,
+      errorKey: "invalidImportFile",
+    });
   });
 
   it("identifies learning entries that cannot match a managed climate", () => {

@@ -128,6 +128,34 @@ Follow local learning progress and understand when Velair plans to start before 
 | --- | --- |
 | ![Velair adaptive preconditioning tablet](../../screenshots/preconditioning-tablet.png) | ![Velair adaptive preconditioning mobile](../../screenshots/preconditioning-mobile.png) |
 
+### Diagnostics
+
+Review scheduler health, managed climate state, delivery failures and a bounded local runtime history.
+
+#### Healthy system
+
+Start with a concise health summary, then inspect the effective setup and runtime evidence for each climate.
+
+**Desktop**
+
+![Velair healthy system desktop](../../screenshots/diagnostics-healthy-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair healthy system tablet](../../screenshots/diagnostics-healthy-tablet.png) | ![Velair healthy system mobile](../../screenshots/diagnostics-healthy-mobile.png) |
+
+#### Errors detected
+
+See exhausted delivery retries and missing managed entities without relying exclusively on logs.
+
+**Desktop**
+
+![Velair errors detected desktop](../../screenshots/diagnostics-errors-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair errors detected tablet](../../screenshots/diagnostics-errors-tablet.png) | ![Velair errors detected mobile](../../screenshots/diagnostics-errors-mobile.png) |
+
 ### Settings
 
 Manage ordering, startup behavior, portability and the capabilities detected for each thermostat.

@@ -846,10 +846,6 @@ export const profileStyles = css`
     color: var(--error-color);
   }
 
-  .profile-zone-error {
-    margin: 0;
-  }
-
   .profile-zone-static {
     cursor: default;
   }

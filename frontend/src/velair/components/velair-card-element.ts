@@ -32,6 +32,7 @@ import type {
   NormalizedBlocks,
   PortableSection,
   PanelSettings,
+  ExternalChangePolicy,
   ScheduleBlock,
   ScheduleEvent,
   ScheduleResponse,
@@ -79,6 +80,7 @@ import {
   showSuccess,
   successNoticeProgress,
 } from "../controllers/notice-actions";
+import { NoticeTransitions } from "../controllers/notice-transitions";
 import {
   addBlock,
   asDraftActionsHost,
@@ -313,6 +315,7 @@ export class VelairCard extends LitElement {
   @state() private _importFileName = "";
   @state() private _pauseDurationMinutes = 60;
   @state() private _controlAction?: "pause" | "resume";
+  @state() private _manualControlActions: Record<string, "enter" | "resume"> = {};
   @state() private _schedulerMenuOpen = false;
   @state() private _nextEventsOpen = false;
   @state() private _nextEventChangeRevision = 0;
@@ -339,6 +342,7 @@ export class VelairCard extends LitElement {
   private _nextEventChangeTimeout?: number;
   private _timelineNowTick?: number;
   private _initialLoadingTimer?: number;
+  private readonly _operationalNotices = new NoticeTransitions(() => this.requestUpdate());
   private _temperatureUnitReloadPending = false;
   private _overviewTimelineScrollInitialized = false;
   private _draggedTimelineIndex?: number;
@@ -376,7 +380,6 @@ export class VelairCard extends LitElement {
       this._positionDiagnosticsSourceFilter();
     });
   };
-
   public setConfig(config: VelairCardConfig): void {
     this._hasExternalConfig = true;
     const previousSelectedEntity = this._selectedEntity;
@@ -428,6 +431,7 @@ export class VelairCard extends LitElement {
       this._unsubscribeDiagnostics = undefined;
     }
     this._clearSuccessNoticeTimer();
+    this._operationalNotices.dispose();
     this._clearOperationStatusTimer();
     this._clearNextEventChangeTimer();
     this._clearPreconditioningRefreshTimer();
@@ -520,6 +524,20 @@ export class VelairCard extends LitElement {
 
   protected render() {
     return renderCardContent(asVelairViewHost(this));
+  }
+
+  protected willUpdate(): void {
+    this._operationalNotices.sync([
+      ...(this._saveMessage ? [{ id: "success", message: this._saveMessage }] : []),
+      ...(this._error ? [{ id: "error", message: this._error }] : []),
+    ]);
+  }
+
+  private _noticeStackEntries() {
+    return this._operationalNotices.entries.map((entry) => ({
+      ...entry,
+      type: entry.id === "success" ? "success" as const : "error" as const,
+    }));
   }
 
   private _dismissOperationStatus(): void {
@@ -1149,6 +1167,10 @@ export class VelairCard extends LitElement {
     showSuccess(asNoticeHost(this), message);
   }
 
+  private _showError(message?: string | null): void {
+    this._error = message ?? undefined;
+  }
+
   private _successNoticeProgress(): number {
     return successNoticeProgress(asNoticeHost(this));
   }
@@ -1287,6 +1309,56 @@ export class VelairCard extends LitElement {
 
   private async _saveSettings(settings: Partial<PanelSettings>): Promise<void> {
     await saveSettings(asSettingsActionsHost(this), settings);
+  }
+
+  private async _saveExternalChangePolicy(
+    entityId: string,
+    policy: ExternalChangePolicy,
+  ): Promise<void> {
+    const api = this._api();
+    if (!api || this._settingsSaving) return;
+    this._settingsSaving = true;
+    this._error = undefined;
+    try {
+      this._applyScheduleData(await api.updateExternalChangePolicy(entityId, policy));
+      this._showSuccess(this._t("externalChangePolicySaved"));
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("unableSaveSettings");
+    } finally {
+      this._settingsSaving = false;
+    }
+  }
+
+  private async _resumeAutomaticControl(entityId: string): Promise<void> {
+    const api = this._api();
+    if (!api || this._manualControlActions[entityId]) return;
+    this._manualControlActions = { ...this._manualControlActions, [entityId]: "resume" };
+    this._error = undefined;
+    try {
+      this._applyScheduleData(await api.resumeAutomaticControl(entityId));
+      this._showSuccess(this._t("automaticControlResumed"));
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("unableResume");
+    } finally {
+      const { [entityId]: _finished, ...remaining } = this._manualControlActions;
+      this._manualControlActions = remaining;
+    }
+  }
+
+  private async _enterManualAdjustment(entityId: string): Promise<void> {
+    const api = this._api();
+    if (!api || this._manualControlActions[entityId]) return;
+    this._manualControlActions = { ...this._manualControlActions, [entityId]: "enter" };
+    this._error = undefined;
+    try {
+      this._applyScheduleData(await api.enterManualAdjustment(entityId));
+      this._showSuccess(this._t("manualAdjustmentStarted"));
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("unableEnterManualAdjustment");
+    } finally {
+      const { [entityId]: _finished, ...remaining } = this._manualControlActions;
+      this._manualControlActions = remaining;
+    }
   }
 
   private async _saveZonePreconditioning(

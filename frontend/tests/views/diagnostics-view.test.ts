@@ -847,6 +847,140 @@ describe("diagnostics view", () => {
     expect(rows[1]).toContain("roomSensorStatusUnavailable");
   });
 
+  it("summarizes external adjustments and Automatic/Manual control changes", () => {
+    const snapshot = diagnostics();
+    snapshot.history = [
+      {
+        at: "2026-08-20T10:00:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "external_climate_change_detected",
+          changed_fields: ["temperature"],
+          previous: { temperature: 20 }, current: { temperature: 22 },
+          policy: "keep_automatic",
+        },
+      },
+      {
+        at: "2026-08-20T10:01:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "external_climate_change_detected",
+          changed_fields: ["target_temp_low", "target_temp_high"],
+          previous: { target_temp_low: 20, target_temp_high: 24 },
+          current: { target_temp_low: 19, target_temp_high: 25 },
+          policy: "until_resumed",
+        },
+      },
+      {
+        at: "2026-08-20T10:02:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "external_climate_change_detected", changed_fields: ["hvac_mode"],
+          previous: { hvac_mode: "heat" }, current: { hvac_mode: "cool" },
+        },
+      },
+      {
+        at: "2026-08-20T10:03:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "zone_control_changed", previous_control_mode: "automatic",
+          control_mode: "manual", policy: "for_duration", duration_minutes: 60,
+          until: "2026-08-20T11:03:00Z",
+        },
+      },
+      {
+        at: "2026-08-20T10:04:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "zone_control_changed", previous_control_mode: "manual",
+          control_mode: "automatic", reason: "resumed",
+        },
+      },
+    ];
+    const viewHost = host(snapshot);
+    viewHost._t = ((key: string, replacements?: Record<string, string>) =>
+      `${key}${replacements ? ` ${Object.values(replacements).join(" ")}` : ""}`) as VelairViewHost["_t"];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+    const rows = [...container.querySelectorAll(".diagnostics-history li")]
+      .map((row) => row.textContent ?? "");
+
+    expect(rows[0]).toContain("diagnosticsEventExternalAdjustment");
+    expect(rows[0]).toContain("diagnosticsTargetChanged 20 °C 22 °C");
+    expect(rows[0]).toContain("externalChangeKeepAutomatic");
+    expect(rows[1]).toContain("diagnosticsRangeChanged 20 °C – 24 °C 19 °C – 25 °C");
+    expect(rows[2]).toContain("diagnosticsHvacModeChanged heat cool");
+    expect(rows[3]).toContain("diagnosticsEventZoneControlChanged");
+    expect(rows[3]).toContain("diagnosticsControlChanged diagnosticsControlAutomatic diagnosticsControlManual");
+    expect(rows[3]).toContain("manualSessionDuration 60");
+    expect(rows[3]).toContain("diagnosticsUntil 2026-08-20T11:03:00Z");
+    expect(rows[4]).toContain("diagnosticsReasonResumed");
+  });
+
+  it("keeps one-sided range adjustments readable without inventing a full range", () => {
+    const snapshot = diagnostics();
+    snapshot.history = [
+      {
+        at: "2026-08-20T10:00:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "external_climate_change_detected", changed_fields: ["target_temp_low"],
+          previous: { target_temp_low: 20 }, current: { target_temp_low: 19 },
+        },
+      },
+      {
+        at: "2026-08-20T10:01:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "external_climate_change_detected", changed_fields: ["target_temp_high"],
+          previous: { target_temp_high: 24 }, current: { target_temp_high: 25 },
+        },
+      },
+      {
+        at: "2026-08-20T10:02:00Z", kind: "event", category: "control",
+        severity: "info", entity_id: "climate.warning",
+        data: {
+          event: "external_climate_change_detected",
+          changed_fields: ["target_temp_low", "target_temp_high"],
+          previous: { target_temp_low: 20, target_temp_high: 24 },
+          current: { target_temp_low: 19, target_temp_high: 25 },
+        },
+      },
+    ];
+    const viewHost = host(snapshot);
+    viewHost._t = ((key: string, replacements?: Record<string, string>) =>
+      `${key}${replacements ? ` ${Object.values(replacements).join(" ")}` : ""}`) as VelairViewHost["_t"];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+    const rows = [...container.querySelectorAll(".diagnostics-history li")]
+      .map((row) => row.textContent ?? "");
+
+    expect(rows[0]).toContain("diagnosticsLowerTargetChanged 20 °C 19 °C");
+    expect(rows[0]).not.toContain("diagnosticsRangeChanged");
+    expect(rows[1]).toContain("diagnosticsUpperTargetChanged 24 °C 25 °C");
+    expect(rows[1]).not.toContain("diagnosticsRangeChanged");
+    expect(rows[2]).toContain("diagnosticsRangeChanged 20 °C – 24 °C 19 °C – 25 °C");
+    expect(rows[2]).not.toContain("diagnosticsLowerTargetChanged");
+    expect(rows[2]).not.toContain("diagnosticsUpperTargetChanged");
+  });
+
+  it("prefixes the calculated intent with Manual or Automatic ownership", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].intent = {
+      control_mode: "manual", state: "paused", hvac_mode: "cool", temperature: 23,
+    };
+    const viewHost = host(snapshot);
+    viewHost._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+    const calculated = [...container.querySelectorAll(".diagnostics-rows > div")]
+      .find((row) => row.textContent?.includes("diagnosticsCalculatedIntent"));
+    expect(calculated?.textContent).toContain("diagnosticsControlManual");
+    expect(calculated?.textContent).toContain("status:paused");
+    expect(calculated?.textContent).toContain("cool");
+    expect(calculated?.textContent).toContain("23 °C");
+  });
+
   it("shows control event types once instead of repeating them in the message", () => {
     const snapshot = diagnostics();
     snapshot.history = [

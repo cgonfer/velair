@@ -1,28 +1,72 @@
 import { css } from "lit";
 
 export const noticeStyles = css`
+  .notice-stack {
+    box-sizing: border-box;
+    display: grid;
+    gap: 8px;
+    max-width: min(520px, calc(100vw - 32px));
+    width: 100%;
+  }
+
+  .notice-stack.floating {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: 50%;
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overflow: auto;
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 1000;
+  }
+
+  .notice-stack.contextual {
+    margin: 0;
+    max-width: none;
+  }
+
+  .notice-row {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition: grid-template-rows 140ms ease, opacity 140ms ease, transform 160ms ease;
+  }
+
+  .notice-row > .notice {
+    min-height: 0;
+  }
+
+  .notice-row.entering {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  .notice-row.leaving {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
   .notice {
     align-items: center;
-    animation: velair-notice-in 180ms ease-out;
     background: var(--secondary-background-color);
     border: 1px solid var(--divider-color);
     border-radius: 8px;
-    bottom: 16px;
     box-shadow: var(--ha-card-box-shadow, 0 4px 18px rgba(0, 0, 0, 0.18));
     box-sizing: border-box;
     display: flex;
     gap: 10px;
     justify-content: space-between;
-    left: 50%;
     margin: 0;
-    max-width: min(520px, calc(100vw - 32px));
-    min-width: min(320px, calc(100vw - 32px));
+    min-width: 0;
     overflow: hidden;
     padding: 12px;
-    position: fixed;
-    transform: translateX(-50%);
-    width: max-content;
-    z-index: 1000;
+    position: relative;
+    width: 100%;
+  }
+
+  .notice > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .notice-close {
@@ -46,7 +90,6 @@ export const noticeStyles = css`
   .notice.error {
     background: color-mix(in srgb, var(--error-color) 12%, transparent);
     border-color: var(--error-color);
-    bottom: 76px;
   }
 
   .notice.success {
@@ -70,15 +113,9 @@ export const noticeStyles = css`
     transition: width 500ms linear;
   }
 
-  @keyframes velair-notice-in {
-    from {
-      opacity: 0;
-      transform: translate(-50%, 14px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translate(-50%, 0);
+  @media (prefers-reduced-motion: reduce) {
+    .notice-row {
+      transition-duration: 0ms;
     }
   }
 `;

@@ -26,6 +26,12 @@ from .const import (
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_TURN_OFF,
     ZONE_PAUSE_ACTION_OPTIONS,
+    DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+    EXTERNAL_CHANGE_KEEP_AUTOMATIC,
+    EXTERNAL_CHANGE_POLICY_OPTIONS,
+    EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK,
+    MANUAL_ADJUSTMENT_POLICY_OPTIONS,
+    MANUAL_CONTROL_PAUSE_ID,
 )
 
 WEEKDAYS = (
@@ -54,6 +60,7 @@ DEFAULT_PRECONDITIONING_COMFORT_PERCENTILE = 80
 DEFAULT_PRECONDITIONING_PARTIAL_EXPIRY_DAYS = 30
 DEFAULT_PRECONDITIONING_RECENCY_DECAY_DAYS = 30
 DEFAULT_PRECONDITIONING_FALLBACK_MINUTES_PER_DEGREE = 25
+DEFAULT_ROOM_SENSOR_ASSIST_DEADBAND = 0.3
 DEFAULT_ROOM_SENSOR_ASSIST_MAX_DELTA = 2.0
 DEFAULT_ROOM_SENSOR_ASSIST_DEBOUNCE_SECONDS = 20
 DEFAULT_COMFORT_TEMPERATURE_MIN = 20.0
@@ -141,6 +148,10 @@ class ZonePauseReason(TypedDict):
     action: str
     until: NotRequired[str]
     pause_id: NotRequired[str]
+    manual_policy: NotRequired[str]
+    manual_source: NotRequired[str]
+    duration_minutes: NotRequired[int]
+    changed_fields: NotRequired[list[str]]
 
 
 class ClimateStateSnapshot(TypedDict, total=False):
@@ -175,6 +186,7 @@ class PreconditioningData(TypedDict):
     outdoor_temperature_entity_id: str | None
     room_temperature_entity_id: str | None
     room_sensor_assist_enabled: bool
+    room_sensor_assist_deadband: float
     room_sensor_assist_max_delta: float
     room_sensor_assist_debounce_seconds: int
 
@@ -194,6 +206,13 @@ class ComfortData(TypedDict):
     co2_attention: int
     co2_poor: int
     stale_after_minutes: int
+
+
+class ExternalChangePolicyData(TypedDict):
+    """Persisted response to changes not made by Velair."""
+
+    action: str
+    duration_minutes: int
 
 
 class PreconditioningObservation(TypedDict, total=False):
@@ -286,6 +305,7 @@ class ZoneData(TypedDict):
     pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
     comfort: ComfortData
+    external_change_policy: ExternalChangePolicyData
 
 
 class ScheduleTemplateData(TypedDict):
@@ -684,6 +704,9 @@ def normalize_schedule_data(
                 zone_data.get("preconditioning")
             ),
             "comfort": normalize_comfort_data(zone_data.get("comfort")),
+            "external_change_policy": normalize_external_change_policy(
+                zone_data.get("external_change_policy")
+            ),
         }
 
     for entity_id in climate_entities:
@@ -696,6 +719,7 @@ def normalize_schedule_data(
                 "pauses": [],
                 "preconditioning": normalize_preconditioning_data(None),
                 "comfort": normalize_comfort_data(None),
+                "external_change_policy": normalize_external_change_policy(None),
             },
         )
 
@@ -777,7 +801,7 @@ def normalize_schedule_data(
         active_mode_id = None
 
     return {
-        "version": 5,
+        "version": 7,
         "zones": zones,
         "global_": {
             "mode": mode,
@@ -1259,6 +1283,23 @@ def normalize_panel_settings(
     }
 
 
+def normalize_external_change_policy(raw_data: Any) -> ExternalChangePolicyData:
+    """Normalize one zone's external-change policy."""
+    data = raw_data if isinstance(raw_data, dict) else {}
+    action = data.get("action", EXTERNAL_CHANGE_KEEP_AUTOMATIC)
+    if action not in EXTERNAL_CHANGE_POLICY_OPTIONS:
+        action = EXTERNAL_CHANGE_KEEP_AUTOMATIC
+    return {
+        "action": str(action),
+        "duration_minutes": _normalize_int(
+            data.get("duration_minutes"),
+            DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+            minimum=1,
+            maximum=10080,
+        ),
+    }
+
+
 def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
     """Normalize stored preconditioning settings."""
     data = raw_data if isinstance(raw_data, dict) else {}
@@ -1328,6 +1369,9 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
             data.get("room_temperature_entity_id")
         ),
         "room_sensor_assist_enabled": bool(data.get("room_sensor_assist_enabled", False)),
+        "room_sensor_assist_deadband": _normalize_room_sensor_assist_deadband(
+            data.get("room_sensor_assist_deadband")
+        ),
         "room_sensor_assist_max_delta": _normalize_float(
             data.get("room_sensor_assist_max_delta"),
             DEFAULT_ROOM_SENSOR_ASSIST_MAX_DELTA,
@@ -2087,6 +2131,23 @@ def _normalize_float(
     return max(minimum, min(number, maximum))
 
 
+def _normalize_room_sensor_assist_deadband(value: Any) -> float:
+    """Repair a corrupt stored deadband to its safe Celsius default."""
+    try:
+        deadband = float(value)
+    except (TypeError, ValueError):
+        return DEFAULT_ROOM_SENSOR_ASSIST_DEADBAND
+    if not isfinite(deadband) or not 0 <= deadband <= 9.0:
+        return DEFAULT_ROOM_SENSOR_ASSIST_DEADBAND
+    return deadband
+
+
+def is_room_sensor_assist_deadband_step_aligned(value: float) -> bool:
+    """Return whether a deadband uses the public 0.1-degree increment."""
+    units = value / 0.1
+    return abs(units - round(units)) <= 0.000001
+
+
 def _normalize_minutes(value: Any, fallback: int) -> int:
     """Normalize a bounded minute value."""
     try:
@@ -2319,6 +2380,25 @@ def _normalize_zone_pauses(raw_zone: dict[str, Any]) -> list[ZonePauseReason]:
                     continue
                 seen_ids.add(pause_id)
                 reason["pause_id"] = pause_id
+                if pause_id == MANUAL_CONTROL_PAUSE_ID:
+                    manual_policy = candidate.get("manual_policy")
+                    reason["manual_policy"] = (
+                        str(manual_policy)
+                        if manual_policy in MANUAL_ADJUSTMENT_POLICY_OPTIONS
+                        else EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK
+                    )
+                    manual_source = candidate.get("manual_source")
+                    if manual_source in ("external_change", "explicit"):
+                        reason["manual_source"] = str(manual_source)
+                    duration_minutes = candidate.get("duration_minutes")
+                    if isinstance(duration_minutes, int) and 1 <= duration_minutes <= 10080:
+                        reason["duration_minutes"] = duration_minutes
+                    changed_fields = candidate.get("changed_fields")
+                    if isinstance(changed_fields, list):
+                        reason["changed_fields"] = [
+                            field for field in changed_fields
+                            if isinstance(field, str)
+                        ]
         elif manual_seen:
             continue
         else:

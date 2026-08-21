@@ -123,12 +123,31 @@ type: custom:velair-card
 view: sensors
 show_room_assist_switch: false
 show_room_assist_sensor: false
+show_room_assist_deadband: false
 show_room_assist_max_delta: false
 show_room_assist_debounce: false
 show_room_assist_live_status: true
 ```
 
 Omitted `show_room_assist_*` values default to `true`.
+
+The Room Assist live scale derives its no-correction band from the saved
+`room_sensor_assist_deadband` value. A scalar target expands by the deadband on
+both sides; a native range expands beyond both scheduled boundaries. Those
+endpoints participate in the scale bounds so the striped band is never
+clipped. The non-zero legend uses a 640 px coordinate track matching the graph
+and a horizontally sticky anchor constrained by the band, with the existing
+graph scroller as its only scrolling container. A non-scrolling `clip-path`
+ties the label's visible pixels to the band's actual intersection, while
+container queries select a symbol, translated brief `Zone ±value`, translated
+descriptive compact label, or full visible label without changing the complete accessible
+name. The striped surface is centered on the main scale line with a visible
+gap before the lower relationship line. This keeps the label with the visible
+part of the band without scroll listeners, observers, or Lit state. A
+zero value keeps a static explicit legend without drawing a surface.
+`show_room_assist_deadband: false` hides the configuration row, visualization,
+and legend as one display option. This is derived UI only and must not create
+frontend persistence.
 
 The Comfort card (`view: comfort`) uses the same thermostat filtering and can
 hide its configuration or each live graph independently:

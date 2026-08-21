@@ -10,9 +10,36 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 
 from . import helpers
+import voluptuous as vol
 
 
 api_module = importlib.import_module("custom_components.velair.api")
+
+
+class ManualAdjustmentApiSchemaTest(unittest.TestCase):
+    def test_enter_manual_adjustment_ws_rejects_legacy_session_fields(self) -> None:
+        schema = vol.Schema(
+            api_module.ENTER_MANUAL_ADJUSTMENT_WS_SCHEMA,
+            extra=vol.PREVENT_EXTRA,
+        )
+        self.assertEqual(
+            {
+                "type": "velair/enter_manual_adjustment",
+                "entity_id": "climate.salon",
+            },
+            schema({
+                "type": "velair/enter_manual_adjustment",
+                "entity_id": "climate.salon",
+            }),
+        )
+        for legacy_field, value in (("policy", "for_duration"), ("duration_minutes", 45)):
+            with self.subTest(field=legacy_field):
+                with self.assertRaises(vol.Invalid):
+                    schema({
+                        "type": "velair/enter_manual_adjustment",
+                        "entity_id": "climate.salon",
+                        legacy_field: value,
+                    })
 
 
 class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
@@ -648,6 +675,116 @@ class PortableTemperatureContractTest(unittest.TestCase):
             68,
         )
 
+    def test_legacy_import_copies_minimum_delta_into_room_assist_deadband(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 7,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {
+                        "schedule": {},
+                        "preconditioning": {"minimum_delta_temperature": 0.5},
+                    }
+                }
+            },
+        }
+
+        imported = api_module._build_import_data(
+            self._runtime(api_module.FAHRENHEIT), payload, ["zones"]
+        )
+
+        self.assertEqual(
+            imported["zones"]["climate.salon"]["preconditioning"][
+                "room_sensor_assist_deadband"
+            ],
+            0.9,
+        )
+
+    def test_v8_deadband_round_trip_converts_explicit_fahrenheit_to_celsius(
+        self,
+    ) -> None:
+        export_runtime = self._runtime(api_module.FAHRENHEIT)
+        export_runtime["entry"] = SimpleNamespace(options={})
+        export_runtime["storage"].data["zones"]["climate.salon"][
+            "preconditioning"
+        ]["room_sensor_assist_deadband"] = 1.8
+
+        payload = api_module._build_export_payload(export_runtime, ["zones"])
+
+        self.assertEqual(payload["model_version"], 8)
+        self.assertEqual(
+            payload["sections"]["zones"]["climate.salon"]["preconditioning"][
+                "room_sensor_assist_deadband"
+            ],
+            1.8,
+        )
+        imported = api_module._build_import_data(
+            self._runtime(api_module.CELSIUS), payload, ["zones"]
+        )
+        self.assertEqual(
+            imported["zones"]["climate.salon"]["preconditioning"][
+                "room_sensor_assist_deadband"
+            ],
+            1.0,
+        )
+
+    def test_v8_deadband_round_trip_preserves_legacy_precision(self) -> None:
+        export_runtime = self._runtime(api_module.CELSIUS)
+        export_runtime["entry"] = SimpleNamespace(options={})
+        export_runtime["storage"].data["zones"]["climate.salon"][
+            "preconditioning"
+        ]["room_sensor_assist_deadband"] = 0.35
+
+        payload = api_module._build_export_payload(export_runtime, ["zones"])
+        imported = api_module._build_import_data(
+            self._runtime(api_module.CELSIUS), payload, ["zones"]
+        )
+
+        self.assertEqual(payload["model_version"], 8)
+        self.assertEqual(
+            payload["sections"]["zones"]["climate.salon"]["preconditioning"][
+                "room_sensor_assist_deadband"
+            ],
+            0.35,
+        )
+        self.assertEqual(
+            imported["zones"]["climate.salon"]["preconditioning"][
+                "room_sensor_assist_deadband"
+            ],
+            0.35,
+        )
+
+    def test_import_rejects_explicit_invalid_room_assist_deadband(self) -> None:
+        for value in (
+            None,
+            "letters",
+            -0.1,
+            5.1,
+            float("nan"),
+            float("inf"),
+        ):
+            with self.subTest(value=value):
+                payload = {
+                    "format": api_module.EXPORT_FORMAT,
+                    "model_version": api_module.EXPORT_MODEL_VERSION,
+                    "temperature_unit": api_module.CELSIUS,
+                    "sections": {
+                        "zones": {
+                            "climate.salon": {
+                                "schedule": {},
+                                "preconditioning": {
+                                    "room_sensor_assist_deadband": value
+                                },
+                            }
+                        }
+                    },
+                }
+                with self.assertRaisesRegex(ValueError, "deadband"):
+                    api_module._build_import_data(
+                        self._runtime(api_module.CELSIUS), payload, ["zones"]
+                    )
+
     def test_import_rejects_incomplete_or_mixed_range_without_dropping_day(self) -> None:
         for invalid_block in (
             {"start": "09:00", "target_temp_low": 20},
@@ -926,6 +1063,22 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
         )
 
         self.assertEqual(data["room_sensor_assist_debounce_seconds"], 10)
+
+    def test_preconditioning_schema_validates_room_assist_deadband(self) -> None:
+        self.assertEqual(
+            api_module.PRECONDITIONING_SCHEMA(
+                {"room_sensor_assist_deadband": 0}
+            )["room_sensor_assist_deadband"],
+            0,
+        )
+        for value in (None, "letters", 0.05, float("nan"), float("inf")):
+            with self.subTest(value=value):
+                with self.assertRaises(vol.Invalid):
+                    api_module._room_sensor_assist_deadband(value)
+        self.assertAlmostEqual(
+            api_module._room_sensor_assist_deadband(0.30000000000000004),
+            0.3,
+        )
 
     def test_learning_response_reports_history_model_when_ready(self) -> None:
         response = api_module._build_preconditioning_learning_response(

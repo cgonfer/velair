@@ -524,13 +524,17 @@ export const overviewStyles = css`
       color-mix(in srgb, var(--timeline-handle, var(--primary-color)) 18%, transparent) 72%,
       transparent 100%
     );
+  background-position: -72% 0;
+  background-repeat: no-repeat;
+  background-size: 42% 100%;
+  border-radius: inherit;
   content: "";
-  inset: -1px auto -1px 0;
+  inset: 0;
   opacity: 0;
   pointer-events: none;
   position: absolute;
-  width: 42%;
-  z-index: -1;
+  width: auto;
+  z-index: 0;
 }
 
 .overview-timeline-boost::after {
@@ -580,8 +584,8 @@ export const overviewStyles = css`
 
 @keyframes velair-overview-boost-bars {
   0% {
+    background-position: -72% 0;
     opacity: 0;
-    transform: translateX(-130%);
   }
 
   14% {
@@ -593,8 +597,8 @@ export const overviewStyles = css`
   }
 
   100% {
+    background-position: 172% 0;
     opacity: 0;
-    transform: translateX(260%);
   }
 }
 
@@ -710,6 +714,19 @@ export const overviewStyles = css`
 .overview-zone-card-name strong, .overview-zone-card-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .overview-zone-card-name span { color: var(--secondary-text-color); font-size: 11px; }
 .overview-zone-activity { align-items: center; align-self: start; box-sizing: border-box; display: grid; gap: 8px; grid-column: 3; grid-template-columns: 32px minmax(0, max-content); justify-self: end; max-width: 220px; min-width: 0; width: fit-content; }
+.overview-manual-control { align-items: center; display: grid; gap: 4px; grid-column: 2; justify-self: start; min-width: 0; }
+.manual-control-segmented { background: var(--secondary-background-color); border: 1px solid color-mix(in srgb, var(--primary-text-color) 24%, var(--divider-color)); border-radius: 8px; display: grid; grid-template-columns: repeat(2, max-content); max-width: 100%; min-width: 0; overflow: hidden; width: fit-content; }
+.manual-control-segmented button { align-items: center; background: transparent; border: 0; border-radius: 0; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; font: inherit; font-size: 11px; gap: 4px; justify-content: center; line-height: 1; min-height: 30px; min-width: 0; padding: 3px 7px; transition: background-color 120ms ease, color 120ms ease, filter 120ms ease; white-space: nowrap; }
+.manual-control-segmented button ha-icon { --mdc-icon-size: 13px; color: currentColor; flex: 0 0 auto; }
+.manual-control-segmented button + button { border-inline-start: 1px solid color-mix(in srgb, var(--primary-text-color) 20%, var(--divider-color)); }
+.manual-control-segmented button:not([aria-pressed="true"]):not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--primary-color) 18%, var(--secondary-background-color)); color: var(--primary-text-color); }
+.manual-control-segmented button[aria-pressed="true"] { background: var(--primary-color); color: var(--text-primary-color, var(--card-background-color)); font-weight: 600; }
+.manual-control-segmented button[aria-pressed="true"]:not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--primary-color) 88%, var(--primary-text-color)); }
+.manual-control-segmented button:active:not([aria-disabled="true"]) { filter: brightness(.92); }
+.manual-control-segmented button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
+.manual-control-segmented button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -3px; position: relative; z-index: 1; }
+.manual-control-segmented button[aria-pressed="true"]:focus-visible { outline-color: var(--text-primary-color, var(--card-background-color)); }
+.manual-control-detail, .manual-control-reason { color: var(--secondary-text-color); font-size: 11px; line-height: 1.35; }
 .overview-zone-activity-copy { display: grid; gap: 1px; min-width: 0; }
 .overview-zone-activity-copy strong, .overview-zone-activity-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .overview-zone-activity-summary { align-items: baseline; display: flex; flex-wrap: wrap; font-size: 12px; gap: 0 4px; line-height: 1.3; min-width: 0; }
@@ -745,7 +762,7 @@ export const overviewStyles = css`
 .overview-assist-metric small { color: var(--secondary-text-color); font-size: 10px; text-transform: uppercase; }
 .overview-assist-metric strong { font-size: 15px; }
 .overview-assist-offset strong { font-size: 15px; }
-.overview-zone-signals { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; overflow: visible; white-space: normal; }
+.overview-zone-signals { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; grid-row: 2; min-width: 0; overflow: visible; white-space: normal; }
 .overview-zone-signals:empty { display: none; }
 .overview-zone-signal {
   align-items: center;
@@ -808,26 +825,28 @@ export const overviewStyles = css`
   .overview-zone-card-heading { grid-template-columns: minmax(0, 1fr) minmax(120px, 220px); }
   .overview-zone-card-name { grid-column: 1; grid-row: 1; }
   .overview-zone-activity { grid-column: 2; grid-row: 1; max-width: 220px; }
-  .overview-zone-signals { grid-column: 1 / -1; grid-row: 2; }
+  .overview-manual-control { grid-column: 1 / -1; grid-row: 2; }
+  .overview-zone-signals { grid-column: 1 / -1; grid-row: 3; }
   .overview-zone-signal strong { overflow: visible; text-overflow: clip; }
 }
 @media (max-width: 1200px) {
   .overview-zone-card-heading { grid-template-columns: minmax(0, 1fr) minmax(120px, 220px); }
   .overview-zone-card-name { grid-column: 1; grid-row: 1; }
   .overview-zone-activity { grid-column: 2; grid-row: 1; max-width: 220px; }
-  .overview-zone-signals { grid-column: 1 / -1; grid-row: 2; }
+  .overview-manual-control { grid-column: 1 / -1; grid-row: 2; }
+  .overview-zone-signals { grid-column: 1 / -1; grid-row: 3; }
   .overview-zone-signal strong { overflow: visible; text-overflow: clip; }
 }
 @container overview-zone-card (max-width: 600px) {
   .overview-zone-card-heading { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%); }
   .overview-zone-card-name { grid-column: 1; grid-row: 1; }
-  .overview-zone-activity { grid-column: 2; grid-row: 1; grid-template-columns: 32px minmax(0, 1fr); justify-self: end; max-width: 100%; width: 100%; }
+  .overview-zone-activity { grid-column: 2; grid-row: 1; grid-template-columns: 32px minmax(0, max-content); justify-self: end; max-width: 100%; width: fit-content; }
   .overview-zone-signals { gap: 7px; margin: 3px 0; padding: 2px 0; }
 }
 @media (max-width: 600px) {
   .overview-zone-card-heading { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%); }
   .overview-zone-card-name { grid-column: 1; grid-row: 1; }
-  .overview-zone-activity { grid-column: 2; grid-row: 1; grid-template-columns: 32px minmax(0, 1fr); justify-self: end; max-width: 100%; width: 100%; }
+  .overview-zone-activity { grid-column: 2; grid-row: 1; grid-template-columns: 32px minmax(0, max-content); justify-self: end; max-width: 100%; width: fit-content; }
   .overview-zone-signals { gap: 7px; margin: 3px 0; padding: 2px 0; }
   .overview-zone-profile { max-width: 100%; }
   .overview-zone-details { padding: 6px 8px; }

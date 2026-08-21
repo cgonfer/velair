@@ -90,6 +90,31 @@ describe("schedule view", () => {
     expect(selectSource).toHaveBeenCalledWith("profile");
   });
 
+  it("routes Profile schedule failures to the host notice stack", () => {
+    const container = document.createElement("div");
+    const showError = vi.fn();
+    const viewHost = {
+      _applyScheduleData: vi.fn(),
+      _currentTimelineNow: () => new Date(),
+      _data: { configured_entities: [], profiles: [], settings: {}, zones: {} },
+      _hasExternalConfig: false,
+      _scheduleSource: "profile",
+      _selectedWeekday: "monday",
+      _setProfileScheduleDirty: vi.fn(),
+      _showError: showError,
+      _showSuccess: vi.fn(),
+      _t: (key: string) => key,
+    } as unknown as VelairViewHost;
+
+    render(renderSchedulesView(viewHost, []), container);
+    container.querySelector("velair-profiles-view")?.dispatchEvent(new CustomEvent(
+      "profile-error",
+      { bubbles: true, composed: true, detail: "Invalid Profile" },
+    ));
+
+    expect(showError).toHaveBeenCalledWith("Invalid Profile");
+  });
+
   it("keeps the Lovelace schedules view on Default schedules", () => {
     const container = document.createElement("div");
     const viewHost = {

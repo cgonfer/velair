@@ -406,6 +406,7 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(comfort["temperature_max"], 75.0)
         preconditioning = storage.data["zones"]["climate.room"]["preconditioning"]
         self.assertEqual(preconditioning["minimum_delta_temperature"], 1.0)
+        self.assertEqual(preconditioning["room_sensor_assist_deadband"], 1.0)
         self.assertEqual(preconditioning["room_sensor_assist_max_delta"], 4.0)
         self.assertEqual(preconditioning["fallback_minutes_per_degree"], 14.0)
         default_targets = {
@@ -431,7 +432,73 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(zone["comfort"]["temperature_min"], 68.0)
         self.assertEqual(zone["comfort"]["temperature_max"], 75.0)
         self.assertEqual(zone["preconditioning"]["minimum_delta_temperature"], 1.0)
+        self.assertEqual(zone["preconditioning"]["room_sensor_assist_deadband"], 1.0)
         self.assertEqual(zone["preconditioning"]["fallback_minutes_per_degree"], 14.0)
+
+    async def test_storage_migrates_absent_room_assist_deadband_from_legacy_delta(
+        self,
+    ) -> None:
+        for unit, legacy_delta in (
+            (CELSIUS, 0.35),
+            (CELSIUS, 0.7),
+            (FAHRENHEIT, 2.0),
+        ):
+            with self.subTest(unit=unit):
+                raw = {
+                    TEMPERATURE_UNIT_KEY: unit,
+                    "zones": {
+                        "climate.room": {
+                            "enabled": True,
+                            "schedule": {},
+                            "preconditioning": {
+                                "minimum_delta_temperature": legacy_delta
+                            },
+                        }
+                    },
+                }
+                storage = make_storage(unit, raw)
+                await storage.async_load(["climate.room"])
+                self.assertEqual(
+                    storage.data["zones"]["climate.room"]["preconditioning"][
+                        "room_sensor_assist_deadband"
+                    ],
+                    legacy_delta,
+                )
+
+    async def test_storage_repairs_explicit_corrupt_deadband_to_native_default(
+        self,
+    ) -> None:
+        for unit, raw_value, expected in (
+            (CELSIUS, None, 0.3),
+            (CELSIUS, -1, 0.3),
+            (FAHRENHEIT, "invalid", 1.0),
+            (FAHRENHEIT, float("inf"), 1.0),
+            (FAHRENHEIT, 0, 0.0),
+        ):
+            with self.subTest(unit=unit, raw_value=raw_value):
+                storage = make_storage(
+                    unit,
+                    {
+                        TEMPERATURE_UNIT_KEY: unit,
+                        "zones": {
+                            "climate.room": {
+                                "enabled": True,
+                                "schedule": {},
+                                "preconditioning": {
+                                    "minimum_delta_temperature": 2,
+                                    "room_sensor_assist_deadband": raw_value,
+                                },
+                            }
+                        },
+                    },
+                )
+                await storage.async_load(["climate.room"])
+                self.assertEqual(
+                    storage.data["zones"]["climate.room"]["preconditioning"][
+                        "room_sensor_assist_deadband"
+                    ],
+                    expected,
+                )
 
     async def test_migration_converts_all_thermal_kinds_and_is_idempotent(self) -> None:
         storage = make_storage(FAHRENHEIT, runtime_celsius_data())
@@ -448,6 +515,7 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(zone["comfort"]["temperature_min"], 68.0)
         self.assertEqual(zone["comfort"]["temperature_max"], 75.0)
         self.assertAlmostEqual(zone["preconditioning"]["minimum_delta_temperature"], 0.5)
+        self.assertAlmostEqual(zone["preconditioning"]["room_sensor_assist_deadband"], 0.54)
         self.assertAlmostEqual(zone["preconditioning"]["room_sensor_assist_max_delta"], 3.6)
         self.assertAlmostEqual(
             zone["preconditioning"]["fallback_minutes_per_degree"], 13.9

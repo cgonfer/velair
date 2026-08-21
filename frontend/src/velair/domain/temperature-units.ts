@@ -14,6 +14,10 @@ export function defaultRoomAssistDelta(unit: string | undefined): number {
   return isFahrenheit(unit) ? 4 : 2;
 }
 
+export function defaultRoomAssistDeadband(unit: string | undefined): number {
+  return isFahrenheit(unit) ? 1 : 0.3;
+}
+
 export function defaultMinutesPerDegree(unit: string | undefined): number {
   return isFahrenheit(unit) ? 14 : 25;
 }

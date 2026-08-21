@@ -5,6 +5,28 @@ export type RoomAssistTemperatureRange = {
   high: number;
 };
 
+export function roomAssistDeadbandZone(
+  status: RoomSensorAssistStatus,
+  deadband: number,
+): RoomAssistTemperatureRange | undefined {
+  if (!Number.isFinite(deadband) || deadband < 0) {
+    return undefined;
+  }
+
+  const scheduledRange = scheduledAssistRange(status);
+  if (scheduledRange) {
+    return {
+      low: scheduledRange.low - deadband,
+      high: scheduledRange.high + deadband,
+    };
+  }
+
+  const target = finiteNumber(status.target_temperature);
+  return target === undefined
+    ? undefined
+    : { low: target - deadband, high: target + deadband };
+}
+
 export function signedAssistDelta(delta: number, direction?: RoomSensorAssistStatus["direction"]): number {
   return direction === "cool" ? -Math.abs(delta) : Math.abs(delta);
 }

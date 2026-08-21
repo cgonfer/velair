@@ -6,6 +6,7 @@ from collections import deque
 from copy import deepcopy
 from datetime import UTC, datetime
 import logging
+import math
 import re
 from typing import Any
 
@@ -31,20 +32,37 @@ DIAGNOSTIC_HISTORY_LIMIT = 100
 DIAGNOSTIC_POLICY_VERSION = 1
 _CONTROL_EVENT_FIELDS = (
     "action",
+    "changed_fields",
+    "control_mode",
+    "duration_minutes",
     "event",
     "hvac_mode",
     "mode",
     "operation",
     "previous_mode",
+    "previous_control_mode",
     "profile_id",
     "reason",
     "source",
     "start",
+    "started_at",
     "temperature",
     "target_temp_high",
     "target_temp_low",
+    "until",
     "weekday",
+    "policy",
 )
+_CONTROL_SNAPSHOT_FIELDS = (
+    "hvac_mode",
+    "temperature",
+    "target_temp_low",
+    "target_temp_high",
+)
+_MANUAL_CONTROL_EVENTS = {
+    "external_climate_change_detected",
+    "zone_control_changed",
+}
 _FEATURE_EVENT_FIELDS: dict[str, tuple[str, ...]] = {
     "room_assist": (
         "applied_offset",
@@ -308,7 +326,19 @@ class RuntimeDiagnosticsManager:
         entity_id = data.get("entity_id") if isinstance(data.get("entity_id"), str) else None
         category = _event_history_category(event_name)
         safe_fields = _FEATURE_EVENT_FIELDS.get(category, _CONTROL_EVENT_FIELDS)
-        safe_data = {key: deepcopy(data[key]) for key in safe_fields if key in data}
+        safe_data = {
+            key: deepcopy(data[key])
+            for key in safe_fields
+            if key in data and key != "changed_fields"
+        }
+        if event_name in _MANUAL_CONTROL_EVENTS:
+            changed_fields = _sanitized_changed_fields(data.get("changed_fields"))
+            if changed_fields:
+                safe_data["changed_fields"] = changed_fields
+            for key in ("previous", "current"):
+                snapshot = _sanitized_control_snapshot(data.get(key))
+                if snapshot:
+                    safe_data[key] = snapshot
         self._record(
             "event",
             "info",
@@ -844,6 +874,34 @@ def _event_history_category(event_name: str) -> str:
     if normalized.startswith("comfort_"):
         return "comfort"
     return "control"
+
+
+def _sanitized_changed_fields(value: Any) -> list[str]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    return [
+        field
+        for field in value
+        if isinstance(field, str) and field in _CONTROL_SNAPSHOT_FIELDS
+    ]
+
+
+def _sanitized_control_snapshot(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    snapshot: dict[str, Any] = {}
+    hvac_mode = value.get("hvac_mode")
+    if isinstance(hvac_mode, str):
+        snapshot["hvac_mode"] = hvac_mode
+    for field in _CONTROL_SNAPSHOT_FIELDS[1:]:
+        candidate = value.get(field)
+        if (
+            isinstance(candidate, (int, float))
+            and not isinstance(candidate, bool)
+            and math.isfinite(candidate)
+        ):
+            snapshot[field] = candidate
+    return snapshot
 
 
 def _event_time(event: Event) -> str:

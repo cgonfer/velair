@@ -1,8 +1,14 @@
 import { html, nothing } from "lit";
 import { VELAIR_FRONTEND_BUILD, VELAIR_RELEASE_VERSION } from "../build-info";
-import { PORTABLE_MODEL_VERSION, PORTABLE_SECTIONS, WEEKDAYS } from "../constants";
+import {
+  DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+  PORTABLE_MODEL_VERSION,
+  PORTABLE_SECTIONS,
+  WEEKDAYS,
+} from "../constants";
 import { unmatchedPreconditioningLearningEntities } from "../domain/portable";
 import type { VelairViewHost } from "../host-types";
+import { renderInlineHelp } from "./inline-help";
 import type { PortableSection } from "../types";
 
 type SettingsViewHost = VelairViewHost;
@@ -374,6 +380,7 @@ export function renderSettingsZoneOrderRow(
           </div>
           <span>${entityId}</span>
         </div>
+        ${renderSettingsExternalChangePolicy(host, entityId)}
       </div>
       <div class="settings-row-actions">
         <button
@@ -394,6 +401,70 @@ export function renderSettingsZoneOrderRow(
         >
           <ha-icon icon="mdi:chevron-down"></ha-icon>
         </button>
+      </div>
+    </div>
+  `;
+}
+
+export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entityId: string) {
+  const policy = host._data?.zones[entityId]?.external_change_policy ?? {
+    action: "keep_automatic" as const,
+    duration_minutes: DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+  };
+  const key = entityId.replace(/[^a-z0-9_-]/gi, "-");
+  const labelId = `external-adjustment-label-${key}`;
+  const helpId = `external-adjustment-info-${key}`;
+  return html`
+    <div class="settings-external-policy">
+      <div class="settings-policy-heading">
+        <span class="label" id=${labelId}>${host._t("externalChangePolicy")}</span>
+        ${renderInlineHelp(
+          helpId,
+          host._t("externalAdjustmentInfoAction"),
+          host._t("externalChangePolicyDescription"),
+        )}
+      </div>
+      <div class="settings-policy-controls">
+        <span class="select-wrap">
+          <select
+            aria-labelledby=${labelId}
+            .value=${policy.action}
+            ?disabled=${host._settingsSaving}
+            @change=${(event: Event) => host._saveExternalChangePolicy(entityId, {
+              ...policy,
+              action: (event.target as HTMLSelectElement).value as typeof policy.action,
+            })}
+          >
+            <option value="keep_automatic">${host._t("externalChangeKeepAutomatic")}</option>
+            <option value="until_next_block">${host._t("externalChangeUntilNextBlock")}</option>
+            <option value="for_duration">${host._t("externalChangeForDuration")}</option>
+            <option value="until_resumed">${host._t("externalChangeUntilResumed")}</option>
+          </select>
+        </span>
+        ${policy.action === "for_duration" ? html`
+          <label class="settings-policy-duration">
+            <input
+              type="number"
+              min="1"
+              max="10080"
+              aria-label=${host._t("durationMinutes")}
+              .value=${String(policy.duration_minutes ?? DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES)}
+              ?disabled=${host._settingsSaving}
+              @change=${(event: Event) => host._saveExternalChangePolicy(entityId, {
+                ...policy,
+                duration_minutes: Math.max(
+                  1,
+                  Math.min(
+                    10080,
+                    Number((event.target as HTMLInputElement).value)
+                      || DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+                  ),
+                ),
+              })}
+            />
+            <span>${host._t("minutesShort")}</span>
+          </label>
+        ` : nothing}
       </div>
     </div>
   `;

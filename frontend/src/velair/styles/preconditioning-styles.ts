@@ -241,49 +241,6 @@ export const preconditioningStyles = css`
   gap: 4px;
 }
 
-.preconditioning-help {
-  align-items: center;
-  color: var(--secondary-text-color);
-  cursor: help;
-  display: inline-flex;
-  flex: 0 0 auto;
-  outline: none;
-  position: relative;
-}
-
-.preconditioning-help ha-icon {
-  --mdc-icon-size: 15px;
-}
-
-.preconditioning-help-tooltip {
-  background: var(--primary-text-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-  color: var(--primary-background-color);
-  font-size: 11px;
-  font-weight: 400;
-  left: 50%;
-  line-height: 1.35;
-  max-width: min(240px, calc(100vw - 40px));
-  opacity: 0;
-  padding: 7px 8px;
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  transform: translateX(-22px);
-  transition: opacity 120ms ease, visibility 120ms ease;
-  visibility: hidden;
-  white-space: normal;
-  width: max-content;
-  z-index: 20;
-}
-
-.preconditioning-help:hover .preconditioning-help-tooltip,
-.preconditioning-help:focus .preconditioning-help-tooltip,
-.preconditioning-help:focus-visible .preconditioning-help-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
 
 .preconditioning-config-row input,
 .preconditioning-config-row select {
@@ -441,7 +398,7 @@ export const preconditioningStyles = css`
   text-overflow: ellipsis;
 }
 
-.preconditioning-live-label .preconditioning-help {
+.preconditioning-live-label .inline-help {
   color: var(--secondary-text-color);
 }
 

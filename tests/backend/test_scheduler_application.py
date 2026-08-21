@@ -2976,6 +2976,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             "outdoor_temperature_entity_id": "sensor.outdoor",
             "room_temperature_entity_id": "sensor.salon_temperature",
             "room_sensor_assist_enabled": True,
+            "room_sensor_assist_deadband": 1.2,
             "room_sensor_assist_max_delta": 4,
         }
 
@@ -2987,6 +2988,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         expected["enabled"] = True
         expected["room_temperature_entity_id"] = "sensor.salon_temperature"
         expected["room_sensor_assist_enabled"] = True
+        expected["room_sensor_assist_deadband"] = 1.2
         expected["room_sensor_assist_max_delta"] = 4.0
         self.assertEqual(result, expected)
         self.assertEqual(
@@ -3019,6 +3021,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             "fallback_minutes_per_degree": 30,
             "room_temperature_entity_id": "sensor.salon_temperature",
             "room_sensor_assist_enabled": True,
+            "room_sensor_assist_deadband": 2.5,
             "room_sensor_assist_max_delta": 7.2,
             "room_sensor_assist_debounce_seconds": 35,
         }
@@ -3029,6 +3032,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["minimum_delta_temperature"], 1.0)
         self.assertEqual(result["fallback_minutes_per_degree"], 14.0)
+        self.assertEqual(result["room_sensor_assist_deadband"], 2.5)
         self.assertEqual(result["room_sensor_assist_max_delta"], 7.2)
         self.assertEqual(result["room_sensor_assist_debounce_seconds"], 35)
 
@@ -3055,14 +3059,17 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         for values in (
             {
                 "minimum_delta_temperature": 0,
+                "room_sensor_assist_deadband": 0,
                 "room_sensor_assist_max_delta": 0.1,
                 "fallback_minutes_per_degree": 1,
             },
             {
                 "minimum_delta_temperature": 5,
+                "room_sensor_assist_deadband": 5,
                 "room_sensor_assist_max_delta": 10,
                 "fallback_minutes_per_degree": 120,
             },
+            {"room_sensor_assist_deadband": 0.30000000000000004},
         ):
             await self.scheduler.async_update_zone_preconditioning(
                 self.entity_id, values
@@ -3071,18 +3078,23 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         for key, value in (
             ("minimum_delta_temperature", -0.1),
             ("minimum_delta_temperature", 5.1),
+            ("room_sensor_assist_deadband", -0.1),
+            ("room_sensor_assist_deadband", 0.05),
+            ("room_sensor_assist_deadband", 5.1),
+            ("room_sensor_assist_deadband", "invalid"),
+            ("room_sensor_assist_deadband", float("nan")),
             ("room_sensor_assist_max_delta", 0),
             ("room_sensor_assist_max_delta", 10.1),
             ("fallback_minutes_per_degree", 0.9),
             ("fallback_minutes_per_degree", 120.1),
         ):
             with self.subTest(key=key, value=value):
-                with self.assertRaisesRegex(ValueError, "must be between"):
+                with self.assertRaisesRegex(ValueError, "must"):
                     await self.scheduler.async_update_zone_preconditioning(
                         self.entity_id, {key: value}
                     )
 
-        self.assertEqual(self.save_count, 2)
+        self.assertEqual(self.save_count, 3)
 
     async def test_fahrenheit_preconditioning_updates_enforce_runtime_bounds(self) -> None:
         self.climate.temperature_unit = lambda _entity_id: scheduler_module.FAHRENHEIT
@@ -3090,14 +3102,17 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         for values in (
             {
                 "minimum_delta_temperature": 0,
+                "room_sensor_assist_deadband": 0,
                 "room_sensor_assist_max_delta": 0.1,
                 "fallback_minutes_per_degree": 0.6,
             },
             {
                 "minimum_delta_temperature": 9,
+                "room_sensor_assist_deadband": 9,
                 "room_sensor_assist_max_delta": 18,
                 "fallback_minutes_per_degree": 66.7,
             },
+            {"room_sensor_assist_deadband": 0.30000000000000004},
         ):
             await self.scheduler.async_update_zone_preconditioning(
                 self.entity_id, values
@@ -3106,18 +3121,21 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         for key, value in (
             ("minimum_delta_temperature", -0.1),
             ("minimum_delta_temperature", 9.1),
+            ("room_sensor_assist_deadband", -0.1),
+            ("room_sensor_assist_deadband", 0.05),
+            ("room_sensor_assist_deadband", 9.1),
             ("room_sensor_assist_max_delta", 0),
             ("room_sensor_assist_max_delta", 18.1),
             ("fallback_minutes_per_degree", 0.5),
             ("fallback_minutes_per_degree", 66.8),
         ):
             with self.subTest(key=key, value=value):
-                with self.assertRaisesRegex(ValueError, "must be between"):
+                with self.assertRaisesRegex(ValueError, "must"):
                     await self.scheduler.async_update_zone_preconditioning(
                         self.entity_id, {key: value}
                     )
 
-        self.assertEqual(self.save_count, 2)
+        self.assertEqual(self.save_count, 3)
 
     async def test_fahrenheit_comfort_missing_or_invalid_uses_runtime_defaults(self) -> None:
         self.climate.temperature_unit = lambda _entity_id: "°F"
@@ -3902,6 +3920,52 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             self.scheduler._climate_delivery.is_deferred(self.entity_id)
         )
 
+    async def test_active_room_assist_deadband_update_refreshes_target_immediately(
+        self,
+    ) -> None:
+        self.climate.steps[self.entity_id] = 0.1
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "temperature": 22},
+        )
+        self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
+            state="20", attributes={"unit_of_measurement": "°C"}
+        )
+        self.data["zones"][self.entity_id]["preconditioning"].update(
+            {
+                "room_temperature_entity_id": "sensor.salon_temperature",
+                "room_sensor_assist_enabled": True,
+                "room_sensor_assist_deadband": 2.0,
+                "room_sensor_assist_max_delta": 3,
+            }
+        )
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 22,
+                "hvac_mode": "heat",
+            }
+        ]
+        await self.scheduler.async_apply_current_schedule()
+        self.climate.calls.clear()
+
+        result = await self.scheduler.async_update_zone_preconditioning(
+            self.entity_id, {"room_sensor_assist_deadband": 0.2}
+        )
+
+        self.assertEqual(result["room_sensor_assist_deadband"], 0.2)
+        self.assertEqual(
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 24.0, True, "heat")],
+        )
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[
+                self.entity_id
+            ].applied_temperature,
+            24.0,
+        )
+
     async def test_room_assist_restore_failure_retries_persisted_disabled_intent(
         self,
     ) -> None:
@@ -4474,6 +4538,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
                     "enabled": True,
                     "previous_enabled": False,
                     "room_temperature_entity_id": "sensor.salon_temperature",
+                    "deadband": 0.3,
                     "max_delta": 2.0,
                     "debounce_seconds": 20,
                 }
@@ -5317,7 +5382,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     def test_room_sensor_assist_non_driving_target_never_crosses_schedule(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 5}
         )
 
         cooling_hold = self.scheduler._room_sensor_assist_target(
@@ -5348,12 +5413,41 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(heating_hold.scheduled_target_guard, "heating_ceiling")
         self.assertEqual(heating_hold.assist_delta, 1.0)
 
+    def test_room_assist_deadband_is_independent_from_preconditioning_delta(self) -> None:
+        self.climate.steps[self.entity_id] = 0.1
+        config = normalize_preconditioning_data(
+            {
+                "minimum_delta_temperature": 2.0,
+                "room_sensor_assist_deadband": 0.2,
+                "room_sensor_assist_max_delta": 5.0,
+            }
+        )
+
+        assisted = self.scheduler._room_sensor_assist_target(
+            self.entity_id, config, "heat", 22.0, 21.0, 20.0
+        )
+        preconditioning = self.scheduler._resolve_preconditioning_target(
+            self.entity_id,
+            config,
+            {
+                "start": "17:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 22.0,
+                "hvac_mode": "heat",
+            },
+            current_temperature=21.0,
+            hvac_mode="heat",
+        )
+
+        self.assertEqual(assisted.assist_delta, 1.0)
+        self.assertIsNone(preconditioning)
+
     def test_room_sensor_assist_signed_protection_uses_native_fahrenheit_values(self) -> None:
         self.climate.temperature_unit = lambda _entity_id: scheduler_module.FAHRENHEIT
         self.climate.steps[self.entity_id] = 1
         self.climate.limits[self.entity_id] = (41, 95)
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0, "room_sensor_assist_max_delta": 9}
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 9}
         )
 
         cooling_guard = self.scheduler._room_sensor_assist_target(
@@ -5394,7 +5488,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     def test_room_sensor_assist_keeps_stronger_inverse_target_on_safe_side(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 5}
         )
 
         cooling_inverse = self.scheduler._room_sensor_assist_target(
@@ -5422,7 +5516,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     def test_room_sensor_assist_protection_applies_at_deadband_boundary(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0.5, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0.5, "room_sensor_assist_max_delta": 5}
         )
 
         cooling_hold = self.scheduler._room_sensor_assist_target(
@@ -5456,7 +5550,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     def test_room_sensor_assist_does_not_invent_device_hysteresis_margin(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 5}
         )
 
         result = self.scheduler._room_sensor_assist_target(
@@ -5750,6 +5844,60 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.scheduler._room_sensor_assist_states[self.entity_id].direction,
             "cool",
+        )
+
+    async def test_room_sensor_assist_auto_direction_uses_its_own_deadband(
+        self,
+    ) -> None:
+        self.climate.steps[self.entity_id] = 0.1
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="auto",
+            attributes={"current_temperature": 22.0, "temperature": 22.0},
+        )
+        self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
+            state="20",
+            attributes={"unit_of_measurement": "°C"},
+        )
+        self.data["zones"][self.entity_id]["preconditioning"].update(
+            {
+                "minimum_delta_temperature": 2.0,
+                "room_sensor_assist_deadband": 0.2,
+                "room_temperature_entity_id": "sensor.salon_temperature",
+                "room_sensor_assist_enabled": True,
+                "room_sensor_assist_max_delta": 3,
+            }
+        )
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 22,
+                "hvac_mode": "auto",
+            }
+        ]
+
+        await self.scheduler.async_apply_current_schedule()
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[self.entity_id].direction,
+            "heat",
+        )
+        self.climate.calls.clear()
+        self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
+            state="22.95",
+            attributes={"unit_of_measurement": "°C"},
+        )
+
+        await self.scheduler._async_refresh_room_sensor_assist_from_current_event(
+            self.entity_id
+        )
+
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[self.entity_id].direction,
+            "cool",
+        )
+        self.assertEqual(
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 21.1, True, "auto")],
         )
 
     async def test_room_sensor_assist_auto_holding_has_no_fixed_mode_guard(
@@ -6351,10 +6499,10 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(self.entity_id, self.scheduler._room_sensor_assist_states)
         self.assertEqual(self.scheduler._room_sensor_assist_entities, ())
 
-    def test_room_sensor_assist_minimum_delta_is_symmetric_deadband(self) -> None:
+    def test_room_sensor_assist_deadband_is_symmetric(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 1, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 5}
         )
 
         below_target = self.scheduler._room_sensor_assist_target(
@@ -6385,7 +6533,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.climate.steps[self.entity_id] = 0.5
         self.climate.limits[self.entity_id] = (5, 30)
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 5}
         )
 
         maximum_limited = self.scheduler._room_sensor_assist_target(
@@ -7434,7 +7582,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.climate.limits[self.entity_id] = (5, 35)
         config = normalize_preconditioning_data(
             {
-                "minimum_delta_temperature": 0.3,
+                "room_sensor_assist_deadband": 0.3,
                 "room_sensor_assist_max_delta": 2,
             }
         )
@@ -7481,7 +7629,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.climate.steps[self.entity_id] = 1
         self.climate.limits[self.entity_id] = (41, 95)
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 1, "room_sensor_assist_max_delta": 4}
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 4}
         )
 
         result = self.scheduler._room_sensor_assist_range_target(
@@ -7529,7 +7677,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.climate.steps[self.entity_id] = 0.0005
         self.climate.limits[self.entity_id] = (20, 21)
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0.1, "room_sensor_assist_max_delta": 0.5}
+            {"room_sensor_assist_deadband": 0.1, "room_sensor_assist_max_delta": 0.5}
         )
 
         result = self.scheduler._room_sensor_assist_range_target(
@@ -7553,7 +7701,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     ) -> None:
         self.climate.steps[self.entity_id] = 0.5
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0.3, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0.3, "room_sensor_assist_max_delta": 5}
         )
 
         holding = self.scheduler._room_sensor_assist_range_target(
@@ -7660,7 +7808,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.climate.steps[self.entity_id] = 0.5
         self.climate.limits[self.entity_id] = (5, 25)
         config = normalize_preconditioning_data(
-            {"minimum_delta_temperature": 0.3, "room_sensor_assist_max_delta": 5}
+            {"room_sensor_assist_deadband": 0.3, "room_sensor_assist_max_delta": 5}
         )
 
         maximum = self.scheduler._room_sensor_assist_range_target(

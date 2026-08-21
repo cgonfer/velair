@@ -469,6 +469,7 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
                 "outdoor_temperature_entity_id": None,
                 "room_temperature_entity_id": None,
                 "room_sensor_assist_enabled": False,
+                "room_sensor_assist_deadband": 0.3,
                 "room_sensor_assist_max_delta": 2.0,
                 "room_sensor_assist_debounce_seconds": 20,
             },
@@ -581,6 +582,7 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
             {
                 "room_temperature_entity_id": " sensor.bedroom_temperature ",
                 "room_sensor_assist_enabled": True,
+                "room_sensor_assist_deadband": 0,
                 "room_sensor_assist_max_delta": 7,
                 "room_sensor_assist_debounce_seconds": 120,
             }
@@ -591,8 +593,33 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
             "sensor.bedroom_temperature",
         )
         self.assertTrue(data["room_sensor_assist_enabled"])
+        self.assertEqual(data["room_sensor_assist_deadband"], 0.0)
         self.assertEqual(data["room_sensor_assist_max_delta"], 7.0)
         self.assertEqual(data["room_sensor_assist_debounce_seconds"], 120)
+
+    def test_normalize_preconditioning_repairs_corrupt_room_assist_deadband(
+        self,
+    ) -> None:
+        for value in (
+            None,
+            "invalid",
+            -0.1,
+            9.1,
+            float("nan"),
+            float("inf"),
+        ):
+            with self.subTest(value=value):
+                data = normalize_preconditioning_data(
+                    {"room_sensor_assist_deadband": value}
+                )
+                self.assertEqual(data["room_sensor_assist_deadband"], 0.3)
+
+        self.assertEqual(
+            normalize_preconditioning_data(
+                {"room_sensor_assist_deadband": 0.35}
+            )["room_sensor_assist_deadband"],
+            0.35,
+        )
 
     def test_normalize_preconditioning_data_caps_room_sensor_assist_max_delta(
         self,

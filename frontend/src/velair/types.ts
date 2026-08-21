@@ -66,6 +66,7 @@ export type VelairCardConfig = {
   show_comfort_humidity?: boolean;
   show_comfort_temperature?: boolean;
   show_room_assist_debounce?: boolean;
+  show_room_assist_deadband?: boolean;
   show_room_assist_live_status?: boolean;
   show_room_assist_max_delta?: boolean;
   show_room_assist_sensor?: boolean;
@@ -193,6 +194,7 @@ export type PreconditioningSettings = {
   outdoor_temperature_entity_id: string | null;
   room_temperature_entity_id: string | null;
   room_sensor_assist_enabled: boolean;
+  room_sensor_assist_deadband: number;
   room_sensor_assist_max_delta: number;
   room_sensor_assist_debounce_seconds: number;
 };
@@ -329,6 +331,24 @@ export type ScheduleZone = {
   }>;
   preconditioning?: PreconditioningSettings;
   comfort?: ComfortSettings;
+  external_change_policy?: ExternalChangePolicy;
+};
+
+export type ExternalChangePolicy = {
+  action: "keep_automatic" | "until_next_block" | "for_duration" | "until_resumed";
+  duration_minutes?: number;
+};
+
+export type ManualAdjustmentPolicy = Exclude<ExternalChangePolicy["action"], "keep_automatic">;
+
+export type ManualControl = {
+  active: boolean;
+  started_at?: string;
+  until?: string;
+  policy?: ManualAdjustmentPolicy;
+  source?: "external_change" | "explicit";
+  duration_minutes?: number;
+  changed_fields?: string[];
 };
 
 export type ZoneRuntimeStatus = {
@@ -345,6 +365,17 @@ export type ZoneRuntimeStatus = {
   pause_count?: number;
   pause_ids?: string[];
   manual_pause?: boolean;
+  control_mode?: "automatic" | "manual";
+  manual_control?: ManualControl;
+  manual_adjustment_allowed?: boolean;
+  manual_adjustment_unavailable_reason?:
+    | "already_manual"
+    | "unavailable"
+    | "disabled"
+    | "temperature_migration"
+    | "scheduler_not_auto"
+    | "profile_paused"
+    | "zone_paused";
 };
 
 export type PreconditioningDiagnostics = {

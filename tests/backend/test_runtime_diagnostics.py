@@ -624,6 +624,76 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         item = self.manager.snapshot(self.runtime)["history"][0]
         self.assertEqual("control", item["category"])
 
+    def test_manual_control_events_keep_only_safe_diagnostic_evidence(self) -> None:
+        self.manager._handle_event(
+            SimpleNamespace(
+                data={
+                    "domain": "velair",
+                    "event": "external_climate_change_detected",
+                    "entity_id": "climate.living_room",
+                    "changed_fields": ["hvac_mode", "temperature", "entity_id", 42],
+                    "control_mode": "manual",
+                    "previous_control_mode": "automatic",
+                    "policy": "for_duration",
+                    "duration_minutes": 45,
+                    "started_at": "2026-08-20T10:00:00+00:00",
+                    "until": "2026-08-20T10:45:00+00:00",
+                    "previous": {
+                        "hvac_mode": "heat",
+                        "temperature": 20.0,
+                        "target_temp_low": float("nan"),
+                        "context_id": "private-context",
+                    },
+                    "current": {
+                        "hvac_mode": "cool",
+                        "temperature": 22.0,
+                        "target_temp_high": float("inf"),
+                        "user_id": "private-user",
+                    },
+                    "context": {"id": "private-context"},
+                },
+                time_fired=None,
+            )
+        )
+        item = self.manager.snapshot(self.runtime)["history"][0]
+        self.assertEqual("control", item["category"])
+        self.assertEqual(["hvac_mode", "temperature"], item["data"]["changed_fields"])
+        self.assertEqual(
+            {"hvac_mode": "heat", "temperature": 20.0},
+            item["data"]["previous"],
+        )
+        self.assertEqual(
+            {"hvac_mode": "cool", "temperature": 22.0},
+            item["data"]["current"],
+        )
+        self.assertEqual("for_duration", item["data"]["policy"])
+        self.assertEqual(45, item["data"]["duration_minutes"])
+        self.assertEqual("manual", item["data"]["control_mode"])
+        self.assertEqual("automatic", item["data"]["previous_control_mode"])
+        self.assertEqual("2026-08-20T10:00:00+00:00", item["data"]["started_at"])
+        self.assertEqual("2026-08-20T10:45:00+00:00", item["data"]["until"])
+        self.assertNotIn("context", item["data"])
+        self.assertNotIn("private", str(item["data"]))
+
+    def test_zone_control_changed_remains_in_control_category(self) -> None:
+        self.manager._handle_event(
+            SimpleNamespace(
+                data={
+                    "domain": "velair",
+                    "event": "zone_control_changed",
+                    "entity_id": "climate.living_room",
+                    "control_mode": "automatic",
+                    "previous_control_mode": "manual",
+                    "reason": "resumed",
+                },
+                time_fired=None,
+            )
+        )
+        item = self.manager.snapshot(self.runtime)["history"][0]
+        self.assertEqual("control", item["category"])
+        self.assertEqual("automatic", item["data"]["control_mode"])
+        self.assertEqual("manual", item["data"]["previous_control_mode"])
+
     def test_all_history_categories_keep_useful_safe_evidence(self) -> None:
         events = (
             ("future_control_event", {"temperature": 20, "unsafe": "secret"}),

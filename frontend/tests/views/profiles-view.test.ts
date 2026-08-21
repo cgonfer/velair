@@ -322,6 +322,93 @@ describe("profiles view", () => {
     element.remove();
   });
 
+  it("shows only the selected climate detail when deleting its Heat target temperature", async () => {
+    vi.useFakeTimers();
+    try {
+      const element = new VelairProfilesView();
+      element.workspace = "profiles";
+      element.scheduleWorkspace = true;
+      element.hass = {
+        language: "en",
+        states: {
+          "climate.office": { state: "heat", attributes: { friendly_name: "Office", supported_features: 1, hvac_modes: ["off", "heat"], min_temp: 5, max_temp: 25, target_temp_step: 0.5 } },
+        },
+      } as never;
+      element.data = {
+        ...data,
+        configured_entities: ["climate.office"],
+        settings: { first_weekday: "monday", zone_order: [] },
+        profiles: [{
+          key: "winter", name: "Winter", zones: {
+            "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "00:00", action: "set_temperature", temperature: 21, hvac_mode: "heat" }] } },
+          },
+        }],
+      } as unknown as ScheduleResponse;
+      document.body.append(element);
+      await element.updateComplete;
+      await selectFirstProfile(element);
+
+      const input = element.shadowRoot!.querySelector<HTMLInputElement>(".editable-block input[type=number]")!;
+      input.value = "";
+      input.dispatchEvent(new Event("input"));
+      await element.updateComplete;
+
+      const stack = element.shadowRoot!.querySelector(".profile-schedule-error .notice-stack.contextual");
+      const notices = stack?.querySelectorAll(".notice");
+      expect(notices).toHaveLength(1);
+      expect(notices?.[0]?.textContent).toContain("Office, Monday at 00:00: Use 5 to 25");
+      expect(stack?.textContent).not.toContain("Review the invalid schedule");
+      expect(stack?.getAttribute("aria-live")).toBe("polite");
+      expect(stack?.querySelector('[role="alert"]')).toBeNull();
+      expect(element.shadowRoot!.querySelector(".profile-zone-error")).toBeNull();
+
+      input.value = "22";
+      input.dispatchEvent(new Event("input"));
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector(".notice-row.leaving")).not.toBeNull();
+      await vi.advanceTimersByTimeAsync(140);
+      await element.updateComplete;
+      const emptyLiveRegion = element.shadowRoot!.querySelector(".profile-schedule-error .notice-stack.contextual");
+      expect(emptyLiveRegion).not.toBeNull();
+      expect(emptyLiveRegion?.querySelectorAll(".notice-row")).toHaveLength(0);
+      expect(emptyLiveRegion?.getAttribute("aria-live")).toBe("polite");
+      element.remove();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stacks a summary and the selected detail when several climate schedules are invalid", async () => {
+    const element = new VelairProfilesView();
+    element.workspace = "profiles";
+    element.scheduleWorkspace = true;
+    element.hass = {
+      language: "en",
+      states: {
+        "climate.office": { state: "heat", attributes: { friendly_name: "Office", supported_features: 1, hvac_modes: ["off", "heat"], min_temp: 5, max_temp: 25, target_temp_step: 0.5 } },
+        "climate.bedroom": { state: "cool", attributes: { friendly_name: "Bedroom", supported_features: 1, hvac_modes: ["off", "cool"], min_temp: 10, max_temp: 30, target_temp_step: 1 } },
+      },
+    } as never;
+    element.data = {
+      ...data,
+      configured_entities: ["climate.office", "climate.bedroom"],
+      settings: { first_weekday: "monday", zone_order: [] },
+      profiles: [{ key: "invalid", name: "Invalid", zones: {
+        "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", temperature: 30, hvac_mode: "heat" }] } },
+        "climate.bedroom": { behavior: "schedule", schedule: { monday: [{ start: "09:00", action: "set_temperature", temperature: 35, hvac_mode: "cool" }] } },
+      } }],
+    } as unknown as ScheduleResponse;
+    document.body.append(element);
+    await element.updateComplete;
+    await selectFirstProfile(element);
+
+    const rows = element.shadowRoot!.querySelectorAll(".profile-schedule-error .notice-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.textContent).toContain("Review the invalid schedule in: Office, Bedroom");
+    expect(rows[1]?.textContent).toContain("Office, Monday at 08:00: Use 5 to 25");
+    element.remove();
+  });
+
   it("identifies a non-selected thermostat with duplicate Profile block times", async () => {
     const element = new VelairProfilesView();
     element.workspace = "profiles";
@@ -967,13 +1054,16 @@ describe("profiles view", () => {
     element.compact = true;
     element.hass = { connection: { sendMessagePromise }, states: {} } as never;
     element.data = data;
+    const profileError = vi.fn();
+    element.addEventListener("profile-error", profileError);
     document.body.append(element);
     await element.updateComplete;
 
     const menu = element.shadowRoot?.querySelector(".active-setup-menu") as HTMLDetailsElement;
     menu.open = true;
     (menu.querySelector('[data-profile-id="away"]') as HTMLButtonElement).click();
-    await vi.waitFor(() => expect(element.shadowRoot?.querySelector('[role="alert"]')?.textContent).toContain("Activation rejected"));
+    await vi.waitFor(() => expect(profileError).toHaveBeenCalled());
+    expect((profileError.mock.calls[0]?.[0] as CustomEvent<string>).detail).toContain("Activation rejected");
     expect(element.shadowRoot?.querySelector(".active-setup-profile-list")?.textContent).toContain("Away");
     expect(menu.open).toBe(false);
     element.remove();
@@ -1168,6 +1258,22 @@ describe("profiles view", () => {
     element.remove();
   });
 
+  it("emits operational failures for the host notice stack", async () => {
+    const element = new VelairProfilesView();
+    const error = vi.fn();
+    element.addEventListener("profile-error", error);
+    document.body.append(element);
+    await element.updateComplete;
+
+    (element as unknown as { _error?: string })._error = "Profile could not be saved";
+    await element.updateComplete;
+
+    expect(error).toHaveBeenCalledOnce();
+    expect((error.mock.calls[0]?.[0] as CustomEvent<string>).detail).toBe("Profile could not be saved");
+    expect(element.shadowRoot?.querySelector(".notice-stack")).toBeNull();
+    element.remove();
+  });
+
   it("allows direct reactivation of a mode-selected profile to switch it to Manual", async () => {
     const response = { ...data, active_mode_id: null } as ScheduleResponse;
     const sendMessagePromise = vi.fn().mockResolvedValue(response);
@@ -1334,6 +1440,8 @@ describe("profiles view", () => {
         finished_at: "2026-07-29T12:00:01+00:00",
       },
     } as ScheduleResponse;
+    const profileError = vi.fn();
+    element.addEventListener("profile-error", profileError);
     document.body.append(element);
     await element.updateComplete;
 
@@ -1341,7 +1449,7 @@ describe("profiles view", () => {
     await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalled());
     await element.updateComplete;
 
-    expect(element.shadowRoot?.querySelector('[role="alert"]')?.textContent).toContain("Activation rejected");
+    expect((profileError.mock.calls[0]?.[0] as CustomEvent<string>).detail).toContain("Activation rejected");
     element.remove();
   });
 
@@ -1354,6 +1462,8 @@ describe("profiles view", () => {
     element.compact = true;
     element.hass = { connection: { sendMessagePromise }, states: {} } as never;
     element.data = data;
+    const profileError = vi.fn();
+    element.addEventListener("profile-error", profileError);
     document.body.append(element);
     await element.updateComplete;
 
@@ -1376,6 +1486,7 @@ describe("profiles view", () => {
     } as ScheduleResponse;
     rejectRequest?.(new Error("Activation rejected"));
     await vi.waitFor(() => expect(element.shadowRoot?.querySelector('[role="alert"]')).toBeNull());
+    expect(profileError).not.toHaveBeenCalled();
     element.remove();
   });
 
@@ -1696,7 +1807,8 @@ describe("profiles view", () => {
     ) as HTMLButtonElement;
     const error = element.shadowRoot?.querySelector(".profile-schedule-error");
     expect(save.disabled).toBe(false);
-    expect(error).toBeNull();
+    expect(error?.querySelector(".notice-stack.contextual")?.getAttribute("aria-live")).toBe("polite");
+    expect(error?.querySelectorAll(".notice-row")).toHaveLength(0);
 
     element.remove();
   });

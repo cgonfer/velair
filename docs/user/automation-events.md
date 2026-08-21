@@ -1,7 +1,15 @@
 # Automation Events
 
-Velair emits transient Home Assistant events for runtime changes. Events are not
-stored and opening or refreshing the Velair panel does not emit them.
+Velair emits raw, transient Home Assistant events for runtime changes. The raw
+event-bus payload exists only while Home Assistant delivers it; Velair does not
+provide an event archive or replay API. Opening or refreshing the Velair panel
+does not emit these events.
+
+Diagnostics is separate. For enabled categories it can retain a sanitized
+summary of selected events in a bounded in-memory history of at most 100
+entries. That history is cleared whenever Velair or Home Assistant restarts, is
+not Recorder history, and does not change or extend the lifetime of the
+original automation event.
 
 All events use:
 
@@ -21,6 +29,82 @@ triggers:
 ```
 
 Every payload contains `domain: velair` and one of the event names below.
+
+## External Climate Change Detected
+
+`external_climate_change_detected` is emitted when a managed climate changes
+HVAC mode or setpoint and the change cannot be attributed to a Velair climate
+action. It is observational: `non-Velair` does not necessarily mean a person,
+because a remote or another automation may be the source.
+
+Detection covers `hvac_mode`, scalar `temperature`, and native
+`target_temp_low`/`target_temp_high`. Environmental readings and fan, preset,
+swing, or humidity options do not produce this event. Transitions to or from
+`unknown` and `unavailable` are ignored. See
+[External Changes and Manual Adjustment](manual-control.md) for the attribution
+model, limitations, policies, and complete timelines.
+
+```yaml
+domain: velair
+event: external_climate_change_detected
+entity_id: climate.living_room
+changed_fields: [hvac_mode, temperature]
+previous:
+  hvac_mode: "off"
+  temperature: 24
+current:
+  hvac_mode: "cool"
+  temperature: 23
+policy: keep_automatic
+```
+
+`policy` is the policy that governs the change. During an active Manual
+adjustment it remains that session's policy even if the future default in
+Settings has since changed. `keep_automatic` means Velair did not create Manual
+adjustment and instead re-resolved its current authority. Therefore that
+detection does not have a matching `zone_control_changed` entry event.
+
+`zone_control_changed` is emitted when the zone enters Manual adjustment or
+returns to automatic control. Its `control_mode` is `manual` or `automatic` and
+is deliberately separate from Velair Mode Manual.
+
+```yaml
+domain: velair
+event: zone_control_changed
+entity_id: climate.living_room
+control_mode: manual
+previous_control_mode: automatic
+policy: for_duration
+source: external_change
+duration_minutes: 60
+started_at: "2026-08-20T18:00:00+02:00"
+until: "2026-08-20T19:00:00+02:00"
+```
+
+`source` is `external_change` when an outside adjustment created the session
+and `explicit` when the panel or `velair.enter_manual_adjustment` captured the
+live climate state. `duration_minutes` is present only for `for_duration`.
+
+An `until_resumed` entry omits `until`. The automatic exit payload contains
+`reason: expired`; an explicit exit contains `reason: resumed`. Exiting Manual
+adjustment does not remove any independent pause reason that may still block
+physical schedule delivery.
+
+The equivalent service actions are:
+
+```yaml
+action: velair.set_external_change_policy
+data:
+  entity_id: climate.living_room
+  policy: for_duration
+  duration_minutes: 60
+```
+
+```yaml
+action: velair.resume_automatic_control
+data:
+  entity_id: climate.living_room
+```
 
 ## Diagnostic Issue Changed
 
@@ -394,6 +478,7 @@ entity_id: climate.living_room
 enabled: true
 previous_enabled: false
 room_temperature_entity_id: sensor.living_room_temperature
+deadband: 0.3
 max_delta: 3
 debounce_seconds: 20
 ```

@@ -634,6 +634,12 @@ function historyDescription(host: VelairViewHost, item: DiagnosticHistoryItem): 
     return [runtimeStateLabel(host, data.state)].filter(Boolean).join(" · ");
   }
   if (item.category === "control") {
+    if (data.event === "external_climate_change_detected") {
+      return externalAdjustmentDescription(host, item);
+    }
+    if (data.event === "zone_control_changed") {
+      return zoneControlDescription(host, item);
+    }
     return [
       data.hvac_mode ? host._modeLabel(String(data.hvac_mode)) : undefined,
       diagnosticControlEventLabel(host, data.action ?? data.operation),
@@ -681,7 +687,7 @@ function formatDiagnosticTimestamp(host: VelairViewHost, value: string): string 
 }
 function temperatureValue(host: VelairViewHost, entityId: string, value: unknown): string | undefined { return typeof value === "number" ? host._formatTemperature(value, entityId) : undefined; }
 function rangeValue(host: VelairViewHost, entityId: string, minimum: unknown, maximum: unknown): string | undefined { return typeof minimum === "number" && typeof maximum === "number" ? `${host._formatTemperature(minimum, entityId)} – ${host._formatTemperature(maximum, entityId)}` : undefined; }
-function intentSummary(host: VelairViewHost, value: unknown, entityId: string): string | undefined { const item = record(value); return [runtimeStateLabel(host, item.state), item.hvac_mode ? host._modeLabel(String(item.hvac_mode)) : undefined, scheduledTargetSummary(host, item, entityId)].filter(Boolean).join(" · ") || undefined; }
+function intentSummary(host: VelairViewHost, value: unknown, entityId: string): string | undefined { const item = record(value); return [controlModeLabel(host, item.control_mode), runtimeStateLabel(host, item.state), item.hvac_mode ? host._modeLabel(String(item.hvac_mode)) : undefined, scheduledTargetSummary(host, item, entityId)].filter(Boolean).join(" · ") || undefined; }
 function applicationSummary(host: VelairViewHost, value: unknown, entityId: string): string | undefined { const item = record(value); return [item.at ? host._formatDateTime(String(item.at)) : undefined, item.hvac_mode ? host._modeLabel(String(item.hvac_mode)) : undefined, scheduledTargetSummary(host, item, entityId)].filter(Boolean).join(" · ") || undefined; }
 function scheduledTargetSummary(host: VelairViewHost, value: Record<string, any>, entityId: string): string | undefined {
   const scalar = value.temperature ?? value.target_temperature;
@@ -692,6 +698,102 @@ function appliedTargetSummary(host: VelairViewHost, value: Record<string, any>, 
   const scalar = value.applied_temperature ?? value.applied_target;
   if (typeof scalar === "number") return host._formatTemperature(scalar, entityId);
   return typeof value.applied_target_temp_low === "number" && typeof value.applied_target_temp_high === "number" ? `${host._formatTemperature(value.applied_target_temp_low, entityId)} – ${host._formatTemperature(value.applied_target_temp_high, entityId)}` : undefined;
+}
+
+function controlModeLabel(host: VelairViewHost, value: unknown): string | undefined {
+  if (value === "manual") return host._t("diagnosticsControlManual");
+  if (value === "automatic") return host._t("diagnosticsControlAutomatic");
+  return undefined;
+}
+
+function manualPolicyLabel(
+  host: VelairViewHost,
+  value: unknown,
+  durationMinutes?: unknown,
+): string | undefined {
+  if (value === "keep_automatic") return host._t("externalChangeKeepAutomatic");
+  if (value === "until_next_block") return host._t("externalChangeUntilNextBlock");
+  if (value === "for_duration") {
+    return [
+      host._t("externalChangeForDuration"),
+      typeof durationMinutes === "number"
+        ? host._t("manualSessionDuration", { minutes: durationMinutes })
+        : undefined,
+    ].filter(Boolean).join(" · ");
+  }
+  if (value === "until_resumed") return host._t("externalChangeUntilResumed");
+  return undefined;
+}
+
+function externalAdjustmentDescription(host: VelairViewHost, item: DiagnosticHistoryItem): string {
+  const data = item.data;
+  const previous = record(data.previous);
+  const current = record(data.current);
+  const changed = new Set(Array.isArray(data.changed_fields) ? data.changed_fields.map(String) : []);
+  const entityId = item.entity_id ?? "";
+  const evidence: Array<string | undefined> = [];
+  if (changed.has("hvac_mode") && previous.hvac_mode && current.hvac_mode) {
+    evidence.push(host._t("diagnosticsHvacModeChanged", {
+      previous: host._modeLabel(String(previous.hvac_mode)),
+      current: host._modeLabel(String(current.hvac_mode)),
+    }));
+  }
+  if (changed.has("temperature")
+    && typeof previous.temperature === "number"
+    && typeof current.temperature === "number") {
+    evidence.push(host._t("diagnosticsTargetChanged", {
+      previous: host._formatTemperature(previous.temperature, entityId),
+      current: host._formatTemperature(current.temperature, entityId),
+    }));
+  }
+  const lowerChanged = changed.has("target_temp_low");
+  const upperChanged = changed.has("target_temp_high");
+  if (lowerChanged || upperChanged) {
+    const previousRange = rangeValue(
+      host, entityId, previous.target_temp_low, previous.target_temp_high,
+    );
+    const currentRange = rangeValue(
+      host, entityId, current.target_temp_low, current.target_temp_high,
+    );
+    if (previousRange && currentRange) {
+      if (lowerChanged && upperChanged) evidence.push(host._t("diagnosticsRangeChanged", {
+        previous: previousRange,
+        current: currentRange,
+      }));
+    }
+    if (!(lowerChanged && upperChanged && previousRange && currentRange)) {
+      if (lowerChanged
+        && typeof previous.target_temp_low === "number"
+        && typeof current.target_temp_low === "number") {
+        evidence.push(host._t("diagnosticsLowerTargetChanged", {
+          previous: host._formatTemperature(previous.target_temp_low, entityId),
+          current: host._formatTemperature(current.target_temp_low, entityId),
+        }));
+      }
+      if (upperChanged
+        && typeof previous.target_temp_high === "number"
+        && typeof current.target_temp_high === "number") {
+        evidence.push(host._t("diagnosticsUpperTargetChanged", {
+          previous: host._formatTemperature(previous.target_temp_high, entityId),
+          current: host._formatTemperature(current.target_temp_high, entityId),
+        }));
+      }
+    }
+  }
+  evidence.push(manualPolicyLabel(host, data.policy, data.duration_minutes));
+  return evidence.filter(Boolean).join(" · ");
+}
+
+function zoneControlDescription(host: VelairViewHost, item: DiagnosticHistoryItem): string {
+  const data = item.data;
+  const previous = controlModeLabel(host, data.previous_control_mode);
+  const current = controlModeLabel(host, data.control_mode);
+  return [
+    previous && current ? host._t("diagnosticsControlChanged", { previous, current }) : current,
+    manualPolicyLabel(host, data.policy, data.duration_minutes),
+    data.until ? host._t("diagnosticsUntil", { time: host._formatDateTime(String(data.until)) }) : undefined,
+    diagnosticReasonLabel(host, data.reason),
+  ].filter(Boolean).join(" · ");
 }
 function overrideSummary(host: VelairViewHost, value: unknown): string | undefined {
   const item = record(value);
@@ -815,6 +917,7 @@ function diagnosticReasonLabel(host: VelairViewHost, value: unknown): string | u
     portable_import: "diagnosticsReasonPortableImport",
     profile_changed: "diagnosticsEventProfileChanged",
     replaced: "diagnosticsReasonReplaced",
+    resumed: "diagnosticsReasonResumed",
     schedule_changed: "diagnosticsReasonScheduleChanged",
     schedule_cleared: "diagnosticsReasonScheduleCleared",
     scheduler_mode_changed: "diagnosticsEventSchedulerModeChanged",
@@ -839,6 +942,7 @@ function diagnosticControlEventLabel(host: VelairViewHost, value: unknown): stri
     boost_ended: "diagnosticsEventBoostEnded",
     boost_started: "diagnosticsEventBoostStarted",
     climate_target_applied: "diagnosticsEventClimateTargetApplied",
+    external_climate_change_detected: "diagnosticsEventExternalAdjustment",
     comfort_assessment_changed: "diagnosticsEventComfortAssessmentChanged",
     none: "diagnosticsNone",
     preconditioning_observation_recorded: "diagnosticsEventPreconditioningObservationRecorded",
@@ -858,6 +962,7 @@ function diagnosticControlEventLabel(host: VelairViewHost, value: unknown): stri
     zone_pause_updated: "diagnosticsEventZonePauseUpdated",
     zone_paused: "diagnosticsEventZonePaused",
     zone_resumed: "diagnosticsEventZoneResumed",
+    zone_control_changed: "diagnosticsEventZoneControlChanged",
   };
   const event = String(value ?? "");
   return keys[event] ? host._t(keys[event]) : humanizeIdentifier(event);

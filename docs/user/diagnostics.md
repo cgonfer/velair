@@ -28,6 +28,11 @@ The **History settings** section lets you independently retain control and
 schedule activity, Room Assist, Preconditioning, Comfort, climate delivery,
 and availability events. New Velair event types that are not yet classified
 are retained under control and schedules instead of being silently discarded.
+External adjustments and transitions between Automatic and Manual control also
+remain in this category. Their log entries show only the changed HVAC mode or
+scalar/range target, the effective external-change policy, and any expiry or resume
+reason; arbitrary climate attributes and Home Assistant Context identifiers are
+not retained.
 All categories are enabled by default. These choices are stored locally by the
 backend; disabling a category immediately removes its already retained events.
 **Clear history** removes all retained events without changing current health,

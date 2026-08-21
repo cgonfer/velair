@@ -14,6 +14,7 @@ from homeassistant.helpers.typing import ConfigType
 from .api import async_setup_api
 from .climate_delivery import ClimateDeliveryCoordinator
 from .climate_manager import ClimateManager
+from .climate_change_monitor import ClimateChangeMonitor
 from .config_helpers import (
     get_configured_climate_entities,
     should_apply_active_schedule_on_startup,
@@ -45,6 +46,7 @@ class VelairData:
     diagnostics: RuntimeDiagnosticsManager
     scheduler: VelairScheduler
     storage: VelairStorage
+    climate_change_monitor: ClimateChangeMonitor
 
 
 type VelairConfigEntry = ConfigEntry[VelairData]
@@ -78,6 +80,9 @@ async def async_setup_entry(
     scheduler.set_temperature_migration_blocked(
         storage.temperature_migration_required
     )
+    climate_change_monitor = ClimateChangeMonitor(
+        hass, climate_entities, climate_manager, scheduler
+    )
 
     entry.runtime_data = VelairData(
         climate_delivery=climate_delivery,
@@ -85,6 +90,7 @@ async def async_setup_entry(
         diagnostics=diagnostics,
         scheduler=scheduler,
         storage=storage,
+        climate_change_monitor=climate_change_monitor,
     )
 
     hass.data.setdefault(DOMAIN, {})
@@ -97,6 +103,7 @@ async def async_setup_entry(
         "operation_recovery": None,
         "scheduler": scheduler,
         "storage": storage,
+        "climate_change_monitor": climate_change_monitor,
     }
     hass.data[DOMAIN][entry.entry_id] = runtime
 
@@ -158,6 +165,9 @@ async def async_setup_entry(
         await scheduler.async_start(
             apply_current_schedule=should_apply_active_schedule_on_startup(entry)
         )
+
+    climate_change_monitor.async_start()
+    entry.async_on_unload(climate_change_monitor.async_stop)
 
     diagnostics.async_finish_startup()
     cleanup_entity_registry(hass, entry, climate_entities)

@@ -16,6 +16,42 @@ includes midnight and empty weekdays: before a day's first block, Velair keeps
 the most recent block from an earlier day. The timeline shows this inherited
 period separately so it is clear where the block was originally configured.
 
+## External adjustments and Manual adjustment
+
+Each zone can choose what Velair does when its HVAC mode or setpoint changes
+outside Velair, for example from a Home Assistant climate card, an IR remote, or
+another automation. Configure **External adjustments** inside each managed
+climate row in **Settings**:
+
+- **Keep automatic** is the default and reapplies the current Velair intent.
+- **Until next block** respects the adjustment until the
+  next effective block begins.
+- **For a duration** resumes after the configured number of minutes.
+- **Until resumed** waits for an explicit action.
+
+While yielded, Overview selects **Manual adjustment** in its permanent
+Automatic/Manual control. This is not Velair Mode **Manual**: Mode Manual describes how
+Profiles were selected, while Manual adjustment describes who currently controls
+one climate. Resuming reapplies the active Profile schedule, Default schedule, or
+other current scheduler intent. Other independent pause reasons remain in force.
+
+Overview selects **Automatic scheduling** while Velair owns the climate. Select
+**Manual adjustment** to hold the current climate without first changing the
+device; it uses the Manual policy already saved in Settings. If **Keep automatic**
+is saved, an explicit Manual action stays Manual until resumed without changing
+that setting. The same operation is available as
+`velair.enter_manual_adjustment`; it captures the live heating, cooling, off, or
+native range state and accepts only the climate entity ID.
+
+With **Keep automatic**, Room Assist recalculates and reapplies its authoritative
+target. With a Manual policy, it yields without restoring its scheduled
+correction. Both scalar and native range targets are supported.
+
+The complete guide explains detection boundaries, every policy, repeated
+adjustments, Profiles and Modes, Boost and pause priority, restart behavior,
+exact service/event YAML, and step-by-step real-world timelines. See
+[External Changes and Manual Adjustment](manual-control.md).
+
 Velair calculates upcoming events in the backend and schedules exact one-shot callbacks through Home Assistant. The frontend subscribes to backend updates over WebSocket, so it does not need continuous polling.
 
 The panel's **Diagnostics** section provides a read-only scheduler and per-zone
@@ -164,7 +200,7 @@ zone_order:
 
 If `entities` is omitted, zone-based cards show every Velair-managed thermostat.
 
-For `view: sensors`, the card editor can hide the on/off switch, room sensor picker, maximum assist delta, refresh delay, or live status section so a dashboard card can be display-only or more compact.
+For `view: sensors`, the card editor can hide the on/off switch, room sensor picker, Room Assist deadband, maximum assist delta, refresh delay, or live status section so a dashboard card can be display-only or more compact.
 
 For `view: comfort`, the card editor can limit the card to selected thermostats and hide the configuration section, temperature graph, humidity graph, or CO2 graph independently. These are dashboard-only display choices; they do not change Comfort settings, tracked sensors, thresholds, events, or generated Home Assistant entities.
 
@@ -256,7 +292,7 @@ The selected room temperature sensor is useful for TRVs or thermostats whose bui
 
 Detailed heating, cooling, automation, and Lovelace examples are documented in [Room Assist](room-assist.md).
 
-Room Sensor Assist is an advanced option that requires a room temperature sensor but does not require Adaptive Preconditioning. While a single-target block is active, Velair adds the signed difference between the scheduled target and room reading to the climate entity's own temperature, capped by Maximum assist delta. The correction becomes zero inside the configured minimum-delta deadband and reverses after the room crosses the scheduled target. Once the room no longer requests a fixed heating or cooling direction, the scheduled target also acts as a safety boundary: fixed cooling never receives a lower non-driving target and fixed heating never receives a higher one. When that protection changes the calculated result, the live status shows the calculated and applied targets and Overview identifies the protected state. For a native `heat_cool` range, Velair instead moves the complete lower/upper band together, preserves its width, and uses the relevant boundary for heating or cooling. A holding range is kept stable rather than following later drift from the climate entity's internal sensor. Maximum assist delta defaults to `2 °C` or `4 °F` and can be configured in `0.1` degree steps up to `10 °C` or `18 °F`; set it high enough to permit any known target gap the thermostat needs to stop, while remembering that Velair only uses the full value when the external room error requires it. The visible schedule target or range remains unchanged. Scheduled protection prevents target drift; it cannot override a device's own hysteresis, compressor protection, or minimum run time, so use an `Off` block when an explicit shutdown is required.
+Room Sensor Assist is an advanced option that requires a room temperature sensor but does not require Adaptive Preconditioning. While a single-target block is active, Velair adds the signed difference between the scheduled target and room reading to the climate entity's own temperature, capped by Maximum assist delta. The correction becomes zero inside the independent Room Assist deadband and reverses after the room crosses the scheduled target. The deadband defaults to `0.3 °C` or `1 °F`, supports `0.1` degree steps from `0` through `5 °C` or `9 °F`, and applies immediately when saved. Once the room no longer requests a fixed heating or cooling direction, the scheduled target also acts as a safety boundary: fixed cooling never receives a lower non-driving target and fixed heating never receives a higher one. When that protection changes the calculated result, the live status shows the calculated and applied targets and Overview identifies the protected state. For a native `heat_cool` range, Velair instead moves the complete lower/upper band together, preserves its width, and uses the relevant boundary for heating or cooling. A holding range is kept stable rather than following later drift from the climate entity's internal sensor. Maximum assist delta defaults to `2 °C` or `4 °F` and can be configured in `0.1` degree steps up to `10 °C` or `18 °F`; set it high enough to permit any known target gap the thermostat needs to stop, while remembering that Velair only uses the full value when the external room error requires it. The visible schedule target or range remains unchanged. Scheduled protection prevents target drift; it cannot override a device's own hysteresis, compressor protection, or minimum run time, so use an `Off` block when an explicit shutdown is required.
 
 Velair follows Home Assistant's configured temperature unit. There is no separate Celsius or
 Fahrenheit setting. Settings shows that Home Assistant unit as a
@@ -282,8 +318,8 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Portable model v5 exports preserve raw values and declare their unit. V4 files
-remain supported. Imports
+Portable model v8 exports preserve raw values and declare their unit. Older
+supported files, including V4 and V5, remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
 Velair versions that produced those files stored Celsius values. Export remains
@@ -298,7 +334,7 @@ edited before relying on that schedule.
 The complete upgrade, migration, backup, and recovery behavior is documented in
 [Temperature Units and Migration](temperature-units.md).
 
-When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. For a range it uses separate brackets for the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
+When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. A neutral striped band shows the no-correction zone from the target minus the saved deadband to the target plus the deadband. For a native range it extends from the scheduled low minus the deadband to the scheduled high plus the deadband; separate brackets still show the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. A compact legend explains the current band; a zero deadband removes the surface and is stated explicitly. Hiding `show_room_assist_deadband` hides its setting, band, and legend together. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
 
 Room Sensor Assist is event-driven. Velair does not poll temperatures. It listens only to the configured room sensor and climate entity while assistance is active, debounces changes using the per-climate Refresh delay setting, aligns temporary targets to the climate entity's supported temperature step, ignores movements smaller than that step, and restores the real scheduled target when the scheduler is paused, a zone is paused, a boost starts, the block turns off, the sensor becomes unusable, or the feature is disabled. If Adaptive Preconditioning has already started a future block early, Room Sensor Assist follows that future target until the scheduled comfort time instead of falling back to the previous time block.
 
@@ -499,7 +535,14 @@ The Settings tab shows technical version information:
 - storage/model version;
 - integration version.
 
-It also includes a reset action. Reset deletes all stored Velair data, including schedules, templates, panel preferences, active boosts and pauses, Comfort and Room Assist settings, Adaptive Preconditioning settings and learning, and startup behavior. It then recreates unit-aware defaults for the currently managed climates. Velair asks for confirmation before doing this.
+It also includes a reset action. Reset deletes all stored Velair schedule data,
+including schedules, templates, panel preferences, active boosts and pauses,
+per-climate external-adjustment policies and active Manual adjustments, Comfort
+and Room Assist settings, Adaptive Preconditioning settings and learning, and
+startup behavior. It then recreates unit-aware defaults for the currently
+managed climates. The separate Diagnostics category selection and its current
+runtime log are not part of this schedule-data reset. Velair asks for
+confirmation before doing this.
 
 ## Services
 
@@ -517,6 +560,9 @@ Velair exposes Home Assistant services for automations and scripts:
 - `velair.pause_zone`
 - `velair.resume`
 - `velair.resume_zone`
+- `velair.set_external_change_policy`
+- `velair.enter_manual_adjustment`
+- `velair.resume_automatic_control`
 - `velair.set_daily_schedule`
 - `velair.copy_day_schedule`
 - `velair.clear_schedule`

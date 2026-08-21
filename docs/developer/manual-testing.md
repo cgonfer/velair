@@ -71,10 +71,10 @@ Restart Home Assistant.
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v5 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v8 records the
    effective `temperature_unit`.
-2. Import the portable V5 file into the opposite unit and confirm selected
-   thermal sections convert. V4 files must remain compatible.
+2. Import the portable V8 file into the opposite unit and confirm selected
+   thermal sections convert. Older supported files must remain compatible.
 3. Import a unitless legacy backup and confirm the UI warns that Celsius is
    assumed before the backend converts it when required.
 4. Confirm known climate targets use exact published steps and standalone values
@@ -251,6 +251,93 @@ Services with `entity_id` must reject climates that were not selected during set
 12. Pause one zone with `velair.pause_zone` and confirm other zones keep scheduling normally.
 13. Resume the paused zone and confirm Velair applies its active block only when one exists.
 
+## Manual Adjustment Smoke Test
+
+Use at least one scalar heat or cool climate and, when available, one native
+`heat_cool` climate. Listen to `velair_event` while testing.
+
+1. Leave the default policy at **Keep automatic**. Change the scalar target
+   through the standard Home Assistant climate card. Confirm one
+   `external_climate_change_detected` payload identifies `temperature` and
+   `policy: keep_automatic`, Overview remains Automatic, no
+   `zone_control_changed` event is emitted, and Velair reapplies the current
+   authoritative target. Repeat with heat, cool, off, a native range, Room
+   Assist, preconditioning, and a Boost.
+2. Still using **Keep automatic**, repeat while a zone pause uses `none` and
+   `turn_off`, while a Profile pause uses each action, while globally paused,
+   disabled, stopped, and with no active target. Confirm only an authoritative
+   `turn_off` is physically reapplied; all yield/no-target gates send nothing.
+3. In **Settings**, select **Until resumed** for the climate. Change HVAC mode and target externally.
+   Confirm Overview shows **Manual adjustment**, the external mode and target
+   remain applied, and `zone_control_changed` contains `control_mode: manual`.
+4. With Room Assist applying a visibly different temporary target, make another
+   external target change. Confirm Room Assist yields without briefly restoring
+   either its assisted target or the scheduled target.
+5. Select **Automatic scheduling**. Confirm the Manual selection disappears,
+   the event contains `control_mode: automatic` and `reason: resumed`, and the
+   schedule intent valid now is applied.
+6. Select **Manual for a duration**, use a short safe duration, and make two
+   external changes. Confirm the second change restarts the expiry and the
+   current authoritative intent applies only after the new expiry.
+7. Select **Until next block**. Make two adjustments before
+   the same next block. Confirm the preserved target changes but the displayed
+   expiry remains the real block boundary. Confirm that block applies at its
+   scheduled time.
+8. Enter Manual adjustment, then activate a Profile or Mode with a different
+   target. Confirm other affected zones change immediately while this zone
+   retains its external state. Resume and confirm only the currently active
+   Profile/Mode intent applies.
+9. Repeat with a Profile that pauses the zone without turn-off and one with
+   `turn_off`. Confirm the pause behavior wins when Manual adjustment ends.
+10. Start a Boost, then change the climate externally. Confirm the Boost ends
+   without restoring its previous state, Manual adjustment preserves the new
+   external state, and the old Boost expiry does not act later.
+11. On a native range climate, change `20–25 °C` to `19–24 °C`. Confirm both
+    boundaries are reported and preserved, and resume restores the complete
+    currently authoritative range.
+12. Add an identified `pause_zone` reason with `action: turn_off` while Manual
+    adjustment is active. Confirm off wins. Resume automatic control and confirm
+    only the Manual reason is removed; the independent pause still keeps the
+    climate off.
+13. Restart Home Assistant with an unexpired Manual adjustment and test both
+    values of **Apply active schedule after startup**. Confirm Manual adjustment
+    survives and startup application does not bypass it. Confirm its later
+    expiry applies current intent.
+14. Make the climate unavailable, change the underlying device if possible,
+    and restore availability. Confirm availability recovery alone does not enter
+    Manual adjustment. Make a later available-state target change and confirm it
+    is detected.
+15. Change only `current_temperature`, `hvac_action`, fan, preset, swing, or
+    humidity. Confirm none enters Manual adjustment.
+16. Call `velair.set_external_change_policy`,
+    `velair.enter_manual_adjustment`, and `velair.resume_automatic_control` for
+    a managed and unmanaged climate.
+    Confirm the managed operation succeeds and the unmanaged target is rejected.
+17. While already manual, change Settings from `until_resumed` to
+    `for_duration`, then to `keep_automatic`. Confirm the active session and
+    expiry do not change; the new default is used only after resuming and a
+    later external adjustment.
+18. With **Keep automatic** saved, select **Manual adjustment** explicitly in
+    Overview. Confirm it starts an `until_resumed` session without changing the
+    saved setting. Resume it and confirm the setting still says **Keep automatic**.
+19. Save each of the three Manual policies in turn. From Automatic scheduling,
+    select **Manual adjustment** in Overview. Verify
+    both segmented options remain visible, the active option is a no-op, the
+    saved policy is used, busy state is per climate, policy detail appears below
+    the selector, and heating, cooling, off, and native ranges are preserved.
+20. In Settings, verify **External adjustments** has four compact choices with
+    **Keep automatic** first and selected by default,
+    shows duration inline when space allows, and exposes its explanation through
+    the shared inline tooltip. Confirm it opens on hover, keyboard focus, or tap;
+    remains hoverable; toggles on repeated tap/click; closes with Escape or when
+    focus leaves; and stays within every viewport edge. On mobile, confirm it is
+    shown as a fixed bottom band without horizontal overflow.
+21. With a temperature-data migration pending, confirm **Manual adjustment**
+    is disabled with an explanation. Confirm the policy, explicit
+    entry, and resume services are rejected; an observed external change does
+    not create a Manual adjustment or log a monitor failure; and an active
+    Manual adjustment remains intact.
+
 ## Room Assist Smoke Test
 
 Prefer a simulated or template-backed climate so its internal temperature can
@@ -266,9 +353,20 @@ be changed independently from the external room sensor.
 8. Move the external room below the lower boundary and then above the upper boundary. Confirm Room Assist resumes boundary-based heating and cooling calculations and always preserves the range width.
 9. Change the active block or target while holding. Confirm the previous scalar target or range is not reused for the new block.
 10. Simulate a heating entity that reports `16.5 °C` while the external room and schedule are both `18 °C`. Confirm Velair reports zero logical correction and does not claim that scheduled protection guarantees an immediate HVAC stop. If the simulated device exposes `hvac_action`, changing that attribute alone must not make Velair invent a device-specific neutral margin.
-11. Repeat a protected scalar case with a non-zero minimum delta. Confirm the scheduled heating ceiling or cooling floor also applies at the deadband boundary and is not reported as a physical thermostat limit.
+11. Repeat a protected scalar case with a non-zero Room Assist deadband. Confirm the scheduled heating ceiling or cooling floor also applies at the deadband boundary and is not reported as a physical thermostat limit.
 12. Repeat the scalar protection and inverse-correction cases with a Fahrenheit climate, for example a `72 °F` cooling schedule, a `70 °F` external reading, and internal readings of `68 °F` and `76 °F`. Confirm Velair applies the scheduled `72 °F` floor in the first case and the stronger inverse `78 °F` target in the second.
 13. Configure a Fahrenheit `68–75 °F` native range with a `1 °F` target step. Confirm Room Assist preserves the `7 °F` width, the graph and any physical-limit warning remain in Fahrenheit, and Maximum assist delta is treated as a temperature difference rather than an absolute Celsius conversion.
+14. In Celsius, verify Room Assist deadband appears immediately before Maximum
+    assist delta, both fields display `°C`, and the deadband accepts `0`, `0.1`,
+    and `5` but does not save negatives, letters, non-finite values, values above
+    `5`, or values between 0.1-degree steps. Repeat in Fahrenheit with `°F`, the
+    `1 °F` default, and the `0–9 °F` range. Confirm changing either deadband does
+    not change Adaptive Preconditioning's Minimum delta.
+15. Upgrade stored and portable pre-v8 data in both unit systems with no
+    `room_sensor_assist_deadband`. Confirm Velair copies the legacy
+    `minimum_delta_temperature` once before unit conversion. Confirm an existing
+    `0.35` value remains `0.35`, while a new or reset climate receives `0.3 °C`
+    or `1 °F`.
 
 ## Adaptive Preconditioning Smoke Test
 
@@ -336,8 +434,9 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
    without a floating notice or animation. Existing content must remain visible
    during later refreshes.
 3. Confirm the Overview, Schedules, Modes, Templates, Room Assist, Comfort,
-   Preconditioning, and Settings tabs render in that order. Confirm existing
-   links and Lovelace `view` values still open the same named views.
+   Preconditioning, Diagnostics, and Settings tabs render in that order.
+   Confirm existing links and Lovelace `view` values still open the same named
+   views.
 4. Confirm Preconditioning lists climates in the order configured in Settings and contains no general Settings sections.
 5. Confirm mobile and desktop layouts do not overflow.
 6. Add, edit, drag, resize, and delete blocks.
@@ -348,8 +447,55 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 11. Export data on desktop.
 12. Import selected sections.
 13. Confirm import warns that selected data will be overwritten.
-14. Confirm Settings diagnostics show climate capabilities.
+14. Open Diagnostics and confirm its managed-climate status shows the climate
+    capabilities and current runtime health. Confirm Settings contains no
+    diagnostics workspace.
 15. Confirm Reset Velair asks for confirmation and restores defaults.
+16. Trigger two validation errors in quick succession. Confirm the notices stack
+    without overlapping, the older notice moves up smoothly, both remain
+    readable at desktop and mobile widths, and each leaves with a short fade.
+17. In Overview, confirm every managed climate always shows both compact
+    **Automatic scheduling** and **Manual adjustment** segments, with icons and
+    a theme-safe selected state. Hover each enabled segment and verify visible
+    affordance; keyboard focus, click/tap, busy state, and the active no-op must
+    remain usable without nested or double borders.
+18. Resize Overview through `743`, `742`, and `741` pixels. Confirm the Zone
+    overview information container neither gains an isolated right gap nor
+    jumps horizontally at the breakpoint, and remains correctly aligned at
+    wider desktop and narrower phone widths.
+19. Add an active Boost to Today's timeline and shrink the viewport until its
+    block becomes narrow. Confirm the moving Boost highlight is clipped to that
+    block at every width and never begins or paints outside it. Enter Manual
+    adjustment and confirm the timeline pause marker also identifies Manual
+    control without requiring two separate space-consuming icons.
+
+## Diagnostics Smoke Test
+
+1. Open Diagnostics and confirm it loads without polling, reports the current
+   scheduler and each managed climate, and updates after a real runtime change.
+2. Enable and disable each history category. Confirm the selection survives a
+   Velair reload, disabled categories immediately disappear from the current
+   log, current health remains available, and newly disabled events are not
+   retained.
+3. Generate more than 100 eligible events and confirm only the newest 100 are
+   kept. Restart Velair or Home Assistant and confirm history is empty while the
+   saved category selection remains.
+4. Apply schedule, Profile, Mode, Boost, pause, external-adjustment, Automatic/
+   Manual-control, Room Assist, Preconditioning, Comfort, failed delivery, and
+   unavailable/available transitions. Confirm each retained row uses the
+   expected category, event label, reason, climate, and timestamp.
+5. Resize log columns on desktop and confirm widths last only for the open panel
+   session. At mobile width, confirm the compact event layout has no horizontal
+   overflow and does not expose column resize controls.
+6. Clear history and confirm the rows disappear while current health and enabled
+   categories do not change.
+7. Download the default report and confirm climate and associated sensor IDs are
+   replaced by stable aliases and Profile, Mode, and pause IDs are absent. Then
+   explicitly export with entity IDs, confirm the warning is visible, verify
+   operational IDs remain removed, and review the JSON before sharing.
+8. Listen for raw `velair_event` events while recording is enabled and disabled.
+   Confirm category retention does not suppress or replay automation events and
+   that opening or refreshing Diagnostics emits no duplicate runtime events.
 
 ## Startup Behavior
 

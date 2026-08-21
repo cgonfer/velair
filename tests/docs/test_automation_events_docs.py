@@ -14,6 +14,8 @@ USAGE_DOC = ROOT / "docs" / "user" / "usage.md"
 CONSTANTS = ROOT / "custom_components" / "velair" / "const.py"
 
 PUBLIC_EVENTS = (
+    "external_climate_change_detected",
+    "zone_control_changed",
     "profile_changed",
     "scheduler_mode_changed",
     "climate_target_applied",
@@ -83,6 +85,11 @@ class AutomationEventsDocsTest(unittest.TestCase):
             "Operations Without Runtime Events",
         ):
             self.assertIn(expected, normalized_guide)
+
+    def test_room_assist_state_event_documents_deadband(self) -> None:
+        guide = EVENTS_GUIDE.read_text(encoding="utf-8")
+
+        self.assertIn("deadband: 0.3", guide)
 
 
 if __name__ == "__main__":

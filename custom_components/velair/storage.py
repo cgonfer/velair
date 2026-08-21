@@ -12,7 +12,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN
-from .models import SchedulerData, normalize_schedule_data, serialize_schedule_data
+from .models import (
+    DEFAULT_ROOM_SENSOR_ASSIST_DEADBAND,
+    SchedulerData,
+    normalize_schedule_data,
+    serialize_schedule_data,
+)
 from .temperature import (
     CELSIUS,
     FAHRENHEIT,
@@ -90,6 +95,9 @@ class VelairStorage:
                 else None
             )
             runtime_data = deepcopy(raw_data)
+            _migrate_room_sensor_assist_deadband(
+                runtime_data, self._temperature_unit
+            )
             if self._temperature_unit == FAHRENHEIT:
                 runtime_data = self._hydrate_fahrenheit_defaults(runtime_data)
         self.data = normalize_schedule_data(runtime_data, climate_entities)
@@ -324,6 +332,35 @@ def _convert_blocks(blocks: Any, source: str, target: str) -> None:
                 )
 
 
+def _migrate_room_sensor_assist_deadband(
+    data: dict[str, Any], unit: str
+) -> None:
+    """Add the independent Room Assist deadband in the stored native unit."""
+    zones = data.get("zones")
+    if not isinstance(zones, dict):
+        return
+    maximum = 9.0 if unit == FAHRENHEIT else 5.0
+    default = 1.0 if unit == FAHRENHEIT else DEFAULT_ROOM_SENSOR_ASSIST_DEADBAND
+    for zone in zones.values():
+        if not isinstance(zone, dict):
+            continue
+        preconditioning = zone.get("preconditioning")
+        if not isinstance(preconditioning, dict):
+            continue
+        raw_value = (
+            preconditioning.get("room_sensor_assist_deadband")
+            if "room_sensor_assist_deadband" in preconditioning
+            else preconditioning.get("minimum_delta_temperature")
+        )
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            value = default
+        if not math.isfinite(value) or not 0 <= value <= maximum:
+            value = default
+        preconditioning["room_sensor_assist_deadband"] = round(value, 6)
+
+
 def _round_fahrenheit_defaults(data: dict[str, Any]) -> None:
     """Use practical whole-degree defaults for a fresh Fahrenheit model."""
     settings = data.get("settings")
@@ -356,6 +393,7 @@ def _round_fahrenheit_defaults(data: dict[str, Any]) -> None:
         preconditioning = zone.get("preconditioning")
         if isinstance(preconditioning, dict):
             preconditioning["minimum_delta_temperature"] = 1.0
+            preconditioning["room_sensor_assist_deadband"] = 1.0
             preconditioning["room_sensor_assist_max_delta"] = 4.0
             preconditioning["fallback_minutes_per_degree"] = 14.0
 
@@ -582,7 +620,11 @@ def _convert_scheduler_temperatures(
                         )
             pre = zone.get("preconditioning")
             if isinstance(pre, dict):
-                for key in ("minimum_delta_temperature", "room_sensor_assist_max_delta"):
+                for key in (
+                    "minimum_delta_temperature",
+                    "room_sensor_assist_deadband",
+                    "room_sensor_assist_max_delta",
+                ):
                     if isinstance(pre.get(key), (int, float)):
                         pre[key] = round(temperature_delta(pre[key], source, target), 6)
                 if isinstance(pre.get("fallback_minutes_per_degree"), (int, float)):

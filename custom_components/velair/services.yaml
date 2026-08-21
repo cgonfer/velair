@@ -457,3 +457,51 @@ disable_room_sensor_assist:
       selector:
         entity:
           domain: climate
+
+set_external_change_policy:
+  name: Set external change policy
+  description: Choose whether Velair reapplies its current authority or starts Manual control when a managed climate changes outside Velair.
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: climate
+    policy:
+      required: true
+      selector:
+        select:
+          options:
+            - keep_automatic
+            - until_next_block
+            - for_duration
+            - until_resumed
+    duration_minutes:
+      required: false
+      example: 60
+      selector:
+        number:
+          min: 1
+          max: 10080
+          step: 5
+          unit_of_measurement: min
+
+resume_automatic_control:
+  name: Resume automatic control
+  description: Leave Manual adjustment, resolve the current Velair intent, and deliver it only when scheduler state and other overrides allow.
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: climate
+
+enter_manual_adjustment:
+  name: Enter Manual adjustment
+  description: Enter Manual adjustment with the climate's live HVAC mode and setpoint. It uses the saved external-adjustment policy; when Keep automatic is saved, the explicit hold lasts until automatic control is resumed.
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: climate

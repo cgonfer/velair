@@ -65,6 +65,7 @@ import { PROFILE_DESCRIPTION_MAX_LENGTH, MODE_NAME_MAX_LENGTH, WEEKDAYS } from "
 import { orderedWeekdays, orderedZoneIds } from "../domain/settings";
 import { cardStyles } from "../styles/card-styles";
 import { profileStyles } from "../styles/profile-styles";
+import { NoticeTransitions, type DesiredNotice } from "../controllers/notice-transitions";
 import type { VelairViewHost } from "../host-types";
 import type {
   ActiveSetupControls,
@@ -84,6 +85,7 @@ import {
   renderTimeline,
 } from "../views/schedule-view";
 import { renderWeeklyScheduleEditor } from "../views/weekly-schedule-editor";
+import { renderContextualNoticeStack } from "../views/notice-view";
 
 export class VelairProfilesView extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
@@ -120,6 +122,7 @@ export class VelairProfilesView extends LitElement {
   @state() private _climateCloneDialog?: { entityId: string; weekday: string; targets: Set<string>; error?: string };
   private _dialogTrigger?: HTMLElement;
   private _templateSaveToken?: symbol;
+  private readonly _validationNotices = new NoticeTransitions(() => this.requestUpdate());
 
   private readonly _handleDocumentClick = (event: MouseEvent): void => {
     const menu = this.shadowRoot?.querySelector<HTMLDetailsElement>(".active-setup-menu");
@@ -134,52 +137,57 @@ export class VelairProfilesView extends LitElement {
 
   public disconnectedCallback(): void {
     this.ownerDocument.removeEventListener("click", this._handleDocumentClick);
+    this._validationNotices.dispose();
     super.disconnectedCallback();
   }
 
   protected willUpdate(changed: Map<string, unknown>): void {
-    if (!changed.has("data")) {
-      return;
-    }
-    if (this._modeEditorOpen && this._selectedModeKey) {
-      const selectedMode = this.data?.modes?.find((mode) => mode.key === this._selectedModeKey);
-      if (!selectedMode) {
-        this._clearModeSelection();
-      } else if (!this._modeDirty) {
-        this._modeDraft = createVelairModeDraft(selectedMode);
+    if (changed.has("data")) {
+      if (this._modeEditorOpen && this._selectedModeKey) {
+        const selectedMode = this.data?.modes?.find((mode) => mode.key === this._selectedModeKey);
+        if (!selectedMode) {
+          this._clearModeSelection();
+        } else if (!this._modeDirty) {
+          this._modeDraft = createVelairModeDraft(selectedMode);
+        }
       }
-    }
-    const profiles = this.data?.profiles ?? [];
-    const entityIds = orderedZoneIds(
-      this.data?.configured_entities ?? [],
-      this.data?.settings?.zone_order ?? [],
-    );
-    if (!this._selectedEntity || !entityIds.includes(this._selectedEntity)) {
-      this._selectedEntity = entityIds[0] ?? "";
-    }
-    const selected = profiles.find((profile) => profile.key === this._selectedKey);
-    if (this._dirty) {
-      if (this._selectedKey && !selected) {
+      const profiles = this.data?.profiles ?? [];
+      const entityIds = orderedZoneIds(
+        this.data?.configured_entities ?? [],
+        this.data?.settings?.zone_order ?? [],
+      );
+      if (!this._selectedEntity || !entityIds.includes(this._selectedEntity)) {
+        this._selectedEntity = entityIds[0] ?? "";
+      }
+      const selected = profiles.find((profile) => profile.key === this._selectedKey);
+      if (this._dirty && this._selectedKey && !selected) {
         this._clearSelection();
         this._error = this._t("profileRemovedElsewhere");
+      } else if (!this._dirty) {
+        if (selected) {
+          this._draft = createClimateProfileDraft(selected);
+        } else if (this._selectedKey) {
+          this._clearSelection();
+        }
       }
-      return;
     }
-    if (selected) {
-      this._draft = createClimateProfileDraft(selected);
-    } else if (this._selectedKey) {
-      this._clearSelection();
+    this._validationNotices.sync(this._desiredValidationNotices());
+  }
+
+  protected updated(changed: Map<string, unknown>): void {
+    if (changed.has("_error") && this._error) {
+      this.dispatchEvent(new CustomEvent("profile-error", {
+        bubbles: true,
+        composed: true,
+        detail: this._error,
+      }));
     }
   }
 
   protected render() {
     const selector = this._renderActiveSelector();
-    const notices = this._error
-      ? html`<div class="notice error" role="alert">${this._error}</div>`
-      : nothing;
-    if (this.compact) return html`${selector}${notices}`;
+    if (this.compact) return html`${selector}`;
     if (this.workspace === "profiles") return html`
-      ${notices}
       ${this._renderLibrary()}
       ${this._renderTemplateDialog()}
       ${this._renderClimateCloneDialog()}
@@ -194,7 +202,6 @@ export class VelairProfilesView extends LitElement {
           </span>
         </header>
         ${selector}
-        ${notices}
         ${this._renderModes()}
       </section>
     `;
@@ -207,7 +214,6 @@ export class VelairProfilesView extends LitElement {
         </span>
       </header>
       ${selector}
-      ${notices}
       ${this._renderLibrarySelector()}
       <div
         id="profiles-library-panel"
@@ -860,12 +866,11 @@ export class VelairProfilesView extends LitElement {
     const descriptionLength = this._draft.description?.length ?? 0;
     const descriptionRemaining = PROFILE_DESCRIPTION_MAX_LENGTH - descriptionLength;
     const descriptionValid = descriptionRemaining >= 0;
-    const unsupportedModeError = this._unsupportedScheduleModeError();
     const hasScheduleValidationError = this._hasScheduleValidationError();
-    const climateScheduleErrors = orderedZoneIds(
-      this.data?.configured_entities ?? [],
-      this.data?.settings?.zone_order ?? [],
-    ).filter((entityId) => Boolean(this._zoneScheduleError(entityId)));
+    const validationNotices = this._validationNotices.entries.map((entry) => ({
+      ...entry,
+      type: "error" as const,
+    }));
     return html`
       <section class="profile-editor">
         <div class="template-detail-heading profile-detail-heading">
@@ -899,14 +904,7 @@ export class VelairProfilesView extends LitElement {
             </button>
           </div>
         </div>
-        ${unsupportedModeError
-          ? html`<div class="notice error profile-schedule-error" role="alert">${unsupportedModeError}</div>`
-          : nothing}
-        ${climateScheduleErrors.length && !unsupportedModeError
-          ? html`<div class="notice error profile-schedule-error" role="alert">${this._t("profileScheduleErrorsSummary", {
-              climates: climateScheduleErrors.map((entityId) => this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId).join(", "),
-            })}</div>`
-          : nothing}
+        <div class="profile-schedule-error">${renderContextualNoticeStack(validationNotices)}</div>
         <div class="metadata">
           <div class="profile-color-field profile-metadata-row">
             <label for="profile-color-picker">${this._t("profileColor")}</label>
@@ -1058,7 +1056,6 @@ export class VelairProfilesView extends LitElement {
           </label>
         </div>
         <div class="profile-zone-content">
-          ${scheduleError ? html`<div class="notice error profile-zone-error" role="alert">${scheduleError}</div>` : nothing}
           ${zone?.behavior === "pause" ? html`
             <label class="profile-pause-action"><span>${this._t("profilePauseAction")}</span>
               <span class="select-wrap">
@@ -1138,7 +1135,6 @@ export class VelairProfilesView extends LitElement {
                 </span>
               </label>
             ` : nothing}
-            ${scheduleError ? html`<div class="notice error profile-zone-error" role="alert">${scheduleError}</div>` : nothing}
             ${zone?.behavior === "schedule" ? this._renderSchedule(entityId, zone) : nothing}
           </div>
         ` : nothing}
@@ -1323,6 +1319,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _clearSelection = (): void => {
+    this._validationNotices.dispose();
     this._selectedKey = "";
     this._draft = createClimateProfileDraft();
     this._selectedDays = {};
@@ -1784,6 +1781,37 @@ export class VelairProfilesView extends LitElement {
     );
   }
 
+  private _desiredValidationNotices(): DesiredNotice[] {
+    if (!this._selectedKey) return [];
+    const unsupportedModeError = this._unsupportedScheduleModeError();
+    if (unsupportedModeError) {
+      return [{ id: "unsupported-mode", message: unsupportedModeError }];
+    }
+    const climateScheduleErrors = orderedZoneIds(
+      this.data?.configured_entities ?? [],
+      this.data?.settings?.zone_order ?? [],
+    ).filter((entityId) => Boolean(this._zoneScheduleError(entityId)));
+    if (!climateScheduleErrors.length) return [];
+
+    const desired: DesiredNotice[] = [];
+    const selectedError = climateScheduleErrors.includes(this._selectedEntity)
+      ? this._zoneScheduleError(this._selectedEntity)
+      : undefined;
+    if (climateScheduleErrors.length > 1 || !selectedError) {
+      desired.push({
+        id: "schedule-summary",
+        message: this._t("profileScheduleErrorsSummary", {
+          climates: climateScheduleErrors.map((entityId) =>
+            this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId).join(", "),
+        }),
+      });
+    }
+    if (selectedError) {
+      desired.push({ id: `schedule-detail:${this._selectedEntity}`, message: selectedError });
+    }
+    return desired;
+  }
+
   private _unsupportedScheduleModeError(onlyEntityId?: string): string | undefined {
     for (const [entityId, zone] of Object.entries(this._draft.zones)) {
       if (onlyEntityId && entityId !== onlyEntityId) continue;
@@ -2144,7 +2172,15 @@ export class VelairProfilesView extends LitElement {
     }));
   }
 
-  private _clearNotices(): void { this._error = undefined; }
+  private _clearNotices(): void {
+    if (this._error === undefined) return;
+    this._error = undefined;
+    this.dispatchEvent(new CustomEvent("profile-error", {
+      bubbles: true,
+      composed: true,
+      detail: null,
+    }));
+  }
   private _setDirty(dirty: boolean): void {
     const nextDirty = dirty && this._profileDraftChanged();
     if (this._dirty === nextDirty) return;

@@ -267,15 +267,43 @@ describe("preconditioning view", () => {
 
     render(renderPreconditioningView(viewHost, ["climate.first"]), container);
 
-    const helpItems = [...container.querySelectorAll(".preconditioning-help")];
+    const helpItems = [...container.querySelectorAll(".inline-help")];
     expect(helpItems).toHaveLength(12);
-    expect(helpItems.every((item) => item.getAttribute("tabindex") === "0")).toBe(true);
+    expect(helpItems.every((item) => item.tagName === "BUTTON")).toBe(true);
     expect(helpItems[0]?.getAttribute("aria-label")).toBe(
       "preconditioningMinStartHelp",
     );
-    expect(helpItems[0]?.querySelector('[role="tooltip"]')?.textContent).toContain(
+    const described = helpItems[0]?.getAttribute("aria-describedby");
+    expect(container.querySelector(`#${described}`)?.textContent).toContain(
       "preconditioningMinStartHelp",
     );
+  });
+
+  it("keeps help IDs unique across climates and live heat/cool directions", () => {
+    const { viewHost } = host({
+      expandedZoneIds: ["climate.first", "climate.second"],
+    });
+    const data = (viewHost as unknown as { _data: any })._data;
+    data.zones["climate.first"].preconditioning.enabled = true;
+    data.preconditioning_learning = {
+      "climate.first": learningBothDirections(),
+      "climate.second": learningBothDirections(),
+    };
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.first", "climate.second"]), container);
+
+    const tooltips = [...container.querySelectorAll<HTMLElement>(".inline-help-tooltip")];
+    const ids = tooltips.map((tooltip) => tooltip.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const button of container.querySelectorAll<HTMLElement>(".inline-help")) {
+      const describedBy = button.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(container.querySelectorAll(`#${describedBy}`)).toHaveLength(1);
+    }
+    expect(ids).toContain("preconditioning-climate-first-heat-live-prediction-help");
+    expect(ids).toContain("preconditioning-climate-first-cool-live-prediction-help");
+    expect(ids).toContain("preconditioning-climate-second-heat-live-prediction-help");
+    expect(ids).toContain("preconditioning-climate-second-cool-live-prediction-help");
   });
 
   it("persists enable changes for the selected climate", () => {

@@ -6,8 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { overviewStyles } from "../../src/velair/styles/overview-styles";
 import { timelineStyles } from "../../src/velair/styles/timeline-styles";
+import { de } from "../../src/velair/translations/de";
 import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
+import { fr } from "../../src/velair/translations/fr";
+import { nl } from "../../src/velair/translations/nl";
+import { ru } from "../../src/velair/translations/ru";
 import { translationTemplate } from "../../src/velair/translations/template";
 import type { ScheduleEvent } from "../../src/velair/types";
 import {
@@ -39,6 +43,190 @@ function host() {
 }
 
 describe("overview next events", () => {
+  it("renders a permanent accessible segmented control and ignores the active option", () => {
+    const container = document.createElement("div");
+    const enter = vi.fn();
+    const resume = vi.fn();
+    const overviewHost = {
+      ...host(),
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: {
+          "climate.office": {
+            state: "scheduled",
+            control_mode: "automatic",
+            manual_adjustment_allowed: true,
+          },
+        },
+      },
+      _manualControlActions: {},
+      _enterManualAdjustment: enter,
+      _resumeAutomaticControl: resume,
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+    const group = container.querySelector('[role="group"]')!;
+    const options = [...group.querySelectorAll<HTMLButtonElement>('button')];
+
+    expect(group.getAttribute("aria-label")).toBe("velairControl");
+    expect(options.map((option) => option.querySelector("span")?.textContent)).toEqual([
+      "overviewControlAutomatic", "overviewControlManual",
+    ]);
+    expect(options.map((option) => option.querySelector("ha-icon")?.getAttribute("icon"))).toEqual([
+      "mdi:calendar-clock", "mdi:hand-back-right-outline",
+    ]);
+    expect(options.every((option) => option.querySelector("ha-icon")?.getAttribute("aria-hidden") === "true"))
+      .toBe(true);
+    expect(options.map((option) => option.getAttribute("aria-pressed"))).toEqual(["true", "false"]);
+    options[0].click();
+    expect(resume).not.toHaveBeenCalled();
+    options[1].click();
+    expect(enter).toHaveBeenCalledWith("climate.office");
+  });
+
+  it("resumes from Manual, keeps the active option a no-op, and blocks only migration", () => {
+    const renderManual = (reason?: "already_manual" | "temperature_migration") => {
+      const container = document.createElement("div");
+      const resume = vi.fn();
+      const overviewHost = {
+        ...host(),
+        _data: {
+          zones: { "climate.office": { enabled: true, schedule: {} } },
+          zone_runtime: {
+            "climate.office": {
+              state: "paused",
+              control_mode: "manual",
+              manual_control: { active: true, policy: "until_resumed" },
+              manual_adjustment_allowed: false,
+              manual_adjustment_unavailable_reason: reason ?? "already_manual",
+            },
+          },
+        },
+        _manualControlActions: {},
+        _enterManualAdjustment: vi.fn(),
+        _resumeAutomaticControl: resume,
+      } as unknown as VelairViewHost;
+      render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+      return { container, resume };
+    };
+
+    const normal = renderManual();
+    const normalOptions = [...normal.container.querySelectorAll<HTMLButtonElement>('.manual-control-segmented button')];
+    normalOptions[1].click();
+    expect(normal.resume).not.toHaveBeenCalled();
+    normalOptions[0].click();
+    expect(normal.resume).toHaveBeenCalledWith("climate.office");
+
+    const migration = renderManual("temperature_migration");
+    const automatic = migration.container.querySelector<HTMLButtonElement>('.manual-control-segmented button')!;
+    expect(automatic.getAttribute("aria-disabled")).toBe("true");
+    expect(automatic.getAttribute("aria-describedby")).toBeTruthy();
+    automatic.click();
+    expect(migration.resume).not.toHaveBeenCalled();
+  });
+
+  it("projects per-entity busy state on both segmented options", () => {
+    const container = document.createElement("div");
+    const overviewHost = {
+      ...host(),
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: { "climate.office": { state: "scheduled", control_mode: "automatic" } },
+      },
+      _manualControlActions: { "climate.office": "enter" },
+    } as unknown as VelairViewHost;
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+    expect([...container.querySelectorAll('.manual-control-segmented button')].map(
+      (option) => option.getAttribute("aria-disabled"),
+    )).toEqual(["true", "true"]);
+    expect(container.querySelector('[role="group"]')?.getAttribute("aria-busy")).toBe("true");
+  });
+
+  it("shows the active Manual session policy and expiry for all policies", () => {
+    const cases = [
+      {
+        manual_control: { active: true, policy: "until_next_block", until: "2026-08-20T22:00:00+02:00" },
+        expected: "manualSessionNextBlockAtdate:2026-08-20T22:00:00+02:00",
+      },
+      {
+        manual_control: { active: true, policy: "for_duration", duration_minutes: 45, until: "2026-08-20T19:00:00+02:00" },
+        expected: "manualSessionDurationUntil45date:2026-08-20T19:00:00+02:00",
+      },
+      {
+        manual_control: { active: true, policy: "until_resumed" },
+        expected: "manualSessionUntilResumed",
+      },
+    ] as const;
+
+    for (const entry of cases) {
+      const container = document.createElement("div");
+      const overviewHost = {
+        ...host(),
+        _data: {
+          zones: { "climate.office": { enabled: true, schedule: {} } },
+          zone_runtime: {
+            "climate.office": {
+              state: "paused",
+              control_mode: "manual",
+              manual_control: entry.manual_control,
+            },
+          },
+        },
+      } as unknown as VelairViewHost;
+
+      render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+      expect(container.querySelector(".manual-control-detail")?.textContent).toContain(entry.expected);
+      const options = [...container.querySelectorAll('.manual-control-segmented button')];
+      expect(options.map((option) => option.getAttribute("aria-pressed"))).toEqual(["false", "true"]);
+    }
+  });
+
+  it("explains that a next-block session without a future block lasts until resumed", () => {
+    const container = document.createElement("div");
+    const overviewHost = {
+      ...host(),
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: {
+          "climate.office": {
+            state: "paused",
+            control_mode: "manual",
+            manual_control: { active: true, policy: "until_next_block" },
+          },
+        },
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+    expect(container.querySelector(".manual-control-detail")?.textContent)
+      .toContain("manualSessionNoNextBlock");
+  });
+
+  it("keeps Manual focusable but aria-disabled with an authoritative reason", () => {
+    const container = document.createElement("div");
+    const overviewHost = {
+      ...host(),
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        zone_runtime: {
+          "climate.office": {
+            state: "paused",
+            control_mode: "automatic",
+            manual_adjustment_allowed: false,
+            manual_adjustment_unavailable_reason: "zone_paused",
+          },
+        },
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+    const manual = container.querySelectorAll('.manual-control-segmented button')[1];
+    expect(manual.getAttribute("aria-disabled")).toBe("true");
+    expect(manual.getAttribute("aria-describedby")).toBeTruthy();
+    expect(container.querySelector(".manual-control-reason")?.textContent)
+      .toContain("manualUnavailableZonePause");
+  });
+
   it("shows authoritative zone state and only relevant secondary signals", () => {
     const container = document.createElement("div");
     const overviewHost = {
@@ -55,8 +243,9 @@ describe("overview next events", () => {
     const heading = container.querySelector(".overview-zone-card-heading")!;
     expect([...heading.children].map((node) => node.className)).toEqual([
       "overview-zone-card-name",
-      "overview-zone-signals",
+      "overview-manual-control",
       "overview-zone-activity state-scheduled",
+      "overview-zone-signals",
     ]);
     expect(container.querySelector(".overview-zone-card")).not.toBeNull();
     expect(container.querySelector(".overview-zone-details .overview-zone-metrics")).not.toBeNull();
@@ -555,7 +744,19 @@ describe("overview next events", () => {
   it("provides concise manual-state translations alongside HVAC action dictionaries", () => {
     expect(en.overviewZoneManual).toBe("Manual");
     expect(es.overviewZoneManual).toBe("Manual");
+    expect(en.overviewControlAutomatic).toBe("Automatic");
+    expect(en.overviewControlManual).toBe("Manual");
+    expect(es.overviewControlAutomatic).toBe("Automático");
+    expect(es.overviewControlManual).toBe("Manual");
     expect(translationTemplate).toHaveProperty("overviewZoneManual");
+    expect(translationTemplate).toHaveProperty("overviewControlAutomatic");
+    expect(translationTemplate).toHaveProperty("overviewControlManual");
+    for (const dictionary of [de, en, es, fr, nl, ru]) {
+      expect(dictionary.overviewControlAutomatic.trim()).toBeTruthy();
+      expect(dictionary.overviewControlManual.trim()).toBeTruthy();
+      expect(dictionary.overviewControlAutomatic).not.toMatch(/\s/);
+      expect(dictionary.overviewControlManual).not.toMatch(/\s/);
+    }
     for (const action of [
       "heating",
       "cooling",
@@ -592,9 +793,36 @@ describe("overview next events", () => {
     expect(cssText).toMatch(/\.overview-zone-activity\.action-idle \.overview-zone-activity-icon,[\s\S]*var\(--secondary-text-color\)/);
     expect(cssText).not.toMatch(/\.overview-zone-signals\s*\{[^}]*overflow-x:\s*auto/);
     expect(cssText).not.toMatch(/\.overview-zone-signal\.hvac-action/);
-    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 1120px\)[\s\S]*\.overview-zone-signals\s*\{[^}]*grid-column:\s*1 \/ -1[^}]*grid-row:\s*2/);
+    expect(cssText).toMatch(/\.manual-control-segmented\s*\{[^}]*grid-template-columns:\s*repeat\(2, max-content\)[^}]*max-width:\s*100%[^}]*width:\s*fit-content/);
+    expect(cssText).toMatch(/\.manual-control-segmented\s*\{[^}]*border:[^}]*color-mix[^}]*overflow:\s*hidden/);
+    expect(cssText).toMatch(/\.manual-control-segmented button\s*\{[^}]*background:\s*transparent[^}]*border-radius:\s*0[^}]*line-height:\s*1[^}]*min-height:\s*30px[^}]*white-space:\s*nowrap/);
+    expect(cssText).toMatch(/\.manual-control-segmented button\s*\{[^}]*display:\s*inline-flex[^}]*gap:\s*4px/);
+    expect(cssText).toMatch(/\.manual-control-segmented button ha-icon\s*\{[^}]*--mdc-icon-size:\s*13px[^}]*color:\s*currentColor/);
+    const segmentRule = cssText.match(/\.manual-control-segmented button\s*\{[^}]*\}/)?.[0] ?? "";
+    const selectedSegmentRule = cssText.match(/\.manual-control-segmented button\[aria-pressed="true"\]\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(segmentRule).toContain("border: 0");
+    expect(segmentRule).not.toContain("box-shadow");
+    expect(selectedSegmentRule).not.toContain("box-shadow");
+    expect(cssText).toMatch(/\.manual-control-segmented button \+ button\s*\{[^}]*border-inline-start:\s*1px solid/);
+    expect(cssText).toMatch(/\.manual-control-segmented button\[aria-pressed="true"\]\s*\{[^}]*background:\s*var\(--primary-color\)[^}]*var\(--text-primary-color, var\(--card-background-color\)\)/);
+    expect(cssText).toMatch(/\.manual-control-segmented button:not\(\[aria-pressed="true"\]\):not\(\[aria-disabled="true"\]\):hover\s*\{[^}]*color-mix\(in srgb, var\(--primary-color\) 18%/);
+    expect(cssText).toMatch(/\.manual-control-segmented button\[aria-pressed="true"\]:not\(\[aria-disabled="true"\]\):hover\s*\{[^}]*color-mix\(in srgb, var\(--primary-color\) 88%/);
+    expect(cssText).toMatch(/\.manual-control-segmented button:active:not\(\[aria-disabled="true"\]\)\s*\{[^}]*filter:\s*brightness/);
+    expect(cssText).toMatch(/\.manual-control-segmented button\[aria-pressed="true"\]:focus-visible\s*\{[^}]*outline-color:\s*var\(--text-primary-color, var\(--card-background-color\)\)/);
+    expect(cssText).toMatch(/\.overview-zone-signals\s*\{[^}]*grid-column:\s*1 \/ -1[^}]*grid-row:\s*2/);
+    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 1120px\)[\s\S]*\.overview-manual-control\s*\{[^}]*grid-column:\s*1 \/ -1[^}]*grid-row:\s*2/);
+    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 1120px\)[\s\S]*\.overview-zone-signals\s*\{[^}]*grid-column:\s*1 \/ -1[^}]*grid-row:\s*3/);
     expect(cssText).toMatch(/@container overview-zone-card \(max-width: 600px\)[\s\S]*\.overview-zone-card-heading\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(120px, 46%\)/);
-    expect(cssText).toMatch(/@container overview-zone-card \(max-width: 600px\)[\s\S]*\.overview-zone-activity\s*\{[^}]*grid-column:\s*2[^}]*grid-row:\s*1[^}]*grid-template-columns:\s*32px minmax\(0, 1fr\)[^}]*width:\s*100%/);
+    const compactContainerRules = cssText.match(
+      /@container overview-zone-card \(max-width: 600px\) \{([\s\S]*?)\n\}/,
+    )?.[1] ?? "";
+    const compactViewportRules = cssText.match(/@media \(max-width: 600px\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    for (const compactRules of [compactContainerRules, compactViewportRules]) {
+      expect(compactRules).toMatch(/\.overview-zone-activity\s*\{[^}]*grid-column:\s*2[^}]*grid-row:\s*1/);
+      expect(compactRules).toMatch(/\.overview-zone-activity\s*\{[^}]*grid-template-columns:\s*32px minmax\(0, max-content\)/);
+      expect(compactRules).toMatch(/\.overview-zone-activity\s*\{[^}]*justify-self:\s*end[^}]*max-width:\s*100%[^}]*width:\s*fit-content/);
+      expect(compactRules).not.toMatch(/\.overview-zone-activity\s*\{[^}]*(?:^|;)\s*width:\s*100%/);
+    }
   });
 
   it("surfaces environmental comfort and monitored air quality as separate signals", () => {
@@ -944,6 +1172,112 @@ describe("overview next events", () => {
 });
 
 describe("overview timeline", () => {
+  it("keeps the boost shimmer inside its responsive block geometry", () => {
+    const cssText = overviewStyles.cssText;
+    const shimmerRule = cssText.match(
+      /\.overview-timeline-boost::before,[\s\S]*?\.overview-timeline-boost::after\s*\{[^}]*\}/,
+    )?.[0] ?? "";
+
+    expect(shimmerRule).toContain("inset: 0");
+    expect(shimmerRule).toContain("width: auto");
+    expect(shimmerRule).toContain("border-radius: inherit");
+    expect(shimmerRule).toContain("background-repeat: no-repeat");
+    expect(shimmerRule).toContain("background-size: 42% 100%");
+    const keyframes = cssText.slice(
+      cssText.indexOf("@keyframes velair-overview-boost-bars"),
+      cssText.indexOf("@media (prefers-reduced-motion: reduce)"),
+    );
+    expect(keyframes).toMatch(/background-position:\s*-72% 0[\s\S]*background-position:\s*172% 0/);
+    expect(keyframes).not.toContain("transform:");
+    expect(cssText).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.overview-timeline-boost::before,[\s\S]*animation:\s*none/);
+  });
+
+  it("identifies a Manual zone pause with one hand icon and accessible detail", () => {
+    const container = document.createElement("div");
+    const timelineHost = {
+      ...host(),
+      _currentTimelineNow: () => new Date("2026-08-21T12:00:00+02:00"),
+      _data: {
+        global: { mode: "auto" },
+        zones: {
+          "climate.office": {
+            enabled: true,
+            schedule: {},
+            override: { type: "pause", action: "none" },
+            pauses: [
+              { started_at: "2026-08-21T11:00:00+02:00", action: "none", pause_id: "manual" },
+              { started_at: "2026-08-21T11:30:00+02:00", action: "turn_off", pause_id: "window" },
+            ],
+          },
+        },
+        zone_runtime: {
+          "climate.office": { state: "paused", control_mode: "manual" },
+        },
+      },
+    } as unknown as VelairViewHost;
+
+    render(html`
+      ${renderOverviewTimelineName(timelineHost, "climate.office")}
+      ${renderOverviewTimelineTrack(timelineHost, "climate.office", [])}
+    `, container);
+
+    const name = container.querySelector(".overview-timeline-name")!;
+    const pause = container.querySelector(".overview-timeline-pause")!;
+    expect(name.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:hand-back-right-outline");
+    expect(pause.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:hand-back-right-outline");
+    expect(name.getAttribute("title")).toContain("pauseActive - manualAdjustment");
+    expect(pause.getAttribute("aria-label")).toContain("pauseActive - manualAdjustment");
+    expect(name.getAttribute("title")).toContain("pauseReasons: 2");
+    expect(pause.getAttribute("aria-label")).toContain("pauseReasons: 2");
+    expect(pause.querySelectorAll("ha-icon")).toHaveLength(1);
+  });
+
+  it("keeps ordinary zone and global pauses distinct from Manual adjustment", () => {
+    const renderPause = (global: boolean) => {
+      const container = document.createElement("div");
+      const timelineHost = {
+        ...host(),
+        _currentTimelineNow: () => new Date("2026-08-21T12:00:00+02:00"),
+        _formatRemaining: () => "2h",
+        _data: {
+          global: global
+            ? {
+                mode: "paused",
+                paused_started_at: "2026-08-21T11:00:00+02:00",
+                paused_until: "2026-08-21T14:00:00+02:00",
+              }
+            : { mode: "auto" },
+          zones: {
+            "climate.office": {
+              enabled: true,
+              schedule: {},
+              ...(global ? {} : { override: { type: "pause", action: "none" } }),
+            },
+          },
+          zone_runtime: {
+            "climate.office": { state: "paused", control_mode: global ? "manual" : "automatic" },
+          },
+        },
+      } as unknown as VelairViewHost;
+      render(html`
+        ${renderOverviewTimelineName(timelineHost, "climate.office")}
+        ${renderOverviewTimelineTrack(timelineHost, "climate.office", [])}
+      `, container);
+      return container;
+    };
+
+    for (const [kind, container] of [["zone", renderPause(false)], ["global", renderPause(true)]] as const) {
+      expect(container.querySelector(".overview-timeline-name ha-icon")?.getAttribute("icon"))
+        .toBe("mdi:pause-circle");
+      expect(container.querySelector(".overview-timeline-pause ha-icon")?.getAttribute("icon"), kind)
+        .toBe("mdi:pause");
+      expect(container.querySelector(".overview-timeline-name")?.getAttribute("title"))
+        .not.toContain("manualAdjustment");
+      expect(container.querySelector(".overview-timeline-pause")?.getAttribute("aria-label"))
+        .not.toContain("manualAdjustment");
+    }
+  });
+
   it("keeps editor carry-over informational while Overview carry-over is interactive", () => {
     expect(timelineStyles.cssText).toMatch(
       /\.timeline-block\.timeline-carry-over,[\s\S]*pointer-events:\s*none/,

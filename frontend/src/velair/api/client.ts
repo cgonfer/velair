@@ -12,6 +12,7 @@ import type {
   ScheduleBlock,
   ScheduleResponse,
   ScheduleUpdateMessage,
+  ExternalChangePolicy,
   VelairPortablePayload,
 } from "../types";
 
@@ -171,6 +172,34 @@ export class VelairApiClient {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/update_settings",
       ...settings,
+    });
+  }
+
+  public updateExternalChangePolicy(
+    entityId: string,
+    policy: ExternalChangePolicy,
+  ): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/update_external_change_policy",
+      entity_id: entityId,
+      policy: policy.action,
+      duration_minutes: policy.duration_minutes,
+    });
+  }
+
+  public resumeAutomaticControl(entityId: string): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/resume_automatic_control",
+      entity_id: entityId,
+    });
+  }
+
+  public enterManualAdjustment(
+    entityId: string,
+  ): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/enter_manual_adjustment",
+      entity_id: entityId,
     });
   }
 

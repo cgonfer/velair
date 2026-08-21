@@ -20,6 +20,7 @@ export const INITIAL_LOADING_DELAY_MS = 300;
 export const VELAIR_LOADING_ICON_URL = "/velair_frontend/velair-icon.png";
 export const PROFILE_DESCRIPTION_MAX_LENGTH = 500;
 export const MODE_NAME_MAX_LENGTH = 255;
+export const DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES = 120;
 export const PANEL_VIEWS: VelairPanelView[] = [
   "overview",
   "schedules",
@@ -44,7 +45,7 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "preconditioning",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 6;
+export const PORTABLE_MODEL_VERSION = 8;
 export const PORTABLE_SECTIONS: PortableSection[] = [
   "zones",
   "templates",

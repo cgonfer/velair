@@ -20,6 +20,7 @@ Room Assist configuration is stored per managed climate together with the climat
 {
   "room_temperature_entity_id": "sensor.living_room_temperature",
   "room_sensor_assist_enabled": true,
+  "room_sensor_assist_deadband": 0.3,
   "room_sensor_assist_max_delta": 2.0,
   "room_sensor_assist_debounce_seconds": 20
 }
@@ -29,10 +30,11 @@ Key meanings:
 
 - `room_temperature_entity_id`: optional Home Assistant `sensor.*` temperature entity selected from the Room Assist tab.
 - `room_sensor_assist_enabled`: enables runtime target assistance. Selecting a sensor alone does not make it operational.
+- `room_sensor_assist_deadband`: suppresses correction while the absolute room error is at or below the configured delta. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
 - `room_sensor_assist_max_delta`: caps how far Velair may temporarily move the target sent to the climate entity while preserving the scheduled target as the real user target. It must be large enough to permit any known target gap the device may need to stop heating or cooling; the cap is not applied in full unless the external room error requires it.
 - `room_sensor_assist_debounce_seconds`: waits this many seconds after relevant room sensor or climate state changes before recalculating assistance. The supported range is `0` to `300` seconds.
 
-All runtime targets, readings, steps, limits, signed corrections, and range widths use the managed climate entity's native Home Assistant temperature unit. Only an external sensor that declares a different unit is converted before calculation. Absolute temperatures use offset-and-scale conversion, while minimum delta and maximum assist delta use scale-only conversion. The maximum assist delta is normalized with a broad bound so Celsius and Fahrenheit installations can both configure useful limits. The frontend should display values using the managed climate's unit.
+All runtime targets, readings, steps, limits, signed corrections, and range widths use the managed climate entity's native Home Assistant temperature unit. Only an external sensor that declares a different unit is converted before calculation. Absolute temperatures use offset-and-scale conversion, while the Room Assist deadband and maximum assist delta use scale-only conversion. The maximum assist delta is normalized with a broad bound so Celsius and Fahrenheit installations can both configure useful limits. The frontend should display values using the managed climate's unit.
 
 ## Effective Temperature Source
 
@@ -89,7 +91,7 @@ Heating and cooling use the same signed calculation:
 
 ```text
 room_error = target_temperature - room_temperature
-correction = 0 when abs(room_error) <= minimum_delta_temperature
+correction = 0 when abs(room_error) <= room_sensor_assist_deadband
 correction = clamp(room_error, -room_sensor_assist_max_delta, room_sensor_assist_max_delta) otherwise
 applied_target = climate_current_temperature + correction
 
@@ -100,7 +102,7 @@ if mode is fixed cool and the room no longer requests cooling:
     applied_target = max(applied_target, target_temperature)
 ```
 
-A positive correction raises the climate target; a negative correction lowers it. When the room crosses the scheduled target, the sign reverses, so Room Assist counters continued heating or cooling instead of stopping its calculations at the threshold. The configured minimum delta remains a symmetric deadband with zero logical correction.
+A positive correction raises the climate target; a negative correction lowers it. When the room crosses the scheduled target, the sign reverses, so Room Assist counters continued heating or cooling instead of stopping its calculations at the threshold. The configured Room Assist deadband remains symmetric with zero logical correction and is refreshed immediately when saved while assistance is active.
 
 For explicit `heat` and `cool`, the direction remains fixed and inversion only
 moves the target toward the non-driving side. For scalar targets in a
@@ -233,6 +235,7 @@ await hass.connection.sendMessagePromise({
   preconditioning: {
     room_temperature_entity_id: "sensor.living_room_temperature",
     room_sensor_assist_enabled: true,
+    room_sensor_assist_deadband: 0.3,
     room_sensor_assist_max_delta: 2.0,
     room_sensor_assist_debounce_seconds: 20
   }

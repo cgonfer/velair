@@ -256,6 +256,13 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     : undefined;
   const appliedTemperature = numericTemperature(status.applied_temperature);
   const presentation = zoneStatePresentation[status.state];
+  const manualDetail = status.control_mode === "manual"
+    ? manualControlSessionDetail(host, status)
+    : undefined;
+  const manualAllowed = status.manual_adjustment_allowed !== false;
+  const manualUnavailable = manualAllowed
+    ? ""
+    : manualAdjustmentUnavailableDetail(host, status.manual_adjustment_unavailable_reason);
   const assist = host._data?.room_sensor_assist?.[entityId];
   const comfort = host._data?.comfort?.[entityId];
   const assistIsActive = Boolean(assist && (assist.status === "assisting" || assist.status === "holding")
@@ -271,12 +278,20 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
         <div class="overview-zone-card-name">
           <strong>${host._friendlyEntityName(entityId)}</strong><span>${entityId}</span>
         </div>
+        ${renderManualControlSelector(
+          host,
+          entityId,
+          status,
+          manualDetail,
+          manualAllowed,
+          manualUnavailable,
+        )}
+        ${renderOverviewStateBadge(host, entityId, status, presentation)}
         <div class="overview-zone-signals">
           ${renderOverviewZoneProfile(host, entityId)}
           ${renderRoomAssistSignal(host, assist)}
           ${renderOverviewComfortSignals(host, comfort)}
         </div>
-        ${renderOverviewStateBadge(host, entityId, status, presentation)}
       </div>
       ${assistIsActive || hasStandardDetails ? html`<div class="overview-zone-details">
         ${assistIsActive ? renderRoomAssistThermalFlow(host, entityId, assist!) : html`<div class="overview-zone-metrics">
@@ -295,6 +310,102 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
         </div>`}
       </div>` : nothing}
     </article>`;
+}
+
+function renderManualControlSelector(
+  host: OverviewViewHost,
+  entityId: string,
+  status: ZoneRuntimeStatus,
+  manualDetail: string | undefined,
+  manualAllowed: boolean,
+  manualUnavailable: string,
+) {
+  const mode = status.control_mode === "manual" ? "manual" : "automatic";
+  const busy = Boolean(host._manualControlActions?.[entityId]);
+  const migrationBlocked = status.manual_adjustment_unavailable_reason === "temperature_migration";
+  const manualDisabled = mode === "automatic" && !manualAllowed;
+  const automaticDisabled = mode === "manual" && migrationBlocked;
+  const reasonId = `manual-control-reason-${entityId.replace(/[^a-z0-9_-]/gi, "-")}`;
+  return html`
+    <div class="overview-manual-control">
+      <div
+        class="manual-control-segmented"
+        role="group"
+        aria-label=${host._t("velairControl")}
+        aria-busy=${String(busy)}
+      >
+        <button
+          type="button"
+          aria-pressed=${String(mode === "automatic")}
+          aria-disabled=${String(busy || automaticDisabled)}
+          aria-describedby=${automaticDisabled ? reasonId : nothing}
+          @click=${() => {
+            if (mode !== "automatic" && !busy && !automaticDisabled) {
+              void host._resumeAutomaticControl(entityId);
+            }
+          }}
+        >
+          <ha-icon icon="mdi:calendar-clock" aria-hidden="true"></ha-icon>
+          <span>${host._t("overviewControlAutomatic")}</span>
+        </button>
+        <button
+          type="button"
+          aria-pressed=${String(mode === "manual")}
+          aria-disabled=${String(busy || manualDisabled)}
+          aria-describedby=${manualDisabled ? reasonId : nothing}
+          @click=${() => {
+            if (mode !== "manual" && !busy && !manualDisabled) {
+              void host._enterManualAdjustment(entityId);
+            }
+          }}
+        >
+          <ha-icon icon="mdi:hand-back-right-outline" aria-hidden="true"></ha-icon>
+          <span>${host._t("overviewControlManual")}</span>
+        </button>
+      </div>
+      ${mode === "manual" && manualDetail
+        ? html`<small class="manual-control-detail">${manualDetail}</small>`
+        : nothing}
+      ${(manualDisabled || automaticDisabled) && manualUnavailable
+        ? html`<small class="manual-control-reason" id=${reasonId}>${manualUnavailable}</small>`
+        : nothing}
+    </div>
+  `;
+}
+
+function manualControlSessionDetail(host: OverviewViewHost, status: ZoneRuntimeStatus): string {
+  const manual = status.manual_control;
+  if (manual?.policy === "until_next_block") {
+    return manual.until
+      ? host._t("manualSessionNextBlockAt", { time: host._formatDateTime(manual.until) })
+      : host._t("manualSessionNoNextBlock");
+  }
+  if (manual?.policy === "for_duration") {
+    const duration = manual.duration_minutes ?? 0;
+    return manual.until
+      ? host._t("manualSessionDurationUntil", {
+          minutes: duration,
+          time: host._formatDateTime(manual.until),
+        })
+      : host._t("manualSessionDuration", { minutes: duration });
+  }
+  return host._t("manualSessionUntilResumed");
+}
+
+function manualAdjustmentUnavailableDetail(
+  host: OverviewViewHost,
+  reason: ZoneRuntimeStatus["manual_adjustment_unavailable_reason"],
+): string {
+  const keys = {
+    unavailable: "manualUnavailableClimate",
+    disabled: "manualUnavailableDisabled",
+    temperature_migration: "manualUnavailableTemperatureMigration",
+    scheduler_not_auto: "manualUnavailableScheduler",
+    profile_paused: "manualUnavailableProfilePause",
+    zone_paused: "manualUnavailableZonePause",
+    already_manual: "manualAdjustmentActive",
+  } as const;
+  return host._t(keys[reason ?? "unavailable"]);
 }
 
 function renderOverviewZoneProfile(host: OverviewViewHost, entityId: string) {
@@ -770,8 +881,11 @@ export function renderOverviewTimelineTrack(
   const overviewHost = asOverviewDataHost(host);
   const zone = host._data?.zones[entityId];
   const override = activeOverrideForEntity(overviewHost, entityId, host._data?.zones[entityId]);
-  const pauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone)
-    ?? globalTimelinePause(host);
+  const zonePauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone);
+  const pauseOverride = zonePauseOverride ?? globalTimelinePause(host);
+  const manualZonePause = Boolean(
+    zonePauseOverride && host._data?.zone_runtime?.[entityId]?.control_mode === "manual",
+  );
   const boostBlock = override ? timelineBoostBlockFromOverride(override, host._currentTimelineNow()) : undefined;
   const pauseBlock = pauseOverride ? timelinePauseBlockFromOverride(pauseOverride, host._currentTimelineNow()) : undefined;
   const trackClass = pauseBlock?.indefinite ? "overview-timeline-track paused-indefinite" : "overview-timeline-track";
@@ -785,7 +899,9 @@ export function renderOverviewTimelineTrack(
           `
         : html`<span class="overview-timeline-empty">${host._t("noBlocks")}</span>`}
       ${boostBlock && override ? renderOverviewTimelineBoost(host, entityId, boostBlock, override) : nothing}
-      ${pauseBlock && pauseOverride ? renderOverviewTimelinePause(host, entityId, pauseBlock, pauseOverride) : nothing}
+      ${pauseBlock && pauseOverride
+        ? renderOverviewTimelinePause(host, entityId, pauseBlock, pauseOverride, manualZonePause)
+        : nothing}
       ${host._overviewTimelineDetail && host._overviewTimelineDetailEntityId === entityId
         ? html`
             <div
@@ -815,15 +931,23 @@ export function renderOverviewTimelineName(host: OverviewViewHost, entityId: str
   const overviewHost = asOverviewDataHost(host);
   const zone = host._data?.zones[entityId];
   const boostOverride = activeOverrideForEntity(overviewHost, entityId, zone);
-  const pauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone)
-    ?? globalTimelinePause(host);
+  const zonePauseOverride = activePauseOverrideForEntity(overviewHost, entityId, zone);
+  const pauseOverride = zonePauseOverride ?? globalTimelinePause(host);
+  const manualZonePause = Boolean(
+    zonePauseOverride && host._data?.zone_runtime?.[entityId]?.control_mode === "manual",
+  );
   const effect = activeClimateProfileZoneEffect(host._data, entityId);
   const showProfile = Boolean(effect && !boostOverride && !pauseOverride);
   const label = host._friendlyEntityName(entityId);
   const detail = pauseOverride ? pauseDetailText(overviewHost, pauseOverride) : "";
   const profileDetail = effect ? `${host._t("profileOverviewLabel")}: ${effect.profile.name}` : "";
+  const pauseDescription = pauseOverride
+    ? [host._t("pauseActive"), manualZonePause ? host._t("manualAdjustment") : "", detail]
+        .filter(Boolean)
+        .join(" - ")
+    : "";
   const title = pauseOverride
-    ? `${label} - ${host._t("pauseActive")} - ${detail}`
+    ? `${label} - ${pauseDescription}`
     : showProfile
       ? `${label} - ${profileDetail}`
       : label;
@@ -836,7 +960,12 @@ export function renderOverviewTimelineName(host: OverviewViewHost, entityId: str
         : ""}
       title=${title}
     >
-      ${pauseOverride ? html`<ha-icon icon="mdi:pause-circle" aria-hidden="true"></ha-icon>` : nothing}
+      ${pauseOverride
+        ? html`<ha-icon
+            icon=${manualZonePause ? "mdi:hand-back-right-outline" : "mdi:pause-circle"}
+            aria-hidden="true"
+          ></ha-icon>`
+        : nothing}
       ${showProfile && effect
         ? html`<ha-icon icon=${effect.profile.icon || "mdi:account-outline"} aria-hidden="true"></ha-icon>`
         : nothing}
@@ -934,8 +1063,13 @@ export function renderOverviewTimelinePause(
   entityId: string,
   pauseBlock: TimelinePauseBlock,
   override: Record<string, unknown>,
+  manualZonePause = false,
 ) {
-  const detail = `${host._t("pauseActive")} - ${pauseDetailText(asOverviewDataHost(host), override)}`;
+  const detail = [
+    host._t("pauseActive"),
+    manualZonePause ? host._t("manualAdjustment") : "",
+    pauseDetailText(asOverviewDataHost(host), override),
+  ].filter(Boolean).join(" - ");
 
   return html`
     <button
@@ -948,7 +1082,10 @@ export function renderOverviewTimelinePause(
         host._showOverviewTimelineDetail(entityId, detail, pauseBlock.left + pauseBlock.width / 2, event)}
     >
       <span class="overview-timeline-block-main">
-        <ha-icon icon="mdi:pause"></ha-icon>
+        <ha-icon
+          icon=${manualZonePause ? "mdi:hand-back-right-outline" : "mdi:pause"}
+          aria-hidden="true"
+        ></ha-icon>
         <span>${host._t("pauseActive")}</span>
       </span>
     </button>

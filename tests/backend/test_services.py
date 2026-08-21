@@ -14,6 +14,9 @@ from custom_components.velair.const import (
     SERVICE_DEACTIVATE_PROFILE,
     SERVICE_PAUSE_ZONE,
     SERVICE_RESUME_ZONE,
+    SERVICE_SET_EXTERNAL_CHANGE_POLICY,
+    SERVICE_ENTER_MANUAL_ADJUSTMENT,
+    SERVICE_RESUME_AUTOMATIC_CONTROL,
 )
 from custom_components.velair.services import (
     HomeAssistantError,
@@ -48,6 +51,9 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
             async_deactivate_profile=AsyncMock(),
             async_pause_zone=AsyncMock(),
             async_resume_zone=AsyncMock(),
+            async_update_external_change_policy=AsyncMock(),
+            async_enter_manual_adjustment=AsyncMock(),
+            async_resume_automatic_control=AsyncMock(),
             ensure_managed_entity=Mock(),
             set_temperature_migration_blocked=Mock(),
             temperature_migration_blocked=False,
@@ -163,6 +169,61 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     _validate_pause_id(value)
+
+    async def test_external_policy_service_does_not_inject_default_duration(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[
+            (DOMAIN, SERVICE_SET_EXTERNAL_CHANGE_POLICY)
+        ]
+
+        await handler(
+            SimpleNamespace(
+                data=schema(
+                    {
+                        "entity_id": "climate.salon",
+                        "policy": "keep_automatic",
+                    }
+                )
+            )
+        )
+
+        self.scheduler.async_update_external_change_policy.assert_awaited_once_with(
+            "climate.salon",
+            {"action": "keep_automatic"},
+        )
+
+    async def test_enter_manual_adjustment_accepts_only_entity_id(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_ENTER_MANUAL_ADJUSTMENT)]
+
+        await handler(SimpleNamespace(data=schema({"entity_id": "climate.salon"})))
+        self.scheduler.async_enter_manual_adjustment.assert_awaited_once_with("climate.salon")
+        for legacy_field, value in (("policy", "for_duration"), ("duration_minutes", 45)):
+            with self.subTest(field=legacy_field):
+                with self.assertRaises(vol.Invalid):
+                    schema({"entity_id": "climate.salon", legacy_field: value})
+
+    async def test_enter_manual_adjustment_service_is_blocked_during_temperature_migration(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_ENTER_MANUAL_ADJUSTMENT)]
+        self.hass.data[DOMAIN]["entry"]["storage"].temperature_migration_required = True
+        self.scheduler.temperature_migration_blocked = True
+
+        with self.assertRaisesRegex(HomeAssistantError, "temperature-data migration"):
+            await handler(SimpleNamespace(data=schema({"entity_id": "climate.salon"})))
+
+        self.scheduler.async_enter_manual_adjustment.assert_not_awaited()
+
+    async def test_resume_automatic_service_is_blocked_during_temperature_migration(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_RESUME_AUTOMATIC_CONTROL)]
+        self.hass.data[DOMAIN]["entry"]["storage"].temperature_migration_required = True
+        self.scheduler.temperature_migration_blocked = True
+
+        with self.assertRaisesRegex(HomeAssistantError, "temperature-data migration"):
+            await handler(SimpleNamespace(data=schema({"entity_id": "climate.salon"})))
+
+        self.scheduler.async_resume_automatic_control.assert_not_awaited()
 
     def test_resume_zone_rejects_ambiguous_resume_all_values(self) -> None:
         with self.assertRaises(vol.Invalid):

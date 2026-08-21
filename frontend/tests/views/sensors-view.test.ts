@@ -25,6 +25,7 @@ function host(options: {
   requestedTemperature?: number;
   scheduledTargetGuard?: "heating_ceiling" | "cooling_floor";
   debounceSeconds?: number;
+  deadband?: number;
   roomTemperatureEntityId?: string | null;
   assistEnabled?: boolean;
   assistDelta?: number;
@@ -48,6 +49,7 @@ function host(options: {
           preconditioning: {
             room_temperature_entity_id: options.roomTemperatureEntityId ?? null,
             room_sensor_assist_enabled: options.assistEnabled ?? false,
+            room_sensor_assist_deadband: options.deadband ?? 0.3,
             room_sensor_assist_max_delta: options.maxDelta ?? 5,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
           },
@@ -58,6 +60,7 @@ function host(options: {
           preconditioning: {
             room_temperature_entity_id: "sensor.bedroom_temperature",
             room_sensor_assist_enabled: true,
+            room_sensor_assist_deadband: options.deadband ?? 0.3,
             room_sensor_assist_max_delta: 2,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
           },
@@ -315,6 +318,87 @@ describe("sensors view", () => {
     );
   });
 
+  it("renders and strictly validates Room Assist deadband before maximum delta", () => {
+    const { saveZonePreconditioning, viewHost } = host({
+      assistEnabled: true,
+      deadband: 0.3,
+      expandedZoneIds: ["climate.first"],
+      roomTemperatureEntityId: "sensor.bedroom_temperature",
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.first"]), container);
+
+    const labels = [...container.querySelectorAll(".sensor-config-row")]
+      .map((label) => label.textContent ?? "");
+    expect(labels.findIndex((label) => label.includes("roomSensorAssistDeadband")))
+      .toBeLessThan(labels.findIndex((label) => label.includes("roomSensorAssistMaxDelta")));
+    const input = [...container.querySelectorAll<HTMLInputElement>("input[type='number']")]
+      .find((candidate) => candidate.value === "0.3")!;
+    expect(input.getAttribute("min")).toBe("0");
+    expect(input.getAttribute("max")).toBe("5");
+    expect(input.getAttribute("step")).toBe("0.1");
+    expect(input.closest("label")?.textContent).toContain("°C");
+    expect(input.closest("label")?.textContent).toContain("roomSensorAssistDeadbandHelp");
+
+    for (const invalidValue of [
+      "",
+      "letters",
+      "-0.1",
+      "0.05",
+      "5.1",
+      "Infinity",
+      "NaN",
+    ]) {
+      input.value = invalidValue;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      expect(input.value).toBe("0.3");
+    }
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+
+    input.value = "0";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith(
+      "climate.first",
+      { room_sensor_assist_deadband: 0 },
+    );
+
+    input.value = "5";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith(
+      "climate.first",
+      { room_sensor_assist_deadband: 5 },
+    );
+  });
+
+  it("uses native Fahrenheit deadband defaults and bounds", () => {
+    const { saveZonePreconditioning, viewHost } = host({
+      assistEnabled: true,
+      deadband: 1,
+      expandedZoneIds: ["climate.first"],
+      roomTemperatureEntityId: "sensor.bedroom_temperature",
+    });
+    (viewHost as unknown as { _temperatureUnit: () => string })._temperatureUnit =
+      () => "°F";
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.first"]), container);
+
+    const input = [...container.querySelectorAll<HTMLInputElement>("input[type='number']")]
+      .find((candidate) => candidate.value === "1")!;
+    expect(input.getAttribute("min")).toBe("0");
+    expect(input.getAttribute("max")).toBe("9");
+    expect(input.getAttribute("step")).toBe("0.1");
+    expect(input.closest("label")?.textContent).toContain("°F");
+
+    input.value = "9";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith(
+      "climate.first",
+      { room_sensor_assist_deadband: 9 },
+    );
+  });
+
   it("shows live room sensor assist values when a sensor is configured", () => {
     const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
     const container = document.createElement("div");
@@ -384,6 +468,131 @@ describe("sensors view", () => {
     expect(container.textContent).toContain("17.1 °C");
   });
 
+  it("draws and explains the scalar deadband without clipping its endpoints", () => {
+    const { viewHost } = host({
+      deadband: 0.3,
+      expandedZoneIds: ["climate.second"],
+      scheduledTargetTemperature: 25,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const zone = container.querySelector<HTMLElement>(".sensor-scale-deadband-zone")!;
+    const left = Number.parseFloat(zone.style.left);
+    const right = left + Number.parseFloat(zone.style.width);
+    expect(left).toBeGreaterThan(0);
+    expect(right).toBeLessThan(100);
+    expect(zone.getAttribute("aria-hidden")).toBe("true");
+    const legend = container.querySelector(".sensor-scale-deadband-legend");
+    expect(legend?.getAttribute("aria-label")).toBe(
+      "roomSensorDeadbandZoneSingle:value=0.3 °C. 24.7–25.3 °C. roomSensorDeadbandZoneHelp",
+    );
+    expect(legend?.querySelector(".sensor-scale-deadband-label-short")?.textContent).toBe("±");
+    expect(legend?.querySelector(".sensor-scale-deadband-label-brief")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneBrief:value=0.3 °C");
+    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneCompact:value=0.3 °C");
+    expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneSingle:value=0.3 °C");
+    const legendRange = container.querySelector<HTMLElement>(
+      ".sensor-scale-deadband-legend-range",
+    )!;
+    expect(legendRange.style.marginLeft).toBe(zone.style.left);
+    expect(legendRange.style.width).toBe(zone.style.width);
+    expect(legendRange.style.clipPath).toBe("");
+    expect(legendRange.querySelector(".sensor-scale-deadband-legend-anchor")).not.toBeNull();
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-deadband-legend-range\s*\{[^}]*display:\s*flex;[^}]*justify-content:\s*center;/s,
+    );
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-deadband-legend-anchor\s*\{[^}]*flex:\s*0 0 max-content;[^}]*left:\s*0;[^}]*position:\s*sticky;[^}]*right:\s*0;[^}]*width:\s*max-content;/s,
+    );
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-deadband-zone\s*\{[^}]*height:\s*20px;[^}]*top:\s*59px;/s,
+    );
+    expect(sensorsStyles.cssText).toMatch(
+      /@container \(min-width:\s*54px\)\s*\{[^}]*\.sensor-scale-deadband-label-short\s*\{[^}]*display:\s*none;[^}]*\}[^}]*\.sensor-scale-deadband-label-brief\s*\{[^}]*display:\s*inline;[^}]*font-size:\s*9px;/s,
+    );
+  });
+
+  it("shows one no-correction zone beyond both limits of a native range", () => {
+    const { viewHost } = host({
+      appliedRange: [21, 25],
+      deadband: 0.5,
+      expandedZoneIds: ["climate.second"],
+      rangeShift: 1,
+      scheduledRange: [20, 24],
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const zone = container.querySelector<HTMLElement>(".sensor-scale-deadband-zone")!;
+    expect(zone).not.toBeNull();
+    expect(zone.getAttribute("aria-hidden")).toBe("true");
+    const legend = container.querySelector(".sensor-scale-deadband-legend");
+    expect(legend?.getAttribute("aria-label")).toBe(
+      "roomSensorDeadbandZoneRange:value=0.5 °C. 19.5–24.5 °C. roomSensorDeadbandZoneHelp",
+    );
+    expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneRange:value=0.5 °C");
+    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneCompact:value=0.5 °C");
+    expect(legend?.querySelector(".sensor-scale-deadband-label-brief")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneBrief:value=0.5 °C");
+  });
+
+  it("explains a zero deadband without drawing a misleading surface", () => {
+    const { viewHost } = host({
+      deadband: 0,
+      expandedZoneIds: ["climate.second"],
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".sensor-scale-deadband-zone")).toBeNull();
+    const legend = container.querySelector(".sensor-scale-deadband-legend");
+    expect(legend?.classList).toContain("is-zero");
+    expect(legend?.textContent).toContain("roomSensorDeadbandZoneZero:value=0 °C");
+    expect(container.querySelector(".sensor-scale-deadband-legend-track")).toBeNull();
+  });
+
+  it("updates the deadband graphic from the saved settings returned by the backend", () => {
+    const { viewHost } = host({
+      deadband: 0.3,
+      expandedZoneIds: ["climate.second"],
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const initialWidth = Number.parseFloat(
+      container.querySelector<HTMLElement>(".sensor-scale-deadband-zone")!.style.width,
+    );
+    (viewHost._data!.zones["climate.second"].preconditioning as { room_sensor_assist_deadband: number })
+      .room_sensor_assist_deadband = 1;
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".sensor-scale-deadband-legend")?.textContent)
+      .toContain("roomSensorDeadbandZoneSingle:value=1 °C");
+    expect(Number.parseFloat(
+      container.querySelector<HTMLElement>(".sensor-scale-deadband-zone")!.style.width,
+    )).toBeGreaterThan(initialWidth);
+  });
+
+  it("hides the deadband setting, graphic and legend together", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"], { showDeadband: false }), container);
+
+    expect(container.textContent).not.toContain("roomSensorAssistDeadband");
+    expect(container.querySelector(".sensor-scale-deadband-zone")).toBeNull();
+    expect(container.querySelector(".sensor-scale-deadband-legend")).toBeNull();
+    expect(container.querySelector(".sensor-temperature-scale")).not.toBeNull();
+  });
+
   it("can hide Room Assist controls and live status for Lovelace cards", () => {
     const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
     const container = document.createElement("div");
@@ -391,6 +600,7 @@ describe("sensors view", () => {
     render(
       renderSensorsView(viewHost, ["climate.second"], {
         showAssistSwitch: false,
+        showDeadband: false,
         showDebounce: false,
         showLiveStatus: false,
         showMaxDelta: false,
@@ -402,6 +612,7 @@ describe("sensors view", () => {
     expect(container.querySelector("ha-switch")).toBeNull();
     expect(container.querySelector(".sensor-picker-row")).toBeNull();
     expect(container.textContent).not.toContain("roomSensorAssistMaxDelta");
+    expect(container.textContent).not.toContain("roomSensorAssistDeadband");
     expect(container.textContent).not.toContain("roomSensorAssistDebounce");
     expect(container.querySelector(".sensor-runtime-section")).toBeNull();
     expect(container.querySelector(".sensor-zone-content")).not.toBeNull();
@@ -1071,7 +1282,8 @@ describe("sensors view", () => {
 
     render(renderSensorsView(viewHost, ["climate.first"]), container);
 
-    const input = container.querySelector<HTMLInputElement>("input[type='number']");
+    const input = [...container.querySelectorAll<HTMLInputElement>("input[type='number']")]
+      .find((candidate) => candidate.max === "18");
     expect(input?.max).toBe("18");
     expect(container.textContent).toContain("°F");
   });
@@ -1086,7 +1298,8 @@ describe("sensors view", () => {
 
     render(renderSensorsView(viewHost, ["climate.first"]), container);
 
-    const help = container.querySelector<HTMLElement>(".sensor-config-help-text");
+    const help = [...container.querySelectorAll<HTMLElement>(".sensor-config-help-text")]
+      .find((candidate) => candidate.textContent === "roomSensorAssistMaxDeltaHelp");
     expect(help).not.toBeNull();
     expect(help?.textContent).toBe("roomSensorAssistMaxDeltaHelp");
     expect(

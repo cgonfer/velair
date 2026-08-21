@@ -20,10 +20,11 @@ The climate entity remains the actuator. Velair does not create a virtual climat
 2. Expand the climate you want to configure.
 3. Select a room temperature sensor.
 4. Enable Room Sensor Assist.
-5. Adjust Maximum assist delta if the default is too small for that room or
+5. Adjust Room Assist deadband if small sensor differences should be ignored.
+6. Adjust Maximum assist delta if the default is too small for that room or
    lower than the target gap the thermostat may need to stop heating or
    cooling.
-6. Adjust Refresh delay if sensor updates feel too slow or too chatty.
+7. Adjust Refresh delay if sensor updates feel too slow or too chatty.
 
 Selecting a room sensor alone only stores the sensor. Velair starts using it as the effective room temperature only when Room Sensor Assist is enabled.
 
@@ -35,6 +36,34 @@ off, Velair starts it in a compatible supported mode. **Keep current mode**
 does not mean "keep the thermostat target unchanged".
 
 Refresh delay is the debounce applied after the room sensor or climate temperature changes. The default is `20` seconds. Set it to `0` for immediate recalculation, or up to `300` seconds to group frequent sensor updates.
+
+Room Assist deadband is independent from Adaptive Preconditioning's minimum
+delta. It defaults to `0.3 °C` or `1 °F`, accepts `0` to disable the deadband,
+and can be configured in `0.1` degree steps up to `5 °C` or `9 °F`. Saving it
+while Room Assist is active refreshes the assisted target immediately.
+
+The live temperature scale draws this no-correction zone as a neutral striped
+band. For a single target, the band spans the scheduled target plus and minus
+the configured deadband. For a native `heat_cool` range, it spans from the
+lower limit minus the deadband to the upper limit plus the deadband. The scale
+expands to keep both edges visible. Its compact legend follows the visible
+part of the band while the graph is scrolled horizontally and stops at either
+edge, so it is shown only while that zone is relevant. The label keeps a short
+description such as `Deadband · ±1 °C` whenever the visible width permits it;
+bands use a translated `Zone ±1 °C` label, and only truly narrow bands fall
+back to `±`. The complete explanation
+remains available to assistive technology and as hover text. With a deadband of `0`,
+no surface is drawn and the static legend explicitly
+states that there is no deadband. The graph and legend update from the saved
+backend value; hiding `show_room_assist_deadband` in a Lovelace Room Assist
+card hides the setting, band, and legend together.
+
+When upgrading from a version where Room Assist shared Adaptive
+Preconditioning's minimum delta, Velair copies the existing value into the new
+Room Assist deadband once. This preserves the zone's previous behavior,
+including a historical value that is not on the newer 0.1-degree input step.
+After migration the two settings are independent: changing one never changes
+the other. A newly configured or reset zone uses the unit-aware default above.
 
 ## Understanding The Live Status
 
@@ -103,7 +132,7 @@ continue to use their separate warning and notification.
 
 If the room later drops again during the same active block, Velair can assist again.
 
-The configured minimum temperature delta acts as a symmetric deadband around the scheduled target. Inside it, the logical correction is zero. The climate device remains responsible for hysteresis, compressor protection, minimum run times, and its physical response, so it may continue briefly before a correction produces another supported target step.
+The configured Room Assist deadband acts symmetrically around the scheduled target. Inside it, the logical correction is zero. The climate device remains responsible for hysteresis, compressor protection, minimum run times, and its physical response, so it may continue briefly before a correction produces another supported target step.
 
 ## Heating With A Capped Delta
 
@@ -303,6 +332,37 @@ Room Assist does not apply an assisted target when:
 
 In these cases Velair keeps or restores the normal scheduled target where that is safe.
 
+## External Adjustments and Manual Adjustment
+
+With the default **Keep automatic** policy, Room Assist remains authoritative
+and Velair recalculates and reapplies its current assisted target after a
+detected external setpoint or HVAC-mode change. With any Manual policy, Room
+Assist intentionally yields when the change places the climate in **Manual
+adjustment**. Velair captures the complete
+external climate state from the Home Assistant state-change event, clears the
+active Room Assist correction without restoring the scheduled target, and
+preserves the external scalar target or native `heat_cool` range. This prevents
+Room Assist from immediately fighting a climate-card, physical remote, or other
+non-Velair adjustment.
+
+Example:
+
+```text
+Scheduled cooling target: 24 °C
+Room Assist temporary target: 26 °C
+External adjustment: 23 °C
+Result during Manual adjustment: 23 °C
+```
+
+When Automatic scheduling resumes, Velair resolves the schedule or Profile
+intent valid at that time. Room Assist can then calculate a new correction from
+the current sensor readings; it does not revive its old `26 °C` correction.
+
+An eligible external change either keeps automatic authority or enters/updates
+Manual adjustment according to the policy saved for that climate. For policies, service examples, Boost/Profile
+interactions, and attribution limits, see
+[External Changes and Manual Adjustment](manual-control.md).
+
 ## Adaptive Preconditioning
 
 When Adaptive Preconditioning is enabled and starts a future block early, Room Assist follows that future target until the scheduled comfort time.
@@ -401,6 +461,7 @@ entities:
   - climate.living_room
 show_room_assist_switch: false
 show_room_assist_sensor: false
+show_room_assist_deadband: false
 show_room_assist_max_delta: false
 show_room_assist_debounce: false
 show_room_assist_live_status: true

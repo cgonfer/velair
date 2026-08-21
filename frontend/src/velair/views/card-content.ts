@@ -4,7 +4,7 @@ import type { ScheduleResponse, ScheduleZone, VelairCardView } from "../types";
 import type { ActiveSetupControls } from "../types";
 import { VELAIR_LOADING_ICON_URL } from "../constants";
 import { incompatibleScheduleTargetCount } from "../domain/schedule-compatibility";
-import { renderNotice } from "./notice-view";
+import { renderNoticeStack } from "./notice-view";
 import { operationStatusIsVisible, renderOperationStatus } from "./operation-status-view";
 import { renderComfortView, type ComfortViewOptions } from "./comfort-view";
 import {
@@ -59,8 +59,10 @@ export function renderCardContent(host: CardContentHost) {
           )
           ? renderOperationStatus(host, host._data.operation_status)
           : nothing}
-        ${host._error ? renderNotice(host, "error", host._error) : nothing}
-        ${host._saveMessage ? renderNotice(host, "success", host._saveMessage) : nothing}
+        ${renderNoticeStack(host, host._noticeStackEntries?.() ?? [
+          ...(host._saveMessage ? [{ id: "success", type: "success" as const, message: host._saveMessage }] : []),
+          ...(host._error ? [{ id: "error", type: "error" as const, message: host._error }] : []),
+        ])}
         ${host._showInitialLoading && host._loading && !host._data
           ? html`
               <div class="initial-loading" role="status" aria-live="polite">
@@ -154,6 +156,7 @@ function renderViewContent(
       .hass=${host.hass}
       .data=${host._data}
       @profile-data-changed=${(event: CustomEvent<ScheduleResponse>) => host._applyScheduleData(event.detail, { forceDraft: false })}
+      @profile-error=${(event: CustomEvent<string | null>) => host._showError(event.detail ?? undefined)}
       @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
     ></velair-profiles-view>`;
   }
@@ -220,6 +223,7 @@ function renderCompactActiveSetup(host: CardContentHost) {
     .hass=${host.hass}
     .data=${host._data}
     @profile-data-changed=${(event: CustomEvent<ScheduleResponse>) => host._applyScheduleData(event.detail, { forceDraft: false })}
+    @profile-error=${(event: CustomEvent<string | null>) => host._showError(event.detail ?? undefined)}
     @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
   ></velair-profiles-view>`;
 }
@@ -240,6 +244,7 @@ function comfortViewOptions(host: CardContentHost): ComfortViewOptions {
 function roomSensorViewOptions(host: CardContentHost): RoomSensorViewOptions {
   return {
     showAssistSwitch: host._config.show_room_assist_switch !== false,
+    showDeadband: host._config.show_room_assist_deadband !== false,
     showDebounce: host._config.show_room_assist_debounce !== false,
     showLiveStatus: host._config.show_room_assist_live_status !== false,
     showMaxDelta: host._config.show_room_assist_max_delta !== false,

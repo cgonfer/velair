@@ -517,6 +517,26 @@ export const sensorsStyles = css`
   position: absolute;
   right: 0;
   top: 66px;
+  z-index: 1;
+}
+
+.sensor-scale-deadband-zone {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-color) 30%, transparent) 0,
+    color-mix(in srgb, var(--primary-color) 30%, transparent) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  border-block: 1px solid color-mix(in srgb, var(--primary-color) 28%, transparent);
+  box-sizing: border-box;
+  display: block;
+  height: 20px;
+  pointer-events: none;
+  position: absolute;
+  top: 59px;
+  z-index: 0;
 }
 
 .sensor-scale-relation {
@@ -910,6 +930,117 @@ export const sensorsStyles = css`
   display: flex;
   justify-content: space-between;
   min-width: 640px;
+}
+
+.sensor-scale-deadband-legend-track {
+  height: 15px;
+  min-width: 640px;
+}
+
+.sensor-scale-deadband-legend-range {
+  clip-path: inset(0);
+  container-type: inline-size;
+  display: flex;
+  height: 15px;
+  justify-content: center;
+}
+
+.sensor-scale-deadband-legend-anchor {
+  display: flex;
+  flex: 0 0 max-content;
+  height: 15px;
+  left: 0;
+  position: sticky;
+  right: 0;
+  width: max-content;
+}
+
+.sensor-scale-deadband-legend {
+  align-items: center;
+  color: var(--secondary-text-color);
+  display: flex;
+  flex: 0 0 max-content;
+  font-size: 11px;
+  gap: 6px;
+  line-height: 1.3;
+  width: fit-content;
+}
+
+.sensor-scale-deadband-legend:not(.is-zero) {
+  gap: 0;
+  white-space: nowrap;
+}
+
+.sensor-scale-deadband-legend:not(.is-zero) .sensor-scale-deadband-swatch,
+.sensor-scale-deadband-label-brief,
+.sensor-scale-deadband-label-compact,
+.sensor-scale-deadband-label-full {
+  display: none;
+}
+
+.sensor-scale-deadband-label-short {
+  display: inline;
+}
+
+@container (min-width: 54px) {
+  .sensor-scale-deadband-label-short {
+    display: none;
+  }
+
+  .sensor-scale-deadband-label-brief {
+    display: inline;
+    font-size: 9px;
+    letter-spacing: -0.15px;
+  }
+}
+
+@container (min-width: 112px) {
+  .sensor-scale-deadband-label-brief {
+    display: none;
+  }
+
+  .sensor-scale-deadband-label-compact {
+    display: inline;
+  }
+}
+
+@container (min-width: 220px) {
+  .sensor-scale-deadband-legend:not(.is-zero) {
+    gap: 6px;
+  }
+
+  .sensor-scale-deadband-legend:not(.is-zero) .sensor-scale-deadband-swatch,
+  .sensor-scale-deadband-label-full {
+    display: inline;
+  }
+
+  .sensor-scale-deadband-label-compact,
+  .sensor-scale-deadband-label-brief {
+    display: none;
+  }
+}
+
+.sensor-scale-deadband-swatch {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-color) 42%, transparent) 0,
+    color-mix(in srgb, var(--primary-color) 42%, transparent) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  border-block: 1px solid color-mix(in srgb, var(--primary-color) 34%, transparent);
+  box-sizing: border-box;
+  flex: 0 0 22px;
+  height: 10px;
+}
+
+.sensor-scale-deadband-legend.is-zero .sensor-scale-deadband-swatch {
+  background: none;
+  border-bottom: 0;
+  border-top-color: var(--secondary-text-color);
+  height: 1px;
+  opacity: 0.55;
 }
 
 .sensor-idle-state {

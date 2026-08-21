@@ -3,6 +3,7 @@ import {
   appliedAssistOffset,
   appliedAssistRange,
   hasRoomAssistScheduledTarget,
+  roomAssistDeadbandZone,
   roomAssistRangeShift,
   scheduledAssistRange,
 } from "../domain/room-assist";
@@ -17,6 +18,7 @@ type SensorsViewHost = VelairViewHost;
 
 export type RoomSensorViewOptions = {
   showAssistSwitch: boolean;
+  showDeadband: boolean;
   showDebounce: boolean;
   showLiveStatus: boolean;
   showMaxDelta: boolean;
@@ -45,6 +47,12 @@ type TemperatureRangeBand = {
   formatted: string;
   left: number;
   width: number;
+};
+
+type TemperatureScaleModel = {
+  lowerBound: number;
+  markers: TemperatureMarker[];
+  upperBound: number;
 };
 
 const TEMPERATURE_MARKER_COLOR: Record<TemperatureMarker["key"], string> = {
@@ -76,12 +84,14 @@ const TEMPERATURE_MARKER_CALLOUT_GAP_PERCENT = 24;
 
 const SENSOR_HELP_KEYS: Partial<Record<TranslationKey, TranslationKey>> = {
   roomSensorAssist: "roomSensorAssistHelp",
+  roomSensorAssistDeadband: "roomSensorAssistDeadbandHelp",
   roomSensorAssistMaxDelta: "roomSensorAssistMaxDeltaHelp",
   roomSensorAssistDebounce: "roomSensorAssistDebounceHelp",
   roomSensorTemperatureEntity: "roomSensorTemperatureEntityHelp",
 };
 const DEFAULT_ROOM_SENSOR_VIEW_OPTIONS: RoomSensorViewOptions = {
   showAssistSwitch: true,
+  showDeadband: true,
   showDebounce: true,
   showLiveStatus: true,
   showMaxDelta: true,
@@ -202,7 +212,7 @@ function renderSensorZone(
                 ? renderSensorInactiveNotice(host)
                 : nothing}
               ${options.showLiveStatus && settings.room_temperature_entity_id && settings.room_sensor_assist_enabled
-                ? renderSensorRuntime(host, entityId, status)
+                ? renderSensorRuntime(host, entityId, status, settings, options.showDeadband)
                 : nothing}
             </div>
           `
@@ -217,7 +227,7 @@ function renderSensorConfiguration(
   settings: PreconditioningSettings,
   options: RoomSensorViewOptions,
 ) {
-  if (!options.showRoomSensor && !options.showMaxDelta && !options.showDebounce) {
+  if (!options.showRoomSensor && !options.showDeadband && !options.showMaxDelta && !options.showDebounce) {
     return nothing;
   }
 
@@ -230,6 +240,24 @@ function renderSensorConfiguration(
               host,
               entityId,
               settings.room_temperature_entity_id ?? "",
+            )
+          : nothing}
+        ${options.showDeadband
+          ? renderSensorNumber(
+              host,
+              entityId,
+              "roomSensorAssistDeadband",
+              "room_sensor_assist_deadband",
+              settings.room_sensor_assist_deadband,
+              0,
+              temperatureDeltaMaximum(host._temperatureUnit(entityId), 5),
+              0.1,
+              host._temperatureUnit(entityId),
+              {
+                inactive:
+                  !settings.room_temperature_entity_id
+                  || !settings.room_sensor_assist_enabled,
+              },
             )
           : nothing}
         ${options.showMaxDelta
@@ -289,12 +317,16 @@ function renderSensorRuntime(
   host: SensorsViewHost,
   entityId: string,
   status?: RoomSensorAssistStatus,
+  settings?: PreconditioningSettings,
+  showDeadband = true,
 ) {
   if (!status) {
     return nothing;
   }
 
-  const markers = buildTemperatureMarkers(host, entityId, status);
+  const deadband = settings?.room_sensor_assist_deadband ?? 0;
+  const deadbandZone = showDeadband ? roomAssistDeadbandZone(status, deadband) : undefined;
+  const scale = buildTemperatureScale(host, entityId, status, deadbandZone);
   const hasActiveBlock = hasRoomAssistScheduledTarget(status) && Boolean(status.start);
 
   return html`
@@ -312,8 +344,8 @@ function renderSensorRuntime(
           : renderSensorIdleState(host)}
         ${hasActiveBlock ? renderRoomAssistLimitWarning(host, entityId, status) : nothing}
         ${hasActiveBlock ? renderRoomAssistScheduledGuard(host, entityId, status) : nothing}
-        ${hasActiveBlock && markers.length
-          ? renderTemperatureScale(host, entityId, markers, status)
+        ${hasActiveBlock && scale.markers.length
+          ? renderTemperatureScale(host, entityId, scale, status, deadbandZone, deadband)
           : nothing}
       </div>
     </section>
@@ -395,10 +427,12 @@ function renderSensorActiveBlockSummary(
 function renderTemperatureScale(
   host: SensorsViewHost,
   entityId: string,
-  markers: TemperatureMarker[],
+  scale: TemperatureScaleModel,
   status: RoomSensorAssistStatus,
+  deadbandZone?: { low: number; high: number },
+  deadband = 0,
 ) {
-  const orderedMarkers = [...markers].sort((first, second) => first.value - second.value);
+  const { markers } = scale;
   const modeClass = status.hvac_mode ? `mode-${modeClassName(status.hvac_mode)}` : "mode-keep";
   const roomGap = buildRoomTargetGap(host, entityId, markers, status);
   const assistOffset = buildAssistOffset(host, entityId, markers, status);
@@ -410,6 +444,35 @@ function renderTemperatureScale(
         markers.filter((marker) => !isTemperatureRangeBoundary(marker.key)),
       )
     : markers;
+  const deadbandSurface = deadbandZone && deadband > 0
+    ? {
+        left: temperatureScalePosition(deadbandZone.low, scale),
+        width:
+          temperatureScalePosition(deadbandZone.high, scale)
+          - temperatureScalePosition(deadbandZone.low, scale),
+      }
+    : undefined;
+  const deadbandValue = formatTemperatureDelta(host, entityId, deadband);
+  const deadbandLabel = deadbandZone
+    ? deadband === 0
+      ? host._t("roomSensorDeadbandZoneZero", { value: deadbandValue })
+      : scheduledAssistRange(status)
+        ? host._t("roomSensorDeadbandZoneRange", { value: deadbandValue })
+        : host._t("roomSensorDeadbandZoneSingle", { value: deadbandValue })
+    : "";
+  const deadbandHelp = deadbandZone ? host._t("roomSensorDeadbandZoneHelp") : "";
+  const deadbandCompactLabel = deadbandZone && deadband > 0
+    ? host._t("roomSensorDeadbandZoneCompact", { value: deadbandValue })
+    : "";
+  const deadbandBriefLabel = deadbandZone && deadband > 0
+    ? host._t("roomSensorDeadbandZoneBrief", { value: deadbandValue })
+    : "";
+  const deadbandBounds = deadbandZone && deadband > 0
+    ? formatTemperatureRange(host, entityId, deadbandZone.low, deadbandZone.high)
+    : "";
+  const deadbandAriaLabel = deadbandBounds
+    ? `${deadbandLabel}. ${deadbandBounds}. ${deadbandHelp}`
+    : `${deadbandLabel}. ${deadbandHelp}`;
   return html`
     <div class=${`sensor-temperature-scale ${modeClass} ${hasRangeBands ? "has-range" : ""}`}>
       <div
@@ -417,6 +480,15 @@ function renderTemperatureScale(
         role="group"
         aria-label=${host._t("roomSensorTemperatureScale")}
       >
+        ${deadbandSurface
+          ? html`
+              <span
+                class="sensor-scale-deadband-zone"
+                style=${`left: ${deadbandSurface.left.toFixed(2)}%; width: ${deadbandSurface.width.toFixed(2)}%;`}
+                aria-hidden="true"
+              ></span>
+            `
+          : nothing}
         <span class="sensor-scale-line"></span>
         ${roomGap
           ? html`
@@ -490,9 +562,52 @@ function renderTemperatureScale(
         )}
       </div>
       <div class="sensor-scale-bounds">
-        <span>${formatOptionalTemperature(host, entityId, orderedMarkers[0]?.value)}</span>
-        <span>${formatOptionalTemperature(host, entityId, orderedMarkers[orderedMarkers.length - 1]?.value)}</span>
+        <span>${formatOptionalTemperature(host, entityId, scale.lowerBound)}</span>
+        <span>${formatOptionalTemperature(host, entityId, scale.upperBound)}</span>
       </div>
+      ${deadbandZone && deadbandSurface
+        ? html`
+            <div class="sensor-scale-deadband-legend-track">
+              <div
+                class="sensor-scale-deadband-legend-range"
+                style=${`margin-left: ${deadbandSurface.left.toFixed(2)}%; width: ${deadbandSurface.width.toFixed(2)}%;`}
+              >
+                <div class="sensor-scale-deadband-legend-anchor">
+                  <div
+                    class="sensor-scale-deadband-legend"
+                    role="note"
+                    aria-label=${deadbandAriaLabel}
+                    title=${deadbandHelp}
+                  >
+                    <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
+                    <span class="sensor-scale-deadband-label-short" aria-hidden="true">±</span>
+                    <span class="sensor-scale-deadband-label-brief" aria-hidden="true">
+                      ${deadbandBriefLabel}
+                    </span>
+                    <span class="sensor-scale-deadband-label-compact" aria-hidden="true">
+                      ${deadbandCompactLabel}
+                    </span>
+                    <span class="sensor-scale-deadband-label-full" aria-hidden="true">
+                      ${deadbandLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `
+        : deadbandZone
+          ? html`
+            <div
+              class="sensor-scale-deadband-legend is-zero"
+              role="note"
+              aria-label=${deadbandAriaLabel}
+              title=${deadbandHelp}
+            >
+              <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
+              <span>${deadbandLabel}</span>
+            </div>
+          `
+        : nothing}
     </div>
   `;
 }
@@ -860,7 +975,7 @@ function renderSensorNumber(
   host: SensorsViewHost,
   entityId: string,
   labelKey: TranslationKey,
-  field: "room_sensor_assist_debounce_seconds" | "room_sensor_assist_max_delta",
+  field: "room_sensor_assist_debounce_seconds" | "room_sensor_assist_deadband" | "room_sensor_assist_max_delta",
   value: number,
   min: number,
   max: number,
@@ -869,7 +984,7 @@ function renderSensorNumber(
   options: { inactive?: boolean } = {},
 ) {
   const disabled = host._settingsSaving || Boolean(options.inactive);
-  const persistentHelp = field === "room_sensor_assist_max_delta";
+  const persistentHelp = field === "room_sensor_assist_deadband" || field === "room_sensor_assist_max_delta";
   return html`
     <label class=${`sensor-config-row ${options.inactive ? "inactive" : ""}`}>
       ${renderSensorLabel(host, labelKey, { persistentHelp })}
@@ -885,7 +1000,22 @@ function renderSensorNumber(
             if (disabled) {
               return;
             }
-            const rawValue = Number((event.currentTarget as HTMLInputElement).value);
+            const inputValue = (event.currentTarget as HTMLInputElement).value.trim();
+            const rawValue = Number(inputValue);
+            if (field === "room_sensor_assist_deadband") {
+              if (
+                inputValue === ""
+                || !Number.isFinite(rawValue)
+                || rawValue < min
+                || rawValue > max
+                || Math.abs((rawValue / step) - Math.round(rawValue / step)) > 0.000001
+              ) {
+                (event.currentTarget as HTMLInputElement).value = String(value);
+                return;
+              }
+              host._saveZonePreconditioning(entityId, { [field]: rawValue });
+              return;
+            }
             const boundedValue = Math.min(
               max,
               Math.max(min, Number.isFinite(rawValue) ? rawValue : value),
@@ -1041,11 +1171,12 @@ function formatSignedTemperatureDelta(
   return formatted;
 }
 
-function buildTemperatureMarkers(
+function buildTemperatureScale(
   host: SensorsViewHost,
   entityId: string,
   status: RoomSensorAssistStatus,
-): TemperatureMarker[] {
+  deadbandZone?: { low: number; high: number },
+): TemperatureScaleModel {
   const scheduledRange = scheduledAssistRange(status);
   const appliedRange = appliedAssistRange(status);
   const effectiveClimateTarget = scheduledRange
@@ -1104,10 +1235,13 @@ function buildTemperatureMarkers(
   );
 
   if (!markerInputs.length) {
-    return [];
+    return { lowerBound: 0, markers: [], upperBound: 0 };
   }
 
-  const values = markerInputs.map((marker) => marker.value);
+  const values = [
+    ...markerInputs.map((marker) => marker.value),
+    ...(deadbandZone ? [deadbandZone.low, deadbandZone.high] : []),
+  ];
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
   const unit = host._temperatureUnit(entityId);
@@ -1133,7 +1267,19 @@ function buildTemperatureMarkers(
     };
   });
 
-  return applyTemperatureMarkerCalloutOffsets(positionedMarkers);
+  return {
+    lowerBound,
+    markers: applyTemperatureMarkerCalloutOffsets(positionedMarkers),
+    upperBound,
+  };
+}
+
+function temperatureScalePosition(value: number, scale: TemperatureScaleModel): number {
+  const range = scale.upperBound - scale.lowerBound;
+  if (range <= 0) {
+    return 50;
+  }
+  return clamp(((value - scale.lowerBound) / range) * 100, 0, 100);
 }
 
 function rangeBoundaryMarkerKey(
