@@ -4,6 +4,7 @@ import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
+import { inlineHelpStyles } from "../../src/velair/styles/inline-help-styles";
 import { sensorsStyles } from "../../src/velair/styles/sensors-styles";
 import { renderSensorsView } from "../../src/velair/views/sensors-view";
 
@@ -13,11 +14,15 @@ function host(options: {
   appliedRange?: [number, number];
   appliedTemperature?: number;
   calculatedTemperature?: number;
+  preStepTemperature?: number;
+  targetTempStep?: number;
   climateRange?: [number, number];
   climateTargetTemperature?: number;
   entityExists?: boolean;
   expandedZoneIds?: string[];
-  hvacMode?: string;
+  hvacMode?: string | null;
+  hysteresisPhase?: "towards_lower" | "towards_upper";
+  hysteresisTarget?: number;
   maxDelta?: number;
   limitedBy?: "minimum" | "maximum";
   limitTemperature?: number;
@@ -30,7 +35,7 @@ function host(options: {
   assistEnabled?: boolean;
   assistDelta?: number;
   direction?: "heat" | "cool";
-  roomAssistStatus?: "assisting" | "holding" | "idle" | "ready";
+  roomAssistStatus?: "assisting" | "holding" | "idle" | "ready" | "blocked";
   roomTemperature?: number;
   scheduledRange?: [number, number];
   scheduledTargetTemperature?: number;
@@ -100,12 +105,16 @@ function host(options: {
           limit_temperature: options.limitTemperature,
           requested_temperature: options.requestedTemperature,
           calculated_temperature: options.calculatedTemperature,
+          pre_step_temperature: options.preStepTemperature,
+          target_temp_step: options.targetTempStep,
           scheduled_target_guard: options.scheduledTargetGuard,
           requested_target_temp_low: options.requestedRange?.[0],
           requested_target_temp_high: options.requestedRange?.[1],
           assist_delta: options.assistDelta ?? 5,
           direction: options.direction ?? "heat",
-          hvac_mode: options.hvacMode ?? "heat",
+          hysteresis_phase: options.hysteresisPhase,
+          hysteresis_target: options.hysteresisTarget,
+          hvac_mode: options.hvacMode === undefined ? "heat" : options.hvacMode,
           weekday: "tuesday",
           start: options.roomAssistStatus === "idle" ? null : "17:00",
           active_from:
@@ -448,7 +457,9 @@ describe("sensors view", () => {
     expect(assistOffsetBounds[0]).toBeCloseTo(markerPosition(".sensor-scale-marker.marker-climate"), 1);
     expect(assistOffsetBounds[1]).toBeCloseTo(markerPosition(".sensor-scale-marker.marker-climateTarget"), 1);
     expect(container.querySelector(".sensor-scale-offset")).not.toBeNull();
-    expect(container.querySelector(".sensor-scale-offset-help")).not.toBeNull();
+    expect(container.querySelector(".marker-climateTarget .inline-help")).not.toBeNull();
+    expect(container.querySelector(".marker-climateTarget .inline-help")?.getAttribute("aria-label"))
+      .toBe("roomSensorClimateTargetAppliedHelp");
     expect(
       container.querySelector(".marker-climateTarget .sensor-scale-value-row .sensor-scale-offset"),
     ).not.toBeNull();
@@ -468,10 +479,125 @@ describe("sensors view", () => {
     expect(container.textContent).toContain("17.1 °C");
   });
 
+  it("explains the climate target and adds exact step alignment details when present", () => {
+    const { viewHost } = host({
+      appliedOffset: -0.6,
+      appliedTemperature: 24,
+      expandedZoneIds: ["climate.second"],
+      preStepTemperature: 23.9,
+      targetTempStep: 0.5,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const help = container.querySelector(
+      ".marker-climateTarget .inline-help",
+    ) as HTMLButtonElement;
+    const expected = "roomSensorClimateTargetAppliedHelp "
+      + "roomSensorClimateTargetStepHelp:calculated=23.9 °C,step=0.5 °C,applied=24 °C";
+    expect(help?.getAttribute("aria-label")).toBe(expected);
+    expect(help?.type).toBe("button");
+    const tooltipId = help?.getAttribute("aria-describedby");
+    const tooltip = tooltipId ? container.querySelector<HTMLElement>(`#${tooltipId}`) : null;
+    expect(tooltip?.getAttribute("role")).toBe("tooltip");
+    expect(tooltip?.textContent?.trim()).toBe(expected);
+    help.click();
+    expect(tooltip?.classList).toContain("visible");
+    help.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
+    expect(tooltip?.classList).not.toContain("visible");
+  });
+
+  it("keeps the base climate-target explanation when no step alignment occurred", () => {
+    const { viewHost } = host({
+      appliedOffset: 0,
+      appliedTemperature: 24,
+      expandedZoneIds: ["climate.second"],
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const help = container.querySelector(
+      ".marker-climateTarget .inline-help",
+    );
+    expect(help?.getAttribute("aria-label")).toBe("roomSensorClimateTargetAppliedHelp");
+    expect(help?.parentElement?.textContent).not.toContain("roomSensorClimateTargetStepHelp");
+  });
+
+  it("uses the always-valid climate-target explanation while Room Assist is ready", () => {
+    const { viewHost } = host({
+      expandedZoneIds: ["climate.second"],
+      roomAssistStatus: "ready",
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const help = container.querySelector(".marker-climateTarget .inline-help");
+    expect(help?.getAttribute("aria-label")).toBe("roomSensorClimateTargetHelp");
+    expect(help?.getAttribute("aria-label")).not.toContain("roomSensorClimateTargetStepHelp");
+  });
+
+  it("describes the visible applied target while holding and the reported target while blocked", () => {
+    const holding = host({
+      appliedTemperature: 24,
+      climateTargetTemperature: 21,
+      expandedZoneIds: ["climate.second"],
+      roomAssistStatus: "holding",
+    });
+    const blocked = host({
+      appliedTemperature: 24,
+      climateTargetTemperature: 21,
+      expandedZoneIds: ["climate.second"],
+      roomAssistStatus: "blocked",
+    });
+    const holdingContainer = document.createElement("div");
+    const blockedContainer = document.createElement("div");
+
+    render(renderSensorsView(holding.viewHost, ["climate.second"]), holdingContainer);
+    render(renderSensorsView(blocked.viewHost, ["climate.second"]), blockedContainer);
+
+    expect(holdingContainer.querySelector(".marker-climateTarget strong")?.textContent)
+      .toContain("24 °C");
+    expect(holdingContainer.querySelector(".marker-climateTarget .inline-help")
+      ?.getAttribute("aria-label")).toBe("roomSensorClimateTargetAppliedHelp");
+    expect(blockedContainer.querySelector(".marker-climateTarget strong")?.textContent)
+      .toContain("21 °C");
+    expect(blockedContainer.querySelector(".marker-climateTarget .inline-help")
+      ?.getAttribute("aria-label")).toBe("roomSensorClimateTargetHelp");
+  });
+
+  it.each([
+    ["towards_lower", 24.7, "roomSensorHysteresisTowardsLower:target=24.7 °C", "mdi:arrow-down-bold-circle-outline"],
+    ["towards_upper", 25.3, "roomSensorHysteresisTowardsUpper:target=25.3 °C", "mdi:arrow-up-bold-circle-outline"],
+  ] as const)("shows the active fixed-direction hysteresis phase %s", (
+    hysteresisPhase,
+    hysteresisTarget,
+    label,
+    icon,
+  ) => {
+    const { viewHost } = host({
+      expandedZoneIds: ["climate.second"],
+      hysteresisPhase,
+      hysteresisTarget,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.textContent).toContain(label);
+    expect(container.querySelector(`ha-icon[icon="${icon}"]`)).not.toBeNull();
+    expect(container.querySelector(".sensor-scale-deadband-zone")?.classList)
+      .toContain(hysteresisPhase === "towards_lower" ? "towards-lower" : "towards-upper");
+  });
+
   it("draws and explains the scalar deadband without clipping its endpoints", () => {
     const { viewHost } = host({
       deadband: 0.3,
       expandedZoneIds: ["climate.second"],
+      hysteresisPhase: "towards_lower",
+      hysteresisTarget: 24.7,
       scheduledTargetTemperature: 25,
     });
     const container = document.createElement("div");
@@ -516,6 +642,58 @@ describe("sensors view", () => {
     );
   });
 
+  it("describes a scalar automatic deadband as a neutral margin", () => {
+    const { viewHost } = host({
+      deadband: 0.3,
+      expandedZoneIds: ["climate.second"],
+      hvacMode: "auto",
+      scheduledTargetTemperature: 25,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const legend = container.querySelector(".sensor-scale-deadband-legend");
+    expect(legend?.getAttribute("aria-label")).toBe(
+      "roomSensorDeadbandZoneAutomatic:value=0.3 °C. 24.7–25.3 °C. roomSensorDeadbandZoneHelpAutomatic",
+    );
+    expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneAutomatic:value=0.3 °C");
+    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
+      .toBe("roomSensorDeadbandZoneCompactAutomatic:value=0.3 °C");
+  });
+
+  it("keeps a fixed-mode control label while its runtime phase is unavailable", () => {
+    const { viewHost } = host({
+      deadband: 0.3,
+      expandedZoneIds: ["climate.second"],
+      hvacMode: "cool",
+      roomAssistStatus: "ready",
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    expect(container.querySelector(".sensor-scale-deadband-legend")?.getAttribute("aria-label"))
+      .toContain("roomSensorDeadbandZoneSingle:value=0.3 °C");
+  });
+
+  it("uses a generic deadband label when the effective mode is unknown", () => {
+    const { viewHost } = host({
+      deadband: 0.3,
+      expandedZoneIds: ["climate.second"],
+      hvacMode: null,
+    });
+    const container = document.createElement("div");
+
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+
+    const ariaLabel = container.querySelector(".sensor-scale-deadband-legend")
+      ?.getAttribute("aria-label");
+    expect(ariaLabel).toContain("roomSensorDeadbandZoneGeneric:value=0.3 °C");
+    expect(ariaLabel).toContain("roomSensorDeadbandZoneHelpGeneric");
+  });
+
   it("shows one no-correction zone beyond both limits of a native range", () => {
     const { viewHost } = host({
       appliedRange: [21, 25],
@@ -538,7 +716,7 @@ describe("sensors view", () => {
     expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
       .toBe("roomSensorDeadbandZoneRange:value=0.5 °C");
     expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
-      .toBe("roomSensorDeadbandZoneCompact:value=0.5 °C");
+      .toBe("roomSensorDeadbandZoneCompactRange:value=0.5 °C");
     expect(legend?.querySelector(".sensor-scale-deadband-label-brief")?.textContent?.trim())
       .toBe("roomSensorDeadbandZoneBrief:value=0.5 °C");
   });
@@ -563,6 +741,8 @@ describe("sensors view", () => {
     const { viewHost } = host({
       deadband: 0.3,
       expandedZoneIds: ["climate.second"],
+      hysteresisPhase: "towards_lower",
+      hysteresisTarget: 24.7,
     });
     const container = document.createElement("div");
 
@@ -1179,8 +1359,8 @@ describe("sensors view", () => {
     expect(sensorsStyles.cssText).not.toMatch(
       /\.sensor-scale-callout\.has-offset \.sensor-scale-value-row\s*\{[^}]*flex-direction:\s*column;/s,
     );
-    expect(sensorsStyles.cssText).toMatch(
-      /\.sensor-scale-offset-help ha-icon\s*\{[^}]*height:\s*12px;[^}]*width:\s*12px;/s,
+    expect(inlineHelpStyles.cssText).toMatch(
+      /\.inline-help\.compact ha-icon\s*\{[^}]*height:\s*12px;[^}]*width:\s*12px;/s,
     );
     expect(sensorsStyles.cssText).toMatch(
       /\.sensor-scale-callout\.has-offset \.sensor-scale-value-row > strong\s*\{[^}]*overflow:\s*visible;[^}]*text-overflow:\s*clip;/s,
@@ -1237,7 +1417,7 @@ describe("sensors view", () => {
     ).toContain("edge-right");
     expect(
       container.querySelector(
-        ".sensor-scale-callout-marker.edge-right .sensor-scale-offset-tooltip",
+        ".sensor-scale-callout-marker.edge-right .inline-help-tooltip",
       ),
     ).not.toBeNull();
   });

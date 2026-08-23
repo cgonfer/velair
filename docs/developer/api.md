@@ -228,7 +228,7 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
     "portable_model": 8,
     "storage": 1,
     "model": 7,
-    "integration": "1.7.0-beta.1"
+    "integration": "1.7.0-beta.2"
   }
 }
 ```
@@ -650,7 +650,7 @@ Preconditioning is adaptive. The scheduler predicts a lead for each concrete fut
 
 Outdoor temperature context is optional and local. In the Preconditioning tab, `outdoor_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Velair reads the selected sensor's numeric state, stores it with learning samples, and uses it only to compare similar preconditioning samples once enough history exists. It does not call external weather services and does not apply fixed weather-based adjustments to the initial model.
 
-Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. `room_sensor_assist_deadband` independently suppresses small Room Assist corrections; `room_sensor_assist_max_delta` caps the active scalar or range-boundary correction. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native-range holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
+Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. For fixed scalar `heat` and `cool`, a non-zero `room_sensor_assist_deadband` defines a runtime hysteresis cycle between the scheduled target minus and plus that value; `room_sensor_assist_max_delta` caps correction relative to the active edge. A zero deadband preserves legacy signed correction. Scalar automatic modes retain their neutral deadband, while native ranges retain their stable holding margin. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native-range holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
 
@@ -667,6 +667,22 @@ from crossing onto the demanding side. `calculated_temperature` contains the
 step-aligned candidate before that protection, while `applied_temperature`
 remains the target actually sent. Both fields are optional and runtime-only;
 clients must treat their absence as an unguarded or older compatible payload.
+
+For scalar targets, status can also include `pre_step_temperature` together
+with `target_temp_step` when alignment to the climate's published step changed
+the setpoint that was actually committed. `pre_step_temperature` is the
+candidate after scheduled-target protection and min/max clamping, immediately
+before alignment. The pair is absent for exact-step results, native ranges,
+results changed by a final physical-limit clamp, and older compatible payloads.
+Diagnostics copies these live status fields, but they are not persisted or
+included in automation events or Home Assistant sensor attributes.
+
+Fixed scalar hysteresis status can additionally include
+`hysteresis_phase` (`towards_lower` or `towards_upper`), `hysteresis_target`,
+`deadband_low`, and `deadband_high`. These fields are optional, runtime-only,
+and absent for the zero-deadband, scalar automatic, and native-range paths.
+The phase is not persisted and resets on an active block, target, or HVAC-mode
+change, when assistance is cleared, and when Velair or Home Assistant reloads.
 
 See [Adaptive preconditioning](adaptive-preconditioning.md) for the full learning lifecycle, input/output examples, prediction rules, storage behavior, and known limitations. See [Room Assist](room-assist.md) for the room sensor assistance lifecycle, target calculation, runtime status, restoration behavior, and events.
 

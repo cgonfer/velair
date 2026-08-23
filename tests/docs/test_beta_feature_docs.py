@@ -88,6 +88,34 @@ class BetaFeatureDocsTest(unittest.TestCase):
         self.assertIn("Portable model v8 separates", architecture)
         self.assertIn("before any Celsius/Fahrenheit conversion", architecture)
 
+    def test_room_assist_hysteresis_contract_is_documented(self) -> None:
+        room_assist = " ".join(ROOM_ASSIST.read_text(encoding="utf-8").split())
+        api = " ".join(API_DOC.read_text(encoding="utf-8").split())
+        manual = " ".join(MANUAL_TESTING.read_text(encoding="utf-8").split())
+
+        for phrase in (
+            "changes direction only when the external room sensor reaches the opposite limit",
+            "starts towards the lower limit",
+            "fresh cycle inside the band initializes safely",
+            "A deadband of `0` preserves the legacy signed calculation",
+        ):
+            self.assertIn(phrase, room_assist)
+
+        for field in (
+            "hysteresis_phase",
+            "hysteresis_target",
+            "deadband_low",
+            "deadband_high",
+        ):
+            self.assertIn(field, api)
+
+        for phrase in (
+            "Repeated updates at an edge must not oscillate the phase",
+            "scalar `auto` and scalar `heat_cool`",
+            "reload the integration, and restart Home Assistant",
+        ):
+            self.assertIn(phrase, manual)
+
     def test_reset_inventory_includes_manual_control_data(self) -> None:
         usage = " ".join(USAGE.read_text(encoding="utf-8").split())
         self.assertIn("external-adjustment policies and active Manual adjustments", usage)

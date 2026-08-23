@@ -825,6 +825,26 @@ describe("overview next events", () => {
     }
   });
 
+  it.each([
+    ["towards_lower", "overviewZoneRoomAssistTowardsLower"],
+    ["towards_upper", "overviewZoneRoomAssistTowardsUpper"],
+  ] as const)("shows the active Room Assist hysteresis phase %s", (phase, label) => {
+    const container = document.createElement("div");
+    const overviewHost = { ...host(), _data: {
+      zones: { "climate.office": { enabled: true, schedule: {} } },
+      zone_runtime: { "climate.office": { state: "scheduled" } },
+      room_sensor_assist: { "climate.office": {
+        status: "assisting",
+        hysteresis_phase: phase,
+        direction: "heat",
+      } },
+    } } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+    expect(container.querySelector(".room-assist")?.textContent).toContain(label);
+  });
+
   it("surfaces environmental comfort and monitored air quality as separate signals", () => {
     const chips = (condition: string, airQuality: string) => {
       const container = document.createElement("div");

@@ -537,6 +537,10 @@ function renderRoomAssistSignal(host: OverviewViewHost, assist?: RoomSensorAssis
   const value = host._t(
     assist.scheduled_target_guard
       ? "overviewZoneRoomAssistGuarded"
+      : assist.hysteresis_phase === "towards_lower"
+        ? "overviewZoneRoomAssistTowardsLower"
+        : assist.hysteresis_phase === "towards_upper"
+          ? "overviewZoneRoomAssistTowardsUpper"
       : assist.status === "holding"
         ? "overviewZoneRoomAssistHolding"
         : "overviewZoneRoomAssistActive",

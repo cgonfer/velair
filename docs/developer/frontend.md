@@ -131,9 +131,14 @@ show_room_assist_live_status: true
 
 Omitted `show_room_assist_*` values default to `true`.
 
-The Room Assist live scale derives its no-correction band from the saved
+The Room Assist live scale derives its displayed deadband from the saved
 `room_sensor_assist_deadband` value. A scalar target expands by the deadband on
-both sides; a native range expands beyond both scheduled boundaries. Those
+both sides. For fixed `heat` or `cool`, those edges are runtime-hysteresis
+limits and the live status can use `hysteresis_phase` and `hysteresis_target`
+to identify the active journey. The corresponding edge receives a restrained
+accent line, the block summary names the active limit, and Overview exposes the
+same phase in its Room Assist signal. For scalar automatic modes the band remains a
+neutral margin. A native range expands beyond both scheduled boundaries. Those
 endpoints participate in the scale bounds so the striped band is never
 clipped. The non-zero legend uses a 640 px coordinate track matching the graph
 and a horizontally sticky anchor constrained by the band, with the existing
@@ -144,7 +149,8 @@ descriptive compact label, or full visible label without changing the complete a
 name. The striped surface is centered on the main scale line with a visible
 gap before the lower relationship line. This keeps the label with the visible
 part of the band without scroll listeners, observers, or Lit state. A
-zero value keeps a static explicit legend without drawing a surface.
+zero value keeps a static explicit legend without drawing a surface and fixed
+scalar control falls back to the legacy signed calculation.
 `show_room_assist_deadband: false` hides the configuration row, visualization,
 and legend as one display option. This is derived UI only and must not create
 frontend persistence.

@@ -30,7 +30,7 @@ Key meanings:
 
 - `room_temperature_entity_id`: optional Home Assistant `sensor.*` temperature entity selected from the Room Assist tab.
 - `room_sensor_assist_enabled`: enables runtime target assistance. Selecting a sensor alone does not make it operational.
-- `room_sensor_assist_deadband`: suppresses correction while the absolute room error is at or below the configured delta. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
+- `room_sensor_assist_deadband`: defines the lower and upper runtime-hysteresis limits for fixed scalar `heat` and `cool`, and the neutral margin for scalar automatic modes and native ranges. A zero value preserves the legacy signed correction without phase state. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
 - `room_sensor_assist_max_delta`: caps how far Velair may temporarily move the target sent to the climate entity while preserving the scheduled target as the real user target. It must be large enough to permit any known target gap the device may need to stop heating or cooling; the cap is not applied in full unless the external room error requires it.
 - `room_sensor_assist_debounce_seconds`: waits this many seconds after relevant room sensor or climate state changes before recalculating assistance. The supported range is `0` to `300` seconds.
 
@@ -65,6 +65,9 @@ This status can include:
 - the absolute logical assist delta and signed applied target offset.
 - for a scalar scheduled-target protection, `scheduled_target_guard` and the
   step-aligned `calculated_temperature` before that protection was applied.
+- for fixed scalar hysteresis, optional `hysteresis_phase`,
+  `hysteresis_target`, `deadband_low`, and `deadband_high` fields. The phase is
+  `towards_lower` or `towards_upper`; the target is the active edge.
 
 For a native range it includes `target_temp_low` and `target_temp_high`, the
 corresponding `applied_target_temp_low` and `applied_target_temp_high`, the live
@@ -87,7 +90,45 @@ When assistance refreshes during active Adaptive Preconditioning, an already-app
 
 ## Target Calculation
 
-Heating and cooling use the same signed calculation:
+Fixed scalar `heat` and `cool` with a non-zero deadband use stateful
+hysteresis. First derive the two room limits:
+
+```text
+deadband_low = target_temperature - room_sensor_assist_deadband
+deadband_high = target_temperature + room_sensor_assist_deadband
+
+if the retained phase is towards_lower and room_temperature <= deadband_low:
+    phase = towards_upper
+else if the retained phase is towards_upper and room_temperature >= deadband_high:
+    phase = towards_lower
+else if a retained phase exists:
+    phase = retained phase
+else if room_temperature <= deadband_low:
+    phase = towards_upper
+else if room_temperature >= deadband_high:
+    phase = towards_lower
+else:
+    phase = towards_lower for heat, towards_upper for cool
+
+hysteresis_target = deadband_low when phase is towards_lower else deadband_high
+room_error = hysteresis_target - room_temperature
+correction = clamp(room_error, -room_sensor_assist_max_delta, room_sensor_assist_max_delta)
+applied_target = climate_current_temperature + correction
+```
+
+The phase is retained while the room travels through the band, including when
+it crosses the central scheduled target. It reverses only at the active edge.
+Initialization inside the band deliberately chooses the non-driving journey:
+fixed heat moves towards the lower edge and fixed cool towards the upper edge.
+If initialization occurs outside the band, the next phase points back across
+the band from the edge already reached.
+
+The configured Maximum assist delta caps error relative to the active edge,
+not relative to the central scheduled target. Target-step alignment and
+physical target limits run after this calculation.
+
+Fixed scalar modes with a zero deadband, scalar `auto` and scalar `heat_cool`
+retain the legacy signed calculation:
 
 ```text
 room_error = target_temperature - room_temperature
@@ -102,38 +143,46 @@ if mode is fixed cool and the room no longer requests cooling:
     applied_target = max(applied_target, target_temperature)
 ```
 
-A positive correction raises the climate target; a negative correction lowers it. When the room crosses the scheduled target, the sign reverses, so Room Assist counters continued heating or cooling instead of stopping its calculations at the threshold. The configured Room Assist deadband remains symmetric with zero logical correction and is refreshed immediately when saved while assistance is active.
+A positive correction raises the climate target; a negative correction lowers
+it. In the legacy and automatic paths, crossing the scheduled target reverses
+the sign outside the neutral deadband. Saving a deadband refreshes active
+assistance immediately. A matching fixed-mode cycle retains its phase, uses
+the new limits, and changes phase immediately only when the current room
+reading has already reached the newly active edge.
 
-For explicit `heat` and `cool`, the direction remains fixed and inversion only
-moves the target toward the non-driving side. For scalar targets in a
-compatible `auto` or scalar `heat_cool` mode, direction is resolved from the
-external room error and may change after crossing. Inside the deadband, a
-scalar auto-mode target is aligned to the nearest supported step and does not
-use a fixed-direction scheduled guard, because auto has no universal
-non-driving side. Range-only `heat_cool` entities never receive a scalar
-target; they follow the native range path.
+For explicit `heat` and `cool`, the HVAC direction remains fixed: hysteresis
+changes the temporary target but never asks fixed heat to cool or fixed cool to
+heat. For scalar targets in a compatible `auto` or scalar `heat_cool` mode,
+direction continues to resolve from the external room error and may change
+after crossing. Inside the deadband, a scalar automatic target is aligned to
+the nearest supported step and does not use a fixed-direction scheduled guard,
+because automatic modes have no universal non-driving side. Range-only
+`heat_cool` entities never receive a scalar target; they follow the native
+range path.
 
-The scheduled target is also a directional safety boundary whenever the
-external room no longer requests the active direction, including the configured
-deadband. A cooling target cannot fall below the schedule and a heating target
-cannot rise above it. An inverse correction that is already farther into the
-safe side is preserved. This breaks the feedback loop created by climate
+The scheduled target is also a directional safety boundary during the
+non-driving fixed-mode phase: `towards_lower` for heat and `towards_upper` for
+cool. In the legacy zero-deadband path, the external-room error selects the
+same non-driving condition. A cooling target cannot fall below the schedule
+and a heating target cannot rise above it. A correction already farther into
+the safe side is preserved. This breaks the feedback loop created by climate
 sensors whose reading moves because the compressor, fan, valve, or radiator is
-running, without removing signed correction after an overshoot.
+running.
 
-For a cooling target of `22 °C`, an external reading of `21 °C`, and a
+For the legacy zero-deadband calculation, with a cooling target of `22 °C`, an external reading of `21 °C`, and a
 climate reading of `19 °C`, the signed candidate is `20 °C`; the cooling
 floor changes the applied target to `22 °C`. With the same external reading
 and a climate reading of `25 °C`, the signed candidate is `26 °C`; it is
 already non-driving and remains unchanged. Heating uses the exact inverse
 ceiling rule.
 
-The boundary is a target-safety invariant, not an HVAC-state guarantee. For
-example, a heating entity may report `16.5 °C`, receive an equal `16.5 °C`
-holding target, and still run because its firmware uses a wide hysteresis or a
-minimum run time. Velair continues reacting to external-room changes, but it
-does not infer an undocumented device-specific stop margin. An explicit `Off`
-block is the authoritative way to require shutdown.
+The hysteresis phase and scheduled boundary are target-control invariants, not
+HVAC-state guarantees. A heating entity can receive a deliberately
+non-driving target while travelling towards the lower edge and still run
+because its firmware uses a wide hysteresis or minimum run time. Velair does
+not inspect `hvac_action` to advance the phase or infer an undocumented
+device-specific stop margin. An explicit `Off` block is the authoritative way
+to require shutdown.
 
 The scalar result keeps `requested_temperature` as the target after scheduled
 protection but before physical thermostat limits. `calculated_temperature` is
@@ -143,7 +192,23 @@ These fields are runtime-only, optional in public payloads, and require no
 storage migration. The frontend treats their absence as an older compatible
 payload.
 
-Velair keeps the runtime state and listeners active while the scheduled block remains active, so assistance can start again if the room sensor moves away from the scheduled target later.
+When scalar step alignment changes the committed setpoint, runtime state also
+adds `pre_step_temperature` and `target_temp_step`. The first is the candidate
+after scheduled-target protection and physical min/max clamping, immediately
+before step alignment; it deliberately does not reuse
+`calculated_temperature`. The pair is omitted unless a valid published step
+actually changes that candidate and the committed target is the aligned
+result. A final physical-limit clamp is therefore never attributed to the
+step. If a refresh skips its service call because the committed target moved by
+less than one step, metadata comes from the new calculation while the unchanged
+applied target remains authoritative only when both targets are equal. If the
+new aligned target differs, the pair is cleared because neither the previous
+nor the new calculation would explain the retained target. This avoids a
+hybrid payload after a target-step capability change. These fields are exposed by live status and its
+Diagnostics snapshot only; they are not persisted or added to automation
+events or Home Assistant sensor attributes.
+
+Velair keeps the runtime state and listeners active while the scheduled block remains active, including the fixed-mode phase needed to reach the opposite edge.
 
 Runtime Room Assist state is never authoritative for choosing the active schedule block. After any active Adaptive Preconditioning target is resolved, Velair uses the current schedule event. This prevents a delayed sensor or climate callback from restoring a target calculated for an earlier block.
 
@@ -209,6 +274,14 @@ Assistance is cleared when:
 
 When assistance is cleared because the block or Velair control path ends, Velair restores the real scheduled target when possible.
 
+The hysteresis phase is runtime-only and is never stored. It resets when the
+active block, scheduled target, or HVAC mode changes; when Room Assist is
+cleared for any reason above; and when the integration or Home Assistant
+reloads. The next eligible refresh initializes a safe phase from the fixed
+mode and current room reading. Resuming Automatic control after a Manual
+adjustment therefore resolves current intent and starts a fresh phase rather
+than reviving the previous one.
+
 ## Automation Events
 
 Velair emits the standard `velair_event` Home Assistant event.
@@ -219,7 +292,7 @@ Room Assist emits:
 - `room_sensor_assist_updated`: Velair applied a temporary assisted climate target.
 - `room_sensor_assist_restored`: Velair stopped managing the temporary assisted target and restored the normal scheduled target where possible.
 
-The event payload includes the climate entity, room sensor entity, scheduled target, applied target, measured temperatures, the absolute logical correction (`assist_delta`), direction, HVAC mode, and reason. Scalar events use `target_temperature`, `applied_temperature`, and signed `applied_offset`. When scheduled protection changes a scalar result, the update also includes `scheduled_target_guard` and `calculated_temperature`; older consumers can ignore these additive fields. Range events use the complete scheduled and applied boundary pairs plus signed `range_shift`. Restoration events return the scheduled target form and report correction or shift as zero.
+The event payload includes the climate entity, room sensor entity, scheduled target, applied target, measured temperatures, the absolute logical correction (`assist_delta`), direction, HVAC mode, and reason. Scalar events use `target_temperature`, `applied_temperature`, and signed `applied_offset`. A fixed scalar hysteresis update can additionally include `hysteresis_phase`, `hysteresis_target`, `deadband_low`, and `deadband_high`. When scheduled protection changes a scalar result, the update also includes `scheduled_target_guard` and `calculated_temperature`; older consumers can ignore these additive fields. Range events use the complete scheduled and applied boundary pairs plus signed `range_shift`. Restoration events return the scheduled target form and report correction or shift as zero. All hysteresis fields are optional so older consumers and non-hysteresis paths remain compatible.
 
 The public payload contract is centralized in
 [Automation Events](../user/automation-events.md#room-sensor-assist-state-changed).

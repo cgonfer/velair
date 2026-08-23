@@ -343,30 +343,93 @@ Use at least one scalar heat or cool climate and, when available, one native
 Prefer a simulated or template-backed climate so its internal temperature can
 be changed independently from the external room sensor.
 
-1. Configure a `22 °C` cooling block, select an external temperature sensor, and enable Room Assist.
-2. Set the external sensor to `22 °C` and the climate reading to `21 °C`. Confirm the applied cooling target is not below `22 °C`, the status is Holding, and the inline protection message shows the calculated and applied targets.
-3. Lower only the climate reading to `19 °C`. Confirm the applied target remains `22 °C` instead of following the internal reading downward, and Overview shows Scheduled protection.
-4. Lower the external sensor to `21 °C` while the climate reads `25 °C`. Confirm the signed inverse correction can apply a target above `22 °C`.
-5. Repeat symmetrically with a heating block: once the external room no longer requests heat, the applied heating target must not rise above the schedule, while a stronger inverse target below it remains allowed.
-6. For a native `heat_cool` range, place the external room inside the scheduled band and note the first applied holding range.
-7. Move only the climate entity's internal reading while keeping the external room inside the band. Confirm the complete applied range remains unchanged.
-8. Move the external room below the lower boundary and then above the upper boundary. Confirm Room Assist resumes boundary-based heating and cooling calculations and always preserves the range width.
-9. Change the active block or target while holding. Confirm the previous scalar target or range is not reused for the new block.
-10. Simulate a heating entity that reports `16.5 °C` while the external room and schedule are both `18 °C`. Confirm Velair reports zero logical correction and does not claim that scheduled protection guarantees an immediate HVAC stop. If the simulated device exposes `hvac_action`, changing that attribute alone must not make Velair invent a device-specific neutral margin.
-11. Repeat a protected scalar case with a non-zero Room Assist deadband. Confirm the scheduled heating ceiling or cooling floor also applies at the deadband boundary and is not reported as a physical thermostat limit.
-12. Repeat the scalar protection and inverse-correction cases with a Fahrenheit climate, for example a `72 °F` cooling schedule, a `70 °F` external reading, and internal readings of `68 °F` and `76 °F`. Confirm Velair applies the scheduled `72 °F` floor in the first case and the stronger inverse `78 °F` target in the second.
-13. Configure a Fahrenheit `68–75 °F` native range with a `1 °F` target step. Confirm Room Assist preserves the `7 °F` width, the graph and any physical-limit warning remain in Fahrenheit, and Maximum assist delta is treated as a temperature difference rather than an absolute Celsius conversion.
-14. In Celsius, verify Room Assist deadband appears immediately before Maximum
+1. Configure a fixed `21 °C` `heat` block with a `0.3 °C` deadband, a
+   `0.1 °C` target step, and a Maximum assist delta large enough not to cap the
+   test. Select an independently controllable external sensor and enable Room
+   Assist.
+2. Start with the external sensor inside `20.7–21.3 °C`. Confirm the fresh
+   phase is `towards_lower`, its target is `20.7 °C`, the status names that
+   limit, and the applied target uses the signed error from `20.7 °C` rather
+   than from the central schedule.
+3. Lower the external sensor through `21.0 °C` without reaching `20.7 °C`.
+   Confirm the phase remains `towards_lower`. At `20.7 °C`, confirm it changes
+   once to `towards_upper`, targets `21.3 °C`, and requests heat.
+4. Raise the sensor through `21.0 °C`. Confirm it remains `towards_upper` until
+   `21.3 °C`, then changes once back to `towards_lower`. Repeated updates at an
+   edge must not oscillate the phase.
+5. Repeat symmetrically with a fixed `24 °C` `cool` block and a `0.5 °C`
+   deadband. Confirm a fresh in-band cycle initializes `towards_upper`, changes
+   to `towards_lower` only at `24.5 °C`, and changes back only at `23.5 °C`.
+6. Set Maximum assist delta below the room-to-active-edge error in each fixed
+   direction. Confirm the signed correction is capped relative to the active
+   edge, then aligned to the native target step and physical limits.
+7. While a fixed-mode phase is active, change the block start, scheduled
+   target, HVAC mode, or selected sensor. Confirm the old phase is not retained
+   for the new runtime identity. Change only the deadband and confirm the phase
+   is retained with recalculated limits, switching immediately only if the
+   current room reading has reached the new active edge. Also clear/disable Room Assist,
+   reload the integration, and restart Home Assistant; each fresh eligible
+   cycle must initialize safely from the current fixed mode and room reading.
+8. Enter Manual adjustment while hysteresis is active. Confirm Room Assist
+   yields and does not restore its temporary target. Resume Automatic control
+   and confirm current intent is resolved with a fresh phase rather than the
+   phase from before Manual adjustment. With **Keep automatic**, confirm an
+   external target change is corrected and runtime control remains eligible;
+   it must not preserve the external target as Velair intent.
+9. Set the deadband to `0` for fixed heat and cool. Confirm no
+   `hysteresis_phase`, `hysteresis_target`, `deadband_low`, or `deadband_high`
+   is reported and the legacy signed correction reverses around the central
+   target.
+10. Test scalar `auto` and scalar `heat_cool` with a non-zero deadband. Confirm
+    they retain neutral in-band correction and do not enter a fixed hysteresis
+    phase or actively alternate modes.
+11. For a native `heat_cool` range, place the external room inside the
+    scheduled band and note the first applied holding range. Move only the
+    climate entity's internal reading and confirm the complete applied range
+    remains unchanged.
+12. Move the external room below the native range's lower boundary and then
+    above its upper boundary. Confirm Room Assist resumes boundary-based
+    calculations, preserves range width, and never reports a scalar hysteresis
+    phase.
+13. Change the active block or range target while holding. Confirm the previous
+    scalar target, phase, or range is not reused for the new block.
+14. While fixed heat is travelling towards its lower edge, change only
+    `hvac_action`. Confirm the phase does not change: Velair controls the
+    setpoint but does not infer device hysteresis or promise an exact relay,
+    valve, or compressor transition.
+15. Repeat a non-driving fixed scalar case and confirm the scheduled heating
+    ceiling or cooling floor applies without being reported as a physical
+    thermostat limit. Then force a real minimum or maximum limit and confirm
+    the separate warning and persistent notification.
+16. Repeat the fixed heating and cooling cycles in Fahrenheit, including both
+    edge transitions and Maximum assist delta capping. Confirm all four
+    hysteresis values and the graph remain in Fahrenheit and differences are
+    not converted as absolute Celsius temperatures.
+17. Configure a Fahrenheit `68–75 °F` native range with a `1 °F` target step. Confirm Room Assist preserves the `7 °F` width, the graph and any physical-limit warning remain in Fahrenheit, and Maximum assist delta is treated as a temperature difference rather than an absolute Celsius conversion.
+18. In Celsius, verify Room Assist deadband appears immediately before Maximum
     assist delta, both fields display `°C`, and the deadband accepts `0`, `0.1`,
     and `5` but does not save negatives, letters, non-finite values, values above
     `5`, or values between 0.1-degree steps. Repeat in Fahrenheit with `°F`, the
     `1 °F` default, and the `0–9 °F` range. Confirm changing either deadband does
     not change Adaptive Preconditioning's Minimum delta.
-15. Upgrade stored and portable pre-v8 data in both unit systems with no
+19. Upgrade stored and portable pre-v8 data in both unit systems with no
     `room_sensor_assist_deadband`. Confirm Velair copies the legacy
     `minimum_delta_temperature` once before unit conversion. Confirm an existing
     `0.35` value remains `0.35`, while a new or reset climate receives `0.3 °C`
     or `1 °F`.
+20. Use a scalar target whose Room Assist result falls between two published
+    climate steps. Confirm **Climate target** keeps its compact label and its
+    information button describes the currently reported climate setpoint in
+    Ready or Blocked and the temporary setpoint sent by Velair in Assisting or
+    Holding, never the room target. Confirm the same help then shows the exact
+    pre-step result, target step, and applied setpoint. Repeat with an exact-step
+    result, a scheduled-target guard, and a physical min/max clamp; the base
+    explanation must remain, while step detail appears only for genuine step
+    alignment. Repeat in fixed heat, fixed cool, scalar automatic mode, and
+    Fahrenheit, then confirm native ranges retain their Range shift help. Change
+    the published target step so a new aligned result differs by less than one
+    step and no service call is sent; confirm no step explanation is combined
+    with the retained target.
 
 ## Adaptive Preconditioning Smoke Test
 

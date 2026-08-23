@@ -9,6 +9,11 @@ export function roomAssistDeadbandZone(
   status: RoomSensorAssistStatus,
   deadband: number,
 ): RoomAssistTemperatureRange | undefined {
+  const runtimeBounds = completeRange(status.deadband_low, status.deadband_high);
+  if (runtimeBounds && runtimeBounds.low <= runtimeBounds.high) {
+    return runtimeBounds;
+  }
+
   if (!Number.isFinite(deadband) || deadband < 0) {
     return undefined;
   }

@@ -89,4 +89,14 @@ describe("inline help", () => {
     expect(css).toMatch(/\.inline-help-tooltip\s*\{[^}]*max-height:\s*calc\(100dvh - 24px\)[^}]*position:\s*fixed/);
     expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip\s*\{[^}]*bottom:\s*12px[^}]*inset-inline:\s*12px[^}]*max-height:\s*min\(40dvh, 180px\)[^}]*position:\s*fixed/);
   });
+
+  it("keeps compact layout at 20px with a 40px coarse-pointer hit area", () => {
+    const css = inlineHelpStyles.cssText;
+    expect(css).toMatch(
+      /\.inline-help\.compact\s*\{[^}]*height:\s*20px;[^}]*width:\s*20px;/s,
+    );
+    expect(css).toMatch(
+      /@media \(pointer: coarse\)[\s\S]*\.inline-help\.compact::before\s*\{[^}]*inset:\s*-10px;[^}]*position:\s*absolute;/s,
+    );
+  });
 });

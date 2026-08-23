@@ -91,6 +91,17 @@ class AutomationEventsDocsTest(unittest.TestCase):
 
         self.assertIn("deadband: 0.3", guide)
 
+    def test_room_assist_update_documents_fixed_mode_hysteresis(self) -> None:
+        guide = EVENTS_GUIDE.read_text(encoding="utf-8")
+
+        for field in (
+            "hysteresis_phase: towards_upper",
+            "hysteresis_target: 21.3",
+            "deadband_low: 20.7",
+            "deadband_high: 21.3",
+        ):
+            self.assertIn(field, guide)
+
 
 if __name__ == "__main__":
     unittest.main()

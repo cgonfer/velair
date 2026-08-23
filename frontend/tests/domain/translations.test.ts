@@ -138,6 +138,18 @@ describe("supported translations", () => {
     expect(en.roomSensorAssistMaxDeltaHelp).not.toContain("valve");
     expect(es.roomSensorAssistMaxDeltaHelp).toContain("dejar de calentar o enfriar");
   });
+
+  it("distinguishes the climate target and localizes step-alignment values", () => {
+    expect(en.roomSensorClimateTargetHelp).toContain("currently reported");
+    expect(en.roomSensorClimateTargetHelp).toContain("not the room temperature target");
+    expect(en.roomSensorClimateTargetAppliedHelp).toContain("temporary setpoint");
+    expect(en.roomSensorClimateTargetAppliedHelp).toContain("Room Assist is active");
+    expect(en.roomSensorClimateTargetAppliedHelp).toContain("not the room temperature target");
+    expect(en.roomSensorClimateTargetStepHelp).toContain("{calculated}");
+    expect(en.roomSensorClimateTargetStepHelp).toContain("{step}");
+    expect(en.roomSensorClimateTargetStepHelp).toContain("{applied}");
+    expect(es.roomSensorClimateTargetHelp).toContain("no es el objetivo");
+  });
 });
 
 describe("Spanish translations", () => {

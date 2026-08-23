@@ -250,6 +250,13 @@ class _RoomSensorAssistState:
     scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None = None
     requested_target_temp_low: float | None = None
     requested_target_temp_high: float | None = None
+    hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None
+    hysteresis_target: float | None = None
+    deadband_low: float | None = None
+    deadband_high: float | None = None
+    hysteresis_mode: Literal["heat", "cool"] | None = None
+    pre_step_temperature: float | None = None
+    target_temp_step: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,6 +271,12 @@ class _RoomSensorAssistTargetResult:
     scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None
     limited_by: Literal["minimum", "maximum"] | None
     limit_temperature: float | None
+    hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None
+    hysteresis_target: float | None = None
+    deadband_low: float | None = None
+    deadband_high: float | None = None
+    pre_step_temperature: float | None = None
+    target_temp_step: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -5602,6 +5615,11 @@ class VelairScheduler:
         assist_delta = 0.0
         calculated_offset = 0.0
         calculated_range_shift: float | None = None
+        hysteresis_phase = None
+        hysteresis_target = None
+        deadband_low = None
+        deadband_high = None
+        hysteresis_mode = None
         if (
             config["room_sensor_assist_enabled"]
             and target_step_available
@@ -5623,6 +5641,55 @@ class VelairScheduler:
                 assist_delta = range_result.assist_delta
                 calculated_range_shift = range_result.range_shift
             elif single_target_supported and target_temperature is not None and direction:
+                (
+                    hysteresis_phase,
+                    hysteresis_target,
+                    deadband_low,
+                    deadband_high,
+                    hysteresis_mode,
+                ) = self._room_sensor_assist_hysteresis(
+                    entity_id,
+                    config,
+                    target_temperature,
+                    room_temperature,
+                    hvac_mode,
+                    room_entity_id,
+                    target_event.weekday if target_event is not None else None,
+                    target_event.start if target_event is not None else None,
+                    runtime_state,
+                )
+                committed_hysteresis_matches = (
+                    self._room_sensor_assist_hysteresis_state_matches(
+                        runtime_state,
+                        target_temperature=target_temperature,
+                        fixed_mode=hysteresis_mode,
+                        room_temperature_entity_id=room_entity_id,
+                        weekday=(
+                            target_event.weekday
+                            if target_event is not None
+                            else None
+                        ),
+                        start=(
+                            target_event.start if target_event is not None else None
+                        ),
+                    )
+                    and runtime_state is not None
+                )
+                if committed_hysteresis_matches and runtime_state is not None:
+                    # Until the debounced refresh commits a transition, all
+                    # status calculations stay anchored to the applied phase.
+                    hysteresis_phase = runtime_state.hysteresis_phase
+                    hysteresis_target = runtime_state.hysteresis_target
+                    deadband_low = runtime_state.deadband_low
+                    deadband_high = runtime_state.deadband_high
+                elif runtime_state is not None and (
+                    runtime_state.hysteresis_phase is not None
+                    or hysteresis_phase is not None
+                ):
+                    # A changed effective mode or zero/non-zero deadband path
+                    # makes the previous applied phase stale. Do not combine
+                    # its target with a newly calculated phase before refresh.
+                    runtime_state = None
                 target_result = self._room_sensor_assist_target(
                     entity_id,
                     config,
@@ -5633,6 +5700,10 @@ class VelairScheduler:
                     fixed_direction=self._room_sensor_assist_uses_fixed_direction(
                         entity_id, hvac_mode
                     ),
+                    hysteresis_phase=hysteresis_phase,
+                    hysteresis_target=hysteresis_target,
+                    deadband_low=deadband_low,
+                    deadband_high=deadband_high,
                 )
                 candidate_temperature = target_result.applied_temperature
                 assist_delta = target_result.assist_delta
@@ -5716,6 +5787,10 @@ class VelairScheduler:
             "scheduled_target_guard": (
                 runtime_state.scheduled_target_guard if runtime_state is not None else None
             ),
+            "hysteresis_phase": hysteresis_phase,
+            "hysteresis_target": hysteresis_target,
+            "deadband_low": deadband_low,
+            "deadband_high": deadband_high,
             "hvac_mode": hvac_mode,
             "weekday": target_event.weekday if target_event is not None else None,
             "start": target_event.start if target_event is not None else None,
@@ -5728,6 +5803,18 @@ class VelairScheduler:
                 else None
             ),
         }
+        if (
+            not range_target
+            and runtime_state is not None
+            and runtime_state.pre_step_temperature is not None
+            and runtime_state.target_temp_step is not None
+        ):
+            status_data.update(
+                {
+                    "pre_step_temperature": runtime_state.pre_step_temperature,
+                    "target_temp_step": runtime_state.target_temp_step,
+                }
+            )
         if range_target:
             status_data.update(
                 {
@@ -6092,6 +6179,24 @@ class VelairScheduler:
             )
             return
 
+        current_state = self._room_sensor_assist_states.get(entity_id)
+        (
+            hysteresis_phase,
+            hysteresis_target,
+            deadband_low,
+            deadband_high,
+            hysteresis_mode,
+        ) = self._room_sensor_assist_hysteresis(
+            entity_id,
+            config,
+            target_temperature,
+            room_temperature,
+            hvac_mode,
+            room_entity_id,
+            weekday,
+            start,
+            current_state,
+        )
         target_result = self._room_sensor_assist_target(
             entity_id,
             config,
@@ -6102,12 +6207,15 @@ class VelairScheduler:
             fixed_direction=self._room_sensor_assist_uses_fixed_direction(
                 entity_id, hvac_mode
             ),
+            hysteresis_phase=hysteresis_phase,
+            hysteresis_target=hysteresis_target,
+            deadband_low=deadband_low,
+            deadband_high=deadband_high,
         )
         desired_temperature = target_result.applied_temperature
         assist_delta = target_result.assist_delta
         applied_offset = target_result.applied_offset
 
-        current_state = self._room_sensor_assist_states.get(entity_id)
         refreshed_state = _RoomSensorAssistState(
             entity_id=entity_id,
             target_temperature=target_temperature,
@@ -6123,6 +6231,13 @@ class VelairScheduler:
             requested_temperature=target_result.requested_temperature,
             calculated_temperature=target_result.calculated_temperature,
             scheduled_target_guard=target_result.scheduled_target_guard,
+            hysteresis_phase=hysteresis_phase,
+            hysteresis_target=hysteresis_target,
+            deadband_low=deadband_low,
+            deadband_high=deadband_high,
+            hysteresis_mode=hysteresis_mode,
+            pre_step_temperature=target_result.pre_step_temperature,
+            target_temp_step=target_result.target_temp_step,
         )
         temperature_step = self.get_temperature_step(entity_id)
         movement_threshold = temperature_step or 0.000001
@@ -6133,6 +6248,10 @@ class VelairScheduler:
             and abs(desired_temperature - current_state.applied_temperature)
             < movement_threshold - 0.000001
         ):
+            unchanged_target_matches_calculation = (
+                abs(desired_temperature - current_state.applied_temperature)
+                <= 0.000001
+            )
             unchanged_state = _RoomSensorAssistState(
                 entity_id=entity_id,
                 target_temperature=target_temperature,
@@ -6151,6 +6270,21 @@ class VelairScheduler:
                 requested_temperature=target_result.requested_temperature,
                 calculated_temperature=target_result.calculated_temperature,
                 scheduled_target_guard=target_result.scheduled_target_guard,
+                hysteresis_phase=hysteresis_phase,
+                hysteresis_target=hysteresis_target,
+                deadband_low=deadband_low,
+                deadband_high=deadband_high,
+                hysteresis_mode=hysteresis_mode,
+                pre_step_temperature=(
+                    target_result.pre_step_temperature
+                    if unchanged_target_matches_calculation
+                    else None
+                ),
+                target_temp_step=(
+                    target_result.target_temp_step
+                    if unchanged_target_matches_calculation
+                    else None
+                ),
             )
             self._room_sensor_assist_states[entity_id] = unchanged_state
             await self._async_update_room_sensor_assist_limit_notification(
@@ -6209,6 +6343,10 @@ class VelairScheduler:
             applied_offset=applied_offset,
             calculated_temperature=target_result.calculated_temperature,
             scheduled_target_guard=target_result.scheduled_target_guard,
+            hysteresis_phase=hysteresis_phase,
+            hysteresis_target=hysteresis_target,
+            deadband_low=deadband_low,
+            deadband_high=deadband_high,
             direction=direction,
             hvac_mode=hvac_mode,
             reason=reason,
@@ -6423,6 +6561,112 @@ class VelairScheduler:
         mode = self._room_sensor_assist_effective_hvac_mode(entity_id, hvac_mode)
         return mode in PRECONDITIONING_HEATING_MODES | PRECONDITIONING_COOLING_MODES
 
+    def _room_sensor_assist_fixed_direction_mode(
+        self,
+        entity_id: str,
+        hvac_mode: str | None,
+    ) -> Literal["heat", "cool"] | None:
+        """Return the effective fixed scalar direction, if one exists."""
+        mode = self._room_sensor_assist_effective_hvac_mode(entity_id, hvac_mode)
+        if mode in PRECONDITIONING_HEATING_MODES:
+            return "heat"
+        if mode in PRECONDITIONING_COOLING_MODES:
+            return "cool"
+        return None
+
+    def _room_sensor_assist_hysteresis(
+        self,
+        entity_id: str,
+        config: PreconditioningData,
+        target_temperature: float,
+        room_temperature: float,
+        hvac_mode: str | None,
+        room_temperature_entity_id: str,
+        weekday: str | None,
+        start: str | None,
+        current_state: _RoomSensorAssistState | None,
+    ) -> tuple[
+        Literal["towards_lower", "towards_upper"] | None,
+        float | None,
+        float | None,
+        float | None,
+        Literal["heat", "cool"] | None,
+    ]:
+        """Resolve the retained external-sensor hysteresis phase and boundary."""
+        deadband = config["room_sensor_assist_deadband"]
+        fixed_mode = self._room_sensor_assist_fixed_direction_mode(
+            entity_id, hvac_mode
+        )
+        if deadband <= 0 or fixed_mode is None:
+            return None, None, None, None, None
+
+        deadband_low = round(target_temperature - deadband, 6)
+        deadband_high = round(target_temperature + deadband, 6)
+        retained_phase = None
+        if self._room_sensor_assist_hysteresis_state_matches(
+            current_state,
+            target_temperature=target_temperature,
+            fixed_mode=fixed_mode,
+            room_temperature_entity_id=room_temperature_entity_id,
+            weekday=weekday,
+            start=start,
+        ) and current_state is not None:
+            retained_phase = current_state.hysteresis_phase
+
+        if retained_phase == "towards_lower":
+            phase: Literal["towards_lower", "towards_upper"] = (
+                "towards_upper"
+                if room_temperature <= deadband_low + 0.000001
+                else "towards_lower"
+            )
+        elif retained_phase == "towards_upper":
+            phase = (
+                "towards_lower"
+                if room_temperature >= deadband_high - 0.000001
+                else "towards_upper"
+            )
+        elif room_temperature <= deadband_low + 0.000001:
+            phase = "towards_upper"
+        elif room_temperature >= deadband_high - 0.000001:
+            phase = "towards_lower"
+        else:
+            # On first entry, choose the non-driving side for the active mode.
+            phase = "towards_lower" if fixed_mode == "heat" else "towards_upper"
+
+        hysteresis_target = (
+            deadband_low if phase == "towards_lower" else deadband_high
+        )
+        return (
+            phase,
+            hysteresis_target,
+            deadband_low,
+            deadband_high,
+            fixed_mode,
+        )
+
+    @staticmethod
+    def _room_sensor_assist_hysteresis_state_matches(
+        state: _RoomSensorAssistState | None,
+        *,
+        target_temperature: float,
+        fixed_mode: Literal["heat", "cool"] | None,
+        room_temperature_entity_id: str,
+        weekday: str | None,
+        start: str | None,
+    ) -> bool:
+        """Return whether a committed phase belongs to the current intent."""
+        return bool(
+            state is not None
+            and fixed_mode is not None
+            and state.hysteresis_phase in ("towards_lower", "towards_upper")
+            and state.hysteresis_mode == fixed_mode
+            and state.target_temperature is not None
+            and abs(state.target_temperature - target_temperature) < 0.000001
+            and state.room_temperature_entity_id == room_temperature_entity_id
+            and state.weekday == weekday
+            and state.start == start
+        )
+
     def _room_sensor_assist_target(
         self,
         entity_id: str,
@@ -6433,12 +6677,21 @@ class VelairScheduler:
         climate_temperature: float,
         *,
         fixed_direction: bool = True,
+        hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None,
+        hysteresis_target: float | None = None,
+        deadband_low: float | None = None,
+        deadband_high: float | None = None,
     ) -> _RoomSensorAssistTargetResult:
         """Return the scalar target before and after physical climate limits."""
         minimum_delta = config["room_sensor_assist_deadband"]
-        error = target_temperature - room_temperature
+        active_target = (
+            hysteresis_target
+            if hysteresis_phase is not None and hysteresis_target is not None
+            else target_temperature
+        )
+        error = active_target - room_temperature
         correction = 0.0
-        if abs(error) > minimum_delta:
+        if hysteresis_phase is not None or abs(error) > minimum_delta:
             max_delta = config["room_sensor_assist_max_delta"]
             correction = max(-max_delta, min(max_delta, error))
         desired_temperature = climate_temperature + correction
@@ -6464,10 +6717,20 @@ class VelairScheduler:
         # not let a drifting climate sensor move the non-driving target across
         # the user's scheduled target. The signed correction is intentionally
         # kept: it can still move farther into the safe side after an overshoot.
+        non_driving_cooling = (
+            hysteresis_phase == "towards_upper"
+            if hysteresis_phase is not None
+            else error >= -minimum_delta
+        )
+        non_driving_heating = (
+            hysteresis_phase == "towards_lower"
+            if hysteresis_phase is not None
+            else error <= minimum_delta
+        )
         if (
             fixed_direction
             and direction == "cool"
-            and error >= -minimum_delta
+            and non_driving_cooling
             and calculated_temperature < target_temperature - 0.000001
         ):
             scheduled_target_guard = "cooling_floor"
@@ -6475,7 +6738,7 @@ class VelairScheduler:
         elif (
             fixed_direction
             and direction == "heat"
-            and error <= minimum_delta
+            and non_driving_heating
             and calculated_temperature > target_temperature + 0.000001
         ):
             scheduled_target_guard = "heating_ceiling"
@@ -6518,6 +6781,17 @@ class VelairScheduler:
         )
         bounded_stepped = max(min_temperature, min(max_temperature, stepped))
         applied_temperature = round(bounded_stepped, 3)
+        rounded_pre_step = round(bounded, 6)
+        pre_step_temperature: float | None = None
+        applied_target_step: float | None = None
+        if (
+            temperature_step is not None
+            and limited_by is None
+            and abs(applied_temperature - rounded_pre_step) > 0.000001
+            and abs(applied_temperature - round(stepped, 3)) <= 0.000001
+        ):
+            pre_step_temperature = rounded_pre_step
+            applied_target_step = temperature_step
         return _RoomSensorAssistTargetResult(
             applied_temperature=applied_temperature,
             assist_delta=round(abs(correction), 3),
@@ -6527,6 +6801,12 @@ class VelairScheduler:
             scheduled_target_guard=scheduled_target_guard,
             limited_by=limited_by,
             limit_temperature=limit_temperature,
+            hysteresis_phase=hysteresis_phase,
+            hysteresis_target=hysteresis_target,
+            deadband_low=deadband_low,
+            deadband_high=deadband_high,
+            pre_step_temperature=pre_step_temperature,
+            target_temp_step=applied_target_step,
         )
 
     def _room_sensor_assist_range_direction(
@@ -7882,6 +8162,10 @@ class VelairScheduler:
         scheduled_target_guard: Literal[
             "heating_ceiling", "cooling_floor"
         ] | None = None,
+        hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None,
+        hysteresis_target: float | None = None,
+        deadband_low: float | None = None,
+        deadband_high: float | None = None,
     ) -> None:
         """Fire a room sensor assist automation event."""
         data = {
@@ -7915,6 +8199,15 @@ class VelairScheduler:
             if scheduled_target_guard is not None:
                 data["scheduled_target_guard"] = scheduled_target_guard
                 data["calculated_temperature"] = calculated_temperature
+            if hysteresis_phase is not None:
+                data.update(
+                    {
+                        "hysteresis_phase": hysteresis_phase,
+                        "hysteresis_target": hysteresis_target,
+                        "deadband_low": deadband_low,
+                        "deadband_high": deadband_high,
+                    }
+                )
         self._async_fire_event(event_name, data)
 
     def _async_fire_room_sensor_assist_state_changed(

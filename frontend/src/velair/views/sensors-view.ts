@@ -13,6 +13,7 @@ import { temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temp
 import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
 import type { PreconditioningSettings, RoomSensorAssistStatus } from "../types";
+import { renderInlineHelp } from "./inline-help";
 
 type SensorsViewHost = VelairViewHost;
 
@@ -388,6 +389,14 @@ function renderSensorActiveBlockSummary(
       ? formatTemperatureRange(host, entityId, scheduledRange.low, scheduledRange.high)
       : host._t("roomSensorValueUnavailable");
   const mode = status.hvac_mode ? host._modeLabel(status.hvac_mode) : host._t("roomSensorValueUnavailable");
+  const hysteresisTarget = typeof status.hysteresis_target === "number"
+    ? host._formatTemperature(status.hysteresis_target, entityId)
+    : "";
+  const hysteresisPhaseKey: TranslationKey | undefined = status.hysteresis_phase === "towards_lower"
+    ? "roomSensorHysteresisTowardsLower"
+    : status.hysteresis_phase === "towards_upper"
+      ? "roomSensorHysteresisTowardsUpper"
+      : undefined;
 
   return html`
     <div class="sensor-block-summary">
@@ -420,6 +429,18 @@ function renderSensorActiveBlockSummary(
         <ha-icon icon="mdi:hvac"></ha-icon>
         ${host._t("roomSensorBlockMode", { mode })}
       </span>
+      ${hysteresisPhaseKey && hysteresisTarget
+        ? html`
+            <span class="sensor-block-detail emphasis">
+              <ha-icon
+                icon=${status.hysteresis_phase === "towards_lower"
+                  ? "mdi:arrow-down-bold-circle-outline"
+                  : "mdi:arrow-up-bold-circle-outline"}
+              ></ha-icon>
+              ${host._t(hysteresisPhaseKey, { target: hysteresisTarget })}
+            </span>
+          `
+        : nothing}
     </div>
   `;
 }
@@ -452,17 +473,44 @@ function renderTemperatureScale(
           - temperatureScalePosition(deadbandZone.low, scale),
       }
     : undefined;
+  const hysteresisPhaseClass = status.hysteresis_phase === "towards_lower"
+    ? " towards-lower"
+    : status.hysteresis_phase === "towards_upper"
+      ? " towards-upper"
+      : "";
+  const hasFixedHysteresis = status.hysteresis_phase === "towards_lower"
+    || status.hysteresis_phase === "towards_upper";
+  const hasScheduledRange = scheduledAssistRange(status) !== undefined;
+  const hasFixedDirectionMode = status.hvac_mode === "heat" || status.hvac_mode === "cool";
+  const hasScalarAutomaticMode = !hasScheduledRange
+    && (status.hvac_mode === "auto" || status.hvac_mode === "heat_cool");
   const deadbandValue = formatTemperatureDelta(host, entityId, deadband);
   const deadbandLabel = deadbandZone
     ? deadband === 0
       ? host._t("roomSensorDeadbandZoneZero", { value: deadbandValue })
-      : scheduledAssistRange(status)
+      : hasScheduledRange
         ? host._t("roomSensorDeadbandZoneRange", { value: deadbandValue })
-        : host._t("roomSensorDeadbandZoneSingle", { value: deadbandValue })
+        : hasFixedHysteresis || hasFixedDirectionMode
+          ? host._t("roomSensorDeadbandZoneSingle", { value: deadbandValue })
+          : hasScalarAutomaticMode
+            ? host._t("roomSensorDeadbandZoneAutomatic", { value: deadbandValue })
+            : host._t("roomSensorDeadbandZoneGeneric", { value: deadbandValue })
     : "";
-  const deadbandHelp = deadbandZone ? host._t("roomSensorDeadbandZoneHelp") : "";
+  const deadbandHelp = deadbandZone
+    ? hasScheduledRange || hasFixedHysteresis || hasFixedDirectionMode
+      ? host._t("roomSensorDeadbandZoneHelp")
+      : hasScalarAutomaticMode
+        ? host._t("roomSensorDeadbandZoneHelpAutomatic")
+        : host._t("roomSensorDeadbandZoneHelpGeneric")
+    : "";
   const deadbandCompactLabel = deadbandZone && deadband > 0
-    ? host._t("roomSensorDeadbandZoneCompact", { value: deadbandValue })
+    ? hasScheduledRange
+      ? host._t("roomSensorDeadbandZoneCompactRange", { value: deadbandValue })
+      : hasFixedHysteresis || hasFixedDirectionMode
+        ? host._t("roomSensorDeadbandZoneCompact", { value: deadbandValue })
+        : hasScalarAutomaticMode
+          ? host._t("roomSensorDeadbandZoneCompactAutomatic", { value: deadbandValue })
+          : host._t("roomSensorDeadbandZoneGeneric", { value: deadbandValue })
     : "";
   const deadbandBriefLabel = deadbandZone && deadband > 0
     ? host._t("roomSensorDeadbandZoneBrief", { value: deadbandValue })
@@ -483,7 +531,7 @@ function renderTemperatureScale(
         ${deadbandSurface
           ? html`
               <span
-                class="sensor-scale-deadband-zone"
+                class=${`sensor-scale-deadband-zone${hysteresisPhaseClass}`}
                 style=${`left: ${deadbandSurface.left.toFixed(2)}%; width: ${deadbandSurface.width.toFixed(2)}%;`}
                 aria-hidden="true"
               ></span>
@@ -849,41 +897,60 @@ function renderTemperatureMarkerCallout(
   const assistOffsetLabel = typeof assistOffset === "number"
     ? formatSignedTemperatureDelta(host, entityId, assistOffset)
     : "";
-  const assistOffsetHelp = host._t(
-    rangeShiftMarker && marker.key === rangeShiftMarker
-      ? "roomSensorRangeShiftHelp"
-      : "roomSensorAssistOffsetHelp",
-  );
+  const isRangeShiftMarker = rangeShiftMarker && marker.key === rangeShiftMarker;
+  const assistOffsetHelp = isRangeShiftMarker
+    ? host._t("roomSensorRangeShiftHelp")
+    : marker.key === "climateTarget"
+      ? climateTargetHelp(host, entityId, status)
+      : host._t("roomSensorAssistOffsetHelp");
+  const showHelp = Boolean(assistOffsetLabel) || marker.key === "climateTarget";
+  const helpId = `room-assist-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}-${marker.key}-help`;
 
   return html`
     <span class=${assistOffsetLabel ? "sensor-scale-callout has-offset" : "sensor-scale-callout"}>
       <small>${marker.label}</small>
       <span class="sensor-scale-value-row">
         <strong>${marker.formatted}</strong>
-        ${assistOffsetLabel
+        ${showHelp
           ? html`
-              <span class="sensor-scale-offset">
-                <span>${assistOffsetLabel}</span>
-                <span
-                  class="sensor-scale-offset-help"
-                  tabindex="0"
-                  aria-label=${assistOffsetHelp}
-                  @click=${(event: Event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                >
-                  <ha-icon icon="mdi:information-outline"></ha-icon>
-                  <span class="sensor-scale-offset-tooltip" role="tooltip">
-                    ${assistOffsetHelp}
-                  </span>
-                </span>
+              <span class=${assistOffsetLabel ? "sensor-scale-offset" : "sensor-scale-offset help-only"}>
+                ${assistOffsetLabel ? html`<span>${assistOffsetLabel}</span>` : nothing}
+                ${renderInlineHelp(helpId, assistOffsetHelp, assistOffsetHelp, { compact: true })}
               </span>
             `
           : nothing}
       </span>
     </span>
   `;
+}
+
+function climateTargetHelp(
+  host: SensorsViewHost,
+  entityId: string,
+  status: RoomSensorAssistStatus,
+): string {
+  const appliedTemperature = status.applied_temperature;
+  const showsTemporaryAppliedTarget = (
+    status.status === "assisting" || status.status === "holding"
+  ) && typeof appliedTemperature === "number";
+  const base = host._t(
+    showsTemporaryAppliedTarget
+      ? "roomSensorClimateTargetAppliedHelp"
+      : "roomSensorClimateTargetHelp",
+  );
+  if (
+    !showsTemporaryAppliedTarget
+    || typeof appliedTemperature !== "number"
+    || typeof status.pre_step_temperature !== "number"
+    || typeof status.target_temp_step !== "number"
+  ) {
+    return base;
+  }
+  return `${base} ${host._t("roomSensorClimateTargetStepHelp", {
+    calculated: host._formatTemperature(status.pre_step_temperature, entityId),
+    step: host._formatTemperature(status.target_temp_step, entityId),
+    applied: host._formatTemperature(appliedTemperature, entityId),
+  })}`;
 }
 
 function renderSensorLabel(

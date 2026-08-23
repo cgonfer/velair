@@ -2820,6 +2820,31 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     async def _async_save(self) -> None:
         self.save_count += 1
 
+    def _room_assist_hysteresis_state(
+        self,
+        *,
+        target: float,
+        phase: str,
+        mode: str,
+        start: str = "17:00",
+        sensor: str = "sensor.salon_temperature",
+    ):
+        """Return one retained scalar hysteresis state for focused tests."""
+        return scheduler_module._RoomSensorAssistState(
+            entity_id=self.entity_id,
+            target_temperature=target,
+            applied_temperature=target,
+            applied_offset=0.0,
+            direction=mode,
+            hvac_mode=mode,
+            room_temperature_entity_id=sensor,
+            weekday="tuesday",
+            start=start,
+            hysteresis_phase=phase,
+            hysteresis_target=target,
+            hysteresis_mode=mode,
+        )
+
     def test_climate_reading_trusts_finite_home_assistant_value(self) -> None:
         self.climate.limits[self.entity_id] = (5, 30)
         self.climate.temperature_unit = lambda _entity_id: scheduler_module.CELSIUS
@@ -3948,6 +3973,12 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             }
         ]
         await self.scheduler.async_apply_current_schedule()
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[
+                self.entity_id
+            ].hysteresis_phase,
+            "towards_upper",
+        )
         self.climate.calls.clear()
 
         result = await self.scheduler.async_update_zone_preconditioning(
@@ -3957,13 +3988,13 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["room_sensor_assist_deadband"], 0.2)
         self.assertEqual(
             self.climate.calls,
-            [("set_temperature", self.entity_id, 24.0, True, "heat")],
+            [("set_temperature", self.entity_id, 24.2, True, "heat")],
         )
         self.assertEqual(
             self.scheduler._room_sensor_assist_states[
                 self.entity_id
             ].applied_temperature,
-            24.0,
+            24.2,
         )
 
     async def test_room_assist_restore_failure_retries_persisted_disabled_intent(
@@ -4231,7 +4262,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[-1]["room_temperature_entity_id"], "sensor.salon_temperature")
         self.assertEqual(events[-1]["target_temperature"], 22.0)
         self.assertEqual(events[-1]["applied_temperature"], 23.5)
-        self.assertEqual(events[-1]["assist_delta"], 1.5)
+        self.assertEqual(events[-1]["assist_delta"], 1.8)
         self.assertEqual(events[-1]["applied_offset"], 1.5)
 
     async def test_room_sensor_assist_works_without_adaptive_preconditioning(
@@ -4668,7 +4699,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             self.climate.calls[-2:],
             [
                 ("set_temperature", self.entity_id, 21.0, True, "heat"),
-                ("set_temperature", self.entity_id, 16.5, True, "heat"),
+                ("set_temperature", self.entity_id, 16.0, True, "heat"),
             ],
         )
         self.assertIn(self.entity_id, self.scheduler._room_sensor_assist_states)
@@ -5236,7 +5267,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             self.climate.calls,
-            [("set_temperature", self.entity_id, 23.5, True, "cool")],
+            [("set_temperature", self.entity_id, 23.0, True, "cool")],
         )
         self.assertEqual(
             self.scheduler._room_sensor_assist_states[self.entity_id].target_temperature,
@@ -5273,7 +5304,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_apply_current_schedule()
         self.assertEqual(
             self.climate.calls[-1],
-            ("set_temperature", self.entity_id, 23.5, True, "heat"),
+            ("set_temperature", self.entity_id, 24.0, True, "heat"),
         )
         self.climate.calls.clear()
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -5323,7 +5354,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
-    async def test_room_sensor_assist_zero_error_tracks_exact_climate_reading(self) -> None:
+    async def test_room_sensor_assist_zero_error_targets_cooling_upper_boundary(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         self.hass.states[self.entity_id] = SimpleNamespace(
             state="cool",
@@ -5355,7 +5386,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             self.climate.calls[-2:],
             [
                 ("set_temperature", self.entity_id, 22.0, True, "cool"),
-                ("set_temperature", self.entity_id, 25.0, True, "cool"),
+                ("set_temperature", self.entity_id, 25.5, True, "cool"),
             ],
         )
         self.climate.calls.clear()
@@ -5370,14 +5401,14 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             self.climate.calls,
-            [("set_temperature", self.entity_id, 26.0, True, "cool")],
+            [("set_temperature", self.entity_id, 26.5, True, "cool")],
         )
         state = self.scheduler._room_sensor_assist_states[self.entity_id]
-        self.assertEqual(state.applied_temperature, 26.0)
+        self.assertEqual(state.applied_temperature, 26.5)
         status = self.scheduler._room_sensor_assist_status(self.entity_id)
-        self.assertEqual(status["status"], "holding")
-        self.assertEqual(status["assist_delta"], 0.0)
-        self.assertEqual(status["applied_offset"], 0.0)
+        self.assertEqual(status["status"], "assisting")
+        self.assertEqual(status["assist_delta"], 0.3)
+        self.assertEqual(status["applied_offset"], 0.5)
 
     def test_room_sensor_assist_non_driving_target_never_crosses_schedule(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
@@ -5412,6 +5443,93 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(heating_hold.calculated_temperature, 23.0)
         self.assertEqual(heating_hold.scheduled_target_guard, "heating_ceiling")
         self.assertEqual(heating_hold.assist_delta, 1.0)
+
+    def test_room_sensor_assist_reports_only_actual_scalar_step_alignment(self) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 0.3, "room_sensor_assist_max_delta": 5}
+        )
+
+        cases = (
+            ("heat floor", "heat", 22, 21, 20.2, True, 21.2, 21.0),
+            ("cool ceil", "cool", 22, 23, 24.2, True, 23.2, 23.5),
+            ("auto nearest", "heat", 22, 22, 20.3, False, 20.3, 20.5),
+        )
+        for (
+            name,
+            direction,
+            target,
+            room,
+            climate,
+            fixed_direction,
+            pre_step,
+            applied,
+        ) in cases:
+            with self.subTest(name=name):
+                result = self.scheduler._room_sensor_assist_target(
+                    self.entity_id,
+                    config,
+                    direction,
+                    target,
+                    room,
+                    climate,
+                    fixed_direction=fixed_direction,
+                )
+
+                self.assertEqual(result.pre_step_temperature, pre_step)
+                self.assertEqual(result.target_temp_step, 0.5)
+                self.assertEqual(result.applied_temperature, applied)
+
+        exact = self.scheduler._room_sensor_assist_target(
+            self.entity_id, config, "heat", 22, 21, 20
+        )
+        self.assertIsNone(exact.pre_step_temperature)
+        self.assertIsNone(exact.target_temp_step)
+
+    def test_room_sensor_assist_does_not_attribute_guard_or_limit_to_step(self) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 5}
+        )
+
+        guarded = self.scheduler._room_sensor_assist_target(
+            self.entity_id, config, "cool", 22, 21, 19
+        )
+        self.climate.limits[self.entity_id] = (7, 35)
+        limited = self.scheduler._room_sensor_assist_target(
+            self.entity_id, config, "heat", 50, 20, 34.8
+        )
+        self.climate.limits[self.entity_id] = (7, 24.3)
+        step_over_limit = self.scheduler._room_sensor_assist_target(
+            self.entity_id, config, "cool", 24.2, 24.2, 24.2
+        )
+
+        self.assertEqual(guarded.scheduled_target_guard, "cooling_floor")
+        self.assertIsNone(guarded.pre_step_temperature)
+        self.assertIsNone(guarded.target_temp_step)
+        self.assertEqual(limited.limited_by, "maximum")
+        self.assertIsNone(limited.pre_step_temperature)
+        self.assertIsNone(limited.target_temp_step)
+        self.assertEqual(step_over_limit.applied_temperature, 24.3)
+        self.assertEqual(step_over_limit.limited_by, "maximum")
+        self.assertIsNone(step_over_limit.pre_step_temperature)
+        self.assertIsNone(step_over_limit.target_temp_step)
+
+    def test_room_sensor_assist_step_metadata_uses_native_fahrenheit_values(self) -> None:
+        self.climate.temperature_unit = lambda _entity_id: scheduler_module.FAHRENHEIT
+        self.climate.steps[self.entity_id] = 1
+        self.climate.limits[self.entity_id] = (41, 95)
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 9}
+        )
+
+        result = self.scheduler._room_sensor_assist_target(
+            self.entity_id, config, "cool", 72, 73, 74.4
+        )
+
+        self.assertEqual(result.pre_step_temperature, 73.4)
+        self.assertEqual(result.target_temp_step, 1)
+        self.assertEqual(result.applied_temperature, 74)
 
     def test_room_assist_deadband_is_independent_from_preconditioning_delta(self) -> None:
         self.climate.steps[self.entity_id] = 0.1
@@ -5617,7 +5735,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         status = self.scheduler._room_sensor_assist_status(self.entity_id)
         self.assertEqual(status["status"], "holding")
         self.assertEqual(status["scheduled_target_guard"], "cooling_floor")
-        self.assertEqual(status["calculated_temperature"], 19.0)
+        self.assertEqual(status["calculated_temperature"], 19.5)
         events = [
             event_data
             for event_type, event_data in self.hass.bus.events
@@ -5625,7 +5743,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             and event_data["event"] == EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED
         ]
         self.assertEqual(events[-1]["scheduled_target_guard"], "cooling_floor")
-        self.assertEqual(events[-1]["calculated_temperature"], 21.0)
+        self.assertEqual(events[-1]["calculated_temperature"], 21.5)
 
     async def test_room_sensor_assist_heat_hold_does_not_follow_internal_sensor_up(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
@@ -5676,7 +5794,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         status = self.scheduler._room_sensor_assist_status(self.entity_id)
         self.assertEqual(status["status"], "holding")
         self.assertEqual(status["scheduled_target_guard"], "heating_ceiling")
-        self.assertEqual(status["calculated_temperature"], 25.0)
+        self.assertEqual(status["calculated_temperature"], 24.5)
 
     async def test_room_sensor_assist_heat_target_moves_inverse_after_crossing(
         self,
@@ -5706,11 +5824,21 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             }
         ]
         await self.scheduler.async_apply_current_schedule()
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[
+                self.entity_id
+            ].hysteresis_phase,
+            "towards_upper",
+        )
         self.climate.calls.clear()
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
             state="23",
             attributes={"unit_of_measurement": "°C"},
         )
+
+        pending_status = self.scheduler._room_sensor_assist_status(self.entity_id)
+        self.assertEqual(pending_status["hysteresis_phase"], "towards_upper")
+        self.assertEqual(pending_status["hysteresis_target"], 22.3)
 
         await self.scheduler._async_refresh_room_sensor_assist_from_current_event(
             self.entity_id
@@ -5718,7 +5846,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             self.climate.calls,
-            [("set_temperature", self.entity_id, 21.0, True, "heat")],
+            [("set_temperature", self.entity_id, 20.5, True, "heat")],
         )
         events = [
             event_data
@@ -5726,8 +5854,13 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             if event_type == EVENT_VELAIR
             and event_data["event"] == EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED
         ]
-        self.assertEqual(events[-1]["assist_delta"], 1.0)
-        self.assertEqual(events[-1]["applied_offset"], -1.0)
+        self.assertEqual(events[-1]["assist_delta"], 1.3)
+        self.assertEqual(events[-1]["applied_offset"], -1.5)
+
+        self.assertEqual(events[-1]["hysteresis_phase"], "towards_lower")
+        self.assertEqual(events[-1]["hysteresis_target"], 21.7)
+        self.assertEqual(events[-1]["deadband_low"], 21.7)
+        self.assertEqual(events[-1]["deadband_high"], 22.3)
 
         self.climate.calls.clear()
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -5742,6 +5875,56 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             self.climate.calls,
             [("set_temperature", self.entity_id, 23.0, True, "heat")],
         )
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_status(self.entity_id)[
+                "hysteresis_phase"
+            ],
+            "towards_upper",
+        )
+
+    async def test_room_sensor_assist_status_does_not_mix_stale_fixed_mode_phase(
+        self,
+    ) -> None:
+        self.climate.steps[self.entity_id] = 0.1
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "temperature": 22},
+        )
+        self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
+            state="22",
+            attributes={"unit_of_measurement": "°C"},
+        )
+        self.data["zones"][self.entity_id]["preconditioning"].update(
+            {
+                "room_temperature_entity_id": "sensor.salon_temperature",
+                "room_sensor_assist_enabled": True,
+            }
+        )
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 22,
+            }
+        ]
+        await self.scheduler.async_apply_current_schedule()
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[
+                self.entity_id
+            ].hysteresis_phase,
+            "towards_lower",
+        )
+
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 22, "temperature": 22},
+        )
+        self.climate.current_hvac_modes[self.entity_id] = "cool"
+        pending_status = self.scheduler._room_sensor_assist_status(self.entity_id)
+
+        self.assertEqual(pending_status["status"], "ready")
+        self.assertEqual(pending_status["hysteresis_phase"], "towards_upper")
+        self.assertIsNone(pending_status["applied_temperature"])
 
     async def test_room_sensor_assist_cool_target_moves_inverse_after_crossing(
         self,
@@ -5771,6 +5954,12 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             }
         ]
         await self.scheduler.async_apply_current_schedule()
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[
+                self.entity_id
+            ].hysteresis_phase,
+            "towards_lower",
+        )
         self.climate.calls.clear()
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
             state="21",
@@ -5791,8 +5980,26 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             if event_type == EVENT_VELAIR
             and event_data["event"] == EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED
         ]
-        self.assertEqual(events[-1]["assist_delta"], 1.0)
+        self.assertEqual(events[-1]["assist_delta"], 1.3)
         self.assertEqual(events[-1]["applied_offset"], 1.4)
+        self.assertEqual(events[-1]["hysteresis_phase"], "towards_upper")
+        self.assertEqual(events[-1]["hysteresis_target"], 22.3)
+
+        self.climate.calls.clear()
+        self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
+            state="23",
+            attributes={"unit_of_measurement": "°C"},
+        )
+        await self.scheduler._async_refresh_room_sensor_assist_from_current_event(
+            self.entity_id
+        )
+
+        self.assertEqual(
+            self.scheduler._room_sensor_assist_states[
+                self.entity_id
+            ].hysteresis_phase,
+            "towards_lower",
+        )
 
     async def test_room_sensor_assist_auto_changes_rounding_direction_on_crossing(
         self,
@@ -6044,6 +6251,77 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.climate.steps[self.entity_id] = 0.5
         self.hass.states[self.entity_id] = SimpleNamespace(
             state="heat",
+            attributes={"current_temperature": 20.2, "temperature": 21},
+        )
+        self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
+            state="15",
+            attributes={"unit_of_measurement": "°C"},
+        )
+        self.data["zones"][self.entity_id]["preconditioning"].update(
+            {
+                "room_temperature_entity_id": "sensor.salon_temperature",
+                "room_sensor_assist_enabled": True,
+                "room_sensor_assist_max_delta": 3,
+            }
+        )
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 25,
+                "hvac_mode": "heat",
+            }
+        ]
+
+        await self.scheduler._async_refresh_room_sensor_assist(
+            self.entity_id,
+            target_temperature=25,
+            hvac_mode="heat",
+            weekday="tuesday",
+            start="17:00",
+            reason="current_schedule",
+        )
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 20, "temperature": 23},
+        )
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "18:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 26,
+                "hvac_mode": "heat",
+            }
+        ]
+        await self.scheduler._async_refresh_room_sensor_assist(
+            self.entity_id,
+            target_temperature=26,
+            hvac_mode="heat",
+            weekday="tuesday",
+            start="18:00",
+            reason="current_schedule",
+        )
+
+        self.assertEqual(
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 23.0, True, "heat")],
+        )
+        state = self.scheduler._room_sensor_assist_states[self.entity_id]
+        self.assertEqual(state.target_temperature, 26)
+        self.assertEqual(state.start, "18:00")
+        self.assertEqual(state.applied_offset, 3.0)
+        self.assertIsNone(state.pre_step_temperature)
+        self.assertIsNone(state.target_temp_step)
+        status = self.scheduler._room_sensor_assist_status(self.entity_id)
+        self.assertNotIn("pre_step_temperature", status)
+        self.assertNotIn("target_temp_step", status)
+
+    async def test_room_sensor_assist_adds_new_step_metadata_without_service_call(
+        self,
+    ) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
             attributes={"current_temperature": 20, "temperature": 21},
         )
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -6074,6 +6352,10 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             start="17:00",
             reason="current_schedule",
         )
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 20.2, "temperature": 23},
+        )
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
             {
                 "start": "18:00",
@@ -6096,9 +6378,38 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             [("set_temperature", self.entity_id, 23.0, True, "heat")],
         )
         state = self.scheduler._room_sensor_assist_states[self.entity_id]
-        self.assertEqual(state.target_temperature, 26)
-        self.assertEqual(state.start, "18:00")
-        self.assertEqual(state.applied_offset, 3.0)
+        self.assertEqual(state.applied_temperature, 23.0)
+        self.assertEqual(state.pre_step_temperature, 23.2)
+        self.assertEqual(state.target_temp_step, 0.5)
+        status = self.scheduler._room_sensor_assist_status(self.entity_id)
+        self.assertEqual(status["pre_step_temperature"], 23.2)
+        self.assertEqual(status["target_temp_step"], 0.5)
+
+        self.climate.steps[self.entity_id] = 0.3
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "19:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 27,
+                "hvac_mode": "heat",
+            }
+        ]
+        await self.scheduler._async_refresh_room_sensor_assist(
+            self.entity_id,
+            target_temperature=27,
+            hvac_mode="heat",
+            weekday="tuesday",
+            start="19:00",
+            reason="current_schedule",
+        )
+
+        state = self.scheduler._room_sensor_assist_states[self.entity_id]
+        self.assertEqual(state.applied_temperature, 23.0)
+        self.assertIsNone(state.pre_step_temperature)
+        self.assertIsNone(state.target_temp_step)
+        status = self.scheduler._room_sensor_assist_status(self.entity_id)
+        self.assertNotIn("pre_step_temperature", status)
+        self.assertNotIn("target_temp_step", status)
 
     async def test_room_sensor_assist_slow_scalar_refresh_is_restored_by_pause(
         self,
@@ -6529,6 +6840,376 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(above_target.assist_delta, 0.0)
         self.assertEqual(above_target.applied_offset, 0.0)
 
+    def test_room_sensor_assist_heat_hysteresis_retains_full_cycle_at_boundaries(
+        self,
+    ) -> None:
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 5}
+        )
+
+        initial = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            None,
+        )
+        self.assertEqual(initial[:4], ("towards_lower", 21, 21, 23))
+
+        towards_upper = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            21,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            self._room_assist_hysteresis_state(
+                target=22, phase="towards_lower", mode="heat"
+            ),
+        )
+        self.assertEqual(towards_upper[:2], ("towards_upper", 23))
+
+        retained = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            self._room_assist_hysteresis_state(
+                target=22, phase="towards_upper", mode="heat"
+            ),
+        )
+        self.assertEqual(retained[:2], ("towards_upper", 23))
+
+        completed = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            23,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            self._room_assist_hysteresis_state(
+                target=22, phase="towards_upper", mode="heat"
+            ),
+        )
+        self.assertEqual(completed[:2], ("towards_lower", 21))
+
+    def test_room_sensor_assist_cool_hysteresis_retains_full_cycle_at_boundaries(
+        self,
+    ) -> None:
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 5}
+        )
+
+        initial = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22,
+            "cool",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            None,
+        )
+        self.assertEqual(initial[:4], ("towards_upper", 23, 21, 23))
+
+        towards_lower = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            23,
+            "cool",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            self._room_assist_hysteresis_state(
+                target=22, phase="towards_upper", mode="cool"
+            ),
+        )
+        self.assertEqual(towards_lower[:2], ("towards_lower", 21))
+
+        retained = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22,
+            "cool",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            self._room_assist_hysteresis_state(
+                target=22, phase="towards_lower", mode="cool"
+            ),
+        )
+        self.assertEqual(retained[:2], ("towards_lower", 21))
+
+        completed = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            21,
+            "cool",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            self._room_assist_hysteresis_state(
+                target=22, phase="towards_lower", mode="cool"
+            ),
+        )
+        self.assertEqual(completed[:2], ("towards_upper", 23))
+
+    def test_room_sensor_assist_hysteresis_resets_for_changed_runtime_identity(
+        self,
+    ) -> None:
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 5}
+        )
+        stale = self._room_assist_hysteresis_state(
+            target=22, phase="towards_upper", mode="heat"
+        )
+        changed_inputs = (
+            (24, "heat", "sensor.salon_temperature", "17:00"),
+            (22, "heat", "sensor.other", "17:00"),
+            (22, "heat", "sensor.salon_temperature", "18:00"),
+        )
+
+        for target, mode, sensor, start in changed_inputs:
+            with self.subTest(target=target, mode=mode, sensor=sensor, start=start):
+                result = self.scheduler._room_sensor_assist_hysteresis(
+                    self.entity_id,
+                    config,
+                    target,
+                    target,
+                    mode,
+                    sensor,
+                    "tuesday",
+                    start,
+                    stale,
+                )
+                self.assertEqual(result[0], "towards_lower")
+
+        mode_reset = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22,
+            "cool",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            stale,
+        )
+        self.assertEqual(mode_reset[0], "towards_upper")
+
+    def test_room_sensor_assist_hysteresis_is_disabled_for_zero_and_auto(self) -> None:
+        zero_config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 5}
+        )
+        enabled_config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 5}
+        )
+
+        zero = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            zero_config,
+            22,
+            22,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            None,
+        )
+        automatic = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            enabled_config,
+            22,
+            22,
+            "auto",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            None,
+        )
+
+        self.assertEqual(zero, (None, None, None, None, None))
+        self.assertEqual(automatic, (None, None, None, None, None))
+
+    def test_room_sensor_assist_hysteresis_reuses_phase_with_updated_deadband(
+        self,
+    ) -> None:
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 0.5, "room_sensor_assist_max_delta": 5}
+        )
+        active = self._room_assist_hysteresis_state(
+            target=22, phase="towards_upper", mode="heat"
+        )
+
+        retained = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22.2,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            active,
+        )
+        reached_new_edge = self.scheduler._room_sensor_assist_hysteresis(
+            self.entity_id,
+            config,
+            22,
+            22.5,
+            "heat",
+            "sensor.salon_temperature",
+            "tuesday",
+            "17:00",
+            active,
+        )
+
+        self.assertEqual(retained[:4], ("towards_upper", 22.5, 21.5, 22.5))
+        self.assertEqual(reached_new_edge[:2], ("towards_lower", 21.5))
+
+    def test_room_sensor_assist_hysteresis_keeps_max_delta_step_and_limits(self) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+        self.climate.limits[self.entity_id] = (5, 30)
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 0.5}
+        )
+
+        result = self.scheduler._room_sensor_assist_target(
+            self.entity_id,
+            config,
+            "heat",
+            22,
+            20,
+            30.2,
+            hysteresis_phase="towards_upper",
+            hysteresis_target=23,
+            deadband_low=21,
+            deadband_high=23,
+        )
+
+        self.assertEqual(result.assist_delta, 0.5)
+        self.assertEqual(result.requested_temperature, 30.5)
+        self.assertEqual(result.applied_temperature, 30)
+        self.assertEqual(result.limited_by, "maximum")
+        self.assertEqual(result.hysteresis_target, 23)
+
+    def test_room_sensor_assist_fixed_hysteresis_uses_native_fahrenheit_values(
+        self,
+    ) -> None:
+        self.climate.temperature_unit = lambda _entity_id: scheduler_module.FAHRENHEIT
+        self.climate.steps[self.entity_id] = 1
+        self.climate.limits[self.entity_id] = (41, 95)
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 4}
+        )
+
+        for mode, initial_phase, first_edge, reverse_phase, second_edge in (
+            ("heat", "towards_lower", 71, "towards_upper", 73),
+            ("cool", "towards_upper", 73, "towards_lower", 71),
+        ):
+            with self.subTest(mode=mode):
+                initial = self.scheduler._room_sensor_assist_hysteresis(
+                    self.entity_id,
+                    config,
+                    72,
+                    72,
+                    mode,
+                    "sensor.salon_temperature",
+                    "tuesday",
+                    "17:00",
+                    None,
+                )
+                self.assertEqual(initial[:4], (initial_phase, first_edge, 71, 73))
+                reversed_phase = self.scheduler._room_sensor_assist_hysteresis(
+                    self.entity_id,
+                    config,
+                    72,
+                    first_edge,
+                    mode,
+                    "sensor.salon_temperature",
+                    "tuesday",
+                    "17:00",
+                    self._room_assist_hysteresis_state(
+                        target=72,
+                        phase=initial_phase,
+                        mode=mode,
+                    ),
+                )
+                self.assertEqual(reversed_phase[:2], (reverse_phase, second_edge))
+
+                target = self.scheduler._room_sensor_assist_target(
+                    self.entity_id,
+                    config,
+                    "heat" if reverse_phase == "towards_upper" else "cool",
+                    72,
+                    first_edge,
+                    72,
+                    hysteresis_phase=reverse_phase,
+                    hysteresis_target=second_edge,
+                    deadband_low=71,
+                    deadband_high=73,
+                )
+                self.assertEqual(target.assist_delta, 2)
+                self.assertEqual(
+                    target.applied_temperature,
+                    74 if reverse_phase == "towards_upper" else 70,
+                )
+                self.assertIsNone(target.limited_by)
+
+    def test_room_sensor_assist_hysteresis_guard_only_limits_non_driving_phase(
+        self,
+    ) -> None:
+        self.climate.steps[self.entity_id] = 0.1
+        config = normalize_preconditioning_data(
+            {"room_sensor_assist_deadband": 0.3, "room_sensor_assist_max_delta": 5}
+        )
+
+        heating = self.scheduler._room_sensor_assist_target(
+            self.entity_id,
+            config,
+            "heat",
+            22,
+            21.7,
+            23,
+            hysteresis_phase="towards_upper",
+            hysteresis_target=22.3,
+            deadband_low=21.7,
+            deadband_high=22.3,
+        )
+        cooling = self.scheduler._room_sensor_assist_target(
+            self.entity_id,
+            config,
+            "cool",
+            22,
+            22.3,
+            21,
+            hysteresis_phase="towards_lower",
+            hysteresis_target=21.7,
+            deadband_low=21.7,
+            deadband_high=22.3,
+        )
+
+        self.assertGreater(heating.applied_temperature, 22)
+        self.assertLess(cooling.applied_temperature, 22)
+        self.assertIsNone(heating.scheduled_target_guard)
+        self.assertIsNone(cooling.scheduled_target_guard)
+
     def test_room_sensor_assist_signed_target_respects_climate_limits(self) -> None:
         self.climate.steps[self.entity_id] = 0.5
         self.climate.limits[self.entity_id] = (5, 30)
@@ -6602,7 +7283,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_apply_current_schedule()
         self.assertEqual(
             self.climate.calls[-1],
-            ("set_temperature", self.entity_id, 25.0, True, "cool"),
+            ("set_temperature", self.entity_id, 25.5, True, "cool"),
         )
         self.climate.calls.clear()
         scheduler_module.dt_util.now = lambda: transition
@@ -6670,7 +7351,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state.target_temperature, 25.0)
         self.assertEqual(state.start, "18:00")
 
-    async def test_room_sensor_assist_uses_zero_correction_when_room_reaches_target(
+    async def test_room_sensor_assist_targets_lower_boundary_at_schedule_target(
         self,
     ) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -6716,7 +7397,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             if event_type == EVENT_VELAIR
             and event_data["event"] == EVENT_TYPE_ROOM_SENSOR_ASSIST_UPDATED
         ]
-        self.assertEqual(events[-1]["assist_delta"], 0.0)
+        self.assertEqual(events[-1]["assist_delta"], 0.3)
         self.assertEqual(events[-1]["applied_offset"], 0.0)
 
     def test_late_preconditioning_window_reports_event_due_now(self) -> None:

@@ -308,10 +308,16 @@ export type RoomSensorAssistStatus = {
   requested_temperature?: number | null;
   calculated_temperature?: number | null;
   scheduled_target_guard?: "heating_ceiling" | "cooling_floor" | null;
+  pre_step_temperature?: number | null;
+  target_temp_step?: number | null;
   requested_target_temp_low?: number | null;
   requested_target_temp_high?: number | null;
   assist_delta?: number | null;
   direction?: "heat" | "cool" | null;
+  hysteresis_phase?: "towards_lower" | "towards_upper" | null;
+  hysteresis_target?: number | null;
+  deadband_low?: number | null;
+  deadband_high?: number | null;
   hvac_mode?: string | null;
   weekday?: string | null;
   start?: string | null;

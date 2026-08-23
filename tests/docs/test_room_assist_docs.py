@@ -34,9 +34,9 @@ class ClimateFeatureDocsTest(unittest.TestCase):
         guide = ROOM_ASSIST_DOC.read_text(encoding="utf-8")
 
         for heading in (
-            "## Heating Example",
+            "## Fixed Heating Hysteresis Example",
             "## Heating With A Capped Delta",
-            "## Cooling Example",
+            "## Fixed Cooling Hysteresis Example",
             "## When Velair Does Nothing",
             "## Adaptive Preconditioning",
             "## Automation Events",
@@ -52,6 +52,11 @@ class ClimateFeatureDocsTest(unittest.TestCase):
             "velair.disable_room_sensor_assist",
             "view: sensors",
             "../developer/room-assist.md",
+            "hysteresis_phase: towards_upper",
+            "deadband_low: 20.7",
+            "deadband_high: 21.3",
+            "Why Climate target can differ from the calculation",
+            "calculation, published step, and applied value",
         ):
             self.assertIn(expected, guide)
 
@@ -81,6 +86,12 @@ class ClimateFeatureDocsTest(unittest.TestCase):
             "target_temp_step",
             "velair.enable_room_sensor_assist",
             "velair.disable_room_sensor_assist",
+            "towards_lower",
+            "towards_upper",
+            "hysteresis_target",
+            "pre_step_temperature",
+            "target_temp_step",
+            "runtime-only and is never stored",
         ):
             self.assertIn(expected, guide)
 

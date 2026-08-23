@@ -69,12 +69,17 @@ function handleClick(event: MouseEvent): void {
   showTooltip(button, "click");
 }
 
-export function renderInlineHelp(id: string, label: string, text: string) {
+export function renderInlineHelp(
+  id: string,
+  label: string,
+  text: string,
+  options: { compact?: boolean } = {},
+) {
   return html`
     <span class="inline-help-wrapper">
       <button
         type="button"
-        class="inline-help"
+        class=${options.compact ? "inline-help compact" : "inline-help"}
         aria-label=${label}
         aria-describedby=${id}
         @focus=${(event: FocusEvent) => showTooltip(event.currentTarget as HTMLElement, "focus")}

@@ -130,6 +130,23 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         self.assertEqual("weekday", unit["effective_setup"]["profile_owner_id"])
         self.assertEqual("profile", unit["effective_setup"]["schedule_source"])
 
+    def test_snapshot_keeps_room_assist_step_alignment_evidence(self) -> None:
+        self.runtime["scheduler"].get_room_sensor_assist_statuses = lambda: {
+            "climate.living_room": {
+                "status": "assisting",
+                "applied_temperature": 24.0,
+                "pre_step_temperature": 23.9,
+                "target_temp_step": 0.5,
+            }
+        }
+
+        room_assist = self.manager.snapshot(self.runtime)["units"][
+            "climate.living_room"
+        ]["room_assist"]
+
+        self.assertEqual(23.9, room_assist["pre_step_temperature"])
+        self.assertEqual(0.5, room_assist["target_temp_step"])
+
     def test_active_issues_centralizes_global_and_unit_evidence(self) -> None:
         self.runtime["operation_recovery"] = {"operation": "import"}
         self.hass.states["climate.living_room"].state = "unavailable"
@@ -704,6 +721,10 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
                     "room_temperature": 21.0,
                     "climate_temperature": 20.0,
                     "direction": "heat",
+                    "hysteresis_phase": "towards_upper",
+                    "hysteresis_target": 21.3,
+                    "deadband_low": 20.7,
+                    "deadband_high": 21.3,
                 },
             ),
             (
@@ -747,6 +768,11 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         by_category = {item["category"]: item for item in snapshot["history"]}
         self.assertEqual(set(diagnostics_module.DIAGNOSTIC_HISTORY_CATEGORIES), set(by_category))
         self.assertEqual(19.5, by_category["room_assist"]["data"]["applied_temperature"])
+        self.assertEqual(
+            "towards_upper",
+            by_category["room_assist"]["data"]["hysteresis_phase"],
+        )
+        self.assertEqual(21.3, by_category["room_assist"]["data"]["hysteresis_target"])
         self.assertEqual("good", by_category["comfort"]["data"]["air_quality"])
         self.assertEqual(35, by_category["preconditioning"]["data"]["lead_minutes"])
         self.assertNotIn("unsafe", by_category["control"]["data"])

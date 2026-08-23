@@ -539,6 +539,25 @@ export const sensorsStyles = css`
   z-index: 0;
 }
 
+.sensor-scale-deadband-zone.towards-lower::after,
+.sensor-scale-deadband-zone.towards-upper::after {
+  background: var(--primary-color);
+  border-radius: 999px;
+  bottom: 1px;
+  content: "";
+  position: absolute;
+  top: 1px;
+  width: 3px;
+}
+
+.sensor-scale-deadband-zone.towards-lower::after {
+  left: -1px;
+}
+
+.sensor-scale-deadband-zone.towards-upper::after {
+  right: -1px;
+}
+
 .sensor-scale-relation {
   display: block;
   height: 0;
@@ -798,64 +817,6 @@ export const sensorsStyles = css`
   min-width: 0;
   overflow: visible;
   white-space: nowrap;
-}
-
-.sensor-scale-offset-help {
-  align-items: center;
-  color: var(--secondary-text-color);
-  cursor: help;
-  display: inline-flex;
-  flex: 0 0 auto;
-  outline: none;
-  overflow: visible;
-  position: relative;
-}
-
-.sensor-scale-offset-help ha-icon {
-  --mdc-icon-size: 12px;
-  height: 12px;
-  width: 12px;
-}
-
-.sensor-scale-offset-tooltip {
-  background: var(--primary-text-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-  color: var(--primary-background-color);
-  font-size: 11px;
-  font-weight: 400;
-  left: 50%;
-  line-height: 1.35;
-  max-width: min(220px, calc(100vw - 40px));
-  opacity: 0;
-  padding: 7px 8px;
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  transform: translateX(-50%);
-  transition: opacity 120ms ease, visibility 120ms ease;
-  visibility: hidden;
-  white-space: normal;
-  width: max-content;
-  z-index: 30;
-}
-
-.sensor-scale-callout-marker.edge-left .sensor-scale-offset-tooltip {
-  left: 0;
-  transform: none;
-}
-
-.sensor-scale-callout-marker.edge-right .sensor-scale-offset-tooltip {
-  left: auto;
-  right: 0;
-  transform: none;
-}
-
-.sensor-scale-offset-help:hover .sensor-scale-offset-tooltip,
-.sensor-scale-offset-help:focus .sensor-scale-offset-tooltip,
-.sensor-scale-offset-help:focus-visible .sensor-scale-offset-tooltip {
-  opacity: 1;
-  visibility: visible;
 }
 
 .sensor-scale-dot {

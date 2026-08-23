@@ -74,4 +74,30 @@ export const inlineHelpStyles = css`
     width: auto;
   }
 }
+
+.inline-help.compact {
+  height: 20px;
+  width: 20px;
+}
+
+@media (pointer: coarse) {
+  .inline-help.compact {
+    height: 20px;
+    position: relative;
+    width: 20px;
+  }
+
+  .inline-help.compact::before {
+    border-radius: 50%;
+    content: "";
+    inset: -10px;
+    position: absolute;
+  }
+}
+
+.inline-help.compact ha-icon {
+  --mdc-icon-size: 12px;
+  height: 12px;
+  width: 12px;
+}
 `;

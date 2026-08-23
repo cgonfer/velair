@@ -502,8 +502,19 @@ assist_delta: 3
 applied_offset: 3
 direction: heat
 hvac_mode: heat
+hysteresis_phase: towards_upper
+hysteresis_target: 21.3
+deadband_low: 20.7
+deadband_high: 21.3
 reason: scheduled_event
 ```
+
+For a fixed scalar `heat` or `cool` target with a non-zero deadband, the four
+hysteresis fields identify the committed runtime phase, its active edge, and
+the complete switching band. They are omitted for a zero deadband, scalar
+automatic modes, and native ranges. The phase remains unchanged while the room
+crosses the scheduled center and reverses only after the external sensor
+reaches the opposite edge.
 
 When the scheduled target protects a fixed heating or cooling result, the
 scalar update adds two optional fields:
@@ -539,11 +550,14 @@ hvac_mode: heat_cool
 ## Room Sensor Assist Restored
 
 `room_sensor_assist_restored` is emitted when Room Assist stops managing its
-temporary target and restores the normal scheduled target where possible.
-Crossing the room target remains part of `room_sensor_assist_updated`; it can
-produce an inverse signed `applied_offset`. In fixed heating or cooling modes,
-the scheduled target remains the safety boundary for a non-driving result even
-if the climate entity's own reading drifts. `reason` explains the transition.
+temporary target and restores the normal scheduled target where possible. For
+a fixed heating or cooling cycle, reaching the active deadband edge remains
+part of `room_sensor_assist_updated`; it reverses the hysteresis phase and can
+change the signed `applied_offset`. The scheduled target remains the safety
+boundary during the non-driving phase even if the climate entity's own reading
+drifts. If target-step rounding makes a new thermostat command unnecessary,
+the phase still changes in live status but no update event is emitted, as
+described above. `reason` explains an emitted transition.
 
 ```yaml
 domain: velair

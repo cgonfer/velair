@@ -73,6 +73,14 @@ describe("Room Assist range contract", () => {
 });
 
 describe("Room Assist deadband zone", () => {
+  it("prefers the backend runtime bounds for an active hysteresis cycle", () => {
+    expect(roomAssistDeadbandZone(status({
+      target_temperature: 21,
+      deadband_low: 20.6,
+      deadband_high: 21.4,
+    }), 0.3)).toEqual({ low: 20.6, high: 21.4 });
+  });
+
   it("expands equally around a scalar scheduled target", () => {
     expect(roomAssistDeadbandZone(status({ target_temperature: 21 }), 0.3))
       .toEqual({ low: 20.7, high: 21.3 });

@@ -78,11 +78,11 @@ Create reusable daily schedules and apply them where they are needed.
 
 ### Room Assist
 
-Compare the scheduled target, external room sensor, climate reading and target applied to the thermostat.
+Compare the scheduled target, deadband limits, external room sensor, climate reading and target applied to the thermostat.
 
 #### Assisting
 
-Room Assist adjusts the thermostat while the room is still moving towards the scheduled target.
+In fixed heating or cooling, Room Assist keeps driving towards the active deadband edge until that edge is reached.
 
 **Desktop**
 
@@ -94,7 +94,7 @@ Room Assist adjusts the thermostat while the room is still moving towards the sc
 
 #### Holding
 
-Once the room reaches its target, the same graph shows the safe target used to avoid driving it further.
+Automatic modes and native ranges keep their neutral deadband behavior when the room is already inside the configured margin.
 
 **Desktop**
 
