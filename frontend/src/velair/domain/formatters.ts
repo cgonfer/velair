@@ -8,7 +8,11 @@ export function dateLocale(language: SupportedLanguage): string {
     en: "en",
     es: "es-ES",
     fr: "fr-FR",
+    it: "it-IT",
     nl: "nl-NL",
+    pl: "pl-PL",
+    "pt-br": "pt-BR",
+    "pt-pt": "pt-PT",
     ru: "ru-RU",
   };
   return locales[language] ?? "en";

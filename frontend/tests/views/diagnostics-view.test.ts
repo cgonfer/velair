@@ -700,8 +700,8 @@ describe("diagnostics view", () => {
     const container = document.createElement("div");
     render(renderDiagnosticsView(viewHost), container);
     const text = container.textContent ?? "";
-    expect(text).toContain("Pausa del Profile");
-    expect(text).toContain("Apagar el climate");
+    expect(text).toContain(es.diagnosticsScheduleSourceProfilePause);
+    expect(text).toContain(es.diagnosticsOverrideTurnOff);
     expect(text).toContain(es.diagnosticsDeliveryFailed);
     expect(text).toContain("Sustituido por una solicitud más reciente");
     expect(text).toContain("1.000");

@@ -1,0 +1,127 @@
+{
+  "title": "Velair",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Skonfiguruj Velair",
+        "description": "Automatyzacja klimatu, która dostosowuje się do Twojego życia. Wybierz encje klimatu zarządzane przez Velair.",
+        "data": {
+          "climate_entities": "Encje klimatu",
+          "apply_active_schedule_on_startup": "Zastosuj aktywny harmonogram po uruchomieniu Home Assistant"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Wybierz co najmniej jedną encję klimatu."
+    },
+    "abort": {
+      "already_configured": "Velair jest już skonfigurowany."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zarządzaj encjami klimatu",
+        "description": "Automatyzacja klimatu, która dostosowuje się do Twojego życia. Wybierz encje klimatu zarządzane przez Velair. Usunięcie encji zatrzymuje zarządzanie nią.",
+        "data": {
+          "climate_entities": "Encje klimatu",
+          "apply_active_schedule_on_startup": "Zastosuj aktywny harmonogram po uruchomieniu Home Assistant"
+        }
+      }
+    },
+    "error": {
+      "no_climate_entities": "Wybierz co najmniej jedną encję klimatu."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_climate_event": {
+        "name": "Następne zaplanowane zdarzenie"
+      },
+      "scheduler_status": {
+        "name": "Stan harmonogramu",
+        "state": {
+          "paused": "Wstrzymano",
+          "override_active": "Wzmocnienie aktywne",
+          "scheduled": "Zaplanowano",
+          "idle": "Bezczynny",
+          "temperature_migration_required": "Wymagana aktualizacja temperatury"
+        }
+      },
+      "diagnostics_status": {
+        "name": "Stan diagnostyki",
+        "state": {
+          "ok": "OK",
+          "warning": "Ostrzeżenie",
+          "error": "Błąd"
+        }
+      },
+      "zone_active_target_temperature": {
+        "name": "Aktywna temperatura docelowa: {zone}"
+      },
+      "zone_environmental_condition": {
+        "name": "Warunki otoczenia: {zone}",
+        "state": {
+          "monitoring_off": "Niemonitorowane",
+          "no_readings": "Brak odczytów",
+          "temperature_comfortable": "Temperatura komfortowa",
+          "humidity_comfortable": "Wilgotność komfortowa",
+          "comfortable": "Komfortowo",
+          "cold": "Zimno",
+          "hot": "Gorąco",
+          "dry": "Sucho",
+          "humid": "Wilgotno",
+          "cold_and_dry": "Zimno i sucho",
+          "cold_and_humid": "Zimno i wilgotno",
+          "hot_and_dry": "Gorąco i sucho",
+          "hot_and_humid": "Gorąco i wilgotno"
+        }
+      },
+      "zone_air_quality": {
+        "name": "Jakość powietrza: {zone}",
+        "state": {
+          "not_monitored": "Niemonitorowana",
+          "unavailable": "Niedostępna",
+          "good": "Dobra",
+          "elevated": "Podwyższona",
+          "poor": "Zła"
+        }
+      },
+      "zone_override_state": {
+        "name": "Nadpisanie: {zone}",
+        "state": {
+          "none": "Brak nadpisania",
+          "boost": "Wzmocnienie",
+          "paused": "Wstrzymano",
+          "disabled": "Wyłączony"
+        }
+      },
+      "zone_preconditioning_start": {
+        "name": "Początek przygotowania wstępnego: {zone}"
+      },
+      "zone_room_assist_state": {
+        "name": "{zone} Room Assist",
+        "state": {
+          "unavailable": "Niedostępny",
+          "not_configured": "Nie skonfigurowano",
+          "disabled": "Wyłączony",
+          "blocked": "Zablokowany",
+          "idle": "Bezczynny",
+          "holding": "Utrzymywanie",
+          "assisting": "Wspomaganie",
+          "ready": "Gotowy"
+        }
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Tryb"
+      }
+    },
+    "switch": {
+      "automatic_scheduling": {
+        "name": "Automatyczny harmonogram"
+      }
+    }
+  }
+}

@@ -518,18 +518,6 @@ function renderTemperatureScale(
         ? host._t("roomSensorDeadbandZoneHelpAutomatic")
         : host._t("roomSensorDeadbandZoneHelpGeneric")
     : "";
-  const deadbandCompactLabel = deadbandZone && deadband > 0
-    ? hasScheduledRange
-      ? host._t("roomSensorDeadbandZoneCompactRange", { value: deadbandValue })
-      : hasFixedHysteresis || hasFixedDirectionMode
-        ? host._t("roomSensorDeadbandZoneCompact", { value: deadbandValue })
-        : hasScalarAutomaticMode
-          ? host._t("roomSensorDeadbandZoneCompactAutomatic", { value: deadbandValue })
-          : host._t("roomSensorDeadbandZoneGeneric", { value: deadbandValue })
-    : "";
-  const deadbandBriefLabel = deadbandZone && deadband > 0
-    ? host._t("roomSensorDeadbandZoneBrief", { value: deadbandValue })
-    : "";
   const deadbandBounds = deadbandZone && deadband > 0
     ? formatTemperatureRange(host, entityId, deadbandZone.low, deadbandZone.high)
     : "";
@@ -643,13 +631,6 @@ function renderTemperatureScale(
                     title=${deadbandHelp}
                   >
                     <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
-                    <span class="sensor-scale-deadband-label-short" aria-hidden="true">±</span>
-                    <span class="sensor-scale-deadband-label-brief" aria-hidden="true">
-                      ${deadbandBriefLabel}
-                    </span>
-                    <span class="sensor-scale-deadband-label-compact" aria-hidden="true">
-                      ${deadbandCompactLabel}
-                    </span>
                     <span class="sensor-scale-deadband-label-full" aria-hidden="true">
                       ${deadbandLabel}
                     </span>

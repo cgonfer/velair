@@ -215,6 +215,7 @@ def _loaded_velair_integration(frontend_module):
         "homeassistant.config_entries",
         "homeassistant.const",
         "homeassistant.core",
+        "homeassistant.helpers.config_validation",
         "homeassistant.helpers.event",
         "homeassistant.helpers.typing",
     )
@@ -255,6 +256,12 @@ def _loaded_velair_integration(frontend_module):
         Event=object,
         HomeAssistant=object,
         callback=lambda function: function,
+    )
+    install_module(
+        "homeassistant.helpers.config_validation",
+        config_entry_only_config_schema=lambda domain: {
+            "config_entry_only": domain
+        },
     )
     install_module(
         "homeassistant.helpers.event",
@@ -420,6 +427,10 @@ class FrontendRegistrationTest(unittest.TestCase):
         hass = FakeHass()
 
         with _loaded_velair_integration(self.frontend) as integration:
+            self.assertEqual(
+                integration.CONFIG_SCHEMA,
+                {"config_entry_only": "velair"},
+            )
             self.assertTrue(asyncio.run(integration.async_setup(hass, {})))
             self.assertTrue(asyncio.run(integration.async_setup(hass, {})))
 
@@ -464,7 +475,11 @@ class FrontendSourceContractTest(unittest.TestCase):
             ]
             self.assertEqual(1, len(profile_copy), translation_path.name)
             if translation_path.name != "template.ts":
-                self.assertIn("Mode", profile_copy[0], translation_path.name)
+                self.assertNotIn(
+                    '"profileExternalScheduleOnly": ""',
+                    profile_copy[0],
+                    translation_path.name,
+                )
 
     def test_typescript_sources_do_not_contain_mojibake(self) -> None:
         """UTF-8 user-facing text must not contain common double-encoding markers."""

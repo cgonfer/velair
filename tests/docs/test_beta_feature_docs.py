@@ -120,7 +120,7 @@ class BetaFeatureDocsTest(unittest.TestCase):
         usage = " ".join(USAGE.read_text(encoding="utf-8").split())
         self.assertIn("external-adjustment policies and active Manual adjustments", usage)
 
-        for name in ("en", "es", "de", "fr", "nl", "ru"):
+        for name in ("en", "es", "de", "fr", "it", "nl", "ru"):
             source = (TRANSLATIONS / f"{name}.ts").read_text(encoding="utf-8")
             self.assertIn('"resetVelairDescription":', source)
 

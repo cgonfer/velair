@@ -118,7 +118,7 @@ Confirm that:
 - removing a climate through the integration options removes its generated zone
   sensors after the integration reloads, without removing global Velair
   entities or entities from other integrations;
-- scheduler status values are translated in every complete language and in the reviewed Russian backend catalog;
+- scheduler status values are translated in every supported frontend and backend language;
 - changing only a user profile language does not rename existing entities,
   because Home Assistant stores their original names at entity creation.
 

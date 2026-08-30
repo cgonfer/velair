@@ -71,6 +71,9 @@ def _install_homeassistant_stubs() -> None:
 
     config_validation = ModuleType("homeassistant.helpers.config_validation")
     config_validation.boolean = bool
+    config_validation.config_entry_only_config_schema = lambda domain: {
+        "config_entry_only": domain
+    }
     config_validation.entity_id = str
     config_validation.string = str
     config_validation.ensure_list = _ensure_list

@@ -91,7 +91,7 @@
         "name": "Tijdelijke aanpassing {zone}",
         "state": {
           "none": "Geen tijdelijke aanpassing",
-          "boost": "Boost",
+          "boost": "Tijdelijke aanpassing",
           "paused": "Gepauzeerd",
           "disabled": "Uitgeschakeld"
         }

@@ -140,15 +140,12 @@ accent line, the block summary names the active limit, and Overview exposes the
 same phase in its Room Assist signal. For scalar automatic modes the band remains a
 neutral margin. A native range expands beyond both scheduled boundaries. Those
 endpoints participate in the scale bounds so the striped band is never
-clipped. The non-zero legend uses a 640 px coordinate track matching the graph
-and a horizontally sticky anchor constrained by the band, with the existing
-graph scroller as its only scrolling container. A non-scrolling `clip-path`
-ties the label's visible pixels to the band's actual intersection, while
-container queries select a symbol, translated brief `Zone ±value`, translated
-descriptive compact label, or full visible label without changing the complete accessible
-name. The striped surface is centered on the main scale line with a visible
-gap before the lower relationship line. This keeps the label with the visible
-part of the band without scroll listeners, observers, or Lit state. A
+clipped. The non-zero legend uses the actual deadband range as its coordinate
+track and positions the complete translated label at its horizontal midpoint.
+The range allows that label to remain visible when the represented band is
+narrower than the text, without changing the band width or introducing scroll
+listeners, observers, or Lit state. The striped surface is centered on the
+main scale line with a visible gap before the lower relationship line. A
 zero value keeps a static explicit legend without drawing a surface and fixed
 scalar control falls back to the legacy signed calculation.
 `show_room_assist_deadband: false` hides the configuration row, visualization,
@@ -213,20 +210,24 @@ frontend/src/velair/translations/
 ```
 
 - `en.ts` is the source language and defines the complete key set.
-- `de.ts`, `es.ts`, `fr.ts`, and `nl.ts` satisfy the complete source key set.
-- A staged community translation such as `ru.ts` may contain only reviewed keys. Missing keys fall back to English.
+- `de.ts`, `es.ts`, `fr.ts`, `it.ts`, `nl.ts`, `pl.ts`, `pt_br.ts`, `pt_pt.ts`, and `ru.ts` satisfy the complete source key set.
+- A future staged community translation may contain only reviewed keys. Missing keys fall back to English.
 - `template.ts` contains the same keys with empty string values and can be copied when adding a new language.
 - `index.ts` automatically builds the language map from every translation file in this folder.
 - `types.ts` defines the translation dictionary shape from `en.ts`.
 
-The file name must be the Home Assistant language code in lowercase. Use ISO-style short codes such as:
+The file name must use the lowercase Home Assistant language code. Use an underscore in TypeScript file and export names for regional BCP 47 variants; the loader exposes it as a hyphenated language tag at runtime.
 
 | Language | File | Export |
 | --- | --- | --- |
 | German | `de.ts` | `de` |
+| Spanish | `es.ts` | `es` |
 | French | `fr.ts` | `fr` |
 | Italian | `it.ts` | `it` |
-| Portuguese | `pt.ts` | `pt` |
+| Dutch | `nl.ts` | `nl` |
+| Polish | `pl.ts` | `pl` |
+| Brazilian Portuguese | `pt_br.ts` | `pt_br` |
+| European Portuguese | `pt_pt.ts` | `pt_pt` |
 | Russian | `ru.ts` | `ru` |
 
 For example, to add German:
@@ -248,7 +249,7 @@ For example, to add German:
    } as const satisfies TranslationDictionary;
    ```
 
-4. Fill every value for a complete translation, or include only reviewed values for a staged community translation. Keep all included keys unchanged.
+4. Fill every value for a complete translation, or include only reviewed values for a staged community translation. Keep all included keys unchanged. Translate from the key and the UI meaning, not from the English sentence in isolation.
 5. Run the checks:
 
    ```powershell
@@ -259,17 +260,26 @@ For example, to add German:
    python -m unittest discover -s tests
    ```
 
-No manual registration is needed. The frontend build scans `frontend/src/velair/translations/*.ts`, ignores `index.ts`, `template.ts`, and `types.ts`, and uses each remaining file name as the Home Assistant language code. The exported constant must match the file name.
+No manual registration is needed. The frontend build scans `frontend/src/velair/translations/*.ts`, ignores `index.ts`, `template.ts`, and `types.ts`, and uses each remaining file name as the Home Assistant language code. The exported constant must match the file name. For example, `pt_br.ts` exports `pt_br` and is registered as `pt-br`.
 
 Complete translations are checked against every English key and placeholder. Staged community translations are checked as a strict subset: every included key must exist in English and use the same placeholders, while omitted keys are rendered from `en.ts`. Prefer an English fallback over publishing a translation whose technical meaning has not been reviewed.
 
+Every included string must be reviewed in its Velair context. In particular,
+check whether a value is a button action, state, field label, sentence, HVAC
+mode, schedule concept, or diagnostic reason. Ambiguous English words such as
+`Apply`, `Current`, `Cool`, `Heat`, `Holding`, `On`, `Publishing`, `Saving`,
+`Swing`, `Target`, and `Time` must use the natural term for that exact UI role.
+An automated translation may be used only as a draft and is not considered
+reviewed until its meaning, tone, placeholders, and surrounding terminology
+have been checked against the interface.
+
 Keep product and technical identifiers stable when translating. In particular,
 do not translate `Velair`, `Home Assistant`, `Room Assist`, entity IDs, service
-names, attribute names, HVAC mode values, or placeholders such as `{entity}`.
+names, attribute names, raw HVAC mode identifiers, or placeholders such as `{entity}`.
 Labels such as Profile, Mode, Boost, Comfort, and Preconditioning may use the
 established term for the target language when that is clearer to its users.
 
-The frontend language detector matches exact language codes and regional variants by prefix. For example, adding `de` also matches `de-DE`, `de-AT`, and `de-CH`. No extra detection code is needed for normal language codes.
+The frontend language detector normalizes hyphens, underscores, and letter case. It prefers exact regional matches before falling back to a base language. For example, `pt-BR` and `pt_BR` select Brazilian Portuguese, while Home Assistant's standard `pt` code, plus the accepted `pt-PT` and `pt_PT` aliases, select European Portuguese. Base languages such as `de` still match `de-DE`, `de-AT`, and `de-CH`.
 
 If a language needs custom matching beyond a simple prefix, update `languageFromHass` in `frontend/src/velair/i18n.ts`.
 
@@ -282,7 +292,7 @@ custom_components/velair/translations/
 When adding a full project language, add both:
 
 - `frontend/src/velair/translations/<language>.ts` for the Velair UI bundle;
-- `custom_components/velair/translations/<language>.json` for Home Assistant integration strings.
+- `custom_components/velair/translations/<language>.json` for Home Assistant integration strings. These filenames use Home Assistant's BCP 47 language tags, such as `pt-BR.json` for Brazilian Portuguese and `pt.json` for European Portuguese.
 
 ## UI Principles
 

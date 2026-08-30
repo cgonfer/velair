@@ -53,14 +53,11 @@ band. For a fixed single target, its two edges are the hysteresis switching
 limits and the live status identifies which one Room Assist is currently
 moving toward. For scalar automatic modes, the same band remains a neutral
 margin. For a native `heat_cool` range, it spans from the lower limit minus the
-deadband to the upper limit plus the deadband. The scale
-expands to keep both edges visible. Its compact legend follows the visible
-part of the band while the graph is scrolled horizontally and stops at either
-edge, so it is shown only while that zone is relevant. The label keeps a short
-description such as `Deadband · ±1 °C` whenever the visible width permits it;
-bands use a translated `Zone ±1 °C` label, and only truly narrow bands fall
-back to `±`. The complete explanation
-remains available to assistive technology and as hover text. With a deadband of `0`,
+deadband to the upper limit plus the deadband. The scale expands to keep both
+edges visible. The complete translated legend remains centered on the actual
+deadband range, even when that range is narrower than its text, so its meaning
+does not change with the graph width. The complete explanation also remains
+available to assistive technology and as hover text. With a deadband of `0`,
 no surface is drawn and the static legend explicitly
 states that there is no deadband. The graph and legend update from the saved
 backend value; hiding `show_room_assist_deadband` in a Lovelace Room Assist

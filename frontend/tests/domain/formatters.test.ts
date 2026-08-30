@@ -48,7 +48,11 @@ describe("formatters", () => {
     expect(dateLocale("en")).toBe("en");
     expect(dateLocale("es")).toBe("es-ES");
     expect(dateLocale("fr")).toBe("fr-FR");
+    expect(dateLocale("it")).toBe("it-IT");
     expect(dateLocale("nl")).toBe("nl-NL");
+    expect(dateLocale("pl")).toBe("pl-PL");
+    expect(dateLocale("pt-br")).toBe("pt-BR");
+    expect(dateLocale("pt-pt")).toBe("pt-PT");
     expect(dateLocale("ru")).toBe("ru-RU");
     expect(dateLocale("unsupported")).toBe("en");
   });

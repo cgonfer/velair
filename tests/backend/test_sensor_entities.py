@@ -674,7 +674,7 @@ class SensorTranslationTest(unittest.TestCase):
                     / f"{language}.json"
                 ).read_text(encoding="utf-8")
             )
-            for language in ("de", "en", "es", "fr", "nl", "ru")
+            for language in ("de", "en", "es", "fr", "it", "nl", "pl", "pt", "pt-BR", "ru")
         }
         expected_states = {
             "paused",
@@ -722,6 +722,24 @@ class SensorTranslationTest(unittest.TestCase):
             translations["es"]["entity"]["sensor"]["next_climate_event"]["name"],
             "Próximo evento programado",
         )
+        self.assertEqual(
+            translations["pt-BR"]["entity"]["switch"]["automatic_scheduling"]["name"],
+            "Programação automática",
+        )
+        self.assertEqual(
+            translations["pt"]["entity"]["sensor"]["zone_air_quality"]["state"]["poor"],
+            "Má",
+        )
+        self.assertEqual(
+            translations["pl"]["entity"]["switch"]["automatic_scheduling"]["name"],
+            "Automatyczny harmonogram",
+        )
+        for language in ("de", "es", "fr", "it", "nl", "pl", "pt", "pt-BR", "ru"):
+            self.assertNotEqual(
+                translations[language]["entity"]["sensor"]["zone_override_state"]["state"]["boost"],
+                "Boost",
+                f"Contextual boost translation missing in {language}",
+            )
 
         def flatten(value, prefix=""):
             entries = {}

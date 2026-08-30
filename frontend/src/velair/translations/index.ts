@@ -12,8 +12,9 @@ const translationModules = import.meta.glob<TranslationModule>("./*.ts", {
 export const TRANSLATIONS = Object.fromEntries(
   Object.entries(translationModules)
     .map(([path, module]) => {
-      const language = path.match(/\.\/(.+)\.ts$/)?.[1] ?? "";
-      return [language, module[language]];
+      const moduleName = path.match(/\.\/(.+)\.ts$/)?.[1] ?? "";
+      const language = moduleName.replaceAll("_", "-");
+      return [language, module[moduleName]];
     })
     .filter(([language, dictionary]) =>
       Boolean(language && dictionary && language !== "index" && language !== "template" && language !== "types"),

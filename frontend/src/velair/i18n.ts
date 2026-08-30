@@ -10,13 +10,24 @@ export function languageFromHass(hass?: Pick<HomeAssistant, "language" | "locale
     hass?.language ??
     hass?.selectedLanguage ??
     "en";
-  const normalizedLanguage = String(language).toLowerCase();
+  const normalizedLanguage = String(language).toLowerCase().replaceAll("_", "-");
   const supportedLanguages = Object.keys(TRANSLATIONS) as SupportedLanguage[];
+  const exactMatch = supportedLanguages.find(
+    (supportedLanguage) => normalizedLanguage === supportedLanguage,
+  );
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  if (normalizedLanguage === "pt") {
+    return supportedLanguages.includes("pt-pt") ? "pt-pt" : "en";
+  }
+
   return (
-    supportedLanguages.find(
-      (supportedLanguage) =>
-        normalizedLanguage === supportedLanguage ||
-        normalizedLanguage.startsWith(`${supportedLanguage}-`),
+    supportedLanguages
+      .filter((supportedLanguage) => !supportedLanguage.includes("-"))
+      .find(
+        (supportedLanguage) => normalizedLanguage.startsWith(`${supportedLanguage}-`),
     ) ?? "en"
   );
 }

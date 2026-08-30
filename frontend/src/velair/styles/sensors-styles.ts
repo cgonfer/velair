@@ -899,20 +899,17 @@ export const sensorsStyles = css`
 }
 
 .sensor-scale-deadband-legend-range {
-  clip-path: inset(0);
-  container-type: inline-size;
-  display: flex;
   height: 15px;
-  justify-content: center;
+  overflow: visible;
+  position: relative;
 }
 
 .sensor-scale-deadband-legend-anchor {
   display: flex;
-  flex: 0 0 max-content;
   height: 15px;
-  left: 0;
-  position: sticky;
-  right: 0;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
   width: max-content;
 }
 
@@ -928,57 +925,7 @@ export const sensorsStyles = css`
 }
 
 .sensor-scale-deadband-legend:not(.is-zero) {
-  gap: 0;
   white-space: nowrap;
-}
-
-.sensor-scale-deadband-legend:not(.is-zero) .sensor-scale-deadband-swatch,
-.sensor-scale-deadband-label-brief,
-.sensor-scale-deadband-label-compact,
-.sensor-scale-deadband-label-full {
-  display: none;
-}
-
-.sensor-scale-deadband-label-short {
-  display: inline;
-}
-
-@container (min-width: 54px) {
-  .sensor-scale-deadband-label-short {
-    display: none;
-  }
-
-  .sensor-scale-deadband-label-brief {
-    display: inline;
-    font-size: 9px;
-    letter-spacing: -0.15px;
-  }
-}
-
-@container (min-width: 112px) {
-  .sensor-scale-deadband-label-brief {
-    display: none;
-  }
-
-  .sensor-scale-deadband-label-compact {
-    display: inline;
-  }
-}
-
-@container (min-width: 220px) {
-  .sensor-scale-deadband-legend:not(.is-zero) {
-    gap: 6px;
-  }
-
-  .sensor-scale-deadband-legend:not(.is-zero) .sensor-scale-deadband-swatch,
-  .sensor-scale-deadband-label-full {
-    display: inline;
-  }
-
-  .sensor-scale-deadband-label-compact,
-  .sensor-scale-deadband-label-brief {
-    display: none;
-  }
 }
 
 .sensor-scale-deadband-swatch {

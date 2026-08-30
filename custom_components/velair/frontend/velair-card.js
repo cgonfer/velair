@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20260829190209", r = "1.7.0-beta.4", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
+}, n = "20260830115042", r = "1.7.0", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
 	constructor(e, t, n) {
 		if (this._$cssResult$ = !0, n !== o) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
 		this.cssText = e, this.t = t;
@@ -622,60 +622,60 @@ var k = [
 	"modes"
 ], nt = /* @__PURE__ */ t({ de: () => rt }), rt = {
 	addBlock: "Block hinzufügen",
-	externalConditionProfilesSupported: "Default, Profile and Mode schedules are supported",
-	profileExternalScheduleOnly: "External zones support Default, Profile or Mode schedules only. Pause and direct Velair actions remain unavailable.",
-	profileExternalMaxChanges: "{climate} exceeds the controller limit of {count} changes on {day}.",
-	profileExternalTimeGrid: "{climate} must use {minutes}-minute intervals on {day}.",
-	profileExternalUnsupportedBlock: "{climate} contains a block that the external controller cannot represent.",
-	externalControllersInUse: "External controllers in use",
-	externalConditionDefaultOnly: "Default schedules only",
-	externalConditionHvacModes: "Supported HVAC modes: {modes}",
-	externalConditionTargetTypes: "Supported target types: {types}",
-	externalConditionActions: "Supported schedule actions: {actions}",
-	externalConditionTurnOffUnsupported: "Turn-off blocks are not supported",
-	externalConditionOptionFields: "Supported climate options: {fields}",
-	externalConditionOptionsUnsupported: "Climate option fields are not supported",
-	externalConditionMaxChanges: "Maximum {count} schedule changes per day",
-	externalConditionTimeGrid: "Times must use {minutes}-minute intervals",
-	externalConditionMidnightContinuityCounts: "An implicit midnight continuity change counts toward the daily maximum",
-	externalConditionsUnavailable: "Controller conditions are unavailable.",
-	externalCapability_action_set_temperature: "Set temperature",
-	externalCapability_action_turn_off: "Turn off",
-	externalCapability_hvac_heat: "Heating",
-	externalCapability_hvac_cool: "Cooling",
-	externalCapability_target_scalar: "Single target temperature",
-	externalCapability_target_range: "Target temperature range",
+	externalConditionProfilesSupported: "Zeitpläne für Standard, Profil und Modus werden unterstützt",
+	profileExternalScheduleOnly: "Externe Zonen unterstützen nur Zeitpläne für Standard, Profil oder Modus. Pausen und direkte Velair-Aktionen bleiben nicht verfügbar.",
+	profileExternalMaxChanges: "{climate} überschreitet am {day} das Controller-Limit von {count} Änderungen.",
+	profileExternalTimeGrid: "{climate} muss am {day} Intervalle von {minutes} Minuten verwenden.",
+	profileExternalUnsupportedBlock: "{climate} enthält einen Block, den der externe Controller nicht abbilden kann.",
+	externalControllersInUse: "Verwendete externe Controller",
+	externalConditionDefaultOnly: "Nur Standardzeitpläne",
+	externalConditionHvacModes: "Unterstützte HVAC-Modi: {modes}",
+	externalConditionTargetTypes: "Unterstützte Zieltypen: {types}",
+	externalConditionActions: "Unterstützte Zeitplanaktionen: {actions}",
+	externalConditionTurnOffUnsupported: "Ausschaltblöcke werden nicht unterstützt",
+	externalConditionOptionFields: "Unterstützte Klimaoptionen: {fields}",
+	externalConditionOptionsUnsupported: "Klimaoptionsfelder werden nicht unterstützt",
+	externalConditionMaxChanges: "Maximal {count} Zeitplanänderungen pro Tag",
+	externalConditionTimeGrid: "Zeiten müssen Intervalle von {minutes} Minuten verwenden",
+	externalConditionMidnightContinuityCounts: "Ein impliziter Kontinuitätswechsel um Mitternacht zählt zum Tagesmaximum",
+	externalConditionsUnavailable: "Controller-Bedingungen sind nicht verfügbar.",
+	externalCapability_action_set_temperature: "Temperatur einstellen",
+	externalCapability_action_turn_off: "Ausschalten",
+	externalCapability_hvac_heat: "Heizen",
+	externalCapability_hvac_cool: "Kühlen",
+	externalCapability_target_scalar: "Einzelne Zieltemperatur",
+	externalCapability_target_range: "Zieltemperaturbereich",
 	externalProviderAvailability: "Controller: {state}",
-	externalProviderAvailable: "available",
-	externalProviderUnavailable: "unavailable",
-	externalPublication_publishing: "Publishing the effective schedule to the external integration.",
-	externalPublication_published: "The external integration accepted the effective schedule.",
-	externalPublication_failed: "Schedule publication failed.",
-	overviewExternalExecutionProvider: "External controller: {provider}",
+	externalProviderAvailable: "verfügbar",
+	externalProviderUnavailable: "nicht verfügbar",
+	externalPublication_publishing: "Der wirksame Zeitplan wird an die externe Integration übertragen.",
+	externalPublication_published: "Die externe Integration hat den wirksamen Zeitplan akzeptiert.",
+	externalPublication_failed: "Die Veröffentlichung des Zeitplans ist fehlgeschlagen.",
+	overviewExternalExecutionProvider: "Externer Controller: {provider}",
 	overviewExternalInfoAction: "Informationen zur externen Ausführung über {provider}",
 	overviewExternalStatusPublishing: "Wird veröffentlicht",
 	overviewExternalStatusAccepted: "Akzeptiert",
 	overviewExternalStatusFailed: "Fehlgeschlagen",
 	overviewExternalStatusUnavailable: "Nicht verfügbar",
-	overviewExternalProviderUnavailable: "The external integration is currently unavailable. Velair remains inactive for this climate.",
-	externalSystems: "External systems",
-	externalSystemsDescription: "Choose who executes the effective weekly schedule for compatible climates. External zones are never physically controlled by Velair.",
-	externalExecutionVelair: "Velair (local execution)",
-	externalExecutionLocal: "Executed by Velair",
-	externalExecutionEnabled: "External schedule execution enabled",
-	externalExecutionDisabled: "Velair schedule execution enabled",
+	overviewExternalProviderUnavailable: "Die externe Integration ist derzeit nicht verfügbar. Velair bleibt für dieses Klimagerät inaktiv.",
+	externalSystems: "Externe Systeme",
+	externalSystemsDescription: "Wähle aus, wer den wirksamen Wochenzeitplan für kompatible Klimageräte ausführt. Externe Zonen werden niemals direkt von Velair gesteuert.",
+	externalExecutionVelair: "Velair (lokale Ausführung)",
+	externalExecutionLocal: "Von Velair ausgeführt",
+	externalExecutionEnabled: "Externe Zeitplanausführung aktiviert",
+	externalExecutionDisabled: "Velair-Zeitplanausführung aktiviert",
 	externalScheduleRequired: "Erstelle und speichere einen Zeitplan mit mindestens einem Temperaturblock, bevor du die externe Ausführung aktivierst.",
 	externalSwitchpointUsage: "{used} von {max} Schaltpunkten des Controllers",
 	externalSwitchpointBreakdown: "{count} geplante Blöcke",
 	externalSwitchpointBreakdownContinuity: "{count} geplante Blöcke + 1 Kontinuitätspunkt um Mitternacht",
-	externalActionsInactive: "Velair actions are inactive because this climate is executed by an external system.",
-	overviewZoneExternal: "External execution",
+	externalActionsInactive: "Velair-Aktionen sind inaktiv, weil dieses Klimagerät von einem externen System ausgeführt wird.",
+	overviewZoneExternal: "Externe Ausführung",
 	overviewExternalLabel: "Extern",
-	overviewExternalExecutionDescription: "The planned timeline is executed by the external controller. Velair does not send climate actions to this zone.",
-	overviewExternalZonesUnaffected: "{count} externally executed zone(s) are unaffected by Velair actions.",
-	manualUnavailableExternalExecution: "Manual control is unavailable for externally executed climates.",
+	overviewExternalExecutionDescription: "Der geplante Zeitverlauf wird vom externen Controller ausgeführt. Velair sendet keine Klimaaktionen an diese Zone.",
+	overviewExternalZonesUnaffected: "{count} extern ausgeführte Zone(n) sind von Velair-Aktionen nicht betroffen.",
+	manualUnavailableExternalExecution: "Die manuelle Steuerung ist für extern ausgeführte Klimageräte nicht verfügbar.",
 	externalChangePolicy: "Externe Anpassungen",
-	externalChangePolicyDescription: "Wähle, was Velair nach einer externen Modus- oder Zieländerung tut. Automatisch beibehalten wendet die aktuelle Velair-Vorgabe erneut an; die anderen Optionen starten die manuelle Steuerung. Änderungen gelten ab der nächsten externen Anpassung. Wird Manuell ausdrücklich gewählt, bleibt es bis zur Fortsetzung aktiv.",
+	externalChangePolicyDescription: "Wähle, was Velair nach einer Modus- oder Zieländerung außerhalb von Velair tut. Automatisch beibehalten wendet die aktuelle Velair-Vorgabe erneut an; die anderen Optionen starten die manuelle Steuerung. Änderungen gelten ab der nächsten externen Anpassung. Wird Manuell ausdrücklich gewählt, bleibt es bis zur Fortsetzung aktiv.",
 	externalAdjustmentInfoAction: "Informationen zu externen Anpassungen",
 	externalChangeKeepAutomatic: "Automatisch beibehalten",
 	externalChangeUntilNextBlock: "Bis zum nächsten Block",
@@ -733,11 +733,11 @@ var k = [
 	applyTo: "Anwenden auf",
 	applyToAction: "Anwenden auf...",
 	applyTemplateTo: "{template} anwenden auf...",
-	boost: "Boost",
-	boostActive: "Boost aktiv",
-	activeBoosts: "Aktive Boosts",
+	boost: "Temporäre Anpassung",
+	boostActive: "Temporäre Anpassung aktiv",
+	activeBoosts: "Aktive temporäre Anpassungen",
 	availableModes: "Verfügbare Modi",
-	boostTarget: "Boost-Ziel",
+	boostTarget: "Ziel der temporären Anpassung",
 	boostUntil: "Endet in",
 	blocks: "Blöcke",
 	build: "Build",
@@ -747,14 +747,14 @@ var k = [
 	activeSetupCardControlsDescription: "Wähle, was diese Karte ändern kann. Der aktuelle Modus und die angewendeten Profile bleiben sichtbar.",
 	activeSetupCardControlsModes: "Nur Modi",
 	activeSetupCardControlsProfiles: "Nur Profile",
-	cardViewOverviewBoosts: "Übersicht: aktive Boosts",
+	cardViewOverviewBoosts: "Übersicht: aktive temporäre Anpassungen",
 	cardViewOverviewEvents: "Übersicht: nächste Ereignisse",
 	cardViewOverviewStatus: "Übersicht: Zeitplanstatus",
 	cardViewOverviewTimeline: "Übersicht: heutiger Zeitplan",
 	cardViewOverviewZones: "Übersicht: Zonen",
 	cardViewActiveSetup: "Profile: aktive Konfiguration",
 	cardViewSchedules: "Zeitpläne: Editor",
-	cardViewSensors: "Raumassistent: Konfiguration und Status",
+	cardViewSensors: "Room Assist: Konfiguration und Status",
 	cardViewComfort: "Komfort: Konfiguration und Status",
 	cardViewPreconditioning: "Vorkonditionierung: Konfiguration und Status",
 	cardThermostatHidden: "In dieser Karte ausgeblendet",
@@ -767,10 +767,10 @@ var k = [
 	comfortCardShowConfiguration: "Konfiguration anzeigen",
 	comfortCardShowHumidity: "Luftfeuchtigkeitsdiagramm anzeigen",
 	comfortCardShowTemperature: "Temperaturdiagramm anzeigen",
-	roomAssistCardVisibility: "Sichtbarkeit des Raumassistenten",
-	roomAssistCardVisibilityDescription: "Wähle, welche Bedienelemente und Statusdetails des Raumassistenten diese Karte zeigt.",
+	roomAssistCardVisibility: "Sichtbarkeit von Room Assist",
+	roomAssistCardVisibilityDescription: "Wähle, welche Bedienelemente und Statusdetails von Room Assist diese Karte zeigt.",
 	roomAssistShowDebounce: "Aktualisierungsverzögerung anzeigen",
-	roomAssistShowDeadband: "Room-Assist-Totband anzeigen",
+	roomAssistShowDeadband: "Totband von Room Assist anzeigen",
 	roomAssistShowLiveStatus: "Live-Status anzeigen",
 	roomAssistShowMaxDelta: "Maximale Assistenzabweichung anzeigen",
 	roomAssistShowSensor: "Raumtemperatursensor anzeigen",
@@ -831,7 +831,7 @@ var k = [
 	comfortHumidityRange: "Luftfeuchtigkeitsbereich",
 	comfortHumidityRangeHelp: "Engere Bereiche warnen früher, weitere Bereiche sind toleranter.",
 	comfortHumiditySensor: "Luftfeuchtigkeitssensor",
-	comfortIntroDetail: "Überwache Temperatur, Luftfeuchtigkeit und CO2 lokal und nutze anschließend Velair-Ereignisse in Home-Assistant-Automatisierungen.",
+	comfortIntroDetail: "Überwache Temperatur, Luftfeuchtigkeit und CO2 lokal und nutze anschließend Velair-Ereignisse in Home Assistant-Automatisierungen.",
 	comfortIntroTitle: "Raumkomfort",
 	comfortMaximum: "Max.",
 	comfortMinimum: "Min.",
@@ -880,7 +880,7 @@ var k = [
 	operationDefaultPartial: "Standardzeitpläne mit Problemen wiederhergestellt",
 	operationDefaultRunning: "Standardzeitpläne werden wiederhergestellt",
 	operationDismiss: "Vorgangsstatus schließen",
-	operationFailedHelp: "Prüfe das betroffene Klimagerät und die Home-Assistant-Protokolle auf weitere Details",
+	operationFailedHelp: "Prüfe das betroffene Klimagerät und die Home Assistant-Protokolle auf weitere Details",
 	operationFailureCount: "{count} Zonen mit Problemen: {zones}",
 	operationFailureOne: "1 Zone mit Problemen: {zones}",
 	operationModeCompleted: "Modus {target} angewendet",
@@ -1045,7 +1045,7 @@ var k = [
 	internalStorageVersion: "Speicher/Datenmodell",
 	integrationVersion: "Integrationsversion",
 	resetVelair: "Velair zurücksetzen",
-	resetVelairDescription: "Löscht alle gespeicherten Velair-Daten, einschließlich Zeitplänen, Vorlagen, Panel-Einstellungen, aktiven Boosts und Pausen, Richtlinien für externe Anpassungen und aktiven manuellen Anpassungen, Komfort- und Raumassistent-Einstellungen, Einstellungen und Lerndaten der adaptiven Vorkonditionierung sowie des Startverhaltens. Anschließend werden einheitenabhängige Standardwerte für die derzeit verwalteten Thermostate neu erstellt.",
+	resetVelairDescription: "Löscht alle gespeicherten Velair-Daten, einschließlich Zeitplänen, Vorlagen, Panel-Einstellungen, aktiven temporären Anpassungen und Pausen, Richtlinien für externe Anpassungen und aktiven manuellen Anpassungen, Einstellungen für Komfort und Room Assist, Einstellungen und Lerndaten der adaptiven Vorkonditionierung sowie des Startverhaltens. Anschließend werden einheitenabhängige Standardwerte für die derzeit verwalteten Thermostate neu erstellt.",
 	confirmReset: "Alle gespeicherten Velair-Daten zurücksetzen? Ohne vorherigen Export kann dies nicht rückgängig gemacht werden.",
 	confirmResetPreconditioningLearning: "Adaptive Lerndaten der Vorkonditionierung für {direction} zurücksetzen? Zeitpläne und Einstellungen bleiben erhalten.",
 	confirmResetPreconditioningSettings: "Standardeinstellungen der Vorkonditionierung für dieses Thermostat wiederherstellen? Lerndaten bleiben erhalten.",
@@ -1061,7 +1061,7 @@ var k = [
 	moveUp: "Nach oben",
 	nextEvent: "Nächstes Ereignis",
 	nextEvents: "Nächste Ereignisse",
-	noActiveBoosts: "Keine aktiven Boosts",
+	noActiveBoosts: "Keine aktiven temporären Anpassungen",
 	noBlocks: "Keine Blöcke",
 	noManagedEntities: "Keine verwalteten Klimageräte gefunden.",
 	noTemplates: "Keine Vorlagen",
@@ -1071,7 +1071,7 @@ var k = [
 	otherDays: "Andere Tage",
 	otherThermostats: "Andere Thermostate",
 	overview: "Übersicht",
-	overviewPanelIntro: "Die Hauptstatusansicht gruppiert Zeitplanstatus, bevorstehende Ereignisse, aktive Boosts und Schnellaktionen.",
+	overviewPanelIntro: "Die Hauptstatusansicht gruppiert Zeitplanstatus, bevorstehende Ereignisse, aktive temporäre Anpassungen und Schnellaktionen.",
 	overviewStatusPaused: "Pausiert",
 	overviewStatusPausedDetail: "Vorübergehend pausiert",
 	overviewStatusRunning: "Aktiv",
@@ -1081,14 +1081,14 @@ var k = [
 	overviewZones: "Zonenübersicht",
 	overviewZoneApplied: "Angewendet",
 	overviewZoneAir: "Luft: {status}",
-	overviewZoneBoost: "Boost",
+	overviewZoneBoost: "Temporäre Anpassung",
 	overviewZoneComfort: "Komfort: {status}",
 	overviewZoneManual: "Manuell",
 	overviewZonePaused: "Pausiert",
 	overviewZonePreconditioning: "Vorkonditionierung",
 	overviewZoneResumes: "Fortsetzung um {time}",
 	overviewZoneRoom: "Raum",
-	overviewZoneRoomAssist: "Raumassistent {delta}",
+	overviewZoneRoomAssist: "Room Assist {delta}",
 	overviewZoneScheduled: "Geplant",
 	overviewZoneSensorIssue: "Sensordaten unvollständig",
 	overviewZoneTarget: "Ziel",
@@ -1097,7 +1097,7 @@ var k = [
 	overviewZoneReadyAt: "Bereit um {time}",
 	overviewZoneNextAt: "Nächstes um {time}",
 	overviewZoneAutomationOff: "Automatisierung aus",
-	overviewZoneRoomAssistThermalFlow: "Temperaturverlauf des Raumassistenten",
+	overviewZoneRoomAssistThermalFlow: "Temperaturverlauf von Room Assist",
 	overviewZoneSensor: "Sensor",
 	overviewZoneClimate: "Klimagerät",
 	overviewZoneTemperature: "Temperatur",
@@ -1219,17 +1219,17 @@ var k = [
 	resizeStart: "Start anpassen",
 	schedulerControls: "Zeitplansteuerung",
 	schedules: "Zeitpläne",
-	sensors: "Raumassistent",
+	sensors: "Room Assist",
 	roomSensorAppliedTarget: "Angewendeter Sollwert",
 	roomSensorAssist: "Raumsensor-Assistent",
-	roomSensorAssistBadge: "Raumassistent",
+	roomSensorAssistBadge: "Room Assist",
 	roomSensorAssistEnabled: "Raumsensor-Assistent aktiviert",
 	roomSensorAssistHelp: "Passt den Sollwert des Klimageräts vorübergehend an, damit der Raumsensor die geplante Temperatur erreichen kann.",
 	roomSensorAssistDisabledDetail: "Ein Raumsensor ist ausgewählt, aber der Raumsensor-Assistent ist aus. Velair verwendet weiterhin die Temperatur des Klimageräts, bis dieser Schalter aktiviert wird.",
 	roomSensorAssistDebounce: "Aktualisierungsverzögerung",
 	roomSensorAssistDebounceHelp: "Wartezeit in Sekunden nach Änderungen der Raum- oder Klimatemperatur, bevor der unterstützte Sollwert neu berechnet wird. Verwende 0 für sofortige Aktualisierungen.",
-	roomSensorAssistDeadband: "Room-Assist-Totband",
-	roomSensorAssistDeadbandHelp: "Legt die untere und obere Room-Assist-Grenze in diesem Abstand vom geplanten Sollwert fest. Bei festem Heizen oder Kühlen richtet Room Assist die Regelung nach Erreichen einer Grenze auf die andere aus. Automatikmodi und Temperaturbereiche verwenden den Wert als korrekturfreien Abstand. Änderungen gelten nach dem Speichern.",
+	roomSensorAssistDeadband: "Totband von Room Assist",
+	roomSensorAssistDeadbandHelp: "Legt die untere und obere Grenze von Room Assist in diesem Abstand vom geplanten Sollwert fest. Bei festem Heizen oder Kühlen richtet Room Assist die Regelung nach Erreichen einer Grenze auf die andere aus. Automatikmodi und Temperaturbereiche verwenden den Wert als korrekturfreien Abstand. Änderungen gelten nach dem Speichern.",
 	roomSensorDeadbandZoneHelp: "Bei festem Heizen oder Kühlen regelt Room Assist bis zu einer Grenze und wechselt nach deren Erreichen zur anderen. Native Bereiche behalten diese Zone als äußeren korrekturfreien Abstand.",
 	roomSensorDeadbandZoneHelpAutomatic: "In einem skalaren Automatikmodus korrigiert Room Assist nicht, solange der Raum innerhalb dieses Abstands bleibt.",
 	roomSensorDeadbandZoneHelpGeneric: "Der effektive Klimamodus bestimmt, wie Room Assist dieses Totband verwendet.",
@@ -1243,13 +1243,13 @@ var k = [
 	roomSensorDeadbandZoneSingle: "Regelband · ±{value}",
 	roomSensorDeadbandZoneZero: "Kein Totband · {value}",
 	roomSensorAssistMaxDelta: "Maximale Korrektur",
-	roomSensorAssistMaxDeltaHelp: "Begrenzt die Room-Assist-Korrektur. Der Wert sollte den Sollwertabstand abdecken, den das Thermostat zum Beenden des Heizens oder Kühlens benötigt. Der volle Wert wird nur bei Bedarf genutzt.",
+	roomSensorAssistMaxDeltaHelp: "Begrenzt die Korrektur von Room Assist. Der Wert sollte den Sollwertabstand abdecken, den das Thermostat zum Beenden des Heizens oder Kühlens benötigt. Der volle Wert wird nur bei Bedarf genutzt.",
 	roomSensorAssistOffset: "Assistenzabweichung",
 	roomSensorAssistOffsetHelp: "Vorübergehende Abweichung vom Klimasollwert, damit sich der Raumsensor weiter der geplanten Temperatur annähern kann.",
 	roomSensorAssistCorrectionValue: "Abweichung {value}",
-	roomSensorAssistCorrectionActiveHelp: "Der Raumassistent passt den Klimasollwert an. Dies zeigt nicht an, ob das Klimagerät aktiv heizt oder kühlt.",
+	roomSensorAssistCorrectionActiveHelp: "Room Assist passt den Klimasollwert an. Dies zeigt nicht an, ob das Klimagerät aktiv heizt oder kühlt.",
 	roomSensorAssistNoCorrection: "Abweichung 0 · Hält",
-	roomSensorAssistNoCorrectionHelp: "Der Raumassistent korrigiert den Sollwert nicht. Raum- und Zeitplantemperatur können dennoch voneinander abweichen.",
+	roomSensorAssistNoCorrectionHelp: "Room Assist korrigiert den Sollwert nicht. Raum- und Zeitplantemperatur können dennoch voneinander abweichen.",
 	roomSensorLimitMaximumTitle: "Thermostat-Maximum erreicht",
 	roomSensorLimitMaximumDetail: "Room Assist hat {requested} angefordert, über dem Grenzwert von {limit}. Velair hat {applied} angewendet; die Korrektur ist begrenzt.",
 	roomSensorLimitMinimumTitle: "Thermostat-Minimum erreicht",
@@ -1281,7 +1281,7 @@ var k = [
 	roomSensorIntroTitle: "Raumtemperaturregelung",
 	roomSensorLiveStatus: "Live-Status",
 	roomSensorNoActiveBlock: "Kein aktiver Temperaturblock",
-	roomSensorNoActiveBlockDetail: "Der Raumassistent wird aktualisiert, sobald ein verwalteter Temperaturblock aktiv ist.",
+	roomSensorNoActiveBlockDetail: "Room Assist wird aktualisiert, sobald ein verwalteter Temperaturblock aktiv ist.",
 	roomSensorNotConfigured: "Wähle zuerst einen Raumsensor aus",
 	roomSensorRoomTemperature: "Raumsensor",
 	roomSensorRemainingToTarget: "Bis zum Ziel",
@@ -1291,7 +1291,7 @@ var k = [
 	roomSensorScheduledHigh: "Geplantes Maximum",
 	roomSensorScheduledRange: "Geplanter Bereich",
 	roomSensorRangeShiftValue: "Bereich verschoben {value}",
-	roomSensorRangeShiftHelp: "Der Raumassistent verschiebt beide Bereichsgrenzen gemeinsam; das Vorzeichen zeigt die Richtung.",
+	roomSensorRangeShiftHelp: "Room Assist verschiebt beide Bereichsgrenzen gemeinsam; das Vorzeichen zeigt die Richtung.",
 	roomSensorSelectSensor: "Raumsensor auswählen",
 	roomSensorStatusAssisting: "Unterstützt",
 	roomSensorStatusBlocked: "Blockiert",
@@ -1303,7 +1303,7 @@ var k = [
 	roomSensorStatusUnavailable: "Nicht verfügbar",
 	roomSensorTemperatureEntity: "Raumtemperatursensor",
 	roomSensorTemperatureEntityHelp: "Sensor, den der Raumsensor-Assistent beim Anpassen des Klimasollwerts als tatsächliche Raumtemperatur verwendet.",
-	roomSensorTemperatureScale: "Temperaturskala des Raumassistenten",
+	roomSensorTemperatureScale: "Temperaturskala von Room Assist",
 	roomSensorUnavailable: "Klimagerät nicht verfügbar",
 	roomSensorValueUnavailable: "Nicht verfügbar",
 	save: "Speichern",
@@ -1327,29 +1327,29 @@ var k = [
 	diagnosticsUnavailable: "Die Diagnose ist nicht verfügbar.",
 	diagnosticsHealthy: "Velair scheint ordnungsgemäß zu funktionieren",
 	diagnosticsAttention: "Einige Einträge erfordern Aufmerksamkeit",
-	diagnosticsSchedulerSummary: "Zeitplaner: {status} · Mode: {mode}",
+	diagnosticsSchedulerSummary: "Zeitplaner: {status} · Modus: {mode}",
 	diagnosticsUnitSummary: "{ok} fehlerfrei · {warning} Warnungen · {error} Fehler",
 	diagnosticsRecentHistory: "Letzter Laufzeitverlauf ({count}/{limit})",
 	diagnosticsNoHistory: "Seit dem Start von Velair wurden keine relevanten Laufzeitereignisse beobachtet.",
 	diagnosticsPrivacy: "Der Verlauf wird nur im Arbeitsspeicher gespeichert und beim Neustart gelöscht. Berichte enthalten keine Telemetrie; Entitäts-IDs werden ersetzt, sofern du sie nicht beibehalten möchtest.",
-	diagnosticsEntityUnavailable: "Die climate-Entität ist nicht verfügbar.",
-	diagnosticsEntityUnknown: "Die climate-Entität meldet einen unbekannten Zustand.",
+	diagnosticsEntityUnavailable: "Das Klimagerät ist nicht verfügbar.",
+	diagnosticsEntityUnknown: "Das Klimagerät meldet einen unbekannten Zustand.",
 	diagnosticsCalculatedIntent: "Berechnete Absicht",
 	diagnosticsLastApplication: "Letzte Anwendung",
 	diagnosticsRoomAssist: "Room Assist",
-	diagnosticsPreconditioning: "Preconditioning",
-	diagnosticsComfort: "Comfort",
+	diagnosticsPreconditioning: "Vorkonditionierung",
+	diagnosticsComfort: "Komfort",
 	diagnosticsAssociatedSensors: "Zugeordnete Sensoren",
 	diagnosticsLoadError: "Die Diagnose konnte nicht geladen werden. Öffne den Bereich erneut.",
 	diagnosticsExportError: "Der Diagnosebericht konnte nicht heruntergeladen werden.",
 	diagnosticsDeliveryFailed: "Der letzte Übertragungsversuch ist fehlgeschlagen und kann wiederholt werden.",
-	diagnosticsDeliveryRetrying: "Velair versucht erneut, die aktuelle climate-Absicht zu übertragen.",
+	diagnosticsDeliveryRetrying: "Velair versucht erneut, die aktuelle Vorgabe an das Klimagerät zu übertragen.",
 	diagnosticsDeliveryExhausted: "Die maximale Anzahl an Übertragungsversuchen wurde erreicht.",
-	diagnosticsDeliveryInvalidIntent: "Die aktuelle climate-Absicht konnte nicht aufgelöst werden.",
+	diagnosticsDeliveryInvalidIntent: "Die aktuelle Vorgabe für das Klimagerät konnte nicht ermittelt werden.",
 	diagnosticsRuntimeUnavailable: "Details zur aktuellen Laufzeitabsicht sind nicht verfügbar.",
 	diagnosticsSensorUnavailable: "Ein zugeordneter Sensor fehlt oder ist nicht verfügbar.",
-	diagnosticsUnits: "Verwaltete climates",
-	diagnosticsNoUnits: "Es sind keine verwalteten climates für die Diagnose verfügbar.",
+	diagnosticsUnits: "Verwaltete Klimageräte",
+	diagnosticsNoUnits: "Es sind keine verwalteten Klimageräte für die Diagnose verfügbar.",
 	diagnosticsStatusDelivery: "Status und Übertragung",
 	diagnosticsActiveConfiguration: "Aktive Konfiguration",
 	diagnosticsFunctions: "Funktionen",
@@ -1359,8 +1359,8 @@ var k = [
 	diagnosticsRetryCount: "Wiederholungen",
 	diagnosticsLastError: "Letzter Fehler",
 	diagnosticsScheduleSource: "Zeitplanquelle",
-	diagnosticsMode: "Mode",
-	diagnosticsProfile: "Profile",
+	diagnosticsMode: "Modus",
+	diagnosticsProfile: "Profil",
 	diagnosticsOverride: "Übersteuerung",
 	diagnosticsPauses: "Aktive Pausen",
 	diagnosticsHvacModes: "HVAC-Modi",
@@ -1381,19 +1381,19 @@ var k = [
 	diagnosticsStatusWithIssues: "{status} – {issues}",
 	diagnosticsHistoryLog: "Laufzeitprotokoll",
 	diagnosticsLogTime: "Zeit",
-	diagnosticsLogClimate: "Climate",
+	diagnosticsLogClimate: "Klimagerät",
 	diagnosticsLogType: "Typ",
 	diagnosticsLogMessage: "Einzelheiten",
 	diagnosticsLogResizeColumn: "Spalte {column} skalieren",
 	diagnosticsHistoryClimateFilter: "Quellen",
 	diagnosticsHistorySourcesLegend: "Ereignisquellen auswählen",
 	diagnosticsHistoryNoSources: "Keine Quellen",
-	diagnosticsHistorySourceCount: "{count} Climate-Geräte",
-	diagnosticsHistorySourceCountWithVelair: "{count} Climate-Geräte + Velair",
+	diagnosticsHistorySourceCount: "{count} Klimageräte",
+	diagnosticsHistorySourceCountWithVelair: "{count} Klimageräte + Velair",
 	diagnosticsHistoryClimateWithVelair: "{climate} und Velair",
 	diagnosticsHistorySourcesDone: "Fertig",
 	diagnosticsHistoryCategoryFilter: "Kategorie",
-	diagnosticsHistoryAllSources: "Alle climates + Velair",
+	diagnosticsHistoryAllSources: "Alle Klimageräte + Velair",
 	diagnosticsHistoryVelairOnly: "Nur Velair",
 	diagnosticsHistoryAllCategories: "Alle Kategorien",
 	diagnosticsHistoryFrom: "Von",
@@ -1407,21 +1407,21 @@ var k = [
 	diagnosticsHistoryUpdateError: "Die Einstellungen des Diagnoseverlaufs konnten nicht gespeichert werden.",
 	diagnosticsHistoryClearError: "Der Diagnoseverlauf konnte nicht gelöscht werden.",
 	diagnosticsHistoryCategoryControl: "Steuerung und Zeitpläne",
-	diagnosticsHistoryCategoryControlDescription: "Zeitpläne, Profile, Modes, Boosts, Pausen, externe Anpassungen und Änderungen der automatischen/manuellen Steuerung.",
+	diagnosticsHistoryCategoryControlDescription: "Zeitpläne, Profile, Modi, temporäre Anpassungen, Pausen, externe Anpassungen und Änderungen der automatischen/manuellen Steuerung.",
 	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
 	diagnosticsHistoryCategoryRoomAssistDescription: "Statusänderungen und Zielwertkorrekturen von Room Assist.",
-	diagnosticsHistoryCategoryPreconditioning: "Preconditioning",
-	diagnosticsHistoryCategoryPreconditioningDescription: "Pläne, Abbrüche und Lernbeobachtungen von Preconditioning.",
-	diagnosticsHistoryCategoryComfort: "Comfort",
-	diagnosticsHistoryCategoryComfortDescription: "Änderungen der lokal ausgewerteten Comfort-Bedingungen.",
-	diagnosticsHistoryCategoryDelivery: "Übertragung an das climate-Gerät",
-	diagnosticsHistoryCategoryDeliveryDescription: "Fehlgeschlagene, wiederholte, ausgeschöpfte oder abgebrochene climate-Befehle.",
+	diagnosticsHistoryCategoryPreconditioning: "Vorkonditionierung",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Pläne, Abbrüche und Lernbeobachtungen der Vorkonditionierung.",
+	diagnosticsHistoryCategoryComfort: "Komfort",
+	diagnosticsHistoryCategoryComfortDescription: "Änderungen der lokal ausgewerteten Komfortbedingungen.",
+	diagnosticsHistoryCategoryDelivery: "Übertragung an das Klimagerät",
+	diagnosticsHistoryCategoryDeliveryDescription: "Fehlgeschlagene, wiederholte, ausgeschöpfte oder abgebrochene Klimabefehle.",
 	diagnosticsHistoryCategoryAvailability: "Verfügbarkeit",
-	diagnosticsHistoryCategoryAvailabilityDescription: "Verwaltete climates, die nicht verfügbar oder unbekannt werden oder wieder verfügbar sind.",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Verwaltete Klimageräte, die nicht verfügbar oder unbekannt werden oder wieder verfügbar sind.",
 	diagnosticsReasonCurrentSchedule: "Aktueller Zeitplan",
 	diagnosticsReasonMissingTargetStep: "Zieltemperaturschritt nicht verfügbar",
 	diagnosticsReasonNoLongerPlanned: "Nicht mehr geplant",
-	diagnosticsReasonSchedulerNotAuto: "Der Zeitplaner ist nicht im automatischen Mode",
+	diagnosticsReasonSchedulerNotAuto: "Der Zeitplaner ist nicht im automatischen Modus",
 	diagnosticsReasonSchedulerStopped: "Zeitplaner angehalten",
 	diagnosticsReasonManualTarget: "Manuelles Ziel",
 	diagnosticsReasonManual: "Manuelle Aktion",
@@ -1443,9 +1443,9 @@ var k = [
 	diagnosticsOperationUpdated: "Aktualisiert",
 	diagnosticsOperationRemoved: "Entfernt",
 	diagnosticsOperationSetTemperature: "Temperatur festlegen",
-	diagnosticsEventBoostEnded: "Boost beendet",
-	diagnosticsEventBoostStarted: "Boost gestartet",
-	diagnosticsEventClimateTargetApplied: "climate-Zielwert angewendet",
+	diagnosticsEventBoostEnded: "Temporäre Anpassung beendet",
+	diagnosticsEventBoostStarted: "Temporäre Anpassung gestartet",
+	diagnosticsEventClimateTargetApplied: "Zielwert des Klimageräts angewendet",
 	diagnosticsEventExternalAdjustment: "Externe Anpassung",
 	diagnosticsEventZoneControlChanged: "Zeitplansteuerung geändert",
 	diagnosticsControlAutomatic: "Automatisch",
@@ -1458,17 +1458,17 @@ var k = [
 	diagnosticsControlChanged: "Von {previous} zu {current}",
 	diagnosticsUntil: "bis {time}",
 	diagnosticsReasonResumed: "Fortgesetzt",
-	diagnosticsEventProfileChanged: "Profile geändert",
-	diagnosticsEventSchedulerModeChanged: "Mode des Zeitplaners geändert",
+	diagnosticsEventProfileChanged: "Profil geändert",
+	diagnosticsEventSchedulerModeChanged: "Modus des Zeitplaners geändert",
 	diagnosticsEventZonePauseAdded: "Pausengrund hinzugefügt",
 	diagnosticsEventZonePauseRemoved: "Pausengrund entfernt",
 	diagnosticsEventZonePauseUpdated: "Pausengrund aktualisiert",
 	diagnosticsEventZonePaused: "Zone pausiert",
 	diagnosticsEventZoneResumed: "Zone fortgesetzt",
-	diagnosticsEventComfortAssessmentChanged: "Comfort-Bewertung geändert",
-	diagnosticsEventPreconditioningObservationRecorded: "Preconditioning-Beobachtung aufgezeichnet",
-	diagnosticsEventPreconditioningPlanCancelled: "Preconditioning-Plan abgebrochen",
-	diagnosticsEventPreconditioningPlanUpdated: "Preconditioning-Plan aktualisiert",
+	diagnosticsEventComfortAssessmentChanged: "Komfortbewertung geändert",
+	diagnosticsEventPreconditioningObservationRecorded: "Beobachtung der Vorkonditionierung aufgezeichnet",
+	diagnosticsEventPreconditioningPlanCancelled: "Vorkonditionierungsplan abgebrochen",
+	diagnosticsEventPreconditioningPlanUpdated: "Vorkonditionierungsplan aktualisiert",
 	diagnosticsEventRoomAssistRestored: "Room Assist wiederhergestellt",
 	diagnosticsEventRoomAssistStateChanged: "Room Assist-Status geändert",
 	diagnosticsEventRoomAssistUpdated: "Room Assist aktualisiert",
@@ -1476,15 +1476,15 @@ var k = [
 	diagnosticsDownloadNow: "Bericht herunterladen",
 	diagnosticsDownloadActionDescription: "Datenschutzoptionen öffnen, bevor ein Diagnosebericht für den Support heruntergeladen wird.",
 	diagnosticsExportOptions: "Datenschutz des Berichts",
-	diagnosticsExportExplanation: "Die lokale Ansicht verwendet echte lokale IDs. Lass diese Option aktiviert, um climate- und Sensor-IDs im Bericht durch stabile Aliase zu ersetzen.",
+	diagnosticsExportExplanation: "Die lokale Ansicht verwendet echte lokale IDs. Lass diese Option aktiviert, um Klimagerät- und Sensor-IDs im Bericht durch stabile Aliase zu ersetzen.",
 	diagnosticsRedactEntityIds: "Entitäts-IDs durch Aliase ersetzen",
-	diagnosticsOperationalIdsAlwaysRedacted: "Kennungen von Profile, Mode und Pausen werden immer entfernt.",
+	diagnosticsOperationalIdsAlwaysRedacted: "Kennungen von Profilen, Modi und Pausen werden immer entfernt.",
 	diagnosticsRawEntityIdsWarning: "Dieser Bericht enthält die ursprünglichen Entitäts-IDs. Prüfe ihn vor dem Teilen.",
 	diagnosticsDownloadWithEntityIds: "Mit IDs herunterladen",
 	diagnosticsSelectUnit: "Wähle ein Klimagerät aus, um die Diagnose anzuzeigen.",
 	diagnosticsDeliverySuccess: "Erfolgreich übertragen",
-	diagnosticsScheduleSourceProfilePause: "Pause des Profile",
-	diagnosticsOverrideTurnOff: "climate-Gerät ausschalten",
+	diagnosticsScheduleSourceProfilePause: "Profilpause",
+	diagnosticsOverrideTurnOff: "Klimagerät ausschalten",
 	diagnosticsNone: "Keine",
 	diagnosticsReasonReplaced: "Durch eine neuere Anfrage ersetzt",
 	diagnosticsReasonStopped: "Gestoppt",
@@ -1514,13 +1514,13 @@ var k = [
 	temperatureMigrationRequired: "Velair benötigt deine Aufmerksamkeit",
 	temperatureMigrationStopped: "Zeitplanung und Temperaturkonfiguration sind gesperrt, weil Home Assistant die Temperatureinheit geändert hat. Öffne die Velair-Einstellungen, um die Daten sicher zu migrieren.",
 	temperatureMigrationQuestion: "Gespeicherte Temperaturen von {source} nach {target} migrieren?",
-	temperatureMigrationExplanation: "Fahre nur fort, wenn alle gespeicherten Velair-Temperaturen noch in {source} vorliegen. Diese Migration aktualisiert Zeitpläne, Vorlagen, Überschreibungen, Komfort, Raumassistent, Vorkonditionierungseinstellungen, Raten und Lerndaten, bevor die Zeitplanung fortgesetzt wird. Falls ein gespeicherter Wert bereits in {target} vorliegt, wird er durch die Migration falsch.",
+	temperatureMigrationExplanation: "Fahre nur fort, wenn alle gespeicherten Velair-Temperaturen noch in {source} vorliegen. Diese Migration aktualisiert Zeitpläne, Vorlagen, Überschreibungen, Komfort, Room Assist, Vorkonditionierungseinstellungen, Raten und Lerndaten, bevor die Zeitplanung fortgesetzt wird. Falls ein gespeicherter Wert bereits in {target} vorliegt, wird er durch die Migration falsch.",
 	temperatureMigrationUse: "{source} nach {target} migrieren",
 	temperatureMigrationConfirm: "Bestätigen, dass alle gespeicherten Velair-Temperaturdaten in {source} vorliegen, und in {target} umwandeln? Fahre nicht fort, falls ein gespeicherter Wert bereits in {target} vorliegt, da er sonst falsch wird. Die Zeitplanung bleibt gestoppt, wenn die Migration nicht gespeichert werden kann.",
 	temperatureMigrationComplete: "Temperaturdaten aktualisiert und Zeitplanung fortgesetzt",
 	temperatureMigrationFailed: "Temperaturdaten konnten nicht aktualisiert werden",
 	temperatureLegacyResetQuestion: "Veraltete Celsius-Daten für {target} zurücksetzen?",
-	temperatureLegacyResetExplanation: "Diese Installation wurde mit einer Velair-Version erstellt, die nur Celsius-Werte gespeichert hat. Da Home Assistant jetzt {target} verwendet, setze Velair zurück, um die alten Daten zu verwerfen und sichere einheitenabhängige Standardwerte zu erstellen. Bei künftigen Änderungen der Home-Assistant-Einheit wird stattdessen eine vollständige Datenkonvertierung angeboten.",
+	temperatureLegacyResetExplanation: "Diese Installation wurde mit einer Velair-Version erstellt, die nur Celsius-Werte gespeichert hat. Da Home Assistant jetzt {target} verwendet, setze Velair zurück, um die alten Daten zu verwerfen und sichere einheitenabhängige Standardwerte zu erstellen. Bei künftigen Änderungen der Temperatureinheit in Home Assistant wird stattdessen eine vollständige Datenkonvertierung angeboten.",
 	temperatureLegacyResetStopped: "Die Zeitplanung ist gestoppt, weil diese ältere Installation nur Celsius-Daten enthält, während Home Assistant Fahrenheit verwendet. Öffne die Velair-Einstellungen und verwende „Velair zurücksetzen“, um Fahrenheit-Standardwerte zu erstellen.",
 	temperatureStep: "Schrittweite",
 	temperatureStepNotReported: "Von Home Assistant nicht gemeldet",
@@ -1575,7 +1575,7 @@ var k = [
 	},
 	schedulerStatuses: {
 		idle: "Inaktiv",
-		override_active: "Boost aktiv",
+		override_active: "Temporäre Anpassung aktiv",
 		paused: "Pausiert",
 		scheduled: "Geplant"
 	},
@@ -2589,9 +2589,9 @@ var k = [
 	externalSystems: "Sistemas externos",
 	externalSystemsDescription: "Elige quién ejecuta la planificación semanal efectiva para los termostatos compatibles. Velair nunca controla físicamente las zonas externas.",
 	externalControllersInUse: "Controladores externos en uso",
-	externalConditionProfilesSupported: "Se admiten planificaciones Default, de Profiles y de Modes",
-	externalConditionDefaultOnly: "Solo planificaciones Default",
-	profileExternalScheduleOnly: "Las zonas externas solo admiten planificaciones Default, de Profile o de Mode. Las pausas y acciones directas de Velair siguen sin estar disponibles.",
+	externalConditionProfilesSupported: "Se admiten planificaciones predeterminadas, de perfiles y de modos",
+	externalConditionDefaultOnly: "Solo planificaciones predeterminadas",
+	profileExternalScheduleOnly: "Las zonas externas solo admiten planificaciones predeterminadas, de perfiles o de modos. Las pausas y acciones directas de Velair siguen sin estar disponibles.",
 	profileExternalMaxChanges: "{climate} supera el límite del controlador de {count} cambios el {day}.",
 	profileExternalTimeGrid: "{climate} debe usar intervalos de {minutes} minutos el {day}.",
 	profileExternalUnsupportedBlock: "{climate} contiene un bloque que el controlador externo no puede representar.",
@@ -2638,7 +2638,7 @@ var k = [
 	overviewExternalProviderUnavailable: "La integración externa no está disponible actualmente. Velair permanece inactivo para este termostato.",
 	overviewExternalZonesUnaffected: "Las acciones de Velair no afectan a {count} zona(s) con ejecución externa.",
 	externalChangePolicy: "Ajustes externos",
-	externalChangePolicyDescription: "Elige qué hace Velair cuando el modo o la consigna cambian fuera de Velair. Mantener automático vuelve a aplicar la intención vigente; las demás opciones activan el control Manual hasta el momento elegido. Los cambios se aplican al siguiente ajuste externo. Si se selecciona Manual en Resumen con Mantener automático guardado, permanecerá Manual hasta reanudarlo.",
+	externalChangePolicyDescription: "Elige qué hace Velair cuando el modo o la consigna cambian fuera de Velair. Mantener automático vuelve a aplicar la intención vigente de Velair; las demás opciones activan el control Manual hasta el momento elegido. Los cambios se aplican al siguiente ajuste externo. Si se selecciona Manual en Resumen con Mantener automático guardado, permanecerá Manual hasta reanudarlo.",
 	externalAdjustmentInfoAction: "Acerca de los ajustes externos",
 	externalChangeKeepAutomatic: "Mantener automático",
 	externalChangeUntilNextBlock: "Hasta el próximo bloque",
@@ -2662,7 +2662,7 @@ var k = [
 	manualUnavailableTemperatureMigration: "Resuelve la migración de datos de temperatura antes de cambiar el control Manual.",
 	manualUnavailableExternalExecution: "El control Manual no está disponible en termostatos con ejecución externa.",
 	manualUnavailableScheduler: "La planificación automática no está activa.",
-	manualUnavailableProfilePause: "El Profile activo pausa este termostato.",
+	manualUnavailableProfilePause: "El perfil activo pausa este termostato.",
 	manualUnavailableZonePause: "Otra pausa controla actualmente este termostato.",
 	manualAdjustmentActive: "Fuera de la planificación automática",
 	automaticControlResumed: "Planificación automática reanudada",
@@ -2718,7 +2718,7 @@ var k = [
 	cardViewOverviewZones: "Resumen: zonas",
 	cardViewActiveSetup: "Perfiles: configuración activa",
 	cardViewSchedules: "Planificación: editor",
-	cardViewSensors: "Sensor de estancia: configuración y estado",
+	cardViewSensors: "Room Assist: configuración y estado",
 	cardViewComfort: "Confort: configuración y estado",
 	cardViewPreconditioning: "Preacondicionamiento: configuración y estado",
 	cardThermostatHidden: "Oculto en esta tarjeta",
@@ -2731,8 +2731,8 @@ var k = [
 	comfortCardShowConfiguration: "Mostrar configuración",
 	comfortCardShowHumidity: "Mostrar gráfica de humedad",
 	comfortCardShowTemperature: "Mostrar gráfica de temperatura",
-	roomAssistCardVisibility: "Visibilidad del sensor de estancia",
-	roomAssistCardVisibilityDescription: "Elige qué controles y detalles de estado muestra esta tarjeta.",
+	roomAssistCardVisibility: "Visibilidad de Room Assist",
+	roomAssistCardVisibilityDescription: "Elige qué controles y detalles de estado de Room Assist muestra esta tarjeta.",
 	roomAssistShowDebounce: "Mostrar retraso de actualización",
 	roomAssistShowDeadband: "Mostrar banda de control de Room Assist",
 	roomAssistShowLiveStatus: "Mostrar estado actual",
@@ -2844,7 +2844,7 @@ var k = [
 	operationDefaultPartial: "Planificaciones predeterminadas restauradas con problemas",
 	operationDefaultRunning: "Restaurando las planificaciones predeterminadas",
 	operationDismiss: "Descartar el estado de la operación",
-	operationFailedHelp: "Revisa el climate afectado y los registros de Home Assistant para obtener más detalles",
+	operationFailedHelp: "Revisa el termostato afectado y los registros de Home Assistant para obtener más detalles",
 	operationFailureCount: "{count} zonas con problemas: {zones}",
 	operationFailureOne: "1 zona con problemas: {zones}",
 	operationModeCompleted: "Modo {target} aplicado",
@@ -3009,7 +3009,7 @@ var k = [
 	internalStorageVersion: "Almacenamiento/modelo",
 	integrationVersion: "Versión de la integración",
 	resetVelair: "Restablecer Velair",
-	resetVelairDescription: "Borra todos los datos almacenados de Velair, incluidas las planificaciones, plantillas, preferencias del panel, refuerzos y pausas activas, políticas de ajustes externos y ajustes manuales activos, ajustes de Comfort y Room Assist, configuración y aprendizaje de Adaptive Preconditioning y el comportamiento al arrancar. Después recrea valores predeterminados adaptados a la unidad de los termostatos gestionados actualmente.",
+	resetVelairDescription: "Borra todos los datos almacenados de Velair, incluidas las planificaciones, plantillas, preferencias del panel, refuerzos y pausas activas, políticas de ajustes externos y ajustes manuales activos, ajustes de Confort y Room Assist, configuración y aprendizaje del preacondicionamiento adaptativo y el comportamiento al arrancar. Después recrea valores predeterminados adaptados a la unidad de los termostatos gestionados actualmente.",
 	confirmReset: "¿Restablecer todos los datos almacenados de Velair? No podrás deshacerlo salvo que hayas creado antes una exportación.",
 	confirmResetPreconditioningLearning: "¿Reiniciar el aprendizaje adaptativo de {direction}? Se conservarán las planificaciones y los ajustes.",
 	confirmResetPreconditioningSettings: "¿Restablecer los ajustes de preacondicionamiento de este termostato? Se conservarán las muestras de aprendizaje.",
@@ -3045,7 +3045,7 @@ var k = [
 	overviewZones: "Resumen de zonas",
 	overviewZoneApplied: "Aplicada",
 	overviewZoneAir: "Aire: {status}",
-	overviewZoneBoost: "Boost",
+	overviewZoneBoost: "Refuerzo",
 	overviewZoneComfort: "Confort: {status}",
 	overviewZoneManual: "Manual",
 	overviewZonePaused: "Pausada",
@@ -3069,7 +3069,7 @@ var k = [
 	overviewZoneScheduledSetpoint: "Programada",
 	overviewZoneScheduledRange: "Rango programado",
 	overviewZoneAppliedRange: "Rango aplicado",
-	overviewZoneOffset: "Offset",
+	overviewZoneOffset: "Compensación",
 	overviewZoneRangeShift: "Desplazamiento del rango",
 	overviewZoneRoomAssistActive: "Activo",
 	overviewZoneRoomAssistGuarded: "Protección de consigna",
@@ -3183,10 +3183,10 @@ var k = [
 	resizeStart: "Ajustar inicio",
 	schedulerControls: "Controles del planificador",
 	schedules: "Planificación",
-	sensors: "Sensor de estancia",
+	sensors: "Room Assist",
 	roomSensorAppliedTarget: "Consigna aplicada",
 	roomSensorAssist: "Control por sensor de estancia",
-	roomSensorAssistBadge: "Sensor de estancia",
+	roomSensorAssistBadge: "Room Assist",
 	roomSensorAssistEnabled: "Control por sensor de estancia activado",
 	roomSensorAssistHelp: "Ajusta temporalmente la consigna del termostato para que el sensor de estancia alcance la temperatura programada.",
 	roomSensorAssistDisabledDetail: "Hay un sensor de estancia seleccionado, pero el control está desactivado. Velair seguirá usando la temperatura del termostato hasta que actives este interruptor.",
@@ -3196,23 +3196,23 @@ var k = [
 	roomSensorAssistDeadbandHelp: "Sitúa los límites inferior y superior de Room Assist a esta distancia de la consigna programada. En Heat o Cool fijos, al alcanzar un límite Room Assist pasa a controlar hacia el otro. Los modos automáticos y los rangos de temperatura lo usan como margen sin corrección. Se aplica al guardar.",
 	roomSensorDeadbandZoneHelp: "Con calefacción o refrigeración fija, Room Assist avanza hacia un límite hasta que la estancia lo alcanza y entonces invierte hacia el otro. Los rangos nativos conservan esta zona como margen exterior sin corrección.",
 	roomSensorDeadbandZoneHelpAutomatic: "Con un modo automático escalar, Room Assist no aplica correcciones mientras la estancia permanezca dentro de este margen.",
-	roomSensorDeadbandZoneHelpGeneric: "El modo efectivo del climate determina cómo utiliza Room Assist esta deadband.",
+	roomSensorDeadbandZoneHelpGeneric: "El modo efectivo del termostato determina cómo utiliza Room Assist esta banda muerta.",
 	roomSensorDeadbandZoneAutomatic: "Margen sin corrección · ±{value}",
-	roomSensorDeadbandZoneGeneric: "Deadband · ±{value}",
+	roomSensorDeadbandZoneGeneric: "Banda muerta · ±{value}",
 	roomSensorDeadbandZoneCompact: "Banda de control · ±{value}",
 	roomSensorDeadbandZoneCompactAutomatic: "Margen neutro · ±{value}",
 	roomSensorDeadbandZoneCompactRange: "Margen de límites · ±{value}",
 	roomSensorDeadbandZoneBrief: "Zona ±{value}",
 	roomSensorDeadbandZoneRange: "Margen de los límites · {value} fuera de cada uno",
 	roomSensorDeadbandZoneSingle: "Banda de control · ±{value}",
-	roomSensorDeadbandZoneZero: "Sin deadband · {value}",
+	roomSensorDeadbandZoneZero: "Sin banda muerta · {value}",
 	roomSensorAssistMaxDelta: "Ajuste máximo de control",
 	roomSensorAssistMaxDeltaHelp: "Limita la corrección de Room Assist. Configúralo para cubrir el margen que el termostato pueda necesitar para dejar de calentar o enfriar. El valor completo solo se utiliza cuando es necesario.",
-	roomSensorAssistOffset: "Offset de control",
-	roomSensorAssistOffsetHelp: "Offset temporal aplicado a la consigna del termostato para acercar la temperatura de la estancia a la programada.",
-	roomSensorAssistCorrectionValue: "Offset {value}",
+	roomSensorAssistOffset: "Compensación del control",
+	roomSensorAssistOffsetHelp: "Compensación temporal aplicada a la consigna del termostato para acercar la temperatura de la estancia a la programada.",
+	roomSensorAssistCorrectionValue: "Compensación {value}",
 	roomSensorAssistCorrectionActiveHelp: "Room Assist está ajustando la consigna del termostato. Esto no indica si el termostato está calentando o enfriando activamente.",
-	roomSensorAssistNoCorrection: "Offset 0 · Manteniendo",
+	roomSensorAssistNoCorrection: "Compensación 0 · Manteniendo",
 	roomSensorAssistNoCorrectionHelp: "Room Assist no está aplicando una corrección de consigna. La temperatura de la estancia y la consigna programada aún pueden ser diferentes.",
 	roomSensorLimitMaximumTitle: "Se ha alcanzado el máximo del termostato",
 	roomSensorLimitMaximumDetail: "Room Assist solicitó {requested}, por encima del límite de {limit}. Velair ha aplicado {applied}; la corrección queda limitada.",
@@ -3231,9 +3231,9 @@ var k = [
 	roomSensorGapAboveTarget: "{value} por encima del objetivo",
 	roomSensorGapBelowTarget: "{value} por debajo del objetivo",
 	roomSensorClimateTarget: "Consigna del termostato",
-	roomSensorClimateTargetHelp: "La consigna del climate es el valor que comunica actualmente la entidad; no es el objetivo de temperatura de la estancia.",
-	roomSensorClimateTargetAppliedHelp: "La consigna del climate es el valor temporal que Velair ha enviado a la entidad mientras Room Assist está activo; no es el objetivo de temperatura de la estancia.",
-	roomSensorClimateTargetStepHelp: "Room Assist calculó {calculated}. Este climate admite pasos de {step}, por lo que Velair aplicó de forma segura {applied}.",
+	roomSensorClimateTargetHelp: "La consigna del termostato es el valor que comunica actualmente la entidad; no es el objetivo de temperatura de la estancia.",
+	roomSensorClimateTargetAppliedHelp: "La consigna del termostato es el valor temporal que Velair ha enviado a la entidad mientras Room Assist está activo; no es el objetivo de temperatura de la estancia.",
+	roomSensorClimateTargetStepHelp: "Room Assist calculó {calculated}. Este termostato admite pasos de {step}, por lo que Velair aplicó de forma segura {applied}.",
 	roomSensorAppliedLow: "Mínimo aplicado",
 	roomSensorAppliedHigh: "Máximo aplicado",
 	roomSensorAppliedRange: "Rango aplicado",
@@ -3245,7 +3245,7 @@ var k = [
 	roomSensorIntroTitle: "Control por temperatura de estancia",
 	roomSensorLiveStatus: "Estado actual",
 	roomSensorNoActiveBlock: "Sin bloque de temperatura activo",
-	roomSensorNoActiveBlockDetail: "El control se actualizará cuando haya un bloque de temperatura programado activo.",
+	roomSensorNoActiveBlockDetail: "Room Assist se actualizará cuando haya un bloque de temperatura programado activo.",
 	roomSensorNotConfigured: "Selecciona primero un sensor de estancia",
 	roomSensorRoomTemperature: "Sensor de estancia",
 	roomSensorRemainingToTarget: "Diferencia hasta el objetivo",
@@ -3293,9 +3293,9 @@ var k = [
 	diagnosticsDownloadNow: "Descargar informe",
 	diagnosticsDownloadActionDescription: "Abre las opciones de privacidad antes de descargar un informe de diagnóstico para soporte.",
 	diagnosticsExportOptions: "Privacidad del informe",
-	diagnosticsExportExplanation: "La vista local usa los ID reales. Mantén esta opción activada para sustituir los ID de climates y sensores por alias estables en el informe.",
+	diagnosticsExportExplanation: "La vista local usa los ID reales. Mantén esta opción activada para sustituir los ID de termostatos y sensores por alias estables en el informe.",
 	diagnosticsRedactEntityIds: "Sustituir los ID de entidad por alias",
-	diagnosticsOperationalIdsAlwaysRedacted: "Los identificadores de Profiles, Modes y pausas siempre se eliminan.",
+	diagnosticsOperationalIdsAlwaysRedacted: "Los identificadores de perfiles, modos y pausas siempre se eliminan.",
 	diagnosticsRawEntityIdsWarning: "Este informe incluirá los ID de entidad originales. Revísalo antes de compartirlo.",
 	diagnosticsDownloadWithEntityIds: "Descargar con ID",
 	diagnosticsHealthy: "Velair parece funcionar correctamente",
@@ -3305,25 +3305,25 @@ var k = [
 	diagnosticsRecentHistory: "Historial reciente en ejecución ({count}/{limit})",
 	diagnosticsNoHistory: "No se han observado eventos relevantes desde que Velair arrancó.",
 	diagnosticsPrivacy: "El historial solo vive en memoria y se borra al reiniciar. Los informes no contienen telemetría; los identificadores de entidad se reemplazan salvo que elijas conservarlos.",
-	diagnosticsEntityUnavailable: "La entidad climate no está disponible.",
-	diagnosticsEntityUnknown: "La entidad climate comunica un estado desconocido.",
+	diagnosticsEntityUnavailable: "El termostato no está disponible.",
+	diagnosticsEntityUnknown: "El termostato comunica un estado desconocido.",
 	diagnosticsCalculatedIntent: "Intención calculada",
 	diagnosticsLastApplication: "Última aplicación",
 	diagnosticsRoomAssist: "Room Assist",
-	diagnosticsPreconditioning: "Preconditioning",
-	diagnosticsComfort: "Comfort",
+	diagnosticsPreconditioning: "Preacondicionamiento",
+	diagnosticsComfort: "Confort",
 	diagnosticsAssociatedSensors: "Sensores asociados",
 	diagnosticsLoadError: "No se pudo cargar el diagnóstico. Vuelve a abrir la sección.",
 	diagnosticsExportError: "No se pudo descargar el informe de diagnóstico.",
 	diagnosticsDeliveryFailed: "El último intento de entrega falló y puede recuperarse.",
-	diagnosticsDeliveryRetrying: "Velair está reintentando la última intención del climate.",
+	diagnosticsDeliveryRetrying: "Velair está reintentando la última intención del termostato.",
 	diagnosticsDeliveryExhausted: "Se alcanzó el límite de reintentos de entrega.",
-	diagnosticsDeliveryInvalidIntent: "No se pudo resolver la intención actual del climate.",
+	diagnosticsDeliveryInvalidIntent: "No se pudo resolver la intención actual del termostato.",
 	diagnosticsRuntimeUnavailable: "Los detalles de intención en ejecución no están disponibles ahora.",
 	diagnosticsSensorUnavailable: "Falta un sensor asociado explícitamente o no está disponible.",
-	diagnosticsUnits: "Climates gestionados",
-	diagnosticsNoUnits: "No hay climates gestionados que diagnosticar.",
-	diagnosticsSelectUnit: "Selecciona un climate para consultar su diagnóstico.",
+	diagnosticsUnits: "Termostatos gestionados",
+	diagnosticsNoUnits: "No hay termostatos gestionados que diagnosticar.",
+	diagnosticsSelectUnit: "Selecciona un termostato para consultar su diagnóstico.",
 	diagnosticsStatusDelivery: "Estado y entrega",
 	diagnosticsActiveConfiguration: "Configuración activa",
 	diagnosticsFunctions: "Funciones",
@@ -3331,16 +3331,16 @@ var k = [
 	diagnosticsCurrentState: "Estado actual",
 	diagnosticsDeliveryStatus: "Estado de entrega",
 	diagnosticsDeliverySuccess: "Entrega completada correctamente",
-	diagnosticsScheduleSourceProfilePause: "Pausa del Profile",
-	diagnosticsOverrideTurnOff: "Apagar el climate",
+	diagnosticsScheduleSourceProfilePause: "Pausa del perfil",
+	diagnosticsOverrideTurnOff: "Apagar el termostato",
 	diagnosticsNone: "Ninguno",
 	diagnosticsReasonReplaced: "Sustituido por una solicitud más reciente",
 	diagnosticsReasonStopped: "Detenido",
 	diagnosticsRetryCount: "Reintentos",
 	diagnosticsLastError: "Último error",
 	diagnosticsScheduleSource: "Origen de la planificación",
-	diagnosticsMode: "Mode",
-	diagnosticsProfile: "Profile",
+	diagnosticsMode: "Modo",
+	diagnosticsProfile: "Perfil",
 	diagnosticsOverride: "Anulación",
 	diagnosticsPauses: "Pausas activas",
 	diagnosticsHvacModes: "Modos HVAC",
@@ -3361,19 +3361,19 @@ var k = [
 	diagnosticsStatusWithIssues: "{status} — {issues}",
 	diagnosticsHistoryLog: "Registro de ejecución",
 	diagnosticsLogTime: "Hora",
-	diagnosticsLogClimate: "Climate",
+	diagnosticsLogClimate: "Termostato",
 	diagnosticsLogType: "Tipo",
 	diagnosticsLogMessage: "Detalles",
 	diagnosticsLogResizeColumn: "Cambiar el ancho de la columna {column}",
 	diagnosticsHistoryClimateFilter: "Orígenes",
 	diagnosticsHistorySourcesLegend: "Seleccionar orígenes de eventos",
 	diagnosticsHistoryNoSources: "Ningún origen",
-	diagnosticsHistorySourceCount: "{count} unidades climate",
-	diagnosticsHistorySourceCountWithVelair: "{count} unidades climate + Velair",
+	diagnosticsHistorySourceCount: "{count} termostatos",
+	diagnosticsHistorySourceCountWithVelair: "{count} termostatos + Velair",
 	diagnosticsHistoryClimateWithVelair: "{climate} y Velair",
 	diagnosticsHistorySourcesDone: "Listo",
 	diagnosticsHistoryCategoryFilter: "Categoría",
-	diagnosticsHistoryAllSources: "Todos los climates + Velair",
+	diagnosticsHistoryAllSources: "Todos los termostatos + Velair",
 	diagnosticsHistoryVelairOnly: "Solo Velair",
 	diagnosticsHistoryAllCategories: "Todas las categorías",
 	diagnosticsHistoryFrom: "Desde",
@@ -3387,17 +3387,17 @@ var k = [
 	diagnosticsHistoryUpdateError: "No se pudieron guardar los ajustes del historial de diagnóstico.",
 	diagnosticsHistoryClearError: "No se pudo borrar el historial de diagnóstico.",
 	diagnosticsHistoryCategoryControl: "Control y planificaciones",
-	diagnosticsHistoryCategoryControlDescription: "Planificaciones, Profiles, Modes, Boosts, pausas, ajustes externos y cambios de control Automático/Manual.",
+	diagnosticsHistoryCategoryControlDescription: "Planificaciones, perfiles, modos, refuerzos, pausas, ajustes externos y cambios de control automático/manual.",
 	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
 	diagnosticsHistoryCategoryRoomAssistDescription: "Cambios de estado y correcciones de consigna de Room Assist.",
-	diagnosticsHistoryCategoryPreconditioning: "Preconditioning",
-	diagnosticsHistoryCategoryPreconditioningDescription: "Planes, cancelaciones y observaciones de aprendizaje de Preconditioning.",
-	diagnosticsHistoryCategoryComfort: "Comfort",
-	diagnosticsHistoryCategoryComfortDescription: "Cambios en las condiciones de Comfort evaluadas localmente.",
-	diagnosticsHistoryCategoryDelivery: "Entrega al climate",
-	diagnosticsHistoryCategoryDeliveryDescription: "Órdenes al climate fallidas, reintentadas, agotadas o canceladas.",
+	diagnosticsHistoryCategoryPreconditioning: "Preacondicionamiento",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Planes, cancelaciones y observaciones de aprendizaje del preacondicionamiento.",
+	diagnosticsHistoryCategoryComfort: "Confort",
+	diagnosticsHistoryCategoryComfortDescription: "Cambios en las condiciones de confort evaluadas localmente.",
+	diagnosticsHistoryCategoryDelivery: "Entrega al termostato",
+	diagnosticsHistoryCategoryDeliveryDescription: "Órdenes al termostato fallidas, reintentadas, agotadas o canceladas.",
 	diagnosticsHistoryCategoryAvailability: "Disponibilidad",
-	diagnosticsHistoryCategoryAvailabilityDescription: "Climates gestionados que pasan a no disponible, desconocido o vuelven a estar disponibles.",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Termostatos gestionados que pasan a no disponible, desconocido o vuelven a estar disponibles.",
 	diagnosticsReasonCurrentSchedule: "Planificación actual",
 	diagnosticsReasonMissingTargetStep: "Paso de temperatura objetivo no disponible",
 	diagnosticsReasonNoLongerPlanned: "Ya no está planificado",
@@ -3423,9 +3423,9 @@ var k = [
 	diagnosticsOperationUpdated: "Actualizado",
 	diagnosticsOperationRemoved: "Eliminado",
 	diagnosticsOperationSetTemperature: "Ajustar temperatura",
-	diagnosticsEventBoostEnded: "Boost finalizado",
-	diagnosticsEventBoostStarted: "Boost iniciado",
-	diagnosticsEventClimateTargetApplied: "Consigna del climate aplicada",
+	diagnosticsEventBoostEnded: "Refuerzo finalizado",
+	diagnosticsEventBoostStarted: "Refuerzo iniciado",
+	diagnosticsEventClimateTargetApplied: "Consigna del termostato aplicada",
 	diagnosticsEventExternalAdjustment: "Ajuste externo",
 	diagnosticsEventZoneControlChanged: "Control de planificación cambiado",
 	diagnosticsControlAutomatic: "Automático",
@@ -3438,17 +3438,17 @@ var k = [
 	diagnosticsControlChanged: "De {previous} a {current}",
 	diagnosticsUntil: "hasta {time}",
 	diagnosticsReasonResumed: "Reanudado",
-	diagnosticsEventProfileChanged: "Profile cambiado",
+	diagnosticsEventProfileChanged: "Perfil cambiado",
 	diagnosticsEventSchedulerModeChanged: "Modo del planificador cambiado",
 	diagnosticsEventZonePauseAdded: "Motivo de pausa añadido",
 	diagnosticsEventZonePauseRemoved: "Motivo de pausa eliminado",
 	diagnosticsEventZonePauseUpdated: "Motivo de pausa actualizado",
 	diagnosticsEventZonePaused: "Zona pausada",
 	diagnosticsEventZoneResumed: "Zona reanudada",
-	diagnosticsEventComfortAssessmentChanged: "Evaluación de Comfort modificada",
-	diagnosticsEventPreconditioningObservationRecorded: "Observación de Preconditioning registrada",
-	diagnosticsEventPreconditioningPlanCancelled: "Plan de Preconditioning cancelado",
-	diagnosticsEventPreconditioningPlanUpdated: "Plan de Preconditioning actualizado",
+	diagnosticsEventComfortAssessmentChanged: "Evaluación de confort modificada",
+	diagnosticsEventPreconditioningObservationRecorded: "Observación de preacondicionamiento registrada",
+	diagnosticsEventPreconditioningPlanCancelled: "Plan de preacondicionamiento cancelado",
+	diagnosticsEventPreconditioningPlanUpdated: "Plan de preacondicionamiento actualizado",
 	diagnosticsEventRoomAssistRestored: "Room Assist restaurado",
 	diagnosticsEventRoomAssistStateChanged: "Estado de Room Assist modificado",
 	diagnosticsEventRoomAssistUpdated: "Room Assist actualizado",
@@ -3478,7 +3478,7 @@ var k = [
 	temperatureMigrationRequired: "Velair necesita tu atención",
 	temperatureMigrationStopped: "El planificador y la configuración térmica están bloqueados porque Home Assistant ha cambiado de unidad. Abre los ajustes de Velair para migrar los datos con seguridad.",
 	temperatureMigrationQuestion: "¿Migrar las temperaturas guardadas de {source} a {target}?",
-	temperatureMigrationExplanation: "Continúa solo si todas las temperaturas guardadas por Velair siguen estando en {source}. La migración actualiza planificaciones, plantillas, anulaciones, Comfort, Room Assist, ajustes y ritmos de calentamiento y enfriamiento, además de los datos de aprendizaje de Adaptive Preconditioning, antes de reanudar el planificador. Si algún valor guardado ya está en {target}, la migración lo dejará incorrecto.",
+	temperatureMigrationExplanation: "Continúa solo si todas las temperaturas guardadas por Velair siguen estando en {source}. La migración actualiza planificaciones, plantillas, anulaciones, Confort, Room Assist, ajustes y ritmos de calentamiento y enfriamiento, además de los datos de aprendizaje del preacondicionamiento adaptativo, antes de reanudar el planificador. Si algún valor guardado ya está en {target}, la migración lo dejará incorrecto.",
 	temperatureMigrationUse: "Migrar de {source} a {target}",
 	temperatureMigrationConfirm: "¿Confirmas que todos los datos de temperatura guardados por Velair están en {source} y quieres convertirlos a {target}? No continúes si algún valor ya está en {target}, porque quedará incorrecto. El planificador seguirá detenido si la migración no puede guardarse.",
 	temperatureMigrationComplete: "Datos de temperatura actualizados y planificador reanudado",
@@ -3488,7 +3488,7 @@ var k = [
 	temperatureLegacyResetStopped: "El planificador está detenido porque esta instalación antigua contiene datos solo en Celsius mientras Home Assistant usa Fahrenheit. Abre los ajustes de Velair y usa Restablecer Velair para crear valores predeterminados en Fahrenheit.",
 	temperatureStep: "Paso",
 	temperatureStepNotReported: "No proporcionado por Home Assistant",
-	temperatureStepNotReportedDescription: "Esta entidad climate no proporciona el atributo target_temp_step. Velair no intenta deducir el paso de temperatura.",
+	temperatureStepNotReportedDescription: "Este termostato no proporciona el atributo target_temp_step. Velair no intenta deducir el paso de temperatura.",
 	targetTemp: "Temp. objetivo",
 	targetHumidity: "Humedad objetivo",
 	targetBy: "Objetivo a las",
@@ -3568,60 +3568,60 @@ var k = [
 	}
 }, ct = /* @__PURE__ */ t({ fr: () => lt }), lt = {
 	addBlock: "Ajouter un bloc",
-	externalConditionProfilesSupported: "Default, Profile and Mode schedules are supported",
-	profileExternalScheduleOnly: "External zones support Default, Profile or Mode schedules only. Pause and direct Velair actions remain unavailable.",
-	profileExternalMaxChanges: "{climate} exceeds the controller limit of {count} changes on {day}.",
-	profileExternalTimeGrid: "{climate} must use {minutes}-minute intervals on {day}.",
-	profileExternalUnsupportedBlock: "{climate} contains a block that the external controller cannot represent.",
-	externalControllersInUse: "External controllers in use",
-	externalConditionDefaultOnly: "Default schedules only",
-	externalConditionHvacModes: "Supported HVAC modes: {modes}",
-	externalConditionTargetTypes: "Supported target types: {types}",
-	externalConditionActions: "Supported schedule actions: {actions}",
-	externalConditionTurnOffUnsupported: "Turn-off blocks are not supported",
-	externalConditionOptionFields: "Supported climate options: {fields}",
-	externalConditionOptionsUnsupported: "Climate option fields are not supported",
-	externalConditionMaxChanges: "Maximum {count} schedule changes per day",
-	externalConditionTimeGrid: "Times must use {minutes}-minute intervals",
-	externalConditionMidnightContinuityCounts: "An implicit midnight continuity change counts toward the daily maximum",
-	externalConditionsUnavailable: "Controller conditions are unavailable.",
-	externalCapability_action_set_temperature: "Set temperature",
-	externalCapability_action_turn_off: "Turn off",
-	externalCapability_hvac_heat: "Heating",
-	externalCapability_hvac_cool: "Cooling",
-	externalCapability_target_scalar: "Single target temperature",
-	externalCapability_target_range: "Target temperature range",
-	externalProviderAvailability: "Controller: {state}",
-	externalProviderAvailable: "available",
-	externalProviderUnavailable: "unavailable",
-	externalPublication_publishing: "Publishing the effective schedule to the external integration.",
-	externalPublication_published: "The external integration accepted the effective schedule.",
-	externalPublication_failed: "Schedule publication failed.",
-	overviewExternalExecutionProvider: "External controller: {provider}",
+	externalConditionProfilesSupported: "Les programmes Par défaut, Profil et Mode sont pris en charge",
+	profileExternalScheduleOnly: "Les zones externes prennent uniquement en charge les programmes Par défaut, Profil ou Mode. Les pauses et les actions Velair directes restent indisponibles.",
+	profileExternalMaxChanges: "{climate} dépasse la limite de {count} changements du contrôleur le {day}.",
+	profileExternalTimeGrid: "{climate} doit utiliser des intervalles de {minutes} minutes le {day}.",
+	profileExternalUnsupportedBlock: "{climate} contient un bloc que le contrôleur externe ne peut pas représenter.",
+	externalControllersInUse: "Contrôleurs externes utilisés",
+	externalConditionDefaultOnly: "Programmes par défaut uniquement",
+	externalConditionHvacModes: "Modes HVAC pris en charge : {modes}",
+	externalConditionTargetTypes: "Types de cible pris en charge : {types}",
+	externalConditionActions: "Actions de programme prises en charge : {actions}",
+	externalConditionTurnOffUnsupported: "Les blocs d’arrêt ne sont pas pris en charge",
+	externalConditionOptionFields: "Options climatiques prises en charge : {fields}",
+	externalConditionOptionsUnsupported: "Les champs d’options climatiques ne sont pas pris en charge",
+	externalConditionMaxChanges: "Maximum de {count} changements de programme par jour",
+	externalConditionTimeGrid: "Les heures doivent utiliser des intervalles de {minutes} minutes",
+	externalConditionMidnightContinuityCounts: "Un changement implicite de continuité à minuit compte dans le maximum quotidien",
+	externalConditionsUnavailable: "Les conditions du contrôleur sont indisponibles.",
+	externalCapability_action_set_temperature: "Régler la température",
+	externalCapability_action_turn_off: "Éteindre",
+	externalCapability_hvac_heat: "Chauffage",
+	externalCapability_hvac_cool: "Refroidissement",
+	externalCapability_target_scalar: "Température cible unique",
+	externalCapability_target_range: "Plage de températures cibles",
+	externalProviderAvailability: "Contrôleur : {state}",
+	externalProviderAvailable: "disponible",
+	externalProviderUnavailable: "indisponible",
+	externalPublication_publishing: "Le programme effectif est publié vers l’intégration externe.",
+	externalPublication_published: "L’intégration externe a accepté le programme effectif.",
+	externalPublication_failed: "La publication du programme a échoué.",
+	overviewExternalExecutionProvider: "Contrôleur externe : {provider}",
 	overviewExternalInfoAction: "À propos de l’exécution externe via {provider}",
 	overviewExternalStatusPublishing: "Publication en cours",
 	overviewExternalStatusAccepted: "Accepté",
 	overviewExternalStatusFailed: "Échec",
 	overviewExternalStatusUnavailable: "Indisponible",
-	overviewExternalProviderUnavailable: "The external integration is currently unavailable. Velair remains inactive for this climate.",
-	externalSystems: "External systems",
-	externalSystemsDescription: "Choose who executes the effective weekly schedule for compatible climates. External zones are never physically controlled by Velair.",
-	externalExecutionVelair: "Velair (local execution)",
-	externalExecutionLocal: "Executed by Velair",
-	externalExecutionEnabled: "External schedule execution enabled",
-	externalExecutionDisabled: "Velair schedule execution enabled",
+	overviewExternalProviderUnavailable: "L’intégration externe est actuellement indisponible. Velair reste inactif pour ce thermostat.",
+	externalSystems: "Systèmes externes",
+	externalSystemsDescription: "Choisissez qui exécute le programme hebdomadaire effectif pour les thermostats compatibles. Les zones externes ne sont jamais contrôlées directement par Velair.",
+	externalExecutionVelair: "Velair (exécution locale)",
+	externalExecutionLocal: "Exécuté par Velair",
+	externalExecutionEnabled: "Exécution externe du programme activée",
+	externalExecutionDisabled: "Exécution du programme par Velair activée",
 	externalScheduleRequired: "Créez et enregistrez un programme comportant au moins un bloc de température avant d’activer l’exécution externe.",
 	externalSwitchpointUsage: "{used} sur {max} points de commutation du contrôleur",
 	externalSwitchpointBreakdown: "{count} blocs programmés",
 	externalSwitchpointBreakdownContinuity: "{count} blocs programmés + 1 point de continuité à minuit",
-	externalActionsInactive: "Velair actions are inactive because this climate is executed by an external system.",
-	overviewZoneExternal: "External execution",
+	externalActionsInactive: "Les actions Velair sont inactives car ce thermostat est exécuté par un système externe.",
+	overviewZoneExternal: "Exécution externe",
 	overviewExternalLabel: "Externe",
-	overviewExternalExecutionDescription: "The planned timeline is executed by the external controller. Velair does not send climate actions to this zone.",
-	overviewExternalZonesUnaffected: "{count} externally executed zone(s) are unaffected by Velair actions.",
-	manualUnavailableExternalExecution: "Manual control is unavailable for externally executed climates.",
+	overviewExternalExecutionDescription: "La chronologie planifiée est exécutée par le contrôleur externe. Velair n’envoie aucune action climatique à cette zone.",
+	overviewExternalZonesUnaffected: "{count} zone(s) exécutée(s) en externe ne sont pas affectée(s) par les actions Velair.",
+	manualUnavailableExternalExecution: "Le contrôle manuel est indisponible pour les thermostats exécutés en externe.",
 	externalChangePolicy: "Réglages externes",
-	externalChangePolicyDescription: "Choisissez la réaction de Velair après un changement externe de mode ou de consigne. Maintenir automatique réapplique l’intention Velair actuelle ; les autres options démarrent le contrôle Manuel. Les changements s’appliquent au prochain réglage externe. Un passage explicite en Manuel reste actif jusqu’à sa reprise.",
+	externalChangePolicyDescription: "Choisissez la réaction de Velair après un changement de mode ou de consigne en dehors de Velair. Maintenir automatique réapplique l’intention Velair actuelle ; les autres options démarrent le contrôle Manuel. Les changements s’appliquent au prochain réglage externe. Un passage explicite en Manuel reste actif jusqu’à sa reprise.",
 	externalAdjustmentInfoAction: "À propos des réglages externes",
 	externalChangeKeepAutomatic: "Maintenir automatique",
 	externalChangeUntilNextBlock: "Jusqu’au prochain bloc",
@@ -3644,7 +3644,7 @@ var k = [
 	manualUnavailableDisabled: "Ce climat est désactivé dans Velair.",
 	manualUnavailableTemperatureMigration: "Résolvez la migration des données de température avant de modifier le contrôle Manuel.",
 	manualUnavailableScheduler: "La programmation automatique n'est pas active.",
-	manualUnavailableProfilePause: "Le Profile actif met ce climat en pause.",
+	manualUnavailableProfilePause: "Le profil actif met ce thermostat en pause.",
 	manualUnavailableZonePause: "Une autre pause contrôle actuellement ce climat.",
 	manualAdjustmentActive: "Hors programmation automatique",
 	automaticControlResumed: "Programmation automatique reprise",
@@ -3806,7 +3806,7 @@ var k = [
 	entityDiagnosticMissing: "Entité introuvable",
 	entityDiagnosticNoModes: "Aucun mode HVAC pris en charge signalé",
 	entityDiagnosticNoRange: "Aucune plage de température signalée",
-	entityDiagnosticNotClimate: "Cette entité n’est pas de type climate",
+	entityDiagnosticNotClimate: "Cette entité n’appartient pas au domaine climate de Home Assistant",
 	entityDiagnosticOk: "La configuration du thermostat semble correcte",
 	fanMode: "Mode du ventilateur",
 	horizontalSwingMode: "Oscillation horizontale",
@@ -4009,7 +4009,7 @@ var k = [
 	nextEvents: "Prochains événements",
 	noActiveBoosts: "Aucun forçage actif",
 	noBlocks: "Aucune plage",
-	noManagedEntities: "Aucune entité climate gérée trouvée.",
+	noManagedEntities: "Aucun thermostat géré trouvé.",
 	noTemplates: "Aucun modèle",
 	newTemplate: "Nouveau modèle",
 	noUpcomingEvent: "Aucun événement à venir",
@@ -4178,7 +4178,7 @@ var k = [
 	roomSensorAssistDeadbandHelp: "Place les limites inférieure et supérieure de Room Assist à cette distance de la consigne planifiée. En chauffage ou refroidissement fixe, lorsque Room Assist atteint une limite, il commence à viser l’autre. Les modes automatiques et les plages de température l’utilisent comme marge sans correction. La modification s’applique à l’enregistrement.",
 	roomSensorDeadbandZoneHelp: "Avec un chauffage ou refroidissement fixe, Room Assist progresse vers une limite jusqu’à ce que la pièce l’atteigne, puis inverse vers l’autre. Les plages natives conservent cette zone comme marge extérieure sans correction.",
 	roomSensorDeadbandZoneHelpAutomatic: "Avec un mode automatique scalaire, Room Assist n’applique aucune correction tant que la pièce reste dans cette marge.",
-	roomSensorDeadbandZoneHelpGeneric: "Le mode effectif du climate détermine comment Room Assist utilise cette zone morte.",
+	roomSensorDeadbandZoneHelpGeneric: "Le mode effectif du thermostat détermine comment Room Assist utilise cette zone morte.",
 	roomSensorDeadbandZoneAutomatic: "Marge sans correction · ±{value}",
 	roomSensorDeadbandZoneGeneric: "Zone morte · ±{value}",
 	roomSensorDeadbandZoneCompact: "Zone morte · ±{value}",
@@ -4213,8 +4213,8 @@ var k = [
 	roomSensorGapAboveTarget: "{value} au-dessus de la consigne",
 	roomSensorGapBelowTarget: "{value} sous la consigne",
 	roomSensorClimateTarget: "Consigne du thermostat",
-	roomSensorClimateTargetHelp: "La consigne du thermostat est la valeur actuellement indiquée par l’entité climate ; ce n’est pas la température cible de la pièce.",
-	roomSensorClimateTargetAppliedHelp: "La consigne du thermostat est la valeur temporaire envoyée par Velair à l’entité climate lorsque Room Assist est actif ; ce n’est pas la température cible de la pièce.",
+	roomSensorClimateTargetHelp: "La consigne du thermostat est la valeur actuellement indiquée par l’entité ; ce n’est pas la température cible de la pièce.",
+	roomSensorClimateTargetAppliedHelp: "La consigne du thermostat est la valeur temporaire envoyée par Velair à l’entité lorsque Room Assist est actif ; ce n’est pas la température cible de la pièce.",
 	roomSensorClimateTargetStepHelp: "Room Assist a calculé {calculated}. Ce thermostat accepte des pas de {step}, Velair a donc appliqué {applied} en toute sécurité.",
 	roomSensorAppliedLow: "Minimum appliqué",
 	roomSensorAppliedHigh: "Maximum appliqué",
@@ -4278,24 +4278,24 @@ var k = [
 	diagnosticsRecentHistory: "Historique d’exécution récent ({count}/{limit})",
 	diagnosticsNoHistory: "Aucun événement pertinent n’a été observé depuis le démarrage de Velair.",
 	diagnosticsPrivacy: "L’historique reste uniquement en mémoire et est effacé au redémarrage. Les rapports ne contiennent aucune télémétrie ; les identifiants d’entité sont remplacés sauf si vous choisissez de les conserver.",
-	diagnosticsEntityUnavailable: "L’entité climate est indisponible.",
-	diagnosticsEntityUnknown: "L’entité climate indique un état inconnu.",
+	diagnosticsEntityUnavailable: "Le thermostat est indisponible.",
+	diagnosticsEntityUnknown: "Le thermostat indique un état inconnu.",
 	diagnosticsCalculatedIntent: "Intention calculée",
 	diagnosticsLastApplication: "Dernière application",
 	diagnosticsRoomAssist: "Room Assist",
-	diagnosticsPreconditioning: "Preconditioning",
-	diagnosticsComfort: "Comfort",
+	diagnosticsPreconditioning: "Anticipation",
+	diagnosticsComfort: "Confort",
 	diagnosticsAssociatedSensors: "Capteurs associés",
 	diagnosticsLoadError: "Le diagnostic n’a pas pu être chargé. Rouvrez la section.",
 	diagnosticsExportError: "Le rapport de diagnostic n’a pas pu être téléchargé.",
 	diagnosticsDeliveryFailed: "La dernière tentative d’envoi a échoué et peut être réessayée.",
-	diagnosticsDeliveryRetrying: "Velair réessaie d’envoyer la dernière intention climate.",
+	diagnosticsDeliveryRetrying: "Velair réessaie d’envoyer la dernière consigne au thermostat.",
 	diagnosticsDeliveryExhausted: "La limite de tentatives d’envoi a été atteinte.",
-	diagnosticsDeliveryInvalidIntent: "L’intention climate actuelle n’a pas pu être déterminée.",
+	diagnosticsDeliveryInvalidIntent: "La consigne actuelle du thermostat n’a pas pu être déterminée.",
 	diagnosticsRuntimeUnavailable: "Les détails de l’intention en cours ne sont pas disponibles.",
 	diagnosticsSensorUnavailable: "Un capteur associé est absent ou indisponible.",
-	diagnosticsUnits: "Climates gérés",
-	diagnosticsNoUnits: "Aucun climate géré n’est disponible pour le diagnostic.",
+	diagnosticsUnits: "Thermostats gérés",
+	diagnosticsNoUnits: "Aucun thermostat géré n’est disponible pour le diagnostic.",
 	diagnosticsStatusDelivery: "État et envoi",
 	diagnosticsActiveConfiguration: "Configuration active",
 	diagnosticsFunctions: "Fonctions",
@@ -4306,7 +4306,7 @@ var k = [
 	diagnosticsLastError: "Dernière erreur",
 	diagnosticsScheduleSource: "Source du programme",
 	diagnosticsMode: "Mode",
-	diagnosticsProfile: "Profile",
+	diagnosticsProfile: "Profil",
 	diagnosticsOverride: "Remplacement",
 	diagnosticsPauses: "Pauses actives",
 	diagnosticsHvacModes: "Modes HVAC",
@@ -4327,19 +4327,19 @@ var k = [
 	diagnosticsStatusWithIssues: "{status} : {issues}",
 	diagnosticsHistoryLog: "Journal d’exécution",
 	diagnosticsLogTime: "Heure",
-	diagnosticsLogClimate: "Climate",
+	diagnosticsLogClimate: "Thermostat",
 	diagnosticsLogType: "Événement",
 	diagnosticsLogMessage: "Détails",
 	diagnosticsLogResizeColumn: "Redimensionner la colonne {column}",
 	diagnosticsHistoryClimateFilter: "Origines",
 	diagnosticsHistorySourcesLegend: "Sélectionner les sources d’événements",
 	diagnosticsHistoryNoSources: "Aucune source",
-	diagnosticsHistorySourceCount: "{count} appareils climate",
-	diagnosticsHistorySourceCountWithVelair: "{count} appareils climate + Velair",
+	diagnosticsHistorySourceCount: "{count} thermostats",
+	diagnosticsHistorySourceCountWithVelair: "{count} thermostats + Velair",
 	diagnosticsHistoryClimateWithVelair: "{climate} et Velair",
 	diagnosticsHistorySourcesDone: "Terminé",
 	diagnosticsHistoryCategoryFilter: "Catégorie",
-	diagnosticsHistoryAllSources: "Tous les climates + Velair",
+	diagnosticsHistoryAllSources: "Tous les thermostats + Velair",
 	diagnosticsHistoryVelairOnly: "Velair uniquement",
 	diagnosticsHistoryAllCategories: "Toutes les catégories",
 	diagnosticsHistoryFrom: "Du",
@@ -4353,17 +4353,17 @@ var k = [
 	diagnosticsHistoryUpdateError: "Les réglages de l’historique de diagnostic n’ont pas pu être enregistrés.",
 	diagnosticsHistoryClearError: "L’historique de diagnostic n’a pas pu être effacé.",
 	diagnosticsHistoryCategoryControl: "Contrôle et programmes",
-	diagnosticsHistoryCategoryControlDescription: "Programmes, Profiles, Modes, Boosts, pauses, réglages externes et changements de contrôle Automatique/Manuel.",
+	diagnosticsHistoryCategoryControlDescription: "Programmes, profils, modes, forçages, pauses, réglages externes et changements de contrôle automatique/manuel.",
 	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
 	diagnosticsHistoryCategoryRoomAssistDescription: "Changements d’état et corrections de consigne de Room Assist.",
-	diagnosticsHistoryCategoryPreconditioning: "Preconditioning",
-	diagnosticsHistoryCategoryPreconditioningDescription: "Plans, annulations et observations d’apprentissage de Preconditioning.",
-	diagnosticsHistoryCategoryComfort: "Comfort",
-	diagnosticsHistoryCategoryComfortDescription: "Changements des conditions Comfort évaluées localement.",
-	diagnosticsHistoryCategoryDelivery: "Envoi au climate",
-	diagnosticsHistoryCategoryDeliveryDescription: "Commandes climate échouées, réessayées, épuisées ou annulées.",
+	diagnosticsHistoryCategoryPreconditioning: "Anticipation",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Plans, annulations et observations d’apprentissage de l’anticipation.",
+	diagnosticsHistoryCategoryComfort: "Confort",
+	diagnosticsHistoryCategoryComfortDescription: "Changements des conditions de confort évaluées localement.",
+	diagnosticsHistoryCategoryDelivery: "Envoi au thermostat",
+	diagnosticsHistoryCategoryDeliveryDescription: "Commandes du thermostat échouées, réessayées, épuisées ou annulées.",
 	diagnosticsHistoryCategoryAvailability: "Disponibilité",
-	diagnosticsHistoryCategoryAvailabilityDescription: "Climates gérés qui deviennent indisponibles, inconnus ou à nouveau disponibles.",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Thermostats gérés qui deviennent indisponibles, inconnus ou à nouveau disponibles.",
 	diagnosticsReasonCurrentSchedule: "Programme actuel",
 	diagnosticsReasonMissingTargetStep: "Pas de température cible indisponible",
 	diagnosticsReasonNoLongerPlanned: "N’est plus planifié",
@@ -4389,9 +4389,9 @@ var k = [
 	diagnosticsOperationUpdated: "Mis à jour",
 	diagnosticsOperationRemoved: "Supprimé",
 	diagnosticsOperationSetTemperature: "Régler la température",
-	diagnosticsEventBoostEnded: "Boost terminé",
-	diagnosticsEventBoostStarted: "Boost démarré",
-	diagnosticsEventClimateTargetApplied: "Consigne climate appliquée",
+	diagnosticsEventBoostEnded: "Forçage terminé",
+	diagnosticsEventBoostStarted: "Forçage démarré",
+	diagnosticsEventClimateTargetApplied: "Consigne du thermostat appliquée",
 	diagnosticsEventExternalAdjustment: "Réglage externe",
 	diagnosticsEventZoneControlChanged: "Contrôle de programmation modifié",
 	diagnosticsControlAutomatic: "Automatique",
@@ -4404,17 +4404,17 @@ var k = [
 	diagnosticsControlChanged: "De {previous} à {current}",
 	diagnosticsUntil: "jusqu’à {time}",
 	diagnosticsReasonResumed: "Repris",
-	diagnosticsEventProfileChanged: "Profile modifié",
+	diagnosticsEventProfileChanged: "Profil modifié",
 	diagnosticsEventSchedulerModeChanged: "Mode du planificateur modifié",
 	diagnosticsEventZonePauseAdded: "Motif de pause ajouté",
 	diagnosticsEventZonePauseRemoved: "Motif de pause supprimé",
 	diagnosticsEventZonePauseUpdated: "Motif de pause mis à jour",
 	diagnosticsEventZonePaused: "Zone mise en pause",
 	diagnosticsEventZoneResumed: "Zone reprise",
-	diagnosticsEventComfortAssessmentChanged: "Évaluation Comfort modifiée",
-	diagnosticsEventPreconditioningObservationRecorded: "Observation Preconditioning enregistrée",
-	diagnosticsEventPreconditioningPlanCancelled: "Plan Preconditioning annulé",
-	diagnosticsEventPreconditioningPlanUpdated: "Plan Preconditioning mis à jour",
+	diagnosticsEventComfortAssessmentChanged: "Évaluation du confort modifiée",
+	diagnosticsEventPreconditioningObservationRecorded: "Observation d’anticipation enregistrée",
+	diagnosticsEventPreconditioningPlanCancelled: "Plan d’anticipation annulé",
+	diagnosticsEventPreconditioningPlanUpdated: "Plan d’anticipation mis à jour",
 	diagnosticsEventRoomAssistRestored: "Room Assist restauré",
 	diagnosticsEventRoomAssistStateChanged: "État de Room Assist modifié",
 	diagnosticsEventRoomAssistUpdated: "Room Assist mis à jour",
@@ -4422,15 +4422,15 @@ var k = [
 	diagnosticsDownloadNow: "Télécharger le rapport",
 	diagnosticsDownloadActionDescription: "Ouvrir les options de confidentialité avant de télécharger un rapport de diagnostic pour l’assistance.",
 	diagnosticsExportOptions: "Confidentialité du rapport",
-	diagnosticsExportExplanation: "La vue locale utilise les ID locaux réels. Gardez cette option activée pour remplacer les ID des entités climate et des capteurs par des alias stables dans le rapport.",
+	diagnosticsExportExplanation: "La vue locale utilise les ID locaux réels. Gardez cette option activée pour remplacer les ID des thermostats et des capteurs par des alias stables dans le rapport.",
 	diagnosticsRedactEntityIds: "Remplacer les ID d’entité par des alias",
-	diagnosticsOperationalIdsAlwaysRedacted: "Les identifiants de Profile, Mode et pause sont toujours supprimés.",
+	diagnosticsOperationalIdsAlwaysRedacted: "Les identifiants de profil, mode et pause sont toujours supprimés.",
 	diagnosticsRawEntityIdsWarning: "Ce rapport inclura les ID d’entité d’origine. Vérifiez-le avant de le partager.",
 	diagnosticsDownloadWithEntityIds: "Télécharger avec les ID",
-	diagnosticsSelectUnit: "Sélectionnez un appareil climate pour afficher son diagnostic.",
+	diagnosticsSelectUnit: "Sélectionnez un thermostat pour afficher son diagnostic.",
 	diagnosticsDeliverySuccess: "Commande transmise avec succès",
-	diagnosticsScheduleSourceProfilePause: "Pause du Profile",
-	diagnosticsOverrideTurnOff: "Éteindre le climate",
+	diagnosticsScheduleSourceProfilePause: "Pause du profil",
+	diagnosticsOverrideTurnOff: "Éteindre le thermostat",
 	diagnosticsNone: "Aucun",
 	diagnosticsReasonReplaced: "Remplacé par une demande plus récente",
 	diagnosticsReasonStopped: "Arrêté",
@@ -4466,7 +4466,7 @@ var k = [
 	temperatureMigrationComplete: "Températures mises à jour et planificateur relancé",
 	temperatureMigrationFailed: "Impossible de mettre à jour les températures",
 	temperatureLegacyResetQuestion: "Réinitialiser les anciennes données Celsius pour {target} ?",
-	temperatureLegacyResetExplanation: "Cette installation a été créée par une version de Velair qui enregistrait uniquement des valeurs Celsius. Comme Home Assistant utilise maintenant {target}, réinitialisez Velair pour supprimer les anciennes données et créer des valeurs par défaut sûres adaptées à l’unité. Les prochains changements d’unité proposeront une conversion complète.",
+	temperatureLegacyResetExplanation: "Cette installation a été créée par une version de Velair qui enregistrait uniquement des valeurs Celsius. Comme Home Assistant utilise maintenant {target}, réinitialisez Velair pour supprimer les anciennes données et créer des valeurs par défaut sûres adaptées à l’unité. Les prochains changements d’unité de Home Assistant proposeront une conversion complète.",
 	temperatureLegacyResetStopped: "Le planificateur est arrêté car cette ancienne installation contient uniquement des données Celsius alors que Home Assistant utilise les Fahrenheit. Ouvrez les réglages Velair et utilisez Réinitialiser Velair pour créer des valeurs par défaut en Fahrenheit.",
 	temperatureStep: "Pas",
 	temperatureStepNotReported: "Non signalé par Home Assistant",
@@ -4548,62 +4548,1044 @@ var k = [
 		preheating: "Préchauffage",
 		defrosting: "Dégivrage"
 	}
-}, ut = /* @__PURE__ */ t({ nl: () => dt }), dt = {
-	addBlock: "Blok toevoegen",
-	externalConditionProfilesSupported: "Default, Profile and Mode schedules are supported",
-	profileExternalScheduleOnly: "External zones support Default, Profile or Mode schedules only. Pause and direct Velair actions remain unavailable.",
-	profileExternalMaxChanges: "{climate} exceeds the controller limit of {count} changes on {day}.",
-	profileExternalTimeGrid: "{climate} must use {minutes}-minute intervals on {day}.",
-	profileExternalUnsupportedBlock: "{climate} contains a block that the external controller cannot represent.",
-	externalControllersInUse: "External controllers in use",
-	externalConditionDefaultOnly: "Default schedules only",
-	externalConditionHvacModes: "Supported HVAC modes: {modes}",
-	externalConditionTargetTypes: "Supported target types: {types}",
-	externalConditionActions: "Supported schedule actions: {actions}",
-	externalConditionTurnOffUnsupported: "Turn-off blocks are not supported",
-	externalConditionOptionFields: "Supported climate options: {fields}",
-	externalConditionOptionsUnsupported: "Climate option fields are not supported",
-	externalConditionMaxChanges: "Maximum {count} schedule changes per day",
-	externalConditionTimeGrid: "Times must use {minutes}-minute intervals",
-	externalConditionMidnightContinuityCounts: "An implicit midnight continuity change counts toward the daily maximum",
-	externalConditionsUnavailable: "Controller conditions are unavailable.",
-	externalCapability_action_set_temperature: "Set temperature",
-	externalCapability_action_turn_off: "Turn off",
-	externalCapability_hvac_heat: "Heating",
-	externalCapability_hvac_cool: "Cooling",
-	externalCapability_target_scalar: "Single target temperature",
-	externalCapability_target_range: "Target temperature range",
+}, ut = /* @__PURE__ */ t({ it: () => dt }), dt = {
+	addBlock: "Aggiungi blocco",
+	externalSystems: "Sistemi esterni",
+	externalSystemsDescription: "Scegli chi esegue la programmazione settimanale effettiva per le entità climatiche compatibili. Velair non controlla mai fisicamente le zone esterne.",
+	externalControllersInUse: "Controller esterni in uso",
+	externalConditionProfilesSupported: "Sono supportate le programmazioni predefinite, del profilo e della modalità",
+	externalConditionDefaultOnly: "Solo programmazioni predefinite",
+	profileExternalScheduleOnly: "Le zone esterne supportano solo le programmazioni predefinite, del profilo o della modalità. Le pause e le azioni dirette di Velair rimangono non disponibili.",
+	profileExternalMaxChanges: "{climate} supera il limite del controller di {count} modifiche per {day}.",
+	profileExternalTimeGrid: "{climate} deve utilizzare intervalli di {minutes} minuti per {day}.",
+	profileExternalUnsupportedBlock: "{climate} contiene un blocco che il controller esterno non può rappresentare.",
+	externalConditionHvacModes: "Modalità HVAC supportate: {modes}",
+	externalConditionTargetTypes: "Tipi di obiettivo supportati: {types}",
+	externalConditionActions: "Azioni di programmazione supportate: {actions}",
+	externalConditionTurnOffUnsupported: "I blocchi di disattivazione non sono supportati",
+	externalConditionOptionFields: "Opzioni supportate dell'entità climatica: {fields}",
+	externalConditionOptionsUnsupported: "I campi facoltativi dell'entità climatica non sono supportati",
+	externalConditionMaxChanges: "Massimo {count} modifiche alla programmazione al giorno",
+	externalConditionTimeGrid: "Gli orari devono utilizzare intervalli di {minutes} minuti",
+	externalConditionMidnightContinuityCounts: "Se il primo blocco inizia dopo le 00:00, la modifica implicita della continuità di mezzanotte viene conteggiata ai fini del massimo giornaliero",
+	externalConditionsUnavailable: "Le condizioni del controller non sono disponibili.",
+	externalCapability_action_set_temperature: "Imposta la temperatura",
+	externalCapability_action_turn_off: "Spegni",
+	externalCapability_hvac_heat: "Riscaldamento",
+	externalCapability_hvac_cool: "Raffreddamento",
+	externalCapability_target_scalar: "Temperatura obiettivo singola",
+	externalCapability_target_range: "Intervallo di temperatura obiettivo",
+	externalExecutionVelair: "Velair (esecuzione locale)",
+	externalExecutionLocal: "Eseguito da Velair",
+	externalExecutionEnabled: "Esecuzione della programmazione esterna abilitata",
+	externalExecutionDisabled: "Esecuzione della programmazione Velair abilitata",
+	externalScheduleRequired: "Crea e salva una programmazione con almeno un blocco di temperatura prima di abilitare l'esecuzione esterna.",
+	externalSwitchpointUsage: "{used} dei punti di commutazione del controller {max}",
+	externalSwitchpointBreakdown: "{count} blocchi programmati",
+	externalSwitchpointBreakdownContinuity: "{count} blocchi programmati + 1 punto di continuità mezzanotte",
+	externalActionsInactive: "Le azioni Velair sono inattive perché questo clima viene eseguito da un sistema esterno.",
 	externalProviderAvailability: "Controller: {state}",
-	externalProviderAvailable: "available",
-	externalProviderUnavailable: "unavailable",
-	externalPublication_publishing: "Publishing the effective schedule to the external integration.",
-	externalPublication_published: "The external integration accepted the effective schedule.",
-	externalPublication_failed: "Schedule publication failed.",
-	overviewExternalExecutionProvider: "External controller: {provider}",
+	externalProviderAvailable: "disponibile",
+	externalProviderUnavailable: "non disponibile",
+	externalPublication_publishing: "Pubblicazione della programmazione effettiva nell'integrazione esterna.",
+	externalPublication_published: "L'integrazione esterna ha accettato la programmazione effettiva.",
+	externalPublication_failed: "Pubblicazione della programmazione non riuscita.",
+	overviewZoneExternal: "Esecuzione esterna",
+	overviewExternalLabel: "Esterno",
+	overviewExternalExecutionDescription: "La sequenza temporale pianificata viene eseguita dal controller esterno. Velair non invia azioni climatiche a questa zona.",
+	overviewExternalExecutionProvider: "Controller esterno: {provider}",
+	overviewExternalInfoAction: "Informazioni sull'esecuzione esterna tramite {provider}",
+	overviewExternalStatusPublishing: "Pubblicazione",
+	overviewExternalStatusAccepted: "Accettato",
+	overviewExternalStatusFailed: "Fallito",
+	overviewExternalStatusUnavailable: "Non disponibile",
+	overviewExternalProviderUnavailable: "L'integrazione esterna non è attualmente disponibile. Velair rimane inattivo per questo clima.",
+	overviewExternalZonesUnaffected: "Le zone {count} eseguite esternamente non sono influenzate dalle azioni Velair.",
+	externalChangePolicy: "Modifiche esterne",
+	externalChangePolicyDescription: "Scegli cosa fa Velair dopo che una modalità o una temperatura obiettivo viene modificata al di fuori di Velair. Mantieni automatico riapplica l'impostazione corrente di Velair; le altre opzioni avviano il controllo manuale fino al punto di ritorno selezionato. Le modifiche si applicano alla successiva regolazione esterna. Se Manuale viene selezionato esplicitamente in Panoramica mentre Mantieni automatico è salvato, rimane attivo fino alla ripresa.",
+	externalAdjustmentInfoAction: "Informazioni sulle modifiche esterne",
+	externalChangeKeepAutomatic: "Mantieni l'automatico",
+	externalChangeUntilNextBlock: "Fino al prossimo blocco",
+	externalChangeForDuration: "Per una durata",
+	externalChangeUntilResumed: "Fino alla ripresa",
+	externalChangePolicySaved: "Criterio di modifica esterna salvato",
+	manualAdjustment: "Regolazione manuale",
+	velairControl: "Controllo Velair",
+	automaticScheduling: "Programmazione automatica",
+	overviewControlAutomatic: "Automatico",
+	overviewControlManual: "Manuale",
+	manualAdjustmentStarted: "È iniziata la regolazione manuale",
+	unableEnterManualAdjustment: "Impossibile avviare la regolazione manuale",
+	manualSessionNoNextBlock: "Nessun blocco successivo, fino alla ripresa",
+	manualSessionNextBlockAt: "Fino al prossimo blocco a {time}",
+	manualSessionDuration: "Per {minutes} minuti",
+	manualSessionDurationUntil: "Per {minutes} minuti, fino a {time}",
+	manualSessionUntilResumed: "Fino alla ripresa",
+	manualUnavailableClimate: "Il clima non è disponibile.",
+	manualUnavailableDisabled: "Questo clima è disabilitato in Velair.",
+	manualUnavailableTemperatureMigration: "Risolvere la migrazione dei dati di temperatura prima di modificare il controllo manuale.",
+	manualUnavailableExternalExecution: "Il controllo manuale non è disponibile per le entità climatiche eseguite esternamente.",
+	manualUnavailableScheduler: "La programmazione automatica non è in esecuzione.",
+	manualUnavailableProfilePause: "Il profilo attivo mette in pausa questa entità climatica.",
+	manualUnavailableZonePause: "Un’altra pausa attualmente controlla questo clima.",
+	manualAdjustmentActive: "Fuori dalla programmazione automatica",
+	automaticControlResumed: "La programmazione automatica è ripresa",
+	durationMinutes: "Durata (minuti)",
+	apply: "Applica",
+	cloneDayToDays: "Clona il giorno in",
+	cloneDayToThermostats: "Clona il giorno in",
+	cloneAction: "Clona",
+	clonePresetLabel: "Selezione rapida del giorno",
+	clonePresetWeekdays: "Lun-ven",
+	clonePresetWeekend: "Fine settimana",
+	clonePresetAll: "Tutti i giorni",
+	clonePresetClear: "Cancella selezione",
+	cancel: "Annulla",
+	close: "Chiudi",
+	profileSaveDayTemplateTitle: "Salva il giorno come modello",
+	profileSaveDayTemplateDescription: "Salva la programmazione modificata di {day} come modello riutilizzabile. La bozza del profilo rimarrà invariata.",
+	profileCloneDayClimatesTitle: "Clona il giorno nelle entità climatiche",
+	profileCloneDayClimatesDescription: "Copia la programmazione di {source} per {day} nello stesso giorno delle entità climatiche selezionate.",
+	profileCloneDayClimatesTargets: "Entità climatiche di destinazione",
+	profileCloneDayClimatesOverwrite: "Questo sostituisce solo quel giorno della settimana in ogni clima selezionato.",
+	profileCloneDayClimatesBehaviorChange: "Queste entità passeranno dalla programmazione predefinita o dalla pausa alla programmazione del profilo: {targets}.",
+	profileCloneDayIncompatibleTarget: "{entity} non può utilizzare questo tipo di obiettivo alle {start}. Nessuna entità climatica è stata modificata.",
+	profileCloneDayIncompatibleMode: "{entity} non supporta la modalità {value} alle {start}. Nessuna entità climatica è stata modificata.",
+	profileCloneDayIncompatibleOptions: "{entity} non supporta tutte le impostazioni facoltative alle {start}. Nessuna entità climatica è stata modificata.",
+	profileCloneDayIncompatibleTemperature: "{entity} non può utilizzare la temperatura alle {start} con i propri limiti e incrementi. Nessuna entità climatica è stata modificata.",
+	appliedDays: "Giorni aggiornati: {count}",
+	appliedTemplateTargets: "Applicato a {count} destinazioni",
+	appliedThermostats: "Termostati aggiornati: {count}",
+	applying: "Applicazione…",
+	applyTemplate: "Applica modello",
+	applyTo: "Applica a",
+	applyToAction: "Applica a…",
+	applyTemplateTo: "Applica {template} a…",
+	boost: "Incremento",
+	boostActive: "Incremento attivo",
+	activeBoosts: "Incrementi attivi",
+	availableModes: "Modalità disponibili",
+	boostTarget: "Temperatura dell'incremento",
+	boostUntil: "Termina tra",
+	blocks: "Blocchi",
+	build: "Versione build",
+	cardView: "Visualizzazione della scheda",
+	activeSetupCardControls: "Controlli di configurazione attivi",
+	activeSetupCardControlsBoth: "Modalità e profili",
+	activeSetupCardControlsDescription: "Scegli cosa può modificare questa scheda. La modalità corrente e i profili applicati rimangono visibili.",
+	activeSetupCardControlsModes: "Solo modalità",
+	activeSetupCardControlsProfiles: "Solo profili",
+	cardViewOverviewBoosts: "Panoramica: incrementi attivi",
+	cardViewOverviewEvents: "Panoramica: prossimi eventi",
+	cardViewOverviewStatus: "Panoramica: stato della programmazione",
+	cardViewOverviewTimeline: "Panoramica: cronologia di oggi",
+	cardViewOverviewZones: "Panoramica: zone",
+	cardViewActiveSetup: "Profili: configurazione attiva",
+	cardViewSchedules: "Programmazioni: editor",
+	cardViewSensors: "Room Assist: configurazione e stato",
+	cardViewComfort: "Comfort: configurazione e stato",
+	cardViewPreconditioning: "Precondizionamento: configurazione e stato",
+	cardThermostatHidden: "Nascosto in questa scheda",
+	cardThermostatVisible: "Visibile in questa scheda",
+	cardThermostats: "Termostati in questa scheda",
+	cardThermostatsDescription: "Scegli quali termostati mostrare in questa scheda e organizza il loro ordine.",
+	comfortCardVisibility: "Visibilità della scheda Comfort",
+	comfortCardVisibilityDescription: "Scegli quale configurazione Comfort e quali grafici in tempo reale mostrare in questa scheda.",
+	comfortCardShowCo2: "Mostra il grafico della CO2",
+	comfortCardShowConfiguration: "Mostra configurazione",
+	comfortCardShowHumidity: "Mostra il grafico dell'umidità",
+	comfortCardShowTemperature: "Mostra il grafico della temperatura",
+	roomAssistCardVisibility: "Visibilità Room Assist",
+	roomAssistCardVisibilityDescription: "Scegli quali controlli Room Assist e dettagli di stato mostrare da questa scheda.",
+	roomAssistShowDebounce: "Mostra ritardo aggiornamento",
+	roomAssistShowDeadband: "Mostra la banda morta Room Assist",
+	roomAssistShowLiveStatus: "Mostra lo stato in tempo reale",
+	roomAssistShowMaxDelta: "Mostra il delta assistenza massimo",
+	roomAssistShowSensor: "Mostra il sensore della temperatura ambiente",
+	roomAssistShowSwitch: "Mostra l'interruttore di accensione/spegnimento",
+	current: "Attuale",
+	currentHumidity: "Umidità",
+	currentTemperature: "Temperatura attuale",
+	currentTime: "Ora corrente: {time}",
+	clear: "Cancella",
+	confirmDeleteTemplate: "Eliminare il modello {template}?",
+	confirmTemplate: "Sostituire {weekday} con {template}?",
+	comfort: "Comfort",
+	comfortAirQuality: "Qualità dell'aria",
+	comfortAirQualityElevated: "CO2 elevata",
+	comfortAirQualityGood: "Buona aria",
+	comfortAirQualityPoor: "Scarsa qualità dell'aria",
+	comfortAirQualityUnavailable: "CO2 non disponibile",
+	comfortAutomaticSourceValue: "Automatico: {entity}",
+	comfortCo2: "CO2",
+	comfortCo2Attention: "Elevato",
+	comfortCo2Limits: "Limiti di CO2",
+	comfortCo2LimitsHelp: "Elevata indica un primo avviso sulla qualità dell'aria. Scarsa indica un livello di CO2 più grave.",
+	comfortCo2Poor: "Scarso",
+	comfortCo2Sensor: "Sensore di CO2",
+	comfortCollapseClimate: "Comprimi {climate}",
+	comfortConditionCold: "Freddo",
+	comfortConditionColdAndDry: "Freddo e secco",
+	comfortConditionColdAndHumid: "Freddo e umido",
+	comfortConditionComfortable: "Confortevole",
+	comfortConditionDry: "Aria secca",
+	comfortConditionHot: "Caldo",
+	comfortConditionHotAndDry: "Caldo e secco",
+	comfortConditionHotAndHumid: "Caldo e umido",
+	comfortConditionHumid: "Umido",
+	comfortConditionHumidityComfortable: "Umidità nell'intervallo",
+	comfortConditionMonitoringOff: "Monitoraggio disattivato",
+	comfortConditionNoReadings: "Nessuna lettura",
+	comfortConditionReadingsOutdated: "Letture obsolete",
+	comfortConditionTemperatureComfortable: "Temperatura nell'intervallo",
+	comfortCooler: "Più fresco",
+	comfortCurrentReadings: "Letture attuali",
+	comfortDataFreshness: "Freschezza dei dati",
+	comfortDataIssueCo2Missing: "CO2 non disponibile",
+	comfortDataIssueCo2Stale: "Lettura della CO2 obsoleta",
+	comfortDataIssueHumidityMissing: "Umidità non disponibile",
+	comfortDataIssueHumidityStale: "Lettura dell'umidità obsoleta",
+	comfortDataIssueTemperatureMissing: "Temperatura non disponibile",
+	comfortDataIssueTemperatureStale: "Lettura della temperatura obsoleta",
+	comfortDataPartial: "Letture parziali",
+	comfortDataStale: "Letture obsolete",
+	comfortDataUnavailable: "Nessuna lettura utilizzabile",
+	comfortDisabledDetail: "Il monitoraggio del comfort è disattivato per questo clima. Nessun sensore di comfort viene tracciato.",
+	comfortDoNotMonitor: "Non monitorare la CO2",
+	comfortDoNotMonitorHumidity: "Non monitorare l'umidità",
+	comfortDrier: "Più secco",
+	comfortExpandClimate: "Espandi {climate}",
+	comfortHumidity: "Umidità",
+	comfortHumidityRange: "Intervallo di umidità",
+	comfortHumidityRangeHelp: "Intervalli più stretti avvisano prima; quelli più ampi sono più tolleranti.",
+	comfortHumiditySensor: "Sensore di umidità",
+	comfortIntroDetail: "Monitora temperatura, umidità e CO2 localmente, quindi utilizza gli eventi Velair nelle automazioni Home Assistant.",
+	comfortIntroTitle: "Comfort ambientale",
+	comfortMaximum: "Massimo",
+	comfortMinimum: "Minimo",
+	comfortMoreHumid: "Più umido",
+	comfortMapCurrentPosition: "Posizione attuale: {temperature}, {humidity}",
+	comfortNotMonitored: "Non monitorato",
+	comfortSelectSensor: "Utilizza la sorgente automatica",
+	comfortStaleAfter: "Considera obsoleto dopo",
+	comfortStaleAfterHelp: "Tempo massimo dall'ultimo aggiornamento dello stato in Home Assistant. Un valore più alto accetta più a lungo le letture precedenti; uno più basso segnala prima i sensori obsoleti.",
+	comfortTargetZone: "Intervallo di comfort",
+	comfortTemperature: "Temperatura",
+	comfortTemperatureRange: "Intervallo di temperatura",
+	comfortTemperatureRangeHelp: "Intervalli più stretti avvisano prima; quelli più ampi sono più tolleranti.",
+	comfortTemperatureSensor: "Sensore di temperatura",
+	comfortUnavailable: "Clima non disponibile",
+	comfortWarmer: "Più caldo",
+	createTemplate: "Crea modello",
+	customTemplateName: "Nome del modello",
+	day: "Giorno",
+	daySchedule: "Programmazione giornaliera",
+	defaultZone: "Prima zona gestita",
+	deleteBlock: "Elimina blocco",
+	deleteTemplate: "Elimina modello",
+	dismiss: "Ignora",
+	duplicateStart: "Ora di inizio duplicata: {start}",
+	entityDiagnosticMissing: "Entità non trovata",
+	entityDiagnosticNoModes: "Nessuna modalità HVAC supportata segnalata",
+	entityDiagnosticNoRange: "Nessun intervallo di temperatura segnalato",
+	entityDiagnosticNotClimate: "L'entità non è un clima",
+	entityDiagnosticOk: "La configurazione del termostato sembra OK",
+	fanMode: "Modalità ventola",
+	horizontalSwingMode: "Oscillazione orizzontale",
+	invalidStart: "Ora di inizio non valida: {start}",
+	invalidTemperature: "Temperatura non valida per {start}",
+	invalidTemperatureRange: "Utilizza un valore da {min} a {max}",
+	invalidTargetRangeOrder: "L'obiettivo di riscaldamento non deve essere superiore all'obiettivo di raffreddamento",
+	invalidTemperatureStep: "Utilizza incrementi di {step}",
+	incompatibleScheduleTargets: "Alcuni obiettivi della programmazione richiedono una verifica",
+	incompatibleScheduleTargetsDescription: "I {count} obiettivi memorizzati non corrispondono più all'intervallo o all'incremento di temperatura del termostato. Apri le programmazioni e salva un valore supportato.",
+	operationRecoveryRequired: "Velair ha salvato i dati ma non è stato possibile riprendere",
+	operationRecoveryDescription: "La programmazione resta ferma. Ricarica l'integrazione Velair o riavvia Home Assistant per completare il ripristino.",
+	operationCancelled: "L'operazione è stata annullata",
+	operationCurrentZone: "Elaborazione di {zone}",
+	operationDefaultCompleted: "Programmazioni predefinite ripristinate",
+	operationDefaultFailed: "Impossibile ripristinare le programmazioni predefinite",
+	operationDefaultPartial: "Programmazioni predefinite ripristinate con problemi",
+	operationDefaultRunning: "Ripristino delle programmazioni predefinite",
+	operationDismiss: "Ignora lo stato dell'operazione",
+	operationFailedHelp: "Per maggiori dettagli, esamina l'entità climatica interessata e i registri di Home Assistant",
+	operationFailureCount: "{count} zone con problemi: {zones}",
+	operationFailureOne: "1 zona con problemi: {zones}",
+	operationModeCompleted: "Modalità {target} applicata",
+	operationModeFailed: "Impossibile applicare la modalità {target}",
+	operationModePartial: "Modalità {target} applicata con problemi",
+	operationModeRunning: "Applicazione della modalità {target}",
+	operationNoZones: "Nessuna zona necessitava di modifiche",
+	operationProfileCompleted: "Profilo {target} applicato",
+	operationProfileFailed: "Impossibile applicare il profilo {target}",
+	operationProfilePartial: "Profilo {target} applicato con problemi",
+	operationProfileRunning: "Applicazione del profilo {target}",
+	operationProgress: "{completed} delle zone {total} elaborate",
+	operationProgressLabel: "Avanzamento dell'operazione Velair",
+	keep: "Mantieni la modalità corrente",
+	keepMode: "Mantieni la modalità corrente",
+	tagline: "L'automazione del clima che si adatta alla tua vita.",
+	loading: "Caricamento...",
+	loadingEntities: "Caricamento delle zone gestite...",
+	managedEntityAvailable: "Disponibile",
+	managedEntityMissing: "Non trovato",
+	managedEntitiesStatus: "Termostati gestiti",
+	menu: "Menù",
+	minutesShort: "min",
+	secondsShort: "s",
+	providedData: "Dati forniti",
+	profiles: "Profili",
+	scheduleSourceLabel: "Origine della programmazione",
+	defaultSchedules: "Programmazioni predefinite",
+	defaultSchedulesDescription: "Il piano settimanale utilizzato quando nessun profilo controlla un termostato.",
+	profileSchedules: "Programmazioni del profilo",
+	profileSchedulesDescription: "Crea profili e scegli se ciascun termostato utilizza la propria programmazione, la programmazione predefinita o mette in pausa.",
+	profileScheduleErrorsSummary: "Verifica la programmazione non valida in: {climates}.",
+	profileScheduleClimateBlockError: "{climate}, {day} alle {start}: {error}",
+	profileDefaultScheduleHelp: "Questo termostato continua a utilizzare la programmazione predefinita mentre il profilo è attivo.",
+	profilesAndModes: "Profili e modalità",
+	activeSetup: "Configurazione attiva",
+	activeSetupDescription: "Scopri cosa controlla attualmente le tue zone e modificalo da un unico posto.",
+	activeSetupChange: "Cambia",
+	activeSetupModesHelp: "Scegli la modalità che deve controllare i profili attivi.",
+	activeSetupAppliedProfiles: "Profili applicati",
+	activeSetupNoProfiles: "Nessun profilo applicato. Le zone seguono le rispettive programmazioni predefinite.",
+	activeSetupManualProfile: "Attiva un profilo manualmente",
+	activeSetupManualProfileHelp: "Ciò sostituisce tutti i profili attivi e cambia la modalità in Manuale. Per attivare più profili insieme, utilizzare una modalità.",
+	profilesPanelIntro: "I profili definiscono routine climatiche alternative. Le modalità attivano uno o più profili insieme.",
+	profileLibrarySelectorLabel: "Librerie di profili e modalità",
+	profilesLibraryDescription: "Definisci il comportamento delle zone selezionate.",
+	profilesDescription: "Un profilo definisce il comportamento di una o più zone quando è attivo.",
+	profileActive: "Profilo attivo",
+	profilesActive: "Profili attivi",
+	profileActivate: "Attiva profilo",
+	profileBehaviorDefault: "Programmazione predefinita",
+	profileBehaviorPause: "Pausa",
+	profileBehaviorSchedule: "Programmazione del profilo",
+	profileBlockAction: "Azione",
+	profileBrowseIcons: "Sfoglia le icone disponibili",
+	profileConfirmDelete: "Eliminare {profile} e tutte le relative impostazioni di zona? Questa operazione non può essere annullata.",
+	profileConfirmDeleteActive: "{profile} è attivo. Eliminarlo e ripristinare le sue zone su Predefinite? Gli altri profili attivi rimarranno. Questa operazione non può essere annullata.",
+	profileColor: "Colore del profilo",
+	profileColorHelp: "Utilizzato per identificare questo profilo nei selettori e negli elenchi.",
+	profileCopyTemplate: "Copia il modello in questo giorno",
+	profileCreate: "Nuovo profilo",
+	profileDelete: "Elimina profilo",
+	profileDeleted: "Profilo eliminato",
+	profileDescription: "Descrizione",
+	profileDescriptionCharactersRemaining: "{count} caratteri rimanenti",
+	profileDescriptionTooLong: "La descrizione deve contenere {count} caratteri o meno.",
+	profileDiscardChanges: "Eliminare le modifiche al profilo non salvate?",
+	discardUnsavedChanges: "Eliminare le modifiche non salvate?",
+	profileCollapseClimate: "Comprimi {climate}",
+	profileExpandClimate: "Espandi {climate}",
+	profileIcon: "Icona",
+	profileIconHelp: "Utilizza una chiave Material Design Icons, ad esempio mdi:briefcase-outline.",
+	profileActiveContext: "Contesto climatico attivo",
+	modeBuiltInHelp: "Le modalità integrate non possono essere rinominate o eliminate.",
+	modeInformation: "Informazioni su {mode}",
+	modeChooseProfile: "Scegli un profilo",
+	modeConfirmDelete: "Eliminare la modalità {mode}? Questa operazione non può essere annullata.",
+	modeCreate: "Nuova modalità",
+	modeDelete: "Elimina modalità",
+	modeDeleted: "Modalità eliminata",
+	modeDiscardChanges: "Eliminare le modifiche alla modalità non salvate?",
+	modeDefault: "Predefinito",
+	modeDefaultDescription: "Disattiva i profili e ripristina la programmazione predefinita di ciascuna zona.",
+	modeManual: "Manuale",
+	modeManualDescription: "I profili attivi non sono controllati da una modalità.",
+	modeCustomDescription: "Attiva i profili mappati: {profile}.",
+	modeChange: "Cambia modalità",
+	modeLabel: "Modalità",
+	modeMappedProfile: "Profilo mappato: {profile}",
+	modeMappedProfileMissing: "Profilo mappato non disponibile: {profile}",
+	modeMappedProfiles: "Profili mappati: {profiles}",
+	modeName: "Nome della modalità",
+	modeNameDuplicate: "Utilizza un nome di modalità univoco.",
+	modeNameHelp: "Questo valore appare nel selettore della modalità di Home Assistant.",
+	modeNameRequired: "Il nome della modalità è obbligatorio.",
+	modeNameTooLong: "Il nome della modalità deve contenere {count} caratteri o meno.",
+	modeProfile: "Profilo mappato",
+	modeProfiles: "Profili mappati",
+	modeProfileHelp: "La selezione di questa modalità attiva tutti i profili selezionati. Una zona può appartenere solo ad uno di essi.",
+	modeProfileRequired: "Seleziona almeno un profilo ed evita i profili che configurano la stessa zona.",
+	modeSaved: "Modalità salvata",
+	modeSelectToBegin: "Seleziona una modalità personalizzata per modificarla o creane una",
+	modeUnableDelete: "Impossibile eliminare la modalità",
+	modeUnableActivate: "Impossibile modificare la modalità",
+	modeUnableSave: "Impossibile salvare la modalità",
+	modesDescription: "Una modalità attiva uno o più profili insieme da Velair o Home Assistant.",
+	modesLibraryDescription: "Attiva uno o più profili insieme.",
+	modesEntityNote: "Le automazioni possono selezionare una modalità tramite l'entità Modalità Velair o attivare un profilo con velair.activate_profile e il relativo ID di automazione.",
+	modesTitle: "Modalità",
+	profilesActiveCount: "{count} profili attivi",
+	profileId: "Identificatore per automazioni",
+	profileIdReadonlyHelp: "ID stabile di sola lettura utilizzato da automazioni e servizi.",
+	profileInvalidIcon: "Utilizza una chiave valida nel formato mdi:nome-icona.",
+	profileInvalidColor: "Scegli un colore valido nel formato #RRGGBB.",
+	profileInvalidSchedule: "Controlla che ogni blocco abbia un'ora e una temperatura valide e univoche.",
+	profileName: "Nome del profilo",
+	profileNameRequired: "Il nome del profilo è obbligatorio",
+	profileNewName: "Nuovo profilo",
+	profileNoDescription: "Nessuna descrizione",
+	profileNoneCreated: "Nessun profilo",
+	profileDefaultDescription: "Ciascuna zona utilizza la propria programmazione predefinita.",
+	profileOverviewLabel: "Profilo",
+	profilePauseAction: "Durante la pausa",
+	profilePauseKeep: "Lascia invariata l'entità climatica",
+	profilePauseTurnOff: "Spegni l'entità climatica",
+	profileRemovedElsewhere: "Questo profilo è stato rimosso altrove. Seleziona o crea un altro profilo.",
+	profileSaved: "Profilo salvato",
+	profileSave: "Salva profilo",
+	profileSelectToBegin: "Seleziona un profilo per modificarlo",
+	profileUnableActivate: "Impossibile attivare il profilo",
+	profileUnableDelete: "Impossibile eliminare il profilo",
+	profileZoneBehavior: "Comportamento di zona",
+	portability: "Portabilità",
+	portabilityDescription: "Esporta o importa i dati Velair tramite un file JSON con controllo della versione.",
+	portabilityFileReady: "{file} pronto",
+	portabilityIncluded: "Incluso",
+	portabilitySettingsSection: "Impostazioni",
+	portabilityTemplatesSection: "Modelli",
+	portabilityZonesSection: "Programmazioni dei termostati",
+	portabilityPreconditioningLearningSection: "Apprendimento del precondizionamento",
+	portabilityProfilesSection: "Profili climatici",
+	portabilityModesSection: "Modalità",
+	preconditioningImportSkipped: "Dati di apprendimento del precondizionamento ignorati ({count}). Questi termostati non sono gestiti qui: {entities}",
+	portableExported: "File di esportazione creato",
+	portableImported: "Importazione completata",
+	importData: "Importa",
+	importFile: "Importa file",
+	chooseFile: "Scegli file",
+	climateOptions: "Opzioni climatiche",
+	climateOptionsAdd: "Aggiungi impostazioni facoltative",
+	noFileSelected: "Nessun file selezionato",
+	exportData: "Esportazione",
+	invalidImportFile: "Il file selezionato non è un'esportazione Velair valida",
+	importOverwriteWarning: "L'importazione sovrascriverà i valori esistenti. Non possono essere recuperati se non li hai prima esportati.",
+	noImportSections: "Nessuna sezione importabile trovata",
+	legacyImportTemperatureUnit: "Questo backup precedente non registra un'unità di temperatura. Velair tratterà le sue temperature come gradi Celsius e le convertirà in {target} quando necessario.",
+	notSet: "Non impostato",
+	maintenance: "Manutenzione",
+	maintenanceDescription: "Dettagli tecnici della versione per la risoluzione dei problemi.",
+	frontendBuild: "Versione frontend",
+	portableFormatVersion: "Formato portatile/esportabile",
+	internalStorageVersion: "Archiviazione/modello",
+	integrationVersion: "Versione di integrazione",
+	resetVelair: "Reimposta Velair",
+	resetVelairDescription: "Elimina tutti i dati Velair memorizzati, incluse programmazioni, modelli, preferenze del pannello, incrementi e pause attivi, criteri per le modifiche esterne e regolazioni manuali attive, impostazioni di Comfort e Room Assist, impostazioni e apprendimento del precondizionamento adattivo e comportamento all'avvio. Quindi ricrea valori predefiniti adeguati all'unità per i termostati attualmente gestiti.",
+	confirmReset: "Reimpostare tutti i dati Velair memorizzati? Questa operazione non può essere annullata a meno che tu non abbia prima esportato i tuoi dati.",
+	confirmResetPreconditioningLearning: "Reimpostare l'apprendimento del precondizionamento adattivo per {direction}? Le programmazioni e le impostazioni verranno mantenute.",
+	confirmResetPreconditioningSettings: "Ripristinare le impostazioni predefinite di precondizionamento per questo termostato? Verranno conservati esempi di apprendimento.",
+	resetDone: "Dati Velair reimpostati",
+	resetting: "Ripristino",
+	minTemperature: "Temperatura minima",
+	maxTemperature: "Temperatura massima",
+	modeOptional: "Modalità opzionale",
+	firstWeekday: "Primo giorno della settimana",
+	managedZones: "Zone gestite",
+	mode: "Modalità",
+	moveDown: "Sposta giù",
+	moveUp: "Sposta su",
+	nextEvent: "Prossimo evento",
+	nextEvents: "Prossimi eventi",
+	noActiveBoosts: "Nessun incremento attivo",
+	noBlocks: "Nessun blocco",
+	noManagedEntities: "Nessuna entità climatica gestita trovata.",
+	noTemplates: "Nessun modello",
+	newTemplate: "Nuovo modello",
+	noUpcomingEvent: "Nessun evento imminente",
+	off: "Spento",
+	otherDays: "Altri giorni",
+	otherThermostats: "Altri termostati",
+	overview: "Panoramica",
+	overviewPanelIntro: "La panoramica raggruppa lo stato della programmazione, gli eventi imminenti, gli incrementi attivi e le azioni rapide.",
+	overviewStatusPaused: "In pausa",
+	overviewStatusPausedDetail: "Pausa temporanea attiva",
+	overviewStatusRunning: "In esecuzione",
+	overviewStatusRunningDetail: "La programmazione sta applicando gli orari configurati",
+	overviewStatusStopped: "Fermato",
+	overviewStatusStoppedDetail: "La programmazione è interrotta fino alla ripresa",
+	overviewZones: "Panoramica delle zone",
+	overviewZoneApplied: "Applicato",
+	overviewZoneAir: "Aria: {status}",
+	overviewZoneBoost: "Incremento",
+	overviewZoneComfort: "Comfort: {status}",
+	overviewZoneManual: "Manuale",
+	overviewZonePaused: "In pausa",
+	overviewZonePreconditioning: "Precondizionamento",
+	overviewZoneResumes: "Riprende {time}",
+	overviewZoneRoom: "Stanza",
+	overviewZoneRoomAssist: "Room Assist {delta}",
+	overviewZoneScheduled: "Programmato",
+	overviewZoneSensorIssue: "Dati del sensore incompleti",
+	overviewZoneTarget: "Obiettivo",
+	overviewZoneUntil: "Fino al {time}",
+	overviewZoneUntilResumed: "Fino alla ripresa",
+	overviewZoneReadyAt: "Pronto alle {time}",
+	overviewZoneNextAt: "Prossimo alle {time}",
+	overviewZoneAutomationOff: "Automazione disattivata",
+	overviewZoneRoomAssistThermalFlow: "Andamento della temperatura di Room Assist",
+	overviewZoneSensor: "Sensore",
+	overviewZoneClimate: "Clima",
+	overviewZoneTemperature: "Temperatura",
+	overviewZoneSetpoint: "Temperatura impostata",
+	overviewZoneScheduledSetpoint: "Programmato",
+	overviewZoneScheduledRange: "Intervallo pianificato",
+	overviewZoneAppliedRange: "Intervallo applicato",
+	overviewZoneOffset: "Compensazione",
+	overviewZoneRangeShift: "Spostamento dell'intervallo",
+	overviewZoneRoomAssistActive: "Attivo",
+	overviewZoneRoomAssistGuarded: "Protezione programmata",
+	overviewZoneRoomAssistHolding: "Mantenimento",
+	overviewZoneRoomAssistTowardsLower: "Verso il limite inferiore",
+	overviewZoneRoomAssistTowardsUpper: "Verso il limite superiore",
+	overviewZoneComfortLabel: "Comfort",
+	overviewZoneAirLabel: "Aria",
+	overviewZoneDataLabel: "Dati",
+	pause: "Pausa",
+	pauseActive: "In pausa",
+	pauseApplied: "Programmazione in pausa",
+	pauseDuration: "Durata della pausa (min)",
+	pauseFrom: "Da",
+	pauseIndefinite: "Nessuna ora di fine",
+	pauseRemaining: "Riprende tra",
+	pauseReasons: "Motivi di pausa",
+	pauseTo: "A",
+	preconditioning: "Precondizionamento",
+	preconditioningEnabled: "Precondizionamento abilitato",
+	preconditioningCool: "Raffreddamento",
+	preconditioningCoolingFallbackLead: "Anticipo iniziale raffreddamento (min)",
+	preconditioningDirectionSamples: "{count}/{required}",
+	preconditioningHeat: "Riscaldamento",
+	preconditioningHeatingFallbackLead: "Anticipo iniziale riscaldamento (min)",
+	preconditioningDirectionStatus: "Stato",
+	preconditioningExpandClimate: "Espandi {climate}",
+	preconditioningIntroDetail: "Lascia che Velair calcoli quando anticipare un obiettivo di comfort programmato, affinché la stanza si avvicini alla temperatura desiderata in tempo.",
+	preconditioningIntroTitle: "Tempi di comfort adattivi",
+	preconditioningAdaptivePercentile: "Percentuale di comfort dinamico",
+	preconditioningAdaptivePercentileHelp: "Quando è attivo, aumenta il margine dopo troppi tentativi parziali e lo riduce dopo tentativi completati con regolarità.",
+	preconditioningCalculationCombined: "Combinato",
+	preconditioningCalculationDetails: "Dettagli di calcolo",
+	preconditioningCalculationFinalLead: "Anticipo finale",
+	preconditioningCalculationPartialFloor: "Limite minimo dai casi parziali",
+	preconditioningCalculationReachedEstimate: "Stima dai casi completati",
+	preconditioningCalculationRounded: "Arrotondato",
+	preconditioningCalculationSampleCounts: "Raggiunto: {reached} · Parziale: {partial} · Non valido: {invalid}",
+	preconditioningCalculationSamples: "Campioni",
+	preconditioningComfortPercentile: "Percentuale di comfort",
+	preconditioningComfortPercentileHelp: "Un valore più alto avvia prima usando i casi appresi più lenti; uno più basso avvia più tardi con meno margine.",
+	preconditioningComfortPercentileLabel: "Percentuale di comfort",
+	preconditioningCollapseClimate: "Comprimi {climate}",
+	preconditioningFallbackInactive: "Modello adattivo attivo",
+	preconditioningFallbackLabel: "Valore iniziale",
+	preconditioningFallbackLead: "{minutes} min",
+	preconditioningFallbackMinutesPerDegree: "Modello iniziale",
+	preconditioningFallbackMinutesPerDegreeHelp: "Un valore più alto anticipa maggiormente l'avvio finché non sono disponibili dati sufficienti; uno più basso lo ritarda.",
+	preconditioningHistorySize: "Dimensione della cronologia",
+	preconditioningHistorySizeHelp: "Un valore più alto conserva più campioni utili; uno più basso elimina prima quelli più vecchi.",
+	preconditioningHistory: "Cronologia",
+	preconditioningInvalidEvents: "Non valido",
+	preconditioningLastSample: "Ultimo campione",
+	preconditioningLeadTime: "{minutes} min di anticipo",
+	preconditioningLearning: "Apprendimento locale",
+	preconditioningLearningStatus: "Stato di apprendimento",
+	preconditioningLearningDisabled: "Apprendimento disabilitato",
+	preconditioningLearningMoreData: "Servono più dati",
+	preconditioningLearningReady: "Pronto per l'apprendimento",
+	preconditioningLimitedByMax: "Limitato al massimo",
+	preconditioningLivePrediction: "Previsione in tempo reale",
+	preconditioningLivePredictionHelp: "Utilizza il blocco reale successivo per mostrare come cambia l'inizio del precondizionamento calcolato.",
+	preconditioningMaxLead: "Inizio massimo (min)",
+	preconditioningMaxLeadHelp: "Un valore più alto consente avvii anticipati; uno più basso limita maggiormente l'anticipo.",
+	preconditioningMaximumLabel: "Massimo",
+	preconditioningMinimumDelta: "Delta di temperatura minimo",
+	preconditioningMinimumDeltaHelp: "Un valore più alto ignora differenze più ampie; uno più basso reagisce a variazioni di temperatura minori.",
+	preconditioningMinStart: "Inizio minimo (min)",
+	preconditioningMinStartHelp: "Un valore più alto ignora anticipi previsti brevi; uno più basso consente avvii con meno anticipo.",
+	preconditioningModelHistory: "Cronologia simile",
+	preconditioningModel: "Modello di apprendimento",
+	preconditioningModelInitial: "Modello iniziale",
+	preconditioningModelSource: "Fonte del modello",
+	preconditioningNextBlock: "Blocco successivo",
+	preconditioningNoUpcomingDirectionEvent: "Nessun blocco {direction} imminente da prevedere.",
+	preconditioningNormalStart: "Inizio normale",
+	preconditioningNotSupported: "Non supportato",
+	preconditioningPartialEvents: "Parziale",
+	preconditioningPartialSamples: "Campioni parziali: {count}",
+	preconditioningPartialExpiry: "Scadenza parziale (giorni)",
+	preconditioningPartialExpiryHelp: "Un valore più alto consente ai tentativi incompleti di influenzare più a lungo le previsioni; uno più basso li fa scadere prima.",
+	preconditioningQualityComplete: "Completo",
+	preconditioningQualityInvalid: "Non valido",
+	preconditioningQualityPartial: "Parziale",
+	preconditioningRecencyDecay: "Riduzione per anzianità (giorni)",
+	preconditioningRecencyDecayHelp: "Un valore più alto riduce più lentamente il peso dei campioni vecchi; uno più basso privilegia il comportamento recente.",
+	preconditioningReachedEvents: "Raggiunto",
+	preconditioningResetLearning: "Reimposta l'apprendimento",
+	preconditioningLearningResetDone: "Apprendimento {direction} reimpostato",
+	preconditioningSimilarSamples: "Campioni simili",
+	preconditioningSimilarSamplesHelp: "Un valore più alto considera una cronologia simile più ampia; uno più basso si concentra sui casi più vicini.",
+	preconditioningUnsupportedDirection: "Non supportato da questo termostato",
+	preconditioningOutdoorTemperatureEntity: "Sensore di temperatura esterna",
+	preconditioningOutdoorTemperatureEntityHelp: "Fornisce il contesto esterno locale per confrontare i campioni appresi; non cambia il modello iniziale.",
+	preconditioningOutdoorContext: "Contesto esterno",
+	preconditioningOutdoorDisabled: "Disabilitato",
+	preconditioningSelectOutdoorSensor: "Seleziona sensore",
+	preconditioningResetSettings: "Ripristina le impostazioni predefinite",
+	preconditioningSettingsResetDone: "Impostazioni del precondizionamento ripristinate",
+	preconditioningStarts: "Inizio",
+	preconditioningTargetBy: "Obiettivo entro",
+	preconditioningTiming: "Tempi e limiti",
+	preconditioningUnavailable: "Termostato non disponibile. Non è possibile abilitare il precondizionamento.",
+	preconditioningPredictionLowerBoundary: "Previsione · limite inferiore {temperature}",
+	preconditioningPredictionUpperBoundary: "Previsione · limite superiore {temperature}",
+	preconditioningUseOutdoorTemperature: "Usa la temperatura esterna",
+	preconditioningUseOutdoorTemperatureHelp: "Quando è attivo, include la temperatura esterna nella scelta di campioni appresi simili.",
+	resume: "Riprendi",
+	resumed: "Programmazione ripresa",
+	resizeEnd: "Regola la fine",
+	resizeStart: "Regola l'inizio",
+	schedulerControls: "Controlli della programmazione",
+	schedules: "Programmazioni",
+	sensors: "Room Assist",
+	roomSensorAppliedTarget: "Obiettivo applicato",
+	roomSensorAssist: "Assistenza tramite sensore ambientale",
+	roomSensorAssistBadge: "Room Assist",
+	roomSensorAssistEnabled: "Assistenza sensore ambiente abilitata",
+	roomSensorAssistHelp: "Regola temporaneamente l'obiettivo climatico in modo che il sensore ambiente possa raggiungere la temperatura programmata.",
+	roomSensorAssistDisabledDetail: "È selezionato un sensore ambiente, ma Room Assist è disattivato. Velair continua a utilizzare la temperatura dell'entità climatica finché non abiliti questa opzione.",
+	roomSensorAssistDebounce: "Ritardo aggiornamento",
+	roomSensorAssistDebounceHelp: "Secondi di attesa dopo variazioni della temperatura ambiente o dell'entità climatica prima di ricalcolare l'obiettivo assistito. Utilizza 0 per aggiornamenti immediati.",
+	roomSensorAssistDeadband: "Banda morta di Room Assist",
+	roomSensorAssistDeadbandHelp: "Imposta i limiti inferiore e superiore di Room Assist a questa distanza dall'obiettivo pianificato. Nelle modalità fisse Riscaldamento o Raffreddamento, quando viene raggiunto un limite Room Assist passa all'altro. Le modalità automatiche e gli intervalli di temperatura lo usano come margine senza correzione. Le modifiche vengono applicate dopo il salvataggio.",
+	roomSensorDeadbandZoneHelp: "Con il riscaldamento o il raffreddamento fissi, Room Assist continua a muoversi verso un limite finché la stanza non lo raggiunge, quindi torna indietro verso l'altro limite. Gli intervalli nativi lo mantengono come margine esterno di non correzione.",
+	roomSensorDeadbandZoneHelpAutomatic: "Con una modalità automatica scalare, Room Assist non applica alcuna correzione finché la stanza rimane all'interno di questo margine.",
+	roomSensorDeadbandZoneHelpGeneric: "La modalità climatica effettiva determina il modo in cui Room Assist utilizza questa zona morta.",
+	roomSensorDeadbandZoneAutomatic: "Margine di non correzione · ±{value}",
+	roomSensorDeadbandZoneGeneric: "Banda morta · ±{value}",
+	roomSensorDeadbandZoneCompact: "Banda morta · ±{value}",
+	roomSensorDeadbandZoneCompactAutomatic: "Margine neutro · ±{value}",
+	roomSensorDeadbandZoneCompactRange: "Margine di confine · ±{value}",
+	roomSensorDeadbandZoneBrief: "Zona ±{value}",
+	roomSensorDeadbandZoneRange: "Margine limite · {value} oltre ciascun limite",
+	roomSensorDeadbandZoneSingle: "Banda di controllo · ±{value}",
+	roomSensorDeadbandZoneZero: "Nessuna zona morta · {value}",
+	roomSensorAssistMaxDelta: "Delta assistenza massimo",
+	roomSensorAssistMaxDeltaHelp: "Limita la correzione di Room Assist. Impostalo su un valore sufficiente a coprire la differenza dall'obiettivo di cui il termostato potrebbe aver bisogno per interrompere il riscaldamento o il raffreddamento. Il valore completo viene usato solo quando necessario.",
+	roomSensorAssistOffset: "Scostamento dell'assistenza",
+	roomSensorAssistOffsetHelp: "Scostamento temporaneo applicato all'obiettivo dell'entità climatica affinché il sensore ambiente possa continuare ad avvicinarsi alla temperatura programmata.",
+	roomSensorAssistCorrectionValue: "Scostamento {value}",
+	roomSensorAssistCorrectionActiveHelp: "Room Assist sta regolando la temperatura impostata dell'entità climatica. Ciò non indica se il dispositivo stia riscaldando o raffreddando attivamente.",
+	roomSensorAssistNoCorrection: "Scostamento 0 · Mantenimento",
+	roomSensorAssistNoCorrectionHelp: "Room Assist non sta correggendo la temperatura impostata. La temperatura della stanza e quella programmata potrebbero comunque differire.",
+	roomSensorLimitMaximumTitle: "Massimo termostato raggiunto",
+	roomSensorLimitMaximumDetail: "Room Assist ha richiesto {requested}, oltre il limite {limit}. Velair ha applicato {applied}; l'ulteriore correzione è limitata.",
+	roomSensorLimitMinimumTitle: "Minimo termostato raggiunto",
+	roomSensorLimitMinimumDetail: "Room Assist ha richiesto {requested}, sotto il limite {limit}. Velair ha applicato {applied}; l'ulteriore correzione è limitata.",
+	roomSensorScheduledGuardTitle: "Protezione dell'obiettivo programmato",
+	roomSensorScheduledGuardCoolingDetail: "Room Assist ha calcolato {calculated}, ma ha mantenuto {applied} in modo che il raffreddamento non continui al di sotto dell'obiettivo programmato.",
+	roomSensorScheduledGuardHeatingDetail: "Room Assist ha calcolato {calculated}, ma ha mantenuto {applied} in modo che il riscaldamento non continui oltre l'obiettivo programmato.",
+	roomSensorBlockActiveSince: "Attivo da {time}",
+	roomSensorBlockMode: "Modalità: {mode}",
+	roomSensorBlockScheduled: "Previsto per {time}",
+	roomSensorBlockStartedEarly: "Iniziato alle {time}",
+	roomSensorBlockTarget: "Obiettivo: {target}",
+	roomSensorHysteresisTowardsLower: "Controllo verso il limite inferiore: {target}",
+	roomSensorHysteresisTowardsUpper: "Controllo verso il limite superiore: {target}",
+	roomSensorGapAboveTarget: "{value} sopra l'obiettivo",
+	roomSensorGapBelowTarget: "{value} sotto l'obiettivo",
+	roomSensorClimateTarget: "Obiettivo climatico",
+	roomSensorClimateTargetHelp: "L'obiettivo climatico è la temperatura impostata attualmente comunicata dall'entità climatica; non è l'obiettivo della temperatura ambiente.",
+	roomSensorClimateTargetAppliedHelp: "L'obiettivo climatico è la temperatura temporanea inviata da Velair all'entità climatica mentre Room Assist è attivo; non è l'obiettivo della temperatura ambiente.",
+	roomSensorClimateTargetStepHelp: "Room Assist ha calcolato {calculated}. Questa entità accetta incrementi di {step}, quindi Velair ha applicato {applied} in modo sicuro.",
+	roomSensorAppliedLow: "Limite inferiore applicato",
+	roomSensorAppliedHigh: "Limite superiore applicato",
+	roomSensorAppliedRange: "Intervallo applicato",
+	roomSensorClimateTemperature: "Lettura del clima",
+	roomSensorCollapseClimate: "Comprimi {climate}",
+	roomSensorControl: "Assistenza tramite sensore ambientale",
+	roomSensorExpandClimate: "Espandi {climate}",
+	roomSensorIntroDetail: "Utilizza un sensore della temperatura ambiente per guidare l'obiettivo climatico mentre Velair esegue blocchi di temperatura gestiti.",
+	roomSensorIntroTitle: "Controllo della temperatura ambiente",
+	roomSensorLiveStatus: "Stato in tempo reale",
+	roomSensorNoActiveBlock: "Nessun blocco della temperatura attivo",
+	roomSensorNoActiveBlockDetail: "Room Assist si aggiornerà quando è attivo un blocco di temperatura gestita.",
+	roomSensorNotConfigured: "Selezionare prima un sensore ambientale",
+	roomSensorRoomTemperature: "Sensore ambientale",
+	roomSensorRemainingToTarget: "Al valore obiettivo",
+	roomSensorRemainingValue: "Mancano {value}",
+	roomSensorScheduledTarget: "Obiettivo programmato",
+	roomSensorScheduledLow: "Limite inferiore programmato",
+	roomSensorScheduledHigh: "Limite superiore programmato",
+	roomSensorScheduledRange: "Intervallo pianificato",
+	roomSensorRangeShiftValue: "Spostamento dell'intervallo {value}",
+	roomSensorRangeShiftHelp: "Room Assist sposta insieme entrambi i limiti dell'intervallo; il segno indica la direzione applicata.",
+	roomSensorSelectSensor: "Seleziona il sensore ambiente",
+	roomSensorStatusAssisting: "Assistenza attiva",
+	roomSensorStatusBlocked: "Bloccato",
+	roomSensorStatusDisabled: "Disabilitato",
+	roomSensorStatusHolding: "Mantenimento",
+	roomSensorStatusIdle: "Inattivo",
+	roomSensorStatusNotConfigured: "Non configurato",
+	roomSensorStatusReady: "Pronto",
+	roomSensorStatusUnavailable: "Non disponibile",
+	roomSensorTemperatureEntity: "Sensore della temperatura ambiente",
+	roomSensorTemperatureEntityHelp: "Sensore che Room Assist utilizza come temperatura ambiente reale durante la regolazione dell'obiettivo climatico.",
+	roomSensorTemperatureScale: "Scala di temperatura di Room Assist",
+	roomSensorUnavailable: "Clima non disponibile",
+	roomSensorValueUnavailable: "Non disponibile",
+	save: "Salva",
+	saveTemplate: "Salva come modello",
+	saved: "Programmazione salvata",
+	saving: "Salvataggio…",
+	scheduleCopyHint: "Puoi anche copiare questa configurazione su un altro giorno o clima.",
+	scheduleEditor: "Editor della programmazione",
+	scheduleStepClimate: "1. Seleziona il clima che desideri configurare.",
+	scheduleStepConfigure: "3. Configura il clima a tuo piacimento.",
+	scheduleStepDay: "2. Seleziona il giorno che desideri configurare.",
+	reorderZones: "Trascina i termostati per cambiare il loro ordine nel pannello.",
+	selectedWeekday: "Giorno iniziale",
+	selectedZone: "Zona iniziale",
+	selectTemplatePlaceholder: "Seleziona un modello",
+	selectTemplateToBegin: "Seleziona un modello per iniziare.",
+	setTemperature: "Imposta la temperatura",
+	settings: "Impostazioni",
+	diagnostics: "Diagnostica",
+	diagnosticsDescription: "Scopri quali dati conosce Velair, cosa intende fare e cosa può verificare localmente.",
+	diagnosticsUnavailable: "La diagnostica non è ancora disponibile.",
+	diagnosticsDownloadAction: "Scarica rapporto…",
+	diagnosticsDownloadNow: "Scarica il rapporto",
+	diagnosticsDownloadActionDescription: "Apri le opzioni sulla privacy del rapporto prima di scaricare la diagnostica per ricevere supporto.",
+	diagnosticsExportOptions: "Privacy del rapporto",
+	diagnosticsExportExplanation: "La visualizzazione in tempo reale utilizza gli ID locali reali. Mantieni questa opzione attiva per sostituire gli ID delle entità climatiche e dei sensori con alias stabili nel rapporto.",
+	diagnosticsRedactEntityIds: "Sostituisci gli ID entità con gli alias",
+	diagnosticsOperationalIdsAlwaysRedacted: "Gli identificatori di profilo, modalità e pausa vengono sempre rimossi.",
+	diagnosticsRawEntityIdsWarning: "Questo rapporto includerà gli ID entità originali. Rivedilo prima di condividerlo.",
+	diagnosticsDownloadWithEntityIds: "Scarica con ID",
+	diagnosticsHealthy: "Velair sembra funzionare correttamente",
+	diagnosticsAttention: "Alcuni elementi richiedono attenzione",
+	diagnosticsSchedulerSummary: "Programmazione: {status} · Modalità: {mode}",
+	diagnosticsUnitSummary: "{ok} integro · Avvisi {warning} · Errori {error}",
+	diagnosticsRecentHistory: "Cronologia recente dell'esecuzione ({count}/{limit})",
+	diagnosticsNoHistory: "Non è stato osservato alcun evento di esecuzione rilevante dall'avvio di Velair.",
+	diagnosticsPrivacy: "La cronologia viene conservata solo in memoria e cancellata al riavvio. I rapporti non contengono dati di telemetria; gli ID delle entità vengono sostituiti, salvo che tu scelga di conservarli.",
+	diagnosticsEntityUnavailable: "L'entità climatica non è disponibile.",
+	diagnosticsEntityUnknown: "L'entità climatica segnala uno stato sconosciuto.",
+	diagnosticsCalculatedIntent: "Intento calcolato",
+	diagnosticsLastApplication: "Ultima applicazione",
+	diagnosticsRoomAssist: "Room Assist",
+	diagnosticsPreconditioning: "Precondizionamento",
+	diagnosticsComfort: "Comfort",
+	diagnosticsAssociatedSensors: "Sensori associati",
+	diagnosticsLoadError: "Impossibile caricare la diagnostica. Prova ad aprire nuovamente la sezione.",
+	diagnosticsExportError: "Impossibile scaricare il rapporto diagnostico.",
+	diagnosticsDeliveryFailed: "L'ultimo tentativo di invio non è riuscito e può essere ripristinato.",
+	diagnosticsDeliveryRetrying: "Velair sta riprovando l'ultimo intento climatico.",
+	diagnosticsDeliveryExhausted: "È stato raggiunto il limite dei tentativi di invio.",
+	diagnosticsDeliveryInvalidIntent: "L’attuale intento climatico non può essere risolto.",
+	diagnosticsRuntimeUnavailable: "I dettagli sull'intento di esecuzione non sono attualmente disponibili.",
+	diagnosticsSensorUnavailable: "Un sensore esplicitamente associato manca o non è disponibile.",
+	diagnosticsUnits: "Climi gestiti",
+	diagnosticsNoUnits: "Non sono disponibili climi gestiti per la diagnosi.",
+	diagnosticsSelectUnit: "Seleziona un clima per visualizzarne la diagnostica.",
+	diagnosticsStatusDelivery: "Stato e invio",
+	diagnosticsActiveConfiguration: "Configurazione attiva",
+	diagnosticsFunctions: "Funzioni",
+	diagnosticsDeviceSensors: "Dispositivo e sensori",
+	diagnosticsCurrentState: "Stato attuale",
+	diagnosticsDeliveryStatus: "Stato dell'invio",
+	diagnosticsDeliverySuccess: "Inviato correttamente",
+	diagnosticsScheduleSourceProfilePause: "Pausa del profilo",
+	diagnosticsOverrideTurnOff: "Spegni il clima",
+	diagnosticsNone: "Nessuno",
+	diagnosticsReasonReplaced: "Sostituito da una richiesta più recente",
+	diagnosticsReasonStopped: "Fermato",
+	diagnosticsRetryCount: "Tentativi",
+	diagnosticsLastError: "Ultimo errore",
+	diagnosticsScheduleSource: "Origine della programmazione",
+	diagnosticsMode: "Modalità",
+	diagnosticsProfile: "Profilo",
+	diagnosticsOverride: "Sostituzione",
+	diagnosticsPauses: "Pause attive",
+	diagnosticsHvacModes: "Modalità HVAC",
+	diagnosticsTemperatureRange: "Intervallo di temperatura",
+	diagnosticsTemperatureStep: "Incremento di temperatura",
+	diagnosticsConfigured: "Configurato",
+	diagnosticsOn: "Attivo",
+	diagnosticsOff: "Spento",
+	diagnosticsActive: "Attivo",
+	diagnosticsFunctionState: "Stato di esecuzione",
+	diagnosticsAppliedTarget: "Obiettivo applicato",
+	diagnosticsHeatSamples: "Osservazioni sul riscaldamento",
+	diagnosticsCoolSamples: "Osservazioni sul raffreddamento",
+	diagnosticsHistorySettings: "Impostazioni della cronologia",
+	diagnosticsStatusHealthy: "Sano",
+	diagnosticsStatusWarning: "Avvertimento",
+	diagnosticsStatusError: "Errore",
+	diagnosticsStatusWithIssues: "{status}: {issues}",
+	diagnosticsHistoryLog: "Registro di esecuzione",
+	diagnosticsLogTime: "Ora",
+	diagnosticsLogClimate: "Clima",
+	diagnosticsLogType: "Tipo",
+	diagnosticsLogMessage: "Dettagli",
+	diagnosticsLogResizeColumn: "Ridimensiona la colonna {column}",
+	diagnosticsHistoryClimateFilter: "Fonti",
+	diagnosticsHistorySourcesLegend: "Seleziona le origini evento",
+	diagnosticsHistoryNoSources: "Nessuna fonte",
+	diagnosticsHistorySourceCount: "Climi {count}",
+	diagnosticsHistorySourceCountWithVelair: "Climi {count} + Velair",
+	diagnosticsHistoryClimateWithVelair: "{climate} + Velair",
+	diagnosticsHistorySourcesDone: "Fatto",
+	diagnosticsHistoryCategoryFilter: "Categoria",
+	diagnosticsHistoryAllSources: "Tutti i climi + Velair",
+	diagnosticsHistoryVelairOnly: "Solo Velair",
+	diagnosticsHistoryAllCategories: "Tutte le categorie",
+	diagnosticsHistoryFrom: "Da",
+	diagnosticsHistoryTo: "A",
+	diagnosticsHistoryInvalidRange: "Da deve essere precedente o uguale a A.",
+	diagnosticsHistoryResults: "Visualizzazione di {visible} degli eventi {total}",
+	diagnosticsHistoryClearFilters: "Cancella filtri",
+	diagnosticsHistoryNoMatches: "Nessun evento conservato corrisponde a questi filtri.",
+	diagnosticsHistoryExplanation: "Scegli quali eventi Velair conserva. La salute attuale viene sempre osservata. La cronologia contiene al massimo gli eventi {limit}, rimane solo in memoria e viene cancellata al riavvio di Home Assistant o Velair.",
+	diagnosticsClearHistory: "Cancella cronologia",
+	diagnosticsHistoryUpdateError: "Impossibile salvare le impostazioni della cronologia diagnostica.",
+	diagnosticsHistoryClearError: "Non è stato possibile cancellare la cronologia della diagnostica.",
+	diagnosticsHistoryCategoryControl: "Controllo e programmazioni",
+	diagnosticsHistoryCategoryControlDescription: "Programmazioni, profili, modalità, incrementi, pause, regolazioni esterne e modifiche del controllo automatico o manuale.",
+	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
+	diagnosticsHistoryCategoryRoomAssistDescription: "Cambiamenti di stato e correzioni dell'obiettivo di Room Assist.",
+	diagnosticsHistoryCategoryPreconditioning: "Precondizionamento",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Piani di precondizionamento, cancellazioni e osservazioni di apprendimento.",
+	diagnosticsHistoryCategoryComfort: "Comfort",
+	diagnosticsHistoryCategoryComfortDescription: "Cambiamenti nelle condizioni di comfort valutate localmente.",
+	diagnosticsHistoryCategoryDelivery: "Invio all'entità climatica",
+	diagnosticsHistoryCategoryDeliveryDescription: "Comandi climatici non riusciti, ritentati, esauriti o annullati.",
+	diagnosticsHistoryCategoryAvailability: "Disponibilità",
+	diagnosticsHistoryCategoryAvailabilityDescription: "I climi gestiti diventano non disponibili, sconosciuti o nuovamente disponibili.",
+	diagnosticsReasonCurrentSchedule: "Programmazione corrente",
+	diagnosticsReasonMissingTargetStep: "Incremento della temperatura obiettivo non disponibile",
+	diagnosticsReasonNoLongerPlanned: "Non più pianificato",
+	diagnosticsReasonSchedulerNotAuto: "La programmazione non è in modalità automatica",
+	diagnosticsReasonSchedulerStopped: "La programmazione è stata interrotta",
+	diagnosticsReasonManualTarget: "Obiettivo manuale",
+	diagnosticsReasonManual: "Azione manuale",
+	diagnosticsReasonScheduleChanged: "Programmazione modificata",
+	diagnosticsReasonScheduleCleared: "Programmazione cancellata",
+	diagnosticsReasonSettingsUpdated: "Impostazioni aggiornate",
+	diagnosticsReasonPortableImport: "Importazione portatile",
+	diagnosticsReasonDataReset: "Reimpostazione dei dati",
+	diagnosticsReasonExpired: "Scaduto",
+	diagnosticsReasonNoActiveTarget: "Nessun obiettivo attivo",
+	diagnosticsReasonZoneUnavailable: "Zona non disponibile",
+	diagnosticsReasonAssistDisabled: "Room Assist disabilitato",
+	diagnosticsReasonMissingTarget: "Obiettivo mancante",
+	diagnosticsReasonUnsupportedTemperatureRange: "Intervallo di temperatura non supportato",
+	diagnosticsReasonUnsupportedMode: "Modalità HVAC non supportata",
+	diagnosticsReasonMissingTemperature: "Manca la temperatura",
+	diagnosticsReasonTemperatureMigration: "Migrazione della temperatura",
+	diagnosticsOperationAdded: "Aggiunto",
+	diagnosticsOperationUpdated: "Aggiornato",
+	diagnosticsOperationRemoved: "Rimosso",
+	diagnosticsOperationSetTemperature: "Imposta la temperatura",
+	diagnosticsEventBoostEnded: "Incremento terminato",
+	diagnosticsEventBoostStarted: "Incremento avviato",
+	diagnosticsEventClimateTargetApplied: "Obiettivo climatico applicato",
+	diagnosticsEventExternalAdjustment: "Regolazione esterna",
+	diagnosticsEventZoneControlChanged: "Il controllo della programmazione è cambiato",
+	diagnosticsControlAutomatic: "Automatico",
+	diagnosticsControlManual: "Manuale",
+	diagnosticsHvacModeChanged: "Modalità HVAC: {previous} → {current}",
+	diagnosticsTargetChanged: "Obiettivo: {previous} → {current}",
+	diagnosticsRangeChanged: "Intervallo: {previous} → {current}",
+	diagnosticsLowerTargetChanged: "Obiettivo inferiore: {previous} → {current}",
+	diagnosticsUpperTargetChanged: "Obiettivo superiore: {previous} → {current}",
+	diagnosticsControlChanged: "{previous} → {current}",
+	diagnosticsUntil: "fino al {time}",
+	diagnosticsReasonResumed: "Ripresa",
+	diagnosticsEventProfileChanged: "Profilo cambiato",
+	diagnosticsEventSchedulerModeChanged: "La modalità della programmazione è cambiata",
+	diagnosticsEventZonePauseAdded: "Motivo della pausa aggiunto",
+	diagnosticsEventZonePauseRemoved: "Motivo della pausa rimosso",
+	diagnosticsEventZonePauseUpdated: "Motivo della pausa aggiornato",
+	diagnosticsEventZonePaused: "Zona in pausa",
+	diagnosticsEventZoneResumed: "La zona è ripresa",
+	diagnosticsEventComfortAssessmentChanged: "La valutazione del comfort è cambiata",
+	diagnosticsEventPreconditioningObservationRecorded: "Osservazione del precondizionamento registrata",
+	diagnosticsEventPreconditioningPlanCancelled: "Piano di precondizionamento annullato",
+	diagnosticsEventPreconditioningPlanUpdated: "Piano di precondizionamento aggiornato",
+	diagnosticsEventRoomAssistRestored: "Room Assist ripristinato",
+	diagnosticsEventRoomAssistStateChanged: "Lo stato Room Assist è cambiato",
+	diagnosticsEventRoomAssistUpdated: "Room Assist aggiornato",
+	settingsPanelIntro: "Scegli come sono ordinati i termostati e i giorni feriali in questo pannello.",
+	startupBehavior: "Avvio Home Assistant",
+	startsAt: "Inizia alle",
+	applyScheduleOnStartup: "Applica la programmazione attiva dopo l'avvio",
+	applyScheduleOnStartupDescription: "All'avvio di Home Assistant, Velair può applicare il blocco di programmazione corrente ai termostati gestiti invece di lasciarli così come sono.",
+	start: "Avvia",
+	status: "Stato",
+	stop: "Arresta",
+	supportedFanModes: "Modalità ventola",
+	supportedHorizontalSwingModes: "Modalità di oscillazione orizzontale",
+	supportedPresetModes: "Preimpostazioni",
+	supportedSwingModes: "Modalità di oscillazione",
+	presetMode: "Preimpostato",
+	swingMode: "Oscillazione",
+	temp: "Temp.",
+	target: "Obiettivo",
+	heatBelow: "Riscalda sotto",
+	coolAbove: "Raffredda sopra",
+	temperatureRange: "Intervallo di temperatura",
+	minimumShort: "Minimo",
+	maximumShort: "Massimo",
+	temperatureUnit: "Unità di temperatura",
+	temperatureUnitManagedByHomeAssistant: "Rilevata da Home Assistant. Modifica questo valore nelle impostazioni delle unità di sistema di Home Assistant.",
+	temperatureMigrationRequired: "Velair ha bisogno della tua attenzione",
+	temperatureMigrationStopped: "La programmazione e la configurazione termica sono bloccate perché Home Assistant ha cambiato unità di temperatura. Apri le impostazioni di Velair per eseguire la migrazione in sicurezza.",
+	temperatureMigrationQuestion: "Migrare le temperature memorizzate da {source} a {target}?",
+	temperatureMigrationExplanation: "Continua solo se tutte le temperature memorizzate in Velair sono ancora espresse in {source}. Prima di riprendere la programmazione, la migrazione aggiorna programmazioni, modelli, sostituzioni, Comfort, Room Assist, impostazioni di precondizionamento, velocità di variazione e dati di apprendimento. Se un valore memorizzato è già espresso in {target}, la migrazione lo renderebbe errato.",
+	temperatureMigrationUse: "Migrare da {source} a {target}",
+	temperatureMigrationConfirm: "Confermare che tutti i dati di temperatura Velair memorizzati siano in {source} e convertirli in {target}? Non continuare se qualche valore memorizzato è già in {target}, perché diventerebbe errato. La programmazione rimane ferma se la migrazione non può essere salvata.",
+	temperatureMigrationComplete: "Dati sulla temperatura aggiornati e programmazione ripristinata",
+	temperatureMigrationFailed: "Impossibile aggiornare i dati sulla temperatura",
+	temperatureLegacyResetQuestion: "Reimpostare i dati Celsius precedenti per {target}?",
+	temperatureLegacyResetExplanation: "Questa installazione è stata creata da una versione Velair che memorizzava solo valori Celsius. Poiché Home Assistant ora utilizza {target}, reimpostare Velair per eliminare i vecchi dati e creare impostazioni predefinite sicure in grado di riconoscere l'unità. Le future modifiche alle unità Home Assistant offriranno invece una conversione completa dei dati.",
+	temperatureLegacyResetStopped: "La programmazione è stata arrestata perché questa installazione precedente contiene solo dati in gradi Celsius mentre Home Assistant utilizza Fahrenheit. Apri le impostazioni di Velair e usa Ripristina Velair per creare valori predefiniti sicuri in Fahrenheit.",
+	temperatureStep: "Incremento",
+	temperatureStepNotReported: "Non segnalato da Home Assistant",
+	temperatureStepNotReportedDescription: "Questo clima non pubblica target_temp_step. Velair non deduce un gradino di temperatura.",
+	targetTemp: "Temp. obiettivo",
+	targetHumidity: "Umidità obiettivo",
+	targetBy: "Obiettivo di",
+	targetTemperature: "Temperatura obiettivo",
+	todayTimeline: "Cronologia di oggi",
+	updateTemplate: "Aggiorna modello",
+	templateDeleted: "Modello eliminato",
+	templateNameRequired: "Il nome del modello è obbligatorio",
+	templateOptionalHint: "Scegli un modello o configura manualmente la programmazione.",
+	templateSaved: "Modello salvato",
+	templates: "Modelli",
+	thermostat: "Termostato",
+	templatesPanelIntro: "Crea programmazioni giornaliere riutilizzabili e applicale a termostati e giorni compatibili.",
+	time: "Ora",
+	timeline: "Cronologia",
+	timelineContinuesFrom: "Da {day}, {time}",
+	title: "Titolo",
+	unableApplyThermostats: "Impossibile applicare la programmazione ai termostati",
+	unableCopy: "Impossibile copiare la programmazione",
+	unableLoad: "Impossibile caricare i dati della programmazione",
+	unablePause: "Impossibile mettere in pausa la programmazione",
+	unableResume: "Impossibile riprendere la programmazione",
+	unableReset: "Impossibile reimpostare i dati Velair",
+	unableSave: "Impossibile salvare la programmazione",
+	unableSaveSettings: "Impossibile salvare le impostazioni",
+	unableDeleteTemplate: "Impossibile eliminare il modello",
+	unableExport: "Impossibile esportare i dati",
+	unableSaveTemplate: "Impossibile salvare il modello",
+	unableSubscribe: "Impossibile iscriversi agli aggiornamenti della programmazione",
+	unsupportedModeForClimate: "{entity} non supporta {mode} alle {start}. Imposta il blocco su Mantieni o scegli una modalità supportata prima dell'applicazione.",
+	unsupportedModeForClimateOnWeekday: "{entity} non supporta {mode} il {weekday} alle {start}. Imposta il blocco su Mantieni o scegli una modalità supportata prima dell'applicazione.",
+	unsupportedRangeTargetForClimate: "{entity} non supporta un intervallo di temperatura alle {start}.",
+	unsupportedRangeTargetForClimateOnWeekday: "{entity} non supporta un intervallo di temperatura il {weekday} alle {start}.",
+	unsupportedSingleTargetForClimate: "{entity} richiede un intervallo di temperatura alle {start}.",
+	unsupportedSingleTargetForClimateOnWeekday: "{entity} richiede un intervallo di temperatura il {weekday} alle {start}.",
+	unsaved: "non salvato",
+	waiting: "In attesa dei dati della programmazione",
+	zoneOrder: "Climi gestiti",
+	zonesManaged: "{count} zone gestite",
+	weekdays: {
+		monday: "Lunedì",
+		tuesday: "Martedì",
+		wednesday: "Mercoledì",
+		thursday: "Giovedì",
+		friday: "Venerdì",
+		saturday: "Sabato",
+		sunday: "Domenica"
+	},
+	schedulerStatuses: {
+		idle: "Inattivo",
+		override_active: "Incremento attivo",
+		paused: "In pausa",
+		scheduled: "Programmato"
+	},
+	schedulerModes: {
+		auto: "Automatico",
+		paused: "In pausa"
+	},
+	hvacModes: {
+		auto: "Automatico",
+		cool: "Raffreddamento",
+		dry: "Asciutto",
+		fan_only: "Solo ventilatore",
+		heat: "Riscaldamento",
+		heat_cool: "Riscaldamento/raffreddamento",
+		off: "Spento"
+	},
+	hvacActions: {
+		cooling: "Raffreddamento",
+		drying: "Asciugatura",
+		fan: "Ventilatore",
+		heating: "Riscaldamento",
+		idle: "Inattivo",
+		off: "Spento",
+		preheating: "Preriscaldamento",
+		defrosting: "Sbrinamento"
+	}
+}, ft = /* @__PURE__ */ t({ nl: () => pt }), pt = {
+	addBlock: "Blok toevoegen",
+	externalConditionProfilesSupported: "Schema's voor Standaard, Profiel en Modus worden ondersteund",
+	profileExternalScheduleOnly: "Externe zones ondersteunen alleen schema's voor Standaard, Profiel of Modus. Pauzes en directe Velair-acties blijven niet beschikbaar.",
+	profileExternalMaxChanges: "{climate} overschrijdt op {day} de controllerlimiet van {count} wijzigingen.",
+	profileExternalTimeGrid: "{climate} moet op {day} intervallen van {minutes} minuten gebruiken.",
+	profileExternalUnsupportedBlock: "{climate} bevat een blok dat de externe controller niet kan weergeven.",
+	externalControllersInUse: "Gebruikte externe controllers",
+	externalConditionDefaultOnly: "Alleen standaardschema's",
+	externalConditionHvacModes: "Ondersteunde HVAC-modi: {modes}",
+	externalConditionTargetTypes: "Ondersteunde doeltypen: {types}",
+	externalConditionActions: "Ondersteunde schema-acties: {actions}",
+	externalConditionTurnOffUnsupported: "Uitschakelblokken worden niet ondersteund",
+	externalConditionOptionFields: "Ondersteunde klimaatopties: {fields}",
+	externalConditionOptionsUnsupported: "Velden voor klimaatopties worden niet ondersteund",
+	externalConditionMaxChanges: "Maximaal {count} schemawijzigingen per dag",
+	externalConditionTimeGrid: "Tijden moeten intervallen van {minutes} minuten gebruiken",
+	externalConditionMidnightContinuityCounts: "Een impliciete continuïteitswijziging om middernacht telt mee voor het dagelijkse maximum",
+	externalConditionsUnavailable: "Controllervoorwaarden zijn niet beschikbaar.",
+	externalCapability_action_set_temperature: "Temperatuur instellen",
+	externalCapability_action_turn_off: "Uitschakelen",
+	externalCapability_hvac_heat: "Verwarmen",
+	externalCapability_hvac_cool: "Koelen",
+	externalCapability_target_scalar: "Enkele doeltemperatuur",
+	externalCapability_target_range: "Doeltemperatuurbereik",
+	externalProviderAvailability: "Controller: {state}",
+	externalProviderAvailable: "beschikbaar",
+	externalProviderUnavailable: "niet beschikbaar",
+	externalPublication_publishing: "Het effectieve schema wordt naar de externe integratie gepubliceerd.",
+	externalPublication_published: "De externe integratie heeft het effectieve schema geaccepteerd.",
+	externalPublication_failed: "Publicatie van het schema is mislukt.",
+	overviewExternalExecutionProvider: "Externe controller: {provider}",
 	overviewExternalInfoAction: "Over externe uitvoering via {provider}",
 	overviewExternalStatusPublishing: "Bezig met publiceren",
 	overviewExternalStatusAccepted: "Geaccepteerd",
 	overviewExternalStatusFailed: "Mislukt",
 	overviewExternalStatusUnavailable: "Niet beschikbaar",
-	overviewExternalProviderUnavailable: "The external integration is currently unavailable. Velair remains inactive for this climate.",
-	externalSystems: "External systems",
-	externalSystemsDescription: "Choose who executes the effective weekly schedule for compatible climates. External zones are never physically controlled by Velair.",
-	externalExecutionVelair: "Velair (local execution)",
-	externalExecutionLocal: "Executed by Velair",
-	externalExecutionEnabled: "External schedule execution enabled",
-	externalExecutionDisabled: "Velair schedule execution enabled",
+	overviewExternalProviderUnavailable: "De externe integratie is momenteel niet beschikbaar. Velair blijft inactief voor deze klimaatentiteit.",
+	externalSystems: "Externe systemen",
+	externalSystemsDescription: "Kies wie het effectieve weekschema voor compatibele klimaatentiteiten uitvoert. Externe zones worden nooit rechtstreeks door Velair aangestuurd.",
+	externalExecutionVelair: "Velair (lokale uitvoering)",
+	externalExecutionLocal: "Uitgevoerd door Velair",
+	externalExecutionEnabled: "Externe uitvoering van schema's ingeschakeld",
+	externalExecutionDisabled: "Uitvoering van schema's door Velair ingeschakeld",
 	externalScheduleRequired: "Maak en bewaar een schema met minstens één temperatuurblok voordat je externe uitvoering inschakelt.",
 	externalSwitchpointUsage: "{used} van {max} schakelmomenten van de controller",
 	externalSwitchpointBreakdown: "{count} geplande blokken",
 	externalSwitchpointBreakdownContinuity: "{count} geplande blokken + 1 continuïteitspunt om middernacht",
-	externalActionsInactive: "Velair actions are inactive because this climate is executed by an external system.",
-	overviewZoneExternal: "External execution",
+	externalActionsInactive: "Velair-acties zijn inactief omdat deze klimaatentiteit door een extern systeem wordt uitgevoerd.",
+	overviewZoneExternal: "Externe uitvoering",
 	overviewExternalLabel: "Extern",
-	overviewExternalExecutionDescription: "The planned timeline is executed by the external controller. Velair does not send climate actions to this zone.",
-	overviewExternalZonesUnaffected: "{count} externally executed zone(s) are unaffected by Velair actions.",
-	manualUnavailableExternalExecution: "Manual control is unavailable for externally executed climates.",
+	overviewExternalExecutionDescription: "De geplande tijdlijn wordt uitgevoerd door de externe controller. Velair stuurt geen klimaatacties naar deze zone.",
+	overviewExternalZonesUnaffected: "{count} extern uitgevoerde zone(s) worden niet beïnvloed door Velair-acties.",
+	manualUnavailableExternalExecution: "Handmatige bediening is niet beschikbaar voor extern uitgevoerde klimaatentiteiten.",
 	externalChangePolicy: "Externe aanpassingen",
-	externalChangePolicyDescription: "Kies wat Velair doet na een externe wijziging van modus of doel. Automatisch behouden past de huidige Velair-instelling opnieuw toe; de andere opties starten handmatige bediening. Wijzigingen gelden vanaf de volgende externe aanpassing. Expliciet Handmatig kiezen blijft actief tot hervatten.",
+	externalChangePolicyDescription: "Kies wat Velair doet na een wijziging van modus of doel buiten Velair. Automatisch behouden past de huidige Velair-instelling opnieuw toe; de andere opties starten handmatige bediening. Wijzigingen gelden vanaf de volgende externe aanpassing. Expliciet Handmatig kiezen blijft actief tot hervatten.",
 	externalAdjustmentInfoAction: "Over externe aanpassingen",
 	externalChangeKeepAutomatic: "Automatisch behouden",
 	externalChangeUntilNextBlock: "Tot volgend blok",
@@ -4626,7 +5608,7 @@ var k = [
 	manualUnavailableDisabled: "Dit klimaat is uitgeschakeld in Velair.",
 	manualUnavailableTemperatureMigration: "Los de migratie van temperatuurgegevens op voordat je Handmatige bediening wijzigt.",
 	manualUnavailableScheduler: "Automatische planning is niet actief.",
-	manualUnavailableProfilePause: "Het actieve Profile pauzeert dit klimaat.",
+	manualUnavailableProfilePause: "Het actieve profiel pauzeert deze klimaatentiteit.",
 	manualUnavailableZonePause: "Een andere pauze bedient dit klimaat momenteel.",
 	manualAdjustmentActive: "Buiten automatische planning",
 	automaticControlResumed: "Automatische planning hervat",
@@ -4661,11 +5643,11 @@ var k = [
 	applyTo: "Toepassen op",
 	applyToAction: "Toepassen op...",
 	applyTemplateTo: "{template} toepassen op...",
-	boost: "Boost",
-	boostActive: "Boost actief",
-	activeBoosts: "Actieve boosts",
+	boost: "Tijdelijke aanpassing",
+	boostActive: "Tijdelijke aanpassing actief",
+	activeBoosts: "Actieve tijdelijke aanpassingen",
 	availableModes: "Beschikbare modi",
-	boostTarget: "Boostdoel",
+	boostTarget: "Doel van tijdelijke aanpassing",
 	boostUntil: "Eindigt over",
 	blocks: "Blokken",
 	build: "Build",
@@ -4675,7 +5657,7 @@ var k = [
 	activeSetupCardControlsDescription: "Kies wat deze kaart kan wijzigen. De huidige modus en toegepaste profielen blijven zichtbaar.",
 	activeSetupCardControlsModes: "Alleen modi",
 	activeSetupCardControlsProfiles: "Alleen profielen",
-	cardViewOverviewBoosts: "Overzicht: actieve boosts",
+	cardViewOverviewBoosts: "Overzicht: actieve tijdelijke aanpassingen",
 	cardViewOverviewEvents: "Overzicht: volgende gebeurtenissen",
 	cardViewOverviewStatus: "Overzicht: plannerstatus",
 	cardViewOverviewTimeline: "Overzicht: tijdlijn van vandaag",
@@ -4973,7 +5955,7 @@ var k = [
 	internalStorageVersion: "Opslag/model",
 	integrationVersion: "Integratieversie",
 	resetVelair: "Velair resetten",
-	resetVelairDescription: "Verwijdert alle opgeslagen Velair-gegevens, waaronder schema's, sjablonen, paneelvoorkeuren, actieve boosts en pauzes, beleid voor externe aanpassingen en actieve handmatige aanpassingen, instellingen voor Comfort en Room Assist, instellingen en leerdata voor adaptieve voorconditionering en opstartgedrag. Daarna worden veilige standaardwaarden met de juiste eenheid gemaakt voor de beheerde thermostaten.",
+	resetVelairDescription: "Verwijdert alle opgeslagen Velair-gegevens, waaronder schema's, sjablonen, paneelvoorkeuren, actieve tijdelijke aanpassingen en pauzes, beleid voor externe aanpassingen en actieve handmatige aanpassingen, instellingen voor Comfort en Room Assist, instellingen en leerdata voor adaptieve voorconditionering en opstartgedrag. Daarna worden veilige standaardwaarden met de juiste eenheid gemaakt voor de beheerde thermostaten.",
 	confirmReset: "Alle opgeslagen Velair-gegevens resetten? Dit kan alleen worden hersteld als je de gegevens eerst hebt geëxporteerd.",
 	confirmResetPreconditioningLearning: "Leerdata voor adaptieve voorconditionering voor {direction} resetten? Schema's en instellingen blijven behouden.",
 	confirmResetPreconditioningSettings: "De standaardinstellingen voor voorconditionering van deze thermostaat herstellen? Leermetingen blijven behouden.",
@@ -4989,7 +5971,7 @@ var k = [
 	moveUp: "Omhoog verplaatsen",
 	nextEvent: "Volgende gebeurtenis",
 	nextEvents: "Volgende gebeurtenissen",
-	noActiveBoosts: "Geen actieve boosts",
+	noActiveBoosts: "Geen actieve tijdelijke aanpassingen",
 	noBlocks: "Geen blokken",
 	noManagedEntities: "Geen beheerde klimaatentiteiten gevonden.",
 	noTemplates: "Geen sjablonen",
@@ -4999,7 +5981,7 @@ var k = [
 	otherDays: "Andere dagen",
 	otherThermostats: "Andere thermostaten",
 	overview: "Overzicht",
-	overviewPanelIntro: "De hoofdweergave groepeert de plannerstatus, komende gebeurtenissen, actieve boosts en snelle acties.",
+	overviewPanelIntro: "De hoofdweergave groepeert de plannerstatus, komende gebeurtenissen, actieve tijdelijke aanpassingen en snelle acties.",
 	overviewStatusPaused: "Gepauzeerd",
 	overviewStatusPausedDetail: "Tijdelijke pauze actief",
 	overviewStatusRunning: "Actief",
@@ -5009,7 +5991,7 @@ var k = [
 	overviewZones: "Zoneoverzicht",
 	overviewZoneApplied: "Toegepast",
 	overviewZoneAir: "Lucht: {status}",
-	overviewZoneBoost: "Boost",
+	overviewZoneBoost: "Tijdelijke aanpassing",
 	overviewZoneComfort: "Comfort: {status}",
 	overviewZoneManual: "Handmatig",
 	overviewZonePaused: "Gepauzeerd",
@@ -5149,11 +6131,11 @@ var k = [
 	schedules: "Schema's",
 	sensors: "Room Assist",
 	roomSensorAppliedTarget: "Toegepast doel",
-	roomSensorAssist: "Room Sensor Assist",
+	roomSensorAssist: "Ondersteuning via kamersensor",
 	roomSensorAssistBadge: "Room Assist",
-	roomSensorAssistEnabled: "Room Sensor Assist ingeschakeld",
+	roomSensorAssistEnabled: "Ondersteuning via kamersensor ingeschakeld",
 	roomSensorAssistHelp: "Past het klimaatdoel tijdelijk aan zodat de kamersensor de geplande temperatuur kan bereiken.",
-	roomSensorAssistDisabledDetail: "Er is een kamersensor geselecteerd, maar Room Sensor Assist staat uit. Velair gebruikt de klimaattemperatuur totdat deze schakelaar wordt ingeschakeld.",
+	roomSensorAssistDisabledDetail: "Er is een kamersensor geselecteerd, maar de ondersteuning via kamersensor staat uit. Velair gebruikt de klimaattemperatuur totdat deze schakelaar wordt ingeschakeld.",
 	roomSensorAssistDebounce: "Vernieuwingsvertraging",
 	roomSensorAssistDebounceHelp: "Wachttijd in seconden na een verandering in de kamer- of klimaattemperatuur voordat het aangepaste doel opnieuw wordt berekend. Gebruik 0 voor direct bijwerken.",
 	roomSensorAssistDeadband: "Dode zone Room Assist",
@@ -5203,7 +6185,7 @@ var k = [
 	roomSensorAppliedRange: "Toegepast bereik",
 	roomSensorClimateTemperature: "Klimaatmeting",
 	roomSensorCollapseClimate: "{climate} inklappen",
-	roomSensorControl: "Room Sensor Assist",
+	roomSensorControl: "Ondersteuning via kamersensor",
 	roomSensorExpandClimate: "{climate} uitklappen",
 	roomSensorIntroDetail: "Gebruik een kamertemperatuursensor om het klimaatdoel te sturen terwijl Velair beheerde temperatuurblokken uitvoert.",
 	roomSensorIntroTitle: "Kamertemperatuurregeling",
@@ -5230,7 +6212,7 @@ var k = [
 	roomSensorStatusReady: "Gereed",
 	roomSensorStatusUnavailable: "Niet beschikbaar",
 	roomSensorTemperatureEntity: "Kamertemperatuursensor",
-	roomSensorTemperatureEntityHelp: "Sensor die Room Sensor Assist als werkelijke kamertemperatuur gebruikt bij het aanpassen van het klimaatdoel.",
+	roomSensorTemperatureEntityHelp: "Sensor die de ondersteuning via kamersensor als werkelijke kamertemperatuur gebruikt bij het aanpassen van het klimaatdoel.",
 	roomSensorTemperatureScale: "Temperatuurschaal Room Assist",
 	roomSensorUnavailable: "Klimaatentiteit niet beschikbaar",
 	roomSensorValueUnavailable: "Niet beschikbaar",
@@ -5255,29 +6237,29 @@ var k = [
 	diagnosticsUnavailable: "Diagnostiek is niet beschikbaar.",
 	diagnosticsHealthy: "Velair lijkt correct te werken",
 	diagnosticsAttention: "Sommige onderdelen vereisen aandacht",
-	diagnosticsSchedulerSummary: "Planner: {status} · Mode: {mode}",
+	diagnosticsSchedulerSummary: "Planner: {status} · Modus: {mode}",
 	diagnosticsUnitSummary: "{ok} in orde · {warning} waarschuwingen · {error} fouten",
 	diagnosticsRecentHistory: "Recente uitvoeringsgeschiedenis ({count}/{limit})",
 	diagnosticsNoHistory: "Sinds Velair is gestart zijn geen relevante gebeurtenissen waargenomen.",
 	diagnosticsPrivacy: "De geschiedenis blijft alleen in het geheugen en wordt bij een herstart gewist. Rapporten bevatten geen telemetrie; entiteits-ID’s worden vervangen tenzij je ervoor kiest ze te behouden.",
-	diagnosticsEntityUnavailable: "De climate-entiteit is niet beschikbaar.",
-	diagnosticsEntityUnknown: "De climate-entiteit meldt een onbekende status.",
+	diagnosticsEntityUnavailable: "De klimaatentiteit is niet beschikbaar.",
+	diagnosticsEntityUnknown: "De klimaatentiteit meldt een onbekende status.",
 	diagnosticsCalculatedIntent: "Berekende intentie",
 	diagnosticsLastApplication: "Laatste toepassing",
 	diagnosticsRoomAssist: "Room Assist",
-	diagnosticsPreconditioning: "Preconditioning",
+	diagnosticsPreconditioning: "Voorconditionering",
 	diagnosticsComfort: "Comfort",
 	diagnosticsAssociatedSensors: "Gekoppelde sensoren",
 	diagnosticsLoadError: "De diagnostiek kon niet worden geladen. Open de sectie opnieuw.",
 	diagnosticsExportError: "Het diagnoserapport kon niet worden gedownload.",
 	diagnosticsDeliveryFailed: "De laatste verzendpoging is mislukt en kan opnieuw worden geprobeerd.",
-	diagnosticsDeliveryRetrying: "Velair probeert de laatste climate-intentie opnieuw te verzenden.",
+	diagnosticsDeliveryRetrying: "Velair probeert de laatste intentie voor de klimaatentiteit opnieuw te verzenden.",
 	diagnosticsDeliveryExhausted: "De limiet voor verzendpogingen is bereikt.",
-	diagnosticsDeliveryInvalidIntent: "De huidige climate-intentie kon niet worden bepaald.",
+	diagnosticsDeliveryInvalidIntent: "De huidige intentie voor de klimaatentiteit kon niet worden bepaald.",
 	diagnosticsRuntimeUnavailable: "Details van de huidige uitvoeringsintentie zijn niet beschikbaar.",
 	diagnosticsSensorUnavailable: "Een gekoppelde sensor ontbreekt of is niet beschikbaar.",
-	diagnosticsUnits: "Beheerde climates",
-	diagnosticsNoUnits: "Er zijn geen beheerde climates beschikbaar voor diagnostiek.",
+	diagnosticsUnits: "Beheerde klimaatentiteiten",
+	diagnosticsNoUnits: "Er zijn geen beheerde klimaatentiteiten beschikbaar voor diagnostiek.",
 	diagnosticsStatusDelivery: "Status en verzending",
 	diagnosticsActiveConfiguration: "Actieve configuratie",
 	diagnosticsFunctions: "Functies",
@@ -5287,8 +6269,8 @@ var k = [
 	diagnosticsRetryCount: "Pogingen",
 	diagnosticsLastError: "Laatste fout",
 	diagnosticsScheduleSource: "Bron van het schema",
-	diagnosticsMode: "Mode",
-	diagnosticsProfile: "Profile",
+	diagnosticsMode: "Modus",
+	diagnosticsProfile: "Profiel",
 	diagnosticsOverride: "Tijdelijke aanpassing",
 	diagnosticsPauses: "Actieve pauzes",
 	diagnosticsHvacModes: "HVAC-modi",
@@ -5309,19 +6291,19 @@ var k = [
 	diagnosticsStatusWithIssues: "{status} — {issues}",
 	diagnosticsHistoryLog: "Uitvoeringslogboek",
 	diagnosticsLogTime: "Tijd",
-	diagnosticsLogClimate: "Climate",
+	diagnosticsLogClimate: "Klimaatentiteit",
 	diagnosticsLogType: "Gebeurtenis",
 	diagnosticsLogMessage: "Informatie",
 	diagnosticsLogResizeColumn: "Kolom {column} breder of smaller maken",
 	diagnosticsHistoryClimateFilter: "Bronnen",
 	diagnosticsHistorySourcesLegend: "Gebeurtenisbronnen selecteren",
 	diagnosticsHistoryNoSources: "Geen bronnen",
-	diagnosticsHistorySourceCount: "{count} climate-apparaten",
-	diagnosticsHistorySourceCountWithVelair: "{count} climate-apparaten + Velair",
+	diagnosticsHistorySourceCount: "{count} klimaatentiteiten",
+	diagnosticsHistorySourceCountWithVelair: "{count} klimaatentiteiten + Velair",
 	diagnosticsHistoryClimateWithVelair: "{climate} en Velair",
 	diagnosticsHistorySourcesDone: "Gereed",
 	diagnosticsHistoryCategoryFilter: "Categorie",
-	diagnosticsHistoryAllSources: "Alle climates + Velair",
+	diagnosticsHistoryAllSources: "Alle klimaatentiteiten + Velair",
 	diagnosticsHistoryVelairOnly: "Alleen Velair",
 	diagnosticsHistoryAllCategories: "Alle categorieën",
 	diagnosticsHistoryFrom: "Van",
@@ -5335,21 +6317,21 @@ var k = [
 	diagnosticsHistoryUpdateError: "De instellingen voor de diagnosegeschiedenis konden niet worden opgeslagen.",
 	diagnosticsHistoryClearError: "De diagnosegeschiedenis kon niet worden gewist.",
 	diagnosticsHistoryCategoryControl: "Besturing en schema’s",
-	diagnosticsHistoryCategoryControlDescription: "Schema’s, Profiles, Modes, Boosts, pauzes, externe aanpassingen en wijzigingen tussen automatische en handmatige bediening.",
+	diagnosticsHistoryCategoryControlDescription: "Schema’s, profielen, modi, tijdelijke aanpassingen, pauzes, externe aanpassingen en wijzigingen tussen automatische en handmatige bediening.",
 	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
 	diagnosticsHistoryCategoryRoomAssistDescription: "Statuswijzigingen en doelcorrecties van Room Assist.",
-	diagnosticsHistoryCategoryPreconditioning: "Preconditioning",
-	diagnosticsHistoryCategoryPreconditioningDescription: "Plannen, annuleringen en leerwaarnemingen van Preconditioning.",
+	diagnosticsHistoryCategoryPreconditioning: "Voorconditionering",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Plannen, annuleringen en leerwaarnemingen van voorconditionering.",
 	diagnosticsHistoryCategoryComfort: "Comfort",
 	diagnosticsHistoryCategoryComfortDescription: "Wijzigingen in lokaal beoordeelde Comfort-omstandigheden.",
-	diagnosticsHistoryCategoryDelivery: "Verzending naar climate",
-	diagnosticsHistoryCategoryDeliveryDescription: "Mislukte, herhaalde, uitgeputte of geannuleerde climate-opdrachten.",
+	diagnosticsHistoryCategoryDelivery: "Verzending naar de klimaatentiteit",
+	diagnosticsHistoryCategoryDeliveryDescription: "Mislukte, herhaalde, uitgeputte of geannuleerde opdrachten voor klimaatentiteiten.",
 	diagnosticsHistoryCategoryAvailability: "Beschikbaarheid",
-	diagnosticsHistoryCategoryAvailabilityDescription: "Beheerde climates die niet beschikbaar of onbekend worden, of weer beschikbaar komen.",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Beheerde klimaatentiteiten die niet beschikbaar of onbekend worden, of weer beschikbaar komen.",
 	diagnosticsReasonCurrentSchedule: "Huidig schema",
 	diagnosticsReasonMissingTargetStep: "Stap voor doeltemperatuur niet beschikbaar",
 	diagnosticsReasonNoLongerPlanned: "Niet langer gepland",
-	diagnosticsReasonSchedulerNotAuto: "De planner staat niet in automatische Mode",
+	diagnosticsReasonSchedulerNotAuto: "De planner staat niet in de automatische modus",
 	diagnosticsReasonSchedulerStopped: "Planner gestopt",
 	diagnosticsReasonManualTarget: "Handmatig doel",
 	diagnosticsReasonManual: "Handmatige actie",
@@ -5371,9 +6353,9 @@ var k = [
 	diagnosticsOperationUpdated: "Bijgewerkt",
 	diagnosticsOperationRemoved: "Verwijderd",
 	diagnosticsOperationSetTemperature: "Temperatuur instellen",
-	diagnosticsEventBoostEnded: "Boost beëindigd",
-	diagnosticsEventBoostStarted: "Boost gestart",
-	diagnosticsEventClimateTargetApplied: "Climate-doeltemperatuur toegepast",
+	diagnosticsEventBoostEnded: "Tijdelijke aanpassing beëindigd",
+	diagnosticsEventBoostStarted: "Tijdelijke aanpassing gestart",
+	diagnosticsEventClimateTargetApplied: "Doeltemperatuur van de klimaatentiteit toegepast",
 	diagnosticsEventExternalAdjustment: "Externe aanpassing",
 	diagnosticsEventZoneControlChanged: "Schemabediening gewijzigd",
 	diagnosticsControlAutomatic: "Automatisch",
@@ -5386,17 +6368,17 @@ var k = [
 	diagnosticsControlChanged: "Van {previous} naar {current}",
 	diagnosticsUntil: "tot {time}",
 	diagnosticsReasonResumed: "Hervat",
-	diagnosticsEventProfileChanged: "Profile gewijzigd",
-	diagnosticsEventSchedulerModeChanged: "Mode van planner gewijzigd",
+	diagnosticsEventProfileChanged: "Profiel gewijzigd",
+	diagnosticsEventSchedulerModeChanged: "Modus van de planner gewijzigd",
 	diagnosticsEventZonePauseAdded: "Pauzereden toegevoegd",
 	diagnosticsEventZonePauseRemoved: "Pauzereden verwijderd",
 	diagnosticsEventZonePauseUpdated: "Pauzereden bijgewerkt",
 	diagnosticsEventZonePaused: "Zone gepauzeerd",
 	diagnosticsEventZoneResumed: "Zone hervat",
 	diagnosticsEventComfortAssessmentChanged: "Comfort-beoordeling gewijzigd",
-	diagnosticsEventPreconditioningObservationRecorded: "Preconditioning-waarneming vastgelegd",
-	diagnosticsEventPreconditioningPlanCancelled: "Preconditioning-plan geannuleerd",
-	diagnosticsEventPreconditioningPlanUpdated: "Preconditioning-plan bijgewerkt",
+	diagnosticsEventPreconditioningObservationRecorded: "Waarneming voor voorconditionering vastgelegd",
+	diagnosticsEventPreconditioningPlanCancelled: "Voorconditioneringsplan geannuleerd",
+	diagnosticsEventPreconditioningPlanUpdated: "Voorconditioneringsplan bijgewerkt",
 	diagnosticsEventRoomAssistRestored: "Room Assist hersteld",
 	diagnosticsEventRoomAssistStateChanged: "Room Assist-status gewijzigd",
 	diagnosticsEventRoomAssistUpdated: "Room Assist bijgewerkt",
@@ -5404,15 +6386,15 @@ var k = [
 	diagnosticsDownloadNow: "Rapport downloaden",
 	diagnosticsDownloadActionDescription: "Open privacyopties voordat je een diagnoserapport voor ondersteuning downloadt.",
 	diagnosticsExportOptions: "Privacy van het rapport",
-	diagnosticsExportExplanation: "De lokale weergave gebruikt echte lokale ID’s. Laat deze optie aan om climate- en sensor-ID’s in het rapport door stabiele aliassen te vervangen.",
+	diagnosticsExportExplanation: "De lokale weergave gebruikt echte lokale ID’s. Laat deze optie aan om ID’s van klimaatentiteiten en sensoren in het rapport door stabiele aliassen te vervangen.",
 	diagnosticsRedactEntityIds: "Entiteits-ID’s door aliassen vervangen",
-	diagnosticsOperationalIdsAlwaysRedacted: "Profile-, Mode- en pauze-ID’s worden altijd verwijderd.",
+	diagnosticsOperationalIdsAlwaysRedacted: "Profiel-, modus- en pauze-ID’s worden altijd verwijderd.",
 	diagnosticsRawEntityIdsWarning: "Dit rapport bevat de oorspronkelijke entiteits-ID’s. Controleer het voordat je het deelt.",
 	diagnosticsDownloadWithEntityIds: "Downloaden met ID’s",
 	diagnosticsSelectUnit: "Selecteer een klimaatapparaat om de diagnose te bekijken.",
 	diagnosticsDeliverySuccess: "Opdracht succesvol verzonden",
-	diagnosticsScheduleSourceProfilePause: "Pauze van Profile",
-	diagnosticsOverrideTurnOff: "Climate uitschakelen",
+	diagnosticsScheduleSourceProfilePause: "Pauze van profiel",
+	diagnosticsOverrideTurnOff: "Klimaatentiteit uitschakelen",
 	diagnosticsNone: "Geen",
 	diagnosticsReasonReplaced: "Vervangen door een nieuwer verzoek",
 	diagnosticsReasonStopped: "Gestopt",
@@ -5503,7 +6485,7 @@ var k = [
 	},
 	schedulerStatuses: {
 		idle: "Inactief",
-		override_active: "Boost actief",
+		override_active: "Tijdelijke aanpassing actief",
 		paused: "Gepauzeerd",
 		scheduled: "Gepland"
 	},
@@ -5530,15 +6512,2961 @@ var k = [
 		preheating: "Voorverwarmen",
 		defrosting: "Ontdooien"
 	}
-}, ft = /* @__PURE__ */ t({ ru: () => pt }), pt = {
+}, mt = /* @__PURE__ */ t({ pl: () => ht }), ht = {
+	addBlock: "Dodaj blok",
+	externalSystems: "Systemy zewnętrzne",
+	externalSystemsDescription: "Wybierz, kto wykonuje wynikowy harmonogram tygodniowy dla zgodnych encji klimatu. Strefy zewnętrzne nigdy nie są fizycznie sterowane przez Velair.",
+	externalControllersInUse: "Używane kontrolery zewnętrzne",
+	externalConditionProfilesSupported: "Obsługiwane są harmonogramy domyślne, profili i trybów",
+	externalConditionDefaultOnly: "Tylko harmonogramy domyślne",
+	profileExternalScheduleOnly: "Strefy zewnętrzne obsługują wyłącznie harmonogramy domyślne, profili lub trybów. Pauzy i bezpośrednie działania Velair pozostają niedostępne.",
+	profileExternalMaxChanges: "{climate} przekracza limit {count} zmian kontrolera w dniu {day}.",
+	profileExternalTimeGrid: "{climate} musi używać {minutes}-minutowych odstępów w dniu {day}.",
+	profileExternalUnsupportedBlock: "{climate} zawiera blok, którego sterownik zewnętrzny nie może reprezentować.",
+	externalConditionHvacModes: "Obsługiwane tryby HVAC: {modes}",
+	externalConditionTargetTypes: "Obsługiwane typy celów: {types}",
+	externalConditionActions: "Obsługiwane akcje harmonogramu: {actions}",
+	externalConditionTurnOffUnsupported: "Bloki wyłączające nie są obsługiwane",
+	externalConditionOptionFields: "Obsługiwane opcje encji klimatu: {fields}",
+	externalConditionOptionsUnsupported: "Pola opcji encji klimatu nie są obsługiwane",
+	externalConditionMaxChanges: "Maksymalnie {count} zmian harmonogramu dziennie",
+	externalConditionTimeGrid: "Godziny muszą używać {minutes}-minutowych odstępów",
+	externalConditionMidnightContinuityCounts: "Jeżeli pierwszy blok rozpoczyna się po godzinie 00:00, ukryta zmiana ciągłości o północy wliczana jest do dziennego maksimum",
+	externalConditionsUnavailable: "Warunki kontrolera są niedostępne.",
+	externalCapability_action_set_temperature: "Ustaw temperaturę",
+	externalCapability_action_turn_off: "Wyłącz",
+	externalCapability_hvac_heat: "Ogrzewanie",
+	externalCapability_hvac_cool: "Chłodzenie",
+	externalCapability_target_scalar: "Pojedyncza temperatura docelowa",
+	externalCapability_target_range: "Docelowy zakres temperatur",
+	externalExecutionVelair: "Velair (wykonanie lokalne)",
+	externalExecutionLocal: "Wykonane przez Velair",
+	externalExecutionEnabled: "Zewnętrzne wykonanie harmonogramu włączone",
+	externalExecutionDisabled: "Włączono wykonanie harmonogramu Velair",
+	externalScheduleRequired: "Utwórz i zapisz harmonogram z co najmniej jednym blokiem temperaturowym przed włączeniem wykonania zewnętrznego.",
+	externalSwitchpointUsage: "{used} z {max} punktów przełączenia kontrolera",
+	externalSwitchpointBreakdown: "{count} zaplanowanych bloków",
+	externalSwitchpointBreakdownContinuity: "{count} zaplanowanych bloków + 1 punkt ciągłości o północy",
+	externalActionsInactive: "Działania Velair są nieaktywne, ponieważ ta encja klimatu jest wykonywana przez system zewnętrzny.",
+	externalProviderAvailability: "Kontroler: {state}",
+	externalProviderAvailable: "dostępny",
+	externalProviderUnavailable: "niedostępny",
+	externalPublication_publishing: "Publikowanie wynikowego harmonogramu w integracji zewnętrznej.",
+	externalPublication_published: "Integracja zewnętrzna przyjęła obowiązujący harmonogram.",
+	externalPublication_failed: "Publikacja harmonogramu nie powiodła się.",
+	overviewZoneExternal: "Wykonanie zewnętrzne",
+	overviewExternalLabel: "Zewnętrzny",
+	overviewExternalExecutionDescription: "Zaplanowany harmonogram realizowany jest przez kontroler zewnętrzny. Velair nie wysyła działań klimatycznych do tej strefy.",
+	overviewExternalExecutionProvider: "Kontroler zewnętrzny: {provider}",
+	overviewExternalInfoAction: "Informacje o wykonaniu zewnętrznym poprzez {provider}",
+	overviewExternalStatusPublishing: "Publikowanie",
+	overviewExternalStatusAccepted: "Zaakceptowano",
+	overviewExternalStatusFailed: "Niepowodzenie",
+	overviewExternalStatusUnavailable: "Niedostępny",
+	overviewExternalProviderUnavailable: "Integracja zewnętrzna jest obecnie niedostępna. Velair pozostaje nieaktywny dla tej encji klimatu.",
+	overviewExternalZonesUnaffected: "Działania Velair nie wpływają na {count} stref wykonywanych zewnętrznie.",
+	externalChangePolicy: "Korekty zewnętrzne",
+	externalChangePolicyDescription: "Wybierz, co Velair ma zrobić po zmianie trybu lub celu poza Velair. Zachowaj sterowanie automatyczne ponownie stosuje bieżący zamiar Velair; pozostałe opcje uruchamiają sterowanie ręczne do wybranego punktu powrotu. Zmiany dotyczą następnej korekty zewnętrznej. Jeśli w Przeglądzie jawnie wybierzesz sterowanie ręczne, pozostanie ono aktywne do wznowienia, nawet gdy zapisano sterowanie automatyczne.",
+	externalAdjustmentInfoAction: "O dostosowaniach zewnętrznych",
+	externalChangeKeepAutomatic: "Zachowaj sterowanie automatyczne",
+	externalChangeUntilNextBlock: "Do następnego bloku",
+	externalChangeForDuration: "Przez określony czas",
+	externalChangeUntilResumed: "Do czasu wznowienia",
+	externalChangePolicySaved: "Zapisano politykę zmian zewnętrznych",
+	manualAdjustment: "Regulacja ręczna",
+	velairControl: "Sterowanie Velair",
+	automaticScheduling: "Automatyczny harmonogram",
+	overviewControlAutomatic: "Automatyczny",
+	overviewControlManual: "Ręczny",
+	manualAdjustmentStarted: "Rozpoczęto ręczną regulację",
+	unableEnterManualAdjustment: "Nie można rozpocząć regulacji ręcznej",
+	manualSessionNoNextBlock: "Żadnego następnego bloku — do czasu wznowienia",
+	manualSessionNextBlockAt: "Do następnego bloku w {time}",
+	manualSessionDuration: "Przez {minutes} min",
+	manualSessionDurationUntil: "Przez {minutes} min, do {time}",
+	manualSessionUntilResumed: "Do czasu wznowienia",
+	manualUnavailableClimate: "Encja klimatu jest niedostępna.",
+	manualUnavailableDisabled: "Ta encja klimatu jest wyłączona w Velair.",
+	manualUnavailableTemperatureMigration: "Rozwiąż problem migracji danych temperatury przed zmianą sterowania ręcznego.",
+	manualUnavailableExternalExecution: "Sterowanie ręczne jest niedostępne dla encji klimatu wykonywanych zewnętrznie.",
+	manualUnavailableScheduler: "Automatyczne planowanie nie jest uruchomione.",
+	manualUnavailableProfilePause: "Aktywny profil wstrzymuje tę encję klimatu.",
+	manualUnavailableZonePause: "Inna pauza steruje obecnie tą encją klimatu.",
+	manualAdjustmentActive: "Poza automatycznym harmonogramem",
+	automaticControlResumed: "Automatyczne planowanie zostało wznowione",
+	durationMinutes: "Czas trwania (minuty)",
+	apply: "Zastosuj",
+	cloneDayToDays: "Klonuj dzień do",
+	cloneDayToThermostats: "Klonuj dzień do",
+	cloneAction: "Klonuj",
+	clonePresetLabel: "Szybki wybór dnia",
+	clonePresetWeekdays: "pon.–pt",
+	clonePresetWeekend: "Weekend",
+	clonePresetAll: "Wszystkie dni",
+	clonePresetClear: "Wyczyść wybór",
+	cancel: "Anuluj",
+	close: "Zamknij",
+	profileSaveDayTemplateTitle: "Zapisz dzień jako szablon",
+	profileSaveDayTemplateDescription: "Zapisz edytowany {day} jako szablon do ponownego użycia. Wersja robocza Twojego profilu pozostanie niezmieniona.",
+	profileCloneDayClimatesTitle: "Klonuj dzień do encji klimatu",
+	profileCloneDayClimatesDescription: "Skopiuj {day} z {source} do tego samego dnia w wybranych encjach klimatu.",
+	profileCloneDayClimatesTargets: "Docelowe encje klimatu",
+	profileCloneDayClimatesOverwrite: "Zastąpi to tylko ten dzień tygodnia w każdej wybranej encji klimatu.",
+	profileCloneDayClimatesBehaviorChange: "Te encje klimatu przejdą z harmonogramu domyślnego lub pauzy na harmonogram profilu: {targets}.",
+	profileCloneDayIncompatibleTarget: "{entity} nie może użyć typu celu o {start}. Żadna encja klimatu nie została zmieniona.",
+	profileCloneDayIncompatibleMode: "{entity} nie obsługuje trybu {value} o {start}. Żadna encja klimatu nie została zmieniona.",
+	profileCloneDayIncompatibleOptions: "{entity} nie obsługuje wszystkich opcjonalnych ustawień o {start}. Żadna encja klimatu nie została zmieniona.",
+	profileCloneDayIncompatibleTemperature: "{entity} nie może użyć temperatury o {start} ze względu na jej limity lub krok. Żadna encja klimatu nie została zmieniona.",
+	appliedDays: "Zaktualizowane dni: {count}",
+	appliedTemplateTargets: "Zastosowano do {count} celów",
+	appliedThermostats: "Zaktualizowane termostaty: {count}",
+	applying: "Stosowanie…",
+	applyTemplate: "Zastosuj szablon",
+	applyTo: "Zastosuj do",
+	applyToAction: "Zastosuj do...",
+	applyTemplateTo: "Zastosuj {template} do...",
+	boost: "Wzmocnienie",
+	boostActive: "Wzmocnienie aktywne",
+	activeBoosts: "Aktywne wzmocnienia",
+	availableModes: "Dostępne tryby",
+	boostTarget: "Cel wzmocnienia",
+	boostUntil: "Kończy się w",
+	blocks: "Bloki",
+	build: "Kompilacja",
+	cardView: "Widok karty",
+	activeSetupCardControls: "Aktywne elementy sterujące konfiguracją",
+	activeSetupCardControlsBoth: "Tryby i profile",
+	activeSetupCardControlsDescription: "Wybierz, co ta karta może zmienić. Bieżący tryb i zastosowane profile pozostają widoczne.",
+	activeSetupCardControlsModes: "Tylko tryby",
+	activeSetupCardControlsProfiles: "Tylko profile",
+	cardViewOverviewBoosts: "Przegląd: aktywne wzmocnienia",
+	cardViewOverviewEvents: "Przegląd: kolejne wydarzenia",
+	cardViewOverviewStatus: "Przegląd: status programu planującego",
+	cardViewOverviewTimeline: "Przegląd: dzisiejsza oś czasu",
+	cardViewOverviewZones: "Przegląd: przegląd strefy",
+	cardViewActiveSetup: "Profile: konfiguracja aktywna",
+	cardViewSchedules: "Harmonogramy: edytor",
+	cardViewSensors: "Room Assist: konfiguracja i status",
+	cardViewComfort: "Komfort: konfiguracja i status",
+	cardViewPreconditioning: "Przygotowanie wstępne: konfiguracja i status",
+	cardThermostatHidden: "Ukryty w tej karcie",
+	cardThermostatVisible: "Pokazane na tej karcie",
+	cardThermostats: "Termostaty w tej karcie",
+	cardThermostatsDescription: "Wybierz, które termostaty przedstawia ta karta i ustal ich kolejność.",
+	comfortCardVisibility: "Widoczność karty komfortu",
+	comfortCardVisibilityDescription: "Wybierz konfigurację komfortu i wykresy na żywo, które ma wyświetlać ta karta.",
+	comfortCardShowCo2: "Pokaż wykres CO2",
+	comfortCardShowConfiguration: "Pokaż konfigurację",
+	comfortCardShowHumidity: "Pokaż wykres wilgotności",
+	comfortCardShowTemperature: "Pokaż wykres temperatury",
+	roomAssistCardVisibility: "Widoczność Room Assist",
+	roomAssistCardVisibilityDescription: "Wybierz, które elementy sterujące Room Assist i szczegóły statusu mają być wyświetlane na tej karcie.",
+	roomAssistShowDebounce: "Pokaż opóźnienie odświeżania",
+	roomAssistShowDeadband: "Pokaż strefę nieczułości Room Assist",
+	roomAssistShowLiveStatus: "Pokaż status na żywo",
+	roomAssistShowMaxDelta: "Pokaż maksymalną deltę wspomagania",
+	roomAssistShowSensor: "Pokaż czujnik temperatury w pomieszczeniu",
+	roomAssistShowSwitch: "Pokaż włącznik/wyłącznik",
+	current: "Bieżące",
+	currentHumidity: "Wilgotność",
+	currentTemperature: "Aktualna temperatura",
+	currentTime: "Bieżący czas: {time}",
+	clear: "Wyczyść",
+	confirmDeleteTemplate: "Usunąć szablon {template}?",
+	confirmTemplate: "Zamienić {weekday} na {template}?",
+	comfort: "Komfort",
+	comfortAirQuality: "Jakość powietrza",
+	comfortAirQualityElevated: "Podwyższony poziom CO2",
+	comfortAirQualityGood: "Dobre powietrze",
+	comfortAirQualityPoor: "Zła jakość powietrza",
+	comfortAirQualityUnavailable: "CO2 niedostępne",
+	comfortAutomaticSourceValue: "Automatyczny: {entity}",
+	comfortCo2: "CO2",
+	comfortCo2Attention: "Podniesiony",
+	comfortCo2Limits: "Limity CO2",
+	comfortCo2LimitsHelp: "Podwyższony oznacza wczesne ostrzeżenie o jakości powietrza. Słaby oznacza poważniejszy poziom CO2.",
+	comfortCo2Poor: "Zła",
+	comfortCo2Sensor: "Czujnik CO2",
+	comfortCollapseClimate: "Zwiń {climate}",
+	comfortConditionCold: "Zimno",
+	comfortConditionColdAndDry: "Zimno i sucho",
+	comfortConditionColdAndHumid: "Zimno i wilgotno",
+	comfortConditionComfortable: "Komfortowo",
+	comfortConditionDry: "Suche powietrze",
+	comfortConditionHot: "Gorąco",
+	comfortConditionHotAndDry: "Gorąco i sucho",
+	comfortConditionHotAndHumid: "Gorąco i wilgotno",
+	comfortConditionHumid: "Wilgotno",
+	comfortConditionHumidityComfortable: "Wilgotność w zakresie",
+	comfortConditionMonitoringOff: "Monitorowanie wyłączone",
+	comfortConditionNoReadings: "Żadnych odczytów",
+	comfortConditionReadingsOutdated: "Odczyty nieaktualne",
+	comfortConditionTemperatureComfortable: "Temperatura w zakresie",
+	comfortCooler: "Chłodniej",
+	comfortCurrentReadings: "Aktualne odczyty",
+	comfortDataFreshness: "Świeżość danych",
+	comfortDataIssueCo2Missing: "CO2 niedostępne",
+	comfortDataIssueCo2Stale: "Odczyt CO2 jest nieaktualny",
+	comfortDataIssueHumidityMissing: "Wilgotność niedostępna",
+	comfortDataIssueHumidityStale: "Odczyt wilgotności jest nieaktualny",
+	comfortDataIssueTemperatureMissing: "Temperatura niedostępna",
+	comfortDataIssueTemperatureStale: "Odczyt temperatury jest nieaktualny",
+	comfortDataPartial: "Częściowe odczyty",
+	comfortDataStale: "Odczyty nieaktualne",
+	comfortDataUnavailable: "Brak użytecznych odczytów",
+	comfortDisabledDetail: "Monitorowanie komfortu jest wyłączone w tym klimacie. Żadne czujniki komfortu nie są śledzone.",
+	comfortDoNotMonitor: "Nie monitoruj CO2",
+	comfortDoNotMonitorHumidity: "Nie monitoruj wilgotności",
+	comfortDrier: "Suchiej",
+	comfortExpandClimate: "Rozwiń {climate}",
+	comfortHumidity: "Wilgotność",
+	comfortHumidityRange: "Zakres wilgotności",
+	comfortHumidityRangeHelp: "Węższe zakresy ostrzegają wcześniej; szersze zakresy są bardziej tolerancyjne.",
+	comfortHumiditySensor: "Czujnik wilgotności",
+	comfortIntroDetail: "Lokalnie monitoruj temperaturę, wilgotność i CO2, a następnie wykorzystuj zdarzenia Velair w automatyce Home Assistant.",
+	comfortIntroTitle: "Komfort środowiskowy",
+	comfortMaximum: "Maks",
+	comfortMinimum: "Min",
+	comfortMoreHumid: "Bardziej wilgotno",
+	comfortMapCurrentPosition: "Aktualna pozycja: {temperature}, {humidity}",
+	comfortNotMonitored: "Niemonitorowane",
+	comfortSelectSensor: "Użyj automatycznego źródła",
+	comfortStaleAfter: "Nieaktualne po",
+	comfortStaleAfterHelp: "Maksymalny wiek od ostatniej aktualizacji stanu Home Assistant. Wyższy ufa starszym wartościom dłużej; niższe oceny oznaczają szybsze przestarzałe czujniki.",
+	comfortTargetZone: "Zakres komfortu",
+	comfortTemperature: "Temperatura",
+	comfortTemperatureRange: "Zakres temperatur",
+	comfortTemperatureRangeHelp: "Węższe zakresy ostrzegają wcześniej; szersze zakresy są bardziej tolerancyjne.",
+	comfortTemperatureSensor: "Czujnik temperatury",
+	comfortUnavailable: "Klimat niedostępny",
+	comfortWarmer: "Cieplej",
+	createTemplate: "Utwórz szablon",
+	customTemplateName: "Nazwa szablonu",
+	day: "Dzień",
+	daySchedule: "Harmonogram dnia",
+	defaultZone: "Pierwsza zarządzana strefa",
+	deleteBlock: "Usuń blok",
+	deleteTemplate: "Usuń szablon",
+	dismiss: "Zamknij",
+	duplicateStart: "Zduplikowany czas rozpoczęcia: {start}",
+	entityDiagnosticMissing: "Nie znaleziono elementu",
+	entityDiagnosticNoModes: "Nie zgłoszono żadnych obsługiwanych trybów HVAC",
+	entityDiagnosticNoRange: "Nie podano zakresu temperatur",
+	entityDiagnosticNotClimate: "Encja nie należy do domeny climate",
+	entityDiagnosticOk: "Konfiguracja termostatu wygląda OK",
+	fanMode: "Tryb wentylatora",
+	horizontalSwingMode: "Oscylacja pozioma",
+	invalidStart: "Nieprawidłowy czas rozpoczęcia: {start}",
+	invalidTemperature: "Nieprawidłowa temperatura dla {start}",
+	invalidTemperatureRange: "Użyj {min} do {max}",
+	invalidTargetRangeOrder: "Cel ogrzewania nie może przekraczać celu chłodzenia",
+	invalidTemperatureStep: "Użyj kroków {step}",
+	incompatibleScheduleTargets: "Niektóre cele harmonogramu wymagają przeglądu",
+	incompatibleScheduleTargetsDescription: "Zapisane cele {count} nie odpowiadają już zakresowi termostatu ani krokowi temperatury. Otwórz Harmonogramy i zapisz obsługiwaną wartość.",
+	operationRecoveryRequired: "Velair zapisał dane, ale nie mógł wznowić",
+	operationRecoveryDescription: "Planowanie pozostaje zatrzymane. Załaduj ponownie integrację Velair lub zrestartuj Home Assistant, aby zakończyć odzyskiwanie.",
+	operationCancelled: "Operację odwołano",
+	operationCurrentZone: "Przetwarzanie: {zone}",
+	operationDefaultCompleted: "Przywrócono domyślne harmonogramy",
+	operationDefaultFailed: "Nie można przywrócić domyślnych harmonogramów",
+	operationDefaultPartial: "Przywrócono domyślne harmonogramy z problemami",
+	operationDefaultRunning: "Przywracanie domyślnych harmonogramów",
+	operationDismiss: "Odrzuć stan operacji",
+	operationFailedHelp: "Sprawdź daną encję klimatu i dzienniki Home Assistant, aby poznać szczegóły",
+	operationFailureCount: "Strefy {count} z problemami: {zones}",
+	operationFailureOne: "1 strefa z problemami: {zones}",
+	operationModeCompleted: "Zastosowano tryb {target}",
+	operationModeFailed: "Nie można zastosować trybu {target}",
+	operationModePartial: "Zastosowano tryb {target} i wystąpiły problemy",
+	operationModeRunning: "Stosowanie trybu {target}",
+	operationNoZones: "Żadne strefy nie wymagały zmian",
+	operationProfileCompleted: "Zastosowano profil {target}",
+	operationProfileFailed: "Nie można zastosować profilu {target}",
+	operationProfilePartial: "Zastosowano profil {target} z problemami",
+	operationProfileRunning: "Stosowanie profilu {target}",
+	operationProgress: "Przetworzono {completed} stref {total}",
+	operationProgressLabel: "Postęp operacji Velair",
+	keep: "Zachowaj bieżący tryb",
+	keepMode: "Zachowaj bieżący tryb",
+	tagline: "Automatyzacja klimatu, która dostosowuje się do Twojego życia.",
+	loading: "Ładowanie…",
+	loadingEntities: "Ładowanie stref zarządzanych...",
+	managedEntityAvailable: "Dostępny",
+	managedEntityMissing: "Nie znaleziono",
+	managedEntitiesStatus: "Zarządzane termostaty",
+	menu: "Menu",
+	minutesShort: "min",
+	secondsShort: "s",
+	providedData: "Podane dane",
+	profiles: "Profile",
+	scheduleSourceLabel: "Źródło harmonogramu",
+	defaultSchedules: "Domyślne harmonogramy",
+	defaultSchedulesDescription: "Plan tygodniowy stosowany, gdy żaden profil nie steruje termostatem.",
+	profileSchedules: "Harmonogramy profili",
+	profileSchedulesDescription: "Utwórz profile i wybierz, czy każdy termostat ma używać własnego harmonogramu, harmonogramu domyślnego, czy też ma przerwy.",
+	profileScheduleErrorsSummary: "Przejrzyj nieprawidłowy harmonogram w: {climates}.",
+	profileScheduleClimateBlockError: "{climate}, {day} i {start}: {error}",
+	profileDefaultScheduleHelp: "Ten termostat nadal korzysta ze swojego domyślnego harmonogramu, gdy profil jest aktywny.",
+	profilesAndModes: "Profile i tryby",
+	activeSetup: "Aktywna konfiguracja",
+	activeSetupDescription: "Zobacz, co aktualnie steruje Twoimi strefami i zmień to z jednego miejsca.",
+	activeSetupChange: "Zmiana",
+	activeSetupModesHelp: "Wybierz tryb, który powinien kontrolować aktywne profile.",
+	activeSetupAppliedProfiles: "Zastosowane profile",
+	activeSetupNoProfiles: "Nie zastosowano żadnych profili. Strefy działają zgodnie ze swoimi domyślnymi harmonogramami.",
+	activeSetupManualProfile: "Aktywuj profil ręcznie",
+	activeSetupManualProfileHelp: "Zastępuje wszystkie aktywne profile i przełącza tryb na ręczny. Aby włączyć jednocześnie dodatkowe profile, użyj trybu.",
+	profilesPanelIntro: "Profile definiują alternatywne ustawienia klimatu. Tryby aktywują jednocześnie jeden lub więcej profili.",
+	profileLibrarySelectorLabel: "Biblioteki profili i trybów",
+	profilesLibraryDescription: "Określ, jak powinny zachowywać się wybrane strefy.",
+	profilesDescription: "Profil definiuje zachowanie jednej lub większej liczby stref, gdy jest ona aktywna.",
+	profileActive: "Aktywny profil",
+	profilesActive: "Aktywne profile",
+	profileActivate: "Aktywuj profil",
+	profileBehaviorDefault: "Domyślny harmonogram",
+	profileBehaviorPause: "Pauza",
+	profileBehaviorSchedule: "Harmonogram profilu",
+	profileBlockAction: "Działanie",
+	profileBrowseIcons: "Przeglądaj dostępne ikony",
+	profileConfirmDelete: "Usunąć {profile} i wszystkie jego ustawienia strefy? Tego nie można cofnąć.",
+	profileConfirmDeleteActive: "{profile} jest aktywny. Usunąć go i przywrócić jego strefy do ustawień domyślnych? Inne aktywne profile pozostaną. Tego nie można cofnąć.",
+	profileColor: "Kolor profilu",
+	profileColorHelp: "Służy do identyfikacji tego profilu w selektorach i listach.",
+	profileCopyTemplate: "Skopiuj szablon do dnia dzisiejszego",
+	profileCreate: "Nowy profil",
+	profileDelete: "Usuń profil",
+	profileDeleted: "Profil usunięty",
+	profileDescription: "Opis",
+	profileDescriptionCharactersRemaining: "Pozostało znaków {count}",
+	profileDescriptionTooLong: "Opis musi zawierać maksymalnie {count} znaków.",
+	profileDiscardChanges: "Odrzucić niezapisane zmiany w profilu?",
+	discardUnsavedChanges: "Odrzucić niezapisane zmiany?",
+	profileCollapseClimate: "Zwiń {climate}",
+	profileExpandClimate: "Rozwiń {climate}",
+	profileIcon: "Ikona",
+	profileIconHelp: "Użyj nazwy ikony Material Design, na przykład mdi:briefcase-outline.",
+	profileActiveContext: "Aktywny kontekst klimatyczny",
+	modeBuiltInHelp: "Wbudowanych trybów nie można zmieniać ani usuwać.",
+	modeInformation: "Informacje o {mode}",
+	modeChooseProfile: "Wybierz profil",
+	modeConfirmDelete: "Usunąć tryb {mode}? Tego nie można cofnąć.",
+	modeCreate: "Nowy tryb",
+	modeDelete: "Usuń tryb",
+	modeDeleted: "Tryb usunięty",
+	modeDiscardChanges: "Odrzucić niezapisane zmiany trybu?",
+	modeDefault: "Domyślny",
+	modeDefaultDescription: "Dezaktywuje profile i przywraca domyślny harmonogram każdej strefy.",
+	modeManual: "Ręczny",
+	modeManualDescription: "Aktywne profile nie są kontrolowane przez tryb.",
+	modeCustomDescription: "Aktywuje zmapowane profile: {profile}.",
+	modeChange: "Zmień tryb",
+	modeLabel: "Tryb",
+	modeMappedProfile: "Mapowany profil: {profile}",
+	modeMappedProfileMissing: "Zmapowany profil niedostępny: {profile}",
+	modeMappedProfiles: "Mapowane profile: {profiles}",
+	modeName: "Nazwa trybu",
+	modeNameDuplicate: "Użyj unikalnej nazwy trybu.",
+	modeNameHelp: "Ta wartość pojawia się w selektorze trybu Home Assistant.",
+	modeNameRequired: "Nazwa trybu jest wymagana.",
+	modeNameTooLong: "Nazwa trybu musi zawierać maksymalnie {count} znaków.",
+	modeProfile: "Zmapowany profil",
+	modeProfiles: "Mapowane profile",
+	modeProfileHelp: "Wybranie tego trybu aktywuje wszystkie wybrane profile. Strefa może należeć tylko do jednego z nich.",
+	modeProfileRequired: "Wybierz co najmniej jeden profil i unikaj profili konfigurujących tę samą strefę.",
+	modeSaved: "Tryb zapisany",
+	modeSelectToBegin: "Wybierz tryb niestandardowy, aby go edytować, lub utwórz go",
+	modeUnableDelete: "Nie można usunąć trybu",
+	modeUnableActivate: "Nie można zmienić trybu",
+	modeUnableSave: "Nie można zapisać trybu",
+	modesDescription: "Tryb aktywuje jeden lub więcej profili razem z Velair lub Home Assistant.",
+	modesLibraryDescription: "Aktywuj jeden lub więcej profili jednocześnie.",
+	modesEntityNote: "Automatyzacje mogą wybrać tryb poprzez encję trybu Velair lub aktywować profil za pomocą velair.activate_profile i jego identyfikatora automatyzacji.",
+	modesTitle: "Tryby",
+	profilesActiveCount: "Aktywne profile {count}",
+	profileId: "Identyfikator automatyzacji",
+	profileIdReadonlyHelp: "Stabilny identyfikator tylko do odczytu używany przez automatyzację i usługi.",
+	profileInvalidIcon: "Użyj prawidłowej nazwy w formacie mdi:icon-name.",
+	profileInvalidColor: "Wybierz prawidłowy kolor w formacie #RRGGBB.",
+	profileInvalidSchedule: "Sprawdź, czy każdy blok ma ważny, unikalny czas i temperaturę.",
+	profileName: "Nazwa profilu",
+	profileNameRequired: "Nazwa profilu jest wymagana",
+	profileNewName: "Nowy profil",
+	profileNoDescription: "Brak opisu",
+	profileNoneCreated: "Brak profili",
+	profileDefaultDescription: "Każda strefa korzysta ze swojego domyślnego harmonogramu.",
+	profileOverviewLabel: "Profil",
+	profilePauseAction: "Podczas pauzy",
+	profilePauseKeep: "Pozostaw encję klimatu bez zmian",
+	profilePauseTurnOff: "Wyłącz encję klimatu",
+	profileRemovedElsewhere: "Ten profil został usunięty w innym miejscu. Wybierz lub utwórz kolejny profil.",
+	profileSaved: "Profil został zapisany",
+	profileSave: "Zapisz profil",
+	profileSelectToBegin: "Wybierz profil, aby go edytować",
+	profileUnableActivate: "Nie można aktywować profilu",
+	profileUnableDelete: "Nie można usunąć profilu",
+	profileZoneBehavior: "Zachowanie strefy",
+	portability: "Przenoszenie danych",
+	portabilityDescription: "Eksportuj lub importuj dane Velair za pomocą wersjonowanego pliku JSON.",
+	portabilityFileReady: "{file} gotowy",
+	portabilityIncluded: "Dołączony",
+	portabilitySettingsSection: "Ustawienia",
+	portabilityTemplatesSection: "Szablony",
+	portabilityZonesSection: "Harmonogramy termostatów",
+	portabilityPreconditioningLearningSection: "Uczenie przygotowania wstępnego",
+	portabilityProfilesSection: "Profile klimatyczne",
+	portabilityModesSection: "Tryby",
+	preconditioningImportSkipped: "Pominięte uczenie się warunkowania wstępnego ({count}). Nie zarządza się tutaj tymi termostatami: {entities}",
+	portableExported: "Utworzono plik eksportu",
+	portableImported: "Import zakończony",
+	importData: "Importuj",
+	importFile: "Plik importu",
+	chooseFile: "Wybierz plik",
+	climateOptions: "Opcje klimatyczne",
+	climateOptionsAdd: "Dodaj ustawienia opcjonalne",
+	noFileSelected: "Nie wybrano pliku",
+	exportData: "Eksportuj",
+	invalidImportFile: "To nie jest prawidłowy plik eksportu Velair",
+	importOverwriteWarning: "Import spowoduje zastąpienie istniejących wartości. Nie można ich odzyskać, chyba że najpierw je wyeksportowano.",
+	noImportSections: "Nie znaleziono żadnych sekcji do zaimportowania",
+	legacyImportTemperatureUnit: "Ta starsza kopia zapasowa nie rejestruje jednostki temperatury. Velair będzie traktować swoje temperatury jako stopnie Celsjusza i w razie potrzeby konwertować je na {target}.",
+	notSet: "Nie ustawiono",
+	maintenance: "Konserwacja",
+	maintenanceDescription: "Szczegóły wersji technicznej dotyczące rozwiązywania problemów.",
+	frontendBuild: "Kompilacja frontendu",
+	portableFormatVersion: "Format przenośny/eksportowy",
+	internalStorageVersion: "Przechowywanie/model",
+	integrationVersion: "Wersja integracyjna",
+	resetVelair: "Zresetuj Velair",
+	resetVelairDescription: "Usuwa wszystkie zapisane dane Velair, w tym harmonogramy, szablony, preferencje paneli, aktywne przyspieszenia i pauzy, zasady regulacji zewnętrznych i aktywne korekty ręczne, ustawienia komfortu i Room Assist, ustawienia adaptacyjnego wstępnego kondycjonowania i uczenia się oraz zachowanie podczas uruchamiania. Następnie odtwarza ustawienia domyślne uwzględniające jednostkę dla aktualnie zarządzanych termostatów.",
+	confirmReset: "Zresetować wszystkie zapisane dane Velair? Tej operacji nie można cofnąć, chyba że najpierw wyeksportowano dane.",
+	confirmResetPreconditioningLearning: "Zresetować uczenie adaptacyjnego warunkowania wstępnego dla {direction}? Harmonogramy i ustawienia zostaną zachowane.",
+	confirmResetPreconditioningSettings: "Przywrócić domyślne ustawienia wstępnego przygotowania dla tego termostatu? Próbki do nauki zostaną zachowane.",
+	resetDone: "Reset danych Velair",
+	resetting: "Resetowanie",
+	minTemperature: "Minimalna temperatura",
+	maxTemperature: "Maksymalna temperatura",
+	modeOptional: "Tryb opcjonalny",
+	firstWeekday: "Pierwszy dzień tygodnia",
+	managedZones: "Strefy zarządzane",
+	mode: "Tryb",
+	moveDown: "Przesuń w dół",
+	moveUp: "Przesuń w górę",
+	nextEvent: "Następne wydarzenie",
+	nextEvents: "Następne wydarzenia",
+	noActiveBoosts: "Brak aktywnych wzmocnień",
+	noBlocks: "Żadnych bloków",
+	noManagedEntities: "Nie znaleziono zarządzanych encji klimatu.",
+	noTemplates: "Brak szablonów",
+	newTemplate: "Nowy szablon",
+	noUpcomingEvent: "Brak zbliżającego się wydarzenia",
+	off: "Wyłączony",
+	otherDays: "Inne dni",
+	otherThermostats: "Inne termostaty",
+	overview: "Przegląd",
+	overviewPanelIntro: "Główny widok stanu grupuje stan harmonogramu, nadchodzące wydarzenia, aktywne wzmocnienia i szybkie działania.",
+	overviewStatusPaused: "Wstrzymano",
+	overviewStatusPausedDetail: "Tymczasowa pauza aktywna",
+	overviewStatusRunning: "Uruchomiony",
+	overviewStatusRunningDetail: "Automatyczny harmonogram jest aktywny",
+	overviewStatusStopped: "Zatrzymany",
+	overviewStatusStoppedDetail: "Automatyczny harmonogram pozostaje zatrzymany do czasu wznowienia",
+	overviewZones: "Przegląd stref",
+	overviewZoneApplied: "Zastosowane",
+	overviewZoneAir: "Powietrze: {status}",
+	overviewZoneBoost: "Wzmocnienie",
+	overviewZoneComfort: "Komfort: {status}",
+	overviewZoneManual: "Ręczny",
+	overviewZonePaused: "Wstrzymano",
+	overviewZonePreconditioning: "Przygotowanie wstępne",
+	overviewZoneResumes: "Wznowienie o {time}",
+	overviewZoneRoom: "Pokój",
+	overviewZoneRoomAssist: "Room Assist {delta}",
+	overviewZoneScheduled: "Zaplanowany",
+	overviewZoneSensorIssue: "Dane czujnika niekompletne",
+	overviewZoneTarget: "Cel",
+	overviewZoneUntil: "Aż do {time}",
+	overviewZoneUntilResumed: "Do czasu wznowienia",
+	overviewZoneReadyAt: "Gotowe o {time}",
+	overviewZoneNextAt: "Następne o {time}",
+	overviewZoneAutomationOff: "Automatyka wyłączona",
+	overviewZoneRoomAssistThermalFlow: "Przepływ temperatury Room Assist",
+	overviewZoneSensor: "Czujnik",
+	overviewZoneClimate: "Encja klimatu",
+	overviewZoneTemperature: "Temperatura",
+	overviewZoneSetpoint: "Wartość zadana",
+	overviewZoneScheduledSetpoint: "Zaplanowany",
+	overviewZoneScheduledRange: "Zaplanowany zakres",
+	overviewZoneAppliedRange: "Zastosowany zakres",
+	overviewZoneOffset: "Korekta",
+	overviewZoneRangeShift: "Przesunięcie zakresu",
+	overviewZoneRoomAssistActive: "Aktywny",
+	overviewZoneRoomAssistGuarded: "Zaplanowana ochrona",
+	overviewZoneRoomAssistHolding: "Utrzymywanie",
+	overviewZoneRoomAssistTowardsLower: "W stronę dolnej granicy",
+	overviewZoneRoomAssistTowardsUpper: "W kierunku górnej granicy",
+	overviewZoneComfortLabel: "Komfort",
+	overviewZoneAirLabel: "Powietrze",
+	overviewZoneDataLabel: "Dane",
+	pause: "Pauza",
+	pauseActive: "Wstrzymano",
+	pauseApplied: "Harmonogram wstrzymany",
+	pauseDuration: "Czas trwania pauzy (min)",
+	pauseFrom: "Z",
+	pauseIndefinite: "Brak czasu końcowego",
+	pauseRemaining: "Wznowienie za",
+	pauseReasons: "Powody pauzy",
+	pauseTo: "Do",
+	preconditioning: "Przygotowanie wstępne",
+	preconditioningEnabled: "Przygotowanie wstępne włączone",
+	preconditioningCool: "Chłodzenie",
+	preconditioningCoolingFallbackLead: "Chłodzenie rezerwowe (min)",
+	preconditioningDirectionSamples: "{count}/{required}",
+	preconditioningHeat: "Ogrzewanie",
+	preconditioningHeatingFallbackLead: "Rezerwa ogrzewania (min)",
+	preconditioningDirectionStatus: "Stan",
+	preconditioningExpandClimate: "Rozwiń {climate}",
+	preconditioningIntroDetail: "Pozwól Velair obliczyć, kiedy powinien rozpocząć się zaplanowany cel komfortu, aby temperatura w pomieszczeniu była zbliżona do temperatury na czas.",
+	preconditioningIntroTitle: "Adaptacyjny czas komfortu",
+	preconditioningAdaptivePercentile: "Percentyl komfortu dynamicznego",
+	preconditioningAdaptivePercentileHelp: "Po włączeniu zwiększa margines po wielu częściowych próbach i zmniejsza go po próbach regularnie zakończonych powodzeniem.",
+	preconditioningCalculationCombined: "Łączny",
+	preconditioningCalculationDetails: "Szczegóły obliczeń",
+	preconditioningCalculationFinalLead: "Końcowe wyprzedzenie",
+	preconditioningCalculationPartialFloor: "Dolna granica częściowa",
+	preconditioningCalculationReachedEstimate: "Osiągnięte oszacowanie",
+	preconditioningCalculationRounded: "Zaokrąglone",
+	preconditioningCalculationSampleCounts: "Osiągnięto: {reached} · Częściowo: {partial} · Nieprawidłowy: {invalid}",
+	preconditioningCalculationSamples: "Próbki",
+	preconditioningComfortPercentile: "Percentyl komfortu",
+	preconditioningComfortPercentileHelp: "Wyższa wartość rozpoczyna wcześniej, korzystając z wolniejszych wyuczonych przypadków; niższa rozpoczyna później z mniejszym marginesem.",
+	preconditioningComfortPercentileLabel: "Percentyl komfortu",
+	preconditioningCollapseClimate: "Zwiń {climate}",
+	preconditioningFallbackInactive: "Model adaptacyjny aktywny",
+	preconditioningFallbackLabel: "Wartość zapasowa",
+	preconditioningFallbackLead: "{minutes} min",
+	preconditioningFallbackMinutesPerDegree: "Model początkowy",
+	preconditioningFallbackMinutesPerDegreeHelp: "Wyższa wartość rozpoczyna wcześniej, zanim zgromadzi się wystarczająca liczba danych; niższa rozpoczyna później.",
+	preconditioningHistorySize: "Rozmiar historii",
+	preconditioningHistorySizeHelp: "Wyższa wartość zachowuje więcej przydatnych próbek; niższa szybciej usuwa starsze próbki.",
+	preconditioningHistory: "Historia",
+	preconditioningInvalidEvents: "Nieprawidłowe",
+	preconditioningLastSample: "Ostatnia próbka",
+	preconditioningLeadTime: "{minutes} min wcześniej",
+	preconditioningLearning: "Uczenie lokalne",
+	preconditioningLearningStatus: "Stan uczenia się",
+	preconditioningLearningDisabled: "Uczenie się wyłączone",
+	preconditioningLearningMoreData: "Potrzebne więcej danych",
+	preconditioningLearningReady: "Gotowe do uczenia",
+	preconditioningLimitedByMax: "Ograniczone przez maksimum",
+	preconditioningLivePrediction: "Przewidywanie na żywo",
+	preconditioningLivePredictionHelp: "Używa następnego rzeczywistego bloku, aby pokazać zmianę obliczonego początku przygotowania wstępnego.",
+	preconditioningMaxLead: "Maksymalny start (min)",
+	preconditioningMaxLeadHelp: "Wyższa wartość pozwala na wcześniejszy start; niższa wprowadza bardziej rygorystyczny limit wyprzedzenia.",
+	preconditioningMaximumLabel: "Maksymalny",
+	preconditioningMinimumDelta: "Minimalna delta temperatury",
+	preconditioningMinimumDeltaHelp: "Wyższa wartość ignoruje więcej małych różnic; niższa reaguje na mniejsze różnice temperatur.",
+	preconditioningMinStart: "Minimalny start (min)",
+	preconditioningMinStartHelp: "Wyższa wartość ignoruje krótkie przewidywane wyprzedzenia; niższa pozwala na krótsze wcześniejsze starty.",
+	preconditioningModelHistory: "Podobne dane historyczne",
+	preconditioningModel: "Model uczenia się",
+	preconditioningModelInitial: "Model początkowy",
+	preconditioningModelSource: "Źródło modelu",
+	preconditioningNextBlock: "Następny blok",
+	preconditioningNoUpcomingDirectionEvent: "Brak nadchodzących bloków {direction} do przewidzenia.",
+	preconditioningNormalStart: "Normalny początek",
+	preconditioningNotSupported: "Nieobsługiwane",
+	preconditioningPartialEvents: "Częściowy",
+	preconditioningPartialSamples: "Częściowe: {count}",
+	preconditioningPartialExpiry: "Częściowe wygaśnięcie (dni)",
+	preconditioningPartialExpiryHelp: "Wyższa pozwala, aby niekompletne próby miały dłuższy wpływ na prognozy; niższe wygasają szybciej.",
+	preconditioningQualityComplete: "Kompletny",
+	preconditioningQualityInvalid: "Nieważny",
+	preconditioningQualityPartial: "Częściowy",
+	preconditioningRecencyDecay: "Spadek znaczenia z czasem (dni)",
+	preconditioningRecencyDecayHelp: "Wyższe powoduje, że stare próbki wolniej tracą na wadze; niższy sprzyja niedawnym zachowaniom.",
+	preconditioningReachedEvents: "Osiągnięty",
+	preconditioningResetLearning: "Zresetuj naukę",
+	preconditioningLearningResetDone: "Reset uczenia {direction}",
+	preconditioningSimilarSamples: "Podobne próbki",
+	preconditioningSimilarSamplesHelp: "Wyższa wartość uwzględnia więcej podobnych danych historycznych; niższa skupia się na najbardziej zbliżonych przypadkach.",
+	preconditioningUnsupportedDirection: "Nieobsługiwane przez ten termostat",
+	preconditioningOutdoorTemperatureEntity: "Czujnik temperatury zewnętrznej",
+	preconditioningOutdoorTemperatureEntityHelp: "Zapewnia lokalny kontekst zewnętrzny do porównywania wyuczonych próbek; nie zmienia to pierwotnego modelu.",
+	preconditioningOutdoorContext: "Kontekst zewnętrzny",
+	preconditioningOutdoorDisabled: "Wyłączony",
+	preconditioningSelectOutdoorSensor: "Wybierz czujnik",
+	preconditioningResetSettings: "Przywróć ustawienia domyślne",
+	preconditioningSettingsResetDone: "Przywrócono ustawienia wstępnego przygotowania",
+	preconditioningStarts: "Rozpoczyna się",
+	preconditioningTargetBy: "Osiągnij do",
+	preconditioningTiming: "Czas i ograniczenia",
+	preconditioningUnavailable: "Termostat niedostępny. Nie można włączyć wstępnego warunkowania.",
+	preconditioningPredictionLowerBoundary: "Przewidywanie · dolny limit {temperature}",
+	preconditioningPredictionUpperBoundary: "Przewidywanie · górna granica {temperature}",
+	preconditioningUseOutdoorTemperature: "Użyj temperatury zewnętrznej",
+	preconditioningUseOutdoorTemperatureHelp: "Po włączeniu uwzględnia temperaturę zewnętrzną przy wyborze podobnych wyuczonych próbek.",
+	resume: "Wznów",
+	resumed: "Harmonogram wznowiony",
+	resizeEnd: "Dostosuj koniec",
+	resizeStart: "Dostosuj początek",
+	schedulerControls: "Sterowanie harmonogramem",
+	schedules: "Harmonogramy",
+	sensors: "Room Assist",
+	roomSensorAppliedTarget: "Zastosowany cel",
+	roomSensorAssist: "Asystent czujnika pokojowego",
+	roomSensorAssistBadge: "Room Assist",
+	roomSensorAssistEnabled: "Asystent czujnika pokojowego włączony",
+	roomSensorAssistHelp: "Tymczasowo dostosowuje cel encji klimatu, aby czujnik pokojowy mógł osiągnąć zaplanowaną temperaturę.",
+	roomSensorAssistDisabledDetail: "Wybrano czujnik pokojowy, ale Asystent czujnika pokojowego jest wyłączony. Velair nadal używa temperatury encji klimatu do czasu włączenia przełącznika.",
+	roomSensorAssistDebounce: "Opóźnienie odświeżenia",
+	roomSensorAssistDebounceHelp: "Liczba sekund oczekiwania po zmianie temperatury pomieszczenia lub encji klimatu przed ponownym obliczeniem wspomaganego celu. Ustaw 0, aby aktualizować natychmiast.",
+	roomSensorAssistDeadband: "Strefa nieczułości Room Assist",
+	roomSensorAssistDeadbandHelp: "Ustawia dolny i górny limit Room Assist w tej odległości od zaplanowanego celu. W trybie stałego ogrzewania lub chłodzenia osiągnięcie jednego limitu powoduje, że Room Assist wybiera drugi. Tryby automatyczne i zakresy temperatur wykorzystują go jako margines braku korekty. Zmiany obowiązują po zapisaniu.",
+	roomSensorDeadbandZoneHelp: "Przy stałym ogrzewaniu lub chłodzeniu Room Assist przesuwa się w kierunku jednego limitu, aż pomieszczenie go osiągnie, a następnie cofa się w kierunku drugiego limitu. Zakresy natywne zachowują to jako zewnętrzny margines braku korekty.",
+	roomSensorDeadbandZoneHelpAutomatic: "W trybie automatycznym skalarnym Room Assist nie stosuje żadnej korekcji, dopóki pomieszczenie pozostaje wewnątrz tego marginesu.",
+	roomSensorDeadbandZoneHelpGeneric: "Efektywny tryb klimatyzacji określa, w jaki sposób Room Assist wykorzystuje tę strefę nieczułości.",
+	roomSensorDeadbandZoneAutomatic: "Brak marginesu korekty · ±{value}",
+	roomSensorDeadbandZoneGeneric: "Strefa nieczułości · ±{value}",
+	roomSensorDeadbandZoneCompact: "Strefa nieczułości · ±{value}",
+	roomSensorDeadbandZoneCompactAutomatic: "Marża neutralna · ±{value}",
+	roomSensorDeadbandZoneCompactRange: "Margines graniczny · ±{value}",
+	roomSensorDeadbandZoneBrief: "Strefa ±{value}",
+	roomSensorDeadbandZoneRange: "Margines graniczny · {value} poza każdym limitem",
+	roomSensorDeadbandZoneSingle: "Pasmo kontrolne · ±{value}",
+	roomSensorDeadbandZoneZero: "Brak strefy nieczułości · {value}",
+	roomSensorAssistMaxDelta: "Maksymalna delta wspomagania",
+	roomSensorAssistMaxDeltaHelp: "Ogranicza korektę Room Assist. Ustaw wartość wystarczająco wysoką, aby pokryć różnicę celu potrzebną termostatowi do zatrzymania ogrzewania lub chłodzenia. Pełna wartość jest używana tylko wtedy, gdy jest potrzebna.",
+	roomSensorAssistOffset: "Przesunięcie wspomagania",
+	roomSensorAssistOffsetHelp: "Tymczasowe przesunięcie zastosowane do docelowej temperatury, aby czujnik pokojowy mógł nadal zbliżać się do zaplanowanej temperatury.",
+	roomSensorAssistCorrectionValue: "Przesunięcie {value}",
+	roomSensorAssistCorrectionActiveHelp: "Room Assist dostosowuje wartość zadaną encji klimatu. Nie oznacza to, że encja aktywnie ogrzewa lub chłodzi.",
+	roomSensorAssistNoCorrection: "Korekta 0 · Utrzymywanie",
+	roomSensorAssistNoCorrectionHelp: "Room Assist nie stosuje korekcji wartości zadanej. Temperatury w pomieszczeniu i w harmonogramie mogą się jeszcze różnić.",
+	roomSensorLimitMaximumTitle: "Osiągnięto maksimum termostatu",
+	roomSensorLimitMaximumDetail: "Room Assist zażądał {requested}, czyli powyżej limitu {limit}. Velair zastosował {applied}; dalsza korekta jest ograniczona.",
+	roomSensorLimitMinimumTitle: "Osiągnięto minimum termostatu",
+	roomSensorLimitMinimumDetail: "Room Assist zażądał {requested}, czyli poniżej limitu {limit}. Velair zastosował {applied}; dalsza korekta jest ograniczona.",
+	roomSensorScheduledGuardTitle: "Zaplanowana ochrona celu",
+	roomSensorScheduledGuardCoolingDetail: "Room Assist obliczył {calculated}, ale zachował {applied}, więc chłodzenie nie będzie kontynuowane poniżej zaplanowanego celu.",
+	roomSensorScheduledGuardHeatingDetail: "Room Assist obliczył {calculated}, ale zachował {applied}, więc ogrzewanie nie będzie kontynuowane powyżej zaplanowanej wartości docelowej.",
+	roomSensorBlockActiveSince: "Aktywny od {time}",
+	roomSensorBlockMode: "Tryb: {mode}",
+	roomSensorBlockScheduled: "Zaplanowano na {time}",
+	roomSensorBlockStartedEarly: "Zaczęło się od {time}",
+	roomSensorBlockTarget: "Cel: {target}",
+	roomSensorHysteresisTowardsLower: "Sterowanie w kierunku dolnego limitu: {target}",
+	roomSensorHysteresisTowardsUpper: "Sterowanie w kierunku górnego limitu: {target}",
+	roomSensorGapAboveTarget: "{value} powyżej celu",
+	roomSensorGapBelowTarget: "{value} poniżej wartości docelowej",
+	roomSensorClimateTarget: "Cel encji klimatu",
+	roomSensorClimateTargetHelp: "Cel encji klimatu to wartość zadana zgłaszana obecnie przez encję climate; nie jest to cel temperatury pokojowej.",
+	roomSensorClimateTargetAppliedHelp: "Cel encji klimatu to tymczasowa wartość zadana wysyłana przez Velair, gdy Room Assist jest aktywny; nie jest to cel temperatury pokojowej.",
+	roomSensorClimateTargetStepHelp: "Room Assist obliczył {calculated}. Ta encja klimatu przyjmuje krok {step}, dlatego Velair bezpiecznie zastosował {applied}.",
+	roomSensorAppliedLow: "Zastosowane minimum",
+	roomSensorAppliedHigh: "Zastosowane maksimum",
+	roomSensorAppliedRange: "Zastosowany zakres",
+	roomSensorClimateTemperature: "Odczyt klimatyczny",
+	roomSensorCollapseClimate: "Zwiń {climate}",
+	roomSensorControl: "Asystent czujnika pokojowego",
+	roomSensorExpandClimate: "Rozwiń {climate}",
+	roomSensorIntroDetail: "Użyj czujnika temperatury pokojowej do sterowania celem encji klimatu, gdy Velair wykonuje zarządzane bloki temperatury.",
+	roomSensorIntroTitle: "Kontrola temperatury w pomieszczeniu",
+	roomSensorLiveStatus: "Stan na żywo",
+	roomSensorNoActiveBlock: "Brak aktywnego bloku temperatury",
+	roomSensorNoActiveBlockDetail: "Room Assist zostanie zaktualizowany, gdy aktywny będzie zarządzany blok temperaturowy.",
+	roomSensorNotConfigured: "Najpierw wybierz czujnik pokojowy",
+	roomSensorRoomTemperature: "Czujnik pokojowy",
+	roomSensorRemainingToTarget: "Do celu",
+	roomSensorRemainingValue: "Pozostało {value}",
+	roomSensorScheduledTarget: "Zaplanowany cel",
+	roomSensorScheduledLow: "Zaplanowane minimum",
+	roomSensorScheduledHigh: "Zaplanowane maksimum",
+	roomSensorScheduledRange: "Zaplanowany zakres",
+	roomSensorRangeShiftValue: "Przesunięcie zakresu {value}",
+	roomSensorRangeShiftHelp: "Room Assist przesuwa obie granice zakresu razem; znak pokazuje zastosowany kierunek.",
+	roomSensorSelectSensor: "Wybierz czujnik pokojowy",
+	roomSensorStatusAssisting: "Wspomaganie",
+	roomSensorStatusBlocked: "Zablokowany",
+	roomSensorStatusDisabled: "Wyłączony",
+	roomSensorStatusHolding: "Utrzymywanie",
+	roomSensorStatusIdle: "Bezczynny",
+	roomSensorStatusNotConfigured: "Nie skonfigurowano",
+	roomSensorStatusReady: "Gotowy",
+	roomSensorStatusUnavailable: "Niedostępny",
+	roomSensorTemperatureEntity: "Czujnik temperatury pokojowej",
+	roomSensorTemperatureEntityHelp: "Czujnik używany przez funkcję Asystent czujnika pokojowego jako rzeczywistą temperaturę w pomieszczeniu podczas dostosowywania docelowej temperatury.",
+	roomSensorTemperatureScale: "Skala temperatury Room Assist",
+	roomSensorUnavailable: "Encja klimatu niedostępna",
+	roomSensorValueUnavailable: "Niedostępny",
+	save: "Zapisz",
+	saveTemplate: "Zapisz jako szablon",
+	saved: "Harmonogram zapisany",
+	saving: "Zapisywanie…",
+	scheduleCopyHint: "Możesz również skopiować tę konfigurację do innego dnia lub encji klimatu.",
+	scheduleEditor: "Edytor harmonogramu",
+	scheduleStepClimate: "1. Wybierz encję klimatu, którą chcesz skonfigurować.",
+	scheduleStepConfigure: "3. Skonfiguruj encję klimatu zgodnie z potrzebami.",
+	scheduleStepDay: "2. Wybierz dzień, który chcesz skonfigurować.",
+	reorderZones: "Przeciągnij termostaty, aby zmienić ich kolejność w panelu.",
+	selectedWeekday: "Dzień początkowy",
+	selectedZone: "Strefa początkowa",
+	selectTemplatePlaceholder: "Wybierz szablon",
+	selectTemplateToBegin: "Aby rozpocząć, wybierz szablon.",
+	setTemperature: "Ustaw temperaturę",
+	settings: "Ustawienia",
+	diagnostics: "Diagnostyka",
+	diagnosticsDescription: "Zobacz, co wie Velair, jakie ma zamierzenia i co może zweryfikować lokalnie.",
+	diagnosticsUnavailable: "Diagnostyka nie jest jeszcze dostępna.",
+	diagnosticsDownloadAction: "Pobierz raport…",
+	diagnosticsDownloadNow: "Pobierz raport",
+	diagnosticsDownloadActionDescription: "Otwórz opcje prywatności raportów przed pobraniem diagnostyki w celu uzyskania pomocy.",
+	diagnosticsExportOptions: "Prywatność raportu",
+	diagnosticsExportExplanation: "Podgląd na żywo wykorzystuje prawdziwe lokalne identyfikatory. Pozostaw tę opcję włączoną, aby w raporcie zastąpić identyfikatory klimatu i czujników stabilnymi aliasami.",
+	diagnosticsRedactEntityIds: "Zastąp identyfikatory jednostek aliasami",
+	diagnosticsOperationalIdsAlwaysRedacted: "Identyfikatory profilu, trybu i pauzy są zawsze usuwane.",
+	diagnosticsRawEntityIdsWarning: "Raport ten będzie zawierał oryginalne identyfikatory encji. Przejrzyj go przed udostępnieniem.",
+	diagnosticsDownloadWithEntityIds: "Pobierz z identyfikatorami",
+	diagnosticsHealthy: "Velair działa prawidłowo",
+	diagnosticsAttention: "Niektóre elementy wymagają uwagi",
+	diagnosticsSchedulerSummary: "Harmonogram: {status} · Tryb: {mode}",
+	diagnosticsUnitSummary: "{ok} sprawny · Ostrzeżenia {warning} · Błędy {error}",
+	diagnosticsRecentHistory: "Najnowsza historia środowiska wykonawczego ({count}/{limit})",
+	diagnosticsNoHistory: "Od uruchomienia Velair nie zaobserwowano żadnych istotnych zdarzeń w czasie wykonywania.",
+	diagnosticsPrivacy: "Historia jest przechowywana wyłącznie w pamięci i jest usuwana po ponownym uruchomieniu. Raporty nie zawierają danych telemetrycznych; identyfikatory jednostek zostaną zastąpione, chyba że zdecydujesz się je zachować.",
+	diagnosticsEntityUnavailable: "Jednostka klimatyczna jest niedostępna.",
+	diagnosticsEntityUnknown: "Jednostka klimatyczna zgłasza nieznany stan.",
+	diagnosticsCalculatedIntent: "Obliczony zamiar sterowania",
+	diagnosticsLastApplication: "Ostatnie zastosowanie",
+	diagnosticsRoomAssist: "Room Assist",
+	diagnosticsPreconditioning: "Przygotowanie wstępne",
+	diagnosticsComfort: "Komfort",
+	diagnosticsAssociatedSensors: "Powiązane czujniki",
+	diagnosticsLoadError: "Nie udało się wczytać diagnostyki. Spróbuj ponownie otworzyć sekcję.",
+	diagnosticsExportError: "Nie można pobrać raportu diagnostycznego.",
+	diagnosticsDeliveryFailed: "Ostatnia próba dostarczenia nie powiodła się i kwalifikuje się do odzyskania.",
+	diagnosticsDeliveryRetrying: "Velair ponawia próbę zastosowania najnowszego celu klimatycznego.",
+	diagnosticsDeliveryExhausted: "Osiągnięto limit ponownych prób dostarczenia.",
+	diagnosticsDeliveryInvalidIntent: "Nie można ustalić bieżącego zamiaru sterowania encją klimatu.",
+	diagnosticsRuntimeUnavailable: "Szczegóły intencji środowiska wykonawczego nie są obecnie dostępne.",
+	diagnosticsSensorUnavailable: "Brak wyraźnie powiązanego czujnika lub jest on niedostępny.",
+	diagnosticsUnits: "Zarządzane encje klimatu",
+	diagnosticsNoUnits: "Brak zarządzanych encji klimatu dostępnych do diagnostyki.",
+	diagnosticsSelectUnit: "Wybierz encję klimatu, aby wyświetlić jej diagnostykę.",
+	diagnosticsStatusDelivery: "Stan i dostawa",
+	diagnosticsActiveConfiguration: "Aktywna konfiguracja",
+	diagnosticsFunctions: "Funkcje",
+	diagnosticsDeviceSensors: "Urządzenie i czujniki",
+	diagnosticsCurrentState: "Stan obecny",
+	diagnosticsDeliveryStatus: "Stan dostawy",
+	diagnosticsDeliverySuccess: "Dostarczono pomyślnie",
+	diagnosticsScheduleSourceProfilePause: "Wstrzymanie profilu",
+	diagnosticsOverrideTurnOff: "Wyłącz encję klimatu",
+	diagnosticsNone: "Brak",
+	diagnosticsReasonReplaced: "Zastąpiony nowszym żądaniem",
+	diagnosticsReasonStopped: "Zatrzymany",
+	diagnosticsRetryCount: "Ponowne próby",
+	diagnosticsLastError: "Ostatni błąd",
+	diagnosticsScheduleSource: "Źródło harmonogramu",
+	diagnosticsMode: "Tryb",
+	diagnosticsProfile: "Profil",
+	diagnosticsOverride: "Nadpisanie",
+	diagnosticsPauses: "Aktywne przerwy",
+	diagnosticsHvacModes: "Tryby HVAC",
+	diagnosticsTemperatureRange: "Zakres temperatur",
+	diagnosticsTemperatureStep: "Krok temperatury",
+	diagnosticsConfigured: "Skonfigurowane",
+	diagnosticsOn: "Włączony",
+	diagnosticsOff: "Wyłączony",
+	diagnosticsActive: "Aktywny",
+	diagnosticsFunctionState: "Stan środowiska wykonawczego",
+	diagnosticsAppliedTarget: "Zastosowany cel",
+	diagnosticsHeatSamples: "Obserwacje ogrzewania",
+	diagnosticsCoolSamples: "Obserwacje chłodzenia",
+	diagnosticsHistorySettings: "Ustawienia historii",
+	diagnosticsStatusHealthy: "Zdrowy",
+	diagnosticsStatusWarning: "Ostrzeżenie",
+	diagnosticsStatusError: "Błąd",
+	diagnosticsStatusWithIssues: "{status}: {issues}",
+	diagnosticsHistoryLog: "Dziennik czasu wykonania",
+	diagnosticsLogTime: "Czas",
+	diagnosticsLogClimate: "Encja klimatu",
+	diagnosticsLogType: "Typ",
+	diagnosticsLogMessage: "Szczegóły",
+	diagnosticsLogResizeColumn: "Zmień rozmiar kolumny {column}",
+	diagnosticsHistoryClimateFilter: "Źródła",
+	diagnosticsHistorySourcesLegend: "Wybierz źródła zdarzeń",
+	diagnosticsHistoryNoSources: "Brak źródeł",
+	diagnosticsHistorySourceCount: "Encje klimatu: {count}",
+	diagnosticsHistorySourceCountWithVelair: "Encje klimatu: {count} + Velair",
+	diagnosticsHistoryClimateWithVelair: "{climate} + Velair",
+	diagnosticsHistorySourcesDone: "Zrobione",
+	diagnosticsHistoryCategoryFilter: "Kategoria",
+	diagnosticsHistoryAllSources: "Wszystkie encje klimatu + Velair",
+	diagnosticsHistoryVelairOnly: "Tylko Velair",
+	diagnosticsHistoryAllCategories: "Wszystkie kategorie",
+	diagnosticsHistoryFrom: "Z",
+	diagnosticsHistoryTo: "Do",
+	diagnosticsHistoryInvalidRange: "Wartość Od musi być wcześniejsza lub równa wartości Do.",
+	diagnosticsHistoryResults: "Wyświetlanie zdarzeń {visible} z {total}",
+	diagnosticsHistoryClearFilters: "Wyczyść filtry",
+	diagnosticsHistoryNoMatches: "Żadne zachowane zdarzenia nie pasują do tych filtrów.",
+	diagnosticsHistoryExplanation: "Wybierz zdarzenia przechowywane przez Velair. Bieżący stan jest zawsze obserwowany. Historia zachowuje maksymalnie {limit} zdarzeń, istnieje tylko w pamięci i jest czyszczona po ponownym uruchomieniu Home Assistant lub Velair.",
+	diagnosticsClearHistory: "Wyczyść historię",
+	diagnosticsHistoryUpdateError: "Nie można zapisać ustawień historii diagnostyki.",
+	diagnosticsHistoryClearError: "Nie można wyczyścić historii diagnostyki.",
+	diagnosticsHistoryCategoryControl: "Kontrola i harmonogramy",
+	diagnosticsHistoryCategoryControlDescription: "Harmonogramy, profile, tryby, wzmocnienia, pauzy, regulacje zewnętrzne i zmiany sterowania automatycznego/ręcznego.",
+	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
+	diagnosticsHistoryCategoryRoomAssistDescription: "Zmiany stanu Room Assist i poprawki celu.",
+	diagnosticsHistoryCategoryPreconditioning: "Przygotowanie wstępne",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Plany przygotowania wstępnego, anulowania i obserwacje uczenia.",
+	diagnosticsHistoryCategoryComfort: "Komfort",
+	diagnosticsHistoryCategoryComfortDescription: "Zmiany w lokalnie ocenianych warunkach komfortu.",
+	diagnosticsHistoryCategoryDelivery: "Sterowanie encją klimatu",
+	diagnosticsHistoryCategoryDeliveryDescription: "Nieudane, ponawiane, wyczerpane lub anulowane polecenia encji klimatu.",
+	diagnosticsHistoryCategoryAvailability: "Dostępność",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Zarządzane encje klimatu stają się niedostępne, nieznane lub ponownie dostępne.",
+	diagnosticsReasonCurrentSchedule: "Aktualny harmonogram",
+	diagnosticsReasonMissingTargetStep: "Stopień temperatury docelowej niedostępny",
+	diagnosticsReasonNoLongerPlanned: "Już nie planowane",
+	diagnosticsReasonSchedulerNotAuto: "Harmonogram nie jest w trybie automatycznym",
+	diagnosticsReasonSchedulerStopped: "Harmonogram zatrzymany",
+	diagnosticsReasonManualTarget: "Cel ręczny",
+	diagnosticsReasonManual: "Akcja ręczna",
+	diagnosticsReasonScheduleChanged: "Harmonogram zmieniony",
+	diagnosticsReasonScheduleCleared: "Harmonogram wyczyszczony",
+	diagnosticsReasonSettingsUpdated: "Ustawienia zaktualizowane",
+	diagnosticsReasonPortableImport: "Przenośny import",
+	diagnosticsReasonDataReset: "Reset danych",
+	diagnosticsReasonExpired: "Wygasły",
+	diagnosticsReasonNoActiveTarget: "Brak aktywnego celu",
+	diagnosticsReasonZoneUnavailable: "Strefa niedostępna",
+	diagnosticsReasonAssistDisabled: "Room Assist wyłączone",
+	diagnosticsReasonMissingTarget: "Brak celu",
+	diagnosticsReasonUnsupportedTemperatureRange: "Nieobsługiwany zakres temperatur",
+	diagnosticsReasonUnsupportedMode: "Tryb HVAC nie jest obsługiwany",
+	diagnosticsReasonMissingTemperature: "Brak temperatury",
+	diagnosticsReasonTemperatureMigration: "Migracja temperaturowa",
+	diagnosticsOperationAdded: "Dodano",
+	diagnosticsOperationUpdated: "Zaktualizowano",
+	diagnosticsOperationRemoved: "Usunięto",
+	diagnosticsOperationSetTemperature: "Ustaw temperaturę",
+	diagnosticsEventBoostEnded: "Wzmocnienie zakończone",
+	diagnosticsEventBoostStarted: "Rozpoczęło się wzmocnienie",
+	diagnosticsEventClimateTargetApplied: "Zastosowano cel klimatyczny",
+	diagnosticsEventExternalAdjustment: "Regulacja zewnętrzna",
+	diagnosticsEventZoneControlChanged: "Zmieniono kontrolę harmonogramu",
+	diagnosticsControlAutomatic: "Automatyczny",
+	diagnosticsControlManual: "Ręczny",
+	diagnosticsHvacModeChanged: "Tryb HVAC: {previous} → {current}",
+	diagnosticsTargetChanged: "Cel: {previous} → {current}",
+	diagnosticsRangeChanged: "Zakres: {previous} → {current}",
+	diagnosticsLowerTargetChanged: "Dolny cel: {previous} → {current}",
+	diagnosticsUpperTargetChanged: "Górny cel: {previous} → {current}",
+	diagnosticsControlChanged: "{previous} → {current}",
+	diagnosticsUntil: "aż do {time}",
+	diagnosticsReasonResumed: "Wznowione",
+	diagnosticsEventProfileChanged: "Profil zmieniony",
+	diagnosticsEventSchedulerModeChanged: "Zmieniono tryb harmonogramu",
+	diagnosticsEventZonePauseAdded: "Dodano powód wstrzymania",
+	diagnosticsEventZonePauseRemoved: "Usunięto przyczynę wstrzymania",
+	diagnosticsEventZonePauseUpdated: "Powód wstrzymania został zaktualizowany",
+	diagnosticsEventZonePaused: "Strefa wstrzymana",
+	diagnosticsEventZoneResumed: "Strefa wznowiona",
+	diagnosticsEventComfortAssessmentChanged: "Ocena komfortu uległa zmianie",
+	diagnosticsEventPreconditioningObservationRecorded: "Zapisano obserwację przygotowania wstępnego",
+	diagnosticsEventPreconditioningPlanCancelled: "Plan przygotowania wstępnego anulowany",
+	diagnosticsEventPreconditioningPlanUpdated: "Zaktualizowano plan przygotowania wstępnego",
+	diagnosticsEventRoomAssistRestored: "Przywrócono Room Assist",
+	diagnosticsEventRoomAssistStateChanged: "Stan Room Assist został zmieniony",
+	diagnosticsEventRoomAssistUpdated: "Room Assist zaktualizowano",
+	settingsPanelIntro: "W tym panelu możesz wybrać sposób uporządkowania termostatów i dni tygodnia.",
+	startupBehavior: "Uruchamianie Home Assistant",
+	startsAt: "Rozpoczyna się",
+	applyScheduleOnStartup: "Zastosuj aktywny harmonogram po uruchomieniu",
+	applyScheduleOnStartupDescription: "Po uruchomieniu Home Assistant Velair może zastosować bieżący blok harmonogramu do zarządzanych termostatów, zamiast pozostawiać je bez zmian.",
+	start: "Uruchom",
+	status: "Stan",
+	stop: "Zatrzymaj",
+	supportedFanModes: "Tryby wentylatora",
+	supportedHorizontalSwingModes: "Tryby oscylacji poziomej",
+	supportedPresetModes: "Ustawienia wstępne",
+	supportedSwingModes: "Tryby oscylacji",
+	presetMode: "Tryb wstępny",
+	swingMode: "Oscylacja",
+	temp: "Temp.",
+	target: "Cel",
+	heatBelow: "Ogrzewaj poniżej",
+	coolAbove: "Chłodź powyżej",
+	temperatureRange: "Zakres temperatur",
+	minimumShort: "Min",
+	maximumShort: "Maks",
+	temperatureUnit: "Jednostka temperatury",
+	temperatureUnitManagedByHomeAssistant: "Wykryto w Home Assistant. Zmień tę wartość w ustawieniach systemu jednostek Home Assistant.",
+	temperatureMigrationRequired: "Velair wymaga Twojej uwagi",
+	temperatureMigrationStopped: "Harmonogram i konfiguracja termiczna są zablokowane, ponieważ Home Assistant zmienił jednostki temperatury. Otwórz ustawienia Velair, aby przeprowadzić bezpieczną migrację.",
+	temperatureMigrationQuestion: "Czy przeprowadzić migrację przechowywanych temperatur z {source} do {target}?",
+	temperatureMigrationExplanation: "Kontynuuj tylko wtedy, gdy każda temperatura zapisana przez Velair nadal używa jednostki {source}. Migracja aktualizuje harmonogramy, szablony, nadpisania, Komfort, Room Assist, ustawienia przygotowania wstępnego, szybkości i dane uczenia przed wznowieniem harmonogramu. Jeśli dowolna zapisana wartość jest już w {target}, migracja spowoduje jej nieprawidłową konwersję.",
+	temperatureMigrationUse: "Przeprowadź migrację {source} do {target}",
+	temperatureMigrationConfirm: "Potwierdzić, że wszystkie zapisane dane dotyczące temperatury Velair znajdują się w {source} i przekonwertować je na {target}? Nie kontynuuj, jeśli jakakolwiek zapisana wartość znajduje się już w {target}, ponieważ stanie się niepoprawna. Jeśli nie można zapisać migracji, harmonogram pozostaje zatrzymany.",
+	temperatureMigrationComplete: "Zaktualizowano dane dotyczące temperatury i wznowiono harmonogram",
+	temperatureMigrationFailed: "Nie można zaktualizować danych dotyczących temperatury",
+	temperatureLegacyResetQuestion: "Zresetować starsze dane w stopniach Celsjusza dla {target}?",
+	temperatureLegacyResetExplanation: "Ta instalacja została utworzona w wersji Velair, która przechowuje tylko wartości stopni Celsjusza. Ponieważ Home Assistant używa teraz {target}, zresetuj Velair, aby odrzucić stare dane i utworzyć bezpieczne ustawienia domyślne uwzględniające jednostki. Przyszłe zmiany jednostek Home Assistant będą oferować zamiast tego pełną konwersję danych.",
+	temperatureLegacyResetStopped: "Harmonogram został zatrzymany, ponieważ ta starsza instalacja zawiera tylko dane w stopniach Celsjusza, podczas gdy Home Assistant używa stopni Fahrenheita. Otwórz ustawienia Velair i użyj opcji Resetuj Velair, aby utworzyć domyślne ustawienia Fahrenheita.",
+	temperatureStep: "Krok",
+	temperatureStepNotReported: "Nie zgłoszono przez Home Assistant",
+	temperatureStepNotReportedDescription: "Ta encja klimatu nie udostępnia target_temp_step. Velair nie zakłada kroku temperatury.",
+	targetTemp: "Temperatura docelowa",
+	targetHumidity: "Docelowa wilgotność",
+	targetBy: "Osiągnij do",
+	targetTemperature: "Temperatura docelowa",
+	todayTimeline: "Dzisiejsza oś czasu",
+	updateTemplate: "Zaktualizuj szablon",
+	templateDeleted: "Szablon usunięty",
+	templateNameRequired: "Nazwa szablonu jest wymagana",
+	templateOptionalHint: "Wybierz szablon lub ręcznie skonfiguruj harmonogram.",
+	templateSaved: "Szablon został zapisany",
+	templates: "Szablony",
+	thermostat: "Termostat",
+	templatesPanelIntro: "Twórz codzienne harmonogramy wielokrotnego użytku i stosuj je do zgodnych termostatów i dni.",
+	time: "Czas",
+	timeline: "Oś czasu",
+	timelineContinuesFrom: "Od {day}, {time}",
+	title: "Tytuł",
+	unableApplyThermostats: "Nie można zastosować harmonogramu do termostatów",
+	unableCopy: "Nie można skopiować harmonogramu",
+	unableLoad: "Nie można załadować danych harmonogramu",
+	unablePause: "Nie można wstrzymać harmonogramu",
+	unableResume: "Nie można wznowić harmonogramu",
+	unableReset: "Nie można zresetować danych Velair",
+	unableSave: "Nie można zapisać harmonogramu",
+	unableSaveSettings: "Nie można zapisać ustawień",
+	unableDeleteTemplate: "Nie można usunąć szablonu",
+	unableExport: "Nie można wyeksportować danych",
+	unableSaveTemplate: "Nie można zapisać szablonu",
+	unableSubscribe: "Nie można subskrybować aktualizacji harmonogramu",
+	unsupportedModeForClimate: "{entity} nie obsługuje {mode} i {start}. Zmień ten blok na Zachowaj lub wybierz obsługiwany tryb przed zastosowaniem.",
+	unsupportedModeForClimateOnWeekday: "{entity} nie obsługuje {mode} na {weekday} i {start}. Zmień ten blok na Zachowaj lub wybierz obsługiwany tryb przed zastosowaniem.",
+	unsupportedRangeTargetForClimate: "{entity} nie obsługuje zakresu temperatur {start}.",
+	unsupportedRangeTargetForClimateOnWeekday: "{entity} nie obsługuje zakresu temperatur {weekday} w {start}.",
+	unsupportedSingleTargetForClimate: "{entity} wymaga zakresu temperatur {start}.",
+	unsupportedSingleTargetForClimateOnWeekday: "{entity} wymaga zakresu temperatur na {weekday} w {start}.",
+	unsaved: "niezapisany",
+	waiting: "Oczekiwanie na dane harmonogramu",
+	zoneOrder: "Kontrolowane klimaty",
+	zonesManaged: "Zarządzane strefy {count}",
+	weekdays: {
+		monday: "Poniedziałek",
+		tuesday: "Wtorek",
+		wednesday: "Środa",
+		thursday: "Czwartek",
+		friday: "Piątek",
+		saturday: "Sobota",
+		sunday: "Niedziela"
+	},
+	schedulerStatuses: {
+		idle: "Bezczynny",
+		override_active: "Wzmocnienie aktywne",
+		paused: "Wstrzymano",
+		scheduled: "Zaplanowany"
+	},
+	schedulerModes: {
+		auto: "Automatyczny",
+		paused: "Wstrzymano"
+	},
+	hvacModes: {
+		auto: "Automatyczny",
+		cool: "Chłodzenie",
+		dry: "Osuszanie",
+		fan_only: "Tylko wentylator",
+		heat: "Ogrzewanie",
+		heat_cool: "Ogrzewanie/chłodzenie",
+		off: "Wyłączony"
+	},
+	hvacActions: {
+		cooling: "Chłodzenie",
+		drying: "Osuszanie",
+		fan: "Wentylacja",
+		heating: "Ogrzewanie",
+		idle: "Bezczynny",
+		off: "Wyłączony",
+		preheating: "Wstępne ogrzewanie",
+		defrosting: "Rozmrażanie"
+	}
+}, gt = /* @__PURE__ */ t({ pt_br: () => _t }), _t = {
+	addBlock: "Adicionar bloco",
+	externalSystems: "Sistemas externos",
+	externalSystemsDescription: "Escolha quem executa a programação semanal efetiva para entidades de climatização compatíveis. As zonas externas nunca são controladas fisicamente pelo Velair.",
+	externalControllersInUse: "Controladores externos em uso",
+	externalConditionProfilesSupported: "Há suporte a programações padrão, de perfil e de modo",
+	externalConditionDefaultOnly: "Somente programações padrão",
+	profileExternalScheduleOnly: "As zonas externas aceitam apenas programações padrão, de perfil ou de modo. Pausas e ações diretas do Velair continuam indisponíveis.",
+	profileExternalMaxChanges: "{climate} excede o limite do controlador de alterações de {count} em {day}.",
+	profileExternalTimeGrid: "{climate} deve usar intervalos de minutos {minutes} em {day}.",
+	profileExternalUnsupportedBlock: "{climate} contém um bloco que o controlador externo não pode representar.",
+	externalConditionHvacModes: "Modos HVAC suportados: {modes}",
+	externalConditionTargetTypes: "Tipos de alvo suportados: {types}",
+	externalConditionActions: "Ações de programação suportadas: {actions}",
+	externalConditionTurnOffUnsupported: "Blocos de desligamento não são suportados",
+	externalConditionOptionFields: "Opções de entidade de climatização suportadas: {fields}",
+	externalConditionOptionsUnsupported: "Os campos de opções climáticas não são suportados",
+	externalConditionMaxChanges: "Máximo de alterações de programação {count} por dia",
+	externalConditionTimeGrid: "Os tempos devem usar intervalos de {minutes} minutos",
+	externalConditionMidnightContinuityCounts: "Se o primeiro bloco começar depois das 00:00, a mudança de continuidade implícita à meia-noite conta para o máximo diário",
+	externalConditionsUnavailable: "As condições do controlador não estão disponíveis.",
+	externalCapability_action_set_temperature: "Definir temperatura",
+	externalCapability_action_turn_off: "Desligar",
+	externalCapability_hvac_heat: "Aquecimento",
+	externalCapability_hvac_cool: "Resfriamento",
+	externalCapability_target_scalar: "Temperaturo alvo único",
+	externalCapability_target_range: "Faixa de temperaturo alvo",
+	externalExecutionVelair: "Velair (execução local)",
+	externalExecutionLocal: "Executado por Velair",
+	externalExecutionEnabled: "Execução de programação externo habilitada",
+	externalExecutionDisabled: "Execução do programação Velair habilitada",
+	externalScheduleRequired: "Crie e salve uma programação com pelo menos um bloco de temperatura antes de habilitar a execução externa.",
+	externalSwitchpointUsage: "{used} de {max} pontos de comutação do controlador",
+	externalSwitchpointBreakdown: "{count} blocos programados",
+	externalSwitchpointBreakdownContinuity: "{count} blocos programados + 1 ponto de continuidade à meia-noite",
+	externalActionsInactive: "As ações Velair estão inativas porque este entidade de climatização é executado por um sistema externo.",
+	externalProviderAvailability: "Controlador: {state}",
+	externalProviderAvailable: "disponível",
+	externalProviderUnavailable: "indisponível",
+	externalPublication_publishing: "Publicando a programação efetiva na integração externa.",
+	externalPublication_published: "A integração externa aceitou a programação efetiva.",
+	externalPublication_failed: "Falha na publicação do programação.",
+	overviewZoneExternal: "Execução externa",
+	overviewExternalLabel: "Externo",
+	overviewExternalExecutionDescription: "A programação planejado é executado pelo controlador externo. Velair não envia ações climáticas para esta zona.",
+	overviewExternalExecutionProvider: "Controlador externo: {provider}",
+	overviewExternalInfoAction: "Sobre execução externa por meio de {provider}",
+	overviewExternalStatusPublishing: "Publicação",
+	overviewExternalStatusAccepted: "Aceito",
+	overviewExternalStatusFailed: "Falha",
+	overviewExternalStatusUnavailable: "Indisponível",
+	overviewExternalProviderUnavailable: "A integração externa não está disponível no momento. Velair permanece inativo para este entidade de climatização.",
+	overviewExternalZonesUnaffected: "As zonas {count} executadas externamente não são afetadas pelas ações Velair.",
+	externalChangePolicy: "Ajustes externos",
+	externalChangePolicyDescription: "Escolha o que Velair faz depois que um modo ou alvo é alterado fora de Velair. Manter automático reaplica a intenção Velair atual; as demais opções iniciam o controle Manual até o ponto de retorno selecionado. As alterações aplicam-se ao próximo ajuste externo. Se Manual for selecionado explicitamente em Visão geral enquanto Manter automático estiver salvo, ele permanecerá Manual até ser retomado.",
+	externalAdjustmentInfoAction: "Sobre ajustes externos",
+	externalChangeKeepAutomatic: "Manter automático",
+	externalChangeUntilNextBlock: "Até o próximo bloco",
+	externalChangeForDuration: "Por um período",
+	externalChangeUntilResumed: "Até ser retomado",
+	externalChangePolicySaved: "Política de alteração externa salva",
+	manualAdjustment: "Ajuste manual",
+	velairControl: "Controle Velair",
+	automaticScheduling: "Agendamento automático",
+	overviewControlAutomatic: "Automático",
+	overviewControlManual: "Manual",
+	manualAdjustmentStarted: "Ajuste manual iniciado",
+	unableEnterManualAdjustment: "Não é possível iniciar o ajuste manual",
+	manualSessionNoNextBlock: "Nenhum próximo bloco – até ser retomado",
+	manualSessionNextBlockAt: "Até o próximo bloco em {time}",
+	manualSessionDuration: "Por {minutes} minutos",
+	manualSessionDurationUntil: "Por {minutes} minutos, até {time}",
+	manualSessionUntilResumed: "Até ser retomado",
+	manualUnavailableClimate: "A entidade de climatização não está disponível.",
+	manualUnavailableDisabled: "Esta entidade de climatização está desativado em Velair.",
+	manualUnavailableTemperatureMigration: "Resolva a migração dos dados de temperatura antes de alterar o controle manual.",
+	manualUnavailableExternalExecution: "O controle manual não está disponível para entidades de climatização executadas externamente.",
+	manualUnavailableScheduler: "A programação automático não está em execução.",
+	manualUnavailableProfilePause: "O perfil ativo pausa essa entidade de climatização.",
+	manualUnavailableZonePause: "Outra pausa controla atualmente este entidade de climatização.",
+	manualAdjustmentActive: "Fora da programação automática",
+	automaticControlResumed: "Agendamento automático retomado",
+	durationMinutes: "Duração (minutos)",
+	apply: "Aplicar",
+	cloneDayToDays: "Clonar dia para",
+	cloneDayToThermostats: "Clonar dia para",
+	cloneAction: "Clonar",
+	clonePresetLabel: "Seleção rápida do dia",
+	clonePresetWeekdays: "Seg–Sex",
+	clonePresetWeekend: "Fim de semana",
+	clonePresetAll: "Todos os dias",
+	clonePresetClear: "Limpar seleção",
+	cancel: "Cancelar",
+	close: "Fechar",
+	profileSaveDayTemplateTitle: "Salvar o dia como modelo",
+	profileSaveDayTemplateDescription: "Salve o {day} editado como um modelo reutilizável. O rascunho do seu perfil permanecerá inalterado.",
+	profileCloneDayClimatesTitle: "Clonar dia para entidades de climatização",
+	profileCloneDayClimatesDescription: "Copie o {day} de {source} para o mesmo dia nas entidades de climatização selecionadas.",
+	profileCloneDayClimatesTargets: "Entidades de climatização de destino",
+	profileCloneDayClimatesOverwrite: "Isto substitui apenas aquele dia da semana em cada entidade de climatização selecionada.",
+	profileCloneDayClimatesBehaviorChange: "Essas entidades de climatização mudarão da programação padrão ou pausa para a programação do perfil: {targets}.",
+	profileCloneDayIncompatibleTarget: "{entity} não pode usar o tipo de alvo em {start}. Nenhuma entidade de climatização foi alterado.",
+	profileCloneDayIncompatibleMode: "{entity} não suporta o modo {value} em {start}. Nenhuma entidade de climatização foi alterado.",
+	profileCloneDayIncompatibleOptions: "{entity} não suporta todas as configurações opcionais em {start}. Nenhuma entidade de climatização foi alterado.",
+	profileCloneDayIncompatibleTemperature: "{entity} não pode usar a temperatura em {start} com seus limites e etapas. Nenhuma entidade de climatização foi alterado.",
+	appliedDays: "Dias atualizados: {count}",
+	appliedTemplateTargets: "Aplicado a {count} destinos",
+	appliedThermostats: "Termostatos atualizados: {count}",
+	applying: "Aplicando…",
+	applyTemplate: "Aplicar modelo",
+	applyTo: "Aplicar a",
+	applyToAction: "Aplicar a…",
+	applyTemplateTo: "Aplicar {template} a...",
+	boost: "Reforço",
+	boostActive: "Reforço ativo",
+	activeBoosts: "Reforços ativos",
+	availableModes: "Modos disponíveis",
+	boostTarget: "Temperatura-alvo do reforço",
+	boostUntil: "Termina em",
+	blocks: "Blocos",
+	build: "Compilação",
+	cardView: "Visualização de cartão",
+	activeSetupCardControls: "Controles de configuração ativos",
+	activeSetupCardControlsBoth: "Modos e Perfis",
+	activeSetupCardControlsDescription: "Escolha o que este cartão pode mudar. O modo atual e os perfis aplicados permanecem visíveis.",
+	activeSetupCardControlsModes: "Apenas modos",
+	activeSetupCardControlsProfiles: "Apenas perfis",
+	cardViewOverviewBoosts: "Visão geral: reforços ativos",
+	cardViewOverviewEvents: "Visão geral: próximos eventos",
+	cardViewOverviewStatus: "Visão geral: status do agendador",
+	cardViewOverviewTimeline: "Visão geral: linha do tempo de hoje",
+	cardViewOverviewZones: "Visão geral: visão geral da zona",
+	cardViewActiveSetup: "Perfis: configuração ativa",
+	cardViewSchedules: "Programações: editor",
+	cardViewSensors: "Room Assist: configuração e status",
+	cardViewComfort: "Conforto: configuração e status",
+	cardViewPreconditioning: "Pré-condicionamento: configuração e status",
+	cardThermostatHidden: "Escondido neste cartão",
+	cardThermostatVisible: "Mostrado neste cartão",
+	cardThermostats: "Termostatos neste cartão",
+	cardThermostatsDescription: "Escolha quais termostatos este cartão mostra e organize sua ordem.",
+	comfortCardVisibility: "Visibilidade do cartão de conforto",
+	comfortCardVisibilityDescription: "Escolha qual configuração do Conforto e gráficos ao vivo este cartão mostra.",
+	comfortCardShowCo2: "Mostrar gráfico de CO2",
+	comfortCardShowConfiguration: "Mostrar configuração",
+	comfortCardShowHumidity: "Mostrar gráfico de umidade",
+	comfortCardShowTemperature: "Mostrar gráfico de temperatura",
+	roomAssistCardVisibility: "Visibilidade Room Assist",
+	roomAssistCardVisibilityDescription: "Escolha quais controles Room Assist e detalhes de status este cartão mostra.",
+	roomAssistShowDebounce: "Mostrar atraso na atualização",
+	roomAssistShowDeadband: "Mostrar zona morta Room Assist",
+	roomAssistShowLiveStatus: "Mostrar status ao vivo",
+	roomAssistShowMaxDelta: "Mostrar delta máximo de assistência",
+	roomAssistShowSensor: "Mostrar sensor de temperatura ambiente",
+	roomAssistShowSwitch: "Mostrar botão liga/desliga",
+	current: "Atual",
+	currentHumidity: "Umidade",
+	currentTemperature: "Temperatura atual",
+	currentTime: "Hora atual: {time}",
+	clear: "Limpar",
+	confirmDeleteTemplate: "Excluir modelo {template}?",
+	confirmTemplate: "Substituir {weekday} por {template}?",
+	comfort: "Conforto",
+	comfortAirQuality: "Qualidade do ar",
+	comfortAirQualityElevated: "CO2 elevado",
+	comfortAirQualityGood: "Bom ar",
+	comfortAirQualityPoor: "Má qualidade do ar",
+	comfortAirQualityUnavailable: "CO2 indisponível",
+	comfortAutomaticSourceValue: "Automático: {entity}",
+	comfortCo2: "CO2",
+	comfortCo2Attention: "Elevado",
+	comfortCo2Limits: "Limites de CO2",
+	comfortCo2LimitsHelp: "Elevado marca um alerta precoce sobre a qualidade do ar. Fraco marca um nível de CO2 mais sério.",
+	comfortCo2Poor: "Ruim",
+	comfortCo2Sensor: "Sensor de CO2",
+	comfortCollapseClimate: "Recolher {climate}",
+	comfortConditionCold: "Frio",
+	comfortConditionColdAndDry: "Frio e seco",
+	comfortConditionColdAndHumid: "Frio e úmido",
+	comfortConditionComfortable: "Confortável",
+	comfortConditionDry: "Ar seco",
+	comfortConditionHot: "Quente",
+	comfortConditionHotAndDry: "Quente e seco",
+	comfortConditionHotAndHumid: "Quente e úmido",
+	comfortConditionHumid: "Úmido",
+	comfortConditionHumidityComfortable: "Umidade dentro da faixa",
+	comfortConditionMonitoringOff: "Monitoramento desativado",
+	comfortConditionNoReadings: "Sem leituras",
+	comfortConditionReadingsOutdated: "Leituras desatualizadas",
+	comfortConditionTemperatureComfortable: "Temperatura dentro da faixa",
+	comfortCooler: "Mais fresco",
+	comfortCurrentReadings: "Leituras atuais",
+	comfortDataFreshness: "Atualização de dados",
+	comfortDataIssueCo2Missing: "CO2 indisponível",
+	comfortDataIssueCo2Stale: "Leitura de CO2 desatualizada",
+	comfortDataIssueHumidityMissing: "Umidade indisponível",
+	comfortDataIssueHumidityStale: "Leitura de umidade desatualizada",
+	comfortDataIssueTemperatureMissing: "Temperatura indisponível",
+	comfortDataIssueTemperatureStale: "Leitura de temperatura desatualizada",
+	comfortDataPartial: "Leituras parciais",
+	comfortDataStale: "Leituras desatualizadas",
+	comfortDataUnavailable: "Nenhuma leitura utilizável",
+	comfortDisabledDetail: "O monitoramento de conforto está desativado para este entidade de climatização. Nenhum sensor de conforto é rastreado.",
+	comfortDoNotMonitor: "Não monitore CO2",
+	comfortDoNotMonitorHumidity: "Não monitore a umidade",
+	comfortDrier: "Mais seco",
+	comfortExpandClimate: "Expandir {climate}",
+	comfortHumidity: "Umidade",
+	comfortHumidityRange: "Faixa de umidade",
+	comfortHumidityRangeHelp: "Intervalos mais estreitos avisam mais cedo; faixas mais amplas são mais tolerantes.",
+	comfortHumiditySensor: "Sensor de umidade",
+	comfortIntroDetail: "Monitore temperatura, umidade e CO2 localmente e, em seguida, use eventos Velair em automações Home Assistant.",
+	comfortIntroTitle: "Conforto ambiental",
+	comfortMaximum: "Máx.",
+	comfortMinimum: "Mínimo",
+	comfortMoreHumid: "Mais úmido",
+	comfortMapCurrentPosition: "Posição atual: {temperature}, {humidity}",
+	comfortNotMonitored: "Não monitorado",
+	comfortSelectSensor: "Usar fonte automática",
+	comfortStaleAfter: "Obsoleto depois",
+	comfortStaleAfterHelp: "Idade máxima desde a última atualização de estado Home Assistant. Maior confia em valores mais antigos por mais tempo; marcas mais baixas em sensores obsoletos mais cedo.",
+	comfortTargetZone: "Gama de conforto",
+	comfortTemperature: "Temperatura",
+	comfortTemperatureRange: "Faixa de temperatura",
+	comfortTemperatureRangeHelp: "Intervalos mais estreitos avisam mais cedo; faixas mais amplas são mais tolerantes.",
+	comfortTemperatureSensor: "Sensor de temperatura",
+	comfortUnavailable: "Entidade de climatização indisponível",
+	comfortWarmer: "Mais quente",
+	createTemplate: "Criar modelo",
+	customTemplateName: "Nome do modelo",
+	day: "Dia",
+	daySchedule: "Programação do dia",
+	defaultZone: "Primeira zona gerenciada",
+	deleteBlock: "Excluir bloco",
+	deleteTemplate: "Excluir modelo",
+	dismiss: "Dispensar",
+	duplicateStart: "Hora de início duplicada: {start}",
+	entityDiagnosticMissing: "Entidade não encontrada",
+	entityDiagnosticNoModes: "Nenhum modo HVAC suportado relatado",
+	entityDiagnosticNoRange: "Nenhuma faixa de temperatura relatada",
+	entityDiagnosticNotClimate: "A entidade não é de climatização",
+	entityDiagnosticOk: "A configuração do termostato parece OK",
+	fanMode: "Modo ventilador",
+	horizontalSwingMode: "Oscilação horizontal",
+	invalidStart: "Hora de início inválida: {start}",
+	invalidTemperature: "Temperatura inválida para {start}",
+	invalidTemperatureRange: "Use {min} para {max}",
+	invalidTargetRangeOrder: "O alvo de aquecimento não deve estar acima do alvo de resfriamento",
+	invalidTemperatureStep: "Use etapas {step}",
+	incompatibleScheduleTargets: "Alguns alvos de programação precisam de revisão",
+	incompatibleScheduleTargetsDescription: "Os alvos armazenados {count} não correspondem mais à faixa do termostato ou à etapa de temperatura. Abra Agendamentos e salve um valor compatível.",
+	operationRecoveryRequired: "Velair salvou os dados, mas não conseguiu retomar",
+	operationRecoveryDescription: "A programação continua parado. Recarregue a integração Velair ou reinicie Home Assistant para concluir a recuperação.",
+	operationCancelled: "A operação foi cancelada",
+	operationCurrentZone: "Trabalhando em {zone}",
+	operationDefaultCompleted: "Programações padrão restauradas",
+	operationDefaultFailed: "Não foi possível restaurar as programações padrão",
+	operationDefaultPartial: "Programações padrão restauradas com problemas",
+	operationDefaultRunning: "Restaurando programações padrão",
+	operationDismiss: "Ignorar status de operação",
+	operationFailedHelp: "Revise a entidade de climatização afetado e os registros Home Assistant para obter detalhes",
+	operationFailureCount: "Zonas {count} com problemas: {zones}",
+	operationFailureOne: "1 zona com problemas: {zones}",
+	operationModeCompleted: "Modo {target} aplicado",
+	operationModeFailed: "Não é possível aplicar o modo {target}",
+	operationModePartial: "Modo {target} aplicado com problemas",
+	operationModeRunning: "Aplicando o modo {target}",
+	operationNoZones: "Nenhuma zona precisava de mudanças",
+	operationProfileCompleted: "Perfil {target} aplicado",
+	operationProfileFailed: "Não é possível aplicar o perfil {target}",
+	operationProfilePartial: "Perfil {target} aplicado com problemas",
+	operationProfileRunning: "Aplicando perfil {target}",
+	operationProgress: "{completed} de zonas {total} processadas",
+	operationProgressLabel: "Progresso da operação Velair",
+	keep: "Manter o modo atual",
+	keepMode: "Manter o modo atual",
+	tagline: "Automação de climatização que se adapta à sua vida.",
+	loading: "Carregando...",
+	loadingEntities: "Carregando zonas gerenciadas...",
+	managedEntityAvailable: "Disponível",
+	managedEntityMissing: "Não encontrado",
+	managedEntitiesStatus: "Termostatos gerenciados",
+	menu: "Menu",
+	minutesShort: "min",
+	secondsShort: "s",
+	providedData: "Dados fornecidos",
+	profiles: "Perfis",
+	scheduleSourceLabel: "Fonte de programação",
+	defaultSchedules: "Programações padrão",
+	defaultSchedulesDescription: "O plano semanal usado quando nenhum Perfil controla um termostato.",
+	profileSchedules: "Programações de perfil",
+	profileSchedulesDescription: "Crie perfis e escolha se cada termostato usa sua própria programação, a programação padrão ou pausa.",
+	profileScheduleErrorsSummary: "Revise o planejamento inválido em: {climates}.",
+	profileScheduleClimateBlockError: "{climate}, {day} e {start}: {error}",
+	profileDefaultScheduleHelp: "Este termostato continua usando sua programação padrão enquanto o perfil está ativo.",
+	profilesAndModes: "Perfis e modos",
+	activeSetup: "Configuração ativa",
+	activeSetupDescription: "Veja o que atualmente controla suas zonas e altere-o em um só lugar.",
+	activeSetupChange: "Mudar",
+	activeSetupModesHelp: "Escolha o modo que deve controlar os perfis ativos.",
+	activeSetupAppliedProfiles: "Perfis Aplicados",
+	activeSetupNoProfiles: "Nenhum perfil aplicado. As zonas seguem suas programações padrão.",
+	activeSetupManualProfile: "Ative um perfil manualmente",
+	activeSetupManualProfileHelp: "Isso substitui todos os perfis ativos e altera o modo para manual. Para ativar perfis adicionais juntos, use um modo.",
+	profilesPanelIntro: "Os perfis definem rotinas climáticas alternativas. Os modos ativam um ou mais perfis juntos.",
+	profileLibrarySelectorLabel: "Bibliotecas de perfil e modo",
+	profilesLibraryDescription: "Defina como as zonas selecionadas devem se comportar.",
+	profilesDescription: "Um Perfil define como uma ou mais zonas se comportam quando estão ativas.",
+	profileActive: "Perfil ativo",
+	profilesActive: "Perfis ativos",
+	profileActivate: "Ativar perfil",
+	profileBehaviorDefault: "Programação padrão",
+	profileBehaviorPause: "Pausa",
+	profileBehaviorSchedule: "Cronograma de perfil",
+	profileBlockAction: "Ação",
+	profileBrowseIcons: "Navegue pelos ícones disponíveis",
+	profileConfirmDelete: "Excluir {profile} e todas as suas configurações de zona? Isto não pode ser desfeito.",
+	profileConfirmDeleteActive: "{profile} está ativo. Excluí-lo e retornar suas zonas ao padrão? Outros perfis ativos permanecerão. Isto não pode ser desfeito.",
+	profileColor: "Cor do perfil",
+	profileColorHelp: "Usado para identificar este perfil em seletores e listas.",
+	profileCopyTemplate: "Copie o modelo até hoje",
+	profileCreate: "Novo perfil",
+	profileDelete: "Excluir perfil",
+	profileDeleted: "Perfil excluído",
+	profileDescription: "Descrição",
+	profileDescriptionCharactersRemaining: "Caracteres {count} restantes",
+	profileDescriptionTooLong: "A descrição deve ter caracteres {count} ou menos.",
+	profileDiscardChanges: "Descartar alterações de perfil não salvas?",
+	discardUnsavedChanges: "Descartar alterações não salvas?",
+	profileCollapseClimate: "Recolher {climate}",
+	profileExpandClimate: "Expandir {climate}",
+	profileIcon: "Ícone",
+	profileIconHelp: "Use um identificador de ícone do Material Design, por exemplo mdi:briefcase-outline.",
+	profileActiveContext: "Contexto climático ativo",
+	modeBuiltInHelp: "Os modos integrados não podem ser renomeados ou excluídos.",
+	modeInformation: "Sobre {mode}",
+	modeChooseProfile: "Escolha um perfil",
+	modeConfirmDelete: "Excluir o modo {mode}? Isto não pode ser desfeito.",
+	modeCreate: "Novo modo",
+	modeDelete: "Modo de exclusão",
+	modeDeleted: "Modo excluído",
+	modeDiscardChanges: "Descartar alterações de modo não salvas?",
+	modeDefault: "Padrão",
+	modeDefaultDescription: "Desativa perfis e restaura a programação padrão de cada zona.",
+	modeManual: "Manual",
+	modeManualDescription: "Perfis ativos não são controlados por um modo.",
+	modeCustomDescription: "Ativa os perfis mapeados: {profile}.",
+	modeChange: "Alterar modo",
+	modeLabel: "Modo",
+	modeMappedProfile: "Perfil mapeado: {profile}",
+	modeMappedProfileMissing: "Perfil mapeado indisponível: {profile}",
+	modeMappedProfiles: "Perfis mapeados: {profiles}",
+	modeName: "Nome do modo",
+	modeNameDuplicate: "Use um nome de modo exclusivo.",
+	modeNameHelp: "Este valor aparece no seletor de modo do Home Assistant.",
+	modeNameRequired: "O nome do modo é obrigatório.",
+	modeNameTooLong: "O nome do modo deve ter caracteres {count} ou menos.",
+	modeProfile: "Perfil mapeado",
+	modeProfiles: "Perfis mapeados",
+	modeProfileHelp: "Selecionar este modo ativa todos os perfis selecionados. Uma zona só pode pertencer a um deles.",
+	modeProfileRequired: "Selecione pelo menos um perfil e evite perfis que configurem a mesma zona.",
+	modeSaved: "Modo salvo",
+	modeSelectToBegin: "Selecione um modo personalizado para editá-lo ou crie um",
+	modeUnableDelete: "Não é possível excluir o modo",
+	modeUnableActivate: "Não é possível alterar o modo",
+	modeUnableSave: "Não foi possível salvar o modo",
+	modesDescription: "Um Modo ativa um ou mais Perfis juntos de Velair ou Home Assistant.",
+	modesLibraryDescription: "Ative um ou mais perfis juntos.",
+	modesEntityNote: "As automações podem selecionar um modo por meio da entidade Modo Velair ou ativar um perfil com velair.activate_profile e seu ID de automação.",
+	modesTitle: "Modos",
+	profilesActiveCount: "Perfis ativos {count}",
+	profileId: "ID de automação",
+	profileIdReadonlyHelp: "ID somente leitura estável usado por automações e serviços.",
+	profileInvalidIcon: "Use um identificador válido no formato mdi:icon-name.",
+	profileInvalidColor: "Escolha uma cor válida no formato #RRGGBB.",
+	profileInvalidSchedule: "Verifique se cada bloco tem tempo e temperatura válidos e exclusivos.",
+	profileName: "Nome do perfil",
+	profileNameRequired: "O nome do perfil é obrigatório",
+	profileNewName: "Novo perfil",
+	profileNoDescription: "Sem descrição",
+	profileNoneCreated: "Nenhum perfil",
+	profileDefaultDescription: "Cada zona está usando sua programação padrão.",
+	profileOverviewLabel: "Perfil",
+	profilePauseAction: "Enquanto pausado",
+	profilePauseKeep: "Manter a climatização sem alterações",
+	profilePauseTurnOff: "Desligar a climatização",
+	profileRemovedElsewhere: "Este perfil foi removido em outro lugar. Selecione ou crie outro perfil.",
+	profileSaved: "Perfil salvo",
+	profileSave: "Salvar perfil",
+	profileSelectToBegin: "Selecione um perfil para editá-lo",
+	profileUnableActivate: "Não foi possível ativar o perfil",
+	profileUnableDelete: "Não foi possível excluir o perfil",
+	profileZoneBehavior: "Comportamento da zona",
+	portability: "Portabilidade",
+	portabilityDescription: "Exporte ou importe dados Velair com um arquivo JSON com versão.",
+	portabilityFileReady: "{file} pronto",
+	portabilityIncluded: "Incluído",
+	portabilitySettingsSection: "Configurações",
+	portabilityTemplatesSection: "Modelos",
+	portabilityZonesSection: "Programações do termostato",
+	portabilityPreconditioningLearningSection: "Pré-condicionamento de aprendizagem",
+	portabilityProfilesSection: "Perfis climáticos",
+	portabilityModesSection: "Modos",
+	preconditioningImportSkipped: "Aprendizado de pré-condicionamento ignorado ({count}). Estes termostatos não são gerenciados aqui: {entities}",
+	portableExported: "Arquivo de exportação criado",
+	portableImported: "Importação concluída",
+	importData: "Importar",
+	importFile: "Arquivo de importação",
+	chooseFile: "Escolha o arquivo",
+	climateOptions: "Opções climáticas",
+	climateOptionsAdd: "Adicione configurações opcionais",
+	noFileSelected: "Nenhum arquivo selecionado",
+	exportData: "Exportar",
+	invalidImportFile: "Este não é um arquivo de exportação Velair válido",
+	importOverwriteWarning: "A importação substituirá os valores existentes. Eles não podem ser recuperados a menos que você os exporte primeiro.",
+	noImportSections: "Nenhuma seção importável encontrada",
+	legacyImportTemperatureUnit: "Este backup mais antigo não registra uma unidade de temperatura. Velair tratará suas temperaturas como Celsius e as converterá para {target} quando necessário.",
+	notSet: "Não definido",
+	maintenance: "Manutenção",
+	maintenanceDescription: "Detalhes da versão técnica para solução de problemas.",
+	frontendBuild: "Construção de front-end",
+	portableFormatVersion: "Formato portátil/de exportação",
+	internalStorageVersion: "Armazenamento/modelo",
+	integrationVersion: "Versão de integração",
+	resetVelair: "Redefinir Velair",
+	resetVelairDescription: "Exclui todos os dados Velair armazenados, incluindo programações, modelos, preferências do painel, reforços e pausas ativos, políticas de ajuste externo e ajustes manuais ativos, configurações de conforto e Room Assist, configurações e aprendizado de pré-condicionamento adaptativo e comportamento de inicialização. Em seguida, ele recria padrões com reconhecimento de unidade para os termostatos gerenciados atualmente.",
+	confirmReset: "Redefinir todos os dados Velair armazenados? Isso não pode ser desfeito a menos que você exporte seus dados primeiro.",
+	confirmResetPreconditioningLearning: "Redefinir o aprendizado de pré-condicionamento adaptativo para {direction}? As programações e configurações serão mantidas.",
+	confirmResetPreconditioningSettings: "Restaurar as configurações padrão de pré-condicionamento para este termostato? Amostras de aprendizagem serão mantidas.",
+	resetDone: "Redefinição de dados Velair",
+	resetting: "Redefinindo",
+	minTemperature: "Temperatura mínima",
+	maxTemperature: "Temperatura máxima",
+	modeOptional: "Modo opcional",
+	firstWeekday: "Primeiro dia da semana",
+	managedZones: "Zonas gerenciadas",
+	mode: "Modo",
+	moveDown: "Mover para baixo",
+	moveUp: "Subir",
+	nextEvent: "Próximo evento",
+	nextEvents: "Próximos eventos",
+	noActiveBoosts: "Sem reforços ativos",
+	noBlocks: "Sem bloqueios",
+	noManagedEntities: "Nenhuma entidade climática gerenciada encontrada.",
+	noTemplates: "Nenhum modelo",
+	newTemplate: "Novo modelo",
+	noUpcomingEvent: "Nenhum evento próximo",
+	off: "Desligado",
+	otherDays: "Outros dias",
+	otherThermostats: "Outros termostatos",
+	overview: "Visão geral",
+	overviewPanelIntro: "A visualização de status principal agrupará o estado do agendador, eventos futuros, reforços ativos e ações rápidas.",
+	overviewStatusPaused: "Pausado",
+	overviewStatusPausedDetail: "Pausa temporária ativa",
+	overviewStatusRunning: "Correndo",
+	overviewStatusRunningDetail: "O agendador está aplicando programações",
+	overviewStatusStopped: "Parou",
+	overviewStatusStoppedDetail: "O agendador está parado até ser retomado",
+	overviewZones: "Visão geral da zona",
+	overviewZoneApplied: "Aplicado",
+	overviewZoneAir: "Ar: {status}",
+	overviewZoneBoost: "Impulsionar",
+	overviewZoneComfort: "Conforto: {status}",
+	overviewZoneManual: "Manual",
+	overviewZonePaused: "Pausado",
+	overviewZonePreconditioning: "Pré-condicionamento",
+	overviewZoneResumes: "Retoma às {time}",
+	overviewZoneRoom: "Sala",
+	overviewZoneRoomAssist: "Room Assist {delta}",
+	overviewZoneScheduled: "Agendado",
+	overviewZoneSensorIssue: "Dados do sensor incompletos",
+	overviewZoneTarget: "Alvo",
+	overviewZoneUntil: "Até {time}",
+	overviewZoneUntilResumed: "Até ser retomado",
+	overviewZoneReadyAt: "Pronto em {time}",
+	overviewZoneNextAt: "Próximo em {time}",
+	overviewZoneAutomationOff: "Automação desligada",
+	overviewZoneRoomAssistThermalFlow: "Fluxo de temperatura Room Assist",
+	overviewZoneSensor: "Sensor",
+	overviewZoneClimate: "Entidade de climatização",
+	overviewZoneTemperature: "Temperatura",
+	overviewZoneSetpoint: "Ponto de ajuste",
+	overviewZoneScheduledSetpoint: "Agendado",
+	overviewZoneScheduledRange: "Intervalo programado",
+	overviewZoneAppliedRange: "Faixa aplicada",
+	overviewZoneOffset: "Desvio",
+	overviewZoneRangeShift: "Mudança de alcance",
+	overviewZoneRoomAssistActive: "Ativo",
+	overviewZoneRoomAssistGuarded: "Proteção agendada",
+	overviewZoneRoomAssistHolding: "Mantendo",
+	overviewZoneRoomAssistTowardsLower: "Em direção ao limite inferior",
+	overviewZoneRoomAssistTowardsUpper: "Em direção ao limite superior",
+	overviewZoneComfortLabel: "Conforto",
+	overviewZoneAirLabel: "Ar",
+	overviewZoneDataLabel: "Dados",
+	pause: "Pausa",
+	pauseActive: "Pausado",
+	pauseApplied: "Agendador pausado",
+	pauseDuration: "Duração da pausa (min)",
+	pauseFrom: "De",
+	pauseIndefinite: "Sem hora de término",
+	pauseRemaining: "Retoma em",
+	pauseReasons: "Motivos de pausa",
+	pauseTo: "Para",
+	preconditioning: "Pré-condicionamento",
+	preconditioningEnabled: "Pré-condicionamento ativado",
+	preconditioningCool: "Refrigeração",
+	preconditioningCoolingFallbackLead: "Reserva de resfriamento (min)",
+	preconditioningDirectionSamples: "{count}/{required}",
+	preconditioningHeat: "Aquecer",
+	preconditioningHeatingFallbackLead: "Reserva de aquecimento (min)",
+	preconditioningDirectionStatus: "Status",
+	preconditioningExpandClimate: "Expandir {climate}",
+	preconditioningIntroDetail: "Deixe Velair calcular quando umo alvo de conforto programada deve começar para que a sala fique mais próxima da temperatura na hora certa.",
+	preconditioningIntroTitle: "Tempo de conforto adaptativo",
+	preconditioningAdaptivePercentile: "Percentil de conforto dinâmico",
+	preconditioningAdaptivePercentileHelp: "Quando ativado, aumenta a margem após muitas tentativas parciais e a reduz após tentativas concluídas de forma consistente.",
+	preconditioningCalculationCombined: "Combinado",
+	preconditioningCalculationDetails: "Detalhes do cálculo",
+	preconditioningCalculationFinalLead: "Liderança final",
+	preconditioningCalculationPartialFloor: "Piso parcial",
+	preconditioningCalculationReachedEstimate: "Estimativa alcançada",
+	preconditioningCalculationRounded: "Arredondado",
+	preconditioningCalculationSampleCounts: "Atingido: {reached} · Parcial: {partial} · Inválido: {invalid}",
+	preconditioningCalculationSamples: "Amostras",
+	preconditioningComfortPercentile: "Percentil de conforto",
+	preconditioningComfortPercentileHelp: "O superior começa mais cedo usando casos aprendidos mais lentos; inferior começa mais tarde com menos margem.",
+	preconditioningComfortPercentileLabel: "Percentil de conforto",
+	preconditioningCollapseClimate: "Recolher {climate}",
+	preconditioningFallbackInactive: "Modelo adaptativo ativo",
+	preconditioningFallbackLabel: "Cair pra trás",
+	preconditioningFallbackLead: "{minutes} min",
+	preconditioningFallbackMinutesPerDegree: "Modelo inicial",
+	preconditioningFallbackMinutesPerDegreeHelp: "O ensino superior começa mais cedo, antes que exista aprendizagem suficiente; inferior começa mais tarde.",
+	preconditioningHistorySize: "Tamanho do histórico",
+	preconditioningHistorySizeHelp: "Valores maiores mantêm mais amostras úteis; valores menores descartam antes as amostras mais antigas.",
+	preconditioningHistory: "História",
+	preconditioningInvalidEvents: "Inválido",
+	preconditioningLastSample: "Última amostra",
+	preconditioningLeadTime: "{minutes} minutos mais cedo",
+	preconditioningLearning: "Aprendendo localmente",
+	preconditioningLearningStatus: "Status de aprendizagem",
+	preconditioningLearningDisabled: "Aprendizagem com deficiência",
+	preconditioningLearningMoreData: "Mais dados necessários",
+	preconditioningLearningReady: "Pronto para aprender",
+	preconditioningLimitedByMax: "Limitado pelo máximo",
+	preconditioningLivePrediction: "Previsão ao vivo",
+	preconditioningLivePredictionHelp: "Usa o próximo bloco real para mostrar como o início do pré-condicionamento calculado muda.",
+	preconditioningMaxLead: "Início máximo (min)",
+	preconditioningMaxLeadHelp: "Maiores permitem inícios mais cedo; menor coloca um limite mais rígido no prazo de entrega.",
+	preconditioningMaximumLabel: "Máximo",
+	preconditioningMinimumDelta: "Delta de temperatura mínima",
+	preconditioningMinimumDeltaHelp: "Maior ignora pequenas lacunas maiores; menor reage a diferenças menores de temperatura.",
+	preconditioningMinStart: "Início mínimo (min)",
+	preconditioningMinStartHelp: "Maior ignora leads curtos previstos; menor permite partidas antecipadas menores.",
+	preconditioningModelHistory: "História semelhante",
+	preconditioningModel: "Modelo de aprendizagem",
+	preconditioningModelInitial: "Modelo inicial",
+	preconditioningModelSource: "Fonte do modelo",
+	preconditioningNextBlock: "Próximo bloco",
+	preconditioningNoUpcomingDirectionEvent: "Nenhum bloco {direction} futuro para prever.",
+	preconditioningNormalStart: "Início normal",
+	preconditioningNotSupported: "Não compatível",
+	preconditioningPartialEvents: "Parcial",
+	preconditioningPartialSamples: "{count} parcial",
+	preconditioningPartialExpiry: "Expiração parcial (dias)",
+	preconditioningPartialExpiryHelp: "Maior permite que tentativas incompletas influenciem as previsões por mais tempo; inferior expira mais cedo.",
+	preconditioningQualityComplete: "Completo",
+	preconditioningQualityInvalid: "Inválido",
+	preconditioningQualityPartial: "Parcial",
+	preconditioningRecencyDecay: "Decadência de tempo recente (dias)",
+	preconditioningRecencyDecayHelp: "Maior faz com que amostras antigas percam peso mais lentamente; menor favorece o comportamento recente.",
+	preconditioningReachedEvents: "Alcançado",
+	preconditioningResetLearning: "Redefinir o aprendizado",
+	preconditioningLearningResetDone: "Redefinição de aprendizagem {direction}",
+	preconditioningSimilarSamples: "Amostras semelhantes",
+	preconditioningSimilarSamplesHelp: "Valores maiores consideram mais histórico próximo; valores menores se concentram nos casos mais semelhantes.",
+	preconditioningUnsupportedDirection: "Não suportado por este termostato",
+	preconditioningOutdoorTemperatureEntity: "Sensor de temperatura externa",
+	preconditioningOutdoorTemperatureEntityHelp: "Fornece contexto externo local para comparar amostras aprendidas; isso não altera o modelo inicial.",
+	preconditioningOutdoorContext: "Contexto ao ar livre",
+	preconditioningOutdoorDisabled: "Desabilitado",
+	preconditioningSelectOutdoorSensor: "Selecione o sensor",
+	preconditioningResetSettings: "Restaurar configurações padrão",
+	preconditioningSettingsResetDone: "Configurações de pré-condicionamento restauradas",
+	preconditioningStarts: "Começa",
+	preconditioningTargetBy: "Atingir até",
+	preconditioningTiming: "Tempo e limites",
+	preconditioningUnavailable: "Termostato indisponível. O pré-condicionamento não pode ser ativado.",
+	preconditioningPredictionLowerBoundary: "Previsão · limite inferior {temperature}",
+	preconditioningPredictionUpperBoundary: "Previsão · limite superior {temperature}",
+	preconditioningUseOutdoorTemperature: "Use a temperatura externa",
+	preconditioningUseOutdoorTemperatureHelp: "Quando ativado, inclui a temperatura externa ao escolher amostras de aprendizado semelhantes.",
+	resume: "Retomar",
+	resumed: "Agendador retomado",
+	resizeEnd: "Ajustar final",
+	resizeStart: "Ajustar início",
+	schedulerControls: "Controles do agendador",
+	schedules: "Programações",
+	sensors: "Room Assist",
+	roomSensorAppliedTarget: "Alvo aplicada",
+	roomSensorAssist: "Assistente de Sensor de Ambiente",
+	roomSensorAssistBadge: "Room Assist",
+	roomSensorAssistEnabled: "Assistente de sensor de ambiente ativado",
+	roomSensorAssistHelp: "Ajusta temporariamente o alvo da climatização para que o sensor ambiente possa atingir a temperatura programada.",
+	roomSensorAssistDisabledDetail: "Um sensor ambiente está selecionado, mas a assistência do sensor ambiente está desativada. O Velair continua usando a temperatura da climatização até que este interruptor seja ativado.",
+	roomSensorAssistDebounce: "Atraso de atualização",
+	roomSensorAssistDebounceHelp: "Segundos para esperar após mudanças na temperatura ambiente ou climática antes de recalcular o alvo assistido. Use 0 para atualizações imediatas.",
+	roomSensorAssistDeadband: "Zona morta Room Assist",
+	roomSensorAssistDeadbandHelp: "Define os limites inferior e superior de Room Assist a esta distância do alvo programado. Em Calor ou Frio fixo, atingir um limite faz com que Room Assist tenha como alvo o outro. Os modos automáticos e as faixas de temperatura usam-no como uma margem sem correção. As alterações se aplicam quando salvas.",
+	roomSensorDeadbandZoneHelp: "Com aquecimento ou resfriamento fixo, Room Assist continua se movendo em direção a um limite até que a sala o alcance e depois inverte em direção ao outro limite. Os intervalos nativos mantêm isso como uma margem externa sem correção.",
+	roomSensorDeadbandZoneHelpAutomatic: "Com um modo escalar automático, Room Assist não aplica nenhuma correção enquanto a sala permanecer dentro desta margem.",
+	roomSensorDeadbandZoneHelpGeneric: "O modo climático efetivo determina como o Room Assist usa essa zona morta.",
+	roomSensorDeadbandZoneAutomatic: "Margem sem correção · ±{value}",
+	roomSensorDeadbandZoneGeneric: "Zona morta · ±{value}",
+	roomSensorDeadbandZoneCompact: "Zona morta · ±{value}",
+	roomSensorDeadbandZoneCompactAutomatic: "Margem neutra · ±{value}",
+	roomSensorDeadbandZoneCompactRange: "Margem limite · ±{value}",
+	roomSensorDeadbandZoneBrief: "Zona ±{value}",
+	roomSensorDeadbandZoneRange: "Margem limite · {value} além de cada limite",
+	roomSensorDeadbandZoneSingle: "Banda de controle · ±{value}",
+	roomSensorDeadbandZoneZero: "Sem zona morta · {value}",
+	roomSensorAssistMaxDelta: "Delta de assistência máxima",
+	roomSensorAssistMaxDeltaHelp: "Limita a correção Room Assist. Defina-o alto o suficiente para cobrir a lacuno alvo que o termostato pode precisar para interromper o aquecimento ou resfriamento. O valor total só é usado quando necessário.",
+	roomSensorAssistOffset: "Deslocamento de assistência",
+	roomSensorAssistOffsetHelp: "Deslocamento temporário aplicado à alvo da climatização para que o sensor ambiente possa continuar se movendo em direção à temperatura programada.",
+	roomSensorAssistCorrectionValue: "Deslocamento {value}",
+	roomSensorAssistCorrectionActiveHelp: "Room Assist está ajustando o ponto de ajuste da entidade de climatização. Isto não indica se a entidade de climatização está aquecendo ou esfriando ativamente.",
+	roomSensorAssistNoCorrection: "Deslocamento 0 · Segurando",
+	roomSensorAssistNoCorrectionHelp: "Room Assist não está aplicando uma correção de ponto de ajuste. As temperaturas ambiente e programadas ainda podem ser diferentes.",
+	roomSensorLimitMaximumTitle: "Máximo do termostato atingido",
+	roomSensorLimitMaximumDetail: "Room Assist solicitou {requested}, acima do limite {limit}. Velair aplicado {applied}; correção adicional é limitada.",
+	roomSensorLimitMinimumTitle: "Mínimo do termostato atingido",
+	roomSensorLimitMinimumDetail: "Room Assist solicitou {requested}, abaixo do limite {limit}. Velair aplicado {applied}; correção adicional é limitada.",
+	roomSensorScheduledGuardTitle: "Proteção de alvo programada",
+	roomSensorScheduledGuardCoolingDetail: "Room Assist calculou {calculated}, mas manteve {applied} para que o resfriamento não continue abaixo do alvo programada.",
+	roomSensorScheduledGuardHeatingDetail: "Room Assist calculou {calculated}, mas manteve {applied} para que o aquecimento não continue acima do alvo programada.",
+	roomSensorBlockActiveSince: "Ativo de {time}",
+	roomSensorBlockMode: "Modo: {mode}",
+	roomSensorBlockScheduled: "Programado para {time}",
+	roomSensorBlockStartedEarly: "Iniciado em {time}",
+	roomSensorBlockTarget: "Alvo: {target}",
+	roomSensorHysteresisTowardsLower: "Controlando em direção ao limite inferior: {target}",
+	roomSensorHysteresisTowardsUpper: "Controlando em direção ao limite superior: {target}",
+	roomSensorGapAboveTarget: "{value} acima do alvo",
+	roomSensorGapBelowTarget: "{value} abaixo do alvo",
+	roomSensorClimateTarget: "Alvo da climatização",
+	roomSensorClimateTargetHelp: "O alvo da climatização é o ponto de referência atualmente comunicado pela entidade climática; não é o alvo de temperatura ambiente.",
+	roomSensorClimateTargetAppliedHelp: "O alvo da climatização é o ponto de ajuste temporário Velair enviado à entidade climática enquanto Room Assist está ativo; não é o alvo de temperatura ambiente.",
+	roomSensorClimateTargetStepHelp: "Room Assist calculou {calculated}. Esta entidade de climatização aceita etapas {step}, então Velair aplicou {applied} com segurança.",
+	roomSensorAppliedLow: "Aplicado baixo",
+	roomSensorAppliedHigh: "Aplicado alto",
+	roomSensorAppliedRange: "Faixa aplicada",
+	roomSensorClimateTemperature: "Leitura climática",
+	roomSensorCollapseClimate: "Recolher {climate}",
+	roomSensorControl: "Assistente de Sensor de Ambiente",
+	roomSensorExpandClimate: "Expandir {climate}",
+	roomSensorIntroDetail: "Use um sensor de temperatura ambiente para orientar o alvo da climatização enquanto o Velair executa blocos de temperatura gerenciados.",
+	roomSensorIntroTitle: "Controle de temperatura ambiente",
+	roomSensorLiveStatus: "Status ativo",
+	roomSensorNoActiveBlock: "Nenhum bloco de temperatura ativo",
+	roomSensorNoActiveBlockDetail: "Room Assist será atualizado quando um bloco de temperatura gerenciada estiver ativo.",
+	roomSensorNotConfigured: "Selecione um sensor ambiente primeiro",
+	roomSensorRoomTemperature: "Sensor ambiente",
+	roomSensorRemainingToTarget: "Até o alvo",
+	roomSensorRemainingValue: "{value} esquerda",
+	roomSensorScheduledTarget: "Alvo programada",
+	roomSensorScheduledLow: "Baixa programada",
+	roomSensorScheduledHigh: "Alta programada",
+	roomSensorScheduledRange: "Intervalo programado",
+	roomSensorRangeShiftValue: "Mudança de faixa {value}",
+	roomSensorRangeShiftHelp: "Room Assist altera ambos os limites do intervalo; o sinal mostra a direção aplicada.",
+	roomSensorSelectSensor: "Selecione o sensor ambiente",
+	roomSensorStatusAssisting: "Ajudando",
+	roomSensorStatusBlocked: "Bloqueado",
+	roomSensorStatusDisabled: "Desabilitado",
+	roomSensorStatusHolding: "Mantendo",
+	roomSensorStatusIdle: "Inativo",
+	roomSensorStatusNotConfigured: "Não configurado",
+	roomSensorStatusReady: "Pronto",
+	roomSensorStatusUnavailable: "Indisponível",
+	roomSensorTemperatureEntity: "Sensor de temperatura ambiente",
+	roomSensorTemperatureEntityHelp: "Sensor que o Assistência do sensor ambiente usa como a temperatura ambiente real enquanto ajusta o alvo da climatização.",
+	roomSensorTemperatureScale: "Escala de temperatura Room Assist",
+	roomSensorUnavailable: "Entidade de climatização indisponível",
+	roomSensorValueUnavailable: "Indisponível",
+	save: "Salvar",
+	saveTemplate: "Salvar como modelo",
+	saved: "Programação salva",
+	saving: "Salvando…",
+	scheduleCopyHint: "Você também pode copiar esta configuração para outro dia ou entidade de climatização.",
+	scheduleEditor: "Editor de programação",
+	scheduleStepClimate: "1. Selecione a entidade de climatização que deseja configurar.",
+	scheduleStepConfigure: "3. Configure a entidade de climatização ao seu gosto.",
+	scheduleStepDay: "2. Selecione o dia que deseja configurar.",
+	reorderZones: "Arraste os termostatos para alterar sua ordem no painel.",
+	selectedWeekday: "Dia inicial",
+	selectedZone: "Zona inicial",
+	selectTemplatePlaceholder: "Selecione um modelo",
+	selectTemplateToBegin: "Selecione um modelo para começar.",
+	setTemperature: "Definir temperatura",
+	settings: "Configurações",
+	diagnostics: "Diagnóstico",
+	diagnosticsDescription: "Veja o que Velair sabe, o que pretendia e o que poderia verificar localmente.",
+	diagnosticsUnavailable: "Os diagnósticos ainda não estão disponíveis.",
+	diagnosticsDownloadAction: "Baixar relatório…",
+	diagnosticsDownloadNow: "Baixar relatório",
+	diagnosticsDownloadActionDescription: "Abra as opções de privacidade do relatório antes de baixar o diagnóstico para suporte.",
+	diagnosticsExportOptions: "Denunciar privacidade",
+	diagnosticsExportExplanation: "A visualização ao vivo usa IDs locais reais. Mantenha esta opção ativada para substituir IDs de entidade de climatização e sensores por aliases estáveis ​​no relatório.",
+	diagnosticsRedactEntityIds: "Substitua IDs de entidade por aliases",
+	diagnosticsOperationalIdsAlwaysRedacted: "Os identificadores de perfil, modo e pausa são sempre removidos.",
+	diagnosticsRawEntityIdsWarning: "Este relatório incluirá IDs de entidade originais. Revise-o antes de compartilhar.",
+	diagnosticsDownloadWithEntityIds: "Baixar com IDs",
+	diagnosticsHealthy: "Velair parece saudável",
+	diagnosticsAttention: "Alguns itens precisam de atenção",
+	diagnosticsSchedulerSummary: "Agendador: {status} · Modo: {mode}",
+	diagnosticsUnitSummary: "{ok} íntegro · Avisos {warning} · Erros {error}",
+	diagnosticsRecentHistory: "Histórico de tempo de execução recente ({count}/{limit})",
+	diagnosticsNoHistory: "Nenhum evento de tempo de execução relevante foi observado desde o início do Velair.",
+	diagnosticsPrivacy: "O histórico é mantido apenas na memória e apagado na reinicialização. Os relatórios não contêm telemetria; os IDs de entidade serão substituídos, a menos que você opte por mantê-los.",
+	diagnosticsEntityUnavailable: "A entidade climática não está disponível.",
+	diagnosticsEntityUnknown: "A entidade climática relata um estado desconhecido.",
+	diagnosticsCalculatedIntent: "Intenção calculada",
+	diagnosticsLastApplication: "Última aplicação",
+	diagnosticsRoomAssist: "Room Assist",
+	diagnosticsPreconditioning: "Pré-condicionamento",
+	diagnosticsComfort: "Conforto",
+	diagnosticsAssociatedSensors: "Sensores associados",
+	diagnosticsLoadError: "Não foi possível carregar o diagnóstico. Tente abrir a seção novamente.",
+	diagnosticsExportError: "Não foi possível fazer download do relatório de diagnóstico.",
+	diagnosticsDeliveryFailed: "A última tentativa de entrega falhou e está qualificada para recuperação.",
+	diagnosticsDeliveryRetrying: "Velair está tentando novamente a intenção climática mais recente.",
+	diagnosticsDeliveryExhausted: "O limite de novas tentativas de entrega foi atingido.",
+	diagnosticsDeliveryInvalidIntent: "Não foi possível determinar a intenção atual da climatização.",
+	diagnosticsRuntimeUnavailable: "Os detalhes da intenção de tempo de execução não estão disponíveis no momento.",
+	diagnosticsSensorUnavailable: "Um sensor explicitamente associado está ausente ou indisponível.",
+	diagnosticsUnits: "Entidades de climatização gerenciados",
+	diagnosticsNoUnits: "Nenhuma entidade de climatização gerenciado está disponível para diagnóstico.",
+	diagnosticsSelectUnit: "Selecione uma entidade de climatização para visualizar seu diagnóstico.",
+	diagnosticsStatusDelivery: "Status e entrega",
+	diagnosticsActiveConfiguration: "Configuração ativa",
+	diagnosticsFunctions: "Funções",
+	diagnosticsDeviceSensors: "Dispositivo e sensores",
+	diagnosticsCurrentState: "Estado atual",
+	diagnosticsDeliveryStatus: "Status de entrega",
+	diagnosticsDeliverySuccess: "Entregue com sucesso",
+	diagnosticsScheduleSourceProfilePause: "Pausa no perfil",
+	diagnosticsOverrideTurnOff: "Desligar a climatização",
+	diagnosticsNone: "Nenhum",
+	diagnosticsReasonReplaced: "Substituído por uma solicitação mais recente",
+	diagnosticsReasonStopped: "Parou",
+	diagnosticsRetryCount: "Novas tentativas",
+	diagnosticsLastError: "Último erro",
+	diagnosticsScheduleSource: "Fonte de programação",
+	diagnosticsMode: "Modo",
+	diagnosticsProfile: "Perfil",
+	diagnosticsOverride: "Substituir",
+	diagnosticsPauses: "Pausas ativas",
+	diagnosticsHvacModes: "Modos HVAC",
+	diagnosticsTemperatureRange: "Faixa de temperatura",
+	diagnosticsTemperatureStep: "Etapa de temperatura",
+	diagnosticsConfigured: "Configurado",
+	diagnosticsOn: "Ativo",
+	diagnosticsOff: "Inativo",
+	diagnosticsActive: "Ativo",
+	diagnosticsFunctionState: "Estado de tempo de execução",
+	diagnosticsAppliedTarget: "Alvo aplicada",
+	diagnosticsHeatSamples: "Observações de aquecimento",
+	diagnosticsCoolSamples: "Observações de resfriamento",
+	diagnosticsHistorySettings: "Configurações do histórico",
+	diagnosticsStatusHealthy: "Saudável",
+	diagnosticsStatusWarning: "Aviso",
+	diagnosticsStatusError: "Erro",
+	diagnosticsStatusWithIssues: "{status}: {issues}",
+	diagnosticsHistoryLog: "Registro de tempo de execução",
+	diagnosticsLogTime: "Hora",
+	diagnosticsLogClimate: "Entidade de climatização",
+	diagnosticsLogType: "Tipo",
+	diagnosticsLogMessage: "Detalhes",
+	diagnosticsLogResizeColumn: "Redimensionar coluna {column}",
+	diagnosticsHistoryClimateFilter: "Fontes",
+	diagnosticsHistorySourcesLegend: "Selecione fontes de eventos",
+	diagnosticsHistoryNoSources: "Nenhuma fonte",
+	diagnosticsHistorySourceCount: "Entidades de climatização {count}",
+	diagnosticsHistorySourceCountWithVelair: "Entidades de climatização {count} + Velair",
+	diagnosticsHistoryClimateWithVelair: "{climate} + Velair",
+	diagnosticsHistorySourcesDone: "Feito",
+	diagnosticsHistoryCategoryFilter: "Categoria",
+	diagnosticsHistoryAllSources: "Todos os entidades de climatização + Velair",
+	diagnosticsHistoryVelairOnly: "Somente Velair",
+	diagnosticsHistoryAllCategories: "Todas as categorias",
+	diagnosticsHistoryFrom: "De",
+	diagnosticsHistoryTo: "Para",
+	diagnosticsHistoryInvalidRange: "De deve ser anterior ou igual a To.",
+	diagnosticsHistoryResults: "Mostrando {visible} de eventos {total}",
+	diagnosticsHistoryClearFilters: "Limpar filtros",
+	diagnosticsHistoryNoMatches: "Nenhum evento retido corresponde a esses filtros.",
+	diagnosticsHistoryExplanation: "Escolha quais eventos Velair retém. A saúde atual é sempre observada. O histórico retém a maioria dos eventos {limit}, permanece apenas na memória e é limpo quando Home Assistant ou Velair é reiniciado.",
+	diagnosticsClearHistory: "Limpar histórico",
+	diagnosticsHistoryUpdateError: "As configurações do histórico de diagnóstico não puderam ser salvas.",
+	diagnosticsHistoryClearError: "O histórico de diagnóstico não pôde ser apagado.",
+	diagnosticsHistoryCategoryControl: "Controle e programações",
+	diagnosticsHistoryCategoryControlDescription: "Programações, Perfis, Modos, Reforços, pausas, ajustes externos e alterações de controle Automático/Manual.",
+	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
+	diagnosticsHistoryCategoryRoomAssistDescription: "Mudanças de estado Room Assist e correções de alvo.",
+	diagnosticsHistoryCategoryPreconditioning: "Pré-condicionamento",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Planos de pré-condicionamento, cancelamentos e observações de aprendizagem.",
+	diagnosticsHistoryCategoryComfort: "Conforto",
+	diagnosticsHistoryCategoryComfortDescription: "Mudanças nas condições de conforto avaliadas localmente.",
+	diagnosticsHistoryCategoryDelivery: "Entrega climática",
+	diagnosticsHistoryCategoryDeliveryDescription: "Comandos climáticos falhados, repetidos, esgotados ou cancelados.",
+	diagnosticsHistoryCategoryAvailability: "Disponibilidade",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Entidades de climatização gerenciados tornam-se indisponíveis, desconhecidos ou disponíveis novamente.",
+	diagnosticsReasonCurrentSchedule: "Cronograma atual",
+	diagnosticsReasonMissingTargetStep: "Etapa de temperaturo alvo indisponível",
+	diagnosticsReasonNoLongerPlanned: "Não está mais planejado",
+	diagnosticsReasonSchedulerNotAuto: "O agendador não está em automático",
+	diagnosticsReasonSchedulerStopped: "Agendador parado",
+	diagnosticsReasonManualTarget: "Alvo manual",
+	diagnosticsReasonManual: "Ação manual",
+	diagnosticsReasonScheduleChanged: "Cronograma alterado",
+	diagnosticsReasonScheduleCleared: "Programação apagada",
+	diagnosticsReasonSettingsUpdated: "Configurações atualizadas",
+	diagnosticsReasonPortableImport: "Importação portátil",
+	diagnosticsReasonDataReset: "Redefinição de dados",
+	diagnosticsReasonExpired: "Expirado",
+	diagnosticsReasonNoActiveTarget: "Nenhum alvo ativo",
+	diagnosticsReasonZoneUnavailable: "Zona indisponível",
+	diagnosticsReasonAssistDisabled: "Room Assist desativado",
+	diagnosticsReasonMissingTarget: "Alvo ausente",
+	diagnosticsReasonUnsupportedTemperatureRange: "Faixa de temperatura não suportada",
+	diagnosticsReasonUnsupportedMode: "Modo HVAC não suportado",
+	diagnosticsReasonMissingTemperature: "Falta de temperatura",
+	diagnosticsReasonTemperatureMigration: "Migração de temperatura",
+	diagnosticsOperationAdded: "Adicionado",
+	diagnosticsOperationUpdated: "Atualizado",
+	diagnosticsOperationRemoved: "Removido",
+	diagnosticsOperationSetTemperature: "Definir temperatura",
+	diagnosticsEventBoostEnded: "O reforço terminou",
+	diagnosticsEventBoostStarted: "Reforço iniciado",
+	diagnosticsEventClimateTargetApplied: "Alvo da climatização aplicado",
+	diagnosticsEventExternalAdjustment: "Ajuste externo",
+	diagnosticsEventZoneControlChanged: "Controle de programação alterado",
+	diagnosticsControlAutomatic: "Automático",
+	diagnosticsControlManual: "Manual",
+	diagnosticsHvacModeChanged: "Modo HVAC: {previous} → {current}",
+	diagnosticsTargetChanged: "Alvo: {previous} → {current}",
+	diagnosticsRangeChanged: "Faixa: {previous} → {current}",
+	diagnosticsLowerTargetChanged: "Alvo inferior: {previous} → {current}",
+	diagnosticsUpperTargetChanged: "Alvo superior: {previous} → {current}",
+	diagnosticsControlChanged: "{previous} → {current}",
+	diagnosticsUntil: "até {time}",
+	diagnosticsReasonResumed: "Retomada",
+	diagnosticsEventProfileChanged: "Perfil alterado",
+	diagnosticsEventSchedulerModeChanged: "Modo agendador alterado",
+	diagnosticsEventZonePauseAdded: "Motivo da pausa adicionado",
+	diagnosticsEventZonePauseRemoved: "Motivo da pausa removido",
+	diagnosticsEventZonePauseUpdated: "Motivo da pausa atualizado",
+	diagnosticsEventZonePaused: "Zona pausada",
+	diagnosticsEventZoneResumed: "Zona retomada",
+	diagnosticsEventComfortAssessmentChanged: "Avaliação de conforto alterada",
+	diagnosticsEventPreconditioningObservationRecorded: "Observação de pré-condicionamento registrada",
+	diagnosticsEventPreconditioningPlanCancelled: "Plano de pré-condicionamento cancelado",
+	diagnosticsEventPreconditioningPlanUpdated: "Plano de pré-condicionamento atualizado",
+	diagnosticsEventRoomAssistRestored: "Room Assist restaurado",
+	diagnosticsEventRoomAssistStateChanged: "Estado Room Assist alterado",
+	diagnosticsEventRoomAssistUpdated: "Room Assist atualizado",
+	settingsPanelIntro: "Escolha como os termostatos e os dias da semana são ordenados neste painel.",
+	startupBehavior: "Inicialização Home Assistant",
+	startsAt: "Começa",
+	applyScheduleOnStartup: "Aplicar programação ativo após inicialização",
+	applyScheduleOnStartupDescription: "Quando Home Assistant é iniciado, Velair pode aplicar o bloco de programação atual aos termostatos gerenciados em vez de deixá-los como estão.",
+	start: "Começar",
+	status: "Status",
+	stop: "Parar",
+	supportedFanModes: "Modos de ventilador",
+	supportedHorizontalSwingModes: "Modos de oscilação horizontal",
+	supportedPresetModes: "Predefinições",
+	supportedSwingModes: "Modos de oscilação",
+	presetMode: "Predefinido",
+	swingMode: "Oscilação",
+	temp: "Temperatura",
+	target: "Alvo",
+	heatBelow: "Calor abaixo",
+	coolAbove: "Refrigerar acima",
+	temperatureRange: "Faixa de temperatura",
+	minimumShort: "Mínimo",
+	maximumShort: "Máx.",
+	temperatureUnit: "Unidade de temperatura",
+	temperatureUnitManagedByHomeAssistant: "Detectado em Home Assistant. Altere este valor nas configurações do sistema de unidades do Home Assistant.",
+	temperatureMigrationRequired: "Velair precisa de sua atenção",
+	temperatureMigrationStopped: "O programador e a configuração térmica estão bloqueados porque Home Assistant alterou as unidades de temperatura. Abra as configurações do Velair para migrar com segurança.",
+	temperatureMigrationQuestion: "Migrar temperaturas armazenadas de {source} para {target}?",
+	temperatureMigrationExplanation: "Continue somente se todas as temperaturas armazenadas pelo Velair ainda estiverem em {source}. A migração atualiza programações, modelos, ajustes temporários, Conforto, Room Assist, configurações de pré-condicionamento, ritmos e dados de aprendizado antes de retomar o agendador. Se algum valor armazenado já estiver em {target}, a migração deixará esse valor incorreto.",
+	temperatureMigrationUse: "Migrar {source} para {target}",
+	temperatureMigrationConfirm: "Confirme se todos os dados de temperatura Velair armazenados estão em {source} e converta-os para {target}? Não continue se algum valor armazenado já estiver em {target}, pois ficará incorreto. O agendador permanece parado se a migração não puder ser salva.",
+	temperatureMigrationComplete: "Dados de temperatura atualizados e agendador retomado",
+	temperatureMigrationFailed: "Não foi possível atualizar os dados de temperatura",
+	temperatureLegacyResetQuestion: "Redefinir dados Celsius legados para {target}?",
+	temperatureLegacyResetExplanation: "Esta instalação foi criada por uma versão Velair que armazenava apenas valores Celsius. Como Home Assistant agora usa {target}, redefina Velair para descartar os dados antigos e criar padrões seguros com reconhecimento de unidade. Futuras alterações na unidade Home Assistant oferecerão uma conversão completa de dados.",
+	temperatureLegacyResetStopped: "O agendador foi interrompido porque esta instalação herdada contém apenas dados Celsius, enquanto Home Assistant usa Fahrenheit. Abra Configurações Velair e use Redefinir Velair para criar padrões Fahrenheit.",
+	temperatureStep: "Etapa",
+	temperatureStepNotReported: "Não relatado por Home Assistant",
+	temperatureStepNotReportedDescription: "Esta entidade de climatização não publica target_temp_step. Velair não infere uma etapa de temperatura.",
+	targetTemp: "Temperaturo alvo",
+	targetHumidity: "Umidade alvo",
+	targetBy: "Atingir até",
+	targetTemperature: "Temperaturo alvo",
+	todayTimeline: "Linha do tempo de hoje",
+	updateTemplate: "Atualizar modelo",
+	templateDeleted: "Modelo excluído",
+	templateNameRequired: "O nome do modelo é obrigatório",
+	templateOptionalHint: "Escolha um modelo ou configure manualmente a programação.",
+	templateSaved: "Modelo salvo",
+	templates: "Modelos",
+	thermostat: "Termostato",
+	templatesPanelIntro: "Crie programações diárias reutilizáveis ​​e aplique-as a termostatos e dias compatíveis.",
+	time: "Hora",
+	timeline: "Linha do tempo",
+	timelineContinuesFrom: "De {day}, {time}",
+	title: "Título",
+	unableApplyThermostats: "Não é possível aplicar a programação aos termostatos",
+	unableCopy: "Não foi possível copiar a programação",
+	unableLoad: "Não foi possível carregar os dados do agendador",
+	unablePause: "Não foi possível pausar o agendador",
+	unableResume: "Não foi possível retomar o agendador",
+	unableReset: "Não foi possível redefinir os dados Velair",
+	unableSave: "Não foi possível salvar a programação",
+	unableSaveSettings: "Não foi possível salvar as configurações",
+	unableDeleteTemplate: "Não foi possível excluir o modelo",
+	unableExport: "Não é possível exportar dados",
+	unableSaveTemplate: "Não foi possível salvar o modelo",
+	unableSubscribe: "Não é possível assinar atualizações do agendador",
+	unsupportedModeForClimate: "{entity} não suporta {mode} em {start}. Altere esse bloco para Manter ou escolha um modo compatível antes de aplicar.",
+	unsupportedModeForClimateOnWeekday: "{entity} não suporta {mode} em {weekday} em {start}. Altere esse bloco para Manter ou escolha um modo compatível antes de aplicar.",
+	unsupportedRangeTargetForClimate: "{entity} não suporta uma faixa de temperatura em {start}.",
+	unsupportedRangeTargetForClimateOnWeekday: "{entity} não suporta uma faixa de temperatura em {weekday} em {start}.",
+	unsupportedSingleTargetForClimate: "{entity} requer uma faixa de temperatura em {start}.",
+	unsupportedSingleTargetForClimateOnWeekday: "{entity} requer uma faixa de temperatura em {weekday} em {start}.",
+	unsaved: "não salvo",
+	waiting: "Aguardando dados da programação",
+	zoneOrder: "Entidades de climatização gerenciados",
+	zonesManaged: "Zonas {count} gerenciadas",
+	weekdays: {
+		monday: "Segunda-feira",
+		tuesday: "Terça-feira",
+		wednesday: "Quarta-feira",
+		thursday: "Quinta-feira",
+		friday: "Sexta-feira",
+		saturday: "Sábado",
+		sunday: "Domingo"
+	},
+	schedulerStatuses: {
+		idle: "Inativo",
+		override_active: "Reforço ativo",
+		paused: "Pausado",
+		scheduled: "Agendado"
+	},
+	schedulerModes: {
+		auto: "Auto",
+		paused: "Pausado"
+	},
+	hvacModes: {
+		auto: "Auto",
+		cool: "Refrigeração",
+		dry: "Desumidificação",
+		fan_only: "Somente ventilação",
+		heat: "Aquecimento",
+		heat_cool: "Aquecimento/refrigeração",
+		off: "Desligado"
+	},
+	hvacActions: {
+		cooling: "Refrigerando",
+		drying: "Desumidificando",
+		fan: "Ventilando",
+		heating: "Aquecendo",
+		idle: "Inativo",
+		off: "Desligado",
+		preheating: "Pré-aquecendo",
+		defrosting: "Descongelando"
+	}
+}, vt = /* @__PURE__ */ t({ pt_pt: () => yt }), yt = {
+	addBlock: "Adicionar bloco",
+	externalSystems: "Sistemas externos",
+	externalSystemsDescription: "Escolha quem executa a programação semanal efetiva para entidades de climatização compatíveis. As zonas externas nunca são controladas fisicamente pelo Velair.",
+	externalControllersInUse: "Controladores externos em utilização",
+	externalConditionProfilesSupported: "São suportadas programações predefinidas, de perfil e de modo",
+	externalConditionDefaultOnly: "Apenas programações predefinidas",
+	profileExternalScheduleOnly: "As zonas externas aceitam apenas programações predefinidas, de perfil ou de modo. As pausas e ações diretas do Velair continuam indisponíveis.",
+	profileExternalMaxChanges: "{climate} excede o limite do controlador de alterações de {count} em {day}.",
+	profileExternalTimeGrid: "{climate} deve utilizar intervalos de minutos {minutes} em {day}.",
+	profileExternalUnsupportedBlock: "{climate} contém um bloco que o controlador externo não consegue representar.",
+	externalConditionHvacModes: "Modos HVAC suportados: {modes}",
+	externalConditionTargetTypes: "Tipos de alvo suportados: {types}",
+	externalConditionActions: "Ações de programação suportadas: {actions}",
+	externalConditionTurnOffUnsupported: "Os blocos de desligamento não são suportados",
+	externalConditionOptionFields: "Opções de entidade de climatização suportadas: {fields}",
+	externalConditionOptionsUnsupported: "Os campos de opções climáticas não são suportados",
+	externalConditionMaxChanges: "Máximo de alterações de programação {count} por dia",
+	externalConditionTimeGrid: "Os tempos devem utilizar intervalos de {minutes} minutos",
+	externalConditionMidnightContinuityCounts: "Se o primeiro bloco começar depois das 00h00, a mudança de continuidade implícita à meia-noite conta para o máximo diário",
+	externalConditionsUnavailable: "As condições do controlador não estão disponíveis.",
+	externalCapability_action_set_temperature: "Definir temperatura",
+	externalCapability_action_turn_off: "Desligar",
+	externalCapability_hvac_heat: "Aquecimento",
+	externalCapability_hvac_cool: "Arrefecimento",
+	externalCapability_target_scalar: "Temperaturo alvo único",
+	externalCapability_target_range: "Gama de temperaturo alvo",
+	externalExecutionVelair: "Velair (execução local)",
+	externalExecutionLocal: "Executado por Velair",
+	externalExecutionEnabled: "Execução de programação externo ativada",
+	externalExecutionDisabled: "Execução do programação Velair ativada",
+	externalScheduleRequired: "Crie e guarde uma programação com pelo menos um bloco de temperatura antes de ativar a execução externa.",
+	externalSwitchpointUsage: "{used} de {max} pontos de comutação do controlador",
+	externalSwitchpointBreakdown: "{count} blocos programados",
+	externalSwitchpointBreakdownContinuity: "{count} blocos programados + 1 ponto de continuidade à meia-noite",
+	externalActionsInactive: "As ações Velair estão inativas porque este entidade de climatização é executado por um sistema externo.",
+	externalProviderAvailability: "Controlador: {state}",
+	externalProviderAvailable: "disponível",
+	externalProviderUnavailable: "indisponível",
+	externalPublication_publishing: "A publicar a programação efetiva na integração externa.",
+	externalPublication_published: "A integração externa aceitou a programação efetiva.",
+	externalPublication_failed: "Falha na publicação do programação.",
+	overviewZoneExternal: "Execução externa",
+	overviewExternalLabel: "Externo",
+	overviewExternalExecutionDescription: "A programação planeado é executado pelo controlador externo. Velair não envia ações meteorológicas para esta zona.",
+	overviewExternalExecutionProvider: "Controlador externo: {provider}",
+	overviewExternalInfoAction: "Sobre a execução externa através de {provider}",
+	overviewExternalStatusPublishing: "Publicação",
+	overviewExternalStatusAccepted: "Aceito",
+	overviewExternalStatusFailed: "Falha",
+	overviewExternalStatusUnavailable: "Indisponível",
+	overviewExternalProviderUnavailable: "A integração externa não está disponível de momento. Velair permanece inativo para este entidade de climatização.",
+	overviewExternalZonesUnaffected: "As zonas {count} executadas externamente não são afetadas pelas ações Velair.",
+	externalChangePolicy: "Ajustes externos",
+	externalChangePolicyDescription: "Escolha o que Velair faz depois de um modo ou alvo ser alterado fora de Velair. Manter automático reaplica a intenção Velair atual; as restantes opções iniciam o controlo Manual até ao ponto de retorno selecionado. As alterações aplicam-se ao próximo ajuste externo. Se Manual for explicitamente selecionado em Visão geral enquanto Manter automático estiver guardado, permanecerá Manual até ser retomado.",
+	externalAdjustmentInfoAction: "Sobre os ajustes externos",
+	externalChangeKeepAutomatic: "Manter automático",
+	externalChangeUntilNextBlock: "Até ao próximo bloco",
+	externalChangeForDuration: "Por um período",
+	externalChangeUntilResumed: "Até ser retomado",
+	externalChangePolicySaved: "Política de alteração externa guardada",
+	manualAdjustment: "Ajuste manual",
+	velairControl: "Comando Velair",
+	automaticScheduling: "Agendamento automático",
+	overviewControlAutomatic: "Automático",
+	overviewControlManual: "Manual",
+	manualAdjustmentStarted: "Ajuste manual iniciado",
+	unableEnterManualAdjustment: "Não é possível iniciar o ajuste manual",
+	manualSessionNoNextBlock: "Sem próximo bloco – até ser retomado",
+	manualSessionNextBlockAt: "Até ao próximo bloco em {time}",
+	manualSessionDuration: "Durante {minutes} minutos",
+	manualSessionDurationUntil: "Durante {minutes} minutos, até {time}",
+	manualSessionUntilResumed: "Até ser retomado",
+	manualUnavailableClimate: "A entidade de climatização não está disponível.",
+	manualUnavailableDisabled: "Esta entidade de climatização está desativado em Velair.",
+	manualUnavailableTemperatureMigration: "Resolva a migração dos dados de temperatura antes de alterar o controlo manual.",
+	manualUnavailableExternalExecution: "O controlo manual não está disponível para entidades de climatização executadas externamente.",
+	manualUnavailableScheduler: "A programação automático não está a ser executado.",
+	manualUnavailableProfilePause: "O perfil ativo pausa este entidade de climatização.",
+	manualUnavailableZonePause: "Outra pausa controla atualmente este entidade de climatização.",
+	manualAdjustmentActive: "Fora da programação automática",
+	automaticControlResumed: "Agendamento automático retomado",
+	durationMinutes: "Duração (minutos)",
+	apply: "Aplicar",
+	cloneDayToDays: "Clonar dia para",
+	cloneDayToThermostats: "Clonar dia para",
+	cloneAction: "Clonar",
+	clonePresetLabel: "Seleção rápida do dia",
+	clonePresetWeekdays: "Seg–Sex",
+	clonePresetWeekend: "Fim de semana",
+	clonePresetAll: "Todos os dias",
+	clonePresetClear: "Limpar seleção",
+	cancel: "Cancelar",
+	close: "Perto",
+	profileSaveDayTemplateTitle: "Guardar o dia como modelo",
+	profileSaveDayTemplateDescription: "Guarde o {day} editado como um modelo reutilizável. O rascunho do seu perfil permanecerá inalterado.",
+	profileCloneDayClimatesTitle: "Clonar dia para entidades de climatização",
+	profileCloneDayClimatesDescription: "Copie o {day} de {source} para o mesmo dia nas entidades de climatização selecionadas.",
+	profileCloneDayClimatesTargets: "Entidades de climatização de destino",
+	profileCloneDayClimatesOverwrite: "Isto substitui apenas esse dia da semana em cada entidade de climatização selecionada.",
+	profileCloneDayClimatesBehaviorChange: "Estas entidades de climatização mudarão da programação padrão ou pausa para a programação do perfil: {targets}.",
+	profileCloneDayIncompatibleTarget: "{entity} não pode utilizar o tipo de alvo em {start}. Nenhuma entidade de climatização foi alterado.",
+	profileCloneDayIncompatibleMode: "{entity} não suporta o modo {value} em {start}. Nenhuma entidade de climatização foi alterado.",
+	profileCloneDayIncompatibleOptions: "{entity} não suporta todas as definições opcionais em {start}. Nenhuma entidade de climatização foi alterado.",
+	profileCloneDayIncompatibleTemperature: "{entity} não pode utilizar a temperatura em {start} com os seus limites e passos. Nenhuma entidade de climatização foi alterado.",
+	appliedDays: "Dias atualizados: {count}",
+	appliedTemplateTargets: "Aplicado a {count} destinos",
+	appliedThermostats: "Termostatos atualizados: {count}",
+	applying: "A aplicar…",
+	applyTemplate: "Aplicar modelo",
+	applyTo: "Aplicar a",
+	applyToAction: "Aplicar a…",
+	applyTemplateTo: "Aplicar {template} a...",
+	boost: "Reforço",
+	boostActive: "Reforço ativo",
+	activeBoosts: "Reforços ativos",
+	availableModes: "Modos disponíveis",
+	boostTarget: "Temperatura-alvo do reforço",
+	boostUntil: "Termina em",
+	blocks: "Blocos",
+	build: "Compilação",
+	cardView: "Visualização de cartão",
+	activeSetupCardControls: "Controlos de configuração ativos",
+	activeSetupCardControlsBoth: "Modos e Perfis",
+	activeSetupCardControlsDescription: "Escolha o que este cartão pode alterar. O modo atual e os perfis aplicados permanecem visíveis.",
+	activeSetupCardControlsModes: "Apenas modos",
+	activeSetupCardControlsProfiles: "Apenas perfis",
+	cardViewOverviewBoosts: "Visão geral: reforços ativos",
+	cardViewOverviewEvents: "Visão geral: próximos eventos",
+	cardViewOverviewStatus: "Visão geral: Estado do agendador",
+	cardViewOverviewTimeline: "Visão geral: linha do tempo de hoje",
+	cardViewOverviewZones: "Visão geral: visão geral da zona",
+	cardViewActiveSetup: "Perfis: configuração ativa",
+	cardViewSchedules: "Programações: editor",
+	cardViewSensors: "Room Assist: configuração e estado",
+	cardViewComfort: "Conforto: configuração e estado",
+	cardViewPreconditioning: "Pré-condicionamento: configuração e estado",
+	cardThermostatHidden: "Escondido neste cartão",
+	cardThermostatVisible: "Mostrado neste cartão",
+	cardThermostats: "Termostatos neste cartão",
+	cardThermostatsDescription: "Escolha quais os termóstatos que este cartão mostra e organize a sua ordem.",
+	comfortCardVisibility: "Visibilidade do cartão de conforto",
+	comfortCardVisibilityDescription: "Escolha qual a configuração do Conforto e os gráficos ao vivo que este cartão mostra.",
+	comfortCardShowCo2: "Mostrar gráfico de CO2",
+	comfortCardShowConfiguration: "Mostrar configuração",
+	comfortCardShowHumidity: "Mostrar gráfico de humidade",
+	comfortCardShowTemperature: "Mostrar gráfico de temperatura",
+	roomAssistCardVisibility: "Visibilidade Room Assist",
+	roomAssistCardVisibilityDescription: "Escolha quais os controlos Room Assist e os detalhes de estado que este cartão mostra.",
+	roomAssistShowDebounce: "Mostrar atraso na atualização",
+	roomAssistShowDeadband: "Mostrar zona morta Room Assist",
+	roomAssistShowLiveStatus: "Mostrar estado ao vivo",
+	roomAssistShowMaxDelta: "Mostrar delta máximo de assistência",
+	roomAssistShowSensor: "Mostrar sensor de temperatura ambiente",
+	roomAssistShowSwitch: "Mostrar botão de ligar/desligar",
+	current: "Atual",
+	currentHumidity: "Humidade",
+	currentTemperature: "Temperatura atual",
+	currentTime: "Hora atual: {time}",
+	clear: "Limpar",
+	confirmDeleteTemplate: "Apagar modelo {template}?",
+	confirmTemplate: "Substituir {weekday} por {template}?",
+	comfort: "Conforto",
+	comfortAirQuality: "Qualidade do ar",
+	comfortAirQualityElevated: "CO2 elevado",
+	comfortAirQualityGood: "Bom ar",
+	comfortAirQualityPoor: "Má qualidade do ar",
+	comfortAirQualityUnavailable: "CO2 indisponível",
+	comfortAutomaticSourceValue: "Automático: {entity}",
+	comfortCo2: "CO2",
+	comfortCo2Attention: "Elevado",
+	comfortCo2Limits: "Limites de CO2",
+	comfortCo2LimitsHelp: "Elevado marca um alerta precoce sobre a qualidade do ar. Fraco marca um nível de CO2 mais grave.",
+	comfortCo2Poor: "Má",
+	comfortCo2Sensor: "Sensor de CO2",
+	comfortCollapseClimate: "Recolher {climate}",
+	comfortConditionCold: "Frio",
+	comfortConditionColdAndDry: "Frio e seco",
+	comfortConditionColdAndHumid: "Frio e húmido",
+	comfortConditionComfortable: "Confortável",
+	comfortConditionDry: "Ar seco",
+	comfortConditionHot: "Quente",
+	comfortConditionHotAndDry: "Quente e seco",
+	comfortConditionHotAndHumid: "Quente e húmido",
+	comfortConditionHumid: "Húmido",
+	comfortConditionHumidityComfortable: "Humidade dentro da faixa",
+	comfortConditionMonitoringOff: "Monitorização desativado",
+	comfortConditionNoReadings: "Sem leituras",
+	comfortConditionReadingsOutdated: "Leituras desatualizadas",
+	comfortConditionTemperatureComfortable: "Temperatura dentro da gama",
+	comfortCooler: "Mais fresco",
+	comfortCurrentReadings: "Leituras atuais",
+	comfortDataFreshness: "Atualização de dados",
+	comfortDataIssueCo2Missing: "CO2 indisponível",
+	comfortDataIssueCo2Stale: "Leitura de CO2 desatualizada",
+	comfortDataIssueHumidityMissing: "Humidade indisponível",
+	comfortDataIssueHumidityStale: "Leitura de humidade desatualizada",
+	comfortDataIssueTemperatureMissing: "Temperatura indisponível",
+	comfortDataIssueTemperatureStale: "Leitura de temperatura desatualizada",
+	comfortDataPartial: "Leituras parciais",
+	comfortDataStale: "Leituras desatualizadas",
+	comfortDataUnavailable: "Nenhuma leitura utilizável",
+	comfortDisabledDetail: "A monitorização de conforto está desativada para este entidade de climatização. Nenhum sensor de conforto é rastreado.",
+	comfortDoNotMonitor: "Não monitorize o CO2",
+	comfortDoNotMonitorHumidity: "Não monitorize a humidade",
+	comfortDrier: "Mais seco",
+	comfortExpandClimate: "Expandir {climate}",
+	comfortHumidity: "Humidade",
+	comfortHumidityRange: "Faixa de humidade",
+	comfortHumidityRangeHelp: "Intervalos mais estreitos avisam mais cedo; faixas mais largas são mais tolerantes.",
+	comfortHumiditySensor: "Sensor de humidade",
+	comfortIntroDetail: "Monitorize localmente a temperatura, a humidade e o CO2 e, em seguida, utilize os eventos Velair nas automações Home Assistant.",
+	comfortIntroTitle: "Conforto ambiental",
+	comfortMaximum: "Máx.",
+	comfortMinimum: "Mínimo",
+	comfortMoreHumid: "Mais húmido",
+	comfortMapCurrentPosition: "Posição atual: {temperature}, {humidity}",
+	comfortNotMonitored: "Não monitorizado",
+	comfortSelectSensor: "Usar fonte automática",
+	comfortStaleAfter: "Obsoleto depois",
+	comfortStaleAfterHelp: "Idade máxima desde a última atualização de estado Home Assistant. Maior confia em valores mais antigos durante mais tempo; marcas mais baixas em sensores obsoletos mais cedo.",
+	comfortTargetZone: "Gama de conforto",
+	comfortTemperature: "Temperatura",
+	comfortTemperatureRange: "Faixa de temperatura",
+	comfortTemperatureRangeHelp: "Intervalos mais estreitos avisam mais cedo; faixas mais largas são mais tolerantes.",
+	comfortTemperatureSensor: "Sensor de temperatura",
+	comfortUnavailable: "Entidade de climatização indisponível",
+	comfortWarmer: "Mais quente",
+	createTemplate: "Criar modelo",
+	customTemplateName: "Nome do modelo",
+	day: "Dia",
+	daySchedule: "Programação do dia",
+	defaultZone: "Primeira zona gerida",
+	deleteBlock: "Apagar bloco",
+	deleteTemplate: "Excluir modelo",
+	dismiss: "Dispensar",
+	duplicateStart: "Hora de início duplicada: {start}",
+	entityDiagnosticMissing: "Entidade não encontrada",
+	entityDiagnosticNoModes: "Nenhum modo HVAC suportado reportado",
+	entityDiagnosticNoRange: "Nenhuma gama de temperatura relatada",
+	entityDiagnosticNotClimate: "A entidade não é de climatização",
+	entityDiagnosticOk: "A configuração do termóstato parece OK",
+	fanMode: "Modo ventilador",
+	horizontalSwingMode: "Oscilação horizontal",
+	invalidStart: "Hora de início inválida: {start}",
+	invalidTemperature: "Temperatura inválida para {start}",
+	invalidTemperatureRange: "Utilize {min} para {max}",
+	invalidTargetRangeOrder: "O alvo de aquecimento não deve estar acima do alvo de arrefecimento",
+	invalidTemperatureStep: "Utilize os passos {step}",
+	incompatibleScheduleTargets: "Alguns alvos de programação precisam de revisão",
+	incompatibleScheduleTargetsDescription: "Os alvos armazenados {count} já não correspondem à gama do termóstato ou à etapa de temperatura. Abra Agendamentos e guarde um valor compatível.",
+	operationRecoveryRequired: "Velair guardou os dados, mas não conseguiu retomar",
+	operationRecoveryDescription: "A programação continua parado. Recarregue a integração Velair ou reinicie Home Assistant para concluir a recuperação.",
+	operationCancelled: "A operação foi cancelada",
+	operationCurrentZone: "Trabalhar em {zone}",
+	operationDefaultCompleted: "Programações padrão restauradas",
+	operationDefaultFailed: "Não foi possível repor as programações padrão",
+	operationDefaultPartial: "Programações padrão restauradas com problemas",
+	operationDefaultRunning: "Restaurando programações padrão",
+	operationDismiss: "Ignorar o estado de operação",
+	operationFailedHelp: "Reveja a entidade de climatização afetado e os registos Home Assistant para obter detalhes",
+	operationFailureCount: "Zonas {count} com problemas: {zones}",
+	operationFailureOne: "1 zona com problemas: {zones}",
+	operationModeCompleted: "Modo {target} aplicado",
+	operationModeFailed: "Não é possível aplicar o modo {target}",
+	operationModePartial: "Modo {target} aplicado com problemas",
+	operationModeRunning: "Aplicando o modo {target}",
+	operationNoZones: "Nenhuma zona necessitava de mudanças",
+	operationProfileCompleted: "Perfil {target} aplicado",
+	operationProfileFailed: "Não é possível aplicar o perfil {target}",
+	operationProfilePartial: "Perfil {target} aplicado com problemas",
+	operationProfileRunning: "Aplicando perfil {target}",
+	operationProgress: "{completed} de zonas {total} processadas",
+	operationProgressLabel: "Progresso da operação Velair",
+	keep: "Manter o modo atual",
+	keepMode: "Manter o modo atual",
+	tagline: "Automação da climatização que se adapta à sua vida.",
+	loading: "Carregando...",
+	loadingEntities: "Carregamento de zonas geridas...",
+	managedEntityAvailable: "Disponível",
+	managedEntityMissing: "Não encontrado",
+	managedEntitiesStatus: "Termostatos geridos",
+	menu: "Menu",
+	minutesShort: "min",
+	secondsShort: "s",
+	providedData: "Dados fornecidos",
+	profiles: "Perfis",
+	scheduleSourceLabel: "Fonte de programação",
+	defaultSchedules: "Programações padrão",
+	defaultSchedulesDescription: "O plano semanal utilizado quando nenhum Perfil controla um termóstato.",
+	profileSchedules: "Programações de perfil",
+	profileSchedulesDescription: "Crie perfis e escolha se cada termóstato utiliza a sua própria programação, a programação padrão ou a pausa.",
+	profileScheduleErrorsSummary: "Reveja o planeamento inválido em: {climates}.",
+	profileScheduleClimateBlockError: "{climate}, {day} e {start}: {error}",
+	profileDefaultScheduleHelp: "Este termóstato continua a utilizar a sua programação padrão enquanto o perfil está ativo.",
+	profilesAndModes: "Perfis e modos",
+	activeSetup: "Configuração ativa",
+	activeSetupDescription: "Veja o que atualmente controla as suas zonas e altere-o num só lugar.",
+	activeSetupChange: "Mudar",
+	activeSetupModesHelp: "Escolha o modo que deve controlar os perfis ativos.",
+	activeSetupAppliedProfiles: "Perfis Aplicados",
+	activeSetupNoProfiles: "Sem perfil aplicado. As zonas seguem as suas programações padrão.",
+	activeSetupManualProfile: "Ative um perfil manualmente",
+	activeSetupManualProfileHelp: "Isto substitui todos os perfis ativos e altera o modo para manual. Para ativar perfis adicionais em conjunto, utilize um modo.",
+	profilesPanelIntro: "Os perfis definem rotinas climáticas alternativas. Os modos ativam um ou mais perfis em conjunto.",
+	profileLibrarySelectorLabel: "Bibliotecas de perfil e modo",
+	profilesLibraryDescription: "Defina como as zonas selecionadas se devem comportar.",
+	profilesDescription: "Um Perfil define a forma como uma ou mais zonas se comportam quando estão ativas.",
+	profileActive: "Perfil ativo",
+	profilesActive: "Perfis ativos",
+	profileActivate: "Ativar perfil",
+	profileBehaviorDefault: "Programação padrão",
+	profileBehaviorPause: "Pausa",
+	profileBehaviorSchedule: "Cronograma de perfil",
+	profileBlockAction: "Ação",
+	profileBrowseIcons: "Navegue pelos ícones disponíveis",
+	profileConfirmDelete: "Apagar {profile} e todas as suas definições de zona? Isto não pode ser desfeito.",
+	profileConfirmDeleteActive: "{profile} está ativo. Apagá-lo e retornar as suas zonas ao padrão? Outros perfis ativos permanecerão. Isto não pode ser desfeito.",
+	profileColor: "Cor do perfil",
+	profileColorHelp: "Utilizado para identificar este perfil em seletores e listas.",
+	profileCopyTemplate: "Copie o modelo até hoje",
+	profileCreate: "Novo perfil",
+	profileDelete: "Apagar perfil",
+	profileDeleted: "Perfil excluído",
+	profileDescription: "Descrição",
+	profileDescriptionCharactersRemaining: "Restantes caracteres {count}",
+	profileDescriptionTooLong: "A descrição deve ter caracteres {count} ou menos.",
+	profileDiscardChanges: "Descartar alterações de perfil não guardadas?",
+	discardUnsavedChanges: "Descartar alterações não guardadas?",
+	profileCollapseClimate: "Recolher {climate}",
+	profileExpandClimate: "Expandir {climate}",
+	profileIcon: "Ícone",
+	profileIconHelp: "Utilize um identificador de ícone do Material Design, por exemplo mdi:briefcase-outline.",
+	profileActiveContext: "Contexto climático ativo",
+	modeBuiltInHelp: "Os modos integrados não podem ser renomeados ou eliminados.",
+	modeInformation: "Sobre {mode}",
+	modeChooseProfile: "Escolha um perfil",
+	modeConfirmDelete: "Apagar o modo {mode}? Isto não pode ser desfeito.",
+	modeCreate: "Novo modo",
+	modeDelete: "Modo de exclusão",
+	modeDeleted: "Modo excluído",
+	modeDiscardChanges: "Descartar alterações de modo não guardadas?",
+	modeDefault: "Predefinição",
+	modeDefaultDescription: "Desativa os perfis e restaura a programação padrão de cada zona.",
+	modeManual: "Manual",
+	modeManualDescription: "Os perfis ativos não são controlados por um modo.",
+	modeCustomDescription: "Activa os perfis mapeados: {profile}.",
+	modeChange: "Alterar modo",
+	modeLabel: "Modo",
+	modeMappedProfile: "Perfil mapeado: {profile}",
+	modeMappedProfileMissing: "Perfil mapeado indisponível: {profile}",
+	modeMappedProfiles: "Perfis mapeados: {profiles}",
+	modeName: "Nome do modo",
+	modeNameDuplicate: "Utilize um nome de modo exclusivo.",
+	modeNameHelp: "Este valor aparece no selector de modo do Home Assistant.",
+	modeNameRequired: "O nome do modo é obrigatório.",
+	modeNameTooLong: "O nome do modo deve ter caracteres {count} ou menos.",
+	modeProfile: "Perfil mapeado",
+	modeProfiles: "Perfis mapeados",
+	modeProfileHelp: "A seleção deste modo ativa todos os perfis selecionados. Uma zona só pode pertencer a um deles.",
+	modeProfileRequired: "Selecione pelo menos um perfil e evite perfis que configurem a mesma zona.",
+	modeSaved: "Modo guardado",
+	modeSelectToBegin: "Selecione um modo personalizado para o editar ou crie um",
+	modeUnableDelete: "Não é possível eliminar o modo",
+	modeUnableActivate: "Não é possível alterar o modo",
+	modeUnableSave: "Não foi possível guardar o modo",
+	modesDescription: "Um Modo activa um ou mais Perfis em conjunto de Velair ou Home Assistant.",
+	modesLibraryDescription: "Ative um ou mais perfis em conjunto.",
+	modesEntityNote: "As automatizações podem selecionar um modo através da entidade Modo Velair ou ativar um perfil com velair.activate_profile e o seu ID de automatização.",
+	modesTitle: "Modos",
+	profilesActiveCount: "Perfis ativos {count}",
+	profileId: "ID de automação",
+	profileIdReadonlyHelp: "ID estável de leitura apenas utilizado por automações e serviços.",
+	profileInvalidIcon: "Utilize um identificador válido no formato mdi:icon-name.",
+	profileInvalidColor: "Escolha uma cor válida no formato #RRGGBB.",
+	profileInvalidSchedule: "Verifique se cada bloco tem tempo e temperatura válidos e exclusivos.",
+	profileName: "Nome do perfil",
+	profileNameRequired: "O nome do perfil é obrigatório",
+	profileNewName: "Novo perfil",
+	profileNoDescription: "Sem descrição",
+	profileNoneCreated: "Nenhum perfil",
+	profileDefaultDescription: "Cada zona está a utilizar a sua programação padrão.",
+	profileOverviewLabel: "Perfil",
+	profilePauseAction: "Enquanto pausado",
+	profilePauseKeep: "Manter a climatização sem alterações",
+	profilePauseTurnOff: "Desligar a climatização",
+	profileRemovedElsewhere: "Este perfil foi removido noutro local. Selecione ou crie outro perfil.",
+	profileSaved: "Perfil guardado",
+	profileSave: "Guardar perfil",
+	profileSelectToBegin: "Selecione um perfil para o editar",
+	profileUnableActivate: "Não foi possível ativar o perfil",
+	profileUnableDelete: "Não foi possível eliminar o perfil",
+	profileZoneBehavior: "Comportamento da zona",
+	portability: "Portabilidade",
+	portabilityDescription: "Exporte ou importe dados Velair com um ficheiro JSON com versão.",
+	portabilityFileReady: "{file} pronto",
+	portabilityIncluded: "Incluído",
+	portabilitySettingsSection: "Definições",
+	portabilityTemplatesSection: "Modelos",
+	portabilityZonesSection: "Programações do termostato",
+	portabilityPreconditioningLearningSection: "Pré-condicionamento da aprendizagem",
+	portabilityProfilesSection: "Perfis climáticos",
+	portabilityModesSection: "Modos",
+	preconditioningImportSkipped: "Aprendizagem de pré-condicionamento ignorado ({count}). Estes termóstatos não são geridos aqui: {entities}",
+	portableExported: "Ficheiro de exportação criado",
+	portableImported: "Importação concluída",
+	importData: "Importação",
+	importFile: "Ficheiro de importação",
+	chooseFile: "Escolha o ficheiro",
+	climateOptions: "Opções climáticas",
+	climateOptionsAdd: "Adicione definições opcionais",
+	noFileSelected: "Nenhum ficheiro selecionado",
+	exportData: "Exportar",
+	invalidImportFile: "Este não é um ficheiro de exportação Velair válido",
+	importOverwriteWarning: "A importação substituirá os valores existentes. Não podem ser recuperados a menos que os exporte primeiro.",
+	noImportSections: "Nenhuma secção importável encontrada",
+	legacyImportTemperatureUnit: "Este backup mais antigo não regista uma unidade de temperatura. Velair tratará as suas temperaturas como Celsius e convertê-las-á para {target} quando necessário.",
+	notSet: "Não definido",
+	maintenance: "Manutenção",
+	maintenanceDescription: "Detalhes da versão técnica para resolução de problemas.",
+	frontendBuild: "Construção de front-end",
+	portableFormatVersion: "Formato portátil/de exportação",
+	internalStorageVersion: "Armazenamento/modelo",
+	integrationVersion: "Versão de integração",
+	resetVelair: "Repor Velair",
+	resetVelairDescription: "Exclui todos os dados Velair armazenados, incluindo programações, modelos, preferências do painel, reforços e pausas ativos, políticas de ajuste externo e ajustes manuais ativos, definições de conforto e Room Assist, definições e aprendizagem de pré-condicionamento adaptativo e comportamento de arranque. Em seguida, recria padrões com reconhecimento de unidade para os termóstatos geridos atualmente.",
+	confirmReset: "Repor todos os dados Velair armazenados? Isto não pode ser desfeito a menos que exporte os seus dados primeiro.",
+	confirmResetPreconditioningLearning: "Redefinir a aprendizagem adaptativa de pré-condicionamento para {direction}? As programações e definições serão mantidas.",
+	confirmResetPreconditioningSettings: "Restaurar as definições padrão de pré-condicionamento para este termóstato? As amostras de aprendizagem serão mantidas.",
+	resetDone: "Reposição de dados Velair",
+	resetting: "Redefinindo",
+	minTemperature: "Temperatura mínima",
+	maxTemperature: "Temperatura máxima",
+	modeOptional: "Modo opcional",
+	firstWeekday: "Primeiro dia da semana",
+	managedZones: "Zonas geridas",
+	mode: "Modo",
+	moveDown: "Mover para baixo",
+	moveUp: "Subir",
+	nextEvent: "Próximo evento",
+	nextEvents: "Próximos eventos",
+	noActiveBoosts: "Sem reforços ativos",
+	noBlocks: "Sem bloqueios",
+	noManagedEntities: "Nenhuma entidade climática gerida encontrada.",
+	noTemplates: "Nenhum modelo",
+	newTemplate: "Novo modelo",
+	noUpcomingEvent: "Nenhum evento próximo",
+	off: "Desligado",
+	otherDays: "Outros dias",
+	otherThermostats: "Outros termostatos",
+	overview: "Visão geral",
+	overviewPanelIntro: "A visualização de estado principal agrupará o estado do agendador, eventos futuros, reforços ativos e ações rápidas.",
+	overviewStatusPaused: "Pausado",
+	overviewStatusPausedDetail: "Pausa temporária ativa",
+	overviewStatusRunning: "Corrida",
+	overviewStatusRunningDetail: "O agendador está a aplicar programações",
+	overviewStatusStopped: "Parou",
+	overviewStatusStoppedDetail: "O agendador está parado até ser retomado",
+	overviewZones: "Visão geral da zona",
+	overviewZoneApplied: "Aplicado",
+	overviewZoneAir: "Ar: {status}",
+	overviewZoneBoost: "Reforço",
+	overviewZoneComfort: "Conforto: {status}",
+	overviewZoneManual: "Manual",
+	overviewZonePaused: "Pausado",
+	overviewZonePreconditioning: "Pré-condicionamento",
+	overviewZoneResumes: "Retoma às {time}",
+	overviewZoneRoom: "Quarto",
+	overviewZoneRoomAssist: "Room Assist {delta}",
+	overviewZoneScheduled: "Agendado",
+	overviewZoneSensorIssue: "Dados do sensor incompletos",
+	overviewZoneTarget: "Objetivo",
+	overviewZoneUntil: "Até {time}",
+	overviewZoneUntilResumed: "Até ser retomado",
+	overviewZoneReadyAt: "Pronto em {time}",
+	overviewZoneNextAt: "Seguinte em {time}",
+	overviewZoneAutomationOff: "Automação desligada",
+	overviewZoneRoomAssistThermalFlow: "Fluxo de temperatura do Room Assist",
+	overviewZoneSensor: "Sensor",
+	overviewZoneClimate: "Entidade de climatização",
+	overviewZoneTemperature: "Temperatura",
+	overviewZoneSetpoint: "Ponto de regulação",
+	overviewZoneScheduledSetpoint: "Agendado",
+	overviewZoneScheduledRange: "Intervalo programado",
+	overviewZoneAppliedRange: "Faixa aplicada",
+	overviewZoneOffset: "Desvio",
+	overviewZoneRangeShift: "Mudança de alcance",
+	overviewZoneRoomAssistActive: "Ativo",
+	overviewZoneRoomAssistGuarded: "Proteção programada",
+	overviewZoneRoomAssistHolding: "A manter",
+	overviewZoneRoomAssistTowardsLower: "Em direção ao limite inferior",
+	overviewZoneRoomAssistTowardsUpper: "Em direção ao limite superior",
+	overviewZoneComfortLabel: "Conforto",
+	overviewZoneAirLabel: "Ar",
+	overviewZoneDataLabel: "Dados",
+	pause: "Pausa",
+	pauseActive: "Pausado",
+	pauseApplied: "Agendador pausado",
+	pauseDuration: "Duração da pausa (min)",
+	pauseFrom: "De",
+	pauseIndefinite: "Sem hora de fim",
+	pauseRemaining: "Retoma em",
+	pauseReasons: "Motivos de pausa",
+	pauseTo: "Para",
+	preconditioning: "Pré-condicionamento",
+	preconditioningEnabled: "Pré-condicionamento ativado",
+	preconditioningCool: "Arrefecimento",
+	preconditioningCoolingFallbackLead: "Reserva de arrefecimento (min)",
+	preconditioningDirectionSamples: "{count}/{required}",
+	preconditioningHeat: "Calor",
+	preconditioningHeatingFallbackLead: "Reserva de aquecimento (min)",
+	preconditioningDirectionStatus: "Estatuto",
+	preconditioningExpandClimate: "Expandir {climate}",
+	preconditioningIntroDetail: "Deixe que Velair calcule quando deve começar umo alvo de conforto programada para que a divisão fique mais próxima da temperatura no momento certo.",
+	preconditioningIntroTitle: "Tempo de conforto adaptativo",
+	preconditioningAdaptivePercentile: "Percentil de conforto dinâmico",
+	preconditioningAdaptivePercentileHelp: "Quando ativado, aumenta a margem após muitas tentativas parciais e reduz essa margem após tentativas concluídas de forma consistente.",
+	preconditioningCalculationCombined: "Combinado",
+	preconditioningCalculationDetails: "Detalhes do cálculo",
+	preconditioningCalculationFinalLead: "Liderança final",
+	preconditioningCalculationPartialFloor: "Piso parcial",
+	preconditioningCalculationReachedEstimate: "Estimativa alcançada",
+	preconditioningCalculationRounded: "Arredondado",
+	preconditioningCalculationSampleCounts: "Atingido: {reached} · Parcial: {partial} · Inválido: {invalid}",
+	preconditioningCalculationSamples: "Amostras",
+	preconditioningComfortPercentile: "Percentil de conforto",
+	preconditioningComfortPercentileHelp: "O superior começa mais cedo utilizando casos aprendidos mais lentos; inferior começa mais tarde com menos margem.",
+	preconditioningComfortPercentileLabel: "Percentil de conforto",
+	preconditioningCollapseClimate: "Recolher {climate}",
+	preconditioningFallbackInactive: "Modelo adaptativo ativo",
+	preconditioningFallbackLabel: "Cair para trás",
+	preconditioningFallbackLead: "{minutes} mín",
+	preconditioningFallbackMinutesPerDegree: "Modelo inicial",
+	preconditioningFallbackMinutesPerDegreeHelp: "O ensino superior começa mais cedo, antes de existir aprendizagem suficiente; inferior começa mais tarde.",
+	preconditioningHistorySize: "Tamanho do histórico",
+	preconditioningHistorySizeHelp: "Valores maiores mantêm mais amostras úteis; valores menores descartam mais cedo as amostras antigas.",
+	preconditioningHistory: "História",
+	preconditioningInvalidEvents: "Inválido",
+	preconditioningLastSample: "Última amostra",
+	preconditioningLeadTime: "{minutes} minutos mais cedo",
+	preconditioningLearning: "Aprendendo localmente",
+	preconditioningLearningStatus: "Estado de aprendizagem",
+	preconditioningLearningDisabled: "Aprendizagem com deficiência",
+	preconditioningLearningMoreData: "Mais dados necessários",
+	preconditioningLearningReady: "Pronto para aprender",
+	preconditioningLimitedByMax: "Limitado pelo máximo",
+	preconditioningLivePrediction: "Previsão ao vivo",
+	preconditioningLivePredictionHelp: "Utiliza o próximo bloco real para mostrar como o início do pré-condicionamento calculado muda.",
+	preconditioningMaxLead: "Início máximo (min)",
+	preconditioningMaxLeadHelp: "Maiores permitem inícios mais cedo; menor coloca um limite mais apertado no prazo de entrega.",
+	preconditioningMaximumLabel: "Máximo",
+	preconditioningMinimumDelta: "Delta de temperatura mínima",
+	preconditioningMinimumDeltaHelp: "Maior ignora pequenas lacunas maiores; menor reage a diferenças menores de temperatura.",
+	preconditioningMinStart: "Início mínimo (min)",
+	preconditioningMinStartHelp: "Maior ignora leads curtos previstos; menor permite partidas antecipadas mais pequenas.",
+	preconditioningModelHistory: "História semelhante",
+	preconditioningModel: "Modelo de aprendizagem",
+	preconditioningModelInitial: "Modelo inicial",
+	preconditioningModelSource: "Fonte do modelo",
+	preconditioningNextBlock: "Próximo bloco",
+	preconditioningNoUpcomingDirectionEvent: "Sem bloco {direction} futuro para prever.",
+	preconditioningNormalStart: "Início normal",
+	preconditioningNotSupported: "Não compatível",
+	preconditioningPartialEvents: "Parcial",
+	preconditioningPartialSamples: "{count} parcial",
+	preconditioningPartialExpiry: "Expiração parcial (dias)",
+	preconditioningPartialExpiryHelp: "Maior permite que tentativas incompletas influenciem as previsões durante mais tempo; inferior expira mais cedo.",
+	preconditioningQualityComplete: "Concluir",
+	preconditioningQualityInvalid: "Inválido",
+	preconditioningQualityPartial: "Parcial",
+	preconditioningRecencyDecay: "Decadência do tempo recente (dias)",
+	preconditioningRecencyDecayHelp: "Maior faz com que as amostras antigas percam peso mais lentamente; menor favorece o comportamento recente.",
+	preconditioningReachedEvents: "Alcançado",
+	preconditioningResetLearning: "Redefinir a aprendizagem",
+	preconditioningLearningResetDone: "Reposição de aprendizagem {direction}",
+	preconditioningSimilarSamples: "Amostras semelhantes",
+	preconditioningSimilarSamplesHelp: "Valores maiores consideram mais histórico próximo; valores menores concentram-se nos casos mais semelhantes.",
+	preconditioningUnsupportedDirection: "Não suportado por este termóstato",
+	preconditioningOutdoorTemperatureEntity: "Sensor de temperatura exterior",
+	preconditioningOutdoorTemperatureEntityHelp: "Fornece contexto externo local para comparar amostras aprendidas; não altera o modelo inicial.",
+	preconditioningOutdoorContext: "Contexto ao ar livre",
+	preconditioningOutdoorDisabled: "Desativado",
+	preconditioningSelectOutdoorSensor: "Selecione o sensor",
+	preconditioningResetSettings: "Restaurar as definições padrão",
+	preconditioningSettingsResetDone: "Definições de pré-condicionamento restauradas",
+	preconditioningStarts: "Começa",
+	preconditioningTargetBy: "Atingir até",
+	preconditioningTiming: "Tempo e limites",
+	preconditioningUnavailable: "Termostato indisponível. O pré-condicionamento não pode ser ativado.",
+	preconditioningPredictionLowerBoundary: "Previsão · limite inferior {temperature}",
+	preconditioningPredictionUpperBoundary: "Previsão · limite superior {temperature}",
+	preconditioningUseOutdoorTemperature: "Utilize a temperatura externa",
+	preconditioningUseOutdoorTemperatureHelp: "Quando ativado, inclui a temperatura exterior ao escolher amostras de aprendizagem semelhantes.",
+	resume: "Retomar",
+	resumed: "Agendador retomado",
+	resizeEnd: "Ajustar final",
+	resizeStart: "Ajustar início",
+	schedulerControls: "Controlos do agendador",
+	schedules: "Programações",
+	sensors: "Room Assist",
+	roomSensorAppliedTarget: "Alvo aplicada",
+	roomSensorAssist: "Assistente de Sensor de Ambiente",
+	roomSensorAssistBadge: "Room Assist",
+	roomSensorAssistEnabled: "Assistente de sensor de ambiente ativado",
+	roomSensorAssistHelp: "Ajusta temporariamente o alvo da climatização para que o sensor ambiente possa atingir a temperatura programada.",
+	roomSensorAssistDisabledDetail: "Está selecionado um sensor ambiente, mas a assistência do sensor ambiente está desativada. O Velair continua a utilizar a temperatura da climatização até que este interruptor seja ativado.",
+	roomSensorAssistDebounce: "Atraso de atualização",
+	roomSensorAssistDebounceHelp: "Segundos para esperar após alterações da temperatura ambiente ou climática antes de recalcular o alvo assistido. Utilize 0 para atualizações imediatas.",
+	roomSensorAssistDeadband: "Zona morta Room Assist",
+	roomSensorAssistDeadbandHelp: "Define os limites inferior e superior de Room Assist a esta distância do alvo programado. Em Calor ou Frio fixo, atingir um limite faz com que Room Assist tenha como alvo o outro. Os modos automáticos e as gamas de temperatura utilizam-no como margem sem correção. As alterações aplicam-se quando guardadas.",
+	roomSensorDeadbandZoneHelp: "Com aquecimento ou arrefecimento fixo, Room Assist continua a mover-se em direção a um limite até que a sala o alcance e depois inverte em direção ao outro limite. Os intervalos nativos mantêm isto como uma margem externa sem correção.",
+	roomSensorDeadbandZoneHelpAutomatic: "Com um modo escalar automático, Room Assist não aplica qualquer correção enquanto a sala se mantiver dentro desta margem.",
+	roomSensorDeadbandZoneHelpGeneric: "O modo climático efetivo determina a forma como o Room Assist utiliza essa zona morta.",
+	roomSensorDeadbandZoneAutomatic: "Margem sem correção · ±{value}",
+	roomSensorDeadbandZoneGeneric: "Zona morta · ±{value}",
+	roomSensorDeadbandZoneCompact: "Zona morta · ±{value}",
+	roomSensorDeadbandZoneCompactAutomatic: "Margem neutra · ±{value}",
+	roomSensorDeadbandZoneCompactRange: "Margem limite · ±{value}",
+	roomSensorDeadbandZoneBrief: "Zona ±{value}",
+	roomSensorDeadbandZoneRange: "Margem limite · {value} para além de cada limite",
+	roomSensorDeadbandZoneSingle: "Banda de controlo · ±{value}",
+	roomSensorDeadbandZoneZero: "Sem zona morta · {value}",
+	roomSensorAssistMaxDelta: "Delta de assistência máxima",
+	roomSensorAssistMaxDeltaHelp: "Limita a correção Room Assist. Defina-o suficientemente alto para cobrir a folgo alvo que o termóstato pode necessitar para interromper o aquecimento ou arrefecimento. O valor total só é utilizado quando necessário.",
+	roomSensorAssistOffset: "Deslocamento de assistência",
+	roomSensorAssistOffsetHelp: "Deslocamento temporário aplicado à alvo da climatização para que o sensor ambiente possa continuar a mover-se em direção à temperatura programada.",
+	roomSensorAssistCorrectionValue: "Deslocamento {value}",
+	roomSensorAssistCorrectionActiveHelp: "Room Assist está a ajustar o ponto de regulação da entidade de climatização. Isto não indica se a entidade de climatização está a aquecer ou a arrefecer ativamente.",
+	roomSensorAssistNoCorrection: "Deslocamento 0 · Segurando",
+	roomSensorAssistNoCorrectionHelp: "Room Assist não está a aplicar uma correção de ponto de regulação. As temperaturas ambiente e programadas podem ainda ser diferentes.",
+	roomSensorLimitMaximumTitle: "Máximo do termóstato atingido",
+	roomSensorLimitMaximumDetail: "Room Assist solicitou {requested}, acima do limite {limit}. Velair aplicado {applied}; a correção adicional é limitada.",
+	roomSensorLimitMinimumTitle: "Mínimo do termóstato atingido",
+	roomSensorLimitMinimumDetail: "Room Assist solicitou {requested}, abaixo do limite {limit}. Velair aplicado {applied}; a correção adicional é limitada.",
+	roomSensorScheduledGuardTitle: "Proteção de alvo programada",
+	roomSensorScheduledGuardCoolingDetail: "Room Assist calculou {calculated}, mas manteve {applied} para que o arrefecimento não continue abaixo do objetivo programado.",
+	roomSensorScheduledGuardHeatingDetail: "Room Assist calculou {calculated}, mas manteve {applied} para que o aquecimento não continue acima do objetivo programado.",
+	roomSensorBlockActiveSince: "Ativo de {time}",
+	roomSensorBlockMode: "Modo: {mode}",
+	roomSensorBlockScheduled: "Programado para {time}",
+	roomSensorBlockStartedEarly: "Iniciado em {time}",
+	roomSensorBlockTarget: "Alvo: {target}",
+	roomSensorHysteresisTowardsLower: "Controlo em direção ao limite inferior: {target}",
+	roomSensorHysteresisTowardsUpper: "Controlo em direção ao limite superior: {target}",
+	roomSensorGapAboveTarget: "{value} acima do objetivo",
+	roomSensorGapBelowTarget: "{value} abaixo do objetivo",
+	roomSensorClimateTarget: "Alvo da climatização",
+	roomSensorClimateTargetHelp: "O alvo da climatização é o ponto de referência atualmente comunicado pela entidade climática; não é o objetivo de temperatura ambiente.",
+	roomSensorClimateTargetAppliedHelp: "O alvo da climatização é o ponto de regulação temporário Velair enviado para a entidade climática enquanto Room Assist está ativo; não é o objetivo de temperatura ambiente.",
+	roomSensorClimateTargetStepHelp: "Room Assist calculou {calculated}. Esta entidade de climatização aceita passos {step}, pelo que Velair aplicou {applied} com segurança.",
+	roomSensorAppliedLow: "Aplicado baixo",
+	roomSensorAppliedHigh: "Aplicado alto",
+	roomSensorAppliedRange: "Faixa aplicada",
+	roomSensorClimateTemperature: "Leitura climática",
+	roomSensorCollapseClimate: "Recolher {climate}",
+	roomSensorControl: "Assistente de Sensor de Ambiente",
+	roomSensorExpandClimate: "Expandir {climate}",
+	roomSensorIntroDetail: "Utilize um sensor de temperatura ambiente para orientar o objetivo climático enquanto o Velair executa blocos de temperatura geridos.",
+	roomSensorIntroTitle: "Controlo de temperatura ambiente",
+	roomSensorLiveStatus: "Estado ativo",
+	roomSensorNoActiveBlock: "Sem bloco de temperatura ativo",
+	roomSensorNoActiveBlockDetail: "Room Assist será atualizado quando um bloco de temperatura gerida estiver ativo.",
+	roomSensorNotConfigured: "Selecione primeiro um sensor ambiente",
+	roomSensorRoomTemperature: "Sensor ambiente",
+	roomSensorRemainingToTarget: "Até ao alvo",
+	roomSensorRemainingValue: "{value} esquerda",
+	roomSensorScheduledTarget: "Alvo programada",
+	roomSensorScheduledLow: "Baixa programada",
+	roomSensorScheduledHigh: "Alta programada",
+	roomSensorScheduledRange: "Intervalo programado",
+	roomSensorRangeShiftValue: "Mudança de faixa {value}",
+	roomSensorRangeShiftHelp: "Room Assist altera ambos os limites do intervalo; o sinal mostra a direção aplicada.",
+	roomSensorSelectSensor: "Selecione o sensor ambiente",
+	roomSensorStatusAssisting: "Ajudando",
+	roomSensorStatusBlocked: "Bloqueado",
+	roomSensorStatusDisabled: "Desativado",
+	roomSensorStatusHolding: "A manter",
+	roomSensorStatusIdle: "Inativo",
+	roomSensorStatusNotConfigured: "Não configurado",
+	roomSensorStatusReady: "Pronto",
+	roomSensorStatusUnavailable: "Indisponível",
+	roomSensorTemperatureEntity: "Sensor de temperatura ambiente",
+	roomSensorTemperatureEntityHelp: "Sensor que o Assistência do sensor ambiente utiliza como a temperatura ambiente real enquanto ajusta o alvo da climatização.",
+	roomSensorTemperatureScale: "Escala de temperatura Room Assist",
+	roomSensorUnavailable: "Entidade de climatização indisponível",
+	roomSensorValueUnavailable: "Indisponível",
+	save: "Guardar",
+	saveTemplate: "Guardar como modelo",
+	saved: "Programação guardada",
+	saving: "A guardar…",
+	scheduleCopyHint: "Também pode copiar esta definição para outro dia ou entidade de climatização.",
+	scheduleEditor: "Editor de programação",
+	scheduleStepClimate: "1.º Selecione a entidade de climatização que pretende configurar.",
+	scheduleStepConfigure: "3.º Configure a entidade de climatização ao seu gosto.",
+	scheduleStepDay: "2.º Selecione o dia que pretende configurar.",
+	reorderZones: "Arraste os termóstatos para alterar a sua ordem no painel.",
+	selectedWeekday: "Dia inicial",
+	selectedZone: "Zona inicial",
+	selectTemplatePlaceholder: "Selecione um modelo",
+	selectTemplateToBegin: "Selecione um modelo para começar.",
+	setTemperature: "Definir temperatura",
+	settings: "Definições",
+	diagnostics: "Diagnóstico",
+	diagnosticsDescription: "Veja o que Velair sabe, o que pretendia e o que poderia verificar localmente.",
+	diagnosticsUnavailable: "Os diagnósticos ainda não estão disponíveis.",
+	diagnosticsDownloadAction: "Descarregar relatório…",
+	diagnosticsDownloadNow: "Descarregar relatório",
+	diagnosticsDownloadActionDescription: "Abra as opções de privacidade do relatório antes de descarregar o diagnóstico para obter suporte.",
+	diagnosticsExportOptions: "Denunciar privacidade",
+	diagnosticsExportExplanation: "A visualização ao vivo utiliza IDs locais reais. Mantenha esta opção ativada para substituir os IDs de entidade de climatizaçãotização e sensores por aliases estáveis ​​no relatório.",
+	diagnosticsRedactEntityIds: "Substitua os IDs de entidade por aliases",
+	diagnosticsOperationalIdsAlwaysRedacted: "Os identificadores de perfil, modo e pausa são sempre removidos.",
+	diagnosticsRawEntityIdsWarning: "Este relatório incluirá os IDs de entidade originais. Reveja-o antes de partilhar.",
+	diagnosticsDownloadWithEntityIds: "Descarregar com IDs",
+	diagnosticsHealthy: "Velair parece saudável",
+	diagnosticsAttention: "Alguns itens precisam de atenção",
+	diagnosticsSchedulerSummary: "Agendador: {status} · Modo: {mode}",
+	diagnosticsUnitSummary: "{ok} íntegro · Avisos {warning} · Erros {error}",
+	diagnosticsRecentHistory: "Histórico de tempo de execução recente ({count}/{limit})",
+	diagnosticsNoHistory: "Não foi observado nenhum evento de tempo de execução relevante desde o início do Velair.",
+	diagnosticsPrivacy: "O histórico é apenas mantido na memória e apagado no reinício. Os relatórios não contêm telemetria; os IDs de entidade serão substituídos, a menos que opte por mantê-los.",
+	diagnosticsEntityUnavailable: "A entidade climática não está disponível.",
+	diagnosticsEntityUnknown: "A entidade climática reporta um estado desconhecido.",
+	diagnosticsCalculatedIntent: "Intenção calculada",
+	diagnosticsLastApplication: "Última aplicação",
+	diagnosticsRoomAssist: "Room Assist",
+	diagnosticsPreconditioning: "Pré-condicionamento",
+	diagnosticsComfort: "Conforto",
+	diagnosticsAssociatedSensors: "Sensores associados",
+	diagnosticsLoadError: "Não foi possível carregar o diagnóstico. Tente abrir a secção novamente.",
+	diagnosticsExportError: "Não foi possível fazer o download do relatório de diagnóstico.",
+	diagnosticsDeliveryFailed: "A última tentativa de entrega falhou e está qualificada para recuperação.",
+	diagnosticsDeliveryRetrying: "Velair está a tentar novamente a intenção climática mais recente.",
+	diagnosticsDeliveryExhausted: "O limite de novas tentativas de entrega foi atingido.",
+	diagnosticsDeliveryInvalidIntent: "Não foi possível determinar a intenção atual da climatização.",
+	diagnosticsRuntimeUnavailable: "Os detalhes da intenção de tempo de execução não estão atualmente disponíveis.",
+	diagnosticsSensorUnavailable: "Um sensor explicitamente associado está ausente ou indisponível.",
+	diagnosticsUnits: "Entidades de climatização geridos",
+	diagnosticsNoUnits: "Nenhuma entidade de climatização gerido está disponível para diagnóstico.",
+	diagnosticsSelectUnit: "Selecione uma entidade de climatização para visualizar o seu diagnóstico.",
+	diagnosticsStatusDelivery: "Estado e entrega",
+	diagnosticsActiveConfiguration: "Configuração ativa",
+	diagnosticsFunctions: "Funções",
+	diagnosticsDeviceSensors: "Dispositivo e sensores",
+	diagnosticsCurrentState: "Estado atual",
+	diagnosticsDeliveryStatus: "Estado de entrega",
+	diagnosticsDeliverySuccess: "Entregue com sucesso",
+	diagnosticsScheduleSourceProfilePause: "Pausa no perfil",
+	diagnosticsOverrideTurnOff: "Desligar a climatização",
+	diagnosticsNone: "Nenhum",
+	diagnosticsReasonReplaced: "Substituído por um pedido mais recente",
+	diagnosticsReasonStopped: "Parou",
+	diagnosticsRetryCount: "Novas tentativas",
+	diagnosticsLastError: "Último erro",
+	diagnosticsScheduleSource: "Fonte de programação",
+	diagnosticsMode: "Modo",
+	diagnosticsProfile: "Perfil",
+	diagnosticsOverride: "Substituir",
+	diagnosticsPauses: "Pausas ativas",
+	diagnosticsHvacModes: "Modos HVAC",
+	diagnosticsTemperatureRange: "Faixa de temperatura",
+	diagnosticsTemperatureStep: "Etapa de temperatura",
+	diagnosticsConfigured: "Configurado",
+	diagnosticsOn: "Ativo",
+	diagnosticsOff: "Inativo",
+	diagnosticsActive: "Ativo",
+	diagnosticsFunctionState: "Estado de tempo de execução",
+	diagnosticsAppliedTarget: "Alvo aplicada",
+	diagnosticsHeatSamples: "Observações de aquecimento",
+	diagnosticsCoolSamples: "Observações de arrefecimento",
+	diagnosticsHistorySettings: "Definições do histórico",
+	diagnosticsStatusHealthy: "Saudável",
+	diagnosticsStatusWarning: "Aviso",
+	diagnosticsStatusError: "Erro",
+	diagnosticsStatusWithIssues: "{status}: {issues}",
+	diagnosticsHistoryLog: "Registo de tempo de execução",
+	diagnosticsLogTime: "Hora",
+	diagnosticsLogClimate: "Entidade de climatização",
+	diagnosticsLogType: "Tipo",
+	diagnosticsLogMessage: "Detalhes",
+	diagnosticsLogResizeColumn: "Redimensionar coluna {column}",
+	diagnosticsHistoryClimateFilter: "Fontes",
+	diagnosticsHistorySourcesLegend: "Selecione as fontes de eventos",
+	diagnosticsHistoryNoSources: "Nenhuma fonte",
+	diagnosticsHistorySourceCount: "Entidades de climatização {count}",
+	diagnosticsHistorySourceCountWithVelair: "Entidades de climatização {count} + Velair",
+	diagnosticsHistoryClimateWithVelair: "{climate} + Velair",
+	diagnosticsHistorySourcesDone: "Concluído",
+	diagnosticsHistoryCategoryFilter: "Categoria",
+	diagnosticsHistoryAllSources: "Todos os entidades de climatização + Velair",
+	diagnosticsHistoryVelairOnly: "Apenas Velair",
+	diagnosticsHistoryAllCategories: "Todas as categorias",
+	diagnosticsHistoryFrom: "De",
+	diagnosticsHistoryTo: "Para",
+	diagnosticsHistoryInvalidRange: "De deve ser anterior ou igual a To.",
+	diagnosticsHistoryResults: "Mostrando {visible} de eventos {total}",
+	diagnosticsHistoryClearFilters: "Limpar filtros",
+	diagnosticsHistoryNoMatches: "Nenhum evento retido corresponde a estes filtros.",
+	diagnosticsHistoryExplanation: "Escolha quais os eventos que Velair retém. A saúde atual é sempre observada. O histórico retém a maioria dos eventos {limit}, permanece apenas na memória e é limpo quando Home Assistant ou Velair é reiniciado.",
+	diagnosticsClearHistory: "Limpar histórico",
+	diagnosticsHistoryUpdateError: "As definições do histórico de diagnóstico não puderam ser guardadas.",
+	diagnosticsHistoryClearError: "O histórico de diagnóstico não pôde ser apagado.",
+	diagnosticsHistoryCategoryControl: "Controlo e programações",
+	diagnosticsHistoryCategoryControlDescription: "Programações, Perfis, Modos, Reforços, pausas, ajustes externos e alterações de controlo Automático/Manual.",
+	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
+	diagnosticsHistoryCategoryRoomAssistDescription: "Mudanças de estado Room Assist e correções de alvos.",
+	diagnosticsHistoryCategoryPreconditioning: "Pré-condicionamento",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Planos de pré-condicionamento, anulações e observações de aprendizagem.",
+	diagnosticsHistoryCategoryComfort: "Conforto",
+	diagnosticsHistoryCategoryComfortDescription: "Alterações nas condições de conforto avaliadas localmente.",
+	diagnosticsHistoryCategoryDelivery: "Entrega climática",
+	diagnosticsHistoryCategoryDeliveryDescription: "Comandos meteorológicos falhados, repetidos, esgotados ou cancelados.",
+	diagnosticsHistoryCategoryAvailability: "Disponibilidade",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Os entidades de climatização geridos tornam-se indisponíveis, desconhecidos ou novamente disponíveis.",
+	diagnosticsReasonCurrentSchedule: "Cronograma atual",
+	diagnosticsReasonMissingTargetStep: "Etapa de temperaturo alvo indisponível",
+	diagnosticsReasonNoLongerPlanned: "Não está mais planeado",
+	diagnosticsReasonSchedulerNotAuto: "O agendador não está em automático",
+	diagnosticsReasonSchedulerStopped: "Agendador parado",
+	diagnosticsReasonManualTarget: "Alvo manual",
+	diagnosticsReasonManual: "Ação manual",
+	diagnosticsReasonScheduleChanged: "Cronograma alterado",
+	diagnosticsReasonScheduleCleared: "Programação apagada",
+	diagnosticsReasonSettingsUpdated: "Definições atualizadas",
+	diagnosticsReasonPortableImport: "Importação portátil",
+	diagnosticsReasonDataReset: "Redefinição de dados",
+	diagnosticsReasonExpired: "Expirado",
+	diagnosticsReasonNoActiveTarget: "Nenhum alvo ativo",
+	diagnosticsReasonZoneUnavailable: "Zona indisponível",
+	diagnosticsReasonAssistDisabled: "Room Assist desativado",
+	diagnosticsReasonMissingTarget: "Alvo ausente",
+	diagnosticsReasonUnsupportedTemperatureRange: "Gama de temperatura não suportada",
+	diagnosticsReasonUnsupportedMode: "Modo HVAC não suportado",
+	diagnosticsReasonMissingTemperature: "Falta de temperatura",
+	diagnosticsReasonTemperatureMigration: "Migração de temperatura",
+	diagnosticsOperationAdded: "Adicionado",
+	diagnosticsOperationUpdated: "Atualizado",
+	diagnosticsOperationRemoved: "Removido",
+	diagnosticsOperationSetTemperature: "Definir temperatura",
+	diagnosticsEventBoostEnded: "O reforço terminou",
+	diagnosticsEventBoostStarted: "Reforço iniciado",
+	diagnosticsEventClimateTargetApplied: "Alvo da climatização aplicado",
+	diagnosticsEventExternalAdjustment: "Ajuste externo",
+	diagnosticsEventZoneControlChanged: "Controlo de programação alterado",
+	diagnosticsControlAutomatic: "Automático",
+	diagnosticsControlManual: "Manual",
+	diagnosticsHvacModeChanged: "Modo HVAC: {previous} → {current}",
+	diagnosticsTargetChanged: "Alvo: {previous} → {current}",
+	diagnosticsRangeChanged: "Gama: {previous} → {current}",
+	diagnosticsLowerTargetChanged: "Alvo inferior: {previous} → {current}",
+	diagnosticsUpperTargetChanged: "Alvo superior: {previous} → {current}",
+	diagnosticsControlChanged: "{previous} → {current}",
+	diagnosticsUntil: "até {time}",
+	diagnosticsReasonResumed: "Retomada",
+	diagnosticsEventProfileChanged: "Perfil alterado",
+	diagnosticsEventSchedulerModeChanged: "Modo agendador alterado",
+	diagnosticsEventZonePauseAdded: "Motivo da pausa adicionado",
+	diagnosticsEventZonePauseRemoved: "Motivo da pausa removido",
+	diagnosticsEventZonePauseUpdated: "Motivo da pausa atualizado",
+	diagnosticsEventZonePaused: "Zona pausada",
+	diagnosticsEventZoneResumed: "Zona retomada",
+	diagnosticsEventComfortAssessmentChanged: "Avaliação de conforto alterada",
+	diagnosticsEventPreconditioningObservationRecorded: "Observação de pré-condicionamento registada",
+	diagnosticsEventPreconditioningPlanCancelled: "Plano de pré-condicionamento cancelado",
+	diagnosticsEventPreconditioningPlanUpdated: "Plano de pré-condicionamento atualizado",
+	diagnosticsEventRoomAssistRestored: "Room Assist restaurado",
+	diagnosticsEventRoomAssistStateChanged: "Estado Room Assist alterado",
+	diagnosticsEventRoomAssistUpdated: "Room Assist atualizado",
+	settingsPanelIntro: "Escolha como os termóstatos e os dias da semana estão ordenados neste painel.",
+	startupBehavior: "Inicialização Home Assistant",
+	startsAt: "Começa",
+	applyScheduleOnStartup: "Aplicar programação ativo após arranque",
+	applyScheduleOnStartupDescription: "Quando o Home Assistant é iniciado, o Velair pode aplicar o bloco de programação atual aos termóstatos geridos em vez de os deixar como estão.",
+	start: "Iniciar",
+	status: "Estatuto",
+	stop: "Parar",
+	supportedFanModes: "Modos de ventilador",
+	supportedHorizontalSwingModes: "Modos de oscilação horizontal",
+	supportedPresetModes: "Predefinições",
+	supportedSwingModes: "Modos de oscilação",
+	presetMode: "Predefinido",
+	swingMode: "Oscilação",
+	temp: "Temperatura",
+	target: "Objetivo",
+	heatBelow: "Calor abaixo",
+	coolAbove: "Arrefecer acima",
+	temperatureRange: "Faixa de temperatura",
+	minimumShort: "Mínimo",
+	maximumShort: "Máx.",
+	temperatureUnit: "Unidade de temperatura",
+	temperatureUnitManagedByHomeAssistant: "Detetado em Home Assistant. Altere este valor nas definições do sistema de unidades do Home Assistant.",
+	temperatureMigrationRequired: "Velair precisa da sua atenção",
+	temperatureMigrationStopped: "O programador e a definição térmica estão bloqueados porque Home Assistant alterou as unidades de temperatura. Abra as definições do Velair para migrar em segurança.",
+	temperatureMigrationQuestion: "Migrar temperaturas armazenadas de {source} para {target}?",
+	temperatureMigrationExplanation: "Continue apenas se todas as temperaturas armazenadas pelo Velair ainda estiverem em {source}. A migração atualiza programações, modelos, ajustes temporários, Conforto, Room Assist, definições de pré-condicionamento, ritmos e dados de aprendizagem antes de retomar o agendador. Se algum valor armazenado já estiver em {target}, a migração deixará esse valor incorreto.",
+	temperatureMigrationUse: "Migrar {source} para {target}",
+	temperatureMigrationConfirm: "Confirme se todos os dados de temperatura Velair armazenados estão em {source} e converta-os para {target}? Não continue se algum valor armazenado já estiver em {target}, pois ficará incorreto. O agendador permanece parado se a migração não puder ser guardada.",
+	temperatureMigrationComplete: "Dados de temperatura atualizados e agendador retomado",
+	temperatureMigrationFailed: "Não foi possível atualizar os dados de temperatura",
+	temperatureLegacyResetQuestion: "Repor dados Celsius legados para {target}?",
+	temperatureLegacyResetExplanation: "Esta instalação foi criada por uma versão Velair que apenas armazenava valores Celsius. Como o Home Assistant utiliza agora o {target}, reponha o Velair para descartar os dados antigos e criar padrões seguros com reconhecimento de unidade. As futuras alterações na unidade Home Assistant oferecerão uma conversão completa de dados.",
+	temperatureLegacyResetStopped: "O agendador foi interrompido porque esta instalação herdada contém apenas dados Celsius, enquanto o Home Assistant utiliza o Fahrenheit. Abra as Definições Velair e utilize Repor Velair para criar padrões Fahrenheit.",
+	temperatureStep: "Degrau",
+	temperatureStepNotReported: "Não reportado por Home Assistant",
+	temperatureStepNotReportedDescription: "Este tempo não publica target_temp_step. Velair não infere um passo de temperatura.",
+	targetTemp: "Temperaturo alvo",
+	targetHumidity: "Humidade alvo",
+	targetBy: "Atingir até",
+	targetTemperature: "Temperaturo alvo",
+	todayTimeline: "Linha do tempo de hoje",
+	updateTemplate: "Atualizar modelo",
+	templateDeleted: "Modelo excluído",
+	templateNameRequired: "O nome do modelo é obrigatório",
+	templateOptionalHint: "Escolha um modelo ou configure manualmente a programação.",
+	templateSaved: "Modelo guardado",
+	templates: "Modelos",
+	thermostat: "Termostato",
+	templatesPanelIntro: "Crie programações diárias reutilizáveis ​​e aplique-as a termóstatos e dias compatíveis.",
+	time: "Hora",
+	timeline: "Linha do tempo",
+	timelineContinuesFrom: "De {day}, {time}",
+	title: "Título",
+	unableApplyThermostats: "Não é possível aplicar a programação aos termóstatos",
+	unableCopy: "Não foi possível copiar a programação",
+	unableLoad: "Não foi possível carregar os dados do agendador",
+	unablePause: "Não foi possível pausar o agendador",
+	unableResume: "Não foi possível retomar o agendador",
+	unableReset: "Não foi possível repor os dados Velair",
+	unableSave: "Não foi possível guardar a programação",
+	unableSaveSettings: "Não foi possível guardar as definições",
+	unableDeleteTemplate: "Não foi possível eliminar o modelo",
+	unableExport: "Não é possível exportar dados",
+	unableSaveTemplate: "Não foi possível guardar o modelo",
+	unableSubscribe: "Não é possível subscrever atualizações do agendador",
+	unsupportedModeForClimate: "{entity} não suporta {mode} em {start}. Altere esse bloco para Manter ou escolha um modo compatível antes de aplicar.",
+	unsupportedModeForClimateOnWeekday: "{entity} não suporta {mode} em {weekday} em {start}. Altere esse bloco para Manter ou escolha um modo compatível antes de aplicar.",
+	unsupportedRangeTargetForClimate: "{entity} não suporta uma gama de temperaturas em {start}.",
+	unsupportedRangeTargetForClimateOnWeekday: "{entity} não suporta uma gama de temperaturas em {weekday} em {start}.",
+	unsupportedSingleTargetForClimate: "{entity} requer uma gama de temperaturas em {start}.",
+	unsupportedSingleTargetForClimateOnWeekday: "{entity} requer uma gama de temperaturas em {weekday} em {start}.",
+	unsaved: "não guardado",
+	waiting: "A aguardar dados da programação",
+	zoneOrder: "Entidades de climatização geridos",
+	zonesManaged: "Zonas {count} geridas",
+	weekdays: {
+		monday: "Segunda-feira",
+		tuesday: "Terça-feira",
+		wednesday: "Quarta-feira",
+		thursday: "Quinta-feira",
+		friday: "Sexta-feira",
+		saturday: "Sábado",
+		sunday: "Domingo"
+	},
+	schedulerStatuses: {
+		idle: "Inativo",
+		override_active: "Reforço ativo",
+		paused: "Pausado",
+		scheduled: "Agendado"
+	},
+	schedulerModes: {
+		auto: "Auto",
+		paused: "Pausado"
+	},
+	hvacModes: {
+		auto: "Auto",
+		cool: "Arrefecimento",
+		dry: "Desumidificação",
+		fan_only: "Apenas ventilação",
+		heat: "Aquecimento",
+		heat_cool: "Aquecimento/arrefecimento",
+		off: "Desligado"
+	},
+	hvacActions: {
+		cooling: "A arrefecer",
+		drying: "A desumidificar",
+		fan: "A ventilar",
+		heating: "A aquecer",
+		idle: "Inativo",
+		off: "Desligado",
+		preheating: "A pré-aquecer",
+		defrosting: "A descongelar"
+	}
+}, bt = /* @__PURE__ */ t({ ru: () => xt }), xt = {
 	addBlock: "Добавить блок",
-	externalConditionProfilesSupported: "Поддерживаются расписания Default, Profiles и Modes",
-	profileExternalScheduleOnly: "Внешние зоны поддерживают только расписания Default, Profile или Mode. Пауза и прямые действия Velair недоступны.",
+	externalConditionProfilesSupported: "Поддерживаются расписания по умолчанию, профилей и режимов",
+	profileExternalScheduleOnly: "Внешние зоны поддерживают только расписания по умолчанию, профилей или режимов. Пауза и прямые действия Velair недоступны.",
 	profileExternalMaxChanges: "{climate}: в {day} превышен лимит контроллера — {count} изменений.",
 	profileExternalTimeGrid: "{climate}: в {day} требуется интервал {minutes} минут.",
 	profileExternalUnsupportedBlock: "{climate} содержит блок, который внешний контроллер не может представить.",
 	externalControllersInUse: "Используемые внешние контроллеры",
-	externalConditionDefaultOnly: "Только расписания Default",
+	externalConditionDefaultOnly: "Только расписания по умолчанию",
 	externalConditionHvacModes: "Поддерживаемые режимы HVAC: {modes}",
 	externalConditionTargetTypes: "Поддерживаемые типы цели: {types}",
 	externalConditionActions: "Поддерживаемые действия расписания: {actions}",
@@ -5585,7 +9513,7 @@ var k = [
 	overviewExternalZonesUnaffected: "Действия Velair не влияют на внешние зоны: {count}.",
 	manualUnavailableExternalExecution: "Ручное управление недоступно для зон с внешним выполнением.",
 	externalChangePolicy: "Внешние настройки",
-	externalChangePolicyDescription: "Выберите действие Velair после внешнего изменения режима или цели. Сохранять автоматически повторно применяет текущую настройку Velair; другие варианты включают ручное управление. Изменения действуют со следующей внешней корректировки. Явно выбранный ручной режим действует до возобновления.",
+	externalChangePolicyDescription: "Выберите действие Velair после изменения режима или цели вне Velair. Сохранять автоматически повторно применяет текущую настройку Velair; другие варианты включают ручное управление. Изменения действуют со следующей внешней корректировки. Явно выбранный ручной режим действует до возобновления.",
 	externalAdjustmentInfoAction: "О внешних настройках",
 	externalChangeKeepAutomatic: "Сохранять автоматически",
 	externalChangeUntilNextBlock: "До следующего блока",
@@ -5608,7 +9536,7 @@ var k = [
 	manualUnavailableDisabled: "Это устройство отключено в Velair.",
 	manualUnavailableTemperatureMigration: "Завершите миграцию данных температуры, прежде чем изменять ручное управление.",
 	manualUnavailableScheduler: "Автоматическое расписание не активно.",
-	manualUnavailableProfilePause: "Активный Profile приостанавливает это устройство.",
+	manualUnavailableProfilePause: "Активный профиль приостанавливает это устройство.",
 	manualUnavailableZonePause: "Другая пауза сейчас управляет этим устройством.",
 	manualAdjustmentActive: "Вне автоматического расписания",
 	automaticControlResumed: "Автоматическое расписание возобновлено",
@@ -5897,7 +9825,7 @@ var k = [
 	modeUnableSave: "Не удалось сохранить режим",
 	modesDescription: "Режим активирует один или несколько профилей одновременно из Velair или Home Assistant.",
 	modesLibraryDescription: "Активируйте один или несколько профилей одновременно.",
-	modesEntityNote: "Автоматизации могут выбирать режим через select.velair_mode или активировать профиль через velair.activate_profile и его Automation ID.",
+	modesEntityNote: "Автоматизации могут выбирать режим через сущность режима Velair или активировать профиль через velair.activate_profile и его ID автоматизации.",
 	modesTitle: "Режимы",
 	profilesActiveCount: "Активных профилей: {count}",
 	profileId: "ID автоматизации",
@@ -5945,6 +9873,7 @@ var k = [
 	invalidImportFile: "Это недопустимый файл экспорта Velair",
 	importOverwriteWarning: "Импорт перезапишет существующие значения. Их нельзя будет восстановить, если вы предварительно не экспортировали данные.",
 	noImportSections: "Не найдено разделов для импорта",
+	legacyImportTemperatureUnit: "В этой старой резервной копии не указана единица температуры. Velair будет считать температуры заданными в градусах Цельсия и при необходимости преобразует их в {target}.",
 	notSet: "Не задано",
 	maintenance: "Обслуживание",
 	maintenanceDescription: "Техническая информация о версиях для устранения неполадок.",
@@ -5953,7 +9882,12 @@ var k = [
 	internalStorageVersion: "Хранилище/модель",
 	integrationVersion: "Версия интеграции",
 	resetVelair: "Сбросить Velair",
-	resetVelairDescription: "Удаляет все сохранённые данные Velair, включая расписания, шаблоны, настройки панели, активные усиления и паузы, политики внешних изменений и активные ручные корректировки, настройки Comfort и Room Assist, настройки и данные обучения Adaptive Preconditioning, а также поведение при запуске. Затем создаёт для управляемых термостатов значения по умолчанию с учётом единиц измерения.",
+	resetVelairDescription: "Удаляет все сохранённые данные Velair, включая расписания, шаблоны, настройки панели, активные усиления и паузы, политики внешних изменений и активные ручные корректировки, настройки комфорта и Room Assist, настройки и данные обучения адаптивного предварительного прогрева, а также поведение при запуске. Затем создаёт для управляемых термостатов значения по умолчанию с учётом единиц измерения.",
+	confirmReset: "Сбросить все сохранённые данные Velair? Это действие нельзя отменить, если данные не были предварительно экспортированы.",
+	confirmResetPreconditioningLearning: "Сбросить адаптивное обучение предварительного прогрева для направления «{direction}»? Расписания и настройки будут сохранены.",
+	confirmResetPreconditioningSettings: "Восстановить настройки предварительного прогрева этого термостата по умолчанию? Обучающие выборки будут сохранены.",
+	resetDone: "Данные Velair сброшены",
+	resetting: "Сброс",
 	minTemperature: "Минимальная температура",
 	maxTemperature: "Максимальная температура",
 	modeOptional: "Режим необязателен",
@@ -5974,6 +9908,7 @@ var k = [
 	otherDays: "Другие дни",
 	otherThermostats: "Другие термостаты",
 	overview: "Обзор",
+	overviewPanelIntro: "В основном представлении состояния сгруппированы состояние планировщика, предстоящие события, активные форсированные режимы и быстрые действия.",
 	overviewStatusPaused: "Приостановлен",
 	overviewStatusPausedDetail: "Активна временная пауза",
 	overviewStatusRunning: "Работает",
@@ -5984,11 +9919,13 @@ var k = [
 	overviewZoneApplied: "Применено",
 	overviewZoneAir: "Воздух: {status}",
 	overviewZoneBoost: "Форсированный режим",
+	overviewZoneComfort: "Комфорт: {status}",
 	overviewZoneManual: "Ручной",
 	overviewZonePaused: "Приостановлен",
 	overviewZonePreconditioning: "Предварительный прогрев",
 	overviewZoneResumes: "Возобновится {time}",
 	overviewZoneRoom: "Помещение",
+	overviewZoneRoomAssist: "Room Assist {delta}",
 	overviewZoneScheduled: "По расписанию",
 	overviewZoneSensorIssue: "Данные датчика неполные",
 	overviewZoneTarget: "Цель",
@@ -6013,6 +9950,7 @@ var k = [
 	overviewZoneRoomAssistTowardsLower: "К нижней границе",
 	overviewZoneRoomAssistTowardsUpper: "К верхней границе",
 	overviewZoneComfortLabel: "Комфорт",
+	overviewZoneAirLabel: "Воздух",
 	overviewZoneDataLabel: "Данные",
 	pause: "Пауза",
 	pauseActive: "Приостановлен",
@@ -6035,20 +9973,30 @@ var k = [
 	preconditioningIntroDetail: "Позвольте Velair рассчитать время начала запланированного комфортного режима, чтобы помещение достигло нужной температуры к заданному времени.",
 	preconditioningIntroTitle: "Адаптивное время достижения комфорта",
 	preconditioningAdaptivePercentile: "Динамический процентиль комфорта",
+	preconditioningAdaptivePercentileHelp: "При включении запас увеличивается после слишком большого числа неполных попыток и уменьшается после стабильно успешных попыток.",
+	preconditioningCalculationCombined: "Совмещённый расчёт",
 	preconditioningCalculationDetails: "Детали расчёта",
 	preconditioningCalculationFinalLead: "Итоговое опережение",
 	preconditioningCalculationPartialFloor: "Минимум для неполных данных",
 	preconditioningCalculationReachedEstimate: "Расчёт достижения",
 	preconditioningCalculationRounded: "Округлено",
+	preconditioningCalculationSampleCounts: "Достигнуто: {reached} · Неполных: {partial} · Недействительных: {invalid}",
 	preconditioningCalculationSamples: "Выборки",
 	preconditioningComfortPercentile: "Процентиль комфорта",
+	preconditioningComfortPercentileHelp: "Более высокое значение запускает систему раньше с учётом медленных изученных случаев; более низкое — позже и с меньшим запасом.",
 	preconditioningComfortPercentileLabel: "Процентиль комфорта",
 	preconditioningCollapseClimate: "Свернуть {climate}",
 	preconditioningFallbackMinutesPerDegree: "Начальная модель",
+	preconditioningFallbackInactive: "Адаптивная модель активна",
+	preconditioningFallbackLabel: "Резервная модель",
+	preconditioningFallbackLead: "{minutes} мин",
+	preconditioningFallbackMinutesPerDegreeHelp: "Более высокое значение запускает систему раньше, пока данных обучения недостаточно; более низкое — позже.",
 	preconditioningHistorySize: "Размер истории",
+	preconditioningHistorySizeHelp: "Более высокое значение сохраняет больше полезных выборок; более низкое быстрее забывает старые.",
 	preconditioningHistory: "История",
 	preconditioningInvalidEvents: "Недействительные",
 	preconditioningLastSample: "Последняя выборка",
+	preconditioningLeadTime: "На {minutes} мин раньше",
 	preconditioningLearning: "Локальное обучение",
 	preconditioningLearningStatus: "Состояние обучения",
 	preconditioningLearningDisabled: "Обучение отключено",
@@ -6056,26 +10004,44 @@ var k = [
 	preconditioningLearningReady: "Обучение готово",
 	preconditioningLimitedByMax: "Ограничено максимумом",
 	preconditioningLivePrediction: "Прогноз в реальном времени",
+	preconditioningLivePredictionHelp: "Использует следующий реальный блок, чтобы показать изменение рассчитанного времени начала предварительного прогрева.",
 	preconditioningMaxLead: "Максимальное опережение (мин)",
+	preconditioningMaxLeadHelp: "Более высокое значение разрешает более ранний запуск; более низкое сильнее ограничивает опережение.",
+	preconditioningMaximumLabel: "Максимум",
 	preconditioningMinimumDelta: "Минимальная разница температур",
+	preconditioningMinimumDeltaHelp: "Более высокое значение игнорирует более крупные небольшие отклонения; более низкое реагирует на меньшие перепады температуры.",
 	preconditioningMinStart: "Минимальное опережение (мин)",
+	preconditioningMinStartHelp: "Более высокое значение игнорирует короткое прогнозируемое опережение; более низкое допускает менее ранний запуск.",
 	preconditioningModelHistory: "Похожая история",
 	preconditioningModel: "Модель обучения",
 	preconditioningModelInitial: "Начальная модель",
 	preconditioningModelSource: "Источник модели",
 	preconditioningNextBlock: "Следующий блок",
 	preconditioningNormalStart: "Обычное начало",
+	preconditioningNoUpcomingDirectionEvent: "Нет предстоящего блока «{direction}» для прогноза.",
 	preconditioningNotSupported: "Не поддерживается",
 	preconditioningPartialEvents: "Неполные",
+	preconditioningPartialSamples: "Неполных: {count}",
+	preconditioningPartialExpiry: "Срок действия неполных данных (дни)",
+	preconditioningPartialExpiryHelp: "Более высокое значение позволяет незавершённым попыткам дольше влиять на прогнозы; более низкое быстрее исключает их.",
+	preconditioningQualityComplete: "Успешные",
 	preconditioningQualityInvalid: "Недействительные",
 	preconditioningQualityPartial: "Неполные",
+	preconditioningRecencyDecay: "Снижение веса по давности (дни)",
+	preconditioningRecencyDecayHelp: "При более высоком значении старые выборки теряют вес медленнее; более низкое отдаёт предпочтение недавнему поведению.",
 	preconditioningReachedEvents: "Достигнуто",
 	preconditioningResetLearning: "Сбросить обучение",
+	preconditioningLearningResetDone: "Обучение для направления «{direction}» сброшено",
+	preconditioningSimilarSamples: "Похожие выборки",
+	preconditioningSimilarSamplesHelp: "Более высокое значение учитывает больше похожих исторических данных; более низкое сосредоточено на наиболее близких случаях.",
+	preconditioningUnsupportedDirection: "Не поддерживается этим термостатом",
 	preconditioningOutdoorTemperatureEntity: "Датчик температуры на улице",
+	preconditioningOutdoorTemperatureEntityHelp: "Добавляет данные о местной наружной температуре для сравнения обучающих выборок, но не изменяет начальную модель.",
 	preconditioningOutdoorContext: "Данные о погоде",
 	preconditioningOutdoorDisabled: "Отключено",
 	preconditioningSelectOutdoorSensor: "Выберите датчик",
 	preconditioningResetSettings: "Восстановить настройки по умолчанию",
+	preconditioningSettingsResetDone: "Настройки предварительного прогрева восстановлены",
 	preconditioningStarts: "Начинается",
 	preconditioningTargetBy: "Цель к",
 	preconditioningTiming: "Время и ограничения",
@@ -6083,6 +10049,7 @@ var k = [
 	preconditioningPredictionLowerBoundary: "Прогноз · нижний предел {temperature}",
 	preconditioningPredictionUpperBoundary: "Прогноз · верхний предел {temperature}",
 	preconditioningUseOutdoorTemperature: "Использовать наружную температуру",
+	preconditioningUseOutdoorTemperatureHelp: "При включении наружная температура учитывается при выборе похожих обучающих выборок.",
 	resume: "Возобновить",
 	resumed: "Планировщик возобновлён",
 	resizeEnd: "Изменить конец",
@@ -6090,17 +10057,20 @@ var k = [
 	schedulerControls: "Управление планировщиком",
 	schedules: "Расписания",
 	sensors: "Room Assist",
+	comfortCo2: "CO₂",
 	roomSensorAppliedTarget: "Применённая цель",
 	roomSensorAssist: "Коррекция по датчику помещения",
 	roomSensorAssistBadge: "Room Assist",
 	roomSensorAssistEnabled: "Коррекция по датчику помещения включена",
 	roomSensorAssistHelp: "Временно изменяет уставку климата, чтобы датчик помещения мог достичь заданной температуры.",
+	roomSensorAssistDisabledDetail: "Датчик помещения выбран, но Room Assist выключен. Velair продолжит использовать температуру климатического устройства, пока этот переключатель не будет включён.",
 	roomSensorAssistDebounce: "Задержка обновления",
+	roomSensorAssistDebounceHelp: "Количество секунд ожидания после изменения температуры помещения или климатического устройства перед перерасчётом скорректированной цели. Укажите 0 для немедленного обновления.",
 	roomSensorAssistDeadband: "Зона нечувствительности Room Assist",
 	roomSensorAssistDeadbandHelp: "Устанавливает нижнюю и верхнюю границы Room Assist на таком расстоянии от заданной по расписанию температуры. В фиксированном режиме нагрева или охлаждения после достижения одной границы Room Assist начинает стремиться к другой. Автоматические режимы и температурные диапазоны используют это значение как зону без коррекции. Изменения применяются после сохранения.",
 	roomSensorDeadbandZoneHelp: "При фиксированном нагреве или охлаждении Room Assist ведёт температуру к одной границе, а после её достижения — к другой. Для нативных диапазонов зона остаётся внешним запасом без коррекции.",
 	roomSensorDeadbandZoneHelpAutomatic: "В скалярном автоматическом режиме Room Assist не применяет коррекцию, пока температура комнаты остаётся в этом запасе.",
-	roomSensorDeadbandZoneHelpGeneric: "Текущий режим climate определяет, как Room Assist использует эту зону нечувствительности.",
+	roomSensorDeadbandZoneHelpGeneric: "Текущий режим климатического устройства определяет, как Room Assist использует эту зону нечувствительности.",
 	roomSensorDeadbandZoneAutomatic: "Запас без коррекции · ±{value}",
 	roomSensorDeadbandZoneGeneric: "Зона нечувствительности · ±{value}",
 	roomSensorDeadbandZoneCompact: "Зона нечувствительности · ±{value}",
@@ -6113,7 +10083,13 @@ var k = [
 	roomSensorHysteresisTowardsLower: "Управление к нижней границе: {target}",
 	roomSensorHysteresisTowardsUpper: "Управление к верхней границе: {target}",
 	roomSensorAssistMaxDelta: "Максимальная коррекция",
+	roomSensorAssistMaxDeltaHelp: "Ограничивает коррекцию Room Assist. Установите значение, достаточное для разницы с целью, которая может потребоваться термостату для прекращения нагрева или охлаждения. Полное значение применяется только при необходимости.",
 	roomSensorAssistOffset: "Смещение коррекции",
+	roomSensorAssistOffsetHelp: "Временное смещение уставки климатического устройства, позволяющее датчику помещения продолжать движение к температуре по расписанию.",
+	roomSensorAssistCorrectionValue: "Смещение {value}",
+	roomSensorAssistCorrectionActiveHelp: "Room Assist корректирует уставку климатического устройства. Это не означает, что оно в данный момент нагревает или охлаждает.",
+	roomSensorAssistNoCorrection: "Смещение 0 · Удержание",
+	roomSensorAssistNoCorrectionHelp: "Room Assist не корректирует уставку. Температура помещения при этом всё ещё может отличаться от температуры по расписанию.",
 	roomSensorLimitMaximumTitle: "Достигнут максимум термостата",
 	roomSensorLimitMaximumDetail: "Room Assist запросил {requested}, что выше предела {limit}. Velair применил {applied}; дальнейшая коррекция ограничена.",
 	roomSensorLimitMinimumTitle: "Достигнут минимум термостата",
@@ -6125,6 +10101,13 @@ var k = [
 	roomSensorClimateTargetHelp: "Уставка климата — это значение, которое сейчас сообщает климатическая сущность; это не целевая температура комнаты.",
 	roomSensorClimateTargetAppliedHelp: "Уставка климата — это временное значение, которое Velair отправил климатической сущности, пока Room Assist активен; это не целевая температура комнаты.",
 	roomSensorClimateTargetStepHelp: "Room Assist рассчитал {calculated}. Этот климат поддерживает шаг {step}, поэтому Velair безопасно применил {applied}.",
+	roomSensorBlockActiveSince: "Активен с {time}",
+	roomSensorBlockMode: "Режим: {mode}",
+	roomSensorBlockScheduled: "Запланирован на {time}",
+	roomSensorBlockStartedEarly: "Начат в {time}",
+	roomSensorBlockTarget: "Цель: {target}",
+	roomSensorGapAboveTarget: "На {value} выше цели",
+	roomSensorGapBelowTarget: "На {value} ниже цели",
 	roomSensorAppliedLow: "Применённый нижний предел",
 	roomSensorAppliedHigh: "Применённый верхний предел",
 	roomSensorAppliedRange: "Применённый диапазон",
@@ -6133,8 +10116,10 @@ var k = [
 	roomSensorControl: "Коррекция по датчику помещения",
 	roomSensorExpandClimate: "Развернуть {climate}",
 	roomSensorIntroTitle: "Управление температурой помещения",
+	roomSensorIntroDetail: "Используйте датчик температуры помещения для корректировки цели климатического устройства, пока Velair выполняет управляемые температурные блоки.",
 	roomSensorLiveStatus: "Состояние в реальном времени",
 	roomSensorNoActiveBlock: "Нет активного температурного блока",
+	roomSensorNoActiveBlockDetail: "Room Assist обновится, когда станет активен управляемый температурный блок.",
 	roomSensorNotConfigured: "Сначала выберите датчик помещения",
 	roomSensorRoomTemperature: "Датчик помещения",
 	roomSensorRemainingToTarget: "До цели",
@@ -6155,6 +10140,8 @@ var k = [
 	roomSensorStatusReady: "Готов",
 	roomSensorStatusUnavailable: "Недоступно",
 	roomSensorTemperatureEntity: "Датчик температуры помещения",
+	roomSensorTemperatureEntityHelp: "Датчик, который Room Assist использует как фактическую температуру помещения при корректировке цели климатического устройства.",
+	roomSensorTemperatureScale: "Температурная шкала Room Assist",
 	roomSensorUnavailable: "Климат недоступен",
 	roomSensorValueUnavailable: "Недоступно",
 	save: "Сохранить",
@@ -6178,29 +10165,29 @@ var k = [
 	diagnosticsUnavailable: "Диагностика недоступна.",
 	diagnosticsHealthy: "Velair работает нормально",
 	diagnosticsAttention: "Некоторые элементы требуют внимания",
-	diagnosticsSchedulerSummary: "Планировщик: {status} · Mode: {mode}",
+	diagnosticsSchedulerSummary: "Планировщик: {status} · Режим: {mode}",
 	diagnosticsUnitSummary: "{ok} в норме · {warning} предупреждений · {error} ошибок",
 	diagnosticsRecentHistory: "Недавняя история выполнения ({count}/{limit})",
 	diagnosticsNoHistory: "С момента запуска Velair значимые события не наблюдались.",
 	diagnosticsPrivacy: "История хранится только в памяти и очищается при перезапуске. Отчёты не содержат телеметрию; идентификаторы сущностей заменяются, если вы не решите сохранить их.",
-	diagnosticsEntityUnavailable: "Climate-сущность недоступна.",
-	diagnosticsEntityUnknown: "Climate-сущность сообщает неизвестное состояние.",
+	diagnosticsEntityUnavailable: "Климатическая сущность недоступна.",
+	diagnosticsEntityUnknown: "Климатическая сущность сообщает неизвестное состояние.",
 	diagnosticsCalculatedIntent: "Рассчитанное действие",
 	diagnosticsLastApplication: "Последнее применение",
 	diagnosticsRoomAssist: "Room Assist",
-	diagnosticsPreconditioning: "Preconditioning",
-	diagnosticsComfort: "Comfort",
+	diagnosticsPreconditioning: "Предварительный прогрев",
+	diagnosticsComfort: "Комфорт",
 	diagnosticsAssociatedSensors: "Связанные датчики",
 	diagnosticsLoadError: "Не удалось загрузить диагностику. Откройте раздел снова.",
 	diagnosticsExportError: "Не удалось скачать диагностический отчёт.",
 	diagnosticsDeliveryFailed: "Последняя попытка отправки завершилась ошибкой и может быть повторена.",
-	diagnosticsDeliveryRetrying: "Velair повторно отправляет последнее действие climate.",
+	diagnosticsDeliveryRetrying: "Velair повторно отправляет последнее действие климатического устройства.",
 	diagnosticsDeliveryExhausted: "Достигнут предел попыток отправки.",
-	diagnosticsDeliveryInvalidIntent: "Не удалось определить текущее действие climate.",
+	diagnosticsDeliveryInvalidIntent: "Не удалось определить текущее действие климатического устройства.",
 	diagnosticsRuntimeUnavailable: "Сведения о текущем выполняемом действии недоступны.",
 	diagnosticsSensorUnavailable: "Связанный датчик отсутствует или недоступен.",
-	diagnosticsUnits: "Управляемые climates",
-	diagnosticsNoUnits: "Нет управляемых climates для диагностики.",
+	diagnosticsUnits: "Управляемые климатические устройства",
+	diagnosticsNoUnits: "Нет управляемых климатических устройств для диагностики.",
 	diagnosticsStatusDelivery: "Состояние и отправка",
 	diagnosticsActiveConfiguration: "Активная конфигурация",
 	diagnosticsFunctions: "Функции",
@@ -6210,8 +10197,8 @@ var k = [
 	diagnosticsRetryCount: "Попытки",
 	diagnosticsLastError: "Последняя ошибка",
 	diagnosticsScheduleSource: "Источник расписания",
-	diagnosticsMode: "Mode",
-	diagnosticsProfile: "Profile",
+	diagnosticsMode: "Режим",
+	diagnosticsProfile: "Профиль",
 	diagnosticsOverride: "Переопределение",
 	diagnosticsPauses: "Активные паузы",
 	diagnosticsHvacModes: "Режимы HVAC",
@@ -6232,19 +10219,19 @@ var k = [
 	diagnosticsStatusWithIssues: "{status} — {issues}",
 	diagnosticsHistoryLog: "Журнал выполнения",
 	diagnosticsLogTime: "Время",
-	diagnosticsLogClimate: "Climate",
+	diagnosticsLogClimate: "Климатическое устройство",
 	diagnosticsLogType: "Тип",
 	diagnosticsLogMessage: "Подробности",
 	diagnosticsLogResizeColumn: "Изменить ширину столбца «{column}»",
 	diagnosticsHistoryClimateFilter: "Источники",
 	diagnosticsHistorySourcesLegend: "Выберите источники событий",
 	diagnosticsHistoryNoSources: "Нет источников",
-	diagnosticsHistorySourceCount: "Устройства climate: {count}",
-	diagnosticsHistorySourceCountWithVelair: "Устройства climate: {count} + Velair",
+	diagnosticsHistorySourceCount: "Климатические устройства: {count}",
+	diagnosticsHistorySourceCountWithVelair: "Климатические устройства: {count} + Velair",
 	diagnosticsHistoryClimateWithVelair: "{climate} и Velair",
 	diagnosticsHistorySourcesDone: "Готово",
 	diagnosticsHistoryCategoryFilter: "Категория",
-	diagnosticsHistoryAllSources: "Все climates + Velair",
+	diagnosticsHistoryAllSources: "Все климатические устройства + Velair",
 	diagnosticsHistoryVelairOnly: "Только Velair",
 	diagnosticsHistoryAllCategories: "Все категории",
 	diagnosticsHistoryFrom: "С",
@@ -6258,21 +10245,21 @@ var k = [
 	diagnosticsHistoryUpdateError: "Не удалось сохранить настройки истории диагностики.",
 	diagnosticsHistoryClearError: "Не удалось очистить историю диагностики.",
 	diagnosticsHistoryCategoryControl: "Управление и расписания",
-	diagnosticsHistoryCategoryControlDescription: "Расписания, Profiles, Modes, Boosts, паузы, внешние настройки и изменения автоматического/ручного управления.",
+	diagnosticsHistoryCategoryControlDescription: "Расписания, профили, режимы, форсированные режимы, паузы, внешние настройки и изменения автоматического/ручного управления.",
 	diagnosticsHistoryCategoryRoomAssist: "Room Assist",
 	diagnosticsHistoryCategoryRoomAssistDescription: "Изменения состояния и корректировки уставки Room Assist.",
-	diagnosticsHistoryCategoryPreconditioning: "Preconditioning",
-	diagnosticsHistoryCategoryPreconditioningDescription: "Планы, отмены и обучающие наблюдения Preconditioning.",
-	diagnosticsHistoryCategoryComfort: "Comfort",
-	diagnosticsHistoryCategoryComfortDescription: "Изменения локально оценённых условий Comfort.",
-	diagnosticsHistoryCategoryDelivery: "Отправка в climate",
-	diagnosticsHistoryCategoryDeliveryDescription: "Неудачные, повторные, исчерпанные или отменённые команды climate.",
+	diagnosticsHistoryCategoryPreconditioning: "Предварительный прогрев",
+	diagnosticsHistoryCategoryPreconditioningDescription: "Планы, отмены и обучающие наблюдения предварительного прогрева.",
+	diagnosticsHistoryCategoryComfort: "Комфорт",
+	diagnosticsHistoryCategoryComfortDescription: "Изменения локально оценённых условий комфорта.",
+	diagnosticsHistoryCategoryDelivery: "Отправка климатическому устройству",
+	diagnosticsHistoryCategoryDeliveryDescription: "Неудачные, повторные, исчерпанные или отменённые команды климатического устройства.",
 	diagnosticsHistoryCategoryAvailability: "Доступность",
-	diagnosticsHistoryCategoryAvailabilityDescription: "Управляемые climates, которые становятся недоступными, неизвестными или снова доступными.",
+	diagnosticsHistoryCategoryAvailabilityDescription: "Управляемые климатические устройства, которые становятся недоступными, неизвестными или снова доступными.",
 	diagnosticsReasonCurrentSchedule: "Текущее расписание",
 	diagnosticsReasonMissingTargetStep: "Шаг целевой температуры недоступен",
 	diagnosticsReasonNoLongerPlanned: "Больше не запланировано",
-	diagnosticsReasonSchedulerNotAuto: "Планировщик не находится в автоматическом Mode",
+	diagnosticsReasonSchedulerNotAuto: "Планировщик не находится в автоматическом режиме",
 	diagnosticsReasonSchedulerStopped: "Планировщик остановлен",
 	diagnosticsReasonManualTarget: "Цель задана вручную",
 	diagnosticsReasonManual: "Ручное действие",
@@ -6294,9 +10281,9 @@ var k = [
 	diagnosticsOperationUpdated: "Обновлено",
 	diagnosticsOperationRemoved: "Удалено",
 	diagnosticsOperationSetTemperature: "Установить температуру",
-	diagnosticsEventBoostEnded: "Boost завершён",
-	diagnosticsEventBoostStarted: "Boost запущен",
-	diagnosticsEventClimateTargetApplied: "Уставка climate применена",
+	diagnosticsEventBoostEnded: "Форсированный режим завершён",
+	diagnosticsEventBoostStarted: "Форсированный режим запущен",
+	diagnosticsEventClimateTargetApplied: "Уставка климатического устройства применена",
 	diagnosticsEventExternalAdjustment: "Внешняя настройка",
 	diagnosticsEventZoneControlChanged: "Управление расписанием изменено",
 	diagnosticsControlAutomatic: "Автоматически",
@@ -6309,17 +10296,17 @@ var k = [
 	diagnosticsControlChanged: "Переход: {previous} → {current}",
 	diagnosticsUntil: "до {time}",
 	diagnosticsReasonResumed: "Возобновлено",
-	diagnosticsEventProfileChanged: "Profile изменён",
-	diagnosticsEventSchedulerModeChanged: "Mode планировщика изменён",
+	diagnosticsEventProfileChanged: "Профиль изменён",
+	diagnosticsEventSchedulerModeChanged: "Режим планировщика изменён",
 	diagnosticsEventZonePauseAdded: "Причина паузы добавлена",
 	diagnosticsEventZonePauseRemoved: "Причина паузы удалена",
 	diagnosticsEventZonePauseUpdated: "Причина паузы обновлена",
 	diagnosticsEventZonePaused: "Зона приостановлена",
 	diagnosticsEventZoneResumed: "Зона возобновлена",
-	diagnosticsEventComfortAssessmentChanged: "Оценка Comfort изменена",
-	diagnosticsEventPreconditioningObservationRecorded: "Наблюдение Preconditioning записано",
-	diagnosticsEventPreconditioningPlanCancelled: "План Preconditioning отменён",
-	diagnosticsEventPreconditioningPlanUpdated: "План Preconditioning обновлён",
+	diagnosticsEventComfortAssessmentChanged: "Оценка комфорта изменена",
+	diagnosticsEventPreconditioningObservationRecorded: "Наблюдение предварительного прогрева записано",
+	diagnosticsEventPreconditioningPlanCancelled: "План предварительного прогрева отменён",
+	diagnosticsEventPreconditioningPlanUpdated: "План предварительного прогрева обновлён",
 	diagnosticsEventRoomAssistRestored: "Room Assist восстановлен",
 	diagnosticsEventRoomAssistStateChanged: "Состояние Room Assist изменено",
 	diagnosticsEventRoomAssistUpdated: "Room Assist обновлён",
@@ -6327,15 +10314,15 @@ var k = [
 	diagnosticsDownloadNow: "Скачать отчёт",
 	diagnosticsDownloadActionDescription: "Открыть параметры конфиденциальности перед скачиванием диагностического отчёта для поддержки.",
 	diagnosticsExportOptions: "Конфиденциальность отчёта",
-	diagnosticsExportExplanation: "В локальном представлении используются реальные локальные ID. Оставьте эту настройку включённой, чтобы заменить ID climate-сущностей и датчиков стабильными псевдонимами в отчёте.",
+	diagnosticsExportExplanation: "В локальном представлении используются реальные локальные ID. Оставьте эту настройку включённой, чтобы заменить ID климатических сущностей и датчиков стабильными псевдонимами в отчёте.",
 	diagnosticsRedactEntityIds: "Заменить ID сущностей псевдонимами",
-	diagnosticsOperationalIdsAlwaysRedacted: "Идентификаторы Profile, Mode и пауз удаляются всегда.",
+	diagnosticsOperationalIdsAlwaysRedacted: "Идентификаторы профилей, режимов и пауз удаляются всегда.",
 	diagnosticsRawEntityIdsWarning: "Этот отчёт будет содержать исходные ID сущностей. Проверьте его перед публикацией.",
 	diagnosticsDownloadWithEntityIds: "Скачать с ID",
 	diagnosticsSelectUnit: "Выберите климатическое устройство, чтобы просмотреть диагностику.",
 	diagnosticsDeliverySuccess: "Команда успешно отправлена",
-	diagnosticsScheduleSourceProfilePause: "Пауза Profile",
-	diagnosticsOverrideTurnOff: "Выключить climate",
+	diagnosticsScheduleSourceProfilePause: "Пауза профиля",
+	diagnosticsOverrideTurnOff: "Выключить климатическое устройство",
 	diagnosticsNone: "Нет",
 	diagnosticsReasonReplaced: "Заменено более новым запросом",
 	diagnosticsReasonStopped: "Остановлено",
@@ -6364,7 +10351,20 @@ var k = [
 	temperatureUnitManagedByHomeAssistant: "Определяется из Home Assistant. Измените это значение в настройках системы единиц Home Assistant.",
 	temperatureMigrationRequired: "Velair требует внимания",
 	temperatureMigrationStopped: "Планировщик и настройки температуры заблокированы, поскольку Home Assistant изменил единицы температуры. Откройте настройки Velair для безопасной конвертации.",
+	temperatureMigrationQuestion: "Преобразовать сохранённые температуры из {source} в {target}?",
+	temperatureMigrationExplanation: "Продолжайте, только если все сохранённые в Velair температуры всё ещё заданы в {source}. Перед возобновлением планировщика будут преобразованы расписания, шаблоны, переопределения, настройки комфорта и Room Assist, настройки предварительного прогрева, скорости изменения температуры и данные обучения. Если какое-либо сохранённое значение уже задано в {target}, после преобразования оно станет неверным.",
+	temperatureMigrationUse: "Преобразовать {source} в {target}",
+	temperatureMigrationConfirm: "Подтвердите, что все сохранённые в Velair температурные данные заданы в {source}, и преобразуйте их в {target}. Не продолжайте, если какое-либо сохранённое значение уже задано в {target}: оно станет неверным. Если преобразование не удастся сохранить, планировщик останется остановленным.",
+	temperatureMigrationComplete: "Температурные данные обновлены, планировщик возобновлён",
+	temperatureMigrationFailed: "Не удалось обновить температурные данные",
+	temperatureLegacyResetQuestion: "Сбросить устаревшие данные в градусах Цельсия для {target}?",
+	temperatureLegacyResetExplanation: "Эта установка была создана версией Velair, которая сохраняла значения только в градусах Цельсия. Поскольку Home Assistant теперь использует {target}, сбросьте Velair, чтобы удалить старые данные и создать безопасные значения по умолчанию с учётом единиц измерения. При последующих изменениях единиц Home Assistant будет предложено полное преобразование данных.",
+	temperatureLegacyResetStopped: "Планировщик остановлен, потому что эта устаревшая установка содержит данные только в градусах Цельсия, а Home Assistant использует градусы Фаренгейта. Откройте настройки Velair и выберите «Сбросить Velair», чтобы создать значения по умолчанию в градусах Фаренгейта.",
+	temperatureStep: "Шаг",
+	temperatureStepNotReported: "Не сообщается Home Assistant",
+	temperatureStepNotReportedDescription: "Это климатическое устройство не публикует target_temp_step. Velair не определяет шаг температуры самостоятельно.",
 	targetTemp: "Целевая температура",
+	targetTemperature: "Целевая температура",
 	targetHumidity: "Целевая влажность",
 	targetBy: "Цель к",
 	todayTimeline: "Расписание на сегодня",
@@ -6374,6 +10374,7 @@ var k = [
 	templateOptionalHint: "Выберите шаблон или настройте расписание вручную.",
 	templateSaved: "Шаблон сохранён",
 	templates: "Шаблоны",
+	templatesPanelIntro: "Создавайте многоразовые суточные расписания и применяйте их к совместимым термостатам и дням.",
 	thermostat: "Термостат",
 	time: "Время",
 	timeline: "Расписание",
@@ -6439,7 +10440,7 @@ var k = [
 		preheating: "Предварительный прогрев",
 		defrosting: "Размораживание"
 	}
-}, mt = /* @__PURE__ */ t({ translationTemplate: () => ht }), ht = {
+}, St = /* @__PURE__ */ t({ translationTemplate: () => Ct }), Ct = {
 	addBlock: "",
 	externalSystems: "",
 	externalSystemsDescription: "",
@@ -7426,21 +11427,25 @@ var k = [
 	"./en.ts": it,
 	"./es.ts": ot,
 	"./fr.ts": ct,
-	"./nl.ts": ut,
-	"./ru.ts": ft,
-	"./template.ts": mt,
+	"./it.ts": ut,
+	"./nl.ts": ft,
+	"./pl.ts": mt,
+	"./pt_br.ts": gt,
+	"./pt_pt.ts": vt,
+	"./ru.ts": bt,
+	"./template.ts": St,
 	"./types.ts": /* @__PURE__ */ t({})
 })).map(([e, t]) => {
 	let n = e.match(/\.\/(.+)\.ts$/)?.[1] ?? "";
-	return [n, t[n]];
+	return [n.replaceAll("_", "-"), t[n]];
 }).filter(([e, t]) => !!(e && t && e !== "index" && e !== "template" && e !== "types")));
 //#endregion
 //#region src/velair/i18n.ts
 function j(e) {
-	let t = e?.locale?.language ?? e?.language ?? e?.selectedLanguage ?? "en", n = String(t).toLowerCase();
-	return Object.keys(A).find((e) => n === e || n.startsWith(`${e}-`)) ?? "en";
+	let t = e?.locale?.language ?? e?.language ?? e?.selectedLanguage ?? "en", n = String(t).toLowerCase().replaceAll("_", "-"), r = Object.keys(A);
+	return r.find((e) => n === e) || (n === "pt" ? r.includes("pt-pt") ? "pt-pt" : "en" : r.filter((e) => !e.includes("-")).find((e) => n.startsWith(`${e}-`)) ?? "en");
 }
-function gt(e, t, n = {}) {
+function wt(e, t, n = {}) {
 	let r = (A[e] ?? A.en)[t] ?? A.en[t];
 	if (typeof r != "string") return t;
 	let i = r;
@@ -7450,24 +11455,24 @@ function gt(e, t, n = {}) {
 }
 function M(e, t) {
 	let n = (A[e] ?? A.en).weekdays, r = A.en.weekdays;
-	return n?.[t] ?? r[t] ?? bt(t);
+	return n?.[t] ?? r[t] ?? Ot(t);
 }
-function _t(e, t) {
+function Tt(e, t) {
 	return M(e, t).slice(0, 3);
 }
-function vt(e, t, n) {
+function Et(e, t, n) {
 	let r = A[e]?.[t], i = A.en[t];
-	return r?.[n] ?? i[n] ?? yt(n);
+	return r?.[n] ?? i[n] ?? Dt(n);
 }
-function yt(e) {
-	return e.split("_").filter(Boolean).map((e) => bt(e)).join(" ");
+function Dt(e) {
+	return e.split("_").filter(Boolean).map((e) => Ot(e)).join(" ");
 }
-function bt(e) {
+function Ot(e) {
 	return e && e[0].toUpperCase() + e.slice(1);
 }
 //#endregion
 //#region src/velair/domain/climate.ts
-function xt(e) {
+function kt(e) {
 	let t = e?.attributes;
 	return JSON.stringify([
 		e?.state ?? "",
@@ -7497,68 +11502,68 @@ function xt(e) {
 		t?.swing_horizontal_modes ?? []
 	]);
 }
-function St(e) {
+function At(e) {
 	return e.replaceAll("_", "-");
 }
-function Ct(e, t) {
-	let n = zt(t) ? [41, 95] : [5, 35], r = Rt(e?.attributes?.min_temp, n[0]), i = Rt(e?.attributes?.max_temp, n[1]);
-	return r >= i || Bt(r, i, t) ? n : [r, i];
+function jt(e, t) {
+	let n = qt(t) ? [41, 95] : [5, 35], r = Kt(e?.attributes?.min_temp, n[0]), i = Kt(e?.attributes?.max_temp, n[1]);
+	return r >= i || Jt(r, i, t) ? n : [r, i];
 }
-function wt(e) {
-	let t = Rt(e?.attributes?.target_temp_step, NaN);
+function Mt(e) {
+	let t = Kt(e?.attributes?.target_temp_step, NaN);
 	return Number.isFinite(t) && t > 0 ? t : void 0;
 }
-function Tt(e, t) {
+function Nt(e, t) {
 	return t === void 0 || !Number.isFinite(t) || t <= 0 ? e : Math.round(Math.ceil(e / t - 1e-6) * t * 1e6) / 1e6;
 }
-function Et(e) {
+function Pt(e) {
 	let t = e?.attributes?.hvac_modes;
 	return Array.isArray(t) ? t.filter((e) => typeof e == "string") : [];
 }
-function Dt(e) {
+function Ft(e) {
 	let t = e?.attributes;
 	if (!t) return !0;
 	let n = Number(t.supported_features ?? 0);
 	return Number.isFinite(n) && n > 0 ? (n & 1) != 0 : typeof t.temperature == "number" || !("target_temp_low" in t && "target_temp_high" in t);
 }
-function Ot(e) {
+function It(e) {
 	let t = e?.attributes;
 	if (!t) return !1;
 	let n = Number(t.supported_features ?? 0);
 	return Number.isFinite(n) && n > 0 ? (n & 2) != 0 : typeof t.target_temp_low == "number" && Number.isFinite(t.target_temp_low) && typeof t.target_temp_high == "number" && Number.isFinite(t.target_temp_high);
 }
-function kt(e, t) {
-	return (t || e?.state) === "heat_cool" && Ot(e);
+function Lt(e, t) {
+	return (t || e?.state) === "heat_cool" && It(e);
 }
-function At(e, t, n) {
-	let r = t === "range" ? Ot(e) : Dt(e);
+function Rt(e, t, n) {
+	let r = t === "range" ? It(e) : Ft(e);
 	if ((t === "range" || e?.state !== "off") && !r) return !1;
-	let i = (n) => t === "range" ? n === "heat_cool" : n !== "off" && !kt(e, n) && (e?.state !== "off" || r || n !== "heat_cool"), a = Et(e);
+	let i = (n) => t === "range" ? n === "heat_cool" : n !== "off" && !Lt(e, n) && (e?.state !== "off" || r || n !== "heat_cool"), a = Pt(e);
 	return n ? a.includes(n) && i(n) : a.some((e) => e !== "off" && i(e));
 }
-function jt(e) {
-	return Vt(e, "fan_modes");
+function zt(e) {
+	return Yt(e, "fan_modes");
 }
-function Mt(e) {
-	return Vt(e, "preset_modes");
+function Bt(e) {
+	return Yt(e, "preset_modes");
 }
-function Nt(e) {
-	return Vt(e, "swing_modes");
+function Vt(e) {
+	return Yt(e, "swing_modes");
 }
-function Pt(e) {
-	return Vt(e, "swing_horizontal_modes");
+function Ht(e) {
+	return Yt(e, "swing_horizontal_modes");
 }
-function Ft(e) {
-	let t = Rt(e?.attributes?.min_humidity, NaN), n = Rt(e?.attributes?.max_humidity, NaN);
+function Ut(e) {
+	let t = Kt(e?.attributes?.min_humidity, NaN), n = Kt(e?.attributes?.max_humidity, NaN);
 	if (!Number.isFinite(t) && !Number.isFinite(n) && typeof e?.attributes?.humidity != "number") return;
 	let r = Number.isFinite(t) ? t : 0, i = Number.isFinite(n) ? n : 100;
 	return r < i ? [r, i] : void 0;
 }
-function It(e) {
+function Wt(e) {
 	let t = new Set(e);
 	return Ke.filter((e) => t.has(e));
 }
-function Lt(e) {
+function Gt(e) {
 	let t = e?.attributes ?? {}, n = [];
 	return typeof t.current_temperature == "number" && n.push({
 		icon: "mdi:thermometer",
@@ -7586,51 +11591,51 @@ function Lt(e) {
 		labelKey: "temperatureRange"
 	}), n;
 }
-function Rt(e, t) {
+function Kt(e, t) {
 	let n = Number(e);
 	return Number.isFinite(n) ? n : t;
 }
-function zt(e) {
+function qt(e) {
 	return String(e ?? "").toUpperCase().includes("F");
 }
-function Bt(e, t, n) {
-	return zt(n) ? t <= 60 && e < 40 : !!n && (t > 60 || e > 40);
+function Jt(e, t, n) {
+	return qt(n) ? t <= 60 && e < 40 : !!n && (t > 60 || e > 40);
 }
-function Vt(e, t) {
+function Yt(e, t) {
 	let n = e?.attributes?.[t];
 	return Array.isArray(n) ? n.filter((e) => typeof e == "string") : [];
 }
 //#endregion
 //#region src/velair/domain/settings.ts
-function Ht(e) {
+function Xt(e) {
 	let t = e.first_weekday ?? e.selected_weekday ?? "monday";
 	return k.includes(t) ? t : "monday";
 }
-function Ut(e) {
+function Zt(e) {
 	let t = k.indexOf(e);
 	return t <= 0 ? [...k] : [...k.slice(t), ...k.slice(0, t)];
 }
-function Wt(e, t = []) {
+function Qt(e, t = []) {
 	let n = new Set(e), r = t.filter((e) => n.has(e)), i = e.filter((e) => !r.includes(e));
 	return [...r, ...i];
 }
-function Gt(e, t) {
-	let n = Wt(e, t.zone_order), r = t.entities?.filter(Boolean) ?? [];
+function $t(e, t) {
+	let n = Qt(e, t.zone_order), r = t.entities?.filter(Boolean) ?? [];
 	if (!r.length) return n;
 	let i = new Set(r);
 	return n.filter((e) => i.has(e));
 }
-function Kt(e) {
+function en(e) {
 	return e.length ? [Math.min(...e.map(([e]) => e)), Math.max(...e.map(([, e]) => e))] : [5, 35];
 }
-function qt(e) {
+function tn(e) {
 	let t = e.filter((e) => e !== void 0 && Number.isFinite(e) && e > 0);
 	if (!(t.length !== e.length || !t.length)) return t.every((e) => Math.abs(e - t[0]) <= 1e-9) ? t[0] : void 0;
 }
-function Jt(e) {
+function nn(e) {
 	return e.toFixed(e % 1 == 0 ? 0 : 1);
 }
-function Yt(e, t, n) {
+function rn(e, t, n) {
 	let r = new Set(e);
 	return n ? r.add(t) : r.delete(t), r;
 }
@@ -7639,30 +11644,30 @@ function Yt(e, t, n) {
 function N(e) {
 	return e;
 }
-function Xt(e) {
+function an(e) {
 	return e.currentTarget.value;
 }
-function Zt(e) {
+function on(e) {
 	return e === "profiles" || $e.includes(e) || et.includes(e);
 }
-function Qt(e, t, n) {
-	return Zt(e) ? e === "profiles" ? "modes" : e : Zt(n) ? n === "profiles" ? "modes" : n : Zt(t) ? t === "profiles" ? "modes" : t : "overview-status";
+function sn(e, t, n) {
+	return on(e) ? e === "profiles" ? "modes" : e : on(n) ? n === "profiles" ? "modes" : n : on(t) ? t === "profiles" ? "modes" : t : "overview-status";
 }
-function $t(e, t, n) {
+function cn(e, t, n) {
 	if (!t) return !1;
 	if (!n) return !0;
-	let r = Gt(e._data?.configured_entities ?? [], e._config);
-	return r.length ? r.some((e) => xt(t.states?.[e]) !== xt(n.states?.[e])) : !1;
+	let r = $t(e._data?.configured_entities ?? [], e._config);
+	return r.length ? r.some((e) => kt(t.states?.[e]) !== kt(n.states?.[e])) : !1;
 }
-function en(e, t, n) {
+function ln(e, t, n) {
 	if (!t || !n || !e._data) return !1;
-	let r = new Set(Gt(e._data.configured_entities, e._config));
+	let r = new Set($t(e._data.configured_entities, e._config));
 	return Object.entries(e._data.zones).some(([e, i]) => {
 		if (!r.has(e)) return !1;
 		let a = i.preconditioning;
 		if (!a?.enabled && !a?.room_sensor_assist_enabled) return !1;
-		if (tn(t, e) !== tn(n, e)) return !0;
-		let o = nn(t, e) !== nn(n, e);
+		if (un(t, e) !== un(n, e)) return !0;
+		let o = dn(t, e) !== dn(n, e);
 		if (a?.room_sensor_assist_enabled && o) return !0;
 		let s = a?.room_temperature_entity_id;
 		if (a?.room_sensor_assist_enabled && s && t.states?.[s]?.state !== n.states?.[s]?.state) return !0;
@@ -7670,124 +11675,124 @@ function en(e, t, n) {
 		return !!(c && t.states?.[c]?.state !== n.states?.[c]?.state);
 	});
 }
-function tn(e, t) {
+function un(e, t) {
 	return e.states?.[t]?.attributes?.current_temperature ?? null;
 }
-function nn(e, t) {
+function dn(e, t) {
 	return e.states?.[t]?.attributes?.temperature ?? null;
 }
-function rn(e) {
+function fn(e) {
 	return j(e.hass);
 }
-function an(e, t, n = {}) {
-	return gt(rn(e), t, n);
+function pn(e, t, n = {}) {
+	return wt(fn(e), t, n);
 }
-function on(e, t) {
-	return M(rn(e), t);
+function mn(e, t) {
+	return M(fn(e), t);
 }
-function sn(e, t) {
-	return _t(rn(e), t);
+function hn(e, t) {
+	return Tt(fn(e), t);
 }
-function cn(e, t, n) {
-	return vt(rn(e), t, n);
+function gn(e, t, n) {
+	return Et(fn(e), t, n);
 }
-function ln(e) {
-	return Ht(e._config);
+function _n(e) {
+	return Xt(e._config);
 }
-function un(e) {
-	return Ut(ln(e));
+function vn(e) {
+	return Zt(_n(e));
 }
-function dn(e, t) {
-	return Wt(t, e._config.zone_order);
+function yn(e, t) {
+	return Qt(t, e._config.zone_order);
 }
-function fn(e, t) {
-	return Gt(t, e._config);
+function bn(e, t) {
+	return $t(t, e._config);
 }
 //#endregion
 //#region src/velair/domain/diagnostics-history.ts
-var pn = Symbol("velair-system-source"), mn = {
+var xn = Symbol("velair-system-source"), Sn = {
 	sources: null,
 	category: "all",
 	from: "",
 	to: ""
 };
-function hn(e) {
-	let t = yn(e.from), n = yn(e.to, !0);
+function Cn(e) {
+	let t = Dn(e.from), n = Dn(e.to, !0);
 	return t === void 0 || n === void 0 || t <= n;
 }
-function gn(e, t) {
-	if (!hn(t)) return [];
-	let n = yn(t.from), r = yn(t.to, !0);
+function wn(e, t) {
+	if (!Cn(t)) return [];
+	let n = Dn(t.from), r = Dn(t.to, !0);
 	return e.filter((e) => {
 		let i = Date.parse(e.at);
 		if (t.sources !== null) {
-			let n = e.entity_id ?? pn;
+			let n = e.entity_id ?? xn;
 			if (!t.sources.has(n)) return !1;
 		}
 		return !(t.category !== "all" && e.category !== t.category || n !== void 0 && i < n || r !== void 0 && i > r);
 	});
 }
-function _n(e) {
+function Tn(e) {
 	return e.sources !== null || e.category !== "all" || e.from !== "" || e.to !== "";
 }
-function vn(e, t) {
+function En(e, t) {
 	if (e.sources === null) return e;
-	let n = new Set([pn, ...t]), r = new Set([...e.sources].filter((e) => n.has(e)));
+	let n = new Set([xn, ...t]), r = new Set([...e.sources].filter((e) => n.has(e)));
 	return {
 		...e,
 		sources: r.size === n.size ? null : r
 	};
 }
-function yn(e, t = !1) {
+function Dn(e, t = !1) {
 	if (!e) return;
 	let n = new Date(e).getTime();
 	if (Number.isFinite(n)) return t && /T\d{2}:\d{2}$/.test(e) ? n + 59999 : n;
 }
 //#endregion
 //#region src/velair/domain/diagnostics-log-layout.ts
-var bn = {
+var On = {
 	time: 180,
 	climate: 96,
 	type: 96
-}, xn = {
+}, kn = {
 	time: 180,
 	climate: 96,
 	type: 96
-}, Sn = {
+}, An = {
 	time: 300,
 	climate: 320,
 	type: 280
 };
-function Cn(e) {
+function jn(e) {
 	return Math.max(0, e - 22);
 }
-function wn(e, t, n) {
+function Mn(e, t, n) {
 	let r = Object.entries(e).filter(([e]) => e !== t).reduce((e, [, t]) => e + t, 0);
-	return Math.min(Sn[t], Math.max(xn[t], n - r - 180 - 36));
+	return Math.min(An[t], Math.max(kn[t], n - r - 180 - 36));
 }
-function Tn(e, t, n, r) {
-	let i = wn(e, t, r);
+function Nn(e, t, n, r) {
+	let i = Mn(e, t, r);
 	return {
 		...e,
-		[t]: Math.min(i, Math.max(xn[t], n))
+		[t]: Math.min(i, Math.max(kn[t], n))
 	};
 }
-function En(e, t) {
-	let n = Object.fromEntries(Object.keys(e).map((t) => [t, Math.min(Sn[t], Math.max(xn[t], e[t]))])), r = Object.values(n).reduce((e, t) => e + t, 0) + 180 + 36 - t;
+function Pn(e, t) {
+	let n = Object.fromEntries(Object.keys(e).map((t) => [t, Math.min(An[t], Math.max(kn[t], e[t]))])), r = Object.values(n).reduce((e, t) => e + t, 0) + 180 + 36 - t;
 	for (let e of [
 		"type",
 		"climate",
 		"time"
 	]) {
 		if (r <= 0) break;
-		let t = n[e] - xn[e], i = Math.min(r, t);
+		let t = n[e] - kn[e], i = Math.min(r, t);
 		n[e] -= i, r -= i;
 	}
 	return n;
 }
 //#endregion
 //#region src/velair/styles/base-styles.ts
-var Dn = u`
+var Fn = u`
   :host {
     display: block;
     max-width: 100%;
@@ -7993,7 +11998,7 @@ var Dn = u`
     min-height: 34px;
     padding: 6px 10px;
   }
-`, On = u`
+`, In = u`
 .comfort-view {
   display: grid;
   gap: 12px;
@@ -8909,7 +12914,7 @@ var Dn = u`
     width: 100%;
   }
 }
-`, kn = u`
+`, Ln = u`
   .diagnostics-view { display: grid; gap: 14px; }
   .diagnostics-intro { align-items: center; display: grid; gap: 10px; grid-template-columns: 24px minmax(0, 1fr); padding: 2px 4px 4px; }
   .diagnostics-intro > ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }
@@ -9087,7 +13092,7 @@ var Dn = u`
     .diagnostics-rows dd, .diagnostics-sensor-detail { margin-top: 3px; }
     .diagnostics-sensor-detail { display: flex; }
   }
-`, An = u`
+`, Rn = u`
 .inline-help-wrapper {
   display: inline-flex;
   flex: 0 0 auto;
@@ -9187,7 +13192,7 @@ var Dn = u`
   height: 12px;
   width: 12px;
 }
-`, jn = u`
+`, zn = u`
   .initial-loading {
     align-items: center;
     box-sizing: border-box;
@@ -9222,7 +13227,7 @@ var Dn = u`
     font-size: 13px;
     line-height: 1.3;
   }
-`, Mn = u`
+`, Bn = u`
   .notice-stack {
     box-sizing: border-box;
     display: grid;
@@ -9340,7 +13345,7 @@ var Dn = u`
       transition-duration: 0ms;
     }
   }
-`, Nn = u`
+`, Vn = u`
   .operation-status {
     --operation-status-color: var(--primary-color);
     align-items: center;
@@ -9492,7 +13497,7 @@ var Dn = u`
       padding-inline: 10px;
     }
   }
-`, Pn = u`
+`, Hn = u`
 .overview-summary {
   margin: 0;
 }
@@ -10805,7 +14810,7 @@ var Dn = u`
 .summary-icon-button ha-icon {
   --mdc-icon-size: 18px;
 }
-`, Fn = u`
+`, Un = u`
   .settings-portability {
     display: grid;
     gap: 12px;
@@ -10949,7 +14954,7 @@ var Dn = u`
     --mdc-icon-size: 18px;
     color: var(--warning-color, #c99500);
   }
-`, In = u`
+`, Wn = u`
 .preconditioning-view {
   display: grid;
   gap: 12px;
@@ -11756,7 +15761,7 @@ var Dn = u`
   font-size: 11px;
 }
 
-`, Ln = u`
+`, Gn = u`
 .sensors-view {
   display: grid;
   gap: 12px;
@@ -12655,20 +16660,17 @@ var Dn = u`
 }
 
 .sensor-scale-deadband-legend-range {
-  clip-path: inset(0);
-  container-type: inline-size;
-  display: flex;
   height: 15px;
-  justify-content: center;
+  overflow: visible;
+  position: relative;
 }
 
 .sensor-scale-deadband-legend-anchor {
   display: flex;
-  flex: 0 0 max-content;
   height: 15px;
-  left: 0;
-  position: sticky;
-  right: 0;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
   width: max-content;
 }
 
@@ -12684,57 +16686,7 @@ var Dn = u`
 }
 
 .sensor-scale-deadband-legend:not(.is-zero) {
-  gap: 0;
   white-space: nowrap;
-}
-
-.sensor-scale-deadband-legend:not(.is-zero) .sensor-scale-deadband-swatch,
-.sensor-scale-deadband-label-brief,
-.sensor-scale-deadband-label-compact,
-.sensor-scale-deadband-label-full {
-  display: none;
-}
-
-.sensor-scale-deadband-label-short {
-  display: inline;
-}
-
-@container (min-width: 54px) {
-  .sensor-scale-deadband-label-short {
-    display: none;
-  }
-
-  .sensor-scale-deadband-label-brief {
-    display: inline;
-    font-size: 9px;
-    letter-spacing: -0.15px;
-  }
-}
-
-@container (min-width: 112px) {
-  .sensor-scale-deadband-label-brief {
-    display: none;
-  }
-
-  .sensor-scale-deadband-label-compact {
-    display: inline;
-  }
-}
-
-@container (min-width: 220px) {
-  .sensor-scale-deadband-legend:not(.is-zero) {
-    gap: 6px;
-  }
-
-  .sensor-scale-deadband-legend:not(.is-zero) .sensor-scale-deadband-swatch,
-  .sensor-scale-deadband-label-full {
-    display: inline;
-  }
-
-  .sensor-scale-deadband-label-compact,
-  .sensor-scale-deadband-label-brief {
-    display: none;
-  }
 }
 
 .sensor-scale-deadband-swatch {
@@ -12827,7 +16779,7 @@ var Dn = u`
   }
 
 }
-`, Rn = u`
+`, Kn = u`
 .settings-view {
   display: grid;
   gap: 12px;
@@ -13400,7 +17352,7 @@ var Dn = u`
   .settings-policy-controls > .select-wrap { flex: 1 1 160px; height: 40px; max-width: 170px; width: auto; }
   .settings-policy-duration { flex: 0 1 105px; height: 40px; }
 }
-`, zn = u`
+`, qn = u`
 .templates-view {
   display: grid;
   gap: 12px;
@@ -13730,7 +17682,7 @@ var Dn = u`
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-`, Bn = u`
+`, Jn = u`
   .timeline-panel {
     display: grid;
     gap: 8px;
@@ -14043,7 +17995,7 @@ var Dn = u`
     pointer-events: auto;
     z-index: 2;
   }
-`, Vn = u`
+`, Yn = u`
   @media (max-width: 900px) {
     .template-library-layout {
       grid-template-columns: minmax(0, 1fr);
@@ -14720,21 +18672,21 @@ var Dn = u`
     .editable-block > .icon-button.danger { grid-area: delete; }
     .editable-block > label > .label { display: block; }
   }
-`, Hn = [
-	Dn,
-	On,
-	kn,
-	An,
-	jn,
-	Mn,
-	Nn,
-	Pn,
+`, Xn = [
 	Fn,
 	In,
 	Ln,
 	Rn,
 	zn,
 	Bn,
+	Vn,
+	Hn,
+	Un,
+	Wn,
+	Gn,
+	Kn,
+	qn,
+	Jn,
 	u`
     .temperature-migration-banner {
       align-items: start;
@@ -15903,7 +19855,7 @@ var Dn = u`
     }
 
   `,
-	Vn
+	Yn
 ], P = class {
 	constructor(e) {
 		this.hass = e;
@@ -16102,62 +20054,62 @@ var Dn = u`
 			expected_revision: n
 		});
 	}
-}, Un = /^\d{2}:\d{2}$/;
-function Wn(e) {
-	if (!Un.test(e)) return;
+}, Zn = /^\d{2}:\d{2}$/;
+function Qn(e) {
+	if (!Zn.test(e)) return;
 	let [t, n] = e.split(":").map((e) => Number(e));
 	if (!(t < 0 || t > 23 || n < 0 || n > 59)) return t * 60 + n;
 }
-function Gn(e) {
+function $n(e) {
 	let t = Math.min(Math.max(e, 0), 1439), n = Math.floor(t / 60), r = t % 60;
 	return `${String(n).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-function Kn(e) {
-	let t = e ? Wn(e) : void 0;
+function er(e) {
+	let t = e ? Qn(e) : void 0;
 	if (t === void 0) return "08:00";
 	let n = Math.floor(t / 60), r = t % 60, i = Math.min(n + 1, 23);
 	return `${String(i).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-function qn(e, t, n) {
+function tr(e, t, n) {
 	return Math.min(Math.max(e, t), Math.max(t, n));
 }
 //#endregion
 //#region src/velair/domain/schedule-events.ts
-function Jn(e, t, n, r = /* @__PURE__ */ new Date()) {
+function nr(e, t, n, r = /* @__PURE__ */ new Date()) {
 	if (t?.enabled) {
 		if (n) {
 			let r = F(n.until);
 			if (r) {
 				let n = new Date(r);
-				return Xn(e, t, n) ?? Yn(e, t, n);
+				return ir(e, t, n) ?? rr(e, t, n);
 			}
 		}
-		return Yn(e, t, r);
+		return rr(e, t, r);
 	}
 }
-function Yn(e, t, n) {
+function rr(e, t, n) {
 	let r;
 	for (let i = 0; i <= 7; i += 1) {
 		let a = new Date(n);
 		a.setDate(n.getDate() + i);
-		let o = $n(a);
+		let o = sr(a);
 		for (let i of t.schedule?.[o] ?? []) {
-			let t = Qn(a, i.start);
+			let t = or(a, i.start);
 			if (!t || t <= n) continue;
-			let s = Zn(e, i, t, o);
+			let s = ar(e, i, t, o);
 			(!r || t < new Date(r.when)) && (r = s);
 		}
 	}
 	return r;
 }
-function Xn(e, t, n) {
-	let r = $n(n), i = n.getHours() * 60 + n.getMinutes(), a = [...t.schedule?.[r] ?? []].map((e) => ({
+function ir(e, t, n) {
+	let r = sr(n), i = n.getHours() * 60 + n.getMinutes(), a = [...t.schedule?.[r] ?? []].map((e) => ({
 		block: e,
-		minute: Wn(e.start)
+		minute: Qn(e.start)
 	})).filter((e) => e.minute !== void 0).sort((e, t) => e.minute - t.minute).filter((e) => e.minute <= i).at(-1)?.block;
-	return a ? Zn(e, a, n, r) : void 0;
+	return a ? ar(e, a, n, r) : void 0;
 }
-function Zn(e, t, n, r) {
+function ar(e, t, n, r) {
 	return {
 		entity_id: e,
 		when: n.toISOString(),
@@ -16170,7 +20122,7 @@ function Zn(e, t, n, r) {
 		start: t.start
 	};
 }
-function Qn(e, t) {
+function or(e, t) {
 	let n = /^(\d{1,2}):(\d{2})$/.exec(t);
 	if (!n) return;
 	let r = Number(n[1]), i = Number(n[2]);
@@ -16178,7 +20130,7 @@ function Qn(e, t) {
 	let a = new Date(e);
 	return a.setHours(r, i, 0, 0), a;
 }
-function $n(e) {
+function sr(e) {
 	return k[e.getDay() === 0 ? 6 : e.getDay() - 1];
 }
 function F(e) {
@@ -16186,7 +20138,7 @@ function F(e) {
 	let t = new Date(e).getTime();
 	return Number.isNaN(t) ? void 0 : t;
 }
-function er(e, t) {
+function cr(e, t) {
 	let n = new Map(e.map((e) => [e.entity_id, e]));
 	return t.filter((e) => {
 		let t = n.get(e.entity_id);
@@ -16197,36 +20149,36 @@ function er(e, t) {
 }
 //#endregion
 //#region src/velair/domain/temperature-units.ts
-function tr(e) {
+function lr(e) {
 	return String(e ?? "").toUpperCase().includes("F");
 }
-function nr(e) {
-	return tr(e) ? 70 : 21;
+function ur(e) {
+	return lr(e) ? 70 : 21;
 }
-function rr(e) {
-	return tr(e) ? 1 : .3;
+function dr(e) {
+	return lr(e) ? 1 : .3;
 }
-function ir(e) {
-	return tr(e) ? 4 : 2;
+function fr(e) {
+	return lr(e) ? 4 : 2;
 }
-function ar(e) {
-	return tr(e) ? 1 : .3;
+function pr(e) {
+	return lr(e) ? 1 : .3;
 }
-function or(e) {
-	return tr(e) ? 14 : 25;
+function mr(e) {
+	return lr(e) ? 14 : 25;
 }
-function sr(e, t) {
-	return tr(e) ? t * 9 / 5 : t;
+function hr(e, t) {
+	return lr(e) ? t * 9 / 5 : t;
 }
-function cr(e) {
-	return tr(e) ? [.6, 66.7] : [1, 120];
+function gr(e) {
+	return lr(e) ? [.6, 66.7] : [1, 120];
 }
-function lr(e) {
-	return tr(e) ? [-58, 212] : [-50, 100];
+function _r(e) {
+	return lr(e) ? [-58, 212] : [-50, 100];
 }
 //#endregion
 //#region src/velair/domain/templates.ts
-function ur(e, t) {
+function vr(e, t) {
 	return (e ?? []).map((e) => ({
 		key: e.key,
 		name: e.name,
@@ -16236,31 +20188,31 @@ function ur(e, t) {
 				start: e.start,
 				hvac_mode: e.hvac_mode ?? ""
 			};
-			return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? nr(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
+			return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? ur(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
 		})
 	}));
 }
-function dr(e) {
+function yr(e) {
 	return e.name ?? e.key;
 }
-function fr(e, t) {
-	let n = new Set(t.map((e) => dr(e)));
+function br(e, t) {
+	let n = new Set(t.map((e) => yr(e)));
 	if (!n.has(e)) return e;
 	let r = 2;
 	for (; n.has(`${e} ${r}`);) r += 1;
 	return `${e} ${r}`;
 }
-function pr(e = Date.now(), t = Math.random()) {
+function xr(e = Date.now(), t = Math.random()) {
 	return `custom_${e.toString(36)}_${t.toString(36).slice(2, 8)}`;
 }
-function mr(e, t) {
+function Sr(e, t) {
 	return `${e}::${t}`;
 }
-function hr(e, t, n, r) {
-	let i = mr(t, n), a = new Set(e);
+function Cr(e, t, n, r) {
+	let i = Sr(t, n), a = new Set(e);
 	return r ? a.add(i) : a.delete(i), a;
 }
-function gr(e, t) {
+function wr(e, t) {
 	return [...e].map((e) => {
 		let [t, n] = e.split("::");
 		return {
@@ -16271,19 +20223,19 @@ function gr(e, t) {
 }
 //#endregion
 //#region src/velair/domain/overrides.ts
-function _r(e, t = Date.now()) {
+function Tr(e, t = Date.now()) {
 	if (!e || e.type !== "boost") return !1;
 	let n = Number(e.temperature), r = Number(e.target_temp_low), i = Number(e.target_temp_high), a = F(e.until);
 	return (Number.isFinite(n) || Number.isFinite(r) && Number.isFinite(i) && r <= i) && !!(a && a > t);
 }
-function vr(e, t = Date.now()) {
+function Er(e, t = Date.now()) {
 	if (!e || e.type !== "pause") return !1;
 	let n = F(e.until);
 	return Object.prototype.hasOwnProperty.call(e, "until") && n === void 0 ? !1 : n === void 0 || n > t;
 }
 //#endregion
 //#region src/velair/domain/timeline.ts
-function yr(e, t) {
+function Dr(e, t) {
 	if (t) try {
 		let n = new Intl.DateTimeFormat("en-US", {
 			hour: "2-digit",
@@ -16295,25 +20247,25 @@ function yr(e, t) {
 	} catch {}
 	return e.getHours() * 60 + e.getMinutes();
 }
-function br(e, t) {
-	let n = yr(e, t);
+function Or(e, t) {
+	let n = Dr(e, t);
 	return {
-		label: Gn(n),
+		label: $n(n),
 		left: n / 1440 * 100,
 		minute: n
 	};
 }
-function xr(e, t, n, r) {
+function kr(e, t, n, r) {
 	let i = Math.max(0, t - n);
 	if (i <= 1) return 0;
 	let a = Math.max(0, Math.min(100, e)), o = Math.max(0, t - r), s = Math.max(0, n - r), c = r + a / 100 * o, l = r + s * .35;
 	return Math.max(0, Math.min(i, c - l));
 }
-function Sr(e) {
+function Ar(e) {
 	let t = e.map((e, t) => ({
 		draft: e,
 		index: t,
-		startMinute: Wn(e.start)
+		startMinute: Qn(e.start)
 	})).filter((e) => e.startMinute !== void 0).sort((e, t) => e.startMinute - t.startMinute);
 	return t.map((e, n) => {
 		let r = e.startMinute, i = t[n + 1], a = i?.startMinute, o = typeof a == "number" && a > r ? a : 1440, s = r / 1440 * 100, c = Math.max((o - r) / 1440 * 100, 3.5);
@@ -16328,11 +20280,11 @@ function Sr(e) {
 		};
 	});
 }
-function Cr(e) {
+function jr(e) {
 	let t = e.map((e, t) => ({
 		block: e,
 		index: t,
-		startMinute: Wn(e.start)
+		startMinute: Qn(e.start)
 	})).filter((e) => e.startMinute !== void 0).sort((e, t) => e.startMinute - t.startMinute);
 	return t.map((e, n) => {
 		let r = t[n + 1]?.startMinute, i = typeof r == "number" && r > e.startMinute ? r : 1440, a = e.startMinute / 1440 * 100, o = (i - e.startMinute) / 1440 * 100;
@@ -16346,12 +20298,12 @@ function Cr(e) {
 		};
 	});
 }
-function wr(e, t) {
+function Mr(e, t) {
 	let n = k.indexOf(t);
 	if (n < 0) return;
-	let r = Tr(e[t] ?? [])[0]?.startMinute ?? 1440;
+	let r = Nr(e[t] ?? [])[0]?.startMinute ?? 1440;
 	if (!(r <= 0)) for (let t = 1; t <= k.length; t += 1) {
-		let i = k[(n - t + k.length) % k.length], a = Tr(e[i] ?? []), o = a[a.length - 1];
+		let i = k[(n - t + k.length) % k.length], a = Nr(e[i] ?? []), o = a[a.length - 1];
 		if (o) return {
 			block: o.block,
 			endMinute: r,
@@ -16362,17 +20314,17 @@ function wr(e, t) {
 		};
 	}
 }
-function Tr(e) {
+function Nr(e) {
 	return e.map((e) => ({
 		block: e,
-		startMinute: Wn(e.start)
+		startMinute: Qn(e.start)
 	})).filter((e) => e.startMinute !== void 0).sort((e, t) => e.startMinute - t.startMinute);
 }
-function Er(e, t = /* @__PURE__ */ new Date()) {
-	if (!_r(e, t.getTime())) return;
-	let n = kr(e.until);
+function Pr(e, t = /* @__PURE__ */ new Date()) {
+	if (!Tr(e, t.getTime())) return;
+	let n = Lr(e.until);
 	if (!n) return;
-	let r = kr(e.started_at) ?? t.getTime(), i = new Date(t);
+	let r = Lr(e.started_at) ?? t.getTime(), i = new Date(t);
 	i.setHours(0, 0, 0, 0);
 	let a = new Date(i);
 	a.setDate(i.getDate() + 1);
@@ -16382,7 +20334,7 @@ function Er(e, t = /* @__PURE__ */ new Date()) {
 	return {
 		block: {
 			action: qe,
-			start: Gn(c),
+			start: $n(c),
 			...Number.isFinite(f) ? { temperature: f } : {},
 			...Number.isFinite(p) && Number.isFinite(m) ? {
 				target_temp_low: p,
@@ -16396,9 +20348,9 @@ function Er(e, t = /* @__PURE__ */ new Date()) {
 		width: Math.max(Math.min(d, 100 - u), .5)
 	};
 }
-function Dr(e, t = /* @__PURE__ */ new Date()) {
-	if (!vr(e, t.getTime())) return;
-	let n = kr(e.until), r = new Date(t);
+function Fr(e, t = /* @__PURE__ */ new Date()) {
+	if (!Er(e, t.getTime())) return;
+	let n = Lr(e.until), r = new Date(t);
 	r.setHours(0, 0, 0, 0);
 	let i = new Date(r);
 	if (i.setDate(r.getDate() + 1), !n) return {
@@ -16408,7 +20360,7 @@ function Dr(e, t = /* @__PURE__ */ new Date()) {
 		startMinute: 0,
 		width: 100
 	};
-	let a = kr(e.started_at) ?? t.getTime(), o = Math.max(a, r.getTime()), s = Math.min(n, i.getTime());
+	let a = Lr(e.started_at) ?? t.getTime(), o = Math.max(a, r.getTime()), s = Math.min(n, i.getTime());
 	if (s <= o || o >= i.getTime() || s <= r.getTime()) return;
 	let c = Math.max(0, Math.min(1440, Math.round((o - r.getTime()) / 6e4))), l = Math.max(c + 1, Math.min(1440, Math.round((s - r.getTime()) / 6e4))), u = c / 1440 * 100, d = (l - c) / 1440 * 100;
 	return {
@@ -16419,23 +20371,23 @@ function Dr(e, t = /* @__PURE__ */ new Date()) {
 		width: Math.max(Math.min(d, 100 - u), .5)
 	};
 }
-function Or(e) {
+function Ir(e) {
 	return e.map((e, t) => ({
 		block: e,
 		index: t,
-		startMinute: Wn(e.start)
+		startMinute: Qn(e.start)
 	})).sort((e, t) => e.startMinute === void 0 && t.startMinute === void 0 ? e.index - t.index : e.startMinute === void 0 ? 1 : t.startMinute === void 0 ? -1 : e.startMinute - t.startMinute || e.index - t.index).map((e) => e.block);
 }
-function kr(e) {
+function Lr(e) {
 	if (typeof e != "string") return;
 	let t = new Date(e).getTime();
 	return Number.isNaN(t) ? void 0 : t;
 }
-function Ar(e, t, n) {
+function Rr(e, t, n) {
 	let r = n > 0 ? (e - t) / n : 0, i = Math.round(Math.min(Math.max(r, 0), 1) * 1440 / 15) * 15;
 	return Math.min(i, 1425);
 }
-function jr(e) {
+function zr(e) {
 	if (e.action === "turn_off") return "off";
 	switch (e.hvac_mode) {
 		case "heat": return "heat";
@@ -16450,22 +20402,22 @@ function jr(e) {
 }
 //#endregion
 //#region src/velair/domain/scheduler-state.ts
-function Mr(e) {
+function Br(e) {
 	return F(e?.paused_until);
 }
-function Nr(e) {
+function Vr(e) {
 	return F(e?.paused_started_at);
 }
-function Pr(e, t, n = Date.now()) {
+function Hr(e, t, n = Date.now()) {
 	if (!e || e >= t) return 100;
 	let r = Math.max(1, t - e), i = Math.max(0, t - n);
 	return Math.min(100, Math.max(0, i / r * 100));
 }
-function Fr(e, t = Date.now()) {
+function Ur(e, t = Date.now()) {
 	return e - t <= 9e4 ? 500 : 1e4;
 }
-function Ir(e, t, n = Date.now()) {
-	let r = [Mr(e), ...Object.values(t ?? {}).map((e) => F(e.until))].filter((e) => typeof e == "number" && e > n);
+function Wr(e, t, n = Date.now()) {
+	let r = [Br(e), ...Object.values(t ?? {}).map((e) => F(e.until))].filter((e) => typeof e == "number" && e > n);
 	return r.length ? Math.min(...r) : void 0;
 }
 //#endregion
@@ -16473,10 +20425,10 @@ function Ir(e, t, n = Date.now()) {
 function I(e) {
 	return e;
 }
-function Lr(e) {
+function Gr(e) {
 	return e._data?.global.mode === "paused" || e._data?.operational_status === "paused";
 }
-async function Rr(e, t, n = {}) {
+async function Kr(e, t, n = {}) {
 	let r = e._api();
 	if (!(!r || e._controlAction)) {
 		e._controlAction = "pause", e._error = void 0, e._saveMessage = void 0;
@@ -16490,7 +20442,7 @@ async function Rr(e, t, n = {}) {
 		}
 	}
 }
-async function zr(e, t = {}) {
+async function qr(e, t = {}) {
 	let n = e._api();
 	if (!(!n || e._controlAction)) {
 		e._controlAction = "resume", e._error = void 0, e._saveMessage = void 0;
@@ -16503,65 +20455,65 @@ async function zr(e, t = {}) {
 		}
 	}
 }
-function Br(e) {
+function Jr(e) {
 	let t = e.renderRoot.querySelector(".scheduler-menu");
 	t instanceof HTMLDetailsElement && (t.open = !1), e._schedulerMenuOpen = !1;
 }
-function Vr(e, t) {
+function Yr(e, t) {
 	let n = t.currentTarget.closest(".scheduler-menu");
 	e._schedulerMenuOpen = n instanceof HTMLDetailsElement ? !n.open : !e._schedulerMenuOpen;
 }
-function Hr(e) {
+function Xr(e) {
 	e._nextEventsOpen = !e._nextEventsOpen;
 }
-function Ur(e) {
-	return Mr(e._data?.global);
+function Zr(e) {
+	return Br(e._data?.global);
 }
-function Wr(e, t) {
-	return Pr(Nr(e._data?.global), t);
+function Qr(e, t) {
+	return Hr(Vr(e._data?.global), t);
 }
-function Gr(e) {
-	let t = Kr(e);
+function $r(e) {
+	let t = ei(e);
 	if (!t || t <= Date.now()) {
 		e._stopPauseTick();
 		return;
 	}
-	let n = Fr(t);
+	let n = Ur(t);
 	(!e._pauseTick || e._pauseTickDelay !== n) && (e._stopPauseTick(), e._pauseTickDelay = n, e._pauseTick = window.setInterval(() => {
 		let t = e._nextCountdownExpirationMs();
-		!t || t <= Date.now() ? e._stopPauseTick() : e._pauseTickDelay !== Fr(t) && e._syncPauseTick(), e.requestUpdate();
+		!t || t <= Date.now() ? e._stopPauseTick() : e._pauseTickDelay !== Ur(t) && e._syncPauseTick(), e.requestUpdate();
 	}, n));
 }
-function Kr(e) {
-	return Ir(e._data?.global, e._data?.active_overrides);
+function ei(e) {
+	return Wr(e._data?.global, e._data?.active_overrides);
 }
-function qr(e) {
+function ti(e) {
 	e._pauseTick && (window.clearInterval(e._pauseTick), e._pauseTick = void 0, e._pauseTickDelay = void 0);
 }
 //#endregion
 //#region src/velair/controllers/notice-actions.ts
-function Jr(e) {
+function ni(e) {
 	return e;
 }
-function Yr(e, t) {
-	t === "error" && (e._error = void 0), t === "success" && (e._saveMessage = void 0, Qr(e));
+function ri(e, t) {
+	t === "error" && (e._error = void 0), t === "success" && (e._saveMessage = void 0, oi(e));
 }
-function Xr(e, t) {
-	e._saveMessage = t, e._successNoticeStartedAt = Date.now(), Qr(e, !1), e._successNoticeTimeout = window.setTimeout(() => {
-		e._saveMessage = void 0, Qr(e);
+function ii(e, t) {
+	e._saveMessage = t, e._successNoticeStartedAt = Date.now(), oi(e, !1), e._successNoticeTimeout = window.setTimeout(() => {
+		e._saveMessage = void 0, oi(e);
 	}, Xe), e._successNoticeTick = window.setInterval(() => e.requestUpdate(), 1e3);
 }
-function Zr(e) {
+function ai(e) {
 	if (!e._successNoticeStartedAt) return 100;
 	let t = Date.now() - e._successNoticeStartedAt;
 	return Math.max(0, Math.min(100, (Xe - t) / Xe * 100));
 }
-function Qr(e, t = !0) {
+function oi(e, t = !0) {
 	e._successNoticeTimeout &&= (window.clearTimeout(e._successNoticeTimeout), void 0), e._successNoticeTick &&= (window.clearInterval(e._successNoticeTick), void 0), t && (e._successNoticeStartedAt = void 0);
 }
 //#endregion
 //#region src/velair/controllers/notice-transitions.ts
-var $r = 140, ei = class {
+var si = 140, ci = class {
 	constructor(e) {
 		this._changed = e, this._entries = [], this._timers = /* @__PURE__ */ new Map(), this._frames = /* @__PURE__ */ new Map();
 	}
@@ -16574,7 +20526,7 @@ var $r = 140, ei = class {
 			let n = t.get(e.id);
 			n ? (this._cancelRemoval(e.id), e.message = n.message, e.phase === "leaving" && (e.phase = "active"), t.delete(e.id)) : e.phase !== "leaving" && (this._cancelActivation(e.id), e.phase = "leaving", this._timers.set(e.id, setTimeout(() => {
 				this._timers.delete(e.id), this._entries = this._entries.filter((t) => t.id !== e.id), this._changed();
-			}, $r)));
+			}, si)));
 		}
 		for (let n of e) t.has(n.id) && (this._entries.push({
 			...n,
@@ -16620,21 +20572,21 @@ var $r = 140, ei = class {
 };
 //#endregion
 //#region src/velair/domain/draft-blocks.ts
-function ti(e, t) {
+function li(e, t) {
 	return e.map((e) => {
 		let n = {
 			action: e.action ?? "set_temperature",
 			start: e.start,
 			hvac_mode: e.hvac_mode ?? ""
 		};
-		return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? nr(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
+		return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? ur(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
 	});
 }
-function ni(e, t, n) {
+function ui(e, t, n) {
 	let r = e[e.length - 1], i = L(r) ? {
 		target_temp_low: r?.target_temp_low ?? "",
 		target_temp_high: r?.target_temp_high ?? ""
-	} : { temperature: Number(r?.temperature || nr(n)) };
+	} : { temperature: Number(r?.temperature || ur(n)) };
 	return [...e, {
 		action: qe,
 		start: t,
@@ -16642,10 +20594,10 @@ function ni(e, t, n) {
 		hvac_mode: ""
 	}];
 }
-function ri(e, t) {
+function di(e, t) {
 	return e.filter((e, n) => n !== t);
 }
-function ii(e, t, n, r) {
+function fi(e, t, n, r) {
 	return e[t] ? e.map((e, i) => i === t ? n === "hvac_mode" ? {
 		...e,
 		action: r === "off" ? Je : qe,
@@ -16655,7 +20607,7 @@ function ii(e, t, n, r) {
 		[n]: r
 	} : e) : e;
 }
-function ai(e, t) {
+function pi(e, t) {
 	if ((e.action || "set_temperature") === "turn_off") return;
 	let n = L(e) ? [e.target_temp_low, e.target_temp_high] : [e.temperature], r = [];
 	for (let e of n) {
@@ -16668,7 +20620,7 @@ function ai(e, t) {
 	}
 	if (r.length === 2 && r[0] > r[1]) return t.rangeOrderError ?? t.rangeError;
 }
-function oi(e, t) {
+function mi(e, t) {
 	let n = /* @__PURE__ */ new Set(), r = [];
 	for (let i of e) {
 		let e = String(i.start || "").trim();
@@ -16712,7 +20664,7 @@ function oi(e, t) {
 		blocks: r.sort((e, t) => e.start.localeCompare(t.start))
 	};
 }
-function si(e, t, n) {
+function hi(e, t, n) {
 	return e.map((e) => {
 		if ((e.action || "set_temperature") === "turn_off") return { ...e };
 		let r = { ...e };
@@ -16722,11 +20674,11 @@ function si(e, t, n) {
 function L(e) {
 	return !!(e && (e.target_temp_low !== void 0 || e.target_temp_high !== void 0));
 }
-function ci(e, t) {
+function gi(e, t) {
 	let n = new Set(t);
 	return e.find((e) => (e.action || "set_temperature") !== "turn_off" && !!e.hvac_mode && !n.has(e.hvac_mode ?? ""));
 }
-function li(e, t) {
+function _i(e, t) {
 	return e.map((e) => {
 		if ((e.action || "set_temperature") === "turn_off") return {
 			start: e.start,
@@ -16738,15 +20690,15 @@ function li(e, t) {
 }
 //#endregion
 //#region src/velair/domain/schedule-editor.ts
-var ui = {
+var vi = {
 	weekdays: k.slice(0, 5),
 	weekend: k.slice(5),
 	all: k
 };
-function di(e, t) {
-	return e === "clear" ? /* @__PURE__ */ new Set() : new Set(ui[e].filter((e) => e !== t));
+function yi(e, t) {
+	return e === "clear" ? /* @__PURE__ */ new Set() : new Set(vi[e].filter((e) => e !== t));
 }
-function fi(e, t) {
+function bi(e, t) {
 	let n = e.length, r = t.implicit_midnight_change_counts_toward_limit && !e.some((e) => e.start === "00:00") ? 1 : 0, i = n + r, a = t.max_switchpoints_per_day;
 	return {
 		scheduled: n,
@@ -16758,27 +20710,27 @@ function fi(e, t) {
 }
 //#endregion
 //#region src/velair/controllers/draft-actions.ts
-function pi(e) {
+function xi(e) {
 	return e;
 }
-function mi(e, t = "schedule") {
-	let n = e._blocksForSource(t), r = e._temperatureUnit(t === "schedule" ? e._selectedEntity : void 0), i = ni(n, Kn(n.at(-1)?.start), r), a = t === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0;
-	!n.length && Ot(a) && !Dt(a) && (i = i.map((e, t) => t === i.length - 1 ? {
+function Si(e, t = "schedule") {
+	let n = e._blocksForSource(t), r = e._temperatureUnit(t === "schedule" ? e._selectedEntity : void 0), i = ui(n, er(n.at(-1)?.start), r), a = t === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0;
+	!n.length && It(a) && !Ft(a) && (i = i.map((e, t) => t === i.length - 1 ? {
 		...e,
 		temperature: void 0,
 		target_temp_low: a?.attributes?.target_temp_low ?? "",
 		target_temp_high: a?.attributes?.target_temp_high ?? ""
 	} : e)), e._setBlocksForSource(t, i), e._markBlocksDirty(t), e._saveMessage = void 0;
 }
-function hi(e, t, n = "schedule") {
-	e._setBlocksForSource(n, ri(e._blocksForSource(n), t)), e._markBlocksDirty(n), e._saveMessage = void 0;
+function Ci(e, t, n = "schedule") {
+	e._setBlocksForSource(n, di(e._blocksForSource(n), t)), e._markBlocksDirty(n), e._saveMessage = void 0;
 }
-function gi(e, t, n, r, i = "schedule") {
+function wi(e, t, n, r, i = "schedule") {
 	let a = e._blocksForSource(i);
 	if (!a[t]) return;
-	let o = ii(a, t, n, r);
+	let o = fi(a, t, n, r);
 	if (n === "hvac_mode") {
-		let n = a[t], s = i === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0, c = i === "template" || Ot(s);
+		let n = a[t], s = i === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0, c = i === "template" || It(s);
 		r === "heat_cool" && n.hvac_mode !== "heat_cool" && c && !L(n) ? o = o.map((e, n) => n === t ? {
 			...e,
 			temperature: void 0,
@@ -16793,36 +20745,36 @@ function gi(e, t, n, r, i = "schedule") {
 	}
 	e._setBlocksForSource(i, o), e._markBlocksDirty(i), e._saveMessage = void 0;
 }
-function _i(e) {
+function Ti(e) {
 	e._dirty = !0, e._dirtyEntityId = e._selectedEntity;
 }
-function vi(e, t, n, r = {}, i = "schedule") {
+function Ei(e, t, n, r = {}, i = "schedule") {
 	let a = e._blocksForSource(i);
 	a[t] && (e._setBlocksForSource(i, a.map((e, r) => r === t ? {
 		...e,
 		start: n
-	} : e)), r.sort && e._setBlocksForSource(i, Or(e._blocksForSource(i))), e._markBlocksDirty(i), e._saveMessage = void 0);
+	} : e)), r.sort && e._setBlocksForSource(i, Ir(e._blocksForSource(i))), e._markBlocksDirty(i), e._saveMessage = void 0);
 }
-function yi(e, t, n) {
-	!k.includes(t) || t === e._selectedWeekday || (e._copyTargets = Yt(e._copyTargets, t, n), e._saveMessage = void 0);
+function Di(e, t, n) {
+	!k.includes(t) || t === e._selectedWeekday || (e._copyTargets = rn(e._copyTargets, t, n), e._saveMessage = void 0);
 }
-function bi(e, t) {
-	e._copyTargets = di(t, e._selectedWeekday), e._saveMessage = void 0;
+function Oi(e, t) {
+	e._copyTargets = yi(t, e._selectedWeekday), e._saveMessage = void 0;
 }
-function xi(e, t, n) {
-	!(e._data?.configured_entities ?? []).includes(t) || t === e._selectedEntity || (e._zoneTargets = Yt(e._zoneTargets, t, n), e._saveMessage = void 0);
+function ki(e, t, n) {
+	!(e._data?.configured_entities ?? []).includes(t) || t === e._selectedEntity || (e._zoneTargets = rn(e._zoneTargets, t, n), e._saveMessage = void 0);
 }
 //#endregion
 //#region src/velair/controllers/draft-validation.ts
-function Si(e) {
+function Ai(e) {
 	return e;
 }
-function Ci(e, t = "schedule") {
-	return e._blocksForSource(t).some((n) => !!wi(e, n, t));
+function ji(e, t = "schedule") {
+	return e._blocksForSource(t).some((n) => !!Mi(e, n, t));
 }
-function wi(e, t, n = "schedule") {
+function Mi(e, t, n = "schedule") {
 	let [r, i] = e._temperatureLimits(n), a = e._temperatureStep(n);
-	return ai(t, {
+	return pi(t, {
 		maxTemperature: i,
 		minTemperature: r,
 		rangeError: e._t("invalidTemperatureRange", {
@@ -16836,13 +20788,13 @@ function wi(e, t, n = "schedule") {
 }
 //#endregion
 //#region src/velair/domain/portable.ts
-function Ti(e) {
+function Ni(e) {
 	let t = Number(e?.model_version), n = e?.temperature_unit, r = n === void 0 || n === "°C" || t >= 3 && n === "°F";
 	if (!e || e.format !== "velair_portable_data" || !Number.isInteger(e.model_version) || t < 1 || t > 8 || !r || !e.sections || typeof e.sections != "object") return {
 		ok: !1,
 		errorKey: "invalidImportFile"
 	};
-	let i = Ei(e);
+	let i = Pi(e);
 	return i.length ? {
 		ok: !0,
 		sections: i
@@ -16851,11 +20803,11 @@ function Ti(e) {
 		errorKey: "noImportSections"
 	};
 }
-function Ei(e) {
+function Pi(e) {
 	let t = e?.sections;
 	return !t || typeof t != "object" ? [] : tt.filter((e) => Object.prototype.hasOwnProperty.call(t, e));
 }
-function Di(e, t) {
+function Fi(e, t) {
 	let n = [];
 	return e.has("zones") && n.push({
 		section: "zones",
@@ -16877,7 +20829,7 @@ function Di(e, t) {
 		value: t.modes
 	}), n;
 }
-function Oi(e) {
+function Ii(e) {
 	let t = e?.sections;
 	if (!t) return [];
 	let n = [];
@@ -16913,7 +20865,7 @@ function Oi(e) {
 		value: Array.isArray(t.modes) ? t.modes.length : 0
 	}), n;
 }
-function ki(e, t) {
+function Li(e, t) {
 	let n = e?.sections?.preconditioning_learning;
 	if (!n || typeof n != "object" || Array.isArray(n)) return [];
 	let r = new Set(t);
@@ -16924,21 +20876,21 @@ function ki(e, t) {
 function R(e) {
 	return e;
 }
-function Ai(e, t, n, r) {
+function Ri(e, t, n, r) {
 	let i = new Set(t === "export" ? e._exportSections : e._importSections);
 	r ? i.add(n) : i.delete(n), t === "export" ? e._exportSections = i : e._importSections = i;
 }
-async function ji(e, t) {
+async function zi(e, t) {
 	let n = t.currentTarget, r = n.files?.[0];
 	if (e._importPayload = void 0, e._importFileName = "", e._importSections = /* @__PURE__ */ new Set(), e._error = void 0, e._saveMessage = void 0, r) try {
-		let t = JSON.parse(await r.text()), n = Ti(t);
+		let t = JSON.parse(await r.text()), n = Ni(t);
 		if (!n.ok) throw Error(e._t(n.errorKey));
 		e._importPayload = t, e._importFileName = r.name, e._importSections = new Set(n.sections);
 	} catch (t) {
 		e._error = t instanceof Error ? t.message : e._t("invalidImportFile"), n.value = "";
 	}
 }
-async function Mi(e) {
+async function Bi(e) {
 	let t = e._api();
 	if (!(!t || !e._exportSections.size)) {
 		e._portabilityAction = "export", e._error = void 0, e._saveMessage = void 0;
@@ -16952,7 +20904,7 @@ async function Mi(e) {
 		}
 	}
 }
-async function Ni(e) {
+async function Vi(e) {
 	let t = e._api();
 	if (!(!t || !e._importPayload || !e._importSections.size)) {
 		e._portabilityAction = "import", e._error = void 0, e._saveMessage = void 0;
@@ -16966,7 +20918,7 @@ async function Ni(e) {
 		}
 	}
 }
-async function Pi(e) {
+async function Hi(e) {
 	let t = e._api();
 	if (!(!t || e._maintenanceAction) && window.confirm(e._t("confirmReset"))) {
 		e._maintenanceAction = "reset", e._error = void 0, e._saveMessage = void 0;
@@ -16980,11 +20932,11 @@ async function Pi(e) {
 		}
 	}
 }
-function Fi(e) {
-	return Ei(e._importPayload);
+function Ui(e) {
+	return Pi(e._importPayload);
 }
-function Ii(e) {
-	return Di(new Set(tt), {
+function Wi(e) {
+	return Fi(new Set(tt), {
 		zones: e._data?.configured_entities.length ?? 0,
 		templates: e._scheduleTemplates().length,
 		preconditioningLearning: Object.values(e._data?.preconditioning_learning ?? {}).filter((e) => e.total_samples > 0).length,
@@ -16992,10 +20944,10 @@ function Ii(e) {
 		modes: e._data?.modes?.length ?? 0
 	}).map((t) => e._portableSummaryItem(t));
 }
-function Li(e) {
-	return Oi(e._importPayload).map((t) => e._portableSummaryItem(t));
+function Gi(e) {
+	return Ii(e._importPayload).map((t) => e._portableSummaryItem(t));
 }
-function Ri(e, t) {
+function Ki(e, t) {
 	let n = e._portableSectionLabel(t.section);
 	return {
 		label: n,
@@ -17004,7 +20956,7 @@ function Ri(e, t) {
 		value: t.value === "included" ? e._t("portabilityIncluded") : t.value
 	};
 }
-function zi(e, t) {
+function qi(e, t) {
 	switch (t) {
 		case "modes": return e._t("portabilityModesSection");
 		case "profiles": return e._t("portabilityProfilesSection");
@@ -17014,7 +20966,7 @@ function zi(e, t) {
 		default: return e._t("portabilityZonesSection");
 	}
 }
-function Bi(e) {
+function Ji(e) {
 	let t = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), n = new Blob([JSON.stringify(e, null, 2)], { type: "application/json" }), r = URL.createObjectURL(n), i = document.createElement("a");
 	i.href = r, i.download = `velair-export-${t}.json`, i.style.display = "none", document.body.append(i), i.click(), i.remove(), URL.revokeObjectURL(r);
 }
@@ -17023,11 +20975,11 @@ function Bi(e) {
 function z(e) {
 	return e;
 }
-async function Vi(e, t) {
+async function Yi(e, t) {
 	let n = k.includes(t) ? t : "monday";
 	e._selectedWeekday = n, e._copyTargets = /* @__PURE__ */ new Set(), e._zoneTargets = /* @__PURE__ */ new Set(), await e._saveSettings({ first_weekday: n }), e._resetDraftBlocks();
 }
-async function Hi(e, t) {
+async function Xi(e, t) {
 	let n = e._api(), r = {
 		...e._config,
 		first_weekday: t.first_weekday ?? e._config.first_weekday,
@@ -17045,7 +20997,7 @@ async function Hi(e, t) {
 		}
 	}
 }
-async function Ui(e, t, n) {
+async function Zi(e, t, n) {
 	let r = e._api();
 	if (r) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -17059,7 +21011,7 @@ async function Ui(e, t, n) {
 		}
 	}
 }
-async function Wi(e, t, n) {
+async function Qi(e, t, n) {
 	let r = e._api();
 	if (r) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -17073,7 +21025,7 @@ async function Wi(e, t, n) {
 		}
 	}
 }
-async function Gi(e, t, n, r) {
+async function $i(e, t, n, r) {
 	let i = e._api();
 	if (i && window.confirm(e._t("confirmResetPreconditioningLearning", { direction: r }))) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -17087,7 +21039,7 @@ async function Gi(e, t, n, r) {
 		}
 	}
 }
-async function Ki(e, t) {
+async function ea(e, t) {
 	let n = e._api();
 	if (n && window.confirm(e._t("confirmResetPreconditioningSettings"))) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -17101,29 +21053,29 @@ async function Ki(e, t) {
 		}
 	}
 }
-function qi(e, t, n) {
+function ta(e, t, n) {
 	let r = e._orderedZoneIds(e._data?.configured_entities ?? []), i = r.indexOf(t), a = i + n;
 	if (i < 0 || a < 0 || a >= r.length) return;
 	let o = [...r];
 	[o[i], o[a]] = [o[a], o[i]], e._updateSettingsZoneOrder(o);
 }
-function Ji(e, t, n) {
+function na(e, t, n) {
 	e._draggedSettingsEntity = t, n.dataTransfer?.setData("text/plain", t), n.dataTransfer && (n.dataTransfer.effectAllowed = "move");
 }
-function Yi(e) {
+function ra(e) {
 	e.preventDefault(), e.dataTransfer && (e.dataTransfer.dropEffect = "move");
 }
-function Xi(e, t, n) {
+function ia(e, t, n) {
 	n.preventDefault();
 	let r = n.dataTransfer?.getData("text/plain") || e._draggedSettingsEntity;
 	if (e._draggedSettingsEntity = void 0, !r || r === t) return;
 	let i = e._orderedZoneIds(e._data?.configured_entities ?? []).filter((e) => e !== r), a = i.indexOf(t);
 	a < 0 || (i.splice(a, 0, r), e._updateSettingsZoneOrder(i));
 }
-function Zi(e) {
+function aa(e) {
 	e._draggedSettingsEntity = void 0;
 }
-function Qi(e, t) {
+function oa(e, t) {
 	let n = new Set(e._data?.configured_entities ?? []), r = t.filter((e) => n.has(e));
 	e._saveSettings({ zone_order: r });
 }
@@ -17132,23 +21084,23 @@ function Qi(e, t) {
 function B(e) {
 	return e;
 }
-function $i(e, t, n, r) {
+function sa(e, t, n, r) {
 	e._draggedTimelineIndex = t, r.dataTransfer?.setData("text/plain", JSON.stringify({
 		index: t,
 		source: n
 	})), r.dataTransfer && (r.dataTransfer.effectAllowed = "move");
 }
-function ea(e) {
+function ca(e) {
 	e.preventDefault(), e.dataTransfer && (e.dataTransfer.dropEffect = "move");
 }
-function ta(e, t, n = "schedule") {
+function la(e, t, n = "schedule") {
 	t.preventDefault();
-	let { index: r, source: i } = na(e, t, n);
+	let { index: r, source: i } = ua(e, t, n);
 	if (e._draggedTimelineIndex = void 0, !Number.isInteger(r) || !e._blocksForSource(i)[r]) return;
-	let a = t.currentTarget, o = ua(e, t.clientX, a);
+	let a = t.currentTarget, o = va(e, t.clientX, a);
 	e._setDraftBlockStart(r, o, { sort: !0 }, i);
 }
-function na(e, t, n) {
+function ua(e, t, n) {
 	let r = t.dataTransfer?.getData("text/plain");
 	if (r) try {
 		let e = JSON.parse(r);
@@ -17168,10 +21120,10 @@ function na(e, t, n) {
 		source: n
 	};
 }
-function ra(e) {
+function da(e) {
 	e._draggedTimelineIndex = void 0;
 }
-function ia(e, t, n, r, i) {
+function fa(e, t, n, r, i) {
 	i.preventDefault(), i.stopPropagation();
 	let a = i.currentTarget.closest(".timeline-track");
 	a instanceof HTMLElement && (e._timelineResize = {
@@ -17179,57 +21131,57 @@ function ia(e, t, n, r, i) {
 		index: t,
 		source: r,
 		track: a
-	}, e.classList.add("timeline-resizing"), fa(e, "ew-resize"), window.addEventListener("pointermove", e._handleTimelineResizeMove), window.addEventListener("pointerup", e._handleTimelineResizeEnd, { once: !0 }), e._resizeTimelineBlock(t, n, da(i.clientX, a), r));
+	}, e.classList.add("timeline-resizing"), ba(e, "ew-resize"), window.addEventListener("pointermove", e._handleTimelineResizeMove), window.addEventListener("pointerup", e._handleTimelineResizeEnd, { once: !0 }), e._resizeTimelineBlock(t, n, ya(i.clientX, a), r));
 }
-function aa(e, t) {
+function pa(e, t) {
 	if (!e._timelineResize) return;
 	t.preventDefault();
 	let { edge: n, index: r, source: i, track: a } = e._timelineResize;
-	e._resizeTimelineBlock(r, n, da(t.clientX, a), i);
+	e._resizeTimelineBlock(r, n, ya(t.clientX, a), i);
 }
-function oa(e) {
+function ma(e) {
 	window.removeEventListener("pointermove", e._handleTimelineResizeMove);
 	let t = e._timelineResize?.source ?? "schedule";
-	e.classList.remove("timeline-resizing"), e._timelineResize = void 0, pa(e), e._sortDraftBlocksByStart(t);
+	e.classList.remove("timeline-resizing"), e._timelineResize = void 0, xa(e), e._sortDraftBlocksByStart(t);
 }
-function sa(e, t, n, r, i = "schedule") {
-	let a = la(e, i), o = a.findIndex((e) => e.index === t), s = a[o];
+function ha(e, t, n, r, i = "schedule") {
+	let a = _a(e, i), o = a.findIndex((e) => e.index === t), s = a[o];
 	if (!s) return;
 	if (n === "start") {
 		let n = a[o - 1]?.startMinute, c = typeof n == "number" ? n + 15 : 0, l = s.endMinute - 15;
-		e._setDraftBlockStart(t, Gn(qn(r, c, l)), {}, i);
+		e._setDraftBlockStart(t, $n(tr(r, c, l)), {}, i);
 		return;
 	}
 	let c = a[o + 1];
 	if (!c) return;
 	let l = a[o + 2]?.startMinute, u = s.startMinute + 15, d = typeof l == "number" ? l - 15 : 1425;
-	e._setDraftBlockStart(c.index, Gn(qn(r, u, d)), {}, i);
+	e._setDraftBlockStart(c.index, $n(tr(r, u, d)), {}, i);
 }
-function ca(e, t = "schedule") {
-	e._setBlocksForSource(t, Or(e._blocksForSource(t)));
+function ga(e, t = "schedule") {
+	e._setBlocksForSource(t, Ir(e._blocksForSource(t)));
 }
-function la(e, t = "schedule") {
-	return Sr(e._blocksForSource(t));
+function _a(e, t = "schedule") {
+	return Ar(e._blocksForSource(t));
 }
-function ua(e, t, n) {
-	return Gn(da(t, n));
+function va(e, t, n) {
+	return $n(ya(t, n));
 }
-function da(e, t) {
+function ya(e, t) {
 	let n = t.getBoundingClientRect();
-	return Ar(e, n.left, n.width);
+	return Rr(e, n.left, n.width);
 }
-function fa(e, t) {
+function ba(e, t) {
 	document.body && (e._previousBodyCursor === void 0 && (e._previousBodyCursor = document.body.style.cursor), e._previousDocumentCursor === void 0 && (e._previousDocumentCursor = document.documentElement.style.cursor), document.body.style.cursor = t, document.documentElement.style.cursor = t);
 }
-function pa(e) {
+function xa(e) {
 	!document.body || e._previousBodyCursor === void 0 || (document.body.style.cursor = e._previousBodyCursor, document.documentElement.style.cursor = e._previousDocumentCursor ?? "", e._previousBodyCursor = void 0, e._previousDocumentCursor = void 0);
 }
 //#endregion
 //#region src/velair/controllers/schedule-actions.ts
-function ma(e) {
+function Sa(e) {
 	return e;
 }
-async function ha(e) {
+async function Ca(e) {
 	let t = e._api();
 	if (!t || !e._selectedEntity || e._saving) return;
 	let n = e._normalizeDraftBlocks();
@@ -17252,7 +21204,7 @@ async function ha(e) {
 		e._saving = !1;
 	}
 }
-async function ga(e) {
+async function wa(e) {
 	let t = e._api();
 	if (!t || !e._selectedEntity || e._copying || e._copyTargets.size === 0) return;
 	let n = e._normalizeDraftBlocks();
@@ -17277,7 +21229,7 @@ async function ga(e) {
 		e._copying = !1;
 	}
 }
-async function _a(e) {
+async function Ta(e) {
 	let t = e._api();
 	if (!t || !e._selectedEntity || e._applyingZones || e._zoneTargets.size === 0) return;
 	let n = e._normalizeDraftBlocks();
@@ -17305,17 +21257,17 @@ async function _a(e) {
 		e._applyingZones = !1;
 	}
 }
-function va(e, t = "schedule") {
-	return oi(e._blocksForSource(t), {
+function Ea(e, t = "schedule") {
+	return mi(e._blocksForSource(t), {
 		duplicateStartError: (t) => e._t("duplicateStart", { start: t }),
 		invalidStartError: (t) => e._t("invalidStart", { start: t }),
 		invalidTemperatureError: (t, n) => `${e._t("invalidTemperature", { start: t })}: ${n}`,
 		temperatureError: (n) => e._temperatureError(n, t)
 	});
 }
-function ya(e, t, n) {
+function Da(e, t, n) {
 	let [r, i] = e._entityTemperatureLimits(n);
-	return li(si(t, r, i), {
+	return _i(hi(t, r, i), {
 		fanModes: e._entityFanModeOptions(n),
 		humidityLimits: e._entityHumidityLimits(n),
 		presetModes: e._entityPresetModeOptions(n),
@@ -17323,25 +21275,25 @@ function ya(e, t, n) {
 		swingModes: e._entitySwingModeOptions(n)
 	});
 }
-function ba(e, t, n) {
+function Oa(e, t, n) {
 	let r = e.hass?.states?.[n], i = t.find((e) => (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && e.hvac_mode !== void 0 && e.hvac_mode !== "heat_cool");
 	if (i?.hvac_mode) return e._t("unsupportedModeForClimate", {
 		entity: e._friendlyEntityName(n),
 		mode: e._modeLabel(i.hvac_mode),
 		start: i.start
 	});
-	let a = t.find((e) => (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && !At(r, "range", e.hvac_mode));
+	let a = t.find((e) => (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && !Rt(r, "range", e.hvac_mode));
 	if (a) return e._t("unsupportedRangeTargetForClimate", {
 		entity: e._friendlyEntityName(n),
 		start: a.start
 	});
-	let o = ci(t, e._climateSupportedModes(n));
+	let o = gi(t, e._climateSupportedModes(n));
 	if (o?.hvac_mode) return e._t("unsupportedModeForClimate", {
 		entity: e._friendlyEntityName(n),
 		mode: e._modeLabel(o.hvac_mode),
 		start: o.start
 	});
-	let s = t.find((e) => e.temperature !== void 0 && !At(r, "scalar", e.hvac_mode));
+	let s = t.find((e) => e.temperature !== void 0 && !Rt(r, "scalar", e.hvac_mode));
 	return s ? e._t("unsupportedSingleTargetForClimate", {
 		entity: e._friendlyEntityName(n),
 		start: s.start
@@ -17352,7 +21304,7 @@ function ba(e, t, n) {
 function V(e) {
 	return e;
 }
-async function xa(e) {
+async function ka(e) {
 	let t = e._api();
 	if (!(!t || e._loading)) {
 		e._loading = !0, e._error = void 0;
@@ -17366,7 +21318,7 @@ async function xa(e) {
 		}
 	}
 }
-async function Sa(e) {
+async function Aa(e) {
 	let t = e._api();
 	if (!(!t || e._unsubscribeUpdates || e._subscribing)) {
 		e._subscribing = !0;
@@ -17385,7 +21337,7 @@ async function Sa(e) {
 		}
 	}
 }
-function Ca(e, t, n = {}) {
+function ja(e, t, n = {}) {
 	let r = !e._data;
 	e._data = t, e._hasExternalConfig || (e._config = {
 		first_weekday: t.settings.first_weekday,
@@ -17396,26 +21348,26 @@ function Ca(e, t, n = {}) {
 	let o = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
 	o ? (n.forceDraft || !e._templateDirty || e._templateDraftKey !== o.key) && e._resetTemplateDraft(o) : e._resetTemplateDraft(), e._syncPauseTick(), (n.forceDraft || !e._dirty) && e._resetDraftBlocks();
 }
-function wa(e) {
-	e._draftBlocks = ti((e._selectedEntity ? e._data?.zones[e._selectedEntity] : void 0)?.schedule?.[e._selectedWeekday] ?? [], e._temperatureUnit(e._selectedEntity)), e._dirty = !1, e._dirtyEntityId = void 0;
+function Ma(e) {
+	e._draftBlocks = li((e._selectedEntity ? e._data?.zones[e._selectedEntity] : void 0)?.schedule?.[e._selectedWeekday] ?? [], e._temperatureUnit(e._selectedEntity)), e._dirty = !1, e._dirtyEntityId = void 0;
 }
-function Ta(e, t) {
+function Na(e, t) {
 	return t === e._selectedEntity ? !0 : e._dirty && !e._confirmDiscardChanges() ? !1 : (e._selectedEntity = t, e._saveMessage = void 0, e._copyTargets = /* @__PURE__ */ new Set(), e._zoneTargets = /* @__PURE__ */ new Set(), e._resetDraftBlocks(), !0);
 }
-function Ea(e, t) {
+function Pa(e, t) {
 	return k.includes(t) ? t === e._selectedWeekday ? !0 : e._dirty && !e._confirmDiscardChanges() ? !1 : (e._selectedWeekday = t, e._saveMessage = void 0, e._copyTargets = /* @__PURE__ */ new Set(), e._zoneTargets = /* @__PURE__ */ new Set(), e._resetDraftBlocks(), !0) : !1;
 }
-function Da(e, t) {
+function Fa(e, t) {
 	return t === "template" ? e._templateDraftBlocks : e._draftBlocks;
 }
-function Oa(e, t, n) {
+function Ia(e, t, n) {
 	if (t === "template") {
 		e._templateDraftBlocks = n;
 		return;
 	}
 	e._draftBlocks = n;
 }
-function ka(e, t) {
+function La(e, t) {
 	if (t === "template") {
 		e._templateDirty = !0;
 		return;
@@ -17424,7 +21376,7 @@ function ka(e, t) {
 }
 //#endregion
 //#region src/velair/domain/entity-diagnostics.ts
-function Aa(e, t, n) {
+function Ra(e, t, n) {
 	let r = [], i = "ok";
 	if (!t) return {
 		messageKeys: ["entityDiagnosticMissing"],
@@ -17439,17 +21391,21 @@ function Aa(e, t, n) {
 }
 //#endregion
 //#region src/velair/domain/formatters.ts
-function ja(e) {
+function za(e) {
 	return {
 		de: "de-DE",
 		en: "en",
 		es: "es-ES",
 		fr: "fr-FR",
+		it: "it-IT",
 		nl: "nl-NL",
+		pl: "pl-PL",
+		"pt-br": "pt-BR",
+		"pt-pt": "pt-PT",
 		ru: "ru-RU"
 	}[e] ?? "en";
 }
-function Ma(e) {
+function Ba(e) {
 	let t = String(e ?? "").toLowerCase(), n = t === "12" ? !0 : t === "24" ? !1 : void 0;
 	return {
 		hour: "numeric",
@@ -17457,17 +21413,17 @@ function Ma(e) {
 		...n === void 0 ? {} : { hour12: n }
 	};
 }
-function Na(e, t, n) {
+function Va(e, t, n) {
 	let r = new Date(e);
 	return Number.isNaN(r.getTime()) ? e : r.toLocaleString(t, {
-		...Ma(n),
+		...Ba(n),
 		weekday: "short"
 	});
 }
-function Pa(e, t, n) {
+function Ha(e, t, n) {
 	let r = new Date(e);
 	return Number.isNaN(r.getTime()) ? e : r.toLocaleString(t, {
-		...Ma(n),
+		...Ba(n),
 		day: "2-digit",
 		month: "2-digit",
 		second: "2-digit",
@@ -17475,13 +21431,13 @@ function Pa(e, t, n) {
 		year: "numeric"
 	});
 }
-function Fa(e, t, n) {
+function Ua(e, t, n) {
 	let r = /^(\d{1,2}):(\d{2})$/.exec(e);
 	if (!r) return e;
 	let i = Number(r[1]), a = Number(r[2]);
-	return i < 0 || i > 23 || a < 0 || a > 59 ? e : new Date(2e3, 0, 1, i, a).toLocaleTimeString(t, Ma(n));
+	return i < 0 || i > 23 || a < 0 || a > 59 ? e : new Date(2e3, 0, 1, i, a).toLocaleTimeString(t, Ba(n));
 }
-function Ia(e) {
+function Wa(e) {
 	let t = Math.max(0, Math.ceil(e / 1e3));
 	if (t < 60) return `${t} s`;
 	let n = Math.floor(t / 60);
@@ -17489,16 +21445,16 @@ function Ia(e) {
 	let r = Math.floor(n / 60), i = n % 60;
 	return i ? `${r} h ${i} min` : `${r} h`;
 }
-function La(e, t) {
+function Ga(e, t) {
 	return `${e.toFixed(e % 1 == 0 ? 0 : 1)} ${t}`;
 }
-function Ra(e, t) {
+function Ka(e, t) {
 	return e ?? t ?? "°C";
 }
-function za(e, t, n) {
+function qa(e, t, n) {
 	return e.action === "turn_off" ? t.off : e.temperature == null ? e.target_temp_low != null && e.target_temp_high != null ? `${n(Number(e.target_temp_low), e.entity_id).replace(/\s+[^\s]+$/, "")}–${n(Number(e.target_temp_high), e.entity_id)}` : t.setTemperature : n(Number(e.temperature), e.entity_id);
 }
-function Ba(e, t, n) {
+function Ja(e, t, n) {
 	return e.hvac_mode ? n(e.hvac_mode) : e.action === "turn_off" ? n("off") : t.keepMode;
 }
 //#endregion
@@ -17506,124 +21462,124 @@ function Ba(e, t, n) {
 function H(e) {
 	return e;
 }
-function Va(e, t = "schedule", n = e._selectedEntity) {
+function Ya(e, t = "schedule", n = e._selectedEntity) {
 	return t === "template" ? e._templateTemperatureLimits() : e._entityTemperatureLimits(n);
 }
-function Ha(e, t) {
-	return Ct(t ? e.hass?.states?.[t] : void 0, e._temperatureUnit(t));
+function Xa(e, t) {
+	return jt(t ? e.hass?.states?.[t] : void 0, e._temperatureUnit(t));
 }
-function Ua(e) {
-	return Kt((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureLimits(t)));
+function Za(e) {
+	return en((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureLimits(t)));
 }
-function Wa(e, t = "schedule", n = e._selectedEntity) {
-	return t === "template" ? qt((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureStep(t))) : e._entityTemperatureStep(n);
+function Qa(e, t = "schedule", n = e._selectedEntity) {
+	return t === "template" ? tn((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureStep(t))) : e._entityTemperatureStep(n);
 }
-function Ga(e, t) {
-	return wt(t ? e.hass?.states?.[t] : void 0);
+function $a(e, t) {
+	return Mt(t ? e.hass?.states?.[t] : void 0);
 }
-function Ka(e, t) {
+function eo(e, t) {
 	return !!e.hass?.states?.[t];
 }
-function qa(e, t) {
+function to(e, t) {
 	return e.hass?.states?.[t]?.attributes?.friendly_name ?? t;
 }
-function Ja(e, t) {
-	return Et(e.hass?.states?.[t]);
+function no(e, t) {
+	return Pt(e.hass?.states?.[t]);
 }
-function Ya(e, t = "schedule") {
+function ro(e, t = "schedule") {
 	if (t === "template") {
 		let t = e._data?.configured_entities ?? [];
 		return e._uniqueModes(t.flatMap((t) => e._climateSupportedModes(t)));
 	}
 	return e._uniqueModes(e._selectedEntity ? e._climateSupportedModes(e._selectedEntity) : []);
 }
-function Xa(e, t = "schedule") {
-	return vo(e, t, jt);
-}
-function Za(e, t) {
-	return so(jt(e.hass?.states?.[t]));
-}
-function Qa(e, t = "schedule") {
-	return vo(e, t, Mt);
-}
-function $a(e, t) {
-	return so(Mt(e.hass?.states?.[t]));
-}
-function eo(e, t = "schedule") {
-	return vo(e, t, Nt);
-}
-function to(e, t) {
-	return so(Nt(e.hass?.states?.[t]));
-}
-function no(e, t = "schedule") {
-	return vo(e, t, Pt);
-}
-function ro(e, t) {
-	return so(Pt(e.hass?.states?.[t]));
-}
 function io(e, t = "schedule") {
-	if (t === "template") {
-		let t = (e._data?.configured_entities ?? []).map((t) => Ft(e.hass?.states?.[t])).filter((e) => !!e);
-		return t.length ? [Math.min(...t.map((e) => e[0])), Math.max(...t.map((e) => e[1]))] : void 0;
-	}
-	return e._selectedEntity ? Ft(e.hass?.states?.[e._selectedEntity]) : void 0;
+	return Eo(e, t, zt);
 }
 function ao(e, t) {
-	return Ft(e.hass?.states?.[t]);
+	return go(zt(e.hass?.states?.[t]));
 }
-function oo(e) {
-	return It(e);
+function oo(e, t = "schedule") {
+	return Eo(e, t, Bt);
 }
-function so(e) {
+function so(e, t) {
+	return go(Bt(e.hass?.states?.[t]));
+}
+function co(e, t = "schedule") {
+	return Eo(e, t, Vt);
+}
+function lo(e, t) {
+	return go(Vt(e.hass?.states?.[t]));
+}
+function uo(e, t = "schedule") {
+	return Eo(e, t, Ht);
+}
+function fo(e, t) {
+	return go(Ht(e.hass?.states?.[t]));
+}
+function po(e, t = "schedule") {
+	if (t === "template") {
+		let t = (e._data?.configured_entities ?? []).map((t) => Ut(e.hass?.states?.[t])).filter((e) => !!e);
+		return t.length ? [Math.min(...t.map((e) => e[0])), Math.max(...t.map((e) => e[1]))] : void 0;
+	}
+	return e._selectedEntity ? Ut(e.hass?.states?.[e._selectedEntity]) : void 0;
+}
+function mo(e, t) {
+	return Ut(e.hass?.states?.[t]);
+}
+function ho(e) {
+	return Wt(e);
+}
+function go(e) {
 	return [...new Set(e)].sort((e, t) => e.localeCompare(t));
 }
-function co(e, t) {
-	let n = Aa(t, e.hass?.states?.[t], e._climateSupportedModes(t)), r = n.messageKeys.map((t) => e._t(t));
+function _o(e, t) {
+	let n = Ra(t, e.hass?.states?.[t], e._climateSupportedModes(t)), r = n.messageKeys.map((t) => e._t(t));
 	return {
 		messages: r,
 		status: n.status,
 		tooltip: r.length ? r.join(" · ") : e._t("entityDiagnosticOk")
 	};
 }
-function lo(e, t) {
-	return Lt(e.hass?.states?.[t]).map((t) => ({
+function vo(e, t) {
+	return Gt(e.hass?.states?.[t]).map((t) => ({
 		icon: t.icon,
 		label: e._t(t.labelKey)
 	}));
 }
-function uo(e, t) {
-	return Na(t, e._dateLocale(), e.hass?.locale?.time_format);
+function yo(e, t) {
+	return Va(t, e._dateLocale(), e.hass?.locale?.time_format);
 }
-function fo(e, t) {
-	return Fa(t, e._dateLocale(), e.hass?.locale?.time_format);
+function bo(e, t) {
+	return Ua(t, e._dateLocale(), e.hass?.locale?.time_format);
 }
-function po(e) {
-	return ja(e._language());
+function xo(e) {
+	return za(e._language());
 }
-function mo(e, t, n) {
-	return La(t, e._temperatureUnit(n));
+function So(e, t, n) {
+	return Ga(t, e._temperatureUnit(n));
 }
-function ho(e, t) {
-	return za(t, {
+function Co(e, t) {
+	return qa(t, {
 		off: e._t("off"),
 		setTemperature: e._t("setTemperature")
 	}, (t, n) => e._formatTemperature(t, n));
 }
-function go(e, t) {
-	return Ba(t, { keepMode: e._t("keepMode") }, (t) => e._modeLabel(t));
+function wo(e, t) {
+	return Ja(t, { keepMode: e._t("keepMode") }, (t) => e._modeLabel(t));
 }
-function _o(e, t) {
-	return e._data?.temperature_unit ?? Ra(void 0, e.hass?.config?.unit_system?.temperature);
+function To(e, t) {
+	return e._data?.temperature_unit ?? Ka(void 0, e.hass?.config?.unit_system?.temperature);
 }
-function vo(e, t, n) {
-	return so(t === "template" ? (e._data?.configured_entities ?? []).flatMap((t) => n(e.hass?.states?.[t])) : e._selectedEntity ? n(e.hass?.states?.[e._selectedEntity]) : []);
+function Eo(e, t, n) {
+	return go(t === "template" ? (e._data?.configured_entities ?? []).flatMap((t) => n(e.hass?.states?.[t])) : e._selectedEntity ? n(e.hass?.states?.[e._selectedEntity]) : []);
 }
 //#endregion
 //#region src/velair/controllers/template-actions.ts
 function U(e) {
 	return e;
 }
-function yo(e, t) {
+function Do(e, t) {
 	e._selectedTemplateKey = t;
 	let n = e._scheduleTemplates().find((e) => e.key === t);
 	if (e._templateDraftKey !== t && (e._resetTemplateDraft(n), e._templateApplyOpen = !1, e._templateApplyTargets = /* @__PURE__ */ new Set()), e._templateNameDraftKey === t) {
@@ -17632,7 +21588,7 @@ function yo(e, t) {
 	}
 	e._templateNameDraftKey = t, e._templateNameDraft = n ? e._templateLabel(n) : "", e._saveMessage = void 0;
 }
-function bo(e, t) {
+function Oo(e, t) {
 	let n = e._selectedTemplateKey;
 	if (e._selectedTemplateKey = t, e._saveMessage = void 0, t) {
 		if (!e._applySelectedTemplate()) {
@@ -17642,14 +21598,14 @@ function bo(e, t) {
 		e._selectedTemplateKey = "";
 	}
 }
-function xo(e, t) {
-	e._templateDraftKey = t?.key ?? "", e._templateDraftBlocks = t ? Fo(t.blocks) : [], e._templateDirty = !1;
+function ko(e, t) {
+	e._templateDraftKey = t?.key ?? "", e._templateDraftBlocks = t ? Uo(t.blocks) : [], e._templateDirty = !1;
 }
-function So(e, t) {
+function Ao(e, t) {
 	let n = ["template-list-wrap"];
 	return t > 5 && n.push("scrollable"), e._templateListCanScrollUp && n.push("can-scroll-up"), e._templateListCanScrollDown && n.push("can-scroll-down"), n.join(" ");
 }
-function Co(e) {
+function jo(e) {
 	let t = e.renderRoot.querySelector(".template-list");
 	if (!(t instanceof HTMLElement)) {
 		e._setTemplateListScrollIndicators(!1, !1);
@@ -17658,16 +21614,16 @@ function Co(e) {
 	let n = t.scrollHeight > t.clientHeight + 1, r = n && t.scrollTop > 1, i = n && t.scrollTop + t.clientHeight < t.scrollHeight - 1;
 	e._setTemplateListScrollIndicators(r, i);
 }
-function wo(e, t, n) {
+function Mo(e, t, n) {
 	e._templateListCanScrollUp !== t && (e._templateListCanScrollUp = t), e._templateListCanScrollDown !== n && (e._templateListCanScrollDown = n);
 }
-function To(e, t) {
+function No(e, t) {
 	return e._templateNameDraftKey === t.key ? e._templateNameDraft : e._templateLabel(t);
 }
-function Eo(e, t, n) {
+function Po(e, t, n) {
 	e._templateNameDraftKey = t, e._templateNameDraft = n, e._templateDirty = !0, e._saveMessage = void 0;
 }
-async function Do(e) {
+async function Fo(e) {
 	let t = e._api();
 	if (!t || e._templateAction) return;
 	let n = e._newTemplateKey(), r = e._uniqueTemplateName(e._t("newTemplate"));
@@ -17681,7 +21637,7 @@ async function Do(e) {
 		e._templateAction = void 0;
 	}
 }
-async function Oo(e, t) {
+async function Io(e, t) {
 	let n = e._api();
 	if (!n || e._templateAction) return;
 	let r = e._templateNameInputValue(t).trim();
@@ -17704,19 +21660,19 @@ async function Oo(e, t) {
 		e._templateAction = void 0;
 	}
 }
-function ko(e, t) {
-	return fr(t, e._scheduleTemplates());
+function Lo(e, t) {
+	return br(t, e._scheduleTemplates());
 }
-function Ao(e) {
+function Ro(e) {
 	e._templateApplyOpen = !e._templateApplyOpen, e._saveMessage = void 0;
 }
-function jo(e, t) {
-	return mr(e, t);
+function zo(e, t) {
+	return Sr(e, t);
 }
-function Mo(e, t, n, r) {
-	!k.includes(n) || !(e._data?.configured_entities ?? []).includes(t) || (e._templateApplyTargets = hr(e._templateApplyTargets, t, n, r), e._saveMessage = void 0);
+function Bo(e, t, n, r) {
+	!k.includes(n) || !(e._data?.configured_entities ?? []).includes(t) || (e._templateApplyTargets = Cr(e._templateApplyTargets, t, n, r), e._saveMessage = void 0);
 }
-async function No(e, t) {
+async function Vo(e, t) {
 	let n = e._api();
 	if (!n || e._applyingTemplateTargets || e._templateApplyTargets.size === 0) return;
 	let r = e._normalizeDraftBlocks("template");
@@ -17724,7 +21680,7 @@ async function No(e, t) {
 		e._error = r.error;
 		return;
 	}
-	let i = gr(e._templateApplyTargets, e._data?.configured_entities ?? []);
+	let i = wr(e._templateApplyTargets, e._data?.configured_entities ?? []);
 	if (i.length) {
 		for (let t of i) {
 			let n = e._unsupportedModeError(r.blocks, t.entityId);
@@ -17745,7 +21701,7 @@ async function No(e, t) {
 		}
 	}
 }
-function Po(e) {
+function Ho(e) {
 	let t = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
 	if (!t) return !1;
 	if (e._selectedEntity) {
@@ -17755,9 +21711,9 @@ function Po(e) {
 	return e._draftBlocks.length && !window.confirm(e._t("confirmTemplate", {
 		template: e._templateLabel(t),
 		weekday: e._weekdayName(e._selectedWeekday)
-	})) ? !1 : (e._draftBlocks = Fo(t.blocks), e._markDirty(), e._saveMessage = void 0, !0);
+	})) ? !1 : (e._draftBlocks = Uo(t.blocks), e._markDirty(), e._saveMessage = void 0, !0);
 }
-function Fo(e) {
+function Uo(e) {
 	return e.map((e) => {
 		let t = {
 			action: e.action,
@@ -17767,7 +21723,7 @@ function Fo(e) {
 		return e.target_temp_low !== void 0 || e.target_temp_high !== void 0 ? (t.target_temp_low = e.target_temp_low, t.target_temp_high = e.target_temp_high) : t.temperature = e.temperature, e.fan_mode && (t.fan_mode = e.fan_mode), e.preset_mode && (t.preset_mode = e.preset_mode), e.swing_mode && (t.swing_mode = e.swing_mode), e.swing_horizontal_mode && (t.swing_horizontal_mode = e.swing_horizontal_mode), String(e.humidity ?? "").trim() && (t.humidity = e.humidity), t;
 	});
 }
-async function Io(e, t) {
+async function Wo(e, t) {
 	let n = e._api();
 	if (!n || e._templateAction) return;
 	let r = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
@@ -17789,10 +21745,10 @@ async function Io(e, t) {
 		e._templateAction = void 0;
 	}
 }
-function Lo() {
-	return pr();
+function Go() {
+	return xr();
 }
-async function Ro(e) {
+async function Ko(e) {
 	let t = e._api();
 	if (!t || e._templateAction) return;
 	let n = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
@@ -17810,13 +21766,13 @@ async function Ro(e) {
 }
 //#endregion
 //#region src/velair/host-types.ts
-function zo(e) {
+function qo(e) {
 	return e;
 }
 //#endregion
 //#region src/velair/domain/schedule-compatibility.ts
-var Bo = 1e-4;
-function Vo(e, t, n) {
+var Jo = 1e-4;
+function Yo(e, t, n) {
 	let r = 0;
 	for (let [i, a] of Object.entries(e)) {
 		let e = n(i);
@@ -17826,23 +21782,23 @@ function Vo(e, t, n) {
 			n.temperature,
 			n.target_temp_low,
 			n.target_temp_high
-		].filter((e) => typeof e == "number" && Number.isFinite(e)).some((t) => t < o || t > s || Math.abs(t / e - Math.round(t / e)) > Bo) && (r += 1);
+		].filter((e) => typeof e == "number" && Number.isFinite(e)).some((t) => t < o || t > s || Math.abs(t / e - Math.round(t / e)) > Jo) && (r += 1);
 	}
 	return r;
 }
 //#endregion
 //#region node_modules/lit-html/directive.js
-var Ho = {
+var Xo = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Uo = (e) => (...t) => ({
+}, Zo = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), Wo = class {
+}), Qo = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -17856,9 +21812,9 @@ var Ho = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: Go } = Re, Ko = (e) => e, qo = () => document.createComment(""), Jo = (e, t, n) => {
+}, { I: $o } = Re, es = (e) => e, ts = () => document.createComment(""), ns = (e, t, n) => {
 	let r = e._$AA.parentNode, i = t === void 0 ? e._$AB : t._$AA;
-	if (n === void 0) n = new Go(r.insertBefore(qo(), i), r.insertBefore(qo(), i), e, e.options);
+	if (n === void 0) n = new $o(r.insertBefore(ts(), i), r.insertBefore(ts(), i), e, e.options);
 	else {
 		let t = n._$AB.nextSibling, a = n._$AM, o = a !== e;
 		if (o) {
@@ -17868,21 +21824,21 @@ var Ho = {
 		if (t !== i || o) {
 			let e = n._$AA;
 			for (; e !== t;) {
-				let t = Ko(e).nextSibling;
-				Ko(r).insertBefore(e, i), e = t;
+				let t = es(e).nextSibling;
+				es(r).insertBefore(e, i), e = t;
 			}
 		}
 	}
 	return n;
-}, Yo = (e, t, n = e) => (e._$AI(t, n), e), Xo = {}, Zo = (e, t = Xo) => e._$AH = t, Qo = (e) => e._$AH, $o = (e) => {
+}, rs = (e, t, n = e) => (e._$AI(t, n), e), is = {}, as = (e, t = is) => e._$AH = t, os = (e) => e._$AH, ss = (e) => {
 	e._$AR(), e._$AA.remove();
-}, es = (e, t, n) => {
+}, cs = (e, t, n) => {
 	let r = /* @__PURE__ */ new Map();
 	for (let i = t; i <= n; i++) r.set(e[i], i);
 	return r;
-}, ts = Uo(class extends Wo {
+}, ls = Zo(class extends Qo {
 	constructor(e) {
-		if (super(e), e.type !== Ho.CHILD) throw Error("repeat() can only be used in text expressions");
+		if (super(e), e.type !== Xo.CHILD) throw Error("repeat() can only be used in text expressions");
 	}
 	dt(e, t, n) {
 		let r;
@@ -17898,52 +21854,52 @@ var Ho = {
 		return this.dt(e, t, n).values;
 	}
 	update(e, [t, n, r]) {
-		let i = Qo(e), { values: a, keys: o } = this.dt(t, n, r);
+		let i = os(e), { values: a, keys: o } = this.dt(t, n, r);
 		if (!Array.isArray(i)) return this.ut = o, a;
 		let s = this.ut ??= [], c = [], l, u, d = 0, f = i.length - 1, p = 0, m = a.length - 1;
 		for (; d <= f && p <= m;) if (i[d] === null) d++;
 		else if (i[f] === null) f--;
-		else if (s[d] === o[p]) c[p] = Yo(i[d], a[p]), d++, p++;
-		else if (s[f] === o[m]) c[m] = Yo(i[f], a[m]), f--, m--;
-		else if (s[d] === o[m]) c[m] = Yo(i[d], a[m]), Jo(e, c[m + 1], i[d]), d++, m--;
-		else if (s[f] === o[p]) c[p] = Yo(i[f], a[p]), Jo(e, i[d], i[f]), f--, p++;
-		else if (l === void 0 && (l = es(o, p, m), u = es(s, d, f)), l.has(s[d])) if (l.has(s[f])) {
+		else if (s[d] === o[p]) c[p] = rs(i[d], a[p]), d++, p++;
+		else if (s[f] === o[m]) c[m] = rs(i[f], a[m]), f--, m--;
+		else if (s[d] === o[m]) c[m] = rs(i[d], a[m]), ns(e, c[m + 1], i[d]), d++, m--;
+		else if (s[f] === o[p]) c[p] = rs(i[f], a[p]), ns(e, i[d], i[f]), f--, p++;
+		else if (l === void 0 && (l = cs(o, p, m), u = cs(s, d, f)), l.has(s[d])) if (l.has(s[f])) {
 			let t = u.get(o[p]), n = t === void 0 ? null : i[t];
 			if (n === null) {
-				let t = Jo(e, i[d]);
-				Yo(t, a[p]), c[p] = t;
-			} else c[p] = Yo(n, a[p]), Jo(e, i[d], n), i[t] = null;
+				let t = ns(e, i[d]);
+				rs(t, a[p]), c[p] = t;
+			} else c[p] = rs(n, a[p]), ns(e, i[d], n), i[t] = null;
 			p++;
-		} else $o(i[f]), f--;
-		else $o(i[d]), d++;
+		} else ss(i[f]), f--;
+		else ss(i[d]), d++;
 		for (; p <= m;) {
-			let t = Jo(e, c[m + 1]);
-			Yo(t, a[p]), c[p++] = t;
+			let t = ns(e, c[m + 1]);
+			rs(t, a[p]), c[p++] = t;
 		}
 		for (; d <= f;) {
 			let e = i[d++];
-			e !== null && $o(e);
+			e !== null && ss(e);
 		}
-		return this.ut = o, Zo(e, c), we;
+		return this.ut = o, as(e, c), we;
 	}
 });
 //#endregion
 //#region src/velair/views/notice-view.ts
-function ns(e) {
+function us(e) {
 	return T`
     <div class="notice-stack contextual" aria-live="polite" aria-relevant="additions text">
-      ${ts(e, (e) => e.id, (e) => is(void 0, e, !0))}
+      ${ls(e, (e) => e.id, (e) => fs(void 0, e, !0))}
     </div>
   `;
 }
-function rs(e, t) {
+function ds(e, t) {
 	return t.length ? T`
     <div class="notice-stack floating">
-      ${ts(t, (e) => e.id, (t) => is(e, t, !1))}
+      ${ls(t, (e) => e.id, (t) => fs(e, t, !1))}
     </div>
   ` : E;
 }
-function is(e, t, n) {
+function fs(e, t, n) {
 	return T`
     <div class=${`notice-row ${t.phase ?? "active"}`} data-notice-id=${t.id}>
       <div
@@ -17967,14 +21923,14 @@ function is(e, t, n) {
 }
 //#endregion
 //#region src/velair/views/operation-status-view.ts
-var as = "velair-operation-status-dismissed", os;
-function ss(e) {
-	os = e, window.dispatchEvent(new CustomEvent(as, { detail: e }));
+var ps = "velair-operation-status-dismissed", ms;
+function hs(e) {
+	ms = e, window.dispatchEvent(new CustomEvent(ps, { detail: e }));
 }
-function cs(e, t, n = Date.now()) {
-	return e.id === t || e.id === os ? !1 : e.state === "completed" && e.finished_at && Number.isFinite(Date.parse(e.finished_at)) ? n - Date.parse(e.finished_at) < Ze : !0;
+function gs(e, t, n = Date.now()) {
+	return e.id === t || e.id === ms ? !1 : e.state === "completed" && e.finished_at && Number.isFinite(Date.parse(e.finished_at)) ? n - Date.parse(e.finished_at) < Ze : !0;
 }
-function ls(e, t) {
+function _s(e, t) {
 	let n = Math.max(0, t.total), r = Math.max(0, Math.min(t.completed, n)), i = n > 0 ? Math.round(r / n * 100) : 100, a = t.state === "completed_with_errors" || t.state === "failed";
 	return T`
     <section
@@ -17985,11 +21941,11 @@ function ls(e, t) {
       data-operation-id=${t.id}
     >
       <div class="operation-status-icon" aria-hidden="true">
-        ${t.state === "running" ? T`<span class="operation-status-spinner"></span>` : T`<ha-icon icon=${ps(t.state)}></ha-icon>`}
+        ${t.state === "running" ? T`<span class="operation-status-spinner"></span>` : T`<ha-icon icon=${xs(t.state)}></ha-icon>`}
       </div>
       <div class="operation-status-copy">
-        <strong>${us(e, t)}</strong>
-        <span>${ds(e, t, r, n)}</span>
+        <strong>${vs(e, t)}</strong>
+        <span>${ys(e, t, r, n)}</span>
       </div>
       <div class="operation-status-actions">
         ${n > 0 ? T`<span class="operation-status-count" aria-hidden="true">${r}/${n}</span>` : E}
@@ -18019,11 +21975,11 @@ function ls(e, t) {
     </section>
   `;
 }
-function us(e, t) {
-	let n = fs(e, t), r = t.state === "running" ? "Running" : t.state === "completed" ? "Completed" : t.state === "completed_with_errors" ? "Partial" : "Failed";
+function vs(e, t) {
+	let n = bs(e, t), r = t.state === "running" ? "Running" : t.state === "completed" ? "Completed" : t.state === "completed_with_errors" ? "Partial" : "Failed";
 	return !t.target_id || t.target_id === "default" ? e._t(`operationDefault${r}`) : e._t(t.kind === "mode_change" ? `operationMode${r}` : `operationProfile${r}`, { target: n });
 }
-function ds(e, t, n, r) {
+function ys(e, t, n, r) {
 	let i = [r > 0 ? e._t("operationProgress", {
 		completed: n,
 		total: r
@@ -18037,21 +21993,21 @@ function ds(e, t, n, r) {
 	}
 	return t.state === "failed" && i.push(t.error_code === "cancelled" ? e._t("operationCancelled") : t.error_message || e._t("operationFailedHelp")), i.join(" · ");
 }
-function fs(e, t) {
+function bs(e, t) {
 	return t.kind === "mode_change" ? t.target_id === "default" ? e._t("modeDefault") : t.target_id === "manual" ? e._t("modeManual") : e._data?.modes?.find((e) => e.key === t.target_id)?.name ?? t.target_id ?? e._t("modeLabel") : e._data?.profiles?.find((e) => e.key === t.target_id)?.name ?? t.target_id ?? e._t("profiles");
 }
-function ps(e) {
+function xs(e) {
 	return e === "completed" ? "mdi:check-circle" : e === "completed_with_errors" ? "mdi:alert-circle" : "mdi:close-circle";
 }
 //#endregion
 //#region src/velair/domain/comfort.ts
-function ms(e, t) {
+function Ss(e, t) {
 	return {
-		...hs(t),
+		...Cs(t),
 		...e
 	};
 }
-function hs(e) {
+function Cs(e) {
 	let t = e.toUpperCase().includes("F");
 	return {
 		enabled: !1,
@@ -18068,7 +22024,7 @@ function hs(e) {
 		stale_after_minutes: 120
 	};
 }
-function gs(e, t, n) {
+function ws(e, t, n) {
 	let r = e?.states ?? {}, i = Object.entries(r).filter(([e, r]) => {
 		if (e === t) return !0;
 		if (!e.startsWith("sensor.")) return !1;
@@ -18083,32 +22039,32 @@ function gs(e, t, n) {
 		label: t
 	}), i;
 }
-function _s(e) {
+function Ts(e) {
 	return e?.availability === "current" && typeof e.value == "number" && typeof e.min == "number" && typeof e.max == "number";
 }
-function vs(e, t, n) {
+function Es(e, t, n) {
 	let r = Math.max(n - t, .1), i = t - r, a = n + r, o = (e - i) / (a - i) * 100;
 	return Math.max(4, Math.min(96, o));
 }
-function ys(e, t, n) {
+function Ds(e, t, n) {
 	let r = Math.min(400, t * .5), i = Math.max(n * 1.25, r + 1), a = (e - r) / (i - r) * 100;
 	return Math.max(4, Math.min(96, a));
 }
 //#endregion
 //#region src/velair/views/comfort-view.ts
-var bs = "__humidity_not_monitored__", xs = {
+var Os = "__humidity_not_monitored__", ks = {
 	showConfiguration: !0,
 	showTemperature: !0,
 	showHumidity: !0,
 	showCo2: !0
-}, Ss = {
+}, As = {
 	comfortTemperatureRange: "comfortTemperatureRangeHelp",
 	comfortHumidityRange: "comfortHumidityRangeHelp",
 	comfortCo2Limits: "comfortCo2LimitsHelp",
 	comfortStaleAfter: "comfortStaleAfterHelp"
 };
-function Cs(e, t, n = {}) {
-	let r = ws(n);
+function js(e, t, n = {}) {
+	let r = Ms(n);
 	return T`
     <section class="comfort-view">
       <header class="comfort-intro">
@@ -18118,18 +22074,18 @@ function Cs(e, t, n = {}) {
           <small>${e._t("comfortIntroDetail")}</small>
         </span>
       </header>
-      ${t.length ? t.map((t) => Ts(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+      ${t.length ? t.map((t) => Ns(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
     </section>
   `;
 }
-function ws(e) {
+function Ms(e) {
 	return {
-		...xs,
+		...ks,
 		...e
 	};
 }
-function Ts(e, t, n) {
-	let r = e._entityExists(t), i = ms(e._data?.zones[t]?.comfort, e._temperatureUnit(t)), a = e._data?.comfort?.[t], o = r && e._expandedComfortZones.has(t), s = `comfort-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "comfortCollapseClimate" : "comfortExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("comfortUnavailable");
+function Ns(e, t, n) {
+	let r = e._entityExists(t), i = Ss(e._data?.zones[t]?.comfort, e._temperatureUnit(t)), a = e._data?.comfort?.[t], o = r && e._expandedComfortZones.has(t), s = `comfort-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "comfortCollapseClimate" : "comfortExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("comfortUnavailable");
 	return T`
     <section class=${`comfort-zone ${i.enabled ? "enabled" : "disabled"} ${o ? "expanded" : "collapsed"}`}>
       <header class="comfort-zone-heading" @click=${(n) => {
@@ -18160,7 +22116,7 @@ function Ts(e, t, n) {
           </span>
         </button>
         <div class="comfort-zone-actions" @click=${(e) => e.stopPropagation()}>
-          ${i.enabled ? Ns(e, a) : E}
+          ${i.enabled ? Vs(e, a) : E}
           <ha-switch
             .checked=${i.enabled}
             ?disabled=${e._settingsSaving || !r}
@@ -18173,14 +22129,14 @@ function Ts(e, t, n) {
       </header>
       ${r && o ? T`
             <div id=${s} class="comfort-zone-content">
-              ${i.enabled ? Ds(e, t, a, n) : Es(e)}
-              ${n.showConfiguration ? Ps(e, t, i) : E}
+              ${i.enabled ? Fs(e, t, a, n) : Ps(e)}
+              ${n.showConfiguration ? Hs(e, t, i) : E}
             </div>
           ` : E}
     </section>
   `;
 }
-function Es(e) {
+function Ps(e) {
 	return T`
     <section class="comfort-assessment-card idle">
       <ha-icon icon="mdi:power-standby"></ha-icon>
@@ -18188,24 +22144,24 @@ function Es(e) {
     </section>
   `;
 }
-function Ds(e, t, n, r = xs) {
+function Fs(e, t, n, r = ks) {
 	return n?.enabled ? T`
     <section class="comfort-assessment-card">
       <div class="comfort-assessment-heading">
         <span>
-          <ha-icon icon=${Ks(n.condition)}></ha-icon>
-          <strong>${Gs(e, n)}</strong>
+          <ha-icon icon=${ec(n.condition)}></ha-icon>
+          <strong>${$s(e, n)}</strong>
         </span>
-        ${Ws(e, n.air_quality)}
+        ${Qs(e, n.air_quality)}
       </div>
-      ${Os(e, t, n, r)}
+      ${Is(e, t, n, r)}
     </section>
-  ` : Es(e);
+  ` : Ps(e);
 }
-function Os(e, t, n, r) {
-	let i = r.showTemperature ? n.temperature : void 0, a = r.showHumidity ? n.humidity : void 0, o = _s(i), s = _s(a), c = r.showTemperature || r.showHumidity, l = r.showCo2 && ks(n.co2), u, d = !0;
+function Is(e, t, n, r) {
+	let i = r.showTemperature ? n.temperature : void 0, a = r.showHumidity ? n.humidity : void 0, o = Ts(i), s = Ts(a), c = r.showTemperature || r.showHumidity, l = r.showCo2 && Ls(n.co2), u, d = !0;
 	if (o && s) {
-		let n = vs(i.value, i.min, i.max), r = 100 - vs(a.value, a.min, a.max), o = [
+		let n = Es(i.value, i.min, i.max), r = 100 - Es(a.value, a.min, a.max), o = [
 			"comfort-map-marker",
 			r < 30 ? "label-below" : "",
 			n < 18 ? "label-left" : "",
@@ -18262,24 +22218,24 @@ function Os(e, t, n, r) {
         </div>
       </div>
     `;
-	} else o ? u = As(e, t, i, "comfortTemperature") : s ? u = As(e, t, a, "comfortHumidity") : c ? u = T`
+	} else o ? u = Rs(e, t, i, "comfortTemperature") : s ? u = Rs(e, t, a, "comfortHumidity") : c ? u = T`
       <div class="comfort-no-readings">
         <ha-icon icon=${n.data_quality === "stale" ? "mdi:clock-alert-outline" : "mdi:sensor-off"}></ha-icon>
-        <span>${Gs(e, n)}</span>
+        <span>${$s(e, n)}</span>
       </div>
     ` : (u = E, d = !1);
 	return !d && !l ? E : T`
     <div class="comfort-visuals">
       ${u}
-      ${l ? js(e, n.co2) : E}
+      ${l ? zs(e, n.co2) : E}
     </div>
   `;
 }
-function ks(e) {
+function Ls(e) {
 	return e?.availability === "current" && typeof e.value == "number" && typeof e.attention == "number" && typeof e.max == "number";
 }
-function As(e, t, n, r) {
-	let i = vs(n.value, n.min, n.max), a = n.metric === "temperature" ? e._formatTemperature(n.value, t) : `${Math.round(n.value)}%`, o = n.metric === "temperature" ? e._formatTemperature(n.min, t) : `${Math.round(n.min)}%`, s = n.metric === "temperature" ? e._formatTemperature(n.max, t) : `${Math.round(n.max)}%`;
+function Rs(e, t, n, r) {
+	let i = Es(n.value, n.min, n.max), a = n.metric === "temperature" ? e._formatTemperature(n.value, t) : `${Math.round(n.value)}%`, o = n.metric === "temperature" ? e._formatTemperature(n.min, t) : `${Math.round(n.min)}%`, s = n.metric === "temperature" ? e._formatTemperature(n.max, t) : `${Math.round(n.max)}%`;
 	return T`
     <div class=${`comfort-range-scale metric-${n.metric}`}>
       <header>
@@ -18296,9 +22252,9 @@ function As(e, t, n, r) {
     </div>
   `;
 }
-function js(e, t) {
+function zs(e, t) {
 	if (t?.availability !== "current" || typeof t.value != "number" || typeof t.attention != "number" || typeof t.max != "number") return E;
-	let n = ys(t.value, t.attention, t.max), r = ys(t.attention, t.attention, t.max), i = ys(t.max, t.attention, t.max);
+	let n = Ds(t.value, t.attention, t.max), r = Ds(t.attention, t.attention, t.max), i = Ds(t.max, t.attention, t.max);
 	return T`
     <div class="comfort-co2-scale">
       <header>
@@ -18319,47 +22275,47 @@ function js(e, t) {
     </div>
   `;
 }
-function Ms(e, t) {
+function Bs(e, t) {
 	if (!t?.enabled || t.data_quality === "complete") return E;
-	let n = t.data_issues.length ? t.data_issues.map((t) => e._t(Xs(t))).join(" · ") : e._t(Ys(t.data_quality));
+	let n = t.data_issues.length ? t.data_issues.map((t) => e._t(ic(t))).join(" · ") : e._t(rc(t.data_quality));
 	return T`
     <span
       class="comfort-data-warning"
       tabindex="0"
       title=${n}
-      aria-label=${e._t(Ys(t.data_quality))}
+      aria-label=${e._t(rc(t.data_quality))}
     >
       <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
       <span class="comfort-help-tooltip" role="tooltip">${n}</span>
     </span>
   `;
 }
-function Ns(e, t) {
+function Vs(e, t) {
 	return T`
     <span class="comfort-assessment-summary">
       <span class="comfort-assessment-line">
-        ${Us(e, t)}
-        ${t ? Ws(e, t.air_quality) : E}
-        ${Ms(e, t)}
+        ${Zs(e, t)}
+        ${t ? Qs(e, t.air_quality) : E}
+        ${Bs(e, t)}
       </span>
     </span>
   `;
 }
-function Ps(e, t, n) {
-	let [r, i] = lr(e._temperatureUnit(t)), a = Ls(e, t, n, "temperature_entity_id", "temperature"), o = Ls(e, t, n, "humidity_entity_id", "humidity"), s = Ls(e, t, n, "co2_entity_id", "co2");
+function Hs(e, t, n) {
+	let [r, i] = _r(e._temperatureUnit(t)), a = Gs(e, t, n, "temperature_entity_id", "temperature"), o = Gs(e, t, n, "humidity_entity_id", "humidity"), s = Gs(e, t, n, "co2_entity_id", "co2");
 	return T`
     <section class="comfort-config-section">
       <h3><ha-icon icon="mdi:clock-check-outline"></ha-icon>${e._t("comfortDataFreshness")}</h3>
       <div class="comfort-config-rows">
-        ${Bs(e, t, "comfortStaleAfter", "stale_after_minutes", n.stale_after_minutes, 5, 1440, 5, e._t("minutesShort"))}
+        ${Js(e, t, "comfortStaleAfter", "stale_after_minutes", n.stale_after_minutes, 5, 1440, 5, e._t("minutesShort"))}
       </div>
     </section>
-    ${Fs(e, "comfortTemperature", "mdi:thermometer", Is(e, t, n, "temperature_entity_id", "temperature", "comfortTemperatureSensor"), a ? zs(e, t, "comfortTemperatureRange", "temperature_min", n.temperature_min, "temperature_max", n.temperature_max, r, i, .5, e._temperatureUnit(t), "comfortMinimum", "comfortMaximum") : E)}
-    ${Fs(e, "comfortHumidity", "mdi:water-percent", Is(e, t, n, "humidity_entity_id", "humidity", "comfortHumiditySensor"), o ? zs(e, t, "comfortHumidityRange", "humidity_min", n.humidity_min, "humidity_max", n.humidity_max, 0, 100, 1, "%", "comfortMinimum", "comfortMaximum") : E)}
-    ${Fs(e, "comfortCo2", "mdi:molecule-co2", Is(e, t, n, "co2_entity_id", "co2", "comfortCo2Sensor"), s ? zs(e, t, "comfortCo2Limits", "co2_attention", n.co2_attention, "co2_poor", n.co2_poor, 400, 1e4, 50, "ppm", "comfortCo2Attention", "comfortCo2Poor") : E)}
+    ${Us(e, "comfortTemperature", "mdi:thermometer", Ws(e, t, n, "temperature_entity_id", "temperature", "comfortTemperatureSensor"), a ? qs(e, t, "comfortTemperatureRange", "temperature_min", n.temperature_min, "temperature_max", n.temperature_max, r, i, .5, e._temperatureUnit(t), "comfortMinimum", "comfortMaximum") : E)}
+    ${Us(e, "comfortHumidity", "mdi:water-percent", Ws(e, t, n, "humidity_entity_id", "humidity", "comfortHumiditySensor"), o ? qs(e, t, "comfortHumidityRange", "humidity_min", n.humidity_min, "humidity_max", n.humidity_max, 0, 100, 1, "%", "comfortMinimum", "comfortMaximum") : E)}
+    ${Us(e, "comfortCo2", "mdi:molecule-co2", Ws(e, t, n, "co2_entity_id", "co2", "comfortCo2Sensor"), s ? qs(e, t, "comfortCo2Limits", "co2_attention", n.co2_attention, "co2_poor", n.co2_poor, 400, 1e4, 50, "ppm", "comfortCo2Attention", "comfortCo2Poor") : E)}
   `;
 }
-function Fs(e, t, n, r, i) {
+function Us(e, t, n, r, i) {
 	return T`
     <section class="comfort-config-section comfort-metric-config-section">
       <h3><ha-icon icon=${n}></ha-icon>${e._t(t)}</h3>
@@ -18370,11 +22326,11 @@ function Fs(e, t, n, r, i) {
     </section>
   `;
 }
-function Is(e, t, n, r, i, a) {
-	let o = n[r] ?? "", s = i === "humidity" && !n.humidity_enabled ? bs : o, c = gs(e.hass, o, i), l = Rs(e, t, n, r, i), u = i === "co2" ? "comfortDoNotMonitor" : "comfortSelectSensor";
+function Ws(e, t, n, r, i, a) {
+	let o = n[r] ?? "", s = i === "humidity" && !n.humidity_enabled ? Os : o, c = ws(e.hass, o, i), l = Ks(e, t, n, r, i), u = i === "co2" ? "comfortDoNotMonitor" : "comfortSelectSensor";
 	return T`
     <label class="comfort-config-row comfort-picker-row">
-      ${Hs(e, a)}
+      ${Xs(e, a)}
       <span class="select-wrap comfort-select-wrap">
         <span class="comfort-select-control">
           <select
@@ -18384,7 +22340,7 @@ function Is(e, t, n, r, i, a) {
           @change=${(n) => {
 		let a = n.currentTarget.value.trim();
 		if (i === "humidity") {
-			if (a === bs) {
+			if (a === Os) {
 				e._saveZoneComfort(t, { humidity_enabled: !1 });
 				return;
 			}
@@ -18402,8 +22358,8 @@ function Is(e, t, n, r, i, a) {
           </option>
           ${i === "humidity" ? T`
                 <option
-                  value=${bs}
-                  ?selected=${s === bs}
+                  value=${Os}
+                  ?selected=${s === Os}
                 >
                   ${e._t("comfortDoNotMonitorHumidity")}
                 </option>
@@ -18420,7 +22376,7 @@ function Is(e, t, n, r, i, a) {
     </label>
   `;
 }
-function Ls(e, t, n, r, i) {
+function Gs(e, t, n, r, i) {
 	if (i === "humidity" && !n.humidity_enabled) return !1;
 	if (n[r]?.trim() || i === "temperature") return !0;
 	if (i === "humidity") {
@@ -18429,7 +22385,7 @@ function Ls(e, t, n, r, i) {
 	}
 	return !1;
 }
-function Rs(e, t, n, r, i) {
+function Ks(e, t, n, r, i) {
 	if (i === "humidity" && !n.humidity_enabled) return e._t("comfortNotMonitored");
 	let a = n[r]?.trim();
 	if (a) return a;
@@ -18443,40 +22399,40 @@ function Rs(e, t, n, r, i) {
 	}
 	return e._t("comfortNotMonitored");
 }
-function zs(e, t, n, r, i, a, o, s, c, l, u, d, f) {
+function qs(e, t, n, r, i, a, o, s, c, l, u, d, f) {
 	return T`
     <label class="comfort-config-row comfort-threshold-row">
-      ${Hs(e, n)}
+      ${Xs(e, n)}
       <span class="comfort-number-pair">
         <span class="comfort-number-field">
           <small>${e._t(d)}</small>
-          ${Vs(e, t, r, i, s, c, l)}
+          ${Ys(e, t, r, i, s, c, l)}
         </span>
         <span class="comfort-number-separator">–</span>
         <span class="comfort-number-field">
           <small>${e._t(f)}</small>
-          ${Vs(e, t, a, o, s, c, l)}
+          ${Ys(e, t, a, o, s, c, l)}
         </span>
         <span class="comfort-number-unit">${u}</span>
       </span>
     </label>
   `;
 }
-function Bs(e, t, n, r, i, a, o, s, c) {
+function Js(e, t, n, r, i, a, o, s, c) {
 	return T`
     <label class="comfort-config-row">
-      ${Hs(e, n)}
+      ${Xs(e, n)}
       <span class="comfort-number-single">
         <span class="comfort-number-field comfort-number-field-single">
           <small aria-hidden="true">&nbsp;</small>
-          ${Vs(e, t, r, i, a, o, s)}
+          ${Ys(e, t, r, i, a, o, s)}
         </span>
         <span class="comfort-number-single-unit">${c}</span>
       </span>
     </label>
   `;
 }
-function Vs(e, t, n, r, i, a, o) {
+function Ys(e, t, n, r, i, a, o) {
 	return T`
     <input
       type="number"
@@ -18492,8 +22448,8 @@ function Vs(e, t, n, r, i, a, o) {
     />
   `;
 }
-function Hs(e, t) {
-	let n = Ss[t], r = n ? e._t(n) : "";
+function Xs(e, t) {
+	let n = As[t], r = n ? e._t(n) : "";
 	return T`
     <span class="label comfort-config-label">
       <span>${e._t(t)}</span>
@@ -18506,24 +22462,24 @@ function Hs(e, t) {
     </span>
   `;
 }
-function Us(e, t) {
+function Zs(e, t) {
 	return T`
     <span class=${`comfort-condition-pill condition-${t?.condition ?? "monitoring_off"}`}>
-      ${t ? Gs(e, t) : e._t("comfortConditionMonitoringOff")}
+      ${t ? $s(e, t) : e._t("comfortConditionMonitoringOff")}
     </span>
   `;
 }
-function Ws(e, t) {
+function Qs(e, t) {
 	return t === "not_monitored" ? E : T`
     <span class=${`comfort-air-pill air-${t}`}>
-      ${e._t(Js(t))}
+      ${e._t(nc(t))}
     </span>
   `;
 }
-function Gs(e, t) {
-	return t.condition === "no_readings" && t.data_quality === "stale" ? e._t("comfortConditionReadingsOutdated") : e._t(qs(t.condition));
+function $s(e, t) {
+	return t.condition === "no_readings" && t.data_quality === "stale" ? e._t("comfortConditionReadingsOutdated") : e._t(tc(t.condition));
 }
-function Ks(e) {
+function ec(e) {
 	return {
 		cold: "mdi:snowflake-thermometer",
 		cold_and_dry: "mdi:snowflake",
@@ -18540,7 +22496,7 @@ function Ks(e) {
 		temperature_comfortable: "mdi:thermometer-check"
 	}[e];
 }
-function qs(e) {
+function tc(e) {
 	return {
 		cold: "comfortConditionCold",
 		cold_and_dry: "comfortConditionColdAndDry",
@@ -18557,7 +22513,7 @@ function qs(e) {
 		temperature_comfortable: "comfortConditionTemperatureComfortable"
 	}[e];
 }
-function Js(e) {
+function nc(e) {
 	return {
 		elevated: "comfortAirQualityElevated",
 		good: "comfortAirQualityGood",
@@ -18565,14 +22521,14 @@ function Js(e) {
 		unavailable: "comfortAirQualityUnavailable"
 	}[e];
 }
-function Ys(e) {
+function rc(e) {
 	return {
 		partial: "comfortDataPartial",
 		stale: "comfortDataStale",
 		unavailable: "comfortDataUnavailable"
 	}[e];
 }
-function Xs(e) {
+function ic(e) {
 	return {
 		co2_missing: "comfortDataIssueCo2Missing",
 		co2_stale: "comfortDataIssueCo2Stale",
@@ -18584,7 +22540,7 @@ function Xs(e) {
 }
 //#endregion
 //#region src/velair/domain/climate-profiles.ts
-function Zs(e) {
+function ac(e) {
 	if (!e) return {
 		name: "",
 		icon: "mdi:account-outline",
@@ -18594,31 +22550,31 @@ function Zs(e) {
 	};
 	let t = Object.fromEntries(Object.entries(e.zones).map(([e, t]) => [e, t.behavior === "schedule" ? {
 		behavior: "schedule",
-		schedule: Object.fromEntries(k.map((e) => [e, ti(t.schedule[e] ?? [])]))
+		schedule: Object.fromEntries(k.map((e) => [e, li(t.schedule[e] ?? [])]))
 	} : structuredClone(t)]));
 	return {
 		...structuredClone(e),
 		color: e.color || W(e.key),
 		zones: t,
-		rememberedSchedules: Object.fromEntries(Object.entries(t).filter(([, e]) => e.behavior === "schedule").map(([e, t]) => [e, ic(t.schedule)]))
+		rememberedSchedules: Object.fromEntries(Object.entries(t).filter(([, e]) => e.behavior === "schedule").map(([e, t]) => [e, fc(t.schedule)]))
 	};
 }
-function Qs(e) {
+function oc(e) {
 	let t = new Map((e?.profiles ?? []).map((e) => [e.key, e]));
 	return (e?.global?.active_profile_ids ?? []).map((e) => t.get(e)).filter((e) => !!e);
 }
-function $s(e, t) {
-	let n = Qs(e).find((e) => t in e.zones), r = n?.zones[t];
+function sc(e, t) {
+	let n = oc(e).find((e) => t in e.zones), r = n?.zones[t];
 	if (!(!n || !r || r.behavior === "normal")) return {
 		profile: n,
 		zone: r
 	};
 }
-function ec(e, t) {
-	let n = $s(e, t);
+function cc(e, t) {
+	let n = sc(e, t);
 	if (n?.zone.behavior !== "pause") return n?.zone.behavior === "schedule" ? n.zone.schedule : e?.zones[t]?.schedule;
 }
-var tc = [
+var lc = [
 	"#3949ab",
 	"#00897b",
 	"#7b1fa2",
@@ -18633,16 +22589,16 @@ function W(e, t) {
 	if (!e) return "#546e7a";
 	let n = 0;
 	for (let t of e) n = (n << 5) - n + t.charCodeAt(0) | 0;
-	return tc[Math.abs(n) % tc.length];
+	return lc[Math.abs(n) % lc.length];
 }
-function nc(e) {
+function uc(e) {
 	return e?.behavior ?? "normal";
 }
-function rc(e, t, n) {
+function dc(e, t, n) {
 	let r = { ...e.zones }, i = { ...e.rememberedSchedules }, a = r[t];
-	return a?.behavior === "schedule" && (i[t] = ic(a.schedule)), n === "normal" ? delete r[t] : n === "schedule" ? r[t] = {
+	return a?.behavior === "schedule" && (i[t] = fc(a.schedule)), n === "normal" ? delete r[t] : n === "schedule" ? r[t] = {
 		behavior: n,
-		schedule: ic(a?.behavior === "schedule" ? a.schedule : i[t])
+		schedule: fc(a?.behavior === "schedule" ? a.schedule : i[t])
 	} : r[t] = {
 		behavior: n,
 		action: "none"
@@ -18652,25 +22608,25 @@ function rc(e, t, n) {
 		rememberedSchedules: i
 	};
 }
-function ic(e) {
+function fc(e) {
 	return Object.fromEntries(k.map((t) => [t, structuredClone(e?.[t] ?? [])]));
 }
-function ac(e, t, n) {
-	let r = ic(e);
+function pc(e, t, n) {
+	let r = fc(e);
 	for (let i of n) i !== t && i in r && (r[i] = structuredClone(e[t] ?? []));
 	return r;
 }
-function oc(e, t, n, r) {
+function mc(e, t, n, r) {
 	let i = e.zones[t];
 	if (i?.behavior !== "schedule" || !k.includes(n)) return e;
 	let a = { ...e.zones }, o = { ...e.rememberedSchedules };
 	for (let e of r) {
 		if (e === t) continue;
-		let r = a[e], s = ic(r?.behavior === "schedule" ? r.schedule : o[e]);
+		let r = a[e], s = fc(r?.behavior === "schedule" ? r.schedule : o[e]);
 		s[n] = structuredClone(i.schedule[n] ?? []), a[e] = {
 			behavior: "schedule",
 			schedule: s
-		}, o[e] = ic(s);
+		}, o[e] = fc(s);
 	}
 	return {
 		...e,
@@ -18678,7 +22634,7 @@ function oc(e, t, n, r) {
 		rememberedSchedules: o
 	};
 }
-function sc(e) {
+function hc(e) {
 	let t = new Set(e.map((e) => e.start)), n = [
 		"08:00",
 		"18:00",
@@ -18695,14 +22651,14 @@ function sc(e) {
 	}
 	return "00:00";
 }
-function cc(e, t) {
+function gc(e, t) {
 	let n = new Set(t.map((e) => e.name));
 	if (!n.has(e)) return e;
 	let r = 2;
 	for (; n.has(`${e} ${r}`);) r += 1;
 	return `${e} ${r}`;
 }
-function lc(e) {
+function _c(e) {
 	if (!e.name.trim()) return "name";
 	if (e.icon?.trim() && !/^mdi:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(e.icon.trim())) return "icon";
 	if (e.color && !/^#[0-9a-f]{6}$/i.test(e.color)) return "color";
@@ -18712,10 +22668,10 @@ function lc(e) {
 		for (let r of t.schedule[e] ?? []) if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start) || n.has(r.start) || (n.add(r.start), r.action !== "turn_off" && !(L(r) ? Number.isFinite(Number(r.target_temp_low)) && Number.isFinite(Number(r.target_temp_high)) && Number(r.target_temp_low) <= Number(r.target_temp_high) : Number.isFinite(Number(r.temperature))))) return "schedule";
 	}
 }
-function uc(e) {
+function vc(e) {
 	let t = Object.fromEntries(Object.entries(e.zones).filter(([, e]) => e.behavior !== "normal").map(([e, t]) => [e, t.behavior === "schedule" ? {
 		behavior: "schedule",
-		schedule: Object.fromEntries(k.map((e) => [e, (t.schedule[e] ?? []).map(dc)]))
+		schedule: Object.fromEntries(k.map((e) => [e, (t.schedule[e] ?? []).map(yc)]))
 	} : t]));
 	return {
 		...e.key ? { key: e.key } : {},
@@ -18726,7 +22682,7 @@ function uc(e) {
 		zones: t
 	};
 }
-function dc(e) {
+function yc(e) {
 	return (e.action || "set_temperature") === "turn_off" ? {
 		start: e.start,
 		action: Je
@@ -18747,7 +22703,7 @@ function dc(e) {
 }
 //#endregion
 //#region src/velair/controllers/overview-data.ts
-var fc = new Set([
+var bc = new Set([
 	"heating",
 	"cooling",
 	"drying",
@@ -18757,26 +22713,26 @@ var fc = new Set([
 	"preheating",
 	"defrosting"
 ]);
-function pc(e) {
+function xc(e) {
 	return e;
 }
-function mc(e, t, n) {
+function Sc(e, t, n) {
 	let r = n?.override ?? e._data?.active_overrides?.[t];
-	return _r(r) ? r : void 0;
+	return Tr(r) ? r : void 0;
 }
-function hc(e) {
+function Cc(e) {
 	return e._data ? e._orderedZoneIds(e._data.configured_entities).filter((t) => {
 		let n = e._data?.zones[t];
-		return !!mc(e, t, n);
+		return !!Sc(e, t, n);
 	}) : [];
 }
-function gc(e, t, n) {
-	if (vr(n?.override)) return {
+function wc(e, t, n) {
+	if (Er(n?.override)) return {
 		...n?.override ?? {},
 		pause_count: n?.pauses?.length ?? 1
 	};
 }
-function _c(e, t, n) {
+function Tc(e, t, n) {
 	let r = Number(n.temperature), i = Number(n.target_temp_low), a = Number(n.target_temp_high), o = F(n.until), s = typeof n.hvac_mode == "string" ? n.hvac_mode : "", c = [];
 	if (Number.isFinite(r)) c.push(e._formatTemperature(r, t));
 	else if (Number.isFinite(i) && Number.isFinite(a)) {
@@ -18785,24 +22741,24 @@ function _c(e, t, n) {
 	}
 	return s && c.push(e._modeLabel(s)), o && c.push(`${e._t("boostUntil")}: ${e._formatRemaining(Math.max(0, o - Date.now()))}`), c.join(" - ") || e._t("boostActive");
 }
-function vc(e, t) {
+function Ec(e, t) {
 	let n = F(t.started_at), r = F(t.until), i = [], a = Number(t.pause_count);
 	return Number.isFinite(a) && a > 1 && i.push(`${e._t("pauseReasons")}: ${a}`), n && i.push(`${e._t("pauseFrom")}: ${e._formatDateTime(new Date(n).toISOString())}`), r ? (i.push(`${e._t("pauseTo")}: ${e._formatDateTime(new Date(r).toISOString())}`), i.push(`${e._t("pauseRemaining")}: ${e._formatRemaining(Math.max(0, r - Date.now()))}`), i.join(" - ")) : (i.push(e._t("pauseIndefinite")), i.join(" - "));
 }
-function yc(e) {
+function Dc(e) {
 	if (!e._data) return [];
 	if (e._data.next_events.length) return e._data.next_events;
-	let t = e._orderedZoneIds(e._data.configured_entities).map((t) => bc(e, t, e._data?.zones[t])).filter((e) => !!e).sort((e, t) => new Date(e.when).getTime() - new Date(t.when).getTime());
+	let t = e._orderedZoneIds(e._data.configured_entities).map((t) => Oc(e, t, e._data?.zones[t])).filter((e) => !!e).sort((e, t) => new Date(e.when).getTime() - new Date(t.when).getTime());
 	return t.length ? t : e._data.next_events;
 }
-function bc(e, t, n) {
-	let r = ec(e._data, t);
-	if (!(!n || !r)) return Jn(t, {
+function Oc(e, t, n) {
+	let r = cc(e._data, t);
+	if (!(!n || !r)) return nr(t, {
 		...n,
 		schedule: r
-	}, mc(e, t, n));
+	}, Sc(e, t, n));
 }
-function xc(e, t = /* @__PURE__ */ new Date()) {
+function kc(e, t = /* @__PURE__ */ new Date()) {
 	let n = e?.config?.time_zone;
 	if (n) try {
 		let e = new Intl.DateTimeFormat("en-US", {
@@ -18819,16 +22775,16 @@ function xc(e, t = /* @__PURE__ */ new Date()) {
 			"sunday"
 		].includes(e)) return e;
 	} catch {}
-	return $n(t);
+	return sr(t);
 }
-function Sc(e, t) {
+function Ac(e, t) {
 	let n = e.hass?.states?.[t]?.attributes?.hvac_action;
-	return typeof n == "string" && fc.has(n) ? n : void 0;
+	return typeof n == "string" && bc.has(n) ? n : void 0;
 }
 //#endregion
 //#region src/velair/domain/room-assist.ts
-function Cc(e, t) {
-	let n = kc(e.deadband_low, e.deadband_high);
+function jc(e, t) {
+	let n = Lc(e.deadband_low, e.deadband_high);
 	if (n && n.low <= n.high) return n;
 	if (!Number.isFinite(t) || t < 0) return;
 	let r = G(e);
@@ -18836,59 +22792,59 @@ function Cc(e, t) {
 		low: r.low - t,
 		high: r.high + t
 	};
-	let i = Ac(e.target_temperature);
+	let i = Rc(e.target_temperature);
 	return i === void 0 ? void 0 : {
 		low: i - t,
 		high: i + t
 	};
 }
-function wc(e, t) {
+function Mc(e, t) {
 	return t === "cool" ? -Math.abs(e) : Math.abs(e);
 }
-function Tc(e) {
+function Nc(e) {
 	if (typeof e.applied_offset == "number" && Number.isFinite(e.applied_offset)) return e.applied_offset;
-	if (typeof e.assist_delta == "number" && Number.isFinite(e.assist_delta)) return wc(e.assist_delta, e.direction);
+	if (typeof e.assist_delta == "number" && Number.isFinite(e.assist_delta)) return Mc(e.assist_delta, e.direction);
 }
 function G(e) {
-	return kc(e.target_temp_low, e.target_temp_high);
+	return Lc(e.target_temp_low, e.target_temp_high);
 }
-function Ec(e) {
-	let t = kc(e.applied_target_temp_low, e.applied_target_temp_high), n = kc(e.climate_target_temp_low, e.climate_target_temp_high);
+function Pc(e) {
+	let t = Lc(e.applied_target_temp_low, e.applied_target_temp_high), n = Lc(e.climate_target_temp_low, e.climate_target_temp_high);
 	return e.status === "assisting" || e.status === "holding" ? t ?? n : n ?? t;
 }
-function Dc(e) {
-	return Ac(e.range_shift);
+function Fc(e) {
+	return Rc(e.range_shift);
 }
-function Oc(e) {
-	return Ac(e.target_temperature) !== void 0 || G(e) !== void 0;
+function Ic(e) {
+	return Rc(e.target_temperature) !== void 0 || G(e) !== void 0;
 }
-function kc(e, t) {
-	let n = Ac(e), r = Ac(t);
+function Lc(e, t) {
+	let n = Rc(e), r = Rc(t);
 	return n !== void 0 && r !== void 0 ? {
 		low: n,
 		high: r
 	} : void 0;
 }
-function Ac(e) {
+function Rc(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : void 0;
 }
 //#endregion
 //#region src/velair/views/inline-help.ts
-var jc = /* @__PURE__ */ new WeakMap(), Mc = 300;
-function Nc(e) {
+var zc = /* @__PURE__ */ new WeakMap(), Bc = 300;
+function Vc(e) {
 	return e.parentElement?.querySelector(".inline-help-tooltip") ?? null;
 }
-function Pc(e) {
-	let t = jc.get(e);
-	t !== void 0 && window.clearTimeout(t), jc.delete(e);
+function Hc(e) {
+	let t = zc.get(e);
+	t !== void 0 && window.clearTimeout(t), zc.delete(e);
 }
-function Fc(e) {
-	Pc(e), e.classList.remove("visible"), delete e.dataset.openCause;
+function Uc(e) {
+	Hc(e), e.classList.remove("visible"), delete e.dataset.openCause;
 }
-function Ic(e) {
-	e.dataset.openCause !== "click" && (Pc(e), jc.set(e, window.setTimeout(() => Fc(e), Mc)));
+function Wc(e) {
+	e.dataset.openCause !== "click" && (Hc(e), zc.set(e, window.setTimeout(() => Uc(e), Bc)));
 }
-function Lc(e, t) {
+function Gc(e, t) {
 	if (window.matchMedia?.("(max-width: 480px)").matches) {
 		t.style.removeProperty("left"), t.style.removeProperty("top");
 		return;
@@ -18896,22 +22852,22 @@ function Lc(e, t) {
 	let n = e.getBoundingClientRect(), r = t.getBoundingClientRect(), i = Math.max(12, window.innerWidth - r.width - 12), a = Math.min(Math.max(n.left, 12), i), o = n.bottom + 6, s = n.top - r.height - 6, c = Math.max(12, window.innerHeight - r.height - 12), l = o + r.height <= window.innerHeight - 12 ? o : s >= 12 ? s : Math.min(Math.max(o, 12), c);
 	t.style.left = `${Math.round(a)}px`, t.style.top = `${Math.round(l)}px`;
 }
-function Rc(e, t) {
-	let n = Nc(e);
-	n && (Pc(n), n.dataset.openCause = t, n.classList.add("visible"), Lc(e, n));
+function Kc(e, t) {
+	let n = Vc(e);
+	n && (Hc(n), n.dataset.openCause = t, n.classList.add("visible"), Gc(e, n));
 }
-function zc(e) {
+function qc(e) {
 	e.preventDefault(), e.stopPropagation();
-	let t = e.currentTarget, n = Nc(t);
+	let t = e.currentTarget, n = Vc(t);
 	if (n) {
 		if (n.classList.contains("visible") && n.dataset.openCause === "click") {
-			Fc(n);
+			Uc(n);
 			return;
 		}
-		Rc(t, "click");
+		Kc(t, "click");
 	}
 }
-function Bc(e, t, n, r = {}) {
+function Jc(e, t, n, r = {}) {
 	return T`
     <span class="inline-help-wrapper">
       <button
@@ -18919,21 +22875,21 @@ function Bc(e, t, n, r = {}) {
         class=${r.compact ? "inline-help compact" : "inline-help"}
         aria-label=${t}
         aria-describedby=${e}
-        @focus=${(e) => Rc(e.currentTarget, "focus")}
+        @focus=${(e) => Kc(e.currentTarget, "focus")}
         @focusout=${(e) => {
-		let t = Nc(e.currentTarget);
-		t && t.dataset.openCause !== "click" && Fc(t);
+		let t = Vc(e.currentTarget);
+		t && t.dataset.openCause !== "click" && Uc(t);
 	}}
-        @pointerenter=${(e) => Rc(e.currentTarget, "hover")}
+        @pointerenter=${(e) => Kc(e.currentTarget, "hover")}
         @pointerleave=${(e) => {
-		let t = Nc(e.currentTarget);
-		t && Ic(t);
+		let t = Vc(e.currentTarget);
+		t && Wc(t);
 	}}
-        @click=${zc}
+        @click=${qc}
         @keydown=${(e) => {
 		if (e.key !== "Escape") return;
-		let t = Nc(e.currentTarget);
-		t && (e.preventDefault(), Fc(t));
+		let t = Vc(e.currentTarget);
+		t && (e.preventDefault(), Uc(t));
 	}}
       >
         <ha-icon icon="mdi:information-outline"></ha-icon>
@@ -18942,15 +22898,15 @@ function Bc(e, t, n, r = {}) {
         id=${e}
         class="inline-help-tooltip"
         role="tooltip"
-        @pointerenter=${(e) => Pc(e.currentTarget)}
-        @pointerleave=${(e) => Ic(e.currentTarget)}
+        @pointerenter=${(e) => Hc(e.currentTarget)}
+        @pointerleave=${(e) => Wc(e.currentTarget)}
       >${n}</span>
     </span>
   `;
 }
 //#endregion
 //#region src/velair/views/overview-view.ts
-function Vc(e) {
+function Yc(e) {
 	let t = e._pauseExpirationMs();
 	return t && t > Date.now() ? {
 		detail: e._t("overviewStatusPausedDetail"),
@@ -18969,9 +22925,9 @@ function Vc(e) {
 		state: "running"
 	};
 }
-function Hc(e, t) {
+function Xc(e, t) {
 	if (!e._data) return E;
-	let n = Vc(e), r = t.filter((t) => e._data?.zones[t]?.execution?.type === "external").length;
+	let n = Yc(e), r = t.filter((t) => e._data?.zones[t]?.execution?.type === "external").length;
 	return T`
     <section class="overview-summary">
       <div class=${`overview-status-card status-${n.state}`}>
@@ -18983,10 +22939,10 @@ function Hc(e, t) {
               <strong>${n.label}</strong>
             </span>
           </div>
-          ${Ml(e)}
+          ${Bl(e)}
           <span class="overview-scheduler-detail">${n.detail}</span>
         </div>
-        ${Nl(e)}
+        ${Vl(e)}
         ${r ? T`
           <div class="notice external-execution-notice overview-external-summary" role="status">
             <ha-icon icon="mdi:information-outline"></ha-icon>
@@ -18997,51 +22953,51 @@ function Hc(e, t) {
     </section>
   `;
 }
-function Uc(e, t) {
+function Zc(e, t) {
 	if (!e._data) return E;
-	let n = pc(e), r = t ? new Set(t) : void 0, i = hc(n).filter((t) => (!r || r.has(t)) && e._data?.zones[t]?.execution?.type !== "external");
+	let n = xc(e), r = t ? new Set(t) : void 0, i = Cc(n).filter((t) => (!r || r.has(t)) && e._data?.zones[t]?.execution?.type !== "external");
 	return T`
     <section class="overview-boost-panel">
       ${i.length ? T`
-            ${Ol(e._t("activeBoosts"), "mdi:lightning-bolt")}
+            ${Il(e._t("activeBoosts"), "mdi:lightning-bolt")}
             <div class="event-list overview-boost-list">
               ${i.map((t) => {
-		let r = mc(n, t, e._data?.zones[t]);
+		let r = Sc(n, t, e._data?.zones[t]);
 		return T`
                   <div class="event">
                     <div>
                       <strong class="overview-climate-name">${e._friendlyEntityName(t)}</strong>
                     </div>
-                    ${r ? Wc(e, t, r) : T`<span>${e._t("boostActive")}</span>`}
+                    ${r ? Qc(e, t, r) : T`<span>${e._t("boostActive")}</span>`}
                   </div>
                 `;
 	})}
             </div>
-          ` : jl(e._t("activeBoosts"), "mdi:lightning-bolt", e._t("noActiveBoosts"))}
+          ` : zl(e._t("activeBoosts"), "mdi:lightning-bolt", e._t("noActiveBoosts"))}
     </section>
   `;
 }
-function Wc(e, t, n) {
+function Qc(e, t, n) {
 	let r = Number(n.temperature), i = Number(n.target_temp_low), a = Number(n.target_temp_high), o = typeof n.until == "string" ? new Date(n.until).getTime() : void 0, s = typeof n.hvac_mode == "string" ? n.hvac_mode : "";
 	return T`
     <div class="event-details">
       <span class="event-time">${o && !Number.isNaN(o) ? `${e._formatDateTime(new Date(o).toISOString())} (${e._formatRemaining(Math.max(0, o - Date.now()))})` : e._t("boostActive")}</span>
-      <strong class="event-target">${Number.isFinite(r) ? e._formatTemperature(r, t) : Number.isFinite(i) && Number.isFinite(a) ? wl(e, i, a, t) : "-"}</strong>
+      <strong class="event-target">${Number.isFinite(r) ? e._formatTemperature(r, t) : Number.isFinite(i) && Number.isFinite(a) ? Ml(e, i, a, t) : "-"}</strong>
       <span class="event-mode">${s ? e._modeLabel(s) : e._t("keepMode")}</span>
     </div>
   `;
 }
-function Gc(e, t) {
+function $c(e, t) {
 	return !e._data || !t.length ? E : T`
     <section class="overview-zones">
-      ${Ol(e._t("overviewZones"), "mdi:thermostat")}
+      ${Il(e._t("overviewZones"), "mdi:thermostat")}
       <div class="overview-zone-cards">
-        ${t.map((t) => qc(e, t))}
+        ${t.map((t) => tl(e, t))}
       </div>
     </section>
   `;
 }
-var Kc = {
+var el = {
 	externally_managed: {
 		icon: "mdi:calendar-export",
 		key: "overviewZoneExternal"
@@ -19071,39 +23027,39 @@ var Kc = {
 		key: "overviewZoneManual"
 	}
 };
-function qc(e, t) {
+function tl(e, t) {
 	let n = e._data?.zone_runtime?.[t], r = n != null, i = n ?? { state: "idle" }, a = e._data?.zones[t]?.execution?.type === "external", o = a && i.state !== "externally_managed" ? {
 		...i,
 		state: "externally_managed"
-	} : i, s = e.hass?.states?.[t], c = s && s.state !== "off" && s.state !== "unknown" && s.state !== "unavailable", l = K(i.room_temperature) ?? (r ? void 0 : K(s?.attributes?.current_temperature)), u = K(i.target_temperature) ?? (!r && c ? K(s.attributes?.temperature) : void 0), d = K(i.target_temp_low) ?? (!r && c ? K(s.attributes?.target_temp_low) : void 0), f = K(i.target_temp_high) ?? (!r && c ? K(s.attributes?.target_temp_high) : void 0), p = d !== void 0 && f !== void 0 ? wl(e, d, f, t) : void 0, m = K(i.applied_temperature), h = o.control_mode === "manual" ? Xc(e, o) : void 0, g = o.manual_adjustment_allowed !== !1, _ = g ? "" : Zc(e, o.manual_adjustment_unavailable_reason), v = e._data?.room_sensor_assist?.[t], y = e._data?.comfort?.[t], b = e._data?.external_execution?.zones[t], x = e._data?.external_execution?.systems.find((e) => e.provider === b?.provider), S = a ? {
+	} : i, s = e.hass?.states?.[t], c = s && s.state !== "off" && s.state !== "unknown" && s.state !== "unavailable", l = K(i.room_temperature) ?? (r ? void 0 : K(s?.attributes?.current_temperature)), u = K(i.target_temperature) ?? (!r && c ? K(s.attributes?.temperature) : void 0), d = K(i.target_temp_low) ?? (!r && c ? K(s.attributes?.target_temp_low) : void 0), f = K(i.target_temp_high) ?? (!r && c ? K(s.attributes?.target_temp_high) : void 0), p = d !== void 0 && f !== void 0 ? Ml(e, d, f, t) : void 0, m = K(i.applied_temperature), h = o.control_mode === "manual" ? il(e, o) : void 0, g = o.manual_adjustment_allowed !== !1, _ = g ? "" : al(e, o.manual_adjustment_unavailable_reason), v = e._data?.room_sensor_assist?.[t], y = e._data?.comfort?.[t], b = e._data?.external_execution?.zones[t], x = e._data?.external_execution?.systems.find((e) => e.provider === b?.provider), S = a ? {
 		...o,
 		state: "scheduled"
-	} : o, C = !!(v && (v.status === "assisting" || v.status === "holding") && el(v)), ee = l !== void 0 || u !== void 0 || p !== void 0 || m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05;
+	} : o, C = !!(v && (v.status === "assisting" || v.status === "holding") && cl(v)), ee = l !== void 0 || u !== void 0 || p !== void 0 || m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05;
 	return T`
     <article class=${`overview-zone-card state-${o.state}`}>
       <div class="overview-zone-card-heading">
         <div class="overview-zone-card-name">
           <strong>${e._friendlyEntityName(t)}</strong><span>${t}</span>
         </div>
-        ${a ? E : Yc(e, t, o, h, g, _)}
-        ${$c(e, t, S, Kc[S.state])}
+        ${a ? E : rl(e, t, o, h, g, _)}
+        ${sl(e, t, S, el[S.state])}
         <div class="overview-zone-signals">
-          ${Qc(e, t)}
-          ${a && b ? Jc(e, t, x?.name ?? b.provider ?? e._t("externalProviderUnavailable"), b) : E}
-          ${a ? E : al(e, v)}
-          ${a ? E : cl(e, y)}
+          ${ol(e, t)}
+          ${a && b ? nl(e, t, x?.name ?? b.provider ?? e._t("externalProviderUnavailable"), b) : E}
+          ${a ? E : pl(e, v)}
+          ${a ? E : gl(e, y)}
         </div>
       </div>
       ${C || ee ? T`<div class="overview-zone-details">
-        ${C ? tl(e, t, v) : T`<div class="overview-zone-metrics">
-          ${l === void 0 ? E : sl(e._t("overviewZoneRoom"), l, e, t)}
-          ${u === void 0 ? p === void 0 ? E : Cl(e._t("overviewZoneTarget"), p) : sl(e._t("overviewZoneTarget"), u, e, t)}
-          ${m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05 ? sl(e._t("overviewZoneApplied"), m, e, t) : E}
+        ${C ? ll(e, t, v) : T`<div class="overview-zone-metrics">
+          ${l === void 0 ? E : hl(e._t("overviewZoneRoom"), l, e, t)}
+          ${u === void 0 ? p === void 0 ? E : jl(e._t("overviewZoneTarget"), p) : hl(e._t("overviewZoneTarget"), u, e, t)}
+          ${m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05 ? hl(e._t("overviewZoneApplied"), m, e, t) : E}
         </div>`}
       </div>` : E}
     </article>`;
 }
-function Jc(e, t, n, r) {
+function nl(e, t, n, r) {
 	let i = r.publication, a = r.available ? i?.state === "publishing" ? {
 		icon: "mdi:cloud-sync-outline",
 		key: "overviewExternalStatusPublishing",
@@ -19146,10 +23102,10 @@ function Jc(e, t, n, r) {
       role="img"
       title=${o}
     ><ha-icon icon=${a.icon} aria-hidden="true"></ha-icon></span>
-    ${Bc(u, e._t("overviewExternalInfoAction", { provider: n }), s.join(" "), { compact: !0 })}
+    ${Jc(u, e._t("overviewExternalInfoAction", { provider: n }), s.join(" "), { compact: !0 })}
   </section>`;
 }
-function Yc(e, t, n, r, i, a) {
+function rl(e, t, n, r, i, a) {
 	let o = n.control_mode === "manual" ? "manual" : "automatic", s = !!e._manualControlActions?.[t], c = n.manual_adjustment_unavailable_reason === "temperature_migration", l = o === "automatic" && !i, u = o === "manual" && c, d = `manual-control-reason-${t.replace(/[^a-z0-9_-]/gi, "-")}`;
 	return T`
     <div class="overview-manual-control">
@@ -19189,7 +23145,7 @@ function Yc(e, t, n, r, i, a) {
     </div>
   `;
 }
-function Xc(e, t) {
+function il(e, t) {
 	let n = t.manual_control;
 	if (n?.policy === "until_next_block") return n.until ? e._t("manualSessionNextBlockAt", { time: e._formatDateTime(n.until) }) : e._t("manualSessionNoNextBlock");
 	if (n?.policy === "for_duration") {
@@ -19201,7 +23157,7 @@ function Xc(e, t) {
 	}
 	return e._t("manualSessionUntilResumed");
 }
-function Zc(e, t) {
+function al(e, t) {
 	return e._t({
 		unavailable: "manualUnavailableClimate",
 		disabled: "manualUnavailableDisabled",
@@ -19213,8 +23169,8 @@ function Zc(e, t) {
 		external_execution: "externalActionsInactive"
 	}[t ?? "unavailable"]);
 }
-function Qc(e, t) {
-	let n = $s(e._data, t);
+function ol(e, t) {
+	let n = sc(e._data, t);
 	if (!n) return E;
 	let r = W(n.profile.key, n.profile.color), i = n.profile.icon || "mdi:account-outline";
 	return T`
@@ -19231,13 +23187,13 @@ function Qc(e, t) {
     </div>
   `;
 }
-function $c(e, t, n, r) {
+function sl(e, t, n, r) {
 	let i = "";
 	if (n.state === "paused" && (i = n.until ? e._t("overviewZoneResumes", { time: e._formatDateTime(n.until) }) : e._t("overviewZoneUntilResumed")), n.state === "boost" && n.until && (i = e._t("overviewZoneUntil", { time: e._formatDateTime(n.until) })), n.state === "preconditioning" && n.target_when && (i = e._t("overviewZoneReadyAt", { time: e._formatDateTime(n.target_when) })), n.state === "scheduled") {
 		let n = e._data?.next_events?.find((e) => e.entity_id === t);
 		i = n?.when ? e._t("overviewZoneNextAt", { time: e._formatDateTime(n.when) }) : "";
 	}
-	let a = e._t(r.key), o = n.state === "externally_managed" ? void 0 : Sc(pc(e), t), s = o ? ol[o] : void 0, c = o === "idle" ? r.icon : s?.icon ?? r.icon, l = o ? pc(e)._hvacActionLabel(o) : a, u = [...o ? [a] : [], ...n.hvac_mode ? [e._modeLabel(n.hvac_mode)] : []].join(" · "), d = [
+	let a = e._t(r.key), o = n.state === "externally_managed" ? void 0 : Ac(xc(e), t), s = o ? ml[o] : void 0, c = o === "idle" ? r.icon : s?.icon ?? r.icon, l = o ? xc(e)._hvacActionLabel(o) : a, u = [...o ? [a] : [], ...n.hvac_mode ? [e._modeLabel(n.hvac_mode)] : []].join(" · "), d = [
 		l,
 		u,
 		i
@@ -19260,7 +23216,7 @@ function $c(e, t, n, r) {
     </span>
   </section>`;
 }
-function el(e) {
+function cl(e) {
 	return [
 		e.room_temperature,
 		e.climate_temperature,
@@ -19278,32 +23234,32 @@ function el(e) {
 		e.range_shift
 	].some((e) => K(e) !== void 0);
 }
-function tl(e, t, n) {
-	let r = G(n), i = Ec(n), a = n.status === "assisting" || n.status === "holding" ? K(n.applied_temperature) ?? K(n.climate_target_temperature) : K(n.climate_target_temperature) ?? K(n.applied_temperature), o = Dc(n), s = r ? o : Tc(n);
+function ll(e, t, n) {
+	let r = G(n), i = Pc(n), a = n.status === "assisting" || n.status === "holding" ? K(n.applied_temperature) ?? K(n.climate_target_temperature) : K(n.climate_target_temperature) ?? K(n.applied_temperature), o = Fc(n), s = r ? o : Nc(n);
 	return T`<div class="overview-assist-flow" aria-label=${e._t("overviewZoneRoomAssistThermalFlow")}>
-    ${nl(e._t("overviewZoneTemperature"), [rl(e, t, "overviewZoneClimate", n.climate_temperature), rl(e, t, "overviewZoneSensor", n.room_temperature)])}
-    ${nl(e._t("overviewZoneSetpoint"), [i ? Sl(e, t, "overviewZoneAppliedRange", i.low, i.high) : rl(e, t, "overviewZoneClimate", a), r ? Sl(e, t, "overviewZoneScheduledRange", r.low, r.high) : rl(e, t, "overviewZoneScheduledSetpoint", n.target_temperature)])}
-    ${s === void 0 ? E : T`<span class="overview-assist-offset"><small>${e._t(o === void 0 ? "overviewZoneOffset" : "overviewZoneRangeShift")}</small><strong>${il(e, t, s)}</strong></span>`}
+    ${ul(e._t("overviewZoneTemperature"), [dl(e, t, "overviewZoneClimate", n.climate_temperature), dl(e, t, "overviewZoneSensor", n.room_temperature)])}
+    ${ul(e._t("overviewZoneSetpoint"), [i ? Al(e, t, "overviewZoneAppliedRange", i.low, i.high) : dl(e, t, "overviewZoneClimate", a), r ? Al(e, t, "overviewZoneScheduledRange", r.low, r.high) : dl(e, t, "overviewZoneScheduledSetpoint", n.target_temperature)])}
+    ${s === void 0 ? E : T`<span class="overview-assist-offset"><small>${e._t(o === void 0 ? "overviewZoneOffset" : "overviewZoneRangeShift")}</small><strong>${fl(e, t, s)}</strong></span>`}
   </div>`;
 }
-function nl(e, t) {
+function ul(e, t) {
 	let n = t.filter((e) => e !== E);
 	return n.length ? T`<section class="overview-assist-group"><small>${e}</small><div>${n}</div></section>` : E;
 }
-function rl(e, t, n, r) {
+function dl(e, t, n, r) {
 	let i = K(r);
 	return i === void 0 ? E : T`<span class="overview-assist-metric"><small>${e._t(n)}</small><strong>${e._formatTemperature(i, t)}</strong></span>`;
 }
-function il(e, t, n) {
+function fl(e, t, n) {
 	let r = e._formatTemperature(Math.abs(n), t);
 	return n > 0 ? `+${r}` : n < 0 ? `-${r}` : r;
 }
-function al(e, t) {
+function pl(e, t) {
 	if (!t || !["assisting", "holding"].includes(t.status)) return E;
 	let n = e._t(t.scheduled_target_guard ? "overviewZoneRoomAssistGuarded" : t.hysteresis_phase === "towards_lower" ? "overviewZoneRoomAssistTowardsLower" : t.hysteresis_phase === "towards_upper" ? "overviewZoneRoomAssistTowardsUpper" : t.status === "holding" ? "overviewZoneRoomAssistHolding" : "overviewZoneRoomAssistActive");
-	return ll("room-assist", "mdi:thermometer-auto", e._t("roomSensorAssistBadge"), n);
+	return _l("room-assist", "mdi:thermometer-auto", e._t("roomSensorAssistBadge"), n);
 }
-var ol = {
+var ml = {
 	heating: { icon: "mdi:fire" },
 	cooling: { icon: "mdi:snowflake" },
 	drying: { icon: "mdi:water-percent" },
@@ -19322,10 +23278,10 @@ var ol = {
 function K(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : void 0;
 }
-function sl(e, t, n, r) {
+function hl(e, t, n, r) {
 	return T`<span class="overview-zone-metric"><small>${e}</small><strong>${n._formatTemperature(t, r)}</strong></span>`;
 }
-function cl(e, t) {
+function gl(e, t) {
 	if (!t?.enabled) return E;
 	let n = t.data_quality !== "complete" && t.condition !== "no_readings", r = {
 		comfortable: "comfortConditionComfortable",
@@ -19351,25 +23307,25 @@ function cl(e, t) {
 		"humidity_comfortable"
 	].includes(t.condition), o = t.condition === "no_readings" ? "error" : a ? "warning" : "normal", s = t.air_quality === "poor" ? "error" : t.air_quality === "elevated" || t.air_quality === "unavailable" ? "warning" : "normal";
 	return T`
-    ${ll("comfort-environment", "mdi:home-thermometer-outline", e._t("overviewZoneComfortLabel"), e._t(r[t.condition] ?? "comfortConditionNoReadings"), o)}
-    ${t.air_quality === "not_monitored" ? E : ll("comfort-air", "mdi:molecule-co2", e._t("overviewZoneAirLabel"), e._t(i[t.air_quality]), s)}
-    ${n ? ll("comfort-data", "mdi:alert-circle-outline", e._t("overviewZoneDataLabel"), e._t("overviewZoneSensorIssue"), "warning") : E}
+    ${_l("comfort-environment", "mdi:home-thermometer-outline", e._t("overviewZoneComfortLabel"), e._t(r[t.condition] ?? "comfortConditionNoReadings"), o)}
+    ${t.air_quality === "not_monitored" ? E : _l("comfort-air", "mdi:molecule-co2", e._t("overviewZoneAirLabel"), e._t(i[t.air_quality]), s)}
+    ${n ? _l("comfort-data", "mdi:alert-circle-outline", e._t("overviewZoneDataLabel"), e._t("overviewZoneSensorIssue"), "warning") : E}
   `;
 }
-function ll(e, t, n, r, i = "normal") {
+function _l(e, t, n, r, i = "normal") {
 	return T`<span class=${`overview-zone-signal ${e} ${i}`} aria-label=${`${n}: ${r}`} title=${`${n}: ${r}`}><ha-icon icon=${t}></ha-icon><span><small>${n}:</small><strong>${r}</strong></span></span>`;
 }
-function ul(e, t) {
+function vl(e, t) {
 	if (!e._data || !t.length) return E;
-	let n = e._currentTimelineNow(), r = br(n, e.hass?.config?.time_zone), i = xc(e.hass, n);
+	let n = e._currentTimelineNow(), r = Or(n, e.hass?.config?.time_zone), i = kc(e.hass, n);
 	return T`
     <section class="overview-timeline-panel">
-      ${Ol(e._t("todayTimeline"), "mdi:timeline-clock-outline")}
+      ${Il(e._t("todayTimeline"), "mdi:timeline-clock-outline")}
       <div class="overview-timeline-scroll">
         <div class="overview-timeline-layout">
           <div class="overview-timeline-names">
             <div class="overview-timeline-axis-spacer"></div>
-            ${t.map((t) => fl(e, t))}
+            ${t.map((t) => bl(e, t))}
           </div>
           <div class="overview-timeline-rows" style=${`--overview-now-left: ${r.left}%;`}>
             <div class="overview-timeline-axis">
@@ -19385,8 +23341,8 @@ function ul(e, t) {
             <div class="overview-timeline-now-line" aria-label=${e._t("currentTime", { time: r.label })}></div>
             ${t.map((t) => {
 		e._data?.zones[t];
-		let n = ec(e._data, t);
-		return dl(e, t, n?.[i] ?? [], n, i);
+		let n = cc(e._data, t);
+		return yl(e, t, n?.[i] ?? [], n, i);
 	})}
           </div>
         </div>
@@ -19394,19 +23350,19 @@ function ul(e, t) {
     </section>
   `;
 }
-function dl(e, t, n, r, i = xc()) {
-	let a = Cr(n), o = r ? wr(r, i) : void 0, s = pc(e), c = e._data?.zones[t], l = c?.execution?.type === "external", u = l ? void 0 : mc(s, t, c), d = l ? void 0 : gc(s, t, c), f = l ? void 0 : d ?? pl(e), p = !!(d && e._data?.zone_runtime?.[t]?.control_mode === "manual"), m = u ? Er(u, e._currentTimelineNow()) : void 0, h = f ? Dr(f, e._currentTimelineNow()) : void 0;
+function yl(e, t, n, r, i = kc()) {
+	let a = jr(n), o = r ? Mr(r, i) : void 0, s = xc(e), c = e._data?.zones[t], l = c?.execution?.type === "external", u = l ? void 0 : Sc(s, t, c), d = l ? void 0 : wc(s, t, c), f = l ? void 0 : d ?? xl(e), p = !!(d && e._data?.zone_runtime?.[t]?.control_mode === "manual"), m = u ? Pr(u, e._currentTimelineNow()) : void 0, h = f ? Fr(f, e._currentTimelineNow()) : void 0;
 	return T`
     <div class=${h?.indefinite ? "overview-timeline-track paused-indefinite" : "overview-timeline-track"}>
       ${a.length || o || m || h ? T`
-            ${o ? xl(e, t, o) : E}
-            ${a.map((n) => ml(e, t, n))}
+            ${o ? kl(e, t, o) : E}
+            ${a.map((n) => Sl(e, t, n))}
           ` : T`<span class="overview-timeline-empty">${e._t("noBlocks")}</span>`}
-      ${m && u ? hl(e, t, m, u) : E}
-      ${h && f ? gl(e, t, h, f, p) : E}
+      ${m && u ? Cl(e, t, m, u) : E}
+      ${h && f ? wl(e, t, h, f, p) : E}
       ${e._overviewTimelineDetail && e._overviewTimelineDetailEntityId === t ? T`
             <div
-              class=${`overview-timeline-tap-detail ${El(e._overviewTimelineDetailAnchor ?? 50)}`}
+              class=${`overview-timeline-tap-detail ${Pl(e._overviewTimelineDetailAnchor ?? 50)}`}
               role="status"
               style=${`--overview-detail-left: ${e._overviewTimelineDetailAnchor ?? 50}%;`}
             >
@@ -19424,8 +23380,8 @@ function dl(e, t, n, r, i = xc()) {
     </div>
   `;
 }
-function fl(e, t) {
-	let n = pc(e), r = e._data?.zones[t], i = r?.execution?.type === "external", a = i ? void 0 : mc(n, t, r), o = i ? void 0 : gc(n, t, r), s = i ? void 0 : o ?? pl(e), c = !!(o && e._data?.zone_runtime?.[t]?.control_mode === "manual"), l = $s(e._data, t), u = !!(l && !a && !s), d = e._friendlyEntityName(t), f = s ? vc(n, s) : "", p = l ? `${e._t("profileOverviewLabel")}: ${l.profile.name}` : "", m = s ? [
+function bl(e, t) {
+	let n = xc(e), r = e._data?.zones[t], i = r?.execution?.type === "external", a = i ? void 0 : Sc(n, t, r), o = i ? void 0 : wc(n, t, r), s = i ? void 0 : o ?? xl(e), c = !!(o && e._data?.zone_runtime?.[t]?.control_mode === "manual"), l = sc(e._data, t), u = !!(l && !a && !s), d = e._friendlyEntityName(t), f = s ? Ec(n, s) : "", p = l ? `${e._t("profileOverviewLabel")}: ${l.profile.name}` : "", m = s ? [
 		e._t("pauseActive"),
 		c ? e._t("manualAdjustment") : "",
 		f
@@ -19445,20 +23401,20 @@ function fl(e, t) {
     </div>
   `;
 }
-function pl(e) {
+function xl(e) {
 	if (e._data?.global?.mode === "paused") return {
 		type: "pause",
 		started_at: e._data.global.paused_started_at,
 		until: e._data.global.paused_until
 	};
 }
-function ml(e, t, n) {
-	let r = yl(e, t, n.block), i = _l(e, t, n.block), a = vl(e, t, n.block);
+function Sl(e, t, n) {
+	let r = Dl(e, t, n.block), i = Tl(e, t, n.block), a = El(e, t, n.block);
 	return T`
     <button
       class=${[
 		"overview-timeline-block",
-		`mode-${jr(n.block)}`,
+		`mode-${zr(n.block)}`,
 		n.width < 12 ? "compact" : "",
 		n.width < 6 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -19475,8 +23431,8 @@ function ml(e, t, n) {
     </button>
   `;
 }
-function hl(e, t, n, r) {
-	let i = jr({ hvac_mode: n.block.hvac_mode ?? e.hass?.states?.[t]?.state }), a = `${e._t("boostActive")} - ${e._formatScheduleTime(n.block.start)} - ${e._formatScheduleTime(Tl(n.endMinute))} - ${_c(pc(e), t, r)}`;
+function Cl(e, t, n, r) {
+	let i = zr({ hvac_mode: n.block.hvac_mode ?? e.hass?.states?.[t]?.state }), a = `${e._t("boostActive")} - ${e._formatScheduleTime(n.block.start)} - ${e._formatScheduleTime(Nl(n.endMinute))} - ${Tc(xc(e), t, r)}`;
 	return T`
     <button
       class=${`overview-timeline-boost mode-${i}`}
@@ -19488,16 +23444,16 @@ function hl(e, t, n, r) {
     >
       <span class="overview-timeline-block-main">
         <ha-icon icon="mdi:lightning-bolt"></ha-icon>
-        ${Number.isFinite(n.block.temperature) ? T`<span>${e._formatTemperature(Number(n.block.temperature), t)}</span>` : Number.isFinite(n.block.target_temp_low) && Number.isFinite(n.block.target_temp_high) ? T`<span>${wl(e, Number(n.block.target_temp_low), Number(n.block.target_temp_high), t)}</span>` : E}
+        ${Number.isFinite(n.block.temperature) ? T`<span>${e._formatTemperature(Number(n.block.temperature), t)}</span>` : Number.isFinite(n.block.target_temp_low) && Number.isFinite(n.block.target_temp_high) ? T`<span>${Ml(e, Number(n.block.target_temp_low), Number(n.block.target_temp_high), t)}</span>` : E}
       </span>
     </button>
   `;
 }
-function gl(e, t, n, r, i = !1) {
+function wl(e, t, n, r, i = !1) {
 	let a = [
 		e._t("pauseActive"),
 		i ? e._t("manualAdjustment") : "",
-		vc(pc(e), r)
+		Ec(xc(e), r)
 	].filter(Boolean).join(" - ");
 	return T`
     <button
@@ -19518,21 +23474,21 @@ function gl(e, t, n, r, i = !1) {
     </button>
   `;
 }
-function _l(e, t, n) {
-	return e._formatEventAction(bl(t, n));
+function Tl(e, t, n) {
+	return e._formatEventAction(Ol(t, n));
 }
-function vl(e, t, n) {
-	return n.action === "turn_off" || n.hvac_mode === "off" ? "" : e._formatEventMode(bl(t, n));
+function El(e, t, n) {
+	return n.action === "turn_off" || n.hvac_mode === "off" ? "" : e._formatEventMode(Ol(t, n));
 }
-function yl(e, t, n) {
-	let r = _l(e, t, n), i = vl(e, t, n);
+function Dl(e, t, n) {
+	let r = Tl(e, t, n), i = El(e, t, n);
 	return [
 		e._formatScheduleTime(n.start),
 		r,
 		i
 	].filter(Boolean).join(" - ");
 }
-function bl(e, t) {
+function Ol(e, t) {
 	return {
 		action: t.action,
 		entity_id: e,
@@ -19541,12 +23497,12 @@ function bl(e, t) {
 		temperature: t.temperature ?? null,
 		target_temp_low: t.target_temp_low ?? null,
 		target_temp_high: t.target_temp_high ?? null,
-		weekday: xc(),
+		weekday: kc(),
 		when: (/* @__PURE__ */ new Date()).toISOString()
 	};
 }
-function xl(e, t, n) {
-	let r = _l(e, t, n.block), i = vl(e, t, n.block), a = e._t("timelineContinuesFrom", {
+function kl(e, t, n) {
+	let r = Tl(e, t, n.block), i = El(e, t, n.block), a = e._t("timelineContinuesFrom", {
 		day: e._shortWeekdayName(n.sourceWeekday),
 		time: e._formatScheduleTime(n.block.start)
 	}), o = [
@@ -19559,7 +23515,7 @@ function xl(e, t, n) {
       class=${[
 		"overview-timeline-block",
 		"overview-timeline-carry-over",
-		`mode-${jr(n.block)}`,
+		`mode-${zr(n.block)}`,
 		n.width < 12 ? "compact" : "",
 		n.width < 6 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -19577,38 +23533,38 @@ function xl(e, t, n) {
     </button>
   `;
 }
-function Sl(e, t, n, r, i) {
-	return T`<span class="overview-assist-metric"><small>${e._t(n)}</small><strong>${wl(e, r, i, t)}</strong></span>`;
+function Al(e, t, n, r, i) {
+	return T`<span class="overview-assist-metric"><small>${e._t(n)}</small><strong>${Ml(e, r, i, t)}</strong></span>`;
 }
-function Cl(e, t) {
+function jl(e, t) {
 	return T`<span class="overview-zone-metric"><small>${e}</small><strong>${t}</strong></span>`;
 }
-function wl(e, t, n, r) {
+function Ml(e, t, n, r) {
 	return `${e._formatTemperature(t, r).replace(/\s+[^\s]+$/, "")}–${e._formatTemperature(n, r)}`;
 }
-function Tl(e) {
+function Nl(e) {
 	let t = Math.max(0, Math.min(1440, e)), n = Math.floor(t / 60), r = t % 60;
 	return `${String(n).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-function El(e) {
+function Pl(e) {
 	return e >= 72 ? "align-end" : e <= 28 ? "align-start" : "align-center";
 }
-function Dl(e, t) {
-	let n = t ? new Set(t) : void 0, r = yc(pc(e)).filter((e) => !n || n.has(e.entity_id)), i = r.some((e) => e.target_when && e.target_when !== e.when);
+function Fl(e, t) {
+	let n = t ? new Set(t) : void 0, r = Dc(xc(e)).filter((e) => !n || n.has(e.entity_id)), i = r.some((e) => e.target_when && e.target_when !== e.when);
 	return r.length ? T`
     <section class="next">
-      ${Ol(e._t(r.length === 1 ? "nextEvent" : "nextEvents"), "mdi:calendar-clock")}
+      ${Il(e._t(r.length === 1 ? "nextEvent" : "nextEvents"), "mdi:calendar-clock")}
       <div class=${`event-list ${i ? "has-preconditioning" : ""}`}>
-        ${r.map((t) => kl(e, t))}
+        ${r.map((t) => Ll(e, t))}
       </div>
     </section>
   ` : T`
       <section class="next">
-        ${jl(e._t("nextEvent"), "mdi:calendar-clock", e._t("noUpcomingEvent"))}
+        ${zl(e._t("nextEvent"), "mdi:calendar-clock", e._t("noUpcomingEvent"))}
       </section>
     `;
 }
-function Ol(e, t) {
+function Il(e, t) {
 	return T`
     <div class="overview-section-title section-heading">
       <ha-icon icon=${t}></ha-icon>
@@ -19616,17 +23572,17 @@ function Ol(e, t) {
     </div>
   `;
 }
-function kl(e, t) {
+function Ll(e, t) {
 	return T`
     <div class="event">
       <div class="event-identity">
         <strong class="overview-climate-name">${e._friendlyEntityName(t.entity_id)}</strong>
       </div>
-      ${Al(e, t)}
+      ${Rl(e, t)}
     </div>
   `;
 }
-function Al(e, t) {
+function Rl(e, t) {
 	let n = !!(t.target_when && t.target_when !== t.when), r = e._changedNextEventIds?.has(t.entity_id) ? `next-event-updated update-${e._nextEventChangeRevision % 2 == 0 ? "even" : "odd"}` : "";
 	return T`
     <div class=${`event-details ${n ? "preconditioned" : ""}`}>
@@ -19658,7 +23614,7 @@ function Al(e, t) {
     </div>
   `;
 }
-function jl(e, t, n) {
+function zl(e, t, n) {
 	return T`
     <div class="overview-empty-state">
       <ha-icon icon=${t}></ha-icon>
@@ -19669,7 +23625,7 @@ function jl(e, t, n) {
     </div>
   `;
 }
-function Ml(e) {
+function Bl(e) {
 	let t = e._canResumeScheduler();
 	return T`
     <div class="overview-controls">
@@ -19721,7 +23677,7 @@ function Ml(e) {
     </div>
   `;
 }
-function Nl(e) {
+function Vl(e) {
 	let t = e._pauseExpirationMs();
 	if (!t || t <= Date.now()) return E;
 	let n = Math.max(0, t - Date.now()), r = e._pauseProgressPercent(t);
@@ -19738,13 +23694,13 @@ function Nl(e) {
 }
 //#endregion
 //#region src/velair/domain/preconditioning.ts
-function Pl(e, t) {
+function Hl(e, t) {
 	let n = e?.config?.unit_system?.temperature, r = e?.states ?? {}, i = Object.entries(r).filter(([e, r]) => {
 		if (!e.startsWith("sensor.")) return !1;
 		let i = r.attributes ?? {};
 		return i.device_class === "temperature" || n !== void 0 && i.unit_of_measurement === n || e === t;
 	}).map(([e, t]) => {
-		let n = t.attributes?.friendly_name ?? e, r = t.attributes?.unit_of_measurement ?? "", i = Il(t.state, r);
+		let n = t.attributes?.friendly_name ?? e, r = t.attributes?.unit_of_measurement ?? "", i = Wl(t.state, r);
 		return {
 			entityId: e,
 			label: i ? `${n} (${i})` : `${n} (${e})`
@@ -19755,11 +23711,11 @@ function Pl(e, t) {
 		label: t
 	}), i;
 }
-function Fl(e, t) {
+function Ul(e, t) {
 	return {
 		enabled: !!e?.enabled,
 		max_lead_minutes: Number(e?.max_lead_minutes ?? 1440),
-		minimum_delta_temperature: Number(e?.minimum_delta_temperature ?? rr(t)),
+		minimum_delta_temperature: Number(e?.minimum_delta_temperature ?? dr(t)),
 		learning_history_size: Number(e?.learning_history_size ?? 120),
 		similar_sample_count: Number(e?.similar_sample_count ?? 25),
 		comfort_percentile: Number(e?.comfort_percentile ?? 80),
@@ -19767,22 +23723,22 @@ function Fl(e, t) {
 		partial_expiry_days: Number(e?.partial_expiry_days ?? 30),
 		recency_decay_days: Number(e?.recency_decay_days ?? 30),
 		min_start_minutes: Number(e?.min_start_minutes ?? 10),
-		fallback_minutes_per_degree: Number(e?.fallback_minutes_per_degree ?? or(t)),
+		fallback_minutes_per_degree: Number(e?.fallback_minutes_per_degree ?? mr(t)),
 		use_outdoor_temperature: e?.use_outdoor_temperature ?? !0,
 		outdoor_temperature_entity_id: e?.outdoor_temperature_entity_id ?? null,
 		room_temperature_entity_id: e?.room_temperature_entity_id ?? null,
 		room_sensor_assist_enabled: e?.room_sensor_assist_enabled ?? !1,
-		room_sensor_assist_deadband: Number(e?.room_sensor_assist_deadband ?? e?.minimum_delta_temperature ?? ar(t)),
-		room_sensor_assist_max_delta: Number(e?.room_sensor_assist_max_delta ?? ir(t)),
+		room_sensor_assist_deadband: Number(e?.room_sensor_assist_deadband ?? e?.minimum_delta_temperature ?? pr(t)),
+		room_sensor_assist_max_delta: Number(e?.room_sensor_assist_max_delta ?? fr(t)),
 		room_sensor_assist_debounce_seconds: Number(e?.room_sensor_assist_debounce_seconds ?? 20)
 	};
 }
-function Il(e, t) {
+function Wl(e, t) {
 	return e === void 0 || e === "unknown" || e === "unavailable" || Number.isNaN(Number(e)) ? "" : `${e}${t ? ` ${t}` : ""}`;
 }
 //#endregion
 //#region src/velair/views/preconditioning-view.ts
-var Ll = {
+var Gl = {
 	preconditioningAdaptivePercentile: "preconditioningAdaptivePercentileHelp",
 	preconditioningComfortPercentile: "preconditioningComfortPercentileHelp",
 	preconditioningFallbackMinutesPerDegree: "preconditioningFallbackMinutesPerDegreeHelp",
@@ -19796,7 +23752,7 @@ var Ll = {
 	preconditioningSimilarSamples: "preconditioningSimilarSamplesHelp",
 	preconditioningUseOutdoorTemperature: "preconditioningUseOutdoorTemperatureHelp"
 };
-function Rl(e, t) {
+function Kl(e, t) {
 	return T`
     <section class="preconditioning-view">
       <header class="preconditioning-intro">
@@ -19806,11 +23762,11 @@ function Rl(e, t) {
           <small>${e._t("preconditioningIntroDetail")}</small>
         </span>
       </header>
-      ${t.length ? t.map((t) => zl(e, t)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+      ${t.length ? t.map((t) => ql(e, t)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
     </section>
   `;
 }
-function zl(e, t) {
+function ql(e, t) {
 	if (e._data?.zones[t]?.execution?.type === "external") return T`
       <section class="preconditioning-zone disabled collapsed">
         <header class="preconditioning-zone-heading">
@@ -19822,7 +23778,7 @@ function zl(e, t) {
         </header>
       </section>
     `;
-	let n = e._entityExists(t), r = e._temperatureUnit?.(t) ?? "°C", i = Fl(e._data?.zones[t]?.preconditioning, r), a = e._data?.preconditioning_learning?.[t], o = n && e._expandedPreconditioningZones.has(t), s = `preconditioning-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = n ? e._t(o ? "preconditioningCollapseClimate" : "preconditioningExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("preconditioningUnavailable");
+	let n = e._entityExists(t), r = e._temperatureUnit?.(t) ?? "°C", i = Ul(e._data?.zones[t]?.preconditioning, r), a = e._data?.preconditioning_learning?.[t], o = n && e._expandedPreconditioningZones.has(t), s = `preconditioning-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = n ? e._t(o ? "preconditioningCollapseClimate" : "preconditioningExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("preconditioningUnavailable");
 	return T`
     <section class=${`preconditioning-zone ${i.enabled ? "enabled" : "disabled"} ${o ? "expanded" : "collapsed"}`}>
       <header class="preconditioning-zone-heading" @click=${(r) => {
@@ -19881,41 +23837,41 @@ function zl(e, t) {
       </header>
       ${n && o ? T`
             <div id=${s} class="preconditioning-zone-content">
-              ${Bl(e, t, i)}
-              ${i.enabled ? Hl(e, t, a) : E}
+              ${Jl(e, t, i)}
+              ${i.enabled ? Xl(e, t, a) : E}
             </div>
           ` : E}
     </section>
   `;
 }
-function Bl(e, t, n) {
-	let r = e._temperatureUnit?.(t) ?? "°C", i = cr(r);
+function Jl(e, t, n) {
+	let r = e._temperatureUnit?.(t) ?? "°C", i = gr(r);
 	return T`
     <div class="preconditioning-config-sections">
-      ${Vl(e, "preconditioningTiming", "mdi:timer-outline", T`
+      ${Yl(e, "preconditioningTiming", "mdi:timer-outline", T`
           ${q(e, t, "preconditioningMinStart", n.min_start_minutes, "min_start_minutes", 0, 1440, 5)}
           ${q(e, t, "preconditioningMaxLead", n.max_lead_minutes, "max_lead_minutes", 0, 1440, 15)}
-          ${q(e, t, "preconditioningMinimumDelta", n.minimum_delta_temperature, "minimum_delta_temperature", 0, sr(r, 5), .1, "", { labelUnit: r })}
+          ${q(e, t, "preconditioningMinimumDelta", n.minimum_delta_temperature, "minimum_delta_temperature", 0, hr(r, 5), .1, "", { labelUnit: r })}
           ${q(e, t, "preconditioningFallbackMinutesPerDegree", n.fallback_minutes_per_degree, "fallback_minutes_per_degree", i[0], i[1], .1, "", { labelUnit: `${e._t("minutesShort")}/${r}` })}
         `)}
-      ${Vl(e, "preconditioningModel", "mdi:tune-variant", T`
+      ${Yl(e, "preconditioningModel", "mdi:tune-variant", T`
           ${q(e, t, "preconditioningComfortPercentile", n.comfort_percentile, "comfort_percentile", 50, 95, 5)}
-          ${ou(e, t, "preconditioningAdaptivePercentile", n.adaptive_percentile_enabled, "adaptive_percentile_enabled")}
+          ${mu(e, t, "preconditioningAdaptivePercentile", n.adaptive_percentile_enabled, "adaptive_percentile_enabled")}
           ${q(e, t, "preconditioningSimilarSamples", n.similar_sample_count, "similar_sample_count", 5, 100, 5)}
         `)}
-      ${Vl(e, "preconditioningHistory", "mdi:history", T`
+      ${Yl(e, "preconditioningHistory", "mdi:history", T`
           ${q(e, t, "preconditioningHistorySize", n.learning_history_size, "learning_history_size", 10, 500, 10)}
           ${q(e, t, "preconditioningPartialExpiry", n.partial_expiry_days, "partial_expiry_days", 1, 365, 1)}
           ${q(e, t, "preconditioningRecencyDecay", n.recency_decay_days, "recency_decay_days", 1, 365, 1)}
         `)}
-      ${Vl(e, "preconditioningOutdoorContext", "mdi:weather-partly-cloudy", T`
-          ${ou(e, t, "preconditioningUseOutdoorTemperature", n.use_outdoor_temperature, "use_outdoor_temperature")}
-          ${su(e, t, "preconditioningOutdoorTemperatureEntity", n.outdoor_temperature_entity_id ?? "", "outdoor_temperature_entity_id", { inactive: !n.use_outdoor_temperature })}
+      ${Yl(e, "preconditioningOutdoorContext", "mdi:weather-partly-cloudy", T`
+          ${mu(e, t, "preconditioningUseOutdoorTemperature", n.use_outdoor_temperature, "use_outdoor_temperature")}
+          ${hu(e, t, "preconditioningOutdoorTemperatureEntity", n.outdoor_temperature_entity_id ?? "", "outdoor_temperature_entity_id", { inactive: !n.use_outdoor_temperature })}
         `)}
     </div>
   `;
 }
-function Vl(e, t, n, r) {
+function Yl(e, t, n, r) {
 	return T`
     <section class="preconditioning-config-section">
       <h3><ha-icon icon=${n}></ha-icon>${e._t(t)}</h3>
@@ -19923,9 +23879,9 @@ function Vl(e, t, n, r) {
     </section>
   `;
 }
-function Hl(e, t, n) {
+function Xl(e, t, n) {
 	if (!n) return E;
-	let r = [n.heat.status === "unsupported" ? void 0 : Ul(e, t, "heat", n.heat), n.cool.status === "unsupported" ? void 0 : Ul(e, t, "cool", n.cool)].filter(Boolean);
+	let r = [n.heat.status === "unsupported" ? void 0 : Zl(e, t, "heat", n.heat), n.cool.status === "unsupported" ? void 0 : Zl(e, t, "cool", n.cool)].filter(Boolean);
 	return T`
     <div class=${`preconditioning-learning ${n.status}`}>
       <h3 class="preconditioning-learning-heading">
@@ -19938,8 +23894,8 @@ function Hl(e, t, n) {
     </div>
   `;
 }
-function Ul(e, t, n, r) {
-	let i = e._t(n === "heat" ? "preconditioningHeat" : "preconditioningCool"), a = e._t(au(r.status)), o = r.total_samples, s = r.model_source === "history", c = e._t(s ? "preconditioningModelHistory" : "preconditioningModelInitial"), l = r.sample_count >= r.required_samples ? String(r.sample_count) : e._t("preconditioningDirectionSamples", {
+function Zl(e, t, n, r) {
+	let i = e._t(n === "heat" ? "preconditioningHeat" : "preconditioningCool"), a = e._t(pu(r.status)), o = r.total_samples, s = r.model_source === "history", c = e._t(s ? "preconditioningModelHistory" : "preconditioningModelInitial"), l = r.sample_count >= r.required_samples ? String(r.sample_count) : e._t("preconditioningDirectionSamples", {
 		count: r.sample_count,
 		required: r.required_samples
 	});
@@ -19963,30 +23919,30 @@ function Ul(e, t, n, r) {
       </div>
       <div class="preconditioning-learning-status-card">
         <div class="preconditioning-learning-summary">
-          ${nu(e._t("preconditioningDirectionStatus"), a, r.status === "ready" ? "mdi:check-circle" : "mdi:progress-clock", r.status)}
-          ${nu(e._t("preconditioningModelSource"), c, s ? "mdi:chart-timeline-variant" : "mdi:calculator-variant-outline", s ? "history" : "initial")}
+          ${uu(e._t("preconditioningDirectionStatus"), a, r.status === "ready" ? "mdi:check-circle" : "mdi:progress-clock", r.status)}
+          ${uu(e._t("preconditioningModelSource"), c, s ? "mdi:chart-timeline-variant" : "mdi:calculator-variant-outline", s ? "history" : "initial")}
         </div>
         <div class="preconditioning-sample-card">
           <div class="preconditioning-sample-chips">
-            ${ru("complete", e._t("preconditioningReachedEvents"), l)}
-            ${ru("partial", e._t("preconditioningPartialEvents"), String(r.partial_sample_count ?? 0))}
-            ${ru("invalid", e._t("preconditioningInvalidEvents"), String(r.invalid_sample_count ?? 0))}
+            ${du("complete", e._t("preconditioningReachedEvents"), l)}
+            ${du("partial", e._t("preconditioningPartialEvents"), String(r.partial_sample_count ?? 0))}
+            ${du("invalid", e._t("preconditioningInvalidEvents"), String(r.invalid_sample_count ?? 0))}
           </div>
         </div>
       </div>
-      ${Wl(e, t, n)}
+      ${Ql(e, t, n)}
     </div>
   `;
 }
-function Wl(e, t, n) {
-	let r = Zl(e, t, n);
+function Ql(e, t, n) {
+	let r = au(e, t, n);
 	if (!r) {
 		let r = e._t(n === "heat" ? "preconditioningHeat" : "preconditioningCool");
 		return T`
       <section class="preconditioning-prediction empty">
         <div class="preconditioning-prediction-heading">
           <span>${e._t("preconditioningNextBlock")}</span>
-          ${Kl(e, t, n)}
+          ${eu(e, t, n)}
         </div>
         <div class="preconditioning-prediction-empty">
           <ha-icon icon="mdi:calendar-search"></ha-icon>
@@ -19995,12 +23951,12 @@ function Wl(e, t, n) {
       </section>
     `;
 	}
-	let i = r.target_when && r.target_when !== r.when ? r.target_when : r.when, a = tu(r.when, i), o = a > 0, s = o ? e._t("preconditioningLeadTime", { minutes: a }) : e._t("preconditioningNormalStart");
+	let i = r.target_when && r.target_when !== r.when ? r.target_when : r.when, a = lu(r.when, i), o = a > 0, s = o ? e._t("preconditioningLeadTime", { minutes: a }) : e._t("preconditioningNormalStart");
 	return T`
     <section class=${`preconditioning-prediction ${n} ${o ? "early" : "normal"}`}>
       <div class="preconditioning-prediction-heading">
         <span>${e._t("preconditioningNextBlock")}</span>
-        ${Kl(e, t, n)}
+        ${eu(e, t, n)}
       </div>
       <div class=${`preconditioning-block-preview ${o ? "with-prestart" : "normal-start"}`}>
         ${o ? T`
@@ -20014,16 +23970,16 @@ function Wl(e, t, n) {
           <small>${e._t("preconditioningTargetBy")}</small>
           <strong>${e._formatDateTime(i)}</strong>
           <span>${e._formatEventAction(r)}</span>
-          ${Gl(e, r, n)}
+          ${$l(e, r, n)}
           <span>${e._formatEventMode(r)}</span>
         </div>
       </div>
-      ${r.preconditioning_diagnostics ? ql(e, r.preconditioning_diagnostics) : E}
+      ${r.preconditioning_diagnostics ? tu(e, r.preconditioning_diagnostics) : E}
     </section>
   `;
 }
-function Gl(e, t, n) {
-	if (!$l(t)) return E;
+function $l(e, t, n) {
+	if (!su(t)) return E;
 	let r = t.preconditioning_diagnostics?.boundary_temperature, i = typeof r == "number" ? r : n === "heat" ? t.target_temp_low : t.target_temp_high;
 	return typeof i == "number" ? T`
     <small class="preconditioning-range-boundary">
@@ -20031,16 +23987,16 @@ function Gl(e, t, n) {
     </small>
   ` : E;
 }
-function Kl(e, t, n) {
+function eu(e, t, n) {
 	let r = e._t("preconditioningLivePredictionHelp"), i = t.replace(/[^a-z0-9_-]/gi, "-");
 	return T`
     <span class="preconditioning-live-label">
       <span>${e._t("preconditioningLivePrediction")}</span>
-      ${Bc(`preconditioning-${i}-${n}-live-prediction-help`, r, r)}
+      ${Jc(`preconditioning-${i}-${n}-live-prediction-help`, r, r)}
     </span>
   `;
 }
-function ql(e, t) {
+function tu(e, t) {
 	return T`
     <details class="preconditioning-calculation-details">
       <summary>
@@ -20049,31 +24005,31 @@ function ql(e, t) {
       </summary>
       <div class="preconditioning-calculation-grid">
         <div class="preconditioning-calculation-row context">
-          ${Yl(e._t("preconditioningCalculationSamples"), e._t("preconditioningCalculationSampleCounts", {
+          ${ru(e._t("preconditioningCalculationSamples"), e._t("preconditioningCalculationSampleCounts", {
 		reached: t.complete_sample_count,
 		partial: t.partial_sample_count,
 		invalid: t.invalid_sample_count
 	}), "samples")}
-          ${Yl(e._t("preconditioningSimilarSamples"), String(t.similar_sample_count), "compact")}
-          ${Yl(e._t("preconditioningComfortPercentileLabel"), `${t.comfort_percentile}%`, "compact")}
+          ${ru(e._t("preconditioningSimilarSamples"), String(t.similar_sample_count), "compact")}
+          ${ru(e._t("preconditioningComfortPercentileLabel"), `${t.comfort_percentile}%`, "compact")}
         </div>
         <div class="preconditioning-calculation-row estimates">
-          ${Yl(e._t("preconditioningCalculationReachedEstimate"), Xl(e, t.complete_estimate_minutes))}
-          ${Yl(e._t("preconditioningCalculationPartialFloor"), Xl(e, t.partial_floor_minutes))}
+          ${ru(e._t("preconditioningCalculationReachedEstimate"), iu(e, t.complete_estimate_minutes))}
+          ${ru(e._t("preconditioningCalculationPartialFloor"), iu(e, t.partial_floor_minutes))}
         </div>
-        <div class=${`preconditioning-calculation-row result ${Jl(t) ? "without-rounded" : "with-rounded"}`}>
-          ${Yl(e._t("preconditioningCalculationCombined"), Xl(e, t.combined_estimate_minutes))}
-          ${Jl(t) ? E : Yl(e._t("preconditioningCalculationRounded"), Xl(e, t.rounded_estimate_minutes))}
-          ${Yl(e._t("preconditioningCalculationFinalLead"), Xl(e, t.final_lead_minutes), "final")}
+        <div class=${`preconditioning-calculation-row result ${nu(t) ? "without-rounded" : "with-rounded"}`}>
+          ${ru(e._t("preconditioningCalculationCombined"), iu(e, t.combined_estimate_minutes))}
+          ${nu(t) ? E : ru(e._t("preconditioningCalculationRounded"), iu(e, t.rounded_estimate_minutes))}
+          ${ru(e._t("preconditioningCalculationFinalLead"), iu(e, t.final_lead_minutes), "final")}
         </div>
       </div>
     </details>
   `;
 }
-function Jl(e) {
+function nu(e) {
 	return Math.round(e.combined_estimate_minutes * 10) / 10 === e.rounded_estimate_minutes;
 }
-function Yl(e, t, n = "") {
+function ru(e, t, n = "") {
 	return T`
     <span class=${`preconditioning-calculation-item ${n}`}>
       <small
@@ -20089,30 +24045,30 @@ function Yl(e, t, n = "") {
     </span>
   `;
 }
-function Xl(e, t) {
+function iu(e, t) {
 	if (typeof t != "number" || !Number.isFinite(t)) return "-";
 	let n = Math.round(t * 10) / 10;
 	return e._t("preconditioningFallbackLead", { minutes: n });
 }
-function Zl(e, t, n) {
-	return (e._data?.next_events ?? []).find((e) => e.entity_id === t && eu(e) === n && Ql(e));
+function au(e, t, n) {
+	return (e._data?.next_events ?? []).find((e) => e.entity_id === t && cu(e) === n && ou(e));
 }
-function Ql(e) {
-	return typeof e.temperature == "number" || $l(e);
+function ou(e) {
+	return typeof e.temperature == "number" || su(e);
 }
-function $l(e) {
+function su(e) {
 	return typeof e.target_temp_low == "number" && typeof e.target_temp_high == "number";
 }
-function eu(e) {
+function cu(e) {
 	let t = e.preconditioning_diagnostics?.direction;
 	if (t === "heat" || t === "cool") return t;
 	if (e.hvac_mode === "heat" || e.hvac_mode === "cool") return e.hvac_mode;
 }
-function tu(e, t) {
+function lu(e, t) {
 	let n = new Date(e).getTime(), r = new Date(t).getTime();
 	return Number.isNaN(n) || Number.isNaN(r) || r <= n ? 0 : Math.round((r - n) / 6e4);
 }
-function nu(e, t, n, r) {
+function uu(e, t, n, r) {
 	return T`
     <div class=${`preconditioning-learning-indicator ${r}`}>
       <ha-icon icon=${n}></ha-icon>
@@ -20123,7 +24079,7 @@ function nu(e, t, n, r) {
     </div>
   `;
 }
-function ru(e, t, n) {
+function du(e, t, n) {
 	return T`
     <span class=${`preconditioning-sample-chip ${e}`}>
       <span>${t}:</span>
@@ -20131,25 +24087,25 @@ function ru(e, t, n) {
     </span>
   `;
 }
-function iu(e, t, n, r = "") {
-	let i = Ll[n], a = i ? e._t(i) : "", o = t.replace(/[^a-z0-9_-]/gi, "-");
+function fu(e, t, n, r = "") {
+	let i = Gl[n], a = i ? e._t(i) : "", o = t.replace(/[^a-z0-9_-]/gi, "-");
 	return T`
     <span class="label preconditioning-config-label">
       <span>${e._t(n)}${r ? ` (${r})` : ""}</span>
       ${i ? T`
-            ${Bc(`preconditioning-${o}-${String(n)}-help`, a, a)}
+            ${Jc(`preconditioning-${o}-${String(n)}-help`, a, a)}
           ` : E}
     </span>
   `;
 }
-function au(e) {
+function pu(e) {
 	return e === "ready" ? "preconditioningLearningReady" : e === "disabled" ? "preconditioningLearningDisabled" : "preconditioningLearning";
 }
 function q(e, t, n, r, i, a, o, s, c = "", l = {}) {
 	let u = e._settingsSaving || !!l.inactive;
 	return T`
     <label class=${`preconditioning-config-row ${l.inactive ? "inactive" : ""}`}>
-      ${iu(e, t, n, l.labelUnit)}
+      ${fu(e, t, n, l.labelUnit)}
       <span class="preconditioning-number-input"><input
         type="number"
         min=${String(a)}
@@ -20166,11 +24122,11 @@ function q(e, t, n, r, i, a, o, s, c = "", l = {}) {
     </label>
   `;
 }
-function ou(e, t, n, r, i, a = {}) {
+function mu(e, t, n, r, i, a = {}) {
 	let o = e._settingsSaving || !!a.inactive;
 	return T`
     <label class=${`preconditioning-config-row preconditioning-toggle-row ${a.inactive ? "inactive" : ""}`}>
-      ${iu(e, t, n)}
+      ${fu(e, t, n)}
       <ha-switch
         .checked=${r}
         ?disabled=${o}
@@ -20179,11 +24135,11 @@ function ou(e, t, n, r, i, a = {}) {
     </label>
   `;
 }
-function su(e, t, n, r, i, a = {}) {
-	let o = e._settingsSaving || !!a.inactive, s = a.inactive ? "" : r, c = Pl(e.hass, r);
+function hu(e, t, n, r, i, a = {}) {
+	let o = e._settingsSaving || !!a.inactive, s = a.inactive ? "" : r, c = Hl(e.hass, r);
 	return T`
     <label class=${`preconditioning-config-row preconditioning-sensor-row ${a.inactive ? "inactive" : ""}`}>
-      ${iu(e, t, n)}
+      ${fu(e, t, n)}
       <span class="select-wrap">
         <select
           .value=${s}
@@ -20210,7 +24166,7 @@ function su(e, t, n, r, i, a = {}) {
 }
 //#endregion
 //#region node_modules/lit-html/directives/keyed.js
-var cu = Uo(class extends Wo {
+var gu = Zo(class extends Qo {
 	constructor() {
 		super(...arguments), this.key = E;
 	}
@@ -20218,35 +24174,35 @@ var cu = Uo(class extends Wo {
 		return this.key = e, t;
 	}
 	update(e, [t, n]) {
-		return t !== this.key && (Zo(e), this.key = t), n;
+		return t !== this.key && (as(e), this.key = t), n;
 	}
 });
 //#endregion
 //#region src/velair/controllers/climate-profile-actions.ts
-async function lu(e, t) {
-	let n = lc(t);
+async function _u(e, t) {
+	let n = _c(t);
 	if (n) throw Error(n);
-	return e.setClimateProfile(uc(t));
+	return e.setClimateProfile(vc(t));
 }
-function uu(e, t) {
+function vu(e, t) {
 	return e.deleteClimateProfile(t);
 }
-function du(e, t) {
+function yu(e, t) {
 	return e.activateProfile(t);
 }
 //#endregion
 //#region src/velair/domain/modes.ts
-var fu = new Set([
+var bu = new Set([
 	"default",
 	"predeterminado",
 	"manual",
 	"unknown",
 	"unavailable"
 ]);
-function pu(e) {
+function xu(e) {
 	return e.normalize("NFKC").toLowerCase().replaceAll("ß", "ss").replaceAll("ς", "σ");
 }
-function mu(e) {
+function Su(e) {
 	return e ? {
 		key: e.key,
 		name: e.name,
@@ -20256,12 +24212,12 @@ function mu(e) {
 		profileIds: []
 	};
 }
-function hu(e, t, n) {
+function Cu(e, t, n) {
 	let r = e.name.trim();
 	if (!r || /[\u0000-\u001F\u007F-\u009F]/u.test(e.name)) return "name";
 	if (r.length > 255) return "length";
-	let i = pu(r);
-	if (fu.has(i) || t.some((t) => t.key !== e.key && pu(t.name.trim()) === i)) return "duplicate";
+	let i = xu(r);
+	if (bu.has(i) || t.some((t) => t.key !== e.key && xu(t.name.trim()) === i)) return "duplicate";
 	if (!e.profileIds.length || new Set(e.profileIds).size !== e.profileIds.length) return "profile";
 	let a = new Map((n ?? []).map((e) => [e.key, e])), o = /* @__PURE__ */ new Set();
 	for (let t of e.profileIds) {
@@ -20273,12 +24229,12 @@ function hu(e, t, n) {
 		}
 	}
 }
-function gu(e) {
+function wu(e) {
 	return e?.global.active_profile_ids?.length ? e.modes?.find((t) => t.key === e.active_mode_id) ?? "manual" : "default";
 }
 //#endregion
 //#region src/velair/styles/profile-styles.ts
-var _u = u`
+var Tu = u`
   :host {
     display: block;
     color: var(--primary-text-color);
@@ -21664,7 +25620,7 @@ var _u = u`
 `;
 //#endregion
 //#region src/velair/views/weekly-schedule-editor.ts
-function vu(e) {
+function Eu(e) {
 	return T`
     ${e.dayTabs}
     <div class="schedule-step-heading"><strong>${e.configureHeading}</strong></div>
@@ -21681,7 +25637,7 @@ function vu(e) {
 }
 //#endregion
 //#region src/velair/views/schedule-editor-controls.ts
-var yu = [
+var Du = [
 	{
 		preset: "weekdays",
 		key: "clonePresetWeekdays",
@@ -21698,11 +25654,11 @@ var yu = [
 		icon: "mdi:calendar-multiselect"
 	}
 ];
-function bu(e, t, n) {
+function Ou(e, t, n) {
 	return T`
     <div class="copy-presets" role="group" aria-label=${e("clonePresetLabel")}>
       <div class="copy-preset-options">
-        ${yu.map(({ preset: n, key: r, icon: i }) => T`
+        ${Du.map(({ preset: n, key: r, icon: i }) => T`
         <button class="copy-preset-button" type="button" @click=${() => t(n)}>
           <ha-icon icon=${i}></ha-icon>
           <span>${e(r)}</span>
@@ -21723,7 +25679,7 @@ function bu(e, t, n) {
     </div>
   `;
 }
-function xu(e, t) {
+function ku(e, t) {
 	if (!t) return;
 	let n = t.max > 0 ? Math.min(100, t.used / t.max * 100) : 0;
 	return T`
@@ -21751,11 +25707,11 @@ function J(e, t, n, r) {
 //#region src/velair/components/profiles-view-element.ts
 var Y = class extends He {
 	constructor(...e) {
-		super(...e), this.initialWeekday = "", this.compact = !1, this.activeSetupControls = "both", this.workspace = "both", this.scheduleWorkspace = !1, this._selectedKey = "", this._draft = Zs(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._dirty = !1, this._expandedZones = /* @__PURE__ */ new Set(), this._selectedModeKey = "", this._modeEditorOpen = !1, this._modeDraft = mu(), this._modeDirty = !1, this._activeLibrary = "profiles", this._selectedEntity = "", this._validationNotices = new ei(() => this.requestUpdate()), this._handleDocumentClick = (e) => {
+		super(...e), this.initialWeekday = "", this.compact = !1, this.activeSetupControls = "both", this.workspace = "both", this.scheduleWorkspace = !1, this._selectedKey = "", this._draft = ac(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._dirty = !1, this._expandedZones = /* @__PURE__ */ new Set(), this._selectedModeKey = "", this._modeEditorOpen = !1, this._modeDraft = Su(), this._modeDirty = !1, this._activeLibrary = "profiles", this._selectedEntity = "", this._validationNotices = new ci(() => this.requestUpdate()), this._handleDocumentClick = (e) => {
 			let t = this.shadowRoot?.querySelector(".active-setup-menu");
 			!t?.open || e.composedPath().includes(t) || (t.open = !1);
 		}, this._clearSelection = () => {
-			this._validationNotices.dispose(), this._selectedKey = "", this._draft = Zs(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices();
+			this._validationNotices.dispose(), this._selectedKey = "", this._draft = ac(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices();
 		}, this._saveDayAsTemplate = async () => {
 			let e = this._templateDialog, t = this.hass ? new P(this.hass) : void 0;
 			if (!e || !t || !e.name.trim() || this._busy) return;
@@ -21769,13 +25725,13 @@ var Y = class extends He {
 				};
 				return;
 			}
-			let a = uc(this._draft).zones[e.entityId];
+			let a = vc(this._draft).zones[e.entityId];
 			if (a.behavior !== "schedule") return;
 			this._busy = "template-save";
 			let o = Symbol("profile-template-save");
 			this._templateSaveToken = o, this._clearNotices();
 			try {
-				let n = await t.setScheduleTemplate(pr(), e.name.trim(), a.schedule[e.weekday] ?? []);
+				let n = await t.setScheduleTemplate(xr(), e.name.trim(), a.schedule[e.weekday] ?? []);
 				this.data = n, this.dispatchEvent(new CustomEvent("profile-data-changed", {
 					bubbles: !0,
 					composed: !0,
@@ -21805,7 +25761,7 @@ var Y = class extends He {
 					return;
 				}
 			}
-			this._draft = oc(this._draft, e.entityId, e.weekday, e.targets), this._cloneClimateTargets = {
+			this._draft = mc(this._draft, e.entityId, e.weekday, e.targets), this._cloneClimateTargets = {
 				...this._cloneClimateTargets,
 				[e.entityId]: /* @__PURE__ */ new Set()
 			}, this._closeClimateCloneDialog(), this._setDirty(!0);
@@ -21818,7 +25774,7 @@ var Y = class extends He {
 			let e = this._dialogTrigger;
 			this._dialogTrigger = void 0, this.updateComplete.then(() => e?.focus());
 		}, this._createMode = () => {
-			this._discardModeChanges() && (this._selectedModeKey = "", this._modeDraft = mu(), this._modeEditorOpen = !0, this._setModeDirty(!1));
+			this._discardModeChanges() && (this._selectedModeKey = "", this._modeDraft = Su(), this._modeEditorOpen = !0, this._setModeDirty(!1));
 		};
 	}
 	connectedCallback() {
@@ -21828,7 +25784,7 @@ var Y = class extends He {
 		this.ownerDocument.removeEventListener("click", this._handleDocumentClick), this._validationNotices.dispose(), super.disconnectedCallback();
 	}
 	_localEntityIds() {
-		return Wt(this.data?.configured_entities ?? [], this.data?.settings?.zone_order ?? []);
+		return Qt(this.data?.configured_entities ?? [], this.data?.settings?.zone_order ?? []);
 	}
 	_externalCapabilities(e) {
 		let t = this.data?.zones?.[e]?.execution;
@@ -21841,12 +25797,12 @@ var Y = class extends He {
 		if (e.has("data")) {
 			if (this._modeEditorOpen && this._selectedModeKey) {
 				let e = this.data?.modes?.find((e) => e.key === this._selectedModeKey);
-				e ? this._modeDirty || (this._modeDraft = mu(e)) : this._clearModeSelection();
+				e ? this._modeDirty || (this._modeDraft = Su(e)) : this._clearModeSelection();
 			}
 			let e = this.data?.profiles ?? [], t = this._localEntityIds();
 			(!this._selectedEntity || !t.includes(this._selectedEntity)) && (this._selectedEntity = t[0] ?? "");
 			let n = e.find((e) => e.key === this._selectedKey);
-			this._dirty && this._selectedKey && !n ? (this._clearSelection(), this._error = this._t("profileRemovedElsewhere")) : this._dirty || (n ? this._draft = Zs(n) : this._selectedKey && this._clearSelection());
+			this._dirty && this._selectedKey && !n ? (this._clearSelection(), this._error = this._t("profileRemovedElsewhere")) : this._dirty || (n ? this._draft = ac(n) : this._selectedKey && this._clearSelection());
 		}
 		this._validationNotices.sync(this._desiredValidationNotices());
 	}
@@ -21933,7 +25889,7 @@ var Y = class extends He {
 	_renderClimateCloneDialog() {
 		let e = this._climateCloneDialog;
 		if (!e) return E;
-		let t = this.hass?.states?.[e.entityId]?.attributes?.friendly_name ?? e.entityId, n = [...e.targets].map((e) => this.hass?.states?.[e]?.attributes?.friendly_name ?? e), r = [...e.targets].filter((e) => nc(this._draft.zones[e]) !== "schedule");
+		let t = this.hass?.states?.[e.entityId]?.attributes?.friendly_name ?? e.entityId, n = [...e.targets].map((e) => this.hass?.states?.[e]?.attributes?.friendly_name ?? e), r = [...e.targets].filter((e) => uc(this._draft.zones[e]) !== "schedule");
 		return T`
       <div class="profile-dialog-backdrop" @click=${(e) => {
 			e.target === e.currentTarget && this._closeClimateCloneDialog();
@@ -22088,7 +26044,7 @@ var Y = class extends He {
     `;
 	}
 	_renderActiveSelector() {
-		let e = Qs(this.data), t = this.data?.global.active_profile_ids ?? [], n = this.data?.profiles ?? [], r = this.data?.modes ?? [], i = gu(this.data), a = i === "default" ? this._t("modeDefault") : i === "manual" ? this._t("modeManual") : i.name, o = i === "default" ? "default" : i === "manual" ? "manual" : `custom:${i.key}`, s = typeof i == "string" ? [] : i.profile_ids.map((e) => n.find((t) => t.key === e)).filter((e) => !!e), c = i === "default" ? this._t("modeDefaultDescription") : i === "manual" ? this._t("modeManualDescription") : this._t("modeCustomDescription", { profile: s.map((e) => e.name).join(", ") }), l = !!this._busy || this._operationRunning() || this._dirty || this._modeDirty, u = this.activeSetupControls === "modes" || this.activeSetupControls === "profiles" ? this.activeSetupControls : "both", d = u !== "profiles", f = u !== "modes";
+		let e = oc(this.data), t = this.data?.global.active_profile_ids ?? [], n = this.data?.profiles ?? [], r = this.data?.modes ?? [], i = wu(this.data), a = i === "default" ? this._t("modeDefault") : i === "manual" ? this._t("modeManual") : i.name, o = i === "default" ? "default" : i === "manual" ? "manual" : `custom:${i.key}`, s = typeof i == "string" ? [] : i.profile_ids.map((e) => n.find((t) => t.key === e)).filter((e) => !!e), c = i === "default" ? this._t("modeDefaultDescription") : i === "manual" ? this._t("modeManualDescription") : this._t("modeCustomDescription", { profile: s.map((e) => e.name).join(", ") }), l = !!this._busy || this._operationRunning() || this._dirty || this._modeDirty, u = this.activeSetupControls === "modes" || this.activeSetupControls === "profiles" ? this.activeSetupControls : "both", d = u !== "profiles", f = u !== "modes";
 		return T`
       <section class="profile-active-context active-setup-card" aria-label=${this._t("activeSetup")}>
         <div class="active-setup-heading">
@@ -22332,7 +26288,7 @@ var Y = class extends He {
     `;
 	}
 	_renderModeEditor() {
-		let e = this.data?.profiles ?? [], t = hu(this._modeDraft, this.data?.modes ?? [], e);
+		let e = this.data?.profiles ?? [], t = Cu(this._modeDraft, this.data?.modes ?? [], e);
 		return T`
       <section class="mode-editor">
         <div class="mode-field mode-name-field">
@@ -22411,7 +26367,7 @@ var Y = class extends He {
             </button>
           </div>
         </div>
-        <div class="profile-schedule-error">${ns(c)}</div>
+        <div class="profile-schedule-error">${us(c)}</div>
         <div class="metadata">
           <div class="profile-color-field profile-metadata-row">
             <label for="profile-color-picker">${this._t("profileColor")}</label>
@@ -22500,7 +26456,7 @@ var Y = class extends He {
 	_renderWorkspaceZone() {
 		let e = this._localEntityIds();
 		if (!e.length) return T`<span class="empty">${this._t("noManagedEntities")}</span>`;
-		let t = e.includes(this._selectedEntity) ? this._selectedEntity : e[0], n = this._draft.zones[t], r = nc(n), i = this._zoneScheduleError(t), a = uc(this._draft), o = this._persistedProfileInput();
+		let t = e.includes(this._selectedEntity) ? this._selectedEntity : e[0], n = this._draft.zones[t], r = uc(n), i = this._zoneScheduleError(t), a = vc(this._draft), o = this._persistedProfileInput();
 		return T`
       <section class="schedule-zone-picker profile-workspace-zone-picker">
         <div class="schedule-step-heading"><strong>${this._t("scheduleStepClimate")}</strong></div>
@@ -22573,7 +26529,7 @@ var Y = class extends He {
     `;
 	}
 	_renderZone(e) {
-		let t = this._draft.zones[e], n = nc(t), r = this._zoneScheduleError(e), i = this._expandedZones.has(e), a = `profile-zone-content-${e.replace(/[^a-zA-Z0-9_-]/g, "-")}`, o = this.hass?.states?.[e]?.attributes?.friendly_name ?? e, s = this._t(i ? "profileCollapseClimate" : "profileExpandClimate", { climate: o }), c = () => this._toggleZone(e);
+		let t = this._draft.zones[e], n = uc(t), r = this._zoneScheduleError(e), i = this._expandedZones.has(e), a = `profile-zone-content-${e.replace(/[^a-zA-Z0-9_-]/g, "-")}`, o = this.hass?.states?.[e]?.attributes?.friendly_name ?? e, s = this._t(i ? "profileCollapseClimate" : "profileExpandClimate", { climate: o }), c = () => this._toggleZone(e);
 		return T`
       <article class=${`profile-zone ${i ? "expanded" : "collapsed"} ${r ? "error" : ""}`}>
         <div
@@ -22634,7 +26590,7 @@ var Y = class extends He {
     `;
 	}
 	_renderSchedule(e, t) {
-		let n = Ut(this.data?.settings?.first_weekday ?? k[0]), r = n.includes(this.initialWeekday) ? this.initialWeekday : n[0], i = this._selectedDays[e] ?? r, a = t.schedule[i] ?? [], o = this._externalCapabilities(e), s = new Set([...this._cloneWeekdayTargets[e] ?? []].filter((e) => e !== i)), c = this._localEntityIds().filter((t) => t !== e), l = new Set([...this._cloneClimateTargets[e] ?? []].filter((e) => c.includes(e))), u = this._blockEditorHost(e, i), d = uc(this._draft), f = this._persistedProfileInput(), p = T`<div class="day-tabs">
+		let n = Zt(this.data?.settings?.first_weekday ?? k[0]), r = n.includes(this.initialWeekday) ? this.initialWeekday : n[0], i = this._selectedDays[e] ?? r, a = t.schedule[i] ?? [], o = this._externalCapabilities(e), s = new Set([...this._cloneWeekdayTargets[e] ?? []].filter((e) => e !== i)), c = this._localEntityIds().filter((t) => t !== e), l = new Set([...this._cloneClimateTargets[e] ?? []].filter((e) => c.includes(e))), u = this._blockEditorHost(e, i), d = vc(this._draft), f = this._persistedProfileInput(), p = T`<div class="day-tabs">
           ${n.map((n) => {
 			let r = this._profileDayDirty(e, n, d, f), a = M(j(this.hass), n);
 			return T`
@@ -22654,7 +26610,7 @@ var Y = class extends He {
             </button>
           `;
 		})}
-        </div>`, m = ku(u, e, "template", {
+        </div>`, m = Lu(u, e, "template", {
 			schedule: t.schedule,
 			weekday: i
 		}), h = T`<div class="template-panel">
@@ -22684,10 +26640,10 @@ var Y = class extends He {
             </button>
           </div>`, _ = T`<div class="draft-list profile-block-list">
           ${a.length ? T`
-                ${Nu(u, "template")}
-                ${a.map((t, n) => cu(qu("template", `${this._selectedKey}:${e}`, i, n), Fu(u, t, n, "template")))}
-                ${Pu(u, "template")}
-              ` : Pu(u, "template")}
+                ${Vu(u, "template")}
+                ${a.map((t, n) => gu(td("template", `${this._selectedKey}:${e}`, i, n), Uu(u, t, n, "template")))}
+                ${Hu(u, "template")}
+              ` : Hu(u, "template")}
         </div>`, v = T`<div class="copy-panel profile-day-copy">
           <div class="copy-header">
             <div>
@@ -22695,7 +26651,7 @@ var Y = class extends He {
               <strong>${this._t("otherDays")}</strong>
             </div>
           </div>
-          ${bu(this._t.bind(this), (t) => this._setCloneDayPreset(e, i, t), s.size > 0)}
+          ${Ou(this._t.bind(this), (t) => this._setCloneDayPreset(e, i, t), s.size > 0)}
           <div class="copy-targets">
             ${n.filter((e) => e !== i).map((t) => T`
                 <label class="check-target" title=${M(j(this.hass), t)}>
@@ -22755,13 +26711,13 @@ var Y = class extends He {
         ` : E}`;
 		return T`
       <div class="profile-week">
-        ${vu({
+        ${Eu({
 			dayTabs: p,
 			timeline: m,
 			configureHeading: this._t("scheduleStepConfigure"),
 			helper: this._t("templateOptionalHint"),
 			templatePanel: h,
-			externalUsage: xu(this._t.bind(this), o ? fi(a, o) : void 0),
+			externalUsage: ku(this._t.bind(this), o ? bi(a, o) : void 0),
 			blockList: _,
 			primaryActions: g,
 			copyPanels: v
@@ -22773,16 +26729,16 @@ var Y = class extends He {
 		if (this._dirty && !window.confirm(this._t("profileDiscardChanges"))) return;
 		let e = this.hass ? new P(this.hass) : void 0;
 		if (!e || this._busy) return;
-		let t = cc(this._t("profileNewName"), this.data?.profiles ?? []);
+		let t = gc(this._t("profileNewName"), this.data?.profiles ?? []);
 		this._busy = "save", this._clearNotices();
 		try {
-			let n = await lu(e, {
-				...Zs(),
+			let n = await _u(e, {
+				...ac(),
 				name: t
 			});
 			this._emitData(n);
 			let r = n.profiles?.find((e) => e.key === n.profile_id) ?? n.profiles?.find((e) => e.name === t);
-			r && (this._selectedKey = r.key, this._draft = Zs(r), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set()), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
+			r && (this._selectedKey = r.key, this._draft = ac(r), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set()), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
 		} catch (e) {
 			this._error = this._errorMessage(e, "profileInvalidSchedule");
 		} finally {
@@ -22790,7 +26746,7 @@ var Y = class extends He {
 		}
 	}
 	_selectProfile(e) {
-		this._dirty && !window.confirm(this._t("profileDiscardChanges")) || (this._selectedKey = e.key, this._draft = Zs(e), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices());
+		this._dirty && !window.confirm(this._t("profileDiscardChanges")) || (this._selectedKey = e.key, this._draft = ac(e), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices());
 	}
 	_updateMetadata(e, t) {
 		this._draft = {
@@ -22799,7 +26755,7 @@ var Y = class extends He {
 		}, this._setDirty(!0);
 	}
 	_setZoneBehavior(e, t) {
-		this._isExternalEntity(e) && t === "pause" || (this._draft = rc(this._draft, e, t), this._cloneWeekdayTargets = {
+		this._isExternalEntity(e) && t === "pause" || (this._draft = dc(this._draft, e, t), this._cloneWeekdayTargets = {
 			...this._cloneWeekdayTargets,
 			[e]: /* @__PURE__ */ new Set()
 		}, this._cloneClimateTargets = {
@@ -22843,7 +26799,7 @@ var Y = class extends He {
 	_setCloneDayPreset(e, t, n) {
 		this._cloneWeekdayTargets = {
 			...this._cloneWeekdayTargets,
-			[e]: di(n, t)
+			[e]: yi(n, t)
 		};
 	}
 	_toggleCloneClimateTarget(e, t, n) {
@@ -22861,7 +26817,7 @@ var Y = class extends He {
 				...this._draft.zones,
 				[e]: {
 					...r,
-					schedule: ac(r.schedule, t, n)
+					schedule: pc(r.schedule, t, n)
 				}
 			}
 		}, this._cloneWeekdayTargets = {
@@ -22894,8 +26850,8 @@ var Y = class extends He {
 		}, this._setDirty(!0));
 	}
 	_addBlock(e, t) {
-		let n = this._blocks(e, t), r = ni(n, sc(n), this.data?.temperature_unit), i = this.hass?.states?.[e];
-		!n.length && Ot(i) && !Dt(i) && (r = r.map((e, t) => t === r.length - 1 ? {
+		let n = this._blocks(e, t), r = ui(n, hc(n), this.data?.temperature_unit), i = this.hass?.states?.[e];
+		!n.length && It(i) && !Ft(i) && (r = r.map((e, t) => t === r.length - 1 ? {
 			...e,
 			temperature: void 0,
 			target_temp_low: i?.attributes?.target_temp_low ?? "",
@@ -22903,13 +26859,13 @@ var Y = class extends He {
 		} : e)), this._setBlocks(e, t, r);
 	}
 	_removeBlock(e, t, n) {
-		this._setBlocks(e, t, ri(this._blocks(e, t), n));
+		this._setBlocks(e, t, di(this._blocks(e, t), n));
 	}
 	_updateBlock(e, t, n, r, i) {
-		let a = this._blocks(e, t), o = a[n], s = ii(a, n, r, i);
+		let a = this._blocks(e, t), o = a[n], s = fi(a, n, r, i);
 		if (o && r === "hvac_mode") {
 			let t = this.hass?.states?.[e];
-			i === "heat_cool" && o.hvac_mode !== "heat_cool" && Ot(t) && !L(o) ? s = s.map((e, r) => r === n ? {
+			i === "heat_cool" && o.hvac_mode !== "heat_cool" && It(t) && !L(o) ? s = s.map((e, r) => r === n ? {
 				...e,
 				temperature: void 0,
 				target_temp_low: t?.attributes?.target_temp_low ?? "",
@@ -22927,7 +26883,7 @@ var Y = class extends He {
 		let r = n.value;
 		if (!r) return;
 		let i = this.data?.templates?.find((e) => e.key === r);
-		i && this._setBlocks(e, t, ti(i.blocks, this.data?.temperature_unit)), n.value = "";
+		i && this._setBlocks(e, t, li(i.blocks, this.data?.temperature_unit)), n.value = "";
 	}
 	_openTemplateDialog(e, t, n) {
 		this._dialogTrigger = n, this._templateDialog = {
@@ -22957,26 +26913,26 @@ var Y = class extends He {
 	_cloneCompatibilityError(e, t) {
 		let n = this.hass?.states?.[t], r = n?.attributes?.friendly_name ?? t;
 		for (let i of e) if (i.action !== "turn_off") {
-			if (i.hvac_mode && !Et(n).includes(i.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", {
+			if (i.hvac_mode && !Pt(n).includes(i.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", {
 				entity: r,
 				value: i.hvac_mode,
 				start: i.start
 			});
-			if (!At(n, L(i) ? "range" : "scalar", i.hvac_mode)) return this._t("profileCloneDayIncompatibleTarget", {
+			if (!Rt(n, L(i) ? "range" : "scalar", i.hvac_mode)) return this._t("profileCloneDayIncompatibleTarget", {
 				entity: r,
 				start: i.start
 			});
 			if ([
-				[i.fan_mode, jt(n)],
-				[i.preset_mode, Mt(n)],
-				[i.swing_mode, Nt(n)],
-				[i.swing_horizontal_mode, Pt(n)]
+				[i.fan_mode, zt(n)],
+				[i.preset_mode, Bt(n)],
+				[i.swing_mode, Vt(n)],
+				[i.swing_horizontal_mode, Ht(n)]
 			].some(([e, t]) => e && !t.includes(e))) return this._t("profileCloneDayIncompatibleOptions", {
 				entity: r,
 				start: i.start
 			});
 			if (String(i.humidity ?? "").trim()) {
-				let e = Ft(n), t = Number(i.humidity);
+				let e = Ut(n), t = Number(i.humidity);
 				if (!e || t < e[0] || t > e[1]) return this._t("profileCloneDayIncompatibleOptions", {
 					entity: r,
 					start: i.start
@@ -22989,7 +26945,7 @@ var Y = class extends He {
 		}
 	}
 	_blockEditorHost(e, t) {
-		let n = this.hass?.states?.[e], r = this._externalCapabilities(e), i = Ct(n, this.data?.temperature_unit), a = wt(n), o = {
+		let n = this.hass?.states?.[e], r = this._externalCapabilities(e), i = jt(n, this.data?.temperature_unit), a = Mt(n), o = {
 			hass: this.hass,
 			classList: this.classList,
 			renderRoot: this.renderRoot,
@@ -23000,14 +26956,14 @@ var Y = class extends He {
 			_temperatureLimits: () => i,
 			_temperatureStep: () => a,
 			_temperatureUnit: () => this.data?.temperature_unit ?? "°C",
-			_hvacModeOptions: () => r?.supported_hvac_modes ?? Et(n),
-			_fanModeOptions: () => r && !r.supported_option_fields.includes("fan_mode") ? [] : jt(n),
-			_presetModeOptions: () => r && !r.supported_option_fields.includes("preset_mode") ? [] : Mt(n),
-			_swingModeOptions: () => r && !r.supported_option_fields.includes("swing_mode") ? [] : Nt(n),
-			_swingHorizontalModeOptions: () => r && !r.supported_option_fields.includes("swing_horizontal_mode") ? [] : Pt(n),
-			_humidityLimits: () => r && !r.supported_option_fields.includes("humidity") ? void 0 : Ft(n),
-			_modeLabel: (e) => vt(j(this.hass), "hvacModes", e),
-			_shortWeekdayName: (e) => _t(j(this.hass), e),
+			_hvacModeOptions: () => r?.supported_hvac_modes ?? Pt(n),
+			_fanModeOptions: () => r && !r.supported_option_fields.includes("fan_mode") ? [] : zt(n),
+			_presetModeOptions: () => r && !r.supported_option_fields.includes("preset_mode") ? [] : Bt(n),
+			_swingModeOptions: () => r && !r.supported_option_fields.includes("swing_mode") ? [] : Vt(n),
+			_swingHorizontalModeOptions: () => r && !r.supported_option_fields.includes("swing_horizontal_mode") ? [] : Ht(n),
+			_humidityLimits: () => r && !r.supported_option_fields.includes("humidity") ? void 0 : Ut(n),
+			_modeLabel: (e) => Et(j(this.hass), "hvacModes", e),
+			_shortWeekdayName: (e) => Tt(j(this.hass), e),
 			_weekdayName: (e) => M(j(this.hass), e),
 			_updateDraftBlock: (n, r, i) => this._updateBlock(e, t, n, r, i),
 			_removeBlock: (n) => this._removeBlock(e, t, n),
@@ -23015,8 +26971,8 @@ var Y = class extends He {
 			_inputValue: (e) => e.currentTarget.value,
 			_formatTemperatureLimit: (e) => this._formatTemperatureLimit(e),
 			_currentTimelineNow: () => this.timelineNow ?? /* @__PURE__ */ new Date(),
-			_formatScheduleTime: (e) => Fa(e, ja(j(this.hass)), this.hass?.locale?.time_format),
-			_formatTemperature: (e) => La(e, this.data?.temperature_unit ?? "°C"),
+			_formatScheduleTime: (e) => Ua(e, za(j(this.hass)), this.hass?.locale?.time_format),
+			_formatTemperature: (e) => Ga(e, this.data?.temperature_unit ?? "°C"),
 			_blocksForSource: () => this._blocks(e, t),
 			_setBlocksForSource: (n, r) => this._setBlocks(e, t, r)
 		};
@@ -23025,15 +26981,15 @@ var Y = class extends He {
 			a[n] && (a[n] = {
 				...a[n],
 				start: r
-			}, this._setBlocks(e, t, a), i.sort && ca(o, "template"));
-		}, o._sortDraftBlocksByStart = () => ca(o, "template"), o._resizeTimelineBlock = (e, t, n) => sa(o, e, t, n, "template"), o._timelineBlocks = () => la(o, "template"), o._handleTimelineDragStart = (e, t, n) => $i(o, e, t, n), o._handleTimelineDragOver = (e) => ea(e), o._handleTimelineDrop = (e, t = "template") => ta(o, e, t), o._handleTimelineDragEnd = () => ra(o), o._handleTimelineResizeStart = (e, t, n, r) => ia(o, e, t, n, r), o._handleTimelineResizeMove = (e) => aa(o, e), o._handleTimelineResizeEnd = (e) => oa(o), o;
+			}, this._setBlocks(e, t, a), i.sort && ga(o, "template"));
+		}, o._sortDraftBlocksByStart = () => ga(o, "template"), o._resizeTimelineBlock = (e, t, n) => ha(o, e, t, n, "template"), o._timelineBlocks = () => _a(o, "template"), o._handleTimelineDragStart = (e, t, n) => sa(o, e, t, n), o._handleTimelineDragOver = (e) => ca(e), o._handleTimelineDrop = (e, t = "template") => la(o, e, t), o._handleTimelineDragEnd = () => da(o), o._handleTimelineResizeStart = (e, t, n, r) => fa(o, e, t, n, r), o._handleTimelineResizeMove = (e) => pa(o, e), o._handleTimelineResizeEnd = (e) => ma(o), o;
 	}
 	_formatTemperatureLimit(e) {
 		return String(Number.isInteger(e) ? e : Number(e.toFixed(2)));
 	}
 	_temperatureError(e, t) {
-		let n = this.hass?.states?.[e], [r, i] = Ct(n, this.data?.temperature_unit), a = wt(n);
-		return ai(t, {
+		let n = this.hass?.states?.[e], [r, i] = jt(n, this.data?.temperature_unit), a = Mt(n);
+		return pi(t, {
 			minTemperature: r,
 			maxTemperature: i,
 			temperatureStep: a,
@@ -23046,7 +27002,7 @@ var Y = class extends He {
 		});
 	}
 	_hasScheduleValidationError() {
-		return lc(this._draft) === "schedule" || this._unsupportedScheduleModeError() ? !0 : Object.entries(this._draft.zones).some(([e, t]) => t.behavior === "schedule" && k.some((n) => (t.schedule[n] ?? []).some((t) => !!this._temperatureError(e, t))));
+		return _c(this._draft) === "schedule" || this._unsupportedScheduleModeError() ? !0 : Object.entries(this._draft.zones).some(([e, t]) => t.behavior === "schedule" && k.some((n) => (t.schedule[n] ?? []).some((t) => !!this._temperatureError(e, t))));
 	}
 	_desiredValidationNotices() {
 		if (!this._selectedKey) return [];
@@ -23074,24 +27030,24 @@ var Y = class extends He {
 				let i = n.schedule[e] ?? [], a = i.find((e) => L(e) && e.hvac_mode !== void 0 && e.hvac_mode !== "heat_cool");
 				if (a?.hvac_mode) return this._t("unsupportedModeForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
-					mode: vt(j(this.hass), "hvacModes", a.hvac_mode),
+					mode: Et(j(this.hass), "hvacModes", a.hvac_mode),
 					start: a.start,
 					weekday: M(j(this.hass), e)
 				});
-				let o = i.find((e) => L(e) && !At(r, "range", e.hvac_mode));
+				let o = i.find((e) => L(e) && !Rt(r, "range", e.hvac_mode));
 				if (o) return this._t("unsupportedRangeTargetForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
 					start: o.start,
 					weekday: M(j(this.hass), e)
 				});
-				let s = ci(i, Et(r));
+				let s = gi(i, Pt(r));
 				if (s?.hvac_mode) return this._t("unsupportedModeForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
-					mode: vt(j(this.hass), "hvacModes", s.hvac_mode),
+					mode: Et(j(this.hass), "hvacModes", s.hvac_mode),
 					start: s.start,
 					weekday: M(j(this.hass), e)
 				});
-				let c = i.find((e) => e.action !== "turn_off" && !L(e) && !At(r, "scalar", e.hvac_mode));
+				let c = i.find((e) => e.action !== "turn_off" && !L(e) && !Rt(r, "scalar", e.hvac_mode));
 				if (c) return this._t("unsupportedSingleTargetForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
 					start: c.start,
@@ -23147,13 +27103,13 @@ var Y = class extends He {
 		}
 	}
 	_selectMode(e) {
-		this._discardModeChanges() && (this._selectedModeKey = e.key, this._modeDraft = mu(e), this._modeEditorOpen = !0, this._setModeDirty(!1));
+		this._discardModeChanges() && (this._selectedModeKey = e.key, this._modeDraft = Su(e), this._modeEditorOpen = !0, this._setModeDirty(!1));
 	}
 	_discardModeChanges() {
 		return !this._modeDirty || window.confirm(this._t("modeDiscardChanges"));
 	}
 	_clearModeSelection() {
-		this._selectedModeKey = "", this._modeDraft = mu(), this._modeEditorOpen = !1, this._setModeDirty(!1);
+		this._selectedModeKey = "", this._modeDraft = Su(), this._modeEditorOpen = !1, this._setModeDirty(!1);
 	}
 	_updateModeDraft(e, t) {
 		this._modeDraft = {
@@ -23170,7 +27126,7 @@ var Y = class extends He {
 	}
 	async _saveMode() {
 		let e = this.hass ? new P(this.hass) : void 0;
-		if (!(!e || this._busy || hu(this._modeDraft, this.data?.modes ?? [], this.data?.profiles ?? []))) {
+		if (!(!e || this._busy || Cu(this._modeDraft, this.data?.modes ?? [], this.data?.profiles ?? []))) {
 			this._busy = "mode-save", this._clearNotices();
 			try {
 				let t = await e.setVelairMode({
@@ -23180,7 +27136,7 @@ var Y = class extends He {
 				});
 				this._emitData(t);
 				let n = this._modeDraft.key ?? t.mode_id, r = t.modes?.find((e) => e.key === n);
-				r && (this._selectedModeKey = r.key, this._modeDraft = mu(r)), this._setModeDirty(!1), this._showSuccess(this._t("modeSaved"));
+				r && (this._selectedModeKey = r.key, this._modeDraft = Su(r)), this._setModeDirty(!1), this._showSuccess(this._t("modeSaved"));
 			} catch (e) {
 				this._error = this._errorMessage(e, "modeUnableSave");
 			} finally {
@@ -23207,7 +27163,7 @@ var Y = class extends He {
 		let n = this.data?.operation_status?.id;
 		this._busy = "activate", this._clearNotices();
 		try {
-			this._emitData(await du(t, e));
+			this._emitData(await yu(t, e));
 		} catch (e) {
 			let t = this.data?.operation_status;
 			t?.state === "failed" && t.id !== n || (this._error = this._errorMessage(e, "profileUnableActivate"));
@@ -23239,10 +27195,10 @@ var Y = class extends He {
 		if (!(!e || this._busy)) {
 			this._busy = "save", this._clearNotices();
 			try {
-				let t = await lu(e, this._draft);
+				let t = await _u(e, this._draft);
 				this._emitData(t);
 				let n = t.profiles?.find((e) => e.key === (this._draft.key ?? t.profile_id)) ?? t.profiles?.find((e) => e.name === this._draft.name.trim());
-				n && (this._selectedKey = n.key, this._draft = Zs(n), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
+				n && (this._selectedKey = n.key, this._draft = ac(n), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
 			} catch (e) {
 				this._error = e instanceof Error && e.message === "name" ? this._t("profileNameRequired") : e instanceof Error && e.message === "icon" ? this._t("profileInvalidIcon") : e instanceof Error && e.message === "color" ? this._t("profileInvalidColor") : e instanceof Error && e.message === "description" ? this._t("profileDescriptionTooLong", { count: 500 }) : this._errorMessage(e, "profileInvalidSchedule");
 			} finally {
@@ -23257,7 +27213,7 @@ var Y = class extends He {
 		if (window.confirm(this._t(n ? "profileConfirmDeleteActive" : "profileConfirmDelete", { profile: e.name }))) {
 			this._busy = "delete", this._clearNotices();
 			try {
-				this._emitData(await uu(t, e.key)), e.key === this._selectedKey && this._clearSelection(), this._showSuccess(this._t("profileDeleted"));
+				this._emitData(await vu(t, e.key)), e.key === this._selectedKey && this._clearSelection(), this._showSuccess(this._t("profileDeleted"));
 			} catch (e) {
 				this._error = this._errorMessage(e, "profileUnableDelete");
 			} finally {
@@ -23277,10 +27233,10 @@ var Y = class extends He {
 	}
 	_persistedProfileInput() {
 		let e = this.data?.profiles?.find((e) => e.key === this._selectedKey);
-		return e ? uc(Zs(e)) : void 0;
+		return e ? vc(ac(e)) : void 0;
 	}
 	_profileZoneSummary(e) {
-		let t = this._draft.zones[e], n = nc(t);
+		let t = this._draft.zones[e], n = uc(t);
 		if (n === "schedule") return this._t("profileBehaviorSchedule");
 		if (n === "pause") {
 			let e = t?.behavior === "pause" && t.action === "turn_off" ? this._t("profilePauseTurnOff") : this._t("profilePauseKeep");
@@ -23288,11 +27244,11 @@ var Y = class extends He {
 		}
 		return this._t("profileBehaviorDefault");
 	}
-	_profileZoneDirty(e, t = uc(this._draft), n = this._persistedProfileInput()) {
+	_profileZoneDirty(e, t = vc(this._draft), n = this._persistedProfileInput()) {
 		let r = t.zones[e] ?? { behavior: "normal" }, i = n?.zones[e] ?? { behavior: "normal" };
 		return this._canonicalJson(r) !== this._canonicalJson(i);
 	}
-	_profileDayDirty(e, t, n = uc(this._draft), r = this._persistedProfileInput()) {
+	_profileDayDirty(e, t, n = vc(this._draft), r = this._persistedProfileInput()) {
 		let i = n.zones[e];
 		if (i?.behavior !== "schedule") return !1;
 		let a = r?.zones[e], o = a?.behavior === "schedule" ? a.schedule[t] ?? [] : [];
@@ -23300,7 +27256,7 @@ var Y = class extends He {
 	}
 	_profileDraftChanged() {
 		let e = this._persistedProfileInput();
-		return e ? this._canonicalJson(uc(this._draft)) !== this._canonicalJson(e) : !1;
+		return e ? this._canonicalJson(vc(this._draft)) !== this._canonicalJson(e) : !1;
 	}
 	_canonicalJson(e) {
 		return JSON.stringify(e, (e, t) => !t || typeof t != "object" || Array.isArray(t) ? t : Object.fromEntries(Object.entries(t).sort(([e], [t]) => e.localeCompare(t))));
@@ -23345,10 +27301,10 @@ var Y = class extends He {
 		return e instanceof Error && e.message && e.message !== "schedule" ? e.message : this._t(t);
 	}
 	_t(e, t = {}) {
-		return gt(j(this.hass), e, t);
+		return wt(j(this.hass), e, t);
 	}
 	static {
-		this.styles = [Hn, _u];
+		this.styles = [Xn, Tu];
 	}
 };
 J([D({ attribute: !1 })], Y.prototype, "hass", void 0), J([D({ attribute: !1 })], Y.prototype, "data", void 0), J([D({ attribute: "initial-weekday" })], Y.prototype, "initialWeekday", void 0), J([D({ attribute: !1 })], Y.prototype, "timelineNow", void 0), J([D({ type: Boolean })], Y.prototype, "compact", void 0), J([D({ attribute: "active-setup-controls" })], Y.prototype, "activeSetupControls", void 0), J([D({ type: String })], Y.prototype, "workspace", void 0), J([D({
@@ -23357,9 +27313,9 @@ J([D({ attribute: !1 })], Y.prototype, "hass", void 0), J([D({ attribute: !1 })]
 })], Y.prototype, "scheduleWorkspace", void 0), J([O()], Y.prototype, "_selectedKey", void 0), J([O()], Y.prototype, "_draft", void 0), J([O()], Y.prototype, "_selectedDays", void 0), J([O()], Y.prototype, "_cloneWeekdayTargets", void 0), J([O()], Y.prototype, "_cloneClimateTargets", void 0), J([O()], Y.prototype, "_busy", void 0), J([O()], Y.prototype, "_dirty", void 0), J([O()], Y.prototype, "_error", void 0), J([O()], Y.prototype, "_expandedZones", void 0), J([O()], Y.prototype, "_selectedModeKey", void 0), J([O()], Y.prototype, "_modeEditorOpen", void 0), J([O()], Y.prototype, "_modeDraft", void 0), J([O()], Y.prototype, "_modeDirty", void 0), J([O()], Y.prototype, "_activeLibrary", void 0), J([O()], Y.prototype, "_selectedEntity", void 0), J([O()], Y.prototype, "_templateDialog", void 0), J([O()], Y.prototype, "_climateCloneDialog", void 0), customElements.get("velair-profiles-view") || customElements.define("velair-profiles-view", Y);
 //#endregion
 //#region src/velair/views/schedule-view.ts
-function Su(e, t, n, r) {
+function Au(e, t, n, r) {
 	return !e._hasExternalConfig && e._scheduleSource === "profile" ? T`
-      ${Cu(e)}
+      ${ju(e)}
       <velair-profiles-view
         workspace="profiles"
         schedule-workspace
@@ -23375,12 +27331,12 @@ function Su(e, t, n, r) {
         @profile-success=${(t) => e._showSuccess(t.detail)}
       ></velair-profiles-view>
     ` : T`
-    ${e._hasExternalConfig ? E : Cu(e)}
-    ${Tu(e, t, n)}
-    ${n && r ? Eu(e, n, r) : T`<div class="notice">${e._t("noManagedEntities")}</div>`}
+    ${e._hasExternalConfig ? E : ju(e)}
+    ${Nu(e, t, n)}
+    ${n && r ? Pu(e, n, r) : T`<div class="notice">${e._t("noManagedEntities")}</div>`}
   `;
 }
-function Cu(e) {
+function ju(e) {
 	return T`
     <div class="schedule-source-selector" role="group" aria-label=${e._t("scheduleSourceLabel")}>
       <button
@@ -23404,7 +27360,7 @@ function Cu(e) {
     </div>
   `;
 }
-function wu(e, t, n) {
+function Mu(e, t, n) {
 	return T`
     <section class="zones">
       ${t.map((t) => T`
@@ -23423,17 +27379,17 @@ function wu(e, t, n) {
     </section>
   `;
 }
-function Tu(e, t, n) {
+function Nu(e, t, n) {
 	return t.length ? T`
     <section class="schedule-zone-picker">
       <div class="schedule-step-heading">
         <strong>${e._t("scheduleStepClimate")}</strong>
       </div>
-      ${wu(e, t, n)}
+      ${Mu(e, t, n)}
     </section>
   ` : E;
 }
-function Eu(e, t, n) {
+function Pu(e, t, n) {
 	let r = e._hasDraftValidationError("schedule"), i = n.execution?.type === "external", a = i ? e._data?.external_execution?.systems.find((e) => e.provider === n.execution?.provider)?.capabilities : void 0;
 	return T`
     <section class="schedule">
@@ -23449,25 +27405,25 @@ function Eu(e, t, n) {
       ${i ? T`<div class="notice external-execution-notice" role="status">
           <ha-icon icon="mdi:information-outline"></ha-icon>
           <span>${e._t("externalActionsInactive")}</span>
-        </div>` : Du(e, t, n)}
-      ${vu({
+        </div>` : Fu(e, t, n)}
+      ${Eu({
 		dayTabs: T`<div class="day-tabs">
-          ${e._orderedWeekdays().map((t) => Ou(e, t, n.schedule[t] ?? []))}
+          ${e._orderedWeekdays().map((t) => Iu(e, t, n.schedule[t] ?? []))}
         </div>`,
-		timeline: ku(e, t, "schedule", {
+		timeline: Lu(e, t, "schedule", {
 			schedule: n.schedule,
 			weekday: e._selectedWeekday
 		}),
 		configureHeading: e._t("scheduleStepConfigure"),
 		helper: e._t("templateOptionalHint"),
-		templatePanel: Mu(e),
-		externalUsage: xu(e._t.bind(e), a ? fi(e._draftBlocks, a) : void 0),
+		templatePanel: Bu(e),
+		externalUsage: ku(e._t.bind(e), a ? bi(e._draftBlocks, a) : void 0),
 		blockList: T`<div class="draft-list">
           ${e._draftBlocks.length ? T`
-                ${Nu(e, "schedule")}
-                ${e._draftBlocks.map((n, r) => cu(qu("schedule", t, e._selectedWeekday, r), Fu(e, n, r, "schedule")))}
-                ${Pu(e, "schedule")}
-              ` : Pu(e, "schedule")}
+                ${Vu(e, "schedule")}
+                ${e._draftBlocks.map((n, r) => gu(td("schedule", t, e._selectedWeekday, r), Uu(e, n, r, "schedule")))}
+                ${Hu(e, "schedule")}
+              ` : Hu(e, "schedule")}
         </div>`,
 		primaryActions: T`<div class="schedule-save-actions">
           <button
@@ -23492,16 +27448,16 @@ function Eu(e, t, n) {
         </div>`,
 		copyPanels: T`
           <div class="schedule-copy-helper">${e._t("scheduleCopyHint")}</div>
-          ${Yu(e)}
-          ${Zu(e)}
+          ${rd(e)}
+          ${ad(e)}
         `
 	})}
     </section>
   `;
 }
-function Du(e, t, n) {
+function Fu(e, t, n) {
 	let r = n.override ?? e._data?.active_overrides?.[t];
-	if (!_r(r)) return E;
+	if (!Tr(r)) return E;
 	let i = Number(r.temperature), a = Number(r.target_temp_low), o = Number(r.target_temp_high), s = F(r.until), c = typeof r.hvac_mode == "string" ? r.hvac_mode : "";
 	return T`
     <div class="boost-status">
@@ -23509,7 +27465,7 @@ function Du(e, t, n) {
       <div>
         <strong>${e._t("boostActive")}</strong>
         <span>
-          ${Number.isFinite(i) ? T`${e._t("boostTarget")}: ${e._formatTemperature(i, t)}` : Number.isFinite(a) && Number.isFinite(o) ? T`${e._t("boostTarget")}: ${Bu(e, a, o, t)}` : E}
+          ${Number.isFinite(i) ? T`${e._t("boostTarget")}: ${e._formatTemperature(i, t)}` : Number.isFinite(a) && Number.isFinite(o) ? T`${e._t("boostTarget")}: ${Ju(e, a, o, t)}` : E}
           ${c ? T` - ${e._modeLabel(c)}` : E}
           ${s ? T` - ${e._t("boostUntil")}: ${e._formatRemaining(Math.max(0, s - Date.now()))}` : E}
         </span>
@@ -23517,7 +27473,7 @@ function Du(e, t, n) {
     </div>
   `;
 }
-function Ou(e, t, n) {
+function Iu(e, t, n) {
 	return T`
     <button
       type="button"
@@ -23529,8 +27485,8 @@ function Ou(e, t, n) {
     </button>
   `;
 }
-function ku(e, t, n = "schedule", r) {
-	let i = e._timelineBlocks(n), a = r ? wr({
+function Lu(e, t, n = "schedule", r) {
+	let i = e._timelineBlocks(n), a = r ? Mr({
 		...r.schedule,
 		[r.weekday]: i.map((e) => e.draft)
 	}, r.weekday) : void 0;
@@ -23544,7 +27500,7 @@ function ku(e, t, n = "schedule", r) {
           <span>12</span>
           <span>18</span>
           <span>24</span>
-          ${Au(e)}
+          ${Ru(e)}
         </div>
       </div>
       <div
@@ -23553,15 +27509,15 @@ function ku(e, t, n = "schedule", r) {
         @drop=${(t) => e._handleTimelineDrop(t, n)}
       >
         ${i.length || a ? T`
-              ${a ? Iu(e, a, t) : E}
-              ${i.map((r) => ju(e, r, t, n))}
+              ${a ? Wu(e, a, t) : E}
+              ${i.map((r) => zu(e, r, t, n))}
             ` : T`<span class="empty timeline-empty">${e._t("noBlocks")}</span>`}
       </div>
     </div>
   `;
 }
-function Au(e) {
-	let t = br(e._currentTimelineNow());
+function Ru(e) {
+	let t = Or(e._currentTimelineNow());
 	return T`
     <div
       class="timeline-now-marker"
@@ -23573,8 +27529,8 @@ function Au(e) {
     </div>
   `;
 }
-function ju(e, t, n, r = "schedule") {
-	let i = t.draft.action === Je, a = Number(t.draft.temperature), o = Number(t.draft.target_temp_low), s = Number(t.draft.target_temp_high), c = i ? e._t("off") : L(t.draft) && Number.isFinite(o) && Number.isFinite(s) ? Bu(e, o, s, n) : Number.isFinite(a) ? e._formatTemperature(a, n) : e._t("invalidTemperatureRange"), l = e._formatScheduleTime(t.draft.start), u = i ? "" : t.draft.hvac_mode || e._t("keep"), d = Ku(e, t.draft), f = d.map((e) => e.short).join(" • "), p = [
+function zu(e, t, n, r = "schedule") {
+	let i = t.draft.action === Je, a = Number(t.draft.temperature), o = Number(t.draft.target_temp_low), s = Number(t.draft.target_temp_high), c = i ? e._t("off") : L(t.draft) && Number.isFinite(o) && Number.isFinite(s) ? Ju(e, o, s, n) : Number.isFinite(a) ? e._formatTemperature(a, n) : e._t("invalidTemperatureRange"), l = e._formatScheduleTime(t.draft.start), u = i ? "" : t.draft.hvac_mode || e._t("keep"), d = ed(e, t.draft), f = d.map((e) => e.short).join(" • "), p = [
 		`${l} - ${c}`,
 		u ? `${e._t("mode")}: ${u}` : "",
 		...d.map((e) => `${e.label}: ${e.value}`)
@@ -23584,7 +27540,7 @@ function ju(e, t, n, r = "schedule") {
       class=${[
 		"timeline-block",
 		i ? "off" : "",
-		`mode-${jr(t.draft)}`,
+		`mode-${zr(t.draft)}`,
 		t.width < 5 ? "compact" : "",
 		t.width < 2.5 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -23618,7 +27574,7 @@ function ju(e, t, n, r = "schedule") {
     </div>
   `;
 }
-function Mu(e) {
+function Bu(e) {
 	let t = e._scheduleTemplates();
 	return T`
     <div class="template-panel">
@@ -23643,7 +27599,7 @@ function Mu(e) {
     </div>
   `;
 }
-function Nu(e, t = "schedule") {
+function Vu(e, t = "schedule") {
 	let n = e._temperatureUnit?.(t === "schedule" ? e._selectedEntity : void 0) ?? "°C";
 	return T`
     <div class="draft-list-header" aria-hidden="true">
@@ -23655,7 +27611,7 @@ function Nu(e, t = "schedule") {
     </div>
   `;
 }
-function Pu(e, t = "schedule") {
+function Hu(e, t = "schedule") {
 	return T`
     <div class="draft-add-row">
       <button
@@ -23670,8 +27626,8 @@ function Pu(e, t = "schedule") {
     </div>
   `;
 }
-function Fu(e, t, n, r = "schedule") {
-	let i = (t.action || "set_temperature") === Je, a = i ? "off" : t.hvac_mode ?? "", o = e._temperatureError(t, r), s = L(t), [c, l] = e._temperatureLimits(r), u = e._temperatureStep(r), d = Tt(c, u), f = e._temperatureUnit?.(r === "schedule" ? e._selectedEntity : void 0) ?? "°C", p = e._hvacModeOptions(r), m = a && !p.includes(a) ? [...p, a] : p, h = e._fanModeOptions(r), g = e._presetModeOptions(r), _ = e._swingModeOptions(r), v = e._swingHorizontalModeOptions(r), y = e._humidityLimits(r), b = !i && (h.length > 0 || g.length > 0 || _.length > 0 || v.length > 0 || !!y), x = Ku(e, t), S = x.length > 0, C = b || S, ee = S ? x.map((e) => e.short).join(" • ") : e._t("climateOptionsAdd");
+function Uu(e, t, n, r = "schedule") {
+	let i = (t.action || "set_temperature") === Je, a = i ? "off" : t.hvac_mode ?? "", o = e._temperatureError(t, r), s = L(t), [c, l] = e._temperatureLimits(r), u = e._temperatureStep(r), d = Nt(c, u), f = e._temperatureUnit?.(r === "schedule" ? e._selectedEntity : void 0) ?? "°C", p = e._hvacModeOptions(r), m = a && !p.includes(a) ? [...p, a] : p, h = e._fanModeOptions(r), g = e._presetModeOptions(r), _ = e._swingModeOptions(r), v = e._swingHorizontalModeOptions(r), y = e._humidityLimits(r), b = !i && (h.length > 0 || g.length > 0 || _.length > 0 || v.length > 0 || !!y), x = ed(e, t), S = x.length > 0, C = b || S, ee = S ? x.map((e) => e.short).join(" • ") : e._t("climateOptionsAdd");
 	return T`
     <div class=${o ? "editable-block invalid" : "editable-block"}>
       <label>
@@ -23685,7 +27641,7 @@ function Fu(e, t, n, r = "schedule") {
       <label>
         <span class="label">${e._t("mode")}</span>
         <span class="select-wrap">
-          ${cu(Ju(r, n, a, m), T`
+          ${gu(nd(r, n, a, m), T`
               <select
                 value=${a}
                 .value=${a}
@@ -23700,14 +27656,14 @@ function Fu(e, t, n, r = "schedule") {
             `)}
         </span>
       </label>
-      ${s ? Ru(e, t, n, r, d, l, u, i, o, f) : Lu(e, t, n, r, "temperature", "temp", f, d, l, u, i, o)}
+      ${s ? Ku(e, t, n, r, d, l, u, i, o, f) : Gu(e, t, n, r, "temperature", "temp", f, d, l, u, i, o)}
       ${C ? T`
-            <details class="advanced-climate-options" @toggle=${Uu}>
+            <details class="advanced-climate-options" @toggle=${Zu}>
               <summary
                 class="icon-button climate-options-toggle"
                 title=${x.map((e) => `${e.label}: ${e.value}`).join("\n") || e._t("climateOptions")}
                 aria-label=${e._t("climateOptions")}
-                @click=${Vu}
+                @click=${Yu}
               >
                 <ha-icon icon="mdi:tune-variant"></ha-icon>
                 ${S ? T`<span class="climate-options-badge">${x.length}</span>` : E}
@@ -23716,14 +27672,14 @@ function Fu(e, t, n, r = "schedule") {
                 class="climate-options-scrim"
                 type="button"
                 aria-label=${e._t("dismiss")}
-                @click=${Hu}
+                @click=${Xu}
               ></button>
               <fieldset class="advanced-climate-options-fields">
                 <legend>${e._t("climateOptions")}</legend>
-                ${Gu(e, t, n, r, "fan_mode", "fanMode", h)}
-                ${Gu(e, t, n, r, "preset_mode", "presetMode", g)}
-                ${Gu(e, t, n, r, "swing_mode", "swingMode", _)}
-                ${Gu(e, t, n, r, "swing_horizontal_mode", "horizontalSwingMode", v)}
+                ${$u(e, t, n, r, "fan_mode", "fanMode", h)}
+                ${$u(e, t, n, r, "preset_mode", "presetMode", g)}
+                ${$u(e, t, n, r, "swing_mode", "swingMode", _)}
+                ${$u(e, t, n, r, "swing_horizontal_mode", "horizontalSwingMode", v)}
                 ${y || String(t.humidity ?? "").trim() ? T`
                       <label>
                         <span class="label">${e._t("targetHumidity")}</span>
@@ -23761,8 +27717,8 @@ function Fu(e, t, n, r = "schedule") {
     </div>
   `;
 }
-function Iu(e, t, n) {
-	let r = t.block, i = r.action === Je, a = Number(r.temperature), o = Number(r.target_temp_low), s = Number(r.target_temp_high), c = i ? e._t("off") : L(r) && Number.isFinite(o) && Number.isFinite(s) ? Bu(e, o, s, n) : Number.isFinite(a) ? e._formatTemperature(a, n) : e._t("invalidTemperatureRange"), l = i ? "" : r.hvac_mode || e._t("keep"), u = e._t("timelineContinuesFrom", {
+function Wu(e, t, n) {
+	let r = t.block, i = r.action === Je, a = Number(r.temperature), o = Number(r.target_temp_low), s = Number(r.target_temp_high), c = i ? e._t("off") : L(r) && Number.isFinite(o) && Number.isFinite(s) ? Ju(e, o, s, n) : Number.isFinite(a) ? e._formatTemperature(a, n) : e._t("invalidTemperatureRange"), l = i ? "" : r.hvac_mode || e._t("keep"), u = e._t("timelineContinuesFrom", {
 		day: e._shortWeekdayName(t.sourceWeekday),
 		time: e._formatScheduleTime(r.start)
 	}), d = [
@@ -23776,7 +27732,7 @@ function Iu(e, t, n) {
 		"timeline-block",
 		"timeline-carry-over",
 		i ? "off" : "",
-		`mode-${jr(r)}`,
+		`mode-${zr(r)}`,
 		t.width < 5 ? "compact" : "",
 		t.width < 2.5 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -23792,7 +27748,7 @@ function Iu(e, t, n) {
     </div>
   `;
 }
-function Lu(e, t, n, r, i, a, o, s, c, l, u, d) {
+function Gu(e, t, n, r, i, a, o, s, c, l, u, d) {
 	return T`
     <label class=${i === "temperature" ? "single-temperature-field" : "range-temperature-field"}>
       <span class="label">${e._t(a)} (${o})</span>
@@ -23812,18 +27768,18 @@ function Lu(e, t, n, r, i, a, o, s, c, l, u, d) {
     </label>
   `;
 }
-function Ru(e, t, n, r, i, a, o, s, c, l = "°C") {
+function Ku(e, t, n, r, i, a, o, s, c, l = "°C") {
 	return T`
     <div class="temperature-range-fields" role="group" aria-label=${e._t("temperatureRange")}>
       <div class=${c ? "temperature-range-control invalid" : "temperature-range-control"}>
-        ${zu(e, t, n, r, "target_temp_low", "minimumShort", "heatBelow", i, a, o, s, l)}
-        ${zu(e, t, n, r, "target_temp_high", "maximumShort", "coolAbove", i, a, o, s, l)}
+        ${qu(e, t, n, r, "target_temp_low", "minimumShort", "heatBelow", i, a, o, s, l)}
+        ${qu(e, t, n, r, "target_temp_high", "maximumShort", "coolAbove", i, a, o, s, l)}
       </div>
       ${c ? T`<small class="field-error range-error">${c}</small>` : E}
     </div>
   `;
 }
-function zu(e, t, n, r, i, a, o, s, c, l, u, d) {
+function qu(e, t, n, r, i, a, o, s, c, l, u, d) {
 	return T`
     <label class="range-temperature-field">
       <span class="range-input-label" aria-hidden="true">${e._t(a)}</span>
@@ -23843,10 +27799,10 @@ function zu(e, t, n, r, i, a, o, s, c, l, u, d) {
     </label>
   `;
 }
-function Bu(e, t, n, r) {
+function Ju(e, t, n, r) {
 	return `${e._formatTemperature(t, r).replace(/\s+[^\s]+$/, "")}–${e._formatTemperature(n, r)}`;
 }
-function Vu(e) {
+function Yu(e) {
 	let t = e.currentTarget;
 	if (!(t instanceof HTMLElement)) return;
 	let n = t.closest("details"), r = t.getRootNode();
@@ -23854,24 +27810,24 @@ function Vu(e) {
 		e !== n && (e.open = !1);
 	});
 }
-function Hu(e) {
+function Xu(e) {
 	e.preventDefault();
 	let t = e.currentTarget;
 	if (!(t instanceof HTMLElement)) return;
 	let n = t.closest("details");
 	n instanceof HTMLDetailsElement && (n.open = !1);
 }
-function Uu(e) {
+function Zu(e) {
 	let t = e.currentTarget;
 	if (!(t instanceof HTMLDetailsElement) || !t.open) return;
 	let n = t.querySelector("summary");
-	n instanceof HTMLElement && Wu(n, t);
+	n instanceof HTMLElement && Qu(n, t);
 }
-function Wu(e, t) {
+function Qu(e, t) {
 	let n = e.getBoundingClientRect(), r = window.innerWidth || document.documentElement.clientWidth || 0, i = window.innerHeight || document.documentElement.clientHeight || 0, a = Math.max(280, Math.min(420, r - 32)), o = n.left + n.width / 2 - a / 2, s = Math.max(16, Math.min(o, r - a - 16)), c = Math.max(0, i - n.bottom - 8 - 16), l = Math.max(0, n.top - 8 - 16), u = l > c && c < 260, d = Math.max(180, u ? l : c), f = u ? n.top - 8 : n.bottom + 8;
 	t.style.setProperty("--climate-options-left", `${Math.round(s)}px`), t.style.setProperty("--climate-options-top", `${Math.round(f)}px`), t.style.setProperty("--climate-options-width", `${Math.round(a)}px`), t.style.setProperty("--climate-options-max-height", `${Math.round(d)}px`), t.style.setProperty("--climate-options-translate-y", u ? "-100%" : "0");
 }
-function Gu(e, t, n, r, i, a, o) {
+function $u(e, t, n, r, i, a, o) {
 	let s = String(t[i] ?? ""), c = s && !o.includes(s) ? [...o, s] : o;
 	return !c.length && !s ? E : T`
     <label>
@@ -23891,7 +27847,7 @@ function Gu(e, t, n, r, i, a, o) {
     </label>
   `;
 }
-function Ku(e, t) {
+function ed(e, t) {
 	let n = [], r = (t, r) => {
 		if (typeof r != "string" || !r.trim()) return;
 		let i = e._t(t);
@@ -23911,7 +27867,7 @@ function Ku(e, t) {
 	}
 	return n;
 }
-function qu(e, t, n, r) {
+function td(e, t, n, r) {
 	return [
 		e,
 		t ?? "",
@@ -23919,7 +27875,7 @@ function qu(e, t, n, r) {
 		r
 	].join(":");
 }
-function Ju(e, t, n, r) {
+function nd(e, t, n, r) {
 	return [
 		e,
 		t,
@@ -23927,7 +27883,7 @@ function Ju(e, t, n, r) {
 		r.join(",")
 	].join(":");
 }
-function Yu(e) {
+function rd(e) {
 	let t = e._orderedWeekdays();
 	return T`
     <div class="copy-panel">
@@ -23937,9 +27893,9 @@ function Yu(e) {
           <strong>${e._t("otherDays")}</strong>
         </div>
       </div>
-      ${bu(e._t.bind(e), (t) => e._setCopyTargetPreset(t), e._copyTargets.size > 0)}
+      ${Ou(e._t.bind(e), (t) => e._setCopyTargetPreset(t), e._copyTargets.size > 0)}
       <div class="copy-targets">
-        ${t.map((t) => Xu(e, t))}
+        ${t.map((t) => id(e, t))}
       </div>
       <div class="copy-actions">
         <button
@@ -23955,7 +27911,7 @@ function Yu(e) {
     </div>
   `;
 }
-function Xu(e, t) {
+function id(e, t) {
 	return t === e._selectedWeekday ? T`
       <span class="check-target disabled" title=${e._weekdayName(t)}>
         <span>${e._shortWeekdayName(t)}</span>
@@ -23971,7 +27927,7 @@ function Xu(e, t) {
     </label>
   `;
 }
-function Zu(e) {
+function ad(e) {
 	let t = e._visibleZoneIds(e._data?.configured_entities ?? []).filter((t) => t !== e._selectedEntity);
 	return t.length ? T`
     <div class="copy-panel">
@@ -24009,7 +27965,7 @@ function Zu(e) {
 }
 //#endregion
 //#region src/velair/views/sensors-view.ts
-var Qu = {
+var od = {
 	appliedHigh: "var(--sensor-scale-applied-color)",
 	appliedLow: "var(--sensor-scale-applied-color)",
 	climate: "var(--secondary-text-color)",
@@ -24018,7 +27974,7 @@ var Qu = {
 	scheduledHigh: "var(--sensor-scale-scheduled-color)",
 	scheduledLow: "var(--sensor-scale-scheduled-color)",
 	target: "var(--sensor-scale-scheduled-color)"
-}, $u = {
+}, sd = {
 	target: 0,
 	scheduledLow: 0,
 	scheduledHigh: 1,
@@ -24027,13 +27983,13 @@ var Qu = {
 	appliedLow: 3,
 	appliedHigh: 4,
 	climate: 5
-}, ed = 1.25, td = 22, nd = 10, rd = 24, id = {
+}, cd = 1.25, ld = 22, ud = 10, dd = 24, fd = {
 	roomSensorAssist: "roomSensorAssistHelp",
 	roomSensorAssistDeadband: "roomSensorAssistDeadbandHelp",
 	roomSensorAssistMaxDelta: "roomSensorAssistMaxDeltaHelp",
 	roomSensorAssistDebounce: "roomSensorAssistDebounceHelp",
 	roomSensorTemperatureEntity: "roomSensorTemperatureEntityHelp"
-}, ad = {
+}, pd = {
 	showAssistSwitch: !0,
 	showDeadband: !0,
 	showDebounce: !0,
@@ -24041,8 +27997,8 @@ var Qu = {
 	showMaxDelta: !0,
 	showRoomSensor: !0
 };
-function od(e, t, n = {}) {
-	let r = sd(n);
+function md(e, t, n = {}) {
+	let r = hd(n);
 	return T`
     <section class="sensors-view">
       <header class="sensors-intro">
@@ -24052,17 +28008,17 @@ function od(e, t, n = {}) {
           <small>${e._t("roomSensorIntroDetail")}</small>
         </span>
       </header>
-      ${t.length ? t.map((t) => cd(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+      ${t.length ? t.map((t) => gd(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
     </section>
   `;
 }
-function sd(e) {
+function hd(e) {
 	return {
-		...ad,
+		...pd,
 		...e
 	};
 }
-function cd(e, t, n) {
+function gd(e, t, n) {
 	if (e._data?.zones[t]?.execution?.type === "external") return T`
       <section class="sensor-zone disabled">
         <header class="sensor-zone-heading">
@@ -24076,7 +28032,7 @@ function cd(e, t, n) {
         </div>
       </section>
     `;
-	let r = e._entityExists(t), i = Fl(e._data?.zones[t]?.preconditioning, e._temperatureUnit(t)), a = e._data?.room_sensor_assist?.[t], o = r && e._expandedPreconditioningZones.has(t), s = `sensor-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "roomSensorCollapseClimate" : "roomSensorExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("roomSensorUnavailable"), l = r && !!i.room_temperature_entity_id;
+	let r = e._entityExists(t), i = Ul(e._data?.zones[t]?.preconditioning, e._temperatureUnit(t)), a = e._data?.room_sensor_assist?.[t], o = r && e._expandedPreconditioningZones.has(t), s = `sensor-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "roomSensorCollapseClimate" : "roomSensorExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("roomSensorUnavailable"), l = r && !!i.room_temperature_entity_id;
 	return T`
     <section class=${`sensor-zone ${i.room_sensor_assist_enabled ? "enabled" : "disabled"} ${o ? "expanded" : "collapsed"}`}>
       <header class="sensor-zone-heading" @click=${(n) => {
@@ -24123,28 +28079,28 @@ function cd(e, t, n) {
       </header>
       ${r && o ? T`
             <div id=${s} class="sensor-zone-content">
-              ${ld(e, t, i, n)}
-              ${n.showLiveStatus && i.room_temperature_entity_id && !i.room_sensor_assist_enabled ? ud(e) : E}
-              ${n.showLiveStatus && i.room_temperature_entity_id && i.room_sensor_assist_enabled ? dd(e, t, a, i, n.showDeadband) : E}
+              ${_d(e, t, i, n)}
+              ${n.showLiveStatus && i.room_temperature_entity_id && !i.room_sensor_assist_enabled ? vd(e) : E}
+              ${n.showLiveStatus && i.room_temperature_entity_id && i.room_sensor_assist_enabled ? yd(e, t, a, i, n.showDeadband) : E}
             </div>
           ` : E}
     </section>
   `;
 }
-function ld(e, t, n, r) {
+function _d(e, t, n, r) {
 	return !r.showRoomSensor && !r.showDeadband && !r.showMaxDelta && !r.showDebounce ? E : T`
     <section class="sensor-config-section">
       <h3><ha-icon icon="mdi:tune-variant"></ha-icon>${e._t("roomSensorAssist")}</h3>
       <div class="sensor-config-rows">
-        ${r.showRoomSensor ? Md(e, t, n.room_temperature_entity_id ?? "") : E}
-        ${r.showDeadband ? Nd(e, t, "roomSensorAssistDeadband", "room_sensor_assist_deadband", n.room_sensor_assist_deadband, 0, sr(e._temperatureUnit(t), 5), .1, e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
-        ${r.showMaxDelta ? Nd(e, t, "roomSensorAssistMaxDelta", "room_sensor_assist_max_delta", n.room_sensor_assist_max_delta, Fd(e._temperatureUnit(t)), Pd(e._temperatureUnit(t)), Fd(e._temperatureUnit(t)), e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
-        ${r.showDebounce ? Nd(e, t, "roomSensorAssistDebounce", "room_sensor_assist_debounce_seconds", n.room_sensor_assist_debounce_seconds, 0, 300, 1, e._t("secondsShort"), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
+        ${r.showRoomSensor ? Bd(e, t, n.room_temperature_entity_id ?? "") : E}
+        ${r.showDeadband ? Vd(e, t, "roomSensorAssistDeadband", "room_sensor_assist_deadband", n.room_sensor_assist_deadband, 0, hr(e._temperatureUnit(t), 5), .1, e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
+        ${r.showMaxDelta ? Vd(e, t, "roomSensorAssistMaxDelta", "room_sensor_assist_max_delta", n.room_sensor_assist_max_delta, Ud(e._temperatureUnit(t)), Hd(e._temperatureUnit(t)), Ud(e._temperatureUnit(t)), e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
+        ${r.showDebounce ? Vd(e, t, "roomSensorAssistDebounce", "room_sensor_assist_debounce_seconds", n.room_sensor_assist_debounce_seconds, 0, 300, 1, e._t("secondsShort"), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
       </div>
     </section>
   `;
 }
-function ud(e) {
+function vd(e) {
 	return T`
     <section class="sensor-runtime-section sensor-inactive-section">
       <h3>
@@ -24155,9 +28111,9 @@ function ud(e) {
     </section>
   `;
 }
-function dd(e, t, n, r, i = !0) {
+function yd(e, t, n, r, i = !0) {
 	if (!n) return E;
-	let a = r?.room_sensor_assist_deadband ?? 0, o = i ? Cc(n, a) : void 0, s = Hd(e, t, n, o), c = Oc(n) && !!n.start;
+	let a = r?.room_sensor_assist_deadband ?? 0, o = i ? jc(n, a) : void 0, s = Xd(e, t, n, o), c = Ic(n) && !!n.start;
 	return T`
     <section class="sensor-runtime-section">
       <h3 class="sensor-runtime-heading">
@@ -24165,26 +28121,26 @@ function dd(e, t, n, r, i = !0) {
           <ha-icon icon="mdi:pulse"></ha-icon>
           ${e._t("roomSensorLiveStatus")}
         </span>
-        ${fd(e, n)}
+        ${bd(e, n)}
       </h3>
       <div class="sensor-status-card">
-        ${c ? md(e, t, n) : pd(e)}
-        ${c ? gd(e, t, n) : E}
-        ${c ? _d(e, t, n) : E}
-        ${c && s.markers.length ? hd(e, t, s, n, o, a) : E}
+        ${c ? Sd(e, t, n) : xd(e)}
+        ${c ? wd(e, t, n) : E}
+        ${c ? Td(e, t, n) : E}
+        ${c && s.markers.length ? Cd(e, t, s, n, o, a) : E}
       </div>
     </section>
   `;
 }
-function fd(e, t) {
+function bd(e, t) {
 	let n = t?.status ?? "not_configured";
 	return T`
     <span class=${`sensor-status-pill ${n}`}>
-      ${e._t(Zd(n))}
+      ${e._t(of(n))}
     </span>
   `;
 }
-function pd(e) {
+function xd(e) {
 	return T`
     <div class="sensor-idle-state">
       <ha-icon icon="mdi:clock-outline"></ha-icon>
@@ -24192,8 +28148,8 @@ function pd(e) {
     </div>
   `;
 }
-function md(e, t, n) {
-	let r = n.start ? e._formatScheduleTime(n.start) : "", i = Xd(e, n.active_from), a = !!(n.target_when && n.active_from), o = G(n), s = typeof n.target_temperature == "number" ? e._formatTemperature(n.target_temperature, t) : o ? Gd(e, t, o.low, o.high) : e._t("roomSensorValueUnavailable"), c = n.hvac_mode ? e._modeLabel(n.hvac_mode) : e._t("roomSensorValueUnavailable"), l = typeof n.hysteresis_target == "number" ? e._formatTemperature(n.hysteresis_target, t) : "", u = n.hysteresis_phase === "towards_lower" ? "roomSensorHysteresisTowardsLower" : n.hysteresis_phase === "towards_upper" ? "roomSensorHysteresisTowardsUpper" : void 0;
+function Sd(e, t, n) {
+	let r = n.start ? e._formatScheduleTime(n.start) : "", i = af(e, n.active_from), a = !!(n.target_when && n.active_from), o = G(n), s = typeof n.target_temperature == "number" ? e._formatTemperature(n.target_temperature, t) : o ? $d(e, t, o.low, o.high) : e._t("roomSensorValueUnavailable"), c = n.hvac_mode ? e._modeLabel(n.hvac_mode) : e._t("roomSensorValueUnavailable"), l = typeof n.hysteresis_target == "number" ? e._formatTemperature(n.hysteresis_target, t) : "", u = n.hysteresis_phase === "towards_lower" ? "roomSensorHysteresisTowardsLower" : n.hysteresis_phase === "towards_upper" ? "roomSensorHysteresisTowardsUpper" : void 0;
 	return T`
     <div class="sensor-block-summary">
       ${a ? T`
@@ -24234,11 +28190,11 @@ function md(e, t, n) {
     </div>
   `;
 }
-function hd(e, t, n, r, i, a = 0) {
-	let { markers: o } = n, s = r.hvac_mode ? `mode-${St(r.hvac_mode)}` : "mode-keep", c = Ld(e, t, o, r), l = Rd(e, t, o, r), u = vd(e, t, o, r), d = u.length === 2, f = bd(o), p = d ? Kd(o.filter((e) => !yd(e.key))) : o, m = i && a > 0 ? {
-		left: Ud(i.low, n),
-		width: Ud(i.high, n) - Ud(i.low, n)
-	} : void 0, h = r.hysteresis_phase === "towards_lower" ? " towards-lower" : r.hysteresis_phase === "towards_upper" ? " towards-upper" : "", g = r.hysteresis_phase === "towards_lower" || r.hysteresis_phase === "towards_upper", _ = G(r) !== void 0, v = r.hvac_mode === "heat" || r.hvac_mode === "cool", y = !_ && (r.hvac_mode === "auto" || r.hvac_mode === "heat_cool"), b = Bd(e, t, a), x = i ? a === 0 ? e._t("roomSensorDeadbandZoneZero", { value: b }) : _ ? e._t("roomSensorDeadbandZoneRange", { value: b }) : g || v ? e._t("roomSensorDeadbandZoneSingle", { value: b }) : y ? e._t("roomSensorDeadbandZoneAutomatic", { value: b }) : e._t("roomSensorDeadbandZoneGeneric", { value: b }) : "", S = i ? _ || g || v ? e._t("roomSensorDeadbandZoneHelp") : y ? e._t("roomSensorDeadbandZoneHelpAutomatic") : e._t("roomSensorDeadbandZoneHelpGeneric") : "", C = i && a > 0 ? _ ? e._t("roomSensorDeadbandZoneCompactRange", { value: b }) : g || v ? e._t("roomSensorDeadbandZoneCompact", { value: b }) : y ? e._t("roomSensorDeadbandZoneCompactAutomatic", { value: b }) : e._t("roomSensorDeadbandZoneGeneric", { value: b }) : "", ee = i && a > 0 ? e._t("roomSensorDeadbandZoneBrief", { value: b }) : "", te = i && a > 0 ? Gd(e, t, i.low, i.high) : "", ne = te ? `${x}. ${te}. ${S}` : `${x}. ${S}`;
+function Cd(e, t, n, r, i, a = 0) {
+	let { markers: o } = n, s = r.hvac_mode ? `mode-${At(r.hvac_mode)}` : "mode-keep", c = Gd(e, t, o, r), l = Kd(e, t, o, r), u = Ed(e, t, o, r), d = u.length === 2, f = Od(o), p = d ? ef(o.filter((e) => !Dd(e.key))) : o, m = i && a > 0 ? {
+		left: Zd(i.low, n),
+		width: Zd(i.high, n) - Zd(i.low, n)
+	} : void 0, h = r.hysteresis_phase === "towards_lower" ? " towards-lower" : r.hysteresis_phase === "towards_upper" ? " towards-upper" : "", g = r.hysteresis_phase === "towards_lower" || r.hysteresis_phase === "towards_upper", _ = G(r) !== void 0, v = r.hvac_mode === "heat" || r.hvac_mode === "cool", y = !_ && (r.hvac_mode === "auto" || r.hvac_mode === "heat_cool"), b = Jd(e, t, a), x = i ? a === 0 ? e._t("roomSensorDeadbandZoneZero", { value: b }) : _ ? e._t("roomSensorDeadbandZoneRange", { value: b }) : g || v ? e._t("roomSensorDeadbandZoneSingle", { value: b }) : y ? e._t("roomSensorDeadbandZoneAutomatic", { value: b }) : e._t("roomSensorDeadbandZoneGeneric", { value: b }) : "", S = i ? _ || g || v ? e._t("roomSensorDeadbandZoneHelp") : y ? e._t("roomSensorDeadbandZoneHelpAutomatic") : e._t("roomSensorDeadbandZoneHelpGeneric") : "", C = i && a > 0 ? $d(e, t, i.low, i.high) : "", ee = C ? `${x}. ${C}. ${S}` : `${x}. ${S}`;
 	return T`
     <div class=${`sensor-temperature-scale ${s} ${d ? "has-range" : ""}`}>
       <div
@@ -24278,10 +28234,10 @@ function hd(e, t, n, r, i, a = 0) {
             ` : E}
         ${f.map((e) => T`
             <span
-              class=${Sd(e)}
-              style=${wd(e)}
+              class=${Ad(e)}
+              style=${Md(e)}
               role="img"
-              aria-label=${Dd(e)}
+              aria-label=${Fd(e)}
             >
               <span class=${`sensor-scale-dot ${e.markers.length > 1 ? "segmented" : ""}`}></span>
             </span>
@@ -24302,16 +28258,16 @@ function hd(e, t, n, r, i, a = 0) {
           `)}
         ${p.map((n) => T`
             <span
-              class=${`sensor-scale-callout-marker marker-${n.key} marker-${Cd(n.key)} lane-${n.lane} ${Od(n)} ${n.shifted ? "shifted" : ""}`}
+              class=${`sensor-scale-callout-marker marker-${n.key} marker-${jd(n.key)} lane-${n.lane} ${Id(n)} ${n.shifted ? "shifted" : ""}`}
               style=${`--callout-left: ${n.calloutPosition.toFixed(2)}%;`}
             >
-              ${kd(e, t, n, r)}
+              ${Ld(e, t, n, r)}
             </span>
           `)}
       </div>
       <div class="sensor-scale-bounds">
-        <span>${Id(e, t, n.lowerBound)}</span>
-        <span>${Id(e, t, n.upperBound)}</span>
+        <span>${Wd(e, t, n.lowerBound)}</span>
+        <span>${Wd(e, t, n.upperBound)}</span>
       </div>
       ${i && m ? T`
             <div class="sensor-scale-deadband-legend-track">
@@ -24323,17 +28279,10 @@ function hd(e, t, n, r, i, a = 0) {
                   <div
                     class="sensor-scale-deadband-legend"
                     role="note"
-                    aria-label=${ne}
+                    aria-label=${ee}
                     title=${S}
                   >
                     <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
-                    <span class="sensor-scale-deadband-label-short" aria-hidden="true">±</span>
-                    <span class="sensor-scale-deadband-label-brief" aria-hidden="true">
-                      ${ee}
-                    </span>
-                    <span class="sensor-scale-deadband-label-compact" aria-hidden="true">
-                      ${C}
-                    </span>
                     <span class="sensor-scale-deadband-label-full" aria-hidden="true">
                       ${x}
                     </span>
@@ -24345,7 +28294,7 @@ function hd(e, t, n, r, i, a = 0) {
             <div
               class="sensor-scale-deadband-legend is-zero"
               role="note"
-              aria-label=${ne}
+              aria-label=${ee}
               title=${S}
             >
               <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
@@ -24355,9 +28304,9 @@ function hd(e, t, n, r, i, a = 0) {
     </div>
   `;
 }
-function gd(e, t, n) {
+function wd(e, t, n) {
 	if (!n.limited_by || typeof n.limit_temperature != "number") return E;
-	let r = n.requested_target_temp_low != null && n.requested_target_temp_high != null ? Gd(e, t, n.requested_target_temp_low, n.requested_target_temp_high) : void 0, i = n.applied_target_temp_low != null && n.applied_target_temp_high != null ? Gd(e, t, n.applied_target_temp_low, n.applied_target_temp_high) : void 0, a = r ?? Id(e, t, n.requested_temperature), o = i ?? Id(e, t, n.applied_temperature), s = e._formatTemperature(n.limit_temperature, t), c = n.limited_by === "maximum" ? "roomSensorLimitMaximumTitle" : "roomSensorLimitMinimumTitle", l = n.limited_by === "maximum" ? "roomSensorLimitMaximumDetail" : "roomSensorLimitMinimumDetail";
+	let r = n.requested_target_temp_low != null && n.requested_target_temp_high != null ? $d(e, t, n.requested_target_temp_low, n.requested_target_temp_high) : void 0, i = n.applied_target_temp_low != null && n.applied_target_temp_high != null ? $d(e, t, n.applied_target_temp_low, n.applied_target_temp_high) : void 0, a = r ?? Wd(e, t, n.requested_temperature), o = i ?? Wd(e, t, n.applied_temperature), s = e._formatTemperature(n.limit_temperature, t), c = n.limited_by === "maximum" ? "roomSensorLimitMaximumTitle" : "roomSensorLimitMinimumTitle", l = n.limited_by === "maximum" ? "roomSensorLimitMaximumDetail" : "roomSensorLimitMinimumDetail";
 	return T`
     <div class="sensor-limit-warning" role="status">
       <ha-icon icon="mdi:alert-outline"></ha-icon>
@@ -24372,7 +28321,7 @@ function gd(e, t, n) {
     </div>
   `;
 }
-function _d(e, t, n) {
+function Td(e, t, n) {
 	if (!n.scheduled_target_guard || typeof n.calculated_temperature != "number" || typeof n.applied_temperature != "number") return E;
 	let r = e._formatTemperature(n.calculated_temperature, t), i = e._formatTemperature(n.applied_temperature, t), a = n.scheduled_target_guard === "cooling_floor" ? "roomSensorScheduledGuardCoolingDetail" : "roomSensorScheduledGuardHeatingDetail";
 	return T`
@@ -24388,33 +28337,33 @@ function _d(e, t, n) {
     </div>
   `;
 }
-function vd(e, t, n, r) {
-	let i = G(r), a = Ec(r);
+function Ed(e, t, n, r) {
+	let i = G(r), a = Pc(r);
 	if (!i || !a) return [];
 	let o = n.find((e) => e.key === "scheduledLow"), s = n.find((e) => e.key === "scheduledHigh"), c = n.find((e) => e.key === "appliedLow"), l = n.find((e) => e.key === "appliedHigh");
 	return !o || !s || !c || !l ? [] : [{
 		kind: "scheduled",
 		label: e._t("roomSensorScheduledRange"),
-		formatted: Gd(e, t, i.low, i.high),
+		formatted: $d(e, t, i.low, i.high),
 		left: Math.min(o.position, s.position),
 		width: Math.abs(s.position - o.position)
 	}, {
 		kind: "applied",
 		label: e._t("roomSensorAppliedRange"),
-		formatted: Gd(e, t, a.low, a.high),
+		formatted: $d(e, t, a.low, a.high),
 		left: Math.min(c.position, l.position),
 		width: Math.abs(l.position - c.position)
 	}];
 }
-function yd(e) {
+function Dd(e) {
 	return e === "scheduledLow" || e === "scheduledHigh" || e === "appliedLow" || e === "appliedHigh";
 }
-function bd(e) {
-	let t = [...e].sort((e, t) => e.position - t.position || $u[e.key] - $u[t.key]), n = [];
+function Od(e) {
+	let t = [...e].sort((e, t) => e.position - t.position || sd[e.key] - sd[t.key]), n = [];
 	for (let e of t) {
 		let t = n[n.length - 1];
-		if (t && Math.abs(e.position - t.position) <= ed) {
-			t.markers = [...t.markers, e].sort((e, t) => $u[e.key] - $u[t.key]), t.position = xd(t.markers);
+		if (t && Math.abs(e.position - t.position) <= cd) {
+			t.markers = [...t.markers, e].sort((e, t) => sd[e.key] - sd[t.key]), t.position = kd(t.markers);
 			continue;
 		}
 		n.push({
@@ -24424,42 +28373,42 @@ function bd(e) {
 	}
 	return n;
 }
-function xd(e) {
+function kd(e) {
 	return e.reduce((e, t) => e + t.position, 0) / e.length;
 }
-function Sd(e) {
+function Ad(e) {
 	return [
 		"sensor-scale-marker",
 		`count-${e.markers.length}`,
 		...e.markers.map((e) => `marker-${e.key}`),
-		...new Set(e.markers.map((e) => `marker-${Cd(e.key)}`))
+		...new Set(e.markers.map((e) => `marker-${jd(e.key)}`))
 	].join(" ");
 }
-function Cd(e) {
+function jd(e) {
 	return e === "scheduledLow" || e === "scheduledHigh" ? "target" : e === "appliedLow" || e === "appliedHigh" ? "climateTarget" : e;
 }
-function wd(e) {
+function Md(e) {
 	let t = [`left: ${e.position.toFixed(2)}%;`];
-	return e.markers.length > 1 && t.push(`--sensor-scale-dot-segments: ${Td(e.markers)};`), t.join(" ");
+	return e.markers.length > 1 && t.push(`--sensor-scale-dot-segments: ${Nd(e.markers)};`), t.join(" ");
 }
-function Td(e) {
-	let t = [...e].sort((e, t) => t.calloutPosition - e.calloutPosition || e.lane - t.lane || $u[e.key] - $u[t.key]), n = 360 / t.length;
+function Nd(e) {
+	let t = [...e].sort((e, t) => t.calloutPosition - e.calloutPosition || e.lane - t.lane || sd[e.key] - sd[t.key]), n = 360 / t.length;
 	return `conic-gradient(${t.map((e, t) => {
-		let r = Ed(t * n), i = Ed((t + 1) * n);
-		return `${Qu[e.key]} ${r}deg ${i}deg`;
+		let r = Pd(t * n), i = Pd((t + 1) * n);
+		return `${od[e.key]} ${r}deg ${i}deg`;
 	}).join(", ")})`;
 }
-function Ed(e) {
+function Pd(e) {
 	return Math.round(e * 100) / 100;
 }
-function Dd(e) {
+function Fd(e) {
 	return e.markers.map((e) => `${e.label}: ${e.formatted}`).join(", ");
 }
-function Od(e) {
-	return e.calloutPosition <= nd ? "edge-left" : e.calloutPosition >= 100 - nd ? "edge-right" : "";
+function Id(e) {
+	return e.calloutPosition <= ud ? "edge-left" : e.calloutPosition >= 100 - ud ? "edge-right" : "";
 }
-function kd(e, t, n, r) {
-	let i = Tc(r), a = Dc(r), o = Wd(r, "applied"), s = n.key === "climateTarget" ? i : n.key === o ? a : null, c = typeof s == "number" ? Vd(e, t, s) : "", l = o && n.key === o ? e._t("roomSensorRangeShiftHelp") : n.key === "climateTarget" ? Ad(e, t, r) : e._t("roomSensorAssistOffsetHelp"), u = !!c || n.key === "climateTarget", d = `room-assist-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-${n.key}-help`;
+function Ld(e, t, n, r) {
+	let i = Nc(r), a = Fc(r), o = Qd(r, "applied"), s = n.key === "climateTarget" ? i : n.key === o ? a : null, c = typeof s == "number" ? Yd(e, t, s) : "", l = o && n.key === o ? e._t("roomSensorRangeShiftHelp") : n.key === "climateTarget" ? Rd(e, t, r) : e._t("roomSensorAssistOffsetHelp"), u = !!c || n.key === "climateTarget", d = `room-assist-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-${n.key}-help`;
 	return T`
     <span class=${c ? "sensor-scale-callout has-offset" : "sensor-scale-callout"}>
       <small>${n.label}</small>
@@ -24468,14 +28417,14 @@ function kd(e, t, n, r) {
         ${u ? T`
               <span class=${c ? "sensor-scale-offset" : "sensor-scale-offset help-only"}>
                 ${c ? T`<span>${c}</span>` : E}
-                ${Bc(d, l, l, { compact: !0 })}
+                ${Jc(d, l, l, { compact: !0 })}
               </span>
             ` : E}
       </span>
     </span>
   `;
 }
-function Ad(e, t, n) {
+function Rd(e, t, n) {
 	let r = n.applied_temperature, i = (n.status === "assisting" || n.status === "holding") && typeof r == "number", a = e._t(i ? "roomSensorClimateTargetAppliedHelp" : "roomSensorClimateTargetHelp");
 	return !i || typeof r != "number" || typeof n.pre_step_temperature != "number" || typeof n.target_temp_step != "number" ? a : `${a} ${e._t("roomSensorClimateTargetStepHelp", {
 		calculated: e._formatTemperature(n.pre_step_temperature, t),
@@ -24483,8 +28432,8 @@ function Ad(e, t, n) {
 		applied: e._formatTemperature(r, t)
 	})}`;
 }
-function jd(e, t, n = {}) {
-	let r = id[t], i = r ? e._t(r) : "";
+function zd(e, t, n = {}) {
+	let r = fd[t], i = r ? e._t(r) : "";
 	return r && n.persistentHelp ? T`
       <span class="sensor-config-label sensor-config-label-stacked">
         <span>${e._t(t)}</span>
@@ -24509,11 +28458,11 @@ function jd(e, t, n = {}) {
     </span>
   `;
 }
-function Md(e, t, n) {
-	let r = e._settingsSaving, i = Pl(e.hass, n);
+function Bd(e, t, n) {
+	let r = e._settingsSaving, i = Hl(e.hass, n);
 	return T`
     <label class="sensor-config-row sensor-picker-row">
-      ${jd(e, "roomSensorTemperatureEntity")}
+      ${zd(e, "roomSensorTemperatureEntity")}
       <span class="select-wrap">
         <select
           .value=${n}
@@ -24541,11 +28490,11 @@ function Md(e, t, n) {
     </label>
   `;
 }
-function Nd(e, t, n, r, i, a, o, s, c, l = {}) {
+function Vd(e, t, n, r, i, a, o, s, c, l = {}) {
 	let u = e._settingsSaving || !!l.inactive, d = r === "room_sensor_assist_deadband" || r === "room_sensor_assist_max_delta";
 	return T`
     <label class=${`sensor-config-row ${l.inactive ? "inactive" : ""}`}>
-      ${jd(e, n, { persistentHelp: d })}
+      ${zd(e, n, { persistentHelp: d })}
       <span class="sensor-number-input">
         <input
           type="number"
@@ -24574,21 +28523,21 @@ function Nd(e, t, n, r, i, a, o, s, c, l = {}) {
     </label>
   `;
 }
-function Pd(e) {
-	return sr(e, 10);
+function Hd(e) {
+	return hr(e, 10);
 }
-function Fd(e) {
+function Ud(e) {
 	return .1;
 }
-function Id(e, t, n) {
+function Wd(e, t, n) {
 	return typeof n == "number" ? e._formatTemperature(n, t) : e._t("roomSensorValueUnavailable");
 }
-function Ld(e, t, n, r) {
+function Gd(e, t, n, r) {
 	let i = n.find((e) => e.key === "room"), a = G(r), o = a && i ? i.value < a.low ? "scheduledLow" : i.value > a.high ? "scheduledHigh" : void 0 : "target", s = n.find((e) => e.key === o);
 	if (!s || !i) return null;
 	let c = Math.abs(s.value - i.value);
 	if (c < (e._temperatureUnit(t).toUpperCase().includes("F") ? .1 : .05)) return null;
-	let l = Bd(e, t, c), u = i.value < s.value ? "below" : "above";
+	let l = Jd(e, t, c), u = i.value < s.value ? "below" : "above";
 	return {
 		label: e._t(u === "below" ? "roomSensorGapBelowTarget" : "roomSensorGapAboveTarget", { value: l }),
 		left: Math.min(s.position, i.position),
@@ -24596,10 +28545,10 @@ function Ld(e, t, n, r) {
 		width: Math.abs(s.position - i.position)
 	};
 }
-function Rd(e, t, n, r) {
-	let i = Dc(r), a = i === void 0 ? void 0 : zd(n, "scheduledLow", "scheduledHigh"), o = i === void 0 ? void 0 : zd(n, "appliedLow", "appliedHigh"), s = n.find((e) => e.key === "climate"), c = n.find((e) => e.key === "climateTarget"), l = i ?? Tc(r), u = i === void 0 ? s?.position : a, d = i === void 0 ? c?.position : o;
+function Kd(e, t, n, r) {
+	let i = Fc(r), a = i === void 0 ? void 0 : qd(n, "scheduledLow", "scheduledHigh"), o = i === void 0 ? void 0 : qd(n, "appliedLow", "appliedHigh"), s = n.find((e) => e.key === "climate"), c = n.find((e) => e.key === "climateTarget"), l = i ?? Nc(r), u = i === void 0 ? s?.position : a, d = i === void 0 ? c?.position : o;
 	if (u === void 0 || d === void 0 || l === void 0) return null;
-	let f = e._temperatureUnit(t).toUpperCase().includes("F") ? .1 : .05, p = Math.abs(l) >= f ? "active" : "holding", m = Vd(e, t, l);
+	let f = e._temperatureUnit(t).toUpperCase().includes("F") ? .1 : .05, p = Math.abs(l) >= f ? "active" : "holding", m = Yd(e, t, l);
 	return {
 		label: i === void 0 ? p === "active" ? e._t("roomSensorAssistCorrectionValue", { value: m }) : e._t("roomSensorAssistNoCorrection") : e._t("roomSensorRangeShiftValue", { value: m }),
 		left: Math.min(u, d),
@@ -24608,19 +28557,19 @@ function Rd(e, t, n, r) {
 		width: Math.abs(u - d)
 	};
 }
-function zd(e, t, n) {
+function qd(e, t, n) {
 	let r = e.find((e) => e.key === t), i = e.find((e) => e.key === n);
 	return r && i ? (r.position + i.position) / 2 : void 0;
 }
-function Bd(e, t, n) {
+function Jd(e, t, n) {
 	return e._formatTemperature(Math.abs(n), t);
 }
-function Vd(e, t, n) {
-	let r = Bd(e, t, n);
+function Yd(e, t, n) {
+	let r = Jd(e, t, n);
 	return n > 0 ? `+${r}` : n < 0 ? `-${r}` : r;
 }
-function Hd(e, t, n, r) {
-	let i = G(n), a = Ec(n), o = i ? void 0 : n.status === "assisting" || n.status === "holding" ? n.applied_temperature ?? n.climate_target_temperature : n.climate_target_temperature ?? n.applied_temperature, s = [
+function Xd(e, t, n, r) {
+	let i = G(n), a = Pc(n), o = i ? void 0 : n.status === "assisting" || n.status === "holding" ? n.applied_temperature ?? n.climate_target_temperature : n.climate_target_temperature ?? n.applied_temperature, s = [
 		{
 			key: "target",
 			label: e._t("roomSensorScheduledTarget"),
@@ -24670,7 +28619,7 @@ function Hd(e, t, n, r) {
 	let c = [...s.map((e) => e.value), ...r ? [r.low, r.high] : []], l = Math.min(...c), u = Math.max(...c), d = e._temperatureUnit(t).toUpperCase().includes("F") ? 2 : 1, f = u - l, p = Math.max(f, d), m = (l + u) / 2, h = m - p * .58, g = m + p * .58, _ = g - h;
 	return {
 		lowerBound: h,
-		markers: Kd(s.map((n) => ({
+		markers: ef(s.map((n) => ({
 			...n,
 			calloutPosition: 0,
 			formatted: e._formatTemperature(n.value, t),
@@ -24681,38 +28630,38 @@ function Hd(e, t, n, r) {
 		upperBound: g
 	};
 }
-function Ud(e, t) {
+function Zd(e, t) {
 	let n = t.upperBound - t.lowerBound;
-	return n <= 0 ? 50 : Yd((e - t.lowerBound) / n * 100, 0, 100);
+	return n <= 0 ? 50 : rf((e - t.lowerBound) / n * 100, 0, 100);
 }
-function Wd(e, t) {
+function Qd(e, t) {
 	let n = G(e);
 	if (!n) return;
 	let r = typeof e.room_temperature == "number" ? e.room_temperature : void 0;
 	return `${t}${e.direction === "cool" || r !== void 0 && r > n.high ? "High" : "Low"}`;
 }
-function Gd(e, t, n, r) {
+function $d(e, t, n, r) {
 	return `${e._formatTemperature(n, t).replace(/\s+[^\s]+$/, "")}–${e._formatTemperature(r, t)}`;
 }
-function Kd(e) {
+function ef(e) {
 	let t = [...e].sort((e, t) => e.position - t.position), n = /* @__PURE__ */ new Map(), r = [], i = [], a = () => {
 		i.length && (r.push(i), i = []);
 	};
 	for (let e of t) {
 		let t = i[i.length - 1];
-		t && e.position - t.position > td && a(), i.push(e);
+		t && e.position - t.position > ld && a(), i.push(e);
 	}
 	a();
 	for (let e = 0; e < r.length - 1;) {
-		let t = qd(r[e]), n = qd(r[e + 1]), i = t[t.length - 1];
-		if (n[0] - i < rd) {
+		let t = tf(r[e]), n = tf(r[e + 1]), i = t[t.length - 1];
+		if (n[0] - i < dd) {
 			r.splice(e, 2, [...r[e], ...r[e + 1]]), e = Math.max(0, e - 1);
 			continue;
 		}
 		e += 1;
 	}
 	for (let e of r) {
-		let t = qd(e);
+		let t = tf(e);
 		e.forEach((e, r) => {
 			let i = t[r] ?? e.position;
 			n.set(e.key, {
@@ -24731,26 +28680,26 @@ function Kd(e) {
 		}
 	}));
 }
-function qd(e) {
+function tf(e) {
 	let t = e.reduce((e, t) => e + t.position, 0) / e.length;
-	return Jd(e.length, t);
+	return nf(e.length, t);
 }
-function Jd(e, t) {
-	if (e <= 1) return [Yd(t, nd, 100 - nd)];
-	let n = Math.min(rd, (100 - 2 * nd) / (e - 1)), r = (e - 1) * n, i = t - r / 2, a = nd, o = 100 - nd;
-	return i < a ? i = a : i + r > o && (i = o - r), Array.from({ length: e }, (e, t) => Yd(i + t * n, a, o));
+function nf(e, t) {
+	if (e <= 1) return [rf(t, ud, 100 - ud)];
+	let n = Math.min(dd, (100 - 2 * ud) / (e - 1)), r = (e - 1) * n, i = t - r / 2, a = ud, o = 100 - ud;
+	return i < a ? i = a : i + r > o && (i = o - r), Array.from({ length: e }, (e, t) => rf(i + t * n, a, o));
 }
-function Yd(e, t, n) {
+function rf(e, t, n) {
 	return Math.min(n, Math.max(t, e));
 }
-function Xd(e, t) {
+function af(e, t) {
 	if (!t) return "";
 	let n = new Date(t);
 	if (Number.isNaN(n.getTime())) return t;
 	let r = `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
 	return e._formatScheduleTime(r);
 }
-function Zd(e) {
+function of(e) {
 	return {
 		assisting: "roomSensorStatusAssisting",
 		blocked: "roomSensorStatusBlocked",
@@ -24764,11 +28713,11 @@ function Zd(e) {
 }
 //#endregion
 //#region src/velair/views/settings-view.ts
-function Qd(e, t) {
+function sf(e, t) {
 	let n = e._firstWeekday(), r = !!e._data?.settings?.apply_active_schedule_on_startup;
 	return T`
     <section class="settings-view">
-      ${nf(e)}
+      ${df(e)}
 
       <label class="settings-field">
         <span class="label">${e._t("firstWeekday")}</span>
@@ -24800,9 +28749,9 @@ function Qd(e, t) {
         ></ha-switch>
       </section>
 
-      ${$d(e)}
+      ${cf(e)}
 
-      ${of(e)}
+      ${mf(e)}
 
       <section class="settings-zone-order">
         <div class="section-heading">
@@ -24813,15 +28762,15 @@ function Qd(e, t) {
           </div>
         </div>
         <div class="settings-zone-list">
-          ${t.length ? t.map((n, r) => cf(e, n, r, t.length)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+          ${t.length ? t.map((n, r) => gf(e, n, r, t.length)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
         </div>
       </section>
 
-      ${rf(e)}
+      ${ff(e)}
     </section>
   `;
 }
-function $d(e) {
+function cf(e) {
 	let t = e._data?.external_execution;
 	if (!t || !t.systems.length && !Object.keys(t.zones).length) return E;
 	let n = /* @__PURE__ */ new Map();
@@ -24832,7 +28781,7 @@ function $d(e) {
 			name: e.name
 		}), n.set(t, r);
 	}
-	let r = Array.from(new Set([...n.keys(), ...Object.keys(t.zones)])), i = new Map(t.systems.map((e) => [e.provider, e])), a = tf(t);
+	let r = Array.from(new Set([...n.keys(), ...Object.keys(t.zones)])), i = new Map(t.systems.map((e) => [e.provider, e])), a = uf(t);
 	return T`
     <section class="settings-startup external-systems-settings">
       <ha-icon class="settings-startup-icon" icon="mdi:calendar-export"></ha-icon>
@@ -24883,9 +28832,9 @@ function $d(e) {
                 ${t.capabilities ? T`
                   <ul>
                     ${t.capabilities.supports_profile_schedules ? T`<li>${e._t("externalConditionProfilesSupported")}</li>` : E}
-                    <li>${e._t("externalConditionHvacModes", { modes: ef(e, "hvac", t.capabilities.supported_hvac_modes) })}</li>
-                    <li>${e._t("externalConditionTargetTypes", { types: ef(e, "target", t.capabilities.supported_target_types) })}</li>
-                    <li>${e._t("externalConditionActions", { actions: ef(e, "action", t.capabilities.supported_actions) })}</li>
+                    <li>${e._t("externalConditionHvacModes", { modes: lf(e, "hvac", t.capabilities.supported_hvac_modes) })}</li>
+                    <li>${e._t("externalConditionTargetTypes", { types: lf(e, "target", t.capabilities.supported_target_types) })}</li>
+                    <li>${e._t("externalConditionActions", { actions: lf(e, "action", t.capabilities.supported_actions) })}</li>
                     ${t.capabilities.supported_actions.includes("turn_off") ? E : T`<li>${e._t("externalConditionTurnOffUnsupported")}</li>`}
                     <li>${t.capabilities.supported_option_fields.length ? e._t("externalConditionOptionFields", { fields: t.capabilities.supported_option_fields.join(", ") }) : e._t("externalConditionOptionsUnsupported")}</li>
                     <li>${e._t("externalConditionMaxChanges", { count: t.capabilities.max_switchpoints_per_day })}</li>
@@ -24902,13 +28851,13 @@ function $d(e) {
     </section>
   `;
 }
-function ef(e, t, n) {
+function lf(e, t, n) {
 	return n.map((n) => {
 		let r = `externalCapability_${t}_${n}`, i = e._t(r);
 		return i === r ? n.replaceAll("_", " ") : i;
 	}).join(", ");
 }
-function tf(e) {
+function uf(e) {
 	let t = new Map(e.systems.map((e) => [e.provider, e]));
 	return Array.from(new Set(Object.values(e.zones).map((e) => e.provider))).map((e) => t.get(e) ?? {
 		provider: e,
@@ -24916,7 +28865,7 @@ function tf(e) {
 		capabilities: null
 	});
 }
-function nf(e) {
+function df(e) {
 	let t = !!e._data?.temperature_migration?.required, n = e._data?.home_assistant_temperature_unit ?? e._temperatureUnit(), r = e._data?.temperature_migration, i = r?.reason === "legacy_celsius_upgrade_reset_required", a = r?.source_unit, o = r?.target_unit ?? n;
 	return T`
     <section class=${t ? "settings-temperature migration-required" : "settings-temperature"}>
@@ -24965,7 +28914,7 @@ function nf(e) {
     </section>
   `;
 }
-function rf(e) {
+function ff(e) {
 	let t = e._data?.versions ?? {}, r = t.portable_model ?? 8, i = t.storage ?? 1, a = t.model ?? 1, o = e._maintenanceAction === "reset", s = !!e._data?.temperature_migration?.required, c = e._data?.temperature_migration?.reason === "legacy_celsius_upgrade_reset_required";
 	return T`
     <section class="settings-maintenance">
@@ -24978,10 +28927,10 @@ function rf(e) {
       </div>
 
       <div class="maintenance-grid">
-        ${af(e._t("frontendBuild"), n)}
-        ${af(e._t("portableFormatVersion"), `v${r}`)}
-        ${af(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${af(e._t("integrationVersion"), "1.7.0-beta.4")}
+        ${pf(e._t("frontendBuild"), n)}
+        ${pf(e._t("portableFormatVersion"), `v${r}`)}
+        ${pf(e._t("internalStorageVersion"), `v${i} / v${a}`)}
+        ${pf(e._t("integrationVersion"), "1.7.0")}
       </div>
     </section>
 
@@ -25003,7 +28952,7 @@ function rf(e) {
     </section>
   `;
 }
-function af(e, t) {
+function pf(e, t) {
 	return T`
     <div class="maintenance-item">
       <span class="label">${e}</span>
@@ -25011,8 +28960,8 @@ function af(e, t) {
     </div>
   `;
 }
-function of(e) {
-	let t = e._importAvailableSections(), n = e._exportSections.size > 0 && !e._portabilityAction, r = !!e._importPayload && e._importSections.size > 0 && !e._portabilityAction, i = new Map(e._portableExportSummaryItems().map((e) => [e.section, e])), a = new Map(e._portableImportSummaryItems().map((e) => [e.section, e])), o = e._importSections.has("preconditioning_learning") ? ki(e._importPayload, e._data?.configured_entities ?? []) : [], s = !!(e._importPayload && e._importPayload.temperature_unit === void 0);
+function mf(e) {
+	let t = e._importAvailableSections(), n = e._exportSections.size > 0 && !e._portabilityAction, r = !!e._importPayload && e._importSections.size > 0 && !e._portabilityAction, i = new Map(e._portableExportSummaryItems().map((e) => [e.section, e])), a = new Map(e._portableImportSummaryItems().map((e) => [e.section, e])), o = e._importSections.has("preconditioning_learning") ? Li(e._importPayload, e._data?.configured_entities ?? []) : [], s = !!(e._importPayload && e._importPayload.temperature_unit === void 0);
 	return T`
     <section class="settings-portability">
       <div class="settings-portability-heading">
@@ -25026,7 +28975,7 @@ function of(e) {
       <div class="portability-grid">
         <div class="portability-card portability-export-card">
           <div class="portability-options">
-            ${tt.map((t) => sf(e, "export", t, e._exportSections.has(t), !1, i.get(t)))}
+            ${tt.map((t) => hf(e, "export", t, e._exportSections.has(t), !1, i.get(t)))}
           </div>
           <button
             class="command-button primary"
@@ -25078,7 +29027,7 @@ function of(e) {
                 </div>
               ` : E}
           <div class="portability-options">
-            ${t.length ? t.map((t) => sf(e, "import", t, e._importSections.has(t), !1, a.get(t))) : T`<span class="empty">${e._t("noImportSections")}</span>`}
+            ${t.length ? t.map((t) => hf(e, "import", t, e._importSections.has(t), !1, a.get(t))) : T`<span class="empty">${e._t("noImportSections")}</span>`}
           </div>
           <button
             class="command-button success"
@@ -25094,7 +29043,7 @@ function of(e) {
     </section>
   `;
 }
-function sf(e, t, n, r, i, a) {
+function hf(e, t, n, r, i, a) {
 	return T`
     <label class="portable-option" title=${a?.title ?? e._portableSectionLabel(n)}>
       <input
@@ -25108,7 +29057,7 @@ function sf(e, t, n, r, i, a) {
     </label>
   `;
 }
-function cf(e, t, n, r) {
+function gf(e, t, n, r) {
 	return T`
     <div
       class="settings-zone-row"
@@ -25134,7 +29083,7 @@ function cf(e, t, n, r) {
           </div>
           <span>${t}</span>
         </div>
-        ${lf(e, t)}
+        ${_f(e, t)}
       </div>
       <div class="settings-row-actions">
         <button
@@ -25159,7 +29108,7 @@ function cf(e, t, n, r) {
     </div>
   `;
 }
-function lf(e, t) {
+function _f(e, t) {
 	if (e._data?.zones[t]?.execution?.type === "external") return T`<small>${e._t("externalActionsInactive")}</small>`;
 	let n = e._data?.zones[t]?.external_change_policy ?? {
 		action: "keep_automatic",
@@ -25169,7 +29118,7 @@ function lf(e, t) {
     <div class="settings-external-policy">
       <div class="settings-policy-heading">
         <span class="label" id=${i}>${e._t("externalChangePolicy")}</span>
-        ${Bc(a, e._t("externalAdjustmentInfoAction"), e._t("externalChangePolicyDescription"))}
+        ${Jc(a, e._t("externalAdjustmentInfoAction"), e._t("externalChangePolicyDescription"))}
       </div>
       <div class="settings-policy-controls">
         <span class="select-wrap">
@@ -25211,7 +29160,7 @@ function lf(e, t) {
 }
 //#endregion
 //#region src/velair/views/diagnostics-view.ts
-var uf = [
+var vf = [
 	"control",
 	"room_assist",
 	"preconditioning",
@@ -25219,10 +29168,10 @@ var uf = [
 	"delivery",
 	"availability"
 ];
-function df(e) {
+function yf(e) {
 	let t = e._data?.diagnostics;
 	if (!t) return T`<p class="empty">${e._t("diagnosticsUnavailable")}</p>`;
-	let n = t.overall.unit_counts, r = ff(e, t), i = pf(e, r), a = i ? t.units[i] : void 0;
+	let n = t.overall.unit_counts, r = bf(e, t), i = xf(e, r), a = i ? t.units[i] : void 0;
 	return T`<section class="diagnostics-view">
     <header class="diagnostics-intro">
       <ha-icon icon="mdi:stethoscope"></ha-icon>
@@ -25233,7 +29182,7 @@ function df(e) {
         title=${e._t("diagnosticsDownloadActionDescription")}
         aria-expanded=${e._diagnosticsExportOpen ? "true" : "false"}
         aria-controls="diagnostics-export-options"
-        @click=${() => Op(e)}>
+        @click=${() => Ip(e)}>
         <ha-icon icon="mdi:download"></ha-icon>
         <span><strong>${e._t("diagnosticsDownloadAction")}</strong>
           <small>${e._t("diagnosticsDownloadActionDescription")}</small></span>
@@ -25251,8 +29200,8 @@ function df(e) {
       <p>${e._t("diagnosticsOperationalIdsAlwaysRedacted")}</p>
       ${e._diagnosticsRedactEntityIds ? E : T`<p class="diagnostics-export-warning" role="alert">
         ${e._t("diagnosticsRawEntityIdsWarning")}</p>`}
-      <div><button class="command-button" type="button" @click=${() => kp(e)}>${e._t("cancel")}</button>
-      <button class="command-button success" type="button" @click=${() => Dp(e)}>${e._t(e._diagnosticsRedactEntityIds ? "diagnosticsDownloadNow" : "diagnosticsDownloadWithEntityIds")}</button></div>
+      <div><button class="command-button" type="button" @click=${() => Lp(e)}>${e._t("cancel")}</button>
+      <button class="command-button success" type="button" @click=${() => Fp(e)}>${e._t(e._diagnosticsRedactEntityIds ? "diagnosticsDownloadNow" : "diagnosticsDownloadWithEntityIds")}</button></div>
       </div>` : E}
     </section>
     <section class=${`diagnostics-summary status-${t.overall.status}`}>
@@ -25269,42 +29218,42 @@ function df(e) {
 	})}</small>
       </div>
     </section>
-    ${t.overall.issues.length ? T`<div class="diagnostics-issues">${t.overall.issues.map((t) => Tf(e, t))}</div>` : E}
+    ${t.overall.issues.length ? T`<div class="diagnostics-issues">${t.overall.issues.map((t) => Nf(e, t))}</div>` : E}
     <div class="diagnostics-master-detail">
       <nav class="diagnostics-unit-list" aria-label=${e._t("diagnosticsUnits")}>
         ${r.map(([t, n]) => T`<button
           class=${`diagnostics-unit-option status-${n.status}${t === i ? " selected" : ""}`}
           type="button" aria-pressed=${t === i ? "true" : "false"}
           aria-current=${t === i ? "true" : "false"}
-          @click=${() => mf(e, t)}>
-          ${cp(e, t)}
+          @click=${() => Sf(e, t)}>
+          ${gp(e, t)}
           <span class="diagnostics-unit-name"><strong>${e._friendlyEntityName(t)}</strong><small>${t}</small></span>
-          <span class="diagnostics-unit-state">${up(e, n.state)}</span>
+          <span class="diagnostics-unit-state">${vp(e, n.state)}</span>
           <span class=${`diagnostics-status-dot ${n.status}`} role="img"
-            title=${sp(e, n)}
-            aria-label=${sp(e, n)}></span>
+            title=${hp(e, n)}
+            aria-label=${hp(e, n)}></span>
         </button>`)}
       </nav>
-      ${a && i ? hf(e, i, a) : T`<div class="empty diagnostics-detail-panel diagnostics-unit-placeholder">
+      ${a && i ? Cf(e, i, a) : T`<div class="empty diagnostics-detail-panel diagnostics-unit-placeholder">
             <ha-icon icon="mdi:cursor-default-click-outline"></ha-icon>
             <span>${e._t(r.length ? "diagnosticsSelectUnit" : "diagnosticsNoUnits")}</span>
           </div>`}
     </div>
-    ${wf(e, t)}
-    ${Df(e, t, r)}
+    ${Mf(e, t)}
+    ${Ff(e, t, r)}
     <p class="diagnostics-privacy">${e._t("diagnosticsPrivacy")}</p>
   </section>`;
 }
-function ff(e, t) {
-	return dn(e, Object.keys(t.units)).map((e) => [e, t.units[e]]);
+function bf(e, t) {
+	return yn(e, Object.keys(t.units)).map((e) => [e, t.units[e]]);
 }
-function pf(e, t) {
+function xf(e, t) {
 	if (e._selectedDiagnosticEntity && t.some(([t]) => t === e._selectedDiagnosticEntity)) return e._selectedDiagnosticEntity;
 }
-function mf(e, t) {
+function Sf(e, t) {
 	e._selectedDiagnosticEntity = t, e.requestUpdate();
 }
-function hf(e, t, n) {
+function Cf(e, t, n) {
 	let r = X(n.configuration), i = X(r.preconditioning), a = X(r.comfort), o = [
 		{
 			label: "diagnosticsCurrentState",
@@ -25313,11 +29262,11 @@ function hf(e, t, n) {
 		},
 		{
 			label: "diagnosticsCalculatedIntent",
-			value: Xf(e, n.intent, t)
+			value: ip(e, n.intent, t)
 		},
 		{
 			label: "diagnosticsLastApplication",
-			value: Zf(e, n.last_application, t)
+			value: ap(e, n.last_application, t)
 		},
 		{
 			label: "diagnosticsDeliveryStatus",
@@ -25330,12 +29279,12 @@ function hf(e, t, n) {
 		},
 		{
 			label: "diagnosticsLastError",
-			value: ap(e, n.delivery.last_error)
+			value: pp(e, n.delivery.last_error)
 		}
 	], s = [
 		{
 			label: "diagnosticsScheduleSource",
-			value: dp(e, n.effective_setup.schedule_source)
+			value: yp(e, n.effective_setup.schedule_source)
 		},
 		{
 			label: "diagnosticsMode",
@@ -25347,7 +29296,7 @@ function hf(e, t, n) {
 		},
 		{
 			label: "diagnosticsOverride",
-			value: ip(e, n.override)
+			value: fp(e, n.override)
 		},
 		{
 			label: "diagnosticsPauses",
@@ -25361,40 +29310,40 @@ function hf(e, t, n) {
 		},
 		{
 			label: "diagnosticsTemperatureRange",
-			value: Yf(e, t, n.capabilities.min_temperature, n.capabilities.max_temperature)
+			value: rp(e, t, n.capabilities.min_temperature, n.capabilities.max_temperature)
 		},
 		{
 			label: "diagnosticsTemperatureStep",
-			value: Jf(e, t, n.capabilities.target_temperature_step)
+			value: np(e, t, n.capabilities.target_temperature_step)
 		}
 	];
 	return T`<article class=${`diagnostics-detail-panel status-${n.status}`}>
-    <header class="diagnostics-unit-heading">${cp(e, t)}
+    <header class="diagnostics-unit-heading">${gp(e, t)}
       <div class="diagnostics-unit-identity"><h3>${e._friendlyEntityName(t)}</h3><small>${t}</small>
         <span class="diagnostics-feature-chips">
-          ${i.room_sensor_assist_enabled ? gf(e, "diagnosticsRoomAssist", "mdi:thermometer-auto") : E}
-          ${i.enabled ? gf(e, "diagnosticsPreconditioning", "mdi:clock-fast") : E}
-          ${a.enabled ? gf(e, "diagnosticsComfort", "mdi:home-heart") : E}
+          ${i.room_sensor_assist_enabled ? wf(e, "diagnosticsRoomAssist", "mdi:thermometer-auto") : E}
+          ${i.enabled ? wf(e, "diagnosticsPreconditioning", "mdi:clock-fast") : E}
+          ${a.enabled ? wf(e, "diagnosticsComfort", "mdi:home-heart") : E}
         </span>
       </div>
       <span class=${`diagnostics-status-dot ${n.status}`} role="img"
-        title=${sp(e, n)}
-        aria-label=${sp(e, n)}></span>
+        title=${hp(e, n)}
+        aria-label=${hp(e, n)}></span>
     </header>
-    ${n.issues.length ? T`<div class="diagnostics-issues">${n.issues.map((t) => Tf(e, t))}</div>` : E}
+    ${n.issues.length ? T`<div class="diagnostics-issues">${n.issues.map((t) => Nf(e, t))}</div>` : E}
     <div class="diagnostics-groups">
-      ${yf(e, "diagnosticsStatusDelivery", "mdi:send-check-outline", o)}
-      ${yf(e, "diagnosticsActiveConfiguration", "mdi:tune-variant", s)}
-      ${_f(e, t, n, i, a)}
-      ${vf(e, n, c)}
+      ${Df(e, "diagnosticsStatusDelivery", "mdi:send-check-outline", o)}
+      ${Df(e, "diagnosticsActiveConfiguration", "mdi:tune-variant", s)}
+      ${Tf(e, t, n, i, a)}
+      ${Ef(e, n, c)}
     </div>
   </article>`;
 }
-function gf(e, t, n) {
+function wf(e, t, n) {
 	let r = e._t(t);
 	return T`<span title=${r} aria-label=${r}><ha-icon icon=${n}></ha-icon>${r}</span>`;
 }
-function _f(e, t, n, r, i) {
+function Tf(e, t, n, r, i) {
 	let a = [
 		{
 			title: "diagnosticsRoomAssist",
@@ -25407,11 +29356,11 @@ function _f(e, t, n, r, i) {
 				},
 				{
 					label: "diagnosticsFunctionState",
-					value: vp(e, X(n.room_assist).status)
+					value: Ep(e, X(n.room_assist).status)
 				},
 				{
 					label: "diagnosticsAppliedTarget",
-					value: $f(e, X(n.room_assist), t)
+					value: sp(e, X(n.room_assist), t)
 				}
 			]
 		},
@@ -25443,81 +29392,81 @@ function _f(e, t, n, r, i) {
 				value: i.enabled === !1 && n.comfort ? !1 : void 0
 			}, {
 				label: "diagnosticsFunctionState",
-				value: yp(e, X(n.comfort).condition ?? X(n.comfort).status)
+				value: Dp(e, X(n.comfort).condition ?? X(n.comfort).status)
 			}]
 		}
 	].filter((e) => e.visible);
 	return a.length ? T`<section class="diagnostics-group"><h4><ha-icon icon="mdi:puzzle-outline"></ha-icon><span>${e._t("diagnosticsFunctions")}</span></h4>
     <div class="diagnostics-function-grid">${a.map((t) => T`<section class="diagnostics-function">
-      <strong><ha-icon icon=${t.icon}></ha-icon><span>${e._t(t.title)}</span></strong>${bf(e, t.rows)}</section>`)}</div>
+      <strong><ha-icon icon=${t.icon}></ha-icon><span>${e._t(t.title)}</span></strong>${Of(e, t.rows)}</section>`)}</div>
   </section>` : E;
 }
-function vf(e, t, n) {
-	return !Gf(n).length && !t.sensors.length ? E : T`<section class="diagnostics-group"><h4><ha-icon icon="mdi:devices"></ha-icon><span>${e._t("diagnosticsDeviceSensors")}</span></h4>
-    ${bf(e, n)}
+function Ef(e, t, n) {
+	return !$f(n).length && !t.sensors.length ? E : T`<section class="diagnostics-group"><h4><ha-icon icon="mdi:devices"></ha-icon><span>${e._t("diagnosticsDeviceSensors")}</span></h4>
+    ${Of(e, n)}
     ${t.sensors.length ? T`<ul class="diagnostics-sensors">${t.sensors.map((t) => T`<li>
-      <strong>${e._t(hp(t.purpose))}</strong>
+      <strong>${e._t(Cp(t.purpose))}</strong>
       <span class="diagnostics-sensor-detail">
-        <ha-icon icon=${gp(t.purpose)}></ha-icon>
+        <ha-icon icon=${wp(t.purpose)}></ha-icon>
         <span class="diagnostics-sensor-entity" title=${t.entity_id}>${t.entity_id}</span>
-        <small class="diagnostics-sensor-value">${lp(e, t)}</small>
+        <small class="diagnostics-sensor-value">${_p(e, t)}</small>
       </span></li>`)}</ul>` : E}
   </section>`;
 }
-function yf(e, t, n, r) {
-	let i = Gf(r);
-	return i.length ? T`<section class="diagnostics-group"><h4><ha-icon icon=${n}></ha-icon><span>${e._t(t)}</span></h4>${bf(e, i)}</section>` : E;
+function Df(e, t, n, r) {
+	let i = $f(r);
+	return i.length ? T`<section class="diagnostics-group"><h4><ha-icon icon=${n}></ha-icon><span>${e._t(t)}</span></h4>${Of(e, i)}</section>` : E;
 }
-function bf(e, t) {
-	return T`<dl class="diagnostics-rows">${Gf(t).map((t) => T`<div>
-    <dt>${e._t(t.label)}</dt><dd>${xf(e, t)}</dd></div>`)}</dl>`;
+function Of(e, t) {
+	return T`<dl class="diagnostics-rows">${$f(t).map((t) => T`<div>
+    <dt>${e._t(t.label)}</dt><dd>${kf(e, t)}</dd></div>`)}</dl>`;
 }
-function xf(e, t) {
+function kf(e, t) {
 	if (t.presentation === "mode") return [
 		"missing",
 		"unknown",
 		"unavailable"
-	].includes(String(t.value)) ? T`<span class=${`diagnostics-state-chip ${t.value === "missing" ? "error" : "warning"}`}>${up(e, t.value)}</span>` : Sf(e, t.value);
-	if (t.presentation === "modes" && Array.isArray(t.value)) return T`<span class="diagnostics-mode-list">${t.value.map((t) => Sf(e, t))}</span>`;
+	].includes(String(t.value)) ? T`<span class=${`diagnostics-state-chip ${t.value === "missing" ? "error" : "warning"}`}>${vp(e, t.value)}</span>` : Af(e, t.value);
+	if (t.presentation === "modes" && Array.isArray(t.value)) return T`<span class="diagnostics-mode-list">${t.value.map((t) => Af(e, t))}</span>`;
 	if (t.presentation === "delivery-status") {
 		let n = String(t.value ?? "");
-		return T`<span class=${`diagnostics-state-chip ${Cf(n)}`}>
-      ${mp(e, n)}
+		return T`<span class=${`diagnostics-state-chip ${jf(n)}`}>
+      ${Sp(e, n)}
     </span>`;
 	}
-	return Kf(e, t.value);
+	return ep(e, t.value);
 }
-function Sf(e, t) {
+function Af(e, t) {
 	let n = String(t ?? "");
-	return n ? T`<span class=${`mode-chip mode-${St(n)}`}>${e._modeLabel(n)}</span>` : E;
+	return n ? T`<span class=${`mode-chip mode-${At(n)}`}>${e._modeLabel(n)}</span>` : E;
 }
-function Cf(e) {
+function jf(e) {
 	return e === "success" ? "success" : [
 		"failed",
 		"exhausted",
 		"invalid_intent"
 	].includes(e) ? "error" : ["retrying", "unavailable"].includes(e) ? "warning" : "neutral";
 }
-function wf(e, t) {
+function Mf(e, t) {
 	return T`<section class="diagnostics-history-policy"><header><div class="diagnostics-section-heading">
       <ha-icon icon="mdi:history"></ha-icon><div><h3>${e._t("diagnosticsHistorySettings")}</h3>
       <p>${e._t("diagnosticsHistoryExplanation", { limit: Z(e, t.history_limit) })}</p>
       </div></div><button class="command-button diagnostics-clear-history" type="button"
       title=${e._t("diagnosticsClearHistory")} aria-label=${e._t("diagnosticsClearHistory")}
       ?disabled=${e._diagnosticsHistorySaving || t.history.length === 0}
-      @click=${() => Ep(e)}><ha-icon icon="mdi:delete-outline"></ha-icon>
+      @click=${() => Pp(e)}><ha-icon icon="mdi:delete-outline"></ha-icon>
       <span>${e._t("diagnosticsClearHistory")}</span></button></header>
-    <div class="diagnostics-category-grid">${uf.map((n) => T`<label><input type="checkbox"
+    <div class="diagnostics-category-grid">${vf.map((n) => T`<label><input type="checkbox"
       .checked=${t.history_policy.categories[n]} ?disabled=${e._diagnosticsHistorySaving}
-      @change=${(r) => Tp(e, t, n, r.currentTarget.checked)} />
-      <span><strong>${e._t(Cp(n))}</strong><small>${e._t(wp(n))}</small></span>
+      @change=${(r) => Np(e, t, n, r.currentTarget.checked)} />
+      <span><strong>${e._t(jp(n))}</strong><small>${e._t(Mp(n))}</small></span>
     </label>`)}</div>
   </section>`;
 }
-function Tf(e, t) {
-	return T`<p class=${`diagnostics-issue ${t.severity}`}><ha-icon icon=${t.severity === "error" ? "mdi:alert-circle" : "mdi:alert"}></ha-icon><span>${Ef(e, t.code)}</span></p>`;
+function Nf(e, t) {
+	return T`<p class=${`diagnostics-issue ${t.severity}`}><ha-icon icon=${t.severity === "error" ? "mdi:alert-circle" : "mdi:alert"}></ha-icon><span>${Pf(e, t.code)}</span></p>`;
 }
-function Ef(e, t) {
+function Pf(e, t) {
 	let n = {
 		entity_missing: "entityDiagnosticMissing",
 		entity_unavailable: "diagnosticsEntityUnavailable",
@@ -25535,43 +29484,43 @@ function Ef(e, t) {
 	};
 	return n[t] ? e._t(n[t]) : Q(t) ?? t;
 }
-function Df(e, t, n) {
-	let r = n.map(([e]) => e), i = vn(e._diagnosticsHistoryFilters ?? mn, r), a = hn(i), o = gn(t.history, i);
+function Ff(e, t, n) {
+	let r = n.map(([e]) => e), i = En(e._diagnosticsHistoryFilters ?? Sn, r), a = Cn(i), o = wn(t.history, i);
 	return T`<section class="diagnostics-history" aria-labelledby="diagnostics-history-title">
     <header><div><h3 id="diagnostics-history-title">${e._t("diagnosticsHistoryLog")}</h3>
       <p>${e._t("diagnosticsRecentHistory", {
 		count: Z(e, t.history.length),
 		limit: Z(e, t.history_limit)
 	})}</p></div>
-      <button class=${`command-button diagnostics-clear-filters${_n(i) ? " success" : ""}`} type="button"
-        ?disabled=${!_n(i)}
-        @click=${() => Mf(e, mn)}>
+      <button class=${`command-button diagnostics-clear-filters${Tn(i) ? " success" : ""}`} type="button"
+        ?disabled=${!Tn(i)}
+        @click=${() => Bf(e, Sn)}>
         <ha-icon icon="mdi:filter-off-outline"></ha-icon>
         <span>${e._t("diagnosticsHistoryClearFilters")}</span>
       </button></header>
     <div class="diagnostics-history-filters">
-      ${Of(e, i, r)}
+      ${If(e, i, r)}
       <label><span>${e._t("diagnosticsHistoryCategoryFilter")}</span><select
         .value=${i.category}
-        @change=${(t) => Mf(e, {
+        @change=${(t) => Bf(e, {
 		...i,
 		category: t.currentTarget.value
 	})}>
         <option value="all">${e._t("diagnosticsHistoryAllCategories")}</option>
-        ${uf.map((t) => T`<option value=${t}>${e._t(Cp(t))}</option>`)}
+        ${vf.map((t) => T`<option value=${t}>${e._t(jp(t))}</option>`)}
       </select></label>
-      ${jf(e, i, "from", "diagnosticsHistoryFrom")}
-      ${jf(e, i, "to", "diagnosticsHistoryTo")}
+      ${zf(e, i, "from", "diagnosticsHistoryFrom")}
+      ${zf(e, i, "to", "diagnosticsHistoryTo")}
     </div>
     ${a ? E : T`<p class="diagnostics-filter-error" role="alert">${e._t("diagnosticsHistoryInvalidRange")}</p>`}
     <p class="diagnostics-history-results" aria-live="polite">${e._t("diagnosticsHistoryResults", {
 		visible: Z(e, o.length),
 		total: Z(e, t.history.length)
 	})}</p>
-    ${Nf(e, t.history, o)}
+    ${Vf(e, t.history, o)}
   </section>`;
 }
-function Of(e, t, n) {
+function If(e, t, n) {
 	let r = e._diagnosticsSourceFilterOpen, i = t.sources, a = (e) => i === null || i.has(e);
 	return T`<div class="diagnostics-source-filter"
     @keydown=${(t) => {
@@ -25581,7 +29530,7 @@ function Of(e, t, n) {
     <button class="diagnostics-source-trigger" type="button"
       aria-expanded=${r ? "true" : "false"} aria-controls="diagnostics-source-options"
       @click=${() => e._setDiagnosticsSourceFilterOpen(!r)}>
-      <span>${kf(e, t, n)}</span>
+      <span>${Lf(e, t, n)}</span>
       <ha-icon icon=${r ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>
     </button>
     ${r ? T`<div id="diagnostics-source-options"
@@ -25589,16 +29538,16 @@ function Of(e, t, n) {
       style=${e._diagnosticsSourceMaxHeight === void 0 ? E : `max-height:${e._diagnosticsSourceMaxHeight}px`}>
       <fieldset><legend>${e._t("diagnosticsHistorySourcesLegend")}</legend>
         <label><input type="checkbox" .checked=${i === null}
-          @change=${(n) => Mf(e, {
+          @change=${(n) => Bf(e, {
 		...t,
 		sources: n.currentTarget.checked ? null : /* @__PURE__ */ new Set()
 	})} /><span>${e._t("diagnosticsHistoryAllSources")}</span></label>
-        <label><input type="checkbox" .checked=${a(pn)}
-          @change=${(r) => Af(e, t, n, pn, r.currentTarget.checked)} />
+        <label><input type="checkbox" .checked=${a(xn)}
+          @change=${(r) => Rf(e, t, n, xn, r.currentTarget.checked)} />
           <span>${e._t("diagnosticsHistoryVelairOnly")}</span></label>
         ${n.map((r) => T`<label><input type="checkbox"
           .checked=${a(r)}
-          @change=${(i) => Af(e, t, n, r, i.currentTarget.checked)} />
+          @change=${(i) => Rf(e, t, n, r, i.currentTarget.checked)} />
           <span>${e._friendlyEntityName(r)}</span></label>`)}
       </fieldset>
       <button class="command-button diagnostics-source-done" type="button"
@@ -25606,9 +29555,9 @@ function Of(e, t, n) {
     </div>` : E}
   </div>`;
 }
-function kf(e, t, n) {
+function Lf(e, t, n) {
 	if (t.sources === null) return e._t("diagnosticsHistoryAllSources");
-	let r = t.sources.has(pn), i = n.filter((e) => t.sources?.has(e));
+	let r = t.sources.has(xn), i = n.filter((e) => t.sources?.has(e));
 	if (!i.length) return r ? e._t("diagnosticsHistoryVelairOnly") : e._t("diagnosticsHistoryNoSources");
 	if (i.length === 1) {
 		let t = e._friendlyEntityName(i[0]);
@@ -25616,173 +29565,173 @@ function kf(e, t, n) {
 	}
 	return e._t(r ? "diagnosticsHistorySourceCountWithVelair" : "diagnosticsHistorySourceCount", { count: Z(e, i.length) });
 }
-function Af(e, t, n, r, i) {
-	let a = new Set(t.sources ?? [pn, ...n]);
-	i ? a.add(r) : a.delete(r), Mf(e, vn({
+function Rf(e, t, n, r, i) {
+	let a = new Set(t.sources ?? [xn, ...n]);
+	i ? a.add(r) : a.delete(r), Bf(e, En({
 		...t,
 		sources: a
 	}, n));
 }
-function jf(e, t, n, r) {
+function zf(e, t, n, r) {
 	return T`<label><span>${e._t(r)}</span><input type="datetime-local"
     .value=${t[n]}
-    aria-invalid=${hn(t) ? "false" : "true"}
-    @input=${(r) => Mf(e, {
+    aria-invalid=${Cn(t) ? "false" : "true"}
+    @input=${(r) => Bf(e, {
 		...t,
 		[n]: r.currentTarget.value
 	})} /></label>`;
 }
-function Mf(e, t) {
+function Bf(e, t) {
 	e._diagnosticsHistoryFilters = { ...t }, e.requestUpdate();
 }
-function Nf(e, t, n) {
+function Vf(e, t, n) {
 	if (!t.length) return T`<p class="empty">${e._t("diagnosticsNoHistory")}</p>`;
 	if (!n.length) return T`<p class="empty">${e._t("diagnosticsHistoryNoMatches")}</p>`;
-	let r = En(e._diagnosticsLogColumns ?? bn, e._diagnosticsLogAvailableWidth);
+	let r = Pn(e._diagnosticsLogColumns ?? On, e._diagnosticsLogAvailableWidth);
 	return T`<div class="diagnostics-history-table" style=${`--diagnostics-log-time:${r.time}px;--diagnostics-log-climate:${r.climate}px;--diagnostics-log-type:${r.type}px`}>
     <div class="diagnostics-history-header" role="row">
-      <span>${e._t("diagnosticsLogTime")}</span>${Ff(e, "time", r.time)}
-      <span>${e._t("diagnosticsLogClimate")}</span>${Ff(e, "climate", r.climate)}
-      <span>${e._t("diagnosticsLogType")}</span>${Ff(e, "type", r.type)}
+      <span>${e._t("diagnosticsLogTime")}</span>${Uf(e, "time", r.time)}
+      <span>${e._t("diagnosticsLogClimate")}</span>${Uf(e, "climate", r.climate)}
+      <span>${e._t("diagnosticsLogType")}</span>${Uf(e, "type", r.type)}
       <span>${e._t("diagnosticsLogMessage")}</span>
     </div>
     <ol>${n.map((t) => T`<li>
-    <time datetime=${t.at} title=${t.at}>${qf(e, t.at)}</time>
+    <time datetime=${t.at} title=${t.at}>${tp(e, t.at)}</time>
       <span class="diagnostics-history-climate">${t.entity_id ? e._friendlyEntityName(t.entity_id) : "Velair"}</span>
-      <span class="diagnostics-history-type">${_p(e, t)}</span>
-    <span class="diagnostics-history-message">${Hf(e, t)}</span></li>`)}</ol>
+      <span class="diagnostics-history-type">${Tp(e, t)}</span>
+    <span class="diagnostics-history-message">${Xf(e, t)}</span></li>`)}</ol>
   </div>`;
 }
-var Pf = /* @__PURE__ */ new WeakMap();
-function Ff(e, t, n) {
+var Hf = /* @__PURE__ */ new WeakMap();
+function Uf(e, t, n) {
 	let r = `diagnosticsLog${t[0].toUpperCase()}${t.slice(1)}`;
 	return T`<span class="diagnostics-log-resizer" role="separator" tabindex="0"
-    aria-orientation="vertical" aria-valuemin=${xn[t]}
-    aria-valuemax=${wn(e._diagnosticsLogColumns ?? bn, t, e._diagnosticsLogAvailableWidth)}
+    aria-orientation="vertical" aria-valuemin=${kn[t]}
+    aria-valuemax=${Mn(e._diagnosticsLogColumns ?? On, t, e._diagnosticsLogAvailableWidth)}
     aria-valuenow=${Math.round(n)} aria-label=${e._t("diagnosticsLogResizeColumn", { column: e._t(r) })}
-    @pointerdown=${(r) => Rf(e, t, n, r)}
-    @pointermove=${(t) => zf(e, t)}
-    @pointerup=${(t) => Bf(e, t)}
-    @pointercancel=${(t) => Bf(e, t)}
-    @lostpointercapture=${(t) => Bf(e, t)}
-    @keydown=${(n) => Vf(e, t, n)}
-    @dblclick=${(n) => Lf(e, t, bn[t], If(n.currentTarget))}></span>`;
+    @pointerdown=${(r) => Kf(e, t, n, r)}
+    @pointermove=${(t) => qf(e, t)}
+    @pointerup=${(t) => Jf(e, t)}
+    @pointercancel=${(t) => Jf(e, t)}
+    @lostpointercapture=${(t) => Jf(e, t)}
+    @keydown=${(n) => Yf(e, t, n)}
+    @dblclick=${(n) => Gf(e, t, On[t], Wf(n.currentTarget))}></span>`;
 }
-function If(e) {
+function Wf(e) {
 	let t = e?.closest(".diagnostics-history-table")?.getBoundingClientRect().width;
-	return Cn(t && t > 0 ? t : 900);
+	return jn(t && t > 0 ? t : 900);
 }
-function Lf(e, t, n, r) {
-	e._diagnosticsLogColumns = Tn(e._diagnosticsLogColumns ?? bn, t, n, r), e._diagnosticsLogAvailableWidth = r, e.requestUpdate();
+function Gf(e, t, n, r) {
+	e._diagnosticsLogColumns = Nn(e._diagnosticsLogColumns ?? On, t, n, r), e._diagnosticsLogAvailableWidth = r, e.requestUpdate();
 }
-function Rf(e, t, n, r) {
-	!r.isPrimary || r.button !== 0 || Pf.has(e) || (Pf.set(e, {
+function Kf(e, t, n, r) {
+	!r.isPrimary || r.button !== 0 || Hf.has(e) || (Hf.set(e, {
 		column: t,
 		pointerId: r.pointerId,
 		startX: r.clientX,
 		startWidth: n
 	}), r.currentTarget.setPointerCapture?.(r.pointerId));
 }
-function zf(e, t) {
-	let n = Pf.get(e);
-	!n || n.pointerId !== t.pointerId || Lf(e, n.column, n.startWidth + t.clientX - n.startX, If(t.currentTarget));
+function qf(e, t) {
+	let n = Hf.get(e);
+	!n || n.pointerId !== t.pointerId || Gf(e, n.column, n.startWidth + t.clientX - n.startX, Wf(t.currentTarget));
 }
-function Bf(e, t) {
-	let n = Pf.get(e);
+function Jf(e, t) {
+	let n = Hf.get(e);
 	if (!n || n.pointerId !== t.pointerId) return;
-	Pf.delete(e);
+	Hf.delete(e);
 	let r = t.currentTarget;
 	r.hasPointerCapture?.(t.pointerId) && r.releasePointerCapture?.(t.pointerId);
 }
-function Vf(e, t, n) {
-	let r = e._diagnosticsLogColumns ?? bn, i = If(n.currentTarget), a;
-	n.key === "ArrowLeft" && (a = r[t] - (n.shiftKey ? 25 : 10)), n.key === "ArrowRight" && (a = r[t] + (n.shiftKey ? 25 : 10)), n.key === "Home" && (a = xn[t]), n.key === "End" && (a = wn(r, t, i)), a !== void 0 && (n.preventDefault(), Lf(e, t, a, i));
+function Yf(e, t, n) {
+	let r = e._diagnosticsLogColumns ?? On, i = Wf(n.currentTarget), a;
+	n.key === "ArrowLeft" && (a = r[t] - (n.shiftKey ? 25 : 10)), n.key === "ArrowRight" && (a = r[t] + (n.shiftKey ? 25 : 10)), n.key === "Home" && (a = kn[t]), n.key === "End" && (a = Mn(r, t, i)), a !== void 0 && (n.preventDefault(), Gf(e, t, a, i));
 }
-function Hf(e, t) {
+function Xf(e, t) {
 	let n = t.data;
 	return t.category === "room_assist" ? [
 		n.direction ? e._modeLabel(String(n.direction)) : void 0,
-		Uf(e._t("roomSensorAppliedTarget"), $f(e, n, t.entity_id ?? "")),
-		Wf(e, "roomSensorRoomTemperature", n.room_temperature, t.entity_id),
-		Wf(e, "roomSensorClimateTemperature", n.climate_temperature, t.entity_id),
-		fp(e, n.reason)
+		Zf(e._t("roomSensorAppliedTarget"), sp(e, n, t.entity_id ?? "")),
+		Qf(e, "roomSensorRoomTemperature", n.room_temperature, t.entity_id),
+		Qf(e, "roomSensorClimateTemperature", n.climate_temperature, t.entity_id),
+		bp(e, n.reason)
 	].filter(Boolean).join(" · ") : t.category === "preconditioning" ? [
 		n.direction ? e._modeLabel(String(n.direction)) : void 0,
 		typeof n.lead_minutes == "number" ? e._t("preconditioningLeadTime", { minutes: Z(e, n.lead_minutes) }) : void 0,
-		Sp(e, n.model_source),
-		Qf(e, n, t.entity_id ?? ""),
-		fp(e, n.reason)
+		Ap(e, n.model_source),
+		op(e, n, t.entity_id ?? ""),
+		bp(e, n.reason)
 	].filter(Boolean).join(" · ") : t.category === "comfort" ? [
-		yp(e, n.condition),
-		bp(e, n.air_quality),
-		xp(e, n.data_quality)
-	].filter(Boolean).join(" · ") : t.category === "availability" ? [up(e, n.state)].filter(Boolean).join(" · ") : t.category === "control" ? n.event === "external_climate_change_detected" ? np(e, t) : n.event === "zone_control_changed" ? rp(e, t) : [
+		Dp(e, n.condition),
+		Op(e, n.air_quality),
+		kp(e, n.data_quality)
+	].filter(Boolean).join(" · ") : t.category === "availability" ? [vp(e, n.state)].filter(Boolean).join(" · ") : t.category === "control" ? n.event === "external_climate_change_detected" ? up(e, t) : n.event === "zone_control_changed" ? dp(e, t) : [
 		n.hvac_mode ? e._modeLabel(String(n.hvac_mode)) : void 0,
-		pp(e, n.action ?? n.operation),
-		Qf(e, n, t.entity_id ?? ""),
-		fp(e, n.reason)
-	].filter(Boolean).join(" · ") : [n.reason ? fp(e, n.reason) : n.error ? Q(n.error) : n.state ? up(e, n.state) : void 0].filter(Boolean).join(" · ");
+		xp(e, n.action ?? n.operation),
+		op(e, n, t.entity_id ?? ""),
+		bp(e, n.reason)
+	].filter(Boolean).join(" · ") : [n.reason ? bp(e, n.reason) : n.error ? Q(n.error) : n.state ? vp(e, n.state) : void 0].filter(Boolean).join(" · ");
 }
-function Uf(e, t) {
+function Zf(e, t) {
 	return t ? `${e}: ${t}` : void 0;
 }
-function Wf(e, t, n, r) {
+function Qf(e, t, n, r) {
 	return typeof n == "number" ? `${e._t(t)}: ${e._formatTemperature(n, r ?? void 0)}` : void 0;
 }
-function Gf(e) {
+function $f(e) {
 	return e.filter((e) => e.value !== void 0 && e.value !== null && e.value !== "");
 }
 function X(e) {
 	return e && typeof e == "object" && !Array.isArray(e) ? e : {};
 }
-function Kf(e, t) {
+function ep(e, t) {
 	return typeof t == "boolean" ? e._t(t ? "diagnosticsOn" : "diagnosticsOff") : typeof t == "number" ? Z(e, t) : String(t);
 }
-function qf(e, t) {
-	return Pa(t, ja(e._language()), e.hass?.locale?.time_format);
+function tp(e, t) {
+	return Ha(t, za(e._language()), e.hass?.locale?.time_format);
 }
-function Jf(e, t, n) {
+function np(e, t, n) {
 	return typeof n == "number" ? e._formatTemperature(n, t) : void 0;
 }
-function Yf(e, t, n, r) {
+function rp(e, t, n, r) {
 	return typeof n == "number" && typeof r == "number" ? `${e._formatTemperature(n, t)} – ${e._formatTemperature(r, t)}` : void 0;
 }
-function Xf(e, t, n) {
+function ip(e, t, n) {
 	let r = X(t);
 	return [
-		ep(e, r.control_mode),
-		up(e, r.state),
+		cp(e, r.control_mode),
+		vp(e, r.state),
 		r.hvac_mode ? e._modeLabel(String(r.hvac_mode)) : void 0,
-		Qf(e, r, n)
+		op(e, r, n)
 	].filter(Boolean).join(" · ") || void 0;
 }
-function Zf(e, t, n) {
+function ap(e, t, n) {
 	let r = X(t);
 	return [
 		r.at ? e._formatDateTime(String(r.at)) : void 0,
 		r.hvac_mode ? e._modeLabel(String(r.hvac_mode)) : void 0,
-		Qf(e, r, n)
+		op(e, r, n)
 	].filter(Boolean).join(" · ") || void 0;
 }
-function Qf(e, t, n) {
+function op(e, t, n) {
 	let r = t.temperature ?? t.target_temperature;
 	return typeof r == "number" ? e._formatTemperature(r, n) : typeof t.target_temp_low == "number" && typeof t.target_temp_high == "number" ? `${e._formatTemperature(t.target_temp_low, n)} – ${e._formatTemperature(t.target_temp_high, n)}` : void 0;
 }
-function $f(e, t, n) {
+function sp(e, t, n) {
 	let r = t.applied_temperature ?? t.applied_target;
 	return typeof r == "number" ? e._formatTemperature(r, n) : typeof t.applied_target_temp_low == "number" && typeof t.applied_target_temp_high == "number" ? `${e._formatTemperature(t.applied_target_temp_low, n)} – ${e._formatTemperature(t.applied_target_temp_high, n)}` : void 0;
 }
-function ep(e, t) {
+function cp(e, t) {
 	if (t === "manual") return e._t("diagnosticsControlManual");
 	if (t === "automatic") return e._t("diagnosticsControlAutomatic");
 }
-function tp(e, t, n) {
+function lp(e, t, n) {
 	if (t === "keep_automatic") return e._t("externalChangeKeepAutomatic");
 	if (t === "until_next_block") return e._t("externalChangeUntilNextBlock");
 	if (t === "for_duration") return [e._t("externalChangeForDuration"), typeof n == "number" ? e._t("manualSessionDuration", { minutes: n }) : void 0].filter(Boolean).join(" · ");
 	if (t === "until_resumed") return e._t("externalChangeUntilResumed");
 }
-function np(e, t) {
+function up(e, t) {
 	let n = t.data, r = X(n.previous), i = X(n.current), a = new Set(Array.isArray(n.changed_fields) ? n.changed_fields.map(String) : []), o = t.entity_id ?? "", s = [];
 	a.has("hvac_mode") && r.hvac_mode && i.hvac_mode && s.push(e._t("diagnosticsHvacModeChanged", {
 		previous: e._modeLabel(String(r.hvac_mode)),
@@ -25793,7 +29742,7 @@ function np(e, t) {
 	}));
 	let c = a.has("target_temp_low"), l = a.has("target_temp_high");
 	if (c || l) {
-		let t = Yf(e, o, r.target_temp_low, r.target_temp_high), n = Yf(e, o, i.target_temp_low, i.target_temp_high);
+		let t = rp(e, o, r.target_temp_low, r.target_temp_high), n = rp(e, o, i.target_temp_low, i.target_temp_high);
 		t && n && c && l && s.push(e._t("diagnosticsRangeChanged", {
 			previous: t,
 			current: n
@@ -25805,25 +29754,25 @@ function np(e, t) {
 			current: e._formatTemperature(i.target_temp_high, o)
 		})));
 	}
-	return s.push(tp(e, n.policy, n.duration_minutes)), s.filter(Boolean).join(" · ");
+	return s.push(lp(e, n.policy, n.duration_minutes)), s.filter(Boolean).join(" · ");
 }
-function rp(e, t) {
-	let n = t.data, r = ep(e, n.previous_control_mode), i = ep(e, n.control_mode);
+function dp(e, t) {
+	let n = t.data, r = cp(e, n.previous_control_mode), i = cp(e, n.control_mode);
 	return [
 		r && i ? e._t("diagnosticsControlChanged", {
 			previous: r,
 			current: i
 		}) : i,
-		tp(e, n.policy, n.duration_minutes),
+		lp(e, n.policy, n.duration_minutes),
 		n.until ? e._t("diagnosticsUntil", { time: e._formatDateTime(String(n.until)) }) : void 0,
-		fp(e, n.reason)
+		bp(e, n.reason)
 	].filter(Boolean).join(" · ");
 }
-function ip(e, t) {
+function fp(e, t) {
 	let n = X(t), r = n.action ?? n.status;
 	return (r === "turn_off" ? e._t("diagnosticsOverrideTurnOff") : r === "none" ? e._t("diagnosticsNone") : r ? Q(r) : void 0) ?? (n.expires_at ? e._formatDateTime(String(n.expires_at)) : void 0) ?? (Object.keys(n).length ? e._t("diagnosticsActive") : void 0);
 }
-function ap(e, t) {
+function pp(e, t) {
 	let n = X(t), r = String(n.code ?? ""), i = {
 		exhausted: "diagnosticsDeliveryExhausted",
 		failed: "diagnosticsDeliveryFailed",
@@ -25836,33 +29785,33 @@ function ap(e, t) {
 function Z(e, t) {
 	return new Intl.NumberFormat(e._language()).format(t);
 }
-function op(e, t) {
+function mp(e, t) {
 	return e._t({
 		ok: "diagnosticsStatusHealthy",
 		warning: "diagnosticsStatusWarning",
 		error: "diagnosticsStatusError"
 	}[t]);
 }
-function sp(e, t) {
-	let n = op(e, t.status);
+function hp(e, t) {
+	let n = mp(e, t.status);
 	return t.issues.length ? e._t("diagnosticsStatusWithIssues", {
 		status: n,
-		issues: t.issues.map((t) => Ef(e, t.code)).join("; ")
+		issues: t.issues.map((t) => Pf(e, t.code)).join("; ")
 	}) : n;
 }
-function cp(e, t) {
+function gp(e, t) {
 	let n = e.hass?.states?.[t];
 	return n ? T`<ha-state-icon class="diagnostics-climate-icon" .hass=${e.hass} .stateObj=${n}></ha-state-icon>` : T`<ha-icon class="diagnostics-climate-icon" icon="mdi:thermostat"></ha-icon>`;
 }
-function lp(e, t) {
-	let n = up(e, t.state);
+function _p(e, t) {
+	let n = vp(e, t.state);
 	if (["unknown", "unavailable"].includes(t.state)) return n;
 	let r = Number(t.state);
 	if (!Number.isFinite(r)) return n;
 	let i = (e.hass?.states?.[t.entity_id])?.attributes?.unit_of_measurement, a = t.purpose === "comfort_humidity" ? "%" : t.purpose === "comfort_co2" ? "ppm" : t.purpose.includes("temperature") ? e._temperatureUnit(t.entity_id) : void 0, o = i ?? a, s = Z(e, r);
 	return o ? `${s} ${o}` : s;
 }
-function up(e, t) {
+function vp(e, t) {
 	if (!(t == null || t === "")) return t === "unavailable" ? e._t("roomSensorStatusUnavailable") : t === "unknown" ? e._t("diagnosticsEntityUnknown") : t === "missing" ? e._t("entityDiagnosticMissing") : t === "stopped" ? e._t("diagnosticsReasonStopped") : [
 		"idle",
 		"override_active",
@@ -25870,7 +29819,7 @@ function up(e, t) {
 		"scheduled"
 	].includes(String(t)) ? e._schedulerStatusLabel(String(t)) : e._modeLabel(String(t));
 }
-function dp(e, t) {
+function yp(e, t) {
 	return t === "default" ? e._t("defaultSchedules") : t === "profile" ? e._t("profileSchedules") : t === "profile_pause" ? e._t("diagnosticsScheduleSourceProfilePause") : t ? Q(t) : void 0;
 }
 function Q(e) {
@@ -25878,7 +29827,7 @@ function Q(e) {
 	let t = String(e).replace(/[_-]+/g, " ").trim();
 	return t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}` : void 0;
 }
-function fp(e, t) {
+function bp(e, t) {
 	let n = {
 		assist_disabled: "diagnosticsReasonAssistDisabled",
 		boost_started: "diagnosticsEventBoostStarted",
@@ -25914,7 +29863,7 @@ function fp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function pp(e, t) {
+function xp(e, t) {
 	let n = {
 		added: "diagnosticsOperationAdded",
 		boost_ended: "diagnosticsEventBoostEnded",
@@ -25944,7 +29893,7 @@ function pp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function mp(e, t) {
+function Sp(e, t) {
 	let n = String(t ?? ""), r = {
 		cancelled: "operationCancelled",
 		exhausted: "diagnosticsDeliveryExhausted",
@@ -25957,7 +29906,7 @@ function mp(e, t) {
 	};
 	return r[n] ? e._t(r[n]) : Q(n);
 }
-function hp(e) {
+function Cp(e) {
 	return {
 		comfort_co2: "comfortCo2Sensor",
 		comfort_humidity: "comfortHumiditySensor",
@@ -25966,13 +29915,13 @@ function hp(e) {
 		room_temperature: "roomSensorTemperatureEntity"
 	}[e] ?? "diagnosticsAssociatedSensors";
 }
-function gp(e) {
+function wp(e) {
 	return e === "comfort_humidity" ? "mdi:water-percent" : e === "comfort_co2" ? "mdi:molecule-co2" : e === "outdoor_temperature" ? "mdi:thermometer-chevron-down" : "mdi:thermometer";
 }
-function _p(e, t) {
-	return t.category === "delivery" ? mp(e, t.data.status) ?? e._t(Cp(t.category)) : t.data.event ? pp(e, t.data.event) ?? e._t(Cp(t.category)) : e._t(Cp(t.category));
+function Tp(e, t) {
+	return t.category === "delivery" ? Sp(e, t.data.status) ?? e._t(jp(t.category)) : t.data.event ? xp(e, t.data.event) ?? e._t(jp(t.category)) : e._t(jp(t.category));
 }
-function vp(e, t) {
+function Ep(e, t) {
 	let n = {
 		assisting: "roomSensorStatusAssisting",
 		blocked: "roomSensorStatusBlocked",
@@ -25985,7 +29934,7 @@ function vp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function yp(e, t) {
+function Dp(e, t) {
 	let n = {
 		cold: "comfortConditionCold",
 		cold_and_dry: "comfortConditionColdAndDry",
@@ -26003,7 +29952,7 @@ function yp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function bp(e, t) {
+function Op(e, t) {
 	let n = {
 		elevated: "comfortAirQualityElevated",
 		good: "comfortAirQualityGood",
@@ -26012,7 +29961,7 @@ function bp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function xp(e, t) {
+function kp(e, t) {
 	let n = {
 		partial: "comfortDataPartial",
 		stale: "comfortDataStale",
@@ -26020,18 +29969,18 @@ function xp(e, t) {
 	}, r = String(t ?? "");
 	return r === "complete" ? e._t("comfortCurrentReadings") : n[r] ? e._t(n[r]) : Q(r);
 }
-function Sp(e, t) {
+function Ap(e, t) {
 	return t === "history" ? e._t("preconditioningModelHistory") : t === "initial_model" || t === "initial" ? e._t("preconditioningModelInitial") : Q(t);
 }
-function Cp(e) {
+function jp(e) {
 	return `diagnosticsHistoryCategory${e.replace(/(^|_)(\w)/g, (e, t, n) => n.toUpperCase())}`;
 }
-function wp(e) {
-	return `${Cp(e)}Description`;
+function Mp(e) {
+	return `${jp(e)}Description`;
 }
-async function Tp(e, t, n, r) {
+async function Np(e, t, n, r) {
 	if (!e.hass || e._diagnosticsHistorySaving) return;
-	let i = uf.filter((e) => e === n ? r : t.history_policy.categories[e]);
+	let i = vf.filter((e) => e === n ? r : t.history_policy.categories[e]);
 	e._diagnosticsHistorySaving = !0, e.requestUpdate();
 	try {
 		e._applyDiagnosticsSnapshot(await new P(e.hass).updateDiagnosticsHistory(i));
@@ -26041,7 +29990,7 @@ async function Tp(e, t, n, r) {
 		e._diagnosticsHistorySaving = !1, e.requestUpdate();
 	}
 }
-async function Ep(e) {
+async function Pp(e) {
 	if (!(!e.hass || e._diagnosticsHistorySaving)) {
 		e._diagnosticsHistorySaving = !0, e.requestUpdate();
 		try {
@@ -26053,28 +30002,28 @@ async function Ep(e) {
 		}
 	}
 }
-async function Dp(e) {
+async function Fp(e) {
 	if (e.hass) try {
 		e._error = void 0;
 		let t = await new P(e.hass).exportDiagnostics(e._diagnosticsRedactEntityIds), n = URL.createObjectURL(new Blob([JSON.stringify(t, null, 2)], { type: "application/json" })), r = document.createElement("a");
-		r.href = n, r.download = `velair-diagnostics-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, r.style.display = "none", document.body.append(r), r.click(), r.remove(), window.setTimeout(() => URL.revokeObjectURL(n), 0), kp(e);
+		r.href = n, r.download = `velair-diagnostics-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, r.style.display = "none", document.body.append(r), r.click(), r.remove(), window.setTimeout(() => URL.revokeObjectURL(n), 0), Lp(e);
 	} catch {
 		e._error = e._t("diagnosticsExportError"), e.requestUpdate();
 	}
 }
-function Op(e) {
-	e._diagnosticsExportOpen ? kp(e) : (e._diagnosticsExportOpen = !0, e.requestUpdate());
+function Ip(e) {
+	e._diagnosticsExportOpen ? Lp(e) : (e._diagnosticsExportOpen = !0, e.requestUpdate());
 }
-function kp(e) {
+function Lp(e) {
 	e._diagnosticsExportOpen = !1, e._diagnosticsRedactEntityIds = !0, e.requestUpdate();
 }
 //#endregion
 //#region src/velair/views/templates-view.ts
-function Ap(e, t) {
+function Rp(e, t) {
 	let n = e._scheduleTemplates(), r = n.find((t) => t.key === e._selectedTemplateKey), i = e._hasDraftValidationError("template"), a = r ? e._templateNameInputValue(r) : "", o = r ? e._templateDraftBlocks : [];
 	return n.length ? T`
     <section class="templates-view">
-      ${jp(e)}
+      ${zp(e)}
       <div class="template-library">
         <div class="template-library-layout">
         <div class=${e._templateListClass(n.length)}>
@@ -26159,15 +30108,15 @@ function Ap(e, t) {
                     </button>
                   </div>
                 </div>
-                ${Mp(e, r)}
+                ${Bp(e, r)}
                 <div class="editor template-editor">
-                  ${ku(e, t, "template")}
+                  ${Lu(e, t, "template")}
                   <div class="draft-list template-block-list">
                     ${o.length ? T`
-                          ${Nu(e, "template")}
-                          ${o.map((t, n) => cu(qu("template", r.key, void 0, n), Fu(e, t, n, "template")))}
-                          ${Pu(e, "template")}
-                        ` : Pu(e, "template")}
+                          ${Vu(e, "template")}
+                          ${o.map((t, n) => gu(td("template", r.key, void 0, n), Uu(e, t, n, "template")))}
+                          ${Hu(e, "template")}
+                        ` : Hu(e, "template")}
                   </div>
                 </div>
               ` : T`
@@ -26181,7 +30130,7 @@ function Ap(e, t) {
     </section>
   ` : T`
       <section class="templates-view">
-        ${jp(e)}
+        ${zp(e)}
         <div class="template-library">
           <div class="template-placeholder compact">
             <span>${e._t("noTemplates")}</span>
@@ -26199,7 +30148,7 @@ function Ap(e, t) {
       </section>
     `;
 }
-function jp(e) {
+function zp(e) {
 	return T`
     <header class="template-intro">
       <ha-icon icon="mdi:content-copy"></ha-icon>
@@ -26210,7 +30159,7 @@ function jp(e) {
     </header>
   `;
 }
-function Mp(e, t) {
+function Bp(e, t) {
 	if (!e._templateApplyOpen) return E;
 	let n = e._visibleZoneIds(e._data?.configured_entities ?? []), r = e._orderedWeekdays(), i = e._hasDraftValidationError("template"), a = e._templateApplyTargets.size > 0;
 	return T`
@@ -26261,8 +30210,8 @@ function Mp(e, t) {
 }
 //#endregion
 //#region src/velair/views/card-content.ts
-function Np(e) {
-	let t = e._effectiveView(), n = !e._hasExternalConfig || t === "active-setup", r = e._orderedZoneIds(e._data?.configured_entities ?? []), i = e._visibleZoneIds(e._data?.configured_entities ?? []), a = e._selectedEntity && i.includes(e._selectedEntity) ? e._selectedEntity : i[0], o = a ? e._data?.zones[a] : void 0, s = e._data && !e._data.temperature_migration.required ? Vo(e._data.zones, (t) => e._entityTemperatureLimits(t), (t) => e._entityTemperatureStep(t)) : 0;
+function Vp(e) {
+	let t = e._effectiveView(), n = !e._hasExternalConfig || t === "active-setup", r = e._orderedZoneIds(e._data?.configured_entities ?? []), i = e._visibleZoneIds(e._data?.configured_entities ?? []), a = e._selectedEntity && i.includes(e._selectedEntity) ? e._selectedEntity : i[0], o = a ? e._data?.zones[a] : void 0, s = e._data && !e._data.temperature_migration.required ? Yo(e._data.zones, (t) => e._entityTemperatureLimits(t), (t) => e._entityTemperatureStep(t)) : 0;
 	return T`
     <ha-card>
       <div
@@ -26271,8 +30220,8 @@ function Np(e) {
       >
         ${e._schedulerMenuOpen ? T`<button class="card-scrim" type="button" @click=${e._closeSchedulerMenu}></button>` : E}
 
-        ${n && e._data?.operation_status && cs(e._data.operation_status, e._dismissedOperationId) ? ls(e, e._data.operation_status) : E}
-        ${rs(e, e._noticeStackEntries?.() ?? [...e._saveMessage ? [{
+        ${n && e._data?.operation_status && gs(e._data.operation_status, e._dismissedOperationId) ? _s(e, e._data.operation_status) : E}
+        ${ds(e, e._noticeStackEntries?.() ?? [...e._saveMessage ? [{
 		id: "success",
 		type: "success",
 		message: e._saveMessage
@@ -26324,19 +30273,19 @@ function Np(e) {
               </div>
             ` : E}
 
-        ${e._data ? Pp(e, t, r, i, a, o) : E}
+        ${e._data ? Hp(e, t, r, i, a, o) : E}
       </div>
     </ha-card>
   `;
 }
-function Pp(e, t, n, r, i, a) {
+function Hp(e, t, n, r, i, a) {
 	return e._data?.temperature_migration?.required && t !== "settings" && t !== "diagnostics" ? T`<div class="notice">${e._t(e._data.temperature_migration.reason === "legacy_celsius_upgrade_reset_required" ? "temperatureLegacyResetStopped" : "temperatureMigrationStopped")}</div>` : t === "overview" ? T`
-      ${Hc(e, n)}
-      ${Fp(e)}
-      ${Uc(e, r)}
-      ${Dl(e, r)}
-      ${ul(e, r)}
-      ${Gc(e, r)}
+      ${Xc(e, n)}
+      ${Up(e)}
+      ${Zc(e, r)}
+      ${Fl(e, r)}
+      ${vl(e, r)}
+      ${$c(e, r)}
     ` : t === "modes" || t === "profiles" ? T`<velair-profiles-view
       workspace="modes"
       .hass=${e.hass}
@@ -26344,12 +30293,12 @@ function Pp(e, t, n, r, i, a) {
       @profile-data-changed=${(t) => e._applyScheduleData(t.detail, { forceDraft: !1 })}
       @profile-error=${(t) => e._showError(t.detail ?? void 0)}
       @profile-success=${(t) => e._showSuccess(t.detail)}
-    ></velair-profiles-view>` : t === "overview-status" ? Hc(e, n) : t === "active-setup" ? Fp(e) : t === "overview-boosts" ? Uc(e, r) : t === "overview-events" ? Dl(e, r) : t === "overview-timeline" ? ul(e, r) : t === "overview-zones" ? Gc(e, r) : t === "schedules" ? Su(e, r, i, a) : t === "templates" ? Ap(e, i) : t === "sensors" ? od(e, r, Rp(e)) : t === "comfort" ? Cs(e, r, Lp(e)) : t === "preconditioning" ? Rl(e, r) : t === "diagnostics" ? df(e) : t === "settings" ? Qd(e, r) : Hc(e, n);
+    ></velair-profiles-view>` : t === "overview-status" ? Xc(e, n) : t === "active-setup" ? Up(e) : t === "overview-boosts" ? Zc(e, r) : t === "overview-events" ? Fl(e, r) : t === "overview-timeline" ? vl(e, r) : t === "overview-zones" ? $c(e, r) : t === "schedules" ? Au(e, r, i, a) : t === "templates" ? Rp(e, i) : t === "sensors" ? md(e, r, Kp(e)) : t === "comfort" ? js(e, r, Gp(e)) : t === "preconditioning" ? Kl(e, r) : t === "diagnostics" ? yf(e) : t === "settings" ? sf(e, r) : Xc(e, n);
 }
-function Fp(e) {
+function Up(e) {
 	return T`<velair-profiles-view
     compact
-    .activeSetupControls=${Ip(e._config?.active_setup_controls)}
+    .activeSetupControls=${Wp(e._config?.active_setup_controls)}
     .hass=${e.hass}
     .data=${e._data}
     @profile-data-changed=${(t) => e._applyScheduleData(t.detail, { forceDraft: !1 })}
@@ -26357,10 +30306,10 @@ function Fp(e) {
     @profile-success=${(t) => e._showSuccess(t.detail)}
   ></velair-profiles-view>`;
 }
-function Ip(e) {
+function Wp(e) {
 	return e === "modes" || e === "profiles" ? e : "both";
 }
-function Lp(e) {
+function Gp(e) {
 	return {
 		showCo2: e._config.show_comfort_co2 !== !1,
 		showConfiguration: e._config.show_comfort_configuration !== !1,
@@ -26368,7 +30317,7 @@ function Lp(e) {
 		showTemperature: e._config.show_comfort_temperature !== !1
 	};
 }
-function Rp(e) {
+function Kp(e) {
 	return {
 		showAssistSwitch: e._config.show_room_assist_switch !== !1,
 		showDeadband: e._config.show_room_assist_deadband !== !1,
@@ -26382,7 +30331,7 @@ function Rp(e) {
 //#region src/velair/components/velair-card-element.ts
 var $ = class extends He {
 	constructor(...e) {
-		super(...e), this.view = "overview-status", this._config = {}, this._changedNextEventIds = /* @__PURE__ */ new Set(), this._loading = !1, this._showInitialLoading = !1, this._saving = !1, this._scheduleSource = "default", this._profileScheduleDirty = !1, this._selectedWeekday = "monday", this._draftBlocks = [], this._dirty = !1, this._copyTargets = /* @__PURE__ */ new Set(), this._copying = !1, this._zoneTargets = /* @__PURE__ */ new Set(), this._applyingZones = !1, this._selectedTemplateKey = "", this._templateNameDraft = "", this._templateNameDraftKey = "", this._templateDraftBlocks = [], this._templateDraftKey = "", this._templateDirty = !1, this._templateApplyOpen = !1, this._templateApplyTargets = /* @__PURE__ */ new Set(), this._applyingTemplateTargets = !1, this._templateListCanScrollUp = !1, this._templateListCanScrollDown = !1, this._settingsSaving = !1, this._diagnosticsHistorySaving = !1, this._diagnosticsHistoryFilters = { ...mn }, this._diagnosticsSourceFilterOpen = !1, this._diagnosticsSourcePlacement = "down", this._diagnosticsLogColumns = { ...bn }, this._diagnosticsLogAvailableWidth = Cn(900), this._diagnosticsExportOpen = !1, this._diagnosticsRedactEntityIds = !0, this._exportSections = new Set(tt), this._expandedComfortZones = /* @__PURE__ */ new Set(), this._expandedPreconditioningZones = /* @__PURE__ */ new Set(), this._importSections = /* @__PURE__ */ new Set(), this._importFileName = "", this._pauseDurationMinutes = 60, this._manualControlActions = {}, this._schedulerMenuOpen = !1, this._nextEventsOpen = !1, this._nextEventChangeRevision = 0, this._timelineNow = /* @__PURE__ */ new Date(), this._subscribingDiagnostics = !1, this._diagnosticsSubscriptionGeneration = 0, this._diagnosticsSnapshotAuthoritative = !1, this._subscribing = !1, this._operationalNotices = new ei(() => this.requestUpdate()), this._temperatureUnitReloadPending = !1, this._overviewTimelineScrollInitialized = !1, this._hasExternalConfig = !1, this._handleOperationStatusDismissed = (e) => {
+		super(...e), this.view = "overview-status", this._config = {}, this._changedNextEventIds = /* @__PURE__ */ new Set(), this._loading = !1, this._showInitialLoading = !1, this._saving = !1, this._scheduleSource = "default", this._profileScheduleDirty = !1, this._selectedWeekday = "monday", this._draftBlocks = [], this._dirty = !1, this._copyTargets = /* @__PURE__ */ new Set(), this._copying = !1, this._zoneTargets = /* @__PURE__ */ new Set(), this._applyingZones = !1, this._selectedTemplateKey = "", this._templateNameDraft = "", this._templateNameDraftKey = "", this._templateDraftBlocks = [], this._templateDraftKey = "", this._templateDirty = !1, this._templateApplyOpen = !1, this._templateApplyTargets = /* @__PURE__ */ new Set(), this._applyingTemplateTargets = !1, this._templateListCanScrollUp = !1, this._templateListCanScrollDown = !1, this._settingsSaving = !1, this._diagnosticsHistorySaving = !1, this._diagnosticsHistoryFilters = { ...Sn }, this._diagnosticsSourceFilterOpen = !1, this._diagnosticsSourcePlacement = "down", this._diagnosticsLogColumns = { ...On }, this._diagnosticsLogAvailableWidth = jn(900), this._diagnosticsExportOpen = !1, this._diagnosticsRedactEntityIds = !0, this._exportSections = new Set(tt), this._expandedComfortZones = /* @__PURE__ */ new Set(), this._expandedPreconditioningZones = /* @__PURE__ */ new Set(), this._importSections = /* @__PURE__ */ new Set(), this._importFileName = "", this._pauseDurationMinutes = 60, this._manualControlActions = {}, this._schedulerMenuOpen = !1, this._nextEventsOpen = !1, this._nextEventChangeRevision = 0, this._timelineNow = /* @__PURE__ */ new Date(), this._subscribingDiagnostics = !1, this._diagnosticsSubscriptionGeneration = 0, this._diagnosticsSnapshotAuthoritative = !1, this._subscribing = !1, this._operationalNotices = new ci(() => this.requestUpdate()), this._temperatureUnitReloadPending = !1, this._overviewTimelineScrollInitialized = !1, this._hasExternalConfig = !1, this._handleOperationStatusDismissed = (e) => {
 			let t = e.detail;
 			t === this._data?.operation_status?.id && (this._dismissedOperationId = t, this._clearOperationStatusTimer());
 		}, this._handleDiagnosticsOutsidePointerDown = (e) => {
@@ -26396,32 +30345,32 @@ var $ = class extends He {
 		}, this._handleTemplateListScroll = () => {
 			this._syncTemplateListScrollIndicators();
 		}, this._addBlock = (e = "schedule") => {
-			mi(pi(this), e);
-		}, this._applySelectedTemplate = () => Po(U(this)), this._pauseScheduler = async (e, t = {}) => {
-			await Rr(I(this), e, t);
+			Si(xi(this), e);
+		}, this._applySelectedTemplate = () => Ho(U(this)), this._pauseScheduler = async (e, t = {}) => {
+			await Kr(I(this), e, t);
 		}, this._resumeScheduler = async (e = {}) => {
-			await zr(I(this), e);
+			await qr(I(this), e);
 		}, this._handleSchedulerMenuToggle = (e) => {
-			Vr(I(this), e);
+			Yr(I(this), e);
 		}, this._toggleNextEvents = () => {
-			Hr(I(this));
+			Xr(I(this));
 		}, this._handleTimelineDragOver = (e) => {
-			ea(e);
+			ca(e);
 		}, this._handleTimelineDragEnd = () => {
-			ra(B(this));
+			da(B(this));
 		}, this._handleTimelineResizeMove = (e) => {
-			aa(B(this), e);
+			pa(B(this), e);
 		}, this._handleTimelineResizeEnd = () => {
-			oa(B(this));
+			ma(B(this));
 		}, this._handleSettingsZoneDragEnd = () => {
-			Zi(z(this));
+			aa(z(this));
 		};
 	}
 	get hass() {
 		return this._hass;
 	}
 	set hass(e) {
-		let t = this._hass, n = t?.config?.unit_system?.temperature !== e?.config?.unit_system?.temperature, r = en(N(this), e, t);
+		let t = this._hass, n = t?.config?.unit_system?.temperature !== e?.config?.unit_system?.temperature, r = ln(N(this), e, t);
 		this._hass = e, this._shouldUpdateForHass(e, t) && this.requestUpdate("hass", t), r && this._schedulePreconditioningRefresh(), n && t && this._data && (this._temperatureUnitReloadPending = !0, this._loadSchedule());
 	}
 	_api() {
@@ -26437,10 +30386,10 @@ var $ = class extends He {
 		this._selectedWeekday = this._firstWeekday(), this._selectedEntity !== t && this._resetDraftBlocks();
 	}
 	connectedCallback() {
-		super.connectedCallback(), this._loadSchedule(), this._syncInitialLoadingState(), this._subscribeUpdates(), this._syncDiagnosticsSubscription(), this._syncTimelineNowTick(), window.addEventListener(as, this._handleOperationStatusDismissed);
+		super.connectedCallback(), this._loadSchedule(), this._syncInitialLoadingState(), this._subscribeUpdates(), this._syncDiagnosticsSubscription(), this._syncTimelineNowTick(), window.addEventListener(ps, this._handleOperationStatusDismissed);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this.ownerDocument.removeEventListener("pointerdown", this._handleDiagnosticsOutsidePointerDown, !0), this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleDiagnosticsSourcePosition), this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, !0), this._cancelDiagnosticsSourcePosition(), this._diagnosticsSourceFilterOpen = !1, this._resetDiagnosticsExport(), this._disconnectDiagnosticsLogResizeObserver(), this._diagnosticsSubscriptionGeneration += 1, this._unsubscribeUpdates &&= (this._unsubscribeUpdates(), void 0), this._unsubscribeDiagnostics &&= (this._unsubscribeDiagnostics(), void 0), this._clearSuccessNoticeTimer(), this._operationalNotices.dispose(), this._clearOperationStatusTimer(), this._clearNextEventChangeTimer(), this._clearPreconditioningRefreshTimer(), this._clearOverviewTimelineDetail(), this._clearInitialLoadingTimer(), this._stopPauseTick(), this._stopTimelineNowTick(), window.removeEventListener(as, this._handleOperationStatusDismissed);
+		super.disconnectedCallback(), this.ownerDocument.removeEventListener("pointerdown", this._handleDiagnosticsOutsidePointerDown, !0), this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleDiagnosticsSourcePosition), this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, !0), this._cancelDiagnosticsSourcePosition(), this._diagnosticsSourceFilterOpen = !1, this._resetDiagnosticsExport(), this._disconnectDiagnosticsLogResizeObserver(), this._diagnosticsSubscriptionGeneration += 1, this._unsubscribeUpdates &&= (this._unsubscribeUpdates(), void 0), this._unsubscribeDiagnostics &&= (this._unsubscribeDiagnostics(), void 0), this._clearSuccessNoticeTimer(), this._operationalNotices.dispose(), this._clearOperationStatusTimer(), this._clearNextEventChangeTimer(), this._clearPreconditioningRefreshTimer(), this._clearOverviewTimelineDetail(), this._clearInitialLoadingTimer(), this._stopPauseTick(), this._stopTimelineNowTick(), window.removeEventListener(ps, this._handleOperationStatusDismissed);
 	}
 	getCardSize() {
 		return 8;
@@ -26475,7 +30424,7 @@ var $ = class extends He {
 		t === "overview" || t === "overview-timeline" ? this._data && !this._overviewTimelineScrollInitialized && (this._overviewTimelineScrollInitialized = !0, window.requestAnimationFrame(() => this._scrollOverviewTimelineToNow())) : this._overviewTimelineScrollInitialized = !1;
 	}
 	render() {
-		return Np(zo(this));
+		return Vp(qo(this));
 	}
 	willUpdate() {
 		this._operationalNotices.sync([...this._saveMessage ? [{
@@ -26494,7 +30443,7 @@ var $ = class extends He {
 	}
 	_dismissOperationStatus() {
 		let e = this._data?.operation_status?.id;
-		e && ss(e);
+		e && hs(e);
 	}
 	_syncOperationStatusTimer() {
 		this._clearOperationStatusTimer();
@@ -26529,7 +30478,7 @@ var $ = class extends He {
 		this._initialLoadingTimer !== void 0 && (window.clearTimeout(this._initialLoadingTimer), this._initialLoadingTimer = void 0);
 	}
 	_effectiveView() {
-		return Qt(this.getAttribute("view"), this.view, this._config.view);
+		return sn(this.getAttribute("view"), this.view, this._config.view);
 	}
 	_timelineShouldTick() {
 		if (!this._data) return !1;
@@ -26558,7 +30507,7 @@ var $ = class extends He {
 	}
 	_scrollOverviewTimelineToNow() {
 		let e = this.renderRoot.querySelector(".overview-timeline-scroll"), t = e?.querySelector(".overview-timeline-names");
-		!e || !t || e.scrollWidth <= e.clientWidth + 1 || (e.scrollLeft = xr(br(this._currentTimelineNow()).left, e.scrollWidth, e.clientWidth, t.offsetWidth));
+		!e || !t || e.scrollWidth <= e.clientWidth + 1 || (e.scrollLeft = kr(Or(this._currentTimelineNow()).left, e.scrollWidth, e.clientWidth, t.offsetWidth));
 	}
 	_showOverviewTimelineDetail(e, t, n, r) {
 		window.matchMedia("(hover: none), (pointer: coarse)").matches && (r.preventDefault(), r.stopPropagation(), this._overviewTimelineDetail = t, this._overviewTimelineDetailAnchor = Math.max(0, Math.min(100, n)), this._overviewTimelineDetailEntityId = e);
@@ -26567,64 +30516,64 @@ var $ = class extends He {
 		this._overviewTimelineDetail = void 0, this._overviewTimelineDetailAnchor = void 0, this._overviewTimelineDetailEntityId = void 0;
 	}
 	_isCardView(e) {
-		return Zt(e);
+		return on(e);
 	}
 	_shouldUpdateForHass(e, t) {
-		return $t(N(this), e, t);
+		return cn(N(this), e, t);
 	}
 	_canResumeScheduler() {
-		return Lr(I(this));
+		return Gr(I(this));
 	}
 	_selectTemplate(e) {
-		yo(U(this), e);
+		Do(U(this), e);
 	}
 	_selectScheduleTemplate(e) {
-		bo(U(this), e);
+		Oo(U(this), e);
 	}
 	_resetTemplateDraft(e) {
-		xo(U(this), e);
+		ko(U(this), e);
 	}
 	_templateListClass(e) {
-		return So(U(this), e);
+		return Ao(U(this), e);
 	}
 	_syncTemplateListScrollIndicators() {
-		Co(U(this));
+		jo(U(this));
 	}
 	_setTemplateListScrollIndicators(e, t) {
-		wo(U(this), e, t);
+		Mo(U(this), e, t);
 	}
 	_templateNameInputValue(e) {
-		return To(U(this), e);
+		return No(U(this), e);
 	}
 	_updateTemplateNameDraft(e, t) {
-		Eo(U(this), e, t);
+		Po(U(this), e, t);
 	}
 	async _createTemplate() {
-		await Do(U(this));
+		await Fo(U(this));
 	}
 	async _saveSelectedTemplateFromLibrary(e) {
-		await Oo(U(this), e);
+		await Io(U(this), e);
 	}
 	_uniqueTemplateName(e) {
-		return ko(U(this), e);
+		return Lo(U(this), e);
 	}
 	_scheduleTemplates() {
-		return ur(this._data?.templates, this._temperatureUnit());
+		return vr(this._data?.templates, this._temperatureUnit());
 	}
 	_templateLabel(e) {
-		return dr(e);
+		return yr(e);
 	}
 	async _loadSchedule() {
 		if (!this._loading) do
-			this._temperatureUnitReloadPending = !1, await xa(V(this));
+			this._temperatureUnitReloadPending = !1, await ka(V(this));
 		while (this._temperatureUnitReloadPending);
 	}
 	async _subscribeUpdates() {
-		await Sa(V(this));
+		await Aa(V(this));
 	}
 	_applyScheduleData(e, t = {}) {
-		let n = er(this._data?.next_events ?? [], e.next_events);
-		Ca(V(this), {
+		let n = cr(this._data?.next_events ?? [], e.next_events);
+		ja(V(this), {
 			...e,
 			diagnostics: this._diagnosticsSnapshotAuthoritative ? this._latestDiagnostics : e.diagnostics ?? this._data?.diagnostics
 		}, t), this._markChangedNextEvents(n);
@@ -26667,8 +30616,8 @@ var $ = class extends He {
 			return;
 		}
 		typeof ResizeObserver > "u" || e === this._diagnosticsLogObservedElement || (this._disconnectDiagnosticsLogResizeObserver(), this._diagnosticsLogObservedElement = e, this._diagnosticsLogResizeObserver = new ResizeObserver((e) => {
-			let t = e[0]?.contentRect.width, n = t ? Cn(t) : 0;
-			!n || n === this._diagnosticsLogAvailableWidth || (this._diagnosticsLogAvailableWidth = n, this._diagnosticsLogColumns = En(this._diagnosticsLogColumns, n));
+			let t = e[0]?.contentRect.width, n = t ? jn(t) : 0;
+			!n || n === this._diagnosticsLogAvailableWidth || (this._diagnosticsLogAvailableWidth = n, this._diagnosticsLogColumns = Pn(this._diagnosticsLogColumns, n));
 		}), this._diagnosticsLogResizeObserver.observe(e));
 	}
 	_resetDiagnosticsExport() {
@@ -26726,13 +30675,13 @@ var $ = class extends He {
 		this._nextEventChangeTimeout !== void 0 && (window.clearTimeout(this._nextEventChangeTimeout), this._nextEventChangeTimeout = void 0), e && this._changedNextEventIds.size && (this._changedNextEventIds = /* @__PURE__ */ new Set());
 	}
 	_resetDraftBlocks() {
-		wa(V(this));
+		Ma(V(this));
 	}
 	_selectEntity(e) {
-		Ta(V(this), e);
+		Na(V(this), e);
 	}
 	_selectWeekday(e) {
-		Ea(V(this), e);
+		Pa(V(this), e);
 	}
 	_confirmDiscardChanges() {
 		return window.confirm(this._t("discardUnsavedChanges"));
@@ -26751,145 +30700,145 @@ var $ = class extends He {
 		this._profileScheduleDirty = e;
 	}
 	_blocksForSource(e) {
-		return Da(V(this), e);
+		return Fa(V(this), e);
 	}
 	_setBlocksForSource(e, t) {
-		Oa(V(this), e, t);
+		Ia(V(this), e, t);
 	}
 	_markBlocksDirty(e) {
-		ka(V(this), e);
+		La(V(this), e);
 	}
 	_toggleTemplateApplyPanel() {
-		Ao(U(this));
+		Ro(U(this));
 	}
 	_templateApplyTargetKey(e, t) {
-		return jo(e, t);
+		return zo(e, t);
 	}
 	_toggleTemplateApplyTarget(e, t, n) {
-		Mo(U(this), e, t, n);
+		Bo(U(this), e, t, n);
 	}
 	async _applyTemplateToTargets(e) {
-		await No(U(this), e);
+		await Vo(U(this), e);
 	}
 	async _saveTemplate(e) {
-		await Io(U(this), e);
+		await Wo(U(this), e);
 	}
 	_newTemplateKey() {
-		return Lo();
+		return Go();
 	}
 	async _deleteSelectedTemplate() {
-		await Ro(U(this));
+		await Ko(U(this));
 	}
 	_closeSchedulerMenu() {
-		Br(I(this));
+		Jr(I(this));
 	}
 	_removeBlock(e, t = "schedule") {
-		hi(pi(this), e, t);
+		Ci(xi(this), e, t);
 	}
 	_updateDraftBlock(e, t, n, r = "schedule") {
-		gi(pi(this), e, t, n, r);
+		wi(xi(this), e, t, n, r);
 	}
 	_markDirty() {
-		_i(pi(this));
+		Ti(xi(this));
 	}
 	_handleTimelineDragStart(e, t, n) {
-		$i(B(this), e, t, n);
+		sa(B(this), e, t, n);
 	}
 	_handleTimelineDrop(e, t = "schedule") {
-		ta(B(this), e, t);
+		la(B(this), e, t);
 	}
 	_handleTimelineResizeStart(e, t, n, r) {
-		ia(B(this), e, t, n, r);
+		fa(B(this), e, t, n, r);
 	}
 	_resizeTimelineBlock(e, t, n, r = "schedule") {
-		sa(B(this), e, t, n, r);
+		ha(B(this), e, t, n, r);
 	}
 	_setDraftBlockStart(e, t, n = {}, r = "schedule") {
-		vi(pi(this), e, t, n, r);
+		Ei(xi(this), e, t, n, r);
 	}
 	_sortDraftBlocksByStart(e = "schedule") {
-		ca(B(this), e);
+		ga(B(this), e);
 	}
 	_toggleCopyTarget(e, t) {
-		yi(pi(this), e, t);
+		Di(xi(this), e, t);
 	}
 	_setCopyTargetPreset(e) {
-		bi(pi(this), e);
+		Oi(xi(this), e);
 	}
 	_toggleZoneTarget(e, t) {
-		xi(pi(this), e, t);
+		ki(xi(this), e, t);
 	}
 	_dismissNotice(e) {
-		Yr(Jr(this), e);
+		ri(ni(this), e);
 	}
 	_showSuccess(e) {
-		Xr(Jr(this), e);
+		ii(ni(this), e);
 	}
 	_showError(e) {
 		this._error = e ?? void 0;
 	}
 	_successNoticeProgress() {
-		return Zr(Jr(this));
+		return ai(ni(this));
 	}
 	_clearSuccessNoticeTimer(e = !0) {
-		Qr(Jr(this), e);
+		oi(ni(this), e);
 	}
 	_hasDraftValidationError(e = "schedule") {
-		return Ci(Si(this), e);
+		return ji(Ai(this), e);
 	}
 	_temperatureError(e, t = "schedule") {
-		return wi(Si(this), e, t);
+		return Mi(Ai(this), e, t);
 	}
 	async _saveSelectedDay() {
-		await ha(ma(this));
+		await Ca(Sa(this));
 	}
 	async _copySelectedDay() {
-		await ga(ma(this));
+		await wa(Sa(this));
 	}
 	async _applySelectedDayToZones() {
-		await _a(ma(this));
+		await Ta(Sa(this));
 	}
 	_normalizeDraftBlocks(e = "schedule") {
-		return va(ma(this), e);
+		return Ea(Sa(this), e);
 	}
 	_clampBlocksForEntity(e, t) {
-		return ya(ma(this), e, t);
+		return Da(Sa(this), e, t);
 	}
 	_unsupportedModeError(e, t) {
-		return ba(ma(this), e, t);
+		return Oa(Sa(this), e, t);
 	}
 	_pauseExpirationMs() {
-		return Ur(I(this));
+		return Zr(I(this));
 	}
 	_pauseProgressPercent(e) {
-		return Wr(I(this), e);
+		return Qr(I(this), e);
 	}
 	_syncPauseTick() {
-		Gr(I(this));
+		$r(I(this));
 	}
 	_nextCountdownExpirationMs() {
-		return Kr(I(this));
+		return ei(I(this));
 	}
 	_stopPauseTick() {
-		qr(I(this));
+		ti(I(this));
 	}
 	_timelineBlocks(e = "schedule") {
-		return la(B(this), e);
+		return _a(B(this), e);
 	}
 	_inputValue(e) {
-		return Xt(e);
+		return an(e);
 	}
 	_t(e, t = {}) {
-		return an(N(this), e, t);
+		return pn(N(this), e, t);
 	}
 	_language() {
-		return rn(N(this));
+		return fn(N(this));
 	}
 	_weekdayName(e) {
-		return on(N(this), e);
+		return mn(N(this), e);
 	}
 	_shortWeekdayName(e) {
-		return sn(N(this), e);
+		return hn(N(this), e);
 	}
 	_modeLabel(e) {
 		return this._dictionaryLabel("hvacModes", e);
@@ -26904,28 +30853,28 @@ var $ = class extends He {
 		return this._dictionaryLabel("hvacActions", e);
 	}
 	_dictionaryLabel(e, t) {
-		return cn(N(this), e, t);
+		return gn(N(this), e, t);
 	}
 	_firstWeekday() {
-		return ln(N(this));
+		return _n(N(this));
 	}
 	_initialScheduleWeekday(e) {
-		return this._effectiveView() === "schedules" ? $n(this._currentTimelineNow()) : e;
+		return this._effectiveView() === "schedules" ? sr(this._currentTimelineNow()) : e;
 	}
 	_orderedWeekdays() {
-		return un(N(this));
+		return vn(N(this));
 	}
 	_orderedZoneIds(e) {
-		return dn(N(this), e);
+		return yn(N(this), e);
 	}
 	_visibleZoneIds(e) {
-		return fn(N(this), e);
+		return bn(N(this), e);
 	}
 	async _updateSettingsFirstWeekday(e) {
-		await Vi(z(this), e);
+		await Yi(z(this), e);
 	}
 	async _saveSettings(e) {
-		await Hi(z(this), e);
+		await Xi(z(this), e);
 	}
 	async _saveExternalChangePolicy(e, t) {
 		let n = this._api();
@@ -26994,7 +30943,7 @@ var $ = class extends He {
 		}
 	}
 	async _saveZonePreconditioning(e, t) {
-		await Ui(z(this), e, t);
+		await Zi(z(this), e, t);
 	}
 	async _resolveTemperatureMigration(e) {
 		let t = this._api(), n = this._data?.temperature_migration;
@@ -27007,7 +30956,7 @@ var $ = class extends He {
 			this._temperatureMigrationAction = e, this._error = void 0;
 			try {
 				let r = globalThis.crypto?.randomUUID?.() ?? `velair-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-				this._applyScheduleData(await t.resolveTemperatureMigration(e, r, n.temperature_revision ?? 0), { forceDraft: !0 }), Xr(Jr(this), this._t("temperatureMigrationComplete"));
+				this._applyScheduleData(await t.resolveTemperatureMigration(e, r, n.temperature_revision ?? 0), { forceDraft: !0 }), ii(ni(this), this._t("temperatureMigrationComplete"));
 			} catch (e) {
 				this._error = e instanceof Error ? e.message : this._t("temperatureMigrationFailed");
 			} finally {
@@ -27016,7 +30965,7 @@ var $ = class extends He {
 		}
 	}
 	async _saveZoneComfort(e, t) {
-		await Wi(z(this), e, t);
+		await Qi(z(this), e, t);
 	}
 	_togglePreconditioningZone(e) {
 		let t = new Set(this._expandedPreconditioningZones);
@@ -27027,167 +30976,167 @@ var $ = class extends He {
 		t.has(e) ? t.delete(e) : t.add(e), this._expandedComfortZones = t;
 	}
 	async _resetZonePreconditioningLearning(e, t, n) {
-		await Gi(z(this), e, t, n);
+		await $i(z(this), e, t, n);
 	}
 	async _resetZonePreconditioningSettings(e) {
-		await Ki(z(this), e);
+		await ea(z(this), e);
 	}
 	_togglePortableSection(e, t, n) {
-		Ai(R(this), e, t, n);
+		Ri(R(this), e, t, n);
 	}
 	async _handlePortableImportFile(e) {
-		await ji(R(this), e);
+		await zi(R(this), e);
 	}
 	async _exportPortableData() {
-		await Mi(R(this));
+		await Bi(R(this));
 	}
 	async _importPortableData() {
-		await Ni(R(this));
+		await Vi(R(this));
 	}
 	async _resetVelairData() {
-		await Pi(R(this));
+		await Hi(R(this));
 	}
 	_importAvailableSections() {
-		return Fi(R(this));
+		return Ui(R(this));
 	}
 	_portableExportSummaryItems() {
-		return Ii(R(this));
+		return Wi(R(this));
 	}
 	_portableImportSummaryItems() {
-		return Li(R(this));
+		return Gi(R(this));
 	}
 	_portableSummaryItem(e) {
-		return Ri(R(this), e);
+		return Ki(R(this), e);
 	}
 	_portableSectionLabel(e) {
-		return zi(R(this), e);
+		return qi(R(this), e);
 	}
 	_downloadPortablePayload(e) {
-		Bi(e);
+		Ji(e);
 	}
 	_moveSettingsZone(e, t) {
-		qi(z(this), e, t);
+		ta(z(this), e, t);
 	}
 	_handleSettingsZoneDragStart(e, t) {
-		Ji(z(this), e, t);
+		na(z(this), e, t);
 	}
 	_handleSettingsZoneDragOver(e) {
-		Yi(e);
+		ra(e);
 	}
 	_handleSettingsZoneDrop(e, t) {
-		Xi(z(this), e, t);
+		ia(z(this), e, t);
 	}
 	_updateSettingsZoneOrder(e) {
-		Qi(z(this), e);
+		oa(z(this), e);
 	}
 	_temperatureLimits(e = "schedule", t = this._selectedEntity) {
-		return Va(H(this), e, t);
+		return Ya(H(this), e, t);
 	}
 	_entityTemperatureLimits(e) {
-		return Ha(H(this), e);
-	}
-	_templateTemperatureLimits() {
-		return Ua(H(this));
-	}
-	_temperatureStep(e = "schedule", t = this._selectedEntity) {
-		return Wa(H(this), e, t);
-	}
-	_entityTemperatureStep(e) {
-		return Ga(H(this), e);
-	}
-	_formatTemperatureLimit(e) {
-		return Jt(e);
-	}
-	_entityExists(e) {
-		return Ka(H(this), e);
-	}
-	_entityFanModeOptions(e) {
-		return Za(H(this), e);
-	}
-	_entityPresetModeOptions(e) {
-		return $a(H(this), e);
-	}
-	_entitySwingModeOptions(e) {
-		return to(H(this), e);
-	}
-	_entitySwingHorizontalModeOptions(e) {
-		return ro(H(this), e);
-	}
-	_entityHumidityLimits(e) {
-		return ao(H(this), e);
-	}
-	_friendlyEntityName(e) {
-		return qa(H(this), e);
-	}
-	_climateSupportedModes(e) {
-		return Ja(H(this), e);
-	}
-	_hvacModeOptions(e = "schedule") {
-		return Ya(H(this), e);
-	}
-	_fanModeOptions(e = "schedule") {
 		return Xa(H(this), e);
 	}
-	_presetModeOptions(e = "schedule") {
-		return Qa(H(this), e);
+	_templateTemperatureLimits() {
+		return Za(H(this));
 	}
-	_swingModeOptions(e = "schedule") {
+	_temperatureStep(e = "schedule", t = this._selectedEntity) {
+		return Qa(H(this), e, t);
+	}
+	_entityTemperatureStep(e) {
+		return $a(H(this), e);
+	}
+	_formatTemperatureLimit(e) {
+		return nn(e);
+	}
+	_entityExists(e) {
 		return eo(H(this), e);
 	}
-	_swingHorizontalModeOptions(e = "schedule") {
-		return no(H(this), e);
+	_entityFanModeOptions(e) {
+		return ao(H(this), e);
 	}
-	_humidityLimits(e = "schedule") {
-		return io(H(this), e);
+	_entityPresetModeOptions(e) {
+		return so(H(this), e);
 	}
-	_uniqueModes(e) {
-		return oo(e);
-	}
-	_entityDiagnostic(e) {
-		return co(H(this), e);
-	}
-	_climateProvidedData(e) {
+	_entitySwingModeOptions(e) {
 		return lo(H(this), e);
 	}
-	_formatDateTime(e) {
-		return uo(H(this), e);
-	}
-	_formatScheduleTime(e) {
+	_entitySwingHorizontalModeOptions(e) {
 		return fo(H(this), e);
 	}
-	_dateLocale() {
-		return po(H(this));
+	_entityHumidityLimits(e) {
+		return mo(H(this), e);
 	}
-	_formatRemaining(e) {
-		return Ia(e);
+	_friendlyEntityName(e) {
+		return to(H(this), e);
 	}
-	_formatTemperature(e, t) {
-		return mo(H(this), e, t);
+	_climateSupportedModes(e) {
+		return no(H(this), e);
 	}
-	_formatEventAction(e) {
-		return ho(H(this), e);
+	_hvacModeOptions(e = "schedule") {
+		return ro(H(this), e);
 	}
-	_formatEventMode(e) {
-		return go(H(this), e);
+	_fanModeOptions(e = "schedule") {
+		return io(H(this), e);
 	}
-	_temperatureUnit(e) {
+	_presetModeOptions(e = "schedule") {
+		return oo(H(this), e);
+	}
+	_swingModeOptions(e = "schedule") {
+		return co(H(this), e);
+	}
+	_swingHorizontalModeOptions(e = "schedule") {
+		return uo(H(this), e);
+	}
+	_humidityLimits(e = "schedule") {
+		return po(H(this), e);
+	}
+	_uniqueModes(e) {
+		return ho(e);
+	}
+	_entityDiagnostic(e) {
 		return _o(H(this), e);
 	}
+	_climateProvidedData(e) {
+		return vo(H(this), e);
+	}
+	_formatDateTime(e) {
+		return yo(H(this), e);
+	}
+	_formatScheduleTime(e) {
+		return bo(H(this), e);
+	}
+	_dateLocale() {
+		return xo(H(this));
+	}
+	_formatRemaining(e) {
+		return Wa(e);
+	}
+	_formatTemperature(e, t) {
+		return So(H(this), e, t);
+	}
+	_formatEventAction(e) {
+		return Co(H(this), e);
+	}
+	_formatEventMode(e) {
+		return wo(H(this), e);
+	}
+	_temperatureUnit(e) {
+		return To(H(this), e);
+	}
 	static {
-		this.styles = Hn;
+		this.styles = Xn;
 	}
 };
 J([D({ type: String })], $.prototype, "view", void 0), J([O()], $.prototype, "_config", void 0), J([O()], $.prototype, "_changedNextEventIds", void 0), J([O()], $.prototype, "_data", void 0), J([O()], $.prototype, "_error", void 0), J([O()], $.prototype, "_loading", void 0), J([O()], $.prototype, "_showInitialLoading", void 0), J([O()], $.prototype, "_saving", void 0), J([O()], $.prototype, "_saveMessage", void 0), J([O()], $.prototype, "_selectedEntity", void 0), J([O()], $.prototype, "_scheduleSource", void 0), J([O()], $.prototype, "_profileScheduleDirty", void 0), J([O()], $.prototype, "_selectedWeekday", void 0), J([O()], $.prototype, "_draftBlocks", void 0), J([O()], $.prototype, "_dirty", void 0), J([O()], $.prototype, "_dismissedOperationId", void 0), J([O()], $.prototype, "_dirtyEntityId", void 0), J([O()], $.prototype, "_copyTargets", void 0), J([O()], $.prototype, "_copying", void 0), J([O()], $.prototype, "_zoneTargets", void 0), J([O()], $.prototype, "_applyingZones", void 0), J([O()], $.prototype, "_selectedTemplateKey", void 0), J([O()], $.prototype, "_templateNameDraft", void 0), J([O()], $.prototype, "_templateNameDraftKey", void 0), J([O()], $.prototype, "_templateDraftBlocks", void 0), J([O()], $.prototype, "_templateDraftKey", void 0), J([O()], $.prototype, "_templateDirty", void 0), J([O()], $.prototype, "_templateApplyOpen", void 0), J([O()], $.prototype, "_templateApplyTargets", void 0), J([O()], $.prototype, "_applyingTemplateTargets", void 0), J([O()], $.prototype, "_templateListCanScrollUp", void 0), J([O()], $.prototype, "_templateListCanScrollDown", void 0), J([O()], $.prototype, "_templateAction", void 0), J([O()], $.prototype, "_settingsSaving", void 0), J([O()], $.prototype, "_selectedDiagnosticEntity", void 0), J([O()], $.prototype, "_diagnosticsHistorySaving", void 0), J([O()], $.prototype, "_diagnosticsHistoryFilters", void 0), J([O()], $.prototype, "_diagnosticsSourceFilterOpen", void 0), J([O()], $.prototype, "_diagnosticsSourcePlacement", void 0), J([O()], $.prototype, "_diagnosticsSourceMaxHeight", void 0), J([O()], $.prototype, "_diagnosticsLogColumns", void 0), J([O()], $.prototype, "_diagnosticsLogAvailableWidth", void 0), J([O()], $.prototype, "_diagnosticsExportOpen", void 0), J([O()], $.prototype, "_diagnosticsRedactEntityIds", void 0), J([O()], $.prototype, "_temperatureMigrationAction", void 0), J([O()], $.prototype, "_maintenanceAction", void 0), J([O()], $.prototype, "_portabilityAction", void 0), J([O()], $.prototype, "_exportSections", void 0), J([O()], $.prototype, "_expandedComfortZones", void 0), J([O()], $.prototype, "_expandedPreconditioningZones", void 0), J([O()], $.prototype, "_importSections", void 0), J([O()], $.prototype, "_importPayload", void 0), J([O()], $.prototype, "_importFileName", void 0), J([O()], $.prototype, "_pauseDurationMinutes", void 0), J([O()], $.prototype, "_controlAction", void 0), J([O()], $.prototype, "_manualControlActions", void 0), J([O()], $.prototype, "_schedulerMenuOpen", void 0), J([O()], $.prototype, "_nextEventsOpen", void 0), J([O()], $.prototype, "_nextEventChangeRevision", void 0), J([O()], $.prototype, "_overviewTimelineDetail", void 0), J([O()], $.prototype, "_overviewTimelineDetailAnchor", void 0), J([O()], $.prototype, "_overviewTimelineDetailEntityId", void 0), J([O()], $.prototype, "_successNoticeStartedAt", void 0), J([O()], $.prototype, "_timelineNow", void 0);
 //#endregion
 //#region src/velair/registration.ts
-function zp(e) {
+function qp(e) {
 	Object.entries(e.elements).forEach(([e, t]) => {
 		customElements.get(e) || customElements.define(e, t);
 	}), window.velairFrontendBuild = e.build, window.velairFrontendVersion = e.version || void 0, window.customCards = window.customCards ?? [], window.customCards.some((t) => t.type === e.customCard.type) || window.customCards.push(e.customCard);
 }
 //#endregion
 //#region src/velair/views/card-editor.ts
-var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
+var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
 	"comfort",
 	"overview",
 	"overview-boosts",
@@ -27199,19 +31148,19 @@ var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
 	"sensors",
 	"preconditioning",
 	"settings"
-]), Up = new Set(["comfort"]), Wp = [
+]), Zp = new Set(["comfort"]), Qp = [
 	["show_comfort_configuration", "comfortCardShowConfiguration"],
 	["show_comfort_temperature", "comfortCardShowTemperature"],
 	["show_comfort_humidity", "comfortCardShowHumidity"],
 	["show_comfort_co2", "comfortCardShowCo2"]
-], Gp = new Set(["sensors"]), Kp = [
+], $p = new Set(["sensors"]), em = [
 	["show_room_assist_switch", "roomAssistShowSwitch"],
 	["show_room_assist_sensor", "roomAssistShowSensor"],
 	["show_room_assist_deadband", "roomAssistShowDeadband"],
 	["show_room_assist_max_delta", "roomAssistShowMaxDelta"],
 	["show_room_assist_debounce", "roomAssistShowDebounce"],
 	["show_room_assist_live_status", "roomAssistShowLiveStatus"]
-], qp = class extends He {
+], tm = class extends He {
 	constructor(...e) {
 		super(...e), this._config = {}, this._entities = [], this._loading = !1, this._loaded = !1, this._handleZoneDragEnd = () => {
 			this._draggedEntity = void 0;
@@ -27303,7 +31252,7 @@ var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
                   <p>${this._t("comfortCardVisibilityDescription")}</p>
                 </div>
                 <div class="visibility-list">
-                  ${Wp.map(([e, t]) => this._renderVisibilityOption(e, t))}
+                  ${Qp.map(([e, t]) => this._renderVisibilityOption(e, t))}
                 </div>
               </section>
             ` : E}
@@ -27315,7 +31264,7 @@ var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
                   <p>${this._t("roomAssistCardVisibilityDescription")}</p>
                 </div>
                 <div class="visibility-list">
-                  ${Kp.map(([e, t]) => this._renderVisibilityOption(e, t))}
+                  ${em.map(([e, t]) => this._renderVisibilityOption(e, t))}
                 </div>
               </section>
             ` : E}
@@ -27468,7 +31417,7 @@ var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
 		return e.currentTarget.value;
 	}
 	_t(e, t = {}) {
-		return gt(this._language(), e, t);
+		return wt(this._language(), e, t);
 	}
 	_updateView(e) {
 		let t = { ...this._config };
@@ -27509,19 +31458,19 @@ var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
 		return e && et.includes(e) ? e : "overview-status";
 	}
 	_showsFirstWeekdayOption() {
-		return Bp.has(this._selectedView());
+		return Jp.has(this._selectedView());
 	}
 	_showsActiveSetupControls() {
-		return Vp.has(this._selectedView());
+		return Yp.has(this._selectedView());
 	}
 	_showsComfortVisibilityOptions() {
-		return Up.has(this._selectedView());
+		return Zp.has(this._selectedView());
 	}
 	_showsThermostatOptions() {
-		return Hp.has(this._selectedView());
+		return Xp.has(this._selectedView());
 	}
 	_showsRoomAssistVisibilityOptions() {
-		return Gp.has(this._selectedView());
+		return $p.has(this._selectedView());
 	}
 	_friendlyEntityName(e) {
 		return this.hass?.states?.[e]?.attributes?.friendly_name ?? e;
@@ -27688,10 +31637,10 @@ var Bp = new Set(["schedules"]), Vp = new Set(["active-setup"]), Hp = new Set([
   `;
 	}
 };
-J([D({ attribute: !1 })], qp.prototype, "hass", void 0), J([O()], qp.prototype, "_config", void 0), J([O()], qp.prototype, "_entities", void 0), J([O()], qp.prototype, "_loading", void 0), J([O()], qp.prototype, "_loaded", void 0), J([O()], qp.prototype, "_error", void 0);
+J([D({ attribute: !1 })], tm.prototype, "hass", void 0), J([O()], tm.prototype, "_config", void 0), J([O()], tm.prototype, "_entities", void 0), J([O()], tm.prototype, "_loading", void 0), J([O()], tm.prototype, "_loaded", void 0), J([O()], tm.prototype, "_error", void 0);
 //#endregion
 //#region src/velair/views/tabs.ts
-var Jp = [
+var nm = [
 	{
 		icon: "mdi:view-dashboard-outline",
 		labelKey: "overview",
@@ -27738,12 +31687,12 @@ var Jp = [
 		view: "settings"
 	}
 ];
-function Yp(e) {
-	return Jp.find((t) => t.view === e)?.icon ?? "mdi:circle";
+function rm(e) {
+	return nm.find((t) => t.view === e)?.icon ?? "mdi:circle";
 }
 //#endregion
 //#region src/velair/views/panel.ts
-var Xp = class extends He {
+var im = class extends He {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._activeView = "overview", this._activeViewDirty = !1;
 	}
@@ -27779,7 +31728,7 @@ var Xp = class extends He {
     `;
 	}
 	_renderActiveView() {
-		return cu(this._activeView, T`<velair-panel-card
+		return gu(this._activeView, T`<velair-panel-card
         .hass=${this.hass}
         .view=${this._activeView}
         view=${this._activeView}
@@ -27811,10 +31760,10 @@ var Xp = class extends He {
 		return typeof e == "string" && $e.includes(e);
 	}
 	_viewIcon(e) {
-		return Yp(e);
+		return rm(e);
 	}
 	_t(e, t = {}) {
-		return gt(this._language(), e, t);
+		return wt(this._language(), e, t);
 	}
 	_language() {
 		return j(this.hass);
@@ -28021,7 +31970,7 @@ var Xp = class extends He {
   `;
 	}
 };
-J([D({ attribute: !1 })], Xp.prototype, "hass", void 0), J([D({ type: Boolean })], Xp.prototype, "narrow", void 0), J([D({ attribute: !1 })], Xp.prototype, "panel", void 0), J([D({ attribute: !1 })], Xp.prototype, "route", void 0), J([O()], Xp.prototype, "_activeView", void 0), J([O()], Xp.prototype, "_activeViewDirty", void 0), zp({
+J([D({ attribute: !1 })], im.prototype, "hass", void 0), J([D({ type: Boolean })], im.prototype, "narrow", void 0), J([D({ attribute: !1 })], im.prototype, "panel", void 0), J([D({ attribute: !1 })], im.prototype, "route", void 0), J([O()], im.prototype, "_activeView", void 0), J([O()], im.prototype, "_activeViewDirty", void 0), qp({
 	build: n,
 	customCard: {
 		type: "velair-card",
@@ -28030,9 +31979,9 @@ J([D({ attribute: !1 })], Xp.prototype, "hass", void 0), J([D({ type: Boolean })
 	},
 	elements: {
 		"velair-card": $,
-		"velair-card-editor": qp,
+		"velair-card-editor": tm,
 		"velair-panel-card": class extends $ {},
-		"velair-sidebar-panel": Xp
+		"velair-sidebar-panel": im
 	},
 	version: r
 });

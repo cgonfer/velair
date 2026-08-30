@@ -1,6 +1,6 @@
 {
   "name": "velair-frontend",
-  "version": "1.7.0-beta.4",
+  "version": "1.7.0",
   "description": "Climate automation that adapts to your life.",
   "private": true,
   "type": "module",
@@ -9,9 +9,7 @@
     "build:release": "npm run release-build",
     "dev": "vite build --watch",
     "release-build": "vite build",
-    "test": "vitest run",
-    "lint": "eslint src --ext .ts",
-    "format": "prettier --write src"
+    "test": "vitest run"
   },
   "dependencies": {
     "lit": "^3.2.1"

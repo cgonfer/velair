@@ -91,7 +91,7 @@
         "name": "Dérogation de {zone}",
         "state": {
           "none": "Aucune dérogation",
-          "boost": "Boost",
+          "boost": "Forçage",
           "paused": "En pause",
           "disabled": "Désactivée"
         }

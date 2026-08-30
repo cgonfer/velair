@@ -91,7 +91,7 @@
         "name": "Übersteuerung für {zone}",
         "state": {
           "none": "Keine Übersteuerung",
-          "boost": "Boost",
+          "boost": "Temporäre Anpassung",
           "paused": "Pausiert",
           "disabled": "Deaktiviert"
         }

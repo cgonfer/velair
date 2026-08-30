@@ -614,11 +614,6 @@ describe("sensors view", () => {
     expect(legend?.getAttribute("aria-label")).toBe(
       "roomSensorDeadbandZoneSingle:value=0.3 °C. 24.7–25.3 °C. roomSensorDeadbandZoneHelp",
     );
-    expect(legend?.querySelector(".sensor-scale-deadband-label-short")?.textContent).toBe("±");
-    expect(legend?.querySelector(".sensor-scale-deadband-label-brief")?.textContent?.trim())
-      .toBe("roomSensorDeadbandZoneBrief:value=0.3 °C");
-    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
-      .toBe("roomSensorDeadbandZoneCompact:value=0.3 °C");
     expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
       .toBe("roomSensorDeadbandZoneSingle:value=0.3 °C");
     const legendRange = container.querySelector<HTMLElement>(
@@ -626,20 +621,19 @@ describe("sensors view", () => {
     )!;
     expect(legendRange.style.marginLeft).toBe(zone.style.left);
     expect(legendRange.style.width).toBe(zone.style.width);
-    expect(legendRange.style.clipPath).toBe("");
     expect(legendRange.querySelector(".sensor-scale-deadband-legend-anchor")).not.toBeNull();
     expect(sensorsStyles.cssText).toMatch(
-      /\.sensor-scale-deadband-legend-range\s*\{[^}]*display:\s*flex;[^}]*justify-content:\s*center;/s,
+      /\.sensor-scale-deadband-legend-range\s*\{[^}]*overflow:\s*visible;[^}]*position:\s*relative;/s,
     );
     expect(sensorsStyles.cssText).toMatch(
-      /\.sensor-scale-deadband-legend-anchor\s*\{[^}]*flex:\s*0 0 max-content;[^}]*left:\s*0;[^}]*position:\s*sticky;[^}]*right:\s*0;[^}]*width:\s*max-content;/s,
+      /\.sensor-scale-deadband-legend-anchor\s*\{[^}]*left:\s*50%;[^}]*position:\s*absolute;[^}]*transform:\s*translateX\(-50%\);[^}]*width:\s*max-content;/s,
     );
     expect(sensorsStyles.cssText).toMatch(
       /\.sensor-scale-deadband-zone\s*\{[^}]*height:\s*20px;[^}]*top:\s*59px;/s,
     );
-    expect(sensorsStyles.cssText).toMatch(
-      /@container \(min-width:\s*54px\)\s*\{[^}]*\.sensor-scale-deadband-label-short\s*\{[^}]*display:\s*none;[^}]*\}[^}]*\.sensor-scale-deadband-label-brief\s*\{[^}]*display:\s*inline;[^}]*font-size:\s*9px;/s,
-    );
+    expect(legend?.querySelector(".sensor-scale-deadband-label-short")).toBeNull();
+    expect(legend?.querySelector(".sensor-scale-deadband-label-brief")).toBeNull();
+    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")).toBeNull();
   });
 
   it("describes a scalar automatic deadband as a neutral margin", () => {
@@ -659,8 +653,6 @@ describe("sensors view", () => {
     );
     expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
       .toBe("roomSensorDeadbandZoneAutomatic:value=0.3 °C");
-    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
-      .toBe("roomSensorDeadbandZoneCompactAutomatic:value=0.3 °C");
   });
 
   it("keeps a fixed-mode control label while its runtime phase is unavailable", () => {
@@ -715,10 +707,6 @@ describe("sensors view", () => {
     );
     expect(legend?.querySelector(".sensor-scale-deadband-label-full")?.textContent?.trim())
       .toBe("roomSensorDeadbandZoneRange:value=0.5 °C");
-    expect(legend?.querySelector(".sensor-scale-deadband-label-compact")?.textContent?.trim())
-      .toBe("roomSensorDeadbandZoneCompactRange:value=0.5 °C");
-    expect(legend?.querySelector(".sensor-scale-deadband-label-brief")?.textContent?.trim())
-      .toBe("roomSensorDeadbandZoneBrief:value=0.5 °C");
   });
 
   it("explains a zero deadband without drawing a misleading surface", () => {
