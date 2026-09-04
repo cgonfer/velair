@@ -879,6 +879,7 @@ function runtimeStateLabel(host: VelairViewHost, value: unknown): string | undef
   if (value === "unknown") return host._t("diagnosticsEntityUnknown");
   if (value === "missing") return host._t("entityDiagnosticMissing");
   if (value === "stopped") return host._t("diagnosticsReasonStopped");
+  if (value === "hold") return host._t("overviewZoneHold");
   if (["idle", "override_active", "paused", "scheduled"].includes(String(value))) {
     return host._schedulerStatusLabel(String(value));
   }

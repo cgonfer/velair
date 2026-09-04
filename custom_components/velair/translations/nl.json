@@ -93,6 +93,7 @@
           "none": "Geen tijdelijke aanpassing",
           "boost": "Tijdelijke aanpassing",
           "paused": "Gepauzeerd",
+          "hold": "Vasthouden",
           "disabled": "Uitgeschakeld"
         }
       },

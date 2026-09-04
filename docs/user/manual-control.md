@@ -171,6 +171,7 @@ is observed under a policy that would otherwise enter Manual adjustment:
 | No pause or Boost | Emitted | Yes | Preserve the complete external mode and target. |
 | Independent zone pause, action `none` | Emitted | No | Send nothing; the existing pause continues yielding control. |
 | Independent zone pause, action `turn_off` | Emitted | No | Reassert `off`; the external turn-on cannot bypass the pause. |
+| Independent zone hold, action `hold` | Emitted | Yes, per policy | Manual adjustment freezes the climate above the hold; resuming automatic control delivers the hold again. With `Keep automatic`, the composed hold target is reasserted. |
 | Active Profile Pause, including Profile `turn_off` | Emitted | No | Send nothing in this detection path; do not replay the Profile action solely because of the observation. |
 
 A globally paused scheduler or disabled zone follows the same observational
@@ -406,6 +407,45 @@ pause action is off, so the climate turns off. Calling
 `velair.resume_automatic_control` removes only Manual adjustment; the `window`
 reason remains and the climate stays off. The window automation must remove its
 own reason with `velair.resume_zone`.
+
+### Hold a zone at a temperature
+
+`velair.pause_zone` with `action: hold` keeps delivering a temperature target
+instead of freezing the climate. It is the building block for automations that
+own a temporary setback or comfort target without editing the schedule:
+
+```yaml
+action: velair.pause_zone
+data:
+  entity_id: climate.guest_room
+  action: hold
+  pause_id: vacancy
+  temperature: 26
+  constraint: raise_only
+  hvac_mode: cool
+  fan_mode: auto
+  label: vacant 30 min
+```
+
+- A hold starts from the block the Default schedule or active Profile would
+  apply now. `constraint: absolute` replaces that target, `raise_only` keeps
+  the warmer of the two values and `lower_only` keeps the cooler one.
+- Several holds with different `pause_id`s fold in start order, each applying
+  its own constraint to the running result. Reusing a `pause_id` updates that
+  hold in place and keeps its original start time. Omit `duration_minutes`
+  for an indefinite hold; `velair.resume_zone` with the same `pause_id`
+  releases only that hold and immediately delivers the remaining holds or the
+  schedule.
+- Holds never win against a freeze. A plain pause (`action: none`), including
+  Manual adjustment, keeps the climate where it is until it is removed;
+  `turn_off` still beats everything. The zone override sensor reports `hold`
+  with the composed `effective_temperature`, the latest hold's `constraint`
+  and `label`, and every active hold.
+- Boost is not available while any pause reason, including a hold, is active.
+  Use a hold with `constraint: absolute` and `duration_minutes` for a
+  temporary override on top of other holds.
+- Room Assist is suspended while a hold is active. Hold temperatures are
+  snapped to the climate entity's step and limits when the hold is created.
 
 ## Changing the Policy with a Service
 

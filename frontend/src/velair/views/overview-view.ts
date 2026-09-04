@@ -235,6 +235,7 @@ const zoneStatePresentation: Record<ZoneRuntimeStatus["state"], { icon: string; 
   externally_managed: { icon: "mdi:calendar-export", key: "overviewZoneExternal" },
   stopped: { icon: "mdi:stop-circle-outline", key: "overviewZoneAutomationOff" },
   paused: { icon: "mdi:pause-circle", key: "overviewZonePaused" },
+  hold: { icon: "mdi:thermometer-lines", key: "overviewZoneHold" },
   boost: { icon: "mdi:lightning-bolt", key: "overviewZoneBoost" },
   preconditioning: { icon: "mdi:clock-fast", key: "overviewZonePreconditioning" },
   scheduled: { icon: "mdi:calendar-clock", key: "overviewZoneScheduled" },
@@ -809,7 +810,7 @@ function renderOverviewZoneStatus(
     return html`
       <span class="overview-zone-status pause">
         <ha-icon icon="mdi:pause-circle"></ha-icon>
-        <span>${pauseDetailText(asOverviewDataHost(host), pauseOverride)}</span>
+        <span>${pauseDetailText(asOverviewDataHost(host), pauseOverride, entityId)}</span>
       </span>
     `;
   }
@@ -1039,7 +1040,7 @@ export function renderOverviewTimelineName(host: OverviewViewHost, entityId: str
   const effect = activeClimateProfileZoneEffect(host._data, entityId);
   const showProfile = Boolean(effect && !boostOverride && !pauseOverride);
   const label = host._friendlyEntityName(entityId);
-  const detail = pauseOverride ? pauseDetailText(overviewHost, pauseOverride) : "";
+  const detail = pauseOverride ? pauseDetailText(overviewHost, pauseOverride, entityId) : "";
   const profileDetail = effect ? `${host._t("profileOverviewLabel")}: ${effect.profile.name}` : "";
   const pauseDescription = pauseOverride
     ? [host._t("pauseActive"), manualZonePause ? host._t("manualAdjustment") : "", detail]
@@ -1168,7 +1169,7 @@ export function renderOverviewTimelinePause(
   const detail = [
     host._t("pauseActive"),
     manualZonePause ? host._t("manualAdjustment") : "",
-    pauseDetailText(asOverviewDataHost(host), override),
+    pauseDetailText(asOverviewDataHost(host), override, entityId),
   ].filter(Boolean).join(" - ");
 
   return html`

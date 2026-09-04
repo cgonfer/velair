@@ -93,6 +93,7 @@
           "none": "Keine Übersteuerung",
           "boost": "Temporäre Anpassung",
           "paused": "Pausiert",
+          "hold": "Halten",
           "disabled": "Deaktiviert"
         }
       },

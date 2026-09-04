@@ -60,8 +60,15 @@ from .const import (
     MAX_PROFILE_DESCRIPTION_LENGTH,
     NAME,
     SIGNAL_SCHEDULER_UPDATED,
+    ZONE_PAUSE_ACTION_HOLD,
     ZONE_PAUSE_ACTION_NONE,
+    ZONE_PAUSE_ACTION_OPTIONS,
     ZONE_PAUSE_ACTION_TURN_OFF,
+    HOLD_CONSTRAINT_ABSOLUTE,
+    HOLD_CONSTRAINT_LOWER_ONLY,
+    HOLD_CONSTRAINT_OPTIONS,
+    HOLD_CONSTRAINT_RAISE_ONLY,
+    HVAC_MODE_OPTIONS,
     EXTERNAL_CHANGE_FOR_DURATION,
     EXTERNAL_CHANGE_POLICY_OPTIONS,
     EXTERNAL_CHANGE_KEEP_AUTOMATIC,
@@ -108,6 +115,9 @@ from .models import (
     predict_preconditioning_lead,
     trim_preconditioning_observations,
     validate_pause_id,
+    active_hold_reasons,
+    normalize_hold_fields,
+    zone_pause_effective_action,
     zone_pause_override_from_reasons,
 )
 from .temperature import (
@@ -875,6 +885,10 @@ class VelairScheduler:
 
     def get_active_target_event(self, entity_id: str) -> ClimateEvent | None:
         """Return the target Velair is actively managing for one climate."""
+        now = dt_util.now()
+        override = self._get_active_zone_override(entity_id, now)
+        if _is_pause_override(override) and override.get("action") == ZONE_PAUSE_ACTION_HOLD:
+            return self._hold_delivery_event(entity_id, now)
         return self._room_sensor_assist_target_event(entity_id)
 
     def get_active_overrides(self) -> dict[str, dict]:
@@ -897,7 +911,11 @@ class VelairScheduler:
         if _is_boost_override(override):
             state = "boost"
         elif _is_pause_override(override):
-            state = "paused"
+            state = (
+                "hold"
+                if override.get("action") == ZONE_PAUSE_ACTION_HOLD
+                else "paused"
+            )
         else:
             return {"state": "none"}
 
@@ -907,8 +925,9 @@ class VelairScheduler:
             "until": override.get("until"),
             "action": override.get("action"),
         }
-        if state == "paused":
-            reasons = self._active_zone_pause_reasons(entity_id, dt_util.now())
+        if state in ("paused", "hold"):
+            now = dt_util.now()
+            reasons = self._active_zone_pause_reasons(entity_id, now)
             status.update(
                 {
                     "pause_count": len(reasons),
@@ -920,6 +939,32 @@ class VelairScheduler:
                     "pauses": deepcopy(reasons),
                 }
             )
+            if state == "hold":
+                holds = active_hold_reasons(reasons)
+                latest = holds[-1]
+                status.update(
+                    {
+                        "holds": holds,
+                        "hold_count": len(holds),
+                        "hold_temperature": latest.get("temperature"),
+                        "hold_target_temp_low": latest.get(ATTR_TARGET_TEMP_LOW),
+                        "hold_target_temp_high": latest.get(ATTR_TARGET_TEMP_HIGH),
+                        "hold_hvac_mode": latest.get("hvac_mode"),
+                        "hold_fan_mode": latest.get("fan_mode"),
+                        "constraint": latest.get("constraint"),
+                        "label": latest.get("label"),
+                    }
+                )
+                hold_event = self._hold_delivery_event(entity_id, now)
+                if hold_event is not None:
+                    status.update(
+                        {
+                            "effective_temperature": hold_event.temperature,
+                            "effective_target_temp_low": hold_event.target_temp_low,
+                            "effective_target_temp_high": hold_event.target_temp_high,
+                            "effective_hvac_mode": hold_event.hvac_mode,
+                        }
+                    )
         if pause_id := override.get("pause_id"):
             status["pause_id"] = pause_id
         return status
@@ -991,8 +1036,14 @@ class VelairScheduler:
             state = "externally_managed"
         elif not zone["enabled"] or self.mode not in (MODE_AUTO, MODE_PAUSED):
             state = "stopped"
-        elif self.mode == MODE_PAUSED or _is_pause_override(override):
+        elif self.mode == MODE_PAUSED:
             state = "paused"
+        elif _is_pause_override(override):
+            state = (
+                "hold"
+                if override.get("action") == ZONE_PAUSE_ACTION_HOLD
+                else "paused"
+            )
         elif _is_boost_override(override):
             state = "boost"
         elif event is not None and event.target_when is not None and event.target_when > now:
@@ -1016,6 +1067,10 @@ class VelairScheduler:
                 if "temperature" in override
                 else None
             )
+        if _is_pause_override(override) and override.get("action") == ZONE_PAUSE_ACTION_HOLD:
+            hold_event = self._hold_delivery_event(entity_id, now)
+            if hold_event is not None:
+                target_temperature = hold_event.temperature
         applied_temperature = assist.get("applied_temperature")
         if not isinstance(applied_temperature, int | float):
             applied_temperature = reported_target_temperature
@@ -1106,6 +1161,7 @@ class VelairScheduler:
             return False, "profile_paused"
         if any(
             reason.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+            and reason.get("action") != ZONE_PAUSE_ACTION_HOLD
             for reason in self._active_zone_pause_reasons(entity_id, now)
         ):
             return False, "zone_paused"
@@ -1675,11 +1731,34 @@ class VelairScheduler:
         manual_source: str | None = None,
         duration_minutes: int | None = None,
         changed_fields: list[str] | None = None,
+        temperature: float | None = None,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
+        hvac_mode: str | None = None,
+        fan_mode: str | None = None,
+        constraint: str | None = None,
+        label: str | None = None,
     ) -> None:
-        """Add or update one independently owned zone-pause reason."""
+        """Add or update one independently owned zone-pause reason.
+
+        With ``action`` ``hold`` the reason keeps delivering a temperature
+        target instead of freezing the climate. See ``_hold_delivery_event``
+        for how several holds and the schedule combine.
+        """
         self._ensure_local_execution(entity_id)
-        if action not in (ZONE_PAUSE_ACTION_NONE, ZONE_PAUSE_ACTION_TURN_OFF):
+        if action not in ZONE_PAUSE_ACTION_OPTIONS:
             raise ValueError(f"Invalid zone pause action: {action}")
+        hold_fields = self._validate_hold_fields(
+            entity_id,
+            action,
+            temperature=temperature,
+            target_temp_low=target_temp_low,
+            target_temp_high=target_temp_high,
+            hvac_mode=hvac_mode,
+            fan_mode=fan_mode,
+            constraint=constraint,
+            label=label,
+        )
         if pause_id is not None:
             pause_id = validate_pause_id(pause_id)
             if pause_id == MANUAL_CONTROL_PAUSE_ID and not internal:
@@ -1706,6 +1785,7 @@ class VelairScheduler:
             }
             if until is not None:
                 next_reason["until"] = until
+            next_reason.update(hold_fields)
             if pause_id is not None:
                 next_reason["pause_id"] = pause_id
                 if pause_id == MANUAL_CONTROL_PAUSE_ID:
@@ -1726,6 +1806,7 @@ class VelairScheduler:
                     unchanged = (
                         existing.get("action") == action
                         and existing.get("until") == until
+                        and _hold_signature(existing) == _hold_signature(next_reason)
                         and (
                             pause_id != MANUAL_CONTROL_PAUSE_ID
                             or (
@@ -1764,6 +1845,8 @@ class VelairScheduler:
             delivery_changed = (
                 not was_paused
                 or previous_effective_action != next_effective_action
+                # Any hold change can move the composed target.
+                or next_effective_action == ZONE_PAUSE_ACTION_HOLD
             )
 
             previous_session = self._preconditioning_sessions.get(entity_id)
@@ -1776,7 +1859,7 @@ class VelairScheduler:
                     await self._async_clear_room_sensor_assist(
                         entity_id,
                         restore=(
-                            action != ZONE_PAUSE_ACTION_TURN_OFF
+                            action == ZONE_PAUSE_ACTION_NONE
                             and not preserve_current_climate_state
                         ),
                         reason="zone_paused",
@@ -1826,6 +1909,12 @@ class VelairScheduler:
                     ),
                     source="zone_paused",
                 )
+            elif (
+                next_effective_action == ZONE_PAUSE_ACTION_HOLD
+                and delivery_changed
+                and not self._temperature_migration_blocked
+            ):
+                await self._async_apply_zone_hold(entity_id, source="zone_hold")
 
             self.async_schedule_next_event()
             for replaced_reason in replaced_reasons:
@@ -2034,6 +2123,7 @@ class VelairScheduler:
             existing_override is not None
             and existing_manual is None
             and not _is_boost_override(existing_override)
+            and not _is_hold_override(existing_override)
         ):
             if (
                 _is_pause_override(existing_override)
@@ -2082,10 +2172,13 @@ class VelairScheduler:
             raise ValueError("Invalid Manual adjustment policy")
         now = dt_util.now()
         existing_manual = self._manual_control_status(entity_id, now)
+        # Holds keep Velair in control, so they never block a Manual
+        # adjustment; only freezes and turn-offs do.
         other_reasons = [
             reason
             for reason in self._active_zone_pause_reasons(entity_id, now)
             if reason.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
+            and reason.get("action") != ZONE_PAUSE_ACTION_HOLD
         ]
         if existing_manual is None:
             if not zone["enabled"]:
@@ -2291,6 +2384,15 @@ class VelairScheduler:
                     entity_id,
                     source="zone_resumed",
                 )
+            elif (
+                remaining
+                and self.mode == MODE_AUTO
+                and not self._temperature_migration_blocked
+                and zone_pause_effective_action(remaining) == ZONE_PAUSE_ACTION_HOLD
+            ):
+                # Removing a freeze or one of several holds changes the
+                # composed target, so deliver the remaining holds now.
+                await self._async_apply_zone_hold(entity_id, source="zone_resumed")
 
             self.async_schedule_next_event()
 
@@ -4139,7 +4241,16 @@ class VelairScheduler:
             async with self._zone_override_lock(entity_id):
                 # Another action may have established a new authoritative
                 # override after the expired one was persisted as cleared.
-                if self._data["zones"][entity_id].get("override") is not None:
+                current_override = self._data["zones"][entity_id].get("override")
+                if current_override is not None:
+                    if (
+                        _is_pause_override(current_override)
+                        and current_override.get("action") == ZONE_PAUSE_ACTION_HOLD
+                        and self.mode == MODE_AUTO
+                    ):
+                        await self._async_apply_zone_hold(
+                            entity_id, source="zone_pause_expired"
+                        )
                     continue
                 if _is_boost_override(override):
                     await self._async_finish_zone_boost(
@@ -4974,6 +5085,144 @@ class VelairScheduler:
             recovery_resolver=resolve_current,
         )
 
+    def _validate_hold_fields(
+        self,
+        entity_id: str,
+        action: str,
+        *,
+        temperature: float | None,
+        target_temp_low: float | None,
+        target_temp_high: float | None,
+        hvac_mode: str | None,
+        fan_mode: str | None,
+        constraint: str | None,
+        label: str | None,
+    ) -> dict[str, object]:
+        """Validate and snap the hold fields of a pause request."""
+        provided = {
+            key: value
+            for key, value in {
+                "temperature": temperature,
+                ATTR_TARGET_TEMP_LOW: target_temp_low,
+                ATTR_TARGET_TEMP_HIGH: target_temp_high,
+                "hvac_mode": hvac_mode,
+                "fan_mode": fan_mode,
+                "constraint": constraint,
+                "label": label,
+            }.items()
+            if value is not None
+        }
+        if action != ZONE_PAUSE_ACTION_HOLD:
+            if provided:
+                raise ValueError(
+                    "temperature, target_temp_low, target_temp_high, hvac_mode, "
+                    "fan_mode, constraint and label require action hold"
+                )
+            return {}
+        if constraint is not None and constraint not in HOLD_CONSTRAINT_OPTIONS:
+            raise ValueError(f"Invalid hold constraint: {constraint}")
+        if hvac_mode is not None and hvac_mode not in HVAC_MODE_OPTIONS:
+            raise ValueError(f"Invalid hold hvac_mode: {hvac_mode}")
+        fields = normalize_hold_fields(provided)
+        if fields is None:
+            raise ValueError(
+                "A hold requires temperature or target_temp_low and target_temp_high"
+            )
+        for key in ("temperature", ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+            if key in fields:
+                fields[key] = self.normalize_target_temperature(entity_id, float(fields[key]))
+        if (
+            ATTR_TARGET_TEMP_LOW in fields
+            and fields[ATTR_TARGET_TEMP_LOW] > fields[ATTR_TARGET_TEMP_HIGH]
+        ):
+            raise ValueError("target_temp_low must not be greater than target_temp_high")
+        supported_modes = getattr(self._climate_manager, "supported_hvac_modes", None)
+        if hvac_mode is not None and callable(supported_modes):
+            modes = supported_modes(entity_id)
+            if modes and hvac_mode not in modes:
+                raise ValueError(f"{entity_id} does not support hvac_mode {hvac_mode}")
+        if "fan_mode" in fields:
+            filtered = self._climate_options_for_entity(
+                entity_id, _climate_options(fan_mode=fields["fan_mode"])
+            )
+            if not filtered.get(ATTR_FAN_MODE):
+                fields.pop("fan_mode")
+        return fields
+
+    def _hold_delivery_event(
+        self, entity_id: str, now: datetime
+    ) -> ClimateEvent | None:
+        """Compose the delivered target for every active hold on one zone.
+
+        Holds start from the block the schedule (or active Profile) would
+        apply now and are folded in start order. ``absolute`` replaces the
+        running target, ``raise_only`` keeps the warmer value and
+        ``lower_only`` keeps the cooler one. The last hold that names an HVAC
+        or fan mode wins that option; other options come from the block.
+        """
+        holds = active_hold_reasons(self._active_zone_pause_reasons(entity_id, now))
+        if not holds:
+            return None
+        underlying: ClimateEvent | None = None
+        behavior = self._profile_zone_behavior(entity_id)
+        if behavior["behavior"] != "pause":
+            underlying = self._current_schedule_event(entity_id, now)
+        if underlying is not None and underlying.action == ACTION_TURN_OFF:
+            underlying = None
+        temperature = underlying.temperature if underlying is not None else None
+        low = underlying.target_temp_low if underlying is not None else None
+        high = underlying.target_temp_high if underlying is not None else None
+        hvac_mode = underlying.hvac_mode if underlying is not None else None
+        options = (
+            _climate_options_from_event(underlying) if underlying is not None else {}
+        )
+        for hold in holds:
+            constraint = str(hold.get("constraint", HOLD_CONSTRAINT_ABSOLUTE))
+            if "temperature" in hold:
+                temperature = _apply_hold_constraint(
+                    temperature, float(hold["temperature"]), constraint
+                )
+                low = high = None
+            elif ATTR_TARGET_TEMP_LOW in hold and ATTR_TARGET_TEMP_HIGH in hold:
+                low = _apply_hold_constraint(
+                    low, float(hold[ATTR_TARGET_TEMP_LOW]), constraint
+                )
+                high = _apply_hold_constraint(
+                    high, float(hold[ATTR_TARGET_TEMP_HIGH]), constraint
+                )
+                temperature = None
+            if hold.get("hvac_mode"):
+                hvac_mode = str(hold["hvac_mode"])
+            if hold.get("fan_mode"):
+                options = {**options, ATTR_FAN_MODE: str(hold["fan_mode"])}
+        if temperature is None and (low is None or high is None):
+            return None
+        if low is not None and high is not None and low > high:
+            high = low
+        return ClimateEvent(
+            entity_id=entity_id,
+            when=now,
+            temperature=temperature,
+            target_temp_low=low,
+            target_temp_high=high,
+            weekday=None,
+            start=None,
+            action=ACTION_SET_TEMPERATURE,
+            hvac_mode=hvac_mode,
+            **options,
+        )
+
+    async def _async_apply_zone_hold(self, entity_id: str, *, source: str) -> bool:
+        """Deliver the composed hold target for one zone."""
+        event = self._hold_delivery_event(entity_id, dt_util.now())
+        if event is None:
+            return False
+        return await self._async_apply_event(
+            event,
+            hvac_mode=event.hvac_mode,
+            source=source,
+        )
+
     def _resolve_authoritative_delivery_event(
         self,
         entity_id: str,
@@ -4992,6 +5241,8 @@ class VelairScheduler:
         now = dt_util.now()
         override = self._get_active_zone_override(entity_id, now)
         if _is_pause_override(override):
+            if override.get("action") == ZONE_PAUSE_ACTION_HOLD:
+                return self._hold_delivery_event(entity_id, now)
             if override.get("action") != ZONE_PAUSE_ACTION_TURN_OFF:
                 return None
             return ClimateEvent(
@@ -8662,6 +8913,7 @@ class VelairScheduler:
         }
         if pause_id := override.get("pause_id"):
             data["pause_id"] = pause_id
+        data.update(_hold_event_fields(override))
         self._async_fire_event(EVENT_TYPE_ZONE_PAUSED, data)
 
     def _async_fire_zone_pause_reason(
@@ -8686,6 +8938,7 @@ class VelairScheduler:
         }
         if pause_id := pause.get("pause_id"):
             data["pause_id"] = pause_id
+        data.update(_hold_event_fields(pause))
         if reason is not None:
             data["reason"] = reason
         self._async_fire_event(event_types[operation], data)
@@ -8707,6 +8960,7 @@ class VelairScheduler:
         }
         if pause_id := override.get("pause_id"):
             data["pause_id"] = pause_id
+        data.update(_hold_event_fields(override))
         self._async_fire_event(EVENT_TYPE_ZONE_RESUMED, data)
 
     def _async_fire_climate_target_applied(
@@ -9023,6 +9277,31 @@ class VelairScheduler:
         """Write a zone pause action to the Home Assistant logbook."""
         until = override.get("until")
         action = override.get("action", ZONE_PAUSE_ACTION_NONE)
+        if action == ZONE_PAUSE_ACTION_HOLD:
+            target = _hold_target_text(override)
+            constraint = str(override.get("constraint", HOLD_CONSTRAINT_ABSOLUTE))
+            constraint_en = {
+                HOLD_CONSTRAINT_RAISE_ONLY: " (raise only)",
+                HOLD_CONSTRAINT_LOWER_ONLY: " (lower only)",
+            }.get(constraint, "")
+            constraint_es = {
+                HOLD_CONSTRAINT_RAISE_ONLY: " (solo subir)",
+                HOLD_CONSTRAINT_LOWER_ONLY: " (solo bajar)",
+            }.get(constraint, "")
+            label = override.get("label")
+            label_text = f" - {label}" if isinstance(label, str) and label else ""
+            until_en = f" until {until}" if until else ""
+            until_es = f" hasta {until}" if until else ""
+            await self._async_logbook(
+                self._message(
+                    f"Holding {self._friendly_entity_name(entity_id)} at {target}"
+                    f"{constraint_en}{until_en}{label_text}",
+                    f"Manteniendo {self._friendly_entity_name(entity_id)} en {target}"
+                    f"{constraint_es}{until_es}{label_text}",
+                ),
+                entity_id=entity_id,
+            )
+            return
         action_text = " and turned off" if action == ZONE_PAUSE_ACTION_TURN_OFF else ""
         action_text_es = " y apagado" if action == ZONE_PAUSE_ACTION_TURN_OFF else ""
         if until:
@@ -9310,6 +9589,10 @@ class VelairScheduler:
                             },
                         )
                     if remaining:
+                        if zone_pause_effective_action(remaining) == ZONE_PAUSE_ACTION_HOLD:
+                            # The composed hold target may have changed; the
+                            # timer re-delivers the remaining holds.
+                            expired[entity_id] = override
                         continue
                     await self._async_log_zone_resume(entity_id, reason="expired")
                     self._async_fire_zone_resumed(entity_id, override, reason="expired")
@@ -9760,3 +10043,57 @@ def _is_boost_override(override: ZoneOverride | dict | None) -> bool:
 def _is_pause_override(override: ZoneOverride | dict | None) -> bool:
     """Return whether a zone override is a schedule pause."""
     return isinstance(override, dict) and override.get("type") == "pause"
+
+
+def _is_hold_override(override: ZoneOverride | dict | None) -> bool:
+    """Return whether a zone pause override currently holds a target."""
+    return _is_pause_override(override) and override.get("action") == ZONE_PAUSE_ACTION_HOLD
+
+
+_HOLD_FIELDS = (
+    "temperature",
+    ATTR_TARGET_TEMP_LOW,
+    ATTR_TARGET_TEMP_HIGH,
+    "hvac_mode",
+    "fan_mode",
+    "constraint",
+    "label",
+)
+
+
+def _hold_signature(reason: dict | None) -> tuple:
+    """Return the hold-relevant fields of one pause reason for comparison."""
+    if not isinstance(reason, dict):
+        return ()
+    return tuple(reason.get(key) for key in _HOLD_FIELDS)
+
+
+def _hold_event_fields(mapping: dict | None) -> dict[str, object]:
+    """Return the hold fields of a reason or projection for event payloads."""
+    if not isinstance(mapping, dict) or mapping.get("action") != ZONE_PAUSE_ACTION_HOLD:
+        return {}
+    return {key: mapping[key] for key in _HOLD_FIELDS if key in mapping}
+
+
+def _apply_hold_constraint(
+    current: float | None, value: float, constraint: str
+) -> float:
+    """Fold one hold value into the running target."""
+    if current is None or constraint == HOLD_CONSTRAINT_ABSOLUTE:
+        return value
+    if constraint == HOLD_CONSTRAINT_RAISE_ONLY:
+        return max(current, value)
+    if constraint == HOLD_CONSTRAINT_LOWER_ONLY:
+        return min(current, value)
+    return value
+
+
+def _hold_target_text(mapping: dict) -> str:
+    """Return a compact human target for logbook messages."""
+    if mapping.get("temperature") is not None:
+        return f"{float(mapping['temperature']):g}°"
+    low = mapping.get(ATTR_TARGET_TEMP_LOW)
+    high = mapping.get(ATTR_TARGET_TEMP_HIGH)
+    if low is not None and high is not None:
+        return f"{float(low):g}–{float(high):g}°"
+    return "?"

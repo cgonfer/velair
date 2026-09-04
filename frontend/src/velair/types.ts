@@ -334,6 +334,13 @@ export type ScheduleZone = {
     action: string;
     until?: string;
     pause_id?: string;
+    temperature?: number;
+    target_temp_low?: number;
+    target_temp_high?: number;
+    hvac_mode?: string;
+    fan_mode?: string;
+    constraint?: string;
+    label?: string;
   }>;
   preconditioning?: PreconditioningSettings;
   comfort?: ComfortSettings;
@@ -389,7 +396,7 @@ export type ManualControl = {
 };
 
 export type ZoneRuntimeStatus = {
-  state: "stopped" | "paused" | "boost" | "preconditioning" | "scheduled" | "idle" | "externally_managed";
+  state: "stopped" | "paused" | "hold" | "boost" | "preconditioning" | "scheduled" | "idle" | "externally_managed";
   room_temperature?: number | null;
   target_temperature?: number | null;
   target_temp_low?: number | null;

@@ -23,9 +23,14 @@ from .const import (
     MODE_DEFAULT_OPTION,
     MAX_PAUSE_ID_LENGTH,
     PAUSE_ID_PATTERN,
+    ZONE_PAUSE_ACTION_HOLD,
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_TURN_OFF,
     ZONE_PAUSE_ACTION_OPTIONS,
+    HOLD_CONSTRAINT_ABSOLUTE,
+    HOLD_CONSTRAINT_OPTIONS,
+    MAX_HOLD_LABEL_LENGTH,
+    HVAC_MODE_OPTIONS,
     DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
     EXTERNAL_CHANGE_KEEP_AUTOMATIC,
     EXTERNAL_CHANGE_POLICY_OPTIONS,
@@ -142,7 +147,14 @@ class ZoneOverride(TypedDict):
 
 
 class ZonePauseReason(TypedDict):
-    """One independently owned reason that keeps a zone paused."""
+    """One independently owned reason that keeps a zone paused.
+
+    ``action`` ``hold`` keeps delivering a temperature target instead of
+    freezing the climate: ``temperature`` (or a ``target_temp_low`` /
+    ``target_temp_high`` range), an optional ``hvac_mode`` and ``fan_mode``, a
+    ``constraint`` describing how the hold combines with the underlying
+    schedule target, and a short human ``label``.
+    """
 
     started_at: str
     action: str
@@ -152,6 +164,13 @@ class ZonePauseReason(TypedDict):
     manual_source: NotRequired[str]
     duration_minutes: NotRequired[int]
     changed_fields: NotRequired[list[str]]
+    temperature: NotRequired[float]
+    target_temp_low: NotRequired[float]
+    target_temp_high: NotRequired[float]
+    hvac_mode: NotRequired[str]
+    fan_mode: NotRequired[str]
+    constraint: NotRequired[str]
+    label: NotRequired[str]
 
 
 class ClimateStateSnapshot(TypedDict, total=False):
@@ -2354,6 +2373,12 @@ def _normalize_zone_pause_override(raw_override: dict[str, Any]) -> ZoneOverride
     override["action"] = (
         action if action in ZONE_PAUSE_ACTION_OPTIONS else ZONE_PAUSE_ACTION_NONE
     )
+    if override["action"] == ZONE_PAUSE_ACTION_HOLD:
+        hold_fields = normalize_hold_fields(raw_override)
+        if hold_fields is None:
+            override["action"] = ZONE_PAUSE_ACTION_NONE
+        else:
+            override.update(hold_fields)
 
     pause_id = raw_override.get("pause_id")
     if isinstance(pause_id, str):
@@ -2390,6 +2415,14 @@ def _normalize_zone_pauses(raw_zone: dict[str, Any]) -> list[ZonePauseReason]:
         if action not in ZONE_PAUSE_ACTION_OPTIONS:
             action = ZONE_PAUSE_ACTION_NONE
         reason: ZonePauseReason = {"started_at": started_at, "action": action}
+        if action == ZONE_PAUSE_ACTION_HOLD:
+            hold_fields = normalize_hold_fields(candidate)
+            if hold_fields is None:
+                # A hold without a usable target cannot deliver anything;
+                # keep the reason but downgrade it to a plain pause.
+                reason["action"] = ZONE_PAUSE_ACTION_NONE
+            else:
+                reason.update(hold_fields)
         until = candidate.get("until")
         if isinstance(until, str) and until:
             reason["until"] = until
@@ -2431,6 +2464,68 @@ def _normalize_zone_pauses(raw_zone: dict[str, Any]) -> list[ZonePauseReason]:
     return reasons
 
 
+def normalize_hold_fields(raw: dict[str, Any]) -> dict[str, Any] | None:
+    """Return validated hold fields from a raw mapping, or None without a target."""
+    fields: dict[str, Any] = {}
+    temperature = raw.get("temperature")
+    low = raw.get("target_temp_low")
+    high = raw.get("target_temp_high")
+    if isinstance(temperature, (int, float)) and not isinstance(temperature, bool):
+        fields["temperature"] = float(temperature)
+    elif (
+        isinstance(low, (int, float)) and not isinstance(low, bool)
+        and isinstance(high, (int, float)) and not isinstance(high, bool)
+        and float(low) <= float(high)
+    ):
+        fields["target_temp_low"] = float(low)
+        fields["target_temp_high"] = float(high)
+    else:
+        return None
+    constraint = raw.get("constraint")
+    fields["constraint"] = (
+        str(constraint) if constraint in HOLD_CONSTRAINT_OPTIONS else HOLD_CONSTRAINT_ABSOLUTE
+    )
+    hvac_mode = raw.get("hvac_mode")
+    if isinstance(hvac_mode, str) and hvac_mode in HVAC_MODE_OPTIONS:
+        fields["hvac_mode"] = hvac_mode
+    fan_mode = raw.get("fan_mode")
+    if isinstance(fan_mode, str) and fan_mode.strip():
+        fields["fan_mode"] = fan_mode.strip()
+    label = raw.get("label")
+    if isinstance(label, str) and label.strip():
+        fields["label"] = label.strip()[:MAX_HOLD_LABEL_LENGTH]
+    return fields
+
+
+def zone_pause_effective_action(
+    reasons: list[ZonePauseReason] | list[dict[str, Any]],
+) -> str:
+    """Return the action that wins when several reasons are active.
+
+    ``turn_off`` beats everything, a plain pause (``none``) freezes the climate
+    and therefore beats any hold, and holds only apply when every active reason
+    is a hold.
+    """
+    actions = {reason.get("action", ZONE_PAUSE_ACTION_NONE) for reason in reasons}
+    if ZONE_PAUSE_ACTION_TURN_OFF in actions:
+        return ZONE_PAUSE_ACTION_TURN_OFF
+    if ZONE_PAUSE_ACTION_NONE in actions or not actions:
+        return ZONE_PAUSE_ACTION_NONE
+    return ZONE_PAUSE_ACTION_HOLD
+
+
+def active_hold_reasons(
+    reasons: list[ZonePauseReason] | list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return hold reasons ordered by their start time."""
+    holds = [
+        dict(reason) for reason in reasons
+        if reason.get("action") == ZONE_PAUSE_ACTION_HOLD
+    ]
+    holds.sort(key=lambda item: str(item.get("started_at", "")))
+    return holds
+
+
 def zone_pause_override_from_reasons(
     reasons: list[ZonePauseReason] | list[dict[str, Any]],
 ) -> ZoneOverride | None:
@@ -2445,13 +2540,10 @@ def zone_pause_override_from_reasons(
         value for reason in reasons
         if isinstance((value := reason.get("until")), str) and value
     ]
+    effective_action = zone_pause_effective_action(reasons)
     override: ZoneOverride = {
         "type": "pause",
-        "action": (
-            ZONE_PAUSE_ACTION_TURN_OFF
-            if any(reason.get("action") == ZONE_PAUSE_ACTION_TURN_OFF for reason in reasons)
-            else ZONE_PAUSE_ACTION_NONE
-        ),
+        "action": effective_action,
     }
     if started_values:
         override["started_at"] = _pause_timestamp_extreme(started_values, latest=False)
@@ -2459,6 +2551,17 @@ def zone_pause_override_from_reasons(
         override["until"] = _pause_timestamp_extreme(until_values, latest=True)
     if len(reasons) == 1 and isinstance(reasons[0].get("pause_id"), str):
         override["pause_id"] = reasons[0]["pause_id"]
+    if effective_action == ZONE_PAUSE_ACTION_HOLD:
+        # The projection mirrors the most recent hold so cards and the
+        # compatibility override can show what the zone is being held at.
+        latest = active_hold_reasons(reasons)[-1]
+        for key in (
+            "temperature", "target_temp_low", "target_temp_high",
+            "hvac_mode", "fan_mode", "constraint", "label",
+        ):
+            if key in latest:
+                override[key] = latest[key]
+        override["hold_count"] = len(active_hold_reasons(reasons))
     return override
 
 

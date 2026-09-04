@@ -93,6 +93,7 @@
           "none": "Sin anulación",
           "boost": "Refuerzo",
           "paused": "En pausa",
+          "hold": "Retención",
           "disabled": "Desactivada"
         }
       },

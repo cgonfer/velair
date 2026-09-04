@@ -275,7 +275,7 @@ pause_zone:
           unit_of_measurement: min
     action:
       name: Pause action
-      description: Optional action to apply immediately when the zone is paused.
+      description: Optional action to apply immediately when the zone is paused. Use hold to keep delivering a temperature target instead of freezing the climate.
       required: false
       default: none
       example: turn_off
@@ -284,11 +284,85 @@ pause_zone:
           options:
             - none
             - turn_off
+            - hold
     pause_id:
       name: Pause ID
       description: Optional stable reason identifier for an automation. Reusing it updates only that reason; omitting it replaces all reasons with one manual pause.
       required: false
       example: velair_window_guard
+      selector:
+        text:
+    temperature:
+      name: Hold temperature
+      description: Target held while the reason is active. Required for action hold unless a range is given.
+      required: false
+      example: 26
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: °
+    target_temp_low:
+      name: Hold lower target
+      description: Lower bound of a held heat_cool range. Requires target_temp_high.
+      required: false
+      example: 20
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: °
+    target_temp_high:
+      name: Hold upper target
+      description: Upper bound of a held heat_cool range. Requires target_temp_low.
+      required: false
+      example: 26
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: °
+    constraint:
+      name: Hold constraint
+      description: How the hold combines with the schedule target. absolute replaces it, raise_only keeps the warmer value, lower_only keeps the cooler value. Several holds fold in start order.
+      required: false
+      default: absolute
+      example: raise_only
+      selector:
+        select:
+          options:
+            - absolute
+            - raise_only
+            - lower_only
+    hvac_mode:
+      name: Hold HVAC mode
+      description: Optional HVAC mode applied while the hold is active.
+      required: false
+      example: cool
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+            - heat_cool
+            - auto
+            - dry
+            - fan_only
+    fan_mode:
+      name: Hold fan mode
+      description: Optional fan mode applied while the hold is active. Unsupported values are ignored.
+      required: false
+      example: auto
+      selector:
+        text:
+    label:
+      name: Hold label
+      description: Short human label shown in Velair and in the override sensor, for example "vacant 30 min".
+      required: false
+      example: vacant 30 min
       selector:
         text:
 

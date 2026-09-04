@@ -155,6 +155,13 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
             until=None,
             action="none",
             pause_id="window_guard",
+            temperature=None,
+            target_temp_low=None,
+            target_temp_high=None,
+            hvac_mode=None,
+            fan_mode=None,
+            constraint=None,
+            label=None,
         )
         self.scheduler.async_resume_zone.assert_awaited_once_with(
             "climate.salon",

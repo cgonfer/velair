@@ -663,6 +663,9 @@ pause_id: velair_window_guard
 `zone_pause_added`, `zone_pause_updated`, and `zone_pause_removed` describe
 individual reason changes and include `pause_id` when identified. An exact
 identified replay emits no event. Legacy and manual reasons omit the ID.
+Reasons with `action: hold` also carry `temperature` (or `target_temp_low` and
+`target_temp_high`), `constraint`, and, when set, `hvac_mode`, `fan_mode`, and
+`label`; `zone_paused` and `zone_resumed` mirror the latest hold's fields.
 
 ```yaml
 domain: velair
@@ -679,9 +682,14 @@ domain: velair
 event: zone_pause_updated
 entity_id: climate.guest_room
 started_at: "2026-07-09T12:00:00+02:00"
-until: "2026-07-09T18:00:00+02:00"
-action: turn_off
-pause_id: velair_window_guard
+until: null
+action: hold
+pause_id: vacancy
+temperature: 26.0
+constraint: raise_only
+hvac_mode: cool
+fan_mode: auto
+label: vacant 30 min
 ```
 
 ```yaml

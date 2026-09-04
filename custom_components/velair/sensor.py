@@ -375,7 +375,7 @@ class ZoneOverrideStateSensor(_ZoneSensor):
     """Sensor exposing whether one zone has an active override."""
 
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["none", "boost", "paused", "disabled"]
+    _attr_options = ["none", "boost", "paused", "hold", "disabled"]
     _attr_translation_key = "zone_override_state"
 
     def __init__(
@@ -410,6 +410,11 @@ class ZoneOverrideStateSensor(_ZoneSensor):
                 for key in (
                     "started_at", "until", "action", "pause_id",
                     "pause_count", "pause_ids", "manual",
+                    "hold_count", "hold_temperature", "hold_target_temp_low",
+                    "hold_target_temp_high", "hold_hvac_mode", "hold_fan_mode",
+                    "constraint", "label", "effective_temperature",
+                    "effective_target_temp_low", "effective_target_temp_high",
+                    "effective_hvac_mode",
                 )
             }
         )

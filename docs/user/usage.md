@@ -483,6 +483,8 @@ Pause and boost durations are entered in minutes. The Home Assistant service UI 
 
 Velair also supports per-zone pause through services and automations. A zone pause only affects one managed climate entity. Other climates continue following their schedules. When a zone is resumed, Velair applies the current schedule only if a block is active for that climate at that moment; otherwise it leaves the climate untouched.
 
+A zone pause can also **hold** a temperature (`action: hold`). Instead of freezing the climate, Velair keeps delivering the held target with the same resilient delivery it uses for schedule blocks. Holds combine with the current block through a constraint: `absolute` replaces the target, `raise_only` keeps the warmer value, and `lower_only` keeps the cooler value. Several identified holds fold in start order, a plain pause or Manual adjustment freezes the climate above any hold, and `turn_off` beats everything. See [External Changes and Manual Adjustment](manual-control.md#hold-a-zone-at-a-temperature) for examples.
+
 ## Boost
 
 Boost is per climate zone. It temporarily overrides the schedule for one climate entity and leaves other zones running normally.

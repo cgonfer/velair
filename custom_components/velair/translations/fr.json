@@ -93,6 +93,7 @@
           "none": "Aucune dérogation",
           "boost": "Forçage",
           "paused": "En pause",
+          "hold": "Maintien",
           "disabled": "Désactivée"
         }
       },

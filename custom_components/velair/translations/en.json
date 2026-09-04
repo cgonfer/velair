@@ -93,6 +93,7 @@
           "none": "No override",
           "boost": "Boost",
           "paused": "Paused",
+          "hold": "Hold",
           "disabled": "Disabled"
         }
       },

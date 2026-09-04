@@ -35,6 +35,11 @@ from .const import (
     ATTR_TEMPERATURE,
     ATTR_WEEKDAY,
     ATTR_POLICY,
+    ATTR_CONSTRAINT,
+    ATTR_LABEL,
+    HOLD_CONSTRAINT_OPTIONS,
+    MAX_HOLD_LABEL_LENGTH,
+    ZONE_PAUSE_ACTION_HOLD,
     DOMAIN,
     HVAC_MODE_OPTIONS,
     MODE_AUTO,
@@ -80,6 +85,37 @@ def _validate_resume_zone_data(data: dict[str, Any]) -> dict[str, Any]:
         raise vol.Invalid("pause_id and resume_all cannot be used together")
     if not has_id and data.get(ATTR_RESUME_ALL) is False:
         raise vol.Invalid("resume_all: false requires pause_id")
+    return data
+
+
+def _validate_hold_label(value: Any) -> str:
+    """Validate the optional human label of a hold."""
+    label = str(value).strip()
+    if not label or len(label) > MAX_HOLD_LABEL_LENGTH:
+        raise vol.Invalid(
+            f"label must contain between 1 and {MAX_HOLD_LABEL_LENGTH} characters"
+        )
+    return label
+
+
+def _validate_pause_zone_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Require a target for holds and reject hold fields on plain pauses."""
+    hold_keys = (
+        ATTR_TEMPERATURE,
+        ATTR_TARGET_TEMP_LOW,
+        ATTR_TARGET_TEMP_HIGH,
+        ATTR_HVAC_MODE,
+        ATTR_FAN_MODE,
+        ATTR_CONSTRAINT,
+        ATTR_LABEL,
+    )
+    if data.get(ATTR_ACTION) == ZONE_PAUSE_ACTION_HOLD:
+        return _validate_temperature_target_data(data)
+    if any(key in data for key in hold_keys):
+        raise vol.Invalid(
+            "temperature, target_temp_low, target_temp_high, hvac_mode, fan_mode, "
+            "constraint and label require action: hold"
+        )
     return data
 
 
@@ -169,15 +205,25 @@ PAUSE_SCHEMA = vol.Schema(
     }
 )
 
-PAUSE_ZONE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Optional(ATTR_DURATION_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
-        vol.Optional(ATTR_ACTION, default=ZONE_PAUSE_ACTION_NONE): vol.In(
-            ZONE_PAUSE_ACTION_OPTIONS
-        ),
-        vol.Optional(ATTR_PAUSE_ID): vol.All(cv.string, _validate_pause_id),
-    }
+PAUSE_ZONE_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+            vol.Optional(ATTR_DURATION_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional(ATTR_ACTION, default=ZONE_PAUSE_ACTION_NONE): vol.In(
+                ZONE_PAUSE_ACTION_OPTIONS
+            ),
+            vol.Optional(ATTR_PAUSE_ID): vol.All(cv.string, _validate_pause_id),
+            vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
+            vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
+            vol.Optional(ATTR_TARGET_TEMP_HIGH): vol.Coerce(float),
+            vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
+            vol.Optional(ATTR_FAN_MODE): cv.string,
+            vol.Optional(ATTR_CONSTRAINT): vol.In(HOLD_CONSTRAINT_OPTIONS),
+            vol.Optional(ATTR_LABEL): _validate_hold_label,
+        }
+    ),
+    _validate_pause_zone_data,
 )
 
 RESUME_ZONE_SCHEMA = vol.All(
@@ -368,6 +414,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 until=paused_until,
                 action=call.data[ATTR_ACTION],
                 pause_id=call.data.get(ATTR_PAUSE_ID),
+                temperature=call.data.get(ATTR_TEMPERATURE),
+                target_temp_low=call.data.get(ATTR_TARGET_TEMP_LOW),
+                target_temp_high=call.data.get(ATTR_TARGET_TEMP_HIGH),
+                hvac_mode=call.data.get(ATTR_HVAC_MODE),
+                fan_mode=call.data.get(ATTR_FAN_MODE),
+                constraint=call.data.get(ATTR_CONSTRAINT),
+                label=call.data.get(ATTR_LABEL),
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err

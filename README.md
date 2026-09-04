@@ -41,6 +41,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Day cloning to other weekdays or other managed climates.
 - Editable schedule templates with import/export support.
 - One schedule workspace for Default and Profile schedules, with coordinated per-zone behavior, in-editor day cloning, pauses, configurable Modes, and a native Home Assistant select entity for automations.
+- Zone holds: an automation can hold one climate at a temperature (`velair.pause_zone` with `action: hold`) with `absolute`, `raise_only`, or `lower_only` constraints that fold into the current schedule block, so setbacks and comfort targets never edit the schedule.
 - Optional external schedule execution for compatible controllers. Velair publishes the effective Default, Profile, or Mode week while keeping direct climate actions disabled for externally managed zones.
 - Overview tab with scheduler status, active boosts, next events, and responsive zone cards that separate Velair intent from live device activity.
 - Per-climate handling for external setpoint or HVAC-mode changes: keep Velair automatic by default or yield through a configurable Manual adjustment, plus an Overview action that can hold the live climate state and explicitly return to the currently authoritative Default, Profile, Mode, pause, or Off intent.

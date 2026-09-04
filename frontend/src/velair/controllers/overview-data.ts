@@ -98,10 +98,50 @@ export function boostDetailText(
   return parts.join(" - ") || host._t("boostActive");
 }
 
-export function pauseDetailText(host: OverviewDataHost, override: Record<string, unknown>): string {
+export function holdConstraintLabel(host: OverviewDataHost, constraint: unknown): string {
+  if (constraint === "raise_only") return host._t("holdConstraintRaiseOnly");
+  if (constraint === "lower_only") return host._t("holdConstraintLowerOnly");
+  return host._t("holdConstraintAbsolute");
+}
+
+export function holdSummaryText(
+  host: OverviewDataHost,
+  entityId: string,
+  override: Record<string, unknown>,
+): string | undefined {
+  if (override.action !== "hold") return undefined;
+  const parts: string[] = [];
+  const temperature = Number(override.temperature);
+  const low = Number(override.target_temp_low);
+  const high = Number(override.target_temp_high);
+  if (Number.isFinite(temperature)) {
+    parts.push(host._formatTemperature(temperature, entityId));
+  } else if (Number.isFinite(low) && Number.isFinite(high)) {
+    const formattedLow = host._formatTemperature(low, entityId).replace(/\s+[^\s]+$/, "");
+    parts.push(`${formattedLow}–${host._formatTemperature(high, entityId)}`);
+  }
+  parts.push(holdConstraintLabel(host, override.constraint));
+  if (typeof override.hvac_mode === "string" && override.hvac_mode) {
+    parts.push(host._modeLabel(override.hvac_mode));
+  }
+  if (typeof override.label === "string" && override.label) {
+    parts.push(override.label);
+  }
+  return parts.join(" - ");
+}
+
+export function pauseDetailText(
+  host: OverviewDataHost,
+  override: Record<string, unknown>,
+  entityId?: string,
+): string {
   const startedMs = dateMs(override.started_at);
   const untilMs = dateMs(override.until);
   const parts: string[] = [];
+  const holdSummary = entityId ? holdSummaryText(host, entityId, override) : undefined;
+  if (holdSummary) {
+    parts.push(holdSummary);
+  }
   const count = Number(override.pause_count);
   if (Number.isFinite(count) && count > 1) {
     parts.push(`${host._t("pauseReasons")}: ${count}`);
