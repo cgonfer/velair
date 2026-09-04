@@ -14,6 +14,7 @@ import {
 import { diagnosticsStyles } from "../../src/velair/styles/diagnostics-styles";
 import { responsiveStyles } from "../../src/velair/styles/responsive-styles";
 import { de } from "../../src/velair/translations/de";
+import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
 import { renderDiagnosticsView } from "../../src/velair/views/diagnostics-view";
 
@@ -1113,5 +1114,113 @@ describe("diagnostics view", () => {
     for (const [identifier] of [...reasons, ...operations]) {
       if (identifier.includes("_")) expect(text).not.toContain(identifier);
     }
+  });
+});
+
+describe("diagnostics view delivery confirmation", () => {
+  it("shows the readback outcome and attempt count for a selected climate", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].delivery = {
+      status: "unconfirmed",
+      retry_count: 0,
+      last_error: null,
+      confirmation: {
+        outcome: "unconfirmed",
+        attempts: 3,
+        confirmed_at: null,
+        last_attempt_at: "2026-08-18T10:05:00Z",
+      },
+    };
+    snapshot.units["climate.warning"].issues = [{ severity: "warning", code: "delivery_unconfirmed" }];
+    const viewHost = host(snapshot);
+    viewHost._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+
+    const panel = container.querySelector(".diagnostics-detail-panel")?.textContent ?? "";
+    expect(panel).toContain("diagnosticsDeliveryConfirmation");
+    expect(panel).toContain("diagnosticsDeliveryUnconfirmed");
+    expect(panel).toContain("2026-08-18T10:05:00Z");
+    expect(panel).toContain("diagnosticsDeliveryAttempts");
+    expect(container.querySelector(".diagnostics-detail-panel .diagnostics-issue")?.textContent)
+      .toContain("diagnosticsDeliveryUnconfirmed");
+    expect(container.querySelector(".diagnostics-state-chip.warning")?.textContent?.trim())
+      .toBe("diagnosticsDeliveryUnconfirmed");
+  });
+
+  it("shows a pending confirmation and confirmed evidence with their timestamps", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.healthy"].delivery = {
+      status: "confirmed",
+      retry_count: 0,
+      confirmation: { outcome: "confirmed", attempts: 2, confirmed_at: "2026-08-18T10:06:00Z", last_attempt_at: "2026-08-18T10:05:30Z" },
+    };
+    snapshot.units["climate.warning"].delivery = {
+      status: "confirming",
+      retry_count: 0,
+      confirmation: { outcome: "pending", attempts: 1, confirmed_at: null, last_attempt_at: "2026-08-18T10:05:00Z" },
+    };
+    const viewHost = host(snapshot);
+    viewHost._selectedDiagnosticEntity = "climate.healthy";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+    const confirmed = container.querySelector(".diagnostics-detail-panel")?.textContent ?? "";
+    expect(confirmed).toContain("diagnosticsDeliveryConfirmed");
+    expect(confirmed).toContain("2026-08-18T10:06:00Z");
+    expect(container.querySelector(".diagnostics-state-chip.success")?.textContent?.trim())
+      .toBe("diagnosticsDeliveryConfirmed");
+
+    viewHost._selectedDiagnosticEntity = "climate.warning";
+    render(renderDiagnosticsView(viewHost), container);
+    const pending = container.querySelector(".diagnostics-detail-panel")?.textContent ?? "";
+    expect(pending).toContain("diagnosticsDeliveryConfirming");
+    expect(pending).toContain("2026-08-18T10:05:00Z");
+  });
+
+  it("omits confirmation rows when a climate has no readback evidence", () => {
+    const viewHost = host();
+    viewHost._selectedDiagnosticEntity = "climate.healthy";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+
+    const panel = container.querySelector(".diagnostics-detail-panel")?.textContent ?? "";
+    expect(panel).not.toContain("diagnosticsDeliveryConfirmation");
+    expect(panel).not.toContain("diagnosticsDeliveryAttempts");
+  });
+
+  it("describes confirmation attempts and outcomes in the runtime log", () => {
+    const snapshot = diagnostics();
+    snapshot.history = [
+      {
+        at: "2026-08-18T10:05:00Z", kind: "delivery", category: "delivery", severity: "info",
+        entity_id: "climate.warning",
+        data: { status: "confirming", attempt: 2, attempts: 3, requested: { hvac_mode: "heat", temperature: 21 } },
+      },
+      {
+        at: "2026-08-18T10:06:00Z", kind: "delivery", category: "delivery", severity: "warning",
+        entity_id: "climate.warning",
+        data: {
+          status: "unconfirmed", attempts: 3,
+          requested: { hvac_mode: "heat", temperature: 21 },
+          observed: { hvac_mode: "heat", temperature: 18 },
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(host(snapshot)), container);
+
+    const log = container.querySelector(".diagnostics-history")?.textContent ?? "";
+    expect(log).toContain("diagnosticsDeliveryConfirming");
+    expect(log).toContain("diagnosticsDeliveryAttemptOf");
+    expect(log).toContain("diagnosticsDeliveryUnconfirmed");
+    expect(log).toContain("diagnosticsDeliveryAttempts: 3");
+    expect(log).toContain("diagnosticsCurrentState: heat 18 °C");
+    expect(log).toContain("21 °C");
+  });
+
+  it("localizes the confirmation catalogue", () => {
+    expect(es.diagnosticsDeliveryUnconfirmed).not.toBe(en.diagnosticsDeliveryUnconfirmed);
+    expect(de.diagnosticsDeliveryConfirmed).toBe("Vom Klimagerät bestätigt");
+    expect(en.diagnosticsDeliveryAttemptOf).toBe("Attempt {attempt} of {attempts}");
   });
 });

@@ -2,6 +2,7 @@ import { DOMAIN } from "../constants";
 import type {
   HomeAssistant,
   ComfortSettings,
+  DeliverySettings,
   DiagnosticsSnapshot,
   DiagnosticHistoryCategory,
   ClimateProfileInput,
@@ -230,6 +231,17 @@ export class VelairApiClient {
       type: "velair/update_zone_comfort",
       entity_id: entityId,
       comfort,
+    });
+  }
+
+  public updateZoneDelivery(
+    entityId: string,
+    delivery: Partial<DeliverySettings>,
+  ): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/update_zone_delivery",
+      entity_id: entityId,
+      delivery,
     });
   }
 

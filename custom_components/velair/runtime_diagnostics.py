@@ -17,6 +17,7 @@ from homeassistant.helpers.dispatcher import (
 )
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.storage import Store
+from homeassistant.util import dt as dt_util
 
 from .climate_manager import STATE_UNAVAILABLE, STATE_UNKNOWN
 from .const import (
@@ -30,6 +31,13 @@ from .const import (
 
 DIAGNOSTIC_HISTORY_LIMIT = 100
 DIAGNOSTIC_POLICY_VERSION = 1
+_CONFIRMATION_STATUSES = ("confirming", "confirmed", "unconfirmed")
+_CONFIRMATION_TARGET_FIELDS = (
+    "hvac_mode",
+    "temperature",
+    "target_temp_low",
+    "target_temp_high",
+)
 _CONTROL_EVENT_FIELDS = (
     "action",
     "changed_fields",
@@ -146,6 +154,11 @@ class RuntimeDiagnosticsManager:
         self._history: deque[dict[str, Any]] = deque(maxlen=DIAGNOSTIC_HISTORY_LIMIT)
         self._delivery: dict[str, dict[str, Any]] = {}
         self._last_applied: dict[str, dict[str, Any]] = {}
+        self._daily_confirmations: dict[str, Any] = {
+            "date": None,
+            "confirmed": 0,
+            "unconfirmed": 0,
+        }
         self._unsubs: list[CALLBACK_TYPE] = []
         self._unsub_associated_sensors: CALLBACK_TYPE | None = None
         self._associated_sensor_ids: tuple[str, ...] = ()
@@ -291,8 +304,17 @@ class RuntimeDiagnosticsManager:
             entity_id,
             {"status": "idle", "retry_count": 0, "last_error": None},
         )
+        if status in _CONFIRMATION_STATUSES:
+            self._observe_confirmation(entity_id, current, status, details, now)
+            return
         current["status"] = status
         current["updated_at"] = now
+        if status == "success":
+            confirmation = current.get("confirmation")
+            if isinstance(confirmation, dict) and confirmation.get("outcome") == "unconfirmed":
+                # A newly accepted sequence supersedes stale unconfirmed evidence;
+                # the next readback watch reports fresh evidence on its own.
+                confirmation["outcome"] = None
         if status == "retrying":
             current["retry_count"] = int((details or {}).get("retry_count", 0))
         elif status in ("success", "cancelled"):
@@ -316,6 +338,97 @@ class RuntimeDiagnosticsManager:
                 data={"status": status, **(details or {})},
             )
         self._schedule_notify()
+
+    def _observe_confirmation(
+        self,
+        entity_id: str,
+        current: dict[str, Any],
+        status: str,
+        details: dict[str, Any] | None,
+        now: str,
+    ) -> None:
+        """Track opt-in readback confirmation attempts and outcomes."""
+        payload = details or {}
+        confirmation = current.setdefault(
+            "confirmation",
+            {
+                "outcome": None,
+                "attempts": 0,
+                "confirmed_at": None,
+                "last_attempt_at": None,
+            },
+        )
+        attempts = payload.get("attempts")
+        if status == "confirming":
+            attempt = int(payload.get("attempt", 1) or 1)
+            confirmation.update(
+                {
+                    "outcome": "pending",
+                    "attempts": attempt,
+                    "confirmed_at": None,
+                    "last_attempt_at": now,
+                }
+            )
+            current["status"] = status
+            current["updated_at"] = now
+            self._record(
+                "delivery",
+                "info",
+                entity_id=entity_id,
+                data={
+                    "status": status,
+                    "attempt": attempt,
+                    "attempts": int(attempts or attempt),
+                    **_sanitized_confirmation_target("requested", payload),
+                },
+            )
+            self._schedule_notify()
+            return
+        attempt_count = int(attempts or confirmation.get("attempts") or 1)
+        confirmation.update(
+            {
+                "outcome": status,
+                "attempts": attempt_count,
+                "confirmed_at": now if status == "confirmed" else None,
+            }
+        )
+        current["status"] = status
+        current["updated_at"] = now
+        today = dt_util.now().date().isoformat()
+        if self._daily_confirmations.get("date") != today:
+            self._daily_confirmations = {"date": today, "confirmed": 0, "unconfirmed": 0}
+        self._daily_confirmations[status] += 1
+        self._record(
+            "delivery",
+            "info" if status == "confirmed" else "warning",
+            entity_id=entity_id,
+            data={
+                "status": status,
+                "attempts": attempt_count,
+                **_sanitized_confirmation_target("requested", payload),
+                **_sanitized_confirmation_target("observed", payload),
+            },
+        )
+        self._schedule_notify()
+
+    def unconfirmed_delivery_count(self) -> int:
+        """Return how many managed climates last ended unconfirmed."""
+        return sum(
+            1
+            for item in self._delivery.values()
+            if isinstance(item.get("confirmation"), dict)
+            and item["confirmation"].get("outcome") == "unconfirmed"
+        )
+
+    def daily_confirmation_counts(self) -> dict[str, int]:
+        """Return today's runtime-only confirmation counters."""
+        today = dt_util.now().date().isoformat()
+        if self._daily_confirmations.get("date") != today:
+            return {"confirmed": 0, "unconfirmed": 0}
+        return {
+            "confirmed": int(self._daily_confirmations.get("confirmed", 0)),
+            "unconfirmed": int(self._daily_confirmations.get("unconfirmed", 0)),
+        }
 
     @callback
     def _handle_event(self, event: Event) -> None:
@@ -532,9 +645,13 @@ class RuntimeDiagnosticsManager:
                 "warning_count": 0,
                 "error_count": 0,
                 "issue_codes": [],
+                "unconfirmed_deliveries": 0,
+                "confirmed_deliveries_today": 0,
+                "unconfirmed_deliveries_today": 0,
             }
         snapshot = self.cached_snapshot(self._runtime)
         issues = self.active_issues(self._runtime)
+        daily = self.daily_confirmation_counts()
         return {
             "status": snapshot["overall"]["status"],
             "scheduler_mode": snapshot["overall"]["scheduler_mode"],
@@ -554,6 +671,9 @@ class RuntimeDiagnosticsManager:
                     if isinstance(issue.get("code"), str)
                 }
             ),
+            "unconfirmed_deliveries": self.unconfirmed_delivery_count(),
+            "confirmed_deliveries_today": daily["confirmed"],
+            "unconfirmed_deliveries_today": daily["unconfirmed"],
         }
 
     @staticmethod
@@ -761,7 +881,7 @@ class RuntimeDiagnosticsManager:
         if delivery_status in ("exhausted", "invalid_intent"):
             issues.append({"severity": "error", "code": f"delivery_{delivery_status}"})
             status = "error"
-        elif delivery_status in ("failed", "retrying"):
+        elif delivery_status in ("failed", "retrying", "unconfirmed"):
             issues.append({"severity": "warning", "code": f"delivery_{delivery_status}"})
             if status != "error":
                 status = "warning"
@@ -878,6 +998,26 @@ def _event_history_category(event_name: str) -> str:
     if normalized.startswith("comfort_"):
         return "comfort"
     return "control"
+
+
+def _sanitized_confirmation_target(key: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Retain only the control fields of a requested or observed target."""
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        return {}
+    target: dict[str, Any] = {}
+    for field in _CONFIRMATION_TARGET_FIELDS:
+        candidate = value.get(field)
+        if field == "hvac_mode":
+            if isinstance(candidate, str):
+                target[field] = candidate
+        elif (
+            isinstance(candidate, (int, float))
+            and not isinstance(candidate, bool)
+            and math.isfinite(candidate)
+        ):
+            target[field] = candidate
+    return {key: target} if target else {}
 
 
 def _sanitized_changed_fields(value: Any) -> list[str]:

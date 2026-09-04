@@ -599,9 +599,14 @@ await hass.connection.sendMessagePromise({
   type: "velair/update_settings",
   first_weekday: "sunday",
   zone_order: ["climate.living_room"],
-  apply_active_schedule_on_startup: true
+  apply_active_schedule_on_startup: true,
+  delivery_stagger_seconds: 3
 });
 ```
+
+`delivery_stagger_seconds` is optional and accepts an integer from 0 through
+30. It is the minimum gap between the start of physical call sequences to
+different climates; `0` keeps deliveries unpaced.
 
 Templates are capability-neutral storage. They can contain optional climate settings from any managed climate. Filtering happens later when a template is applied to one concrete climate schedule.
 
@@ -752,6 +757,31 @@ await hass.connection.sendMessagePromise({
 ```
 
 Comfort settings are per managed climate. The scheduler only listens to comfort-related entities for climates where `comfort.enabled` is true. See [Environmental Comfort internals](comfort.md) for source selection, assessment calculation, runtime listener behavior, and event payloads.
+
+## Zone Delivery
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/update_zone_delivery",
+  entity_id: "climate.living_room",
+  delivery: {
+    confirm: true,
+    confirm_timeout_seconds: 25,
+    confirm_attempts: 3
+  }
+});
+```
+
+All `delivery` fields are optional and merge into the persisted per-zone
+settings. `confirm` enables readback confirmation, `confirm_timeout_seconds`
+accepts 5 through 120, and `confirm_attempts` accepts 1 through 5. The result is
+the full schedule response. Errors are `not_loaded`,
+`temperature_migration_required`, `operation_in_progress`, or
+`invalid_delivery`. See [Climate delivery internals](climate-delivery.md#readback-confirmation).
+
+Each zone in `zone_runtime` includes `delivery` with `outcome`
+(`pending`, `confirmed`, `unconfirmed`, or `null`), `attempts`, `confirmed_at`,
+and `last_attempt_at`.
 
 ## Climate Profiles
 

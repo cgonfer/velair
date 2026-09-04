@@ -22,7 +22,12 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from .climate_delivery import ClimateDeliveryCoordinator, CurrentGuard, Delivery
+from .climate_delivery import (
+    ClimateDeliveryCoordinator,
+    CurrentGuard,
+    Delivery,
+    DeliveryConfirmation,
+)
 from .climate_manager import ClimateManager
 from .const import (
     ACTION_SET_TEMPERATURE,
@@ -70,6 +75,8 @@ from .const import (
     DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
     MANUAL_ADJUSTMENT_POLICY_OPTIONS,
     MANUAL_CONTROL_PAUSE_ID,
+    EVENT_TYPE_DELIVERY_OUTCOME,
+    HVAC_MODE_OFF,
 )
 from .models import (
     ClimateEvent,
@@ -109,6 +116,8 @@ from .models import (
     trim_preconditioning_observations,
     validate_pause_id,
     zone_pause_override_from_reasons,
+    DeliveryData,
+    normalize_zone_delivery,
 )
 from .temperature import (
     CELSIUS,
@@ -1079,6 +1088,7 @@ class VelairScheduler:
             result["until"] = self._data["global_"].get("paused_until")
         if manual_control is not None:
             result["manual_control"] = manual_control
+        result["delivery"] = self._climate_delivery.confirmation_status(entity_id)
         return result
 
     def _manual_adjustment_availability(
@@ -1575,7 +1585,11 @@ class VelairScheduler:
                     swing_horizontal_mode=event.swing_horizontal_mode,
                 )
 
-            return Delivery(apply, commit)
+            return Delivery(
+                apply,
+                commit,
+                confirm=self._delivery_confirmation(event, event.hvac_mode, "boost"),
+            )
 
         await self._climate_delivery.async_deliver(entity_id, resolve_boost)
 
@@ -2696,6 +2710,29 @@ class VelairScheduler:
         self._async_update_comfort_snapshots(fire_events=True)
         self._async_write_state()
         return next_comfort
+
+    async def async_update_zone_delivery(
+        self,
+        entity_id: str,
+        delivery: dict,
+    ) -> DeliveryData:
+        """Update persisted delivery confirmation settings for one zone."""
+        self.ensure_managed_entity(entity_id)
+        zone = self._data["zones"][entity_id]
+        previous = deepcopy(zone.get("delivery"))
+        zone["delivery"] = normalize_zone_delivery(
+            {
+                **normalize_zone_delivery(previous),
+                **delivery,
+            }
+        )
+        try:
+            await self._async_save_data()
+        except Exception:
+            zone["delivery"] = normalize_zone_delivery(previous)
+            raise
+        self._async_write_state()
+        return zone["delivery"]
 
     async def async_set_room_sensor_assist(
         self,
@@ -4301,7 +4338,13 @@ class VelairScheduler:
                     if on_success is not None and is_current():
                         await on_success(is_current)
 
-                return Delivery(apply_current, commit_and_announce)
+                return Delivery(
+                    apply_current,
+                    commit_and_announce,
+                    confirm=self._delivery_confirmation(
+                        current_event, current_event.hvac_mode, "boost_ended"
+                    ),
+                )
             if (
                 self._stopped
                 or self._temperature_migration_blocked
@@ -4946,7 +4989,13 @@ class VelairScheduler:
                 if on_success is not None and is_current():
                     await on_success(is_current)
 
-            return Delivery(apply, commit)
+            return Delivery(
+                apply,
+                commit,
+                confirm=self._delivery_confirmation(
+                    resolved, mode_override or resolved.hvac_mode, source
+                ),
+            )
 
         def resolve_initial() -> Delivery | None:
             return delivery_for(
@@ -4973,6 +5022,76 @@ class VelairScheduler:
             resolve_initial,
             recovery_resolver=resolve_current,
         )
+
+    def _delivery_confirmation(
+        self,
+        event: ClimateEvent,
+        hvac_mode: str | None,
+        source: str,
+    ) -> DeliveryConfirmation | None:
+        """Describe opt-in readback confirmation for one resolved delivery."""
+        zone = self._data["zones"].get(event.entity_id)
+        if zone is None:
+            return None
+        config = normalize_zone_delivery(zone.get("delivery"))
+        if not config["confirm"]:
+            return None
+        return DeliveryConfirmation(
+            requested=lambda: self._requested_delivery_target(event, hvac_mode),
+            timeout=float(config["confirm_timeout_seconds"]),
+            attempts=int(config["confirm_attempts"]),
+            source=source,
+            on_outcome=self._async_fire_delivery_outcome,
+        )
+
+    def _requested_delivery_target(
+        self,
+        event: ClimateEvent,
+        hvac_mode: str | None,
+    ) -> dict[str, object] | None:
+        """Describe what the accepted call sequence asked the climate to report.
+
+        Resolved after the physical sequence completed, so an active Room
+        Assist adjustment of the same target is confirmed against the
+        temperature that was actually sent.
+        """
+        if event.action == ACTION_TURN_OFF:
+            return {"action": ACTION_TURN_OFF, "hvac_mode": HVAC_MODE_OFF}
+        requested: dict[str, object] = {
+            "action": ACTION_SET_TEMPERATURE,
+            "hvac_mode": hvac_mode or event.hvac_mode,
+            "step": self.get_temperature_step(event.entity_id),
+        }
+        assist = self._room_sensor_assist_states.get(event.entity_id)
+        if event.target_temp_low is not None and event.target_temp_high is not None:
+            low, high = event.target_temp_low, event.target_temp_high
+            if (
+                assist is not None
+                and assist.target_temp_low == low
+                and assist.target_temp_high == high
+                and assist.applied_target_temp_low is not None
+                and assist.applied_target_temp_high is not None
+            ):
+                low, high = assist.applied_target_temp_low, assist.applied_target_temp_high
+            requested[ATTR_TARGET_TEMP_LOW] = low
+            requested[ATTR_TARGET_TEMP_HIGH] = high
+            return requested
+        temperature = event.temperature
+        if temperature is None:
+            return None
+        if (
+            assist is not None
+            and assist.target_temperature == temperature
+            and assist.applied_temperature is not None
+        ):
+            temperature = assist.applied_temperature
+        requested["temperature"] = temperature
+        return requested
+
+    def _async_fire_delivery_outcome(self, payload: dict[str, object]) -> None:
+        """Publish one readback outcome and refresh dependent projections."""
+        self._async_fire_event(EVENT_TYPE_DELIVERY_OUTCOME, dict(payload))
+        self._async_write_state()
 
     def _resolve_authoritative_delivery_event(
         self,

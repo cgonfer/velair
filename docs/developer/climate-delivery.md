@@ -53,3 +53,51 @@ retried.
 Manual services are intentionally non-resilient one-shots. They may use the
 same serialization boundary, but must not register delayed availability work
 or retry an obsolete manual payload.
+
+## Readback confirmation
+
+`Delivery.confirm` optionally carries a `DeliveryConfirmation`. The scheduler
+attaches one only when the zone's persisted `delivery.confirm` flag is on, so
+the default path is unchanged. Confirmation starts inside `_async_attempt`
+right after the success boundary above: commit timing, `climate_target_applied`
+and runtime bookkeeping are untouched, and confirmation is a later, additional
+outcome.
+
+- `requested` is a resolver invoked when the watch starts, after the complete
+  physical sequence was accepted. The scheduler resolves it against the event
+  that was delivered and the current Room Assist runtime state, so the check
+  compares the entity with what was actually sent. It returns `None` when there
+  is nothing observable to confirm.
+- The watch is one `async_track_state_change_event` listener plus one
+  `async_call_later` timeout per entity; there is no polling. The current state
+  is checked once immediately so an entity that already converged is confirmed
+  without waiting.
+- Convergence is `_target_converged`: `turn_off` requires `off`; otherwise the
+  mode must equal the requested mode (any non-off mode when `hvac_mode` is
+  `None`), and each requested scalar or range field must be within half of the
+  target step, taken from the request, then `target_temp_step`, then 0.5.
+- On timeout with attempts remaining, the coordinator re-runs the eligible
+  recovery resolver through `_async_redeliver_current(confirm_attempt=n + 1)`,
+  so the attempt counter survives the new generation while the payload is
+  re-resolved. After the final attempt the outcome is `unconfirmed`.
+- `_replace` (new intent, `cancel`, `retry_current`) and `async_stop` tear down
+  the listener and timer and clear a pending outcome. A confirmation watch is
+  not "active work", so superseding it does not publish a cancelled entry.
+- Observer statuses `confirming`, `confirmed`, and `unconfirmed` feed the
+  diagnostics history and per-unit `delivery.confirmation`; `on_outcome` lets
+  the scheduler fire `delivery_outcome` and refresh projections.
+  `confirmation_status(entity_id)` backs `get_zone_runtime_statuses()`.
+
+Manual one-shot services never attach a confirmation because the coordinator
+would otherwise need to replay an obsolete manual payload.
+
+## Cross-entity stagger
+
+`stagger_seconds` is a resolver read on every attempt, so a settings change
+applies immediately. When it is positive, `_async_wait_for_stagger_slot` takes
+one coordinator-level lock after the per-entity lock and sleeps until the
+previous sequence start is at least that far in the past. The lock order is
+always per-entity first and stagger second, and `async_serialize` never takes
+the stagger lock, so the two cannot deadlock. A waiter sleeps on a future that
+`_replace` resolves, so a superseded generation is dropped immediately instead
+of holding the slot or executing. Zero keeps deliveries fully parallel.

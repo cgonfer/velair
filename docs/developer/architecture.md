@@ -86,6 +86,11 @@ The storage model is intentionally simple and versioned:
       "external_change_policy": {
         "action": "for_duration",
         "duration_minutes": 120
+      },
+      "delivery": {
+        "confirm": false,
+        "confirm_timeout_seconds": 25,
+        "confirm_attempts": 3
       }
     }
   },
@@ -100,7 +105,8 @@ The storage model is intentionally simple and versioned:
     "first_weekday": "monday",
     "zone_order": [],
     "min_temperature": 5.0,
-    "max_temperature": 35.0
+    "max_temperature": 35.0,
+    "delivery_stagger_seconds": 0
   },
   "templates": [],
   "profiles": [
@@ -304,7 +310,10 @@ Physical delivery is coordinated in runtime memory per managed entity.
 Blocking Home Assistant calls expose invocation failures; generation
 invalidation and an async lock prevent obsolete or overlapping commits.
 Availability recovery is state-event driven, and every delayed attempt resolves
-current scheduler intent rather than retaining an old payload. See
+current scheduler intent rather than retaining an old payload. Zones can opt
+into readback confirmation, which watches the entity after acceptance and
+re-resolves the current intent when it does not converge, and a global stagger
+can space the start of sequences across climates. See
 [Climate delivery coordination](climate-delivery.md).
 
 ## Frontend Contract

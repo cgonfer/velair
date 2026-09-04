@@ -249,6 +249,40 @@ target_temp_high: 24
 hvac_mode: heat_cool
 ```
 
+## Delivery Outcome
+
+`delivery_outcome` is emitted only for climates where **Confirm delivery** is
+enabled in Settings. After Home Assistant accepts a Velair call sequence,
+Velair watches the climate entity's own state until it reports the requested
+HVAC mode and target, or the confirmation timeout expires. `outcome` is
+`confirmed` when the entity converged, or `unconfirmed` when every configured
+attempt timed out. `attempts` counts how many times the current intent was
+sent, including the first delivery. `requested` describes the target that was
+actually sent; `observed` is the entity's reported state when the outcome was
+decided. See [Confirming delivery](resilient-climate-delivery.md#confirming-delivery).
+
+```yaml
+domain: velair
+event: delivery_outcome
+entity_id: climate.bedroom
+outcome: unconfirmed
+attempts: 3
+source: scheduled_event
+requested:
+  hvac_mode: cool
+  temperature: 24
+observed:
+  hvac_mode: cool
+  temperature: 26
+```
+
+For a range target, `requested` and `observed` contain `target_temp_low` and
+`target_temp_high` instead of `temperature`; a turn-off delivery requests
+`hvac_mode: "off"` without a temperature. A `requested.hvac_mode` of `null`
+means the block kept the current mode, so any non-off mode was acceptable.
+This event does not change the meaning of `climate_target_applied`, which is
+still emitted when the call sequence is accepted.
+
 ## Preconditioning Plan Updated
 
 `preconditioning_plan_updated` is emitted when a new early-start plan is
@@ -727,4 +761,6 @@ An applied event is emitted only after Home Assistant accepts the complete
 mode, target, and supported-option call sequence for the current Velair
 intention. Failed or superseded attempts do not emit it. The event confirms
 command acceptance, not that the physical equipment has already reached the
-requested temperature or HVAC state.
+requested temperature or HVAC state. Climates with optional delivery
+confirmation additionally emit `delivery_outcome` once the entity's reported
+state has, or has not, converged.

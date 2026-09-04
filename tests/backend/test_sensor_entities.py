@@ -353,6 +353,9 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             "warning_count": 2,
             "error_count": 1,
             "issue_codes": ["associated_sensor_unavailable", "delivery_exhausted"],
+            "unconfirmed_deliveries": 1,
+            "confirmed_deliveries_today": 4,
+            "unconfirmed_deliveries_today": 1,
         }
         entry = self._entry(SimpleNamespace(), ["climate.living_room"])
         entry.runtime_data.diagnostics = SimpleNamespace(
@@ -378,6 +381,9 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
                     "associated_sensor_unavailable",
                     "delivery_exhausted",
                 ],
+                "unconfirmed_deliveries": 1,
+                "confirmed_deliveries_today": 4,
+                "unconfirmed_deliveries_today": 1,
             },
         )
 

@@ -420,6 +420,14 @@ export const settingsStyles = css`
   padding-inline-end: 7px;
 }
 
+.settings-delivery-confirmation .settings-policy-controls { gap: 10px; }
+
+.settings-delivery-confirmation ha-switch { flex: 0 0 auto; }
+
+.settings-delivery-confirmation .settings-policy-duration { flex: 0 1 96px; min-width: 72px; }
+
+.settings-delivery-stagger .settings-policy-duration { flex: 0 0 96px; }
+
 .settings-zone-identity strong,
 .settings-zone-identity span {
   overflow: hidden;

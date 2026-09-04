@@ -32,6 +32,14 @@ from .const import (
     EXTERNAL_CHANGE_UNTIL_NEXT_BLOCK,
     MANUAL_ADJUSTMENT_POLICY_OPTIONS,
     MANUAL_CONTROL_PAUSE_ID,
+    DEFAULT_DELIVERY_CONFIRM_ATTEMPTS,
+    DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+    DEFAULT_DELIVERY_STAGGER_SECONDS,
+    MAX_DELIVERY_CONFIRM_ATTEMPTS,
+    MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+    MAX_DELIVERY_STAGGER_SECONDS,
+    MIN_DELIVERY_CONFIRM_ATTEMPTS,
+    MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
 )
 
 WEEKDAYS = (
@@ -215,6 +223,14 @@ class ExternalChangePolicyData(TypedDict):
     duration_minutes: int
 
 
+class DeliveryData(TypedDict):
+    """Persisted opt-in readback confirmation settings for one zone."""
+
+    confirm: bool
+    confirm_timeout_seconds: int
+    confirm_attempts: int
+
+
 class ZoneExecutionData(TypedDict):
     """Persisted non-default execution ownership for one zone."""
 
@@ -314,6 +330,7 @@ class ZoneData(TypedDict):
     comfort: ComfortData
     external_change_policy: ExternalChangePolicyData
     execution: NotRequired[ZoneExecutionData]
+    delivery: DeliveryData
 
 
 class ScheduleTemplateData(TypedDict):
@@ -331,6 +348,7 @@ class PanelSettingsData(TypedDict):
     zone_order: list[str]
     min_temperature: float
     max_temperature: float
+    delivery_stagger_seconds: int
 
 
 class GlobalData(TypedDict):
@@ -715,6 +733,7 @@ def normalize_schedule_data(
             "external_change_policy": normalize_external_change_policy(
                 zone_data.get("external_change_policy")
             ),
+            "delivery": normalize_zone_delivery(zone_data.get("delivery")),
         }
         execution = normalize_zone_execution(zone_data.get("execution"))
         if execution is not None:
@@ -731,6 +750,7 @@ def normalize_schedule_data(
                 "preconditioning": normalize_preconditioning_data(None),
                 "comfort": normalize_comfort_data(None),
                 "external_change_policy": normalize_external_change_policy(None),
+                "delivery": normalize_zone_delivery(None),
             },
         )
 
@@ -1304,6 +1324,12 @@ def normalize_panel_settings(
         "zone_order": zone_order,
         "min_temperature": min_temperature,
         "max_temperature": max_temperature,
+        "delivery_stagger_seconds": _normalize_int(
+            settings.get("delivery_stagger_seconds"),
+            DEFAULT_DELIVERY_STAGGER_SECONDS,
+            minimum=0,
+            maximum=MAX_DELIVERY_STAGGER_SECONDS,
+        ),
     }
 
 
@@ -1320,6 +1346,26 @@ def normalize_external_change_policy(raw_data: Any) -> ExternalChangePolicyData:
             DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
             minimum=1,
             maximum=10080,
+        ),
+    }
+
+
+def normalize_zone_delivery(raw_data: Any) -> DeliveryData:
+    """Normalize one zone's opt-in delivery confirmation settings."""
+    data = raw_data if isinstance(raw_data, dict) else {}
+    return {
+        "confirm": bool(data.get("confirm", False)),
+        "confirm_timeout_seconds": _normalize_int(
+            data.get("confirm_timeout_seconds"),
+            DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+            minimum=MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+            maximum=MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+        ),
+        "confirm_attempts": _normalize_int(
+            data.get("confirm_attempts"),
+            DEFAULT_DELIVERY_CONFIRM_ATTEMPTS,
+            minimum=MIN_DELIVERY_CONFIRM_ATTEMPTS,
+            maximum=MAX_DELIVERY_CONFIRM_ATTEMPTS,
         ),
     }
 

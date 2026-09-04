@@ -45,6 +45,11 @@ from .const import (
     SIGNAL_SCHEDULER_UPDATED,
     SIGNAL_DIAGNOSTICS_UPDATED,
     EXTERNAL_CHANGE_POLICY_OPTIONS,
+    MAX_DELIVERY_CONFIRM_ATTEMPTS,
+    MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+    MAX_DELIVERY_STAGGER_SECONDS,
+    MIN_DELIVERY_CONFIRM_ATTEMPTS,
+    MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
 )
 from .config_helpers import (
     get_configured_climate_entities,
@@ -245,6 +250,26 @@ COMFORT_SCHEMA = vol.Schema(
     }
 )
 
+DELIVERY_SCHEMA = vol.Schema(
+    {
+        vol.Optional("confirm"): bool,
+        vol.Optional("confirm_timeout_seconds"): vol.All(
+            vol.Coerce(int),
+            vol.Range(
+                min=MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+                max=MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+            ),
+        ),
+        vol.Optional("confirm_attempts"): vol.All(
+            vol.Coerce(int),
+            vol.Range(
+                min=MIN_DELIVERY_CONFIRM_ATTEMPTS,
+                max=MAX_DELIVERY_CONFIRM_ATTEMPTS,
+            ),
+        ),
+    }
+)
+
 
 def async_setup_api(hass: HomeAssistant) -> None:
     """Register WebSocket API commands."""
@@ -276,6 +301,7 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_resume_automatic_control)
     websocket_api.async_register_command(hass, ws_update_zone_preconditioning)
     websocket_api.async_register_command(hass, ws_update_zone_comfort)
+    websocket_api.async_register_command(hass, ws_update_zone_delivery)
     websocket_api.async_register_command(hass, ws_reset_zone_preconditioning_settings)
     websocket_api.async_register_command(hass, ws_reset_zone_preconditioning_learning)
     websocket_api.async_register_command(hass, ws_export_data)
@@ -862,6 +888,10 @@ async def ws_select_mode(
         vol.Optional("min_temperature"): vol.Coerce(float),
         vol.Optional("max_temperature"): vol.Coerce(float),
         vol.Optional(CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP): bool,
+        vol.Optional("delivery_stagger_seconds"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=0, max=MAX_DELIVERY_STAGGER_SECONDS),
+        ),
     }
 )
 @websocket_api.async_response
@@ -895,6 +925,7 @@ async def ws_update_settings(
             "zone_order",
             "min_temperature",
             "max_temperature",
+            "delivery_stagger_seconds",
         )
         if key in msg
     }
@@ -1143,6 +1174,40 @@ async def ws_update_zone_comfort(
         )
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_comfort", str(err))
+        return
+
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/update_zone_delivery",
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required("delivery"): DELIVERY_SCHEMA,
+    }
+)
+@websocket_api.async_response
+async def ws_update_zone_delivery(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Handle persisted zone delivery confirmation setting updates."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+
+    scheduler = runtime["scheduler"]
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        await scheduler.async_update_zone_delivery(
+            msg[ATTR_ENTITY_ID],
+            msg["delivery"],
+        )
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_delivery", str(err))
         return
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
@@ -1857,6 +1922,7 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
             "external_change_policy": deepcopy(
                 zone.get("external_change_policy", {})
             ),
+            "delivery": deepcopy(zone.get("delivery", {})),
         }
         for entity_id, zone in zones.items()
     }

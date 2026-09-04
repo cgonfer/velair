@@ -173,6 +173,13 @@ class DiagnosticsStatusSensor(VelairEntity, SensorEntity):
             "warning_count": summary["warning_count"],
             "error_count": summary["error_count"],
             "issue_codes": summary["issue_codes"],
+            "unconfirmed_deliveries": summary.get("unconfirmed_deliveries", 0),
+            "confirmed_deliveries_today": summary.get(
+                "confirmed_deliveries_today", 0
+            ),
+            "unconfirmed_deliveries_today": summary.get(
+                "unconfirmed_deliveries_today", 0
+            ),
         }
 
     async def async_added_to_hass(self) -> None:

@@ -10,7 +10,9 @@ import { settingsStyles } from "../../src/velair/styles/settings-styles";
 import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
 import {
+  renderDeliveryStaggerSettings,
   renderExternalSystemsSettings,
+  renderSettingsDeliveryConfirmation,
   renderSettingsZoneOrderRow,
 } from "../../src/velair/views/settings-view";
 
@@ -490,5 +492,132 @@ describe("settings climate row", () => {
     expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-policy-controls\s*\{[^}]*width:\s*100%/);
     expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-policy-controls > \.select-wrap\s*\{[^}]*flex:\s*1 1 160px[^}]*max-width:\s*170px/);
     expect(cssText).not.toContain("external-adjustment-popover");
+  });
+});
+
+describe("delivery confirmation settings", () => {
+  function deliveryHost(
+    delivery?: { confirm: boolean; confirm_timeout_seconds: number; confirm_attempts: number },
+    options: { external?: boolean; staggerSeconds?: number } = {},
+  ) {
+    return {
+      _data: {
+        settings: { first_weekday: "monday", zone_order: [], delivery_stagger_seconds: options.staggerSeconds },
+        zones: {
+          "climate.office": {
+            ...(delivery ? { delivery } : {}),
+            ...(options.external ? { execution: { type: "external", provider: "ramses_cc" } } : {}),
+          },
+        },
+      },
+      _friendlyEntityName: () => "Office",
+      _saveSettings: vi.fn(),
+      _saveZoneDelivery: vi.fn(),
+      _settingsSaving: false,
+      _t: (key: string) => key,
+    } as unknown as VelairViewHost;
+  }
+
+  it("hides timeout and attempts until confirmation is enabled", () => {
+    const container = document.createElement("div");
+    render(renderSettingsDeliveryConfirmation(deliveryHost(), "climate.office"), container);
+
+    const toggle = container.querySelector(".settings-delivery-confirmation ha-switch") as HTMLElement & { checked: boolean };
+    expect(toggle).not.toBeNull();
+    expect(toggle.checked).toBe(false);
+    expect(container.querySelector(".settings-delivery-timeout")).toBeNull();
+    expect(container.querySelector(".settings-delivery-attempts")).toBeNull();
+    expect(container.textContent).toContain("deliveryConfirmation");
+    expect(container.querySelector(".inline-help")?.getAttribute("aria-label"))
+      .toBe("deliveryConfirmationInfoAction");
+  });
+
+  it("saves the confirmation toggle through the zone delivery action", () => {
+    const viewHost = deliveryHost();
+    const container = document.createElement("div");
+    render(renderSettingsDeliveryConfirmation(viewHost, "climate.office"), container);
+
+    const toggle = container.querySelector(".settings-delivery-confirmation ha-switch") as HTMLElement & { checked: boolean };
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+
+    expect(viewHost._saveZoneDelivery).toHaveBeenCalledWith("climate.office", { confirm: true });
+  });
+
+  it("shows the configured timeout and attempts and clamps edits to the supported ranges", () => {
+    const viewHost = deliveryHost({ confirm: true, confirm_timeout_seconds: 40, confirm_attempts: 2 });
+    const container = document.createElement("div");
+    render(renderSettingsDeliveryConfirmation(viewHost, "climate.office"), container);
+
+    const timeout = container.querySelector(".settings-delivery-timeout input") as HTMLInputElement;
+    const attempts = container.querySelector(".settings-delivery-attempts input") as HTMLInputElement;
+    expect(timeout.value).toBe("40");
+    expect(attempts.value).toBe("2");
+    expect(timeout.getAttribute("min")).toBe("5");
+    expect(timeout.getAttribute("max")).toBe("120");
+    expect(attempts.getAttribute("min")).toBe("1");
+    expect(attempts.getAttribute("max")).toBe("5");
+
+    timeout.value = "500";
+    timeout.dispatchEvent(new Event("change"));
+    attempts.value = "0";
+    attempts.dispatchEvent(new Event("change"));
+    attempts.value = "abc";
+    attempts.dispatchEvent(new Event("change"));
+
+    expect(viewHost._saveZoneDelivery).toHaveBeenNthCalledWith(1, "climate.office", { confirm_timeout_seconds: 120 });
+    expect(viewHost._saveZoneDelivery).toHaveBeenNthCalledWith(2, "climate.office", { confirm_attempts: 1 });
+    expect(viewHost._saveZoneDelivery).toHaveBeenNthCalledWith(3, "climate.office", { confirm_attempts: 3 });
+  });
+
+  it("is not offered for externally executed climates", () => {
+    const container = document.createElement("div");
+    render(
+      renderSettingsDeliveryConfirmation(
+        deliveryHost({ confirm: true, confirm_timeout_seconds: 25, confirm_attempts: 3 }, { external: true }),
+        "climate.office",
+      ),
+      container,
+    );
+
+    expect(container.querySelector(".settings-delivery-confirmation")).toBeNull();
+  });
+
+  it("renders confirmation inside every managed climate row", () => {
+    const viewHost = {
+      ...host(false),
+      _saveZoneDelivery: vi.fn(),
+    } as unknown as VelairViewHost;
+    const container = document.createElement("div");
+    render(renderSettingsZoneOrderRow(viewHost, "climate.office", 0, 1), container);
+
+    expect(container.querySelector(".settings-zone-main .settings-delivery-confirmation")).not.toBeNull();
+  });
+
+  it("saves the global delivery stagger through settings and clamps it", () => {
+    const viewHost = deliveryHost(undefined, { staggerSeconds: 3 });
+    const container = document.createElement("div");
+    render(renderDeliveryStaggerSettings(viewHost), container);
+
+    const input = container.querySelector(".settings-delivery-stagger input") as HTMLInputElement;
+    expect(input.value).toBe("3");
+    expect(input.getAttribute("max")).toBe("30");
+    expect(container.textContent).toContain("deliveryStagger");
+    expect(container.textContent).toContain("deliveryStaggerDescription");
+
+    input.value = "45";
+    input.dispatchEvent(new Event("change"));
+    input.value = "-2";
+    input.dispatchEvent(new Event("change"));
+
+    expect(viewHost._saveSettings).toHaveBeenNthCalledWith(1, { delivery_stagger_seconds: 30 });
+    expect(viewHost._saveSettings).toHaveBeenNthCalledWith(2, { delivery_stagger_seconds: 0 });
+  });
+
+  it("explains that confirmation is opt-in evidence from the climate entity", () => {
+    expect(en.deliveryConfirmationDescription).toContain("silently drop");
+    expect(en.deliveryConfirmationDescription).toContain("attempts");
+    expect(en.deliveryStaggerDescription).toContain("Zero");
+    expect(es.deliveryConfirmation).toBe("Confirmar entrega");
   });
 });

@@ -147,6 +147,8 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
     { label: "diagnosticsDeliveryStatus", value: unit.delivery.status, presentation: "delivery-status" },
     { label: "diagnosticsRetryCount", value: unit.delivery.retry_count },
     { label: "diagnosticsLastError", value: deliveryErrorLabel(host, unit.delivery.last_error) },
+    { label: "diagnosticsDeliveryConfirmation", value: confirmationSummary(host, unit.delivery.confirmation) },
+    { label: "diagnosticsDeliveryAttempts", value: confirmationAttempts(unit.delivery.confirmation) },
   ];
   const setupRows: DetailRow[] = [
     { label: "diagnosticsScheduleSource", value: scheduleSourceLabel(host, unit.effective_setup.schedule_source) },
@@ -279,9 +281,9 @@ function renderModeChip(host: VelairViewHost, value: unknown) {
 }
 
 function deliveryStatusClass(status: string): string {
-  if (status === "success") return "success";
+  if (["success", "confirmed"].includes(status)) return "success";
   if (["failed", "exhausted", "invalid_intent"].includes(status)) return "error";
-  if (["retrying", "unavailable"].includes(status)) return "warning";
+  if (["retrying", "unavailable", "unconfirmed"].includes(status)) return "warning";
   return "neutral";
 }
 
@@ -314,6 +316,7 @@ function issueText(host: VelairViewHost, code: string): string {
     operation_recovery_required: "operationRecoveryRequired", delivery_failed: "diagnosticsDeliveryFailed",
     delivery_retrying: "diagnosticsDeliveryRetrying", delivery_exhausted: "diagnosticsDeliveryExhausted",
     delivery_invalid_intent: "diagnosticsDeliveryInvalidIntent", runtime_status_unavailable: "diagnosticsRuntimeUnavailable",
+    delivery_unconfirmed: "diagnosticsDeliveryUnconfirmed",
     associated_sensor_unavailable: "diagnosticsSensorUnavailable",
   };
   return keys[code] ? host._t(keys[code]) : humanizeIdentifier(code) ?? code;
@@ -647,11 +650,61 @@ function historyDescription(host: VelairViewHost, item: DiagnosticHistoryItem): 
       diagnosticReasonLabel(host, data.reason),
     ].filter(Boolean).join(" · ");
   }
+  if (item.category === "delivery" && CONFIRMATION_STATUSES.includes(String(data.status))) {
+    return confirmationHistoryDescription(host, item);
+  }
   const evidence = data.reason
     ? diagnosticReasonLabel(host, data.reason)
     : data.error ? humanizeIdentifier(data.error)
       : data.state ? runtimeStateLabel(host, data.state) : undefined;
   return [evidence].filter(Boolean).join(" · ");
+}
+
+const CONFIRMATION_STATUSES = ["confirming", "confirmed", "unconfirmed"];
+
+function confirmationHistoryDescription(host: VelairViewHost, item: DiagnosticHistoryItem): string {
+  const data = item.data;
+  const requested = record(data.requested);
+  const observed = record(data.observed);
+  const entityId = item.entity_id ?? "";
+  const attempts = typeof data.attempt === "number" && typeof data.attempts === "number"
+    ? host._t("diagnosticsDeliveryAttemptOf", {
+        attempt: formatNumber(host, data.attempt),
+        attempts: formatNumber(host, data.attempts),
+      })
+    : typeof data.attempts === "number"
+      ? labeledValue(host._t("diagnosticsDeliveryAttempts"), formatNumber(host, data.attempts))
+      : undefined;
+  const observedSummary = [
+    observed.hvac_mode ? host._modeLabel(String(observed.hvac_mode)) : undefined,
+    scheduledTargetSummary(host, observed, entityId),
+  ].filter(Boolean).join(" ");
+  return [
+    attempts,
+    requested.hvac_mode ? host._modeLabel(String(requested.hvac_mode)) : undefined,
+    scheduledTargetSummary(host, requested, entityId),
+    data.status !== "confirming" && observedSummary
+      ? labeledValue(host._t("diagnosticsCurrentState"), observedSummary)
+      : undefined,
+  ].filter(Boolean).join(" · ");
+}
+
+function confirmationSummary(host: VelairViewHost, value: unknown): string | undefined {
+  const confirmation = record(value);
+  const outcome = String(confirmation.outcome ?? "");
+  if (!outcome) return undefined;
+  const label = outcome === "pending"
+    ? host._t("diagnosticsDeliveryConfirming")
+    : deliveryStatusLabel(host, outcome);
+  const at = outcome === "confirmed" ? confirmation.confirmed_at : confirmation.last_attempt_at;
+  return [label, at ? host._formatDateTime(String(at)) : undefined].filter(Boolean).join(" · ") || undefined;
+}
+
+function confirmationAttempts(value: unknown): number | undefined {
+  const confirmation = record(value);
+  return confirmation.outcome && typeof confirmation.attempts === "number" && confirmation.attempts > 0
+    ? confirmation.attempts
+    : undefined;
 }
 
 function labeledValue(label: string, value: string | undefined): string | undefined {
@@ -972,6 +1025,8 @@ function deliveryStatusLabel(host: VelairViewHost, value: unknown): string | und
   const status = String(value ?? "");
   const labels: Record<string, TranslationKey> = {
     cancelled: "operationCancelled",
+    confirmed: "diagnosticsDeliveryConfirmed",
+    confirming: "diagnosticsDeliveryConfirming",
     exhausted: "diagnosticsDeliveryExhausted",
     failed: "diagnosticsDeliveryFailed",
     idle: "roomSensorStatusIdle",
@@ -979,6 +1034,7 @@ function deliveryStatusLabel(host: VelairViewHost, value: unknown): string | und
     retrying: "diagnosticsDeliveryRetrying",
     success: "diagnosticsDeliverySuccess",
     unavailable: "diagnosticsEntityUnavailable",
+    unconfirmed: "diagnosticsDeliveryUnconfirmed",
   };
   return labels[status] ? host._t(labels[status]) : humanizeIdentifier(status);
 }

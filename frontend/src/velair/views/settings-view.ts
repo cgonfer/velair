@@ -1,7 +1,14 @@
 import { html, nothing } from "lit";
 import { VELAIR_FRONTEND_BUILD, VELAIR_RELEASE_VERSION } from "../build-info";
 import {
+  DEFAULT_DELIVERY_CONFIRM_ATTEMPTS,
+  DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
   DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
+  MAX_DELIVERY_CONFIRM_ATTEMPTS,
+  MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+  MAX_DELIVERY_STAGGER_SECONDS,
+  MIN_DELIVERY_CONFIRM_ATTEMPTS,
+  MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
   PORTABLE_MODEL_VERSION,
   PORTABLE_SECTIONS,
   WEEKDAYS,
@@ -55,6 +62,8 @@ export function renderSettingsView(host: SettingsViewHost, zoneIds: string[]) {
             })}
         ></ha-switch>
       </section>
+
+      ${renderDeliveryStaggerSettings(host)}
 
       ${renderExternalSystemsSettings(host)}
 
@@ -524,6 +533,7 @@ export function renderSettingsZoneOrderRow(
           <span>${entityId}</span>
         </div>
         ${renderSettingsExternalChangePolicy(host, entityId)}
+        ${renderSettingsDeliveryConfirmation(host, entityId)}
       </div>
       <div class="settings-row-actions">
         <button
@@ -609,6 +619,129 @@ export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entit
               })}
             />
             <span>${host._t("minutesShort")}</span>
+          </label>
+        ` : nothing}
+      </div>
+    </div>
+  `;
+}
+
+function clampInteger(value: unknown, fallback: number, minimum: number, maximum: number): number {
+  const raw = typeof value === "string" ? value.trim() : value;
+  if (raw === "" || raw === null || raw === undefined) {
+    return fallback;
+  }
+  const number = Math.round(Number(raw));
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.max(minimum, Math.min(maximum, number));
+}
+
+export function renderDeliveryStaggerSettings(host: SettingsViewHost) {
+  const stagger = clampInteger(host._data?.settings?.delivery_stagger_seconds ?? 0, 0, 0, MAX_DELIVERY_STAGGER_SECONDS);
+  return html`
+    <section class="settings-startup settings-delivery-stagger">
+      <ha-icon class="settings-startup-icon" icon="mdi:timer-sand"></ha-icon>
+      <div class="settings-startup-copy">
+        <span class="section-label">${host._t("deliveryStagger")}</span>
+        <p>${host._t("deliveryStaggerDescription")}</p>
+      </div>
+      <label class="settings-policy-duration">
+        <input
+          type="number"
+          min="0"
+          max=${MAX_DELIVERY_STAGGER_SECONDS}
+          step="1"
+          aria-label=${host._t("deliveryStagger")}
+          .value=${String(stagger)}
+          ?disabled=${host._settingsSaving}
+          @change=${(event: Event) => host._saveSettings({
+            delivery_stagger_seconds: clampInteger(
+              (event.target as HTMLInputElement).value,
+              0,
+              0,
+              MAX_DELIVERY_STAGGER_SECONDS,
+            ),
+          })}
+        />
+        <span>${host._t("secondsShort")}</span>
+      </label>
+    </section>
+  `;
+}
+
+export function renderSettingsDeliveryConfirmation(host: SettingsViewHost, entityId: string) {
+  if (host._data?.zones[entityId]?.execution?.type === "external") {
+    return nothing;
+  }
+  const delivery = host._data?.zones[entityId]?.delivery ?? {
+    confirm: false,
+    confirm_timeout_seconds: DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+    confirm_attempts: DEFAULT_DELIVERY_CONFIRM_ATTEMPTS,
+  };
+  const key = entityId.replace(/[^a-z0-9_-]/gi, "-");
+  const labelId = `delivery-confirmation-label-${key}`;
+  const helpId = `delivery-confirmation-info-${key}`;
+  return html`
+    <div class="settings-external-policy settings-delivery-confirmation">
+      <div class="settings-policy-heading">
+        <span class="label" id=${labelId}>${host._t("deliveryConfirmation")}</span>
+        ${renderInlineHelp(
+          helpId,
+          host._t("deliveryConfirmationInfoAction"),
+          host._t("deliveryConfirmationDescription"),
+        )}
+      </div>
+      <div class="settings-policy-controls">
+        <ha-switch
+          aria-labelledby=${labelId}
+          .checked=${Boolean(delivery.confirm)}
+          ?disabled=${host._settingsSaving}
+          @change=${(event: Event) => host._saveZoneDelivery(entityId, {
+            confirm: Boolean((event.target as HTMLInputElement).checked),
+          })}
+        ></ha-switch>
+        ${delivery.confirm ? html`
+          <label class="settings-policy-duration settings-delivery-timeout" title=${host._t("deliveryConfirmTimeout")}>
+            <input
+              type="number"
+              min=${MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS}
+              max=${MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS}
+              step="1"
+              aria-label=${host._t("deliveryConfirmTimeout")}
+              .value=${String(delivery.confirm_timeout_seconds ?? DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS)}
+              ?disabled=${host._settingsSaving}
+              @change=${(event: Event) => host._saveZoneDelivery(entityId, {
+                confirm_timeout_seconds: clampInteger(
+                  (event.target as HTMLInputElement).value,
+                  DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+                  MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+                  MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS,
+                ),
+              })}
+            />
+            <span>${host._t("secondsShort")}</span>
+          </label>
+          <label class="settings-policy-duration settings-delivery-attempts" title=${host._t("deliveryConfirmAttempts")}>
+            <input
+              type="number"
+              min=${MIN_DELIVERY_CONFIRM_ATTEMPTS}
+              max=${MAX_DELIVERY_CONFIRM_ATTEMPTS}
+              step="1"
+              aria-label=${host._t("deliveryConfirmAttempts")}
+              .value=${String(delivery.confirm_attempts ?? DEFAULT_DELIVERY_CONFIRM_ATTEMPTS)}
+              ?disabled=${host._settingsSaving}
+              @change=${(event: Event) => host._saveZoneDelivery(entityId, {
+                confirm_attempts: clampInteger(
+                  (event.target as HTMLInputElement).value,
+                  DEFAULT_DELIVERY_CONFIRM_ATTEMPTS,
+                  MIN_DELIVERY_CONFIRM_ATTEMPTS,
+                  MAX_DELIVERY_CONFIRM_ATTEMPTS,
+                ),
+              })}
+            />
+            <span>×</span>
           </label>
         ` : nothing}
       </div>

@@ -21,6 +21,13 @@ export const VELAIR_LOADING_ICON_URL = "/velair_frontend/velair-icon.png";
 export const PROFILE_DESCRIPTION_MAX_LENGTH = 500;
 export const MODE_NAME_MAX_LENGTH = 255;
 export const DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES = 120;
+export const DEFAULT_DELIVERY_CONFIRM_TIMEOUT_SECONDS = 25;
+export const MIN_DELIVERY_CONFIRM_TIMEOUT_SECONDS = 5;
+export const MAX_DELIVERY_CONFIRM_TIMEOUT_SECONDS = 120;
+export const DEFAULT_DELIVERY_CONFIRM_ATTEMPTS = 3;
+export const MIN_DELIVERY_CONFIRM_ATTEMPTS = 1;
+export const MAX_DELIVERY_CONFIRM_ATTEMPTS = 5;
+export const MAX_DELIVERY_STAGGER_SECONDS = 30;
 export const PANEL_VIEWS: VelairPanelView[] = [
   "overview",
   "schedules",

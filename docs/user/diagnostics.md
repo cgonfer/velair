@@ -13,6 +13,8 @@ configuration, functions, and device and sensors. It includes:
 - detected configuration issues where Velair has direct evidence;
 - the effective Mode and Profiles, calculated runtime intent, Boosts and pauses;
 - the last confirmed application, delivery error, and bounded retry state;
+- the readback confirmation outcome and attempt count for climates with
+  Confirm delivery enabled;
 - Room Assist, Adaptive Preconditioning, Comfort, and explicitly associated
   sensors.
 
@@ -90,7 +92,12 @@ Velair creates a **Diagnostics status** entity with `ok`, `warning`, and
 `error` states. It is updated from the same backend snapshot as this view and
 does not poll. Its compact attributes include scheduler state, unit counts,
 issue counts, and stable issue codes; raw errors and operational identifiers
-are not included.
+are not included. For climates with **Confirm delivery** enabled it also
+exposes `unconfirmed_deliveries`, the number of climates whose latest readback
+ended unconfirmed, plus runtime-only `confirmed_deliveries_today` and
+`unconfirmed_deliveries_today` counters that reset at local midnight and on
+restart. An unconfirmed climate carries the `delivery_unconfirmed` warning
+issue until a later delivery is accepted or confirmed.
 
 Use a state trigger when an automation only needs the aggregate current health.
 Use the `diagnostic_issue_changed` event when it needs to react to one issue

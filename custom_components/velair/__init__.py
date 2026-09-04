@@ -85,7 +85,11 @@ async def async_setup_entry(
     )
     diagnostics = RuntimeDiagnosticsManager(hass, climate_entities, entry.entry_id)
     await diagnostics.async_load_policy()
-    climate_delivery = ClimateDeliveryCoordinator(hass, diagnostics.observe_delivery)
+    climate_delivery = ClimateDeliveryCoordinator(
+        hass,
+        diagnostics.observe_delivery,
+        stagger_seconds=lambda: data["settings"].get("delivery_stagger_seconds", 0),
+    )
     scheduler = VelairScheduler(
         hass,
         data,

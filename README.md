@@ -53,6 +53,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Global pause, stop, and resume controls, plus per-zone pause and resume.
 - Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
 - Automation events through `velair_event` for Profile changes, scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
+- Optional verified delivery per climate: after a call is accepted, Velair watches the entity's own reported mode and target and re-sends the current intent up to a configured number of attempts, plus an optional global stagger between commands to different climates for gateways that drop back-to-back writes.
 - Push updates through Home Assistant WebSocket events, without frontend polling.
 - Complete English, Spanish, German, French, Italian, Dutch, Polish, Brazilian Portuguese, European Portuguese, and community-reviewed Russian UI coverage, with English fallback for unsupported languages.
 - Native Celsius and Fahrenheit workflows using Home Assistant's configured unit, including unit-aware defaults, explicit stored-data migration, and legacy backup conversion.
