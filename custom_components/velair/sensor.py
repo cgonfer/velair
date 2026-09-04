@@ -402,15 +402,32 @@ class ZoneOverrideStateSensor(_ZoneSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, object] | None:
-        """Return compact active override context."""
+        """Return compact active override context plus zone runtime context."""
         status = self.scheduler.get_zone_override_status(self._climate_entity_id)
+        context_getter = getattr(self.scheduler, "get_zone_context", None)
+        context = context_getter(self._climate_entity_id) if callable(context_getter) else {}
         return _compact_attributes(
             {
-                key: status.get(key)
-                for key in (
-                    "started_at", "until", "action", "pause_id",
-                    "pause_count", "pause_ids", "manual",
-                )
+                **{
+                    key: status.get(key)
+                    for key in (
+                        "started_at", "until", "action", "pause_id",
+                        "pause_count", "pause_ids", "manual",
+                    )
+                },
+                **{
+                    key: context.get(key)
+                    for key in (
+                        "runtime_state", "control_mode", "manual_source",
+                        "manual_policy", "manual_since", "manual_until",
+                        "manual_changed_fields", "effective_profile_id",
+                        "effective_profile_name", "schedule_source",
+                        "last_applied_source", "last_applied_at",
+                        "last_applied_action", "last_applied_temperature",
+                        "last_applied_target_temp_low",
+                        "last_applied_target_temp_high", "last_applied_hvac_mode",
+                    )
+                },
             }
         )
 

@@ -93,7 +93,15 @@ automation events:
 - **Air quality** is created once per managed climate and keeps the independent
   CO2 assessment: good, elevated, poor, unavailable, or not monitored.
 - **Zone override** shows whether that climate currently has no override, an
-  active boost, or an active zone pause.
+  active boost, or an active zone pause. Its attributes also carry compact
+  runtime context so a dashboard can explain the zone without the panel:
+  `runtime_state`, `control_mode`, the Manual adjustment `manual_source`,
+  `manual_policy`, `manual_since` and `manual_until`, the
+  `effective_profile_id` / `effective_profile_name` and `schedule_source`
+  (`default`, `profile` or `profile_pause`), and the last target Velair
+  delivered (`last_applied_source`, `last_applied_at`, `last_applied_action`,
+  `last_applied_temperature` or range, `last_applied_hvac_mode`). The last
+  applied values are runtime only and start empty after a restart.
 - **Preconditioning start** is a timestamp sensor containing the calculated
   start for the next or currently active early-start block. Its attributes
   include the scheduled target time, lead, direction, model source, target

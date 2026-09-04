@@ -336,6 +336,8 @@ class VelairScheduler:
             _AppliedPreconditioningTarget,
         ] = {}
         self._preconditioning_sessions: dict[str, _PreconditioningSession] = {}
+        # Last target Velair delivered per zone (runtime only, for entity attributes).
+        self._last_applied: dict[str, dict[str, object]] = {}
         self._preconditioning_replan_entities: tuple[str, ...] = ()
         self._preconditioning_replan_temperatures: dict[str, float] = {}
         self._preconditioning_plan_snapshots: dict[str, tuple] = {}
@@ -886,6 +888,62 @@ class VelairScheduler:
             if (override := self._get_active_zone_override(entity_id, now)) is not None
             and _is_boost_override(override)
         }
+
+    def get_zone_context(self, entity_id: str) -> dict[str, object]:
+        """Return compact runtime context for one zone's entity attributes.
+
+        This complements the override state with what dashboards and
+        automations most often need to explain a zone: the runtime state,
+        Automatic or Manual control with the Manual adjustment source and
+        policy, which Profile (if any) supplies the schedule, and the last
+        target Velair delivered together with its source.
+        """
+        zone = self._data["zones"].get(entity_id)
+        if zone is None:
+            return {}
+        now = dt_util.now()
+        context: dict[str, object] = {}
+        try:
+            runtime = self._zone_runtime_status(entity_id)
+        except Exception:  # pragma: no cover - defensive; attributes must not break
+            runtime = {}
+        if runtime.get("state") is not None:
+            context["runtime_state"] = runtime.get("state")
+        if runtime.get("control_mode") is not None:
+            context["control_mode"] = runtime.get("control_mode")
+        manual = self._manual_control_status(entity_id, now)
+        if manual is not None:
+            context["manual_source"] = manual.get("source")
+            context["manual_policy"] = manual.get("policy")
+            context["manual_since"] = manual.get("started_at")
+            if manual.get("until") is not None:
+                context["manual_until"] = manual.get("until")
+            changed = manual.get("changed_fields")
+            if changed:
+                context["manual_changed_fields"] = list(changed)
+        profile = self._active_profile_for_zone(entity_id)
+        behavior = self._profile_zone_behavior(entity_id)
+        if profile is not None:
+            context["effective_profile_id"] = profile.get("key")
+            context["effective_profile_name"] = profile.get("name")
+            context["schedule_source"] = (
+                "profile_pause" if behavior.get("behavior") == "pause" else "profile"
+            )
+        else:
+            context["schedule_source"] = "default"
+        applied = self._last_applied.get(entity_id)
+        if applied is not None:
+            context["last_applied_source"] = applied.get("source")
+            context["last_applied_at"] = applied.get("at")
+            context["last_applied_action"] = applied.get("action")
+            if applied.get("temperature") is not None:
+                context["last_applied_temperature"] = applied.get("temperature")
+            if applied.get("target_temp_low") is not None:
+                context["last_applied_target_temp_low"] = applied.get("target_temp_low")
+                context["last_applied_target_temp_high"] = applied.get("target_temp_high")
+            if applied.get("hvac_mode") is not None:
+                context["last_applied_hvac_mode"] = applied.get("hvac_mode")
+        return context
 
     def get_zone_override_status(self, entity_id: str) -> dict[str, object]:
         """Return the current override state for one managed zone."""
@@ -8734,6 +8792,15 @@ class VelairScheduler:
         if event.target_when is not None:
             data["target_when"] = event.target_when.isoformat()
 
+        self._last_applied[event.entity_id] = {
+            "source": source,
+            "at": dt_util.now().isoformat(),
+            "action": event.action,
+            "temperature": data.get("temperature"),
+            "target_temp_low": data.get(ATTR_TARGET_TEMP_LOW),
+            "target_temp_high": data.get(ATTR_TARGET_TEMP_HIGH),
+            "hvac_mode": hvac_mode,
+        }
         self._async_fire_climate_target_applied_data(data)
 
     def _async_fire_climate_target_applied_data(self, data: dict) -> None:
