@@ -53,6 +53,7 @@ from .const import (
     SERVICE_RESUME,
     SERVICE_RESUME_ZONE,
     SERVICE_SET_DAILY_SCHEDULE,
+    SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     SERVICE_SET_EXTERNAL_CHANGE_POLICY,
     SERVICE_ENTER_MANUAL_ADJUSTMENT,
@@ -131,6 +132,14 @@ SET_TEMPERATURE_SCHEMA = vol.All(
         }
     ),
     _validate_temperature_target_data,
+)
+
+SET_HVAC_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_HVAC_MODE): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
 )
 
 APPLY_SCHEDULE_SCHEMA = vol.Schema(
@@ -273,6 +282,19 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 swing_mode=call.data.get(ATTR_SWING_MODE),
                 swing_horizontal_mode=call.data.get(ATTR_SWING_HORIZONTAL_MODE),
                 event_source="service_set_temperature",
+            )
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_set_hvac_mode(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        entity_id = call.data[ATTR_ENTITY_ID]
+        _ensure_managed_entity(scheduler, entity_id)
+        try:
+            await scheduler.async_set_hvac_mode(
+                entity_id,
+                call.data[ATTR_HVAC_MODE],
+                event_source="service_set_hvac_mode",
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
@@ -483,6 +505,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_SET_HVAC_MODE,
+        async_set_hvac_mode,
+        schema=SET_HVAC_MODE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_APPLY_SCHEDULE,
         async_apply_schedule,
         schema=APPLY_SCHEDULE_SCHEMA,
@@ -587,6 +615,7 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     """Remove integration services."""
     for service in (
         SERVICE_SET_TEMPERATURE,
+        SERVICE_SET_HVAC_MODE,
         SERVICE_APPLY_SCHEDULE,
         SERVICE_ACTIVATE_PROFILE,
         SERVICE_DEACTIVATE_PROFILE,

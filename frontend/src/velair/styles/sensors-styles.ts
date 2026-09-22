@@ -233,50 +233,6 @@ export const sensorsStyles = css`
   min-width: 0;
 }
 
-.sensor-help {
-  align-items: center;
-  color: var(--secondary-text-color);
-  cursor: help;
-  display: inline-flex;
-  flex: 0 0 auto;
-  outline: none;
-  position: relative;
-}
-
-.sensor-help ha-icon {
-  --mdc-icon-size: 15px;
-}
-
-.sensor-help-tooltip {
-  background: var(--primary-text-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-  color: var(--primary-background-color);
-  font-size: 11px;
-  font-weight: 400;
-  left: 50%;
-  line-height: 1.35;
-  max-width: min(240px, calc(100vw - 40px));
-  opacity: 0;
-  padding: 7px 8px;
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  transform: translateX(-22px);
-  transition: opacity 120ms ease, visibility 120ms ease;
-  visibility: hidden;
-  white-space: normal;
-  width: max-content;
-  z-index: 20;
-}
-
-.sensor-help:hover .sensor-help-tooltip,
-.sensor-help:focus .sensor-help-tooltip,
-.sensor-help:focus-visible .sensor-help-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
 .sensor-status-card {
   display: grid;
   gap: 12px;
@@ -720,12 +676,14 @@ export const sensorsStyles = css`
 
 .sensor-scale-callout-marker {
   --callout-left: 50%;
+  box-sizing: border-box;
   display: block;
   height: 0;
   left: clamp(72px, var(--callout-left), calc(100% - 72px));
+  margin-left: -72px;
   position: absolute;
   top: 69px;
-  width: 0;
+  width: 144px;
   z-index: 2;
 }
 
@@ -740,13 +698,15 @@ export const sensorsStyles = css`
   display: grid;
   gap: 1px;
   left: 0;
+  margin-inline: auto;
   max-width: 144px;
   min-width: 96px;
   padding: 5px 7px 5px 6px;
   pointer-events: auto;
   position: absolute;
+  right: 0;
   text-align: left;
-  transform: translateX(-50%);
+  width: max-content;
 }
 
 .sensor-scale-callout::after {
@@ -795,10 +755,6 @@ export const sensorsStyles = css`
   min-width: 0;
   overflow: visible;
   white-space: nowrap;
-}
-
-.sensor-scale-callout.has-offset {
-  width: max-content;
 }
 
 .sensor-scale-callout.has-offset .sensor-scale-value-row > strong {
@@ -993,24 +949,6 @@ export const sensorsStyles = css`
   .sensor-config-row {
     align-items: stretch;
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sensor-config-label {
-    box-sizing: border-box;
-    position: relative;
-    width: 100%;
-  }
-
-  .sensor-config-label .sensor-help {
-    position: static;
-  }
-
-  .sensor-config-label .sensor-help-tooltip {
-    left: 0;
-    max-width: 100%;
-    right: 0;
-    transform: none;
-    width: auto;
   }
 
   .sensor-block-summary {

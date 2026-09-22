@@ -32,12 +32,19 @@ Absolute temperatures, temperature deltas, and minutes-per-degree rates use
 separate conversion helpers because their transforms are different.
 
 Defaults and normal schedule editing use each climate's exact
-`target_temp_step` when available. Velair never converts a default step from one
-unit to another. During migration or import, values tied to a known climate are
-aligned to that exact step. Migrated editable targets without a usable exact step
-are range-limited and rounded to safe `0.1` precision; this normalization is not
-treated as a reported device step. Default schedule validation and Room Assist
-still require the real `target_temp_step` where their behavior depends on it.
+`target_temp_step` when available. If it is unavailable, they use the last
+valid step reported by the entity, then the persisted per-zone manual fallback,
+or `1` when neither exists. A published step always wins. Last-reported values
+are captured even when a dormant manual fallback exists and are retained across
+missing or invalid state attributes.
+Saving a manual fallback clears the remembered step only while no valid step is
+published. Both persisted step values are temperature deltas,
+so explicit unit migration converts them without an absolute offset. During
+migration or import, values tied to a known climate are aligned
+to the same effective grid, anchored at the climate's published minimum rather
+than at zero. Template climates share a target grid only when both their steps
+and minimum anchors are compatible. Migrated editable targets without one are
+range-limited and rounded to safe `0.1` precision.
 Editable Room Assist, Adaptive Preconditioning, and rate fields use their own
 valid precision rules.
 
@@ -64,9 +71,11 @@ until the integration reloads or Home Assistant restarts.
 
 ## Portable Data
 
-Portable model v8 exports raw stored values and declares `temperature_unit`.
-Model v5 historically added the non-thermal `modes` section; older supported
-files, including V4 and V5, remain importable.
+Current portable model v11 exports raw stored values and declares
+`temperature_unit`. Model v5 historically added the non-thermal `modes`
+section, v8 separated the Room Assist deadband, v9 added derived Comfort metric
+configuration, and v10 added outdoor comparison configuration. Older supported
+files, including v4, v5, v8, and v9, remain importable.
 Imports convert selected sections from that unit to the effective Home Assistant
 unit. Unitless model v1 files are interpreted as Celsius; model v2 is also Celsius
 for compatibility with the format that produced it.

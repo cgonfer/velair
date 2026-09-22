@@ -24,6 +24,7 @@ from .temperature import (
     absolute_temperature,
     normalize_temperature_unit,
     rate_per_degree,
+    snap_temperature_to_step,
     temperature_delta,
 )
 
@@ -390,6 +391,7 @@ def _round_fahrenheit_defaults(data: dict[str, Any]) -> None:
         if isinstance(comfort, dict):
             comfort["temperature_min"] = 68.0
             comfort["temperature_max"] = 75.0
+            comfort["ventilation_temperature_threshold"] = 1.8
         preconditioning = zone.get("preconditioning")
         if isinstance(preconditioning, dict):
             preconditioning["minimum_delta_temperature"] = 1.0
@@ -410,8 +412,9 @@ def _entity_target_grid(
     unit: str,
     *,
     source_unit: str | None = None,
+    fallback_step: float | None = None,
 ) -> tuple[float, float, float | None]:
-    """Return safe limits and the exact target step published by HA."""
+    """Return safe limits and the published or configured target step."""
     default_limits = (41.0, 95.0) if unit == FAHRENHEIT else (5.0, 35.0)
     states = getattr(hass, "states", None)
     state = states.get(entity_id) if states is not None else None
@@ -427,8 +430,14 @@ def _entity_target_grid(
         raw_step = float(attributes["target_temp_step"])
     except (KeyError, TypeError, ValueError):
         step = None
+        step_is_published = False
     else:
         step = raw_step if math.isfinite(raw_step) and raw_step > 0 else None
+        step_is_published = step is not None
+    if step is None and isinstance(fallback_step, (int, float)):
+        configured_step = float(fallback_step)
+        if math.isfinite(configured_step) and configured_step >= 0.001:
+            step = configured_step
     if (
         source_unit in (CELSIUS, FAHRENHEIT)
         and source_unit != unit
@@ -437,6 +446,10 @@ def _entity_target_grid(
     ):
         minimum = absolute_temperature(minimum, source_unit, unit)
         maximum = absolute_temperature(maximum, source_unit, unit)
+        # Entity attributes still use the source unit during this transition,
+        # while persisted fallback steps were converted with the data already.
+        if step is not None and step_is_published:
+            step = temperature_delta(step, source_unit, unit)
     return minimum, maximum, step
 
 
@@ -453,6 +466,7 @@ def _template_target_step(
     unit: str,
     *,
     source_unit: str | None = None,
+    fallback_steps: dict[str, float] | None = None,
 ) -> tuple[float, float | None]:
     """Return the combined minimum and step used by frontend validation."""
     default_minimum = 41.0 if unit == FAHRENHEIT else 5.0
@@ -460,18 +474,30 @@ def _template_target_step(
         return default_minimum, None
     grids = [
         _entity_target_grid(
-            hass, entity_id, unit, source_unit=source_unit
+            hass,
+            entity_id,
+            unit,
+            source_unit=source_unit,
+            fallback_step=(fallback_steps or {}).get(entity_id),
         )
         for entity_id in entity_ids
     ]
     steps = [grid[2] for grid in grids if grid[2] is not None]
+    base_minimum = min(grid[0] for grid in grids)
     shared_step = (
         steps[0]
         if len(steps) == len(grids)
         and all(abs(step - steps[0]) <= 0.000000001 for step in steps[1:])
+        and all(
+            abs(
+                ((grid[0] - base_minimum) / steps[0])
+                - round((grid[0] - base_minimum) / steps[0])
+            ) <= 0.000001
+            for grid in grids
+        )
         else None
     )
-    return min(grid[0] for grid in grids), shared_step
+    return base_minimum, shared_step
 
 
 def _snap_migrated_editable_temperatures(
@@ -484,8 +510,28 @@ def _snap_migrated_editable_temperatures(
     """Normalize migrated editable fields while preserving learning precision."""
     zones = data.get("zones")
     entity_ids = list(zones) if isinstance(zones, dict) else []
+    fallback_steps = {
+        entity_id: float(
+            zone["last_reported_target_temp_step"]
+            if "last_reported_target_temp_step" in zone
+            else zone["target_temp_step_override"]
+        )
+        for entity_id, zone in (zones.items() if isinstance(zones, dict) else [])
+        if isinstance(zone, dict)
+        and isinstance(
+            zone.get(
+                "last_reported_target_temp_step",
+                zone.get("target_temp_step_override"),
+            ),
+            (int, float),
+        )
+    }
     _template_minimum, template_step = _template_target_step(
-        hass, entity_ids, unit, source_unit=source_unit
+        hass,
+        entity_ids,
+        unit,
+        source_unit=source_unit,
+        fallback_steps=fallback_steps,
     )
     templates = data.get("templates")
     if isinstance(templates, list):
@@ -497,7 +543,9 @@ def _snap_migrated_editable_temperatures(
                     continue
                 for key in ("temperature", "target_temp_low", "target_temp_high"):
                     if isinstance(block.get(key), (int, float)):
-                        block[key] = _nearest_step(block[key], template_step or 0.1)
+                        block[key] = _nearest_step(
+                            block[key], template_step or 0.1, _template_minimum
+                        )
 
     profiles = data.get("profiles")
     if isinstance(profiles, list):
@@ -509,11 +557,13 @@ def _snap_migrated_editable_temperatures(
                 if not isinstance(profile_zone, dict):
                     continue
                 minimum, maximum, step = _entity_target_grid(
-                    hass, entity_id, unit, source_unit=source_unit
+                    hass,
+                    entity_id,
+                    unit,
+                    source_unit=source_unit,
+                    fallback_step=fallback_steps.get(entity_id),
                 )
                 target_step = step or 0.1
-                first = math.ceil((minimum / target_step) - 0.000001) * target_step
-                last = math.floor((maximum / target_step) + 0.000001) * target_step
                 schedule = profile_zone.get("schedule")
                 if not isinstance(schedule, dict):
                     continue
@@ -526,9 +576,8 @@ def _snap_migrated_editable_temperatures(
                         for key in ("temperature", "target_temp_low", "target_temp_high"):
                             if not isinstance(block.get(key), (int, float)):
                                 continue
-                            bounded = max(first, min(last, float(block[key])))
-                            block[key] = max(
-                                first, min(last, _nearest_step(bounded, target_step))
+                            block[key] = snap_temperature_to_step(
+                                block[key], minimum, maximum, target_step
                             )
 
     settings = data.get("settings")
@@ -543,21 +592,19 @@ def _snap_migrated_editable_temperatures(
         if not isinstance(zone, dict):
             continue
         minimum, maximum, step = _entity_target_grid(
-            hass, entity_id, unit, source_unit=source_unit
+            hass,
+            entity_id,
+            unit,
+            source_unit=source_unit,
+            fallback_step=fallback_steps.get(entity_id),
         )
 
         def snap_target(mapping: Any, key: str) -> None:
             if not isinstance(mapping, dict) or not isinstance(mapping.get(key), (int, float)):
                 return
             target_step = step or 0.1
-            first = math.ceil((minimum / target_step) - 0.000001) * target_step
-            last = math.floor((maximum / target_step) + 0.000001) * target_step
-            if first > last:
-                mapping[key] = max(minimum, min(maximum, float(mapping[key])))
-                return
-            bounded = max(first, min(last, float(mapping[key])))
-            mapping[key] = max(
-                first, min(last, _nearest_step(bounded, target_step))
+            mapping[key] = snap_temperature_to_step(
+                mapping[key], minimum, maximum, target_step
             )
 
         schedule = zone.get("schedule")
@@ -634,6 +681,43 @@ def _convert_scheduler_temperatures(
                 for key in ("temperature_min", "temperature_max"):
                     if isinstance(comfort.get(key), (int, float)):
                         comfort[key] = round(absolute_temperature(comfort[key], source, target), 6)
+                if isinstance(
+                    comfort.get("ventilation_temperature_threshold"),
+                    (int, float),
+                ):
+                    value = float(comfort["ventilation_temperature_threshold"])
+                    source_bounds = (
+                        (0.2, 18.0) if source == FAHRENHEIT else (0.1, 10.0)
+                    )
+                    target_bounds = (
+                        (0.2, 18.0) if target == FAHRENHEIT else (0.1, 10.0)
+                    )
+                    # The documented editable minima are rounded physical
+                    # equivalents. Map only exact boundaries to each other;
+                    # preserve precision for every interior delta.
+                    if math.isclose(value, source_bounds[0], abs_tol=1e-9):
+                        converted_threshold = target_bounds[0]
+                    elif math.isclose(value, source_bounds[1], abs_tol=1e-9):
+                        converted_threshold = target_bounds[1]
+                    else:
+                        converted_threshold = round(
+                            temperature_delta(value, source, target), 6
+                        )
+                    comfort["ventilation_temperature_threshold"] = (
+                        converted_threshold
+                    )
+            if isinstance(zone.get("target_temp_step_override"), (int, float)):
+                zone["target_temp_step_override"] = round(
+                    temperature_delta(zone["target_temp_step_override"], source, target),
+                    6,
+                )
+            if isinstance(zone.get("last_reported_target_temp_step"), (int, float)):
+                zone["last_reported_target_temp_step"] = round(
+                    temperature_delta(
+                        zone["last_reported_target_temp_step"], source, target
+                    ),
+                    6,
+                )
     templates = data.get("templates", [])
     if isinstance(templates, list):
         for template in templates:

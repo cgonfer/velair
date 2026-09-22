@@ -10,6 +10,7 @@ import unicodedata
 from typing import Any, Literal, NotRequired, TypedDict
 
 from .const import (
+    ACTION_SET_HVAC_MODE,
     ACTION_SET_TEMPERATURE,
     ACTION_TURN_OFF,
     ATTR_FAN_MODE,
@@ -46,6 +47,7 @@ WEEKDAYS = (
 
 DEFAULT_MIN_TEMPERATURE = 5.0
 DEFAULT_MAX_TEMPERATURE = 35.0
+DEFAULT_TARGET_TEMP_STEP = 1.0
 DEFAULT_SCHEDULE_TEMPLATES_VERSION = 2
 DEFAULT_SCHEDULE_TEMPLATE_MIGRATIONS = {
     2: ("clear_day",),
@@ -70,6 +72,9 @@ DEFAULT_COMFORT_HUMIDITY_MAX = 60.0
 DEFAULT_COMFORT_CO2_ATTENTION = 1000
 DEFAULT_COMFORT_CO2_POOR = 1500
 DEFAULT_COMFORT_STALE_AFTER_MINUTES = 120
+DEFAULT_VENTILATION_TEMPERATURE_THRESHOLD = 1.0
+DEFAULT_VENTILATION_HUMIDITY_THRESHOLD = 5.0
+DEFAULT_VENTILATION_ABSOLUTE_HUMIDITY_THRESHOLD = 1.0
 MAX_PRECONDITIONING_INVALID_OBSERVATIONS = 10
 MIN_PRECONDITIONING_COMPLETE_SAMPLES = 5
 PARTIAL_PRECONDITIONING_FLOOR_INCREMENT_RATIO = 0.2
@@ -191,6 +196,28 @@ class PreconditioningData(TypedDict):
     room_sensor_assist_debounce_seconds: int
 
 
+class DerivedMetricData(TypedDict):
+    """Stored source selection for one optional derived Comfort metric."""
+
+    enabled: bool
+    source: Literal["velair", "entity"]
+    entity_id: str | None
+
+
+class ComfortHumidityRangeData(TypedDict):
+    """Stored relative-humidity range at one temperature boundary."""
+
+    minimum: float
+    maximum: float
+
+
+class TemperatureAwareComfortData(TypedDict):
+    """Stored humidity limits for the temperature-aware comfort model."""
+
+    at_temperature_min: ComfortHumidityRangeData
+    at_temperature_max: ComfortHumidityRangeData
+
+
 class ComfortData(TypedDict):
     """Stored comfort monitoring settings for one climate zone."""
 
@@ -203,9 +230,18 @@ class ComfortData(TypedDict):
     temperature_max: float
     humidity_min: float
     humidity_max: float
+    comfort_model: Literal["simple", "guided", "temperature_aware"]
+    temperature_aware: TemperatureAwareComfortData
     co2_attention: int
     co2_poor: int
     stale_after_minutes: int
+    outdoor_comparison_enabled: bool
+    outdoor_temperature_entity_id: str | None
+    outdoor_humidity_entity_id: str | None
+    ventilation_temperature_threshold: float
+    ventilation_humidity_threshold: float
+    ventilation_absolute_humidity_threshold: float
+    derived_metrics: dict[str, DerivedMetricData]
 
 
 class ExternalChangePolicyData(TypedDict):
@@ -313,6 +349,8 @@ class ZoneData(TypedDict):
     preconditioning: PreconditioningData
     comfort: ComfortData
     external_change_policy: ExternalChangePolicyData
+    target_temp_step_override: NotRequired[float]
+    last_reported_target_temp_step: NotRequired[float]
     execution: NotRequired[ZoneExecutionData]
 
 
@@ -544,6 +582,37 @@ def normalize_schedule_blocks(raw_blocks: list[dict[str, Any]]) -> list[Schedule
             seen_starts.add(start)
             continue
 
+        if action == ACTION_SET_HVAC_MODE:
+            hvac_mode = block.get("hvac_mode")
+            if not isinstance(hvac_mode, str) or not hvac_mode or hvac_mode == "off":
+                raise ValueError(
+                    f"Mode-only schedule block requires a non-off HVAC mode: {start}"
+                )
+            if any(
+                field in block
+                for field in ("temperature", "target_temp_low", "target_temp_high")
+            ):
+                raise ValueError(
+                    f"Mode-only schedule block cannot include a temperature target: {start}"
+                )
+            if any(
+                field in block
+                for field in (
+                    ATTR_FAN_MODE,
+                    ATTR_HUMIDITY,
+                    ATTR_PRESET_MODE,
+                    ATTR_SWING_HORIZONTAL_MODE,
+                    ATTR_SWING_MODE,
+                )
+            ):
+                raise ValueError(
+                    f"Mode-only schedule block cannot include climate options: {start}"
+                )
+            normalized_block["hvac_mode"] = hvac_mode
+            normalized.append(normalized_block)
+            seen_starts.add(start)
+            continue
+
         if action != ACTION_SET_TEMPERATURE:
             raise ValueError(f"Invalid schedule action: {action}")
 
@@ -688,6 +757,7 @@ def normalize_schedule_data(
                         or "target_temp_low" in block
                         or "target_temp_high" in block
                         or block.get("action") == ACTION_TURN_OFF
+                        or block.get("action") == ACTION_SET_HVAC_MODE
                     )
                 ]
                 try:
@@ -716,6 +786,18 @@ def normalize_schedule_data(
                 zone_data.get("external_change_policy")
             ),
         }
+        target_temp_step_override = normalize_target_temp_step_override(
+            zone_data.get("target_temp_step_override")
+        )
+        if target_temp_step_override is not None:
+            zones[entity_id]["target_temp_step_override"] = target_temp_step_override
+        last_reported_target_temp_step = normalize_target_temp_step_override(
+            zone_data.get("last_reported_target_temp_step")
+        )
+        if last_reported_target_temp_step is not None:
+            zones[entity_id]["last_reported_target_temp_step"] = (
+                last_reported_target_temp_step
+            )
         execution = normalize_zone_execution(zone_data.get("execution"))
         if execution is not None:
             zones[entity_id]["execution"] = execution
@@ -960,6 +1042,15 @@ def _normalize_modes(
     return normalized
 
 
+def normalize_target_temp_step_override(raw_value: Any) -> float | None:
+    """Return one persisted positive target-step fallback, when configured."""
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return None
+    return round(value, 6) if isfinite(value) and value >= 0.001 else None
+
+
 def validate_modes(
     raw_modes: Any, profile_zones: dict[str, set[str]] | set[str]
 ) -> list[VelairModeData]:
@@ -1034,6 +1125,7 @@ def normalize_climate_profiles(
                                 or "target_temp_low" in block
                                 or "target_temp_high" in block
                                 or block.get("action") == ACTION_TURN_OFF
+                                or block.get("action") == ACTION_SET_HVAC_MODE
                             )
                         ]
                         try:
@@ -1183,6 +1275,21 @@ def validate_climate_profiles(
                         if set(block) - {"start", "action"}:
                             raise ValueError(
                                 f"Turn Off block has unsupported targets for {entity_id}"
+                            )
+                        continue
+                    if action == ACTION_SET_HVAC_MODE:
+                        if set(block) != {"start", "action", "hvac_mode"}:
+                            raise ValueError(
+                                f"Mode-only block must contain only a mode for {entity_id}"
+                            )
+                        hvac_mode = block.get("hvac_mode")
+                        if (
+                            not isinstance(hvac_mode, str)
+                            or not hvac_mode
+                            or hvac_mode == "off"
+                        ):
+                            raise ValueError(
+                                f"Mode-only block requires a non-off HVAC mode for {entity_id}"
                             )
                         continue
                     if action != ACTION_SET_TEMPERATURE:
@@ -1443,6 +1550,33 @@ def normalize_comfort_data(raw_data: Any) -> ComfortData:
         humidity_min = DEFAULT_COMFORT_HUMIDITY_MIN
         humidity_max = DEFAULT_COMFORT_HUMIDITY_MAX
 
+    raw_temperature_aware = data.get("temperature_aware")
+    raw_temperature_aware = (
+        raw_temperature_aware if isinstance(raw_temperature_aware, dict) else {}
+    )
+
+    def normalize_temperature_aware_boundary(key: str) -> ComfortHumidityRangeData:
+        raw_boundary = raw_temperature_aware.get(key)
+        raw_boundary = raw_boundary if isinstance(raw_boundary, dict) else {}
+        minimum = _normalize_float(
+            raw_boundary.get("minimum"), humidity_min, minimum=0, maximum=100
+        )
+        maximum = _normalize_float(
+            raw_boundary.get("maximum"), humidity_max, minimum=0, maximum=100
+        )
+        if minimum >= maximum:
+            minimum, maximum = humidity_min, humidity_max
+        return {"minimum": minimum, "maximum": maximum}
+
+    temperature_aware: TemperatureAwareComfortData = {
+        "at_temperature_min": normalize_temperature_aware_boundary(
+            "at_temperature_min"
+        ),
+        "at_temperature_max": normalize_temperature_aware_boundary(
+            "at_temperature_max"
+        ),
+    }
+
     co2_attention = _normalize_int(
         data.get("co2_attention"),
         DEFAULT_COMFORT_CO2_ATTENTION,
@@ -1459,6 +1593,21 @@ def normalize_comfort_data(raw_data: Any) -> ComfortData:
         co2_attention = DEFAULT_COMFORT_CO2_ATTENTION
         co2_poor = DEFAULT_COMFORT_CO2_POOR
 
+    raw_derived = data.get("derived_metrics")
+    raw_derived = raw_derived if isinstance(raw_derived, dict) else {}
+    derived_metrics: dict[str, DerivedMetricData] = {}
+    for metric in ("dew_point", "absolute_humidity", "humidex"):
+        raw_metric = raw_derived.get(metric)
+        raw_metric = raw_metric if isinstance(raw_metric, dict) else {}
+        source = raw_metric.get("source")
+        derived_metrics[metric] = {
+            "enabled": bool(raw_metric.get("enabled", False)),
+            "source": "entity" if source == "entity" else "velair",
+            "entity_id": normalize_sensor_entity_id(
+                raw_metric.get("entity_id")
+            ),
+        }
+
     return {
         "enabled": bool(data.get("enabled", False)),
         "temperature_entity_id": _normalize_optional_entity_id(
@@ -1473,6 +1622,12 @@ def normalize_comfort_data(raw_data: Any) -> ComfortData:
         "temperature_max": temperature_max,
         "humidity_min": humidity_min,
         "humidity_max": humidity_max,
+        "comfort_model": (
+            data["comfort_model"]
+            if data.get("comfort_model") in ("guided", "temperature_aware")
+            else "simple"
+        ),
+        "temperature_aware": temperature_aware,
         "co2_attention": co2_attention,
         "co2_poor": co2_poor,
         "stale_after_minutes": _normalize_int(
@@ -1481,6 +1636,34 @@ def normalize_comfort_data(raw_data: Any) -> ComfortData:
             minimum=5,
             maximum=1440,
         ),
+        "outdoor_comparison_enabled": bool(
+            data.get("outdoor_comparison_enabled", False)
+        ),
+        "outdoor_temperature_entity_id": normalize_sensor_entity_id(
+            data.get("outdoor_temperature_entity_id")
+        ),
+        "outdoor_humidity_entity_id": normalize_sensor_entity_id(
+            data.get("outdoor_humidity_entity_id")
+        ),
+        "ventilation_temperature_threshold": _normalize_float(
+            data.get("ventilation_temperature_threshold"),
+            DEFAULT_VENTILATION_TEMPERATURE_THRESHOLD,
+            minimum=0.1,
+            maximum=18.0,
+        ),
+        "ventilation_humidity_threshold": _normalize_float(
+            data.get("ventilation_humidity_threshold"),
+            DEFAULT_VENTILATION_HUMIDITY_THRESHOLD,
+            minimum=0.5,
+            maximum=50.0,
+        ),
+        "ventilation_absolute_humidity_threshold": _normalize_float(
+            data.get("ventilation_absolute_humidity_threshold"),
+            DEFAULT_VENTILATION_ABSOLUTE_HUMIDITY_THRESHOLD,
+            minimum=0.1,
+            maximum=10.0,
+        ),
+        "derived_metrics": derived_metrics,
     }
 
 
@@ -2131,6 +2314,16 @@ def _normalize_optional_entity_id(value: Any) -> str | None:
     return entity_id
 
 
+def normalize_sensor_entity_id(value: Any) -> str | None:
+    """Return a syntactically valid sensor entity ID or None."""
+    if not isinstance(value, str):
+        return None
+    entity_id = value.strip()
+    if re.fullmatch(r"sensor\.[a-z0-9_]+", entity_id) is None:
+        return None
+    return entity_id
+
+
 def _normalize_int(value: Any, fallback: int, *, minimum: int, maximum: int) -> int:
     """Normalize a bounded integer field."""
     try:
@@ -2223,6 +2416,7 @@ def normalize_schedule_templates(raw_templates: Any) -> list[ScheduleTemplateDat
                 or "target_temp_low" in block
                 or "target_temp_high" in block
                 or block.get("action") == ACTION_TURN_OFF
+                or block.get("action") == ACTION_SET_HVAC_MODE
             )
         ]
 

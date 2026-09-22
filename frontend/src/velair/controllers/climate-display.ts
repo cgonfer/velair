@@ -26,6 +26,7 @@ import {
   formatTemperatureLimit,
   commonTemperatureStep,
 } from "../domain/settings";
+import { DEFAULT_TARGET_TEMP_STEP } from "../constants";
 import type { SupportedLanguage } from "../translations";
 import type { BlockDraftSource, EntityDiagnostic, HassState, HomeAssistant, ScheduleEvent, ScheduleResponse } from "../types";
 
@@ -80,9 +81,10 @@ export function temperatureStep(
   entityId = host._selectedEntity,
 ): number | undefined {
   if (source === "template") {
+    const entityIds = host._data?.configured_entities ?? [];
     return commonTemperatureStep(
-      (host._data?.configured_entities ?? []).map((climateEntityId: string) =>
-        host._entityTemperatureStep(climateEntityId)),
+      entityIds.map((climateEntityId: string) => host._entityTemperatureStep(climateEntityId)),
+      entityIds.map((climateEntityId: string) => host._entityTemperatureLimits(climateEntityId)[0]),
     );
   }
 
@@ -90,7 +92,21 @@ export function temperatureStep(
 }
 
 export function entityTemperatureStepForHost(host: ClimateDisplayHost, entityId?: string): number | undefined {
-  return entityTemperatureStep(entityId ? host.hass?.states?.[entityId] : undefined);
+  const published = entityTemperatureStep(
+    entityId ? host.hass?.states?.[entityId] : undefined,
+    host._temperatureUnit(entityId),
+  );
+  if (published !== undefined) return published;
+  const zone = entityId ? host._data?.zones?.[entityId] : undefined;
+  for (const fallback of [
+    zone?.last_reported_target_temp_step,
+    zone?.target_temp_step_override,
+  ]) {
+    if (typeof fallback === "number" && Number.isFinite(fallback) && fallback >= 0.001) {
+      return fallback;
+    }
+  }
+  return DEFAULT_TARGET_TEMP_STEP;
 }
 
 export function entityExists(host: ClimateDisplayHost, entityId: string): boolean {
@@ -226,6 +242,7 @@ export function formatEventActionForHost(host: ClimateDisplayHost, event: Schedu
     {
       off: host._t("off"),
       setTemperature: host._t("setTemperature"),
+      deviceControlled: host._t("deviceControlled"),
     },
     (value, entityId) => host._formatTemperature(value, entityId),
   );

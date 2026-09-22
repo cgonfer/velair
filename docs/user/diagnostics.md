@@ -12,14 +12,48 @@ configuration, functions, and device and sensors. It includes:
 - availability and reported HVAC/temperature capabilities;
 - detected configuration issues where Velair has direct evidence;
 - the effective Mode and Profiles, calculated runtime intent, Boosts and pauses;
-- the last confirmed application, delivery error, and bounded retry state;
+- the last control target accepted by Home Assistant, delivery error, and
+  bounded retry state;
 - Room Assist, Adaptive Preconditioning, Comfort, and explicitly associated
   sensors.
+
+Successful `velair.set_hvac_mode` calls appear as a manual, mode-only accepted
+delivery. They include the selected HVAC mode but no invented temperature.
+Validation failures do not replace the previous accepted evidence, and physical
+delivery failures do not publish a successful target event.
 
 Velair does not infer a cause when the available evidence only proves a symptom
 such as an unavailable entity.
 Battery information is omitted unless Velair can establish a reliable
 association; the first version does not attempt heuristic device matching.
+
+For Comfort, Diagnostics includes the saved source for every enabled derived
+reading, the effective input or external entity, its current availability, and
+stable issue codes for missing, stale, or invalid data. Dew point, absolute
+humidity, and Humidex remain observational here: their presence in a report does
+not mean that they influenced scheduling or climate control. The same enabled
+payloads are exposed in the `derived_metrics` attribute of the zone
+**Environmental condition** sensor; Velair does not create separate proxy
+entities for them.
+When outdoor comparison is enabled, the same Comfort report also contains its
+explicit sensor availability, independent outdoor data quality, normalized
+comparison, explicit indoor/outdoor absolute humidity, and any opportunity or
+trade-off code. The `guidance_thresholds` block records the effective per-zone
+sensitivity used for that conclusion, which helps distinguish a sensor problem
+from intentionally stricter guidance. These values remain
+observational and do not indicate that Velair opened a window or changed HVAC.
+Diagnostics also includes `comfort_zone`: the configured Simple, Guided, or
+custom temperature-aware geometry and the humidity range effective at the current
+temperature. A `null` effective range explains why a current humidity reading
+was not classified when temperature was unavailable; it is not replaced with a
+guessed fallback.
+
+The live assessment includes the current `range_summary`. Retained
+`comfort_assessment_changed` entries also keep `previous_range_summary` and the
+`range_summary_changed` and `range_status_changed` flags, so a downloaded
+report can show whether the event represented a configured-range transition or
+another Comfort change. These fields contain only stable semantic codes, not
+raw Home Assistant event context.
 
 ## Runtime History And Privacy
 
@@ -84,6 +118,16 @@ Diagnostics has no scheduler, retry, rollback, or climate controls. Settings
 continues to contain configuration and maintenance actions; climate capability
 and health details now belong to Diagnostics.
 
+Each managed climate also reports runtime-only command-settling evidence. While
+a recent Velair command is stabilizing, Diagnostics lists the affected control
+fields in its runtime snapshot. If the climate has not converged by the bounded
+deadline, the next fresh snapshot marks the unit with a
+`command_settling_mismatch` warning. The downloaded report's
+`command_settling` block includes the expected and observed values. This is
+evidence for troubleshooting: Diagnostics does not retry the command, change
+the climate, or create a Manual adjustment. The evidence is cleared by a newer
+command for that field or by restart.
+
 ## Automating Diagnostic Health
 
 Velair creates a **Diagnostics status** entity with `ok`, `warning`, and
@@ -97,3 +141,15 @@ Use the `diagnostic_issue_changed` event when it needs to react to one issue
 being detected or resolved while other issues remain active. See
 [Automation events](automation-events.md#diagnostic-issue-changed) for the
 event payload and examples.
+
+Each managed climate also has a disabled-by-default **Zone delivery
+diagnostics** sensor. It projects the same runtime-only delivery status and last
+accepted control target used by Diagnostics, without raw error text. An
+accepted target means that Home Assistant accepted Velair's related service
+sequence; it does not establish the state of the device or transport. Room
+Assist may subsequently adjust the sent target and exposes that context through
+its own sensor. Delivery evidence is never restored after a restart and is
+cleared by a successful Velair data reset. See
+[Zone Control and Delivery Sensors](zone-sensors.md#zone-delivery-diagnostics)
+for the complete state and attribute contract, enablement steps, and automation
+examples.

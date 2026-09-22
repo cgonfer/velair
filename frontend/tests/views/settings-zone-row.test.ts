@@ -12,6 +12,7 @@ import { es } from "../../src/velair/translations/es";
 import {
   renderExternalSystemsSettings,
   renderSettingsZoneOrderRow,
+  renderSettingsTargetTempStep,
 } from "../../src/velair/views/settings-view";
 
 function host(
@@ -36,6 +37,11 @@ function host(
         },
       },
     },
+    hass: {
+      states: {
+        "climate.office": { attributes: { target_temp_step: 0.5 } },
+      },
+    },
     _climateProvidedData: () => [],
     _climateSupportedModes: () => ["heat"],
     _entityDiagnostic: () => ({ status: "ok", tooltip: "Available", messages: [] }),
@@ -51,6 +57,7 @@ function host(
     _modeLabel: () => "Heat",
     _moveSettingsZone: vi.fn(),
     _saveExternalChangePolicy: vi.fn(),
+    _saveZoneTargetTempStep: vi.fn(),
     _settingsSaving: false,
     _t: (key: string) => key,
     _temperatureUnit: () => "\u00b0C",
@@ -415,6 +422,67 @@ describe("settings climate row", () => {
     expect(container.querySelector(".settings-capability-section")).toBeNull();
   });
 
+  it("shows and saves a fallback only when Home Assistant omits the target step", () => {
+    const container = document.createElement("div");
+    const viewHost = host(false);
+    delete viewHost.hass!.states!["climate.office"].attributes!.target_temp_step;
+    viewHost._data!.zones["climate.office"].target_temp_step_override = 0.5;
+
+    render(renderSettingsTargetTempStep(viewHost, "climate.office"), container);
+
+    const input = container.querySelector(".settings-target-temp-step-control input") as HTMLInputElement;
+    expect(input.value).toBe("0.5");
+    input.value = "0.25";
+    input.dispatchEvent(new Event("change"));
+    expect(viewHost._saveZoneTargetTempStep).toHaveBeenCalledWith("climate.office", 0.25);
+  });
+
+  it("uses one as the fallback default and hides a retained override when a step is published", () => {
+    const container = document.createElement("div");
+    const viewHost = host(false);
+    delete viewHost.hass!.states!["climate.office"].attributes!.target_temp_step;
+
+    render(renderSettingsTargetTempStep(viewHost, "climate.office"), container);
+    expect((container.querySelector("input") as HTMLInputElement).value).toBe("1");
+
+    viewHost._data!.zones["climate.office"].target_temp_step_override = 0.25;
+    viewHost.hass!.states!["climate.office"].attributes!.target_temp_step = 0.5;
+    render(renderSettingsTargetTempStep(viewHost, "climate.office"), container);
+    expect(container.querySelector(".settings-target-temp-step")).toBeNull();
+    expect(viewHost._data!.zones["climate.office"].target_temp_step_override).toBe(0.25);
+  });
+
+  it("shows the retained last-reported step when the entity stops publishing it", () => {
+    const container = document.createElement("div");
+    const viewHost = host(false);
+    delete viewHost.hass!.states!["climate.office"].attributes!.target_temp_step;
+    viewHost._data!.zones["climate.office"].last_reported_target_temp_step = 0.5;
+    viewHost._data!.zones["climate.office"].target_temp_step_override = 1;
+
+    render(renderSettingsTargetTempStep(viewHost, "climate.office"), container);
+
+    expect((container.querySelector("input") as HTMLInputElement).value).toBe("0.5");
+  });
+
+  it("shows and saves the fallback in the climate's Fahrenheit unit", () => {
+    const container = document.createElement("div");
+    const viewHost = host(false);
+    delete viewHost.hass!.states!["climate.office"].attributes!.target_temp_step;
+    viewHost._data!.zones["climate.office"].last_reported_target_temp_step = 0.9;
+    viewHost._temperatureUnit = () => "°F";
+    viewHost._entityTemperatureLimits = () => [41, 95];
+
+    render(renderSettingsTargetTempStep(viewHost, "climate.office"), container);
+
+    const control = container.querySelector(".settings-target-temp-step-control") as HTMLElement;
+    const input = control.querySelector("input") as HTMLInputElement;
+    expect(input.value).toBe("0.9");
+    expect(control.textContent).toContain("°F");
+    input.value = "1.8";
+    input.dispatchEvent(new Event("change"));
+    expect(viewHost._saveZoneTargetTempStep).toHaveBeenCalledWith("climate.office", 1.8);
+  });
+
   it("owns the future external-change policy inside each managed climate row", () => {
     const container = document.createElement("div");
     render(renderSettingsZoneOrderRow(host(false), "climate.office", 0, 1), container);
@@ -477,11 +545,13 @@ describe("settings climate row", () => {
     expect(container.querySelector(".popover-close")).toBeNull();
   });
 
-  it("keeps compact desktop controls and groups policy with duration below the mobile heading", () => {
+  it("aligns the temperature-step control without changing the external policy layout", () => {
     const cssText = settingsStyles.cssText;
     expect(cssText).toMatch(/\.settings-external-policy\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/);
     expect(cssText).toMatch(/\.settings-policy-controls\s*\{[^}]*display:\s*flex[^}]*flex:\s*0 1 auto[^}]*gap:\s*8px/);
     expect(cssText).toMatch(/\.settings-policy-controls > \.select-wrap\s*\{[^}]*flex:\s*0 1 170px[^}]*height:\s*34px[^}]*margin:\s*0[^}]*width:\s*170px/);
+    expect(cssText).toMatch(/\.settings-target-temp-step > \.settings-policy-heading\s*\{[^}]*flex:\s*0 0 142px/);
+    expect(cssText).toMatch(/\.settings-target-temp-step-control\s*\{[^}]*max-width:\s*100%[^}]*width:\s*170px/);
     expect(cssText).toMatch(/\.settings-external-policy \.select-wrap select\s*\{[^}]*height:\s*100%[^}]*margin:\s*0[^}]*width:\s*100%/);
     expect(cssText).toMatch(/\.settings-policy-duration\s*\{[^}]*flex:\s*0 1 105px[^}]*height:\s*34px/);
     expect(cssText).toMatch(/\.settings-policy-duration input\s*\{[^}]*border-radius:\s*0[^}]*box-shadow:\s*none[^}]*margin:\s*0[^}]*outline:\s*0/);
@@ -489,6 +559,7 @@ describe("settings climate row", () => {
     expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-external-policy\s*\{[^}]*flex-direction:\s*column/);
     expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-policy-controls\s*\{[^}]*width:\s*100%/);
     expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-policy-controls > \.select-wrap\s*\{[^}]*flex:\s*1 1 160px[^}]*max-width:\s*170px/);
+    expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-target-temp-step\s*\{[^}]*flex-direction:\s*column/);
     expect(cssText).not.toContain("external-adjustment-popover");
   });
 });

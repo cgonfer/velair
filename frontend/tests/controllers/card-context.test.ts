@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { effectiveView, preconditioningInputsChanged } from "../../src/velair/controllers/card-context";
+import { effectiveView, preconditioningInputsChanged, shouldUpdateForHass } from "../../src/velair/controllers/card-context";
 import type { HomeAssistant, ScheduleResponse } from "../../src/velair/types";
 
 function data(): ScheduleResponse {
@@ -126,5 +126,55 @@ describe("preconditioning input changes", () => {
         oldHass,
       ),
     ).toBe(true);
+  });
+});
+
+describe("climate card Home Assistant updates", () => {
+  it("updates for optional outdoor and window sensors but ignores unrelated entities", () => {
+    const oldHass = hass(18, "10");
+    oldHass.states!["binary_sensor.window"] = { state: "off" };
+    oldHass.states!["sensor.unrelated"] = { state: "1" };
+    const nextHass = structuredClone(oldHass);
+    nextHass.states!["binary_sensor.window"].state = "on";
+    expect(shouldUpdateForHass({
+      _data: data(),
+      _config: { view: "climate", selected_entity: "climate.office", climate_window_entities: ["binary_sensor.window"] },
+    }, nextHass, oldHass)).toBe(true);
+
+    nextHass.states!["binary_sensor.window"].state = "off";
+    nextHass.states!["sensor.unrelated"].state = "2";
+    expect(shouldUpdateForHass({
+      _data: data(),
+      _config: { view: "climate", selected_entity: "climate.office", climate_window_entities: ["binary_sensor.window"] },
+    }, nextHass, oldHass)).toBe(false);
+  });
+
+  it.each([
+    ["current", { climate_actions: [{ type: "script", name: "Ventilate", script: "script.ventilate" }] }],
+    ["legacy", { climate_custom_actions: [{ name: "Ventilate", script: "script.ventilate" }] }],
+  ])("updates when a %s configured script becomes unavailable or available", (_label, actionConfig) => {
+    const available = hass(18, "10");
+    available.states!["script.ventilate"] = { state: "off", attributes: { friendly_name: "Ventilate" } };
+    const unavailable = structuredClone(available);
+    unavailable.states!["script.ventilate"].state = "unavailable";
+    const host = {
+      _data: data(),
+      _config: {
+        view: "climate",
+        selected_entity: "climate.office",
+        ...actionConfig,
+      },
+    } as any;
+
+    expect(shouldUpdateForHass(host, unavailable, available)).toBe(true);
+    expect(shouldUpdateForHass(host, available, unavailable)).toBe(true);
+
+    const missing = structuredClone(available);
+    delete missing.states!["script.ventilate"];
+    expect(shouldUpdateForHass(host, available, missing)).toBe(true);
+
+    const running = structuredClone(available);
+    running.states!["script.ventilate"].state = "on";
+    expect(shouldUpdateForHass(host, running, available)).toBe(false);
   });
 });

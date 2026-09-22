@@ -1,4 +1,5 @@
 import type { ScheduleZone } from "../types";
+import { temperatureMatchesStep } from "./climate";
 
 const GRID_TOLERANCE = 0.0001;
 
@@ -21,7 +22,7 @@ export function incompatibleScheduleTargetCount(
         if (targets.some((temperature) => (
           temperature < minimum
           || temperature > maximum
-          || Math.abs(temperature / step - Math.round(temperature / step)) > GRID_TOLERANCE
+          || !temperatureMatchesStep(temperature, minimum, step, GRID_TOLERANCE)
         ))) {
           count += 1;
         }

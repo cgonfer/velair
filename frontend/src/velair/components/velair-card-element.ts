@@ -24,7 +24,9 @@ import {
 } from "../controllers/card-context";
 import type {
   BlockDraftSource,
+  ClimateCardCustomAction,
   ComfortSettings,
+  ComfortSettingsUpdate,
   DraftScheduleBlock,
   DiagnosticsSnapshot,
   EntityDiagnostic,
@@ -43,6 +45,15 @@ import type {
   VelairPortablePayload,
 } from "../types";
 import { EMPTY_DIAGNOSTIC_HISTORY_FILTERS } from "../domain/diagnostics-history";
+import { climateCardMenuPosition } from "../domain/climate-card-menu";
+import { validScriptEntityId } from "../domain/climate-card-actions";
+import { climateCardOwner } from "../domain/climate-card";
+import {
+  climateCardPublishedHvacModes,
+  climateCardRuntimeBlocksThermostat,
+  climateCardTargetPayload,
+  type ClimateCardTargetField,
+} from "../domain/climate-card-controls";
 import {
   DEFAULT_DIAGNOSTICS_LOG_COLUMNS,
   diagnosticsLogContentWidth,
@@ -264,6 +275,37 @@ export class VelairCard extends LitElement {
 
   @state() private _config: VelairCardConfig = {};
   @state() private _changedNextEventIds = new Set<string>();
+  @state() private _climateCardBoost?: {
+    entityId: string;
+    durationMinutes: number;
+    targetKind: "single" | "range";
+    target?: number;
+    low?: number;
+    high?: number;
+    hvacMode?: string;
+    fanMode?: string;
+    presetMode?: string;
+    swingMode?: string;
+    swingHorizontalMode?: string;
+    humidity?: number;
+  };
+  @state() private _climateCardPause?: {
+    entityId: string;
+    indefinite: boolean;
+    durationMinutes: number;
+    action: "none" | "turn_off";
+  };
+  @state() private _climateCardServiceAction?: "boost" | "cancel-boost" | "pause" | "resume";
+  @state() private _climateCardThermostatAction?: "temperature" | "hvac-mode";
+  @state() private _climateCardActionsMenuOpen = false;
+  @state() private _climateCardActionsHasOverflow = false;
+  @state() private _climateCardActionsCanScrollLeft = false;
+  @state() private _climateCardActionsCanScrollRight = false;
+  @state() private _climateCardCurrentStateCollapsed = true;
+  @state() private _climateCardPreconditioningCollapsed = true;
+  @state() private _climateCardRoomAssistCollapsed = true;
+  @state() private _climateCardScriptAction?: string;
+  @state() private _climateCardScriptFeedback?: { key: string; status: "success" | "error"; message: string };
   @state() private _data?: ScheduleResponse;
   @state() private _error?: string;
   @state() private _loading = false;
@@ -333,6 +375,8 @@ export class VelairCard extends LitElement {
   private _diagnosticsSnapshotAuthoritative = false;
   private _diagnosticsLogResizeObserver?: ResizeObserver;
   private _diagnosticsLogObservedElement?: Element;
+  private _climateCardActionsResizeObserver?: ResizeObserver;
+  private _climateCardActionsObservedElement?: HTMLElement;
   private _subscribing = false;
   private _successNoticeTick?: number;
   private _successNoticeTimeout?: number;
@@ -358,6 +402,8 @@ export class VelairCard extends LitElement {
   private _previousBodyCursor?: string;
   private _previousDocumentCursor?: string;
   private _diagnosticsSourcePositionFrame?: number;
+  private _climateCardActionsMenuPositionFrame?: number;
+  private _climateCardScriptFeedbackTimeout?: number;
   private readonly _handleOperationStatusDismissed = (event: Event): void => {
     const operationId = (event as CustomEvent<string>).detail;
     if (operationId !== this._data?.operation_status?.id) {
@@ -381,10 +427,40 @@ export class VelairCard extends LitElement {
       this._positionDiagnosticsSourceFilter();
     });
   };
+  private readonly _handleClimateCardActionsOutsidePointerDown = (event: PointerEvent): void => {
+    if (!this._climateCardActionsMenuOpen) return;
+    const inside = event.composedPath().some((item) => item instanceof Element && (
+      item.classList.contains("climate-card-actions-menu")
+      || item.classList.contains("climate-card-actions-menu-trigger")
+    ));
+    if (!inside) this._closeClimateCardActionsMenu();
+  };
+  private readonly _scheduleClimateCardActionsMenuPosition = (): void => {
+    if (this._climateCardActionsMenuPositionFrame !== undefined) return;
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    this._climateCardActionsMenuPositionFrame = view.requestAnimationFrame(() => {
+      this._climateCardActionsMenuPositionFrame = undefined;
+      this._positionClimateCardActionsMenu();
+    });
+  };
   public setConfig(config: VelairCardConfig): void {
+    if (this._climateCardActionsMenuOpen) this._closeClimateCardActionsMenu();
+    const previousConfig = this._config;
+    const hadExternalConfig = this._hasExternalConfig;
+    const nextConfig = config ?? {};
+    if (!hadExternalConfig || previousConfig.climate_current_state_default_collapsed !== nextConfig.climate_current_state_default_collapsed) {
+      this._climateCardCurrentStateCollapsed = nextConfig.climate_current_state_default_collapsed !== false;
+    }
+    if (!hadExternalConfig || previousConfig.climate_room_assist_default_collapsed !== nextConfig.climate_room_assist_default_collapsed) {
+      this._climateCardRoomAssistCollapsed = nextConfig.climate_room_assist_default_collapsed !== false;
+    }
+    if (!hadExternalConfig || previousConfig.climate_preconditioning_default_collapsed !== nextConfig.climate_preconditioning_default_collapsed) {
+      this._climateCardPreconditioningCollapsed = nextConfig.climate_preconditioning_default_collapsed !== false;
+    }
     this._hasExternalConfig = true;
     const previousSelectedEntity = this._selectedEntity;
-    this._config = config ?? {};
+    this._config = nextConfig;
     this._selectedEntity = config?.selected_entity;
     if (this._data) {
       const visibleZoneIds = this._visibleZoneIds(this._data.configured_entities);
@@ -420,8 +496,10 @@ export class VelairCard extends LitElement {
     this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, true);
     this._cancelDiagnosticsSourcePosition();
     this._diagnosticsSourceFilterOpen = false;
+    this._closeClimateCardActionsMenu();
     this._resetDiagnosticsExport();
     this._disconnectDiagnosticsLogResizeObserver();
+    this._disconnectClimateCardActionsResizeObserver();
     this._diagnosticsSubscriptionGeneration += 1;
     if (this._unsubscribeUpdates) {
       void this._unsubscribeUpdates();
@@ -432,6 +510,7 @@ export class VelairCard extends LitElement {
       this._unsubscribeDiagnostics = undefined;
     }
     this._clearSuccessNoticeTimer();
+    this._clearClimateCardScriptFeedback();
     this._operationalNotices.dispose();
     this._clearOperationStatusTimer();
     this._clearNextEventChangeTimer();
@@ -503,6 +582,7 @@ export class VelairCard extends LitElement {
       void this._syncDiagnosticsSubscription();
     }
     this._syncDiagnosticsLogResizeObserver();
+    this._syncClimateCardActionsResizeObserver();
     if (changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty")) {
       this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
         bubbles: true,
@@ -514,12 +594,20 @@ export class VelairCard extends LitElement {
       }));
     }
     const effectiveView = this._effectiveView();
-    const showsOverviewTimeline = effectiveView === "overview" || effectiveView === "overview-timeline";
+    const showsOverviewTimeline = effectiveView === "overview"
+      || effectiveView === "overview-timeline"
+      || effectiveView === "climate";
     if (!showsOverviewTimeline) {
       this._overviewTimelineScrollInitialized = false;
     } else if (this._data && !this._overviewTimelineScrollInitialized) {
       this._overviewTimelineScrollInitialized = true;
       window.requestAnimationFrame(() => this._scrollOverviewTimelineToNow());
+    }
+    if (this._climateCardActionsMenuOpen && (
+      !this.renderRoot.querySelector(".climate-card-actions-menu-trigger")
+      || !this.renderRoot.querySelector(".climate-card-actions-menu")
+    )) {
+      this._closeClimateCardActionsMenu();
     }
   }
 
@@ -616,7 +704,7 @@ export class VelairCard extends LitElement {
       return false;
     }
     const view = this._effectiveView();
-    return view === "overview" || view.startsWith("overview-") || view === "schedules" || view === "templates";
+    return view === "overview" || view.startsWith("overview-") || view === "climate" || view === "schedules" || view === "templates";
   }
 
   private _syncTimelineNowTick(): void {
@@ -656,16 +744,16 @@ export class VelairCard extends LitElement {
   private _scrollOverviewTimelineToNow(): void {
     const scroller = this.renderRoot.querySelector<HTMLElement>(".overview-timeline-scroll");
     const stickyNames = scroller?.querySelector<HTMLElement>(".overview-timeline-names");
-    if (!scroller || !stickyNames || scroller.scrollWidth <= scroller.clientWidth + 1) {
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth + 1) {
       return;
     }
 
-    const marker = timelineNowMarker(this._currentTimelineNow());
+    const marker = timelineNowMarker(this._currentTimelineNow(), this.hass?.config?.time_zone);
     scroller.scrollLeft = overviewTimelineInitialScrollLeft(
       marker.left,
       scroller.scrollWidth,
       scroller.clientWidth,
-      stickyNames.offsetWidth,
+      stickyNames?.offsetWidth ?? 0,
     );
   }
 
@@ -1370,7 +1458,7 @@ export class VelairCard extends LitElement {
 
   private async _resumeAutomaticControl(entityId: string): Promise<void> {
     const api = this._api();
-    if (!api || this._manualControlActions[entityId]) return;
+    if (!api || this._manualControlActions[entityId] || this._climateCardThermostatAction) return;
     this._manualControlActions = { ...this._manualControlActions, [entityId]: "resume" };
     this._error = undefined;
     try {
@@ -1384,9 +1472,441 @@ export class VelairCard extends LitElement {
     }
   }
 
+  private async _saveZoneTargetTempStep(
+    entityId: string,
+    targetTempStep: number,
+  ): Promise<void> {
+    const api = this._api();
+    if (!api || this._settingsSaving) return;
+    this._settingsSaving = true;
+    this._error = undefined;
+    try {
+      this._applyScheduleData(await api.updateZoneTargetTempStep(entityId, targetTempStep));
+      this._showSuccess(this._t("targetTempStepSaved"));
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("unableSaveSettings");
+    } finally {
+      this._settingsSaving = false;
+    }
+  }
+
+  private _openClimateCardBoost(entityId: string): void {
+    if (this._climateCardBoost?.entityId === entityId) {
+      this._climateCardBoost = undefined;
+      return;
+    }
+    this._climateCardPause = undefined;
+    const attributes = this.hass?.states?.[entityId]?.attributes;
+    const runtime = this._data?.zone_runtime?.[entityId];
+    const low = attributes?.target_temp_low ?? runtime?.target_temp_low;
+    const high = attributes?.target_temp_high ?? runtime?.target_temp_high;
+    const target = attributes?.temperature ?? runtime?.target_temperature ?? attributes?.current_temperature;
+    this._climateCardBoost = {
+      entityId,
+      durationMinutes: 60,
+      targetKind: typeof low === "number" && typeof high === "number" ? "range" : "single",
+      target,
+      low: typeof low === "number" ? low : typeof target === "number" ? target - 1 : undefined,
+      high: typeof high === "number" ? high : typeof target === "number" ? target + 1 : undefined,
+    };
+  }
+
+  private _cancelClimateCardBoost(): void {
+    this._climateCardBoost = undefined;
+  }
+
+  private _openClimateCardPause(entityId: string): void {
+    if (this._climateCardPause?.entityId === entityId) {
+      this._climateCardPause = undefined;
+      return;
+    }
+    this._climateCardBoost = undefined;
+    this._climateCardPause = {
+      entityId,
+      indefinite: false,
+      durationMinutes: 60,
+      action: "none",
+    };
+  }
+
+  private _cancelClimateCardPause(): void {
+    this._climateCardPause = undefined;
+  }
+
+  private _openClimateCardActionsMenu = (): void => {
+    if (this._climateCardActionsMenuOpen) {
+      this._closeClimateCardActionsMenu(true);
+      return;
+    }
+    this._climateCardActionsMenuOpen = true;
+    this.ownerDocument.addEventListener("pointerdown", this._handleClimateCardActionsOutsidePointerDown, true);
+    this.ownerDocument.defaultView?.addEventListener("resize", this._scheduleClimateCardActionsMenuPosition);
+    this.ownerDocument.addEventListener("scroll", this._scheduleClimateCardActionsMenuPosition, true);
+    this.ownerDocument.defaultView?.visualViewport?.addEventListener("resize", this._scheduleClimateCardActionsMenuPosition);
+    this.ownerDocument.defaultView?.visualViewport?.addEventListener("scroll", this._scheduleClimateCardActionsMenuPosition);
+    this.requestUpdate();
+    void this.updateComplete.then(() => {
+      if (!this._climateCardActionsMenuOpen) return;
+      const menu = this.renderRoot.querySelector<HTMLElement>(".climate-card-actions-menu");
+      if (!menu) return;
+      try {
+        menu.showPopover?.();
+      } catch {
+        // A manual fallback remains visible and fixed when Popover is unavailable.
+      }
+      this._positionClimateCardActionsMenu();
+      this.ownerDocument.defaultView?.requestAnimationFrame(() => {
+        menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+      });
+    });
+  };
+
+  private _closeClimateCardActionsMenu(returnFocus = false): void {
+    const wasOpen = this._climateCardActionsMenuOpen;
+    this._climateCardActionsMenuOpen = false;
+    this.ownerDocument.removeEventListener("pointerdown", this._handleClimateCardActionsOutsidePointerDown, true);
+    this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleClimateCardActionsMenuPosition);
+    this.ownerDocument.removeEventListener("scroll", this._scheduleClimateCardActionsMenuPosition, true);
+    this.ownerDocument.defaultView?.visualViewport?.removeEventListener("resize", this._scheduleClimateCardActionsMenuPosition);
+    this.ownerDocument.defaultView?.visualViewport?.removeEventListener("scroll", this._scheduleClimateCardActionsMenuPosition);
+    if (this._climateCardActionsMenuPositionFrame !== undefined) {
+      this.ownerDocument.defaultView?.cancelAnimationFrame(this._climateCardActionsMenuPositionFrame);
+      this._climateCardActionsMenuPositionFrame = undefined;
+    }
+    const menu = (this.renderRoot as Element | ShadowRoot | undefined)?.querySelector<HTMLElement>(".climate-card-actions-menu");
+    try {
+      menu?.hidePopover?.();
+    } catch {
+      // It may already have been light-dismissed by the browser.
+    }
+    if (wasOpen) this.requestUpdate();
+    if (returnFocus && wasOpen) this.ownerDocument.defaultView?.requestAnimationFrame(() => {
+      (this.renderRoot as Element | ShadowRoot | undefined)?.querySelector<HTMLElement>(".climate-card-actions-menu-trigger")?.focus();
+    });
+  }
+
+  private _positionClimateCardActionsMenu(): void {
+    if (!this._climateCardActionsMenuOpen) return;
+    const trigger = this.renderRoot.querySelector<HTMLElement>(".climate-card-actions-menu-trigger");
+    const menu = this.renderRoot.querySelector<HTMLElement>(".climate-card-actions-menu");
+    const view = this.ownerDocument.defaultView;
+    if (!trigger || !menu || !view) return;
+    const visual = view.visualViewport;
+    const position = climateCardMenuPosition(
+      trigger.getBoundingClientRect(),
+      menu.scrollWidth || 280,
+      menu.scrollHeight || 240,
+      {
+        top: visual?.offsetTop ?? 0,
+        left: visual?.offsetLeft ?? 0,
+        width: visual?.width ?? view.innerWidth,
+        height: visual?.height ?? view.innerHeight,
+      },
+    );
+    menu.dataset.placement = position.placement;
+    menu.style.left = `${position.left}px`;
+    menu.style.top = `${position.top}px`;
+    menu.style.width = `${position.width}px`;
+    menu.style.maxHeight = `${position.maxHeight}px`;
+  }
+
+  private async _runClimateCardScriptAction(action: ClimateCardCustomAction, index: number): Promise<void> {
+    if (!this.hass || this._climateCardScriptAction) return;
+    if (!validScriptEntityId(action.script)) {
+      this._error = this._t("climateCardScriptUnavailable");
+      this._closeClimateCardActionsMenu();
+      return;
+    }
+    const state = this.hass.states?.[action.script];
+    if (!state || state.state === "unavailable" || state.state === "unknown") {
+      this._error = this._t("climateCardScriptUnavailable");
+      return;
+    }
+    const name = action.name.trim() || this._friendlyEntityName(action.script);
+    if (action.confirmation && !window.confirm(this._t("climateCardConfirmScriptAction", { name }))) return;
+    const key = `${index}:${action.script}`;
+    this._clearClimateCardScriptFeedback();
+    this._climateCardScriptAction = key;
+    this._closeClimateCardActionsMenu(true);
+    this._error = undefined;
+    try {
+      await this.hass.callService("script", "turn_on", { entity_id: action.script });
+      const message = this._t("climateCardScriptExecuted", { name });
+      this._showSuccess(message);
+      this._setClimateCardScriptFeedback({ key, status: "success", message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : this._t("climateCardActionFailed");
+      this._error = message;
+      this._setClimateCardScriptFeedback({ key, status: "error", message });
+    } finally {
+      this._climateCardScriptAction = undefined;
+    }
+  }
+
+  private _setClimateCardScriptFeedback(feedback: { key: string; status: "success" | "error"; message: string }): void {
+    this._clearClimateCardScriptFeedback();
+    this._climateCardScriptFeedback = feedback;
+    this._climateCardScriptFeedbackTimeout = this.ownerDocument.defaultView?.setTimeout(() => {
+      this._climateCardScriptFeedbackTimeout = undefined;
+      this._climateCardScriptFeedback = undefined;
+    }, 2000);
+  }
+
+  private _clearClimateCardScriptFeedback(): void {
+    if (this._climateCardScriptFeedbackTimeout !== undefined) {
+      this.ownerDocument.defaultView?.clearTimeout(this._climateCardScriptFeedbackTimeout);
+      this._climateCardScriptFeedbackTimeout = undefined;
+    }
+    this._climateCardScriptFeedback = undefined;
+  }
+
+  private _handleClimateCardActionsScroll = (event: Event): void => {
+    this._updateClimateCardActionsScrollState(event.currentTarget as HTMLElement);
+  };
+
+  private _scrollClimateCardActions(direction: -1 | 1): void {
+    const row = this.renderRoot.querySelector<HTMLElement>(".climate-card-actions-row");
+    if (!row) return;
+    const reducedMotion = this.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    row.scrollBy({
+      left: direction * Math.max(96, row.clientWidth * 0.7),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }
+
+  private _syncClimateCardActionsResizeObserver(): void {
+    const row = this.renderRoot.querySelector<HTMLElement>(".climate-card-actions-row");
+    if (row === this._climateCardActionsObservedElement) {
+      if (row) this._updateClimateCardActionsScrollState(row);
+      return;
+    }
+    this._disconnectClimateCardActionsResizeObserver();
+    if (!row) {
+      this._setClimateCardActionsScrollState(false, false, false);
+      return;
+    }
+    this._climateCardActionsObservedElement = row;
+    this._updateClimateCardActionsScrollState(row);
+    if (typeof ResizeObserver !== "undefined") {
+      this._climateCardActionsResizeObserver = new ResizeObserver(() => this._updateClimateCardActionsScrollState(row));
+      this._climateCardActionsResizeObserver.observe(row);
+    }
+  }
+
+  private _disconnectClimateCardActionsResizeObserver(): void {
+    this._climateCardActionsResizeObserver?.disconnect();
+    this._climateCardActionsResizeObserver = undefined;
+    this._climateCardActionsObservedElement = undefined;
+  }
+
+  private _updateClimateCardActionsScrollState(row: HTMLElement): void {
+    const tolerance = 1;
+    const viewportWidth = row.parentElement?.clientWidth || row.clientWidth;
+    const hasOverflow = row.scrollWidth > viewportWidth + tolerance;
+    this._setClimateCardActionsScrollState(
+      hasOverflow,
+      hasOverflow && row.scrollLeft > tolerance,
+      hasOverflow && row.scrollLeft + row.clientWidth < row.scrollWidth - tolerance,
+    );
+  }
+
+  private _setClimateCardActionsScrollState(hasOverflow: boolean, canScrollLeft: boolean, canScrollRight: boolean): void {
+    if (this._climateCardActionsHasOverflow !== hasOverflow) this._climateCardActionsHasOverflow = hasOverflow;
+    if (this._climateCardActionsCanScrollLeft !== canScrollLeft) this._climateCardActionsCanScrollLeft = canScrollLeft;
+    if (this._climateCardActionsCanScrollRight !== canScrollRight) this._climateCardActionsCanScrollRight = canScrollRight;
+  }
+
+  private _updateClimateCardBoost(
+    field: "durationMinutes" | "target" | "low" | "high" | "humidity",
+    value: string,
+  ): void {
+    if (!this._climateCardBoost) return;
+    const numeric = Number(value);
+    this._climateCardBoost = {
+      ...this._climateCardBoost,
+      [field]: Number.isFinite(numeric) ? numeric : undefined,
+    };
+  }
+
+  private _updateClimateCardBoostOption(
+    field: "targetKind" | "hvacMode" | "fanMode" | "presetMode" | "swingMode" | "swingHorizontalMode",
+    value: string,
+  ): void {
+    if (!this._climateCardBoost) return;
+    this._climateCardBoost = { ...this._climateCardBoost, [field]: value || undefined } as typeof this._climateCardBoost;
+  }
+
+  private _updateClimateCardPause(
+    field: "durationMinutes" | "action" | "indefinite",
+    value: string | boolean,
+  ): void {
+    if (!this._climateCardPause) return;
+    this._climateCardPause = {
+      ...this._climateCardPause,
+      [field]: field === "durationMinutes" ? Number(value) : value,
+    } as typeof this._climateCardPause;
+  }
+
+  private async _runClimateCardService(
+    action: "boost" | "cancel-boost" | "pause" | "resume",
+    entityId: string,
+  ): Promise<void> {
+    if (!this.hass || this._climateCardServiceAction) return;
+    this._climateCardServiceAction = action;
+    this._error = undefined;
+    try {
+      if (action === "boost") {
+        const boost = this._climateCardBoost;
+        if (!boost || boost.entityId !== entityId) return;
+        const data: Record<string, unknown> = {
+          entity_id: entityId,
+          duration_minutes: boost.durationMinutes,
+          ...(boost.targetKind === "range" && typeof boost.low === "number" && typeof boost.high === "number"
+            ? { target_temp_low: boost.low, target_temp_high: boost.high }
+            : { temperature: boost.target }),
+        };
+        if (boost.hvacMode) data.hvac_mode = boost.hvacMode;
+        if (boost.fanMode) data.fan_mode = boost.fanMode;
+        if (boost.presetMode) data.preset_mode = boost.presetMode;
+        if (boost.swingMode) data.swing_mode = boost.swingMode;
+        if (boost.swingHorizontalMode) data.swing_horizontal_mode = boost.swingHorizontalMode;
+        if (typeof boost.humidity === "number") data.humidity = boost.humidity;
+        await this.hass.callService("velair", "boost", data);
+        this._climateCardBoost = undefined;
+        this._showSuccess(this._t("climateCardBoostStarted"));
+      } else if (action === "cancel-boost") {
+        await this.hass.callService("velair", "cancel_boost", { entity_id: entityId });
+        this._showSuccess(this._t("climateCardBoostCancelled"));
+      } else if (action === "pause") {
+        const pause = this._climateCardPause;
+        if (!pause || pause.entityId !== entityId) return;
+        await this.hass.callService("velair", "pause_zone", {
+          entity_id: entityId,
+          action: pause.action,
+          ...(!pause.indefinite ? { duration_minutes: pause.durationMinutes } : {}),
+        });
+        this._climateCardPause = undefined;
+        this._showSuccess(this._t("climateCardZonePaused"));
+      } else {
+        await this.hass.callService("velair", "resume_zone", {
+          entity_id: entityId,
+          apply_current_schedule: true,
+          resume_all: true,
+        });
+        this._showSuccess(this._t("climateCardZoneResumed"));
+      }
+      await this._loadSchedule();
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("climateCardActionFailed");
+    } finally {
+      this._climateCardServiceAction = undefined;
+    }
+  }
+
+  private _navigateToVelair(): void {
+    this._closeClimateCardActionsMenu();
+    window.history.pushState(null, "", "/velair");
+    window.dispatchEvent(new Event("location-changed"));
+  }
+
+  private _openClimateEntity(entityId: string): void {
+    if (!this.hass?.states?.[entityId]) return;
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      bubbles: true,
+      composed: true,
+      detail: { entityId },
+    }));
+  }
+
+  private _openEntityHistory(entityId: string): void {
+    if (!this.hass?.states?.[entityId]) return;
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      bubbles: true,
+      composed: true,
+      detail: { entityId, view: "history" },
+    }));
+  }
+
+  private _toggleClimateCardCurrentState(): void {
+    this._climateCardCurrentStateCollapsed = !this._climateCardCurrentStateCollapsed;
+  }
+
+  private _toggleClimateCardRoomAssist(): void {
+    this._climateCardRoomAssistCollapsed = !this._climateCardRoomAssistCollapsed;
+  }
+
+  private _toggleClimateCardPreconditioning(): void {
+    this._climateCardPreconditioningCollapsed = !this._climateCardPreconditioningCollapsed;
+  }
+
+  private async _adjustClimateCardTarget(
+    entityId: string,
+    field: ClimateCardTargetField,
+    direction: -1 | 1,
+  ): Promise<void> {
+    if (!this._climateCardThermostatReady(entityId)) return;
+    const hass = this.hass;
+    if (!hass) return;
+    const state = hass.states?.[entityId];
+    const payload = climateCardTargetPayload(
+      state,
+      field,
+      direction,
+      this._temperatureUnit(entityId),
+      this._entityTemperatureStep(entityId),
+    );
+    if (!payload) return;
+    this._climateCardThermostatAction = "temperature";
+    this._error = undefined;
+    try {
+      await hass.callService("climate", "set_temperature", {
+        entity_id: entityId,
+        ...payload,
+      });
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("climateCardThermostatActionFailed");
+    } finally {
+      this._climateCardThermostatAction = undefined;
+    }
+  }
+
+  private async _setClimateCardHvacMode(entityId: string, mode: string): Promise<void> {
+    if (!this._climateCardThermostatReady(entityId)) return;
+    const hass = this.hass;
+    if (!hass) return;
+    const state = hass.states?.[entityId];
+    if (!climateCardPublishedHvacModes(state).includes(mode)) return;
+    this._climateCardThermostatAction = "hvac-mode";
+    this._error = undefined;
+    try {
+      await hass.callService("climate", "set_hvac_mode", {
+        entity_id: entityId,
+        hvac_mode: mode,
+      });
+    } catch (error) {
+      this._error = error instanceof Error ? error.message : this._t("climateCardThermostatActionFailed");
+    } finally {
+      this._climateCardThermostatAction = undefined;
+    }
+  }
+
+  private _climateCardThermostatReady(entityId: string): boolean {
+    const hass = this.hass;
+    if (!hass || !this._data || this._climateCardThermostatAction
+      || this._manualControlActions[entityId]
+      || !this._data.configured_entities.includes(entityId)
+      || climateCardOwner(this._data, entityId) !== "manual") {
+      return false;
+    }
+    const state = hass.states?.[entityId];
+    const runtime = this._data.zone_runtime?.[entityId];
+    return Boolean(state && state.state !== "unavailable" && state.state !== "unknown"
+      && !climateCardRuntimeBlocksThermostat("manual", runtime));
+  }
+
   private async _enterManualAdjustment(entityId: string): Promise<void> {
     const api = this._api();
-    if (!api || this._manualControlActions[entityId]) return;
+    if (!api || this._manualControlActions[entityId] || this._climateCardThermostatAction) return;
     this._manualControlActions = { ...this._manualControlActions, [entityId]: "enter" };
     this._error = undefined;
     try {
@@ -1440,7 +1960,7 @@ export class VelairCard extends LitElement {
 
   private async _saveZoneComfort(
     entityId: string,
-    comfort: Partial<ComfortSettings>,
+    comfort: ComfortSettingsUpdate,
   ): Promise<void> {
     await saveZoneComfort(asSettingsActionsHost(this), entityId, comfort);
   }

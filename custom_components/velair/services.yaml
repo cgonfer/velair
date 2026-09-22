@@ -86,6 +86,31 @@ set_temperature:
           step: 1
           unit_of_measurement: "%"
 
+set_hvac_mode:
+  name: Set HVAC mode
+  description: Set a non-off HVAC mode for one locally controlled Velair climate without sending a target temperature.
+  fields:
+    entity_id:
+      required: true
+      example: climate.living_room
+      selector:
+        entity:
+          domain: climate
+    hvac_mode:
+      name: HVAC mode
+      description: Non-off mode advertised by the selected climate entity.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+            - heat_cool
+            - auto
+            - dry
+            - fan_only
+
 apply_schedule:
   name: Apply schedule
   description: Apply the currently active schedule block now.
@@ -350,7 +375,7 @@ set_daily_schedule:
             - sunday
     blocks:
       required: true
-      description: List of schedule blocks. Temperature blocks need start and temperature. Turn-off blocks need start and action turn_off.
+      description: List of schedule blocks. Temperature blocks need start and temperature. Mode-only blocks need action set_hvac_mode and a non-off hvac_mode. Turn-off blocks need start and action turn_off.
       example:
         - start: "06:00"
           action: set_temperature
@@ -358,6 +383,9 @@ set_daily_schedule:
           hvac_mode: heat
         - start: "09:00"
           action: turn_off
+        - start: "12:00"
+          action: set_hvac_mode
+          hvac_mode: auto
         - start: "15:00"
           action: set_temperature
           temperature: 18

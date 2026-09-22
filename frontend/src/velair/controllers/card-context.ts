@@ -8,6 +8,12 @@ import {
 } from "../i18n";
 import { climateStateSignature } from "../domain/climate";
 import {
+  climateCardAvailabilitySignature,
+  climateCardEntityIds,
+  climateCardScriptEntityIds,
+  climateCardStateSignature,
+} from "../domain/climate-card";
+import {
   firstWeekdayFromConfig,
   orderedWeekdays,
   orderedZoneIds,
@@ -73,6 +79,16 @@ export function shouldUpdateForHass(
   const entityIds = visibleZoneIds(host._data?.configured_entities ?? [], host._config);
   if (!entityIds.length) {
     return false;
+  }
+  if (host._config.view === "climate") {
+    const scriptEntityIds = new Set(climateCardScriptEntityIds(host._config));
+    return climateCardEntityIds(host._config, host._data?.configured_entities ?? []).some(
+      (entityId) => scriptEntityIds.has(entityId)
+        ? climateCardAvailabilitySignature(value.states?.[entityId])
+          !== climateCardAvailabilitySignature(oldValue.states?.[entityId])
+        : climateCardStateSignature(value.states?.[entityId])
+          !== climateCardStateSignature(oldValue.states?.[entityId]),
+    );
   }
   return entityIds.some(
     (entityId) =>

@@ -56,7 +56,7 @@ class ClimateFeatureDocsTest(unittest.TestCase):
             "deadband_low: 20.7",
             "deadband_high: 21.3",
             "Why Climate target can differ from the calculation",
-            "calculation, published step, and applied value",
+            "calculation, effective step, and applied value",
         ):
             self.assertIn(expected, guide)
 

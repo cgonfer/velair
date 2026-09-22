@@ -3,7 +3,9 @@
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
-import { ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
+import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
+import { cardStyles } from "../../src/velair/styles/card-styles";
+import { responsiveStyles } from "../../src/velair/styles/responsive-styles";
 import { renderEditableBlock } from "../../src/velair/views/schedule-view";
 import type { BlockDraftSource, DraftScheduleBlock } from "../../src/velair/types";
 
@@ -44,6 +46,22 @@ function modeSelect(container: HTMLElement): HTMLSelectElement {
 }
 
 describe("editable schedule block view", () => {
+  it("gives the target three mobile grid segments at 320–340 px", () => {
+    expect(responsiveStyles.cssText).toMatch(
+      /(?:@container|@media) \(max-width: 340px\)[\s\S]*"mode target target target";[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 36px 36px 36px;/,
+    );
+  });
+
+  it("keeps the explicit target label aligned with existing desktop and mobile visibility rules", () => {
+    const cardCssText = cardStyles.map((style) => style.cssText).join("\n");
+    expect(cardCssText).toMatch(
+      /\.editable-block > label > \.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*none;/,
+    );
+    expect(responsiveStyles.cssText).toMatch(
+      /(?:@container|@media) \(max-width: 340px\)[\s\S]*\.editable-block > label > \.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*block;/,
+    );
+  });
+
   it.each(["00:00", "00:30", "18:00", "23:00"])(
     "preserves the native time value %s",
     (start) => {
@@ -68,6 +86,67 @@ describe("editable schedule block view", () => {
     expect(modeSelect(container).value).toBe("heat");
   });
 
+  it("switches between a temperature target and device-controlled target in the same cell", async () => {
+    const container = document.createElement("div");
+    const viewHost = host();
+
+    render(renderEditableBlock(viewHost, block("auto"), 0, "schedule"), container);
+    const modeOnlyToggle = container.querySelector<HTMLButtonElement>(".target-action-toggle");
+    expect(modeOnlyToggle).not.toBeNull();
+    expect(modeOnlyToggle?.getAttribute("aria-pressed")).toBe("true");
+    expect(modeOnlyToggle?.getAttribute("aria-label")).toBe("includeTargetTemperature");
+    expect(modeOnlyToggle?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:thermometer");
+    expect(container.querySelector<HTMLInputElement>('.single-temperature-field input[type="number"]')?.value).toBe("21");
+    const targetLabel = container.querySelector<HTMLLabelElement>(".single-temperature-field > label");
+    const targetInput = container.querySelector<HTMLInputElement>('.single-temperature-field input[type="number"]');
+    expect(targetLabel?.htmlFor).toBe(targetInput?.id);
+    expect(targetLabel?.querySelector("button")).toBeNull();
+    modeOnlyToggle?.click();
+    expect(viewHost._updateDraftBlock).toHaveBeenCalledWith(
+      0,
+      "action",
+      ACTION_SET_HVAC_MODE,
+      "schedule",
+    );
+
+    render(renderEditableBlock(viewHost, {
+      ...block("auto"),
+      action: ACTION_SET_HVAC_MODE,
+    }, 0, "schedule"), container);
+    await Promise.resolve();
+    const deviceTarget = container.querySelector<HTMLButtonElement>(".target-action-toggle.device-controlled");
+    const disabledInput = container.querySelector<HTMLInputElement>('.single-temperature-field input[type="number"]');
+    expect(deviceTarget?.getAttribute("aria-pressed")).toBe("false");
+    expect(deviceTarget?.getAttribute("aria-label")).toBe("includeTargetTemperature");
+    expect(deviceTarget?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:thermometer-off");
+    expect(disabledInput?.disabled).toBe(true);
+    expect(disabledInput?.placeholder).toBe("—");
+    expect(disabledInput?.value).toBe("");
+    deviceTarget?.click();
+    expect(viewHost._updateDraftBlock).toHaveBeenCalledWith(
+      0,
+      "action",
+      ACTION_SET_TEMPERATURE,
+      "schedule",
+    );
+  });
+
+  it("keeps the compact disabled state for a remembered range target", () => {
+    const container = document.createElement("div");
+    render(renderEditableBlock(host(), {
+      action: ACTION_SET_HVAC_MODE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: 19,
+      target_temp_high: 24,
+    }, 0), container);
+
+    const inputs = [...container.querySelectorAll<HTMLInputElement>('.temperature-range-fields input')];
+    expect(inputs).toHaveLength(2);
+    expect(inputs.every((input) => input.disabled && input.placeholder === "—")).toBe(true);
+    expect(container.querySelector(".target-action-toggle")?.getAttribute("aria-pressed")).toBe("false");
+  });
+
   it("normalizes missing HVAC modes to keep instead of leaving the selector blank", async () => {
     const container = document.createElement("div");
     const draft = { ...block(""), hvac_mode: undefined } as unknown as DraftScheduleBlock;
@@ -79,7 +158,7 @@ describe("editable schedule block view", () => {
     expect(modeSelect(container).selectedOptions[0]?.textContent).toBe("keep");
   });
 
-  it("aligns the spinner minimum to the zero-anchored climate grid", async () => {
+  it("anchors the spinner step at the climate minimum", async () => {
     const container = document.createElement("div");
     const viewHost = {
       ...host(),
@@ -87,12 +166,12 @@ describe("editable schedule block view", () => {
       _temperatureStep: () => 1,
     };
 
-    render(renderEditableBlock(viewHost, { ...block("heat"), temperature: 42 }, 0), container);
+    render(renderEditableBlock(viewHost, { ...block("heat"), temperature: 42.3 }, 0), container);
 
     const input = container.querySelector<HTMLInputElement>('input[type="number"]');
-    expect(input?.min).toBe("42");
+    expect(input?.min).toBe("41.3");
     expect(input?.step).toBe("1");
-    expect(input?.value).toBe("42");
+    expect(input?.value).toBe("42.3");
   });
 
   it("uses step any when Home Assistant publishes no valid target step", () => {

@@ -218,6 +218,7 @@ normalize_panel_settings = models_module.normalize_panel_settings
 normalize_comfort_data = models_module.normalize_comfort_data
 normalize_preconditioning_data = models_module.normalize_preconditioning_data
 ACTION_SET_TEMPERATURE = const_module.ACTION_SET_TEMPERATURE
+ACTION_SET_HVAC_MODE = const_module.ACTION_SET_HVAC_MODE
 ACTION_TURN_OFF = const_module.ACTION_TURN_OFF
 EVENT_TYPE_BOOST_ENDED = const_module.EVENT_TYPE_BOOST_ENDED
 EVENT_TYPE_BOOST_STARTED = const_module.EVENT_TYPE_BOOST_STARTED
@@ -371,6 +372,9 @@ class FakeClimateManager:
 
     async def async_turn_off(self, entity_id: str) -> None:
         self.calls.append(("turn_off", entity_id))
+
+    async def async_set_hvac_mode(self, entity_id: str, hvac_mode: str) -> None:
+        self.calls.append(("set_hvac_mode", entity_id, hvac_mode))
 
     def climate_state_snapshot(self, entity_id: str) -> dict:
         return dict(self.snapshots.get(entity_id, {}))

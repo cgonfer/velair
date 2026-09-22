@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime
 
 from .helpers import (
+    ACTION_SET_HVAC_MODE,
     ACTION_SET_TEMPERATURE,
     ACTION_TURN_OFF,
     DEFAULT_SCHEDULE_TEMPLATES_VERSION,
@@ -410,6 +411,67 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
                 self.assertEqual(data["global_"]["mode"], MODE_PAUSED)
                 self.assertNotIn("vacation", data["global_"])
 
+    def test_normalize_schedule_data_preserves_only_valid_target_step_overrides(self) -> None:
+        for raw_value, expected in ((0.5, 0.5), ("0.25", 0.25), (0, None), (-1, None), ("bad", None)):
+            with self.subTest(raw_value=raw_value):
+                data = normalize_schedule_data(
+                    {
+                        "zones": {
+                            "climate.salon": {
+                                "enabled": True,
+                                "schedule": empty_week_schedule(),
+                                "target_temp_step_override": raw_value,
+                            }
+                        }
+                    },
+                    ["climate.salon"],
+                )
+                zone = data["zones"]["climate.salon"]
+                if expected is None:
+                    self.assertNotIn("target_temp_step_override", zone)
+                else:
+                    self.assertEqual(zone["target_temp_step_override"], expected)
+
+    def test_normalize_schedule_data_preserves_valid_last_reported_step(self) -> None:
+        data = normalize_schedule_data(
+            {
+                "zones": {
+                    "climate.salon": {
+                        "enabled": True,
+                        "schedule": empty_week_schedule(),
+                        "last_reported_target_temp_step": 0.5,
+                    }
+                }
+            },
+            ["climate.salon"],
+        )
+
+        self.assertEqual(
+            data["zones"]["climate.salon"]["last_reported_target_temp_step"],
+            0.5,
+        )
+
+    def test_normalize_mode_only_block_requires_only_non_off_mode(self) -> None:
+        self.assertEqual(
+            normalize_schedule_blocks(
+                [{"start": "22:00", "action": ACTION_SET_HVAC_MODE, "hvac_mode": "auto"}]
+            ),
+            [{"start": "22:00", "action": ACTION_SET_HVAC_MODE, "hvac_mode": "auto"}],
+        )
+        for block in (
+            {"start": "22:00", "action": ACTION_SET_HVAC_MODE},
+            {"start": "22:00", "action": ACTION_SET_HVAC_MODE, "hvac_mode": "off"},
+            {
+                "start": "22:00",
+                "action": ACTION_SET_HVAC_MODE,
+                "hvac_mode": "auto",
+                "temperature": 15,
+            },
+        ):
+            with self.subTest(block=block):
+                with self.assertRaises(ValueError):
+                    normalize_schedule_blocks([block])
+
     def test_normalize_schedule_data_preserves_panel_settings(self) -> None:
         data = normalize_schedule_data(
             {
@@ -519,9 +581,43 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
                 "temperature_max": 25.0,
                 "humidity_min": 35.0,
                 "humidity_max": 65.0,
+                "comfort_model": "simple",
+                "temperature_aware": {
+                    "at_temperature_min": {
+                        "minimum": 35.0,
+                        "maximum": 65.0,
+                    },
+                    "at_temperature_max": {
+                        "minimum": 35.0,
+                        "maximum": 65.0,
+                    },
+                },
                 "co2_attention": 900,
                 "co2_poor": 1400,
                 "stale_after_minutes": 45,
+                "outdoor_comparison_enabled": False,
+                "outdoor_temperature_entity_id": None,
+                "outdoor_humidity_entity_id": None,
+                "ventilation_temperature_threshold": 1.0,
+                "ventilation_humidity_threshold": 5.0,
+                "ventilation_absolute_humidity_threshold": 1.0,
+                "derived_metrics": {
+                    "dew_point": {
+                        "enabled": False,
+                        "source": "velair",
+                        "entity_id": None,
+                    },
+                    "absolute_humidity": {
+                        "enabled": False,
+                        "source": "velair",
+                        "entity_id": None,
+                    },
+                    "humidex": {
+                        "enabled": False,
+                        "source": "velair",
+                        "entity_id": None,
+                    },
+                },
             },
         )
         self.assertFalse(data["zones"]["climate.bedroom"]["comfort"]["enabled"])
@@ -547,9 +643,129 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
         self.assertEqual(data["temperature_max"], 24.0)
         self.assertEqual(data["humidity_min"], 40.0)
         self.assertEqual(data["humidity_max"], 60.0)
+        self.assertEqual(data["comfort_model"], "simple")
+        self.assertEqual(
+            data["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 40.0, "maximum": 60.0},
+                "at_temperature_max": {"minimum": 40.0, "maximum": 60.0},
+            },
+        )
         self.assertEqual(data["co2_attention"], 1000)
         self.assertEqual(data["co2_poor"], 1500)
         self.assertEqual(data["stale_after_minutes"], 1440)
+        self.assertFalse(data["outdoor_comparison_enabled"])
+        self.assertIsNone(data["outdoor_temperature_entity_id"])
+        self.assertIsNone(data["outdoor_humidity_entity_id"])
+        self.assertEqual(data["ventilation_temperature_threshold"], 1.0)
+        self.assertEqual(data["ventilation_humidity_threshold"], 5.0)
+        self.assertEqual(data["ventilation_absolute_humidity_threshold"], 1.0)
+        self.assertEqual(
+            data["derived_metrics"]["humidex"],
+            {"enabled": False, "source": "velair", "entity_id": None},
+        )
+
+    def test_normalize_comfort_data_preserves_temperature_aware_ranges(self) -> None:
+        data = normalize_comfort_data(
+            {
+                "comfort_model": "temperature_aware",
+                "humidity_min": 40,
+                "humidity_max": 60,
+                "temperature_aware": {
+                    "at_temperature_min": {"minimum": 42, "maximum": 64},
+                    "at_temperature_max": {"minimum": 34, "maximum": 52},
+                },
+            }
+        )
+
+        self.assertEqual(data["comfort_model"], "temperature_aware")
+        self.assertEqual(
+            data["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 42.0, "maximum": 64.0},
+                "at_temperature_max": {"minimum": 34.0, "maximum": 52.0},
+            },
+        )
+
+    def test_normalize_comfort_data_preserves_guided_model(self) -> None:
+        data = normalize_comfort_data(
+            {
+                "comfort_model": "guided",
+                "humidity_min": 42,
+                "humidity_max": 58,
+            }
+        )
+
+        self.assertEqual(data["comfort_model"], "guided")
+        self.assertEqual(data["humidity_min"], 42.0)
+        self.assertEqual(data["humidity_max"], 58.0)
+
+    def test_normalize_comfort_data_preserves_derived_metric_sources(self) -> None:
+        data = normalize_comfort_data(
+            {
+                "derived_metrics": {
+                    "humidex": {
+                        "enabled": True,
+                        "source": "entity",
+                        "entity_id": " sensor.living_room_humidex ",
+                    },
+                    "dew_point": {
+                        "enabled": True,
+                        "source": "unknown",
+                        "entity_id": "not-an-entity",
+                    },
+                }
+            }
+        )
+
+        self.assertEqual(
+            data["derived_metrics"]["humidex"],
+            {
+                "enabled": True,
+                "source": "entity",
+                "entity_id": "sensor.living_room_humidex",
+            },
+        )
+        self.assertEqual(
+            data["derived_metrics"]["dew_point"],
+            {"enabled": True, "source": "velair", "entity_id": None},
+        )
+
+    def test_normalize_comfort_data_preserves_only_outdoor_sensor_entities(self) -> None:
+        data = normalize_comfort_data(
+            {
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": " sensor.outdoor_temperature ",
+                "outdoor_humidity_entity_id": "climate.outdoor",
+            }
+        )
+
+        self.assertTrue(data["outdoor_comparison_enabled"])
+        self.assertEqual(
+            data["outdoor_temperature_entity_id"],
+            "sensor.outdoor_temperature",
+        )
+        self.assertIsNone(data["outdoor_humidity_entity_id"])
+
+    def test_normalize_comfort_data_discards_invalid_sensor_derived_source(self) -> None:
+        for entity_id in ("climate.living_room", "sensor.", "sensor.bad name"):
+            with self.subTest(entity_id=entity_id):
+                data = normalize_comfort_data(
+                    {
+                        "derived_metrics": {
+                            "dew_point": {
+                                "enabled": True,
+                                "source": "entity",
+                                "entity_id": entity_id,
+                            }
+                        }
+                    }
+                )
+
+                self.assertEqual(
+                    data["derived_metrics"]["dew_point"],
+                    {"enabled": True, "source": "entity", "entity_id": None},
+                )
 
     def test_normalize_preconditioning_data_preserves_outdoor_temperature_entity(
         self,

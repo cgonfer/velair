@@ -83,10 +83,20 @@ The storage model is intentionally simple and versioned:
         "room_sensor_assist_deadband": 0.3,
         "room_sensor_assist_max_delta": 2.0
       },
+      "comfort": {
+        "enabled": true,
+        "derived_metrics": {
+          "dew_point": {"enabled": true, "source": "velair", "entity_id": null},
+          "absolute_humidity": {"enabled": false, "source": "velair", "entity_id": null},
+          "humidex": {"enabled": true, "source": "entity", "entity_id": "sensor.living_room_humidex"}
+        }
+      },
       "external_change_policy": {
         "action": "for_duration",
         "duration_minutes": 120
-      }
+      },
+      "target_temp_step_override": 0.5,
+      "last_reported_target_temp_step": 0.5
     }
   },
   "global": {
@@ -143,6 +153,12 @@ The storage model is intentionally simple and versioned:
 
 `models.py` normalizes stored data on load. This allows Velair to tolerate old or partial storage data and gives future migrations a single place to evolve.
 
+Comfort derived metrics are backend-owned and disabled by default. Each uses
+either a Velair calculation from effective Comfort temperature and humidity or
+one generic `sensor.*` entity. They are observational and do not modify climate
+control or the existing Comfort classifications. Per-metric configuration is
+deep-merged so partial updates preserve sibling settings.
+
 Climate profiles are backend-owned effective schedule overlays. The persisted
 `active_profile_ids` list is empty for the built-in Default state. A Mode may
 activate several profiles together, but the backend rejects any composition in
@@ -197,6 +213,15 @@ Deleting the selected mode retains the active profile set and resolves to
 Manual, while deleting an active profile cascades its Modes and removes only
 that profile from the active set.
 
+Per-zone control and delivery sensors are projections over these existing
+authorities, not new state owners. Control context comes from the scheduler's
+single effective-setup projection. Accepted-target evidence is delivered to
+Diagnostics through a direct internal callback after a successful commit; the
+public `velair_event` remains an informational projection and cannot replace
+that evidence. Public attribute values are normalized to the bounded contract
+documented in the user guide, so internal reason strings are not an automation
+API.
+
 Each Mode stores one or more unique IDs in `profile_ids`. Validation rejects
 unknown profiles and any set where two profiles explicitly configure the same
 zone. This keeps effective ownership deterministic without a priority system.
@@ -207,8 +232,13 @@ zone. This keeps effective ownership deterministic without a priority system.
 Before each logical action it creates a Home Assistant `Context` and registers
 a bounded, 120-second expectation for the HVAC mode and scalar/range target
 that should become observable. A single mode-and-target action shares one
-context. The expectation ledger is capped per entity and globally, and failed
-service calls remove their expectations.
+context. Each affected field also receives a 45-second, generation-scoped
+settling window. The window starts when the command is registered, has an
+initial deadline and is finalized once when the complete Home Assistant service
+sequence returns. Device echoes cannot extend that final deadline, and the
+window remains available after the first expected value is observed. The
+expectation ledger is capped per entity and globally, and failed service calls
+remove their expectations.
 
 `ClimateChangeMonitor` listens only to state-change events for managed climates.
 It compares the changed control fields with the ledger. Context narrows the
@@ -217,8 +247,16 @@ requires field-and-value correlation because an integration can reuse a context
 while reporting an unrelated device-side change. When an integration omits the
 context, matching expected values, ordered multi-stage transitions, and
 captured disappearance/appearance of setpoints around `off` transitions cover
-the known device echo patterns. Any changed HVAC-mode or target field that
-cannot be attributed to Velair is external. Environmental attributes, fan,
+the known device echo patterns. During a field's settling window, anonymous
+intermediate, stale, or out-of-order values remain attributed to that command;
+a Home Assistant context with a user ID is positive evidence of a new user
+command and is not suppressed. An unrelated parent context likewise identifies
+a different script or automation. A newer command generation supersedes the
+older one for that field. After the absolute deadline, later changes use normal
+external attribution. Persistent ambiguity does not schedule a delayed Manual
+transition: failure to converge and proof of an external command are different
+conditions. A non-converged command is instead exposed as a runtime Diagnostics
+warning with expected and observed values. Environmental attributes, fan,
 preset, swing, and humidity changes are outside this feature's trigger scope.
 
 Each zone persists an `external_change_policy`; its default is
@@ -260,6 +298,18 @@ entity IDs with stable report-local aliases by default, and always remove
 operational Profile, Mode, and pause identifiers. No telemetry or Recorder
 dependency is introduced.
 
+Two per-zone entity projections reuse these existing runtime sources. **Zone
+control** exposes the scheduler's reconstructable control owner and compact
+Default/Profile, Mode, and Manual-adjustment context without temperatures or
+delivery timestamps. **Zone delivery diagnostics** is disabled by default and
+exposes only sanitized, runtime-only coordinator status and the last Velair
+control target whose complete service sequence Home Assistant accepted. It
+preserves the temperature unit recorded with that target, never exposes raw
+error text, and does not claim device or transport confirmation. Room Assist
+keeps its separate applied-target projection. Neither entity adds persistence,
+polling, or another delivery boundary. A successful full data reset clears the
+runtime delivery evidence together with the bounded diagnostic history.
+
 ## Scheduler Flow
 
 ```text
@@ -299,6 +349,15 @@ When applying a temperature:
 3. If no mode is provided and the climate is off, Velair uses the first supported mode that is not `off`.
 
 This keeps schedule blocks useful across heating-only, cooling-only, and mixed systems.
+
+A schedule block may instead persist `action: set_hvac_mode` with one explicit
+non-off `hvac_mode` and no temperature or optional climate fields. Local
+execution validates that the entity still advertises the mode and sends exactly
+one `climate.set_hvac_mode` call. This action is distinct from
+`set_temperature`, so existing mode-plus-target blocks retain their behavior.
+It does not participate in preconditioning or Room Assist. External execution
+rejects it unless the provider explicitly lists `set_hvac_mode` in its supported
+actions.
 
 Physical delivery is coordinated in runtime memory per managed entity.
 Blocking Home Assistant calls expose invocation failures; generation
@@ -396,12 +455,22 @@ If a template temperature is outside a target climate range, the frontend clamps
 
 Exports use a separate portable model version. This lets future imports handle old files even if the internal storage model changes.
 
+The internal zone model retains both an optional user-owned
+`target_temp_step_override` and the latest valid
+`last_reported_target_temp_step` observed from Home Assistant. Runtime target
+alignment resolves a valid currently published step first, then the remembered
+step, the manual fallback, and finally `1` in the active unit. Saving a manual
+fallback while no valid step is published clears the remembered observation;
+the next valid report is stored again. Both stored steps are temperature deltas.
+Portable zone exports include only the manual fallback because the remembered
+value is device-local runtime context.
+
 Persisted thermal values use the raw runtime unit recorded in storage metadata.
-Load, save, and Home Assistant unit-change events never convert them. Portable
-model v4 preserves those raw values and declares the stored unit. Imports convert
-selected thermal sections when the source and current Home Assistant units
-differ. Model v2 and unitless v1 exports are treated as Celsius for backward
-compatibility.
+Load, save, and Home Assistant unit-change events never convert them. Current
+portable model v11 preserves those raw values and declares the stored unit.
+Imports convert selected thermal sections when the source and current Home
+Assistant units differ. Model v2 and unitless v1 exports are treated as Celsius
+for backward compatibility.
 
 Live climate state belongs to Home Assistant and is not converted or
 reinterpreted by Velair. Finite `current_temperature` readings are consumed in
@@ -424,7 +493,7 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 8,
+  "model_version": 11,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
@@ -451,6 +520,22 @@ migration. New and reset zones instead receive unit-aware defaults of `0.3 °C`
 or `1 °F`; subsequent public writes require 0.1-degree steps within `0–5 °C`
 or `0–9 °F`. Adaptive Preconditioning and Room Assist then persist and evaluate
 their values independently.
+
+Portable model v9 adds the optional per-zone Comfort derived-metric
+configuration. Portable model v10 adds the opt-in outdoor comparison and its
+retained temperature and humidity sensor IDs. Both versions export
+configuration only: calculated readings, availability, insights, and comparison
+results remain runtime state. Older supported models continue to import with
+the defaults for fields introduced later.
+
+Portable model v11 adds the optional Guided and custom temperature-aware Comfort configuration.
+The backend persists two humidity ranges at the configured temperature
+endpoints, interpolates and clamps the effective range at runtime, and exposes
+one `comfort_zone` projection to all consumers. Guided derives a sampled
+constant-vapour-pressure curve from one midpoint humidity reference; no derived
+geometry is persisted. The frontend draws that
+projection but never owns or persists the calculation. Existing and older
+configurations continue to normalize to the Simple rectangular model.
 
 `preconditioning_learning` is an optional incremental section keyed by the exact climate entity ID. Import replaces learning only for matching managed climates contained in the section. Unknown IDs are ignored, while existing learning for local climates absent from the file is preserved.
 

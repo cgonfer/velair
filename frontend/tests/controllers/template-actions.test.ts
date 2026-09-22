@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
+import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
 import {
   applySelectedTemplate,
   applyTemplateToTargets,
@@ -9,6 +9,7 @@ import {
   toggleTemplateApplyTargetForHost,
   updateTemplateNameDraft,
 } from "../../src/velair/controllers/template-actions";
+import { unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
 import type { ScheduleBlock, ScheduleTemplate } from "../../src/velair/types";
 
 const template: ScheduleTemplate = {
@@ -93,6 +94,44 @@ describe("template actions controller", () => {
 
     expect(applied).toBe(false);
     expect(state._draftBlocks).toEqual([{ action: ACTION_SET_TEMPERATURE, start: "10:00", temperature: 18, hvac_mode: "heat" }]);
+  });
+
+  it("applies a mode-only template with an auxiliary target to a climate without target support", () => {
+    const { state } = host();
+    const modeOnlyTemplate: ScheduleTemplate = {
+      blocks: [{
+        action: ACTION_SET_HVAC_MODE,
+        start: "08:00",
+        hvac_mode: "auto",
+        temperature: 21,
+      }],
+      key: "device-controlled",
+      name: "Device controlled",
+    };
+    Object.assign(state, {
+      hass: {
+        states: {
+          "climate.office": {
+            state: "auto",
+            attributes: { hvac_modes: ["off", "auto"], supported_features: 0 },
+          },
+        },
+      },
+      _climateSupportedModes: () => ["off", "auto"],
+      _friendlyEntityName: (entityId: string) => entityId,
+      _modeLabel: (mode: string) => mode,
+      _scheduleTemplates: () => [modeOnlyTemplate],
+      _selectedTemplateKey: modeOnlyTemplate.key,
+    });
+    state._unsupportedModeError = (blocks, entityId) =>
+      unsupportedModeError(state as never, blocks as ScheduleBlock[], entityId);
+
+    expect(applySelectedTemplate(state)).toBe(true);
+    expect(state._draftBlocks[0]).toMatchObject({
+      action: ACTION_SET_HVAC_MODE,
+      hvac_mode: "auto",
+      start: "08:00",
+    });
   });
 
   it("updates editable template names as dirty state", () => {

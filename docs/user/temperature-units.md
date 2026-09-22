@@ -13,8 +13,19 @@ from Home Assistant. Resetting Velair recreates those defaults for the currently
 detected unit.
 
 Climate targets are validated against each managed climate's minimum, maximum,
-and exact `target_temp_step` when Home Assistant provides them. Velair uses that
-reported step directly instead of converting or inventing one.
+and effective temperature step. Velair uses `target_temp_step` directly when
+Home Assistant provides it. Otherwise, Settings shows the effective fallback:
+the last valid step reported by that entity, the saved manual per-zone value, or
+`1` when neither exists. It can be set to the device's actual increment. Saving
+it while the attribute is missing clears the remembered observation without
+changing schedule rules. A later valid report becomes authoritative and is
+remembered again, so an inconsistent entity cannot invalidate existing decimal
+schedules merely by omitting the attribute.
+
+The valid target grid starts at the climate's published minimum temperature,
+not at zero. This preserves the device's real setpoints in both Celsius and
+Fahrenheit, including climates whose minimum is not an exact multiple of their
+step.
 
 ## Existing Stored Data
 
@@ -32,9 +43,9 @@ other unit, Velair:
 
 Run that migration only when every stored value still uses the source unit shown.
 The operation converts schedules, templates, active and previous override
-targets, Comfort thresholds, Room Assist settings, Adaptive Preconditioning
-configuration, rates, and learning observations. Targets tied to a known climate
-are aligned to its exact supported step when available. Other converted editable
+targets, target-step fallbacks, Comfort thresholds, Room Assist settings, Adaptive Preconditioning
+configuration, last-reported target steps, rates, and learning observations. Targets tied to a known climate
+are aligned to its effective step when available. Other converted editable
 values use safe precision instead of inventing a device step.
 
 The scheduler resumes only after the converted data is stored successfully and
@@ -70,6 +81,10 @@ installation, those legacy values are converted to Fahrenheit automatically.
 Importing remains destructive for the selected sections: matching schedules,
 templates, settings, or learning data are overwritten. Export the current setup
 first when you may need a recovery point.
+
+The manual per-zone target-step fallback is included with portable zone data and
+is converted as a temperature delta when units differ. The last step observed
+from a local climate entity is internal device context and is not exported.
 
 ## Temporarily Unavailable Climates
 

@@ -209,6 +209,22 @@ class TemperatureCodecTests(unittest.TestCase):
                         "room_sensor_assist_max_delta": 3,
                         "fallback_minutes_per_degree": 25,
                     },
+                    "comfort": {
+                        "ventilation_temperature_threshold": 0.1,
+                        "comfort_model": "temperature_aware",
+                        "temperature_min": 20,
+                        "temperature_max": 24,
+                        "temperature_aware": {
+                            "at_temperature_min": {
+                                "minimum": 42,
+                                "maximum": 64,
+                            },
+                            "at_temperature_max": {
+                                "minimum": 34,
+                                "maximum": 52,
+                            },
+                        },
+                    },
                 }
             },
             "templates": [
@@ -295,6 +311,24 @@ class TemperatureCodecTests(unittest.TestCase):
             zone["preconditioning"]["fallback_minutes_per_degree"],
             25 * 5 / 9,
         )
+        self.assertAlmostEqual(
+            zone["comfort"]["ventilation_temperature_threshold"], 0.2
+        )
+        self.assertEqual(zone["comfort"]["temperature_min"], 68)
+        self.assertEqual(zone["comfort"]["temperature_max"], 75.2)
+        self.assertEqual(
+            zone["comfort"]["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 42, "maximum": 64},
+                "at_temperature_max": {"minimum": 34, "maximum": 52},
+            },
+        )
+        self.assertEqual(
+            round_trip["zones"]["climate.room"]["comfort"][
+                "temperature_aware"
+            ],
+            data["zones"]["climate.room"]["comfort"]["temperature_aware"],
+        )
         self.assertEqual(
             (
                 fahrenheit["templates"][0]["blocks"][0]["target_temp_low"],
@@ -323,6 +357,37 @@ class TemperatureCodecTests(unittest.TestCase):
             (68, 68, 75.2, 3.6, "low"),
         )
         self.assertEqual(round_trip, data)
+
+    def test_guidance_delta_preserves_fahrenheit_interior_precision(self) -> None:
+        data = {
+            "zones": {
+                "climate.room": {
+                    "comfort": {"ventilation_temperature_threshold": 0.3}
+                }
+            }
+        }
+
+        celsius = convert_portable_temperature_data(
+            data, FAHRENHEIT, CELSIUS, None
+        )
+        round_trip = convert_portable_temperature_data(
+            celsius, CELSIUS, FAHRENHEIT, None
+        )
+
+        self.assertAlmostEqual(
+            celsius["zones"]["climate.room"]["comfort"][
+                "ventilation_temperature_threshold"
+            ],
+            1 / 6,
+            places=6,
+        )
+        self.assertAlmostEqual(
+            round_trip["zones"]["climate.room"]["comfort"][
+                "ventilation_temperature_threshold"
+            ],
+            0.3,
+            places=5,
+        )
 
 
 class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
@@ -404,6 +469,7 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         comfort = storage.data["zones"]["climate.room"]["comfort"]
         self.assertEqual(comfort["temperature_min"], 68.0)
         self.assertEqual(comfort["temperature_max"], 75.0)
+        self.assertEqual(comfort["ventilation_temperature_threshold"], 1.8)
         preconditioning = storage.data["zones"]["climate.room"]["preconditioning"]
         self.assertEqual(preconditioning["minimum_delta_temperature"], 1.0)
         self.assertEqual(preconditioning["room_sensor_assist_deadband"], 1.0)
@@ -431,6 +497,9 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         zone = storage.data["zones"]["climate.room"]
         self.assertEqual(zone["comfort"]["temperature_min"], 68.0)
         self.assertEqual(zone["comfort"]["temperature_max"], 75.0)
+        self.assertEqual(
+            zone["comfort"]["ventilation_temperature_threshold"], 1.8
+        )
         self.assertEqual(zone["preconditioning"]["minimum_delta_temperature"], 1.0)
         self.assertEqual(zone["preconditioning"]["room_sensor_assist_deadband"], 1.0)
         self.assertEqual(zone["preconditioning"]["fallback_minutes_per_degree"], 14.0)
@@ -540,6 +609,65 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(storage.data, snapshot)
 
+    def test_portable_conversion_treats_target_step_override_as_delta(self) -> None:
+        raw = runtime_celsius_data()
+        raw["zones"]["climate.room"]["target_temp_step_override"] = 0.5
+        raw["zones"]["climate.room"]["last_reported_target_temp_step"] = 0.25
+
+        converted = convert_portable_temperature_data(raw, CELSIUS, FAHRENHEIT, None)
+
+        self.assertAlmostEqual(
+            converted["zones"]["climate.room"]["target_temp_step_override"],
+            0.9,
+        )
+        self.assertAlmostEqual(
+            converted["zones"]["climate.room"]["last_reported_target_temp_step"],
+            0.45,
+        )
+
+        round_trip = convert_portable_temperature_data(
+            converted, FAHRENHEIT, CELSIUS, None
+        )
+        self.assertAlmostEqual(
+            round_trip["zones"]["climate.room"]["target_temp_step_override"],
+            0.5,
+        )
+        self.assertAlmostEqual(
+            round_trip["zones"]["climate.room"]["last_reported_target_temp_step"],
+            0.25,
+        )
+
+    def test_stale_entity_grid_converts_published_step_as_delta(self) -> None:
+        stale_celsius = SimpleNamespace(
+            attributes={"min_temp": 5, "max_temp": 35, "target_temp_step": 0.5}
+        )
+        celsius_hass = SimpleNamespace(
+            states=SimpleNamespace(get=lambda _entity_id: stale_celsius)
+        )
+        minimum, maximum, step = _entity_target_grid(
+            celsius_hass,
+            "climate.room",
+            FAHRENHEIT,
+            source_unit=CELSIUS,
+        )
+        self.assertEqual((minimum, maximum), (41, 95))
+        self.assertAlmostEqual(step, 0.9)
+
+        stale_fahrenheit = SimpleNamespace(
+            attributes={"min_temp": 41, "max_temp": 95, "target_temp_step": 1}
+        )
+        fahrenheit_hass = SimpleNamespace(
+            states=SimpleNamespace(get=lambda _entity_id: stale_fahrenheit)
+        )
+        minimum, maximum, step = _entity_target_grid(
+            fahrenheit_hass,
+            "climate.room",
+            CELSIUS,
+            source_unit=FAHRENHEIT,
+        )
+        self.assertEqual((minimum, maximum), (5, 35))
+        self.assertAlmostEqual(step, 5 / 9)
+
     async def test_migrated_template_uses_managed_climate_step(self) -> None:
         raw = runtime_celsius_data()
         raw["templates"][0]["blocks"][0]["temperature"] = 20.3
@@ -574,10 +702,45 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         )
 
         zone = storage.data["zones"]["climate.room"]
-        self.assertEqual(zone["schedule"]["monday"][0]["temperature"], 70.0)
-        self.assertEqual(storage.data["templates"][0]["blocks"][0]["temperature"], 68.5)
+        self.assertEqual(zone["schedule"]["monday"][0]["temperature"], 69.8)
+        self.assertEqual(storage.data["templates"][0]["blocks"][0]["temperature"], 68.9)
 
-    async def test_migrated_template_step_uses_zero_anchored_grid(self) -> None:
+    async def test_migration_does_not_convert_fallback_step_twice_with_stale_grid(self) -> None:
+        raw = runtime_celsius_data()
+        raw["zones"]["climate.room"]["last_reported_target_temp_step"] = 0.5
+        stale_state = SimpleNamespace(attributes={"min_temp": 5, "max_temp": 35})
+        storage = make_storage(FAHRENHEIT, raw)
+        storage._hass.states = SimpleNamespace(get=lambda _entity_id: stale_state)
+        await storage.async_load(["climate.room"])
+
+        await storage.async_resolve_temperature_migration(
+            CELSIUS, migration_id="stale-grid-fallback", expected_revision=0
+        )
+
+        zone = storage.data["zones"]["climate.room"]
+        self.assertAlmostEqual(zone["last_reported_target_temp_step"], 0.9)
+        self.assertEqual(zone["schedule"]["monday"][0]["temperature"], 69.8)
+
+    async def test_reverse_migration_does_not_convert_fallback_step_twice_with_stale_grid(self) -> None:
+        raw = convert_portable_temperature_data(
+            runtime_celsius_data(), CELSIUS, FAHRENHEIT, None
+        )
+        raw[TEMPERATURE_UNIT_KEY] = FAHRENHEIT
+        raw["zones"]["climate.room"]["last_reported_target_temp_step"] = 0.9
+        stale_state = SimpleNamespace(attributes={"min_temp": 41, "max_temp": 95})
+        storage = make_storage(CELSIUS, raw)
+        storage._hass.states = SimpleNamespace(get=lambda _entity_id: stale_state)
+        await storage.async_load(["climate.room"])
+
+        await storage.async_resolve_temperature_migration(
+            FAHRENHEIT, migration_id="reverse-stale-grid-fallback", expected_revision=0
+        )
+
+        zone = storage.data["zones"]["climate.room"]
+        self.assertAlmostEqual(zone["last_reported_target_temp_step"], 0.5)
+        self.assertEqual(zone["schedule"]["monday"][0]["temperature"], 21.0)
+
+    async def test_migrated_template_step_uses_minimum_anchored_grid(self) -> None:
         raw = runtime_celsius_data()
         raw["templates"][0]["blocks"][0]["temperature"] = 20.3
         state = SimpleNamespace(
@@ -593,7 +756,7 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             storage.data["templates"][0]["blocks"][0]["temperature"],
-            69.0,
+            68.5,
         )
 
     async def test_migrated_template_is_not_snapped_for_mixed_entity_steps(self) -> None:
@@ -643,9 +806,9 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
         )
 
         zone = storage.data["zones"]["climate.room"]
-        self.assertEqual(zone["schedule"]["monday"][0]["temperature"], 68.5)
-        self.assertEqual(zone["override"]["temperature"], 68.5)
-        self.assertEqual(storage.data["templates"][0]["blocks"][0]["temperature"], 68.5)
+        self.assertEqual(zone["schedule"]["monday"][0]["temperature"], 68.54)
+        self.assertEqual(zone["override"]["temperature"], 68.54)
+        self.assertEqual(storage.data["templates"][0]["blocks"][0]["temperature"], 68.54)
         self.assertEqual(
             storage.data["preconditioning_learning"]["climate.room"]["heat"][
                 "observations"
@@ -673,7 +836,7 @@ class RuntimeTemperatureStorageTests(unittest.IsolatedAsyncioTestCase):
             boundary_storage.data["zones"]["climate.room"]["schedule"][
                 "monday"
             ][0]["temperature"],
-            41.1,
+            41.04,
         )
 
     async def test_normal_save_before_migration_cannot_overwrite_migrated_data(self) -> None:

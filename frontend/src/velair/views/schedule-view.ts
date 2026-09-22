@@ -2,7 +2,7 @@ import { html, nothing } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 import { firstTemperatureStepAtOrAbove } from "../domain/climate";
 import { draftBlockUsesRange } from "../domain/draft-blocks";
-import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
+import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import { isActiveBoostOverride } from "../domain/overrides";
 import { dateMs } from "../domain/schedule-events";
 import { externalSwitchpointUsage } from "../domain/schedule-editor";
@@ -325,11 +325,14 @@ export function renderTimelineBlock(
   source: BlockDraftSource = "schedule",
 ) {
   const isTurnOff = block.draft.action === ACTION_TURN_OFF;
+  const isModeOnly = block.draft.action === ACTION_SET_HVAC_MODE;
   const temperature = Number(block.draft.temperature);
   const low = Number(block.draft.target_temp_low);
   const high = Number(block.draft.target_temp_high);
   const label = isTurnOff
     ? host._t("off")
+    : isModeOnly
+      ? host._t("deviceControlled")
     : draftBlockUsesRange(block.draft) && Number.isFinite(low) && Number.isFinite(high)
       ? formatRange(host, low, high, entityId)
       : Number.isFinite(temperature)
@@ -460,6 +463,7 @@ export function renderEditableBlock(
 ) {
   const action = block.action || ACTION_SET_TEMPERATURE;
   const isTurnOff = action === ACTION_TURN_OFF;
+  const isModeOnly = action === ACTION_SET_HVAC_MODE;
   const selectedMode = isTurnOff ? "off" : block.hvac_mode ?? "";
   const temperatureError = host._temperatureError(block, source);
   const usesRange = draftBlockUsesRange(block);
@@ -476,7 +480,7 @@ export function renderEditableBlock(
   const swingModeOptions = host._swingModeOptions(source);
   const swingHorizontalModeOptions = host._swingHorizontalModeOptions(source);
   const humidityLimits = host._humidityLimits(source);
-  const hasSupportedClimateOptions = !isTurnOff && (
+  const hasSupportedClimateOptions = action === ACTION_SET_TEMPERATURE && (
     fanModeOptions.length > 0 ||
     presetModeOptions.length > 0 ||
     swingModeOptions.length > 0 ||
@@ -530,12 +534,15 @@ export function renderEditableBlock(
             inputMinTemperature,
             maxTemperature,
             temperatureStep,
-            isTurnOff,
+            isTurnOff || isModeOnly,
             temperatureError,
             temperatureUnit,
+            selectedMode !== "",
+            isModeOnly,
           )
         : renderTargetInput(host, block, index, source, "temperature", "temp", temperatureUnit,
-            inputMinTemperature, maxTemperature, temperatureStep, isTurnOff, temperatureError)}
+            inputMinTemperature, maxTemperature, temperatureStep, isTurnOff || isModeOnly,
+            temperatureError, selectedMode !== "", isModeOnly)}
       ${hasClimateOptions
         ? html`
             <details class="advanced-climate-options" @toggle=${handleClimateOptionsToggle}>
@@ -646,11 +653,14 @@ export function renderTimelineCarryOverBlock(
 ) {
   const block = carryOver.block;
   const isTurnOff = block.action === ACTION_TURN_OFF;
+  const isModeOnly = block.action === ACTION_SET_HVAC_MODE;
   const temperature = Number(block.temperature);
   const low = Number(block.target_temp_low);
   const high = Number(block.target_temp_high);
   const label = isTurnOff
     ? host._t("off")
+    : isModeOnly
+      ? host._t("deviceControlled")
     : draftBlockUsesRange(block) && Number.isFinite(low) && Number.isFinite(high)
       ? formatRange(host, low, high, entityId)
       : Number.isFinite(temperature)
@@ -702,24 +712,52 @@ function renderTargetInput(
   step: number | undefined,
   disabled: boolean,
   error?: string,
+  canUseDeviceTarget = false,
+  isModeOnly = false,
 ) {
+  const inputId = `velair-${source}-${index}-${field}`;
   return html`
-    <label class=${field === "temperature" ? "single-temperature-field" : "range-temperature-field"}>
-      <span class="label">${host._t(labelKey)} (${unit})</span>
+    <div class=${field === "temperature" ? "single-temperature-field target-action-field" : "range-temperature-field"}>
+      <label class="label" for=${inputId}>${host._t(labelKey)} (${unit})</label>
       <input
+        id=${inputId}
         class=${error ? "invalid" : ""}
         type="number"
         min=${String(minimum)}
         max=${String(maximum)}
         step=${step === undefined ? "any" : String(step)}
         ?disabled=${disabled}
-        placeholder=${disabled ? host._t("off") : ""}
+        placeholder=${isModeOnly ? "—" : disabled ? host._t("off") : ""}
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
         @change=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
       />
+      ${field === "temperature" && (!disabled || isModeOnly)
+        ? html`
+            <button
+              class=${isModeOnly ? "target-action-toggle device-controlled" : "target-action-toggle"}
+              type="button"
+              ?disabled=${!isModeOnly && !canUseDeviceTarget}
+              title=${isModeOnly
+                ? host._t("restoreTemperatureTarget")
+                : canUseDeviceTarget
+                  ? host._t("useDeviceControlledTarget")
+                  : host._t("chooseModeForDeviceControlled")}
+              aria-label=${host._t("includeTargetTemperature")}
+              aria-pressed=${String(!isModeOnly)}
+              @click=${() => host._updateDraftBlock(
+                index,
+                "action",
+                isModeOnly ? ACTION_SET_TEMPERATURE : ACTION_SET_HVAC_MODE,
+                source,
+              )}
+            >
+              <ha-icon icon=${isModeOnly ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
+            </button>
+          `
+        : nothing}
       ${field === "temperature" && error ? html`<small class="field-error">${error}</small>` : nothing}
-    </label>
+    </div>
   `;
 }
 
@@ -734,9 +772,11 @@ function renderRangeTargetInputs(
   disabled: boolean,
   error?: string,
   unit = "°C",
+  canUseDeviceTarget = false,
+  isModeOnly = false,
 ) {
   return html`
-    <div class="temperature-range-fields" role="group" aria-label=${host._t("temperatureRange")}>
+    <div class="temperature-range-fields target-action-range" role="group" aria-label=${host._t("temperatureRange")}>
       <div class=${error ? "temperature-range-control invalid" : "temperature-range-control"}>
         ${renderRangeTargetInput(
           host,
@@ -751,6 +791,7 @@ function renderRangeTargetInputs(
           step,
           disabled,
           unit,
+          isModeOnly,
         )}
         ${renderRangeTargetInput(
           host,
@@ -765,8 +806,33 @@ function renderRangeTargetInputs(
           step,
           disabled,
           unit,
+          isModeOnly,
         )}
       </div>
+      ${!disabled || isModeOnly
+        ? html`
+            <button
+              class=${isModeOnly ? "target-action-toggle device-controlled" : "target-action-toggle"}
+              type="button"
+              ?disabled=${!isModeOnly && !canUseDeviceTarget}
+              title=${isModeOnly
+                ? host._t("restoreTemperatureTarget")
+                : canUseDeviceTarget
+                  ? host._t("useDeviceControlledTarget")
+                  : host._t("chooseModeForDeviceControlled")}
+              aria-label=${host._t("includeTargetTemperature")}
+              aria-pressed=${String(!isModeOnly)}
+              @click=${() => host._updateDraftBlock(
+                index,
+                "action",
+                isModeOnly ? ACTION_SET_TEMPERATURE : ACTION_SET_HVAC_MODE,
+                source,
+              )}
+            >
+              <ha-icon icon=${isModeOnly ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
+            </button>
+          `
+        : nothing}
       ${error ? html`<small class="field-error range-error">${error}</small>` : nothing}
     </div>
   `;
@@ -785,6 +851,7 @@ function renderRangeTargetInput(
   step: number | undefined,
   disabled: boolean,
   unit: string,
+  isModeOnly = false,
 ) {
   return html`
     <label class="range-temperature-field">
@@ -796,7 +863,7 @@ function renderRangeTargetInput(
         max=${String(maximum)}
         step=${step === undefined ? "any" : String(step)}
         ?disabled=${disabled}
-        placeholder=${disabled ? host._t("off") : ""}
+        placeholder=${isModeOnly ? "—" : disabled ? host._t("off") : ""}
         aria-label=${`${host._t(accessibleLabelKey)} (${unit})`}
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}

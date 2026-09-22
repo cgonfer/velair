@@ -3,7 +3,7 @@ Climate automation that adapts to your life.
 
 [Explore Velair on the project website](https://cgonfer.github.io/velair/)
 
-[![Version](https://img.shields.io/badge/version-1.7.0-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
+[![Version](https://img.shields.io/badge/version-1.8.0--beta.1-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -34,7 +34,7 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Visual schedule editor for managed `climate.*` entities.
 - Weekly schedules per climate zone.
 - Weekly continuity across midnight and empty days, with inherited periods identified in the timeline.
-- Schedule blocks for temperature targets or turning a climate entity off.
+- Schedule blocks for temperature targets, changing only the HVAC mode while keeping the device target, or turning a climate entity off.
 - Optional HVAC mode per block. `Keep current mode` still applies the block target; stored compatibility is based on advertised HVAC modes, while runtime delivery preserves a compatible running mode or starts an off climate in a compatible mode before sending the target.
 - Support for heating, cooling, dry, fan-only, and off modes where the climate entity supports them. Climate entities can use either a single target or separate lower and upper targets for range-based modes such as `heat_cool`.
 - Drag and resize interactions on a 24-hour timeline.
@@ -46,10 +46,10 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Per-climate handling for external setpoint or HVAC-mode changes: keep Velair automatic by default or yield through a configurable Manual adjustment, plus an Overview action that can hold the live climate state and explicitly return to the currently authoritative Default, Profile, Mode, pause, or Off intent.
 - Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
 - Dedicated Room Assist tab for setups that need a separate room temperature sensor, including width-preserving assistance for native `heat_cool` ranges.
-- Dedicated Comfort tab with readable temperature/humidity conditions, independent CO2 air quality, data-quality warnings, and responsive live visualizations.
+- Dedicated Comfort tab with readable temperature/humidity conditions, independent CO2 air quality, data-quality warnings, optional dew point, absolute humidity and Humidex, and responsive live visualizations.
 - Optional climate controls per block where supported, including fan mode, preset mode, swing mode, horizontal swing mode, and target humidity.
 - Dedicated Diagnostics tab with live runtime health, bounded history, filters, and privacy-aware issue reports.
-- Settings tab with climate ordering, startup behavior, portability tools, and maintenance information.
+- Settings tab with climate ordering, fallback target steps for incomplete climate entities, startup behavior, portability tools, and maintenance information.
 - Global pause, stop, and resume controls, plus per-zone pause and resume.
 - Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
 - Automation events through `velair_event` for Profile changes, scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
@@ -122,7 +122,9 @@ For development builds, see [docs/developer/development.md](docs/developer/devel
 6. Save the day.
 7. Clone the day or create templates when useful.
 
-See [docs/user/usage.md](docs/user/usage.md) for the full workflow.
+See [docs/user/usage.md](docs/user/usage.md) for the full workflow. The
+[sensor reference](docs/user/sensors.md) lists every Velair sensor, its main
+attributes, and practical automation examples.
 
 Optional Home Assistant blueprints can connect Velair to occupancy or pause a
 zone while windows remain open. They keep the automation logic in Home
@@ -228,6 +230,7 @@ show_comfort_co2: true
 
 Supported `view` values:
 
+- `climate`: compact status and controls for one managed climate, with optional outdoor-temperature and window sensors.
 - `overview-status`: scheduler state and pause/stop/resume controls.
 - `overview-boosts`: active boosts.
 - `overview-events`: next events.
@@ -251,6 +254,8 @@ If Home Assistant shows a custom element error, confirm that Velair is installed
 - [External changes and Manual adjustment](docs/user/manual-control.md)
 - [External schedule execution](docs/user/external-systems.md)
 - [Diagnostics](docs/user/diagnostics.md)
+- [Sensor reference](docs/user/sensors.md)
+- [Zone control and delivery sensors](docs/user/zone-sensors.md)
 - [Climate Profiles](docs/user/climate-profiles.md)
 - [Automation Events](docs/user/automation-events.md)
 - [Automation Blueprints](docs/user/blueprints.md)

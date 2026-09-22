@@ -7,6 +7,7 @@ import {
   WEEKDAYS,
 } from "../constants";
 import { unmatchedPreconditioningLearningEntities } from "../domain/portable";
+import { entityTemperatureStep } from "../domain/climate";
 import type { VelairViewHost } from "../host-types";
 import { renderInlineHelp } from "./inline-help";
 import type { ExternalExecutionInfo, PortableSection } from "../types";
@@ -523,7 +524,10 @@ export function renderSettingsZoneOrderRow(
           </div>
           <span>${entityId}</span>
         </div>
-        ${renderSettingsExternalChangePolicy(host, entityId)}
+        <div class="settings-zone-configuration">
+          ${renderSettingsExternalChangePolicy(host, entityId)}
+          ${renderSettingsTargetTempStep(host, entityId)}
+        </div>
       </div>
       <div class="settings-row-actions">
         <button
@@ -545,6 +549,55 @@ export function renderSettingsZoneOrderRow(
           <ha-icon icon="mdi:chevron-down"></ha-icon>
         </button>
       </div>
+    </div>
+  `;
+}
+
+export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: string) {
+  const publishedStep = entityTemperatureStep(host.hass?.states?.[entityId]);
+  if (publishedStep !== undefined) return nothing;
+  const zone = host._data?.zones?.[entityId];
+  const configuredStep = zone?.last_reported_target_temp_step
+    ?? zone?.target_temp_step_override
+    ?? 1;
+  const [minimum, maximum] = host._entityTemperatureLimits(entityId);
+  const maximumStep = Math.max(0.001, maximum - minimum);
+  const key = entityId.replace(/[^a-z0-9_-]/gi, "-");
+  const labelId = `target-temp-step-label-${key}`;
+  const helpId = `target-temp-step-help-${key}`;
+  return html`
+    <div class="settings-target-temp-step">
+      <div class="settings-policy-heading">
+        <span class="label" id=${labelId}>${host._t("targetTempStepFallback")}</span>
+        ${renderInlineHelp(
+          helpId,
+          host._t("targetTempStepFallbackInfoAction"),
+          host._t("targetTempStepFallbackDescription"),
+        )}
+      </div>
+      <label class="settings-target-temp-step-control">
+        <input
+          type="number"
+          inputmode="decimal"
+          min="0.001"
+          max=${String(maximumStep)}
+          step="any"
+          required
+          aria-labelledby=${labelId}
+          .value=${String(configuredStep)}
+          ?disabled=${host._settingsSaving}
+          @change=${(event: Event) => {
+            const input = event.currentTarget as HTMLInputElement;
+            const value = Number(input.value);
+            if (!input.reportValidity() || !Number.isFinite(value) || value < 0.001) {
+              input.value = String(configuredStep);
+              return;
+            }
+            void host._saveZoneTargetTempStep(entityId, value);
+          }}
+        />
+        <span>${host._temperatureUnit(entityId)}</span>
+      </label>
     </div>
   `;
 }

@@ -27,6 +27,7 @@ from .const import (
     SIGNAL_DIAGNOSTICS_UPDATED,
     SIGNAL_SCHEDULER_UPDATED,
 )
+from .temperature import CELSIUS, normalize_temperature_unit, state_temperature_unit
 
 DIAGNOSTIC_HISTORY_LIMIT = 100
 DIAGNOSTIC_POLICY_VERSION = 1
@@ -117,12 +118,21 @@ _FEATURE_EVENT_FIELDS: dict[str, tuple[str, ...]] = {
     "comfort": (
         "air_quality",
         "co2",
+        "comfort_zone",
         "condition",
         "data_issues",
         "data_quality",
+        "derived_metrics",
         "event",
         "humidity",
+        "insights",
+        "outdoor",
+        "previous_range_summary",
+        "range_status_changed",
+        "range_summary",
+        "range_summary_changed",
         "temperature",
+        "ventilation_opportunity",
     ),
 }
 
@@ -221,6 +231,14 @@ class RuntimeDiagnosticsManager:
         self._history.clear()
         self._schedule_notify()
 
+    @callback
+    def async_reset_runtime_evidence(self) -> None:
+        """Clear all non-persisted evidence after a successful Velair data reset."""
+        self._history.clear()
+        self._delivery.clear()
+        self._last_applied.clear()
+        self._schedule_notify()
+
     def async_start(self, runtime: dict[str, Any] | None = None) -> None:
         """Start passive event listeners."""
         self._runtime = runtime
@@ -293,9 +311,16 @@ class RuntimeDiagnosticsManager:
         )
         current["status"] = status
         current["updated_at"] = now
-        if status == "retrying":
+        if status in (
+            "success",
+            "failed",
+            "retrying",
+            "exhausted",
+            "invalid_intent",
+            "unavailable",
+        ):
             current["retry_count"] = int((details or {}).get("retry_count", 0))
-        elif status in ("success", "cancelled"):
+        elif status == "cancelled":
             current["retry_count"] = 0
         if status in ("failed", "exhausted", "invalid_intent"):
             current["last_error"] = {
@@ -315,6 +340,37 @@ class RuntimeDiagnosticsManager:
                 entity_id=entity_id,
                 data={"status": status, **(details or {})},
             )
+        self._schedule_notify()
+
+    @callback
+    def observe_target_applied(self, data: dict[str, Any]) -> None:
+        """Record trusted target evidence emitted directly by the scheduler."""
+        entity_id = data.get("entity_id")
+        if not isinstance(entity_id, str) or entity_id not in self._entity_ids:
+            return
+        safe_data = {
+            key: deepcopy(data[key])
+            for key in _CONTROL_EVENT_FIELDS
+            if key in data and key != "changed_fields"
+        }
+        last_applied = {"at": _now_iso(), **safe_data}
+        if any(
+            safe_data.get(key) is not None
+            for key in ("temperature", "target_temp_low", "target_temp_high")
+        ):
+            configured_unit = normalize_temperature_unit(
+                getattr(
+                    getattr(getattr(self._hass, "config", None), "units", None),
+                    "temperature_unit",
+                    CELSIUS,
+                ),
+                CELSIUS,
+            )
+            last_applied["temperature_unit"] = state_temperature_unit(
+                self._hass.states.get(entity_id),
+                configured_unit,
+            )
+        self._last_applied[entity_id] = last_applied
         self._schedule_notify()
 
     @callback
@@ -350,13 +406,6 @@ class RuntimeDiagnosticsManager:
             data=safe_data,
             category=category,
         )
-        if event_name == "climate_target_applied" and entity_id:
-            self._last_applied[entity_id] = {
-                "at": _event_time(event),
-                **safe_data,
-            }
-            delivery = self._delivery.setdefault(entity_id, {})
-            delivery.update({"status": "success", "retry_count": 0, "updated_at": _now_iso()})
         self._schedule_notify()
 
     @callback
@@ -450,6 +499,36 @@ class RuntimeDiagnosticsManager:
                 (
                     comfort.get("co2_entity_id"),
                     bool(comfort.get("enabled")),
+                ),
+                (
+                    comfort.get("outdoor_temperature_entity_id"),
+                    bool(
+                        comfort.get("enabled")
+                        and comfort.get("outdoor_comparison_enabled")
+                    ),
+                ),
+                (
+                    comfort.get("outdoor_humidity_entity_id"),
+                    bool(
+                        comfort.get("enabled")
+                        and comfort.get("outdoor_comparison_enabled")
+                    ),
+                ),
+                *tuple(
+                    (
+                        metric_config.get("entity_id"),
+                        bool(
+                            comfort.get("enabled")
+                            and metric_config.get("enabled")
+                            and metric_config.get("source") == "entity"
+                        ),
+                    )
+                    for metric_config in (
+                        comfort.get("derived_metrics", {}).values()
+                        if isinstance(comfort.get("derived_metrics"), dict)
+                        else ()
+                    )
+                    if isinstance(metric_config, dict)
                 ),
             )
             entity_ids.update(
@@ -556,6 +635,66 @@ class RuntimeDiagnosticsManager:
             ),
         }
 
+    def zone_delivery_diagnostics(self, entity_id: str) -> dict[str, Any]:
+        """Return compact runtime-only delivery evidence for one zone."""
+        delivery = self._delivery.get(entity_id, {})
+        raw_status = delivery.get("status", "idle")
+        public_statuses = {
+            "idle",
+            "success",
+            "failed",
+            "retrying",
+            "exhausted",
+            "invalid_intent",
+            "cancelled",
+            "unavailable",
+        }
+        last_error = delivery.get("last_error")
+        last_accepted = self._last_applied.get(entity_id)
+        result: dict[str, Any] = {
+            "status": raw_status if raw_status in public_statuses else "failed",
+            "updated_at": delivery.get("updated_at"),
+            "retry_count": int(delivery.get("retry_count", 0)),
+            "last_error_at": (
+                delivery.get("updated_at")
+                if raw_status not in public_statuses
+                else last_error.get("at")
+                if isinstance(last_error, dict)
+                else None
+            ),
+            "last_error_code": (
+                "unknown_delivery_status"
+                if raw_status not in public_statuses
+                else last_error.get("code")
+                if isinstance(last_error, dict)
+                else None
+            ),
+        }
+        if isinstance(last_accepted, dict):
+            result.update(
+                {
+                    "last_accepted_at": last_accepted.get("at"),
+                    "last_accepted_source": _public_delivery_source(
+                        last_accepted.get("source")
+                    ),
+                    "last_accepted_action": _public_delivery_action(
+                        last_accepted.get("action")
+                    ),
+                    "last_accepted_hvac_mode": last_accepted.get("hvac_mode"),
+                    "last_accepted_temperature_unit": last_accepted.get(
+                        "temperature_unit"
+                    ),
+                    "last_accepted_temperature": last_accepted.get("temperature"),
+                    "last_accepted_target_temp_low": last_accepted.get(
+                        "target_temp_low"
+                    ),
+                    "last_accepted_target_temp_high": last_accepted.get(
+                        "target_temp_high"
+                    ),
+                }
+            )
+        return result
+
     @staticmethod
     def _issue_identity(
         issue: dict[str, Any],
@@ -627,6 +766,7 @@ class RuntimeDiagnosticsManager:
         )
         units: dict[str, Any] = {}
         counts = {"ok": 0, "warning": 0, "error": 0}
+        climate_manager = runtime.get("climate_manager")
         for entity_id, zone in zones.items():
             unit = self._unit_snapshot(
                 entity_id,
@@ -637,6 +777,18 @@ class RuntimeDiagnosticsManager:
                 comfort.get(entity_id),
                 scheduler,
             )
+            settling_diagnostics = getattr(
+                climate_manager, "command_settling_diagnostics", None
+            )
+            if callable(settling_diagnostics):
+                unit["command_settling"] = settling_diagnostics(entity_id)
+                if unit["command_settling"]["mismatches"]:
+                    unit["issues"].append({
+                        "severity": "warning",
+                        "code": "command_settling_mismatch",
+                    })
+                    if unit["status"] != "error":
+                        unit["status"] = "warning"
             units[entity_id] = unit
             counts[unit["status"]] += 1
 
@@ -780,7 +932,7 @@ class RuntimeDiagnosticsManager:
         preconditioning = deepcopy(zone.get("preconditioning", {}))
         comfort_config = deepcopy(zone.get("comfort", {}))
         sensors = []
-        for purpose, sensor_id, active in (
+        sensor_candidates = [
             (
                 "room_temperature",
                 preconditioning.get("room_temperature_entity_id"),
@@ -815,7 +967,39 @@ class RuntimeDiagnosticsManager:
                 comfort_config.get("co2_entity_id"),
                 bool(comfort_config.get("enabled")),
             ),
-        ):
+            (
+                "comfort_outdoor_temperature",
+                comfort_config.get("outdoor_temperature_entity_id"),
+                bool(
+                    comfort_config.get("enabled")
+                    and comfort_config.get("outdoor_comparison_enabled")
+                ),
+            ),
+            (
+                "comfort_outdoor_humidity",
+                comfort_config.get("outdoor_humidity_entity_id"),
+                bool(
+                    comfort_config.get("enabled")
+                    and comfort_config.get("outdoor_comparison_enabled")
+                ),
+            ),
+        ]
+        derived_config = comfort_config.get("derived_metrics", {})
+        if isinstance(derived_config, dict):
+            sensor_candidates.extend(
+                (
+                    f"comfort_{metric}",
+                    metric_config.get("entity_id"),
+                    bool(
+                        comfort_config.get("enabled")
+                        and metric_config.get("enabled")
+                        and metric_config.get("source") == "entity"
+                    ),
+                )
+                for metric, metric_config in derived_config.items()
+                if isinstance(metric_config, dict)
+            )
+        for purpose, sensor_id, active in sensor_candidates:
             if isinstance(sensor_id, str) and sensor_id:
                 sensor_state = self._hass.states.get(sensor_id)
                 sensor_value = getattr(sensor_state, "state", "missing")
@@ -849,7 +1033,7 @@ class RuntimeDiagnosticsManager:
                 "preconditioning": preconditioning,
                 "comfort": comfort_config,
             },
-            "effective_setup": _effective_setup(data, entity_id),
+            "effective_setup": scheduler.get_zone_effective_setup(entity_id),
             "intent": deepcopy(runtime_status),
             "last_application": deepcopy(self._last_applied.get(entity_id)),
             "delivery": delivery,
@@ -1015,47 +1199,17 @@ def _learning_summary(value: Any) -> dict[str, Any] | None:
     return summary
 
 
-def _effective_setup(data: dict[str, Any], entity_id: str) -> dict[str, Any]:
-    """Resolve the profile owner and schedule source for one managed climate."""
-    global_data = data.get("global_", {})
-    profiles = {
-        profile.get("key"): profile
-        for profile in data.get("profiles", [])
-        if isinstance(profile, dict) and isinstance(profile.get("key"), str)
-    }
-    active_profile_ids = global_data.get("active_profile_ids", [])
-    owner = next(
-        (
-            profiles.get(profile_id)
-            for profile_id in active_profile_ids
-            if isinstance(profiles.get(profile_id), dict)
-            and entity_id in profiles[profile_id].get("zones", {})
-        ),
-        None,
-    )
-    behavior = (
-        owner.get("zones", {}).get(entity_id, {"behavior": "normal"})
-        if owner is not None
-        else {"behavior": "normal"}
-    )
-    behavior_kind = behavior.get("behavior", "normal")
-    modes = {
-        mode.get("key"): mode
-        for mode in data.get("modes", [])
-        if isinstance(mode, dict) and isinstance(mode.get("key"), str)
-    }
-    mode_id = global_data.get("active_mode_id")
-    return {
-        "scheduler_mode": global_data.get("mode"),
-        "mode_id": mode_id,
-        "mode_name": modes.get(mode_id, {}).get("name") if mode_id else None,
-        "profile_ids": list(active_profile_ids),
-        "profile_owner_id": owner.get("key") if owner else None,
-        "profile_owner_name": owner.get("name") if owner else None,
-        "profile_behavior": behavior_kind,
-        "schedule_source": (
-            "profile" if behavior_kind == "schedule"
-            else "profile_pause" if behavior_kind == "pause"
-            else "default"
-        ),
-    }
+def _public_delivery_source(value: Any) -> str:
+    """Map internal scheduler reasons to a small public contract."""
+    if value in ("service_set_temperature", "service_set_hvac_mode"):
+        return "manual"
+    if value == "boost":
+        return "boost"
+    if value == "external_change_reasserted":
+        return "automatic_reassertion"
+    return "automatic"
+
+
+def _public_delivery_action(value: Any) -> str:
+    """Return a stable public action without leaking internal values."""
+    return value if value in ("set_temperature", "set_hvac_mode", "turn_off") else "other"

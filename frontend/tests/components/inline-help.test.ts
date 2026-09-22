@@ -1,16 +1,22 @@
 // @vitest-environment jsdom
 
-import { render } from "lit";
+import { html, render } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { inlineHelpStyles } from "../../src/velair/styles/inline-help-styles";
 import { renderInlineHelp } from "../../src/velair/views/inline-help";
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  document.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 function setup() {
   const container = document.createElement("div");
   render(renderInlineHelp("policy-help", "About this setting", "Future sessions only"), container);
+  document.body.append(container);
   return {
     button: container.querySelector("button")!,
     container,
@@ -22,6 +28,8 @@ describe("inline help", () => {
   it("links a real button to its tooltip without dialog state", () => {
     const { button, container, tooltip } = setup();
     expect(button.getAttribute("aria-describedby")).toBe("policy-help");
+    expect(button.getAttribute("aria-controls")).toBe("policy-help");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
     expect(button.getAttribute("aria-label")).toBe("About this setting");
     expect(tooltip.id).toBe("policy-help");
     expect(tooltip.textContent).toBe("Future sessions only");
@@ -78,7 +86,7 @@ describe("inline help", () => {
 
     button.dispatchEvent(new FocusEvent("focus"));
     expect(tooltip.classList).toContain("visible");
-    button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
+    button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
     expect(tooltip.classList).not.toContain("visible");
     button.dispatchEvent(new FocusEvent("focus"));
     button.dispatchEvent(new FocusEvent("focusout"));
@@ -89,16 +97,60 @@ describe("inline help", () => {
     const css = inlineHelpStyles.cssText;
     expect(css).toMatch(/\.inline-help-tooltip\.visible\s*\{[^}]*pointer-events:\s*auto/);
     expect(css).toMatch(/\.inline-help-tooltip\s*\{[^}]*max-height:\s*calc\(100dvh - 24px\)[^}]*position:\s*fixed/);
-    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip\s*\{[^}]*bottom:\s*12px[^}]*inset-inline:\s*12px[^}]*max-height:\s*min\(40dvh, 180px\)[^}]*position:\s*fixed/);
+    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip,[\s\S]*\.inline-help-tooltip\.constrained\s*\{[^}]*bottom:\s*calc\(var\(--inline-help-mobile-bottom, 0px\) \+ max\(12px, env\(safe-area-inset-bottom\)\)\)/);
+    expect(css).toContain("var(--inline-help-mobile-width, 100dvw)");
+    expect(css).toContain("env(safe-area-inset-left)");
   });
 
-  it("keeps compact layout at 20px with a 40px coarse-pointer hit area", () => {
+  it("supports accessible constrained multi-block content without changing the mobile band", () => {
+    const container = document.createElement("div");
+    render(renderInlineHelp(
+      "adjusted-humidity-help",
+      "Adjusted outdoor humidity",
+      ["First explanation.", "Second explanation."],
+      { layout: "constrained" },
+    ), container);
+    const tooltip = container.querySelector<HTMLElement>('[role="tooltip"]')!;
+    const blocks = tooltip.querySelectorAll('[role="paragraph"]');
+
+    expect(tooltip.classList).toContain("constrained");
+    expect(blocks).toHaveLength(2);
+    expect(Array.from(blocks, (block) => block.textContent)).toEqual([
+      "First explanation.",
+      "Second explanation.",
+    ]);
+    expect(inlineHelpStyles.cssText).toMatch(
+      /\.inline-help-tooltip\.constrained\s*\{[^}]*max-width:\s*min\(236px, calc\(100dvw - 24px\)\);[^}]*width:\s*min\(236px, calc\(100dvw - 24px\)\);/,
+    );
+    expect(inlineHelpStyles.cssText).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip,[\s\S]*\.inline-help-tooltip\.constrained\s*\{[^}]*width:\s*calc\(/,
+    );
+  });
+
+  it("uses one real 32px button without an overlapping pseudo hit area", () => {
     const css = inlineHelpStyles.cssText;
     expect(css).toMatch(
-      /\.inline-help\.compact\s*\{[^}]*height:\s*20px;[^}]*width:\s*20px;/s,
+      /\.inline-help\s*\{[^}]*height:\s*32px;[^}]*width:\s*32px;/s,
     );
-    expect(css).toMatch(
-      /@media \(pointer: coarse\)[\s\S]*\.inline-help\.compact::before\s*\{[^}]*inset:\s*-10px;[^}]*position:\s*absolute;/s,
-    );
+    expect(css).not.toContain(".inline-help::before");
+    expect(css).not.toContain("@media (pointer: coarse)");
+    expect(css).not.toMatch(/margin[^;]*:\s*-\d/);
+    expect(css).not.toContain(".inline-help.compact");
+  });
+
+  it("keeps only one help open and closes it from outside clicks", () => {
+    const container = document.createElement("div");
+    render(html`${renderInlineHelp("first-help", "First", "First text")}${renderInlineHelp("second-help", "Second", "Second text")}`, container);
+    document.body.append(container);
+    const buttons = container.querySelectorAll<HTMLButtonElement>("button");
+
+    buttons[0].click();
+    expect(buttons[0].getAttribute("aria-expanded")).toBe("true");
+    buttons[1].click();
+    expect(buttons[0].getAttribute("aria-expanded")).toBe("false");
+    expect(buttons[1].getAttribute("aria-expanded")).toBe("true");
+
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
+    expect(buttons[1].getAttribute("aria-expanded")).toBe("false");
   });
 });

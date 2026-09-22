@@ -37,3 +37,30 @@ export function minutesPerDegreeBounds(unit: string | undefined): [number, numbe
 export function absoluteTemperatureBounds(unit: string | undefined): [number, number] {
   return isFahrenheit(unit) ? [-58, 212] : [-50, 100];
 }
+
+export function convertAbsoluteTemperature(
+  value: number,
+  sourceUnit: string | undefined,
+  targetUnit: string | undefined,
+): number {
+  const source = normalizedTemperatureUnit(sourceUnit);
+  const target = normalizedTemperatureUnit(targetUnit);
+  if (!source || !target || source === target) return value;
+  return source === "F" ? (value - 32) * 5 / 9 : (value * 9 / 5) + 32;
+}
+
+export function convertTemperatureDelta(
+  value: number,
+  sourceUnit: string | undefined,
+  targetUnit: string | undefined,
+): number {
+  const source = normalizedTemperatureUnit(sourceUnit);
+  const target = normalizedTemperatureUnit(targetUnit);
+  if (!source || !target || source === target) return value;
+  return source === "C" ? value * 9 / 5 : value * 5 / 9;
+}
+
+function normalizedTemperatureUnit(unit: string | undefined): "C" | "F" | undefined {
+  const normalized = String(unit ?? "").trim().toUpperCase().replace("°", "");
+  return normalized === "C" || normalized === "F" ? normalized : undefined;
+}

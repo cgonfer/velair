@@ -77,6 +77,18 @@
           "hot_and_humid": "Жарко и влажно"
         }
       },
+      "zone_ventilation_opportunity": {
+        "name": "Возможность проветривания: {zone}",
+        "state": {
+          "unavailable": "Недоступно",
+          "no_opportunity": "Нет возможности",
+          "may_help": "Может помочь",
+          "comfort_possible": "Комфорт возможен",
+          "trade_off": "Компромисс",
+          "already_comfortable": "Уже комфортно"
+        }
+      },
+
       "zone_air_quality": {
         "name": "{zone}: качество воздуха",
         "state": {
@@ -94,6 +106,27 @@
           "boost": "Форсированный режим",
           "paused": "Приостановлен",
           "disabled": "Отключено"
+        }
+      },
+      "zone_control": {
+        "name": "Управление {zone}",
+        "state": {
+          "automatic": "Автоматическое",
+          "manual": "Ручное",
+          "external": "Внешнее"
+        }
+      },
+      "zone_delivery_diagnostics": {
+        "name": "Диагностика доставки {zone}",
+        "state": {
+          "idle": "Нет данных",
+          "success": "Успешно",
+          "failed": "Ошибка",
+          "retrying": "Повторная попытка",
+          "exhausted": "Попытки исчерпаны",
+          "invalid_intent": "Недопустимая цель",
+          "cancelled": "Отменено",
+          "unavailable": "Недоступно"
         }
       },
       "zone_preconditioning_start": {

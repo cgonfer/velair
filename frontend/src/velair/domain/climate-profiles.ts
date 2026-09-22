@@ -1,5 +1,6 @@
 import { WEEKDAYS } from "../constants";
 import {
+  ACTION_SET_HVAC_MODE,
   ACTION_SET_TEMPERATURE,
   ACTION_TURN_OFF,
   PROFILE_DESCRIPTION_MAX_LENGTH,
@@ -254,7 +255,9 @@ export function climateProfileValidationError(draft: ClimateProfileDraft): strin
           return "schedule";
         }
         starts.add(block.start);
-        if (block.action !== ACTION_TURN_OFF) {
+        if (block.action === ACTION_SET_HVAC_MODE) {
+          if (!block.hvac_mode || block.hvac_mode === "off") return "schedule";
+        } else if (block.action !== ACTION_TURN_OFF) {
           const validTarget = draftBlockUsesRange(block)
             ? Number.isFinite(Number(block.target_temp_low))
               && Number.isFinite(Number(block.target_temp_high))
@@ -295,6 +298,13 @@ export function climateProfileInput(draft: ClimateProfileDraft): ClimateProfileI
 function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock {
   if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF) {
     return { start: block.start, action: ACTION_TURN_OFF };
+  }
+  if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_SET_HVAC_MODE) {
+    return {
+      start: block.start,
+      action: ACTION_SET_HVAC_MODE,
+      ...(block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
+    };
   }
   return {
     start: block.start,

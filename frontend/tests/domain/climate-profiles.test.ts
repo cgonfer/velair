@@ -247,6 +247,27 @@ describe("climate profiles domain", () => {
     }
   });
 
+  it("persists mode-only profile blocks without stale targets or climate options", () => {
+    const draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "schedule");
+    const zone = draft.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected schedule");
+    zone.schedule.monday = [{
+      action: "set_hvac_mode",
+      start: "08:00",
+      hvac_mode: "auto",
+      temperature: "21",
+      fan_mode: "quiet",
+    }];
+
+    const inputZone = climateProfileInput(draft).zones["climate.office"];
+    if (inputZone.behavior !== "schedule") throw new Error("Expected schedule");
+    expect(inputZone.schedule.monday).toEqual([{
+      action: "set_hvac_mode",
+      start: "08:00",
+      hvac_mode: "auto",
+    }]);
+  });
+
   it("validates icon syntax and creates a unique default name", () => {
     const draft = { ...createClimateProfileDraft(), name: "Away", icon: "briefcase" };
     expect(climateProfileValidationError(draft)).toBe("icon");

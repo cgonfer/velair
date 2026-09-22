@@ -21,6 +21,7 @@ import { renderSettingsView } from "./settings-view";
 import { renderDiagnosticsView } from "./diagnostics-view";
 import { renderTemplatesView } from "./templates-view";
 import "../components/profiles-view-element";
+import { renderClimateCard } from "./climate-card-view";
 
 type CardContentHost = VelairViewHost;
 
@@ -148,6 +149,10 @@ function renderViewContent(
       ${renderOverviewTimelines(host, visibleZoneIds)}
       ${renderOverviewZones(host, visibleZoneIds)}
     `;
+  }
+
+  if (view === "climate") {
+    return renderClimateCard(host, selectedEntity);
   }
 
   if (view === "modes" || view === "profiles") {

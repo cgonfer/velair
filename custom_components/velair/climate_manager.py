@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import logging
 import math
 from types import SimpleNamespace
@@ -30,7 +31,7 @@ from .const import (
     ATTR_TEMPERATURE,
     HVAC_MODE_OFF,
 )
-from .temperature import absolute_temperature
+from .temperature import absolute_temperature, snap_temperature_to_step, temperature_delta
 from .execution import ExecutionAuthority
 
 CLIMATE_DOMAIN = "climate"
@@ -68,6 +69,8 @@ FEATURE_TARGET_TEMPERATURE = 1
 FEATURE_TARGET_TEMPERATURE_RANGE = 2
 MAX_EXPECTED_ACTIONS_PER_ENTITY = 32
 MAX_OWNED_CONTEXTS = 256
+EXPECTED_ACTION_TIMEOUT = 120.0
+SETTLING_TIMEOUT = 45.0
 
 
 class ClimateManager:
@@ -81,6 +84,9 @@ class ClimateManager:
         self._execution_authority = execution_authority
         self._contexts: dict[str, float] = {}
         self._expected: dict[str, list[dict[str, Any]]] = {}
+        self._settling: dict[str, dict[str, dict[str, Any]]] = {}
+        self._settling_mismatches: dict[str, dict[str, dict[str, Any]]] = {}
+        self._field_generations: dict[str, dict[str, int]] = {}
 
     async def _async_call(
         self,
@@ -101,26 +107,48 @@ class ClimateManager:
             expected = self._expected_for_service(service, data)
             structural_transition_fields: set[str] = set()
             structural_transition_values: dict[str, float] = {}
-            if expected.get(ATTR_HVAC_MODE) == HVAC_MODE_OFF:
+            structural_transition_direction = "appear"
+            structural_transition_mode: str | None = None
+            structural_transition_source_mode: str | None = None
+            requested_mode = expected.get(ATTR_HVAC_MODE)
+            if service in {
+                CLIMATE_SERVICE_SET_HVAC_MODE,
+                CLIMATE_SERVICE_TURN_OFF,
+            } and isinstance(
+                requested_mode, str
+            ):
                 state = self._hass.states.get(entity_id)
-                if state is not None and state.state != HVAC_MODE_OFF:
+                if state is not None and requested_mode != state.state:
                     for field in (
                         ATTR_TEMPERATURE,
                         ATTR_TARGET_TEMP_LOW,
                         ATTR_TARGET_TEMP_HIGH,
                     ):
                         value = state.attributes.get(field)
-                        if not self._is_finite_observed_target(value):
+                        if (
+                            requested_mode == HVAC_MODE_OFF
+                            and not self._is_finite_observed_target(value)
+                        ):
                             continue
                         structural_transition_fields.add(field)
-                        structural_transition_values[field] = float(value)
+                        if self._is_finite_observed_target(value):
+                            structural_transition_values[field] = float(value)
+                    structural_transition_direction = (
+                        "disappear"
+                        if requested_mode == HVAC_MODE_OFF
+                        else "reshape"
+                    )
+                    structural_transition_mode = requested_mode
+                    structural_transition_source_mode = state.state
             self._register_expected_action(
                 entity_id,
                 context,
                 expected,
                 structural_transition_fields=structural_transition_fields,
-                structural_transition_direction="disappear",
+                structural_transition_direction=structural_transition_direction,
                 structural_transition_values=structural_transition_values,
+                structural_transition_mode=structural_transition_mode,
+                structural_transition_source_mode=structural_transition_source_mode,
             )
         try:
             try:
@@ -137,6 +165,8 @@ class ClimateManager:
             if register_expected and isinstance(entity_id, str):
                 self._discard_expected_action(entity_id, context.id)
             raise
+        if register_expected and isinstance(entity_id, str):
+            self._mark_expected_action_delivered(entity_id, context.id)
 
     @staticmethod
     def _new_owned_context() -> Any:
@@ -173,20 +203,85 @@ class ClimateManager:
         structural_transition_fields: set[str] | None = None,
         structural_transition_direction: str = "appear",
         structural_transition_values: dict[str, float] | None = None,
+        structural_transition_mode: str | None = None,
+        structural_transition_source_mode: str | None = None,
     ) -> None:
         """Register one bounded expectation for a logical climate action."""
         if not expected:
             return
-        expiry = monotonic() + 120
+        registered_at = monotonic()
+        expiry = registered_at + EXPECTED_ACTION_TIMEOUT
+        settles_until = registered_at + SETTLING_TIMEOUT
         self._contexts[context.id] = expiry
         while len(self._contexts) > MAX_OWNED_CONTEXTS:
             self._discard_owned_context(next(iter(self._contexts)))
         candidates = self._expected.setdefault(entity_id, [])
+        observable_fields = {
+            ATTR_HVAC_MODE if key == "__not_off__" else key
+            for key in expected
+        }
+        previous_settling: dict[str, dict[str, Any]] = {}
+        for field in observable_fields:
+            settled = self._settling.get(entity_id, {}).get(field)
+            if settled is not None and settled["expires"] > registered_at:
+                previous_settling[field] = settled
+                continue
+            for older in reversed(candidates):
+                fallback = older.get("previous_settling", {}).get(field)
+                if fallback is not None and fallback["expires"] > registered_at:
+                    previous_settling[field] = fallback
+                    break
+        superseded_structural_candidates: list[dict[str, Any]] = []
+        target_fields = {
+            ATTR_TEMPERATURE,
+            ATTR_TARGET_TEMP_LOW,
+            ATTR_TARGET_TEMP_HIGH,
+        }
+        if (
+            ATTR_HVAC_MODE in observable_fields
+            or observable_fields & target_fields
+        ):
+            for older in candidates:
+                transition = older.get("structural_transition")
+                if (
+                    transition is not None
+                    and transition.get("direction") == "reshape"
+                ):
+                    if ATTR_HVAC_MODE in observable_fields:
+                        previous = deepcopy(older)
+                        previous.pop(
+                            "superseded_structural_candidates", None
+                        )
+                        superseded_structural_candidates.append(previous)
+                    older.pop("structural_transition", None)
+        self._supersede_expected_fields(entity_id, observable_fields)
+        candidates = self._expected.setdefault(entity_id, [])
+        generations = self._field_generations.setdefault(entity_id, {})
+        candidate_generations: dict[str, int] = {}
+        for field in observable_fields:
+            self._settling_mismatches.get(entity_id, {}).pop(field, None)
+            generation = generations.get(field, 0) + 1
+            generations[field] = generation
+            candidate_generations[field] = generation
+            self._settling.get(entity_id, {}).pop(field, None)
+        if not self._settling_mismatches.get(entity_id):
+            self._settling_mismatches.pop(entity_id, None)
+        if not self._settling.get(entity_id):
+            self._settling.pop(entity_id, None)
         candidate = {
             "expires": expiry,
+            "settles_until": settles_until,
+            "delivery_pending": True,
             "context_id": context.id,
             "expected": expected,
+            "generations": candidate_generations,
         }
+        if previous_settling:
+            candidate["previous_settling"] = previous_settling
+        if superseded_structural_candidates:
+            candidate["superseded_structural_candidates"] = (
+                superseded_structural_candidates
+            )
         if structural_transition_fields:
             candidate["structural_transition"] = {
                 "fields": set(structural_transition_fields),
@@ -194,16 +289,67 @@ class ClimateManager:
                 "direction": structural_transition_direction,
                 "values": dict(structural_transition_values or {}),
             }
+            if structural_transition_mode is not None:
+                candidate["structural_transition"]["mode"] = (
+                    structural_transition_mode
+                )
+            if structural_transition_source_mode is not None:
+                candidate["structural_transition"]["source_mode"] = (
+                    structural_transition_source_mode
+                )
         candidates.append(candidate)
         if len(candidates) > MAX_EXPECTED_ACTIONS_PER_ENTITY:
             evicted = candidates[:-MAX_EXPECTED_ACTIONS_PER_ENTITY]
             del candidates[:-MAX_EXPECTED_ACTIONS_PER_ENTITY]
             for item in evicted:
                 self._contexts.pop(item["context_id"], None)
+                removed = self._discard_settling_context(
+                    entity_id, item["context_id"]
+                )
+                self._restore_discarded_settling(entity_id, removed)
+                self._restore_previous_settling(entity_id, item)
+            self._cleanup_field_generations(entity_id)
+
+    def _mark_expected_action_delivered(
+        self, entity_id: str, context_id: str
+    ) -> None:
+        """Start the final settling budget after the service delivery completes."""
+        delivered_at = monotonic()
+        settles_until = delivered_at + SETTLING_TIMEOUT
+        expected_until = delivered_at + EXPECTED_ACTION_TIMEOUT
+        matched = False
+        for candidate in self._expected.get(entity_id, []):
+            if candidate["context_id"] != context_id:
+                continue
+            candidate["settles_until"] = max(
+                candidate.get("settles_until", 0.0), settles_until
+            )
+            candidate["expires"] = max(candidate["expires"], expected_until)
+            candidate["delivery_pending"] = False
+            matched = True
+        for item in self._settling.get(entity_id, {}).values():
+            if context_id not in item["context_ids"]:
+                continue
+            item["expires"] = max(item["expires"], settles_until)
+            item["recovery_until"] = max(
+                item.get("recovery_until", 0.0), expected_until
+            )
+            item["delivery_pending"] = False
+            matched = True
+        if matched:
+            self._contexts[context_id] = max(
+                self._contexts.get(context_id, 0.0), expected_until
+            )
 
     def _discard_expected_action(self, entity_id: str, context_id: str) -> None:
         """Discard a failed logical action without leaving stale ownership."""
         self._contexts.pop(context_id, None)
+        removed_settling = self._discard_settling_context(entity_id, context_id)
+        discarded = [
+            item
+            for item in self._expected.get(entity_id, [])
+            if item["context_id"] == context_id
+        ]
         remaining = [
             item for item in self._expected.get(entity_id, [])
             if item["context_id"] != context_id
@@ -212,11 +358,68 @@ class ClimateManager:
             self._expected[entity_id] = remaining
         else:
             self._expected.pop(entity_id, None)
+        for item in discarded:
+            self._restore_previous_settling(entity_id, item)
+        self._restore_discarded_settling(entity_id, removed_settling)
+        self._restore_superseded_structural_candidates(entity_id, discarded)
+        self._cleanup_field_generations(entity_id)
+
+    def _restore_superseded_structural_candidates(
+        self,
+        entity_id: str,
+        discarded: list[dict[str, Any]],
+    ) -> None:
+        """Restore bounded structural ownership after a newer service fails."""
+        now = monotonic()
+        current_generation = self._field_generations.get(entity_id, {}).get(
+            ATTR_HVAC_MODE
+        )
+        for failed in discarded:
+            failed_generation = failed.get("generations", {}).get(
+                ATTR_HVAC_MODE
+            )
+            if (
+                failed_generation is None
+                or failed_generation != current_generation
+            ):
+                continue
+            for previous in failed.get(
+                "superseded_structural_candidates", []
+            ):
+                transition = previous.get("structural_transition")
+                if (
+                    transition is None
+                    or previous.get("expires", 0.0) <= now
+                    or (
+                        not previous.get("delivery_pending", False)
+                        and previous.get("settles_until", 0.0) <= now
+                    )
+                ):
+                    continue
+                live = self._expected.get(entity_id, [])
+                if any(
+                    self._candidate_controls_field(item, ATTR_HVAC_MODE)
+                    for item in live
+                ):
+                    continue
+                self._expected.setdefault(entity_id, []).insert(0, previous)
+                self._contexts[previous["context_id"]] = previous["expires"]
+                previous_generation = previous.get("generations", {}).get(
+                    ATTR_HVAC_MODE
+                )
+                if previous_generation is not None:
+                    self._field_generations.setdefault(entity_id, {})[
+                        ATTR_HVAC_MODE
+                    ] = previous_generation
+                return
 
     def _discard_owned_context(self, context_id: str) -> None:
         """Discard one context and every expectation associated with it."""
         self._contexts.pop(context_id, None)
         for entity_id in list(self._expected):
+            removed_settling = self._discard_settling_context(
+                entity_id, context_id
+            )
             remaining = [
                 item for item in self._expected[entity_id]
                 if item["context_id"] != context_id
@@ -225,16 +428,24 @@ class ClimateManager:
                 self._expected[entity_id] = remaining
             else:
                 self._expected.pop(entity_id, None)
+            self._restore_discarded_settling(entity_id, removed_settling)
+            self._cleanup_field_generations(entity_id)
 
     def _retain_expected_action_fields(
         self, entity_id: str, context_id: str, fields: set[str]
     ) -> None:
         """Keep only fields belonging to an already accepted action stage."""
         candidates = self._expected.get(entity_id, [])
+        retained_fields = {
+            ATTR_HVAC_MODE if field == "__not_off__" else field
+            for field in fields
+        }
         retained = False
+        candidate: dict[str, Any] | None = None
         for item in candidates:
             if item["context_id"] != context_id:
                 continue
+            candidate = item
             item["expected"] = {
                 key: value for key, value in item["expected"].items()
                 if key in fields
@@ -242,17 +453,41 @@ class ClimateManager:
             item.pop("structural_transition", None)
             retained = bool(item["expected"])
             break
-        if not retained:
+        retained_settling = any(
+            field in retained_fields
+            and context_id in item["context_ids"]
+            for field, item in self._settling.get(entity_id, {}).items()
+        )
+        if not retained and not retained_settling:
             self._discard_expected_action(entity_id, context_id)
+        else:
+            removed_settling = self._discard_settling_context(
+                entity_id, context_id, retain_fields=retained_fields
+            )
+            if candidate is not None:
+                self._restore_previous_settling(
+                    entity_id, candidate, excluded_fields=retained_fields
+                )
+                if not retained:
+                    remaining = [item for item in candidates if item is not candidate]
+                    if remaining:
+                        self._expected[entity_id] = remaining
+                    else:
+                        self._expected.pop(entity_id, None)
+            self._restore_discarded_settling(
+                entity_id, removed_settling
+            )
+            self._cleanup_field_generations(entity_id)
 
     def owned_state_change_fields(
         self, entity_id: str, new_state: Any, old_state: Any | None = None
     ) -> set[str]:
         """Return changed control fields attributable to Velair.
 
-        Home Assistant integrations can retain a service Context while also
-        reporting an unrelated device-side change. Context therefore narrows
-        candidate selection but never replaces field and value correlation.
+        Exact field-and-value matches consume one-shot expectations. During the
+        bounded settling period, anonymous divergent values on fields controlled
+        by the active command remain ambiguous and are treated as owned, while
+        explicit user contexts and unrelated fields remain external.
         """
         self._prune_owned_actions()
         context_id = getattr(getattr(new_state, "context", None), "id", None)
@@ -302,6 +537,10 @@ class ClimateManager:
                     expected_key = field
                 if expected_key not in expected:
                     continue
+                if not self._change_can_belong_to_owned_contexts(
+                    new_state, {item["context_id"]}
+                ):
+                    continue
                 transition = item.get("structural_transition")
                 if (
                     field == ATTR_HVAC_MODE
@@ -321,13 +560,21 @@ class ClimateManager:
                     continue
                 owned.add(field)
                 consumed.setdefault(id(item), set()).add(expected_key)
+                mismatches = self._settling_mismatches.get(entity_id)
+                if mismatches is not None:
+                    mismatches.pop(field, None)
+                    if not mismatches:
+                        self._settling_mismatches.pop(entity_id, None)
+                self._remember_settling_field(
+                    entity_id, item, field, expected[expected_key]
+                )
                 if (
                     field == ATTR_HVAC_MODE
                     and transition is not None
                 ):
-                    if item["context_id"] == context_id:
+                    if item["context_id"] == context_id or context_id is None:
                         transition["mode_confirmed"] = True
-                    elif (
+                    if (
                         context_id is None
                         and transition.get("direction") == "disappear"
                     ):
@@ -344,6 +591,20 @@ class ClimateManager:
                                 )
                             ):
                                 candidate_transition["mode_confirmed"] = True
+                    if (
+                        transition.get("direction") == "reshape"
+                        and transition["mode_confirmed"]
+                    ):
+                        provisional_fields = transition.pop(
+                            "provisional_fields", set()
+                        )
+                        transition["fields"].difference_update(provisional_fields)
+                        for provisional_field in provisional_fields:
+                            transition.get("values", {}).pop(
+                                provisional_field, None
+                            )
+                        if not transition["fields"]:
+                            item.pop("structural_transition", None)
                 if field == ATTR_HVAC_MODE and context_id is None:
                     for candidate in candidates:
                         if candidate["expected"].get(ATTR_HVAC_MODE) == HVAC_MODE_OFF:
@@ -352,7 +613,49 @@ class ClimateManager:
                             )
                 matched = True
                 break
-            if matched or field == ATTR_HVAC_MODE:
+            if matched:
+                continue
+            mismatch = self._settling_mismatches.get(entity_id, {}).get(field)
+            if (
+                mismatch is not None
+                and mismatch.get("recovery_until", 0.0) > monotonic()
+                and self._change_can_belong_to_owned_contexts(
+                    new_state, mismatch.get("context_ids", set())
+                )
+                and self._field_matches_expected(
+                    entity_id, new_state, field, mismatch.get("expected")
+                )
+            ):
+                owned.add(field)
+                self._settling_mismatches[entity_id].pop(field, None)
+                if not self._settling_mismatches[entity_id]:
+                    self._settling_mismatches.pop(entity_id, None)
+                continue
+            active_candidate = next(
+                (
+                    item
+                    for item in ordered
+                    if self._candidate_controls_field(item, field)
+                    and (
+                        item.get("delivery_pending", False)
+                        or item.get("settles_until", 0.0) > monotonic()
+                    )
+                    and self._change_can_belong_to_owned_contexts(
+                        new_state, {item["context_id"]}
+                    )
+                ),
+                None,
+            )
+            if active_candidate is not None:
+                owned.add(field)
+                continue
+            settling = self._settling.get(entity_id, {}).get(field)
+            if settling is not None and self._change_can_belong_to_owned_contexts(
+                new_state, settling["context_ids"]
+            ):
+                owned.add(field)
+                continue
+            if field == ATTR_HVAC_MODE:
                 continue
             for item in ordered:
                 transition = item.get("structural_transition")
@@ -363,6 +666,77 @@ class ClimateManager:
                 ):
                     continue
                 direction = transition.get("direction", "appear")
+                if direction == "reshape":
+                    if not self._change_can_belong_to_owned_contexts(
+                        new_state, {item["context_id"]}
+                    ):
+                        structural_invalidations.setdefault(id(item), set()).update(
+                            transition["fields"]
+                        )
+                        continue
+                    if not (
+                        item.get("delivery_pending", False)
+                        or item.get("settles_until", 0.0) > monotonic()
+                    ):
+                        structural_invalidations.setdefault(id(item), set()).update(
+                            transition["fields"]
+                        )
+                        continue
+                    provisional = not transition["mode_confirmed"]
+                    if provisional:
+                        generation = item.get("generations", {}).get(
+                            ATTR_HVAC_MODE
+                        )
+                        latest_generation = self._field_generations.get(
+                            entity_id, {}
+                        ).get(ATTR_HVAC_MODE)
+                        if (
+                            not self._candidate_controls_field(
+                                item, ATTR_HVAC_MODE
+                            )
+                            or generation != latest_generation
+                            or new_state.state != transition.get("source_mode")
+                        ):
+                            structural_invalidations.setdefault(
+                                id(item), set()
+                            ).update(transition["fields"])
+                            continue
+                    elif new_state.state != transition.get("mode"):
+                        structural_invalidations.setdefault(id(item), set()).update(
+                            transition["fields"]
+                        )
+                        continue
+                    old_value = old_state.attributes.get(field)
+                    new_value = new_state.attributes.get(field)
+                    old_is_finite = self._is_finite_observed_target(old_value)
+                    new_is_finite = self._is_finite_observed_target(new_value)
+                    captured = transition.get("values", {}).get(field)
+                    started_finite = captured is not None
+                    valid_shape_change = (
+                        started_finite
+                        and old_is_finite
+                        and not new_is_finite
+                        and self._target_values_match(
+                            entity_id, old_value, captured
+                        )
+                    ) or (
+                        not started_finite
+                        and not old_is_finite
+                        and new_is_finite
+                    )
+                    if not valid_shape_change:
+                        structural_invalidations.setdefault(id(item), set()).update(
+                            transition["fields"]
+                        )
+                        continue
+                    owned.add(field)
+                    if provisional:
+                        transition.setdefault("provisional_fields", set()).add(
+                            field
+                        )
+                    else:
+                        structural_uses.setdefault(id(item), set()).add(field)
+                    break
                 if direction == "disappear":
                     if (
                         context_id is not None
@@ -479,6 +853,13 @@ class ClimateManager:
             candidate_context = item["context_id"]
             if candidate_context not in live_contexts:
                 self._contexts.pop(candidate_context, None)
+        self._cleanup_field_generations(entity_id)
+        mismatches = self._settling_mismatches.get(entity_id)
+        if mismatches is not None:
+            for field in changed_fields - owned:
+                mismatches.pop(field, None)
+            if not mismatches:
+                self._settling_mismatches.pop(entity_id, None)
         return owned
 
     def owns_state_change(
@@ -487,6 +868,195 @@ class ClimateManager:
         """Compatibility helper for callers interested in whole-event ownership."""
         changed = self._observed_changed_fields(old_state, new_state)
         return changed == self.owned_state_change_fields(entity_id, new_state, old_state)
+
+    @staticmethod
+    def _candidate_controls_field(candidate: dict[str, Any], field: str) -> bool:
+        """Return whether an expectation is still waiting for one field."""
+        expected = candidate["expected"]
+        if field == ATTR_HVAC_MODE:
+            return ATTR_HVAC_MODE in expected or "__not_off__" in expected
+        return field in expected
+
+    def _remember_settling_field(
+        self,
+        entity_id: str,
+        candidate: dict[str, Any],
+        field: str,
+        expected: Any,
+    ) -> None:
+        """Retain bounded ownership after the first expected device echo."""
+        settles_until = candidate.get("settles_until", 0.0)
+        if settles_until <= monotonic() and not candidate.get(
+            "delivery_pending", False
+        ):
+            return
+        generation = candidate.get("generations", {}).get(field)
+        current_generation = self._field_generations.get(entity_id, {}).get(field)
+        if generation is None or generation != current_generation:
+            return
+        self._settling.setdefault(entity_id, {})[field] = {
+            "expires": settles_until,
+            "recovery_until": candidate.get("expires", settles_until),
+            "delivery_pending": candidate.get("delivery_pending", False),
+            "expected": expected,
+            "generation": generation,
+            "context_ids": {candidate["context_id"]},
+            "previous_settling": candidate.get("previous_settling", {}).get(
+                field
+            ),
+        }
+
+    def _field_matches_expected(
+        self, entity_id: str, state: Any, field: str, expected: Any
+    ) -> bool:
+        """Return whether one observed control field reached its expected value."""
+        actual = state.state if field == ATTR_HVAC_MODE else state.attributes.get(field)
+        if field == ATTR_HVAC_MODE:
+            return actual != HVAC_MODE_OFF if expected is True else actual == expected
+        if expected is None:
+            return actual is None
+        return self._target_values_match(entity_id, actual, expected)
+
+    @staticmethod
+    def _change_can_belong_to_owned_contexts(
+        new_state: Any, owned_contexts: set[str]
+    ) -> bool:
+        """Return whether an update lacks evidence of an external command."""
+        context = getattr(new_state, "context", None)
+        if context is None:
+            return True
+        context_id = getattr(context, "id", None)
+        parent_id = getattr(context, "parent_id", None)
+        if context_id in owned_contexts or parent_id in owned_contexts:
+            return True
+        # Integrations frequently replace or drop contexts for device echoes.
+        # A user id or an unrelated parent context is positive evidence of a
+        # user, script, or automation-originated Home Assistant command.
+        if getattr(context, "user_id", None) is not None:
+            return False
+        return parent_id is None
+
+    def _cleanup_field_generations(self, entity_id: str) -> None:
+        """Drop generation bookkeeping no longer backed by live ownership."""
+        generations = self._field_generations.get(entity_id)
+        if not generations:
+            return
+        settling = self._settling.get(entity_id, {})
+        retained: dict[str, int] = {}
+        for field, generation in generations.items():
+            settling_item = settling.get(field)
+            if (
+                settling_item is not None
+                and settling_item.get("generation") == generation
+            ):
+                retained[field] = generation
+                continue
+            if any(
+                item.get("generations", {}).get(field) == generation
+                and self._candidate_controls_field(item, field)
+                for item in self._expected.get(entity_id, [])
+            ):
+                retained[field] = generation
+        if retained:
+            self._field_generations[entity_id] = retained
+        else:
+            self._field_generations.pop(entity_id, None)
+
+    def _discard_settling_context(
+        self,
+        entity_id: str,
+        context_id: str,
+        *,
+        retain_fields: set[str] | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        """Remove settling ownership for a failed or discarded action stage."""
+        settling = self._settling.get(entity_id)
+        if not settling:
+            return {}
+        removed = {
+            field: item
+            for field, item in settling.items()
+            if context_id in item["context_ids"]
+            and not (retain_fields is not None and field in retain_fields)
+        }
+        retained = {
+            field: item
+            for field, item in settling.items()
+            if context_id not in item["context_ids"]
+            or (retain_fields is not None and field in retain_fields)
+        }
+        if retained:
+            self._settling[entity_id] = retained
+        else:
+            self._settling.pop(entity_id, None)
+        return removed
+
+    def _restore_discarded_settling(
+        self,
+        entity_id: str,
+        discarded: dict[str, dict[str, Any]],
+    ) -> None:
+        """Restore fallback ownership retained by an already consumed stage."""
+        now = monotonic()
+        for field, item in discarded.items():
+            previous = item.get("previous_settling")
+            if previous is None or previous["expires"] <= now:
+                continue
+            self._settling.setdefault(entity_id, {})[field] = previous
+            self._field_generations.setdefault(entity_id, {})[field] = previous[
+                "generation"
+            ]
+
+    def _supersede_expected_fields(
+        self, entity_id: str, fields: set[str]
+    ) -> None:
+        """Remove older expectations replaced by a newer field generation."""
+        candidates = self._expected.get(entity_id, [])
+        remaining: list[dict[str, Any]] = []
+        for candidate in candidates:
+            expected = candidate["expected"]
+            for field in fields:
+                expected.pop(field, None)
+                if field == ATTR_HVAC_MODE:
+                    expected.pop("__not_off__", None)
+            transition = candidate.get("structural_transition")
+            if transition is not None:
+                transition["fields"].difference_update(fields)
+                values = transition.get("values")
+                if values is not None:
+                    for field in fields:
+                        values.pop(field, None)
+                if not transition["fields"]:
+                    candidate.pop("structural_transition", None)
+            if candidate["expected"] or "structural_transition" in candidate:
+                remaining.append(candidate)
+            else:
+                self._contexts.pop(candidate["context_id"], None)
+        if remaining:
+            self._expected[entity_id] = remaining
+        else:
+            self._expected.pop(entity_id, None)
+
+    def _restore_previous_settling(
+        self,
+        entity_id: str,
+        candidate: dict[str, Any],
+        *,
+        excluded_fields: set[str] | None = None,
+    ) -> None:
+        """Restore superseded ownership when a newer command stage fails."""
+        now = monotonic()
+        restored = self._settling.setdefault(entity_id, {})
+        generations = self._field_generations.setdefault(entity_id, {})
+        for field, item in candidate.get("previous_settling", {}).items():
+            if excluded_fields is not None and field in excluded_fields:
+                continue
+            if item["expires"] <= now:
+                continue
+            restored[field] = item
+            generations[field] = item["generation"]
+        if not restored:
+            self._settling.pop(entity_id, None)
 
     def _observed_changed_fields(self, old_state: Any | None, new_state: Any) -> set[str]:
         if old_state is None:
@@ -573,11 +1143,127 @@ class ClimateManager:
         now = monotonic()
         self._contexts = {key: expiry for key, expiry in self._contexts.items() if expiry > now}
         for entity_id, candidates in list(self._expected.items()):
+            for item in candidates:
+                if (
+                    item.get("delivery_pending", False)
+                    and item["expires"] > now
+                ) or (
+                    not item.get("delivery_pending", False)
+                    and item.get("settles_until", 0.0) > now
+                ):
+                    continue
+                for expected_field, expected_value in item["expected"].items():
+                    field = (
+                        ATTR_HVAC_MODE
+                        if expected_field == "__not_off__"
+                        else expected_field
+                    )
+                    generation = item.get("generations", {}).get(field)
+                    if generation != self._field_generations.get(entity_id, {}).get(
+                        field
+                    ):
+                        continue
+                    self._record_settling_mismatch(
+                        entity_id,
+                        field,
+                        {
+                            "expected": expected_value,
+                            "recovery_until": item["expires"],
+                            "context_ids": {item["context_id"]},
+                        },
+                    )
             remaining = [item for item in candidates if item["expires"] > now]
             if remaining:
                 self._expected[entity_id] = remaining
             else:
                 self._expected.pop(entity_id, None)
+        for entity_id, fields in list(self._settling.items()):
+            for field, item in fields.items():
+                pending = item.get("delivery_pending", False)
+                pending_until = item.get("recovery_until", item["expires"])
+                if item["expires"] <= now and not (
+                    pending and pending_until > now
+                ):
+                    self._record_settling_mismatch(entity_id, field, item)
+            remaining_fields = {
+                field: item
+                for field, item in fields.items()
+                if item["expires"] > now
+                or (
+                    item.get("delivery_pending", False)
+                    and item.get("recovery_until", item["expires"]) > now
+                )
+            }
+            if remaining_fields:
+                self._settling[entity_id] = remaining_fields
+            else:
+                self._settling.pop(entity_id, None)
+        for entity_id in list(self._field_generations):
+            self._cleanup_field_generations(entity_id)
+
+    def _record_settling_mismatch(
+        self, entity_id: str, field: str, settling: dict[str, Any]
+    ) -> None:
+        """Remember a command that did not converge before settling expired."""
+        state = self._hass.states.get(entity_id)
+        if state is None:
+            return
+        actual = (
+            state.state
+            if field == ATTR_HVAC_MODE
+            else state.attributes.get(field)
+        )
+        expected = settling.get("expected")
+        if field == ATTR_HVAC_MODE:
+            matches = (
+                actual != HVAC_MODE_OFF
+                if expected is True
+                else actual == expected
+            )
+        elif expected is None:
+            matches = actual is None
+        else:
+            matches = self._target_values_match(entity_id, actual, expected)
+        if matches:
+            mismatch = self._settling_mismatches.get(entity_id)
+            if mismatch is not None:
+                mismatch.pop(field, None)
+                if not mismatch:
+                    self._settling_mismatches.pop(entity_id, None)
+            return
+        self._settling_mismatches.setdefault(entity_id, {})[field] = {
+            "expected": expected,
+            "observed": actual,
+            "recovery_until": settling.get("recovery_until", 0.0),
+            "context_ids": set(settling.get("context_ids", set())),
+        }
+
+    def command_settling_diagnostics(self, entity_id: str) -> dict[str, Any]:
+        """Return privacy-safe runtime evidence for recent command settling."""
+        self._prune_owned_actions()
+        now = monotonic()
+        active_fields = {
+            field
+            for item in self._expected.get(entity_id, [])
+            if item.get("delivery_pending", False)
+            or item.get("settles_until", 0.0) > now
+            for field in item.get("generations", {})
+            if self._candidate_controls_field(item, field)
+        }
+        active_fields.update(self._settling.get(entity_id, {}))
+        mismatches = self._settling_mismatches.get(entity_id, {})
+        return {
+            "active": bool(active_fields),
+            "fields": sorted(active_fields),
+            "mismatches": {
+                field: {
+                    "expected": item.get("expected"),
+                    "observed": item.get("observed"),
+                }
+                for field, item in sorted(mismatches.items())
+            },
+            "window_seconds": SETTLING_TIMEOUT,
+        }
 
     async def async_set_temperature(
         self,
@@ -753,6 +1439,7 @@ class ClimateManager:
                 context=context,
                 register_expected=False,
             )
+            self._mark_expected_action_delivered(entity_id, context.id)
         except Exception:
             if mode_service is None:
                 self._discard_expected_action(entity_id, context.id)
@@ -765,6 +1452,7 @@ class ClimateManager:
                 self._retain_expected_action_fields(
                     entity_id, context.id, mode_fields
                 )
+                self._mark_expected_action_delivered(entity_id, context.id)
             raise
 
     async def async_apply_climate_options(
@@ -1236,7 +1924,7 @@ class ClimateManager:
     def normalize_target_temperature(
         self, entity_id: str, temperature: float
     ) -> float:
-        """Clamp and snap a target to Home Assistant's zero-anchored step grid."""
+        """Clamp and snap a target to Home Assistant's minimum-anchored grid."""
         value = float(temperature)
         if not math.isfinite(value):
             raise ValueError("Temperature must be a finite number")
@@ -1249,21 +1937,23 @@ class ClimateManager:
             )
         if step is None:
             return round(max(minimum, min(maximum, value)), 6)
-        first = math.ceil((minimum / step) - 0.000001) * step
-        last = math.floor((maximum / step) + 0.000001) * step
-        if first > last:
-            return round(max(minimum, min(maximum, value)), 6)
-        bounded = max(first, min(last, value))
-        step_count = math.floor((bounded / step) + 0.5 + 0.000000001)
-        snapped = step_count * step
-        return round(max(first, min(last, snapped)), 6)
+        return snap_temperature_to_step(value, minimum, maximum, step)
 
     def temperature_step(self, entity_id: str) -> float | None:
         """Return the exact target step published by Home Assistant, if valid."""
         state = self._hass.states.get(entity_id)
         attributes = state.attributes if state is not None else {}
         step = _coerce_temperature(attributes.get("target_temp_step"), math.nan)
-        return step if math.isfinite(step) and step > 0 else None
+        if not math.isfinite(step) or step <= 0:
+            return None
+        reported_unit = attributes.get("unit_of_measurement")
+        target_unit = self.temperature_unit(entity_id)
+        if (
+            reported_unit in (UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT)
+            and reported_unit != target_unit
+        ):
+            return temperature_delta(step, reported_unit, target_unit)
+        return step
 
     def temperature_unit(self, entity_id: str) -> str:
         """Return the effective temperature unit for one climate entity."""

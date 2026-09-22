@@ -1,6 +1,7 @@
 import { css } from "lit";
 import { baseStyles } from "./base-styles";
 import { comfortStyles } from "./comfort-styles";
+import { climateCardStyles } from "./climate-card-styles";
 import { diagnosticsStyles } from "./diagnostics-styles";
 import { inlineHelpStyles } from "./inline-help-styles";
 import { loadingStyles } from "./loading-styles";
@@ -15,7 +16,7 @@ import { templateStyles } from "./template-styles";
 import { timelineStyles } from "./timeline-styles";
 import { responsiveStyles } from "./responsive-styles";
 
-export const cardStyles = [baseStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
+export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
     .temperature-migration-banner {
       align-items: start;
       background: color-mix(in srgb, var(--warning-color, #c99500) 12%, var(--card-background-color));
@@ -906,7 +907,8 @@ export const cardStyles = [baseStyles, comfortStyles, diagnosticsStyles, inlineH
       margin-top: 0;
     }
 
-    .editable-block > label > .label {
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label {
       display: none;
     }
 
@@ -928,6 +930,83 @@ export const cardStyles = [baseStyles, comfortStyles, diagnosticsStyles, inlineH
     .editable-block input,
     .editable-block select {
       margin-top: 0;
+    }
+
+    .target-action-field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 36px;
+      min-width: 0;
+    }
+
+    .target-action-range {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 36px;
+    }
+
+    .target-action-range > .field-error {
+      grid-column: 1 / -1;
+    }
+
+    .target-action-range .temperature-range-control {
+      border-end-end-radius: 0;
+      border-start-end-radius: 0;
+    }
+
+    .target-action-field > label,
+    .target-action-field > .field-error {
+      grid-column: 1 / -1;
+    }
+
+    .target-action-field input {
+      border-end-end-radius: 0;
+      border-start-end-radius: 0;
+      min-width: 0;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .target-action-field input:disabled,
+    .target-action-range input:disabled {
+      background: color-mix(in srgb, var(--secondary-background-color) 82%, var(--card-background-color));
+      color: var(--disabled-text-color);
+      opacity: 1;
+      -webkit-text-fill-color: var(--disabled-text-color);
+    }
+
+    .target-action-field input:disabled::placeholder,
+    .target-action-range input:disabled::placeholder {
+      color: var(--disabled-text-color);
+      opacity: 1;
+    }
+
+    .target-action-toggle {
+      align-items: center;
+      background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color));
+      border: 1px solid var(--divider-color);
+      border-end-end-radius: 6px;
+      border-inline-start: 0;
+      border-start-end-radius: 6px;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: inline-flex;
+      justify-content: center;
+      min-width: 0;
+      padding: 0;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .target-action-toggle.device-controlled {
+      background: color-mix(in srgb, var(--disabled-text-color) 9%, var(--card-background-color));
+      color: var(--secondary-text-color);
+    }
+
+    .target-action-toggle:disabled {
+      color: var(--disabled-text-color);
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    .target-action-toggle ha-icon {
+      --mdc-icon-size: 17px;
     }
 
     .select-wrap {

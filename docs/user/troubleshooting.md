@@ -90,8 +90,12 @@ writes remain stopped so an old target cannot be applied with the wrong meaning.
   stopped until recovery.
 
 If a schedule is marked incompatible after a climate becomes available, review
-the target against that entity's reported range and exact temperature step.
-Velair does not invent a missing `target_temp_step`.
+the target against that entity's reported range and effective temperature step.
+When `target_temp_step` is missing, configure the device's actual step in that
+climate's Settings row. The field shows the last valid step Velair remembers,
+then a saved manual fallback, or `1` if neither exists. Saving a manual value
+while the attribute is missing replaces the remembered observation. The manual
+value is ignored—but retained—whenever Home Assistant publishes a valid step.
 
 Older backups without a recorded unit are accepted as Celsius. The import screen
 shows that assumption and converts selected thermal values when the current Home

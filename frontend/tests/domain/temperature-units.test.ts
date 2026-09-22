@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   absoluteTemperatureBounds,
+  convertAbsoluteTemperature,
+  convertTemperatureDelta,
   defaultMinimumDelta,
   defaultMinutesPerDegree,
   defaultRoomAssistDelta,
@@ -22,5 +24,19 @@ describe("temperature unit defaults", () => {
     expect(minutesPerDegreeBounds("°F")).toEqual([0.6, 66.7]);
     expect((defaultMinutesPerDegree("°F") - 0.6) / 0.1).toBeCloseTo(134);
     expect(absoluteTemperatureBounds("°F")).toEqual([-58, 212]);
+  });
+
+  it("converts absolute sensor readings in both directions without treating deltas as absolutes", () => {
+    expect(convertAbsoluteTemperature(10, "°C", "°F")).toBe(50);
+    expect(convertAbsoluteTemperature(68, "F", "C")).toBe(20);
+    expect(convertAbsoluteTemperature(12.5, "°C", "C")).toBe(12.5);
+    expect(convertAbsoluteTemperature(12.5, undefined, "°F")).toBe(12.5);
+  });
+
+  it("converts temperature deltas without applying an absolute-temperature offset", () => {
+    expect(convertTemperatureDelta(0.5, "°C", "°F")).toBeCloseTo(0.9);
+    expect(convertTemperatureDelta(1, "°F", "°C")).toBeCloseTo(5 / 9);
+    expect(convertTemperatureDelta(0.5, "°C", "C")).toBe(0.5);
+    expect(convertTemperatureDelta(0.5, undefined, "°F")).toBe(0.5);
   });
 });

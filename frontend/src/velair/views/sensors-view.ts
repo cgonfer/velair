@@ -7,7 +7,7 @@ import {
   roomAssistRangeShift,
   scheduledAssistRange,
 } from "../domain/room-assist";
-import { modeClassName } from "../domain/climate";
+import { modeClassName, temperatureMatchesStep } from "../domain/climate";
 import { preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
 import { temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
 import type { VelairViewHost } from "../host-types";
@@ -366,6 +366,24 @@ function renderSensorRuntime(
       </div>
     </section>
   `;
+}
+
+/** Reuse the exact Room Assist temperature graphic outside the Sensors view. */
+export function renderRoomAssistTemperatureScale(
+  host: SensorsViewHost,
+  entityId: string,
+  status?: RoomSensorAssistStatus,
+  settings?: PreconditioningSettings,
+) {
+  if (!status || !hasRoomAssistScheduledTarget(status) || !status.start) {
+    return nothing;
+  }
+  const deadband = settings?.room_sensor_assist_deadband ?? 0;
+  const deadbandZone = roomAssistDeadbandZone(status, deadband);
+  const scale = buildTemperatureScale(host, entityId, status, deadbandZone);
+  return scale.markers.length
+    ? renderTemperatureScale(host, entityId, scale, status, deadbandZone, deadband)
+    : nothing;
 }
 
 function renderSensorStatusPill(
@@ -911,7 +929,7 @@ function renderTemperatureMarkerCallout(
           ? html`
               <span class=${assistOffsetLabel ? "sensor-scale-offset" : "sensor-scale-offset help-only"}>
                 ${assistOffsetLabel ? html`<span>${assistOffsetLabel}</span>` : nothing}
-                ${renderInlineHelp(helpId, assistOffsetHelp, assistOffsetHelp, { compact: true })}
+                ${renderInlineHelp(helpId, assistOffsetHelp, assistOffsetHelp)}
               </span>
             `
           : nothing}
@@ -952,7 +970,7 @@ function climateTargetHelp(
 function renderSensorLabel(
   host: SensorsViewHost,
   labelKey: TranslationKey,
-  options: { persistentHelp?: boolean } = {},
+  options: { helpId?: string; persistentHelp?: boolean } = {},
 ) {
   const helpKey = SENSOR_HELP_KEYS[labelKey];
   const help = helpKey ? host._t(helpKey) : "";
@@ -968,20 +986,7 @@ function renderSensorLabel(
     <span class="label sensor-config-label">
       <span>${host._t(labelKey)}</span>
       ${helpKey
-        ? html`
-            <span
-              class="sensor-help"
-              tabindex="0"
-              aria-label=${help}
-              @click=${(event: Event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-            >
-              <ha-icon icon="mdi:information-outline"></ha-icon>
-              <span class="sensor-help-tooltip" role="tooltip">${help}</span>
-            </span>
-          `
+        ? renderInlineHelp(options.helpId ?? `sensor-${labelKey}-help`, help, help)
         : nothing}
     </span>
   `;
@@ -994,9 +999,12 @@ function renderSensorEntityPicker(
 ) {
   const disabled = host._settingsSaving;
   const sensors = temperatureSensorOptions(host.hass, value);
+  const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
   return html`
     <label class="sensor-config-row sensor-picker-row">
-      ${renderSensorLabel(host, "roomSensorTemperatureEntity")}
+      ${renderSensorLabel(host, "roomSensorTemperatureEntity", {
+        helpId: `room-sensor-${safeEntityId}-temperature-entity-help`,
+      })}
       <span class="select-wrap">
         <select
           .value=${value}
@@ -1048,9 +1056,13 @@ function renderSensorNumber(
 ) {
   const disabled = host._settingsSaving || Boolean(options.inactive);
   const persistentHelp = field === "room_sensor_assist_deadband" || field === "room_sensor_assist_max_delta";
+  const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
   return html`
     <label class=${`sensor-config-row ${options.inactive ? "inactive" : ""}`}>
-      ${renderSensorLabel(host, labelKey, { persistentHelp })}
+      ${renderSensorLabel(host, labelKey, {
+        helpId: `room-sensor-${safeEntityId}-${field}-help`,
+        persistentHelp,
+      })}
       <span class="sensor-number-input">
         <input
           type="number"
@@ -1071,7 +1083,7 @@ function renderSensorNumber(
                 || !Number.isFinite(rawValue)
                 || rawValue < min
                 || rawValue > max
-                || Math.abs((rawValue / step) - Math.round(rawValue / step)) > 0.000001
+                || !temperatureMatchesStep(rawValue, min, step, 0.000001)
               ) {
                 (event.currentTarget as HTMLInputElement).value = String(value);
                 return;

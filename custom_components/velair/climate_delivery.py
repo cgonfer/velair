@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import async_track_state_change_event
 
@@ -88,7 +88,7 @@ class ClimateDeliveryCoordinator:
             if self._pending_generations.get(entity_id) == generation:
                 self._pending_generations.pop(entity_id, None)
         if outcome == "success":
-            self._observe(entity_id, "success")
+            self._observe(entity_id, "success", {"retry_count": 0})
             return True
         if outcome == "cancelled":
             self._observe_cancelled_once(entity_id, generation)
@@ -241,11 +241,16 @@ class ClimateDeliveryCoordinator:
         resolver: DeliveryResolver,
         *,
         catch_recoverable: bool = True,
+        retry_count: int = 0,
     ) -> str:
         if not self._is_current(entity_id, generation):
             return "cancelled"
         if not self._is_available(entity_id):
-            self._observe(entity_id, "unavailable")
+            self._observe(
+                entity_id,
+                "unavailable",
+                {"retry_count": retry_count},
+            )
             return "unavailable"
         async with self._locks.setdefault(entity_id, asyncio.Lock()):
             if not self._is_current(entity_id, generation):
@@ -262,6 +267,14 @@ class ClimateDeliveryCoordinator:
                     raise
                 except HomeAssistantError:
                     if not catch_recoverable:
+                        self._observe(
+                            entity_id,
+                            "failed",
+                            {
+                                "message": "Home Assistant service call failed",
+                                "retry_count": retry_count,
+                            },
+                        )
                         raise
                     _LOGGER.warning(
                         "Climate delivery failed for %s; recovery will re-resolve current intent",
@@ -271,7 +284,10 @@ class ClimateDeliveryCoordinator:
                     self._observe(
                         entity_id,
                         "failed",
-                        {"message": "Home Assistant service call failed"},
+                        {
+                            "message": "Home Assistant service call failed",
+                            "retry_count": retry_count,
+                        },
                     )
                     return "failed"
                 if not self._is_current(entity_id, generation):
@@ -306,6 +322,7 @@ class ClimateDeliveryCoordinator:
         if entity_id in self._availability_unsubs:
             return
 
+        @callback
         def _state_changed(_event) -> None:
             available = self._is_available(entity_id)
             was_available = self._last_available.get(entity_id, available)
@@ -369,11 +386,14 @@ class ClimateDeliveryCoordinator:
             self._observe(
                 entity_id,
                 "invalid_intent",
-                {"message": "Current intent could not be resolved"},
+                {
+                    "message": "Current intent could not be resolved",
+                    "retry_count": 0,
+                },
             )
             return
         if outcome == "success":
-            self._observe(entity_id, "success")
+            self._observe(entity_id, "success", {"retry_count": 0})
         if outcome == "failed" and self._is_current(entity_id, generation):
             self._spawn(
                 entity_id,
@@ -391,14 +411,24 @@ class ClimateDeliveryCoordinator:
         try:
             while self._is_current(entity_id, generation):
                 if retry_index >= len(RETRY_DELAYS):
-                    self._observe(entity_id, "exhausted", {"message": "Retry limit reached"})
+                    self._observe(
+                        entity_id,
+                        "exhausted",
+                        {
+                            "message": "Retry limit reached",
+                            "retry_count": retry_index,
+                        },
+                    )
                     return
                 await asyncio.sleep(RETRY_DELAYS[retry_index])
                 retry_index += 1
                 self._observe(entity_id, "retrying", {"retry_count": retry_index})
                 try:
                     outcome = await self._async_attempt(
-                        entity_id, generation, resolver
+                        entity_id,
+                        generation,
+                        resolver,
+                        retry_count=retry_index,
                     )
                 except Exception:
                     self._clear_eligibility(entity_id, generation)
@@ -408,12 +438,19 @@ class ClimateDeliveryCoordinator:
                     self._observe(
                         entity_id,
                         "invalid_intent",
-                        {"message": "Current intent could not be resolved"},
+                        {
+                            "message": "Current intent could not be resolved",
+                            "retry_count": retry_index,
+                        },
                     )
                     return
                 if outcome != "failed":
                     if outcome == "success":
-                        self._observe(entity_id, "success")
+                        self._observe(
+                            entity_id,
+                            "success",
+                            {"retry_count": retry_index},
+                        )
                     return
         except asyncio.CancelledError:
             return

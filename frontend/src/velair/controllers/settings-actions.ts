@@ -1,6 +1,6 @@
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
-import type { ComfortSettings, PanelSettings, PreconditioningSettings, ScheduleResponse, VelairCardConfig } from "../types";
+import type { ComfortSettingsUpdate, PanelSettings, PreconditioningSettings, ScheduleResponse, VelairCardConfig } from "../types";
 
 type SettingsActionsHost = {
   _config: VelairCardConfig;
@@ -89,7 +89,7 @@ export async function saveZonePreconditioning(
 export async function saveZoneComfort(
   host: SettingsActionsHost,
   entityId: string,
-  comfort: Partial<ComfortSettings>,
+  comfort: ComfortSettingsUpdate,
 ): Promise<void> {
   const api = host._api();
   if (!api) {

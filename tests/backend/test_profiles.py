@@ -8,6 +8,7 @@ import unittest
 from types import SimpleNamespace
 
 from .helpers import (
+    ACTION_SET_HVAC_MODE,
     ACTION_SET_TEMPERATURE,
     ACTION_TURN_OFF,
     FakeClimateManager,
@@ -393,6 +394,95 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(any(
             pause.get("pause_id") == "velair.manual_adjustment"
             for pause in data["zones"][entity_id]["pauses"]
+        ))
+
+    async def test_active_mode_only_profile_restored_target_stays_automatic(
+        self,
+    ) -> None:
+        entity_id = "climate.salon"
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        hass.states[entity_id] = SimpleNamespace(
+            entity_id=entity_id,
+            state="off",
+            attributes={
+                "current_temperature": 20.0,
+                "target_temp_step": 0.5,
+                "min_temp": 5,
+                "max_temp": 35,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool"],
+            },
+            context=None,
+        )
+        data = normalize_schedule_data(None, [entity_id])
+
+        async def save() -> None:
+            return None
+
+        manager = ClimateManager(hass)
+        scheduler = VelairScheduler(hass, data, manager, save)
+        monitor = ClimateChangeMonitor(hass, [entity_id], manager, scheduler)
+
+        class _ContextlessRestoredTarget:
+            async def async_call(
+                self, _domain, service, call_data, *, blocking=False, context=None
+            ) -> None:
+                if service != "set_hvac_mode":
+                    return
+                old = hass.states[entity_id]
+                target_echo = SimpleNamespace(
+                    entity_id=entity_id,
+                    state=old.state,
+                    attributes={
+                        **old.attributes,
+                        "temperature": 21.0,
+                    },
+                    context=None,
+                )
+                hass.states[entity_id] = target_echo
+                monitor._handle_state_change(
+                    SimpleNamespace(
+                        data={"old_state": old, "new_state": target_echo}
+                    )
+                )
+                mode_echo = SimpleNamespace(
+                    entity_id=entity_id,
+                    state=call_data["hvac_mode"],
+                    attributes=dict(target_echo.attributes),
+                    context=None,
+                )
+                hass.states[entity_id] = mode_echo
+                monitor._handle_state_change(
+                    SimpleNamespace(
+                        data={"old_state": target_echo, "new_state": mode_echo}
+                    )
+                )
+
+        hass.services = _ContextlessRestoredTarget()
+        profile = _profile()
+        profile["zones"][entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_HVAC_MODE,
+                "hvac_mode": "heat",
+            }
+        ]
+
+        await scheduler.async_set_profile(profile)
+        await scheduler.async_activate_profile("away")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        runtime = scheduler.get_zone_runtime_statuses()[entity_id]
+        self.assertEqual("automatic", runtime["control_mode"])
+        self.assertFalse(any(
+            pause.get("pause_id") == "velair.manual_adjustment"
+            for pause in data["zones"][entity_id]["pauses"]
+        ))
+        self.assertFalse(any(
+            event_data.get("event") == "external_climate_change_detected"
+            for _event_type, event_data in hass.bus.events
         ))
 
     async def test_active_profile_heat_to_off_echo_stays_automatic(self) -> None:

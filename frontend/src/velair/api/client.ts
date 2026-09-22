@@ -2,6 +2,7 @@ import { DOMAIN } from "../constants";
 import type {
   HomeAssistant,
   ComfortSettings,
+  ComfortSettingsUpdate,
   DiagnosticsSnapshot,
   DiagnosticHistoryCategory,
   ClimateProfileInput,
@@ -187,6 +188,17 @@ export class VelairApiClient {
     });
   }
 
+  public updateZoneTargetTempStep(
+    entityId: string,
+    targetTempStep: number,
+  ): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise<ScheduleResponse>({
+      type: "velair/update_zone_target_temp_step",
+      entity_id: entityId,
+      target_temp_step: targetTempStep,
+    });
+  }
+
   public setZoneExecution(entityId: string, provider?: string): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/set_zone_execution",
@@ -224,7 +236,7 @@ export class VelairApiClient {
 
   public updateZoneComfort(
     entityId: string,
-    comfort: Partial<ComfortSettings>,
+    comfort: ComfortSettingsUpdate,
   ): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/update_zone_comfort",
