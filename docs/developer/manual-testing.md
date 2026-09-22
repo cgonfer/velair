@@ -25,6 +25,110 @@ to:
 
 Restart Home Assistant.
 
+## Climate Card Editor And Actions
+
+Header checks:
+
+- Verify the header with and without a reported `hvac_action`. When it is
+  absent, the HVAC mode must appear only once and must not be presented as an
+  active heating or cooling action.
+- Check heating, cooling, idle, off, unavailable, and externally managed zones.
+- Force an `off` entity with a stale `hvac_action: idle`; confirm the header uses
+  the power icon and Off, does not repeat Off, and does not look paused. With an
+  active Heat or Cool mode and `hvac_action: idle`, confirm the neutral thermostat
+  icon and attenuated mode-colored line are used.
+- Confirm the top line uses warm heating/preheating, blue cooling, steady
+  drying/fan, neutral off, and an interrupted unavailable treatment. It must not
+  imply progress or change for Boost, Pause, or external ownership. Enable
+  reduced motion and confirm its sweep is disabled.
+- At card widths around 380 px, confirm that the Velair shortcut keeps its
+  slightly enlarged logo beside the two-line `Velair` / `by cgonfer` signature
+  without overlapping a long climate name or losing its keyboard focus
+  indication and touch target.
+- Toggle the climate name and operating state independently; hidden items must
+  not reserve empty header space, while the fixed Velair signature remains.
+
+1. Add a `view: climate` card, select a climate, and confirm its friendly name
+   initially fills the custom-name field.
+2. Delete the complete name and confirm it stays empty after every editor
+   refresh. Enter another label, reopen the editor, and confirm the exact value
+   remains selected. Use Reset and confirm the current entity friendly name is
+   restored.
+3. Confirm Room Assist display, default presentation, and graph settings are
+   grouped in one editor section. Confirm the corresponding preconditioning
+   settings are grouped in their own section.
+4. Reorder Boost, Pause/Resume, and scripts in the single action list. Confirm
+   every row keeps its move controls first, then its icon and name, with delete
+   available only for script shortcuts and the disclosure control last. Hide
+   each Velair action independently and confirm it is identified as supplied and
+   not customizable. Confirm external and unavailable zones never expose
+   Velair-only actions, while later eligible scripts move up without leaving gaps.
+5. Add at least five existing `script.*` entities. Configure distinct names, MDI
+   icons, colors, order, and confirmation values. Reopen the editor and confirm
+   every value and the selected climate are preserved. Confirm the editor states
+   that the direct-action limit is three, does not expose a limit setting, and
+   explains Automatic and More menu placement for every action.
+6. Open **More** near each viewport edge on desktop and mobile. Confirm the menu
+   stays fully visible, prefers opening below, opens above when required, and
+   scrolls internally when its contents cannot fit.
+7. Run an unconfirmed shortcut and confirm Home Assistant receives only
+   `script.turn_on` with its selected `entity_id`. Cancel a confirmed shortcut
+   and confirm no service call occurs; accept it and confirm exactly one call.
+8. Remove or disable a configured script and confirm its shortcut is visibly
+   unavailable and cannot run. Confirm arbitrary services, payloads, templates,
+   and JavaScript cannot be configured through the editor.
+9. Confirm the first three eligible actions using Automatic placement are direct
+   and **More** contains automatically overflowing and explicitly delegated
+   actions in their configured relative order, followed by **Open Velair**.
+   Delegate one of three actions and confirm **More** appears; return it to
+   Automatic and confirm **More** disappears. Delegate every action and confirm
+   the card shows only the icon-only **More** button. Confirm the actions share
+   the top of the climate control surface with Automatic/Manual as two separate
+   islands aligned to opposite ends. At narrow widths, confirm both remain in one
+   row and only the actions island gains horizontal scrolling, without exposing
+   more than three direct actions plus **More**.
+   Give a direct action a long visible name and confirm its button grows enough
+   to show the complete name on one line; the actions island must scroll instead
+   of truncating or wrapping the label. Confirm hidden-name actions remain compact.
+   Confirm the native scrollbar remains hidden, the left and right indicators
+   appear only while content remains in that direction, stay outside the
+   scrollable action row, and keep their fixed outer slots when hidden so no
+   indicator changes the toolbar width or height. Swipe the row on touch and
+   drag it with a primary mouse or pen pointer. A drag must not execute the
+   action beneath it, while a normal click must still work.
+10. Open Boost and Pause. Confirm each form replaces the normal HVAC mode,
+    target, and Home Assistant pane without moving to another section. Close it
+    with Cancel and by pressing its selected action again, and confirm applying
+    either action returns to the normal controls. Confirm the selected action
+    includes a close icon. Run successful and failing custom scripts and confirm
+    the direct action briefly shows distinct progress, success, and error feedback.
+11. Hide every thermostat control while keeping actions visible, then hide the
+    actions too. Confirm the actions-only surface remains complete and that no
+    empty control container remains when every internal item is hidden.
+12. In Manual adjustment, change the target repeatedly with the decrement and
+    increment buttons. Confirm the Automatic/Manual selector remains visually
+    stable while each Home Assistant service call is pending. Confirm the same
+    for the complete lower surface: HVAC mode icon and label, selector accent,
+    target value, and `−`/`+` controls must not dim, flatten, or flash while the
+    request is in flight.
+13. Set Current state's default presentation to collapsed and reload the card.
+    Confirm temperature, humidity, outdoor context, non-zero window states, and
+    Comfort appear as compact theme-safe items only when their expanded
+    counterparts are enabled. The compact sensor items must wrap onto as many
+    rows as the available width requires; they must not scroll horizontally or
+    expose directional controls. Confirm an available Comfort assessment appears
+    as a separate descriptive row below the collapsed heading, with its icon,
+    condition, air-quality context, and accent. Confirm that an unavailable
+    assessment is omitted without leaving an empty row and that the expand
+    control remains visible. Expand it again, click outside the chevron on
+    several points of the complete heading to collapse it, and confirm both
+    transitions are smooth; repeat at mobile width and with reduced motion.
+    Change the configured default to expanded, reload, and confirm the initial
+    presentation changes without preventing later manual collapse or expansion.
+14. Repeat in Home Assistant light and dark themes, with keyboard focus and
+    Escape, and with an externally executed zone. Custom scripts may remain
+    available externally, but Boost and Pause/Resume must not appear.
+
 ## Setup Flow
 
 1. Go to **Settings > Devices & services**.
@@ -71,14 +175,19 @@ Restart Home Assistant.
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v8 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v11 records the
    effective `temperature_unit`.
-2. Import the portable V8 file into the opposite unit and confirm selected
-   thermal sections convert. Older supported files must remain compatible.
-3. Import a unitless legacy backup and confirm the UI warns that Celsius is
+2. Import each newly exported portable v10 file back into the same installation
+   and confirm the frontend accepts it and the selected sections round-trip.
+3. Import a portable v10 file into the opposite unit and confirm selected
+   thermal sections convert. Confirm its Comfort derived-metric and outdoor-
+   comparison configuration is retained without importing runtime readings.
+   Older supported files, including v8 and v9, must remain compatible.
+4. Import a unitless legacy backup and confirm the UI warns that Celsius is
    assumed before the backend converts it when required.
-4. Confirm known climate targets use exact published steps and standalone values
-   without a common device step use safe fallback precision.
+5. Confirm known climate targets use exact published steps. For an entity that
+   omits its step, configure the per-zone fallback and confirm migration and
+   import align its values to that grid.
 
 ## Options Flow
 
@@ -100,8 +209,9 @@ Expected entity types include:
 - one scheduler status sensor;
 - one active target temperature sensor per managed climate;
 - environmental condition and air-quality sensors per managed climate;
-- zone override, preconditioning start, and Room Assist state sensors per
-  managed climate.
+- zone override, Zone control, preconditioning start, and Room Assist state
+  sensors per managed climate;
+- one disabled-by-default Zone delivery diagnostics sensor per managed climate.
 
 Confirm that:
 
@@ -113,6 +223,17 @@ Confirm that:
   readings;
 - optional features expose clear inactive states when they are disabled or not
   configured;
+- Zone control reports `automatic`, `manual`, or `external` while keeping
+  pause, Boost, preconditioning, and scheduler activity in `runtime_state`;
+- during a required temperature migration, Zone control remains available and
+  reports `runtime_state: temperature_migration_required` without projecting a
+  stale scheduled or idle state;
+- after one accepted scalar, range, and `turn_off` delivery, the enabled Zone
+  delivery diagnostics sensor exposes only the applicable target fields,
+  recorded temperature unit, timestamps, retry count, and stable error codes;
+  it must not expose raw error text or imply device confirmation;
+- after reloading the integration, Zone control is reconstructed while Zone
+  delivery diagnostics returns to `idle` without a last accepted target;
 - turning Automatic scheduling off stops indefinitely and turning it on resumes
   the current schedule;
 - removing a climate through the integration options removes its generated zone
@@ -127,6 +248,7 @@ Confirm that:
 Confirm these services are available in Developer Tools > Actions:
 
 - `velair.set_temperature`
+- `velair.set_hvac_mode`
 - `velair.apply_schedule`
 - `velair.boost`
 - `velair.pause`
@@ -140,6 +262,17 @@ Confirm these services are available in Developer Tools > Actions:
 - `velair.deactivate_profile`
 
 Services with `entity_id` must reject climates that were not selected during setup.
+
+For `velair.set_hvac_mode`, test one supported heating mode and one supported
+cooling mode. Confirm the action changes only HVAC mode, preserves the device
+target, emits `climate_target_applied` with `source: service_set_hvac_mode`, and
+does not enter Manual adjustment. Also confirm `off`, an unadvertised mode, an
+externally executed zone, and an unmanaged climate are rejected. Make the
+underlying climate call fail while Room Assist is active and confirm no success
+event is emitted and Room Assist remains active. Start from `off` on a climate
+that restores its previous target when enabled, call the service, and confirm
+the restored target is treated as part of Velair's mode change rather than an
+external adjustment.
 
 ## Climate Profiles Smoke Test
 
@@ -188,6 +321,11 @@ Services with `entity_id` must reject climates that were not selected during set
     confirm each schedule block keeps time, mode, target, options, and delete
     controls in one compact row without horizontal overflow. At exceptionally
     narrow widths, confirm the fallback layout remains readable and usable.
+    For every supported non-off HVAC mode, disable the Target input with its
+    compact thermometer button and confirm the grey field shows a dash without
+    adding a column or depending on visible explanatory text. Enable it again,
+    confirm the previous draft target returns, and verify Save requires that
+    restored target to be valid.
 15. Listen for `velair_event` and confirm profile activation, return to Default,
     and deletion of the active profile emit `profile_changed` with the expected
     `profile_ids` and `previous_profile_ids`. Re-selecting the current set must
@@ -373,6 +511,51 @@ Use at least one scalar heat or cool climate and, when available, one native
     entry, and resume services are rejected; an observed external change does
     not create a Manual adjustment or log a monitor failure; and an active
     Manual adjustment remains intact.
+22. In the single-climate card, confirm its compact Automatic/Manual selector
+    starts and resumes Manual adjustment like the Overview selector. Controls
+    must be read-only in Automatic and enabled only after the backend confirms
+    Manual. Confirm this remains independent of the quick-actions section.
+23. Repeat with scalar heat, scalar cool, and native `heat_cool`. Confirm the
+    card follows the entity's effective step and limits, sends both range
+    boundaries, offers only published HVAC modes, and does not optimistically
+    change displayed values before Home Assistant updates the entity. Remove
+    `target_temp_step` and confirm Settings exposes a fallback of `1`; change it
+    to `0.5` and confirm schedule inputs and card buttons use that increment.
+24. With Automatic scheduling active, use a climate that publishes delayed or
+    out-of-order command echoes. Apply a scheduled target and reproduce both
+    `expected -> old/intermediate -> expected` and
+    `old/intermediate -> expected`. Confirm no
+    `external_climate_change_detected` or Manual adjustment is created during
+    the bounded settling period. Repeat with Room Assist using different
+    scheduled and effective targets, then with **Keep automatic**, and confirm
+    there is no reapply loop. During the same period, change an unrelated
+    control field and make an explicit user-originated Home Assistant target
+    change; confirm those remain external. Finally, wait beyond the settling
+    deadline and confirm a later target change is detected normally. Simulate
+    a service handler that completes slowly and confirm the full settling
+    budget remains after the logical mode-and-target sequence finishes. Leave
+    the entity at a value different from the requested target until the
+    deadline and confirm Diagnostics reports `command_settling_mismatch` with
+    expected and observed values without entering Manual or retrying blindly.
+    Restore a published step and confirm it takes priority while the configured
+    fallback is hidden and retained. Remove the attribute again and confirm the
+    last reported step remains effective, including after reload, so existing
+    decimal schedules remain valid. While the attribute is missing, save a
+    different manual value and confirm it clears the remembered step without
+    changing schedule rules. Restore another valid published value, remove it,
+    and confirm that newer observation is remembered. In Manual adjustment, confirm the enabled
+    HVAC selector has a subtle theme-safe surface and distinct hover, keyboard
+    focus, and open states without visually dominating the target controls.
+24. Confirm that the exclusive `velair.manual_adjustment` pause permits direct
+    editing while Manual adjustment owns the climate. Add a second pause reason
+    and confirm editing becomes unavailable. Also confirm Boost, any independent
+    pause, stopped, unavailable, and external ownership prevent direct editing.
+    External ownership must retain only **Open in Home
+    Assistant**. Disable each Thermostat controls option in the card editor and
+    verify the strip collapses cleanly on desktop, tablet, and mobile in light
+    and dark themes. While the entity is `off`, confirm the shared surface keeps
+    only the HVAC selector and Home Assistant icon; target values and `−`/`+`
+    must not be rendered.
 
 ## Room Assist Smoke Test
 
@@ -504,6 +687,127 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 10. Add a CO2 sensor and confirm Good air, CO2 elevated, and Poor air quality remain separate from the environmental condition.
 11. Make every monitored reading unavailable or stale and confirm No readings or Readings outdated is shown.
 12. Disable Comfort for that climate and confirm changing those sensors no longer emits comfort events.
+13. Enable dew point, absolute humidity, and Humidex with **Calculated by Velair**. Confirm they use the effective Comfort temperature and humidity, display dew point in the zone temperature unit, absolute humidity in `g/m³`, and Humidex without a unit.
+14. Disable humidity monitoring and confirm all three Velair-calculated readings become missing without changing the established Comfort `data_quality` or `data_issues` contract.
+15. Use each metric's single source selector for **Calculated by Velair** and
+    compatible Home Assistant sensors. Confirm switching back retains the
+    previous entity, a missing retained entity remains visible, and an external
+    source without an entity shows a disabled placeholder without auto-saving.
+    Verify all documented units are normalized.
+16. Test an empty external selection, `unknown`, `unavailable`, stale, non-numeric, incompatible-unit, and negative absolute-humidity source. Confirm the derived payload reports missing, stale, or invalid and never reuses an old value.
+17. In a Fahrenheit Home Assistant installation, confirm native calculations still match their Celsius equivalents, dew point is displayed in Fahrenheit, absolute humidity remains `g/m³`, and Humidex remains unitless.
+18. Confirm enabled readings appear in the panel, card, Environmental condition
+    attributes, Diagnostics, and API. Confirm no per-metric proxy entities are
+    created.
+19. Change only a derived numeric value while availability and source validity remain unchanged. Confirm the UI and sensor attribute refresh without a duplicate `comfort_assessment_changed` event; then change availability and confirm one event is emitted.
+20. Export and import the zone with mixed Velair and external sources. Confirm
+    current model v11 preserves `enabled`, `source`, and retained `entity_id`,
+    but exports no calculated values or runtime availability. Import a legacy v9
+    backup and confirm its derived-metric configuration receives the disabled
+    outdoor-comparison defaults.
+21. Verify elevated/poor CO2 follows configured thresholds and unusable metrics create no insight. Confirm Humidex appears only with a Celsius-normalized margin of at least 1 °C. Confirm dew point and absolute humidity remain values without permanent insight cards, and that their information help opens by hover and keyboard focus without crossing the viewport on mobile or desktop. Check the compact climate card shows only the first prioritized contextual insight.
+22. In the derived panels, confirm Humidex shows a directional room-temperature comparison (including an equivalent Fahrenheit delta without a 32-degree offset), dew point says how far it is above or below room air without claiming risk, and absolute humidity shows only its neutral `g/m³` value. Make a reading missing, stale, or invalid and confirm its relationship disappears.
+23. Enable outdoor comparison, select explicit outdoor temperature and humidity
+    sensors, and confirm both selectors retain and display the selected entities
+    after a Velair reload and after a Home Assistant restart. Disable the
+    comparison and confirm the retained selections return when it is enabled
+    again.
+24. With current indoor and outdoor readings, confirm **Indoor vs outdoor** shows
+    the normalized indoor and outdoor temperatures, indoor and outdoor absolute
+    humidity, and adjusted outdoor humidity at the indoor temperature. Confirm
+    the same values and source IDs appear in the schedule API, Diagnostics, the
+    Environmental condition sensor attributes, and the Comfort event payload.
+25. Exercise a useful heating case, a useful cooling case, a useful moisture
+    case, and a case where one dimension would improve while another would get
+    worse. Confirm Velair uses cautious opportunity or trade-off language and
+    never presents opening a window as a command or changes the climate.
+26. Remove the optional outdoor humidity selection. Confirm temperature
+    comparison remains available, moisture comparison becomes unavailable, and
+    no humidity opportunity is produced. Restore it and confirm the complete
+    comparison returns without changing the indoor Comfort quality.
+27. Make one configured outdoor source missing, stale, invalid, and current in
+    turn while the other remains current. Confirm outdoor `data_quality` becomes
+    `partial` where applicable, each comparison dimension reports its own
+    availability, and no conclusion uses an old or unusable value. Then make all
+    configured outdoor inputs stale or unavailable and confirm the outdoor block
+    reports that state without altering indoor `data_quality` or `data_issues`.
+28. Repeat the complete outdoor comparison in Fahrenheit with physically
+    equivalent inputs. Confirm temperatures and temperature differences use
+    Fahrenheit, absolute humidity remains `g/m³`, adjusted humidity remains a
+    percentage, and opportunity thresholds remain physically equivalent to the
+    Celsius case.
+29. Establish a stable current assessment, open the event listener for
+    `velair_event` filtered by `event: comfort_assessment_changed`, and note
+    its `range_summary`. Confirm the summary contains `status`, `thermal_relation`, and nullable `temperature`,
+    `humidity`, and `humidex` positions using only the documented stable values.
+30. Move one reading across a configured boundary. Confirm the event contains
+    the complete new `range_summary`, the previous complete summary in
+    `previous_range_summary`, `range_summary_changed: true`, and
+    `range_status_changed: true` only when the aggregate status also changes.
+31. Create a transition where temperature and Humidex move between aligned and
+    mixed positions without changing the aggregate status. Confirm
+    `range_summary_changed` is true and `range_status_changed` is false. Change
+    only CO2, an insight, or outdoor semantics and confirm both flags are false.
+32. Make a required physical reading or enabled Humidex missing, stale, or
+    invalid. Confirm `range_summary.status` and the relevant thermal relation or
+    positions become unavailable without changing the backward-compatible
+    `condition` contract.
+33. Reload Velair and restart Home Assistant while the sensors already represent
+    an established non-default range summary. Confirm the first reconstructed
+    snapshot becomes the baseline and emits no false transition event. A later
+    real semantic change must emit exactly one event with the restored baseline
+    as `previous_range_summary`.
+34. In **Ventilation guidance**, change each per-climate margin and reload the
+    panel and Home Assistant. Confirm the values persist, appear under
+    `outdoor.guidance_thresholds` in the schedule API, Diagnostics, Environmental
+    condition attributes, and Comfort events, and alter opportunities only when
+    the configured margin is crossed. Removing the outdoor humidity sensor must
+    hide its two controls without deleting their values. Repeat in Fahrenheit:
+    the temperature default must be `1.8 °F`, while percentage points and
+    `g/m³` remain unchanged. Editing a threshold without changing the semantic
+    result must not emit an event.
+
+35. Leave the Comfort model on **Simple** and confirm the established rectangle,
+    humidity condition, outdoor guidance, and existing zone configuration are
+    unchanged.
+36. Select **Guided psychrometric range** with a humidity source configured.
+    Confirm only one reference humidity range is requested, the map becomes a
+    smooth curved target, and the reference equals the effective range at the
+    midpoint temperature. Remove humidity monitoring and confirm the model is
+    changed atomically rather than leaving invalid configuration.
+37. Make the configured humidity sensor temporarily unavailable. Confirm Guided
+    remains selected and stored while humidity-dependent status waits for data.
+38. Confirm collapsed and expanded headings keep the physical condition. Create
+    mixed temperature/Humidex positions and confirm a second Humidex chip
+    appears in both headings, then disappears when positions align. Enable the
+    single-climate card option for extra collapsed Comfort readings and confirm
+    Humidex, dew point, and absolute humidity chips appear only while that
+    dashboard option is enabled.
+39. Exercise every **Ventilation opportunity** state. Confirm attributes match
+    the API, Diagnostics, Environmental condition attribute, and event. Without
+    optional outdoor humidity, monitored humidity limits the result to
+    `may_help`; deliberately disabled humidity permits temperature-only
+    `comfort_possible`. Unusable configured dependencies produce
+    `unavailable`.
+    Restore the sensor and confirm evaluation resumes. Repeat in Fahrenheit.
+40. Select **Custom range by temperature**. Configure different humidity ranges at the
+    displayed minimum and maximum temperatures and confirm the map becomes a
+    four-sided sloped target. At both endpoints and one midpoint, verify the
+    shown effective range, humidity condition, `range_summary`, Environmental
+    condition attributes, Diagnostics, API, and event payload all agree.
+41. Move temperature below and above the configured interval. Confirm the
+    nearest endpoint range is used without extrapolation. Repeat with the two
+    endpoint ranges rising, falling, and equal to ensure no direction is
+    imposed.
+42. Make temperature missing or stale while humidity remains current. Confirm
+    humidity stays visible but has no condition, the effective range is absent,
+    the summary is unavailable, and no humidity ventilation opportunity is
+    produced. Restore temperature and confirm evaluation returns.
+43. Reload Velair and Home Assistant, export/import portable model v11, and
+    confirm the selected model and both endpoint ranges survive. Import a v10
+    payload and confirm it uses the Simple model. In Fahrenheit, confirm endpoint
+    temperature labels and exported thermal values use Fahrenheit while the
+    humidity percentages remain unchanged.
 
 ## Automation Event Smoke Test
 

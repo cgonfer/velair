@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
+import { renderInlineHelp } from "../views/inline-help";
 import { VelairApiClient } from "../api/client";
 import { activateClimateProfile, deleteClimateProfile, saveClimateProfile } from "../controllers/climate-profile-actions";
 import {
@@ -61,7 +62,7 @@ import {
   timelineBlocks,
 } from "../controllers/timeline-interactions";
 import { dictionaryLabel, languageFromHass, shortWeekdayName, translate, weekdayName } from "../i18n";
-import { PROFILE_DESCRIPTION_MAX_LENGTH, MODE_NAME_MAX_LENGTH, WEEKDAYS } from "../constants";
+import { ACTION_SET_TEMPERATURE, DEFAULT_TARGET_TEMP_STEP, PROFILE_DESCRIPTION_MAX_LENGTH, MODE_NAME_MAX_LENGTH, WEEKDAYS } from "../constants";
 import { orderedWeekdays, orderedZoneIds } from "../domain/settings";
 import {
   cloneDayPresetTargets,
@@ -776,16 +777,11 @@ export class VelairProfilesView extends LitElement {
           <ha-icon icon=${mode === "default" ? "mdi:calendar-clock-outline" : "mdi:gesture-tap"}></ha-icon>
           <span><strong>${label}</strong></span>
         </div>
-        <button
-          class="mode-help"
-          type="button"
-          aria-label=${this._t("modeInformation", { mode: label })}
-          aria-describedby=${tooltipId}
-          @click=${(event: Event) => event.stopPropagation()}
-        >
-          <ha-icon icon="mdi:information-outline"></ha-icon>
-          <span id=${tooltipId} class="mode-help-tooltip" role="tooltip">${description}</span>
-        </button>
+        ${renderInlineHelp(
+          tooltipId,
+          this._t("modeInformation", { mode: label }),
+          description,
+        )}
         <ha-icon class="mode-lock" icon="mdi:lock-outline" title=${this._t("modeBuiltInHelp")}></ha-icon>
       </div>
     `;
@@ -1577,7 +1573,7 @@ export class VelairProfilesView extends LitElement {
     const invalid = draftBlocks.some((block) => {
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(block.start) || starts.has(block.start)) return true;
       starts.add(block.start);
-      if (block.action === "turn_off") return false;
+      if (block.action !== ACTION_SET_TEMPERATURE) return false;
       return Boolean(this._temperatureError(dialog.entityId, block))
         || (draftBlockUsesRange(block)
           ? !Number.isFinite(Number(block.target_temp_low)) || !Number.isFinite(Number(block.target_temp_high))
@@ -1694,8 +1690,8 @@ export class VelairProfilesView extends LitElement {
     const state = this.hass?.states?.[entityId];
     const name = state?.attributes?.friendly_name ?? entityId;
     for (const block of blocks) {
-      if (block.action === "turn_off") continue;
       if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
+      if (block.action !== ACTION_SET_TEMPERATURE) continue;
       if (!climateTargetCompatibleForConfiguration(
         state,
         draftBlockUsesRange(block) ? "range" : "scalar",
@@ -1719,7 +1715,7 @@ export class VelairProfilesView extends LitElement {
     const state = this.hass?.states?.[entityId];
     const external = this._externalCapabilities(entityId);
     const temperatureLimits = entityTemperatureLimits(state, this.data?.temperature_unit);
-    const temperatureStep = entityTemperatureStep(state);
+    const temperatureStep = this._entityTemperatureStep(entityId, state);
     const host: Record<string, unknown> = {
       hass: this.hass,
       classList: this.classList,
@@ -1798,10 +1794,28 @@ export class VelairProfilesView extends LitElement {
     return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
   }
 
+  private _entityTemperatureStep(
+    entityId: string,
+    state = this.hass?.states?.[entityId],
+  ): number {
+    const published = entityTemperatureStep(state, this.data?.temperature_unit);
+    if (published !== undefined) return published;
+    const zone = this.data?.zones?.[entityId];
+    for (const fallback of [
+      zone?.last_reported_target_temp_step,
+      zone?.target_temp_step_override,
+    ]) {
+      if (typeof fallback === "number" && Number.isFinite(fallback) && fallback >= 0.001) {
+        return fallback;
+      }
+    }
+    return DEFAULT_TARGET_TEMP_STEP;
+  }
+
   private _temperatureError(entityId: string, block: DraftScheduleBlock): string | undefined {
     const state = this.hass?.states?.[entityId];
     const [minTemperature, maxTemperature] = entityTemperatureLimits(state, this.data?.temperature_unit);
-    const temperatureStep = entityTemperatureStep(state);
+    const temperatureStep = this._entityTemperatureStep(entityId, state);
     return draftBlockTemperatureError(block, {
       minTemperature,
       maxTemperature,
@@ -1865,7 +1879,8 @@ export class VelairProfilesView extends LitElement {
       for (const weekday of WEEKDAYS) {
         const blocks = zone.schedule[weekday] ?? [];
         const unsupportedRangeMode = blocks.find((block) =>
-          draftBlockUsesRange(block)
+          block.action === ACTION_SET_TEMPERATURE
+          && draftBlockUsesRange(block)
           && block.hvac_mode !== undefined
           && block.hvac_mode !== "heat_cool");
         if (unsupportedRangeMode?.hvac_mode) {
@@ -1881,7 +1896,8 @@ export class VelairProfilesView extends LitElement {
           });
         }
         const unsupportedRange = blocks.find((block) =>
-          draftBlockUsesRange(block)
+          block.action === ACTION_SET_TEMPERATURE
+          && draftBlockUsesRange(block)
           && !climateTargetCompatibleForConfiguration(
             state,
             "range",
@@ -1908,7 +1924,7 @@ export class VelairProfilesView extends LitElement {
           });
         }
         const unsupportedScalar = blocks.find((block) =>
-          block.action !== "turn_off" && !draftBlockUsesRange(block)
+          block.action === ACTION_SET_TEMPERATURE && !draftBlockUsesRange(block)
           && !climateTargetCompatibleForConfiguration(
             state,
             "scalar",

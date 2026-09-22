@@ -1,5 +1,6 @@
-import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
+import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import type { DraftScheduleBlock, NormalizedBlocks, ScheduleBlock } from "../types";
+import { temperatureMatchesStep } from "./climate";
 import { defaultTargetTemperature } from "./temperature-units";
 
 type TemperatureErrorOptions = {
@@ -89,10 +90,33 @@ export function updateDraftBlock(
     }
 
     if (field === "hvac_mode") {
+      const currentAction = block.action || ACTION_SET_TEMPERATURE;
       return {
         ...block,
-        action: value === "off" ? ACTION_TURN_OFF : ACTION_SET_TEMPERATURE,
+        action: value === "off"
+          ? ACTION_TURN_OFF
+          : currentAction === ACTION_SET_HVAC_MODE
+            ? ACTION_SET_HVAC_MODE
+            : ACTION_SET_TEMPERATURE,
         hvac_mode: value === "off" ? "" : value,
+      };
+    }
+
+    if (field === "action") {
+      if (value === ACTION_SET_HVAC_MODE) {
+        return {
+          ...block,
+          action: ACTION_SET_HVAC_MODE,
+          fan_mode: undefined,
+          humidity: undefined,
+          preset_mode: undefined,
+          swing_horizontal_mode: undefined,
+          swing_mode: undefined,
+        };
+      }
+      return {
+        ...block,
+        action: value,
       };
     }
 
@@ -107,7 +131,7 @@ export function draftBlockTemperatureError(
   block: DraftScheduleBlock,
   options: TemperatureErrorOptions,
 ): string | undefined {
-  if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF) {
+  if ((block.action || ACTION_SET_TEMPERATURE) !== ACTION_SET_TEMPERATURE) {
     return undefined;
   }
 
@@ -129,8 +153,11 @@ export function draftBlockTemperatureError(
       return options.rangeError;
     }
     if (
-      options.temperatureStep !== undefined
-      && Math.abs(temperature / options.temperatureStep - Math.round(temperature / options.temperatureStep)) > 0.0001
+      !temperatureMatchesStep(
+        temperature,
+        options.minTemperature,
+        options.temperatureStep,
+      )
     ) {
       return options.stepError;
     }
@@ -168,6 +195,19 @@ export function normalizeDraftBlocks(
     const action = block.action || ACTION_SET_TEMPERATURE;
     if (action === ACTION_TURN_OFF) {
       blocks.push({ start, action: ACTION_TURN_OFF });
+      seen.add(start);
+      continue;
+    }
+
+    if (action === ACTION_SET_HVAC_MODE) {
+      if (!block.hvac_mode || block.hvac_mode === "off") {
+        return { ok: false, error: options.invalidTemperatureError(start, "HVAC mode is required") };
+      }
+      blocks.push({
+        start,
+        action: ACTION_SET_HVAC_MODE,
+        hvac_mode: block.hvac_mode,
+      });
       seen.add(start);
       continue;
     }
@@ -226,7 +266,7 @@ export function clampBlocksToTemperatureLimits(
   maxTemperature: number,
 ): ScheduleBlock[] {
   return blocks.map((block) => {
-    if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF) {
+    if ((block.action || ACTION_SET_TEMPERATURE) !== ACTION_SET_TEMPERATURE) {
       return { ...block };
     }
     const clamped = { ...block };
@@ -274,6 +314,14 @@ export function filterBlocksForClimateOptions(
   return blocks.map((block) => {
     if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF) {
       return { start: block.start, action: ACTION_TURN_OFF };
+    }
+
+    if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_SET_HVAC_MODE) {
+      return {
+        start: block.start,
+        action: ACTION_SET_HVAC_MODE,
+        ...(block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
+      };
     }
 
     const filtered: ScheduleBlock = { ...block };

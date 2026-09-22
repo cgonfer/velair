@@ -330,6 +330,12 @@ export const settingsStyles = css`
   min-width: 0;
 }
 
+.settings-zone-configuration {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .settings-zone-title {
   align-items: center;
   display: grid;
@@ -418,6 +424,59 @@ export const settingsStyles = css`
   color: var(--secondary-text-color);
   font-size: 11px;
   padding-inline-end: 7px;
+}
+
+.settings-target-temp-step-control {
+  align-items: center;
+  border: 1px solid var(--divider-color);
+  border-radius: 6px;
+  box-sizing: border-box;
+  display: flex;
+  height: 34px;
+  overflow: hidden;
+  max-width: 100%;
+  width: 170px;
+}
+
+.settings-target-temp-step-control input {
+  background: var(--card-background-color);
+  border: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  color: var(--primary-text-color);
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 12px;
+  height: 100%;
+  margin: 0;
+  min-width: 0;
+  outline: 0;
+  padding-inline: 8px 2px;
+  width: 100%;
+}
+
+.settings-target-temp-step-control:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.settings-target-temp-step-control span {
+  color: var(--secondary-text-color);
+  font-size: 11px;
+  padding-inline-end: 7px;
+}
+
+.settings-target-temp-step {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.settings-target-temp-step > .settings-policy-heading {
+  box-sizing: border-box;
+  flex: 0 0 142px;
 }
 
 .settings-zone-identity strong,
@@ -562,7 +621,8 @@ export const settingsStyles = css`
 
 @media (pointer: coarse) {
   .settings-policy-controls > .select-wrap,
-  .settings-policy-duration { height: 40px; }
+  .settings-policy-duration,
+  .settings-target-temp-step-control { height: 40px; }
 }
 
 @media (max-width: 480px) {
@@ -572,5 +632,8 @@ export const settingsStyles = css`
   .settings-policy-controls { width: 100%; }
   .settings-policy-controls > .select-wrap { flex: 1 1 160px; height: 40px; max-width: 170px; width: auto; }
   .settings-policy-duration { flex: 0 1 105px; height: 40px; }
+  .settings-target-temp-step { align-items: stretch; flex-direction: column; gap: 4px; }
+  .settings-target-temp-step > .settings-policy-heading { flex-basis: auto; }
+  .settings-target-temp-step-control { height: 40px; width: 170px; }
 }
 `;

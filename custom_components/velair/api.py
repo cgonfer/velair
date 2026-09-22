@@ -54,6 +54,7 @@ from .external_execution.models import ExternalScheduleRequiredError
 from .models import (
     DEFAULT_COMFORT_TEMPERATURE_MAX,
     DEFAULT_COMFORT_TEMPERATURE_MIN,
+    DEFAULT_VENTILATION_TEMPERATURE_THRESHOLD,
     DEFAULT_MAX_TEMPERATURE,
     DEFAULT_MIN_TEMPERATURE,
     DEFAULT_PRECONDITIONING_FALLBACK_MINUTES_PER_DEGREE,
@@ -68,6 +69,7 @@ from .models import (
     normalize_panel_settings,
     normalize_preconditioning_data,
     normalize_preconditioning_learning_data,
+    normalize_sensor_entity_id,
     preconditioning_comfort_percentile,
     preconditioning_observations_for_direction,
     normalize_schedule_blocks,
@@ -91,7 +93,7 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 8
+EXPORT_MODEL_VERSION = 11
 EXPORT_SECTIONS = (
     "zones",
     "templates",
@@ -131,6 +133,15 @@ def _room_sensor_assist_deadband(value: Any) -> float:
     if not is_room_sensor_assist_deadband_step_aligned(number):
         raise vol.Invalid("expected 0.1 degree increments")
     return number
+
+
+def _sensor_entity_id(value: Any) -> str:
+    """Validate that a configured generic source is a sensor entity."""
+    entity_id = cv.entity_id(value)
+    normalized = normalize_sensor_entity_id(entity_id)
+    if normalized is None:
+        raise vol.Invalid("expected a sensor entity")
+    return normalized
 
 SCHEDULE_BLOCK_SCHEMA = vol.Schema(
     {
@@ -230,6 +241,20 @@ COMFORT_SCHEMA = vol.Schema(
             vol.Coerce(float),
             vol.Range(min=0, max=100),
         ),
+        vol.Optional("comfort_model"): vol.In(
+            ("simple", "guided", "temperature_aware")
+        ),
+        vol.Optional("temperature_aware"): {
+            vol.Optional(boundary): {
+                vol.Optional("minimum"): vol.All(
+                    _finite_float, vol.Range(min=0, max=100)
+                ),
+                vol.Optional("maximum"): vol.All(
+                    _finite_float, vol.Range(min=0, max=100)
+                ),
+            }
+            for boundary in ("at_temperature_min", "at_temperature_max")
+        },
         vol.Optional("co2_attention"): vol.All(
             vol.Coerce(float),
             vol.Range(min=400, max=10000),
@@ -242,6 +267,33 @@ COMFORT_SCHEMA = vol.Schema(
             vol.Coerce(int),
             vol.Range(min=5, max=1440),
         ),
+        vol.Optional("outdoor_comparison_enabled"): bool,
+        vol.Optional("outdoor_temperature_entity_id"): vol.Any(
+            None, _sensor_entity_id
+        ),
+        vol.Optional("outdoor_humidity_entity_id"): vol.Any(
+            None, _sensor_entity_id
+        ),
+        vol.Optional("ventilation_temperature_threshold"): vol.All(
+            _finite_float,
+            vol.Range(min=0.1, max=18.0),
+        ),
+        vol.Optional("ventilation_humidity_threshold"): vol.All(
+            _finite_float,
+            vol.Range(min=0.5, max=50.0),
+        ),
+        vol.Optional("ventilation_absolute_humidity_threshold"): vol.All(
+            _finite_float,
+            vol.Range(min=0.1, max=10.0),
+        ),
+        vol.Optional("derived_metrics"): {
+            vol.Optional(metric): {
+                vol.Optional("enabled"): bool,
+                vol.Optional("source"): vol.In(("velair", "entity")),
+                vol.Optional("entity_id"): vol.Any(None, _sensor_entity_id),
+            }
+            for metric in ("dew_point", "absolute_humidity", "humidex")
+        },
     }
 )
 
@@ -272,6 +324,7 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update_settings)
     websocket_api.async_register_command(hass, ws_set_zone_execution)
     websocket_api.async_register_command(hass, ws_update_external_change_policy)
+    websocket_api.async_register_command(hass, ws_update_zone_target_temp_step)
     websocket_api.async_register_command(hass, ws_enter_manual_adjustment)
     websocket_api.async_register_command(hass, ws_resume_automatic_control)
     websocket_api.async_register_command(hass, ws_update_zone_preconditioning)
@@ -945,6 +998,38 @@ async def ws_update_external_change_policy(
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/update_zone_target_temp_step",
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required("target_temp_step"): vol.All(
+            _finite_float, vol.Range(min=0.001)
+        ),
+    }
+)
+@websocket_api.async_response
+async def ws_update_zone_target_temp_step(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Persist one zone's target-step fallback."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        await runtime["scheduler"].async_update_zone_target_temp_step_override(
+            msg[ATTR_ENTITY_ID], msg["target_temp_step"]
+        )
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_target_temp_step", str(err))
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
 ENTER_MANUAL_ADJUSTMENT_WS_SCHEMA = {
     vol.Required("type"): f"{DOMAIN}/enter_manual_adjustment",
     vol.Required(ATTR_ENTITY_ID): cv.entity_id,
@@ -1364,6 +1449,7 @@ async def ws_reset_data(
                 source_unit, target_unit, reason="data_reset"
             )
             scheduler.handle_temperature_unit_change()
+        runtime["diagnostics"].async_reset_runtime_evidence()
         blocked = _finish_exclusive_operation(runtime)
         if not blocked:
             await async_dismiss_temperature_migration_notification(hass, entry.entry_id)
@@ -1780,6 +1866,14 @@ def _hydrate_portable_temperature_defaults(
                     DEFAULT_COMFORT_TEMPERATURE_MAX, CELSIUS, source_unit
                 ),
             )
+            comfort.setdefault(
+                "ventilation_temperature_threshold",
+                temperature_delta(
+                    DEFAULT_VENTILATION_TEMPERATURE_THRESHOLD,
+                    CELSIUS,
+                    source_unit,
+                ),
+            )
         preconditioning = zone.setdefault("preconditioning", {})
         if isinstance(preconditioning, dict):
             if "room_sensor_assist_deadband" not in preconditioning:
@@ -1856,6 +1950,11 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
             "comfort": deepcopy(zone.get("comfort", {})),
             "external_change_policy": deepcopy(
                 zone.get("external_change_policy", {})
+            ),
+            **(
+                {"target_temp_step_override": zone["target_temp_step_override"]}
+                if "target_temp_step_override" in zone
+                else {}
             ),
         }
         for entity_id, zone in zones.items()
@@ -2145,6 +2244,17 @@ def _validate_portable_zone_schedules(
         zone = raw_zones[entity_id]
         if not isinstance(zone, dict):
             raise ValueError(f"Schedule for {entity_id} is not valid")
+        if "target_temp_step_override" in zone:
+            try:
+                fallback_step = float(zone["target_temp_step_override"])
+            except (TypeError, ValueError) as err:
+                raise ValueError(
+                    f"Temperature step fallback for {entity_id} is not valid"
+                ) from err
+            if not math.isfinite(fallback_step) or fallback_step < 0.001:
+                raise ValueError(
+                    f"Temperature step fallback for {entity_id} must be at least 0.001"
+                )
         preconditioning = zone.get("preconditioning")
         if preconditioning is not None and not isinstance(preconditioning, dict):
             raise ValueError(f"Preconditioning for {entity_id} is not valid")
@@ -2166,6 +2276,135 @@ def _validate_portable_zone_schedules(
                 raise ValueError(
                     f"Room Assist deadband for {entity_id} must be between 0 and {maximum:g}"
                 )
+        comfort = zone.get("comfort")
+        if comfort is not None and not isinstance(comfort, dict):
+            raise ValueError(f"Comfort settings for {entity_id} are not valid")
+        derived_metrics = (
+            comfort.get("derived_metrics") if isinstance(comfort, dict) else None
+        )
+        if derived_metrics is not None and not isinstance(derived_metrics, dict):
+            raise ValueError(f"Derived Comfort metrics for {entity_id} are not valid")
+        if isinstance(derived_metrics, dict):
+            for metric in ("dew_point", "absolute_humidity", "humidex"):
+                metric_config = derived_metrics.get(metric)
+                if metric_config is None:
+                    continue
+                if not isinstance(metric_config, dict):
+                    raise ValueError(
+                        f"Derived Comfort metric {metric} for {entity_id} is not valid"
+                    )
+                if (
+                    metric_config.get("enabled") is True
+                    and metric_config.get("source") == "entity"
+                ):
+                    source_entity_id = metric_config.get("entity_id")
+                    if source_entity_id is not None and (
+                        not isinstance(source_entity_id, str)
+                        or normalize_sensor_entity_id(source_entity_id)
+                        != source_entity_id
+                    ):
+                        raise ValueError(
+                            f"Derived Comfort metric {metric} for {entity_id} must use a sensor entity"
+                        )
+        if isinstance(comfort, dict):
+            comfort_model = comfort.get("comfort_model")
+            if comfort_model is not None and comfort_model not in (
+                "simple",
+                "guided",
+                "temperature_aware",
+            ):
+                raise ValueError(
+                    f"Comfort model for {entity_id} is not valid"
+                )
+            if (
+                comfort_model == "guided"
+                and comfort.get("humidity_enabled") is False
+            ):
+                raise ValueError(
+                    f"Guided Comfort for {entity_id} requires humidity monitoring"
+                )
+            temperature_aware = comfort.get("temperature_aware")
+            if temperature_aware is not None and not isinstance(
+                temperature_aware, dict
+            ):
+                raise ValueError(
+                    f"Temperature-aware Comfort settings for {entity_id} are not valid"
+                )
+            if isinstance(temperature_aware, dict):
+                for boundary in (
+                    "at_temperature_min",
+                    "at_temperature_max",
+                ):
+                    humidity_range = temperature_aware.get(boundary)
+                    if humidity_range is None:
+                        continue
+                    if not isinstance(humidity_range, dict):
+                        raise ValueError(
+                            f"Temperature-aware Comfort range {boundary} for "
+                            f"{entity_id} is not valid"
+                        )
+                    minimum = humidity_range.get("minimum")
+                    maximum = humidity_range.get("maximum")
+                    if minimum is None or maximum is None:
+                        raise ValueError(
+                            f"Temperature-aware Comfort range {boundary} for "
+                            f"{entity_id} must include minimum and maximum"
+                        )
+                    if (
+                        isinstance(minimum, bool)
+                        or isinstance(maximum, bool)
+                        or not isinstance(minimum, int | float)
+                        or not isinstance(maximum, int | float)
+                        or not math.isfinite(float(minimum))
+                        or not math.isfinite(float(maximum))
+                        or not 0 <= float(minimum) < float(maximum) <= 100
+                    ):
+                        raise ValueError(
+                            f"Temperature-aware Comfort range {boundary} for "
+                            f"{entity_id} must use a valid 0-100 range"
+                        )
+            temperature_bounds = (
+                (0.2, 18.0)
+                if temperature_unit == FAHRENHEIT
+                else (0.1, 10.0)
+            )
+            threshold_ranges = {
+                "ventilation_temperature_threshold": temperature_bounds,
+                "ventilation_humidity_threshold": (0.5, 50.0),
+                "ventilation_absolute_humidity_threshold": (0.1, 10.0),
+            }
+            for field, (minimum, maximum) in threshold_ranges.items():
+                if field not in comfort:
+                    continue
+                raw_value = comfort[field]
+                try:
+                    value = float(raw_value)
+                except (TypeError, ValueError) as err:
+                    raise ValueError(
+                        f"Comfort threshold {field} for {entity_id} is not valid"
+                    ) from err
+                if (
+                    isinstance(raw_value, bool)
+                    or not math.isfinite(value)
+                    or not minimum <= value <= maximum
+                ):
+                    raise ValueError(
+                        f"Comfort threshold {field} for {entity_id} must be "
+                        f"between {minimum:g} and {maximum:g}"
+                    )
+            for field in (
+                "outdoor_temperature_entity_id",
+                "outdoor_humidity_entity_id",
+            ):
+                source_entity_id = comfort.get(field)
+                if source_entity_id is not None and (
+                    not isinstance(source_entity_id, str)
+                    or normalize_sensor_entity_id(source_entity_id)
+                    != source_entity_id
+                ):
+                    raise ValueError(
+                        f"Outdoor Comfort source {field} for {entity_id} must use a sensor entity"
+                    )
         raw_schedule = zone.get("schedule", {})
         if not isinstance(raw_schedule, dict):
             raise ValueError(f"Schedule for {entity_id} is not valid")

@@ -66,6 +66,8 @@ The integration-served bundle under `custom_components/velair/frontend/` must be
 ## Coding Guidelines
 
 - Keep Home Assistant runtime code asynchronous.
+- Mark synchronous Home Assistant listeners and timer handlers with `@callback`
+  when they use event-loop-only APIs or mutate runtime state.
 - Do not add continuous polling when callbacks or timers can solve the problem.
 - Validate climate targets against configured entities before applying any action.
 - Preserve heating and cooling support.

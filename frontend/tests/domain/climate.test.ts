@@ -6,9 +6,44 @@ import {
   effectiveClimateHvacModeForEnsureOn,
   climateRequiresRangeTarget,
   climateSupportsRangeTarget,
+  entityTemperatureStep,
 } from "../../src/velair/domain/climate";
 
 describe("climate target capabilities", () => {
+  it("converts a published step when the entity still reports the other temperature unit", () => {
+    expect(entityTemperatureStep({
+      attributes: {
+        min_temp: 5,
+        max_temp: 35,
+        target_temp_step: 0.5,
+        unit_of_measurement: "°C",
+      },
+    } as any, "°F")).toBeCloseTo(0.9);
+    expect(entityTemperatureStep({
+      attributes: {
+        min_temp: 41,
+        max_temp: 95,
+        target_temp_step: 1,
+        unit_of_measurement: "°F",
+      },
+    } as any, "°C")).toBeCloseTo(5 / 9);
+  });
+
+  it("infers a stale temperature grid unit but preserves normal published steps", () => {
+    expect(entityTemperatureStep({
+      attributes: { min_temp: 5, max_temp: 35, target_temp_step: 0.5 },
+    } as any, "°F")).toBeCloseTo(0.9);
+    expect(entityTemperatureStep({
+      attributes: { min_temp: 41, max_temp: 95, target_temp_step: 1 },
+    } as any, "°F")).toBe(1);
+    expect(entityTemperatureStep({
+      attributes: { min_temp: 41, max_temp: 95, target_temp_step: 1 },
+    } as any, "°C")).toBeCloseTo(5 / 9);
+    expect(entityTemperatureStep({
+      attributes: { min_temp: 5, max_temp: 35, target_temp_step: 0.5 },
+    } as any, "°C")).toBe(0.5);
+  });
+
   it("requires both finite range attributes when legacy feature flags are absent", () => {
     expect(climateSupportsRangeTarget({
       attributes: { target_temp_low: 19 },

@@ -1,4 +1,5 @@
 import { HVAC_MODES } from "../constants";
+import { convertTemperatureDelta } from "./temperature-units";
 import type { HassState } from "../types";
 
 export type ClimateCapabilityKey =
@@ -85,16 +86,29 @@ export function entityTemperatureLimits(state?: HassState, unit?: string): [numb
   return [minTemperature, maxTemperature];
 }
 
-export function entityTemperatureStep(state?: HassState): number | undefined {
+export function entityTemperatureStep(
+  state?: HassState,
+  targetUnit?: string,
+): number | undefined {
   const step = coerceNumber(state?.attributes?.target_temp_step, Number.NaN);
-  return Number.isFinite(step) && step > 0 ? step : undefined;
+  if (!Number.isFinite(step) || step <= 0) return undefined;
+  const sourceUnit = reportedTemperatureGridUnit(state, targetUnit);
+  return convertTemperatureDelta(step, sourceUnit, targetUnit);
 }
 
-export function firstTemperatureStepAtOrAbove(minimum: number, step?: number): number {
-  if (step === undefined || !Number.isFinite(step) || step <= 0) {
-    return minimum;
-  }
-  return Math.round(Math.ceil((minimum / step) - 0.000001) * step * 1_000_000) / 1_000_000;
+export function firstTemperatureStepAtOrAbove(minimum: number, _step?: number): number {
+  return minimum;
+}
+
+export function temperatureMatchesStep(
+  temperature: number,
+  minimum: number,
+  step?: number,
+  tolerance = 0.0001,
+): boolean {
+  if (step === undefined || !Number.isFinite(step) || step <= 0) return true;
+  const position = (temperature - minimum) / step;
+  return Math.abs(position - Math.round(position)) <= tolerance;
 }
 
 export function climateSupportedModes(state?: HassState): string[] {
@@ -299,6 +313,27 @@ function gridLooksStaleForUnit(minimum: number, maximum: number, unit?: string):
   return isFahrenheit(unit)
     ? maximum <= 60 && minimum < 40
     : Boolean(unit) && (maximum > 60 || minimum > 40);
+}
+
+function reportedTemperatureGridUnit(
+  state: HassState | undefined,
+  targetUnit: string | undefined,
+): string | undefined {
+  const reportedUnit = state?.attributes?.unit_of_measurement;
+  if (/^[°]?[cf]$/i.test(String(reportedUnit ?? "").trim())) {
+    return String(reportedUnit);
+  }
+  const minimum = coerceNumber(state?.attributes?.min_temp, Number.NaN);
+  const maximum = coerceNumber(state?.attributes?.max_temp, Number.NaN);
+  if (
+    !targetUnit
+    || !Number.isFinite(minimum)
+    || !Number.isFinite(maximum)
+    || !gridLooksStaleForUnit(minimum, maximum, targetUnit)
+  ) {
+    return targetUnit;
+  }
+  return isFahrenheit(targetUnit) ? "°C" : "°F";
 }
 
 function stringArrayAttribute(state: HassState | undefined, attribute: string): string[] {

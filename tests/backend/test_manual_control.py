@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 from datetime import timedelta
 import asyncio
 
@@ -20,6 +20,7 @@ from custom_components.velair.climate_change_monitor import (
     ClimateChangeMonitor,
     _control_change,
 )
+from custom_components.velair.climate_manager import ClimateManager
 from custom_components.velair.api import _export_zones
 from custom_components.velair.const import (
     EXTERNAL_CHANGE_POLICY_OPTIONS,
@@ -965,6 +966,276 @@ class ExternalChangeProjectionTest(unittest.TestCase):
 
 
 class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):
+    async def test_mode_service_echo_remains_velair_owned_and_automatic(self) -> None:
+        entity_id = "climate.salon"
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        old = SimpleNamespace(
+            entity_id=entity_id,
+            state="heat",
+            attributes={
+                "temperature": 21.0,
+                "target_temp_step": 0.5,
+                "min_temp": 5.0,
+                "max_temp": 35.0,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool", "auto"],
+            },
+            context=None,
+        )
+        hass.states[entity_id] = old
+        data = normalize_schedule_data(
+            {
+                "zones": {
+                    entity_id: {
+                        "enabled": True,
+                        "schedule": empty_week_schedule(),
+                    }
+                }
+            },
+            [entity_id],
+        )
+        manager = ClimateManager(hass)
+        scheduler = VelairScheduler(hass, data, manager, AsyncMock())
+        monitor = ClimateChangeMonitor(hass, [entity_id], manager, scheduler)
+
+        await scheduler.async_set_hvac_mode(
+            entity_id,
+            "auto",
+            event_source="service_set_hvac_mode",
+        )
+        echoed = SimpleNamespace(
+            entity_id=entity_id,
+            state="auto",
+            attributes=dict(old.attributes),
+            context=None,
+        )
+        monitor._handle_state_change(
+            SimpleNamespace(data={"old_state": old, "new_state": echoed})
+        )
+        await asyncio.sleep(0)
+
+        self.assertEqual(
+            "automatic",
+            scheduler.get_zone_runtime_statuses()[entity_id]["control_mode"],
+        )
+        self.assertFalse(any(
+            pause.get("pause_id") == "velair.manual_adjustment"
+            for pause in data["zones"][entity_id]["pauses"]
+        ))
+        self.assertFalse(any(
+            event_data.get("event") == "external_climate_change_detected"
+            for _event_type, event_data in hass.bus.events
+        ))
+
+    async def test_active_velair_command_chatter_is_not_forwarded_as_manual(
+        self,
+    ) -> None:
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        hass.states["climate.salon"] = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={
+                "temperature": 10.0,
+                "target_temp_step": 0.5,
+                "min_temp": 5.0,
+                "max_temp": 35.0,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool"],
+            },
+            context=None,
+        )
+        manager = ClimateManager(hass)
+        await manager.async_set_temperature("climate.salon", 16.0)
+        scheduler = SimpleNamespace(
+            async_handle_external_climate_change=AsyncMock()
+        )
+        monitor = ClimateChangeMonitor(
+            hass, ["climate.salon"], manager, scheduler
+        )
+        old = hass.states["climate.salon"]
+        intermediate = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={**old.attributes, "temperature": 22.0},
+            context=None,
+        )
+
+        monitor._handle_state_change(
+            SimpleNamespace(data={"old_state": old, "new_state": intermediate})
+        )
+        await asyncio.sleep(0)
+
+        scheduler.async_handle_external_climate_change.assert_not_awaited()
+
+    async def test_expected_then_intermediate_then_expected_stays_automatic(
+        self,
+    ) -> None:
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        base = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={
+                "temperature": 10.0,
+                "target_temp_step": 0.5,
+                "min_temp": 5.0,
+                "max_temp": 35.0,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool"],
+            },
+            context=None,
+        )
+        hass.states["climate.salon"] = base
+        manager = ClimateManager(hass)
+        await manager.async_set_temperature("climate.salon", 16.0)
+        scheduler = SimpleNamespace(
+            async_handle_external_climate_change=AsyncMock()
+        )
+        monitor = ClimateChangeMonitor(
+            hass, ["climate.salon"], manager, scheduler
+        )
+        values = [16.0, 22.0, 16.0]
+        previous = base
+        for value in values:
+            current = SimpleNamespace(
+                entity_id="climate.salon",
+                state="heat",
+                attributes={**base.attributes, "temperature": value},
+                context=None,
+            )
+            hass.states["climate.salon"] = current
+            monitor._handle_state_change(
+                SimpleNamespace(
+                    data={"old_state": previous, "new_state": current}
+                )
+            )
+            previous = current
+        await asyncio.sleep(0)
+
+        scheduler.async_handle_external_climate_change.assert_not_awaited()
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_late_expected_return_after_mismatch_stays_automatic(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        base = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={
+                "temperature": 10.0,
+                "target_temp_step": 0.5,
+                "min_temp": 5.0,
+                "max_temp": 35.0,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool"],
+            },
+            context=None,
+        )
+        hass.states["climate.salon"] = base
+        manager = ClimateManager(hass)
+        await manager.async_set_temperature("climate.salon", 16.0)
+        scheduler = SimpleNamespace(
+            async_handle_external_climate_change=AsyncMock()
+        )
+        monitor = ClimateChangeMonitor(
+            hass, ["climate.salon"], manager, scheduler
+        )
+
+        previous = base
+        for moment, value in ((101.0, 16.0), (120.0, 22.0)):
+            monotonic_mock.return_value = moment
+            current = SimpleNamespace(
+                entity_id="climate.salon",
+                state="heat",
+                attributes={**base.attributes, "temperature": value},
+                context=None,
+            )
+            hass.states["climate.salon"] = current
+            monitor._handle_state_change(
+                SimpleNamespace(
+                    data={"old_state": previous, "new_state": current}
+                )
+            )
+            previous = current
+
+        monotonic_mock.return_value = 145.1
+        self.assertIn(
+            "temperature",
+            manager.command_settling_diagnostics("climate.salon")["mismatches"],
+        )
+        monotonic_mock.return_value = 150.0
+        returned = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={**base.attributes, "temperature": 16.0},
+            context=None,
+        )
+        hass.states["climate.salon"] = returned
+        monitor._handle_state_change(
+            SimpleNamespace(
+                data={"old_state": previous, "new_state": returned}
+            )
+        )
+        await asyncio.sleep(0)
+
+        scheduler.async_handle_external_climate_change.assert_not_awaited()
+        self.assertEqual(
+            {},
+            manager.command_settling_diagnostics("climate.salon")["mismatches"],
+        )
+
+    async def test_room_assist_generation_and_delayed_schedule_echo_stay_automatic(
+        self,
+    ) -> None:
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        base = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={
+                "temperature": 10.0,
+                "target_temp_step": 0.5,
+                "min_temp": 5.0,
+                "max_temp": 35.0,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool"],
+            },
+            context=None,
+        )
+        hass.states["climate.salon"] = base
+        manager = ClimateManager(hass)
+        await manager.async_set_temperature("climate.salon", 22.0)
+        await manager.async_set_temperature("climate.salon", 16.0)
+        scheduler = SimpleNamespace(
+            async_handle_external_climate_change=AsyncMock()
+        )
+        monitor = ClimateChangeMonitor(
+            hass, ["climate.salon"], manager, scheduler
+        )
+        previous = base
+        for value in (16.0, 22.0, 16.0):
+            current = SimpleNamespace(
+                entity_id="climate.salon",
+                state="heat",
+                attributes={**base.attributes, "temperature": value},
+                context=None,
+            )
+            hass.states["climate.salon"] = current
+            monitor._handle_state_change(
+                SimpleNamespace(
+                    data={"old_state": previous, "new_state": current}
+                )
+            )
+            previous = current
+        await asyncio.sleep(0)
+
+        scheduler.async_handle_external_climate_change.assert_not_awaited()
+
     async def test_only_external_fields_are_forwarded(self) -> None:
         manager = SimpleNamespace(
             owned_state_change_fields=lambda *_args: {"temperature"},

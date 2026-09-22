@@ -118,9 +118,25 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
         "temperature_max": 24.0,
         "humidity_min": 40.0,
         "humidity_max": 60.0,
+        "comfort_model": "simple",
+        "temperature_aware": {
+          "at_temperature_min": {"minimum": 40.0, "maximum": 60.0},
+          "at_temperature_max": {"minimum": 40.0, "maximum": 60.0}
+        },
         "co2_attention": 1000,
         "co2_poor": 1500,
-        "stale_after_minutes": 120
+        "stale_after_minutes": 120,
+        "outdoor_comparison_enabled": false,
+        "outdoor_temperature_entity_id": null,
+        "outdoor_humidity_entity_id": null,
+        "ventilation_temperature_threshold": 1.0,
+        "ventilation_humidity_threshold": 5.0,
+        "ventilation_absolute_humidity_threshold": 1.0,
+        "derived_metrics": {
+          "dew_point": {"enabled": true, "source": "velair", "entity_id": null},
+          "absolute_humidity": {"enabled": false, "source": "velair", "entity_id": null},
+          "humidex": {"enabled": true, "source": "entity", "entity_id": "sensor.living_room_humidex"}
+        }
       }
     }
   },
@@ -225,10 +241,10 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 8,
+    "portable_model": 11,
     "storage": 1,
     "model": 7,
-    "integration": "1.7.0"
+    "integration": "1.8.0-beta.1"
   }
 }
 ```
@@ -296,7 +312,38 @@ These fields are optional so existing stored and portable observations remain
 valid. Temperature migration converts both optional boundaries as absolute
 temperatures.
 
-`comfort` is the local runtime Environmental Comfort assessment. It contains the human environmental `condition`, independent CO2 `air_quality`, `data_quality`, `data_issues`, and raw metric payloads. Opening or refreshing the panel does not emit comfort automation events.
+`comfort` is the local runtime Environmental Comfort assessment. It contains the compatible physical `condition`, independent CO2 `air_quality`, `data_quality`, `data_issues`, and raw metric payloads.
+
+`comfort_zone` identifies the selected Simple, Guided, or custom temperature-aware model, its backend-owned geometry points, and the humidity range effective at the current temperature. Its temperatures use the managed climate's runtime unit. Guided also exposes its midpoint `reference`. For Guided and custom temperature-aware models, `effective_humidity_range` is `null` when temperature cannot be evaluated; clients must not substitute the Simple range.
+
+Optional `derived_metrics` and the `outdoor` comparison are observational and do not control a climate. Every derived payload has a stable shape; the Humidex payload alone includes nullable `temperature_range_position`. Range position does not create an insight or change the compatible physical condition. Backend-owned `range_summary` reconciles the configured physical ranges and Humidex with `status`, `thermal_relation`, and nullable per-metric `positions`, without replacing `condition` or making a universal comfort claim. Clients should tolerate these newer fields being absent when paired with an older backend. The existing `comfort_assessment_changed` event adds `previous_range_summary`, `range_summary_changed`, and `range_status_changed` so automations can distinguish an aggregate transition from another semantic Comfort update without subscribing to a second event. Outdoor quality/issues remain separate and its comparison reports normalized temperature, explicit indoor and outdoor absolute-humidity readings, equivalent indoor relative humidity, possible improvement, and known trade-offs. Clients must treat an omitted `indoor_absolute_humidity` from an older backend as unavailable instead of reconstructing it from rounded deltas. The runtime-only ordered `insights` list contains backend-owned `code`, `kind`, `tone`, and `metrics`; clients translate it but must not infer new rules. Opening or refreshing the panel does not emit comfort automation events.
+
+## Home Assistant Mode-Only Service
+
+`velair.set_hvac_mode` is the public one-shot counterpart to a persisted
+`set_hvac_mode` schedule block:
+
+```yaml
+action: velair.set_hvac_mode
+data:
+  entity_id: climate.living_room
+  hvac_mode: cool
+```
+
+The schema contains exactly `entity_id` and `hvac_mode`. The backend rejects an
+unmanaged climate, externally owned execution, `off`, and any mode not advertised
+by the live entity. A valid request is serialized through the local delivery
+coordinator and produces exactly one `climate.set_hvac_mode` call with no target
+or optional climate fields. ClimateManager registers that call as Velair-owned,
+so its state echo is not classified as an external adjustment.
+
+After successful physical delivery, Velair disables any active Room Assist
+correction for that climate and emits `climate_target_applied` with
+`action: set_hvac_mode`, the applied `hvac_mode`, and
+`source: service_set_hvac_mode`. No temperature fields are added. Failed
+physical delivery publishes no success event and leaves Room Assist unchanged.
+The existing `velair.set_temperature` schema and behavior are independent and
+unchanged.
 
 ## Read Schedule State
 
@@ -502,6 +549,7 @@ await hass.connection.sendMessagePromise({
       fan_mode: "quiet",
       preset_mode: "eco"
     },
+    { start: "12:00", action: "set_hvac_mode", hvac_mode: "auto" },
     { start: "23:30", action: "turn_off" }
   ],
 });
@@ -516,6 +564,9 @@ mutually exclusive. Blocks may also include optional climate settings:
 `humidity`. The scheduler filters these fields against the target climate
 capabilities before persisting or applying them. Unsupported fields are
 dropped; `turn_off` blocks never keep target or optional climate settings.
+`set_hvac_mode` blocks require an explicit supported mode other than `off` and
+contain no temperature target or optional climate settings. They change only
+the HVAC mode and leave the device target untouched.
 
 ## Copy Day Schedule
 
@@ -565,6 +616,7 @@ await hass.connection.sendMessagePromise({
       hvac_mode: "heat",
       fan_mode: "quiet"
     },
+    { start: "21:00", action: "set_hvac_mode", hvac_mode: "auto" },
     { start: "23:00", action: "set_temperature", temperature: 17 }
   ],
 });
@@ -603,7 +655,7 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Templates are capability-neutral storage. They can contain optional climate settings from any managed climate. Filtering happens later when a template is applied to one concrete climate schedule.
+Templates are capability-neutral storage. They can contain optional climate settings from any managed climate. Filtering happens later when a template is applied to one concrete climate schedule. A `set_hvac_mode` template block follows the same contract as a daily schedule block: it requires a non-`off` `hvac_mode` and contains neither a temperature target nor optional climate settings.
 
 ### External-change Policy
 
@@ -626,6 +678,27 @@ result is the full schedule response.
 Errors are `not_loaded`, `temperature_migration_required`,
 `operation_in_progress`, or `invalid_external_change_policy`; malformed fields
 can also fail WebSocket schema validation.
+
+### Target-temperature Step Fallback
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/update_zone_target_temp_step",
+  entity_id: "climate.living_room",
+  target_temp_step: 0.5,
+});
+```
+
+`entity_id` must be managed and `target_temp_step` must be a finite positive
+number of at least `0.001` that does not exceed the climate's target range. The
+value is persisted as a fallback. A valid `target_temp_step` currently published
+by Home Assistant always takes priority without deleting this value. When no
+valid step is currently published, this explicit write also clears the internal
+last-reported observation so the saved value becomes the effective fallback; it
+does not modify schedule rules. A later valid entity report is remembered and
+takes priority again. The result is the full schedule response. Errors are `not_loaded`,
+`temperature_migration_required`, `operation_in_progress`, or
+`invalid_target_temp_step`.
 
 ### Enter Manual Adjustment
 
@@ -744,14 +817,37 @@ await hass.connection.sendMessagePromise({
     temperature_max: 24,
     humidity_min: 40,
     humidity_max: 60,
+    comfort_model: "temperature_aware",
+    temperature_aware: {
+      at_temperature_min: { minimum: 40, maximum: 60 },
+      at_temperature_max: { minimum: 35, maximum: 50 }
+    },
     co2_attention: 1000,
     co2_poor: 1500,
-    stale_after_minutes: 120
+    stale_after_minutes: 120,
+    outdoor_comparison_enabled: true,
+    outdoor_temperature_entity_id: "sensor.outdoor_temperature",
+    outdoor_humidity_entity_id: "sensor.outdoor_humidity",
+    ventilation_temperature_threshold: 1.5,
+    ventilation_humidity_threshold: 7.5,
+    ventilation_absolute_humidity_threshold: 1.5,
+    derived_metrics: {
+      dew_point: { enabled: true, source: "velair", entity_id: null },
+      humidex: {
+        enabled: true,
+        source: "entity",
+        entity_id: "sensor.living_room_humidex"
+      }
+    }
   }
 });
 ```
 
-Comfort settings are per managed climate. The scheduler only listens to comfort-related entities for climates where `comfort.enabled` is true. See [Environmental Comfort internals](comfort.md) for source selection, assessment calculation, runtime listener behavior, and event payloads.
+Comfort settings are per managed climate. `comfort_model` defaults to `simple`, accepts `guided` when humidity monitoring is enabled, and keeps `temperature_aware` for explicit endpoint control. Guided reuses `humidity_min` and `humidity_max` as the midpoint reference and persists no calculated geometry. `temperature_aware` stores complete humidity ranges at the configured minimum and maximum temperatures. Both `temperature_aware` and `derived_metrics` accept deep partial updates, so omitted boundaries, metrics, and fields retain their stored values. Outdoor comparison requires an explicit temperature `sensor.*`; humidity is optional. Disabling it retains both IDs and removes them from active listeners. The three ventilation thresholds are partial, per-climate settings: temperature is a unit-aware delta, while projected humidity uses percentage points and absolute humidity uses `g/m³`. Omitted values retain their stored values. See [Environmental Comfort internals](comfort.md) for validation, interpolation, comparison policy, source selection, listener behavior, and event payloads.
+
+`entity_id: null` is valid for an enabled external metric while configuration is
+incomplete; runtime reports it as `missing`. Any non-null external entity ID
+must be a syntactically valid `sensor.*` ID, including during portable import.
 
 ## Climate Profiles
 
@@ -890,7 +986,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 8,
+  "model_version": 11,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -918,9 +1014,28 @@ unit metadata existed may omit it; the backend treats those values as Celsius.
 Portable model v8 adds the independent `room_sensor_assist_deadband`. When a v7
 or older zone omits it, import migrates the legacy
 `minimum_delta_temperature` value before any unit conversion.
+Portable model v9 adds each zone's optional Comfort `derived_metrics`
+configuration. It preserves whether a metric is enabled, whether Velair or a
+Home Assistant entity supplies it, and the retained `entity_id`. Runtime values,
+availability, issues, and calculated inputs are deliberately not exported. An
+enabled external metric without an entity remains a valid incomplete
+configuration after import.
+Portable model v10 adds the opt-in outdoor-comparison flag, retained
+temperature/humidity sensor IDs, and per-zone ventilation-guidance thresholds.
+Runtime readings and conclusions are not exported. Older or partial portable
+models use the disabled comparison and default guidance sensitivity.
+Portable model v11 adds each zone's Comfort model and retained
+temperature-aware endpoint ranges. It also accepts Guided without storing its
+calculated curve. Runtime `comfort_zone` geometry and its
+effective range are recalculated after import and are never exported as state.
+Each included endpoint must contain both `minimum` and `maximum`; incomplete or
+invalid ranges are rejected instead of being silently replaced. Older payloads
+normalize to the Simple model.
 If the source differs from Velair's current Home Assistant unit, selected thermal
-data is converted before normalization. Managed climates with known limits and
-`target_temp_step` are aligned to that exact grid. Standalone template values use
+data is converted before normalization. Managed climates with known limits are
+aligned to their effective published, last-reported, manual, or default target
+grid. The portable zone model includes `target_temp_step_override` but excludes
+the device-local `last_reported_target_temp_step`. Standalone template values use
 safe fallback precision when no common exact device step can be derived. Data for
 unmatched climate IDs is not applied or used to transform existing local zones.
 

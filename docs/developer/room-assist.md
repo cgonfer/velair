@@ -196,7 +196,7 @@ When scalar step alignment changes the committed setpoint, runtime state also
 adds `pre_step_temperature` and `target_temp_step`. The first is the candidate
 after scheduled-target protection and physical min/max clamping, immediately
 before step alignment; it deliberately does not reuse
-`calculated_temperature`. The pair is omitted unless a valid published step
+`calculated_temperature`. The pair is omitted unless a valid effective step
 actually changes that candidate and the committed target is the aligned
 result. A final physical-limit clamp is therefore never attributed to the
 step. If a refresh skips its service call because the committed target moved by
@@ -212,7 +212,7 @@ Velair keeps the runtime state and listeners active while the scheduled block re
 
 Runtime Room Assist state is never authoritative for choosing the active schedule block. After any active Adaptive Preconditioning target is resolved, Velair uses the current schedule event. This prevents a delayed sensor or climate callback from restoring a target calculated for an earlier block.
 
-The applied target is bounded by the climate entity's min/max target temperatures and aligned to the climate entity's `target_temp_step`. For heating, Velair rounds the assisted target down to the nearest supported step; for cooling, it rounds up. The rule follows the active HVAC direction on both sides of the scheduled target. During an inverse correction this can increase the final offset by less than one device step, while keeping the target on the conservative side for that mode.
+The applied target is bounded by the climate entity's min/max target temperatures and aligned to the effective published, last-reported, manual, or default target step. For heating, Velair rounds the assisted target down to the nearest supported step; for cooling, it rounds up. The rule follows the active HVAC direction on both sides of the scheduled target. During an inverse correction this can increase the final offset by less than one device step, while keeping the target on the conservative side for that mode.
 
 When a physical target limit changes an applied result, runtime state adds
 `limited_by` (`minimum` or `maximum`), `limit_temperature`, and either
@@ -227,8 +227,9 @@ from climate control. Recovery, disablement, clearing, and scheduler shutdown
 dismiss tracked notifications.
 
 If the climate does not publish a finite, positive `target_temp_step`, Room Assist
-reports `missing_target_step`, does not calculate a fallback step, and sends no
-assisted climate service call.
+uses its persisted last-reported step, followed by the manual per-zone fallback.
+Missing fallback data resolves to `1` in the active temperature unit; Settings
+exposes the effective fallback so the user can match the physical device.
 
 ### Native Range Calculation
 
@@ -257,7 +258,8 @@ boundary can narrow or widen the user's range. `assist_delta` is the capped
 active-boundary correction, or zero while holding. `range_shift` is the signed
 scheduled-to-applied displacement after step alignment and physical limits.
 
-Velair ignores target movements smaller than the climate entity's `target_temp_step`.
+Velair ignores target movements smaller than the effective published or
+configured target step.
 
 ## Clearing And Restoring
 

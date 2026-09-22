@@ -15,6 +15,7 @@ export type HassState = {
     fan_mode?: string;
     fan_modes?: string[];
     friendly_name?: string;
+    icon?: string;
     hvac_action?: string;
     hvac_modes?: string[];
     humidity?: number;
@@ -57,8 +58,69 @@ export type HomeAssistant = {
 
 export type ActiveSetupControls = "both" | "modes" | "profiles";
 
+export type ClimateCardActionPlacement = "auto" | "more";
+
+export type ClimateCardCustomAction = {
+  name: string;
+  script: string;
+  icon?: string;
+  color?: string;
+  confirmation?: boolean;
+  hide_name?: boolean;
+  placement?: ClimateCardActionPlacement;
+};
+
+export type ClimateCardAction =
+  | { type: "boost"; enabled?: boolean; hide_name?: boolean; placement?: ClimateCardActionPlacement }
+  | { type: "pause"; enabled?: boolean; hide_name?: boolean; placement?: ClimateCardActionPlacement }
+  | ({ type: "script" } & ClimateCardCustomAction);
+
 export type VelairCardConfig = {
   active_setup_controls?: ActiveSetupControls;
+  climate_name?: string;
+  climate_actions?: ClimateCardAction[];
+  /** @deprecated Read for existing cards; the editor writes climate_actions. */
+  climate_custom_actions?: ClimateCardCustomAction[];
+  climate_humidity_entity?: string;
+  climate_outdoor_temperature_entity?: string;
+  climate_current_state_default_collapsed?: boolean;
+  climate_preconditioning_display?: "both" | "chart" | "text";
+  climate_preconditioning_default_collapsed?: boolean;
+  climate_room_assist_display?: "both" | "chart" | "text";
+  climate_room_assist_default_collapsed?: boolean;
+  climate_show_actions?: boolean;
+  /** @deprecated Read for existing cards; the editor writes climate_actions. */
+  climate_show_boost_action?: boolean;
+  climate_show_comfort?: boolean;
+  climate_show_comfort_absolute_humidity?: boolean;
+  climate_show_comfort_dew_point?: boolean;
+  climate_show_comfort_humidex?: boolean;
+  climate_show_comfort_collapsed_readings?: boolean;
+  climate_show_current_humidity?: boolean;
+  climate_show_current_temperature?: boolean;
+  climate_show_name?: boolean;
+  climate_show_operation?: boolean;
+  climate_show_outdoor_temperature?: boolean;
+  climate_show_preconditioning?: boolean;
+  /** @deprecated Read for existing cards; the editor writes climate_actions. */
+  climate_show_pause_action?: boolean;
+  climate_show_room_assist?: boolean;
+  climate_show_state_bar?: boolean;
+  /** @deprecated Ignored; the control surface is composed from its internal visibility options. */
+  climate_show_thermostat_controls?: boolean;
+  climate_show_control_mode?: boolean;
+  climate_show_target_control?: boolean;
+  climate_show_hvac_mode_control?: boolean;
+  climate_show_native_climate_link?: boolean;
+  climate_show_timeline?: boolean;
+  climate_show_timeline_mode?: boolean;
+  climate_show_timeline_profile?: boolean;
+  climate_show_timeline_title?: boolean;
+  /** @deprecated Ignored; the Velair header shortcut is always visible. */
+  climate_show_velair_link?: boolean;
+  climate_show_windows?: boolean;
+  climate_window_entities?: string[];
+  climate_window_display?: "grouped" | "individual";
   entities?: string[];
   first_weekday?: string;
   show_comfort_co2?: boolean;
@@ -101,7 +163,7 @@ export type VelairOverviewCardView =
   | "overview-zones";
 // `profiles` remains accepted as a legacy panel/card route. New navigation
 // exposes Profiles through the Schedules workspace and uses `modes` here.
-export type VelairCardView = VelairPanelView | VelairOverviewCardView | "profiles";
+export type VelairCardView = VelairPanelView | VelairOverviewCardView | "climate" | "profiles";
 
 export type ScheduleBlock = {
   action?: string;
@@ -201,6 +263,7 @@ export type PreconditioningSettings = {
 
 export type ComfortSettings = {
   enabled: boolean;
+  comfort_model: "simple" | "guided" | "temperature_aware";
   temperature_entity_id: string | null;
   humidity_enabled: boolean;
   humidity_entity_id: string | null;
@@ -209,14 +272,72 @@ export type ComfortSettings = {
   temperature_max: number;
   humidity_min: number;
   humidity_max: number;
+  temperature_aware: TemperatureAwareHumiditySettings;
   co2_attention: number;
   co2_poor: number;
   stale_after_minutes: number;
+  outdoor_comparison_enabled: boolean;
+  outdoor_temperature_entity_id: string | null;
+  outdoor_humidity_entity_id: string | null;
+  ventilation_temperature_threshold: number;
+  ventilation_humidity_threshold: number;
+  ventilation_absolute_humidity_threshold: number;
+  derived_metrics: Record<DerivedComfortMetric, DerivedComfortMetricSettings>;
+};
+
+export type TemperatureAwareHumidityRange = {
+  minimum: number;
+  maximum: number;
+};
+
+export type TemperatureAwareHumiditySettings = {
+  at_temperature_min: TemperatureAwareHumidityRange;
+  at_temperature_max: TemperatureAwareHumidityRange;
+};
+
+export type DerivedComfortMetric = "dew_point" | "absolute_humidity" | "humidex";
+
+export type DerivedComfortMetricSettings = {
+  enabled: boolean;
+  source: "velair" | "entity";
+  entity_id: string | null;
+};
+
+export type ComfortSettingsUpdate = Omit<
+  Partial<ComfortSettings>,
+  "derived_metrics" | "temperature_aware"
+> & {
+  derived_metrics?: Partial<Record<DerivedComfortMetric, Partial<DerivedComfortMetricSettings>>>;
+  temperature_aware?: Partial<{
+    at_temperature_min: Partial<TemperatureAwareHumidityRange>;
+    at_temperature_max: Partial<TemperatureAwareHumidityRange>;
+  }>;
+};
+
+export type ComfortZoneAssessment = {
+  model: "simple" | "guided" | "temperature_aware";
+  temperature_min: number;
+  temperature_max: number;
+  points: Array<{
+    temperature: number;
+    humidity_min: number;
+    humidity_max: number;
+  }>;
+  effective_humidity_range?: {
+    temperature: number;
+    minimum: number;
+    maximum: number;
+  } | null;
+  reference?: {
+    temperature: number;
+    humidity_min: number;
+    humidity_max: number;
+  };
 };
 
 export type ComfortMetricAssessment = {
   attention?: number;
-  availability: "current" | "missing" | "stale" | "not_monitored";
+  availability: "current" | "missing" | "stale" | "invalid" | "not_monitored";
   condition:
     | "cold"
     | "comfortable"
@@ -229,10 +350,69 @@ export type ComfortMetricAssessment = {
     | null;
   entity_id?: string | null;
   max?: number;
-  metric: "temperature" | "humidity" | "co2";
+  metric:
+    | "temperature"
+    | "humidity"
+    | "co2"
+    | "outdoor_temperature"
+    | "outdoor_humidity"
+    | "indoor_absolute_humidity"
+    | "outdoor_absolute_humidity"
+    | DerivedComfortMetric;
   min?: number;
   source: string;
   value?: number | null;
+  unit?: string | null;
+  issues?: string[];
+  input_entity_ids?: string[];
+  temperature_range_position?: "below" | "within" | "above" | null;
+};
+
+export type ComfortOutdoorAvailability = ComfortMetricAssessment["availability"];
+
+export type ComfortOutdoorComparisonDimension = {
+  availability: ComfortOutdoorAvailability;
+  effect: "cooler" | "warmer" | "drier" | "more_humid" | "similar" | null;
+  potential: "cooling" | "warming" | "drying" | "humidifying" | null;
+  blocked_by: Array<"temperature" | "humidity">;
+  delta?: number | null;
+  absolute_humidity_delta?: number | null;
+  equivalent_indoor_relative_humidity?: number | null;
+  equivalent_indoor_relative_humidity_delta?: number | null;
+};
+
+export type ComfortOutdoorAssessment = {
+  enabled: boolean;
+  data_quality: "complete" | "partial" | "stale" | "unavailable";
+  data_issues: string[];
+  temperature?: ComfortMetricAssessment;
+  humidity?: ComfortMetricAssessment;
+  indoor_absolute_humidity?: ComfortMetricAssessment;
+  absolute_humidity?: ComfortMetricAssessment;
+  comparison?: {
+    temperature?: ComfortOutdoorComparisonDimension;
+    humidity?: ComfortOutdoorComparisonDimension;
+  };
+  guidance_thresholds?: {
+    temperature_delta: number;
+    temperature_unit: string;
+    humidity_delta_percentage_points: number;
+    absolute_humidity_delta_g_m3: number;
+  };
+};
+
+export type VentilationOpportunityAssessment = {
+  state:
+    | "unavailable"
+    | "no_opportunity"
+    | "may_help"
+    | "comfort_possible"
+    | "trade_off"
+    | "already_comfortable";
+  evaluation_scope: "temperature_only" | "temperature_and_humidity" | null;
+  potential_effects: Array<"cooling" | "warming" | "drying" | "humidifying">;
+  blocked_by: Array<"temperature" | "humidity">;
+  reason: string;
 };
 
 export type ComfortAssessment = {
@@ -254,9 +434,30 @@ export type ComfortAssessment = {
   air_quality: "not_monitored" | "unavailable" | "good" | "elevated" | "poor";
   data_quality: "complete" | "partial" | "stale" | "unavailable";
   data_issues: string[];
+  comfort_zone?: ComfortZoneAssessment;
+  range_summary?: {
+    status: "within_range" | "outside_range" | "mixed" | "unavailable";
+    thermal_relation: "aligned" | "mixed" | "not_evaluated" | "unavailable";
+    positions: {
+      temperature: "below" | "within" | "above" | null;
+      humidity: "below" | "within" | "above" | null;
+      humidex: "below" | "within" | "above" | null;
+    };
+  };
   temperature?: ComfortMetricAssessment;
   humidity?: ComfortMetricAssessment;
   co2?: ComfortMetricAssessment;
+  derived_metrics?: Record<DerivedComfortMetric, ComfortMetricAssessment>;
+  outdoor?: ComfortOutdoorAssessment;
+  ventilation_opportunity?: VentilationOpportunityAssessment;
+  insights?: ComfortInsight[];
+};
+
+export type ComfortInsight = {
+  code: string;
+  kind: "primary" | "context";
+  tone: "positive" | "neutral" | "cool" | "warm" | "attention" | "critical";
+  metrics: string[];
 };
 
 export type PreconditioningDirectionLearning = {
@@ -338,6 +539,8 @@ export type ScheduleZone = {
   preconditioning?: PreconditioningSettings;
   comfort?: ComfortSettings;
   external_change_policy?: ExternalChangePolicy;
+  target_temp_step_override?: number;
+  last_reported_target_temp_step?: number;
   execution?: { type: "external"; provider: string };
 };
 

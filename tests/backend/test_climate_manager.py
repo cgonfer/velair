@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from . import helpers  # noqa: F401 - installs Home Assistant test stubs
 from homeassistant.const import UnitOfTemperature
@@ -52,6 +53,18 @@ class _LogicalActionRecorder:
             )
         if service == self.fail_service:
             raise RuntimeError("service failed")
+
+
+class _TimedLogicalActionRecorder:
+    def __init__(self, clock) -> None:
+        self.clock = clock
+        self.calls = 0
+
+    async def async_call(
+        self, _domain, _service, _data, *, blocking=False, context=None
+    ) -> None:
+        self.calls += 1
+        self.clock.return_value = 100.0 + (30.0 * self.calls)
 
 
 class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
@@ -126,6 +139,479 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             {"hvac_mode", "temperature"},
             manager.owned_state_change_fields("climate.room", new, old),
+        )
+
+    async def test_mode_only_off_to_on_owns_restored_scalar_target(self) -> None:
+        for target_mode in ("heat", "cool"):
+            with self.subTest(target_mode=target_mode):
+                manager = self._manager()
+                state = manager._hass.states["climate.room"]
+                state.state = "off"
+                state.attributes.pop("temperature", None)
+
+                await manager.async_set_hvac_mode("climate.room", target_mode)
+
+                old = SimpleNamespace(state="off", attributes={}, context=None)
+                restored = SimpleNamespace(
+                    state=target_mode,
+                    attributes={"temperature": 21.0},
+                    context=None,
+                )
+                self.assertEqual(
+                    {"hvac_mode", "temperature"},
+                    manager.owned_state_change_fields(
+                        "climate.room", restored, old
+                    ),
+                )
+                self.assertNotIn(
+                    "temperature", manager._settling.get("climate.room", {})
+                )
+
+    async def test_mode_only_owns_separate_contextless_target_restoration(
+        self,
+    ) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+        await manager.async_set_hvac_mode("climate.room", "heat")
+
+        old = SimpleNamespace(state="off", attributes={}, context=None)
+        mode_echo = SimpleNamespace(state="heat", attributes={}, context=None)
+        self.assertEqual(
+            {"hvac_mode"},
+            manager.owned_state_change_fields("climate.room", mode_echo, old),
+        )
+
+        restored = SimpleNamespace(
+            state="heat",
+            attributes={"temperature": 21.0},
+            context=None,
+        )
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", restored, mode_echo
+            ),
+        )
+        self.assertNotIn(
+            "temperature", manager._settling.get("climate.room", {})
+        )
+
+    async def test_mode_only_owns_target_restored_before_mode_echo(self) -> None:
+        for use_owned_context in (False, True):
+            with self.subTest(use_owned_context=use_owned_context):
+                manager = self._manager()
+                state = manager._hass.states["climate.room"]
+                state.state = "off"
+                state.attributes.pop("temperature", None)
+                await manager.async_set_hvac_mode("climate.room", "heat")
+                candidate = manager._expected["climate.room"][0]
+                context = (
+                    SimpleNamespace(id=candidate["context_id"])
+                    if use_owned_context
+                    else None
+                )
+
+                old = SimpleNamespace(state="off", attributes={}, context=None)
+                target_echo = SimpleNamespace(
+                    state="off",
+                    attributes={"temperature": 21.0},
+                    context=context,
+                )
+                self.assertEqual(
+                    {"temperature"},
+                    manager.owned_state_change_fields(
+                        "climate.room", target_echo, old
+                    ),
+                )
+                transition = manager._expected["climate.room"][0][
+                    "structural_transition"
+                ]
+                self.assertFalse(transition["mode_confirmed"])
+                self.assertEqual(
+                    {"temperature"}, transition["provisional_fields"]
+                )
+
+                mode_echo = SimpleNamespace(
+                    state="heat",
+                    attributes={"temperature": 21.0},
+                    context=context,
+                )
+                self.assertEqual(
+                    {"hvac_mode"},
+                    manager.owned_state_change_fields(
+                        "climate.room", mode_echo, target_echo
+                    ),
+                )
+                remaining = manager._expected.get("climate.room", [])
+                self.assertTrue(all(
+                    "temperature"
+                    not in item.get("structural_transition", {}).get(
+                        "fields", set()
+                    )
+                    for item in remaining
+                ))
+
+    async def test_mode_only_owns_range_shape_before_mode_echo(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "heat"
+        state.attributes.update(
+            {
+                "supported_features": 3,
+                "hvac_modes": ["off", "heat", "cool", "heat_cool"],
+                "temperature": 21.0,
+            }
+        )
+        await manager.async_set_hvac_mode("climate.room", "heat_cool")
+
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 21.0}, context=None
+        )
+        target_echo = SimpleNamespace(
+            state="heat",
+            attributes={
+                "target_temp_low": 19.0,
+                "target_temp_high": 24.0,
+            },
+            context=None,
+        )
+        self.assertEqual(
+            {"temperature", "target_temp_low", "target_temp_high"},
+            manager.owned_state_change_fields(
+                "climate.room", target_echo, old
+            ),
+        )
+        mode_echo = SimpleNamespace(
+            state="heat_cool",
+            attributes=dict(target_echo.attributes),
+            context=None,
+        )
+        self.assertEqual(
+            {"hvac_mode"},
+            manager.owned_state_change_fields(
+                "climate.room", mode_echo, target_echo
+            ),
+        )
+        self.assertNotIn("climate.room", manager._expected)
+
+    async def test_provisional_shape_permission_expires_without_mode_echo(
+        self,
+    ) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+        with patch(
+            "custom_components.velair.climate_manager.monotonic",
+            return_value=100.0,
+        ):
+            await manager.async_set_hvac_mode("climate.room", "heat")
+
+        old = SimpleNamespace(state="off", attributes={}, context=None)
+        target_echo = SimpleNamespace(
+            state="off",
+            attributes={"temperature": 21.0},
+            context=None,
+        )
+        with patch(
+            "custom_components.velair.climate_manager.monotonic",
+            return_value=146.0,
+        ):
+            self.assertEqual(
+                set(),
+                manager.owned_state_change_fields(
+                    "climate.room", target_echo, old
+                ),
+            )
+
+    async def test_provisional_shape_rejects_finite_target_change(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "heat"
+        state.attributes["temperature"] = 21.0
+        await manager.async_set_hvac_mode("climate.room", "cool")
+
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 21.0}, context=None
+        )
+        changed = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields("climate.room", changed, old),
+        )
+
+    async def test_provisional_shape_rejects_explicit_user_context(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+        await manager.async_set_hvac_mode("climate.room", "heat")
+
+        old = SimpleNamespace(state="off", attributes={}, context=None)
+        target_echo = SimpleNamespace(
+            state="off",
+            attributes={"temperature": 21.0},
+            context=SimpleNamespace(
+                id="user-context", parent_id=None, user_id="user-id"
+            ),
+        )
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", target_echo, old
+            ),
+        )
+
+    async def test_failed_mode_superseder_restores_previous_shape_permission(
+        self,
+    ) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+        await manager.async_set_hvac_mode("climate.room", "heat")
+        previous_context = manager._expected["climate.room"][0]["context_id"]
+
+        manager._hass.services = _ContextServiceRecorder(fail=True)
+        with self.assertRaisesRegex(RuntimeError, "service failed"):
+            await manager.async_set_hvac_mode("climate.room", "cool")
+
+        candidates = manager._expected["climate.room"]
+        self.assertEqual(1, len(candidates))
+        self.assertEqual(previous_context, candidates[0]["context_id"])
+        self.assertEqual(
+            "heat", candidates[0]["structural_transition"]["mode"]
+        )
+        old = SimpleNamespace(state="off", attributes={}, context=None)
+        late_echo = SimpleNamespace(
+            state="heat",
+            attributes={"temperature": 21.0},
+            context=None,
+        )
+        self.assertEqual(
+            {"hvac_mode", "temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", late_echo, old
+            ),
+        )
+
+    async def test_rejected_mode_superseder_keeps_previous_shape_permission(
+        self,
+    ) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+        await manager.async_set_hvac_mode("climate.room", "heat")
+        previous = manager._expected["climate.room"][0]
+
+        def reject(_entity_id: str) -> None:
+            raise RuntimeError("not local")
+
+        manager._execution_authority = SimpleNamespace(ensure_local=reject)
+        with self.assertRaisesRegex(RuntimeError, "not local"):
+            await manager.async_set_hvac_mode("climate.room", "cool")
+
+        self.assertEqual([previous], manager._expected["climate.room"])
+
+    async def test_mode_only_owns_scalar_to_range_shape_change(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "heat"
+        state.attributes.update(
+            {
+                "supported_features": 3,
+                "hvac_modes": ["off", "heat", "cool", "heat_cool"],
+                "temperature": 21.0,
+            }
+        )
+        await manager.async_set_hvac_mode("climate.room", "heat_cool")
+
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 21.0}, context=None
+        )
+        reshaped = SimpleNamespace(
+            state="heat_cool",
+            attributes={
+                "target_temp_low": 19.0,
+                "target_temp_high": 24.0,
+            },
+            context=None,
+        )
+        self.assertEqual(
+            {
+                "hvac_mode",
+                "temperature",
+                "target_temp_low",
+                "target_temp_high",
+            },
+            manager.owned_state_change_fields(
+                "climate.room", reshaped, old
+            ),
+        )
+        self.assertEqual(
+            {"hvac_mode"},
+            set(manager._settling.get("climate.room", {})),
+        )
+
+    async def test_mode_only_owns_range_to_scalar_shape_change(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "heat_cool"
+        state.attributes.pop("temperature", None)
+        state.attributes.update(
+            {
+                "supported_features": 3,
+                "hvac_modes": ["off", "heat", "cool", "heat_cool"],
+                "target_temp_low": 19.0,
+                "target_temp_high": 24.0,
+            }
+        )
+        await manager.async_set_hvac_mode("climate.room", "cool")
+
+        old = SimpleNamespace(
+            state="heat_cool",
+            attributes={
+                "target_temp_low": 19.0,
+                "target_temp_high": 24.0,
+            },
+            context=None,
+        )
+        reshaped = SimpleNamespace(
+            state="cool",
+            attributes={"temperature": 23.0},
+            context=None,
+        )
+        self.assertEqual(
+            {
+                "hvac_mode",
+                "temperature",
+                "target_temp_low",
+                "target_temp_high",
+            },
+            manager.owned_state_change_fields(
+                "climate.room", reshaped, old
+            ),
+        )
+
+    async def test_new_mode_generation_supersedes_old_shape_permission(
+        self,
+    ) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+
+        await manager.async_set_hvac_mode("climate.room", "heat")
+        old = SimpleNamespace(state="off", attributes={}, context=None)
+        provisional = SimpleNamespace(
+            state="off",
+            attributes={"temperature": 21.0},
+            context=None,
+        )
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", provisional, old
+            ),
+        )
+        old_context = manager._expected["climate.room"][0]["context_id"]
+        await manager.async_set_hvac_mode("climate.room", "cool")
+
+        candidates = manager._expected["climate.room"]
+        self.assertEqual(1, len(candidates))
+        self.assertNotEqual(old_context, candidates[0]["context_id"])
+        self.assertEqual(
+            "cool", candidates[0]["structural_transition"]["mode"]
+        )
+        late_heat = SimpleNamespace(
+            state="heat",
+            attributes={"temperature": 21.0},
+            context=None,
+        )
+        self.assertEqual(
+            {"hvac_mode"},
+            manager.owned_state_change_fields(
+                "climate.room", late_heat, provisional
+            ),
+        )
+
+    async def test_repeated_mode_supersession_keeps_snapshot_depth_constant(
+        self,
+    ) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+
+        for index in range(40):
+            await manager.async_set_hvac_mode(
+                "climate.room", "heat" if index % 2 == 0 else "cool"
+            )
+            candidates = manager._expected["climate.room"]
+            self.assertEqual(1, len(candidates))
+            snapshots = candidates[0].get(
+                "superseded_structural_candidates", []
+            )
+            self.assertLessEqual(len(snapshots), 1)
+            self.assertTrue(all(
+                "superseded_structural_candidates" not in previous
+                for previous in snapshots
+            ))
+
+    async def test_mode_only_does_not_own_finite_target_change(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "heat"
+        state.attributes["temperature"] = 21.0
+        await manager.async_set_hvac_mode("climate.room", "cool")
+
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 21.0}, context=None
+        )
+        changed = SimpleNamespace(
+            state="cool", attributes={"temperature": 22.0}, context=None
+        )
+        self.assertEqual(
+            {"hvac_mode"},
+            manager.owned_state_change_fields("climate.room", changed, old),
+        )
+        later = SimpleNamespace(
+            state="cool", attributes={"temperature": 23.0}, context=None
+        )
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", later, changed
+            ),
+        )
+
+    async def test_mode_only_does_not_own_user_context_target_shape(self) -> None:
+        manager = self._manager()
+        state = manager._hass.states["climate.room"]
+        state.state = "off"
+        state.attributes.pop("temperature", None)
+        await manager.async_set_hvac_mode("climate.room", "heat")
+
+        old = SimpleNamespace(state="off", attributes={}, context=None)
+        user_change = SimpleNamespace(
+            state="heat",
+            attributes={"temperature": 21.0},
+            context=SimpleNamespace(
+                id="user-context",
+                parent_id=None,
+                user_id="user-id",
+            ),
+        )
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", user_change, old
+            ),
         )
 
     async def test_turning_off_owns_coalesced_scalar_target_disappearance(self) -> None:
@@ -225,7 +711,9 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
         new = SimpleNamespace(
             state="off",
             attributes={},
-            context=SimpleNamespace(id="external-context"),
+            context=SimpleNamespace(
+                id="external-context", parent_id=None, user_id="user-id"
+            ),
         )
 
         self.assertEqual(
@@ -521,7 +1009,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             context=SimpleNamespace(id=context_id),
         )
         self.assertEqual(
-            set(),
+            {"temperature"},
             manager.owned_state_change_fields(
                 "climate.room",
                 second_appearance,
@@ -534,7 +1022,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             context=SimpleNamespace(id=context_id),
         )
         self.assertEqual(
-            set(),
+            {"temperature"},
             manager.owned_state_change_fields("climate.room", divergent, restored),
         )
         final = SimpleNamespace(
@@ -570,7 +1058,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             state="cool", attributes={"temperature": 20.0}, context=None
         )
         self.assertEqual(
-            set(),
+            {"temperature"},
             manager.owned_state_change_fields(
                 "climate.room", contextless_target, mode_echo
             ),
@@ -703,7 +1191,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             context=SimpleNamespace(id=context_id),
         )
         self.assertEqual(
-            set(),
+            {"target_temp_low"},
             manager.owned_state_change_fields(
                 "climate.room", reappeared_low, missing_low
             ),
@@ -729,11 +1217,11 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             context=SimpleNamespace(id=context_id),
         )
         self.assertEqual(
-            set(),
+            {"temperature"},
             manager.owned_state_change_fields("climate.room", divergent, old),
         )
 
-    async def test_coalesced_divergent_target_remains_external(self) -> None:
+    async def test_coalesced_divergent_target_is_ambiguous_while_settling(self) -> None:
         manager = self._manager()
         manager._hass.states["climate.room"].state = "off"
         await manager.async_set_temperature(
@@ -750,7 +1238,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            {"hvac_mode"},
+            {"hvac_mode", "temperature"},
             manager.owned_state_change_fields("climate.room", new, old),
         )
         self.assertEqual(
@@ -853,6 +1341,144 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual({}, manager._contexts)
         self.assertEqual({}, manager._expected)
 
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_slow_failed_target_finalizes_retained_mode_settling(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        manager._hass.states["climate.room"].state = "off"
+
+        class SlowFailingTarget:
+            calls = 0
+
+            async def async_call(inner_self, _domain, service, _data, **_kwargs):
+                inner_self.calls += 1
+                monotonic_mock.return_value = 130.0 + 30.0 * (
+                    inner_self.calls - 1
+                )
+                if service == "set_temperature":
+                    raise RuntimeError("service failed")
+
+        manager._hass.services = SlowFailingTarget()
+        with self.assertRaisesRegex(RuntimeError, "service failed"):
+            await manager.async_set_temperature(
+                "climate.room", 21.0, hvac_mode="heat"
+            )
+
+        candidate = manager._expected["climate.room"][0]
+        self.assertFalse(candidate["delivery_pending"])
+        self.assertEqual(205.0, candidate["settles_until"])
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_failed_target_retains_mode_settling_after_early_echo(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        manager._hass.states["climate.room"].state = "off"
+
+        class EarlyModeEchoThenFail:
+            calls = 0
+
+            async def async_call(
+                inner_self, _domain, service, _data, *, context=None, **_kwargs
+            ):
+                inner_self.calls += 1
+                if service == "set_hvac_mode":
+                    monotonic_mock.return_value = 130.0
+                    old = SimpleNamespace(
+                        state="off",
+                        attributes={"temperature": 20.0},
+                        context=None,
+                    )
+                    mode_echo = SimpleNamespace(
+                        state="heat",
+                        attributes={"temperature": 20.0},
+                        context=SimpleNamespace(id=context.id),
+                    )
+                    self.assertEqual(
+                        {"hvac_mode"},
+                        manager.owned_state_change_fields(
+                            "climate.room", mode_echo, old
+                        ),
+                    )
+                    return
+                monotonic_mock.return_value = 160.0
+                raise RuntimeError("service failed")
+
+        manager._hass.services = EarlyModeEchoThenFail()
+        with self.assertRaisesRegex(RuntimeError, "service failed"):
+            await manager.async_set_temperature(
+                "climate.room", 21.0, hvac_mode="heat"
+            )
+
+        self.assertNotIn("climate.room", manager._expected)
+        settling = manager._settling["climate.room"]["hvac_mode"]
+        self.assertFalse(settling["delivery_pending"])
+        self.assertEqual(205.0, settling["expires"])
+        rollback = SimpleNamespace(
+            state="off", attributes={"temperature": 20.0}, context=None
+        )
+        heat = SimpleNamespace(
+            state="heat", attributes={"temperature": 20.0}, context=None
+        )
+        monotonic_mock.return_value = 180.0
+        self.assertEqual(
+            {"hvac_mode"},
+            manager.owned_state_change_fields("climate.room", rollback, heat),
+        )
+
+    async def test_failed_action_discards_settling_created_by_early_echo(
+        self,
+    ) -> None:
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        context_id = manager._expected["climate.room"][0]["context_id"]
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        expected = SimpleNamespace(
+            state="cool", attributes={"temperature": 21.0}, context=None
+        )
+        manager.owned_state_change_fields("climate.room", expected, old)
+        self.assertIn("temperature", manager._settling["climate.room"])
+
+        manager._discard_expected_action("climate.room", context_id)
+
+        self.assertNotIn("climate.room", manager._settling)
+        self.assertNotIn("climate.room", manager._field_generations)
+
+    async def test_partial_failure_discards_unaccepted_field_settling(self) -> None:
+        manager = self._manager()
+        manager._hass.states["climate.room"].state = "off"
+        await manager.async_set_temperature(
+            "climate.room", 21.0, ensure_on=True, hvac_mode="heat"
+        )
+        candidate = manager._expected["climate.room"][0]
+        context_id = candidate["context_id"]
+        old = SimpleNamespace(
+            state="off", attributes={"temperature": 20.0}, context=None
+        )
+        target_echo = SimpleNamespace(
+            state="off", attributes={"temperature": 21.0}, context=None
+        )
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields("climate.room", target_echo, old),
+        )
+        self.assertIn("temperature", manager._settling["climate.room"])
+
+        manager._retain_expected_action_fields(
+            "climate.room", context_id, {"hvac_mode"}
+        )
+
+        self.assertNotIn("climate.room", manager._settling)
+        self.assertEqual(
+            {"hvac_mode": "heat"},
+            manager._expected["climate.room"][0]["expected"],
+        )
+
     async def test_temperature_matching_uses_native_step_tolerance(self) -> None:
         manager = self._manager()
         await manager.async_set_temperature("climate.room", 21.0)
@@ -877,7 +1503,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(manager.owns_state_change("climate.room", new, old))
         self.assertEqual(1, len(manager._expected["climate.room"]))
 
-    async def test_known_context_with_divergent_control_state_is_external(self) -> None:
+    async def test_known_context_with_divergent_control_state_is_ambiguous(self) -> None:
         manager = self._manager()
         await manager.async_set_hvac_mode("climate.room", "cool")
         context_id = manager._expected["climate.room"][0]["context_id"]
@@ -890,7 +1516,615 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             context=SimpleNamespace(id=context_id),
         )
         self.assertEqual(
-            set(), manager.owned_state_change_fields("climate.room", new, old)
+            {"hvac_mode"},
+            manager.owned_state_change_fields("climate.room", new, old),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_active_expectation_owns_intermediate_before_expected_echo(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 16.0)
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 10.0}, context=None
+        )
+        intermediate = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields("climate.room", intermediate, old),
+        )
+        self.assertEqual(
+            {"temperature": 16.0},
+            manager._expected["climate.room"][0]["expected"],
+        )
+
+        expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 16.0}, context=None
+        )
+        monotonic_mock.return_value = 102.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", expected, intermediate
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_new_generation_owns_old_echo_before_new_expected_echo(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 22.0)
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 18.0}, context=None
+        )
+        first_expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        manager.owned_state_change_fields("climate.room", first_expected, old)
+
+        monotonic_mock.return_value = 105.0
+        await manager.async_set_temperature("climate.room", 16.0)
+        self.assertNotIn("climate.room", manager._settling)
+        old_generation_echo = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        current = SimpleNamespace(
+            state="heat", attributes={"temperature": 18.0}, context=None
+        )
+        monotonic_mock.return_value = 106.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", old_generation_echo, current
+            ),
+        )
+        self.assertEqual(
+            {"temperature": 16.0},
+            manager._expected["climate.room"][0]["expected"],
+        )
+        new_expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 16.0}, context=None
+        )
+        monotonic_mock.return_value = 107.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", new_expected, old_generation_echo
+            ),
+        )
+        late_old_echo = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        monotonic_mock.return_value = 151.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", late_old_echo, new_expected
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_unconfirmed_old_generation_cannot_outlive_new_deadline(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 22.0)
+
+        monotonic_mock.return_value = 105.0
+        await manager.async_set_temperature("climate.room", 16.0)
+        self.assertEqual(1, len(manager._expected["climate.room"]))
+        current = SimpleNamespace(
+            state="heat", attributes={"temperature": 18.0}, context=None
+        )
+        new_expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 16.0}, context=None
+        )
+        monotonic_mock.return_value = 106.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", new_expected, current
+            ),
+        )
+
+        late_old_echo = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        monotonic_mock.return_value = 151.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", late_old_echo, new_expected
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_failed_new_generation_restores_previous_settling(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 22.0)
+        old = SimpleNamespace(
+            state="heat", attributes={"temperature": 18.0}, context=None
+        )
+        first_expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        manager.owned_state_change_fields("climate.room", first_expected, old)
+
+        monotonic_mock.return_value = 105.0
+        await manager.async_set_temperature("climate.room", 16.0)
+        new_context = manager._expected["climate.room"][0]["context_id"]
+        new_expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 16.0}, context=None
+        )
+        monotonic_mock.return_value = 106.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", new_expected, first_expected
+            ),
+        )
+        self.assertNotIn("climate.room", manager._expected)
+        manager._discard_expected_action("climate.room", new_context)
+
+        transient_old_echo = SimpleNamespace(
+            state="heat", attributes={"temperature": 20.0}, context=None
+        )
+        monotonic_mock.return_value = 110.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", transient_old_echo, new_expected
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_settling_deadline_is_absolute_and_cleans_up(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        expected = SimpleNamespace(
+            state="cool", attributes={"temperature": 21.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        manager.owned_state_change_fields("climate.room", expected, old)
+
+        intermediate = SimpleNamespace(
+            state="cool", attributes={"temperature": 19.0}, context=None
+        )
+        monotonic_mock.return_value = 129.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", intermediate, expected
+            ),
+        )
+        returned = SimpleNamespace(
+            state="cool", attributes={"temperature": 21.0}, context=None
+        )
+        monotonic_mock.return_value = 144.9
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", returned, intermediate
+            ),
+        )
+        late = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        monotonic_mock.return_value = 145.1
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields("climate.room", late, returned),
+        )
+        self.assertNotIn("climate.room", manager._settling)
+        self.assertNotIn("climate.room", manager._field_generations)
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_settling_budget_starts_after_logical_delivery_completes(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        manager._hass.states["climate.room"].state = "off"
+        manager._hass.services = _TimedLogicalActionRecorder(monotonic_mock)
+
+        await manager.async_set_temperature(
+            "climate.room", 21.0, hvac_mode="heat"
+        )
+
+        self.assertEqual(2, manager._hass.services.calls)
+        candidate = manager._expected["climate.room"][0]
+        self.assertEqual(205.0, candidate["settles_until"])
+        expected = SimpleNamespace(
+            state="heat", attributes={"temperature": 21.0}, context=None
+        )
+        old = SimpleNamespace(
+            state="off", attributes={"temperature": 20.0}, context=None
+        )
+        monotonic_mock.return_value = 170.0
+        manager.owned_state_change_fields("climate.room", expected, old)
+        intermediate = SimpleNamespace(
+            state="heat", attributes={"temperature": 19.0}, context=None
+        )
+        monotonic_mock.return_value = 204.9
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", intermediate, expected
+            ),
+        )
+        monotonic_mock.return_value = 205.1
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", intermediate, expected
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_inflight_delivery_remains_owned_past_initial_deadline(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        manager._hass.states["climate.room"].state = "off"
+
+        class InflightRecorder:
+            calls = 0
+            observed_fields = None
+
+            async def async_call(inner_self, _domain, _service, _data, **_kwargs):
+                inner_self.calls += 1
+                if inner_self.calls == 1:
+                    monotonic_mock.return_value = 146.0
+                    old = SimpleNamespace(
+                        state="off",
+                        attributes={"temperature": 20.0},
+                        context=None,
+                    )
+                    intermediate = SimpleNamespace(
+                        state="off",
+                        attributes={"temperature": 19.0},
+                        context=None,
+                    )
+                    inner_self.observed_fields = manager.owned_state_change_fields(
+                        "climate.room", intermediate, old
+                    )
+                else:
+                    monotonic_mock.return_value = 160.0
+
+        recorder = InflightRecorder()
+        manager._hass.services = recorder
+        await manager.async_set_temperature(
+            "climate.room", 21.0, hvac_mode="heat"
+        )
+
+        self.assertEqual({"temperature"}, recorder.observed_fields)
+        self.assertEqual(
+            205.0,
+            manager._expected["climate.room"][0]["settles_until"],
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_persistent_command_divergence_is_reported(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        expected = SimpleNamespace(
+            state="cool", attributes={"temperature": 21.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        manager.owned_state_change_fields("climate.room", expected, old)
+        manager._hass.states["climate.room"].attributes["temperature"] = 19.0
+
+        monotonic_mock.return_value = 145.1
+        diagnostics = manager.command_settling_diagnostics("climate.room")
+
+        self.assertFalse(diagnostics["active"])
+        self.assertEqual(
+            {"expected": 21.0, "observed": 19.0},
+            diagnostics["mismatches"]["temperature"],
+        )
+
+        returned = SimpleNamespace(
+            state="cool", attributes={"temperature": 21.0}, context=None
+        )
+        intermediate = SimpleNamespace(
+            state="cool", attributes={"temperature": 19.0}, context=None
+        )
+        monotonic_mock.return_value = 150.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", returned, intermediate
+            ),
+        )
+        self.assertEqual(
+            {},
+            manager.command_settling_diagnostics("climate.room")["mismatches"],
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_unacknowledged_command_divergence_is_reported_at_deadline(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        manager._hass.states["climate.room"].attributes["temperature"] = 19.0
+
+        monotonic_mock.return_value = 145.1
+        diagnostics = manager.command_settling_diagnostics("climate.room")
+
+        self.assertFalse(diagnostics["active"])
+        self.assertEqual(
+            {"expected": 21.0, "observed": 19.0},
+            diagnostics["mismatches"]["temperature"],
+        )
+
+        late_expected = SimpleNamespace(
+            state="cool", attributes={"temperature": 21.0}, context=None
+        )
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 19.0}, context=None
+        )
+        monotonic_mock.return_value = 150.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", late_expected, old
+            ),
+        )
+        self.assertEqual(
+            {},
+            manager.command_settling_diagnostics("climate.room")["mismatches"],
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_explicit_user_context_is_external_during_active_expectation(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        manual = SimpleNamespace(
+            state="cool",
+            attributes={"temperature": 19.0},
+            context=SimpleNamespace(
+                id="external-user", parent_id=None, user_id="user-id"
+            ),
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields("climate.room", manual, old),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_explicit_user_exact_expected_value_remains_external(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        manual = SimpleNamespace(
+            state="cool",
+            attributes={"temperature": 21.0},
+            context=SimpleNamespace(
+                id="external-user", parent_id=None, user_id="user-id"
+            ),
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields("climate.room", manual, old),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_foreign_automation_context_is_external_during_settling(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        automation = SimpleNamespace(
+            state="cool",
+            attributes={"temperature": 19.0},
+            context=SimpleNamespace(
+                id="automation-service", parent_id="automation-run", user_id=None
+            ),
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields("climate.room", automation, old),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_foreign_automation_exact_expected_value_remains_external(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        automation = SimpleNamespace(
+            state="cool",
+            attributes={"temperature": 21.0},
+            context=SimpleNamespace(
+                id="automation-service", parent_id="automation-run", user_id=None
+            ),
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields("climate.room", automation, old),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_anonymous_root_context_remains_ambiguous_during_settling(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        device_echo = SimpleNamespace(
+            state="cool",
+            attributes={"temperature": 19.0},
+            context=SimpleNamespace(
+                id="integration-echo", parent_id=None, user_id=None
+            ),
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields("climate.room", device_echo, old),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_active_settling_is_scoped_to_command_fields(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 21.0)
+        old = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        unrelated_mode = SimpleNamespace(
+            state="heat", attributes={"temperature": 20.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            set(),
+            manager.owned_state_change_fields(
+                "climate.room", unrelated_mode, old
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_room_assist_like_target_bounce_stays_owned(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_temperature("climate.room", 16.0)
+        scheduled = SimpleNamespace(
+            state="heat", attributes={"temperature": 22.0}, context=None
+        )
+        effective = SimpleNamespace(
+            state="heat", attributes={"temperature": 16.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", scheduled, effective
+            ),
+        )
+        monotonic_mock.return_value = 102.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", effective, scheduled
+            ),
+        )
+        monotonic_mock.return_value = 120.0
+        self.assertEqual(
+            {"temperature"},
+            manager.owned_state_change_fields(
+                "climate.room", scheduled, effective
+            ),
+        )
+
+    @patch("custom_components.velair.climate_manager.monotonic")
+    async def test_hvac_and_range_fields_stabilize_independently(
+        self, monotonic_mock
+    ) -> None:
+        monotonic_mock.return_value = 100.0
+        manager = self._manager()
+        await manager.async_set_hvac_mode("climate.room", "heat")
+        old_mode = SimpleNamespace(
+            state="cool", attributes={"temperature": 20.0}, context=None
+        )
+        intermediate_mode = SimpleNamespace(
+            state="off", attributes={"temperature": 20.0}, context=None
+        )
+        monotonic_mock.return_value = 101.0
+        self.assertEqual(
+            {"hvac_mode"},
+            manager.owned_state_change_fields(
+                "climate.room", intermediate_mode, old_mode
+            ),
+        )
+
+        state = manager._hass.states["climate.room"]
+        state.state = "heat_cool"
+        state.attributes.update(
+            {
+                "supported_features": 2,
+                "hvac_modes": ["off", "heat_cool"],
+                "target_temp_low": 18.0,
+                "target_temp_high": 25.0,
+            }
+        )
+        monotonic_mock.return_value = 110.0
+        await manager.async_set_temperature_range(
+            "climate.room", 19.0, 24.0, hvac_mode="heat_cool"
+        )
+        old_range = SimpleNamespace(
+            state="heat_cool",
+            attributes={"target_temp_low": 18.0, "target_temp_high": 25.0},
+            context=None,
+        )
+        intermediate_range = SimpleNamespace(
+            state="heat_cool",
+            attributes={"target_temp_low": 17.0, "target_temp_high": 26.0},
+            context=None,
+        )
+        monotonic_mock.return_value = 111.0
+        self.assertEqual(
+            {"target_temp_low", "target_temp_high"},
+            manager.owned_state_change_fields(
+                "climate.room", intermediate_range, old_range
+            ),
         )
 
     async def test_coalesced_external_mode_keeps_expected_temperature_owned(self) -> None:
@@ -925,7 +2159,9 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             manager.owned_state_change_fields("climate.room", new, old),
         )
 
-    async def test_expectation_ledger_is_bounded_per_entity(self) -> None:
+    async def test_new_same_field_expectation_supersedes_previous_candidate(
+        self,
+    ) -> None:
         manager = self._manager()
         first_context = None
         for index in range(33):
@@ -934,7 +2170,7 @@ class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
             )
             if first_context is None:
                 first_context = manager._expected["climate.room"][0]["context_id"]
-        self.assertEqual(32, len(manager._expected["climate.room"]))
+        self.assertEqual(1, len(manager._expected["climate.room"]))
         self.assertNotIn(first_context, manager._contexts)
 
     async def test_non_observable_option_call_does_not_register_context(self) -> None:
@@ -1619,12 +2855,13 @@ class ClimateManagerTemperatureLimitsTest(unittest.TestCase):
         state.attributes.update({"min_temp": float("inf"), "max_temp": float("nan")})
         self.assertEqual(manager.temperature_limits("climate.room"), (41, 95))
 
-    def test_fahrenheit_targets_snap_to_zero_anchored_grid(self) -> None:
+    def test_fahrenheit_targets_snap_to_minimum_anchored_grid(self) -> None:
         state = SimpleNamespace(
             attributes={
                 "unit_of_measurement": UnitOfTemperature.FAHRENHEIT,
                 "min_temp": 41.3,
                 "max_temp": 95,
+                "target_temp_step": 1,
             }
         )
         hass = SimpleNamespace(
@@ -1635,7 +2872,7 @@ class ClimateManagerTemperatureLimitsTest(unittest.TestCase):
         )
         manager = ClimateManager(hass)
 
-        self.assertEqual(manager.normalize_target_temperature("climate.room", 42), 42)
+        self.assertEqual(manager.normalize_target_temperature("climate.room", 42), 42.3)
 
     def test_configured_fahrenheit_ignores_stale_celsius_entity_grid(self) -> None:
         state = SimpleNamespace(
@@ -1656,12 +2893,12 @@ class ClimateManagerTemperatureLimitsTest(unittest.TestCase):
 
         self.assertEqual(manager.temperature_unit("climate.room"), UnitOfTemperature.FAHRENHEIT)
         self.assertEqual(manager.temperature_limits("climate.room"), (41, 95))
-        self.assertEqual(manager.temperature_step("climate.room"), 0.5)
-        self.assertEqual(manager.normalize_target_temperature("climate.room", 70), 70)
+        self.assertEqual(manager.temperature_step("climate.room"), 0.9)
+        self.assertEqual(manager.normalize_target_temperature("climate.room", 70), 69.8)
 
         state.attributes["target_temp_step"] = 0.2
-        self.assertEqual(manager.temperature_step("climate.room"), 0.2)
-        self.assertEqual(manager.normalize_target_temperature("climate.room", 70.1), 70.2)
+        self.assertAlmostEqual(manager.temperature_step("climate.room"), 0.36)
+        self.assertEqual(manager.normalize_target_temperature("climate.room", 70.1), 70.16)
 
 
 if __name__ == "__main__":

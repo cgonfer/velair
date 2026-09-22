@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
+import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
 import {
   addDraftBlock,
   clampBlocksToTemperatureLimits,
@@ -50,6 +50,86 @@ describe("draft block domain", () => {
     expect(updateDraftBlock(blocks, 0, "hvac_mode", "cool")[0]).toMatchObject({
       action: ACTION_SET_TEMPERATURE,
       hvac_mode: "cool",
+    });
+  });
+
+  it("preserves mode-only while changing supported modes and serializes no target", () => {
+    const blocks = [{
+      action: ACTION_SET_HVAC_MODE,
+      hvac_mode: "auto",
+      start: "08:00",
+      temperature: 21,
+    }];
+
+    expect(updateDraftBlock(blocks, 0, "hvac_mode", "cool")[0]).toMatchObject({
+      action: ACTION_SET_HVAC_MODE,
+      hvac_mode: "cool",
+    });
+    expect(normalize(blocks)).toEqual({
+      ok: true,
+      blocks: [{ action: ACTION_SET_HVAC_MODE, hvac_mode: "auto", start: "08:00" }],
+    });
+  });
+
+  it("restores the last edited target and validates it when target control is re-enabled", () => {
+    const original = [{
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "auto",
+      start: "08:00",
+      temperature: "invalid",
+    }];
+    const disabled = updateDraftBlock(original, 0, "action", ACTION_SET_HVAC_MODE);
+    expect(disabled[0].temperature).toBe("invalid");
+    expect(normalize(disabled)).toEqual({
+      ok: true,
+      blocks: [{ action: ACTION_SET_HVAC_MODE, hvac_mode: "auto", start: "08:00" }],
+    });
+
+    const restored = updateDraftBlock(disabled, 0, "action", ACTION_SET_TEMPERATURE);
+    expect(restored[0].temperature).toBe("invalid");
+    expect(normalize(restored)).toEqual({
+      ok: false,
+      error: "invalid-temperature:08:00:range",
+    });
+  });
+
+  it("restores both remembered range targets after device-controlled mode", () => {
+    const original = [{
+      action: ACTION_SET_TEMPERATURE,
+      hvac_mode: "heat_cool",
+      start: "08:00",
+      target_temp_low: "19",
+      target_temp_high: "24",
+    }];
+    const disabled = updateDraftBlock(original, 0, "action", ACTION_SET_HVAC_MODE);
+    expect(disabled[0]).toMatchObject({ target_temp_low: "19", target_temp_high: "24" });
+    expect(normalize(disabled)).toEqual({
+      ok: true,
+      blocks: [{ action: ACTION_SET_HVAC_MODE, hvac_mode: "heat_cool", start: "08:00" }],
+    });
+
+    const restored = updateDraftBlock(disabled, 0, "action", ACTION_SET_TEMPERATURE);
+    expect(normalize(restored)).toEqual({
+      ok: true,
+      blocks: [{
+        action: ACTION_SET_TEMPERATURE,
+        hvac_mode: "heat_cool",
+        start: "08:00",
+        target_temp_low: 19,
+        target_temp_high: 24,
+      }],
+    });
+  });
+
+  it("requires an explicit non-off mode for mode-only blocks", () => {
+    expect(normalize([{
+      action: ACTION_SET_HVAC_MODE,
+      hvac_mode: "",
+      start: "08:00",
+      temperature: 21,
+    }])).toEqual({
+      ok: false,
+      error: "invalid-temperature:08:00:HVAC mode is required",
     });
   });
 
@@ -121,7 +201,7 @@ describe("draft block domain", () => {
     });
   });
 
-  it("validates temperature steps against the zero-anchored grid", () => {
+  it("validates temperature steps against the minimum-anchored grid", () => {
     const options = {
       maxTemperature: 95,
       minTemperature: 41.3,
@@ -131,7 +211,7 @@ describe("draft block domain", () => {
     };
 
     expect(draftBlockTemperatureError(
-      { action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 42 },
+      { action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 42.3 },
       options,
     )).toBeUndefined();
     expect(draftBlockTemperatureError(

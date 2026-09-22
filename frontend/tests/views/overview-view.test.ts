@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { overviewStyles } from "../../src/velair/styles/overview-styles";
+import { responsiveStyles } from "../../src/velair/styles/responsive-styles";
 import { timelineStyles } from "../../src/velair/styles/timeline-styles";
 import { de } from "../../src/velair/translations/de";
 import { en } from "../../src/velair/translations/en";
@@ -157,7 +158,7 @@ describe("overview next events", () => {
       expect(tooltip.textContent).not.toContain(`externalPublication_${state}`);
       expect(signal.querySelector(".inline-help")?.getAttribute("aria-label"))
         .toContain("overviewExternalInfoActionEvohome via ramses_cc");
-      expect(signal.querySelector(".inline-help")?.classList).toContain("compact");
+      expect(signal.querySelector(".inline-help")?.classList).not.toContain("compact");
       (signal.querySelector(".inline-help") as HTMLButtonElement).click();
       expect(tooltip.classList).toContain("visible");
       const activity = container.querySelector(".overview-zone-activity")!;
@@ -1530,6 +1531,14 @@ describe("overview timeline", () => {
     }
   });
 
+  it("keeps responsive start-edge timeline labels inside their visible block", () => {
+    const cssText = responsiveStyles.cssText;
+
+    expect(cssText).toContain("left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));");
+    expect(cssText).toMatch(
+      /\.overview-timeline-start-edge \.overview-timeline-block-main\s*\{[^}]*left:\s*var\(--overview-timeline-sticky-left, calc\(var\(--overview-timeline-name-column\) \+ 12px\)\);[^}]*position:\s*sticky/,
+    );
+  });
   it("keeps editor carry-over informational while Overview carry-over is interactive", () => {
     expect(timelineStyles.cssText).toMatch(
       /\.timeline-block\.timeline-carry-over,[\s\S]*pointer-events:\s*none/,
@@ -1604,6 +1613,9 @@ describe("overview timeline", () => {
     expect(carry?.getAttribute("aria-label")).toBe(carry?.getAttribute("title"));
     expect(carry?.textContent).toContain("heat");
     expect(carry?.getAttribute("style")).toContain("width: 25%");
+    expect(carry?.classList).toContain("overview-timeline-start-edge");
+    expect(container.querySelector(".overview-timeline-block:not(.overview-timeline-carry-over)")?.classList)
+      .not.toContain("overview-timeline-start-edge");
     expect(container.querySelectorAll("button.overview-timeline-block")).toHaveLength(2);
 
     (carry as HTMLButtonElement).click();

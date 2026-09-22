@@ -216,7 +216,8 @@ paused_started_at: "2026-07-09T17:00:00+02:00"
 ## Climate Target Applied
 
 `climate_target_applied` is emitted after Velair applies a scheduled target,
-turn-off action, restored schedule, startup schedule, or `velair.set_temperature`.
+mode-only action, turn-off action, restored schedule, startup schedule, or
+`velair.set_temperature` / `velair.set_hvac_mode` service call.
 Unsupported optional settings are omitted.
 
 ```yaml
@@ -239,7 +240,8 @@ source: scheduled_event
 
 Common `source` values are `scheduled_event`, `current_schedule`,
 `schedule_saved`, `scheduler_resumed`, `startup`, `service_set_temperature`,
-`boost_ended`, `zone_paused`, `zone_resumed`, and `zone_pause_expired`.
+`service_set_hvac_mode`, `boost_ended`, `zone_paused`, `zone_resumed`, and
+`zone_pause_expired`.
 
 For a range target, `temperature` is omitted and the event contains both limits:
 
@@ -248,6 +250,13 @@ target_temp_low: 20
 target_temp_high: 24
 hvac_mode: heat_cool
 ```
+
+For a mode-only block, `action` is `set_hvac_mode`, `hvac_mode` is the
+mode Velair applied, and all temperature target fields are omitted. This lets
+automations distinguish a mode handoff from a target change.
+The same payload shape is used by `velair.set_hvac_mode`, with
+`source: service_set_hvac_mode` and without schedule-only `weekday` or `start`
+fields.
 
 ## Preconditioning Plan Updated
 
@@ -425,8 +434,11 @@ An invalid observation also includes `invalid_reason`.
 ## Comfort Assessment Changed
 
 `comfort_assessment_changed` is emitted when `condition`, `air_quality`,
-`data_quality`, or `data_issues` changes. Numeric movement inside the same
-assessment still refreshes the Velair UI but does not flood the event bus.
+`data_quality`, `data_issues`, or an enabled derived metric's semantic state
+changes. Semantic state includes availability, source, entity, unit, issues,
+and condition. Numeric movement in base or derived readings still refreshes the
+Velair UI and sensor attributes without emitting another automation event. This
+does not flood the event bus.
 
 ```yaml
 domain: velair
@@ -436,6 +448,22 @@ condition: hot_and_humid
 air_quality: elevated
 data_quality: complete
 data_issues: []
+range_summary:
+  status: mixed
+  thermal_relation: mixed
+  positions:
+    temperature: above
+    humidity: above
+    humidex: within
+previous_range_summary:
+  status: outside_range
+  thermal_relation: aligned
+  positions:
+    temperature: above
+    humidity: above
+    humidex: above
+range_summary_changed: true
+range_status_changed: true
 temperature:
   metric: temperature
   availability: current
@@ -454,6 +482,21 @@ humidity:
   value: 67
   min: 40
   max: 60
+comfort_zone:
+  model: temperature_aware
+  temperature_min: 20
+  temperature_max: 24
+  points:
+    - temperature: 20
+      humidity_min: 40
+      humidity_max: 60
+    - temperature: 24
+      humidity_min: 35
+      humidity_max: 50
+  effective_humidity_range:
+    temperature: 27.1
+    minimum: 35
+    maximum: 50
 co2:
   metric: co2
   availability: current
@@ -463,7 +506,199 @@ co2:
   value: 1180
   attention: 1000
   max: 1500
+derived_metrics:
+  humidex:
+    metric: humidex
+    availability: current
+    condition: null
+    source: velair
+    entity_id: null
+    value: 23.8
+    unit: null
+    temperature_range_position: within
+    issues: []
+    input_entity_ids:
+      - sensor.office_temperature
+      - sensor.office_humidity
+  dew_point:
+    metric: dew_point
+    availability: current
+    condition: null
+    source: velair
+    entity_id: null
+    value: 15.1
+    unit: °C
+    issues: []
+    input_entity_ids:
+      - sensor.office_temperature
+      - sensor.office_humidity
+outdoor:
+  enabled: true
+  data_quality: complete
+  data_issues: []
+  temperature:
+    metric: outdoor_temperature
+    availability: current
+    source: sensor
+    entity_id: sensor.outdoor_temperature
+    value: 18
+    unit: °C
+  humidity:
+    metric: outdoor_humidity
+    availability: current
+    source: sensor
+    entity_id: sensor.outdoor_humidity
+    value: 55
+    unit: "%"
+  indoor_absolute_humidity:
+    metric: indoor_absolute_humidity
+    availability: current
+    source: velair
+    entity_id: null
+    value: 12.7
+    unit: g/m³
+    input_entity_ids:
+      - sensor.office_temperature
+      - sensor.office_humidity
+  absolute_humidity:
+    metric: outdoor_absolute_humidity
+    availability: current
+    source: velair
+    entity_id: null
+    value: 8.5
+    unit: g/m³
+    input_entity_ids:
+      - sensor.outdoor_temperature
+      - sensor.outdoor_humidity
+  guidance_thresholds:
+    temperature_delta: 1
+    temperature_unit: °C
+    humidity_delta_percentage_points: 5
+    absolute_humidity_delta_g_m3: 1
+  comparison:
+    temperature:
+      availability: current
+      delta: -9.1
+      effect: cooler
+      potential: cooling
+      blocked_by: []
+    humidity:
+      availability: current
+      absolute_humidity_delta: -4.2
+      equivalent_indoor_relative_humidity: 43
+      equivalent_indoor_relative_humidity_delta: -24
+      effect: drier
+      potential: drying
+      blocked_by: []
+insights:
+  - code: co2_elevated
+    kind: context
+    tone: attention
+    metrics:
+      - co2
+  - code: ventilation_may_help_cool
+    kind: context
+    tone: cool
+    metrics:
+      - temperature
+      - outdoor
+ventilation_opportunity:
+  state: comfort_possible
+  evaluation_scope: temperature_and_humidity
+  potential_effects:
+    - cooling
+    - drying
+  blocked_by: []
+  reason: outdoor_conditions_within_comfort
 ```
+
+The range fields are intended for simple automations without replacing the
+compatible physical `condition` field:
+
+For current-state templates and state triggers, see the complete
+[Environmental Condition entity contract](zone-sensors.md#environmental-condition).
+Use this event when the previous value or the exact transition matters.
+
+| `status` | Meaning |
+| --- | --- |
+| `within_range` | Every usable monitored value is inside its configured range. |
+| `outside_range` | At least one usable monitored value is outside its configured range, with temperature and Humidex aligned when both are enabled. |
+| `mixed` | Current temperature and Humidex occupy different range positions. |
+| `unavailable` | A required monitored value, or enabled Humidex, cannot currently be evaluated. |
+
+| `thermal_relation` | Meaning |
+| --- | --- |
+| `aligned` | Current temperature and Humidex have the same position. |
+| `mixed` | Current temperature and Humidex have different positions. |
+| `not_evaluated` | Humidex is disabled. |
+| `unavailable` | Temperature or enabled Humidex cannot currently be evaluated. |
+
+Each entry in `positions` is `below`, `within`, `above`, or `null`. The event
+also includes the previous complete summary. `range_summary_changed` reports
+any status, thermal-relation, or position change;
+`range_status_changed` reports only an aggregate `status` change. Both flags
+are `false` when another part of the Comfort assessment caused the event.
+
+`comfort_zone` uses the managed climate's temperature unit. Its effective range
+is the same one used by the humidity condition and outdoor guidance. With the
+Guided or custom temperature-aware model it is `null` when temperature cannot be evaluated, so
+automations should not substitute the legacy fixed humidity limits.
+Ordinary numeric movement of that range updates entity attributes and the API
+without emitting an event unless a documented semantic result also changes.
+The event also carries the current `ventilation_opportunity`. Changes to its
+state, scope, effects, blockers, or reason are semantic; numeric outdoor churn
+that leaves those fields unchanged does not emit another event.
+
+For example, this automation reacts only when a zone newly moves outside its
+configured ranges:
+
+```yaml
+automation:
+  - alias: "Velair office outside configured ranges"
+    triggers:
+      - trigger: event
+        event_type: velair_event
+        event_data:
+          domain: velair
+          event: comfort_assessment_changed
+          entity_id: climate.office
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.event.data.range_status_changed
+             and trigger.event.data.range_summary.status == 'outside_range' }}
+    actions:
+      - action: notify.notify
+        data:
+          message: "The office moved outside its configured Comfort ranges."
+```
+
+`insights` is an ordered, runtime-only interpretation of current indoor data.
+Its fields are stable identifiers rather than localized prose. A semantic
+insight change can emit this event; stale, missing, or invalid readings do not
+produce an insight. The payload contains the complete current list, including
+`insights: []` when the final contextual insight disappears. The existing
+`condition` field remains the assessment summary and is not duplicated as an
+insight.
+
+When outdoor comparison is enabled, this event also carries the complete
+`outdoor` subtree. Its own quality and issues never alter the indoor
+`data_quality` or `data_issues`. Events react to changes in availability,
+quality, `effect`, `potential`, `blocked_by`, or the insight list; ordinary
+numeric movement within the same semantic result does not emit another event.
+`guidance_thresholds` reports the effective per-zone sensitivity used to reach
+that result. Editing a threshold without changing the semantic result refreshes
+current state but does not emit an event.
+The subtree provides indoor absolute humidity explicitly; consumers must not
+reconstruct it from rounded deltas.
+The ventilation codes describe an opportunity or trade-off only. They do not
+mean Velair opened a window or changed the climate.
+
+Only the Humidex derived payload includes `temperature_range_position`. It is
+always present there and is `below`, `within`, `above`, or `null`; crossing
+between those values can emit this event. The field is an observational
+comparison with the configured temperature range, not a comfort verdict or a
+climate-control instruction.
 
 ## Room Sensor Assist State Changed
 

@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock
 
+from . import helpers as _helpers  # noqa: F401  # Install focused HA/voluptuous stubs.
+
 import voluptuous as vol
 
 from custom_components.velair.const import (
@@ -14,6 +16,8 @@ from custom_components.velair.const import (
     SERVICE_DEACTIVATE_PROFILE,
     SERVICE_PAUSE_ZONE,
     SERVICE_RESUME_ZONE,
+    SERVICE_SET_HVAC_MODE,
+    SERVICE_SET_TEMPERATURE,
     SERVICE_SET_EXTERNAL_CHANGE_POLICY,
     SERVICE_ENTER_MANUAL_ADJUSTMENT,
     SERVICE_RESUME_AUTOMATIC_CONTROL,
@@ -22,6 +26,8 @@ from custom_components.velair.services import (
     HomeAssistantError,
     _validate_pause_id,
     RESUME_ZONE_SCHEMA,
+    SET_HVAC_MODE_SCHEMA,
+    SET_TEMPERATURE_SCHEMA,
     async_setup_services,
     async_unload_services,
 )
@@ -54,6 +60,8 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
             async_update_external_change_policy=AsyncMock(),
             async_enter_manual_adjustment=AsyncMock(),
             async_resume_automatic_control=AsyncMock(),
+            async_set_hvac_mode=AsyncMock(),
+            async_set_temperature=AsyncMock(),
             ensure_managed_entity=Mock(),
             set_temperature_migration_blocked=Mock(),
             temperature_migration_blocked=False,
@@ -117,6 +125,57 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaisesRegex(HomeAssistantError, "unknown profile"):
             await handler(SimpleNamespace(data=schema({"profile_id": "missing"})))
+
+    async def test_set_hvac_mode_schema_and_forwarding(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_SET_HVAC_MODE)]
+
+        data = schema({"entity_id": "climate.salon", "hvac_mode": "cool"})
+        self.assertEqual(data, SET_HVAC_MODE_SCHEMA(data))
+        await handler(SimpleNamespace(data=data))
+
+        self.scheduler.ensure_managed_entity.assert_called_with("climate.salon")
+        self.scheduler.async_set_hvac_mode.assert_awaited_once_with(
+            "climate.salon",
+            "cool",
+            event_source="service_set_hvac_mode",
+        )
+        with self.assertRaises(vol.Invalid):
+            schema(
+                {
+                    "entity_id": "climate.salon",
+                    "hvac_mode": "heat",
+                    "temperature": 21,
+                }
+            )
+
+        self.scheduler.async_set_hvac_mode.side_effect = ValueError("unsupported mode")
+        with self.assertRaisesRegex(HomeAssistantError, "unsupported mode"):
+            await handler(
+                SimpleNamespace(
+                    data=schema(
+                        {"entity_id": "climate.salon", "hvac_mode": "unknown"}
+                    )
+                )
+            )
+
+        await async_unload_services(self.hass)
+        self.assertIn((DOMAIN, SERVICE_SET_HVAC_MODE), self.services.removed)
+
+    def test_set_temperature_contract_remains_separate(self) -> None:
+        scalar = SET_TEMPERATURE_SCHEMA(
+            {
+                "entity_id": "climate.salon",
+                "temperature": 21,
+                "hvac_mode": "heat",
+            }
+        )
+        self.assertEqual(21.0, scalar["temperature"])
+        with self.assertRaises(vol.Invalid):
+            SET_TEMPERATURE_SCHEMA(
+                {"entity_id": "climate.salon", "hvac_mode": "heat"}
+            )
+        self.assertNotEqual(SERVICE_SET_TEMPERATURE, SERVICE_SET_HVAC_MODE)
 
     async def test_pause_and_resume_zone_forward_optional_pause_id(self) -> None:
         await async_setup_services(self.hass)

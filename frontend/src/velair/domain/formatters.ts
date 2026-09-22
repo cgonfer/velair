@@ -1,4 +1,4 @@
-import { ACTION_TURN_OFF } from "../constants";
+import { ACTION_SET_HVAC_MODE, ACTION_TURN_OFF } from "../constants";
 import type { ScheduleEvent } from "../types";
 import type { SupportedLanguage } from "../translations";
 
@@ -119,11 +119,14 @@ export function temperatureUnit(entityUnit?: string, systemUnit?: string): strin
 
 export function formatEventAction(
   event: ScheduleEvent,
-  labels: { off: string; setTemperature: string },
+  labels: { off: string; setTemperature: string; deviceControlled?: string },
   formatEventTemperature: (value: number, entityId?: string) => string,
 ): string {
   if (event.action === ACTION_TURN_OFF) {
     return labels.off;
+  }
+  if (event.action === ACTION_SET_HVAC_MODE) {
+    return labels.deviceControlled ?? labels.setTemperature;
   }
   if (event.temperature == null) {
     if (event.target_temp_low != null && event.target_temp_high != null) {

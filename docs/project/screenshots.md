@@ -14,6 +14,18 @@ See scheduler status, upcoming events, today's timeline and current zone conditi
 | --- | --- |
 | ![Velair overview tablet](../../screenshots/overview-tablet.png) | ![Velair overview mobile](../../screenshots/overview-mobile.png) |
 
+### Climate status and control card
+
+Use one Lovelace card to control a managed climate and review Velair context, Comfort, Room Assist, Preconditioning, actions and today's timeline.
+
+**Desktop**
+
+![Velair single-climate card desktop](../../screenshots/climate-card-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair single-climate card tablet](../../screenshots/climate-card-tablet.png) | ![Velair single-climate card mobile](../../screenshots/climate-card-mobile.png) |
+
 ### Schedule workspace
 
 Use one full-size workspace for both the normal weekly plan and reusable Profile schedules.

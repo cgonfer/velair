@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from homeassistant.const import UnitOfTemperature
@@ -35,6 +36,21 @@ def temperature_delta(value: float, source: str, target: str) -> float:
     if source == target:
         return number
     return number * 9 / 5 if source == CELSIUS else number * 5 / 9
+
+
+def snap_temperature_to_step(
+    value: float,
+    minimum: float,
+    maximum: float,
+    step: float,
+) -> float:
+    """Clamp and snap an absolute target to a minimum-anchored device grid."""
+    bounded = max(minimum, min(maximum, float(value)))
+    count = math.floor(((bounded - minimum) / step) + 0.5 + 0.000000001)
+    last = minimum + math.floor(
+        ((maximum - minimum) / step) + 0.000000001
+    ) * step
+    return round(max(minimum, min(last, minimum + count * step)), 6)
 
 
 def rate_per_degree(value: float, source: str, target: str) -> float:

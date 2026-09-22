@@ -51,8 +51,13 @@ export const responsiveStyles = css`
     }
 
     .overview-timeline-block-main {
-      left: calc(var(--overview-timeline-name-column) + 12px);
+      left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));
       max-width: min(150px, calc(100vw - var(--overview-timeline-name-column) - 32px));
+      position: sticky;
+    }
+
+    .overview-timeline-start-edge .overview-timeline-block-main {
+      left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));
       position: sticky;
     }
 
@@ -163,7 +168,8 @@ export const responsiveStyles = css`
       grid-column: 1 / -1;
     }
 
-    .editable-block > label > .label {
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label {
       display: none;
     }
 
@@ -355,7 +361,8 @@ export const responsiveStyles = css`
       grid-column: 1 / -1;
     }
 
-    .editable-block > label > .label {
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label {
       display: none;
     }
 
@@ -631,8 +638,8 @@ export const responsiveStyles = css`
       grid-column: 1 / -1;
       grid-template-areas:
         "time time options delete"
-        "mode mode target target";
-      grid-template-columns: repeat(2, minmax(0, 1fr)) 30px 30px;
+        "mode target target target";
+      grid-template-columns: minmax(0, 1fr) 36px 36px 36px;
       min-width: 0;
       row-gap: 8px;
     }
@@ -644,7 +651,8 @@ export const responsiveStyles = css`
     .editable-block > .advanced-climate-options,
     .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
     .editable-block > .icon-button.danger { grid-area: delete; }
-    .editable-block > label > .label { display: block; }
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label { display: block; }
   }
 
   @media (max-width: 340px) {
@@ -662,8 +670,8 @@ export const responsiveStyles = css`
       grid-column: 1 / -1;
       grid-template-areas:
         "time time options delete"
-        "mode mode target target";
-      grid-template-columns: repeat(2, minmax(0, 1fr)) 30px 30px;
+        "mode target target target";
+      grid-template-columns: minmax(0, 1fr) 36px 36px 36px;
       min-width: 0;
       row-gap: 8px;
     }
@@ -675,6 +683,7 @@ export const responsiveStyles = css`
     .editable-block > .advanced-climate-options,
     .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
     .editable-block > .icon-button.danger { grid-area: delete; }
-    .editable-block > label > .label { display: block; }
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label { display: block; }
   }
 `;

@@ -62,13 +62,63 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
                 "climate.living_room": {"status": "ready"}
             },
             get_comfort_assessments=lambda: {
-                "climate.living_room": {"condition": "comfortable"}
+                "climate.living_room": {
+                    "condition": "comfortable",
+                    "derived_metrics": {
+                        "humidex": {
+                            "availability": "current",
+                            "metric": "humidex",
+                            "value": 25.4,
+                            "temperature_range_position": "above",
+                        },
+                        "absolute_humidity": {
+                            "availability": "current",
+                            "metric": "absolute_humidity",
+                            "value": 9.8,
+                        },
+                    },
+                    "outdoor": {
+                        "enabled": True,
+                        "data_quality": "complete",
+                        "data_issues": [],
+                        "guidance_thresholds": {
+                            "temperature_delta": 1.0,
+                            "temperature_unit": "°C",
+                            "humidity_delta_percentage_points": 5.0,
+                            "absolute_humidity_delta_g_m3": 1.0,
+                        },
+                        "indoor_absolute_humidity": {
+                            "availability": "current",
+                            "metric": "indoor_absolute_humidity",
+                            "value": 9.81,
+                            "unit": "g/m³",
+                        },
+                        "comparison": {
+                            "temperature": {
+                                "availability": "current",
+                                "effect": "cooler",
+                                "potential": "cooling",
+                                "blocked_by": [],
+                            }
+                        },
+                    },
+                }
             },
             get_zone_runtime_statuses=lambda: {
                 "climate.living_room": {
                     "state": "scheduled",
                     "hvac_mode": "heat_cool",
                 }
+            },
+            get_zone_effective_setup=lambda _entity_id: {
+                "scheduler_mode": "auto",
+                "mode_id": "home",
+                "mode_name": "Home",
+                "profile_ids": ["weekday"],
+                "profile_owner_id": "weekday",
+                "profile_owner_name": "Weekday",
+                "profile_behavior": "schedule",
+                "schedule_source": "profile",
             },
         )
         data = {
@@ -130,6 +180,31 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         self.assertEqual("weekday", unit["effective_setup"]["profile_owner_id"])
         self.assertEqual("profile", unit["effective_setup"]["schedule_source"])
 
+    def test_snapshot_surfaces_persistent_command_settling_mismatch(self) -> None:
+        self.runtime["climate_manager"] = SimpleNamespace(
+            command_settling_diagnostics=lambda _entity_id: {
+                "active": False,
+                "fields": [],
+                "mismatches": {
+                    "temperature": {"expected": 21.0, "observed": 19.0}
+                },
+                "window_seconds": 45.0,
+            }
+        )
+
+        snapshot = self.manager.snapshot(self.runtime)
+        unit = snapshot["units"]["climate.living_room"]
+
+        self.assertEqual("warning", unit["status"])
+        self.assertIn(
+            {"severity": "warning", "code": "command_settling_mismatch"},
+            unit["issues"],
+        )
+        self.assertEqual(
+            19.0,
+            unit["command_settling"]["mismatches"]["temperature"]["observed"],
+        )
+
     def test_snapshot_keeps_room_assist_step_alignment_evidence(self) -> None:
         self.runtime["scheduler"].get_room_sensor_assist_statuses = lambda: {
             "climate.living_room": {
@@ -146,6 +221,32 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
 
         self.assertEqual(23.9, room_assist["pre_step_temperature"])
         self.assertEqual(0.5, room_assist["target_temp_step"])
+
+    def test_snapshot_preserves_humidex_temperature_range_position(self) -> None:
+        comfort = self.manager.snapshot(self.runtime)["units"][
+            "climate.living_room"
+        ]["comfort"]["derived_metrics"]
+
+        self.assertEqual(
+            "above",
+            comfort["humidex"]["temperature_range_position"],
+        )
+        self.assertNotIn(
+            "temperature_range_position",
+            comfort["absolute_humidity"],
+        )
+
+    def test_snapshot_preserves_outdoor_comparison_contract(self) -> None:
+        outdoor = self.manager.snapshot(self.runtime)["units"][
+            "climate.living_room"
+        ]["comfort"]["outdoor"]
+
+        self.assertEqual(outdoor["data_quality"], "complete")
+        self.assertEqual(outdoor["indoor_absolute_humidity"]["value"], 9.81)
+        self.assertEqual(outdoor["guidance_thresholds"]["temperature_delta"], 1.0)
+        self.assertEqual(
+            outdoor["comparison"]["temperature"]["potential"], "cooling"
+        )
 
     def test_active_issues_centralizes_global_and_unit_evidence(self) -> None:
         self.runtime["operation_recovery"] = {"operation": "import"}
@@ -183,6 +284,201 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         self.assertEqual(1, summary["unit_counts"]["error"])
         self.assertEqual(["delivery_exhausted"], summary["issue_codes"])
         self.assertNotIn("secret device failure", str(summary))
+
+    def test_zone_delivery_diagnostics_is_idle_after_startup(self) -> None:
+        self.assertEqual(
+            {
+                "status": "idle",
+                "updated_at": None,
+                "retry_count": 0,
+                "last_error_at": None,
+                "last_error_code": None,
+            },
+            self.manager.zone_delivery_diagnostics("climate.living_room"),
+        )
+
+    def test_zone_delivery_diagnostics_exposes_unavailable(self) -> None:
+        self.manager.observe_delivery("climate.living_room", "unavailable")
+
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+
+        self.assertEqual("unavailable", status["status"])
+        self.assertIsNone(status["last_error_code"])
+        self.assertIsNone(status["last_error_at"])
+
+    def test_unknown_delivery_status_uses_a_stable_public_fallback(self) -> None:
+        self.manager.observe_delivery("climate.living_room", "failed")
+        self.manager.observe_delivery("climate.living_room", "future_internal_state")
+
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+
+        self.assertEqual("failed", status["status"])
+        self.assertEqual("unknown_delivery_status", status["last_error_code"])
+        self.assertEqual(status["updated_at"], status["last_error_at"])
+
+    def test_turn_off_does_not_report_a_temperature_unit_or_target(self) -> None:
+        self.manager.observe_target_applied(
+            {
+                "entity_id": "climate.living_room",
+                "source": "scheduled_event",
+                "action": "turn_off",
+                "temperature": None,
+            }
+        )
+
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+
+        self.assertEqual("turn_off", status["last_accepted_action"])
+        self.assertIsNone(status["last_accepted_temperature"])
+        self.assertIsNone(status["last_accepted_temperature_unit"])
+
+    def test_zone_delivery_diagnostics_flattens_safe_runtime_evidence(self) -> None:
+        self.manager.observe_delivery(
+            "climate.living_room",
+            "failed",
+            {"message": "private device detail"},
+        )
+        self.manager.observe_target_applied(
+            {
+                "entity_id": "climate.living_room",
+                "source": "scheduled_event",
+                "action": "set_temperature",
+                "hvac_mode": "heat_cool",
+                "target_temp_low": 20,
+                "target_temp_high": 24,
+            }
+        )
+        self.manager.observe_delivery(
+            "climate.living_room", "success", {"retry_count": 0}
+        )
+
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+
+        self.assertEqual("success", status["status"])
+        self.assertEqual("failed", status["last_error_code"])
+        self.assertEqual("automatic", status["last_accepted_source"])
+        self.assertEqual("set_temperature", status["last_accepted_action"])
+        self.assertEqual("heat_cool", status["last_accepted_hvac_mode"])
+        self.assertEqual("°C", status["last_accepted_temperature_unit"])
+        self.assertEqual(20, status["last_accepted_target_temp_low"])
+        self.assertEqual(24, status["last_accepted_target_temp_high"])
+        self.assertNotIn("private device detail", str(status))
+
+    def test_public_event_cannot_replace_trusted_target_evidence(self) -> None:
+        self.manager.observe_target_applied(
+            {
+                "entity_id": "climate.living_room",
+                "source": "service_set_temperature",
+                "action": "set_temperature",
+                "temperature": 21,
+            }
+        )
+
+        self.manager._handle_event(
+            SimpleNamespace(
+                data={
+                    "domain": "velair",
+                    "event": "climate_target_applied",
+                    "entity_id": "climate.living_room",
+                    "source": "forged",
+                    "action": "set_temperature",
+                    "temperature": 99,
+                },
+                time_fired=None,
+            )
+        )
+
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+        self.assertEqual("manual", status["last_accepted_source"])
+        self.assertEqual(21, status["last_accepted_temperature"])
+
+    def test_mode_service_is_classified_as_manual_delivery(self) -> None:
+        self.manager.observe_target_applied(
+            {
+                "entity_id": "climate.living_room",
+                "action": "set_hvac_mode",
+                "hvac_mode": "auto",
+                "source": "service_set_hvac_mode",
+            }
+        )
+
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+        self.assertEqual("manual", status["last_accepted_source"])
+        self.assertEqual("set_hvac_mode", status["last_accepted_action"])
+        self.assertEqual("auto", status["last_accepted_hvac_mode"])
+        self.assertIsNone(status["last_accepted_temperature"])
+
+    def test_terminal_delivery_keeps_retry_count(self) -> None:
+        self.manager.observe_delivery("climate.living_room", "failed")
+        self.manager.observe_delivery(
+            "climate.living_room", "retrying", {"retry_count": 1}
+        )
+        self.manager.observe_delivery(
+            "climate.living_room", "success", {"retry_count": 1}
+        )
+        self.assertEqual(
+            1,
+            self.manager.zone_delivery_diagnostics("climate.living_room")[
+                "retry_count"
+            ],
+        )
+
+        self.manager.observe_delivery("climate.living_room", "failed")
+        self.manager.observe_delivery(
+            "climate.living_room", "retrying", {"retry_count": 2}
+        )
+        self.manager.observe_delivery(
+            "climate.living_room", "exhausted", {"retry_count": 2}
+        )
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+        self.assertEqual("exhausted", status["status"])
+        self.assertEqual(2, status["retry_count"])
+
+        self.manager.observe_delivery(
+            "climate.living_room", "unavailable", {"retry_count": 0}
+        )
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+        self.assertEqual("unavailable", status["status"])
+        self.assertEqual(0, status["retry_count"])
+
+        self.manager.observe_delivery(
+            "climate.living_room",
+            "invalid_intent",
+            {"retry_count": 2},
+        )
+        status = self.manager.zone_delivery_diagnostics("climate.living_room")
+        self.assertEqual("invalid_intent", status["status"])
+        self.assertEqual(2, status["retry_count"])
+
+    def test_data_reset_clears_delivery_and_last_accepted_evidence(self) -> None:
+        self.manager.observe_delivery(
+            "climate.living_room",
+            "failed",
+            {"message": "private device detail"},
+        )
+        self.manager.observe_target_applied(
+            {
+                "entity_id": "climate.living_room",
+                "source": "scheduled_event",
+                "action": "set_temperature",
+                "hvac_mode": "cool",
+                "temperature": 24,
+            }
+        )
+
+        self.manager.async_reset_runtime_evidence()
+
+        self.assertEqual(
+            {
+                "status": "idle",
+                "updated_at": None,
+                "retry_count": 0,
+                "last_error_at": None,
+                "last_error_code": None,
+            },
+            self.manager.zone_delivery_diagnostics("climate.living_room"),
+        )
+        self.assertEqual([], self.manager.snapshot(self.runtime)["history"])
 
     def test_issue_events_use_startup_baseline_dedupe_and_resolution(self) -> None:
         self.hass.states["climate.living_room"].state = "unavailable"
@@ -737,6 +1033,26 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
                     "condition": "comfortable",
                     "air_quality": "good",
                     "data_quality": "complete",
+                    "range_summary": {
+                        "status": "mixed",
+                        "thermal_relation": "mixed",
+                        "positions": {
+                            "temperature": "within",
+                            "humidity": "within",
+                            "humidex": "above",
+                        },
+                    },
+                    "previous_range_summary": {
+                        "status": "within_range",
+                        "thermal_relation": "aligned",
+                        "positions": {
+                            "temperature": "within",
+                            "humidity": "within",
+                            "humidex": "within",
+                        },
+                    },
+                    "range_summary_changed": True,
+                    "range_status_changed": True,
                 },
             ),
         )
@@ -774,6 +1090,15 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         )
         self.assertEqual(21.3, by_category["room_assist"]["data"]["hysteresis_target"])
         self.assertEqual("good", by_category["comfort"]["data"]["air_quality"])
+        self.assertEqual(
+            "mixed", by_category["comfort"]["data"]["range_summary"]["status"]
+        )
+        self.assertEqual(
+            "within_range",
+            by_category["comfort"]["data"]["previous_range_summary"]["status"],
+        )
+        self.assertTrue(by_category["comfort"]["data"]["range_summary_changed"])
+        self.assertTrue(by_category["comfort"]["data"]["range_status_changed"])
         self.assertEqual(35, by_category["preconditioning"]["data"]["lead_minutes"])
         self.assertNotIn("unsafe", by_category["control"]["data"])
 

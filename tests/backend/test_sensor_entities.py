@@ -109,6 +109,10 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             options={},
             runtime_data=SimpleNamespace(
                 diagnostics=SimpleNamespace(
+                    zone_delivery_diagnostics=lambda _entity_id: {
+                        "status": "idle",
+                        "retry_count": 0,
+                    },
                     automation_summary=lambda: {
                         "status": "ok",
                         "scheduler_mode": "auto",
@@ -150,7 +154,52 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(sensor.available)
 
-    async def test_setup_creates_three_global_and_six_sensors_per_climate(
+    def test_runtime_context_sensors_remain_available_during_unit_migration(self) -> None:
+        scheduler = SimpleNamespace(
+            temperature_migration_blocked=True,
+            get_zone_control_status=lambda _entity_id: {
+                "control_mode": "automatic",
+                "runtime_state": "temperature_migration_required",
+                "schedule_source": "default",
+            },
+        )
+        entry = self._entry(scheduler, ["climate.living_room"])
+
+        control = sensor_module.ZoneControlSensor(entry, "climate.living_room")
+        self.assertTrue(control.available)
+        self.assertEqual(
+            "temperature_migration_required",
+            control.extra_state_attributes["runtime_state"],
+        )
+        self.assertTrue(
+            sensor_module.ZoneDeliveryDiagnosticsSensor(
+                entry, "climate.living_room"
+            ).available
+        )
+
+    def test_runtime_context_sensors_suggest_clean_entity_ids(self) -> None:
+        scheduler = SimpleNamespace(
+            get_zone_control_status=lambda _entity_id: {
+                "control_mode": "automatic"
+            }
+        )
+        entry = self._entry(scheduler, ["climate.living_room"])
+
+        control = sensor_module.ZoneControlSensor(entry, "climate.living_room")
+        diagnostics = sensor_module.ZoneDeliveryDiagnosticsSensor(
+            entry, "climate.living_room"
+        )
+
+        self.assertEqual(
+            "velair_control_living_room",
+            control._attr_suggested_object_id,
+        )
+        self.assertEqual(
+            "velair_delivery_diagnostics_living_room",
+            diagnostics._attr_suggested_object_id,
+        )
+
+    async def test_setup_creates_three_global_and_nine_sensors_per_climate(
         self,
     ) -> None:
         scheduler = SimpleNamespace(
@@ -164,6 +213,11 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             get_operational_status=lambda: "idle",
             get_room_sensor_assist_status=lambda entity_id: {},
             get_zone_override_status=lambda entity_id: {"state": "none"},
+            get_zone_control_status=lambda entity_id: {
+                "control_mode": "automatic",
+                "runtime_state": "idle",
+                "schedule_source": "default",
+            },
         )
         entry = self._entry(
             scheduler,
@@ -192,7 +246,7 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
 
         await sensor_module.async_setup_entry(hass, entry, entities.extend)
 
-        self.assertEqual(len(entities), 15)
+        self.assertEqual(len(entities), 21)
         target_sensors = [
             entity
             for entity in entities
@@ -424,11 +478,85 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             "air_quality": "elevated",
             "data_quality": "partial",
             "data_issues": ["humidity_stale"],
+            "range_summary": {
+                "status": "mixed",
+                "thermal_relation": "mixed",
+                "positions": {
+                    "temperature": "below",
+                    "humidity": "above",
+                    "humidex": "above",
+                },
+            },
             "temperature": {"entity_id": "sensor.room_temperature"},
             "humidity": {"entity_id": "sensor.room_humidity"},
             "co2": {
                 "entity_id": "sensor.room_co2",
                 "availability": "current",
+            },
+            "derived_metrics": {
+                "dew_point": {
+                    "availability": "current",
+                    "value": 12.3,
+                    "unit": "°C",
+                },
+                "humidex": {
+                    "availability": "current",
+                    "value": 25.4,
+                    "unit": None,
+                    "temperature_range_position": "above",
+                },
+            },
+            "insights": [
+                {
+                    "code": "co2_elevated",
+                    "kind": "context",
+                    "tone": "attention",
+                    "metrics": ["co2"],
+                }
+            ],
+            "outdoor": {
+                "enabled": True,
+                "data_quality": "complete",
+                "data_issues": [],
+                "guidance_thresholds": {
+                    "temperature_delta": 1.0,
+                    "temperature_unit": "°C",
+                    "humidity_delta_percentage_points": 5.0,
+                    "absolute_humidity_delta_g_m3": 1.0,
+                },
+                "indoor_absolute_humidity": {
+                    "availability": "current",
+                    "metric": "indoor_absolute_humidity",
+                    "value": 9.81,
+                    "unit": "g/m³",
+                },
+                "temperature": {
+                    "availability": "current",
+                    "entity_id": "sensor.outdoor_temperature",
+                    "value": 15,
+                    "unit": "°C",
+                },
+                "humidity": {
+                    "availability": "current",
+                    "entity_id": "sensor.outdoor_humidity",
+                    "value": 50,
+                    "unit": "%",
+                },
+                "comparison": {
+                    "temperature": {
+                        "availability": "current",
+                        "effect": "cooler",
+                        "potential": "cooling",
+                        "blocked_by": [],
+                    }
+                },
+            },
+            "ventilation_opportunity": {
+                "state": "may_help",
+                "evaluation_scope": "temperature_and_humidity",
+                "potential_effects": ["cooling"],
+                "blocked_by": [],
+                "reason": "moves_toward_comfort",
             },
         }
         scheduler = SimpleNamespace(
@@ -450,8 +578,51 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             {
                 "data_quality": "partial",
                 "data_issues": ["humidity_stale"],
+                "range_summary": assessment["range_summary"],
+                "ventilation_opportunity": assessment[
+                    "ventilation_opportunity"
+                ],
                 "temperature_source": "sensor.room_temperature",
                 "humidity_source": "sensor.room_humidity",
+                "derived_metrics": {
+                    "dew_point": {
+                        "availability": "current",
+                        "value": 12.3,
+                        "unit": "°C",
+                    },
+                    "humidex": {
+                        "availability": "current",
+                        "value": 25.4,
+                        "unit": None,
+                        "temperature_range_position": "above",
+                    },
+                },
+                "insights": [
+                    {
+                        "code": "co2_elevated",
+                        "kind": "context",
+                        "tone": "attention",
+                        "metrics": ["co2"],
+                    }
+                ],
+                "outdoor": assessment["outdoor"],
+            },
+        )
+        ventilation = sensor_module.ZoneVentilationOpportunitySensor(
+            entry,
+            "climate.living_room",
+        )
+        self.assertEqual(ventilation.native_value, "may_help")
+        self.assertEqual(
+            ventilation.extra_state_attributes,
+            {
+                "evaluation_scope": "temperature_and_humidity",
+                "potential_effects": ["cooling"],
+                "blocked_by": [],
+                "reason": "moves_toward_comfort",
+                "data_quality": "complete",
+                "outdoor_temperature_source": "sensor.outdoor_temperature",
+                "outdoor_humidity_source": "sensor.outdoor_humidity",
             },
         )
         self.assertEqual(air_quality.native_value, "elevated")
@@ -491,6 +662,18 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
                 "climate.living_room",
             ).native_value,
             "not_monitored",
+        )
+        ventilation = sensor_module.ZoneVentilationOpportunitySensor(
+            entry,
+            "climate.living_room",
+        )
+        self.assertEqual(ventilation.native_value, "unavailable")
+        self.assertEqual(
+            ventilation.extra_state_attributes,
+            {
+                "potential_effects": [],
+                "blocked_by": [],
+            },
         )
         self.assertEqual(
             sensor_module.ZoneRoomAssistStateSensor(
@@ -533,6 +716,61 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
                 "pause_id": "window_guard",
             },
         )
+
+    def test_zone_control_exposes_low_churn_context_and_manual_fields(self) -> None:
+        scheduler = SimpleNamespace(
+            get_zone_control_status=lambda _entity_id: {
+                "control_mode": "manual",
+                "runtime_state": "paused",
+                "schedule_source": "profile",
+                "profile_id": "weekday",
+                "profile_name": "Weekday",
+                "mode_id": "home",
+                "mode_name": "Home",
+                "manual_source": "external_change",
+                "manual_started_at": "2026-09-04T10:00:00+00:00",
+                "manual_until": "2026-09-04T12:00:00+00:00",
+                "manual_policy": "for_duration",
+            }
+        )
+        sensor = sensor_module.ZoneControlSensor(
+            self._entry(scheduler, ["climate.living_room"]),
+            "climate.living_room",
+        )
+
+        self.assertEqual("manual", sensor.native_value)
+        self.assertEqual("paused", sensor.extra_state_attributes["runtime_state"])
+        self.assertEqual("weekday", sensor.extra_state_attributes["profile_id"])
+        self.assertEqual("external_change", sensor.extra_state_attributes["manual_source"])
+        self.assertNotIn("temperature", sensor.extra_state_attributes)
+
+    def test_zone_delivery_diagnostics_is_disabled_and_omits_error_message(self) -> None:
+        entry = self._entry(SimpleNamespace(), ["climate.living_room"])
+        entry.runtime_data.diagnostics.zone_delivery_diagnostics = lambda _entity_id: {
+            "status": "retrying",
+            "updated_at": "2026-09-04T10:00:05+00:00",
+            "retry_count": 1,
+            "last_error_at": "2026-09-04T10:00:04+00:00",
+            "last_error_code": "failed",
+            "last_accepted_at": "2026-09-04T09:00:00+00:00",
+            "last_accepted_source": "scheduled_event",
+            "last_accepted_action": "set_temperature",
+            "last_accepted_hvac_mode": "cool",
+            "last_accepted_temperature_unit": "°C",
+            "last_accepted_temperature": 24,
+        }
+        sensor = sensor_module.ZoneDeliveryDiagnosticsSensor(
+            entry,
+            "climate.living_room",
+        )
+
+        self.assertEqual("retrying", sensor.native_value)
+        self.assertEqual("diagnostic", sensor._attr_entity_category)
+        self.assertFalse(sensor._attr_entity_registry_enabled_default)
+        self.assertEqual(1, sensor.extra_state_attributes["retry_count"])
+        self.assertEqual(24, sensor.extra_state_attributes["last_accepted_temperature"])
+        self.assertEqual("°C", sensor.extra_state_attributes["last_accepted_temperature_unit"])
+        self.assertNotIn("message", str(sensor.extra_state_attributes))
 
     def test_preconditioning_start_uses_cached_zone_prediction(self) -> None:
         event = helpers.models_module.ClimateEvent(
@@ -695,8 +933,11 @@ class SensorTranslationTest(unittest.TestCase):
                         "scheduler_status",
                         "zone_active_target_temperature",
                         "zone_environmental_condition",
+                        "zone_ventilation_opportunity",
                         "zone_air_quality",
                         "zone_override_state",
+                        "zone_control",
+                        "zone_delivery_diagnostics",
                         "zone_preconditioning_start",
                         "zone_room_assist_state",
                     },
@@ -708,6 +949,34 @@ class SensorTranslationTest(unittest.TestCase):
                 self.assertEqual(
                     set(sensors["diagnostics_status"]["state"]),
                     {"ok", "warning", "error"},
+                )
+                self.assertEqual(
+                    set(sensors["zone_control"]["state"]),
+                    {"automatic", "manual", "external"},
+                )
+                self.assertEqual(
+                    set(sensors["zone_ventilation_opportunity"]["state"]),
+                    {
+                        "unavailable",
+                        "no_opportunity",
+                        "may_help",
+                        "comfort_possible",
+                        "trade_off",
+                        "already_comfortable",
+                    },
+                )
+                self.assertEqual(
+                    set(sensors["zone_delivery_diagnostics"]["state"]),
+                    {
+                        "idle",
+                        "success",
+                        "failed",
+                        "retrying",
+                        "exhausted",
+                        "invalid_intent",
+                        "cancelled",
+                        "unavailable",
+                    },
                 )
                 self.assertEqual(
                     set(translation["entity"]["select"]),
@@ -777,6 +1046,8 @@ class SensorTranslationTest(unittest.TestCase):
             "**Environmental condition**",
             "**Air quality**",
             "**Zone override**",
+            "**Zone control**",
+            "**Zone delivery diagnostics**",
             "**Preconditioning start**",
             "**Room Assist**",
             "**Automatic scheduling**",

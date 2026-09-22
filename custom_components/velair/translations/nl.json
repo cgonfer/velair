@@ -77,6 +77,18 @@
           "hot_and_humid": "Warm en vochtig"
         }
       },
+      "zone_ventilation_opportunity": {
+        "name": "Ventilatiemogelijkheid voor {zone}",
+        "state": {
+          "unavailable": "Niet beschikbaar",
+          "no_opportunity": "Geen mogelijkheid",
+          "may_help": "Kan helpen",
+          "comfort_possible": "Comfort mogelijk",
+          "trade_off": "Afweging",
+          "already_comfortable": "Al comfortabel"
+        }
+      },
+
       "zone_air_quality": {
         "name": "Luchtkwaliteit {zone}",
         "state": {
@@ -94,6 +106,27 @@
           "boost": "Tijdelijke aanpassing",
           "paused": "Gepauzeerd",
           "disabled": "Uitgeschakeld"
+        }
+      },
+      "zone_control": {
+        "name": "Bediening van {zone}",
+        "state": {
+          "automatic": "Automatisch",
+          "manual": "Handmatig",
+          "external": "Extern"
+        }
+      },
+      "zone_delivery_diagnostics": {
+        "name": "Leveringsdiagnose van {zone}",
+        "state": {
+          "idle": "Inactief",
+          "success": "Geslaagd",
+          "failed": "Mislukt",
+          "retrying": "Opnieuw proberen",
+          "exhausted": "Pogingen uitgeput",
+          "invalid_intent": "Ongeldig doel",
+          "cancelled": "Geannuleerd",
+          "unavailable": "Niet beschikbaar"
         }
       },
       "zone_preconditioning_start": {

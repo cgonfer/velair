@@ -77,6 +77,18 @@
           "hot_and_humid": "Chaud et humide"
         }
       },
+      "zone_ventilation_opportunity": {
+        "name": "Possibilité de ventilation de {zone}",
+        "state": {
+          "unavailable": "Indisponible",
+          "no_opportunity": "Aucune possibilité",
+          "may_help": "Peut aider",
+          "comfort_possible": "Confort possible",
+          "trade_off": "Compromis",
+          "already_comfortable": "Déjà confortable"
+        }
+      },
+
       "zone_air_quality": {
         "name": "Qualité de l’air de {zone}",
         "state": {
@@ -94,6 +106,27 @@
           "boost": "Forçage",
           "paused": "En pause",
           "disabled": "Désactivée"
+        }
+      },
+      "zone_control": {
+        "name": "Contrôle de {zone}",
+        "state": {
+          "automatic": "Automatique",
+          "manual": "Manuel",
+          "external": "Externe"
+        }
+      },
+      "zone_delivery_diagnostics": {
+        "name": "Diagnostic de livraison de {zone}",
+        "state": {
+          "idle": "Inactif",
+          "success": "Réussie",
+          "failed": "Échouée",
+          "retrying": "Nouvelle tentative",
+          "exhausted": "Tentatives épuisées",
+          "invalid_intent": "Cible non valide",
+          "cancelled": "Annulée",
+          "unavailable": "Indisponible"
         }
       },
       "zone_preconditioning_start": {

@@ -18,6 +18,8 @@ Velair documentation is grouped by audience and topic.
 - [Temperature Units and Migration](user/temperature-units.md): understand Celsius/Fahrenheit defaults, upgrades, migration, import/export, and recovery.
 - [Troubleshooting](user/troubleshooting.md): common setup, frontend resource, and runtime issues.
 - [Diagnostics](user/diagnostics.md): local runtime health, bounded history, and redacted issue reports.
+- [Sensor Reference](user/sensors.md): see every Velair sensor, its main attributes, and practical automation examples.
+- [Zone control and delivery sensors](user/zone-sensors.md): use per-climate ownership context and runtime delivery evidence in dashboards and automations.
 
 ## Developer Documentation
 

@@ -57,7 +57,7 @@ describe("climate display controller", () => {
     expect(temperatureUnitForHost(viewHost, "climate.living_room")).toBe("°C");
   });
 
-  it("preserves the exact Home Assistant target step without a unit fallback", () => {
+  it("prefers the published target step and retains a configured fallback", () => {
     const viewHost = host() as any;
     viewHost._temperatureUnit = () => "°F";
     viewHost.hass.states["climate.living_room"].attributes.target_temp_step = 0.2;
@@ -65,13 +65,48 @@ describe("climate display controller", () => {
     expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(0.2);
 
     delete viewHost.hass.states["climate.living_room"].attributes.target_temp_step;
-    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBeUndefined();
+    viewHost._data.zones = {
+      "climate.living_room": {
+        last_reported_target_temp_step: 0.25,
+        target_temp_step_override: 0.5,
+      },
+    };
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(0.25);
+
+    delete viewHost._data.zones["climate.living_room"].last_reported_target_temp_step;
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(0.5);
+
+    delete viewHost._data.zones["climate.living_room"].target_temp_step_override;
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(1);
+  });
+
+  it("uses the effective Home Assistant unit for a stale published step", () => {
+    const viewHost = host() as any;
+    viewHost._temperatureUnit = () => "°F";
+    viewHost.hass.states["climate.living_room"].attributes = {
+      min_temp: 5,
+      max_temp: 35,
+      target_temp_step: 0.5,
+      unit_of_measurement: "°C",
+    };
+
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBeCloseTo(0.9);
   });
 
   it("uses no template step when managed climates publish different steps", () => {
     const viewHost = host() as any;
     viewHost._entityTemperatureStep = (entityId: string) =>
       entityId === "climate.living_room" ? 0.2 : 0.5;
+    viewHost._entityTemperatureLimits = () => [41, 95];
+
+    expect(temperatureStep(viewHost, "template")).toBeUndefined();
+  });
+
+  it("uses no template step when equal steps have incompatible minimum anchors", () => {
+    const viewHost = host() as any;
+    viewHost._entityTemperatureStep = () => 0.9;
+    viewHost._entityTemperatureLimits = (entityId: string) =>
+      entityId === "climate.living_room" ? [41, 95] : [41.5, 95];
 
     expect(temperatureStep(viewHost, "template")).toBeUndefined();
   });

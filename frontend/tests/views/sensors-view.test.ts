@@ -183,18 +183,10 @@ describe("sensors view", () => {
     expect(styles).toMatch(/\.sensor-scale-track\s*\{[^}]*min-width:\s*640px;/s);
   });
 
-  it("keeps Room Assist help tooltips inside the mobile label width", () => {
+  it("delegates Room Assist interactive help to the shared inline help", () => {
     const styles = sensorsStyles.cssText;
-
-    expect(styles).toMatch(
-      /@media \(max-width:\s*720px\)[\s\S]*\.sensor-config-label\s*\{[^}]*position:\s*relative;[^}]*width:\s*100%;/,
-    );
-    expect(styles).toMatch(
-      /\.sensor-config-label \.sensor-help\s*\{[^}]*position:\s*static;/,
-    );
-    expect(styles).toMatch(
-      /\.sensor-config-label \.sensor-help-tooltip\s*\{[^}]*left:\s*0;[^}]*max-width:\s*100%;[^}]*right:\s*0;[^}]*transform:\s*none;[^}]*width:\s*auto;/,
-    );
+    expect(styles).not.toContain(".sensor-help");
+    expect(styles).not.toContain(".sensor-help-tooltip");
   });
 
   it("renders climates in the provided user order", () => {
@@ -1322,6 +1314,19 @@ describe("sensors view", () => {
     );
   });
 
+  it("centers callouts without making hidden fixed help overflow the scale", () => {
+    expect(sensorsStyles.cssText).toMatch(
+      /\.sensor-scale-callout-marker\s*\{[^}]*margin-left:\s*-72px;[^}]*width:\s*144px;/s,
+    );
+    const calloutRule = sensorsStyles.cssText.match(
+      /\.sensor-scale-callout\s*\{[^}]*\}/s,
+    )?.[0] ?? "";
+    expect(calloutRule).toMatch(/left:\s*0;/);
+    expect(calloutRule).toMatch(/margin-inline:\s*auto;/);
+    expect(calloutRule).toMatch(/right:\s*0;/);
+    expect(calloutRule).not.toContain("transform:");
+  });
+
   it("keeps an applied decimal target visible when its assist offset is shown", () => {
     const { viewHost } = host({
       appliedTemperature: 24.5,
@@ -1342,13 +1347,13 @@ describe("sensors view", () => {
     expect(appliedCallout?.querySelector("strong")?.textContent).toContain("24.5");
     expect(appliedCallout?.querySelector(".sensor-scale-offset")?.textContent).toContain("+5");
     expect(sensorsStyles.cssText).toMatch(
-      /\.sensor-scale-callout\.has-offset\s*\{[^}]*width:\s*max-content;/s,
+      /\.sensor-scale-callout\s*\{[^}]*width:\s*max-content;/s,
     );
     expect(sensorsStyles.cssText).not.toMatch(
       /\.sensor-scale-callout\.has-offset \.sensor-scale-value-row\s*\{[^}]*flex-direction:\s*column;/s,
     );
     expect(inlineHelpStyles.cssText).toMatch(
-      /\.inline-help\.compact ha-icon\s*\{[^}]*height:\s*12px;[^}]*width:\s*12px;/s,
+      /\.inline-help ha-icon\s*\{[^}]*height:\s*16px;[^}]*width:\s*16px;/s,
     );
     expect(sensorsStyles.cssText).toMatch(
       /\.sensor-scale-callout\.has-offset \.sensor-scale-value-row > strong\s*\{[^}]*overflow:\s*visible;[^}]*text-overflow:\s*clip;/s,
@@ -1360,8 +1365,10 @@ describe("sensors view", () => {
       appliedTemperature: 75.5,
       climateTargetTemperature: 75.5,
       expandedZoneIds: ["climate.second"],
+      preStepTemperature: 75.3,
       roomTemperature: 73.4,
       scheduledTargetTemperature: 74,
+      targetTempStep: 0.9,
       thermostatTemperature: 76,
     });
     (viewHost as unknown as { _temperatureUnit: () => string })._temperatureUnit =
@@ -1378,6 +1385,8 @@ describe("sensors view", () => {
     );
     expect(callout?.classList).toContain("has-offset");
     expect(callout?.textContent).toContain("75.5 °F");
+    expect(callout?.querySelector(".inline-help")?.getAttribute("aria-label"))
+      .toContain("step=0.9 °F");
   });
 
   it("keeps close edge marker callouts inside the available direction", () => {
@@ -1472,7 +1481,7 @@ describe("sensors view", () => {
     expect(help?.textContent).toBe("roomSensorAssistMaxDeltaHelp");
     expect(
       container.querySelector(
-        ".sensor-help[aria-label='roomSensorAssistMaxDeltaHelp']",
+        ".inline-help[aria-label='roomSensorAssistMaxDeltaHelp']",
       ),
     ).toBeNull();
   });

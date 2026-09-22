@@ -7,6 +7,7 @@ import {
 import {
   climateTargetCompatibleForConfiguration,
 } from "../domain/climate";
+import { ACTION_SET_TEMPERATURE } from "../constants";
 import type { VelairApiClient } from "../api/client";
 import type {
   BlockDraftSource,
@@ -216,7 +217,8 @@ export function unsupportedModeError(
 ): string | undefined {
   const state = host.hass?.states?.[entityId];
   const unsupportedRangeMode = blocks.find((block) =>
-    (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
+    block.action === ACTION_SET_TEMPERATURE
+    && (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
     && block.hvac_mode !== undefined
     && block.hvac_mode !== "heat_cool");
   if (unsupportedRangeMode?.hvac_mode) {
@@ -227,7 +229,8 @@ export function unsupportedModeError(
     });
   }
   const unsupportedRange = blocks.find((block) =>
-    (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
+    block.action === ACTION_SET_TEMPERATURE
+    && (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
     && !climateTargetCompatibleForConfiguration(state, "range", block.hvac_mode));
   if (unsupportedRange) {
     return host._t("unsupportedRangeTargetForClimate", {
@@ -244,7 +247,8 @@ export function unsupportedModeError(
     });
   }
   const unsupportedScalar = blocks.find((block) =>
-    block.temperature !== undefined
+    block.action === ACTION_SET_TEMPERATURE
+    && block.temperature !== undefined
     && !climateTargetCompatibleForConfiguration(state, "scalar", block.hvac_mode));
   return unsupportedScalar
     ? host._t("unsupportedSingleTargetForClimate", {

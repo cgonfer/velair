@@ -1,4 +1,4 @@
-﻿"""Unit tests for Velair frontend panel registration."""
+"""Unit tests for Velair frontend panel registration."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import asyncio
 from contextlib import contextmanager
 import importlib.util
 from pathlib import Path
+import re
 import sys
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
@@ -41,6 +42,7 @@ FRONTEND_SENSORS_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles"
 FRONTEND_TEMPLATE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "template-styles.ts"
 FRONTEND_TIMELINE_STYLES_SOURCE = ROOT / "frontend" / "src" / "velair" / "styles" / "timeline-styles.ts"
 FRONTEND_CLIMATE_DOMAIN_SOURCE = ROOT / "frontend" / "src" / "velair" / "domain" / "climate.ts"
+FRONTEND_CLIMATE_CARD_CONTROLS_SOURCE = ROOT / "frontend" / "src" / "velair" / "domain" / "climate-card-controls.ts"
 FRONTEND_DRAFT_BLOCKS_DOMAIN_SOURCE = ROOT / "frontend" / "src" / "velair" / "domain" / "draft-blocks.ts"
 FRONTEND_OVERRIDES_DOMAIN_SOURCE = ROOT / "frontend" / "src" / "velair" / "domain" / "overrides.ts"
 FRONTEND_TEMPLATES_DOMAIN_SOURCE = ROOT / "frontend" / "src" / "velair" / "domain" / "templates.ts"
@@ -70,6 +72,8 @@ FRONTEND_SETTINGS_ACTIONS_SOURCE = ROOT / "frontend" / "src" / "velair" / "contr
 FRONTEND_TIMELINE_INTERACTIONS_SOURCE = ROOT / "frontend" / "src" / "velair" / "controllers" / "timeline-interactions.ts"
 FRONTEND_NOTICE_VIEW_SOURCE = ROOT / "frontend" / "src" / "velair" / "views" / "notice-view.ts"
 SERVICES_YAML_SOURCE = ROOT / "custom_components" / "velair" / "services.yaml"
+BACKEND_CONSTANTS_SOURCE = ROOT / "custom_components" / "velair" / "const.py"
+BACKEND_API_SOURCE = ROOT / "custom_components" / "velair" / "api.py"
 
 
 def _frontend_implementation_source() -> str:
@@ -453,6 +457,40 @@ class FrontendRegistrationTest(unittest.TestCase):
 
 
 class FrontendSourceContractTest(unittest.TestCase):
+    def test_portable_model_version_matches_backend(self) -> None:
+        """Frontend validation must accept exports created by this backend."""
+        backend_source = BACKEND_API_SOURCE.read_text(encoding="utf-8")
+        frontend_source = FRONTEND_CONSTANTS_SOURCE.read_text(encoding="utf-8")
+        backend_match = re.search(
+            r"^EXPORT_MODEL_VERSION\s*=\s*(\d+)\s*$",
+            backend_source,
+            re.MULTILINE,
+        )
+        frontend_match = re.search(
+            r"^export const PORTABLE_MODEL_VERSION\s*=\s*(\d+);\s*$",
+            frontend_source,
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(backend_match)
+        self.assertIsNotNone(frontend_match)
+        self.assertEqual(frontend_match.group(1), backend_match.group(1))
+
+    def test_manual_adjustment_pause_id_matches_backend(self) -> None:
+        """The card must recognize the backend-owned Manual pause identifier."""
+        backend_source = BACKEND_CONSTANTS_SOURCE.read_text(encoding="utf-8")
+        frontend_source = FRONTEND_CLIMATE_CARD_CONTROLS_SOURCE.read_text(encoding="utf-8")
+        backend_line = next(
+            line for line in backend_source.splitlines()
+            if line.startswith("MANUAL_CONTROL_PAUSE_ID = ")
+        )
+        frontend_line = next(
+            line for line in frontend_source.splitlines()
+            if line.startswith("export const MANUAL_ADJUSTMENT_PAUSE_ID = ")
+        )
+        backend_value = backend_line.split("=", 1)[1].strip().strip('"')
+        frontend_value = frontend_line.split("=", 1)[1].strip().rstrip(";").strip('"')
+        self.assertEqual(frontend_value, backend_value)
+
     def test_external_publication_translations_describe_effective_schedule(self) -> None:
         """External publication copy must not imply that only Default is published."""
         publication_keys = (
@@ -578,7 +616,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('from "./velair/views/panel"', source)
         self.assertIn("export type ScheduleResponse", types_source)
         self.assertIn(
-            "export const cardStyles = [baseStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
+            "export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`",
             styles_source,
         )
         self.assertIn("`, responsiveStyles];", styles_source)
@@ -989,7 +1027,10 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("grid-template-columns: 42ch 8ch 12ch", overview_styles_source)
         self.assertIn("--overview-timeline-name-column: 168px", overview_styles_source)
         self.assertIn("left: calc(var(--overview-timeline-name-column) + 10px)", responsive_styles_source)
-        self.assertIn(".overview-timeline-block-main {\n      left: calc(var(--overview-timeline-name-column) + 12px);", responsive_styles_source)
+        self.assertIn(".overview-timeline-block-main {\n      left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));", responsive_styles_source)
+        self.assertIn(".overview-timeline-start-edge .overview-timeline-block-main", responsive_styles_source)
+        self.assertIn("left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));", responsive_styles_source)
+        self.assertIn("position: sticky;", responsive_styles_source)
         self.assertIn("max-width: min(150px, calc(100vw - var(--overview-timeline-name-column) - 32px))", responsive_styles_source)
         self.assertIn(".overview-timeline-boost", overview_styles_source)
         self.assertIn(".overview-timeline-pause", overview_styles_source)
@@ -1160,7 +1201,11 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("@container (max-width: 340px)", responsive_styles_source)
         self.assertIn("grid-template-areas:", responsive_styles_source)
         self.assertIn('"time time options delete"', responsive_styles_source)
-        self.assertIn('"mode mode target target"', responsive_styles_source)
+        self.assertIn('"mode target target target"', responsive_styles_source)
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1fr) 36px 36px 36px",
+            responsive_styles_source,
+        )
         self.assertIn(".editable-block > label:nth-child(2)", responsive_styles_source)
         self.assertIn("grid-area: mode", responsive_styles_source)
         self.assertIn(".editable-block > .temperature-range-fields", responsive_styles_source)

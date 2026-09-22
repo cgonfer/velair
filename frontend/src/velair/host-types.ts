@@ -4,7 +4,9 @@ import type { TimelineBlock } from "./domain/timeline";
 import type { SupportedLanguage, TranslationKey } from "./translations";
 import type {
   BlockDraftSource,
+  ClimateCardCustomAction,
   ComfortSettings,
+  ComfortSettingsUpdate,
   DiagnosticsSnapshot,
   DraftScheduleBlock,
   EntityDiagnostic,
@@ -41,6 +43,37 @@ export type VelairViewHost = {
   _applyingTemplateTargets: boolean;
   _applyingZones: boolean;
   _changedNextEventIds: Set<string>;
+  _climateCardBoost?: {
+    entityId: string;
+    durationMinutes: number;
+    targetKind: "single" | "range";
+    target?: number;
+    low?: number;
+    high?: number;
+    hvacMode?: string;
+    fanMode?: string;
+    presetMode?: string;
+    swingMode?: string;
+    swingHorizontalMode?: string;
+    humidity?: number;
+  };
+  _climateCardPause?: {
+    entityId: string;
+    indefinite: boolean;
+    durationMinutes: number;
+    action: "none" | "turn_off";
+  };
+  _climateCardActionsMenuOpen: boolean;
+  _climateCardActionsHasOverflow: boolean;
+  _climateCardActionsCanScrollLeft: boolean;
+  _climateCardActionsCanScrollRight: boolean;
+  _climateCardCurrentStateCollapsed: boolean;
+  _climateCardPreconditioningCollapsed: boolean;
+  _climateCardRoomAssistCollapsed: boolean;
+  _climateCardScriptAction?: string;
+  _climateCardScriptFeedback?: { key: string; status: "success" | "error"; message: string };
+  _climateCardServiceAction?: "boost" | "cancel-boost" | "pause" | "resume";
+  _climateCardThermostatAction?: "temperature" | "hvac-mode";
   _config: VelairCardConfig;
   _controlAction?: "pause" | "resume";
   _manualControlActions: Record<string, "enter" | "resume">;
@@ -112,6 +145,10 @@ export type VelairViewHost = {
   _clearOverviewTimelineDetail(): void;
   _climateProvidedData(entityId: string): { icon: string; label: string }[];
   _climateSupportedModes(entityId: string): string[];
+  _cancelClimateCardBoost(): void;
+  _cancelClimateCardPause(): void;
+  _closeClimateCardActionsMenu(returnFocus?: boolean): void;
+  _handleClimateCardActionsScroll(event: Event): void;
   _closeSchedulerMenu(): void;
   _copySelectedDay(): Promise<void>;
   _createTemplate(): Promise<void>;
@@ -156,10 +193,25 @@ export type VelairViewHost = {
   _handleTimelineResizeStart(index: number, edge: "start" | "end", source: BlockDraftSource, event: PointerEvent): void;
   _hasDraftValidationError(source?: BlockDraftSource): boolean;
   _humidityLimits(source?: BlockDraftSource): [number, number] | undefined;
+  _hvacActionLabel(action: string): string;
   _hvacModeOptions(source?: BlockDraftSource): string[];
   _importAvailableSections(): PortableSection[];
   _importPortableData(): Promise<void>;
   _inputValue(event: Event): string;
+  _navigateToVelair(): void;
+  _openClimateCardActionsMenu(): void;
+  _openClimateCardBoost(entityId: string): void;
+  _openClimateCardPause(entityId: string): void;
+  _openClimateEntity(entityId: string): void;
+  _openEntityHistory(entityId: string): void;
+  _toggleClimateCardCurrentState(): void;
+  _toggleClimateCardPreconditioning(): void;
+  _toggleClimateCardRoomAssist(): void;
+  _adjustClimateCardTarget(entityId: string, field: "temperature" | "target_temp_low" | "target_temp_high", direction: -1 | 1): Promise<void>;
+  _setClimateCardHvacMode(entityId: string, mode: string): Promise<void>;
+  _updateClimateCardBoost(field: "durationMinutes" | "target" | "low" | "high" | "humidity", value: string): void;
+  _updateClimateCardBoostOption(field: "targetKind" | "hvacMode" | "fanMode" | "presetMode" | "swingMode" | "swingHorizontalMode", value: string): void;
+  _updateClimateCardPause(field: "durationMinutes" | "action" | "indefinite", value: string | boolean): void;
   _initialScheduleWeekday(firstWeekday: string): string;
   _language(): SupportedLanguage;
   _modeLabel(mode: string): string;
@@ -191,10 +243,17 @@ export type VelairViewHost = {
   _saveSelectedTemplateFromLibrary(template: ScheduleTemplate): Promise<void>;
   _saveSettings(settings: Partial<PanelSettings>): Promise<void>;
   _saveExternalChangePolicy(entityId: string, policy: ExternalChangePolicy): Promise<void>;
+  _saveZoneTargetTempStep(entityId: string, targetTempStep: number): Promise<void>;
   _setZoneExecution(entityId: string, provider?: string): Promise<boolean>;
   _resumeAutomaticControl(entityId: string): Promise<void>;
+  _runClimateCardService(
+    action: "boost" | "cancel-boost" | "pause" | "resume",
+    entityId: string,
+  ): Promise<void>;
+  _runClimateCardScriptAction(action: ClimateCardCustomAction, index: number): Promise<void>;
+  _scrollClimateCardActions(direction: -1 | 1): void;
   _enterManualAdjustment(entityId: string): Promise<void>;
-  _saveZoneComfort(entityId: string, comfort: Partial<ComfortSettings>): Promise<void>;
+  _saveZoneComfort(entityId: string, comfort: ComfortSettingsUpdate): Promise<void>;
   _saveZonePreconditioning(entityId: string, preconditioning: Partial<PreconditioningSettings>): Promise<void>;
   _saveTemplate(saveAsNew: boolean): Promise<void>;
   _scheduleTemplates(): ScheduleTemplate[];

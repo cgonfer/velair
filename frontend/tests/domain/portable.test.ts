@@ -87,10 +87,10 @@ describe("portable preconditioning learning", () => {
     expect(validatePortablePayload(rangePayload)).toEqual({ ok: true, sections: ["zones"] });
   });
 
-  it("accepts and round-trips v8 zone data but rejects v9", () => {
-    const v7: VelairPortablePayload = {
+  it("accepts current v11 zone data and rejects future v12 data", () => {
+    const current: VelairPortablePayload = {
       ...payload,
-      model_version: 8,
+      model_version: 11,
       sections: {
         zones: {
           "climate.office": {
@@ -103,16 +103,26 @@ describe("portable preconditioning learning", () => {
               action: "for_duration",
               duration_minutes: 90,
             },
+            comfort: {
+              derived_metrics: {
+                humidex: { enabled: true, source: "velair" },
+              },
+              outdoor_comparison: {
+                enabled: true,
+                temperature_entity_id: "sensor.outdoor_temperature",
+                humidity_entity_id: "sensor.outdoor_humidity",
+              },
+            },
           },
         },
       },
     };
-    const roundTrip = JSON.parse(JSON.stringify(v7)) as VelairPortablePayload;
+    const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(8);
+    expect(PORTABLE_MODEL_VERSION).toBe(11);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
-    expect(roundTrip.sections.zones).toEqual(v7.sections.zones);
-    expect(validatePortablePayload({ ...roundTrip, model_version: 9 })).toEqual({
+    expect(roundTrip.sections.zones).toEqual(current.sections.zones);
+    expect(validatePortablePayload({ ...roundTrip, model_version: 12 })).toEqual({
       ok: false,
       errorKey: "invalidImportFile",
     });

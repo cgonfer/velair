@@ -20,6 +20,59 @@ async function selectFirstProfile(element: VelairProfilesView): Promise<void> {
 }
 
 describe("profiles view", () => {
+  it("accepts mode-only profile blocks on climates without temperature targets", () => {
+    const profiles = new VelairProfilesView();
+    profiles.hass = {
+      language: "en",
+      states: {
+        "climate.office": {
+          state: "auto",
+          attributes: { friendly_name: "Office", hvac_modes: ["off", "auto"], supported_features: 0 },
+        },
+      },
+    } as never;
+    const blocks = [{
+      action: "set_hvac_mode",
+      hvac_mode: "auto",
+      start: "08:00",
+      temperature: 21,
+      fan_mode: "quiet",
+    }] as never;
+    const cloneCompatibilityError = (profiles as unknown as {
+      _cloneCompatibilityError: (value: unknown, entityId: string) => string | undefined;
+    })._cloneCompatibilityError.bind(profiles);
+
+    expect(cloneCompatibilityError(blocks, "climate.office")).toBeUndefined();
+  });
+
+  it("uses native Fahrenheit target-step priority for profile validation", () => {
+    const profiles = new VelairProfilesView();
+    profiles.data = {
+      ...data,
+      temperature_unit: "°F",
+      zones: {
+        "climate.office": {
+          last_reported_target_temp_step: 0.9,
+          target_temp_step_override: 1.8,
+        },
+      },
+    } as unknown as ScheduleResponse;
+    profiles.hass = {
+      states: {
+        "climate.office": { state: "heat", attributes: {} },
+      },
+    } as never;
+    const temperatureStep = (profiles as unknown as {
+      _entityTemperatureStep: (entityId: string) => number;
+    })._entityTemperatureStep.bind(profiles);
+
+    expect(temperatureStep("climate.office")).toBe(0.9);
+    delete profiles.data.zones["climate.office"].last_reported_target_temp_step;
+    expect(temperatureStep("climate.office")).toBe(1.8);
+    profiles.hass.states!["climate.office"].attributes!.target_temp_step = 0.5;
+    expect(temperatureStep("climate.office")).toBe(0.5);
+  });
+
   it("separates the Profile schedules and Modes workspaces", async () => {
     const profiles = new VelairProfilesView();
     profiles.workspace = "profiles";
@@ -790,14 +843,14 @@ describe("profiles view", () => {
     expect([...element.shadowRoot!.querySelectorAll(".mode-item.built-in")].map((item) => item.textContent))
       .toEqual(expect.arrayContaining([expect.stringContaining("Default"), expect.stringContaining("Manual")]));
     expect(element.shadowRoot?.querySelectorAll(".mode-item.built-in .mode-delete")).toHaveLength(0);
-    const helpButtons = element.shadowRoot?.querySelectorAll<HTMLButtonElement>(".mode-item.built-in .mode-help");
+    const helpButtons = element.shadowRoot?.querySelectorAll<HTMLButtonElement>(".mode-item.built-in .inline-help");
     expect(helpButtons).toHaveLength(2);
-    expect(helpButtons?.[0]?.querySelector('[role="tooltip"]')?.textContent).toContain("Deactivates profiles");
-    expect(helpButtons?.[1]?.querySelector('[role="tooltip"]')?.textContent)
+    expect(helpButtons?.[0]?.parentElement?.querySelector('[role="tooltip"]')?.textContent).toContain("Deactivates profiles");
+    expect(helpButtons?.[1]?.parentElement?.querySelector('[role="tooltip"]')?.textContent)
       .toContain("Active Profiles are not controlled by a Mode.");
     expect(helpButtons?.[0]?.getAttribute("aria-label")).toBe("About Default");
     expect(helpButtons?.[0]?.getAttribute("aria-label")).not.toBe(
-      helpButtons?.[0]?.querySelector('[role="tooltip"]')?.textContent,
+      helpButtons?.[0]?.parentElement?.querySelector('[role="tooltip"]')?.textContent,
     );
     expect(helpButtons?.[0]?.getAttribute("aria-describedby")).toBe("mode-default-help");
     const modeCreate = element.shadowRoot?.querySelector(".mode-create");
@@ -2103,8 +2156,11 @@ describe("profiles view", () => {
     expect(profileStyles.cssText).toContain("min-height: 42px");
     expect(profileStyles.cssText).toContain(".mode-layout");
     expect(profileStyles.cssText).toMatch(/@media \(max-width: 760px\)[\s\S]*\.mode-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
-    expect(profileStyles.cssText).toMatch(/\.mode-help-tooltip\s*\{[^}]*max-width:\s*min\(240px, calc\(100vw - 40px\)\)/);
-    expect(profileStyles.cssText).toMatch(/\.mode-help:hover \.mode-help-tooltip,[\s\S]*\.mode-help:focus-visible \.mode-help-tooltip\s*\{[^}]*visibility:\s*visible/);
+    expect(profileStyles.cssText).not.toContain(".mode-help-tooltip");
+    expect(profileStyles.cssText).toContain(".mode-item.built-in > .inline-help-wrapper");
+    expect(profileStyles.cssText).toMatch(
+      /\.mode-item\.built-in\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 32px 34px;/,
+    );
     expect(profileStyles.cssText).not.toMatch(/\.mode-item\.built-in\s*\{[^}]*opacity/);
     expect(profileStyles.cssText).toMatch(/\.profile-item-copy code\s*\{[^}]*font-size:\s*11px/);
     expect(profileStyles.cssText).toMatch(/\.profile-heading-id\s*\{[^}]*font-size:\s*12px/);

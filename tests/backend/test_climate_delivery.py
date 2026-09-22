@@ -33,6 +33,34 @@ class ClimateDeliveryCoordinatorTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         await self.coordinator.async_stop()
 
+    async def test_availability_listener_is_registered_as_home_assistant_callback(
+        self,
+    ) -> None:
+        callbacks = []
+
+        def track(_hass, _entity_ids, state_callback):
+            callbacks.append(state_callback)
+            return lambda: None
+
+        async def apply() -> None:
+            return None
+
+        with patch(
+            "custom_components.velair.climate_delivery.async_track_state_change_event",
+            track,
+        ):
+            self.assertTrue(
+                await self.coordinator.async_deliver(
+                    self.entity_id,
+                    lambda: Delivery(apply),
+                )
+            )
+
+        self.assertEqual(1, len(callbacks))
+        self.assertTrue(
+            getattr(callbacks[0], "__velair_test_callback__", False)
+        )
+
     async def test_explicit_failure_re_resolves_twice_then_stops(self) -> None:
         resolved: list[int] = []
 
@@ -86,6 +114,70 @@ class ClimateDeliveryCoordinatorTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual([1, 2], attempts)
         self.assertGreaterEqual(log.call_count, 2)
+        await coordinator.async_stop()
+
+    async def test_non_resilient_failure_is_observed_before_it_is_raised(self) -> None:
+        observed = []
+        coordinator = ClimateDeliveryCoordinator(
+            self.hass,
+            lambda entity_id, status, details: observed.append(
+                (entity_id, status, details)
+            ),
+        )
+
+        async def apply() -> None:
+            raise HomeAssistantError("manual delivery failed")
+
+        with self.assertRaises(HomeAssistantError):
+            await coordinator.async_deliver(
+                self.entity_id,
+                lambda: Delivery(apply),
+                resilient=False,
+            )
+
+        self.assertEqual("failed", observed[-1][1])
+        self.assertEqual(
+            "Home Assistant service call failed",
+            observed[-1][2]["message"],
+        )
+        await coordinator.async_stop()
+
+    async def test_recovered_success_reports_the_retries_it_used(self) -> None:
+        observed = []
+        attempts = 0
+        coordinator = ClimateDeliveryCoordinator(
+            self.hass,
+            lambda _entity_id, status, details: observed.append((status, details)),
+        )
+
+        def resolver():
+            async def apply() -> None:
+                nonlocal attempts
+                attempts += 1
+                if attempts == 1:
+                    raise HomeAssistantError("temporary")
+
+            return Delivery(apply)
+
+        with patch("custom_components.velair.climate_delivery.RETRY_DELAYS", (0,)):
+            self.assertFalse(
+                await coordinator.async_deliver(self.entity_id, resolver)
+            )
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+
+        self.assertIn(
+            (
+                "failed",
+                {
+                    "message": "Home Assistant service call failed",
+                    "retry_count": 0,
+                },
+            ),
+            observed,
+        )
+        self.assertIn(("retrying", {"retry_count": 1}), observed)
+        self.assertIn(("success", {"retry_count": 1}), observed)
         await coordinator.async_stop()
 
     async def test_replace_cancel_and_stop_publish_cancelled_evidence(self) -> None:
@@ -145,7 +237,7 @@ class ClimateDeliveryCoordinatorTests(unittest.IsolatedAsyncioTestCase):
         )
         observed.clear()
         await coordinator._async_redeliver_current(self.entity_id)
-        self.assertIn(("success", None), observed)
+        self.assertIn(("success", {"retry_count": 0}), observed)
         self.assertFalse(any(status == "cancelled" for status, _ in observed))
         await coordinator.async_stop()
 

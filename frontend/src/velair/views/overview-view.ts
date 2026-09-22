@@ -397,7 +397,6 @@ function renderExternalControllerSignal(
       helpId,
       host._t("overviewExternalInfoAction", { provider: providerName }),
       tooltipParts.join(" "),
-      { compact: true },
     )}
   </section>`;
 }
@@ -1096,6 +1095,7 @@ export function renderOverviewTimelineBlock(
   const blockClass = [
     "overview-timeline-block",
     `mode-${timelineModeClass(timelineBlock.block)}`,
+    timelineBlock.startMinute <= 0 ? "overview-timeline-start-edge" : "",
     timelineBlock.width < 12 ? "compact" : "",
     timelineBlock.width < 6 ? "tiny" : "",
   ].filter(Boolean).join(" ");
@@ -1239,6 +1239,7 @@ export function renderOverviewTimelineCarryOver(
   const blockClass = [
     "overview-timeline-block",
     "overview-timeline-carry-over",
+    "overview-timeline-start-edge",
     `mode-${timelineModeClass(carryOver.block)}`,
     carryOver.width < 12 ? "compact" : "",
     carryOver.width < 6 ? "tiny" : "",
@@ -1443,7 +1444,7 @@ export function renderSchedulerControls(host: OverviewViewHost) {
             <input
               type="number"
               min="1"
-              step="5"
+              step="1"
               .value=${String(host._pauseDurationMinutes)}
               @input=${(event: Event) => {
                 host._pauseDurationMinutes = Math.max(1, Math.round(Number(host._inputValue(event)) || 1));
@@ -1494,7 +1495,7 @@ export function renderOverviewSchedulerControls(host: OverviewViewHost) {
           <input
             type="number"
             min="1"
-            step="5"
+            step="1"
             aria-label=${host._t("pauseDuration")}
             .value=${String(host._pauseDurationMinutes)}
             @input=${(event: Event) => {

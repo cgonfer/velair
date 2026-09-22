@@ -44,6 +44,78 @@ class ManualAdjustmentApiSchemaTest(unittest.TestCase):
                     })
 
 
+class TargetTemperatureStepApiTest(unittest.IsolatedAsyncioTestCase):
+    async def test_update_persists_zone_fallback_and_returns_schedule(self) -> None:
+        scheduler = SimpleNamespace(
+            async_update_zone_target_temp_step_override=AsyncMock(return_value=0.5)
+        )
+        runtime = {
+            "scheduler": scheduler,
+            "storage": SimpleNamespace(temperature_migration_required=False),
+            "operation_active": None,
+            "operation_recovery": None,
+        }
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        original_get_runtime = api_module._get_runtime
+        original_build_response = api_module._build_schedule_response
+        api_module._get_runtime = lambda _hass: runtime
+        api_module._build_schedule_response = lambda _runtime: {"updated": True}
+        self.addCleanup(setattr, api_module, "_get_runtime", original_get_runtime)
+        self.addCleanup(
+            setattr, api_module, "_build_schedule_response", original_build_response
+        )
+
+        await api_module.ws_update_zone_target_temp_step(
+            SimpleNamespace(),
+            connection,
+            {
+                "id": 1,
+                "type": "velair/update_zone_target_temp_step",
+                "entity_id": "climate.salon",
+                "target_temp_step": 0.5,
+            },
+        )
+
+        scheduler.async_update_zone_target_temp_step_override.assert_awaited_once_with(
+            "climate.salon", 0.5
+        )
+        connection.send_result.assert_called_once_with(1, {"updated": True})
+        connection.send_error.assert_not_called()
+
+    async def test_update_reports_validation_error(self) -> None:
+        scheduler = SimpleNamespace(
+            async_update_zone_target_temp_step_override=AsyncMock(
+                side_effect=ValueError("invalid step")
+            )
+        )
+        runtime = {
+            "scheduler": scheduler,
+            "storage": SimpleNamespace(temperature_migration_required=False),
+            "operation_active": None,
+            "operation_recovery": None,
+        }
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        original_get_runtime = api_module._get_runtime
+        api_module._get_runtime = lambda _hass: runtime
+        self.addCleanup(setattr, api_module, "_get_runtime", original_get_runtime)
+
+        await api_module.ws_update_zone_target_temp_step(
+            SimpleNamespace(),
+            connection,
+            {
+                "id": 2,
+                "type": "velair/update_zone_target_temp_step",
+                "entity_id": "climate.salon",
+                "target_temp_step": 40,
+            },
+        )
+
+        connection.send_error.assert_called_once_with(
+            2, "invalid_target_temp_step", "invalid step"
+        )
+        connection.send_result.assert_not_called()
+
+
 class ExternalExecutionApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_schedule_required_uses_specific_websocket_error_code(self) -> None:
         scheduler = SimpleNamespace(
@@ -576,6 +648,64 @@ class ClimateProfileImportValidationTest(unittest.TestCase):
 class ResetDataOrderingTest(unittest.IsolatedAsyncioTestCase):
     """Verify reset publishes no side effects before durable storage."""
 
+    async def test_successful_reset_clears_runtime_diagnostics_evidence(self) -> None:
+        storage = SimpleNamespace(
+            temperature_migration_required=False,
+            effective_temperature_unit=api_module.CELSIUS,
+            async_reset_to_defaults=AsyncMock(),
+        )
+        scheduler = SimpleNamespace(
+            async_prepare_data_reset=AsyncMock(),
+            async_restore_room_sensor_assist_after_temperature_operation=AsyncMock(),
+            handle_temperature_unit_change=Mock(),
+            async_start=AsyncMock(),
+            set_temperature_migration_blocked=Mock(),
+        )
+        diagnostics = SimpleNamespace(async_reset_runtime_evidence=Mock())
+        entry = SimpleNamespace(
+            entry_id="entry",
+            options={"apply_active_schedule_on_startup": True},
+        )
+        runtime = {
+            "diagnostics": diagnostics,
+            "entry": entry,
+            "scheduler": scheduler,
+            "storage": storage,
+            "operation_active": None,
+            "operation_recovery": None,
+        }
+        original_get_runtime = api_module._get_runtime
+        original_build_response = api_module._build_schedule_response
+        original_dismiss = api_module.async_dismiss_temperature_migration_notification
+        api_module._get_runtime = lambda _hass: runtime
+        api_module._build_schedule_response = lambda _runtime: {"ok": True}
+        api_module.async_dismiss_temperature_migration_notification = AsyncMock()
+        self.addCleanup(setattr, api_module, "_get_runtime", original_get_runtime)
+        self.addCleanup(
+            setattr, api_module, "_build_schedule_response", original_build_response
+        )
+        self.addCleanup(
+            setattr,
+            api_module,
+            "async_dismiss_temperature_migration_notification",
+            original_dismiss,
+        )
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=Mock())
+        )
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+
+        await api_module.ws_reset_data(
+            hass,
+            connection,
+            {"id": 1, "type": "velair/reset_data", "confirmation": "reset"},
+        )
+
+        diagnostics.async_reset_runtime_evidence.assert_called_once_with()
+        scheduler.async_start.assert_awaited_once_with(apply_current_schedule=False)
+        connection.send_result.assert_called_once_with(1, {"ok": True})
+        connection.send_error.assert_not_called()
+
     async def test_failed_store_does_not_change_options_or_clear_runtime(self) -> None:
         storage = SimpleNamespace(
             temperature_migration_required=False,
@@ -783,7 +913,7 @@ class PortableTemperatureContractTest(unittest.TestCase):
 
         payload = api_module._build_export_payload(export_runtime, ["zones"])
 
-        self.assertEqual(payload["model_version"], 8)
+        self.assertEqual(payload["model_version"], api_module.EXPORT_MODEL_VERSION)
         self.assertEqual(
             payload["sections"]["zones"]["climate.salon"]["preconditioning"][
                 "room_sensor_assist_deadband"
@@ -812,7 +942,7 @@ class PortableTemperatureContractTest(unittest.TestCase):
             self._runtime(api_module.CELSIUS), payload, ["zones"]
         )
 
-        self.assertEqual(payload["model_version"], 8)
+        self.assertEqual(payload["model_version"], api_module.EXPORT_MODEL_VERSION)
         self.assertEqual(
             payload["sections"]["zones"]["climate.salon"]["preconditioning"][
                 "room_sensor_assist_deadband"
@@ -855,6 +985,365 @@ class PortableTemperatureContractTest(unittest.TestCase):
                     api_module._build_import_data(
                         self._runtime(api_module.CELSIUS), payload, ["zones"]
                     )
+
+    def test_import_rejects_enabled_external_metric_with_invalid_sensor_entity(self) -> None:
+        for entity_id in ("climate.salon", "sensor.", "sensor.bad name"):
+            with self.subTest(entity_id=entity_id):
+                payload = {
+                    "format": api_module.EXPORT_FORMAT,
+                    "model_version": api_module.EXPORT_MODEL_VERSION,
+                    "temperature_unit": api_module.CELSIUS,
+                    "sections": {
+                        "zones": {
+                            "climate.salon": {
+                                "schedule": {},
+                                "comfort": {
+                                    "derived_metrics": {
+                                        "dew_point": {
+                                            "enabled": True,
+                                            "source": "entity",
+                                            "entity_id": entity_id,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                }
+
+                with self.assertRaisesRegex(ValueError, "must use a sensor entity"):
+                    api_module._build_import_data(
+                        self._runtime(api_module.CELSIUS), payload, ["zones"]
+                    )
+
+    def test_incomplete_external_metric_round_trips_portable_data(self) -> None:
+        export_runtime = self._runtime(api_module.CELSIUS)
+        export_runtime["entry"] = SimpleNamespace(options={})
+        export_runtime["storage"].data["zones"]["climate.salon"]["comfort"] = (
+            helpers.models_module.normalize_comfort_data(
+                {
+                    "enabled": True,
+                    "derived_metrics": {
+                        "dew_point": {
+                            "enabled": True,
+                            "source": "entity",
+                            "entity_id": None,
+                        }
+                    },
+                }
+            )
+        )
+
+        payload = api_module._build_export_payload(export_runtime, ["zones"])
+        imported = api_module._build_import_data(
+            self._runtime(api_module.CELSIUS), payload, ["zones"]
+        )
+
+        self.assertEqual(
+            imported["zones"]["climate.salon"]["comfort"]["derived_metrics"][
+                "dew_point"
+            ],
+            {"enabled": True, "source": "entity", "entity_id": None},
+        )
+
+    def test_comfort_settings_round_trip_in_portable_model_v11(self) -> None:
+        export_runtime = self._runtime(api_module.CELSIUS)
+        export_runtime["entry"] = SimpleNamespace(options={})
+        export_runtime["storage"].data["zones"]["climate.salon"]["comfort"] = (
+            helpers.models_module.normalize_comfort_data(
+                {
+                    "enabled": True,
+                    "outdoor_comparison_enabled": True,
+                    "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+                    "outdoor_humidity_entity_id": "sensor.outdoor_humidity",
+                    "ventilation_temperature_threshold": 1.5,
+                    "ventilation_humidity_threshold": 7.5,
+                    "ventilation_absolute_humidity_threshold": 1.8,
+                    "comfort_model": "temperature_aware",
+                    "temperature_aware": {
+                        "at_temperature_min": {
+                            "minimum": 42,
+                            "maximum": 64,
+                        },
+                        "at_temperature_max": {
+                            "minimum": 34,
+                            "maximum": 52,
+                        },
+                    },
+                }
+            )
+        )
+
+        payload = api_module._build_export_payload(export_runtime, ["zones"])
+        imported = api_module._build_import_data(
+            self._runtime(api_module.CELSIUS), payload, ["zones"]
+        )
+        comfort = imported["zones"]["climate.salon"]["comfort"]
+
+        self.assertEqual(payload["model_version"], 11)
+        self.assertTrue(comfort["outdoor_comparison_enabled"])
+        self.assertEqual(
+            comfort["outdoor_temperature_entity_id"],
+            "sensor.outdoor_temperature",
+        )
+        self.assertEqual(
+            comfort["outdoor_humidity_entity_id"],
+            "sensor.outdoor_humidity",
+        )
+        self.assertEqual(comfort["ventilation_temperature_threshold"], 1.5)
+        self.assertEqual(comfort["ventilation_humidity_threshold"], 7.5)
+        self.assertEqual(
+            comfort["ventilation_absolute_humidity_threshold"], 1.8
+        )
+        self.assertEqual(comfort["comfort_model"], "temperature_aware")
+        self.assertEqual(
+            comfort["temperature_aware"]["at_temperature_max"],
+            {"minimum": 34.0, "maximum": 52.0},
+        )
+
+    def test_guided_comfort_model_round_trips_in_portable_model_v11(self) -> None:
+        export_runtime = self._runtime(api_module.CELSIUS)
+        export_runtime["entry"] = SimpleNamespace(options={})
+        export_runtime["storage"].data["zones"]["climate.salon"]["comfort"] = (
+            helpers.models_module.normalize_comfort_data(
+                {
+                    "enabled": True,
+                    "humidity_enabled": True,
+                    "comfort_model": "guided",
+                    "humidity_min": 42,
+                    "humidity_max": 58,
+                }
+            )
+        )
+
+        payload = api_module._build_export_payload(export_runtime, ["zones"])
+        imported = api_module._build_import_data(
+            self._runtime(api_module.CELSIUS), payload, ["zones"]
+        )
+
+        comfort = imported["zones"]["climate.salon"]["comfort"]
+        self.assertEqual(comfort["comfort_model"], "guided")
+        self.assertEqual(comfort["humidity_min"], 42.0)
+        self.assertEqual(comfort["humidity_max"], 58.0)
+
+    def test_import_rejects_guided_model_with_humidity_disabled(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 11,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {
+                        "schedule": {},
+                        "comfort": {
+                            "comfort_model": "guided",
+                            "humidity_enabled": False,
+                        },
+                    }
+                }
+            },
+        }
+
+        with self.assertRaisesRegex(ValueError, "requires humidity monitoring"):
+            api_module._build_import_data(
+                self._runtime(api_module.CELSIUS), payload, ["zones"]
+            )
+
+    def test_import_rejects_invalid_temperature_aware_range(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 11,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {
+                        "schedule": {},
+                        "comfort": {
+                            "comfort_model": "temperature_aware",
+                            "temperature_aware": {
+                                "at_temperature_max": {
+                                    "minimum": 65,
+                                    "maximum": 50,
+                                }
+                            },
+                        },
+                    }
+                }
+            },
+        }
+
+        with self.assertRaisesRegex(ValueError, "valid 0-100 range"):
+            api_module._build_import_data(
+                self._runtime(api_module.CELSIUS), payload, ["zones"]
+            )
+
+    def test_import_rejects_incomplete_temperature_aware_range(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 11,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {
+                        "schedule": {},
+                        "comfort": {
+                            "comfort_model": "temperature_aware",
+                            "temperature_aware": {
+                                "at_temperature_max": {"minimum": 35}
+                            },
+                        },
+                    }
+                }
+            },
+        }
+
+        with self.assertRaisesRegex(ValueError, "must include minimum and maximum"):
+            api_module._build_import_data(
+                self._runtime(api_module.CELSIUS), payload, ["zones"]
+            )
+
+    def test_portable_v10_comfort_import_defaults_to_simple_model(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 10,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {
+                        "schedule": {},
+                        "comfort": {"humidity_min": 42, "humidity_max": 58},
+                    }
+                }
+            },
+        }
+
+        imported = api_module._build_import_data(
+            self._runtime(api_module.CELSIUS), payload, ["zones"]
+        )
+
+        comfort = imported["zones"]["climate.salon"]["comfort"]
+        self.assertEqual(comfort["comfort_model"], "simple")
+        self.assertEqual(
+            comfort["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 42.0, "maximum": 58.0},
+                "at_temperature_max": {"minimum": 42.0, "maximum": 58.0},
+            },
+        )
+
+    def test_import_rejects_non_sensor_outdoor_sources(self) -> None:
+        payload = {
+            "format": api_module.EXPORT_FORMAT,
+            "model_version": 10,
+            "temperature_unit": api_module.CELSIUS,
+            "sections": {
+                "zones": {
+                    "climate.salon": {
+                        "schedule": {},
+                        "comfort": {
+                            "outdoor_comparison_enabled": True,
+                            "outdoor_temperature_entity_id": "weather.home",
+                        },
+                    }
+                }
+            },
+        }
+
+        with self.assertRaisesRegex(ValueError, "must use a sensor entity"):
+            api_module._build_import_data(
+                self._runtime(api_module.CELSIUS), payload, ["zones"]
+            )
+
+    def test_import_validates_guidance_thresholds_in_declared_unit(self) -> None:
+        invalid_cases = (
+            (api_module.CELSIUS, "ventilation_temperature_threshold", 10.1),
+            (api_module.FAHRENHEIT, "ventilation_temperature_threshold", 0.1),
+            (api_module.CELSIUS, "ventilation_humidity_threshold", 50.1),
+            (api_module.CELSIUS, "ventilation_humidity_threshold", True),
+            (
+                api_module.CELSIUS,
+                "ventilation_absolute_humidity_threshold",
+                float("inf"),
+            ),
+            (
+                api_module.CELSIUS,
+                "ventilation_absolute_humidity_threshold",
+                "invalid",
+            ),
+        )
+        for unit, field, value in invalid_cases:
+            with self.subTest(unit=unit, field=field, value=value):
+                payload = {
+                    "format": api_module.EXPORT_FORMAT,
+                    "model_version": 10,
+                    "temperature_unit": unit,
+                    "sections": {
+                        "zones": {
+                            "climate.salon": {
+                                "schedule": {},
+                                "comfort": {field: value},
+                            }
+                        }
+                    },
+                }
+                with self.assertRaisesRegex(ValueError, "Comfort threshold"):
+                    api_module._build_import_data(
+                        self._runtime(api_module.CELSIUS), payload, ["zones"]
+                    )
+
+    def test_import_accepts_guidance_threshold_boundaries_and_converts_delta(self) -> None:
+        for source_unit, target_unit, minimum, maximum, expected_minimum in (
+            (api_module.CELSIUS, api_module.FAHRENHEIT, 0.1, 10, 0.2),
+            (api_module.FAHRENHEIT, api_module.CELSIUS, 0.2, 18, 0.1),
+        ):
+            with self.subTest(source_unit=source_unit, target_unit=target_unit):
+                payload = {
+                    "format": api_module.EXPORT_FORMAT,
+                    "model_version": 10,
+                    "temperature_unit": source_unit,
+                    "sections": {
+                        "zones": {
+                            "climate.salon": {
+                                "schedule": {},
+                                "comfort": {
+                                    "ventilation_temperature_threshold": minimum,
+                                    "ventilation_humidity_threshold": 0.5,
+                                    "ventilation_absolute_humidity_threshold": 10,
+                                },
+                            }
+                        }
+                    },
+                }
+                imported = api_module._build_import_data(
+                    self._runtime(target_unit), payload, ["zones"]
+                )
+                comfort = imported["zones"]["climate.salon"]["comfort"]
+                self.assertEqual(
+                    comfort["ventilation_temperature_threshold"], expected_minimum
+                )
+                self.assertEqual(comfort["ventilation_humidity_threshold"], 0.5)
+                self.assertEqual(
+                    comfort["ventilation_absolute_humidity_threshold"], 10
+                )
+
+                payload["sections"]["zones"]["climate.salon"]["comfort"][
+                    "ventilation_temperature_threshold"
+                ] = maximum
+                imported = api_module._build_import_data(
+                    self._runtime(source_unit), payload, ["zones"]
+                )
+                self.assertEqual(
+                    imported["zones"]["climate.salon"]["comfort"][
+                        "ventilation_temperature_threshold"
+                    ],
+                    maximum,
+                )
+
+    def test_comfort_websocket_source_validator_rejects_non_sensor_entity(self) -> None:
+        for entity_id in ("climate.salon", "sensor.", "sensor.bad name"):
+            with self.subTest(entity_id=entity_id):
+                with self.assertRaises(api_module.vol.Invalid):
+                    api_module._sensor_entity_id(entity_id)
 
     def test_import_rejects_incomplete_or_mixed_range_without_dropping_day(self) -> None:
         for invalid_block in (
@@ -1227,11 +1716,24 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
                 get_operational_status=lambda: "idle",
                 get_comfort_assessments=lambda: {
                     entity_id: {
-                        "enabled": False,
-                        "condition": "monitoring_off",
+                        "enabled": True,
+                        "condition": "comfortable",
                         "air_quality": "not_monitored",
-                        "data_quality": "unavailable",
+                        "data_quality": "complete",
                         "data_issues": [],
+                        "derived_metrics": {
+                            "humidex": {
+                                "availability": "current",
+                                "metric": "humidex",
+                                "value": 25.4,
+                                "temperature_range_position": "above",
+                            },
+                            "dew_point": {
+                                "availability": "current",
+                                "metric": "dew_point",
+                                "value": 12.3,
+                            },
+                        },
                     }
                 },
                 get_room_sensor_assist_statuses=lambda: {
@@ -1262,7 +1764,17 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
         )
         self.assertEqual(
             response["comfort"][entity_id]["condition"],
-            "monitoring_off",
+            "comfortable",
+        )
+        self.assertEqual(
+            response["comfort"][entity_id]["derived_metrics"]["humidex"][
+                "temperature_range_position"
+            ],
+            "above",
+        )
+        self.assertNotIn(
+            "temperature_range_position",
+            response["comfort"][entity_id]["derived_metrics"]["dew_point"],
         )
         self.assertEqual(response["zone_runtime"][entity_id]["state"], "scheduled")
         self.assertEqual(response["zone_runtime"][entity_id]["applied_temperature"], 21.5)
@@ -1569,6 +2081,8 @@ class PreconditioningLearningPortabilityTest(unittest.TestCase):
                     "temperature_min": 20.0,
                     "temperature_max": 24.0,
                 },
+                "target_temp_step_override": 0.5,
+                "last_reported_target_temp_step": 0.25,
             }
         }
 
@@ -1581,6 +2095,13 @@ class PreconditioningLearningPortabilityTest(unittest.TestCase):
         self.assertEqual(
             exported["climate.salon"]["preconditioning"]["minimum_delta_temperature"],
             5.0,
+        )
+        self.assertEqual(
+            exported["climate.salon"]["target_temp_step_override"],
+            0.5,
+        )
+        self.assertNotIn(
+            "last_reported_target_temp_step", exported["climate.salon"]
         )
 
 

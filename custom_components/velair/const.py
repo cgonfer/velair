@@ -61,6 +61,7 @@ SERVICE_RESUME_ZONE = "resume_zone"
 SERVICE_ENABLE_ROOM_SENSOR_ASSIST = "enable_room_sensor_assist"
 SERVICE_DISABLE_ROOM_SENSOR_ASSIST = "disable_room_sensor_assist"
 SERVICE_SET_DAILY_SCHEDULE = "set_daily_schedule"
+SERVICE_SET_HVAC_MODE = "set_hvac_mode"
 SERVICE_SET_TEMPERATURE = "set_temperature"
 SERVICE_SET_EXTERNAL_CHANGE_POLICY = "set_external_change_policy"
 SERVICE_ENTER_MANUAL_ADJUSTMENT = "enter_manual_adjustment"
@@ -90,9 +91,11 @@ ATTR_WEEKDAY = "weekday"
 ATTR_POLICY = "policy"
 
 ACTION_SET_TEMPERATURE = "set_temperature"
+ACTION_SET_HVAC_MODE = "set_hvac_mode"
 ACTION_TURN_OFF = "turn_off"
 ACTION_OPTIONS = [
     ACTION_SET_TEMPERATURE,
+    ACTION_SET_HVAC_MODE,
     ACTION_TURN_OFF,
 ]
 
@@ -146,8 +149,11 @@ PLATFORMS: tuple[Platform, ...] = (
 ZONE_SENSOR_UNIQUE_ID_SUFFIXES = (
     "active_target_temperature",
     "environmental_condition",
+    "ventilation_opportunity",
     "air_quality",
     "override_state",
+    "control",
+    "delivery_diagnostics",
     "preconditioning_start",
     "room_assist_state",
 )

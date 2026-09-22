@@ -5,8 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { VelairCard } from "../../src/velair/components/velair-card-element";
+import { ACTION_SET_HVAC_MODE } from "../../src/velair/constants";
 import { timelineBlocksFromDrafts } from "../../src/velair/domain/timeline";
 import { cardStyles } from "../../src/velair/styles/card-styles";
+import type { DraftScheduleBlock } from "../../src/velair/types";
 import {
   renderScheduleEditor,
   renderSchedulesView,
@@ -296,6 +298,51 @@ describe("schedule view", () => {
     expect(carry?.textContent).toContain("off");
     expect(carry?.querySelector(".timeline-resize-handle")).toBeNull();
     expect(container.querySelectorAll(".timeline-block:not(.timeline-carry-over)")).toHaveLength(1);
+  });
+
+  it("renders mode-only timeline and carry-over blocks without inventing a target", () => {
+    const container = document.createElement("div");
+    const drafts: DraftScheduleBlock[] = [{
+      action: ACTION_SET_HVAC_MODE,
+      start: "08:00",
+      hvac_mode: "auto",
+    }];
+    const viewHost = {
+      _currentTimelineNow: () => new Date("2026-08-04T12:00:00"),
+      _formatScheduleTime: (value: string) => value,
+      _formatTemperature: (value: number) => `${value} C`,
+      _handleTimelineDragEnd: vi.fn(),
+      _handleTimelineDragOver: vi.fn(),
+      _handleTimelineDrop: vi.fn(),
+      _handleTimelineResizeStart: vi.fn(),
+      _modeLabel: (mode: string) => mode,
+      _t: (key: string, replacements?: Record<string, string>) =>
+        replacements ? `${key}:${Object.values(replacements).join("")}` : key,
+      _timelineBlocks: () => timelineBlocksFromDrafts(drafts),
+      _shortWeekdayName: (weekday: string) => weekday.slice(0, 3),
+      _weekdayName: (weekday: string) => weekday,
+    } as unknown as VelairViewHost;
+
+    render(renderTimeline(viewHost, "climate.office", "schedule", {
+      schedule: {
+        monday: [{ action: ACTION_SET_HVAC_MODE, start: "22:00", hvac_mode: "auto" }],
+        tuesday: drafts,
+      },
+      weekday: "tuesday",
+    }), container);
+
+    const blocks = [
+      container.querySelector(".timeline-carry-over"),
+      container.querySelector(".timeline-block:not(.timeline-carry-over)"),
+    ];
+    for (const block of blocks) {
+      expect(block).not.toBeNull();
+      expect(block?.classList.contains("mode-auto")).toBe(true);
+      expect(block?.querySelector("small")?.textContent).toBe("auto");
+      expect(block?.querySelector("span")?.textContent).not.toBe("invalidTemperatureRange");
+      expect(block?.getAttribute("title")).not.toContain("invalidTemperatureRange");
+      expect(block?.getAttribute("title")).not.toMatch(/\b\d+(?:\.\d+)?\s*C\b/);
+    }
   });
 
   it("does not derive weekly carry-over for a template timeline", () => {

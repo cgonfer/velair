@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20260830115042", r = "1.7.0", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
+}, n = "20260922194616", r = "1.8.0-beta.1", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
 	constructor(e, t, n) {
 		if (this._$cssResult$ = !0, n !== o) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
 		this.cssText = e, this.t = t;
@@ -36,7 +36,7 @@ var e = Object.defineProperty, t = (t, n) => {
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return l(t);
-})(e) : e, { is: p, defineProperty: m, getOwnPropertyDescriptor: h, getOwnPropertyNames: g, getOwnPropertySymbols: _, getPrototypeOf: v } = Object, y = globalThis, b = y.trustedTypes, x = b ? b.emptyScript : "", S = y.reactiveElementPolyfillSupport, C = (e, t) => e, ee = {
+})(e) : e, { is: p, defineProperty: m, getOwnPropertyDescriptor: h, getOwnPropertyNames: g, getOwnPropertySymbols: _, getPrototypeOf: v } = Object, y = globalThis, b = y.trustedTypes, x = b ? b.emptyScript : "", S = y.reactiveElementPolyfillSupport, C = (e, t) => e, w = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
@@ -65,23 +65,23 @@ var e = Object.defineProperty, t = (t, n) => {
 		}
 		return n;
 	}
-}, te = (e, t) => !p(e, t), ne = {
+}, ee = (e, t) => !p(e, t), te = {
 	attribute: !0,
 	type: String,
-	converter: ee,
+	converter: w,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: te
+	hasChanged: ee
 };
 Symbol.metadata ??= Symbol("metadata"), y.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var re = class extends HTMLElement {
+var ne = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = ne) {
+	static createProperty(e, t = te) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && m(this.prototype, e, r);
@@ -107,7 +107,7 @@ var re = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? ne;
+		return this.elementProperties.get(e) ?? te;
 	}
 	static _$Ei() {
 		if (this.hasOwnProperty(C("elementProperties"))) return;
@@ -178,14 +178,14 @@ var re = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? ee : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? w : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? ee : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? w : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -194,7 +194,7 @@ var re = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? te)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ee)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -258,17 +258,17 @@ var re = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-re.elementStyles = [], re.shadowRootOptions = { mode: "open" }, re[C("elementProperties")] = /* @__PURE__ */ new Map(), re[C("finalized")] = /* @__PURE__ */ new Map(), S?.({ ReactiveElement: re }), (y.reactiveElementVersions ??= []).push("2.1.2");
+ne.elementStyles = [], ne.shadowRootOptions = { mode: "open" }, ne[C("elementProperties")] = /* @__PURE__ */ new Map(), ne[C("finalized")] = /* @__PURE__ */ new Map(), S?.({ ReactiveElement: ne }), (y.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var ie = globalThis, ae = (e) => e, oe = ie.trustedTypes, se = oe ? oe.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ce = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, le = "?" + w, ue = `<${le}>`, de = document, fe = () => de.createComment(""), pe = (e) => e === null || typeof e != "object" && typeof e != "function", me = Array.isArray, he = (e) => me(e) || typeof e?.[Symbol.iterator] == "function", ge = "[ 	\n\f\r]", _e = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ve = /-->/g, ye = />/g, be = RegExp(`>|${ge}(?:([^\\s"'>=/]+)(${ge}*=${ge}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), xe = /'/g, Se = /"/g, Ce = /^(?:script|style|textarea|title)$/i, T = ((e) => (t, ...n) => ({
+var re = globalThis, ie = (e) => e, ae = re.trustedTypes, oe = ae ? ae.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, se = "$lit$", ce = `lit$${Math.random().toFixed(9).slice(2)}$`, le = "?" + ce, ue = `<${le}>`, de = document, fe = () => de.createComment(""), pe = (e) => e === null || typeof e != "object" && typeof e != "function", me = Array.isArray, he = (e) => me(e) || typeof e?.[Symbol.iterator] == "function", ge = "[ 	\n\f\r]", _e = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ve = /-->/g, ye = />/g, be = RegExp(`>|${ge}(?:([^\\s"'>=/]+)(${ge}*=${ge}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), xe = /'/g, Se = /"/g, Ce = /^(?:script|style|textarea|title)$/i, T = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
 }))(1), we = Symbol.for("lit-noChange"), E = Symbol.for("lit-nothing"), Te = /* @__PURE__ */ new WeakMap(), Ee = de.createTreeWalker(de, 129);
 function De(e, t) {
 	if (!me(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return se === void 0 ? t : se.createHTML(t);
+	return oe === void 0 ? t : oe.createHTML(t);
 }
 var Oe = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = _e;
@@ -276,7 +276,7 @@ var Oe = (e, t) => {
 		let n = e[t], s, c, l = -1, u = 0;
 		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === _e ? c[1] === "!--" ? o = ve : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = be) : (Ce.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = be) : o = ye : o === be ? c[0] === ">" ? (o = i ?? _e, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? be : c[3] === "\"" ? Se : xe) : o === Se || o === xe ? o = be : o === ve || o === ye ? o = _e : (o = be, i = void 0);
 		let d = o === be && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === _e ? n + ue : l >= 0 ? (r.push(s), n.slice(0, l) + ce + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
+		a += o === _e ? n + ue : l >= 0 ? (r.push(s), n.slice(0, l) + se + n.slice(l) + ce + d) : n + ce + (l === -2 ? t : d);
 	}
 	return [De(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, ke = class e {
@@ -290,8 +290,8 @@ var Oe = (e, t) => {
 		}
 		for (; (i = Ee.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ce)) {
-					let t = u[o++], n = i.getAttribute(e).split(w), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(se)) {
+					let t = u[o++], n = i.getAttribute(e).split(ce), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
@@ -299,14 +299,14 @@ var Oe = (e, t) => {
 						strings: n,
 						ctor: r[1] === "." ? Pe : r[1] === "?" ? Fe : r[1] === "@" ? Ie : Ne
 					}), i.removeAttribute(e);
-				} else e.startsWith(w) && (c.push({
+				} else e.startsWith(ce) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
 				if (Ce.test(i.tagName)) {
-					let e = i.textContent.split(w), t = e.length - 1;
+					let e = i.textContent.split(ce), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = oe ? oe.emptyScript : "";
+						i.textContent = ae ? ae.emptyScript : "";
 						for (let n = 0; n < t; n++) i.append(e[n], fe()), Ee.nextNode(), c.push({
 							type: 2,
 							index: ++a
@@ -320,10 +320,10 @@ var Oe = (e, t) => {
 			});
 			else {
 				let e = -1;
-				for (; (e = i.data.indexOf(w, e + 1)) !== -1;) c.push({
+				for (; (e = i.data.indexOf(ce, e + 1)) !== -1;) c.push({
 					type: 7,
 					index: a
-				}), e += w.length - 1;
+				}), e += ce.length - 1;
 			}
 			a++;
 		}
@@ -414,8 +414,8 @@ var je = class {
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = ae(e).nextSibling;
-			ae(e).remove(), e = t;
+			let t = ie(e).nextSibling;
+			ie(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -480,8 +480,8 @@ var je = class {
 		Ae(this, e);
 	}
 }, Re = {
-	M: ce,
-	P: w,
+	M: se,
+	P: ce,
 	A: le,
 	C: 1,
 	L: Oe,
@@ -494,8 +494,8 @@ var je = class {
 	U: Ie,
 	B: Pe,
 	F: Le
-}, ze = ie.litHtmlPolyfillSupport;
-ze?.(ke, Me), (ie.litHtmlVersions ??= []).push("3.3.3");
+}, ze = re.litHtmlPolyfillSupport;
+ze?.(ke, Me), (re.litHtmlVersions ??= []).push("3.3.3");
 var Be = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
@@ -503,7 +503,7 @@ var Be = (e, t, n) => {
 		r._$litPart$ = i = new Me(t.insertBefore(fe(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, Ve = globalThis, He = class extends re {
+}, Ve = globalThis, He = class extends ne {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -533,9 +533,9 @@ Ue?.({ LitElement: He }), (Ve.litElementVersions ??= []).push("4.2.2");
 var We = {
 	attribute: !0,
 	type: String,
-	converter: ee,
+	converter: w,
 	reflect: !1,
-	hasChanged: te
+	hasChanged: ee
 }, Ge = (e = We, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
@@ -592,7 +592,7 @@ var k = [
 	"dry",
 	"fan_only",
 	"off"
-], qe = "set_temperature", Je = "turn_off", Ye = "velair", Xe = 5e3, Ze = 5e3, Qe = "/velair_frontend/velair-icon.png", $e = [
+], qe = "set_temperature", A = "set_hvac_mode", Je = "turn_off", Ye = "velair", Xe = 5e3, Ze = 5e3, Qe = "/velair_frontend/velair-icon.png", $e = [
 	"overview",
 	"schedules",
 	"modes",
@@ -603,6 +603,7 @@ var k = [
 	"diagnostics",
 	"settings"
 ], et = [
+	"climate",
 	"overview-status",
 	"overview-boosts",
 	"overview-events",
@@ -621,6 +622,31 @@ var k = [
 	"profiles",
 	"modes"
 ], nt = /* @__PURE__ */ t({ de: () => rt }), rt = {
+	climateCardThermostatControls: "Thermostatsteuerung",
+	climateCardShowControlMode: "Automatische/manuelle Steuerung anzeigen",
+	climateCardShowTargetControl: "Sollwertsteuerung anzeigen",
+	climateCardShowHvacModeControl: "HVAC-Modusauswahl anzeigen",
+	climateCardShowNativeClimateLink: "Link zum Klimagerät in Home Assistant anzeigen",
+	climateCardThermostatControlsDescription: "Sollwert und HVAC-Modus können nur während einer bestätigten manuellen Anpassung geändert werden. Der Link zu Home Assistant öffnet alle nativen Steuerelemente des Klimageräts.",
+	climateCardTargetTemperature: "Solltemperatur",
+	climateCardLowerTarget: "Unterer Sollwert",
+	climateCardUpperTarget: "Oberer Sollwert",
+	climateCardDecreaseTarget: "Sollwert senken",
+	climateCardIncreaseTarget: "Sollwert erhöhen",
+	climateCardAdjustManually: "Manuell anpassen",
+	climateCardOpenInHomeAssistant: "In Home Assistant öffnen",
+	climateCardHumiditySource: "Feuchtigkeitsquelle",
+	climateCardHumidityClimateSource: "Vom Klimagerät bereitgestellte Feuchtigkeit",
+	climateCardHumiditySourceDescription: "Wähle einen Feuchtigkeitssensor aus Home Assistant, um sowohl den Messwert des Klimageräts als auch dessen Verlaufsverknüpfung zu ersetzen.",
+	climateCardOpenMetricHistory: "Verlauf für {metric} öffnen",
+	climateCardControlsAutomaticHint: "Starte eine manuelle Anpassung, um das Klimagerät direkt zu ändern.",
+	climateCardManualAdjustmentUnavailable: "Eine manuelle Anpassung ist derzeit nicht verfügbar.",
+	climateCardControlsUnavailable: "Direkte Steuerung ist nicht verfügbar, solange das Klimagerät nicht verfügbar ist.",
+	climateCardControlsBlockedBoost: "Direkte Steuerung ist während der Verstärkung nicht verfügbar.",
+	climateCardControlsBlockedPause: "Direkte Steuerung ist während einer Pause nicht verfügbar.",
+	climateCardControlsBlockedStopped: "Direkte Steuerung ist bei gestoppter Zone nicht verfügbar.",
+	climateCardControlsMissingStep: "Dieses Klimagerät veröffentlicht kein gültiges Temperaturintervall; verwende die nativen Steuerelemente von Home Assistant.",
+	climateCardThermostatActionFailed: "Die Thermostatänderung konnte nicht angewendet werden",
 	addBlock: "Block hinzufügen",
 	externalConditionProfilesSupported: "Zeitpläne für Standard, Profil und Modus werden unterstützt",
 	profileExternalScheduleOnly: "Externe Zonen unterstützen nur Zeitpläne für Standard, Profil oder Modus. Pausen und direkte Velair-Aktionen bleiben nicht verfügbar.",
@@ -640,6 +666,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Ein impliziter Kontinuitätswechsel um Mitternacht zählt zum Tagesmaximum",
 	externalConditionsUnavailable: "Controller-Bedingungen sind nicht verfügbar.",
 	externalCapability_action_set_temperature: "Temperatur einstellen",
+	externalCapability_action_set_hvac_mode: "Nur HVAC-Modus ändern",
 	externalCapability_action_turn_off: "Ausschalten",
 	externalCapability_hvac_heat: "Heizen",
 	externalCapability_hvac_cool: "Kühlen",
@@ -682,6 +709,10 @@ var k = [
 	externalChangeForDuration: "Für eine Dauer",
 	externalChangeUntilResumed: "Bis zur Fortsetzung",
 	externalChangePolicySaved: "Richtlinie für externe Änderungen gespeichert",
+	targetTempStepFallback: "Temperaturschritt",
+	targetTempStepFallbackDescription: "Home Assistant meldet den Solltemperaturschritt dieses Klimageräts nicht. Velair verwendet diesen Wert, bis das Gerät einen meldet.",
+	targetTempStepFallbackInfoAction: "Über den Temperaturschritt",
+	targetTempStepSaved: "Temperaturschritt gespeichert",
 	manualAdjustment: "Manuelle Anpassung",
 	velairControl: "Velair-Steuerung",
 	automaticScheduling: "Automatische Planung",
@@ -742,6 +773,117 @@ var k = [
 	blocks: "Blöcke",
 	build: "Build",
 	cardView: "Kartenansicht",
+	climateCardOutdoorSensorDescription: "Rein visuelle Außenmessung zum Vergleich mit der aktuellen Innentemperatur. Sie verändert die Velair-Steuerung nicht.",
+	climateCardHeaderOptions: "Kopfzeile",
+	climateCardShowStateBar: "Statusleiste anzeigen",
+	climateCardShowName: "Name des Klimageräts anzeigen",
+	climateCardCustomName: "Benutzerdefinierter Name",
+	climateCardShowOperation: "Betriebsstatus anzeigen",
+	climateCardShowCurrentTemperature: "Aktuelle Temperatur anzeigen",
+	climateCardShowCurrentHumidity: "Aktuelle Luftfeuchtigkeit anzeigen",
+	climateCardShowOutdoorTemperature: "Außentemperatur anzeigen",
+	climateCardShowWindows: "Fenster anzeigen",
+	climateCardWindowsDescription: "Fenstersensoren dienen nur zur Anzeige und steuern Velair nicht. Nutze eine eigene Home Assistant-Automatisierung oder den Velair-Fenster-Blueprint, wenn ein offenes Fenster dieses Klimagerät pausieren soll.",
+	climateCardWindowBlueprintLink: "Dokumentation öffnen und Blueprint importieren",
+	climateCardTimelineShowTitle: "Titel der Zeitleiste anzeigen",
+	climateCardTimelineShowProfile: "Aktives Profil anzeigen",
+	climateCardTimelineShowMode: "Aktiven Modus anzeigen",
+	climateCardResetName: "Name des Klimageräts wiederherstellen",
+	climateCardActions: "Aktionen",
+	climateCardShowBoostAction: "Temporäre Anpassung anzeigen",
+	climateCardShowPauseAction: "Pause- und Fortsetzen-Aktion anzeigen",
+	climateCardVelairActionsDescription: "Temporäre Anpassung und Pause werden von Velair bereitgestellt. Verhalten, Beschriftung und Symbole können nicht angepasst werden.",
+	climateCardCustomActions: "Benutzerdefinierte Aktionen",
+	climateCardActionsOrderDescription: "Ordnen Sie Velair-Aktionen und Skripte von Home Assistant neu. Automatische Aktionen verwenden bis zu drei direkte Plätze; wählen Sie für eine Aktion Mehr-Menü, damit sie unter Mehr bleibt. Das Limit ist nicht anpassbar.",
+	climateCardActionPlacement: "Position",
+	climateCardActionPlacementAuto: "Automatisch",
+	climateCardActionPlacementMore: "Mehr-Menü",
+	climateCardActionPlacementAutoDescription: "Verwendet einen der ersten drei verfügbaren direkten Plätze. Sind sie belegt, wird die Aktion nach Mehr verschoben.",
+	climateCardActionPlacementMoreDescription: "Behält diese Aktion unabhängig von ihrer Reihenfolge immer im Menü Mehr.",
+	climateCardRemoveCustomAction: "Verknüpfung von der Karte entfernen",
+	climateCardExpandAction: "{name} bearbeiten",
+	climateCardCollapseAction: "Einstellungen für {name} schließen",
+	climateCardCollapseCurrentState: "Aktuellen Zustand einklappen",
+	climateCardExpandCurrentState: "Aktuellen Zustand ausklappen",
+	climateCardCollapsedByDefault: "Standardmäßig eingeklappt",
+	climateCardCollapseSection: "{name} einklappen",
+	climateCardExpandSection: "{name} ausklappen",
+	climateCardProvidedByVelair: "Von Velair bereitgestellt · das Verhalten kann nicht angepasst werden",
+	climateCardHideActionName: "Aktionsnamen ausblenden",
+	climateCardCustomActionsDescription: "Füge Home Assistant-Skripte hinzu. Die Skriptlogik bleibt in Home Assistant verwaltet.",
+	climateCardAddCustomAction: "Benutzerdefinierte Aktion hinzufügen",
+	climateCardNoScripts: "Erstelle zuerst ein Home Assistant-Skript.",
+	climateCardCustomActionName: "Name",
+	climateCardCustomActionScript: "Home Assistant-Skript",
+	climateCardCustomActionIcon: "Symbol",
+	climateCardCustomActionColor: "Symbolfarbe",
+	climateCardCustomActionConfirmation: "Vor der Ausführung bestätigen",
+	climateCardScriptUnavailable: "Skript nicht verfügbar",
+	climateCardOpenVelairMenu: "Velair öffnen",
+	climateCardConfirmScriptAction: "{name} ausführen?",
+	climateCardScriptExecuted: "{name} gestartet",
+	climateCardPreconditioningDisplay: "Vorkonditionierungsanzeige",
+	cardViewClimate: "Klimagerät: Status und Steuerung",
+	climateCardConfiguration: "Klimakarte",
+	climateCardConfigurationDescription: "Zeigt ein verwaltetes Klimagerät mit Live-Status, Velair-Kontext und optionalen Dashboard-Sensoren.",
+	climateCardManagedClimate: "Verwaltetes Klimagerät",
+	climateCardOutdoorSensor: "Außentemperatursensor (optional)",
+	climateCardWindowDisplay: "Fensteranzeige",
+	climateCardWindowGrouped: "Nach Status gruppieren",
+	climateCardWindowIndividual: "Einzeln anzeigen",
+	climateCardRoomAssistDisplay: "Room Assist-Anzeige",
+	climateCardDisplayBoth: "Text und Diagramm",
+	climateCardDisplayChart: "Diagramm",
+	climateCardDisplayText: "Text",
+	climateCardAddWindow: "Fenster hinzufügen",
+	climateCardWindows: "Fenster",
+	climateCardShowTimeline: "Heutigen Zeitverlauf anzeigen",
+	climateCardShowComfort: "Behaglichkeit anzeigen",
+	climateCardShowCollapsedComfortReadings: "Zusätzliche Messwerte im eingeklappten Zustand anzeigen",
+	climateCardShowRoomAssist: "Room Assist anzeigen",
+	climateCardShowPreconditioning: "Vorkonditionierung anzeigen",
+	climateCardShowActions: "Aktionen anzeigen",
+	climateCardOpenVelair: "Velair öffnen",
+	climateCardAvailable: "Verfügbar",
+	climateCardUnavailable: "Nicht verfügbar",
+	climateCardCurrentState: "Aktueller Zustand",
+	climateCardOutdoor: "Außentemperatur",
+	climateCardOutdoorWarmer: "{delta} wärmer als innen",
+	climateCardOutdoorColder: "{delta} kälter als innen",
+	climateCardWindowsOpen: "{count} offen",
+	climateCardWindowsClosed: "{count} geschlossen",
+	climateCardWindowsUnavailable: "{count} nicht verfügbar",
+	climateCardProfilePause: "Profil {profile} pausiert dieses Klimagerät",
+	climateCardRoomReading: "Raumwert",
+	climateCardAppliedSetpoint: "Angewandter Sollwert",
+	climateCardClimateReading: "Gerätewert",
+	climateCardRoomAssistNotConfigured: "Nicht konfiguriert",
+	climateCardRoomAssistDisabled: "Deaktiviert",
+	climateCardRoomAssistIdle: "Bereit",
+	climateCardRoomAssistReady: "Bereit",
+	climateCardRoomAssistAssisting: "Unterstützt",
+	climateCardRoomAssistHolding: "Hält",
+	climateCardRoomAssistBlocked: "Blockiert",
+	climateCardRoomAssistUnavailable: "Nicht verfügbar",
+	climateCardExternalManaged: "Verwaltet von {provider}",
+	climateCardExternalControl: "Externe Steuerung",
+	climateCardManagePause: "Pause verwalten",
+	climateCardConfigureBoost: "Verstärkung konfigurieren",
+	climateCardBoostStarted: "Verstärkung gestartet",
+	climateCardBoostCancelled: "Verstärkung beendet",
+	climateCardZonePaused: "Klimagerät pausiert",
+	climateCardZoneResumed: "Klimagerät fortgesetzt",
+	climateCardActionFailed: "Aktion konnte nicht abgeschlossen werden",
+	resumeAutomaticControl: "Automatik fortsetzen",
+	cancelBoost: "Verstärkung beenden",
+	more: "Mehr",
+	manualControl: "Manuelle Steuerung",
+	scheduled: "Geplant",
+	enabled: "Aktiviert",
+	unavailable: "Nicht verfügbar",
+	unknown: "Unbekannt",
+	none: "Keine",
+	remove: "Entfernen",
 	activeSetupCardControls: "Steuerelemente für aktive Konfiguration",
 	activeSetupCardControlsBoth: "Modi und Profile",
 	activeSetupCardControlsDescription: "Wähle, was diese Karte ändern kann. Der aktuelle Modus und die angewendeten Profile bleiben sichtbar.",
@@ -795,6 +937,42 @@ var k = [
 	comfortCo2LimitsHelp: "„Erhöht“ kennzeichnet eine frühe Luftqualitätswarnung. „Schlecht“ kennzeichnet einen bedenklicheren CO2-Wert.",
 	comfortCo2Poor: "Schlecht",
 	comfortCo2Sensor: "CO2-Sensor",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Komfortkonfiguration",
+	comfortConfigurationDescription: "Sensorquellen, Komfortbereiche und Datenaktualität.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Auf Oberflächen mit einer Temperatur am oder unter dem Taupunkt kann sich Kondenswasser bilden. Velair erkennt weder Oberflächentemperaturen noch Kondensation.",
+	comfortDewPointBelowRoom: "Der Taupunkt liegt {difference} unter der Raumluft.",
+	comfortDewPointAboveRoom: "Der Taupunkt liegt {difference} über der Raumluft.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Absolute Luftfeuchtigkeit: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Unter dem konfigurierten Temperaturbereich",
+	comfortHumidexRangeWithin: "Im konfigurierten Temperaturbereich",
+	comfortHumidexRangeAbove: "Über dem konfigurierten Temperaturbereich",
+	comfortHumidexRangeUnknown: "Position zum konfigurierten Bereich nicht verfügbar",
+	comfortHumidexScaleAria: "Luft {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "Der Humidex zeigt eine gefühlte Wärme von {delta} über der Raumtemperatur an.",
+	comfortHumidexCoolerRelation: "Der Humidex liegt {delta} unter der Raumtemperatur.",
+	comfortHumidexNeutralRelation: "Der Humidex entspricht der Raumtemperatur.",
+	comfortRangeWithin: "Innerhalb der konfigurierten Bereiche",
+	comfortRangeOutside: "Außerhalb der konfigurierten Bereiche",
+	comfortRangeMixed: "Unterschiedliche thermische Indikatoren",
+	comfortRangeUnavailable: "Begrenzte Daten",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "CO2 liegt über der festgelegten Aufmerksamkeitsgrenze.",
+	comfortInsightCo2Poor: "CO2 liegt über dem festgelegten Grenzwert für schlechte Luft.",
+	comfortInsightHumidexWarmer: "Die Luftfeuchtigkeit erhöht die gefühlte Wärme um {delta}.",
+	comfortAir: "Luft",
 	comfortCollapseClimate: "{climate} einklappen",
 	comfortConditionCold: "Kalt",
 	comfortConditionColdAndDry: "Kalt und trocken",
@@ -835,6 +1013,15 @@ var k = [
 	comfortIntroTitle: "Raumkomfort",
 	comfortMaximum: "Max.",
 	comfortMinimum: "Min.",
+	comfortModel: "Komfortmodell",
+	comfortModelSimple: "Einfache Bereiche",
+	comfortModelSimpleDescription: "Verwendet bei jeder angenehmen Temperatur denselben Feuchtigkeitsbereich.",
+	comfortModelTemperatureAware: "Temperaturabhängige Bereiche",
+	comfortModelTemperatureAwareDescription: "Passt den zulässigen Feuchtigkeitsbereich zwischen dem kühlen und warmen Ende des Temperaturbereichs an.",
+	comfortTemperatureAwareHumidityRanges: "Temperaturabhängige Feuchtigkeitsbereiche",
+	comfortAtMinimumTemperature: "An der kühleren Grenze",
+	comfortAtMaximumTemperature: "An der wärmeren Grenze",
+	comfortEffectiveHumidityRange: "Bei {temperature} liegt der Komfort-Feuchtigkeitsbereich bei {minimum}–{maximum}%.",
 	comfortMoreHumid: "Feuchter",
 	comfortMapCurrentPosition: "Aktuelle Position: {temperature}, {humidity}",
 	comfortNotMonitored: "Nicht überwacht",
@@ -1524,11 +1711,16 @@ var k = [
 	temperatureLegacyResetStopped: "Die Zeitplanung ist gestoppt, weil diese ältere Installation nur Celsius-Daten enthält, während Home Assistant Fahrenheit verwendet. Öffne die Velair-Einstellungen und verwende „Velair zurücksetzen“, um Fahrenheit-Standardwerte zu erstellen.",
 	temperatureStep: "Schrittweite",
 	temperatureStepNotReported: "Von Home Assistant nicht gemeldet",
-	temperatureStepNotReportedDescription: "Dieses Klimagerät veröffentlicht target_temp_step nicht. Velair leitet keine Temperaturschrittweite ab.",
+	temperatureStepNotReportedDescription: "Dieses Klimagerät veröffentlicht target_temp_step nicht. Velair verwendet den in den Einstellungen konfigurierten Zonen-Ersatzwert.",
 	targetTemp: "Zieltemperatur",
 	targetHumidity: "Zielluftfeuchtigkeit",
 	targetBy: "Ziel bis",
 	targetTemperature: "Zieltemperatur",
+	includeTargetTemperature: "Zieltemperatur einbeziehen",
+	deviceControlled: "Vom Gerät gesteuert",
+	useDeviceControlledTarget: "Gerätesollwert beibehalten und nur den HVAC-Modus ändern",
+	restoreTemperatureTarget: "Zieltemperatur festlegen",
+	chooseModeForDeviceControlled: "Wähle einen HVAC-Modus, bevor du den gerätegesteuerten Sollwert verwendest",
 	todayTimeline: "Heutiger Zeitplan",
 	updateTemplate: "Vorlage aktualisieren",
 	templateDeleted: "Vorlage gelöscht",
@@ -1583,6 +1775,63 @@ var k = [
 		auto: "Auto",
 		paused: "Pausiert"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Wähle einen Raumtemperatursensor aus, bevor du Room Assist verwendest.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist ist konfiguriert, aber derzeit deaktiviert.",
+	climateCardRoomAssistSummaryIdle: "Wartet auf ein aktives kompatibles geplantes Ziel.",
+	climateCardRoomAssistSummaryReady: "Bereit, das Klimaziel anzupassen, wenn die Raumtemperatur dies erfordert.",
+	climateCardRoomAssistSummaryAssisting: "Passt das Klimaziel an, um den Raum dem geplanten Ziel anzunähern.",
+	climateCardRoomAssistSummaryHolding: "Hält das aktuelle Room Assist-Ziel stabil.",
+	climateCardRoomAssistSummaryBlocked: "Wartet, während eine andere Velair-Aktion Vorrang hat.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist kann dieses Klimagerät derzeit nicht steuern.",
+	climateCardPreconditioningActive: "Aktiv",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Stellt das Klimagerät auf {applied}, um den Raum seinem geplanten Ziel von {target} anzunähern.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Auto",
 		cool: "Kühlen",
@@ -1601,7 +1850,14 @@ var k = [
 		off: "Aus",
 		preheating: "Vorheizen",
 		defrosting: "Abtauen"
-	}
+	},
+	comfortDataSources: "Datenquellen",
+	comfortModelGuided: "Geführter psychrometrischer Bereich",
+	comfortModelGuidedDescription: "Passt die relative Luftfeuchtigkeit anhand eines Referenzbereichs an den Temperaturbereich an.",
+	comfortModelGuidedReference: "Der Feuchtigkeitsbereich ist die Referenz bei {temperature}; Velair passt die Zielkurve für andere Temperaturen an.",
+	comfortModelHumidityRequired: "Für die Auswahl dieses Modells ist eine Feuchtigkeitsquelle erforderlich.",
+	comfortGuidedHumidityReference: "Referenzbereich der Luftfeuchtigkeit",
+	comfortPreferences: "Behaglichkeitseinstellungen"
 }, it = /* @__PURE__ */ t({ en: () => at }), at = {
 	addBlock: "Add block",
 	externalSystems: "External systems",
@@ -1624,6 +1880,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "If the first block starts after 00:00, the implicit midnight continuity change counts toward the daily maximum",
 	externalConditionsUnavailable: "Controller conditions are unavailable.",
 	externalCapability_action_set_temperature: "Set temperature",
+	externalCapability_action_set_hvac_mode: "Change HVAC mode only",
 	externalCapability_action_turn_off: "Turn off",
 	externalCapability_hvac_heat: "Heating",
 	externalCapability_hvac_cool: "Cooling",
@@ -1663,6 +1920,10 @@ var k = [
 	externalChangeForDuration: "For a duration",
 	externalChangeUntilResumed: "Until resumed",
 	externalChangePolicySaved: "External change policy saved",
+	targetTempStepFallback: "Temperature step",
+	targetTempStepFallbackDescription: "Home Assistant does not report this climate's target temperature step. Velair uses this value until the climate reports one.",
+	targetTempStepFallbackInfoAction: "About the temperature step",
+	targetTempStepSaved: "Temperature step saved",
 	manualAdjustment: "Manual adjustment",
 	velairControl: "Velair control",
 	automaticScheduling: "Automatic scheduling",
@@ -1724,6 +1985,152 @@ var k = [
 	blocks: "Blocks",
 	build: "Build",
 	cardView: "Card view",
+	cardViewClimate: "Climate: status and control",
+	climateCardConfiguration: "Climate card",
+	climateCardConfigurationDescription: "Show one managed climate with its live state, Velair context and optional dashboard sensors.",
+	climateCardManagedClimate: "Managed climate",
+	climateCardOutdoorSensor: "Outdoor temperature sensor (optional)",
+	climateCardOutdoorSensorDescription: "Visual-only outdoor reading for comparison with the current indoor temperature. It does not change Velair control.",
+	climateCardHeaderOptions: "Header",
+	climateCardShowStateBar: "Show state bar",
+	climateCardShowName: "Show climate name",
+	climateCardCustomName: "Custom climate name",
+	climateCardShowOperation: "Show operating state",
+	climateCardShowCurrentTemperature: "Show current temperature",
+	climateCardShowCurrentHumidity: "Show current humidity",
+	climateCardShowOutdoorTemperature: "Show outdoor temperature",
+	climateCardShowWindows: "Show windows",
+	climateCardWindowsDescription: "Window sensors are visual only and do not control Velair. Use your own Home Assistant automation or the Velair window blueprint if an open window should pause this climate.",
+	climateCardWindowBlueprintLink: "View documentation and import blueprint",
+	climateCardTimelineShowTitle: "Show timeline title",
+	climateCardTimelineShowProfile: "Show active profile",
+	climateCardTimelineShowMode: "Show active mode",
+	climateCardResetName: "Restore climate name",
+	climateCardActions: "Actions",
+	climateCardShowBoostAction: "Show Boost action",
+	climateCardShowPauseAction: "Show Pause and Resume action",
+	climateCardVelairActionsDescription: "Boost and Pause are provided by Velair. Their behavior, labels and icons cannot be customized.",
+	climateCardCustomActions: "Custom actions",
+	climateCardCustomActionsDescription: "Add Home Assistant scripts. Script logic remains managed by Home Assistant.",
+	climateCardActionsOrderDescription: "Reorder Velair actions and Home Assistant scripts. Automatic actions use up to three direct positions; choose More menu on any action to keep it inside More. The three-position limit cannot be customized.",
+	climateCardActionPlacement: "Location",
+	climateCardActionPlacementAuto: "Automatic",
+	climateCardActionPlacementMore: "More menu",
+	climateCardActionPlacementAutoDescription: "Uses one of the first three available direct positions. If those positions are full, this action moves to More.",
+	climateCardActionPlacementMoreDescription: "Always keeps this action inside the More menu, regardless of its order.",
+	climateCardRemoveCustomAction: "Remove shortcut from card",
+	climateCardExpandAction: "Edit {name}",
+	climateCardCollapseAction: "Close {name} settings",
+	climateCardCollapseCurrentState: "Collapse current state",
+	climateCardExpandCurrentState: "Expand current state",
+	climateCardCollapsedByDefault: "Collapsed by default",
+	climateCardCollapseSection: "Collapse {name}",
+	climateCardExpandSection: "Expand {name}",
+	climateCardProvidedByVelair: "Provided by Velair · behavior cannot be customized",
+	climateCardHideActionName: "Hide action name",
+	climateCardAddCustomAction: "Add custom action",
+	climateCardNoScripts: "Create a Home Assistant script before adding a custom action.",
+	climateCardCustomActionName: "Name",
+	climateCardCustomActionScript: "Home Assistant script",
+	climateCardCustomActionIcon: "Icon",
+	climateCardCustomActionColor: "Icon color",
+	climateCardCustomActionConfirmation: "Ask for confirmation before running",
+	climateCardScriptUnavailable: "Script unavailable",
+	climateCardOpenVelairMenu: "Open Velair",
+	climateCardConfirmScriptAction: "Run {name}?",
+	climateCardScriptExecuted: "{name} started",
+	climateCardWindowDisplay: "Window display",
+	climateCardWindowGrouped: "Group by state",
+	climateCardWindowIndividual: "Show individually",
+	climateCardRoomAssistDisplay: "Room Assist display",
+	climateCardPreconditioningDisplay: "Preconditioning display",
+	climateCardDisplayBoth: "Text and chart",
+	climateCardDisplayChart: "Chart",
+	climateCardDisplayText: "Text",
+	climateCardAddWindow: "Add window",
+	climateCardThermostatControls: "Thermostat controls",
+	climateCardShowControlMode: "Show Automatic/Manual control",
+	climateCardShowTargetControl: "Show target temperature control",
+	climateCardShowHvacModeControl: "Show HVAC mode control",
+	climateCardShowNativeClimateLink: "Show Home Assistant climate link",
+	climateCardThermostatControlsDescription: "Target and HVAC mode can be changed only during a confirmed Manual adjustment. The Home Assistant link opens the climate entity's complete native controls.",
+	climateCardTargetTemperature: "Target",
+	climateCardLowerTarget: "Lower target",
+	climateCardUpperTarget: "Upper target",
+	climateCardDecreaseTarget: "Decrease target temperature",
+	climateCardIncreaseTarget: "Increase target temperature",
+	climateCardAdjustManually: "Adjust manually",
+	climateCardOpenInHomeAssistant: "Open in Home Assistant",
+	climateCardHumiditySource: "Humidity source",
+	climateCardHumidityClimateSource: "Climate-provided humidity",
+	climateCardHumiditySourceDescription: "Choose a Home Assistant humidity sensor to replace both the climate humidity reading and its history shortcut.",
+	climateCardOpenMetricHistory: "Open {metric} history",
+	climateCardControlsAutomaticHint: "Start Manual adjustment to change the climate directly.",
+	climateCardManualAdjustmentUnavailable: "Manual adjustment is not available right now.",
+	climateCardControlsUnavailable: "Direct controls are unavailable while the climate is unavailable.",
+	climateCardControlsBlockedBoost: "Direct controls are unavailable during Boost.",
+	climateCardControlsBlockedPause: "Direct controls are unavailable while this climate is paused.",
+	climateCardControlsBlockedStopped: "Direct controls are unavailable while this climate is stopped.",
+	climateCardControlsMissingStep: "This climate does not publish a valid target temperature step.",
+	climateCardThermostatActionFailed: "Unable to update the climate",
+	climateCardWindows: "Windows",
+	climateCardShowTimeline: "Show today's timeline",
+	climateCardShowComfort: "Show Comfort",
+	climateCardShowCollapsedComfortReadings: "Show extra readings when collapsed",
+	climateCardShowRoomAssist: "Show Room Assist",
+	climateCardShowPreconditioning: "Show preconditioning",
+	climateCardShowActions: "Show actions",
+	climateCardOpenVelair: "Open Velair",
+	climateCardAvailable: "Available",
+	climateCardUnavailable: "Unavailable",
+	climateCardCurrentState: "Current state",
+	climateCardOutdoor: "Outdoor temperature",
+	climateCardOutdoorWarmer: "{delta} warmer than indoors",
+	climateCardOutdoorColder: "{delta} colder than indoors",
+	climateCardWindowsOpen: "{count} open",
+	climateCardWindowsClosed: "{count} closed",
+	climateCardWindowsUnavailable: "{count} unavailable",
+	climateCardProfilePause: "Profile {profile} pauses this climate",
+	climateCardRoomReading: "Room reading",
+	climateCardAppliedSetpoint: "Applied setpoint",
+	climateCardClimateReading: "Climate reading",
+	climateCardRoomAssistNotConfigured: "Not configured",
+	climateCardRoomAssistDisabled: "Disabled",
+	climateCardRoomAssistIdle: "Idle",
+	climateCardRoomAssistReady: "Ready",
+	climateCardRoomAssistAssisting: "Assisting",
+	climateCardRoomAssistHolding: "Holding",
+	climateCardRoomAssistBlocked: "Blocked",
+	climateCardRoomAssistUnavailable: "Unavailable",
+	climateCardRoomAssistSummaryNotConfigured: "Choose a room temperature sensor before using Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist is configured but currently disabled.",
+	climateCardRoomAssistSummaryIdle: "Waiting for an active compatible scheduled target.",
+	climateCardRoomAssistSummaryReady: "Ready to adjust the climate target when the room reading requires it.",
+	climateCardRoomAssistSummaryAssisting: "Adjusting the climate target to move the room towards the scheduled target.",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Setting the climate to {applied} to move the room towards its scheduled target of {target}.",
+	climateCardRoomAssistSummaryHolding: "Keeping the current Room Assist target stable.",
+	climateCardRoomAssistSummaryBlocked: "Waiting while another Velair action has priority.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist cannot control this climate right now.",
+	climateCardPreconditioningActive: "Active",
+	climateCardExternalManaged: "Managed by {provider}",
+	climateCardExternalControl: "External control",
+	climateCardManagePause: "Manage pause",
+	climateCardConfigureBoost: "Configure boost",
+	climateCardBoostStarted: "Boost started",
+	climateCardBoostCancelled: "Boost cancelled",
+	climateCardZonePaused: "Climate paused",
+	climateCardZoneResumed: "Climate resumed",
+	climateCardActionFailed: "Unable to complete the climate action",
+	resumeAutomaticControl: "Resume automatic",
+	cancelBoost: "Cancel boost",
+	more: "More",
+	manualControl: "Manual control",
+	scheduled: "Scheduled",
+	enabled: "Enabled",
+	unavailable: "Unavailable",
+	unknown: "Unknown",
+	none: "None",
+	remove: "Remove",
 	activeSetupCardControls: "Active setup controls",
 	activeSetupCardControlsBoth: "Modes and Profiles",
 	activeSetupCardControlsDescription: "Choose what this card can change. The current Mode and applied Profiles remain visible.",
@@ -1777,6 +2184,89 @@ var k = [
 	comfortCo2LimitsHelp: "Elevated marks an early air-quality warning. Poor marks a more serious CO2 level.",
 	comfortCo2Poor: "Poor",
 	comfortCo2Sensor: "CO2 sensor",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Comfort configuration",
+	comfortConfigurationDescription: "Sensor sources, comfort ranges and data freshness.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Surfaces at or below the dew point could collect condensation. Velair does not detect surface temperature or condensation.",
+	comfortDewPointBelowRoom: "Dew point is {difference} below room air.",
+	comfortDewPointAboveRoom: "Dew point is {difference} above room air.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Absolute humidity: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Below the configured temperature range",
+	comfortHumidexRangeWithin: "Within the configured temperature range",
+	comfortHumidexRangeAbove: "Above the configured temperature range",
+	comfortHumidexRangeUnknown: "Position relative to the configured range unavailable",
+	comfortHumidexScaleAria: "Air {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "Humidex indicates perceived heat {delta} warmer than room temperature.",
+	comfortHumidexCoolerRelation: "Humidex is {delta} below room temperature.",
+	comfortHumidexNeutralRelation: "Humidex matches room temperature.",
+	comfortRangeWithin: "Within configured ranges",
+	comfortRangeOutside: "Outside configured ranges",
+	comfortRangeMixed: "Mixed thermal indicators",
+	comfortRangeUnavailable: "Limited data",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "CO2 is above the configured attention level.",
+	comfortInsightCo2Poor: "CO2 is above the configured poor-air threshold.",
+	comfortInsightHumidexWarmer: "Humidity increases perceived heat by {delta}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair compares indoor and outdoor temperature to show when ventilation could move the room toward comfort. Guidance requires a difference of at least {temperature}. Add outdoor humidity to evaluate moisture and trade-offs. Velair never opens windows or changes climate control.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair compares indoor and outdoor temperature and moisture to show when ventilation could move the room toward comfort. Guidance requires at least {temperature}, {humidity}, and {moisture}; any trade-off remains visible. Velair never opens windows or changes climate control.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
+	comfortAir: "Air",
 	comfortCollapseClimate: "Collapse {climate}",
 	comfortConditionCold: "Cold",
 	comfortConditionColdAndDry: "Cold and dry",
@@ -1813,6 +2303,22 @@ var k = [
 	comfortHumidityRange: "Humidity range",
 	comfortHumidityRangeHelp: "Narrower ranges warn sooner; wider ranges are more tolerant.",
 	comfortHumiditySensor: "Humidity sensor",
+	comfortDataSources: "Data sources",
+	comfortModel: "Comfort model",
+	comfortModelGuided: "Guided psychrometric range",
+	comfortModelGuidedDescription: "Adapts relative humidity across the temperature range from one reference range.",
+	comfortModelGuidedReference: "The humidity range is your reference at {temperature}; Velair adapts the target curve at other temperatures.",
+	comfortModelHumidityRequired: "A humidity source is required before this model can be selected.",
+	comfortModelSimple: "Simple ranges",
+	comfortModelSimpleDescription: "Uses the same humidity range at every comfortable temperature.",
+	comfortModelTemperatureAware: "Custom range by temperature",
+	comfortModelTemperatureAwareDescription: "Adjusts the acceptable humidity range between the cool and warm ends of your temperature range.",
+	comfortTemperatureAwareHumidityRanges: "Temperature-aware humidity ranges",
+	comfortAtMinimumTemperature: "At the cooler limit",
+	comfortAtMaximumTemperature: "At the warmer limit",
+	comfortEffectiveHumidityRange: "At {temperature}, the comfort humidity range is {minimum}–{maximum}%.",
+	comfortGuidedHumidityReference: "Reference humidity range",
+	comfortPreferences: "Comfort preferences",
 	comfortIntroDetail: "Monitor temperature, humidity and CO2 locally, then use Velair events in Home Assistant automations.",
 	comfortIntroTitle: "Environmental comfort",
 	comfortMaximum: "Max",
@@ -2486,6 +2992,10 @@ var k = [
 	swingMode: "Swing",
 	temp: "Temp",
 	target: "Target",
+	deviceControlled: "Device controlled",
+	useDeviceControlledTarget: "Keep the device target and only change the HVAC mode",
+	restoreTemperatureTarget: "Set a target temperature",
+	chooseModeForDeviceControlled: "Choose an HVAC mode before using the device-controlled target",
 	heatBelow: "Heat below",
 	coolAbove: "Cool above",
 	temperatureRange: "Temperature range",
@@ -2506,11 +3016,12 @@ var k = [
 	temperatureLegacyResetStopped: "The scheduler is stopped because this legacy installation contains Celsius-only data while Home Assistant uses Fahrenheit. Open Velair Settings and use Reset Velair to create Fahrenheit defaults.",
 	temperatureStep: "Step",
 	temperatureStepNotReported: "Not reported by Home Assistant",
-	temperatureStepNotReportedDescription: "This climate does not publish target_temp_step. Velair does not infer a temperature step.",
+	temperatureStepNotReportedDescription: "This climate does not publish target_temp_step. Velair uses the per-zone fallback configured in Settings.",
 	targetTemp: "Target temp",
 	targetHumidity: "Target humidity",
 	targetBy: "Target by",
 	targetTemperature: "Target temperature",
+	includeTargetTemperature: "Include target temperature",
 	todayTimeline: "Today's timeline",
 	updateTemplate: "Update template",
 	templateDeleted: "Template deleted",
@@ -2606,6 +3117,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Si el primer bloque empieza después de las 00:00, el cambio implícito de continuidad a medianoche cuenta para el máximo diario",
 	externalConditionsUnavailable: "Las condiciones del controlador no están disponibles.",
 	externalCapability_action_set_temperature: "Establecer temperatura",
+	externalCapability_action_set_hvac_mode: "Cambiar solo el modo HVAC",
 	externalCapability_action_turn_off: "Apagar",
 	externalCapability_hvac_heat: "Calefacción",
 	externalCapability_hvac_cool: "Refrigeración",
@@ -2645,6 +3157,10 @@ var k = [
 	externalChangeForDuration: "Durante un tiempo",
 	externalChangeUntilResumed: "Hasta reanudar",
 	externalChangePolicySaved: "Política de cambios externos guardada",
+	targetTempStepFallback: "Paso de temperatura",
+	targetTempStepFallbackDescription: "Home Assistant no proporciona el paso de consigna de este termostato. Velair utilizará este valor hasta que el termostato publique uno.",
+	targetTempStepFallbackInfoAction: "Acerca del paso de temperatura",
+	targetTempStepSaved: "Paso de temperatura guardado",
 	manualAdjustment: "Ajuste manual",
 	velairControl: "Control de Velair",
 	automaticScheduling: "Planificación automática",
@@ -2706,6 +3222,152 @@ var k = [
 	blocks: "Bloques",
 	build: "Compilación",
 	cardView: "Vista de la tarjeta",
+	cardViewClimate: "Climatización: estado y control",
+	climateCardConfiguration: "Tarjeta de climatización",
+	climateCardConfigurationDescription: "Muestra un termostato gestionado con su estado, el contexto de Velair y sensores opcionales del panel.",
+	climateCardManagedClimate: "Termostato gestionado",
+	climateCardOutdoorSensor: "Sensor de temperatura exterior (opcional)",
+	climateCardOutdoorSensorDescription: "Lectura exterior únicamente visual para compararla con la temperatura interior actual. No modifica el control de Velair.",
+	climateCardHeaderOptions: "Cabecera",
+	climateCardShowStateBar: "Mostrar barra de estado",
+	climateCardShowName: "Mostrar nombre del termostato",
+	climateCardCustomName: "Nombre personalizado del termostato",
+	climateCardShowOperation: "Mostrar estado de funcionamiento",
+	climateCardShowCurrentTemperature: "Mostrar temperatura actual",
+	climateCardShowCurrentHumidity: "Mostrar humedad actual",
+	climateCardShowOutdoorTemperature: "Mostrar temperatura exterior",
+	climateCardShowWindows: "Mostrar ventanas",
+	climateCardWindowsDescription: "Los sensores de ventana son únicamente informativos y no controlan Velair. Utiliza tu propia automatización de Home Assistant o el blueprint de ventanas de Velair si abrir una ventana debe pausar este termostato.",
+	climateCardWindowBlueprintLink: "Ver documentación e importar el blueprint",
+	climateCardTimelineShowTitle: "Mostrar título de la línea temporal",
+	climateCardTimelineShowProfile: "Mostrar perfil activo",
+	climateCardTimelineShowMode: "Mostrar modo activo",
+	climateCardResetName: "Restablecer nombre del termostato",
+	climateCardActions: "Acciones",
+	climateCardShowBoostAction: "Mostrar acción de refuerzo",
+	climateCardShowPauseAction: "Mostrar acción Pausa y Reanudar",
+	climateCardVelairActionsDescription: "El refuerzo y la pausa son acciones proporcionadas por Velair. Su comportamiento, texto e iconos no pueden personalizarse.",
+	climateCardCustomActions: "Acciones personalizadas",
+	climateCardCustomActionsDescription: "Añade scripts de Home Assistant. La lógica del script sigue gestionada por Home Assistant.",
+	climateCardActionsOrderDescription: "Reordena las acciones de Velair y los scripts de Home Assistant. Las acciones automáticas usan hasta tres posiciones directas; elige Menú Más en cualquier acción para mantenerla dentro de Más. El límite de tres posiciones no se puede personalizar.",
+	climateCardActionPlacement: "Ubicación",
+	climateCardActionPlacementAuto: "Automática",
+	climateCardActionPlacementMore: "Menú Más",
+	climateCardActionPlacementAutoDescription: "Usa una de las tres primeras posiciones directas disponibles. Si están ocupadas, esta acción pasa a Más.",
+	climateCardActionPlacementMoreDescription: "Mantiene siempre esta acción dentro del menú Más, independientemente de su orden.",
+	climateCardRemoveCustomAction: "Quitar acceso directo de la tarjeta",
+	climateCardExpandAction: "Editar {name}",
+	climateCardCollapseAction: "Cerrar configuración de {name}",
+	climateCardCollapseCurrentState: "Contraer estado actual",
+	climateCardExpandCurrentState: "Expandir estado actual",
+	climateCardCollapsedByDefault: "Contraído por defecto",
+	climateCardCollapseSection: "Contraer {name}",
+	climateCardExpandSection: "Expandir {name}",
+	climateCardProvidedByVelair: "Proporcionada por Velair · su comportamiento no se puede personalizar",
+	climateCardHideActionName: "Ocultar nombre de la acción",
+	climateCardAddCustomAction: "Añadir acción personalizada",
+	climateCardNoScripts: "Crea un script de Home Assistant antes de añadir una acción personalizada.",
+	climateCardCustomActionName: "Nombre",
+	climateCardCustomActionScript: "Script de Home Assistant",
+	climateCardCustomActionIcon: "Icono",
+	climateCardCustomActionColor: "Color del icono",
+	climateCardCustomActionConfirmation: "Pedir confirmación antes de ejecutar",
+	climateCardScriptUnavailable: "Script no disponible",
+	climateCardOpenVelairMenu: "Abrir Velair",
+	climateCardConfirmScriptAction: "¿Ejecutar {name}?",
+	climateCardScriptExecuted: "{name} iniciado",
+	climateCardWindowDisplay: "Visualización de ventanas",
+	climateCardWindowGrouped: "Agrupar por estado",
+	climateCardWindowIndividual: "Mostrar individualmente",
+	climateCardRoomAssistDisplay: "Visualización de Room Assist",
+	climateCardPreconditioningDisplay: "Visualización del preacondicionamiento",
+	climateCardDisplayBoth: "Texto y gráfico",
+	climateCardDisplayChart: "Gráfico",
+	climateCardDisplayText: "Texto",
+	climateCardAddWindow: "Añadir ventana",
+	climateCardThermostatControls: "Controles del termostato",
+	climateCardShowControlMode: "Mostrar control Automático/Manual",
+	climateCardShowTargetControl: "Mostrar control de consigna",
+	climateCardShowHvacModeControl: "Mostrar control del modo HVAC",
+	climateCardShowNativeClimateLink: "Mostrar enlace al termostato de Home Assistant",
+	climateCardThermostatControlsDescription: "La consigna y el modo HVAC solo se pueden cambiar durante un Ajuste manual confirmado. El enlace de Home Assistant abre todos los controles nativos del termostato.",
+	climateCardTargetTemperature: "Consigna",
+	climateCardLowerTarget: "Límite inferior",
+	climateCardUpperTarget: "Límite superior",
+	climateCardDecreaseTarget: "Reducir la consigna",
+	climateCardIncreaseTarget: "Aumentar la consigna",
+	climateCardAdjustManually: "Ajustar manualmente",
+	climateCardOpenInHomeAssistant: "Abrir en Home Assistant",
+	climateCardHumiditySource: "Origen de la humedad",
+	climateCardHumidityClimateSource: "Humedad proporcionada por el termostato",
+	climateCardHumiditySourceDescription: "Selecciona un sensor de humedad de Home Assistant para sustituir tanto la lectura del termostato como su acceso al historial.",
+	climateCardOpenMetricHistory: "Abrir historial de {metric}",
+	climateCardControlsAutomaticHint: "Inicia un Ajuste manual para cambiar directamente el termostato.",
+	climateCardManualAdjustmentUnavailable: "El Ajuste manual no está disponible en este momento.",
+	climateCardControlsUnavailable: "Los controles directos no están disponibles mientras el termostato no esté disponible.",
+	climateCardControlsBlockedBoost: "Los controles directos no están disponibles durante un refuerzo.",
+	climateCardControlsBlockedPause: "Los controles directos no están disponibles mientras el termostato esté pausado.",
+	climateCardControlsBlockedStopped: "Los controles directos no están disponibles mientras el termostato esté detenido.",
+	climateCardControlsMissingStep: "Este termostato no publica un incremento de consigna válido.",
+	climateCardThermostatActionFailed: "No se pudo actualizar el termostato",
+	climateCardWindows: "Ventanas",
+	climateCardShowTimeline: "Mostrar la línea temporal de hoy",
+	climateCardShowComfort: "Mostrar Confort",
+	climateCardShowCollapsedComfortReadings: "Mostrar lecturas adicionales al contraer",
+	climateCardShowRoomAssist: "Mostrar Room Assist",
+	climateCardShowPreconditioning: "Mostrar preacondicionamiento",
+	climateCardShowActions: "Mostrar acciones",
+	climateCardOpenVelair: "Abrir Velair",
+	climateCardAvailable: "Disponible",
+	climateCardUnavailable: "No disponible",
+	climateCardCurrentState: "Estado actual",
+	climateCardOutdoor: "Temperatura exterior",
+	climateCardOutdoorWarmer: "{delta} más que en el interior",
+	climateCardOutdoorColder: "{delta} menos que en el interior",
+	climateCardWindowsOpen: "{count} abiertas",
+	climateCardWindowsClosed: "{count} cerradas",
+	climateCardWindowsUnavailable: "{count} no disponibles",
+	climateCardProfilePause: "El perfil {profile} pausa este termostato",
+	climateCardRoomReading: "Lectura de la estancia",
+	climateCardAppliedSetpoint: "Consigna aplicada",
+	climateCardClimateReading: "Lectura del termostato",
+	climateCardRoomAssistNotConfigured: "Sin configurar",
+	climateCardRoomAssistDisabled: "Deshabilitado",
+	climateCardRoomAssistIdle: "En espera",
+	climateCardRoomAssistReady: "Preparado",
+	climateCardRoomAssistAssisting: "Compensando",
+	climateCardRoomAssistHolding: "Manteniendo",
+	climateCardRoomAssistBlocked: "Bloqueado",
+	climateCardRoomAssistUnavailable: "No disponible",
+	climateCardRoomAssistSummaryNotConfigured: "Selecciona un sensor de temperatura de estancia antes de utilizar Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist está configurado, pero actualmente está deshabilitado.",
+	climateCardRoomAssistSummaryIdle: "Esperando un objetivo programado activo y compatible.",
+	climateCardRoomAssistSummaryReady: "Preparado para ajustar la consigna cuando lo requiera la temperatura de la estancia.",
+	climateCardRoomAssistSummaryAssisting: "Ajustando la consigna para acercar la estancia al objetivo programado.",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Aplicando una consigna de {applied} para acercar la estancia a su objetivo programado de {target}.",
+	climateCardRoomAssistSummaryHolding: "Manteniendo estable la consigna actual de Room Assist.",
+	climateCardRoomAssistSummaryBlocked: "Esperando mientras otra acción de Velair tiene prioridad.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist no puede controlar este termostato en este momento.",
+	climateCardPreconditioningActive: "Activo",
+	climateCardExternalManaged: "Gestionado por {provider}",
+	climateCardExternalControl: "Control externo",
+	climateCardManagePause: "Gestionar pausa",
+	climateCardConfigureBoost: "Configurar refuerzo",
+	climateCardBoostStarted: "Refuerzo iniciado",
+	climateCardBoostCancelled: "Refuerzo cancelado",
+	climateCardZonePaused: "Termostato pausado",
+	climateCardZoneResumed: "Termostato reanudado",
+	climateCardActionFailed: "No se pudo completar la acción del termostato",
+	resumeAutomaticControl: "Reanudar automático",
+	cancelBoost: "Cancelar refuerzo",
+	more: "Más",
+	manualControl: "Control manual",
+	scheduled: "Programado",
+	enabled: "Habilitado",
+	unavailable: "No disponible",
+	unknown: "Desconocido",
+	none: "Ninguno",
+	remove: "Eliminar",
 	activeSetupCardControls: "Controles de configuración activa",
 	activeSetupCardControlsBoth: "Modos y Perfiles",
 	activeSetupCardControlsDescription: "Elige qué puede cambiar esta tarjeta. El Modo actual y los Perfiles aplicados seguirán visibles.",
@@ -2759,6 +3421,89 @@ var k = [
 	comfortCo2LimitsHelp: "El nivel «Elevado» sirve como aviso temprano sobre la calidad del aire. «Deficiente» señala un nivel de CO2 más preocupante.",
 	comfortCo2Poor: "Deficiente",
 	comfortCo2Sensor: "Sensor de CO2",
+	comfortAdditionalInformation: "Información ambiental adicional",
+	comfortAdditionalInformationDescription: "Valores opcionales calculados por Velair o proporcionados por una entidad de Home Assistant. Aportan contexto sin cambiar el control del termostato.",
+	comfortConfiguration: "Configuración de confort",
+	comfortConfigurationDescription: "Fuentes de sensores, rangos de confort y vigencia de los datos.",
+	comfortDewPoint: "Punto de rocío",
+	comfortDewPointDescription: "Las superficies a la temperatura del punto de rocío o por debajo podrían acumular condensación. Velair no detecta la temperatura superficial ni la condensación.",
+	comfortDewPointBelowRoom: "El punto de rocío está {difference} por debajo del aire de la estancia.",
+	comfortDewPointAboveRoom: "El punto de rocío está {difference} por encima del aire de la estancia.",
+	comfortAbsoluteHumidity: "Humedad absoluta",
+	comfortAbsoluteHumidityDescription: "Cantidad real de vapor de agua presente en el aire.",
+	comfortAbsoluteHumidityNeutral: "Humedad absoluta: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Percepción del calor según temperatura y humedad; no es un índice universal de confort.",
+	comfortHumidexRangeBelow: "Por debajo del rango de temperatura configurado",
+	comfortHumidexRangeWithin: "Dentro del rango de temperatura configurado",
+	comfortHumidexRangeAbove: "Por encima del rango de temperatura configurado",
+	comfortHumidexRangeUnknown: "Posición respecto al rango configurado no disponible",
+	comfortHumidexScaleAria: "Aire {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "El Humidex indica una percepción térmica {delta} más cálida que la temperatura ambiente.",
+	comfortHumidexCoolerRelation: "El Humidex está {delta} por debajo de la temperatura ambiente.",
+	comfortHumidexNeutralRelation: "El Humidex coincide con la temperatura ambiente.",
+	comfortRangeWithin: "Dentro de los rangos configurados",
+	comfortRangeOutside: "Fuera de los rangos configurados",
+	comfortRangeMixed: "Indicadores térmicos diferentes",
+	comfortRangeUnavailable: "Datos limitados",
+	comfortMetricSource: "Origen",
+	comfortMetricSourceVelair: "Calculado por Velair",
+	comfortMetricSourceEntity: "Entidad de Home Assistant",
+	comfortMetricEntity: "Entidad",
+	comfortMetricSelectEntity: "Selecciona un sensor compatible",
+	comfortMetricStale: "Lectura desactualizada",
+	comfortMetricInvalid: "Lectura o unidad no válida",
+	comfortInsightCo2Elevated: "El CO2 supera el nivel de atención configurado.",
+	comfortInsightCo2Poor: "El CO2 supera el umbral configurado de mala calidad del aire.",
+	comfortInsightHumidexWarmer: "La humedad aumenta el calor percibido en {delta}.",
+	comfortOutdoorComparison: "Interior y exterior",
+	comfortOutdoorDescription: "Solo aporta información visual. Esta comparación no controla ventanas ni el climatizador.",
+	comfortVentilationGuidance: "Orientación de ventilación",
+	comfortVentilationGuidanceDescription: "Velair compara la temperatura interior y exterior para indicar cuándo ventilar podría acercar la estancia al confort. La diferencia mínima es {temperature}. Añade humedad exterior para evaluar la humedad y posibles contrapartidas. Velair nunca abre ventanas ni modifica el control climático.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair compara temperatura y humedad dentro y fuera para indicar cuándo ventilar podría acercar la estancia al confort. Exige al menos {temperature}, {humidity} y {moisture}; cualquier contrapartida seguirá visible. Velair nunca abre ventanas ni modifica el control climático.",
+	comfortVentilationTemperatureThreshold: "Diferencia de temperatura",
+	comfortVentilationTemperatureThresholdHelp: "Diferencia mínima útil entre la temperatura interior y la exterior.",
+	comfortVentilationHumidityThreshold: "Mejora de humedad proyectada",
+	comfortVentilationHumidityThresholdHelp: "Mejora mínima de humedad relativa después de proyectar el aire exterior a la temperatura interior.",
+	comfortVentilationMoistureThreshold: "Diferencia de humedad absoluta",
+	comfortVentilationMoistureThresholdHelp: "Diferencia mínima en la densidad de vapor de agua necesaria para confirmar que el cambio de humedad proyectado es significativo.",
+	comfortOutdoorTemperatureSensor: "Sensor de temperatura exterior",
+	comfortOutdoorHumiditySensor: "Sensor de humedad exterior (opcional)",
+	comfortOutdoorSelectTemperature: "Selecciona un sensor de temperatura exterior",
+	comfortOutdoorNoHumidity: "No comparar la humedad exterior",
+	comfortOutdoorTemperatureComparison: "Temperatura",
+	comfortOutdoorMoistureComparison: "Humedad del aire",
+	comfortIndoor: "Interior",
+	comfortOutdoor: "Exterior",
+	comfortIndoorAbsoluteHumidity: "Humedad absoluta interior",
+	comfortOutdoorAbsoluteHumidity: "Humedad absoluta exterior",
+	comfortOutdoorEquivalentHumidity: "Humedad exterior ajustada",
+	comfortOutdoorAdjustedHumidityHelp: "Humedad relativa estimada del aire exterior después de alcanzar la temperatura interior actual.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "Compara la humedad interior y exterior sin que la diferencia de temperatura entre ambas distorsione el resultado.",
+	comfortOutdoorCooler: "más frío",
+	comfortOutdoorWarmer: "más cálido",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "más seco",
+	comfortOutdoorMoreHumid: "más húmedo",
+	comfortOutdoorTemperatureDelta: "El aire exterior está {difference} {direction}.",
+	comfortOutdoorHumidityLower: "La humedad exterior ajustada sería {difference} {unit} menor que la interior.",
+	comfortOutdoorHumidityHigher: "La humedad exterior ajustada sería {difference} {unit} mayor que la interior.",
+	comfortOutdoorHumiditySimilarDetail: "La humedad exterior ajustada sería similar a la interior (diferencia: {difference} {unit}).",
+	comfortPercentagePoint: "punto porcentual",
+	comfortPercentagePoints: "puntos porcentuales",
+	comfortInsightVentilationCool: "El aire exterior podría ayudar a enfriar la estancia.",
+	comfortInsightVentilationWarm: "El aire exterior podría ayudar a calentar la estancia.",
+	comfortInsightVentilationDry: "El aire exterior podría ayudar a reducir la humedad de la estancia.",
+	comfortInsightVentilationHumidify: "El aire exterior podría ayudar a aumentar la humedad de la estancia.",
+	comfortInsightVentilationTradeoff: "El aire exterior podría {effect} la estancia, pero empeorar la {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Basado en la temperatura; no está disponible el efecto de la humedad.",
+	comfortVentilationEffectCool: "enfriar",
+	comfortVentilationEffectWarm: "calentar",
+	comfortVentilationEffectDry: "secar",
+	comfortVentilationEffectHumidify: "humidificar",
+	comfortVentilationDimensionTemperature: "temperatura",
+	comfortVentilationDimensionHumidity: "humedad",
+	comfortAir: "Aire",
 	comfortCollapseClimate: "Ocultar {climate}",
 	comfortConditionCold: "Frío",
 	comfortConditionColdAndDry: "Frío y seco",
@@ -2795,6 +3540,22 @@ var k = [
 	comfortHumidityRange: "Rango de humedad",
 	comfortHumidityRangeHelp: "Con rangos más estrechos, Velair avisa antes; los rangos más amplios son más tolerantes.",
 	comfortHumiditySensor: "Sensor de humedad",
+	comfortDataSources: "Fuentes de datos",
+	comfortModel: "Modelo de confort",
+	comfortModelGuided: "Rango psicrométrico guiado",
+	comfortModelGuidedDescription: "Adapta la humedad relativa a lo largo del rango de temperatura partiendo de un único rango de referencia.",
+	comfortModelGuidedReference: "El rango de humedad es la referencia a {temperature}; Velair adapta la curva objetivo en las demás temperaturas.",
+	comfortModelHumidityRequired: "Es necesario configurar una fuente de humedad antes de seleccionar este modelo.",
+	comfortModelSimple: "Rangos simples",
+	comfortModelSimpleDescription: "Utiliza el mismo rango de humedad para todas las temperaturas confortables.",
+	comfortModelTemperatureAware: "Rango personalizado según temperatura",
+	comfortModelTemperatureAwareDescription: "Ajusta la humedad aceptable entre los extremos frío y cálido del rango de temperatura.",
+	comfortTemperatureAwareHumidityRanges: "Rangos de humedad según temperatura",
+	comfortAtMinimumTemperature: "En el límite más frío",
+	comfortAtMaximumTemperature: "En el límite más cálido",
+	comfortEffectiveHumidityRange: "A {temperature}, el rango de humedad confortable es {minimum}–{maximum}%.",
+	comfortGuidedHumidityReference: "Rango de humedad de referencia",
+	comfortPreferences: "Preferencias de confort",
 	comfortIntroDetail: "Monitoriza temperatura, humedad y CO2 de forma local, y usa los eventos de Velair en automatizaciones de Home Assistant.",
 	comfortIntroTitle: "Confort ambiental",
 	comfortMaximum: "Máx.",
@@ -3468,6 +4229,10 @@ var k = [
 	swingMode: "Oscilación",
 	temp: "Temp.",
 	target: "Consigna",
+	deviceControlled: "Controlada por el dispositivo",
+	useDeviceControlledTarget: "Mantener la consigna del dispositivo y cambiar solo el modo HVAC",
+	restoreTemperatureTarget: "Establecer una temperatura objetivo",
+	chooseModeForDeviceControlled: "Elige un modo HVAC antes de usar la consigna del dispositivo",
 	heatBelow: "Calentar por debajo de",
 	coolAbove: "Enfriar por encima de",
 	temperatureRange: "Rango de temperatura",
@@ -3488,11 +4253,12 @@ var k = [
 	temperatureLegacyResetStopped: "El planificador está detenido porque esta instalación antigua contiene datos solo en Celsius mientras Home Assistant usa Fahrenheit. Abre los ajustes de Velair y usa Restablecer Velair para crear valores predeterminados en Fahrenheit.",
 	temperatureStep: "Paso",
 	temperatureStepNotReported: "No proporcionado por Home Assistant",
-	temperatureStepNotReportedDescription: "Este termostato no proporciona el atributo target_temp_step. Velair no intenta deducir el paso de temperatura.",
+	temperatureStepNotReportedDescription: "Este termostato no proporciona target_temp_step. Velair utiliza el valor de respaldo configurado para la zona en Ajustes.",
 	targetTemp: "Temp. objetivo",
 	targetHumidity: "Humedad objetivo",
 	targetBy: "Objetivo a las",
 	targetTemperature: "Temperatura objetivo",
+	includeTargetTemperature: "Incluir temperatura objetivo",
 	todayTimeline: "Línea temporal de hoy",
 	updateTemplate: "Actualizar plantilla",
 	templateDeleted: "Plantilla eliminada",
@@ -3567,6 +4333,31 @@ var k = [
 		defrosting: "Desescarchando"
 	}
 }, ct = /* @__PURE__ */ t({ fr: () => lt }), lt = {
+	climateCardThermostatControls: "Commandes du thermostat",
+	climateCardShowControlMode: "Afficher le contrôle Automatique/Manuel",
+	climateCardShowTargetControl: "Afficher le réglage de la consigne",
+	climateCardShowHvacModeControl: "Afficher le sélecteur de mode HVAC",
+	climateCardShowNativeClimateLink: "Afficher le lien vers le thermostat dans Home Assistant",
+	climateCardThermostatControlsDescription: "La consigne et le mode HVAC ne peuvent être modifiés que pendant un ajustement manuel confirmé. Le lien Home Assistant ouvre toutes les commandes natives du thermostat.",
+	climateCardTargetTemperature: "Température cible",
+	climateCardLowerTarget: "Consigne basse",
+	climateCardUpperTarget: "Consigne haute",
+	climateCardDecreaseTarget: "Diminuer la consigne",
+	climateCardIncreaseTarget: "Augmenter la consigne",
+	climateCardAdjustManually: "Ajuster manuellement",
+	climateCardOpenInHomeAssistant: "Ouvrir dans Home Assistant",
+	climateCardHumiditySource: "Source d’humidité",
+	climateCardHumidityClimateSource: "Humidité fournie par le thermostat",
+	climateCardHumiditySourceDescription: "Choisissez un capteur d’humidité Home Assistant pour remplacer la mesure du thermostat et son raccourci vers l’historique.",
+	climateCardOpenMetricHistory: "Ouvrir l’historique de {metric}",
+	climateCardControlsAutomaticHint: "Démarrez un ajustement manuel pour modifier directement le thermostat.",
+	climateCardManualAdjustmentUnavailable: "L’ajustement manuel n’est pas disponible actuellement.",
+	climateCardControlsUnavailable: "Les commandes directes sont indisponibles tant que le thermostat est indisponible.",
+	climateCardControlsBlockedBoost: "Les commandes directes sont indisponibles pendant le renfort.",
+	climateCardControlsBlockedPause: "Les commandes directes sont indisponibles pendant une pause.",
+	climateCardControlsBlockedStopped: "Les commandes directes sont indisponibles lorsque la zone est arrêtée.",
+	climateCardControlsMissingStep: "Ce thermostat ne publie pas de pas de température valide ; utilisez ses commandes natives Home Assistant.",
+	climateCardThermostatActionFailed: "Impossible d’appliquer la modification du thermostat",
 	addBlock: "Ajouter un bloc",
 	externalConditionProfilesSupported: "Les programmes Par défaut, Profil et Mode sont pris en charge",
 	profileExternalScheduleOnly: "Les zones externes prennent uniquement en charge les programmes Par défaut, Profil ou Mode. Les pauses et les actions Velair directes restent indisponibles.",
@@ -3586,6 +4377,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Un changement implicite de continuité à minuit compte dans le maximum quotidien",
 	externalConditionsUnavailable: "Les conditions du contrôleur sont indisponibles.",
 	externalCapability_action_set_temperature: "Régler la température",
+	externalCapability_action_set_hvac_mode: "Modifier uniquement le mode HVAC",
 	externalCapability_action_turn_off: "Éteindre",
 	externalCapability_hvac_heat: "Chauffage",
 	externalCapability_hvac_cool: "Refroidissement",
@@ -3628,6 +4420,10 @@ var k = [
 	externalChangeForDuration: "Pendant une durée",
 	externalChangeUntilResumed: "Jusqu'à la reprise",
 	externalChangePolicySaved: "Politique de modifications externes enregistrée",
+	targetTempStepFallback: "Pas de température",
+	targetTempStepFallbackDescription: "Home Assistant ne fournit pas le pas de consigne de ce thermostat. Velair utilise cette valeur jusqu’à ce que le thermostat en publie une.",
+	targetTempStepFallbackInfoAction: "À propos du pas de température",
+	targetTempStepSaved: "Pas de température enregistré",
 	manualAdjustment: "Réglage manuel",
 	velairControl: "Contrôle Velair",
 	automaticScheduling: "Programmation automatique",
@@ -3688,6 +4484,117 @@ var k = [
 	blocks: "Plages",
 	build: "Build",
 	cardView: "Vue de la carte",
+	climateCardOutdoorSensorDescription: "Mesure extérieure purement visuelle pour la comparer à la température intérieure actuelle. Elle ne modifie pas le contrôle Velair.",
+	climateCardHeaderOptions: "En-tête",
+	climateCardShowStateBar: "Afficher la barre d’état",
+	climateCardShowName: "Afficher le nom du thermostat",
+	climateCardCustomName: "Nom personnalisé du thermostat",
+	climateCardShowOperation: "Afficher l’état de fonctionnement",
+	climateCardShowCurrentTemperature: "Afficher la température actuelle",
+	climateCardShowCurrentHumidity: "Afficher l’humidité actuelle",
+	climateCardShowOutdoorTemperature: "Afficher la température extérieure",
+	climateCardShowWindows: "Afficher les fenêtres",
+	climateCardWindowsDescription: "Les capteurs de fenêtre sont uniquement visuels et ne contrôlent pas Velair. Utilisez votre propre automatisation Home Assistant ou le blueprint Velair si l’ouverture d’une fenêtre doit mettre ce thermostat en pause.",
+	climateCardWindowBlueprintLink: "Voir la documentation et importer le blueprint",
+	climateCardTimelineShowTitle: "Afficher le titre de la chronologie",
+	climateCardTimelineShowProfile: "Afficher le profil actif",
+	climateCardTimelineShowMode: "Afficher le mode actif",
+	climateCardResetName: "Restaurer le nom du thermostat",
+	climateCardActions: "Actions",
+	climateCardShowBoostAction: "Afficher l’action de forçage",
+	climateCardShowPauseAction: "Afficher l’action Pause et Reprendre",
+	climateCardVelairActionsDescription: "Le forçage et la pause sont fournis par Velair. Leur comportement, leur libellé et leurs icônes ne sont pas personnalisables.",
+	climateCardCustomActions: "Actions personnalisées",
+	climateCardActionsOrderDescription: "Réorganisez les actions Velair et les scripts Home Assistant. Les actions automatiques utilisent jusqu’à trois emplacements directs ; choisissez Menu Plus pour conserver une action dans Plus. Cette limite n’est pas personnalisable.",
+	climateCardActionPlacement: "Emplacement",
+	climateCardActionPlacementAuto: "Automatique",
+	climateCardActionPlacementMore: "Menu Plus",
+	climateCardActionPlacementAutoDescription: "Utilise l’un des trois premiers emplacements directs disponibles. S’ils sont occupés, l’action passe dans Plus.",
+	climateCardActionPlacementMoreDescription: "Conserve toujours cette action dans le menu Plus, quel que soit son ordre.",
+	climateCardRemoveCustomAction: "Retirer le raccourci de la carte",
+	climateCardExpandAction: "Modifier {name}",
+	climateCardCollapseAction: "Fermer les réglages de {name}",
+	climateCardCollapseCurrentState: "Réduire l’état actuel",
+	climateCardExpandCurrentState: "Développer l’état actuel",
+	climateCardCollapsedByDefault: "Réduit par défaut",
+	climateCardCollapseSection: "Réduire {name}",
+	climateCardExpandSection: "Développer {name}",
+	climateCardProvidedByVelair: "Fourni par Velair · le comportement n’est pas personnalisable",
+	climateCardHideActionName: "Masquer le nom de l’action",
+	climateCardCustomActionsDescription: "Ajoutez des scripts Home Assistant. La logique reste gérée par Home Assistant.",
+	climateCardAddCustomAction: "Ajouter une action personnalisée",
+	climateCardNoScripts: "Créez un script Home Assistant avant d’ajouter une action.",
+	climateCardCustomActionName: "Nom",
+	climateCardCustomActionScript: "Script Home Assistant",
+	climateCardCustomActionIcon: "Icône",
+	climateCardCustomActionColor: "Couleur de l’icône",
+	climateCardCustomActionConfirmation: "Demander confirmation avant l’exécution",
+	climateCardScriptUnavailable: "Script indisponible",
+	climateCardOpenVelairMenu: "Ouvrir Velair",
+	climateCardConfirmScriptAction: "Exécuter {name} ?",
+	climateCardScriptExecuted: "{name} démarré",
+	climateCardPreconditioningDisplay: "Affichage du préconditionnement",
+	cardViewClimate: "Thermostat : état et contrôle",
+	climateCardConfiguration: "Carte de thermostat",
+	climateCardConfigurationDescription: "Affiche un thermostat géré avec son état, le contexte Velair et des capteurs facultatifs du tableau de bord.",
+	climateCardManagedClimate: "Thermostat géré",
+	climateCardOutdoorSensor: "Capteur de température extérieure (facultatif)",
+	climateCardWindowDisplay: "Affichage des fenêtres",
+	climateCardWindowGrouped: "Grouper par état",
+	climateCardWindowIndividual: "Afficher séparément",
+	climateCardRoomAssistDisplay: "Affichage Room Assist",
+	climateCardDisplayBoth: "Texte et graphique",
+	climateCardDisplayChart: "Graphique",
+	climateCardDisplayText: "Texte",
+	climateCardAddWindow: "Ajouter une fenêtre",
+	climateCardWindows: "Fenêtres",
+	climateCardShowTimeline: "Afficher la chronologie du jour",
+	climateCardShowComfort: "Afficher le confort",
+	climateCardShowCollapsedComfortReadings: "Afficher les relevés supplémentaires une fois réduit",
+	climateCardShowRoomAssist: "Afficher Room Assist",
+	climateCardShowPreconditioning: "Afficher le préconditionnement",
+	climateCardShowActions: "Afficher les actions",
+	climateCardOpenVelair: "Ouvrir Velair",
+	climateCardAvailable: "Disponible",
+	climateCardUnavailable: "Indisponible",
+	climateCardCurrentState: "État actuel",
+	climateCardOutdoor: "Température extérieure",
+	climateCardOutdoorWarmer: "{delta} de plus qu'à l'intérieur",
+	climateCardOutdoorColder: "{delta} de moins qu'à l'intérieur",
+	climateCardWindowsOpen: "{count} ouvertes",
+	climateCardWindowsClosed: "{count} fermées",
+	climateCardWindowsUnavailable: "{count} indisponibles",
+	climateCardProfilePause: "Le profil {profile} met ce thermostat en pause",
+	climateCardRoomReading: "Mesure de la pièce",
+	climateCardAppliedSetpoint: "Consigne appliquée",
+	climateCardClimateReading: "Mesure du thermostat",
+	climateCardRoomAssistNotConfigured: "Non configuré",
+	climateCardRoomAssistDisabled: "Désactivé",
+	climateCardRoomAssistIdle: "En attente",
+	climateCardRoomAssistReady: "Prêt",
+	climateCardRoomAssistAssisting: "Correction active",
+	climateCardRoomAssistHolding: "Maintien",
+	climateCardRoomAssistBlocked: "Bloqué",
+	climateCardRoomAssistUnavailable: "Indisponible",
+	climateCardExternalManaged: "Géré par {provider}",
+	climateCardExternalControl: "Contrôle externe",
+	climateCardManagePause: "Gérer la pause",
+	climateCardConfigureBoost: "Configurer le renfort",
+	climateCardBoostStarted: "Renfort démarré",
+	climateCardBoostCancelled: "Renfort annulé",
+	climateCardZonePaused: "Thermostat en pause",
+	climateCardZoneResumed: "Thermostat relancé",
+	climateCardActionFailed: "Impossible de terminer l'action",
+	resumeAutomaticControl: "Reprendre l'automatique",
+	cancelBoost: "Annuler le renfort",
+	more: "Plus",
+	manualControl: "Contrôle manuel",
+	scheduled: "Programmé",
+	enabled: "Activé",
+	unavailable: "Indisponible",
+	unknown: "Inconnu",
+	none: "Aucun",
+	remove: "Supprimer",
 	activeSetupCardControls: "Commandes de configuration active",
 	activeSetupCardControlsBoth: "Modes et profils",
 	activeSetupCardControlsDescription: "Choisissez ce que cette carte peut modifier. Le mode actuel et les profils appliqués restent visibles.",
@@ -3741,6 +4648,42 @@ var k = [
 	comfortCo2LimitsHelp: "Le niveau élevé signale une première alerte. Le niveau mauvais indique une concentration de CO2 plus préoccupante.",
 	comfortCo2Poor: "Mauvais",
 	comfortCo2Sensor: "Capteur de CO2",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Configuration du confort",
+	comfortConfigurationDescription: "Sources des capteurs, plages de confort et fraîcheur des données.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Les surfaces à une température égale ou inférieure au point de rosée peuvent accumuler de la condensation. Velair ne détecte ni leur température ni la condensation.",
+	comfortDewPointBelowRoom: "Le point de rosée est {difference} sous l’air ambiant.",
+	comfortDewPointAboveRoom: "Le point de rosée est {difference} au-dessus de l’air ambiant.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Humidité absolue : {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Sous la plage de température configurée",
+	comfortHumidexRangeWithin: "Dans la plage de température configurée",
+	comfortHumidexRangeAbove: "Au-dessus de la plage de température configurée",
+	comfortHumidexRangeUnknown: "Position par rapport à la plage configurée indisponible",
+	comfortHumidexScaleAria: "Air {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "L’Humidex indique une chaleur perçue {delta} supérieure à la température ambiante.",
+	comfortHumidexCoolerRelation: "L’Humidex est inférieur de {delta} à la température ambiante.",
+	comfortHumidexNeutralRelation: "L’Humidex correspond à la température ambiante.",
+	comfortRangeWithin: "Dans les plages configurées",
+	comfortRangeOutside: "Hors des plages configurées",
+	comfortRangeMixed: "Indicateurs thermiques divergents",
+	comfortRangeUnavailable: "Données limitées",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "Le CO2 dépasse le seuil d’attention configuré.",
+	comfortInsightCo2Poor: "Le CO2 dépasse le seuil configuré de mauvaise qualité de l’air.",
+	comfortInsightHumidexWarmer: "L’humidité augmente la chaleur ressentie de {delta}.",
+	comfortAir: "Air",
 	comfortCollapseClimate: "Réduire {climate}",
 	comfortConditionCold: "Froid",
 	comfortConditionColdAndDry: "Froid et sec",
@@ -3781,6 +4724,15 @@ var k = [
 	comfortIntroTitle: "Confort ambiant",
 	comfortMaximum: "Max",
 	comfortMinimum: "Min",
+	comfortModel: "Modèle de confort",
+	comfortModelSimple: "Plages simples",
+	comfortModelSimpleDescription: "Utilise la même plage d'humidité pour toutes les températures confortables.",
+	comfortModelTemperatureAware: "Plages selon la température",
+	comfortModelTemperatureAwareDescription: "Adapte la plage d'humidité acceptable entre les extrémités fraîche et chaude de la plage de température.",
+	comfortTemperatureAwareHumidityRanges: "Plages d'humidité selon la température",
+	comfortAtMinimumTemperature: "À la limite la plus fraîche",
+	comfortAtMaximumTemperature: "À la limite la plus chaude",
+	comfortEffectiveHumidityRange: "À {temperature}, la plage d'humidité de confort est de {minimum} à {maximum}%.",
 	comfortMoreHumid: "Plus humide",
 	comfortMapCurrentPosition: "Position actuelle : {temperature}, {humidity}",
 	comfortNotMonitored: "Non surveillé",
@@ -4470,11 +5422,16 @@ var k = [
 	temperatureLegacyResetStopped: "Le planificateur est arrêté car cette ancienne installation contient uniquement des données Celsius alors que Home Assistant utilise les Fahrenheit. Ouvrez les réglages Velair et utilisez Réinitialiser Velair pour créer des valeurs par défaut en Fahrenheit.",
 	temperatureStep: "Pas",
 	temperatureStepNotReported: "Non signalé par Home Assistant",
-	temperatureStepNotReportedDescription: "Ce thermostat ne publie pas target_temp_step. Velair ne déduit aucun pas de température.",
+	temperatureStepNotReportedDescription: "Ce thermostat ne publie pas target_temp_step. Velair utilise la valeur de secours configurée pour la zone dans Réglages.",
 	targetTemp: "Température cible",
 	targetHumidity: "Humidité cible",
 	targetBy: "Consigne à atteindre à",
 	targetTemperature: "Température cible",
+	includeTargetTemperature: "Inclure la température cible",
+	deviceControlled: "Contrôlée par l’appareil",
+	useDeviceControlledTarget: "Conserver la consigne de l’appareil et modifier uniquement le mode HVAC",
+	restoreTemperatureTarget: "Définir une température cible",
+	chooseModeForDeviceControlled: "Choisissez un mode HVAC avant d’utiliser la consigne contrôlée par l’appareil",
 	todayTimeline: "Programme du jour",
 	updateTemplate: "Mettre à jour le modèle",
 	templateDeleted: "Modèle supprimé",
@@ -4529,6 +5486,63 @@ var k = [
 		auto: "Auto",
 		paused: "En pause"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Sélectionnez un capteur de température ambiante avant d’utiliser Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist est configuré, mais actuellement désactivé.",
+	climateCardRoomAssistSummaryIdle: "En attente d’une consigne programmée active et compatible.",
+	climateCardRoomAssistSummaryReady: "Prêt à ajuster la consigne lorsque la température ambiante l’exige.",
+	climateCardRoomAssistSummaryAssisting: "Ajuste la consigne pour rapprocher la pièce de la consigne programmée.",
+	climateCardRoomAssistSummaryHolding: "Maintient stable la consigne Room Assist actuelle.",
+	climateCardRoomAssistSummaryBlocked: "En attente pendant qu’une autre action Velair est prioritaire.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist ne peut pas contrôler ce thermostat pour le moment.",
+	climateCardPreconditioningActive: "Actif",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Applique une consigne de {applied} pour rapprocher la pièce de son objectif programmé de {target}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Auto",
 		cool: "Refroidissement",
@@ -4547,8 +5561,40 @@ var k = [
 		off: "Arrêt",
 		preheating: "Préchauffage",
 		defrosting: "Dégivrage"
-	}
+	},
+	comfortDataSources: "Sources de données",
+	comfortModelGuided: "Plage psychrométrique guidée",
+	comfortModelGuidedDescription: "Adapte l’humidité relative à la plage de température à partir d’une seule plage de référence.",
+	comfortModelGuidedReference: "La plage d’humidité sert de référence à {temperature} ; Velair adapte la courbe cible aux autres températures.",
+	comfortModelHumidityRequired: "Une source d’humidité est nécessaire pour sélectionner ce modèle.",
+	comfortGuidedHumidityReference: "Plage d’humidité de référence",
+	comfortPreferences: "Préférences de confort"
 }, ut = /* @__PURE__ */ t({ it: () => dt }), dt = {
+	climateCardThermostatControls: "Controlli del termostato",
+	climateCardShowControlMode: "Mostra controllo Automatico/Manuale",
+	climateCardShowTargetControl: "Mostra il controllo della temperatura obiettivo",
+	climateCardShowHvacModeControl: "Mostra il selettore della modalità HVAC",
+	climateCardShowNativeClimateLink: "Mostra il collegamento al termostato in Home Assistant",
+	climateCardThermostatControlsDescription: "La temperatura obiettivo e la modalità HVAC possono essere modificate solo durante una regolazione manuale confermata. Il collegamento Home Assistant apre tutti i controlli nativi del termostato.",
+	climateCardTargetTemperature: "Temperatura obiettivo",
+	climateCardLowerTarget: "Obiettivo inferiore",
+	climateCardUpperTarget: "Obiettivo superiore",
+	climateCardDecreaseTarget: "Riduci la temperatura obiettivo",
+	climateCardIncreaseTarget: "Aumenta la temperatura obiettivo",
+	climateCardAdjustManually: "Regola manualmente",
+	climateCardOpenInHomeAssistant: "Apri in Home Assistant",
+	climateCardHumiditySource: "Fonte umidità",
+	climateCardHumidityClimateSource: "Umidità fornita dal termostato",
+	climateCardHumiditySourceDescription: "Scegli un sensore di umidità di Home Assistant per sostituire sia la lettura del termostato sia il relativo collegamento alla cronologia.",
+	climateCardOpenMetricHistory: "Apri la cronologia di {metric}",
+	climateCardControlsAutomaticHint: "Avvia una regolazione manuale per modificare direttamente il termostato.",
+	climateCardManualAdjustmentUnavailable: "La regolazione manuale non è attualmente disponibile.",
+	climateCardControlsUnavailable: "I controlli diretti non sono disponibili mentre il termostato non è disponibile.",
+	climateCardControlsBlockedBoost: "I controlli diretti non sono disponibili durante il potenziamento.",
+	climateCardControlsBlockedPause: "I controlli diretti non sono disponibili durante una pausa.",
+	climateCardControlsBlockedStopped: "I controlli diretti non sono disponibili quando la zona è arrestata.",
+	climateCardControlsMissingStep: "Questo termostato non pubblica un intervallo di temperatura valido; usa i controlli nativi di Home Assistant.",
+	climateCardThermostatActionFailed: "Impossibile applicare la modifica del termostato",
 	addBlock: "Aggiungi blocco",
 	externalSystems: "Sistemi esterni",
 	externalSystemsDescription: "Scegli chi esegue la programmazione settimanale effettiva per le entità climatiche compatibili. Velair non controlla mai fisicamente le zone esterne.",
@@ -4570,6 +5616,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Se il primo blocco inizia dopo le 00:00, la modifica implicita della continuità di mezzanotte viene conteggiata ai fini del massimo giornaliero",
 	externalConditionsUnavailable: "Le condizioni del controller non sono disponibili.",
 	externalCapability_action_set_temperature: "Imposta la temperatura",
+	externalCapability_action_set_hvac_mode: "Modifica solo la modalità HVAC",
 	externalCapability_action_turn_off: "Spegni",
 	externalCapability_hvac_heat: "Riscaldamento",
 	externalCapability_hvac_cool: "Raffreddamento",
@@ -4609,6 +5656,10 @@ var k = [
 	externalChangeForDuration: "Per una durata",
 	externalChangeUntilResumed: "Fino alla ripresa",
 	externalChangePolicySaved: "Criterio di modifica esterna salvato",
+	targetTempStepFallback: "Incremento temperatura",
+	targetTempStepFallbackDescription: "Home Assistant non comunica l'incremento della temperatura obiettivo di questo clima. Velair usa questo valore finché il clima non ne comunica uno.",
+	targetTempStepFallbackInfoAction: "Informazioni sull'incremento",
+	targetTempStepSaved: "Incremento temperatura salvato",
 	manualAdjustment: "Regolazione manuale",
 	velairControl: "Controllo Velair",
 	automaticScheduling: "Programmazione automatica",
@@ -4670,6 +5721,117 @@ var k = [
 	blocks: "Blocchi",
 	build: "Versione build",
 	cardView: "Visualizzazione della scheda",
+	climateCardOutdoorSensorDescription: "Lettura esterna solo visiva per il confronto con la temperatura interna attuale. Non modifica il controllo di Velair.",
+	climateCardHeaderOptions: "Intestazione",
+	climateCardShowStateBar: "Mostra barra di stato",
+	climateCardShowName: "Mostra nome del termostato",
+	climateCardCustomName: "Nome personalizzato del termostato",
+	climateCardShowOperation: "Mostra stato operativo",
+	climateCardShowCurrentTemperature: "Mostra temperatura attuale",
+	climateCardShowCurrentHumidity: "Mostra umidità attuale",
+	climateCardShowOutdoorTemperature: "Mostra temperatura esterna",
+	climateCardShowWindows: "Mostra finestre",
+	climateCardWindowsDescription: "I sensori delle finestre sono solo visivi e non controllano Velair. Usa una tua automazione Home Assistant o il blueprint Velair se una finestra aperta deve mettere in pausa questo termostato.",
+	climateCardWindowBlueprintLink: "Vedi la documentazione e importa il blueprint",
+	climateCardTimelineShowTitle: "Mostra titolo della cronologia",
+	climateCardTimelineShowProfile: "Mostra profilo attivo",
+	climateCardTimelineShowMode: "Mostra modalità attiva",
+	climateCardResetName: "Ripristina nome del termostato",
+	climateCardActions: "Azioni",
+	climateCardShowBoostAction: "Mostra azione di incremento",
+	climateCardShowPauseAction: "Mostra azione Pause e Riprendi",
+	climateCardVelairActionsDescription: "Incremento e pausa sono forniti da Velair. Comportamento, testo e icone non sono personalizzabili.",
+	climateCardCustomActions: "Azioni personalizzate",
+	climateCardActionsOrderDescription: "Riordina le azioni Velair e gli script di Home Assistant. Le azioni automatiche usano fino a tre posizioni dirette; scegli Menu Altro per mantenere un’azione in Altro. Il limite non è personalizzabile.",
+	climateCardActionPlacement: "Posizione",
+	climateCardActionPlacementAuto: "Automatica",
+	climateCardActionPlacementMore: "Menu Altro",
+	climateCardActionPlacementAutoDescription: "Usa una delle prime tre posizioni dirette disponibili. Se sono occupate, l’azione passa in Altro.",
+	climateCardActionPlacementMoreDescription: "Mantiene sempre questa azione nel menu Altro, indipendentemente dall’ordine.",
+	climateCardRemoveCustomAction: "Rimuovi scorciatoia dalla scheda",
+	climateCardExpandAction: "Modifica {name}",
+	climateCardCollapseAction: "Chiudi le impostazioni di {name}",
+	climateCardCollapseCurrentState: "Comprimi stato attuale",
+	climateCardExpandCurrentState: "Espandi stato attuale",
+	climateCardCollapsedByDefault: "Compresso per impostazione predefinita",
+	climateCardCollapseSection: "Comprimi {name}",
+	climateCardExpandSection: "Espandi {name}",
+	climateCardProvidedByVelair: "Fornita da Velair · il comportamento non è personalizzabile",
+	climateCardHideActionName: "Nascondi nome azione",
+	climateCardCustomActionsDescription: "Aggiungi script Home Assistant. La logica resta gestita da Home Assistant.",
+	climateCardAddCustomAction: "Aggiungi azione personalizzata",
+	climateCardNoScripts: "Crea uno script Home Assistant prima di aggiungere un’azione.",
+	climateCardCustomActionName: "Nome",
+	climateCardCustomActionScript: "Script Home Assistant",
+	climateCardCustomActionIcon: "Icona",
+	climateCardCustomActionColor: "Colore icona",
+	climateCardCustomActionConfirmation: "Chiedi conferma prima dell’esecuzione",
+	climateCardScriptUnavailable: "Script non disponibile",
+	climateCardOpenVelairMenu: "Apri Velair",
+	climateCardConfirmScriptAction: "Eseguire {name}?",
+	climateCardScriptExecuted: "{name} avviato",
+	climateCardPreconditioningDisplay: "Visualizzazione precondizionamento",
+	cardViewClimate: "Termostato: stato e controllo",
+	climateCardConfiguration: "Scheda termostato",
+	climateCardConfigurationDescription: "Mostra un termostato gestito con stato, contesto Velair e sensori opzionali del pannello.",
+	climateCardManagedClimate: "Termostato gestito",
+	climateCardOutdoorSensor: "Sensore temperatura esterna (opzionale)",
+	climateCardWindowDisplay: "Visualizzazione finestre",
+	climateCardWindowGrouped: "Raggruppa per stato",
+	climateCardWindowIndividual: "Mostra singolarmente",
+	climateCardRoomAssistDisplay: "Visualizzazione Room Assist",
+	climateCardDisplayBoth: "Testo e grafico",
+	climateCardDisplayChart: "Grafico",
+	climateCardDisplayText: "Testo",
+	climateCardAddWindow: "Aggiungi finestra",
+	climateCardWindows: "Finestre",
+	climateCardShowTimeline: "Mostra cronologia odierna",
+	climateCardShowComfort: "Mostra benessere",
+	climateCardShowCollapsedComfortReadings: "Mostra le letture aggiuntive quando è compresso",
+	climateCardShowRoomAssist: "Mostra Room Assist",
+	climateCardShowPreconditioning: "Mostra precondizionamento",
+	climateCardShowActions: "Mostra azioni",
+	climateCardOpenVelair: "Apri Velair",
+	climateCardAvailable: "Disponibile",
+	climateCardUnavailable: "Non disponibile",
+	climateCardCurrentState: "Stato attuale",
+	climateCardOutdoor: "Temperatura esterna",
+	climateCardOutdoorWarmer: "{delta} più calda dell'interno",
+	climateCardOutdoorColder: "{delta} più fredda dell'interno",
+	climateCardWindowsOpen: "{count} aperte",
+	climateCardWindowsClosed: "{count} chiuse",
+	climateCardWindowsUnavailable: "{count} non disponibili",
+	climateCardProfilePause: "Il profilo {profile} mette in pausa questo termostato",
+	climateCardRoomReading: "Lettura ambiente",
+	climateCardAppliedSetpoint: "Setpoint applicato",
+	climateCardClimateReading: "Lettura termostato",
+	climateCardRoomAssistNotConfigured: "Non configurato",
+	climateCardRoomAssistDisabled: "Disattivato",
+	climateCardRoomAssistIdle: "In attesa",
+	climateCardRoomAssistReady: "Pronto",
+	climateCardRoomAssistAssisting: "Correzione attiva",
+	climateCardRoomAssistHolding: "Mantenimento",
+	climateCardRoomAssistBlocked: "Bloccato",
+	climateCardRoomAssistUnavailable: "Non disponibile",
+	climateCardExternalManaged: "Gestito da {provider}",
+	climateCardExternalControl: "Controllo esterno",
+	climateCardManagePause: "Gestisci pausa",
+	climateCardConfigureBoost: "Configura potenziamento",
+	climateCardBoostStarted: "Potenziamento avviato",
+	climateCardBoostCancelled: "Potenziamento annullato",
+	climateCardZonePaused: "Termostato in pausa",
+	climateCardZoneResumed: "Termostato riattivato",
+	climateCardActionFailed: "Impossibile completare l'azione",
+	resumeAutomaticControl: "Riprendi automatico",
+	cancelBoost: "Annulla potenziamento",
+	more: "Altro",
+	manualControl: "Controllo manuale",
+	scheduled: "Programmato",
+	enabled: "Attivato",
+	unavailable: "Non disponibile",
+	unknown: "Sconosciuto",
+	none: "Nessuno",
+	remove: "Rimuovi",
 	activeSetupCardControls: "Controlli di configurazione attivi",
 	activeSetupCardControlsBoth: "Modalità e profili",
 	activeSetupCardControlsDescription: "Scegli cosa può modificare questa scheda. La modalità corrente e i profili applicati rimangono visibili.",
@@ -4723,6 +5885,42 @@ var k = [
 	comfortCo2LimitsHelp: "Elevata indica un primo avviso sulla qualità dell'aria. Scarsa indica un livello di CO2 più grave.",
 	comfortCo2Poor: "Scarso",
 	comfortCo2Sensor: "Sensore di CO2",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Configurazione comfort",
+	comfortConfigurationDescription: "Fonti dei sensori, intervalli di comfort e aggiornamento dei dati.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Le superfici a una temperatura pari o inferiore al punto di rugiada potrebbero accumulare condensa. Velair non rileva la temperatura superficiale né la condensa.",
+	comfortDewPointBelowRoom: "Il punto di rugiada è {difference} sotto l’aria ambiente.",
+	comfortDewPointAboveRoom: "Il punto di rugiada è {difference} sopra l’aria ambiente.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Umidità assoluta: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Sotto l'intervallo di temperatura configurato",
+	comfortHumidexRangeWithin: "Nell'intervallo di temperatura configurato",
+	comfortHumidexRangeAbove: "Sopra l'intervallo di temperatura configurato",
+	comfortHumidexRangeUnknown: "Posizione rispetto all'intervallo configurato non disponibile",
+	comfortHumidexScaleAria: "Aria {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "L’Humidex indica un calore percepito {delta} superiore alla temperatura ambiente.",
+	comfortHumidexCoolerRelation: "L’Humidex è {delta} sotto la temperatura ambiente.",
+	comfortHumidexNeutralRelation: "L’Humidex coincide con la temperatura ambiente.",
+	comfortRangeWithin: "Entro gli intervalli configurati",
+	comfortRangeOutside: "Fuori dagli intervalli configurati",
+	comfortRangeMixed: "Indicatori termici discordanti",
+	comfortRangeUnavailable: "Dati limitati",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "La CO2 supera il livello di attenzione configurato.",
+	comfortInsightCo2Poor: "La CO2 supera la soglia configurata di scarsa qualità dell’aria.",
+	comfortInsightHumidexWarmer: "L’umidità aumenta il calore percepito di {delta}.",
+	comfortAir: "Aria",
 	comfortCollapseClimate: "Comprimi {climate}",
 	comfortConditionCold: "Freddo",
 	comfortConditionColdAndDry: "Freddo e secco",
@@ -4763,6 +5961,15 @@ var k = [
 	comfortIntroTitle: "Comfort ambientale",
 	comfortMaximum: "Massimo",
 	comfortMinimum: "Minimo",
+	comfortModel: "Modello di comfort",
+	comfortModelSimple: "Intervalli semplici",
+	comfortModelSimpleDescription: "Usa lo stesso intervallo di umidità per ogni temperatura confortevole.",
+	comfortModelTemperatureAware: "Intervalli in base alla temperatura",
+	comfortModelTemperatureAwareDescription: "Adatta l'intervallo di umidità accettabile tra gli estremi fresco e caldo dell'intervallo di temperatura.",
+	comfortTemperatureAwareHumidityRanges: "Intervalli di umidità in base alla temperatura",
+	comfortAtMinimumTemperature: "Al limite più fresco",
+	comfortAtMaximumTemperature: "Al limite più caldo",
+	comfortEffectiveHumidityRange: "A {temperature}, l'intervallo di umidità confortevole è {minimum}–{maximum}%.",
 	comfortMoreHumid: "Più umido",
 	comfortMapCurrentPosition: "Posizione attuale: {temperature}, {humidity}",
 	comfortNotMonitored: "Non monitorato",
@@ -5452,11 +6659,16 @@ var k = [
 	temperatureLegacyResetStopped: "La programmazione è stata arrestata perché questa installazione precedente contiene solo dati in gradi Celsius mentre Home Assistant utilizza Fahrenheit. Apri le impostazioni di Velair e usa Ripristina Velair per creare valori predefiniti sicuri in Fahrenheit.",
 	temperatureStep: "Incremento",
 	temperatureStepNotReported: "Non segnalato da Home Assistant",
-	temperatureStepNotReportedDescription: "Questo clima non pubblica target_temp_step. Velair non deduce un gradino di temperatura.",
+	temperatureStepNotReportedDescription: "Questo clima non pubblica target_temp_step. Velair usa il valore di riserva configurato per la zona nelle Impostazioni.",
 	targetTemp: "Temp. obiettivo",
 	targetHumidity: "Umidità obiettivo",
 	targetBy: "Obiettivo di",
 	targetTemperature: "Temperatura obiettivo",
+	includeTargetTemperature: "Includi la temperatura obiettivo",
+	deviceControlled: "Controllato dal dispositivo",
+	useDeviceControlledTarget: "Mantieni il setpoint del dispositivo e cambia solo la modalità HVAC",
+	restoreTemperatureTarget: "Imposta una temperatura obiettivo",
+	chooseModeForDeviceControlled: "Scegli una modalità HVAC prima di usare il setpoint controllato dal dispositivo",
 	todayTimeline: "Cronologia di oggi",
 	updateTemplate: "Aggiorna modello",
 	templateDeleted: "Modello eliminato",
@@ -5511,6 +6723,63 @@ var k = [
 		auto: "Automatico",
 		paused: "In pausa"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Seleziona un sensore di temperatura ambiente prima di usare Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist è configurato, ma attualmente disattivato.",
+	climateCardRoomAssistSummaryIdle: "In attesa di un obiettivo programmato attivo e compatibile.",
+	climateCardRoomAssistSummaryReady: "Pronto a regolare il setpoint quando la temperatura ambiente lo richiede.",
+	climateCardRoomAssistSummaryAssisting: "Regola il setpoint per avvicinare la stanza all’obiettivo programmato.",
+	climateCardRoomAssistSummaryHolding: "Mantiene stabile l’attuale obiettivo di Room Assist.",
+	climateCardRoomAssistSummaryBlocked: "In attesa mentre un’altra azione Velair ha la priorità.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist non può controllare questo termostato al momento.",
+	climateCardPreconditioningActive: "Attivo",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Applica un setpoint di {applied} per avvicinare la stanza al suo obiettivo programmato di {target}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Automatico",
 		cool: "Raffreddamento",
@@ -5529,8 +6798,40 @@ var k = [
 		off: "Spento",
 		preheating: "Preriscaldamento",
 		defrosting: "Sbrinamento"
-	}
+	},
+	comfortDataSources: "Origini dati",
+	comfortModelGuided: "Intervallo psicrometrico guidato",
+	comfortModelGuidedDescription: "Adatta l’umidità relativa all’intervallo di temperatura partendo da un unico intervallo di riferimento.",
+	comfortModelGuidedReference: "L’intervallo di umidità è il riferimento a {temperature}; Velair adatta la curva obiettivo alle altre temperature.",
+	comfortModelHumidityRequired: "Per selezionare questo modello è necessaria una fonte di umidità.",
+	comfortGuidedHumidityReference: "Intervallo di umidità di riferimento",
+	comfortPreferences: "Preferenze di benessere"
 }, ft = /* @__PURE__ */ t({ nl: () => pt }), pt = {
+	climateCardThermostatControls: "Thermostaatbediening",
+	climateCardShowControlMode: "Automatische/handmatige bediening tonen",
+	climateCardShowTargetControl: "Doeltemperatuurbediening tonen",
+	climateCardShowHvacModeControl: "HVAC-modusselectie tonen",
+	climateCardShowNativeClimateLink: "Link naar de thermostaat in Home Assistant tonen",
+	climateCardThermostatControlsDescription: "De doeltemperatuur en HVAC-modus kunnen alleen tijdens een bevestigde handmatige aanpassing worden gewijzigd. De Home Assistant-link opent alle ingebouwde thermostaatbediening.",
+	climateCardTargetTemperature: "Doeltemperatuur",
+	climateCardLowerTarget: "Ondergrens",
+	climateCardUpperTarget: "Bovengrens",
+	climateCardDecreaseTarget: "Doeltemperatuur verlagen",
+	climateCardIncreaseTarget: "Doeltemperatuur verhogen",
+	climateCardAdjustManually: "Handmatig aanpassen",
+	climateCardOpenInHomeAssistant: "Openen in Home Assistant",
+	climateCardHumiditySource: "Vochtigheidsbron",
+	climateCardHumidityClimateSource: "Vochtigheid van de thermostaat",
+	climateCardHumiditySourceDescription: "Kies een vochtigheidssensor uit Home Assistant om zowel de thermostaatmeting als de snelkoppeling naar de geschiedenis te vervangen.",
+	climateCardOpenMetricHistory: "Geschiedenis van {metric} openen",
+	climateCardControlsAutomaticHint: "Start een handmatige aanpassing om de thermostaat direct te wijzigen.",
+	climateCardManualAdjustmentUnavailable: "Handmatige aanpassing is momenteel niet beschikbaar.",
+	climateCardControlsUnavailable: "Directe bediening is niet beschikbaar zolang de thermostaat niet beschikbaar is.",
+	climateCardControlsBlockedBoost: "Directe bediening is niet beschikbaar tijdens een versterking.",
+	climateCardControlsBlockedPause: "Directe bediening is niet beschikbaar tijdens een pauze.",
+	climateCardControlsBlockedStopped: "Directe bediening is niet beschikbaar wanneer de zone is gestopt.",
+	climateCardControlsMissingStep: "Deze thermostaat publiceert geen geldige temperatuurstap; gebruik de ingebouwde Home Assistant-bediening.",
+	climateCardThermostatActionFailed: "De thermostaatwijziging kon niet worden toegepast",
 	addBlock: "Blok toevoegen",
 	externalConditionProfilesSupported: "Schema's voor Standaard, Profiel en Modus worden ondersteund",
 	profileExternalScheduleOnly: "Externe zones ondersteunen alleen schema's voor Standaard, Profiel of Modus. Pauzes en directe Velair-acties blijven niet beschikbaar.",
@@ -5550,6 +6851,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Een impliciete continuïteitswijziging om middernacht telt mee voor het dagelijkse maximum",
 	externalConditionsUnavailable: "Controllervoorwaarden zijn niet beschikbaar.",
 	externalCapability_action_set_temperature: "Temperatuur instellen",
+	externalCapability_action_set_hvac_mode: "Alleen HVAC-modus wijzigen",
 	externalCapability_action_turn_off: "Uitschakelen",
 	externalCapability_hvac_heat: "Verwarmen",
 	externalCapability_hvac_cool: "Koelen",
@@ -5592,6 +6894,10 @@ var k = [
 	externalChangeForDuration: "Voor een bepaalde tijd",
 	externalChangeUntilResumed: "Tot hervatten",
 	externalChangePolicySaved: "Beleid voor externe wijzigingen opgeslagen",
+	targetTempStepFallback: "Temperatuurstap",
+	targetTempStepFallbackDescription: "Home Assistant meldt de doeltemperatuurstap van deze klimaatentiteit niet. Velair gebruikt deze waarde totdat de entiteit er een meldt.",
+	targetTempStepFallbackInfoAction: "Over de temperatuurstap",
+	targetTempStepSaved: "Temperatuurstap opgeslagen",
 	manualAdjustment: "Handmatige aanpassing",
 	velairControl: "Velair-bediening",
 	automaticScheduling: "Automatische planning",
@@ -5652,6 +6958,117 @@ var k = [
 	blocks: "Blokken",
 	build: "Build",
 	cardView: "Kaartweergave",
+	climateCardOutdoorSensorDescription: "Alleen-visuele buitenmeting ter vergelijking met de huidige binnentemperatuur. Dit wijzigt de Velair-regeling niet.",
+	climateCardHeaderOptions: "Koptekst",
+	climateCardShowStateBar: "Statusbalk tonen",
+	climateCardShowName: "Naam van thermostaat tonen",
+	climateCardCustomName: "Aangepaste naam",
+	climateCardShowOperation: "Bedrijfsstatus tonen",
+	climateCardShowCurrentTemperature: "Huidige temperatuur tonen",
+	climateCardShowCurrentHumidity: "Huidige luchtvochtigheid tonen",
+	climateCardShowOutdoorTemperature: "Buitentemperatuur tonen",
+	climateCardShowWindows: "Vensters tonen",
+	climateCardWindowsDescription: "Venstersensoren zijn alleen visueel en regelen Velair niet. Gebruik je eigen Home Assistant-automatisering of de Velair-vensterblueprint als een open venster deze thermostaat moet pauzeren.",
+	climateCardWindowBlueprintLink: "Documentatie bekijken en blueprint importeren",
+	climateCardTimelineShowTitle: "Titel van tijdlijn tonen",
+	climateCardTimelineShowProfile: "Actief profiel tonen",
+	climateCardTimelineShowMode: "Actieve modus tonen",
+	climateCardResetName: "Naam van thermostaat herstellen",
+	climateCardActions: "Acties",
+	climateCardShowBoostAction: "Tijdelijke aanpassing tonen",
+	climateCardShowPauseAction: "Pause- en hervatactie tonen",
+	climateCardVelairActionsDescription: "Tijdelijke aanpassing en pauze worden door Velair geleverd. Gedrag, labels en pictogrammen zijn niet aanpasbaar.",
+	climateCardCustomActions: "Aangepaste acties",
+	climateCardActionsOrderDescription: "Orden Velair-acties en Home Assistant-scripts. Automatische acties gebruiken maximaal drie directe posities; kies Menu Meer om een actie in Meer te houden. De limiet kan niet worden aangepast.",
+	climateCardActionPlacement: "Locatie",
+	climateCardActionPlacementAuto: "Automatisch",
+	climateCardActionPlacementMore: "Menu Meer",
+	climateCardActionPlacementAutoDescription: "Gebruikt een van de eerste drie beschikbare directe posities. Als die bezet zijn, verhuist de actie naar Meer.",
+	climateCardActionPlacementMoreDescription: "Houdt deze actie altijd in het menu Meer, ongeacht de volgorde.",
+	climateCardRemoveCustomAction: "Snelkoppeling van kaart verwijderen",
+	climateCardExpandAction: "{name} bewerken",
+	climateCardCollapseAction: "Instellingen van {name} sluiten",
+	climateCardCollapseCurrentState: "Huidige status inklappen",
+	climateCardExpandCurrentState: "Huidige status uitklappen",
+	climateCardCollapsedByDefault: "Standaard ingeklapt",
+	climateCardCollapseSection: "{name} inklappen",
+	climateCardExpandSection: "{name} uitklappen",
+	climateCardProvidedByVelair: "Geleverd door Velair · het gedrag kan niet worden aangepast",
+	climateCardHideActionName: "Actienaam verbergen",
+	climateCardCustomActionsDescription: "Voeg Home Assistant-scripts toe. De scriptlogica blijft beheerd door Home Assistant.",
+	climateCardAddCustomAction: "Aangepaste actie toevoegen",
+	climateCardNoScripts: "Maak eerst een Home Assistant-script.",
+	climateCardCustomActionName: "Naam",
+	climateCardCustomActionScript: "Home Assistant-script",
+	climateCardCustomActionIcon: "Pictogram",
+	climateCardCustomActionColor: "Pictogramkleur",
+	climateCardCustomActionConfirmation: "Bevestiging vragen voor uitvoeren",
+	climateCardScriptUnavailable: "Script niet beschikbaar",
+	climateCardOpenVelairMenu: "Velair openen",
+	climateCardConfirmScriptAction: "{name} uitvoeren?",
+	climateCardScriptExecuted: "{name} gestart",
+	climateCardPreconditioningDisplay: "Voorconditioneringsweergave",
+	cardViewClimate: "Thermostaat: status en bediening",
+	climateCardConfiguration: "Thermostaatkaart",
+	climateCardConfigurationDescription: "Toont één beheerde thermostaat met status, Velair-context en optionele dashboardsensoren.",
+	climateCardManagedClimate: "Beheerde thermostaat",
+	climateCardOutdoorSensor: "Buitentemperatuursensor (optioneel)",
+	climateCardWindowDisplay: "Vensterweergave",
+	climateCardWindowGrouped: "Groeperen op status",
+	climateCardWindowIndividual: "Afzonderlijk tonen",
+	climateCardRoomAssistDisplay: "Room Assist-weergave",
+	climateCardDisplayBoth: "Tekst en grafiek",
+	climateCardDisplayChart: "Grafiek",
+	climateCardDisplayText: "Tekst",
+	climateCardAddWindow: "Venster toevoegen",
+	climateCardWindows: "Vensters",
+	climateCardShowTimeline: "Tijdlijn van vandaag tonen",
+	climateCardShowComfort: "Welzijn tonen",
+	climateCardShowCollapsedComfortReadings: "Extra metingen tonen wanneer ingeklapt",
+	climateCardShowRoomAssist: "Room Assist tonen",
+	climateCardShowPreconditioning: "Voorconditionering tonen",
+	climateCardShowActions: "Acties tonen",
+	climateCardOpenVelair: "Velair openen",
+	climateCardAvailable: "Beschikbaar",
+	climateCardUnavailable: "Niet beschikbaar",
+	climateCardCurrentState: "Huidige status",
+	climateCardOutdoor: "Buitentemperatuur",
+	climateCardOutdoorWarmer: "{delta} warmer dan binnen",
+	climateCardOutdoorColder: "{delta} kouder dan binnen",
+	climateCardWindowsOpen: "{count} open",
+	climateCardWindowsClosed: "{count} gesloten",
+	climateCardWindowsUnavailable: "{count} niet beschikbaar",
+	climateCardProfilePause: "Profiel {profile} pauzeert deze thermostaat",
+	climateCardRoomReading: "Kamermeting",
+	climateCardAppliedSetpoint: "Toegepast setpoint",
+	climateCardClimateReading: "Thermostaatmeting",
+	climateCardRoomAssistNotConfigured: "Niet ingesteld",
+	climateCardRoomAssistDisabled: "Uitgeschakeld",
+	climateCardRoomAssistIdle: "Inactief",
+	climateCardRoomAssistReady: "Gereed",
+	climateCardRoomAssistAssisting: "Corrigeert",
+	climateCardRoomAssistHolding: "Behoudt",
+	climateCardRoomAssistBlocked: "Geblokkeerd",
+	climateCardRoomAssistUnavailable: "Niet beschikbaar",
+	climateCardExternalManaged: "Beheerd door {provider}",
+	climateCardExternalControl: "Externe bediening",
+	climateCardManagePause: "Pauze beheren",
+	climateCardConfigureBoost: "Versterking instellen",
+	climateCardBoostStarted: "Versterking gestart",
+	climateCardBoostCancelled: "Versterking geannuleerd",
+	climateCardZonePaused: "Thermostaat gepauzeerd",
+	climateCardZoneResumed: "Thermostaat hervat",
+	climateCardActionFailed: "Actie kon niet worden voltooid",
+	resumeAutomaticControl: "Automatisch hervatten",
+	cancelBoost: "Versterking annuleren",
+	more: "Meer",
+	manualControl: "Handmatige bediening",
+	scheduled: "Gepland",
+	enabled: "Ingeschakeld",
+	unavailable: "Niet beschikbaar",
+	unknown: "Onbekend",
+	none: "Geen",
+	remove: "Verwijderen",
 	activeSetupCardControls: "Bediening actieve instelling",
 	activeSetupCardControlsBoth: "Modi en profielen",
 	activeSetupCardControlsDescription: "Kies wat deze kaart kan wijzigen. De huidige modus en toegepaste profielen blijven zichtbaar.",
@@ -5705,6 +7122,42 @@ var k = [
 	comfortCo2LimitsHelp: "Verhoogd geeft een vroege waarschuwing. Slecht geeft een ernstiger CO2-niveau aan.",
 	comfortCo2Poor: "Slecht",
 	comfortCo2Sensor: "CO2-sensor",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Comfortconfiguratie",
+	comfortConfigurationDescription: "Sensorbronnen, comfortbereiken en actualiteit van gegevens.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Oppervlakken op of onder het dauwpunt kunnen condens verzamelen. Velair detecteert geen oppervlaktetemperatuur of condensatie.",
+	comfortDewPointBelowRoom: "Het dauwpunt ligt {difference} onder de kamerlucht.",
+	comfortDewPointAboveRoom: "Het dauwpunt ligt {difference} boven de kamerlucht.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Absolute luchtvochtigheid: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Onder het ingestelde temperatuurbereik",
+	comfortHumidexRangeWithin: "Binnen het ingestelde temperatuurbereik",
+	comfortHumidexRangeAbove: "Boven het ingestelde temperatuurbereik",
+	comfortHumidexRangeUnknown: "Positie ten opzichte van het ingestelde bereik niet beschikbaar",
+	comfortHumidexScaleAria: "Lucht {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "Humidex geeft een gevoelstemperatuur aan die {delta} warmer is dan de kamertemperatuur.",
+	comfortHumidexCoolerRelation: "Humidex ligt {delta} onder de kamertemperatuur.",
+	comfortHumidexNeutralRelation: "Humidex komt overeen met de kamertemperatuur.",
+	comfortRangeWithin: "Binnen geconfigureerde bereiken",
+	comfortRangeOutside: "Buiten geconfigureerde bereiken",
+	comfortRangeMixed: "Verschillende thermische indicatoren",
+	comfortRangeUnavailable: "Beperkte gegevens",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "CO2 ligt boven het ingestelde aandachtsniveau.",
+	comfortInsightCo2Poor: "CO2 ligt boven de ingestelde grens voor slechte luchtkwaliteit.",
+	comfortInsightHumidexWarmer: "De luchtvochtigheid verhoogt de gevoelstemperatuur met {delta}.",
+	comfortAir: "Lucht",
 	comfortCollapseClimate: "{climate} inklappen",
 	comfortConditionCold: "Koud",
 	comfortConditionColdAndDry: "Koud en droog",
@@ -5745,6 +7198,15 @@ var k = [
 	comfortIntroTitle: "Omgevingscomfort",
 	comfortMaximum: "Max",
 	comfortMinimum: "Min",
+	comfortModel: "Comfortmodel",
+	comfortModelSimple: "Eenvoudige bereiken",
+	comfortModelSimpleDescription: "Gebruikt hetzelfde vochtigheidsbereik bij elke comfortabele temperatuur.",
+	comfortModelTemperatureAware: "Temperatuurafhankelijke bereiken",
+	comfortModelTemperatureAwareDescription: "Past het toegestane vochtigheidsbereik aan tussen de koele en warme grens van het temperatuurbereik.",
+	comfortTemperatureAwareHumidityRanges: "Temperatuurafhankelijke vochtigheidsbereiken",
+	comfortAtMinimumTemperature: "Bij de koelere grens",
+	comfortAtMaximumTemperature: "Bij de warmere grens",
+	comfortEffectiveHumidityRange: "Bij {temperature} is het comfortabele vochtigheidsbereik {minimum}–{maximum}%.",
 	comfortMoreHumid: "Vochtiger",
 	comfortMapCurrentPosition: "Huidige positie: {temperature}, {humidity}",
 	comfortNotMonitored: "Niet bewaakt",
@@ -6434,11 +7896,16 @@ var k = [
 	temperatureLegacyResetStopped: "De planner is gestopt omdat deze oudere installatie alleen Celsius-gegevens bevat terwijl Home Assistant Fahrenheit gebruikt. Open de Velair-instellingen en gebruik Velair resetten om standaardwaarden in Fahrenheit te maken.",
 	temperatureStep: "Stap",
 	temperatureStepNotReported: "Niet gemeld door Home Assistant",
-	temperatureStepNotReportedDescription: "Deze klimaatentiteit publiceert geen target_temp_step. Velair leidt zelf geen temperatuurstap af.",
+	temperatureStepNotReportedDescription: "Deze klimaatentiteit publiceert geen target_temp_step. Velair gebruikt de terugvalwaarde die voor de zone is ingesteld.",
 	targetTemp: "Doeltemperatuur",
 	targetHumidity: "Doelluchtvochtigheid",
 	targetBy: "Doel om",
 	targetTemperature: "Doeltemperatuur",
+	includeTargetTemperature: "Doeltemperatuur opnemen",
+	deviceControlled: "Door apparaat geregeld",
+	useDeviceControlledTarget: "Behoud het apparaatdoel en wijzig alleen de HVAC-modus",
+	restoreTemperatureTarget: "Doeltemperatuur instellen",
+	chooseModeForDeviceControlled: "Kies een HVAC-modus voordat je het door het apparaat geregelde doel gebruikt",
 	todayTimeline: "Tijdlijn van vandaag",
 	updateTemplate: "Sjabloon bijwerken",
 	templateDeleted: "Sjabloon verwijderd",
@@ -6493,6 +7960,63 @@ var k = [
 		auto: "Automatisch",
 		paused: "Gepauzeerd"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Selecteer een kamertemperatuursensor voordat je Room Assist gebruikt.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist is geconfigureerd, maar momenteel uitgeschakeld.",
+	climateCardRoomAssistSummaryIdle: "Wacht op een actief en compatibel gepland doel.",
+	climateCardRoomAssistSummaryReady: "Klaar om het klimaatdoel aan te passen wanneer de kamertemperatuur dat vereist.",
+	climateCardRoomAssistSummaryAssisting: "Past het klimaatdoel aan om de kamer naar het geplande doel te brengen.",
+	climateCardRoomAssistSummaryHolding: "Houdt het huidige Room Assist-doel stabiel.",
+	climateCardRoomAssistSummaryBlocked: "Wacht terwijl een andere Velair-actie voorrang heeft.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist kan dit klimaatapparaat momenteel niet regelen.",
+	climateCardPreconditioningActive: "Actief",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Stelt het klimaatdoel in op {applied} om de kamer naar het geplande doel van {target} te brengen.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Automatisch",
 		cool: "Koelen",
@@ -6511,8 +8035,40 @@ var k = [
 		off: "Uit",
 		preheating: "Voorverwarmen",
 		defrosting: "Ontdooien"
-	}
+	},
+	comfortDataSources: "Gegevensbronnen",
+	comfortModelGuided: "Begeleid psychrometrisch bereik",
+	comfortModelGuidedDescription: "Past de relatieve luchtvochtigheid vanuit één referentiebereik aan het temperatuurbereik aan.",
+	comfortModelGuidedReference: "Het vochtigheidsbereik is de referentie bij {temperature}; Velair past de doelcurve aan andere temperaturen aan.",
+	comfortModelHumidityRequired: "Voor dit model is een vochtigheidsbron vereist.",
+	comfortGuidedHumidityReference: "Referentiebereik luchtvochtigheid",
+	comfortPreferences: "Welzijnsvoorkeuren"
 }, mt = /* @__PURE__ */ t({ pl: () => ht }), ht = {
+	climateCardThermostatControls: "Sterowanie termostatem",
+	climateCardShowControlMode: "Pokaż sterowanie automatyczne/ręczne",
+	climateCardShowTargetControl: "Pokaż sterowanie temperaturą docelową",
+	climateCardShowHvacModeControl: "Pokaż wybór trybu HVAC",
+	climateCardShowNativeClimateLink: "Pokaż odnośnik do termostatu w Home Assistant",
+	climateCardThermostatControlsDescription: "Temperaturę docelową i tryb HVAC można zmieniać tylko podczas potwierdzonej regulacji ręcznej. Odnośnik Home Assistant otwiera wszystkie natywne elementy sterowania termostatem.",
+	climateCardTargetTemperature: "Temperatura docelowa",
+	climateCardLowerTarget: "Dolna nastawa",
+	climateCardUpperTarget: "Górna nastawa",
+	climateCardDecreaseTarget: "Zmniejsz temperaturę docelową",
+	climateCardIncreaseTarget: "Zwiększ temperaturę docelową",
+	climateCardAdjustManually: "Dostosuj ręcznie",
+	climateCardOpenInHomeAssistant: "Otwórz w Home Assistant",
+	climateCardHumiditySource: "Źródło wilgotności",
+	climateCardHumidityClimateSource: "Wilgotność z termostatu",
+	climateCardHumiditySourceDescription: "Wybierz czujnik wilgotności Home Assistant, aby zastąpić odczyt termostatu i jego skrót do historii.",
+	climateCardOpenMetricHistory: "Otwórz historię: {metric}",
+	climateCardControlsAutomaticHint: "Uruchom regulację ręczną, aby bezpośrednio zmienić termostat.",
+	climateCardManualAdjustmentUnavailable: "Regulacja ręczna jest obecnie niedostępna.",
+	climateCardControlsUnavailable: "Sterowanie bezpośrednie jest niedostępne, gdy termostat jest niedostępny.",
+	climateCardControlsBlockedBoost: "Sterowanie bezpośrednie jest niedostępne podczas wzmocnienia.",
+	climateCardControlsBlockedPause: "Sterowanie bezpośrednie jest niedostępne podczas pauzy.",
+	climateCardControlsBlockedStopped: "Sterowanie bezpośrednie jest niedostępne po zatrzymaniu strefy.",
+	climateCardControlsMissingStep: "Ten termostat nie publikuje prawidłowego kroku temperatury; użyj natywnych elementów sterowania Home Assistant.",
+	climateCardThermostatActionFailed: "Nie udało się zastosować zmiany termostatu",
 	addBlock: "Dodaj blok",
 	externalSystems: "Systemy zewnętrzne",
 	externalSystemsDescription: "Wybierz, kto wykonuje wynikowy harmonogram tygodniowy dla zgodnych encji klimatu. Strefy zewnętrzne nigdy nie są fizycznie sterowane przez Velair.",
@@ -6534,6 +8090,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Jeżeli pierwszy blok rozpoczyna się po godzinie 00:00, ukryta zmiana ciągłości o północy wliczana jest do dziennego maksimum",
 	externalConditionsUnavailable: "Warunki kontrolera są niedostępne.",
 	externalCapability_action_set_temperature: "Ustaw temperaturę",
+	externalCapability_action_set_hvac_mode: "Zmień tylko tryb HVAC",
 	externalCapability_action_turn_off: "Wyłącz",
 	externalCapability_hvac_heat: "Ogrzewanie",
 	externalCapability_hvac_cool: "Chłodzenie",
@@ -6573,6 +8130,10 @@ var k = [
 	externalChangeForDuration: "Przez określony czas",
 	externalChangeUntilResumed: "Do czasu wznowienia",
 	externalChangePolicySaved: "Zapisano politykę zmian zewnętrznych",
+	targetTempStepFallback: "Krok temperatury",
+	targetTempStepFallbackDescription: "Home Assistant nie podaje kroku temperatury docelowej tego termostatu. Velair używa tej wartości, dopóki termostat nie poda własnej.",
+	targetTempStepFallbackInfoAction: "O kroku temperatury",
+	targetTempStepSaved: "Zapisano krok temperatury",
 	manualAdjustment: "Regulacja ręczna",
 	velairControl: "Sterowanie Velair",
 	automaticScheduling: "Automatyczny harmonogram",
@@ -6634,6 +8195,117 @@ var k = [
 	blocks: "Bloki",
 	build: "Kompilacja",
 	cardView: "Widok karty",
+	climateCardOutdoorSensorDescription: "Wyłącznie wizualny odczyt temperatury zewnętrznej do porównania z bieżącą temperaturą wewnętrzną. Nie zmienia sterowania Velair.",
+	climateCardHeaderOptions: "Nagłówek",
+	climateCardShowStateBar: "Pokaż pasek stanu",
+	climateCardShowName: "Pokaż nazwę termostatu",
+	climateCardCustomName: "Własna nazwa termostatu",
+	climateCardShowOperation: "Pokaż stan pracy",
+	climateCardShowCurrentTemperature: "Pokaż bieżącą temperaturę",
+	climateCardShowCurrentHumidity: "Pokaż bieżącą wilgotność",
+	climateCardShowOutdoorTemperature: "Pokaż temperaturę zewnętrzną",
+	climateCardShowWindows: "Pokaż okna",
+	climateCardWindowsDescription: "Czujniki okien służą tylko do wyświetlania i nie sterują Velair. Użyj własnej automatyzacji Home Assistant lub blueprintu Velair, jeśli otwarcie okna ma wstrzymywać ten termostat.",
+	climateCardWindowBlueprintLink: "Zobacz dokumentację i zaimportuj blueprint",
+	climateCardTimelineShowTitle: "Pokaż tytuł osi czasu",
+	climateCardTimelineShowProfile: "Pokaż aktywny profil",
+	climateCardTimelineShowMode: "Pokaż aktywny tryb",
+	climateCardResetName: "Przywróć nazwę termostatu",
+	climateCardActions: "Akcje",
+	climateCardShowBoostAction: "Pokaż akcję wzmocnienia",
+	climateCardShowPauseAction: "Pokaż akcję Pause i Wznów",
+	climateCardVelairActionsDescription: "Wzmocnienie i pauza są dostarczane przez Velair. Ich działania, etykiet i ikon nie można dostosować.",
+	climateCardCustomActions: "Akcje niestandardowe",
+	climateCardActionsOrderDescription: "Zmień kolejność akcji Velair i skryptów Home Assistant. Akcje automatyczne zajmują maksymalnie trzy bezpośrednie pozycje; wybierz Menu Więcej, aby akcja pozostała w Więcej. Limitu nie można zmienić.",
+	climateCardActionPlacement: "Położenie",
+	climateCardActionPlacementAuto: "Automatyczne",
+	climateCardActionPlacementMore: "Menu Więcej",
+	climateCardActionPlacementAutoDescription: "Używa jednej z pierwszych trzech dostępnych pozycji bezpośrednich. Jeśli są zajęte, akcja trafia do Więcej.",
+	climateCardActionPlacementMoreDescription: "Zawsze utrzymuje tę akcję w menu Więcej, niezależnie od kolejności.",
+	climateCardRemoveCustomAction: "Usuń skrót z karty",
+	climateCardExpandAction: "Edytuj {name}",
+	climateCardCollapseAction: "Zamknij ustawienia {name}",
+	climateCardCollapseCurrentState: "Zwiń bieżący stan",
+	climateCardExpandCurrentState: "Rozwiń bieżący stan",
+	climateCardCollapsedByDefault: "Domyślnie zwinięte",
+	climateCardCollapseSection: "Zwiń {name}",
+	climateCardExpandSection: "Rozwiń {name}",
+	climateCardProvidedByVelair: "Dostarczone przez Velair · działania nie można dostosować",
+	climateCardHideActionName: "Ukryj nazwę akcji",
+	climateCardCustomActionsDescription: "Dodaj skrypty Home Assistant. Logika pozostaje zarządzana przez Home Assistant.",
+	climateCardAddCustomAction: "Dodaj akcję niestandardową",
+	climateCardNoScripts: "Najpierw utwórz skrypt Home Assistant.",
+	climateCardCustomActionName: "Nazwa",
+	climateCardCustomActionScript: "Skrypt Home Assistant",
+	climateCardCustomActionIcon: "Ikona",
+	climateCardCustomActionColor: "Kolor ikony",
+	climateCardCustomActionConfirmation: "Poproś o potwierdzenie przed uruchomieniem",
+	climateCardScriptUnavailable: "Skrypt niedostępny",
+	climateCardOpenVelairMenu: "Otwórz Velair",
+	climateCardConfirmScriptAction: "Uruchomić {name}?",
+	climateCardScriptExecuted: "Uruchomiono {name}",
+	climateCardPreconditioningDisplay: "Widok przygotowania",
+	cardViewClimate: "Termostat: stan i sterowanie",
+	climateCardConfiguration: "Karta termostatu",
+	climateCardConfigurationDescription: "Pokazuje zarządzany termostat, jego stan, kontekst Velair i opcjonalne czujniki pulpitu.",
+	climateCardManagedClimate: "Zarządzany termostat",
+	climateCardOutdoorSensor: "Czujnik temperatury zewnętrznej (opcjonalny)",
+	climateCardWindowDisplay: "Widok okien",
+	climateCardWindowGrouped: "Grupuj według stanu",
+	climateCardWindowIndividual: "Pokazuj osobno",
+	climateCardRoomAssistDisplay: "Widok Room Assist",
+	climateCardDisplayBoth: "Tekst i wykres",
+	climateCardDisplayChart: "Wykres",
+	climateCardDisplayText: "Tekst",
+	climateCardAddWindow: "Dodaj okno",
+	climateCardWindows: "Okna",
+	climateCardShowTimeline: "Pokaż dzisiejszą oś czasu",
+	climateCardShowComfort: "Pokaż komfort",
+	climateCardShowCollapsedComfortReadings: "Pokaż dodatkowe odczyty po zwinięciu",
+	climateCardShowRoomAssist: "Pokaż Room Assist",
+	climateCardShowPreconditioning: "Pokaż przygotowanie",
+	climateCardShowActions: "Pokaż działania",
+	climateCardOpenVelair: "Otwórz Velair",
+	climateCardAvailable: "Dostępny",
+	climateCardUnavailable: "Niedostępny",
+	climateCardCurrentState: "Bieżący stan",
+	climateCardOutdoor: "Temperatura zewnętrzna",
+	climateCardOutdoorWarmer: "o {delta} cieplej niż wewnątrz",
+	climateCardOutdoorColder: "o {delta} chłodniej niż wewnątrz",
+	climateCardWindowsOpen: "{count} otwartych",
+	climateCardWindowsClosed: "{count} zamkniętych",
+	climateCardWindowsUnavailable: "{count} niedostępnych",
+	climateCardProfilePause: "Profil {profile} wstrzymuje ten termostat",
+	climateCardRoomReading: "Pomiar pokojowy",
+	climateCardAppliedSetpoint: "Zastosowana nastawa",
+	climateCardClimateReading: "Pomiar termostatu",
+	climateCardRoomAssistNotConfigured: "Nie skonfigurowano",
+	climateCardRoomAssistDisabled: "Wyłączony",
+	climateCardRoomAssistIdle: "Bezczynny",
+	climateCardRoomAssistReady: "Gotowy",
+	climateCardRoomAssistAssisting: "Koryguje",
+	climateCardRoomAssistHolding: "Utrzymuje",
+	climateCardRoomAssistBlocked: "Zablokowany",
+	climateCardRoomAssistUnavailable: "Niedostępny",
+	climateCardExternalManaged: "Zarządzany przez {provider}",
+	climateCardExternalControl: "Sterowanie zewnętrzne",
+	climateCardManagePause: "Zarządzaj pauzą",
+	climateCardConfigureBoost: "Ustaw wzmocnienie",
+	climateCardBoostStarted: "Wzmocnienie uruchomione",
+	climateCardBoostCancelled: "Wzmocnienie anulowane",
+	climateCardZonePaused: "Termostat wstrzymany",
+	climateCardZoneResumed: "Termostat wznowiony",
+	climateCardActionFailed: "Nie udało się wykonać działania",
+	resumeAutomaticControl: "Wznów automatykę",
+	cancelBoost: "Anuluj wzmocnienie",
+	more: "Więcej",
+	manualControl: "Sterowanie ręczne",
+	scheduled: "Zaplanowany",
+	enabled: "Włączony",
+	unavailable: "Niedostępny",
+	unknown: "Nieznany",
+	none: "Brak",
+	remove: "Usuń",
 	activeSetupCardControls: "Aktywne elementy sterujące konfiguracją",
 	activeSetupCardControlsBoth: "Tryby i profile",
 	activeSetupCardControlsDescription: "Wybierz, co ta karta może zmienić. Bieżący tryb i zastosowane profile pozostają widoczne.",
@@ -6687,6 +8359,42 @@ var k = [
 	comfortCo2LimitsHelp: "Podwyższony oznacza wczesne ostrzeżenie o jakości powietrza. Słaby oznacza poważniejszy poziom CO2.",
 	comfortCo2Poor: "Zła",
 	comfortCo2Sensor: "Czujnik CO2",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Konfiguracja komfortu",
+	comfortConfigurationDescription: "Źródła czujników, zakresy komfortu i aktualność danych.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Na powierzchniach o temperaturze równej punktowi rosy lub niższej może gromadzić się kondensat. Velair nie wykrywa temperatury powierzchni ani kondensacji.",
+	comfortDewPointBelowRoom: "Punkt rosy jest o {difference} niższy od temperatury powietrza w pomieszczeniu.",
+	comfortDewPointAboveRoom: "Punkt rosy jest o {difference} wyższy od temperatury powietrza w pomieszczeniu.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Wilgotność bezwzględna: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Poniżej skonfigurowanego zakresu temperatury",
+	comfortHumidexRangeWithin: "W skonfigurowanym zakresie temperatury",
+	comfortHumidexRangeAbove: "Powyżej skonfigurowanego zakresu temperatury",
+	comfortHumidexRangeUnknown: "Pozycja względem skonfigurowanego zakresu jest niedostępna",
+	comfortHumidexScaleAria: "Powietrze {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "Humidex wskazuje temperaturę odczuwalną o {delta} wyższą od temperatury pomieszczenia.",
+	comfortHumidexCoolerRelation: "Humidex jest o {delta} niższy od temperatury pomieszczenia.",
+	comfortHumidexNeutralRelation: "Humidex odpowiada temperaturze pomieszczenia.",
+	comfortRangeWithin: "W skonfigurowanych zakresach",
+	comfortRangeOutside: "Poza skonfigurowanymi zakresami",
+	comfortRangeMixed: "Rozbieżne wskaźniki termiczne",
+	comfortRangeUnavailable: "Ograniczone dane",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "Poziom CO2 przekracza skonfigurowany próg ostrzegawczy.",
+	comfortInsightCo2Poor: "Poziom CO2 przekracza skonfigurowany próg złej jakości powietrza.",
+	comfortInsightHumidexWarmer: "Wilgotność zwiększa odczuwalne ciepło o {delta}.",
+	comfortAir: "Powietrze",
 	comfortCollapseClimate: "Zwiń {climate}",
 	comfortConditionCold: "Zimno",
 	comfortConditionColdAndDry: "Zimno i sucho",
@@ -6727,6 +8435,15 @@ var k = [
 	comfortIntroTitle: "Komfort środowiskowy",
 	comfortMaximum: "Maks",
 	comfortMinimum: "Min",
+	comfortModel: "Model komfortu",
+	comfortModelSimple: "Proste zakresy",
+	comfortModelSimpleDescription: "Używa tego samego zakresu wilgotności przy każdej komfortowej temperaturze.",
+	comfortModelTemperatureAware: "Zakresy zależne od temperatury",
+	comfortModelTemperatureAwareDescription: "Dostosowuje dopuszczalny zakres wilgotności między chłodnym i ciepłym krańcem zakresu temperatury.",
+	comfortTemperatureAwareHumidityRanges: "Zakresy wilgotności zależne od temperatury",
+	comfortAtMinimumTemperature: "Przy chłodniejszej granicy",
+	comfortAtMaximumTemperature: "Przy cieplejszej granicy",
+	comfortEffectiveHumidityRange: "Przy {temperature} komfortowy zakres wilgotności wynosi {minimum}–{maximum}%.",
 	comfortMoreHumid: "Bardziej wilgotno",
 	comfortMapCurrentPosition: "Aktualna pozycja: {temperature}, {humidity}",
 	comfortNotMonitored: "Niemonitorowane",
@@ -7416,11 +9133,16 @@ var k = [
 	temperatureLegacyResetStopped: "Harmonogram został zatrzymany, ponieważ ta starsza instalacja zawiera tylko dane w stopniach Celsjusza, podczas gdy Home Assistant używa stopni Fahrenheita. Otwórz ustawienia Velair i użyj opcji Resetuj Velair, aby utworzyć domyślne ustawienia Fahrenheita.",
 	temperatureStep: "Krok",
 	temperatureStepNotReported: "Nie zgłoszono przez Home Assistant",
-	temperatureStepNotReportedDescription: "Ta encja klimatu nie udostępnia target_temp_step. Velair nie zakłada kroku temperatury.",
+	temperatureStepNotReportedDescription: "Ta encja klimatu nie udostępnia target_temp_step. Velair używa wartości zapasowej skonfigurowanej dla strefy.",
 	targetTemp: "Temperatura docelowa",
 	targetHumidity: "Docelowa wilgotność",
 	targetBy: "Osiągnij do",
 	targetTemperature: "Temperatura docelowa",
+	includeTargetTemperature: "Uwzględnij temperaturę docelową",
+	deviceControlled: "Sterowane przez urządzenie",
+	useDeviceControlledTarget: "Zachowaj temperaturę docelową urządzenia i zmień tylko tryb HVAC",
+	restoreTemperatureTarget: "Ustaw temperaturę docelową",
+	chooseModeForDeviceControlled: "Wybierz tryb HVAC przed użyciem temperatury sterowanej przez urządzenie",
 	todayTimeline: "Dzisiejsza oś czasu",
 	updateTemplate: "Zaktualizuj szablon",
 	templateDeleted: "Szablon usunięty",
@@ -7475,6 +9197,63 @@ var k = [
 		auto: "Automatyczny",
 		paused: "Wstrzymano"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Wybierz czujnik temperatury pomieszczenia przed użyciem Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist jest skonfigurowany, ale obecnie wyłączony.",
+	climateCardRoomAssistSummaryIdle: "Oczekiwanie na aktywną i zgodną zaplanowaną temperaturę docelową.",
+	climateCardRoomAssistSummaryReady: "Gotowy do dostosowania temperatury docelowej, gdy wymaga tego temperatura pomieszczenia.",
+	climateCardRoomAssistSummaryAssisting: "Dostosowuje temperaturę docelową, aby zbliżyć pomieszczenie do zaplanowanej wartości.",
+	climateCardRoomAssistSummaryHolding: "Utrzymuje stabilną bieżącą wartość docelową Room Assist.",
+	climateCardRoomAssistSummaryBlocked: "Oczekiwanie, gdy inne działanie Velair ma pierwszeństwo.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist nie może teraz sterować tym termostatem.",
+	climateCardPreconditioningActive: "Aktywne",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Ustawia temperaturę urządzenia na {applied}, aby zbliżyć pomieszczenie do zaplanowanej wartości {target}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Automatyczny",
 		cool: "Chłodzenie",
@@ -7493,8 +9272,40 @@ var k = [
 		off: "Wyłączony",
 		preheating: "Wstępne ogrzewanie",
 		defrosting: "Rozmrażanie"
-	}
+	},
+	comfortDataSources: "Źródła danych",
+	comfortModelGuided: "Prowadzony zakres psychrometryczny",
+	comfortModelGuidedDescription: "Dostosowuje wilgotność względną w całym zakresie temperatur na podstawie jednego zakresu odniesienia.",
+	comfortModelGuidedReference: "Zakres wilgotności jest odniesieniem przy {temperature}; Velair dostosowuje krzywą docelową dla innych temperatur.",
+	comfortModelHumidityRequired: "Przed wybraniem tego modelu wymagane jest źródło wilgotności.",
+	comfortGuidedHumidityReference: "Referencyjny zakres wilgotności",
+	comfortPreferences: "Ustawienia komfortu"
 }, gt = /* @__PURE__ */ t({ pt_br: () => _t }), _t = {
+	climateCardThermostatControls: "Controles do termostato",
+	climateCardShowControlMode: "Mostrar controle Automático/Manual",
+	climateCardShowTargetControl: "Mostrar controle da temperatura alvo",
+	climateCardShowHvacModeControl: "Mostrar seletor do modo HVAC",
+	climateCardShowNativeClimateLink: "Mostrar link para o termostato no Home Assistant",
+	climateCardThermostatControlsDescription: "A temperatura alvo e o modo HVAC só podem ser alterados durante um ajuste manual confirmado. O link do Home Assistant abre todos os controles nativos do termostato.",
+	climateCardTargetTemperature: "Temperatura alvo",
+	climateCardLowerTarget: "Alvo inferior",
+	climateCardUpperTarget: "Alvo superior",
+	climateCardDecreaseTarget: "Diminuir temperatura alvo",
+	climateCardIncreaseTarget: "Aumentar temperatura alvo",
+	climateCardAdjustManually: "Ajustar manualmente",
+	climateCardOpenInHomeAssistant: "Abrir no Home Assistant",
+	climateCardHumiditySource: "Fonte de umidade",
+	climateCardHumidityClimateSource: "Umidade fornecida pelo termostato",
+	climateCardHumiditySourceDescription: "Escolha um sensor de umidade do Home Assistant para substituir a leitura do termostato e seu atalho para o histórico.",
+	climateCardOpenMetricHistory: "Abrir histórico de {metric}",
+	climateCardControlsAutomaticHint: "Inicie um ajuste manual para alterar diretamente o termostato.",
+	climateCardManualAdjustmentUnavailable: "O ajuste manual não está disponível no momento.",
+	climateCardControlsUnavailable: "Os controles diretos ficam indisponíveis enquanto o termostato estiver indisponível.",
+	climateCardControlsBlockedBoost: "Os controles diretos ficam indisponíveis durante o reforço.",
+	climateCardControlsBlockedPause: "Os controles diretos ficam indisponíveis durante uma pausa.",
+	climateCardControlsBlockedStopped: "Os controles diretos ficam indisponíveis quando a zona está parada.",
+	climateCardControlsMissingStep: "Este termostato não publica um incremento de temperatura válido; use os controles nativos do Home Assistant.",
+	climateCardThermostatActionFailed: "Não foi possível aplicar a alteração do termostato",
 	addBlock: "Adicionar bloco",
 	externalSystems: "Sistemas externos",
 	externalSystemsDescription: "Escolha quem executa a programação semanal efetiva para entidades de climatização compatíveis. As zonas externas nunca são controladas fisicamente pelo Velair.",
@@ -7516,6 +9327,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Se o primeiro bloco começar depois das 00:00, a mudança de continuidade implícita à meia-noite conta para o máximo diário",
 	externalConditionsUnavailable: "As condições do controlador não estão disponíveis.",
 	externalCapability_action_set_temperature: "Definir temperatura",
+	externalCapability_action_set_hvac_mode: "Alterar somente o modo HVAC",
 	externalCapability_action_turn_off: "Desligar",
 	externalCapability_hvac_heat: "Aquecimento",
 	externalCapability_hvac_cool: "Resfriamento",
@@ -7555,6 +9367,10 @@ var k = [
 	externalChangeForDuration: "Por um período",
 	externalChangeUntilResumed: "Até ser retomado",
 	externalChangePolicySaved: "Política de alteração externa salva",
+	targetTempStepFallback: "Incremento de temperatura",
+	targetTempStepFallbackDescription: "O Home Assistant não informa o incremento da temperatura-alvo deste clima. O Velair usa este valor até que o clima informe um.",
+	targetTempStepFallbackInfoAction: "Sobre o incremento de temperatura",
+	targetTempStepSaved: "Incremento de temperatura salvo",
 	manualAdjustment: "Ajuste manual",
 	velairControl: "Controle Velair",
 	automaticScheduling: "Agendamento automático",
@@ -7616,6 +9432,117 @@ var k = [
 	blocks: "Blocos",
 	build: "Compilação",
 	cardView: "Visualização de cartão",
+	climateCardOutdoorSensorDescription: "Leitura externa apenas visual para comparação com a temperatura interna atual. Ela não altera o controle do Velair.",
+	climateCardHeaderOptions: "Cabeçalho",
+	climateCardShowStateBar: "Mostrar barra de status",
+	climateCardShowName: "Mostrar nome do termostato",
+	climateCardCustomName: "Nome personalizado do termostato",
+	climateCardShowOperation: "Mostrar status de operação",
+	climateCardShowCurrentTemperature: "Mostrar temperatura atual",
+	climateCardShowCurrentHumidity: "Mostrar umidade atual",
+	climateCardShowOutdoorTemperature: "Mostrar temperatura externa",
+	climateCardShowWindows: "Mostrar janelas",
+	climateCardWindowsDescription: "Os sensores de janela são apenas visuais e não controlam o Velair. Use sua própria automação do Home Assistant ou o blueprint de janelas do Velair se uma janela aberta precisar pausar este termostato.",
+	climateCardWindowBlueprintLink: "Ver a documentação e importar o blueprint",
+	climateCardTimelineShowTitle: "Mostrar título da linha do tempo",
+	climateCardTimelineShowProfile: "Mostrar perfil ativo",
+	climateCardTimelineShowMode: "Mostrar modo ativo",
+	climateCardResetName: "Restaurar nome do termostato",
+	climateCardActions: "Ações",
+	climateCardShowBoostAction: "Mostrar ação de reforço",
+	climateCardShowPauseAction: "Mostrar ação Pause e Retomar",
+	climateCardVelairActionsDescription: "Reforço e pausa são fornecidos pelo Velair. O comportamento, os textos e os ícones não podem ser personalizados.",
+	climateCardCustomActions: "Ações personalizadas",
+	climateCardActionsOrderDescription: "Reordene as ações do Velair e os scripts do Home Assistant. Ações automáticas usam até três posições diretas; escolha Menu Mais para manter uma ação em Mais. O limite não pode ser personalizado.",
+	climateCardActionPlacement: "Local",
+	climateCardActionPlacementAuto: "Automático",
+	climateCardActionPlacementMore: "Menu Mais",
+	climateCardActionPlacementAutoDescription: "Usa uma das três primeiras posições diretas disponíveis. Se estiverem ocupadas, a ação vai para Mais.",
+	climateCardActionPlacementMoreDescription: "Mantém esta ação sempre no menu Mais, independentemente da ordem.",
+	climateCardRemoveCustomAction: "Remover atalho do cartão",
+	climateCardExpandAction: "Editar {name}",
+	climateCardCollapseAction: "Fechar configurações de {name}",
+	climateCardCollapseCurrentState: "Recolher estado atual",
+	climateCardExpandCurrentState: "Expandir estado atual",
+	climateCardCollapsedByDefault: "Recolhido por padrão",
+	climateCardCollapseSection: "Recolher {name}",
+	climateCardExpandSection: "Expandir {name}",
+	climateCardProvidedByVelair: "Fornecida pelo Velair · o comportamento não pode ser personalizado",
+	climateCardHideActionName: "Ocultar nome da ação",
+	climateCardCustomActionsDescription: "Adicione scripts do Home Assistant. A lógica continua gerenciada pelo Home Assistant.",
+	climateCardAddCustomAction: "Adicionar ação personalizada",
+	climateCardNoScripts: "Crie um script do Home Assistant antes de adicionar uma ação.",
+	climateCardCustomActionName: "Nome",
+	climateCardCustomActionScript: "Script do Home Assistant",
+	climateCardCustomActionIcon: "Ícone",
+	climateCardCustomActionColor: "Cor do ícone",
+	climateCardCustomActionConfirmation: "Pedir confirmação antes de executar",
+	climateCardScriptUnavailable: "Script indisponível",
+	climateCardOpenVelairMenu: "Abrir Velair",
+	climateCardConfirmScriptAction: "Executar {name}?",
+	climateCardScriptExecuted: "{name} iniciado",
+	climateCardPreconditioningDisplay: "Exibição do pré-condicionamento",
+	cardViewClimate: "Termostato: status e controle",
+	climateCardConfiguration: "Cartão do termostato",
+	climateCardConfigurationDescription: "Mostra um termostato gerenciado com status, contexto do Velair e sensores opcionais do painel.",
+	climateCardManagedClimate: "Termostato gerenciado",
+	climateCardOutdoorSensor: "Sensor de temperatura externa (opcional)",
+	climateCardWindowDisplay: "Exibição das janelas",
+	climateCardWindowGrouped: "Agrupar por status",
+	climateCardWindowIndividual: "Mostrar separadamente",
+	climateCardRoomAssistDisplay: "Exibição do Room Assist",
+	climateCardDisplayBoth: "Texto e gráfico",
+	climateCardDisplayChart: "Gráfico",
+	climateCardDisplayText: "Texto",
+	climateCardAddWindow: "Adicionar janela",
+	climateCardWindows: "Janelas",
+	climateCardShowTimeline: "Mostrar linha do tempo de hoje",
+	climateCardShowComfort: "Mostrar conforto",
+	climateCardShowCollapsedComfortReadings: "Mostrar leituras extras ao recolher",
+	climateCardShowRoomAssist: "Mostrar Room Assist",
+	climateCardShowPreconditioning: "Mostrar pré-condicionamento",
+	climateCardShowActions: "Mostrar ações",
+	climateCardOpenVelair: "Abrir Velair",
+	climateCardAvailable: "Disponível",
+	climateCardUnavailable: "Indisponível",
+	climateCardCurrentState: "Estado atual",
+	climateCardOutdoor: "Temperatura externa",
+	climateCardOutdoorWarmer: "{delta} mais quente que dentro",
+	climateCardOutdoorColder: "{delta} mais frio que dentro",
+	climateCardWindowsOpen: "{count} abertas",
+	climateCardWindowsClosed: "{count} fechadas",
+	climateCardWindowsUnavailable: "{count} indisponíveis",
+	climateCardProfilePause: "O perfil {profile} pausa este termostato",
+	climateCardRoomReading: "Leitura do ambiente",
+	climateCardAppliedSetpoint: "Ajuste aplicado",
+	climateCardClimateReading: "Leitura do termostato",
+	climateCardRoomAssistNotConfigured: "Não configurado",
+	climateCardRoomAssistDisabled: "Desativado",
+	climateCardRoomAssistIdle: "Em espera",
+	climateCardRoomAssistReady: "Pronto",
+	climateCardRoomAssistAssisting: "Corrigindo",
+	climateCardRoomAssistHolding: "Mantendo",
+	climateCardRoomAssistBlocked: "Bloqueado",
+	climateCardRoomAssistUnavailable: "Indisponível",
+	climateCardExternalManaged: "Gerenciado por {provider}",
+	climateCardExternalControl: "Controle externo",
+	climateCardManagePause: "Gerenciar pausa",
+	climateCardConfigureBoost: "Configurar reforço",
+	climateCardBoostStarted: "Reforço iniciado",
+	climateCardBoostCancelled: "Reforço cancelado",
+	climateCardZonePaused: "Termostato pausado",
+	climateCardZoneResumed: "Termostato retomado",
+	climateCardActionFailed: "Não foi possível concluir a ação",
+	resumeAutomaticControl: "Retomar automático",
+	cancelBoost: "Cancelar reforço",
+	more: "Mais",
+	manualControl: "Controle manual",
+	scheduled: "Programado",
+	enabled: "Ativado",
+	unavailable: "Indisponível",
+	unknown: "Desconhecido",
+	none: "Nenhum",
+	remove: "Remover",
 	activeSetupCardControls: "Controles de configuração ativos",
 	activeSetupCardControlsBoth: "Modos e Perfis",
 	activeSetupCardControlsDescription: "Escolha o que este cartão pode mudar. O modo atual e os perfis aplicados permanecem visíveis.",
@@ -7669,6 +9596,42 @@ var k = [
 	comfortCo2LimitsHelp: "Elevado marca um alerta precoce sobre a qualidade do ar. Fraco marca um nível de CO2 mais sério.",
 	comfortCo2Poor: "Ruim",
 	comfortCo2Sensor: "Sensor de CO2",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Configuração de conforto",
+	comfortConfigurationDescription: "Fontes de sensores, faixas de conforto e atualização dos dados.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "Superfícies na temperatura do ponto de orvalho ou abaixo dela podem acumular condensação. O Velair não detecta a temperatura da superfície nem a condensação.",
+	comfortDewPointBelowRoom: "O ponto de orvalho está {difference} abaixo do ar ambiente.",
+	comfortDewPointAboveRoom: "O ponto de orvalho está {difference} acima do ar ambiente.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Umidade absoluta: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Abaixo da faixa de temperatura configurada",
+	comfortHumidexRangeWithin: "Dentro da faixa de temperatura configurada",
+	comfortHumidexRangeAbove: "Acima da faixa de temperatura configurada",
+	comfortHumidexRangeUnknown: "Posição em relação à faixa configurada indisponível",
+	comfortHumidexScaleAria: "Ar {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "O Humidex indica calor percebido {delta} acima da temperatura ambiente.",
+	comfortHumidexCoolerRelation: "O Humidex está {delta} abaixo da temperatura ambiente.",
+	comfortHumidexNeutralRelation: "O Humidex corresponde à temperatura ambiente.",
+	comfortRangeWithin: "Dentro dos intervalos configurados",
+	comfortRangeOutside: "Fora dos intervalos configurados",
+	comfortRangeMixed: "Indicadores térmicos divergentes",
+	comfortRangeUnavailable: "Dados limitados",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "O CO2 está acima do nível de atenção configurado.",
+	comfortInsightCo2Poor: "O CO2 está acima do limite configurado de baixa qualidade do ar.",
+	comfortInsightHumidexWarmer: "A umidade aumenta o calor percebido em {delta}.",
+	comfortAir: "Ar",
 	comfortCollapseClimate: "Recolher {climate}",
 	comfortConditionCold: "Frio",
 	comfortConditionColdAndDry: "Frio e seco",
@@ -7709,6 +9672,15 @@ var k = [
 	comfortIntroTitle: "Conforto ambiental",
 	comfortMaximum: "Máx.",
 	comfortMinimum: "Mínimo",
+	comfortModel: "Modelo de conforto",
+	comfortModelSimple: "Faixas simples",
+	comfortModelSimpleDescription: "Usa a mesma faixa de umidade em todas as temperaturas confortáveis.",
+	comfortModelTemperatureAware: "Faixas conforme a temperatura",
+	comfortModelTemperatureAwareDescription: "Ajusta a faixa de umidade aceitável entre os extremos frio e quente da faixa de temperatura.",
+	comfortTemperatureAwareHumidityRanges: "Faixas de umidade conforme a temperatura",
+	comfortAtMinimumTemperature: "No limite mais frio",
+	comfortAtMaximumTemperature: "No limite mais quente",
+	comfortEffectiveHumidityRange: "A {temperature}, a faixa de umidade de conforto é {minimum}–{maximum}%.",
 	comfortMoreHumid: "Mais úmido",
 	comfortMapCurrentPosition: "Posição atual: {temperature}, {humidity}",
 	comfortNotMonitored: "Não monitorado",
@@ -8398,11 +10370,16 @@ var k = [
 	temperatureLegacyResetStopped: "O agendador foi interrompido porque esta instalação herdada contém apenas dados Celsius, enquanto Home Assistant usa Fahrenheit. Abra Configurações Velair e use Redefinir Velair para criar padrões Fahrenheit.",
 	temperatureStep: "Etapa",
 	temperatureStepNotReported: "Não relatado por Home Assistant",
-	temperatureStepNotReportedDescription: "Esta entidade de climatização não publica target_temp_step. Velair não infere uma etapa de temperatura.",
+	temperatureStepNotReportedDescription: "Esta entidade de climatização não publica target_temp_step. O Velair usa o valor alternativo configurado para a zona.",
 	targetTemp: "Temperaturo alvo",
 	targetHumidity: "Umidade alvo",
 	targetBy: "Atingir até",
 	targetTemperature: "Temperaturo alvo",
+	includeTargetTemperature: "Incluir temperatura-alvo",
+	deviceControlled: "Controlada pelo dispositivo",
+	useDeviceControlledTarget: "Manter a temperatura-alvo do dispositivo e alterar somente o modo HVAC",
+	restoreTemperatureTarget: "Definir uma temperatura-alvo",
+	chooseModeForDeviceControlled: "Escolha um modo HVAC antes de usar a temperatura controlada pelo dispositivo",
 	todayTimeline: "Linha do tempo de hoje",
 	updateTemplate: "Atualizar modelo",
 	templateDeleted: "Modelo excluído",
@@ -8457,6 +10434,63 @@ var k = [
 		auto: "Auto",
 		paused: "Pausado"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Selecione um sensor de temperatura ambiente antes de usar o Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "O Room Assist está configurado, mas atualmente desativado.",
+	climateCardRoomAssistSummaryIdle: "Aguardando um alvo programado ativo e compatível.",
+	climateCardRoomAssistSummaryReady: "Pronto para ajustar o alvo do climatizador quando a temperatura ambiente exigir.",
+	climateCardRoomAssistSummaryAssisting: "Ajustando o alvo do climatizador para aproximar o ambiente do alvo programado.",
+	climateCardRoomAssistSummaryHolding: "Mantendo estável o alvo atual do Room Assist.",
+	climateCardRoomAssistSummaryBlocked: "Aguardando enquanto outra ação do Velair tem prioridade.",
+	climateCardRoomAssistSummaryUnavailable: "O Room Assist não pode controlar este climatizador no momento.",
+	climateCardPreconditioningActive: "Ativo",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Aplica um alvo de {applied} para aproximar o ambiente do alvo programado de {target}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Auto",
 		cool: "Refrigeração",
@@ -8475,8 +10509,40 @@ var k = [
 		off: "Desligado",
 		preheating: "Pré-aquecendo",
 		defrosting: "Descongelando"
-	}
+	},
+	comfortDataSources: "Fontes de dados",
+	comfortModelGuided: "Intervalo psicrométrico guiado",
+	comfortModelGuidedDescription: "Adapta a umidade relativa ao intervalo de temperatura a partir de um único intervalo de referência.",
+	comfortModelGuidedReference: "O intervalo de umidade é a referência em {temperature}; o Velair adapta a curva-alvo às demais temperaturas.",
+	comfortModelHumidityRequired: "É necessária uma fonte de umidade para selecionar este modelo.",
+	comfortGuidedHumidityReference: "Intervalo de umidade de referência",
+	comfortPreferences: "Preferências de conforto"
 }, vt = /* @__PURE__ */ t({ pt_pt: () => yt }), yt = {
+	climateCardThermostatControls: "Controlos do termóstato",
+	climateCardShowControlMode: "Mostrar controlo Automático/Manual",
+	climateCardShowTargetControl: "Mostrar controlo da temperatura-alvo",
+	climateCardShowHvacModeControl: "Mostrar seletor do modo HVAC",
+	climateCardShowNativeClimateLink: "Mostrar ligação ao termóstato no Home Assistant",
+	climateCardThermostatControlsDescription: "A temperatura-alvo e o modo HVAC só podem ser alterados durante um ajuste manual confirmado. A ligação do Home Assistant abre todos os controlos nativos do termóstato.",
+	climateCardTargetTemperature: "Temperatura-alvo",
+	climateCardLowerTarget: "Alvo inferior",
+	climateCardUpperTarget: "Alvo superior",
+	climateCardDecreaseTarget: "Diminuir temperatura-alvo",
+	climateCardIncreaseTarget: "Aumentar temperatura-alvo",
+	climateCardAdjustManually: "Ajustar manualmente",
+	climateCardOpenInHomeAssistant: "Abrir no Home Assistant",
+	climateCardHumiditySource: "Origem da humidade",
+	climateCardHumidityClimateSource: "Humidade fornecida pelo termóstato",
+	climateCardHumiditySourceDescription: "Escolha um sensor de humidade do Home Assistant para substituir a leitura do termóstato e o respetivo atalho para o histórico.",
+	climateCardOpenMetricHistory: "Abrir histórico de {metric}",
+	climateCardControlsAutomaticHint: "Inicie um ajuste manual para alterar diretamente o termóstato.",
+	climateCardManualAdjustmentUnavailable: "O ajuste manual não está disponível neste momento.",
+	climateCardControlsUnavailable: "Os controlos diretos ficam indisponíveis enquanto o termóstato estiver indisponível.",
+	climateCardControlsBlockedBoost: "Os controlos diretos ficam indisponíveis durante o reforço.",
+	climateCardControlsBlockedPause: "Os controlos diretos ficam indisponíveis durante uma pausa.",
+	climateCardControlsBlockedStopped: "Os controlos diretos ficam indisponíveis quando a zona está parada.",
+	climateCardControlsMissingStep: "Este termóstato não publica um incremento de temperatura válido; utilize os controlos nativos do Home Assistant.",
+	climateCardThermostatActionFailed: "Não foi possível aplicar a alteração do termóstato",
 	addBlock: "Adicionar bloco",
 	externalSystems: "Sistemas externos",
 	externalSystemsDescription: "Escolha quem executa a programação semanal efetiva para entidades de climatização compatíveis. As zonas externas nunca são controladas fisicamente pelo Velair.",
@@ -8498,6 +10564,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Se o primeiro bloco começar depois das 00h00, a mudança de continuidade implícita à meia-noite conta para o máximo diário",
 	externalConditionsUnavailable: "As condições do controlador não estão disponíveis.",
 	externalCapability_action_set_temperature: "Definir temperatura",
+	externalCapability_action_set_hvac_mode: "Alterar apenas o modo HVAC",
 	externalCapability_action_turn_off: "Desligar",
 	externalCapability_hvac_heat: "Aquecimento",
 	externalCapability_hvac_cool: "Arrefecimento",
@@ -8537,6 +10604,10 @@ var k = [
 	externalChangeForDuration: "Por um período",
 	externalChangeUntilResumed: "Até ser retomado",
 	externalChangePolicySaved: "Política de alteração externa guardada",
+	targetTempStepFallback: "Incremento de temperatura",
+	targetTempStepFallbackDescription: "O Home Assistant não indica o incremento da temperatura-alvo deste clima. O Velair utiliza este valor até o clima indicar um.",
+	targetTempStepFallbackInfoAction: "Sobre o incremento de temperatura",
+	targetTempStepSaved: "Incremento de temperatura guardado",
 	manualAdjustment: "Ajuste manual",
 	velairControl: "Comando Velair",
 	automaticScheduling: "Agendamento automático",
@@ -8598,6 +10669,117 @@ var k = [
 	blocks: "Blocos",
 	build: "Compilação",
 	cardView: "Visualização de cartão",
+	climateCardOutdoorSensorDescription: "Leitura exterior apenas visual para comparação com a temperatura interior atual. Não altera o controlo do Velair.",
+	climateCardHeaderOptions: "Cabeçalho",
+	climateCardShowStateBar: "Mostrar barra de estado",
+	climateCardShowName: "Mostrar nome do termóstato",
+	climateCardCustomName: "Nome personalizado do termóstato",
+	climateCardShowOperation: "Mostrar estado de funcionamento",
+	climateCardShowCurrentTemperature: "Mostrar temperatura atual",
+	climateCardShowCurrentHumidity: "Mostrar humidade atual",
+	climateCardShowOutdoorTemperature: "Mostrar temperatura exterior",
+	climateCardShowWindows: "Mostrar janelas",
+	climateCardWindowsDescription: "Os sensores de janela são apenas visuais e não controlam o Velair. Utilize a sua própria automação do Home Assistant ou o blueprint de janelas do Velair se uma janela aberta tiver de pausar este termóstato.",
+	climateCardWindowBlueprintLink: "Ver a documentação e importar o blueprint",
+	climateCardTimelineShowTitle: "Mostrar título da cronologia",
+	climateCardTimelineShowProfile: "Mostrar perfil ativo",
+	climateCardTimelineShowMode: "Mostrar modo ativo",
+	climateCardResetName: "Restaurar nome do termóstato",
+	climateCardActions: "Ações",
+	climateCardShowBoostAction: "Mostrar ação de reforço",
+	climateCardShowPauseAction: "Mostrar ação Pause e Retomar",
+	climateCardVelairActionsDescription: "Reforço e pausa são fornecidos pelo Velair. O comportamento, os textos e os ícones não podem ser personalizados.",
+	climateCardCustomActions: "Ações personalizadas",
+	climateCardActionsOrderDescription: "Reordene as ações do Velair e os scripts do Home Assistant. As ações automáticas usam até três posições diretas; escolha Menu Mais para manter uma ação em Mais. O limite não pode ser personalizado.",
+	climateCardActionPlacement: "Localização",
+	climateCardActionPlacementAuto: "Automática",
+	climateCardActionPlacementMore: "Menu Mais",
+	climateCardActionPlacementAutoDescription: "Usa uma das três primeiras posições diretas disponíveis. Se estiverem ocupadas, a ação passa para Mais.",
+	climateCardActionPlacementMoreDescription: "Mantém sempre esta ação no menu Mais, independentemente da ordem.",
+	climateCardRemoveCustomAction: "Remover atalho do cartão",
+	climateCardExpandAction: "Editar {name}",
+	climateCardCollapseAction: "Fechar definições de {name}",
+	climateCardCollapseCurrentState: "Recolher estado atual",
+	climateCardExpandCurrentState: "Expandir estado atual",
+	climateCardCollapsedByDefault: "Recolhido por predefinição",
+	climateCardCollapseSection: "Recolher {name}",
+	climateCardExpandSection: "Expandir {name}",
+	climateCardProvidedByVelair: "Fornecida pelo Velair · o comportamento não pode ser personalizado",
+	climateCardHideActionName: "Ocultar nome da ação",
+	climateCardCustomActionsDescription: "Adicione scripts do Home Assistant. A lógica continua gerida pelo Home Assistant.",
+	climateCardAddCustomAction: "Adicionar ação personalizada",
+	climateCardNoScripts: "Crie um script do Home Assistant antes de adicionar uma ação.",
+	climateCardCustomActionName: "Nome",
+	climateCardCustomActionScript: "Script do Home Assistant",
+	climateCardCustomActionIcon: "Ícone",
+	climateCardCustomActionColor: "Cor do ícone",
+	climateCardCustomActionConfirmation: "Pedir confirmação antes de executar",
+	climateCardScriptUnavailable: "Script indisponível",
+	climateCardOpenVelairMenu: "Abrir Velair",
+	climateCardConfirmScriptAction: "Executar {name}?",
+	climateCardScriptExecuted: "{name} iniciado",
+	climateCardPreconditioningDisplay: "Apresentação do pré-condicionamento",
+	cardViewClimate: "Termóstato: estado e controlo",
+	climateCardConfiguration: "Cartão do termóstato",
+	climateCardConfigurationDescription: "Mostra um termóstato gerido com estado, contexto do Velair e sensores opcionais do painel.",
+	climateCardManagedClimate: "Termóstato gerido",
+	climateCardOutdoorSensor: "Sensor de temperatura exterior (opcional)",
+	climateCardWindowDisplay: "Apresentação das janelas",
+	climateCardWindowGrouped: "Agrupar por estado",
+	climateCardWindowIndividual: "Mostrar separadamente",
+	climateCardRoomAssistDisplay: "Apresentação do Room Assist",
+	climateCardDisplayBoth: "Texto e gráfico",
+	climateCardDisplayChart: "Gráfico",
+	climateCardDisplayText: "Texto",
+	climateCardAddWindow: "Adicionar janela",
+	climateCardWindows: "Janelas",
+	climateCardShowTimeline: "Mostrar cronologia de hoje",
+	climateCardShowComfort: "Mostrar conforto",
+	climateCardShowCollapsedComfortReadings: "Mostrar leituras adicionais ao recolher",
+	climateCardShowRoomAssist: "Mostrar Room Assist",
+	climateCardShowPreconditioning: "Mostrar pré-condicionamento",
+	climateCardShowActions: "Mostrar ações",
+	climateCardOpenVelair: "Abrir Velair",
+	climateCardAvailable: "Disponível",
+	climateCardUnavailable: "Indisponível",
+	climateCardCurrentState: "Estado atual",
+	climateCardOutdoor: "Temperatura exterior",
+	climateCardOutdoorWarmer: "{delta} mais quente que no interior",
+	climateCardOutdoorColder: "{delta} mais frio que no interior",
+	climateCardWindowsOpen: "{count} abertas",
+	climateCardWindowsClosed: "{count} fechadas",
+	climateCardWindowsUnavailable: "{count} indisponíveis",
+	climateCardProfilePause: "O perfil {profile} pausa este termóstato",
+	climateCardRoomReading: "Leitura da divisão",
+	climateCardAppliedSetpoint: "Regulação aplicada",
+	climateCardClimateReading: "Leitura do termóstato",
+	climateCardRoomAssistNotConfigured: "Não configurado",
+	climateCardRoomAssistDisabled: "Desativado",
+	climateCardRoomAssistIdle: "Em espera",
+	climateCardRoomAssistReady: "Pronto",
+	climateCardRoomAssistAssisting: "A corrigir",
+	climateCardRoomAssistHolding: "A manter",
+	climateCardRoomAssistBlocked: "Bloqueado",
+	climateCardRoomAssistUnavailable: "Indisponível",
+	climateCardExternalManaged: "Gerido por {provider}",
+	climateCardExternalControl: "Controlo externo",
+	climateCardManagePause: "Gerir pausa",
+	climateCardConfigureBoost: "Configurar reforço",
+	climateCardBoostStarted: "Reforço iniciado",
+	climateCardBoostCancelled: "Reforço cancelado",
+	climateCardZonePaused: "Termóstato pausado",
+	climateCardZoneResumed: "Termóstato retomado",
+	climateCardActionFailed: "Não foi possível concluir a ação",
+	resumeAutomaticControl: "Retomar automático",
+	cancelBoost: "Cancelar reforço",
+	more: "Mais",
+	manualControl: "Controlo manual",
+	scheduled: "Programado",
+	enabled: "Ativado",
+	unavailable: "Indisponível",
+	unknown: "Desconhecido",
+	none: "Nenhum",
+	remove: "Remover",
 	activeSetupCardControls: "Controlos de configuração ativos",
 	activeSetupCardControlsBoth: "Modos e Perfis",
 	activeSetupCardControlsDescription: "Escolha o que este cartão pode alterar. O modo atual e os perfis aplicados permanecem visíveis.",
@@ -8651,6 +10833,42 @@ var k = [
 	comfortCo2LimitsHelp: "Elevado marca um alerta precoce sobre a qualidade do ar. Fraco marca um nível de CO2 mais grave.",
 	comfortCo2Poor: "Má",
 	comfortCo2Sensor: "Sensor de CO2",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Configuração de conforto",
+	comfortConfigurationDescription: "Fontes de sensores, intervalos de conforto e atualização dos dados.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "As superfícies à temperatura do ponto de orvalho ou abaixo podem acumular condensação. O Velair não deteta a temperatura da superfície nem a condensação.",
+	comfortDewPointBelowRoom: "O ponto de orvalho está {difference} abaixo do ar ambiente.",
+	comfortDewPointAboveRoom: "O ponto de orvalho está {difference} acima do ar ambiente.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Humidade absoluta: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Abaixo do intervalo de temperatura configurado",
+	comfortHumidexRangeWithin: "Dentro do intervalo de temperatura configurado",
+	comfortHumidexRangeAbove: "Acima do intervalo de temperatura configurado",
+	comfortHumidexRangeUnknown: "Posição relativa ao intervalo configurado indisponível",
+	comfortHumidexScaleAria: "Ar {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "O Humidex indica calor percecionado {delta} acima da temperatura ambiente.",
+	comfortHumidexCoolerRelation: "O Humidex está {delta} abaixo da temperatura ambiente.",
+	comfortHumidexNeutralRelation: "O Humidex corresponde à temperatura ambiente.",
+	comfortRangeWithin: "Dentro dos intervalos configurados",
+	comfortRangeOutside: "Fora dos intervalos configurados",
+	comfortRangeMixed: "Indicadores térmicos divergentes",
+	comfortRangeUnavailable: "Dados limitados",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "O CO2 está acima do nível de atenção configurado.",
+	comfortInsightCo2Poor: "O CO2 está acima do limiar configurado de fraca qualidade do ar.",
+	comfortInsightHumidexWarmer: "A humidade aumenta o calor percecionado em {delta}.",
+	comfortAir: "Ar",
 	comfortCollapseClimate: "Recolher {climate}",
 	comfortConditionCold: "Frio",
 	comfortConditionColdAndDry: "Frio e seco",
@@ -8691,6 +10909,15 @@ var k = [
 	comfortIntroTitle: "Conforto ambiental",
 	comfortMaximum: "Máx.",
 	comfortMinimum: "Mínimo",
+	comfortModel: "Modelo de conforto",
+	comfortModelSimple: "Intervalos simples",
+	comfortModelSimpleDescription: "Utiliza o mesmo intervalo de humidade em todas as temperaturas confortáveis.",
+	comfortModelTemperatureAware: "Intervalos conforme a temperatura",
+	comfortModelTemperatureAwareDescription: "Ajusta o intervalo de humidade aceitável entre os extremos frio e quente do intervalo de temperatura.",
+	comfortTemperatureAwareHumidityRanges: "Intervalos de humidade conforme a temperatura",
+	comfortAtMinimumTemperature: "No limite mais frio",
+	comfortAtMaximumTemperature: "No limite mais quente",
+	comfortEffectiveHumidityRange: "A {temperature}, o intervalo de humidade de conforto é {minimum}–{maximum}%.",
 	comfortMoreHumid: "Mais húmido",
 	comfortMapCurrentPosition: "Posição atual: {temperature}, {humidity}",
 	comfortNotMonitored: "Não monitorizado",
@@ -9380,11 +11607,16 @@ var k = [
 	temperatureLegacyResetStopped: "O agendador foi interrompido porque esta instalação herdada contém apenas dados Celsius, enquanto o Home Assistant utiliza o Fahrenheit. Abra as Definições Velair e utilize Repor Velair para criar padrões Fahrenheit.",
 	temperatureStep: "Degrau",
 	temperatureStepNotReported: "Não reportado por Home Assistant",
-	temperatureStepNotReportedDescription: "Este tempo não publica target_temp_step. Velair não infere um passo de temperatura.",
+	temperatureStepNotReportedDescription: "Este clima não publica target_temp_step. O Velair utiliza o valor alternativo configurado para a zona.",
 	targetTemp: "Temperaturo alvo",
 	targetHumidity: "Humidade alvo",
 	targetBy: "Atingir até",
 	targetTemperature: "Temperaturo alvo",
+	includeTargetTemperature: "Incluir temperatura alvo",
+	deviceControlled: "Controlado pelo dispositivo",
+	useDeviceControlledTarget: "Manter a temperatura definida pelo dispositivo e alterar apenas o modo HVAC",
+	restoreTemperatureTarget: "Definir uma temperatura alvo",
+	chooseModeForDeviceControlled: "Escolha um modo HVAC antes de usar a temperatura controlada pelo dispositivo",
 	todayTimeline: "Linha do tempo de hoje",
 	updateTemplate: "Atualizar modelo",
 	templateDeleted: "Modelo excluído",
@@ -9439,6 +11671,63 @@ var k = [
 		auto: "Auto",
 		paused: "Pausado"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Selecione um sensor de temperatura da divisão antes de utilizar o Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "O Room Assist está configurado, mas atualmente desativado.",
+	climateCardRoomAssistSummaryIdle: "A aguardar um alvo programado ativo e compatível.",
+	climateCardRoomAssistSummaryReady: "Pronto para ajustar o alvo do termóstato quando a temperatura da divisão o exigir.",
+	climateCardRoomAssistSummaryAssisting: "A ajustar o alvo do termóstato para aproximar a divisão do alvo programado.",
+	climateCardRoomAssistSummaryHolding: "A manter estável o alvo atual do Room Assist.",
+	climateCardRoomAssistSummaryBlocked: "A aguardar enquanto outra ação do Velair tem prioridade.",
+	climateCardRoomAssistSummaryUnavailable: "O Room Assist não pode controlar este termóstato neste momento.",
+	climateCardPreconditioningActive: "Ativo",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Aplica um alvo de {applied} para aproximar a divisão do alvo programado de {target}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Auto",
 		cool: "Arrefecimento",
@@ -9457,8 +11746,40 @@ var k = [
 		off: "Desligado",
 		preheating: "A pré-aquecer",
 		defrosting: "A descongelar"
-	}
+	},
+	comfortDataSources: "Fontes de dados",
+	comfortModelGuided: "Intervalo psicrométrico guiado",
+	comfortModelGuidedDescription: "Adapta a humidade relativa ao intervalo de temperatura a partir de um único intervalo de referência.",
+	comfortModelGuidedReference: "O intervalo de humidade é a referência a {temperature}; o Velair adapta a curva-alvo às restantes temperaturas.",
+	comfortModelHumidityRequired: "É necessária uma fonte de humidade para selecionar este modelo.",
+	comfortGuidedHumidityReference: "Intervalo de humidade de referência",
+	comfortPreferences: "Preferências de conforto"
 }, bt = /* @__PURE__ */ t({ ru: () => xt }), xt = {
+	climateCardThermostatControls: "Управление термостатом",
+	climateCardShowControlMode: "Показывать автоматическое/ручное управление",
+	climateCardShowTargetControl: "Показывать управление целевой температурой",
+	climateCardShowHvacModeControl: "Показывать выбор режима HVAC",
+	climateCardShowNativeClimateLink: "Показывать ссылку на термостат в Home Assistant",
+	climateCardThermostatControlsDescription: "Целевую температуру и режим HVAC можно изменить только во время подтверждённой ручной регулировки. Ссылка Home Assistant открывает все встроенные элементы управления термостатом.",
+	climateCardTargetTemperature: "Целевая температура",
+	climateCardLowerTarget: "Нижняя уставка",
+	climateCardUpperTarget: "Верхняя уставка",
+	climateCardDecreaseTarget: "Уменьшить целевую температуру",
+	climateCardIncreaseTarget: "Увеличить целевую температуру",
+	climateCardAdjustManually: "Настроить вручную",
+	climateCardOpenInHomeAssistant: "Открыть в Home Assistant",
+	climateCardHumiditySource: "Источник влажности",
+	climateCardHumidityClimateSource: "Влажность от климатического устройства",
+	climateCardHumiditySourceDescription: "Выберите датчик влажности Home Assistant, чтобы заменить показание климатического устройства и ссылку на его историю.",
+	climateCardOpenMetricHistory: "Открыть историю: {metric}",
+	climateCardControlsAutomaticHint: "Запустите ручную регулировку, чтобы напрямую изменить термостат.",
+	climateCardManualAdjustmentUnavailable: "Ручная регулировка сейчас недоступна.",
+	climateCardControlsUnavailable: "Прямое управление недоступно, пока термостат недоступен.",
+	climateCardControlsBlockedBoost: "Прямое управление недоступно во время усиления.",
+	climateCardControlsBlockedPause: "Прямое управление недоступно во время паузы.",
+	climateCardControlsBlockedStopped: "Прямое управление недоступно, когда зона остановлена.",
+	climateCardControlsMissingStep: "Этот термостат не публикует допустимый шаг температуры; используйте встроенные элементы управления Home Assistant.",
+	climateCardThermostatActionFailed: "Не удалось применить изменение термостата",
 	addBlock: "Добавить блок",
 	externalConditionProfilesSupported: "Поддерживаются расписания по умолчанию, профилей и режимов",
 	profileExternalScheduleOnly: "Внешние зоны поддерживают только расписания по умолчанию, профилей или режимов. Пауза и прямые действия Velair недоступны.",
@@ -9478,6 +11799,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "Неявное изменение для непрерывности в полночь учитывается в дневном максимуме",
 	externalConditionsUnavailable: "Условия контроллера недоступны.",
 	externalCapability_action_set_temperature: "Установить температуру",
+	externalCapability_action_set_hvac_mode: "Изменить только режим HVAC",
 	externalCapability_action_turn_off: "Выключить",
 	externalCapability_hvac_heat: "Отопление",
 	externalCapability_hvac_cool: "Охлаждение",
@@ -9520,6 +11842,10 @@ var k = [
 	externalChangeForDuration: "На заданное время",
 	externalChangeUntilResumed: "До возобновления",
 	externalChangePolicySaved: "Политика внешних изменений сохранена",
+	targetTempStepFallback: "Шаг температуры",
+	targetTempStepFallbackDescription: "Home Assistant не сообщает шаг целевой температуры этого климатического устройства. Velair использует это значение, пока устройство не сообщит шаг.",
+	targetTempStepFallbackInfoAction: "О шаге температуры",
+	targetTempStepSaved: "Шаг температуры сохранён",
 	manualAdjustment: "Ручная настройка",
 	velairControl: "Управление Velair",
 	automaticScheduling: "Автоматическое расписание",
@@ -9580,6 +11906,117 @@ var k = [
 	blocks: "Блоки",
 	build: "Сборка",
 	cardView: "Вид карточки",
+	climateCardOutdoorSensorDescription: "Только визуальное показание наружной температуры для сравнения с текущей температурой в помещении. Оно не изменяет управление Velair.",
+	climateCardHeaderOptions: "Заголовок",
+	climateCardShowStateBar: "Показывать полосу состояния",
+	climateCardShowName: "Показывать название термостата",
+	climateCardCustomName: "Пользовательское название",
+	climateCardShowOperation: "Показывать рабочее состояние",
+	climateCardShowCurrentTemperature: "Показывать текущую температуру",
+	climateCardShowCurrentHumidity: "Показывать текущую влажность",
+	climateCardShowOutdoorTemperature: "Показывать наружную температуру",
+	climateCardShowWindows: "Показывать окна",
+	climateCardWindowsDescription: "Датчики окон используются только для отображения и не управляют Velair. Используйте собственную автоматизацию Home Assistant или blueprint окон Velair, если открытое окно должно приостанавливать этот термостат.",
+	climateCardWindowBlueprintLink: "Открыть документацию и импортировать blueprint",
+	climateCardTimelineShowTitle: "Показывать заголовок временной шкалы",
+	climateCardTimelineShowProfile: "Показывать активный профиль",
+	climateCardTimelineShowMode: "Показывать активный режим",
+	climateCardResetName: "Восстановить название термостата",
+	climateCardActions: "Действия",
+	climateCardShowBoostAction: "Показывать форсированный режим",
+	climateCardShowPauseAction: "Показывать действие Pause и Возобновить",
+	climateCardVelairActionsDescription: "Форсированный режим и пауза предоставляются Velair. Их поведение, подписи и значки нельзя изменить.",
+	climateCardCustomActions: "Пользовательские действия",
+	climateCardActionsOrderDescription: "Измените порядок действий Velair и сценариев Home Assistant. Автоматические действия занимают до трёх прямых позиций; выберите меню «Ещё», чтобы оставить действие там. Лимит нельзя изменить.",
+	climateCardActionPlacement: "Расположение",
+	climateCardActionPlacementAuto: "Автоматически",
+	climateCardActionPlacementMore: "Меню «Ещё»",
+	climateCardActionPlacementAutoDescription: "Занимает одну из первых трёх доступных прямых позиций. Если они заняты, действие переходит в «Ещё».",
+	climateCardActionPlacementMoreDescription: "Всегда оставляет это действие в меню «Ещё» независимо от порядка.",
+	climateCardRemoveCustomAction: "Удалить ярлык с карточки",
+	climateCardExpandAction: "Изменить {name}",
+	climateCardCollapseAction: "Закрыть настройки {name}",
+	climateCardCollapseCurrentState: "Свернуть текущее состояние",
+	climateCardExpandCurrentState: "Развернуть текущее состояние",
+	climateCardCollapsedByDefault: "Свернуто по умолчанию",
+	climateCardCollapseSection: "Свернуть {name}",
+	climateCardExpandSection: "Развернуть {name}",
+	climateCardProvidedByVelair: "Предоставлено Velair · поведение не настраивается",
+	climateCardHideActionName: "Скрыть название действия",
+	climateCardCustomActionsDescription: "Добавьте скрипты Home Assistant. Логика остаётся под управлением Home Assistant.",
+	climateCardAddCustomAction: "Добавить пользовательское действие",
+	climateCardNoScripts: "Сначала создайте скрипт Home Assistant.",
+	climateCardCustomActionName: "Название",
+	climateCardCustomActionScript: "Скрипт Home Assistant",
+	climateCardCustomActionIcon: "Значок",
+	climateCardCustomActionColor: "Цвет значка",
+	climateCardCustomActionConfirmation: "Запрашивать подтверждение перед запуском",
+	climateCardScriptUnavailable: "Скрипт недоступен",
+	climateCardOpenVelairMenu: "Открыть Velair",
+	climateCardConfirmScriptAction: "Запустить {name}?",
+	climateCardScriptExecuted: "{name} запущен",
+	climateCardPreconditioningDisplay: "Отображение предварительной подготовки",
+	cardViewClimate: "Термостат: состояние и управление",
+	climateCardConfiguration: "Карточка термостата",
+	climateCardConfigurationDescription: "Показывает управляемый термостат, его состояние, данные Velair и необязательные датчики панели.",
+	climateCardManagedClimate: "Управляемый термостат",
+	climateCardOutdoorSensor: "Датчик наружной температуры (необязательно)",
+	climateCardWindowDisplay: "Отображение окон",
+	climateCardWindowGrouped: "Группировать по состоянию",
+	climateCardWindowIndividual: "Показывать отдельно",
+	climateCardRoomAssistDisplay: "Отображение Room Assist",
+	climateCardDisplayBoth: "Текст и график",
+	climateCardDisplayChart: "График",
+	climateCardDisplayText: "Текст",
+	climateCardAddWindow: "Добавить окно",
+	climateCardWindows: "Окна",
+	climateCardShowTimeline: "Показывать расписание на сегодня",
+	climateCardShowComfort: "Показывать комфорт",
+	climateCardShowCollapsedComfortReadings: "Показывать дополнительные показания в свернутом виде",
+	climateCardShowRoomAssist: "Показывать Room Assist",
+	climateCardShowPreconditioning: "Показывать предварительную подготовку",
+	climateCardShowActions: "Показывать действия",
+	climateCardOpenVelair: "Открыть Velair",
+	climateCardAvailable: "Доступен",
+	climateCardUnavailable: "Недоступен",
+	climateCardCurrentState: "Текущее состояние",
+	climateCardOutdoor: "Наружная температура",
+	climateCardOutdoorWarmer: "на {delta} теплее, чем внутри",
+	climateCardOutdoorColder: "на {delta} холоднее, чем внутри",
+	climateCardWindowsOpen: "Открыто: {count}",
+	climateCardWindowsClosed: "Закрыто: {count}",
+	climateCardWindowsUnavailable: "Недоступно: {count}",
+	climateCardProfilePause: "Профиль {profile} приостанавливает этот термостат",
+	climateCardRoomReading: "Температура комнаты",
+	climateCardAppliedSetpoint: "Применённая уставка",
+	climateCardClimateReading: "Показание термостата",
+	climateCardRoomAssistNotConfigured: "Не настроено",
+	climateCardRoomAssistDisabled: "Отключено",
+	climateCardRoomAssistIdle: "Ожидание",
+	climateCardRoomAssistReady: "Готово",
+	climateCardRoomAssistAssisting: "Корректирует",
+	climateCardRoomAssistHolding: "Удерживает",
+	climateCardRoomAssistBlocked: "Заблокировано",
+	climateCardRoomAssistUnavailable: "Недоступно",
+	climateCardExternalManaged: "Управляется через {provider}",
+	climateCardExternalControl: "Внешнее управление",
+	climateCardManagePause: "Управление паузой",
+	climateCardConfigureBoost: "Настроить усиление",
+	climateCardBoostStarted: "Усиление запущено",
+	climateCardBoostCancelled: "Усиление отменено",
+	climateCardZonePaused: "Термостат приостановлен",
+	climateCardZoneResumed: "Термостат возобновлён",
+	climateCardActionFailed: "Не удалось выполнить действие",
+	resumeAutomaticControl: "Возобновить автоматически",
+	cancelBoost: "Отменить усиление",
+	more: "Ещё",
+	manualControl: "Ручное управление",
+	scheduled: "По расписанию",
+	enabled: "Включено",
+	unavailable: "Недоступно",
+	unknown: "Неизвестно",
+	none: "Нет",
+	remove: "Удалить",
 	activeSetupCardControls: "Управление текущей настройкой",
 	activeSetupCardControlsBoth: "Режимы и профили",
 	activeSetupCardControlsDescription: "Выберите, что можно изменять в этой карточке. Текущий режим и применённые профили остаются видимыми.",
@@ -9632,6 +12069,42 @@ var k = [
 	comfortCo2LimitsHelp: "«Повышенный» означает раннее предупреждение о качестве воздуха. «Плохой» — более серьёзный уровень CO₂.",
 	comfortCo2Poor: "Плохой",
 	comfortCo2Sensor: "Датчик CO₂",
+	comfortAdditionalInformation: "Additional environmental information",
+	comfortAdditionalInformationDescription: "Optional values calculated by Velair or supplied by a Home Assistant entity. They add context without changing climate control.",
+	comfortConfiguration: "Настройки комфорта",
+	comfortConfigurationDescription: "Источники датчиков, диапазоны комфорта и актуальность данных.",
+	comfortDewPoint: "Dew point",
+	comfortDewPointDescription: "На поверхностях с температурой не выше точки росы может образоваться конденсат. Velair не определяет температуру поверхностей или наличие конденсата.",
+	comfortDewPointBelowRoom: "Точка росы на {difference} ниже температуры воздуха в помещении.",
+	comfortDewPointAboveRoom: "Точка росы на {difference} выше температуры воздуха в помещении.",
+	comfortAbsoluteHumidity: "Absolute humidity",
+	comfortAbsoluteHumidityDescription: "The actual amount of water vapour in the air.",
+	comfortAbsoluteHumidityNeutral: "Абсолютная влажность: {value}.",
+	comfortHumidex: "Humidex",
+	comfortHumidexDescription: "Perceived heat based on temperature and humidity; it is not a universal comfort score.",
+	comfortHumidexRangeBelow: "Ниже настроенного диапазона температуры",
+	comfortHumidexRangeWithin: "В настроенном диапазоне температуры",
+	comfortHumidexRangeAbove: "Выше настроенного диапазона температуры",
+	comfortHumidexRangeUnknown: "Положение относительно настроенного диапазона недоступно",
+	comfortHumidexScaleAria: "Воздух {air}. Humidex {humidex}. {position}.",
+	comfortHumidexWarmerRelation: "Humidex показывает воспринимаемое тепло на {delta} выше температуры помещения.",
+	comfortHumidexCoolerRelation: "Humidex на {delta} ниже температуры в помещении.",
+	comfortHumidexNeutralRelation: "Humidex совпадает с температурой в помещении.",
+	comfortRangeWithin: "В настроенных диапазонах",
+	comfortRangeOutside: "Вне настроенных диапазонов",
+	comfortRangeMixed: "Противоречивые тепловые показатели",
+	comfortRangeUnavailable: "Ограниченные данные",
+	comfortMetricSource: "Source",
+	comfortMetricSourceVelair: "Calculated by Velair",
+	comfortMetricSourceEntity: "Home Assistant entity",
+	comfortMetricEntity: "Entity",
+	comfortMetricSelectEntity: "Select a compatible sensor",
+	comfortMetricStale: "Reading outdated",
+	comfortMetricInvalid: "Invalid reading or unit",
+	comfortInsightCo2Elevated: "Уровень CO2 выше настроенного порога внимания.",
+	comfortInsightCo2Poor: "Уровень CO2 выше настроенного порога плохого качества воздуха.",
+	comfortInsightHumidexWarmer: "Влажность повышает воспринимаемое тепло на {delta}.",
+	comfortAir: "Воздух",
 	comfortCollapseClimate: "Свернуть {climate}",
 	comfortConditionCold: "Холодно",
 	comfortConditionColdAndDry: "Холодно и сухо",
@@ -9672,6 +12145,15 @@ var k = [
 	comfortIntroTitle: "Комфорт окружающей среды",
 	comfortMaximum: "Макс.",
 	comfortMinimum: "Мин.",
+	comfortModel: "Модель комфорта",
+	comfortModelSimple: "Простые диапазоны",
+	comfortModelSimpleDescription: "Использует один диапазон влажности при любой комфортной температуре.",
+	comfortModelTemperatureAware: "Диапазоны с учетом температуры",
+	comfortModelTemperatureAwareDescription: "Настраивает допустимый диапазон влажности между прохладной и теплой границами диапазона температуры.",
+	comfortTemperatureAwareHumidityRanges: "Диапазоны влажности с учетом температуры",
+	comfortAtMinimumTemperature: "На прохладной границе",
+	comfortAtMaximumTemperature: "На теплой границе",
+	comfortEffectiveHumidityRange: "При {temperature} комфортный диапазон влажности составляет {minimum}–{maximum}%.",
 	comfortMoreHumid: "Влажнее",
 	comfortMapCurrentPosition: "Текущее положение: {temperature}, {humidity}",
 	comfortNotMonitored: "Не отслеживается",
@@ -10362,9 +12844,14 @@ var k = [
 	temperatureLegacyResetStopped: "Планировщик остановлен, потому что эта устаревшая установка содержит данные только в градусах Цельсия, а Home Assistant использует градусы Фаренгейта. Откройте настройки Velair и выберите «Сбросить Velair», чтобы создать значения по умолчанию в градусах Фаренгейта.",
 	temperatureStep: "Шаг",
 	temperatureStepNotReported: "Не сообщается Home Assistant",
-	temperatureStepNotReportedDescription: "Это климатическое устройство не публикует target_temp_step. Velair не определяет шаг температуры самостоятельно.",
+	temperatureStepNotReportedDescription: "Это климатическое устройство не публикует target_temp_step. Velair использует резервное значение, настроенное для зоны.",
 	targetTemp: "Целевая температура",
 	targetTemperature: "Целевая температура",
+	includeTargetTemperature: "Включить целевую температуру",
+	deviceControlled: "Управляется устройством",
+	useDeviceControlledTarget: "Сохранить целевую температуру устройства и изменить только режим HVAC",
+	restoreTemperatureTarget: "Задать целевую температуру",
+	chooseModeForDeviceControlled: "Выберите режим HVAC перед использованием целевой температуры устройства",
 	targetHumidity: "Целевая влажность",
 	targetBy: "Цель к",
 	todayTimeline: "Расписание на сегодня",
@@ -10421,6 +12908,63 @@ var k = [
 		auto: "Авто",
 		paused: "Приостановлен"
 	},
+	climateCardRoomAssistSummaryNotConfigured: "Выберите датчик температуры помещения перед использованием Room Assist.",
+	climateCardRoomAssistSummaryDisabled: "Room Assist настроен, но сейчас отключен.",
+	climateCardRoomAssistSummaryIdle: "Ожидание активной совместимой запланированной цели.",
+	climateCardRoomAssistSummaryReady: "Готов изменить целевую температуру, когда этого потребует температура в помещении.",
+	climateCardRoomAssistSummaryAssisting: "Изменяет целевую температуру, чтобы приблизить помещение к запланированной цели.",
+	climateCardRoomAssistSummaryHolding: "Поддерживает текущую цель Room Assist без изменений.",
+	climateCardRoomAssistSummaryBlocked: "Ожидает, пока приоритет имеет другое действие Velair.",
+	climateCardRoomAssistSummaryUnavailable: "Room Assist сейчас не может управлять этим климатическим устройством.",
+	climateCardPreconditioningActive: "Активно",
+	climateCardRoomAssistSummaryAssistingAdjusted: "Устанавливает для климатического устройства {applied}, чтобы приблизить помещение к запланированной цели {target}.",
+	comfortOutdoorComparison: "Indoor vs outdoor",
+	comfortOutdoorDescription: "Visual information only. This comparison does not control windows or the climate.",
+	comfortOutdoorTemperatureSensor: "Outdoor temperature sensor",
+	comfortOutdoorHumiditySensor: "Outdoor humidity sensor (optional)",
+	comfortOutdoorSelectTemperature: "Select an outdoor temperature sensor",
+	comfortOutdoorNoHumidity: "Do not compare outdoor humidity",
+	comfortOutdoorTemperatureComparison: "Temperature",
+	comfortOutdoorMoistureComparison: "Air moisture",
+	comfortIndoor: "Indoor",
+	comfortOutdoor: "Outdoor",
+	comfortIndoorAbsoluteHumidity: "Indoor absolute humidity",
+	comfortOutdoorAbsoluteHumidity: "Outdoor absolute humidity",
+	comfortOutdoorEquivalentHumidity: "Adjusted outdoor humidity",
+	comfortOutdoorAdjustedHumidityHelp: "Estimated relative humidity of the outdoor air after it reaches the current indoor temperature.",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
+	comfortOutdoorCooler: "cooler",
+	comfortOutdoorWarmer: "warmer",
+	comfortOutdoorSimilar: "similar",
+	comfortOutdoorDrier: "drier",
+	comfortOutdoorMoreHumid: "more humid",
+	comfortOutdoorTemperatureDelta: "Outdoor air is {difference} {direction}.",
+	comfortOutdoorHumidityLower: "Adjusted outdoor humidity would be {difference} {unit} lower than indoors.",
+	comfortOutdoorHumidityHigher: "Adjusted outdoor humidity would be {difference} {unit} higher than indoors.",
+	comfortOutdoorHumiditySimilarDetail: "Adjusted outdoor humidity would be similar to indoors (difference: {difference} {unit}).",
+	comfortPercentagePoint: "percentage point",
+	comfortPercentagePoints: "percentage points",
+	comfortInsightVentilationCool: "Outdoor air may help cool the room.",
+	comfortInsightVentilationWarm: "Outdoor air may help warm the room.",
+	comfortInsightVentilationDry: "Outdoor air may help reduce room humidity.",
+	comfortInsightVentilationHumidify: "Outdoor air may help increase room humidity.",
+	comfortInsightVentilationTradeoff: "Outdoor air may {effect} the room, but could worsen {dimension}.",
+	comfortInsightVentilationTemperatureOnly: "Based on temperature; humidity impact is unavailable.",
+	comfortVentilationGuidance: "Ventilation guidance",
+	comfortVentilationGuidanceDescription: "Velair shows a ventilation opportunity only when outdoor air differs by at least {temperature} and would move the room toward its configured comfort range. Add an outdoor humidity sensor to also evaluate moisture. Velair never acts automatically.",
+	comfortVentilationGuidanceDescriptionWithHumidity: "Velair shows a ventilation opportunity only when outdoor air would move the room toward its configured comfort range. Temperature guidance requires at least {temperature}; humidity guidance requires at least {humidity} and {moisture}. If another monitored condition would worsen, Velair shows the trade-off instead. It never acts automatically.",
+	comfortVentilationTemperatureThreshold: "Temperature difference",
+	comfortVentilationTemperatureThresholdHelp: "Minimum useful indoor-to-outdoor temperature difference.",
+	comfortVentilationHumidityThreshold: "Projected humidity improvement",
+	comfortVentilationHumidityThresholdHelp: "Minimum improvement in relative humidity after projecting outdoor air to the indoor temperature.",
+	comfortVentilationMoistureThreshold: "Absolute humidity difference",
+	comfortVentilationMoistureThresholdHelp: "Minimum difference in water-vapour density required to confirm that the projected humidity change is meaningful.",
+	comfortVentilationEffectCool: "cool",
+	comfortVentilationEffectWarm: "warm",
+	comfortVentilationEffectDry: "dry",
+	comfortVentilationEffectHumidify: "humidify",
+	comfortVentilationDimensionTemperature: "temperature",
+	comfortVentilationDimensionHumidity: "humidity",
 	hvacModes: {
 		auto: "Авто",
 		cool: "Охлаждение",
@@ -10439,9 +12983,99 @@ var k = [
 		off: "Выкл.",
 		preheating: "Предварительный прогрев",
 		defrosting: "Размораживание"
-	}
+	},
+	comfortDataSources: "Источники данных",
+	comfortModelGuided: "Управляемый психрометрический диапазон",
+	comfortModelGuidedDescription: "Адаптирует относительную влажность во всём диапазоне температур на основе одного опорного диапазона.",
+	comfortModelGuidedReference: "Диапазон влажности служит опорным при {temperature}; Velair адаптирует целевую кривую для других температур.",
+	comfortModelHumidityRequired: "Для выбора этой модели требуется источник влажности.",
+	comfortGuidedHumidityReference: "Опорный диапазон влажности",
+	comfortPreferences: "Настройки комфорта"
 }, St = /* @__PURE__ */ t({ translationTemplate: () => Ct }), Ct = {
 	addBlock: "",
+	comfortAdditionalInformation: "",
+	comfortAdditionalInformationDescription: "",
+	comfortConfiguration: "",
+	comfortConfigurationDescription: "",
+	comfortAir: "",
+	comfortDewPoint: "",
+	comfortDewPointDescription: "",
+	comfortDewPointBelowRoom: "",
+	comfortDewPointAboveRoom: "",
+	comfortAbsoluteHumidity: "",
+	comfortAbsoluteHumidityDescription: "",
+	comfortAbsoluteHumidityNeutral: "",
+	comfortHumidex: "",
+	comfortHumidexDescription: "",
+	comfortHumidexRangeBelow: "",
+	comfortHumidexRangeWithin: "",
+	comfortHumidexRangeAbove: "",
+	comfortHumidexRangeUnknown: "",
+	comfortHumidexScaleAria: "",
+	comfortHumidexWarmerRelation: "",
+	comfortHumidexCoolerRelation: "",
+	comfortHumidexNeutralRelation: "",
+	comfortRangeWithin: "",
+	comfortRangeOutside: "",
+	comfortRangeMixed: "",
+	comfortRangeUnavailable: "",
+	comfortMetricSource: "",
+	comfortMetricSourceVelair: "",
+	comfortMetricSourceEntity: "",
+	comfortMetricEntity: "",
+	comfortMetricSelectEntity: "",
+	comfortMetricStale: "",
+	comfortMetricInvalid: "",
+	comfortInsightCo2Elevated: "",
+	comfortInsightCo2Poor: "",
+	comfortInsightHumidexWarmer: "",
+	comfortOutdoorComparison: "",
+	comfortOutdoorDescription: "",
+	comfortVentilationGuidance: "",
+	comfortVentilationGuidanceDescription: "",
+	comfortVentilationGuidanceDescriptionWithHumidity: "",
+	comfortVentilationTemperatureThreshold: "",
+	comfortVentilationTemperatureThresholdHelp: "",
+	comfortVentilationHumidityThreshold: "",
+	comfortVentilationHumidityThresholdHelp: "",
+	comfortVentilationMoistureThreshold: "",
+	comfortVentilationMoistureThresholdHelp: "",
+	comfortOutdoorTemperatureSensor: "",
+	comfortOutdoorHumiditySensor: "",
+	comfortOutdoorSelectTemperature: "",
+	comfortOutdoorNoHumidity: "",
+	comfortOutdoorTemperatureComparison: "",
+	comfortOutdoorMoistureComparison: "",
+	comfortIndoor: "",
+	comfortOutdoor: "",
+	comfortIndoorAbsoluteHumidity: "",
+	comfortOutdoorAbsoluteHumidity: "",
+	comfortOutdoorEquivalentHumidity: "",
+	comfortOutdoorAdjustedHumidityHelp: "",
+	comfortOutdoorAdjustedHumidityComparisonHelp: "",
+	comfortOutdoorCooler: "",
+	comfortOutdoorWarmer: "",
+	comfortOutdoorSimilar: "",
+	comfortOutdoorDrier: "",
+	comfortOutdoorMoreHumid: "",
+	comfortOutdoorTemperatureDelta: "",
+	comfortOutdoorHumidityLower: "",
+	comfortOutdoorHumidityHigher: "",
+	comfortOutdoorHumiditySimilarDetail: "",
+	comfortPercentagePoint: "",
+	comfortPercentagePoints: "",
+	comfortInsightVentilationCool: "",
+	comfortInsightVentilationWarm: "",
+	comfortInsightVentilationDry: "",
+	comfortInsightVentilationHumidify: "",
+	comfortInsightVentilationTradeoff: "",
+	comfortInsightVentilationTemperatureOnly: "",
+	comfortVentilationEffectCool: "",
+	comfortVentilationEffectWarm: "",
+	comfortVentilationEffectDry: "",
+	comfortVentilationEffectHumidify: "",
+	comfortVentilationDimensionTemperature: "",
+	comfortVentilationDimensionHumidity: "",
 	externalSystems: "",
 	externalSystemsDescription: "",
 	externalControllersInUse: "",
@@ -10462,6 +13096,7 @@ var k = [
 	externalConditionMidnightContinuityCounts: "",
 	externalConditionsUnavailable: "",
 	externalCapability_action_set_temperature: "",
+	externalCapability_action_set_hvac_mode: "",
 	externalCapability_action_turn_off: "",
 	externalCapability_hvac_heat: "",
 	externalCapability_hvac_cool: "",
@@ -10501,6 +13136,10 @@ var k = [
 	externalChangeForDuration: "",
 	externalChangeUntilResumed: "",
 	externalChangePolicySaved: "",
+	targetTempStepFallback: "",
+	targetTempStepFallbackDescription: "",
+	targetTempStepFallbackInfoAction: "",
+	targetTempStepSaved: "",
 	manualAdjustment: "",
 	velairControl: "",
 	automaticScheduling: "",
@@ -10562,6 +13201,152 @@ var k = [
 	blocks: "",
 	build: "",
 	cardView: "",
+	cardViewClimate: "",
+	climateCardConfiguration: "",
+	climateCardConfigurationDescription: "",
+	climateCardManagedClimate: "",
+	climateCardOutdoorSensor: "",
+	climateCardOutdoorSensorDescription: "",
+	climateCardHeaderOptions: "",
+	climateCardShowStateBar: "",
+	climateCardShowName: "",
+	climateCardCustomName: "",
+	climateCardShowOperation: "",
+	climateCardShowCurrentTemperature: "",
+	climateCardShowCurrentHumidity: "",
+	climateCardShowOutdoorTemperature: "",
+	climateCardShowWindows: "",
+	climateCardWindowsDescription: "",
+	climateCardWindowBlueprintLink: "",
+	climateCardTimelineShowTitle: "",
+	climateCardTimelineShowProfile: "",
+	climateCardTimelineShowMode: "",
+	climateCardResetName: "",
+	climateCardActions: "",
+	climateCardShowBoostAction: "",
+	climateCardShowPauseAction: "",
+	climateCardVelairActionsDescription: "",
+	climateCardCustomActions: "",
+	climateCardCustomActionsDescription: "",
+	climateCardActionsOrderDescription: "",
+	climateCardActionPlacement: "",
+	climateCardActionPlacementAuto: "",
+	climateCardActionPlacementMore: "",
+	climateCardActionPlacementAutoDescription: "",
+	climateCardActionPlacementMoreDescription: "",
+	climateCardRemoveCustomAction: "",
+	climateCardExpandAction: "",
+	climateCardCollapseAction: "",
+	climateCardCollapseCurrentState: "",
+	climateCardExpandCurrentState: "",
+	climateCardCollapsedByDefault: "",
+	climateCardCollapseSection: "",
+	climateCardExpandSection: "",
+	climateCardProvidedByVelair: "",
+	climateCardHideActionName: "",
+	climateCardAddCustomAction: "",
+	climateCardNoScripts: "",
+	climateCardCustomActionName: "",
+	climateCardCustomActionScript: "",
+	climateCardCustomActionIcon: "",
+	climateCardCustomActionColor: "",
+	climateCardCustomActionConfirmation: "",
+	climateCardScriptUnavailable: "",
+	climateCardOpenVelairMenu: "",
+	climateCardConfirmScriptAction: "",
+	climateCardScriptExecuted: "",
+	climateCardWindowDisplay: "",
+	climateCardWindowGrouped: "",
+	climateCardWindowIndividual: "",
+	climateCardRoomAssistDisplay: "",
+	climateCardPreconditioningDisplay: "",
+	climateCardDisplayBoth: "",
+	climateCardDisplayChart: "",
+	climateCardDisplayText: "",
+	climateCardAddWindow: "",
+	climateCardThermostatControls: "",
+	climateCardShowControlMode: "",
+	climateCardShowTargetControl: "",
+	climateCardShowHvacModeControl: "",
+	climateCardShowNativeClimateLink: "",
+	climateCardThermostatControlsDescription: "",
+	climateCardTargetTemperature: "",
+	climateCardLowerTarget: "",
+	climateCardUpperTarget: "",
+	climateCardDecreaseTarget: "",
+	climateCardIncreaseTarget: "",
+	climateCardAdjustManually: "",
+	climateCardOpenInHomeAssistant: "",
+	climateCardHumiditySource: "",
+	climateCardHumidityClimateSource: "",
+	climateCardHumiditySourceDescription: "",
+	climateCardOpenMetricHistory: "",
+	climateCardControlsAutomaticHint: "",
+	climateCardManualAdjustmentUnavailable: "",
+	climateCardControlsUnavailable: "",
+	climateCardControlsBlockedBoost: "",
+	climateCardControlsBlockedPause: "",
+	climateCardControlsBlockedStopped: "",
+	climateCardControlsMissingStep: "",
+	climateCardThermostatActionFailed: "",
+	climateCardWindows: "",
+	climateCardShowTimeline: "",
+	climateCardShowComfort: "",
+	climateCardShowCollapsedComfortReadings: "",
+	climateCardShowRoomAssist: "",
+	climateCardShowPreconditioning: "",
+	climateCardShowActions: "",
+	climateCardOpenVelair: "",
+	climateCardAvailable: "",
+	climateCardUnavailable: "",
+	climateCardCurrentState: "",
+	climateCardOutdoor: "",
+	climateCardOutdoorWarmer: "",
+	climateCardOutdoorColder: "",
+	climateCardWindowsOpen: "",
+	climateCardWindowsClosed: "",
+	climateCardWindowsUnavailable: "",
+	climateCardProfilePause: "",
+	climateCardRoomReading: "",
+	climateCardAppliedSetpoint: "",
+	climateCardClimateReading: "",
+	climateCardRoomAssistNotConfigured: "",
+	climateCardRoomAssistDisabled: "",
+	climateCardRoomAssistIdle: "",
+	climateCardRoomAssistReady: "",
+	climateCardRoomAssistAssisting: "",
+	climateCardRoomAssistHolding: "",
+	climateCardRoomAssistBlocked: "",
+	climateCardRoomAssistUnavailable: "",
+	climateCardRoomAssistSummaryNotConfigured: "",
+	climateCardRoomAssistSummaryDisabled: "",
+	climateCardRoomAssistSummaryIdle: "",
+	climateCardRoomAssistSummaryReady: "",
+	climateCardRoomAssistSummaryAssisting: "",
+	climateCardRoomAssistSummaryAssistingAdjusted: "",
+	climateCardRoomAssistSummaryHolding: "",
+	climateCardRoomAssistSummaryBlocked: "",
+	climateCardRoomAssistSummaryUnavailable: "",
+	climateCardPreconditioningActive: "",
+	climateCardExternalManaged: "",
+	climateCardExternalControl: "",
+	climateCardManagePause: "",
+	climateCardConfigureBoost: "",
+	climateCardBoostStarted: "",
+	climateCardBoostCancelled: "",
+	climateCardZonePaused: "",
+	climateCardZoneResumed: "",
+	climateCardActionFailed: "",
+	resumeAutomaticControl: "",
+	cancelBoost: "",
+	more: "",
+	manualControl: "",
+	scheduled: "",
+	enabled: "",
+	unavailable: "",
+	unknown: "",
+	none: "",
+	remove: "",
 	activeSetupCardControls: "",
 	activeSetupCardControlsBoth: "",
 	activeSetupCardControlsDescription: "",
@@ -10651,6 +13436,22 @@ var k = [
 	comfortHumidityRange: "",
 	comfortHumidityRangeHelp: "",
 	comfortHumiditySensor: "",
+	comfortDataSources: "",
+	comfortModel: "",
+	comfortModelGuided: "",
+	comfortModelGuidedDescription: "",
+	comfortModelGuidedReference: "",
+	comfortModelHumidityRequired: "",
+	comfortModelSimple: "",
+	comfortModelSimpleDescription: "",
+	comfortModelTemperatureAware: "",
+	comfortModelTemperatureAwareDescription: "",
+	comfortTemperatureAwareHumidityRanges: "",
+	comfortAtMinimumTemperature: "",
+	comfortAtMaximumTemperature: "",
+	comfortEffectiveHumidityRange: "",
+	comfortGuidedHumidityReference: "",
+	comfortPreferences: "",
 	comfortIntroDetail: "",
 	comfortIntroTitle: "",
 	comfortMaximum: "",
@@ -11324,6 +14125,10 @@ var k = [
 	swingMode: "",
 	temp: "",
 	target: "",
+	deviceControlled: "",
+	useDeviceControlledTarget: "",
+	restoreTemperatureTarget: "",
+	chooseModeForDeviceControlled: "",
 	heatBelow: "",
 	coolAbove: "",
 	temperatureRange: "",
@@ -11349,6 +14154,7 @@ var k = [
 	targetHumidity: "",
 	targetBy: "",
 	targetTemperature: "",
+	includeTargetTemperature: "",
 	todayTimeline: "",
 	updateTemplate: "",
 	templateDeleted: "",
@@ -11422,7 +14228,7 @@ var k = [
 		preheating: "",
 		defrosting: ""
 	}
-}, A = Object.fromEntries(Object.entries(/* @__PURE__ */ Object.assign({
+}, wt = Object.fromEntries(Object.entries(/* @__PURE__ */ Object.assign({
 	"./de.ts": nt,
 	"./en.ts": it,
 	"./es.ts": ot,
@@ -11442,11 +14248,11 @@ var k = [
 //#endregion
 //#region src/velair/i18n.ts
 function j(e) {
-	let t = e?.locale?.language ?? e?.language ?? e?.selectedLanguage ?? "en", n = String(t).toLowerCase().replaceAll("_", "-"), r = Object.keys(A);
+	let t = e?.locale?.language ?? e?.language ?? e?.selectedLanguage ?? "en", n = String(t).toLowerCase().replaceAll("_", "-"), r = Object.keys(wt);
 	return r.find((e) => n === e) || (n === "pt" ? r.includes("pt-pt") ? "pt-pt" : "en" : r.filter((e) => !e.includes("-")).find((e) => n.startsWith(`${e}-`)) ?? "en");
 }
-function wt(e, t, n = {}) {
-	let r = (A[e] ?? A.en)[t] ?? A.en[t];
+function Tt(e, t, n = {}) {
+	let r = (wt[e] ?? wt.en)[t] ?? wt.en[t];
 	if (typeof r != "string") return t;
 	let i = r;
 	return Object.entries(n).forEach(([e, t]) => {
@@ -11454,25 +14260,66 @@ function wt(e, t, n = {}) {
 	}), i;
 }
 function M(e, t) {
-	let n = (A[e] ?? A.en).weekdays, r = A.en.weekdays;
-	return n?.[t] ?? r[t] ?? Ot(t);
+	let n = (wt[e] ?? wt.en).weekdays, r = wt.en.weekdays;
+	return n?.[t] ?? r[t] ?? kt(t);
 }
-function Tt(e, t) {
+function Et(e, t) {
 	return M(e, t).slice(0, 3);
 }
-function Et(e, t, n) {
-	let r = A[e]?.[t], i = A.en[t];
-	return r?.[n] ?? i[n] ?? Dt(n);
-}
-function Dt(e) {
-	return e.split("_").filter(Boolean).map((e) => Ot(e)).join(" ");
+function Dt(e, t, n) {
+	let r = wt[e]?.[t], i = wt.en[t];
+	return r?.[n] ?? i[n] ?? Ot(n);
 }
 function Ot(e) {
+	return e.split("_").filter(Boolean).map((e) => kt(e)).join(" ");
+}
+function kt(e) {
 	return e && e[0].toUpperCase() + e.slice(1);
 }
 //#endregion
+//#region src/velair/domain/temperature-units.ts
+function At(e) {
+	return String(e ?? "").toUpperCase().includes("F");
+}
+function jt(e) {
+	return At(e) ? 70 : 21;
+}
+function Mt(e) {
+	return At(e) ? 1 : .3;
+}
+function Nt(e) {
+	return At(e) ? 4 : 2;
+}
+function Pt(e) {
+	return At(e) ? 1 : .3;
+}
+function Ft(e) {
+	return At(e) ? 14 : 25;
+}
+function It(e, t) {
+	return At(e) ? t * 9 / 5 : t;
+}
+function Lt(e) {
+	return At(e) ? [.6, 66.7] : [1, 120];
+}
+function Rt(e) {
+	return At(e) ? [-58, 212] : [-50, 100];
+}
+function zt(e, t, n) {
+	let r = Vt(t), i = Vt(n);
+	return !r || !i || r === i ? e : r === "F" ? (e - 32) * 5 / 9 : e * 9 / 5 + 32;
+}
+function Bt(e, t, n) {
+	let r = Vt(t), i = Vt(n);
+	return !r || !i || r === i ? e : r === "C" ? e * 9 / 5 : e * 5 / 9;
+}
+function Vt(e) {
+	let t = String(e ?? "").trim().toUpperCase().replace("°", "");
+	return t === "C" || t === "F" ? t : void 0;
+}
+//#endregion
 //#region src/velair/domain/climate.ts
-function kt(e) {
+function Ht(e) {
 	let t = e?.attributes;
 	return JSON.stringify([
 		e?.state ?? "",
@@ -11502,68 +14349,73 @@ function kt(e) {
 		t?.swing_horizontal_modes ?? []
 	]);
 }
-function At(e) {
+function Ut(e) {
 	return e.replaceAll("_", "-");
 }
-function jt(e, t) {
-	let n = qt(t) ? [41, 95] : [5, 35], r = Kt(e?.attributes?.min_temp, n[0]), i = Kt(e?.attributes?.max_temp, n[1]);
-	return r >= i || Jt(r, i, t) ? n : [r, i];
+function Wt(e, t) {
+	let n = cn(t) ? [41, 95] : [5, 35], r = sn(e?.attributes?.min_temp, n[0]), i = sn(e?.attributes?.max_temp, n[1]);
+	return r >= i || ln(r, i, t) ? n : [r, i];
 }
-function Mt(e) {
-	let t = Kt(e?.attributes?.target_temp_step, NaN);
-	return Number.isFinite(t) && t > 0 ? t : void 0;
+function Gt(e, t) {
+	let n = sn(e?.attributes?.target_temp_step, NaN);
+	if (!(!Number.isFinite(n) || n <= 0)) return Bt(n, un(e, t), t);
 }
-function Nt(e, t) {
-	return t === void 0 || !Number.isFinite(t) || t <= 0 ? e : Math.round(Math.ceil(e / t - 1e-6) * t * 1e6) / 1e6;
+function Kt(e, t) {
+	return e;
 }
-function Pt(e) {
+function qt(e, t, n, r = 1e-4) {
+	if (n === void 0 || !Number.isFinite(n) || n <= 0) return !0;
+	let i = (e - t) / n;
+	return Math.abs(i - Math.round(i)) <= r;
+}
+function Jt(e) {
 	let t = e?.attributes?.hvac_modes;
 	return Array.isArray(t) ? t.filter((e) => typeof e == "string") : [];
 }
-function Ft(e) {
+function Yt(e) {
 	let t = e?.attributes;
 	if (!t) return !0;
 	let n = Number(t.supported_features ?? 0);
 	return Number.isFinite(n) && n > 0 ? (n & 1) != 0 : typeof t.temperature == "number" || !("target_temp_low" in t && "target_temp_high" in t);
 }
-function It(e) {
+function Xt(e) {
 	let t = e?.attributes;
 	if (!t) return !1;
 	let n = Number(t.supported_features ?? 0);
 	return Number.isFinite(n) && n > 0 ? (n & 2) != 0 : typeof t.target_temp_low == "number" && Number.isFinite(t.target_temp_low) && typeof t.target_temp_high == "number" && Number.isFinite(t.target_temp_high);
 }
-function Lt(e, t) {
-	return (t || e?.state) === "heat_cool" && It(e);
+function Zt(e, t) {
+	return (t || e?.state) === "heat_cool" && Xt(e);
 }
-function Rt(e, t, n) {
-	let r = t === "range" ? It(e) : Ft(e);
+function Qt(e, t, n) {
+	let r = t === "range" ? Xt(e) : Yt(e);
 	if ((t === "range" || e?.state !== "off") && !r) return !1;
-	let i = (n) => t === "range" ? n === "heat_cool" : n !== "off" && !Lt(e, n) && (e?.state !== "off" || r || n !== "heat_cool"), a = Pt(e);
+	let i = (n) => t === "range" ? n === "heat_cool" : n !== "off" && !Zt(e, n) && (e?.state !== "off" || r || n !== "heat_cool"), a = Jt(e);
 	return n ? a.includes(n) && i(n) : a.some((e) => e !== "off" && i(e));
 }
-function zt(e) {
-	return Yt(e, "fan_modes");
+function $t(e) {
+	return dn(e, "fan_modes");
 }
-function Bt(e) {
-	return Yt(e, "preset_modes");
+function en(e) {
+	return dn(e, "preset_modes");
 }
-function Vt(e) {
-	return Yt(e, "swing_modes");
+function tn(e) {
+	return dn(e, "swing_modes");
 }
-function Ht(e) {
-	return Yt(e, "swing_horizontal_modes");
+function nn(e) {
+	return dn(e, "swing_horizontal_modes");
 }
-function Ut(e) {
-	let t = Kt(e?.attributes?.min_humidity, NaN), n = Kt(e?.attributes?.max_humidity, NaN);
+function rn(e) {
+	let t = sn(e?.attributes?.min_humidity, NaN), n = sn(e?.attributes?.max_humidity, NaN);
 	if (!Number.isFinite(t) && !Number.isFinite(n) && typeof e?.attributes?.humidity != "number") return;
 	let r = Number.isFinite(t) ? t : 0, i = Number.isFinite(n) ? n : 100;
 	return r < i ? [r, i] : void 0;
 }
-function Wt(e) {
+function an(e) {
 	let t = new Set(e);
 	return Ke.filter((e) => t.has(e));
 }
-function Gt(e) {
+function on(e) {
 	let t = e?.attributes ?? {}, n = [];
 	return typeof t.current_temperature == "number" && n.push({
 		icon: "mdi:thermometer",
@@ -11591,83 +14443,286 @@ function Gt(e) {
 		labelKey: "temperatureRange"
 	}), n;
 }
-function Kt(e, t) {
+function sn(e, t) {
 	let n = Number(e);
 	return Number.isFinite(n) ? n : t;
 }
-function qt(e) {
+function cn(e) {
 	return String(e ?? "").toUpperCase().includes("F");
 }
-function Jt(e, t, n) {
-	return qt(n) ? t <= 60 && e < 40 : !!n && (t > 60 || e > 40);
+function ln(e, t, n) {
+	return cn(n) ? t <= 60 && e < 40 : !!n && (t > 60 || e > 40);
 }
-function Yt(e, t) {
+function un(e, t) {
+	let n = e?.attributes?.unit_of_measurement;
+	if (/^[°]?[cf]$/i.test(String(n ?? "").trim())) return String(n);
+	let r = sn(e?.attributes?.min_temp, NaN), i = sn(e?.attributes?.max_temp, NaN);
+	return !t || !Number.isFinite(r) || !Number.isFinite(i) || !ln(r, i, t) ? t : cn(t) ? "°C" : "°F";
+}
+function dn(e, t) {
 	let n = e?.attributes?.[t];
 	return Array.isArray(n) ? n.filter((e) => typeof e == "string") : [];
 }
+function N(e) {
+	let t = _n(e);
+	if (Array.isArray(t.climate_actions)) {
+		let e = /* @__PURE__ */ new Set();
+		return t.climate_actions.flatMap((t) => {
+			let n = _n(t);
+			if (n.type === "boost" || n.type === "pause") return e.has(n.type) ? [] : (e.add(n.type), [{
+				type: n.type,
+				enabled: typeof n.enabled == "boolean" ? n.enabled : !0,
+				...n.hide_name === !0 ? { hide_name: !0 } : {},
+				...gn(n.placement)
+			}]);
+			let r = hn(n);
+			return n.type === "script" && r ? [{
+				type: "script",
+				...r
+			}] : [];
+		});
+	}
+	let n = Array.isArray(t.climate_custom_actions) ? t.climate_custom_actions.flatMap((e) => {
+		let t = hn(_n(e));
+		return t ? [t] : [];
+	}) : [];
+	return [
+		{
+			type: "boost",
+			enabled: t.climate_show_boost_action !== !1
+		},
+		{
+			type: "pause",
+			enabled: t.climate_show_pause_action !== !1
+		},
+		...n.map((e) => ({
+			type: "script",
+			...e
+		}))
+	];
+}
+function fn(e, t, n) {
+	let r = [];
+	return N(e).forEach((e, i) => {
+		if (e.type === "boost") {
+			e.enabled !== !1 && n.velairActionsAvailable && !n.manual && r.push({
+				type: "boost",
+				hideName: e.hide_name === !0,
+				placement: e.placement ?? "auto"
+			});
+			return;
+		}
+		if (e.type === "pause") {
+			e.enabled !== !1 && n.velairActionsAvailable && r.push({
+				type: "pause",
+				hideName: e.hide_name === !0,
+				placement: e.placement ?? "auto"
+			});
+			return;
+		}
+		let a = t?.states?.[e.script];
+		r.push({
+			type: "script",
+			action: e,
+			sourceIndex: i,
+			available: !!(a && a.state !== "unavailable" && a.state !== "unknown"),
+			placement: e.placement ?? "auto"
+		});
+	}), r;
+}
+function pn(e) {
+	let t = [], n = [];
+	return e.forEach((e) => {
+		e.placement === "auto" && t.length < 3 ? t.push(e) : n.push(e);
+	}), {
+		direct: t,
+		overflow: n
+	};
+}
+function mn(e) {
+	return typeof e == "string" && /^script\.[a-z0-9_]+$/.test(e);
+}
+function hn(e) {
+	if (!mn(e.script)) return;
+	let t = e.script.slice(7).replaceAll("_", " ") || e.script;
+	return {
+		name: ((typeof e.name == "string" ? e.name.trim() : "") || t).slice(0, 60),
+		script: e.script,
+		...typeof e.icon == "string" ? { icon: e.icon } : {},
+		...typeof e.color == "string" ? { color: e.color } : {},
+		...typeof e.confirmation == "boolean" ? { confirmation: e.confirmation } : {},
+		...e.hide_name === !0 ? { hide_name: !0 } : {},
+		...gn(e.placement)
+	};
+}
+function gn(e) {
+	return e === "auto" || e === "more" ? { placement: e } : {};
+}
+function _n(e) {
+	return typeof e == "object" && e && !Array.isArray(e) ? e : {};
+}
+//#endregion
+//#region src/velair/domain/climate-card.ts
+var vn = new Set([
+	"heating",
+	"cooling",
+	"drying",
+	"fan",
+	"idle",
+	"off",
+	"preheating",
+	"defrosting"
+]);
+function yn(e, t) {
+	return e.zones[t]?.execution?.type === "external" ? "external" : e.zone_runtime?.[t]?.control_mode === "manual" ? "manual" : "automatic";
+}
+function bn(e, t) {
+	return [
+		e.selected_entity && t.includes(e.selected_entity) ? e.selected_entity : t[0],
+		e.climate_show_current_humidity === !1 ? void 0 : e.climate_humidity_entity,
+		e.climate_show_outdoor_temperature === !1 ? void 0 : e.climate_outdoor_temperature_entity,
+		...e.climate_show_windows === !1 ? [] : e.climate_window_entities ?? [],
+		...xn(e)
+	].filter((e) => !!e);
+}
+function xn(e) {
+	return N(e).filter((e) => e.type === "script").map((e) => e.script);
+}
+function Sn(e) {
+	return e && e.state !== "unknown" && e.state !== "unavailable" ? "available" : "unavailable";
+}
+function Cn(e) {
+	return JSON.stringify({
+		state: e?.state,
+		attributes: e?.attributes
+	});
+}
+function wn(e, t) {
+	return t.map((t) => {
+		let n = e?.states?.[t], r = n?.state;
+		return {
+			entityId: t,
+			name: n?.attributes?.friendly_name ?? t,
+			state: r === "on" || r === "open" ? "open" : r === "off" || r === "closed" ? "closed" : "unavailable"
+		};
+	});
+}
+function Tn(e, t) {
+	if (!t) return;
+	let n = Number(e?.states?.[t]?.state);
+	return Number.isFinite(n) ? n : void 0;
+}
+function En(e) {
+	return !e?.enabled || e.data_quality === "unavailable" || e.condition === "no_readings" ? "muted" : e.range_summary ? e.range_summary.status === "within_range" ? "good" : e.range_summary.status === "mixed" ? "info" : e.range_summary.status === "outside_range" ? "warning" : "muted" : e.condition === "comfortable" || e.condition.endsWith("_comfortable") ? "good" : e.condition.includes("hot") || e.condition.includes("cold") ? "bad" : "warning";
+}
+function Dn(e) {
+	if (!e || e.state === "unavailable" || e.state === "unknown") return "unavailable";
+	let t = e.state || "off";
+	if (t === "off") return "off";
+	let n = e.attributes?.hvac_action;
+	return n && vn.has(n) ? n : t;
+}
+function On(e) {
+	return {
+		heat: "mdi:fire",
+		cool: "mdi:snowflake",
+		heat_cool: "mdi:sun-snowflake-variant",
+		auto: "mdi:thermostat-auto",
+		dry: "mdi:water-percent",
+		fan_only: "mdi:fan",
+		off: "mdi:power"
+	}[e] ?? "mdi:thermostat";
+}
+function kn(e) {
+	return {
+		heating: "mdi:fire",
+		cooling: "mdi:snowflake",
+		drying: "mdi:water-percent",
+		fan: "mdi:fan",
+		idle: "mdi:thermostat",
+		off: "mdi:power",
+		preheating: "mdi:radiator",
+		defrosting: "mdi:snowflake-melt",
+		unavailable: "mdi:alert-circle-outline"
+	}[e] ?? "mdi:thermostat";
+}
 //#endregion
 //#region src/velair/domain/settings.ts
-function Xt(e) {
+function An(e) {
 	let t = e.first_weekday ?? e.selected_weekday ?? "monday";
 	return k.includes(t) ? t : "monday";
 }
-function Zt(e) {
+function jn(e) {
 	let t = k.indexOf(e);
 	return t <= 0 ? [...k] : [...k.slice(t), ...k.slice(0, t)];
 }
-function Qt(e, t = []) {
+function Mn(e, t = []) {
 	let n = new Set(e), r = t.filter((e) => n.has(e)), i = e.filter((e) => !r.includes(e));
 	return [...r, ...i];
 }
-function $t(e, t) {
-	let n = Qt(e, t.zone_order), r = t.entities?.filter(Boolean) ?? [];
+function Nn(e, t) {
+	let n = Mn(e, t.zone_order), r = t.entities?.filter(Boolean) ?? [];
 	if (!r.length) return n;
 	let i = new Set(r);
 	return n.filter((e) => i.has(e));
 }
-function en(e) {
+function Pn(e) {
 	return e.length ? [Math.min(...e.map(([e]) => e)), Math.max(...e.map(([, e]) => e))] : [5, 35];
 }
-function tn(e) {
-	let t = e.filter((e) => e !== void 0 && Number.isFinite(e) && e > 0);
-	if (!(t.length !== e.length || !t.length)) return t.every((e) => Math.abs(e - t[0]) <= 1e-9) ? t[0] : void 0;
+function Fn(e, t) {
+	let n = e.filter((e) => e !== void 0 && Number.isFinite(e) && e > 0);
+	if (!(n.length !== e.length || !n.length) && n.every((e) => Math.abs(e - n[0]) <= 1e-9)) {
+		if (t?.length === n.length) {
+			let e = Math.min(...t);
+			if (!t.every((t) => {
+				let r = (t - e) / n[0];
+				return Math.abs(r - Math.round(r)) <= 1e-6;
+			})) return;
+		}
+		return n[0];
+	}
 }
-function nn(e) {
+function In(e) {
 	return e.toFixed(e % 1 == 0 ? 0 : 1);
 }
-function rn(e, t, n) {
+function Ln(e, t, n) {
 	let r = new Set(e);
 	return n ? r.add(t) : r.delete(t), r;
 }
 //#endregion
 //#region src/velair/controllers/card-context.ts
-function N(e) {
+function P(e) {
 	return e;
 }
-function an(e) {
+function Rn(e) {
 	return e.currentTarget.value;
 }
-function on(e) {
+function zn(e) {
 	return e === "profiles" || $e.includes(e) || et.includes(e);
 }
-function sn(e, t, n) {
-	return on(e) ? e === "profiles" ? "modes" : e : on(n) ? n === "profiles" ? "modes" : n : on(t) ? t === "profiles" ? "modes" : t : "overview-status";
+function Bn(e, t, n) {
+	return zn(e) ? e === "profiles" ? "modes" : e : zn(n) ? n === "profiles" ? "modes" : n : zn(t) ? t === "profiles" ? "modes" : t : "overview-status";
 }
-function cn(e, t, n) {
+function Vn(e, t, n) {
 	if (!t) return !1;
 	if (!n) return !0;
-	let r = $t(e._data?.configured_entities ?? [], e._config);
-	return r.length ? r.some((e) => kt(t.states?.[e]) !== kt(n.states?.[e])) : !1;
+	let r = Nn(e._data?.configured_entities ?? [], e._config);
+	if (!r.length) return !1;
+	if (e._config.view === "climate") {
+		let r = new Set(xn(e._config));
+		return bn(e._config, e._data?.configured_entities ?? []).some((e) => r.has(e) ? Sn(t.states?.[e]) !== Sn(n.states?.[e]) : Cn(t.states?.[e]) !== Cn(n.states?.[e]));
+	}
+	return r.some((e) => Ht(t.states?.[e]) !== Ht(n.states?.[e]));
 }
-function ln(e, t, n) {
+function Hn(e, t, n) {
 	if (!t || !n || !e._data) return !1;
-	let r = new Set($t(e._data.configured_entities, e._config));
+	let r = new Set(Nn(e._data.configured_entities, e._config));
 	return Object.entries(e._data.zones).some(([e, i]) => {
 		if (!r.has(e)) return !1;
 		let a = i.preconditioning;
 		if (!a?.enabled && !a?.room_sensor_assist_enabled) return !1;
-		if (un(t, e) !== un(n, e)) return !0;
-		let o = dn(t, e) !== dn(n, e);
+		if (Un(t, e) !== Un(n, e)) return !0;
+		let o = Wn(t, e) !== Wn(n, e);
 		if (a?.room_sensor_assist_enabled && o) return !0;
 		let s = a?.room_temperature_entity_id;
 		if (a?.room_sensor_assist_enabled && s && t.states?.[s]?.state !== n.states?.[s]?.state) return !0;
@@ -11675,124 +14730,210 @@ function ln(e, t, n) {
 		return !!(c && t.states?.[c]?.state !== n.states?.[c]?.state);
 	});
 }
-function un(e, t) {
+function Un(e, t) {
 	return e.states?.[t]?.attributes?.current_temperature ?? null;
 }
-function dn(e, t) {
+function Wn(e, t) {
 	return e.states?.[t]?.attributes?.temperature ?? null;
 }
-function fn(e) {
+function Gn(e) {
 	return j(e.hass);
 }
-function pn(e, t, n = {}) {
-	return wt(fn(e), t, n);
+function Kn(e, t, n = {}) {
+	return Tt(Gn(e), t, n);
 }
-function mn(e, t) {
-	return M(fn(e), t);
+function qn(e, t) {
+	return M(Gn(e), t);
 }
-function hn(e, t) {
-	return Tt(fn(e), t);
+function Jn(e, t) {
+	return Et(Gn(e), t);
 }
-function gn(e, t, n) {
-	return Et(fn(e), t, n);
+function Yn(e, t, n) {
+	return Dt(Gn(e), t, n);
 }
-function _n(e) {
-	return Xt(e._config);
+function Xn(e) {
+	return An(e._config);
 }
-function vn(e) {
-	return Zt(_n(e));
+function Zn(e) {
+	return jn(Xn(e));
 }
-function yn(e, t) {
-	return Qt(t, e._config.zone_order);
+function Qn(e, t) {
+	return Mn(t, e._config.zone_order);
 }
-function bn(e, t) {
-	return $t(t, e._config);
+function $n(e, t) {
+	return Nn(t, e._config);
 }
 //#endregion
 //#region src/velair/domain/diagnostics-history.ts
-var xn = Symbol("velair-system-source"), Sn = {
+var er = Symbol("velair-system-source"), tr = {
 	sources: null,
 	category: "all",
 	from: "",
 	to: ""
 };
-function Cn(e) {
-	let t = Dn(e.from), n = Dn(e.to, !0);
+function nr(e) {
+	let t = or(e.from), n = or(e.to, !0);
 	return t === void 0 || n === void 0 || t <= n;
 }
-function wn(e, t) {
-	if (!Cn(t)) return [];
-	let n = Dn(t.from), r = Dn(t.to, !0);
+function rr(e, t) {
+	if (!nr(t)) return [];
+	let n = or(t.from), r = or(t.to, !0);
 	return e.filter((e) => {
 		let i = Date.parse(e.at);
 		if (t.sources !== null) {
-			let n = e.entity_id ?? xn;
+			let n = e.entity_id ?? er;
 			if (!t.sources.has(n)) return !1;
 		}
 		return !(t.category !== "all" && e.category !== t.category || n !== void 0 && i < n || r !== void 0 && i > r);
 	});
 }
-function Tn(e) {
+function ir(e) {
 	return e.sources !== null || e.category !== "all" || e.from !== "" || e.to !== "";
 }
-function En(e, t) {
+function ar(e, t) {
 	if (e.sources === null) return e;
-	let n = new Set([xn, ...t]), r = new Set([...e.sources].filter((e) => n.has(e)));
+	let n = new Set([er, ...t]), r = new Set([...e.sources].filter((e) => n.has(e)));
 	return {
 		...e,
 		sources: r.size === n.size ? null : r
 	};
 }
-function Dn(e, t = !1) {
+function or(e, t = !1) {
 	if (!e) return;
 	let n = new Date(e).getTime();
 	if (Number.isFinite(n)) return t && /T\d{2}:\d{2}$/.test(e) ? n + 59999 : n;
 }
 //#endregion
+//#region src/velair/domain/climate-card-menu.ts
+var sr = 8, cr = 6, lr = 220, ur = 320;
+function dr(e, t, n, r) {
+	let i = r.left + r.width, a = r.top + r.height, o = Math.max(0, r.width - sr * 2), s = Math.min(o, Math.max(lr, Math.min(ur, t || e.width))), c = Math.max(0, a - sr - e.bottom - cr), l = Math.max(0, e.top - cr - r.top - sr), u = c >= n || c >= l ? "down" : "up", d = Math.max(0, Math.min(n, u === "down" ? c : l)), f = e.right - s, p = Math.min(Math.max(f, r.left + sr), Math.max(r.left + sr, i - sr - s)), m = u === "down" ? e.bottom + cr : e.top - cr - d;
+	return {
+		left: p,
+		top: Math.min(Math.max(m, r.top + sr), Math.max(r.top + sr, a - sr - d)),
+		width: s,
+		maxHeight: d,
+		placement: u
+	};
+}
+function fr(e) {
+	let t = typeof e == "string" ? e.trim() : void 0;
+	return t && /^mdi:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(t) ? t : void 0;
+}
+function pr(e) {
+	let t = typeof e == "string" ? e.trim() : void 0;
+	return t && /^#[0-9a-f]{6}$/i.test(t) ? t : void 0;
+}
+function mr(e) {
+	let t = e?.attributes;
+	if (!t) return;
+	let n = br(t.target_temp_low), r = br(t.target_temp_high);
+	if (Zt(e)) return n !== void 0 && r !== void 0 && n <= r ? {
+		kind: "range",
+		low: n,
+		high: r
+	} : void 0;
+	if (!Yt(e)) return;
+	let i = br(t.temperature);
+	return i === void 0 ? void 0 : {
+		kind: "single",
+		temperature: i
+	};
+}
+function hr(e, t, n) {
+	let r = br(e?.attributes?.min_temp), i = br(e?.attributes?.max_temp), a = br(n) ?? br(e?.attributes?.target_temp_step) ?? xr(t);
+	return r !== void 0 && i !== void 0 && a !== void 0 && r < i && a > 0 ? {
+		minimum: r,
+		maximum: i,
+		step: a
+	} : void 0;
+}
+function gr(e, t, n, r, i) {
+	let a = mr(e), o = hr(e, r, i);
+	if (!a || !o) return;
+	if (a.kind === "single") {
+		if (t !== "temperature") return;
+		let e = yr(a.temperature, n, o);
+		return e === void 0 ? void 0 : { temperature: e };
+	}
+	if (t === "temperature") return;
+	if (t === "target_temp_low") {
+		let e = yr(a.low, n, o);
+		return e === void 0 || e > a.high ? void 0 : {
+			target_temp_low: e,
+			target_temp_high: a.high
+		};
+	}
+	let s = yr(a.high, n, o);
+	if (!(s === void 0 || s < a.low)) return {
+		target_temp_low: a.low,
+		target_temp_high: s
+	};
+}
+function _r(e) {
+	return [...new Set(Jt(e))];
+}
+function vr(e, t) {
+	return t ? t.state === "boost" || t.state === "stopped" ? !0 : t.state === "paused" ? !(e === "manual" && t.pause_count === 1 && t.pause_ids?.length === 1 && t.pause_ids[0] === "velair.manual_adjustment") : !1 : !1;
+}
+function yr(e, t, n) {
+	let r = (e - n.minimum) / n.step, i = 1e-7, a = t > 0 ? Math.floor(r + i) + 1 : Math.ceil(r - i) - 1, o = Sr(n.minimum + a * n.step);
+	if (!(o < n.minimum - i || o > n.maximum + i)) return Math.min(n.maximum, Math.max(n.minimum, o));
+}
+function br(e) {
+	return typeof e == "number" && Number.isFinite(e) ? e : void 0;
+}
+function xr(e) {
+	if (e) return e.toUpperCase().includes("F") ? 1 : .5;
+}
+function Sr(e) {
+	return Math.round(e * 1e6) / 1e6;
+}
+//#endregion
 //#region src/velair/domain/diagnostics-log-layout.ts
-var On = {
+var Cr = {
 	time: 180,
 	climate: 96,
 	type: 96
-}, kn = {
+}, wr = {
 	time: 180,
 	climate: 96,
 	type: 96
-}, An = {
+}, Tr = {
 	time: 300,
 	climate: 320,
 	type: 280
 };
-function jn(e) {
+function Er(e) {
 	return Math.max(0, e - 22);
 }
-function Mn(e, t, n) {
+function Dr(e, t, n) {
 	let r = Object.entries(e).filter(([e]) => e !== t).reduce((e, [, t]) => e + t, 0);
-	return Math.min(An[t], Math.max(kn[t], n - r - 180 - 36));
+	return Math.min(Tr[t], Math.max(wr[t], n - r - 180 - 36));
 }
-function Nn(e, t, n, r) {
-	let i = Mn(e, t, r);
+function Or(e, t, n, r) {
+	let i = Dr(e, t, r);
 	return {
 		...e,
-		[t]: Math.min(i, Math.max(kn[t], n))
+		[t]: Math.min(i, Math.max(wr[t], n))
 	};
 }
-function Pn(e, t) {
-	let n = Object.fromEntries(Object.keys(e).map((t) => [t, Math.min(An[t], Math.max(kn[t], e[t]))])), r = Object.values(n).reduce((e, t) => e + t, 0) + 180 + 36 - t;
+function kr(e, t) {
+	let n = Object.fromEntries(Object.keys(e).map((t) => [t, Math.min(Tr[t], Math.max(wr[t], e[t]))])), r = Object.values(n).reduce((e, t) => e + t, 0) + 180 + 36 - t;
 	for (let e of [
 		"type",
 		"climate",
 		"time"
 	]) {
 		if (r <= 0) break;
-		let t = n[e] - kn[e], i = Math.min(r, t);
+		let t = n[e] - wr[e], i = Math.min(r, t);
 		n[e] -= i, r -= i;
 	}
 	return n;
 }
 //#endregion
 //#region src/velair/styles/base-styles.ts
-var Fn = u`
+var Ar = u`
   :host {
     display: block;
     max-width: 100%;
@@ -11998,7 +15139,7 @@ var Fn = u`
     min-height: 34px;
     padding: 6px 10px;
   }
-`, In = u`
+`, jr = u`
 .comfort-view {
   display: grid;
   gap: 12px;
@@ -12143,6 +15284,7 @@ var Fn = u`
 .comfort-assessment-line {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -12159,6 +15301,7 @@ var Fn = u`
 .comfort-condition-pill.condition-comfortable,
 .comfort-condition-pill.condition-temperature_comfortable,
 .comfort-condition-pill.condition-humidity_comfortable,
+.comfort-condition-pill.range-within_range,
 .comfort-air-pill.air-good {
   border-color: color-mix(in srgb, var(--success-color, #43a047) 28%, var(--divider-color));
   color: var(--success-color, #43a047);
@@ -12194,6 +15337,31 @@ var Fn = u`
   font-weight: 700;
   padding: 4px 8px;
   white-space: nowrap;
+}
+
+.comfort-humidex-pill {
+  border: 1px solid var(--divider-color);
+  border-radius: 999px;
+  color: var(--secondary-text-color);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.comfort-humidex-pill.position-below {
+  border-color: color-mix(in srgb, var(--info-color, #039be5) 35%, var(--divider-color));
+  color: var(--info-color, #0277bd);
+}
+
+.comfort-humidex-pill.position-within {
+  border-color: color-mix(in srgb, var(--success-color, #43a047) 28%, var(--divider-color));
+  color: var(--success-color, #43a047);
+}
+
+.comfort-humidex-pill.position-above {
+  border-color: color-mix(in srgb, var(--warning-color, #f9ab00) 35%, var(--divider-color));
+  color: var(--warning-color, #b26a00);
 }
 
 .comfort-zone-content {
@@ -12232,37 +15400,726 @@ var Fn = u`
   gap: 6px;
 }
 
+.comfort-assessment-heading-pills {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .comfort-data-warning {
   align-items: center;
   color: var(--warning-color, #b26a00);
-  cursor: help;
   display: inline-flex;
-  position: relative;
 }
 
-.comfort-data-warning ha-icon {
-  --mdc-icon-size: 17px;
+.comfort-condition-pill.range-mixed {
+  border-color: color-mix(in srgb, var(--info-color, #039be5) 35%, var(--divider-color));
+  color: var(--info-color, #0277bd);
 }
 
-.comfort-data-warning:hover .comfort-help-tooltip,
-.comfort-data-warning:focus .comfort-help-tooltip,
-.comfort-data-warning:focus-visible .comfort-help-tooltip {
-  display: block;
+.comfort-condition-pill.range-outside_range {
+  border-color: color-mix(in srgb, var(--warning-color, #f9ab00) 35%, var(--divider-color));
+  color: var(--warning-color, #b26a00);
 }
 
-.comfort-data-warning .comfort-help-tooltip {
-  left: auto;
-  max-width: min(260px, calc(100vw - 32px));
-  overflow-wrap: anywhere;
-  right: 0;
-  text-align: left;
-  transform: none;
-  white-space: normal;
+.comfort-data-warning .inline-help {
+  color: inherit;
 }
 
 .comfort-visuals {
   display: grid;
   gap: 12px;
+}
+
+.comfort-insights {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.comfort-insight-context {
+  align-items: center;
+  border-radius: 8px;
+  display: grid;
+  min-width: 0;
+}
+
+.comfort-insight-context ha-icon {
+  --mdc-icon-size: 19px;
+  color: var(--secondary-text-color);
+}
+
+.comfort-insight-context-list {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.comfort-insight-context {
+  background: var(--card-background-color);
+  border: 1px solid var(--divider-color);
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  gap: 7px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  line-height: 1.35;
+  padding: 8px 9px;
+}
+
+.comfort-insight-context.tone-attention ha-icon,
+.comfort-insight-context.tone-warm ha-icon { color: var(--warning-color, #f9ab00); }
+.comfort-insight-context.tone-cool ha-icon { color: var(--info-color, #039be5); }
+.comfort-insight-context.tone-positive ha-icon { color: var(--success-color, #2e7d32); }
+.comfort-insight-context.tone-critical ha-icon { color: var(--error-color, #d93025); }
+
+.comfort-config-description {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: -3px 0 11px;
+}
+
+.comfort-configuration {
+  background: var(--secondary-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.comfort-configuration > summary {
+  align-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  list-style: none;
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+.comfort-configuration > summary::-webkit-details-marker {
+  display: none;
+}
+
+.comfort-configuration > summary:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -3px;
+}
+
+.comfort-configuration-summary {
+  align-items: center;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.comfort-configuration-summary > ha-icon {
+  --mdc-icon-size: 20px;
+  color: var(--primary-color);
+}
+
+.comfort-configuration-summary > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.comfort-configuration-summary strong {
+  color: var(--primary-text-color);
+  font-size: 13px;
+}
+
+.comfort-configuration-summary small {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.comfort-configuration-chevron {
+  --mdc-icon-size: 20px;
+  color: var(--secondary-text-color);
+  transform: rotate(-90deg);
+  transition: transform 160ms ease;
+}
+
+.comfort-configuration[open] .comfort-configuration-chevron {
+  transform: rotate(0);
+}
+
+.comfort-configuration-content {
+  border-top: 1px solid var(--divider-color);
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.comfort-derived-visual-section {
+  border-top: 1px solid var(--divider-color);
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.comfort-outdoor-comparison {
+  border-top: 1px solid var(--divider-color);
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+  padding-top: 10px;
+}
+
+.comfort-outdoor-comparison > h3 {
+  align-items: center;
+  color: var(--secondary-text-color);
+  display: flex;
+  font-size: 13px;
+  gap: 6px;
+  margin: 0;
+}
+
+.comfort-outdoor-comparison > h3 ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-outdoor-grid {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.comfort-outdoor-cell {
+  align-content: start;
+  background: var(--card-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 8px;
+  display: grid;
+  gap: 7px;
+  grid-auto-rows: max-content;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.comfort-outdoor-cell > header {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  line-height: 1.3;
+}
+
+.comfort-outdoor-cell > header ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-outdoor-cell > header strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.comfort-outdoor-data {
+  display: grid;
+  grid-auto-rows: minmax(32px, auto);
+  line-height: 1.35;
+  row-gap: 0;
+}
+
+.comfort-outdoor-cell dl {
+  display: contents;
+  margin: 0;
+}
+
+.comfort-outdoor-cell dl > div {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 32px;
+  min-width: 0;
+}
+
+.comfort-outdoor-cell dt,
+.comfort-outdoor-cell p {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.comfort-outdoor-cell dd {
+  color: var(--primary-text-color);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.comfort-outdoor-adjusted-label {
+  align-items: center;
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+}
+
+.comfort-outdoor-adjusted-label > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.comfort-outdoor-cell p {
+  align-items: center;
+  display: flex;
+  margin: 0;
+  min-height: 32px;
+}
+
+.comfort-outdoor-config-section > header {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.comfort-outdoor-config-section > header > span {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+
+.comfort-outdoor-config-section > header ha-icon {
+  --mdc-icon-size: 20px;
+  color: var(--primary-color);
+}
+
+.comfort-outdoor-config-section > header strong {
+  font-size: 13px;
+}
+
+.comfort-outdoor-config-section > .comfort-config-description {
+  margin: 5px 0 10px;
+}
+
+.comfort-outdoor-config-rows {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.comfort-ventilation-guidance-config {
+  border-top: 1px solid var(--divider-color);
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.comfort-ventilation-guidance-config > h4 {
+  align-items: center;
+  color: var(--secondary-text-color);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  margin: 0;
+}
+
+.comfort-ventilation-guidance-config > h4 ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-ventilation-guidance-rows {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+}
+
+.comfort-ventilation-guidance-rows .comfort-number-field-single small {
+  display: none;
+}
+
+.comfort-derived-visual-section > h3 {
+  align-items: center;
+  color: var(--secondary-text-color);
+  display: flex;
+  font-size: 0.8rem;
+  gap: 6px;
+  margin: 0;
+}
+
+.comfort-derived-visual-section > h3 ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-derived-visual-list {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  min-width: 0;
+}
+
+.comfort-derived-reading {
+  background: var(--card-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 8px;
+  display: grid;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.comfort-derived-reading > header {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  margin-bottom: 7px;
+  min-width: 0;
+}
+
+.comfort-derived-summary-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.comfort-derived-summary-row > header {
+  align-items: center;
+  display: grid;
+  flex: 1 1 150px;
+  gap: 7px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.comfort-derived-summary-row > header > ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-derived-summary-value {
+  flex: 0 1 auto;
+  font-size: 1rem;
+  line-height: 1.2;
+  margin-left: auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.comfort-derived-detail {
+  color: var(--secondary-text-color);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.comfort-derived-reading > header > ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-derived-config-list {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.comfort-derived-config {
+  align-self: start;
+  background: var(--card-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 8px;
+  height: auto;
+  overflow: hidden;
+}
+
+.comfort-derived-config > header {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.comfort-derived-config > header > ha-icon {
+  --mdc-icon-size: 20px;
+  color: var(--primary-color);
+}
+
+.comfort-derived-title {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.comfort-derived-title strong {
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comfort-derived-title .inline-help {
+  flex: 0 0 auto;
+}
+
+.comfort-derived-config-section .comfort-derived-title strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.comfort-derived-body {
+  border-top: 1px solid var(--divider-color);
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.comfort-derived-reading-value {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.comfort-derived-reading-value small {
+  color: var(--secondary-text-color);
+  font-size: 0.72rem;
+}
+
+.comfort-derived-current {
+  color: var(--primary-text-color);
+  font-size: 1rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comfort-derived-current:not(.availability-current) {
+  color: var(--secondary-text-color);
+  font-size: 0.86rem;
+}
+
+.comfort-derived-visual {
+  color: var(--primary-text-color);
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.comfort-derived-visual > small,
+.comfort-derived-endpoint small {
+  color: var(--secondary-text-color);
+  font-size: 0.72rem;
+}
+
+.comfort-derived-visual > strong,
+.comfort-derived-endpoint strong {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) {
+  color: var(--secondary-text-color);
+  opacity: 0.72;
+}
+
+.comfort-derived-relation {
+  color: var(--secondary-text-color);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.comfort-humidex-comparison {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  min-width: 0;
+}
+
+.comfort-derived-endpoint {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.comfort-derived-endpoint.humidex {
+  text-align: right;
+}
+
+.comfort-humidex-delta {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--divider-color));
+  border-radius: 999px;
+  color: var(--secondary-text-color);
+  display: inline-flex;
+  gap: 3px;
+  justify-content: center;
+  min-width: 0;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.comfort-humidex-delta ha-icon {
+  --mdc-icon-size: 14px;
+}
+
+.comfort-humidex-delta strong {
+  font-size: 0.74rem;
+  line-height: 1;
+}
+
+.comfort-derived-visual.tone-warm .comfort-humidex-delta {
+  color: color-mix(in srgb, var(--warning-color, #f9ab00) 72%, var(--primary-text-color));
+}
+
+.comfort-derived-visual.tone-cool .comfort-humidex-delta {
+  color: color-mix(in srgb, var(--primary-color) 68%, var(--primary-text-color));
+}
+
+.comfort-humidex-scale {
+  display: grid;
+  gap: 3px 8px;
+  grid-template-areas:
+    "air plot"
+    "humidex plot"
+    ". domain"
+    "status status";
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 24px 24px auto auto;
+  margin-top: 5px;
+  min-width: 0;
+}
+
+.comfort-humidex-scale-label {
+  align-self: center;
+  color: var(--secondary-text-color);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.comfort-humidex-scale-label.air { grid-area: air; }
+.comfort-humidex-scale-label.humidex { grid-area: humidex; }
+
+.comfort-humidex-scale-plot {
+  grid-area: plot;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.comfort-humidex-scale-plot::before,
+.comfort-humidex-scale-plot::after {
+  background: var(--divider-color);
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.comfort-humidex-scale-plot::before { top: 25%; }
+.comfort-humidex-scale-plot::after { top: 75%; }
+
+.comfort-humidex-range-band {
+  background: color-mix(in srgb, var(--success-color, #43a047) 10%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--success-color, #43a047) 45%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--success-color, #43a047) 45%, transparent);
+  bottom: 2px;
+  left: var(--comfort-band-start);
+  position: absolute;
+  top: 2px;
+  width: calc(var(--comfort-band-end) - var(--comfort-band-start));
+}
+
+.comfort-humidex-connector {
+  border-top: 1px dashed color-mix(in srgb, var(--secondary-text-color) 65%, transparent);
+  left: var(--comfort-connector-start);
+  position: absolute;
+  top: 50%;
+  width: var(--comfort-connector-width);
+}
+
+.comfort-humidex-marker {
+  border: 2px solid var(--card-background-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--divider-color);
+  height: 8px;
+  left: var(--comfort-air-position);
+  position: absolute;
+  top: 25%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+}
+
+.comfort-humidex-marker.air.condition-cold { background: var(--info-color, #039be5); }
+.comfort-humidex-marker.air.condition-comfortable { background: var(--success-color, #43a047); }
+.comfort-humidex-marker.air.condition-hot { background: var(--error-color, #d93025); }
+.comfort-humidex-marker.air.condition-neutral { background: var(--secondary-text-color); }
+
+.comfort-humidex-marker.humidex {
+  left: var(--comfort-humidex-position);
+  top: 75%;
+}
+
+.comfort-humidex-marker.humidex.position-below { background: var(--info-color, #039be5); }
+.comfort-humidex-marker.humidex.position-within { background: var(--success-color, #43a047); }
+.comfort-humidex-marker.humidex.position-above { background: var(--warning-color, #f9ab00); }
+.comfort-humidex-marker.humidex.position-neutral { background: var(--secondary-text-color); }
+
+.comfort-humidex-scale-domain {
+  color: var(--secondary-text-color);
+  display: grid;
+  font-size: 0.66rem;
+  gap: 4px;
+  grid-area: domain;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.comfort-humidex-scale-domain span:nth-child(2) {
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comfort-humidex-scale-status {
+  color: var(--secondary-text-color);
+  font-size: 0.7rem;
+  grid-area: status;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.comfort-humidex-scale-status.position-below { color: var(--info-color, #039be5); }
+.comfort-humidex-scale-status.position-within { color: var(--success-color, #43a047); }
+.comfort-humidex-scale-status.position-above { color: var(--warning-color, #b26a00); }
+
+.comfort-derived-source {
+  box-sizing: border-box;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  padding: 0 10px 10px;
+}
+
+.comfort-derived-source-row {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .comfort-map {
@@ -12325,9 +16182,22 @@ var Fn = u`
   border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 48%, var(--divider-color));
   border-radius: 5px;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success-color, #43a047) 9%, transparent);
-  inset: 33.333%;
   position: absolute;
   z-index: 1;
+}
+
+.comfort-map-zone.simple {
+  inset: 33.333%;
+}
+
+.comfort-map-zone.shaped {
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--comfort-zone-polygon);
+  filter: drop-shadow(
+    0 0 1px color-mix(in srgb, var(--success-color, #43a047) 72%, var(--divider-color))
+  );
+  inset: 0;
 }
 
 .comfort-map-regions {
@@ -12630,8 +16500,16 @@ var Fn = u`
   display: flex;
   gap: 8px;
   justify-content: center;
-  min-height: 96px;
   padding: 12px;
+}
+
+.comfort-range-scale.unclassified {
+  gap: 0;
+}
+
+.comfort-map-legend .comfort-effective-range {
+  flex-basis: 100%;
+  justify-content: center;
 }
 
 .comfort-no-readings ha-icon {
@@ -12641,13 +16519,20 @@ var Fn = u`
 .comfort-config-section h3 {
   align-items: center;
   display: flex;
-  font-size: 0.9rem;
+  font-size: 13px;
   gap: 6px;
   margin: 0 0 10px;
 }
 
 .comfort-config-section h3 ha-icon {
   color: var(--primary-color);
+}
+
+.comfort-config-subheading {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 6px;
 }
 
 .comfort-config-rows {
@@ -12667,49 +16552,9 @@ var Fn = u`
   align-items: center;
   color: var(--secondary-text-color);
   display: flex;
-  font-size: 0.78rem;
+  font-size: 12px;
   font-weight: 700;
   gap: 5px;
-}
-
-.comfort-help {
-  align-items: center;
-  cursor: help;
-  display: inline-flex;
-  position: relative;
-}
-
-.comfort-help ha-icon {
-  --mdc-icon-size: 16px;
-}
-
-.comfort-help-tooltip {
-  background: var(--primary-text-color);
-  border-radius: 6px;
-  bottom: calc(100% + 8px);
-  box-sizing: border-box;
-  color: var(--card-background-color);
-  display: none;
-  font-size: 0.76rem;
-  font-weight: 500;
-  left: auto;
-  line-height: 1.35;
-  max-width: min(260px, calc(100vw - 32px));
-  overflow-wrap: anywhere;
-  padding: 7px 9px;
-  position: absolute;
-  right: 0;
-  text-align: left;
-  transform: none;
-  white-space: normal;
-  width: max-content;
-  z-index: 20;
-}
-
-.comfort-help:hover .comfort-help-tooltip,
-.comfort-help:focus .comfort-help-tooltip,
-.comfort-help:focus-visible .comfort-help-tooltip {
-  display: block;
 }
 
 .comfort-selected-entity {
@@ -12793,7 +16638,7 @@ var Fn = u`
 .comfort-number-unit,
 .comfort-number-single-unit {
   color: var(--secondary-text-color);
-  font-size: 0.78rem;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -12815,7 +16660,126 @@ var Fn = u`
   flex: 0 0 auto;
 }
 
+.comfort-model-row,
+.comfort-temperature-aware-ranges {
+  grid-column: 1 / -1;
+}
+
+.comfort-model-row .comfort-select-wrap > small {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 4px;
+}
+
+.comfort-model-requirement {
+  color: var(--warning-color, #b26a00) !important;
+}
+
+.comfort-guided-reference {
+  align-items: center;
+  align-self: end;
+  color: var(--secondary-text-color);
+  display: grid;
+  font-size: 12px;
+  gap: 7px;
+  grid-column: 1 / -1;
+  grid-template-columns: 18px minmax(0, 1fr);
+  line-height: 1.35;
+  margin: 0;
+}
+
+.comfort-guided-reference ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-data-sources-config-section .comfort-config-rows,
+.comfort-preferences-config-section .comfort-config-rows {
+  align-items: start;
+}
+
+.comfort-freshness-config-section .comfort-number-field-single small {
+  display: none;
+}
+
+.comfort-temperature-aware-ranges {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.comfort-temperature-aware-range {
+  background: var(--card-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 8px;
+  margin: 0;
+  min-width: 0;
+  padding: 9px 10px 10px;
+}
+
+.comfort-temperature-aware-range-heading {
+  align-items: center;
+  color: var(--secondary-text-color);
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 8px;
+  justify-content: space-between;
+  line-height: 1.3;
+  margin: 0 0 8px;
+  min-width: 0;
+}
+
+.comfort-temperature-aware-range-heading strong {
+  color: var(--primary-text-color);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.comfort-temperature-aware-fields {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.comfort-temperature-aware-field {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.comfort-temperature-aware-field > small {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.comfort-number-with-unit {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.comfort-number-with-unit input {
+  min-width: 0;
+  width: 100%;
+}
+
+.comfort-number-with-unit > span {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 @media (min-width: 681px) {
+  .comfort-preferences-config-section .comfort-threshold-row {
+    grid-template-rows: minmax(32px, auto) auto;
+  }
+
   .comfort-metric-config-section .comfort-config-rows {
     align-items: start;
     column-gap: 24px;
@@ -12848,29 +16812,58 @@ var Fn = u`
 }
 
 @media (max-width: 680px) {
-  .comfort-zone-heading {
-    align-items: center;
+  .comfort-outdoor-grid,
+  .comfort-outdoor-config-rows {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .comfort-assessment-heading {
-    display: grid;
+  .comfort-zone-heading {
+    align-items: center;
+    gap: 6px 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .comfort-zone-toggle {
+    align-items: center;
+    grid-column: 1 / 2;
+    grid-row: 1;
+  }
+
+  .comfort-zone-identity {
+    align-self: center;
   }
 
   .comfort-zone-actions {
-    gap: 5px;
+    display: contents;
+  }
+
+  .comfort-zone-actions ha-switch {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .comfort-assessment-summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: start;
+    min-width: 0;
+    padding-inline-start: 28px;
   }
 
   .comfort-assessment-line {
     gap: 4px;
+    justify-content: flex-start;
+    min-width: 0;
   }
 
   .comfort-air-pill,
+  .comfort-humidex-pill,
   .comfort-condition-pill {
-    max-width: 130px;
+    max-width: min(100%, 220px);
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
   .comfort-map {
     grid-template-columns: 58px minmax(0, 1fr);
     grid-template-rows: 180px auto auto;
@@ -12880,29 +16873,22 @@ var Fn = u`
     grid-template-columns: 1fr;
   }
 
+  .comfort-derived-config-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .comfort-derived-visual-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .comfort-temperature-aware-ranges {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .comfort-config-row,
   .comfort-number-pair,
   .comfort-number-single {
     width: 100%;
-  }
-
-  .comfort-config-label {
-    box-sizing: border-box;
-    position: relative;
-    width: 100%;
-  }
-
-  .comfort-config-label .comfort-help {
-    position: static;
-  }
-
-  .comfort-config-label .comfort-help-tooltip {
-    bottom: auto;
-    left: 0;
-    max-width: 100%;
-    right: 0;
-    top: calc(100% + 6px);
-    width: auto;
   }
 
   .comfort-number-field {
@@ -12914,7 +16900,438 @@ var Fn = u`
     width: 100%;
   }
 }
-`, Ln = u`
+`, Mr = u`
+  .climate-card-view {
+    --climate-action-color: var(--secondary-text-color);
+    --climate-card-surface: color-mix(in srgb, var(--secondary-background-color) 72%, var(--card-background-color));
+    --climate-card-elevated-surface: color-mix(in srgb, var(--card-background-color) 88%, var(--climate-action-color) 12%);
+    --climate-card-border: color-mix(in srgb, var(--divider-color) 82%, var(--climate-action-color) 18%);
+    --climate-card-soft-shadow: 0 10px 28px color-mix(in srgb, var(--climate-action-color) 9%, transparent);
+    color: var(--primary-text-color);
+    container: climate-card / inline-size;
+    display: grid;
+    gap: 12px;
+    overflow: visible;
+    padding-top: 4px;
+    position: relative;
+  }
+  .climate-card-view::before {
+    background:
+      radial-gradient(circle at 9% 4%, color-mix(in srgb, var(--climate-action-color) 15%, transparent) 0 16%, transparent 38%),
+      linear-gradient(145deg, color-mix(in srgb, var(--climate-action-color) 7%, transparent), transparent 42%);
+    border-radius: 16px;
+    content: "";
+    inset: -6px;
+    opacity: .72;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+  }
+  .climate-card-view > * { position: relative; z-index: 1; }
+  .climate-card-view.climate-action-heating,
+  .climate-card-view.climate-action-preheating { --climate-action-color: var(--warning-color, #e69b35); }
+  .climate-card-view.climate-action-cooling { --climate-action-color: var(--primary-color, #4f8fcf); }
+  .climate-card-view.climate-action-drying { --climate-action-color: var(--info-color, #4b9c9a); }
+  .climate-card-view.climate-action-fan { --climate-action-color: var(--primary-color, #4f8fcf); }
+  .climate-card-view.climate-action-idle.climate-mode-heat { --climate-action-color: color-mix(in srgb, var(--warning-color, #e69b35) 55%, var(--secondary-text-color)); }
+  .climate-card-view.climate-action-idle.climate-mode-cool { --climate-action-color: color-mix(in srgb, var(--primary-color, #4f8fcf) 55%, var(--secondary-text-color)); }
+  .climate-card-view.climate-action-unavailable { --climate-action-color: var(--error-color, #db5a5a); }
+  .climate-card-state-line { background: linear-gradient(90deg, color-mix(in srgb, var(--climate-action-color) 56%, transparent), var(--climate-action-color), color-mix(in srgb, var(--climate-action-color) 48%, transparent)); border-radius: 999px; box-shadow: 0 0 12px color-mix(in srgb, var(--climate-action-color) 18%, transparent); height: 4px; overflow: hidden; position: relative; }
+  .climate-action-idle .climate-card-state-line { opacity: .58; }
+  .climate-action-off .climate-card-state-line { opacity: .38; }
+  .climate-action-unavailable .climate-card-state-line { background: repeating-linear-gradient(90deg, var(--climate-action-color) 0 9px, transparent 9px 14px); }
+  .climate-action-heating .climate-card-state-line::after,
+  .climate-action-preheating .climate-card-state-line::after,
+  .climate-action-cooling .climate-card-state-line::after {
+    animation: climate-card-energy 4.8s ease-in-out 1;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--card-background-color) 62%, transparent), transparent);
+    content: ""; inset: 0; position: absolute; transform: translateX(-100%);
+  }
+  @keyframes climate-card-energy { 0%, 12% { transform: translateX(-100%); } 68%, 100% { transform: translateX(100%); } }
+  .climate-card-header { align-items: center; display: flex; gap: 10px; min-width: 0; }
+  .climate-card-operation-icon { --mdc-icon-size: 24px; background: linear-gradient(145deg, color-mix(in srgb, var(--climate-action-color) 20%, var(--card-background-color)), color-mix(in srgb, var(--climate-action-color) 7%, var(--card-background-color))); border: 1px solid color-mix(in srgb, var(--climate-action-color) 34%, var(--divider-color)); border-radius: 12px; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 5px 14px color-mix(in srgb, var(--climate-action-color) 11%, transparent); color: var(--climate-action-color); flex: 0 0 auto; padding: 7px; }
+  .climate-card-header-content { display: grid; flex: 1 1 auto; min-width: 0; }
+  .climate-card-brand { align-items: center; align-self: center; background: transparent; border: 0; border-radius: 9px; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; flex: 0 0 auto; font: inherit; gap: 6px; justify-content: center; margin-inline-start: auto; min-height: 44px; min-width: 44px; padding: 5px 6px; }
+  .climate-card-brand { transition: background-color 150ms ease, color 150ms ease, transform 150ms ease; }
+  .climate-card-brand:hover { background: color-mix(in srgb, var(--primary-color) 8%, transparent); color: var(--primary-color); transform: translateY(-1px); }
+  .climate-card-brand:focus-visible { box-shadow: inset 0 0 0 2px var(--primary-color); outline: none; }
+  .climate-card-brand img { display: block; flex: 0 0 auto; height: 20px; object-fit: contain; width: 20px; }
+  .climate-card-brand-copy { align-content: center; display: grid; flex: 0 0 auto; grid-template-rows: repeat(2, auto); line-height: 1.05; text-align: left; white-space: nowrap; }
+  .climate-card-brand-copy strong { color: var(--primary-text-color); display: block; font-size: 10px; font-weight: 600; }
+  .climate-card-brand-copy small { color: var(--secondary-text-color); display: block; font-size: 8px; font-weight: 400; }
+  .climate-card-title { align-items: center; display: flex; gap: 6px; min-width: 0; }
+  .climate-card-title h2 { font-size: 18px; line-height: 1.2; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-title ha-icon { --mdc-icon-size: 16px; flex: 0 0 auto; }
+  .climate-card-title ha-icon.available { color: var(--success-color, #65a56f); }
+  .climate-card-title ha-icon.unavailable { color: var(--error-color, #db5a5a); }
+  .climate-card-operation { align-items: baseline; display: flex; flex-wrap: wrap; gap: 2px 6px; margin-top: 2px; min-width: 0; }
+  .climate-card-operation strong, .climate-card-operation small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-operation strong { font-size: 13px; }
+  .climate-card-operation small { color: var(--secondary-text-color); font-size: 11px; }
+  .climate-card-thermostat-controls { background: transparent; border: 0; border-radius: 11px; display: grid; min-width: 0; overflow: visible; }
+  .climate-card-control-toolbar { --climate-card-toolbar-island-height: 46px; align-items: end; background: transparent; column-gap: 12px; display: grid; grid-template-columns: max-content minmax(0, 1fr); min-width: 0; }
+  .climate-card-thermostat-controls:not(.has-actions) .climate-card-control-toolbar { grid-template-columns: max-content; }
+  .climate-card-thermostat-controls:not(.has-authority) .climate-card-control-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .climate-card-manual-control { align-items: center; align-self: stretch; background: linear-gradient(145deg, color-mix(in srgb, var(--secondary-background-color) 88%, var(--climate-action-color) 12%), var(--secondary-background-color)); border: 1px solid var(--climate-card-border); border-bottom: 0; border-radius: 11px 11px 0 0; box-sizing: border-box; display: grid; gap: 5px; grid-column: 1; grid-template-columns: auto; justify-items: start; justify-self: start; min-height: var(--climate-card-toolbar-island-height); min-width: 0; padding: 7px; }
+  .climate-card-thermostat-controls:not(.has-pane) .climate-card-manual-control { border-bottom: 1px solid var(--climate-card-border); border-radius: 11px; }
+  .climate-card-manual-segmented { background: var(--secondary-background-color); border: 1px solid color-mix(in srgb, var(--primary-text-color) 24%, var(--divider-color)); border-radius: 8px; display: grid; flex: 0 0 auto; grid-column: 1; grid-row: 1; grid-template-columns: repeat(2, max-content); isolation: isolate; justify-self: start; max-width: 100%; min-width: 0; overflow: hidden; position: relative; z-index: 3; }
+  .climate-card-manual-segmented button { align-items: center; background: transparent; border: 0; border-radius: 0; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; font: inherit; font-size: 10px; gap: 4px; justify-content: center; line-height: 1; min-height: 28px; min-width: 0; padding: 2px 6px; transition: background-color 120ms ease, color 120ms ease, filter 120ms ease; white-space: nowrap; }
+  .climate-card-manual-segmented button ha-icon { --mdc-icon-size: 12px; color: currentColor; flex: 0 0 auto; }
+  .climate-card-manual-segmented button + button { border-inline-start: 1px solid color-mix(in srgb, var(--primary-text-color) 20%, var(--divider-color)); }
+  .climate-card-manual-segmented button:not([aria-pressed="true"]):not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--primary-color) 18%, var(--secondary-background-color)); color: var(--primary-text-color); }
+  .climate-card-manual-segmented button[aria-pressed="true"] { background: var(--primary-color); color: var(--text-primary-color, var(--card-background-color)); font-weight: 600; }
+  .climate-card-manual-segmented button[aria-pressed="true"]:not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--primary-color) 88%, var(--primary-text-color)); }
+  .climate-card-manual-segmented button:active:not([aria-disabled="true"]) { filter: brightness(.92); }
+  .climate-card-manual-segmented button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
+  .climate-card-manual-segmented[aria-busy="true"] button[aria-disabled="true"] { cursor: wait; opacity: 1; }
+  .climate-card-manual-segmented button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -3px; position: relative; z-index: 1; }
+  .climate-card-manual-segmented button[aria-pressed="true"]:focus-visible { outline-color: var(--text-primary-color, var(--card-background-color)); }
+  .climate-card-control-reason { color: var(--secondary-text-color); font-size: 10px; grid-column: 1 / -1; line-height: 1.3; min-width: 0; }
+  .climate-card-control-surface { align-items: stretch; background: linear-gradient(145deg, var(--climate-card-elevated-surface), var(--secondary-background-color)); border: 1px solid var(--climate-card-border); border-radius: 11px; box-shadow: var(--climate-card-soft-shadow); display: grid; grid-template-columns: minmax(88px, 1fr) auto 56px; min-width: 0; overflow: visible; }
+  .climate-card-thermostat-controls.has-authority.has-actions .climate-card-control-surface,
+  .climate-card-thermostat-controls.has-authority.has-actions .climate-card-control-pane { border-radius: 0 0 11px 11px; }
+  .climate-card-thermostat-controls.has-authority:not(.has-actions) .climate-card-control-surface,
+  .climate-card-thermostat-controls.has-authority:not(.has-actions) .climate-card-control-pane { border-radius: 0 11px 11px 11px; }
+  .climate-card-thermostat-controls.has-actions:not(.has-authority) .climate-card-control-surface,
+  .climate-card-thermostat-controls.has-actions:not(.has-authority) .climate-card-control-pane { border-radius: 11px 0 11px 11px; }
+  .climate-card-thermostat-controls:not(.has-toolbar) .climate-card-control-surface { border-radius: 11px; border-top: 0; }
+  .climate-card-control-surface:not(:has(.climate-card-native-link)) { grid-template-columns: minmax(88px, 1fr) auto; }
+  .climate-card-target-control, .climate-card-mode-control { box-sizing: border-box; min-width: 0; }
+  .climate-card-target-control { align-items: center; display: flex; grid-column: 2; grid-row: 1; justify-content: center; padding: 5px 7px; }
+  .climate-card-target-stepper { align-items: stretch; background: transparent; display: grid; grid-template-columns: 44px minmax(64px, 1fr) 44px; overflow: hidden; }
+  .climate-card-target-value { align-content: center; display: grid; line-height: 1.05; min-width: 0; row-gap: 4px; text-align: center; }
+  .climate-card-target-value small { color: var(--secondary-text-color); font-size: 8px; font-weight: 500; line-height: 1; }
+  .climate-card-target-control strong { font-size: 15px; text-align: center; white-space: nowrap; }
+  .climate-card-target-control button, .climate-card-native-link { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--primary-text-color); cursor: pointer; display: inline-flex; font: inherit; justify-content: center; min-height: 44px; padding: 0; }
+  .climate-card-target-control button { border-radius: 8px; min-height: 44px; width: 44px; }
+  .climate-card-target-control button:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-color) 14%, var(--secondary-background-color)); }
+  .climate-card-target-control button:active:not(:disabled) { filter: brightness(.94); transform: scale(.96); }
+  .climate-card-native-link:hover { background: color-mix(in srgb, var(--primary-color) 9%, var(--card-background-color)); }
+  .climate-card-target-control button:focus-visible, .climate-card-native-link:focus-visible, .climate-card-mode-control summary:focus-visible, .climate-card-mode-options button:focus-visible { box-shadow: inset 0 0 0 2px var(--primary-color); outline: none; }
+  .climate-card-target-control button:disabled { cursor: default; opacity: .5; }
+  .climate-card-target-control button:disabled { background: transparent; }
+  .climate-card-target-control ha-icon { --mdc-icon-size: 18px; color: var(--primary-color); }
+  .climate-card-range-controls { display: grid; grid-column: 2; grid-row: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; position: relative; }
+  .climate-card-range-controls > .climate-card-target-control { grid-column: auto; grid-row: auto; }
+  .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control { position: relative; }
+  .climate-card-range-controls > .climate-card-target-control { border-inline-start: 0; }
+  .climate-card-mode-control { background: transparent; grid-column: 1; grid-row: 1; min-width: 0; position: relative; }
+  .climate-card-mode-control summary { align-items: center; border-radius: 8px; cursor: pointer; display: grid; gap: 8px; grid-template-columns: auto minmax(0, 1fr) auto; list-style: none; margin: 4px; min-height: 48px; padding: 0 9px; transition: background-color 120ms ease, box-shadow 120ms ease; }
+  .climate-card-mode-control:not([data-disabled]) summary { background: color-mix(in srgb, var(--primary-color) 6%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 20%, var(--divider-color)); }
+  .climate-card-mode-control:not([data-disabled]) summary:hover { background: color-mix(in srgb, var(--primary-color) 11%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 34%, var(--divider-color)); }
+  .climate-card-mode-control[open]:not([data-disabled]) summary { background: color-mix(in srgb, var(--primary-color) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 44%, var(--divider-color)); }
+  .climate-card-mode-control summary::-webkit-details-marker { display: none; }
+  .climate-card-mode-control summary > ha-icon:first-child { --mdc-icon-size: 20px; color: var(--climate-action-color); }
+  .climate-card-mode-control summary strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-mode-control .select-indicator { --mdc-icon-size: 18px; color: var(--secondary-text-color); transition: transform 120ms ease; }
+  .climate-card-mode-control[open] .select-indicator { transform: rotate(180deg); }
+  .climate-card-mode-control[data-disabled] summary { cursor: default; opacity: .5; }
+  .climate-card-mode-control[data-pending] summary, .climate-card-target-control[data-pending] button { cursor: progress; }
+  .climate-card-mode-control[data-disabled] .climate-card-mode-options { display: none; }
+  .climate-card-mode-options { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 9px; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); display: grid; left: 0; max-height: var(--climate-card-mode-menu-max-height, 240px); max-width: calc(100vw - 32px); min-width: min(max(100%, 160px), calc(100vw - 32px)); overflow: auto; padding: 4px; position: absolute; top: calc(100% + 5px); z-index: 20; }
+  .climate-card-mode-control[data-placement="up"] .climate-card-mode-options { bottom: calc(100% + 5px); top: auto; }
+  .climate-card-mode-options button { align-items: center; background: transparent; border: 0; border-radius: 7px; color: var(--primary-text-color); cursor: pointer; display: grid; font: inherit; font-size: 12px; gap: 8px; grid-template-columns: 22px minmax(0, 1fr) 18px; min-height: 40px; padding: 6px 8px; text-align: left; }
+  .climate-card-mode-options button:hover, .climate-card-mode-options button[aria-current="true"] { background: color-mix(in srgb, var(--primary-color) 12%, var(--card-background-color)); }
+  .climate-card-mode-options button > ha-icon:first-child { --mdc-icon-size: 18px; color: var(--climate-action-color); }
+  .climate-card-mode-control[data-mode="heat"] summary > ha-icon:first-child,
+  .climate-card-mode-options button[data-mode="heat"] > ha-icon:first-child { color: var(--warning-color, #e69b35); }
+  .climate-card-mode-control[data-mode="cool"] summary > ha-icon:first-child,
+  .climate-card-mode-options button[data-mode="cool"] > ha-icon:first-child { color: var(--primary-color, #4f8fcf); }
+  .climate-card-mode-control[data-mode="dry"] summary > ha-icon:first-child,
+  .climate-card-mode-options button[data-mode="dry"] > ha-icon:first-child { color: var(--info-color, #4b9c9a); }
+  .climate-card-mode-control[data-mode="fan_only"] summary > ha-icon:first-child,
+  .climate-card-mode-options button[data-mode="fan_only"] > ha-icon:first-child { color: var(--primary-color, #4f8fcf); }
+  .climate-card-mode-control[data-mode="off"] summary > ha-icon:first-child,
+  .climate-card-mode-options button[data-mode="off"] > ha-icon:first-child { color: var(--secondary-text-color); }
+  .climate-card-mode-options button .selected { --mdc-icon-size: 16px; color: var(--primary-color); }
+  .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-target-control,
+  .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-range-controls { grid-column: 1 / 3; grid-row: 1; border-inline-start: 0; }
+  .climate-card-native-link { border-radius: 0 11px 11px 0; display: grid; grid-column: 3; grid-row: 1; position: relative; width: 56px; }
+  .climate-card-control-surface > .climate-card-target-control, .climate-card-range-controls, .climate-card-native-link { position: relative; }
+  .climate-card-control-surface > .climate-card-target-control::before, .climate-card-range-controls::before, .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control::before, .climate-card-native-link::before { background: linear-gradient(to top, var(--divider-color), color-mix(in srgb, var(--divider-color) 35%, transparent) 58%, transparent); content: ""; inset-block: 0; inset-inline-start: 0; pointer-events: none; position: absolute; width: 1px; }
+  .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-target-control::before, .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-range-controls::before, .climate-card-native-link:only-child::before { display: none; }
+  .climate-card-native-link:only-child { grid-column: 1 / -1; justify-self: end; }
+  .climate-card-native-link ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }
+  .climate-card-panel { background: linear-gradient(145deg, var(--climate-card-surface), color-mix(in srgb, var(--card-background-color) 92%, var(--climate-action-color) 8%)); border: 1px solid var(--climate-card-border); border-radius: 12px; box-shadow: 0 6px 18px color-mix(in srgb, var(--climate-action-color) 6%, transparent); padding: 12px; }
+  .climate-card-panel h3, .climate-card-section-heading h3 { align-items: center; display: flex; font-size: 13px; gap: 7px; margin: 0; }
+  .climate-card-panel h3 ha-icon, .climate-card-section-heading h3 ha-icon { --mdc-icon-size: 18px; color: var(--primary-color); }
+  .climate-card-current-heading { align-items: center; border-radius: 8px; column-gap: 8px; display: grid; grid-template-columns: max-content minmax(0, 1fr) 30px; min-width: 0; transition: background 150ms ease; }
+  .climate-card-current-heading h3 { grid-column: 1; grid-row: 1; }
+  .climate-card-current.collapsed .climate-card-current-heading { align-items: start; display: flex; flex-wrap: wrap; gap: 6px 8px; padding-inline-end: 34px; position: relative; }
+  .climate-card-current.collapsed .climate-card-current-heading h3 { align-self: start; flex: 0 0 auto; min-height: 30px; }
+  .climate-card-current.collapsed .climate-card-current-toggle { inset-block-start: 0; inset-inline-end: 0; position: absolute; }
+  .climate-card-current.collapsed .climate-card-current-summary-wrap { align-self: start; display: contents; }
+  .climate-card-current.collapsed .climate-card-current-summary { display: contents; }
+  .climate-card-current:not(.collapsed) .climate-card-current-heading { cursor: pointer; }
+  .climate-card-current:not(.collapsed) .climate-card-current-heading:hover { background: color-mix(in srgb, var(--primary-color) 6%, transparent); }
+  .climate-card-current-summary-wrap { display: grid; grid-column: 2; grid-row: 1; grid-template-rows: 0fr; min-width: 0; opacity: 0; pointer-events: none; transform: translateY(3px); transition: grid-template-rows 200ms ease, opacity 160ms ease, transform 200ms ease, visibility 0s linear 200ms; visibility: hidden; }
+  .climate-card-current.collapsed .climate-card-current-summary-wrap { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; transform: translateY(0); transition-delay: 0s; visibility: visible; }
+  .climate-card-current-toggle { align-items: center; background: transparent; border: 0; border-radius: 50%; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; grid-column: 3; grid-row: 1; height: 30px; justify-content: center; padding: 0; width: 30px; }
+  .climate-card-current-toggle:hover { color: var(--primary-color); }
+  .climate-card-current:not(.collapsed) .climate-card-current-heading:hover .climate-card-current-toggle { color: var(--primary-color); }
+  .climate-card-current-toggle:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+  .climate-card-current-toggle ha-icon { --mdc-icon-size: 19px; transition: transform 200ms ease; }
+  .climate-card-current.collapsed .climate-card-current-toggle ha-icon { transform: rotate(180deg); }
+  .climate-card-current-summary { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; min-height: 30px; min-width: 0; overflow: hidden; }
+  .climate-card-current-summary-item { --current-summary-accent: var(--primary-color); align-items: center; background: color-mix(in srgb, var(--current-summary-accent) 7%, var(--card-background-color)); border: 1px solid color-mix(in srgb, var(--current-summary-accent) 25%, var(--divider-color)); border-radius: 999px; box-sizing: border-box; color: var(--primary-text-color); display: inline-flex; flex: 0 0 auto; gap: 6px; min-height: 28px; min-width: 0; padding: 3px 9px; }
+  .climate-card-current-summary-item ha-icon { --mdc-icon-size: 16px; align-items: center; color: var(--current-summary-accent); display: inline-flex; flex: 0 0 16px; height: 16px; justify-content: center; line-height: 1; width: 16px; }
+  .climate-card-current-summary-item strong { align-items: center; display: inline-flex; flex-wrap: nowrap; font-size: 11px; gap: 4px; line-height: 16px; min-width: 0; white-space: nowrap; }
+  .climate-card-current-summary-item.temperature { --current-summary-accent: var(--deep-orange-color, var(--warning-color, #e67e45)); }
+  .climate-card-current-summary-item.humidity, .climate-card-current-summary-item.outdoor { --current-summary-accent: var(--info-color, #3aa7c9); }
+  .climate-card-current-summary-item.clickable { cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease; }
+  .climate-card-current-summary-item.clickable:hover { background: color-mix(in srgb, var(--current-summary-accent) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--current-summary-accent) 42%, var(--divider-color)); color: var(--primary-text-color); }
+  .climate-card-current-summary-item.clickable:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--current-summary-accent) 44%, transparent); outline: 0; }
+  .climate-card-current-summary-item.windows .open { color: var(--primary-color); }
+  .climate-card-current-collapsed-comfort { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 200ms ease, opacity 140ms ease; }
+  .climate-card-current.collapsed .climate-card-current-collapsed-comfort { grid-template-rows: 1fr; opacity: 1; }
+  .climate-card-current-collapsed-comfort-inner { min-height: 0; overflow: hidden; }
+  .climate-card-current-collapsed-comfort-row { --comfort-primary-accent: var(--current-comfort-accent); --comfort-secondary-accent: var(--comfort-primary-accent); --current-comfort-accent: var(--success-color, #65a56f); align-items: flex-start; background: linear-gradient(135deg, color-mix(in srgb, var(--comfort-primary-accent) 12%, var(--card-background-color)) 0%, color-mix(in srgb, var(--comfort-secondary-accent) 9%, var(--card-background-color)) 100%); border-radius: 7px; color: var(--secondary-text-color); display: flex; font-size: 12px; gap: 6px; margin-top: 9px; min-height: 30px; min-width: 0; overflow: visible; padding: 5px 9px 5px 12px; position: relative; white-space: normal; }
+  .climate-card-current-collapsed-comfort-row::before { background: linear-gradient(to bottom, var(--comfort-primary-accent), var(--comfort-secondary-accent)); border-radius: 999px; bottom: 0; content: ""; inset-inline-start: 0; position: absolute; top: 0; width: 3px; }
+  .climate-card-current-collapsed-comfort-row.warning { --current-comfort-accent: var(--warning-color, #e69b35); }
+  .climate-card-current-collapsed-comfort-row.info { --current-comfort-accent: var(--info-color, #3aa7c9); }
+  .climate-card-current-collapsed-comfort-row.bad { --current-comfort-accent: var(--error-color, #db5a5a); }
+  .climate-card-current-collapsed-comfort-row > ha-icon { --mdc-icon-size: 17px; color: var(--comfort-primary-accent); flex: 0 0 auto; margin-top: 3px; }
+  .climate-card-current-collapsed-comfort-row .climate-card-comfort-chip { min-height: 24px; padding: 3px 7px; }
+  .climate-card-current-collapsed-comfort-row .climate-card-comfort-chip small { font-size: 11px; font-weight: 400; line-height: 1.3; }
+  .climate-card-current-collapsed-comfort-row .climate-card-comfort-chip strong { font-size: 11px; font-weight: 600; line-height: 1.3; white-space: normal; }
+  .climate-card-current-collapsed-comfort-row .climate-card-comfort-chip ha-icon { --mdc-icon-size: 15px; }
+  .climate-card-comfort-chip-list { align-items: center; display: flex; flex-wrap: wrap; gap: 5px 6px; min-width: 0; }
+  .climate-card-comfort-chip { --comfort-chip-accent: var(--comfort-accent, var(--primary-color)); align-items: center; background: color-mix(in srgb, var(--comfort-chip-accent) 8%, var(--card-background-color)); border: 1px solid color-mix(in srgb, var(--comfort-chip-accent) 24%, var(--divider-color)); border-radius: 999px; box-sizing: border-box; color: var(--primary-text-color); display: inline-flex; gap: 5px; max-width: 100%; min-height: 26px; min-width: 0; padding: 3px 8px; }
+  .climate-card-comfort-chip.good { --comfort-chip-accent: var(--success-color, #65a56f); }
+  .climate-card-comfort-chip.warning { --comfort-chip-accent: var(--warning-color, #e69b35); }
+  .climate-card-comfort-chip.info { --comfort-chip-accent: var(--info-color, #3aa7c9); }
+  .climate-card-comfort-chip.bad { --comfort-chip-accent: var(--error-color, #db5a5a); }
+  .climate-card-comfort-chip ha-icon { --mdc-icon-size: 16px; color: var(--comfort-chip-accent); flex: 0 0 auto; }
+  .climate-card-comfort-chip small { color: var(--secondary-text-color); font-size: 12px; line-height: 1.35; margin: 0; }
+  .climate-card-comfort-chip strong { color: var(--primary-text-color); font-size: 12px; line-height: 1.35; min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+  .climate-card-current-body { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 220ms ease, opacity 160ms ease; }
+  .climate-card-current-body-inner { min-height: 0; overflow: hidden; }
+  .climate-card-current.collapsed .climate-card-current-body { grid-template-rows: 0fr; opacity: 0; }
+  .climate-card-current-grid { background: linear-gradient(145deg, var(--card-background-color), color-mix(in srgb, var(--secondary-background-color) 68%, var(--card-background-color))); border: 1px solid var(--climate-card-border); border-radius: 11px; display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 10px; overflow: hidden; }
+  .climate-card-current-readings { align-items: stretch; display: flex; min-width: 0; width: 100%; }
+  .climate-card-metric, .climate-card-context-item { --current-cell-accent: var(--primary-color); align-items: center; display: grid; gap: 9px; grid-template-columns: 31px minmax(0, 1fr); min-width: 0; padding: 11px 13px; }
+  .climate-card-metric { grid-template-columns: 31px minmax(0, 1fr) 30px; }
+  .climate-card-context-item.with-history { grid-template-columns: 31px minmax(0, 1fr) 30px; }
+  .climate-card-metric { flex: 1 1 50%; min-width: 72px; }
+  .climate-card-metric + .climate-card-metric { border-left: 1px solid var(--divider-color); }
+  .climate-card-metric strong { font-size: 16px; white-space: nowrap; }
+  .climate-card-metric ha-icon, .climate-card-context-item > ha-icon { --mdc-icon-size: 19px; background: color-mix(in srgb, var(--current-cell-accent) 11%, var(--card-background-color)); border-radius: 8px; color: var(--current-cell-accent); padding: 6px; }
+  .climate-card-metric-history { align-items: center; background: transparent; border: 0; border-radius: 50%; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; height: 30px; justify-content: center; margin: -4px; padding: 0; width: 30px; }
+  .climate-card-metric-history:hover { background: color-mix(in srgb, var(--primary-color) 10%, transparent); color: var(--primary-color); }
+  .climate-card-metric-history:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+  .climate-card-metric-history ha-icon { --mdc-icon-size: 17px; background: transparent; border-radius: 0; color: currentColor; padding: 0; }
+  .climate-card-metric.temperature { --current-cell-accent: var(--deep-orange-color, var(--warning-color, #e67e45)); }
+  .climate-card-metric.humidity { --current-cell-accent: var(--info-color, #3aa7c9); }
+  .climate-card-context-item.outdoor { --current-cell-accent: var(--cyan-color, var(--info-color, #3aa7c9)); }
+  .climate-card-current-context { border-top: 1px solid var(--divider-color); display: flex; min-width: 0; }
+  .climate-card-current-grid:not(.has-readings) .climate-card-current-context { border-top: 0; }
+  .climate-card-current-context > .climate-card-context-item { flex: 1 1 0; }
+  .climate-card-context-item + .climate-card-context-item { border-left: 1px solid var(--divider-color); }
+  .climate-card-context-item > div { display: grid; min-width: 0; width: 100%; }
+  .climate-card-context-item small, .climate-card-context-item span { color: var(--secondary-text-color); font-size: 11px; }
+  .climate-card-context-item > div > small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-context-item strong { font-size: 13px; }
+  .climate-card-context-detail { align-items: baseline; display: flex; flex-wrap: wrap; gap: 3px 7px; margin-top: 2px; }
+  .climate-card-window-summary { align-items: center; display: flex; flex-wrap: wrap; gap: 5px; }
+  .climate-card-window-summary > span { color: var(--primary-text-color); font-size: inherit; font-weight: inherit; }
+  .climate-card-window-summary > .open { background: color-mix(in srgb, var(--primary-color) 13%, transparent); border-radius: 999px; color: var(--primary-color); padding: 2px 7px; }
+  .climate-card-window-summary > .separator { color: var(--secondary-text-color); }
+  .climate-card-window-list { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; }
+  .climate-card-window-list span { align-items: center; display: inline-flex; gap: 3px; }
+  .climate-card-window-list ha-icon { --mdc-icon-size: 15px; }
+  .climate-card-window-list .open, .climate-card-window-list .open ha-icon { color: var(--primary-color); }
+  .climate-card-comfort { --comfort-accent: var(--secondary-text-color); --comfort-primary-accent: var(--comfort-accent); --comfort-secondary-accent: var(--comfort-primary-accent); align-items: flex-start; background: linear-gradient(135deg, color-mix(in srgb, var(--comfort-primary-accent) 13%, var(--card-background-color)) 0%, color-mix(in srgb, var(--comfort-secondary-accent) 8%, var(--card-background-color)) 100%); border-top: 1px solid color-mix(in srgb, var(--comfort-primary-accent) 20%, var(--divider-color)); display: grid; gap: 9px; grid-template-columns: 31px minmax(0, 1fr); margin: 0; padding: 10px 13px 10px 13px; position: relative; }
+  .climate-card-comfort::before { background: linear-gradient(to bottom, var(--comfort-primary-accent), var(--comfort-secondary-accent)); border-radius: 999px; bottom: 0; content: ""; inset-inline-start: 0; position: absolute; top: 0; width: 4px; }
+  .climate-card-comfort.good { --comfort-accent: var(--success-color, #65a56f); }
+  .climate-card-comfort.warning { --comfort-accent: var(--warning-color, #e69b35); }
+  .climate-card-comfort.info { --comfort-accent: var(--info-color, #3aa7c9); }
+  .climate-card-comfort.bad { --comfort-accent: var(--error-color, #db5a5a); }
+  .climate-card-comfort > ha-icon { --mdc-icon-size: 19px; background: color-mix(in srgb, var(--comfort-primary-accent) 13%, var(--card-background-color)); border-radius: 8px; color: var(--comfort-primary-accent); margin-top: 1px; padding: 6px; }
+  .climate-card-comfort-content { display: grid; gap: 7px; min-width: 0; }
+  .climate-card-comfort-heading-row { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+  .climate-card-comfort-heading-row strong { min-width: 0; overflow-wrap: anywhere; }
+  .climate-card-comfort-notices { display: grid; gap: 5px; min-width: 0; }
+  .climate-card-comfort-notice { align-items: flex-start; color: var(--secondary-text-color); display: flex; font-size: 12px; gap: 6px; line-height: 1.35; min-width: 0; overflow-wrap: anywhere; }
+  .climate-card-comfort-notice.info ha-icon { color: var(--info-color, #3aa7c9); }
+  .climate-card-comfort-notice.warning ha-icon { color: var(--warning-color, #e69b35); }
+  .climate-card-comfort-notice ha-icon { --mdc-icon-size: 16px; flex: 0 0 auto; margin-top: 1px; }
+  .climate-card-comfort-metrics { align-items: center; display: flex; flex-wrap: wrap; gap: 5px 6px; min-width: 0; }
+  .climate-card-timeline { min-width: 0; }
+  .climate-card-timeline-grid { align-items: center; display: grid; gap: 7px 12px; grid-template-columns: minmax(118px, .42fr) minmax(0, 1fr); min-width: 0; }
+  .climate-card-timeline.no-heading .climate-card-timeline-grid { grid-template-columns: minmax(0, 1fr); }
+  .climate-card-timeline-meta { align-content: center; display: grid; gap: 6px; min-width: 0; }
+  .climate-card-timeline-meta h3 { align-items: center; display: flex; font-size: 13px; gap: 7px; margin: 0; min-width: 0; }
+  .climate-card-timeline-meta h3 ha-icon { --mdc-icon-size: 18px; color: var(--primary-color); }
+  .overview-timeline-scroll.climate-card-timeline-scroll { align-self: center; border: 0; border-radius: 0; margin: 0; min-width: 0; padding: 0; scrollbar-gutter: auto; }
+  .overview-timeline-layout.climate-card-timeline-layout { --overview-timeline-name-column: 0px; --overview-timeline-sticky-left: 12px; grid-template-columns: minmax(0, 1fr); min-width: 0; width: 100%; }
+  .climate-card-context-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; min-width: 0; }
+  .climate-card-timeline .climate-card-context-chip { --climate-chip-accent: var(--primary-color); align-items: center; background: color-mix(in srgb, var(--climate-chip-accent) 7%, var(--secondary-background-color)); border: 1px solid color-mix(in srgb, var(--climate-chip-accent) 72%, var(--divider-color)); border-radius: 7px; box-shadow: 0 2px 8px color-mix(in srgb, var(--climate-chip-accent) 8%, transparent); box-sizing: border-box; display: inline-flex; flex: 0 1 auto; gap: 4px; height: 22px; max-width: 100%; min-width: 0; overflow: hidden; padding: 0 6px 0 0; }
+  .climate-card-timeline .climate-card-context-chip.is-mode { --climate-chip-accent: var(--info-color, #3aa7c9); }
+  .climate-card-timeline .climate-card-chip-accent { align-items: center; align-self: stretch; background: var(--climate-chip-accent); border-radius: 6px 0 0 6px; color: var(--text-primary-color, #fff); display: inline-flex; flex: 0 0 auto; gap: 3px; justify-content: center; padding: 2px 5px; }
+  .climate-card-timeline .climate-card-context-chip ha-icon { --mdc-icon-size: 13px; }
+  .climate-card-timeline .climate-card-context-chip small { color: inherit; font-size: 9px; font-weight: 600; letter-spacing: .02em; line-height: 1; }
+  .climate-card-timeline .climate-card-context-chip strong { color: var(--primary-text-color); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-runtime { align-items: center; background: color-mix(in srgb, var(--warning-color, #e69b35) 11%, var(--card-background-color)); border: 1px solid color-mix(in srgb, var(--warning-color, #e69b35) 32%, var(--divider-color)); border-radius: 10px; display: grid; gap: 7px; grid-template-columns: auto auto minmax(0, 1fr); padding: 9px 11px; }
+  .climate-card-runtime ha-icon { --mdc-icon-size: 20px; color: var(--warning-color, #e69b35); }
+  .climate-card-runtime span { color: var(--secondary-text-color); font-size: 12px; text-align: right; }
+  .climate-card-runtime.boost { background: color-mix(in srgb, var(--primary-color) 10%, var(--card-background-color)); border-color: color-mix(in srgb, var(--primary-color) 30%, var(--divider-color)); }
+  .climate-card-runtime.boost ha-icon { color: var(--primary-color); }
+  .climate-card-features { display: grid; gap: 10px; min-width: 0; }
+  .climate-card-feature-panel { --feature-panel-accent: var(--cyan-color, var(--info-color, #3aa7c9)); background: linear-gradient(145deg, color-mix(in srgb, var(--feature-panel-accent) 6%, var(--card-background-color)), color-mix(in srgb, var(--card-background-color) 94%, var(--feature-panel-accent) 6%)); border: 1px solid color-mix(in srgb, var(--feature-panel-accent) 26%, var(--divider-color)); border-radius: 11px; box-shadow: 0 5px 16px color-mix(in srgb, var(--feature-panel-accent) 7%, transparent); min-width: 0; overflow: hidden; }
+  .climate-card-feature-panel.preconditioning { --feature-panel-accent: var(--purple-color, #8b6fc2); }
+  .climate-card-feature-heading { align-items: center; background: transparent; border: 0; color: var(--primary-text-color); cursor: pointer; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) 30px; min-height: 43px; padding: 6px 8px 6px 11px; text-align: start; width: 100%; }
+  .climate-card-feature-heading.static { cursor: default; grid-template-columns: minmax(0, 1fr); padding-inline-end: 11px; }
+  .climate-card-feature-heading:hover { background: color-mix(in srgb, var(--feature-panel-accent) 7%, transparent); }
+  .climate-card-feature-heading.static:hover { background: transparent; }
+  .climate-card-feature-heading:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
+  .climate-card-feature-heading-content { display: grid; gap: 4px; min-width: 0; }
+  .climate-card-feature-title-row { align-items: center; display: flex; gap: 10px; justify-content: space-between; min-width: 0; }
+  .climate-card-feature-title { align-items: center; display: inline-flex; flex: 0 0 auto; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .climate-card-feature-title ha-icon { --mdc-icon-size: 19px; color: var(--feature-panel-accent); }
+  .climate-card-feature-title strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+  .climate-card-feature-status { color: var(--feature-panel-accent); flex: 0 0 auto; font-size: 11px; font-weight: 600; }
+  .climate-card-feature-status.blocked { color: var(--warning-color, #e69b35); }
+  .climate-card-feature-status.unavailable { color: var(--error-color, #db5a5a); }
+  .climate-card-feature-status.active { color: var(--warning-color, #e69b35); }
+  .climate-card-feature-description { color: var(--secondary-text-color); display: block; font-size: 11px; line-height: 1.35; min-width: 0; }
+  .climate-card-feature-description.preconditioning { align-items: baseline; display: flex; flex-wrap: wrap; gap: 2px 5px; }
+  .climate-card-feature-description.preconditioning > span { align-items: baseline; display: inline-flex; gap: 3px; }
+  .climate-card-feature-description.preconditioning small { color: var(--secondary-text-color); font-size: 9px; }
+  .climate-card-feature-description.preconditioning .separator { color: var(--divider-color); }
+  .climate-card-feature-chevron { --mdc-icon-size: 19px; color: var(--secondary-text-color); justify-self: center; transition: transform 200ms ease; }
+  .climate-card-feature-panel.collapsed .climate-card-feature-chevron { transform: rotate(180deg); }
+  .climate-card-feature-body { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 220ms ease, opacity 160ms ease; }
+  .climate-card-feature-panel.collapsed .climate-card-feature-body { grid-template-rows: 0fr; opacity: 0; }
+  .climate-card-feature-body-inner { display: grid; gap: 10px; min-height: 0; overflow: hidden; padding: 0 10px 10px; transition: padding-bottom 220ms ease; }
+  .climate-card-feature-panel.collapsed .climate-card-feature-body-inner { padding-bottom: 0; }
+  .climate-card-room-assist-graph { min-width: 0; }
+  .climate-card-room-assist-graph .sensor-temperature-scale { background: color-mix(in srgb, var(--secondary-background-color) 72%, var(--card-background-color)); }
+  .climate-card-preconditioning-preview { --preconditioning-preview-accent: var(--warning-color, #e69b35); border: 1px solid color-mix(in srgb, var(--preconditioning-preview-accent) 48%, var(--divider-color)); border-radius: 10px; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 7%, transparent); display: grid; grid-template-columns: minmax(105px, .8fr) minmax(0, 1.6fr); overflow: hidden; }
+  .climate-card-preconditioning-preview.cool { --preconditioning-preview-accent: var(--primary-color, #2d7dd2); }
+  .climate-card-preconditioning-start, .climate-card-preconditioning-target { display: grid; gap: 1px; min-width: 0; padding: 7px 10px; }
+  .climate-card-preconditioning-start { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--preconditioning-preview-accent) 8%, var(--card-background-color)) 0 8px, var(--card-background-color) 8px 16px); border-right: 1px solid color-mix(in srgb, var(--preconditioning-preview-accent) 42%, var(--divider-color)); }
+  .climate-card-preconditioning-target { background: color-mix(in srgb, var(--preconditioning-preview-accent) 12%, var(--card-background-color)); }
+  .climate-card-preconditioning-preview small { color: var(--secondary-text-color); font-size: 9px; }
+  .climate-card-preconditioning-preview strong { font-size: 11px; }
+  .climate-card-preconditioning-preview span { color: var(--primary-text-color); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-actions { align-content: center; align-self: stretch; background: linear-gradient(145deg, color-mix(in srgb, var(--secondary-background-color) 88%, var(--climate-action-color) 12%), var(--secondary-background-color)); border: 1px solid var(--climate-card-border); border-bottom: 0; border-radius: 11px 11px 0 0; box-sizing: border-box; display: grid; grid-column: 2; justify-self: end; max-width: 100%; min-height: var(--climate-card-toolbar-island-height); min-width: 0; overflow: hidden; padding: 7px; width: max-content; }
+  .climate-card-thermostat-controls:not(.has-authority) .climate-card-actions { grid-column: 1; }
+  .climate-card-thermostat-controls:not(.has-pane) .climate-card-actions { border-bottom: 1px solid var(--climate-card-border); border-radius: 11px; }
+  .climate-card-actions-scroll { align-items: center; display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; position: relative; }
+  .climate-card-actions-row { -webkit-overflow-scrolling: touch; display: flex; flex-wrap: nowrap; gap: 6px; grid-column: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: none; touch-action: pan-x; }
+  .climate-card-actions-row.horizontal-dragging,
+  .climate-card-actions-row.horizontal-dragging * { cursor: grabbing !important; user-select: none; }
+  .climate-card-actions-row::-webkit-scrollbar { display: none; height: 0; width: 0; }
+  .climate-card-actions-scroll-button { align-items: center; background: color-mix(in srgb, var(--primary-color) 13%, var(--secondary-background-color)) !important; border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--divider-color)) !important; border-radius: 999px !important; box-shadow: 0 2px 7px color-mix(in srgb, var(--primary-color) 12%, transparent); box-sizing: border-box; color: var(--primary-text-color) !important; display: flex; height: 30px; justify-content: center; line-height: 1; margin: 0 !important; min-height: 30px !important; opacity: 1; padding: 0 !important; pointer-events: auto; position: absolute; top: 50%; transform: translateY(-50%) scale(1) !important; transition: opacity 160ms ease, transform 180ms ease, visibility 0s linear 0s; width: 28px; z-index: 2; }
+  .climate-card-actions-scroll-button.scroll-previous { inset-inline-start: 2px; }
+  .climate-card-actions-scroll-button.scroll-next { inset-inline-end: 2px; }
+  .climate-card-actions-scroll:not(.has-overflow) .climate-card-actions-scroll-button { display: none; }
+  .climate-card-actions .climate-card-actions-scroll-button:disabled { opacity: 0; pointer-events: none; transform: translateY(-50%) scale(.78) !important; visibility: hidden; transition-delay: 0s, 0s, 160ms; }
+  .climate-card-actions .climate-card-actions-scroll-button ha-icon { --mdc-icon-size: 18px; color: color-mix(in srgb, var(--primary-color) 68%, var(--primary-text-color)); }
+  .climate-card-actions button { align-items: center; background: color-mix(in srgb, var(--card-background-color) 92%, var(--climate-card-action-accent, var(--primary-color)) 8%); border: 1px solid color-mix(in srgb, var(--divider-color) 82%, var(--climate-card-action-accent, var(--primary-color)) 18%); border-radius: 8px; color: var(--primary-text-color); cursor: pointer; display: inline-flex; gap: 5px; justify-content: center; min-height: 32px; padding: 5px 8px; transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, flex-basis 160ms ease, transform 160ms ease, width 160ms ease; }
+  .climate-card-external button, .climate-card-boost-form button { align-items: center; background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 10px; color: var(--primary-text-color); cursor: pointer; display: inline-flex; gap: 6px; justify-content: center; min-height: 40px; padding: 8px 10px; }
+  .climate-card-actions-row > button { flex: 0 0 auto; min-width: max-content; }
+  .climate-card-actions-row > button.icon-only { flex: 0 0 34px; min-width: 34px; padding-inline: 0; width: 34px; }
+  .climate-card-actions-row > button.icon-only.name-hidden.panel-open { flex-basis: 52px; min-width: 52px; width: 52px; }
+  .climate-card-actions-row > button > span:not(.climate-card-action-icon-stack) { white-space: nowrap; }
+  .climate-card-actions ha-icon { --mdc-icon-size: 17px; color: var(--secondary-text-color); }
+  .climate-card-actions .boost { --climate-card-action-accent: var(--warning-color, #e69b35); }
+  .climate-card-actions .pause, .climate-card-actions .resume { --climate-card-action-accent: var(--info-color, #3aa7c9); }
+  .climate-card-actions .custom { --climate-card-action-accent: var(--custom-action-color, var(--primary-color)); }
+  .climate-card-actions .boost ha-icon, .climate-card-actions .pause ha-icon, .climate-card-actions .resume ha-icon, .climate-card-actions .custom ha-icon { color: var(--climate-card-action-accent); }
+  .climate-card-actions .more ha-icon { color: var(--primary-color); }
+  .climate-card-actions .climate-card-action-icon-stack { display: grid; flex: 0 0 17px; height: 17px; overflow: visible; place-items: center; width: 17px; }
+  .climate-card-action-icon-stack ha-icon { grid-area: 1 / 1; opacity: 0; transform: scale(.62); transition: opacity 140ms ease, transform 180ms ease; }
+  .climate-card-action-icon-stack .action-result-default { opacity: 1; transform: scale(1); }
+  .climate-card-actions button.feedback-running .action-result-default, .climate-card-actions button.feedback-success .action-result-default, .climate-card-actions button.feedback-error .action-result-default { opacity: 0; transform: scale(.72); }
+  .climate-card-actions button.feedback-running .action-result-running, .climate-card-actions button.feedback-success .action-result-success, .climate-card-actions button.feedback-error .action-result-error { opacity: 1; transform: scale(1); }
+  .climate-card-actions button.feedback-running .action-result-running { animation: climate-card-menu-spin 1s linear infinite; }
+  .climate-card-actions .panel-close { --mdc-icon-size: 14px; color: var(--primary-text-color); flex: 0 0 auto; margin-inline-start: 0; opacity: 0; overflow: hidden; transform: scale(.55) rotate(-35deg); transition: margin-inline-start 160ms ease, opacity 140ms ease, transform 160ms ease, width 160ms ease; width: 0; }
+  .climate-card-actions button.panel-open .panel-close { margin-inline-start: 1px; opacity: .82; transform: scale(1) rotate(0); width: 14px; }
+  .climate-card-actions button.feedback-running { cursor: wait; }
+  .climate-card-actions button.feedback-success { background: color-mix(in srgb, var(--success-color, #65a56f) 16%, var(--card-background-color)); border-color: color-mix(in srgb, var(--success-color, #65a56f) 58%, var(--divider-color)); }
+  .climate-card-actions button.feedback-success ha-icon { color: var(--success-color, #65a56f); }
+  .climate-card-actions button.feedback-error { background: color-mix(in srgb, var(--error-color, #db5a5a) 14%, var(--card-background-color)); border-color: color-mix(in srgb, var(--error-color, #db5a5a) 58%, var(--divider-color)); }
+  .climate-card-actions button.feedback-error ha-icon { color: var(--error-color, #db5a5a); }
+  .climate-card-action-feedback-label { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+  .climate-card-actions button.panel-open { background: color-mix(in srgb, var(--climate-card-action-accent, var(--primary-color)) 13%, var(--card-background-color)); border-color: color-mix(in srgb, var(--climate-card-action-accent, var(--primary-color)) 55%, var(--divider-color)); }
+  .climate-card-actions button.runtime-active:not(.panel-open) { box-shadow: inset 0 -2px 0 var(--climate-card-action-accent, var(--primary-color)); }
+  .climate-card-actions button:hover:not(:disabled) { background: color-mix(in srgb, var(--climate-card-action-accent, var(--primary-color)) 12%, var(--card-background-color)); box-shadow: 0 4px 12px color-mix(in srgb, var(--climate-card-action-accent, var(--primary-color)) 12%, transparent); transform: translateY(-1px); }
+  .climate-card-actions button:focus-visible { box-shadow: inset 0 0 0 2px var(--primary-color); outline: none; }
+  .climate-card-actions button:disabled { cursor: default; opacity: 0.55; }
+  .climate-card-actions-menu { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 11px; box-shadow: var(--ha-card-box-shadow, 0 8px 24px rgba(0, 0, 0, .24)); box-sizing: border-box; color: var(--primary-text-color); display: grid; gap: 3px; inset: auto; margin: 0; overflow-x: hidden; overflow-y: auto; padding: 6px; position: fixed; z-index: 1000; }
+  .climate-card-actions-menu::backdrop {
+    -webkit-backdrop-filter: blur(1.5px) saturate(.72);
+    backdrop-filter: blur(1.5px) saturate(.72);
+    background: color-mix(in srgb, var(--primary-background-color) 24%, transparent);
+  }
+  .climate-card-actions-menu button { --custom-action-color: var(--secondary-text-color); align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--primary-text-color); cursor: pointer; display: grid; font: inherit; gap: 9px; grid-template-columns: 24px minmax(0, 1fr); min-height: 44px; padding: 7px 10px; text-align: left; width: 100%; }
+  .climate-card-actions-menu button:hover, .climate-card-actions-menu button:focus-visible { background: color-mix(in srgb, var(--primary-color) 9%, var(--card-background-color)); outline: none; }
+  .climate-card-actions-menu button:focus-visible { box-shadow: inset 0 0 0 2px var(--primary-color); }
+  .climate-card-actions-menu button:disabled { cursor: default; opacity: .55; }
+  .climate-card-actions-menu button ha-icon { --mdc-icon-size: 20px; color: var(--custom-action-color); }
+  .climate-card-actions-menu .boost ha-icon { color: var(--warning-color, #e69b35); }
+  .climate-card-actions-menu .pause ha-icon, .climate-card-actions-menu .resume ha-icon { color: var(--info-color, #3aa7c9); }
+  .climate-card-actions-menu-brand { display: block; height: 22px; object-fit: contain; width: 22px; }
+  .climate-card-actions-menu button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-actions-menu-separator { border-top: 1px solid var(--divider-color); margin: 3px 5px; }
+  @keyframes climate-card-menu-spin { to { transform: rotate(360deg); } }
+  .climate-card-boost-form { background: var(--secondary-background-color); border: 1px solid var(--divider-color); border-radius: 12px; display: grid; gap: 10px; padding: 12px; }
+  .climate-card-control-pane { border-width: 0; }
+  .climate-card-boost-form > div { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
+  .climate-card-boost-form label span { color: var(--secondary-text-color); display: block; font-size: 11px; margin-bottom: 3px; }
+  .climate-card-boost-form input, .climate-card-boost-form select { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; box-sizing: border-box; color: var(--primary-text-color); min-height: 38px; padding: 9px; width: 100%; }
+  .climate-card-form-checkbox { align-items: center; display: flex; gap: 7px; }
+  .climate-card-form-checkbox input { min-height: auto; width: auto; }
+  .climate-card-form-checkbox span { margin: 0; }
+  .climate-card-boost-form footer { display: flex; gap: 8px; justify-content: end; }
+  .climate-card-boost-form button.primary { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
+  .climate-card-external { align-items: center; display: grid; gap: 10px; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .climate-card-external > ha-icon { color: var(--primary-color); }
+  .climate-card-external div { display: grid; }
+  .climate-card-external small { color: var(--secondary-text-color); margin-top: 3px; }
+  .climate-card-external-readings { display: grid; gap: 8px; grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); }
+  .climate-card-empty { color: var(--secondary-text-color); padding: 16px; text-align: center; }
+  @media (max-width: 600px) {
+    .climate-card-view { box-sizing: border-box; padding: 4px; }
+    .climate-card-current-grid { grid-template-columns: minmax(0, 1fr); }
+    .climate-card-current-context { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .climate-card-current-grid:not(.has-readings) .climate-card-current-context { border-top: 0; }
+    .climate-card-context-item + .climate-card-context-item { border-left: 0; border-top: 1px solid var(--divider-color); }
+    .climate-card-external { grid-template-columns: auto minmax(0, 1fr); }
+    .climate-card-external button { grid-column: 1 / -1; }
+    .climate-card-runtime { grid-template-columns: auto 1fr; }
+    .climate-card-runtime span { grid-column: 1 / -1; text-align: left; }
+    .climate-card-preconditioning-preview { grid-template-columns: minmax(95px, .85fr) minmax(0, 1.4fr); }
+    .overview-timeline-layout.climate-card-timeline-layout { --overview-timeline-name-column: 0px; --overview-timeline-sticky-left: 12px; grid-template-columns: minmax(640px, 1fr); min-width: 640px; }
+  }
+  @container climate-card (max-width: 520px) {
+    .climate-card-control-toolbar { column-gap: 6px; }
+    .climate-card-manual-control { padding: 7px; }
+    .climate-card-actions { padding-inline: 7px; }
+  }
+  @container climate-card (max-width: 380px) {
+    .climate-card-brand { padding-inline: 7px; }
+    .climate-card-control-surface { grid-template-columns: minmax(74px, 1fr) auto 52px; }
+    .climate-card-control-surface:not(:has(.climate-card-native-link)) { grid-template-columns: minmax(74px, 1fr) auto; }
+    .climate-card-mode-control summary { gap: 5px; padding-inline: 6px; }
+    .climate-card-native-link { width: 52px; }
+    .climate-card-range-controls { border-inline-start: 0; border-top: 1px solid var(--divider-color); grid-column: 1 / -1; grid-row: 2; }
+    .climate-card-range-controls { grid-template-columns: minmax(0, 1fr); }
+    .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control { border-inline-start: 0; border-top: 1px solid var(--divider-color); }
+    .climate-card-range-controls::before, .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control::before { display: none; }
+    .climate-card-native-link:only-child { grid-column: 1 / -1; justify-self: end; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .climate-card-state-line::after, .climate-card-actions button.feedback-running .action-result-running { animation: none !important; }
+    .climate-card-manual-segmented button, .climate-card-brand { transition: none; }
+    .climate-card-mode-control summary, .climate-card-mode-control .select-indicator { transition: none; }
+    .climate-card-actions button, .climate-card-actions .panel-close, .climate-card-action-icon-stack ha-icon { transition: none; }
+    .climate-card-brand:hover, .climate-card-actions button:hover:not(:disabled) { transform: none; }
+    .climate-card-current-body, .climate-card-current-summary-wrap, .climate-card-current-collapsed-comfort, .climate-card-current-toggle ha-icon,
+    .climate-card-feature-body, .climate-card-feature-body-inner, .climate-card-feature-chevron { transition: none; }
+  }
+`, Nr = u`
   .diagnostics-view { display: grid; gap: 14px; }
   .diagnostics-intro { align-items: center; display: grid; gap: 10px; grid-template-columns: 24px minmax(0, 1fr); padding: 2px 4px 4px; }
   .diagnostics-intro > ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }
@@ -13092,7 +17509,7 @@ var Fn = u`
     .diagnostics-rows dd, .diagnostics-sensor-detail { margin-top: 3px; }
     .diagnostics-sensor-detail { display: flex; }
   }
-`, Rn = u`
+`, Pr = u`
 .inline-help-wrapper {
   display: inline-flex;
   flex: 0 0 auto;
@@ -13107,13 +17524,18 @@ var Fn = u`
   color: var(--secondary-text-color);
   cursor: help;
   display: inline-flex;
-  height: 28px;
+  height: 32px;
   justify-content: center;
   padding: 0;
-  width: 28px;
+  position: relative;
+  width: 32px;
 }
 
-.inline-help ha-icon { --mdc-icon-size: 16px; }
+.inline-help ha-icon {
+  --mdc-icon-size: 16px;
+  height: 16px;
+  width: 16px;
+}
 
 .inline-help:focus-visible {
   outline: 2px solid var(--primary-color);
@@ -13124,13 +17546,15 @@ var Fn = u`
   background: var(--primary-text-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
+  box-sizing: border-box;
   color: var(--primary-background-color);
   font-size: 11px;
   font-weight: 400;
   line-height: 1.35;
   max-height: calc(100dvh - 24px);
-  max-width: min(260px, calc(100vw - 32px));
+  max-width: min(260px, calc(100dvw - 24px));
   opacity: 0;
+  overflow-wrap: anywhere;
   overflow-y: auto;
   padding: 7px 8px;
   pointer-events: none;
@@ -13148,51 +17572,47 @@ var Fn = u`
   visibility: visible;
 }
 
-@media (pointer: coarse) {
-  .inline-help { height: 40px; width: 40px; }
+.inline-help-tooltip.constrained {
+  max-width: min(236px, calc(100dvw - 24px));
+  width: min(236px, calc(100dvw - 24px));
+}
+
+.inline-help-tooltip-content {
+  display: grid;
+  gap: 6px;
+}
+
+.inline-help-tooltip-block {
+  display: block;
 }
 
 @media (max-width: 480px) {
   .inline-help-wrapper { position: static; }
-  .inline-help { height: 40px; width: 40px; }
-  .inline-help-tooltip {
-    bottom: 12px;
-    inset-inline: 12px;
-    max-height: min(40dvh, 180px);
+
+  .inline-help-tooltip,
+  .inline-help-tooltip.constrained {
+    bottom: calc(var(--inline-help-mobile-bottom, 0px) + max(12px, env(safe-area-inset-bottom)));
+    left: calc(var(--inline-help-mobile-left, 0px) + max(12px, env(safe-area-inset-left)));
+    max-height: min(
+      180px,
+      calc(
+        var(--inline-help-mobile-height, 100dvh)
+        - max(12px, env(safe-area-inset-top))
+        - max(12px, env(safe-area-inset-bottom))
+      ),
+      calc(100dvh - 24px)
+    );
     max-width: none;
-    overflow-y: auto;
-    position: fixed;
+    right: auto;
     top: auto;
-    width: auto;
+    width: calc(
+      var(--inline-help-mobile-width, 100dvw)
+      - max(12px, env(safe-area-inset-left))
+      - max(12px, env(safe-area-inset-right))
+    );
   }
 }
-
-.inline-help.compact {
-  height: 20px;
-  width: 20px;
-}
-
-@media (pointer: coarse) {
-  .inline-help.compact {
-    height: 20px;
-    position: relative;
-    width: 20px;
-  }
-
-  .inline-help.compact::before {
-    border-radius: 50%;
-    content: "";
-    inset: -10px;
-    position: absolute;
-  }
-}
-
-.inline-help.compact ha-icon {
-  --mdc-icon-size: 12px;
-  height: 12px;
-  width: 12px;
-}
-`, zn = u`
+`, Fr = u`
   .initial-loading {
     align-items: center;
     box-sizing: border-box;
@@ -13227,7 +17647,7 @@ var Fn = u`
     font-size: 13px;
     line-height: 1.3;
   }
-`, Bn = u`
+`, Ir = u`
   .notice-stack {
     box-sizing: border-box;
     display: grid;
@@ -13345,7 +17765,7 @@ var Fn = u`
       transition-duration: 0ms;
     }
   }
-`, Vn = u`
+`, Lr = u`
   .operation-status {
     --operation-status-color: var(--primary-color);
     align-items: center;
@@ -13497,7 +17917,7 @@ var Fn = u`
       padding-inline: 10px;
     }
   }
-`, Hn = u`
+`, Rr = u`
 .overview-summary {
   margin: 0;
 }
@@ -14810,7 +19230,7 @@ var Fn = u`
 .summary-icon-button ha-icon {
   --mdc-icon-size: 18px;
 }
-`, Un = u`
+`, zr = u`
   .settings-portability {
     display: grid;
     gap: 12px;
@@ -14954,7 +19374,7 @@ var Fn = u`
     --mdc-icon-size: 18px;
     color: var(--warning-color, #c99500);
   }
-`, Wn = u`
+`, Br = u`
 .preconditioning-view {
   display: grid;
   gap: 12px;
@@ -15761,7 +20181,7 @@ var Fn = u`
   font-size: 11px;
 }
 
-`, Gn = u`
+`, Vr = u`
 .sensors-view {
   display: grid;
   gap: 12px;
@@ -15992,50 +20412,6 @@ var Fn = u`
   display: inline-flex;
   gap: 6px;
   min-width: 0;
-}
-
-.sensor-help {
-  align-items: center;
-  color: var(--secondary-text-color);
-  cursor: help;
-  display: inline-flex;
-  flex: 0 0 auto;
-  outline: none;
-  position: relative;
-}
-
-.sensor-help ha-icon {
-  --mdc-icon-size: 15px;
-}
-
-.sensor-help-tooltip {
-  background: var(--primary-text-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-  color: var(--primary-background-color);
-  font-size: 11px;
-  font-weight: 400;
-  left: 50%;
-  line-height: 1.35;
-  max-width: min(240px, calc(100vw - 40px));
-  opacity: 0;
-  padding: 7px 8px;
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  transform: translateX(-22px);
-  transition: opacity 120ms ease, visibility 120ms ease;
-  visibility: hidden;
-  white-space: normal;
-  width: max-content;
-  z-index: 20;
-}
-
-.sensor-help:hover .sensor-help-tooltip,
-.sensor-help:focus .sensor-help-tooltip,
-.sensor-help:focus-visible .sensor-help-tooltip {
-  opacity: 1;
-  visibility: visible;
 }
 
 .sensor-status-card {
@@ -16481,12 +20857,14 @@ var Fn = u`
 
 .sensor-scale-callout-marker {
   --callout-left: 50%;
+  box-sizing: border-box;
   display: block;
   height: 0;
   left: clamp(72px, var(--callout-left), calc(100% - 72px));
+  margin-left: -72px;
   position: absolute;
   top: 69px;
-  width: 0;
+  width: 144px;
   z-index: 2;
 }
 
@@ -16501,13 +20879,15 @@ var Fn = u`
   display: grid;
   gap: 1px;
   left: 0;
+  margin-inline: auto;
   max-width: 144px;
   min-width: 96px;
   padding: 5px 7px 5px 6px;
   pointer-events: auto;
   position: absolute;
+  right: 0;
   text-align: left;
-  transform: translateX(-50%);
+  width: max-content;
 }
 
 .sensor-scale-callout::after {
@@ -16556,10 +20936,6 @@ var Fn = u`
   min-width: 0;
   overflow: visible;
   white-space: nowrap;
-}
-
-.sensor-scale-callout.has-offset {
-  width: max-content;
 }
 
 .sensor-scale-callout.has-offset .sensor-scale-value-row > strong {
@@ -16756,30 +21132,12 @@ var Fn = u`
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .sensor-config-label {
-    box-sizing: border-box;
-    position: relative;
-    width: 100%;
-  }
-
-  .sensor-config-label .sensor-help {
-    position: static;
-  }
-
-  .sensor-config-label .sensor-help-tooltip {
-    left: 0;
-    max-width: 100%;
-    right: 0;
-    transform: none;
-    width: auto;
-  }
-
   .sensor-block-summary {
     grid-template-columns: minmax(0, 1fr);
   }
 
 }
-`, Kn = u`
+`, Hr = u`
 .settings-view {
   display: grid;
   gap: 12px;
@@ -17109,6 +21467,12 @@ var Fn = u`
   min-width: 0;
 }
 
+.settings-zone-configuration {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .settings-zone-title {
   align-items: center;
   display: grid;
@@ -17197,6 +21561,59 @@ var Fn = u`
   color: var(--secondary-text-color);
   font-size: 11px;
   padding-inline-end: 7px;
+}
+
+.settings-target-temp-step-control {
+  align-items: center;
+  border: 1px solid var(--divider-color);
+  border-radius: 6px;
+  box-sizing: border-box;
+  display: flex;
+  height: 34px;
+  overflow: hidden;
+  max-width: 100%;
+  width: 170px;
+}
+
+.settings-target-temp-step-control input {
+  background: var(--card-background-color);
+  border: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  color: var(--primary-text-color);
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 12px;
+  height: 100%;
+  margin: 0;
+  min-width: 0;
+  outline: 0;
+  padding-inline: 8px 2px;
+  width: 100%;
+}
+
+.settings-target-temp-step-control:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.settings-target-temp-step-control span {
+  color: var(--secondary-text-color);
+  font-size: 11px;
+  padding-inline-end: 7px;
+}
+
+.settings-target-temp-step {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.settings-target-temp-step > .settings-policy-heading {
+  box-sizing: border-box;
+  flex: 0 0 142px;
 }
 
 .settings-zone-identity strong,
@@ -17341,7 +21758,8 @@ var Fn = u`
 
 @media (pointer: coarse) {
   .settings-policy-controls > .select-wrap,
-  .settings-policy-duration { height: 40px; }
+  .settings-policy-duration,
+  .settings-target-temp-step-control { height: 40px; }
 }
 
 @media (max-width: 480px) {
@@ -17351,8 +21769,11 @@ var Fn = u`
   .settings-policy-controls { width: 100%; }
   .settings-policy-controls > .select-wrap { flex: 1 1 160px; height: 40px; max-width: 170px; width: auto; }
   .settings-policy-duration { flex: 0 1 105px; height: 40px; }
+  .settings-target-temp-step { align-items: stretch; flex-direction: column; gap: 4px; }
+  .settings-target-temp-step > .settings-policy-heading { flex-basis: auto; }
+  .settings-target-temp-step-control { height: 40px; width: 170px; }
 }
-`, qn = u`
+`, Ur = u`
 .templates-view {
   display: grid;
   gap: 12px;
@@ -17682,7 +22103,7 @@ var Fn = u`
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-`, Jn = u`
+`, Wr = u`
   .timeline-panel {
     display: grid;
     gap: 8px;
@@ -17995,7 +22416,7 @@ var Fn = u`
     pointer-events: auto;
     z-index: 2;
   }
-`, Yn = u`
+`, Gr = u`
   @media (max-width: 900px) {
     .template-library-layout {
       grid-template-columns: minmax(0, 1fr);
@@ -18046,8 +22467,13 @@ var Fn = u`
     }
 
     .overview-timeline-block-main {
-      left: calc(var(--overview-timeline-name-column) + 12px);
+      left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));
       max-width: min(150px, calc(100vw - var(--overview-timeline-name-column) - 32px));
+      position: sticky;
+    }
+
+    .overview-timeline-start-edge .overview-timeline-block-main {
+      left: var(--overview-timeline-sticky-left, calc(var(--overview-timeline-name-column) + 12px));
       position: sticky;
     }
 
@@ -18158,7 +22584,8 @@ var Fn = u`
       grid-column: 1 / -1;
     }
 
-    .editable-block > label > .label {
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label {
       display: none;
     }
 
@@ -18350,7 +22777,8 @@ var Fn = u`
       grid-column: 1 / -1;
     }
 
-    .editable-block > label > .label {
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label {
       display: none;
     }
 
@@ -18626,8 +23054,8 @@ var Fn = u`
       grid-column: 1 / -1;
       grid-template-areas:
         "time time options delete"
-        "mode mode target target";
-      grid-template-columns: repeat(2, minmax(0, 1fr)) 30px 30px;
+        "mode target target target";
+      grid-template-columns: minmax(0, 1fr) 36px 36px 36px;
       min-width: 0;
       row-gap: 8px;
     }
@@ -18639,7 +23067,8 @@ var Fn = u`
     .editable-block > .advanced-climate-options,
     .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
     .editable-block > .icon-button.danger { grid-area: delete; }
-    .editable-block > label > .label { display: block; }
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label { display: block; }
   }
 
   @media (max-width: 340px) {
@@ -18657,8 +23086,8 @@ var Fn = u`
       grid-column: 1 / -1;
       grid-template-areas:
         "time time options delete"
-        "mode mode target target";
-      grid-template-columns: repeat(2, minmax(0, 1fr)) 30px 30px;
+        "mode target target target";
+      grid-template-columns: minmax(0, 1fr) 36px 36px 36px;
       min-width: 0;
       row-gap: 8px;
     }
@@ -18670,23 +23099,25 @@ var Fn = u`
     .editable-block > .advanced-climate-options,
     .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
     .editable-block > .icon-button.danger { grid-area: delete; }
-    .editable-block > label > .label { display: block; }
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label { display: block; }
   }
-`, Xn = [
-	Fn,
-	In,
-	Ln,
-	Rn,
-	zn,
-	Bn,
-	Vn,
-	Hn,
-	Un,
-	Wn,
-	Gn,
-	Kn,
-	qn,
-	Jn,
+`, Kr = [
+	Ar,
+	Mr,
+	jr,
+	Nr,
+	Pr,
+	Fr,
+	Ir,
+	Lr,
+	Rr,
+	zr,
+	Br,
+	Vr,
+	Hr,
+	Ur,
+	Wr,
 	u`
     .temperature-migration-banner {
       align-items: start;
@@ -19578,7 +24009,8 @@ var Fn = u`
       margin-top: 0;
     }
 
-    .editable-block > label > .label {
+    .editable-block > label > .label,
+    .editable-block > .target-action-field > label.label {
       display: none;
     }
 
@@ -19600,6 +24032,83 @@ var Fn = u`
     .editable-block input,
     .editable-block select {
       margin-top: 0;
+    }
+
+    .target-action-field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 36px;
+      min-width: 0;
+    }
+
+    .target-action-range {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 36px;
+    }
+
+    .target-action-range > .field-error {
+      grid-column: 1 / -1;
+    }
+
+    .target-action-range .temperature-range-control {
+      border-end-end-radius: 0;
+      border-start-end-radius: 0;
+    }
+
+    .target-action-field > label,
+    .target-action-field > .field-error {
+      grid-column: 1 / -1;
+    }
+
+    .target-action-field input {
+      border-end-end-radius: 0;
+      border-start-end-radius: 0;
+      min-width: 0;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .target-action-field input:disabled,
+    .target-action-range input:disabled {
+      background: color-mix(in srgb, var(--secondary-background-color) 82%, var(--card-background-color));
+      color: var(--disabled-text-color);
+      opacity: 1;
+      -webkit-text-fill-color: var(--disabled-text-color);
+    }
+
+    .target-action-field input:disabled::placeholder,
+    .target-action-range input:disabled::placeholder {
+      color: var(--disabled-text-color);
+      opacity: 1;
+    }
+
+    .target-action-toggle {
+      align-items: center;
+      background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color));
+      border: 1px solid var(--divider-color);
+      border-end-end-radius: 6px;
+      border-inline-start: 0;
+      border-start-end-radius: 6px;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: inline-flex;
+      justify-content: center;
+      min-width: 0;
+      padding: 0;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .target-action-toggle.device-controlled {
+      background: color-mix(in srgb, var(--disabled-text-color) 9%, var(--card-background-color));
+      color: var(--secondary-text-color);
+    }
+
+    .target-action-toggle:disabled {
+      color: var(--disabled-text-color);
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    .target-action-toggle ha-icon {
+      --mdc-icon-size: 17px;
     }
 
     .select-wrap {
@@ -19855,8 +24364,8 @@ var Fn = u`
     }
 
   `,
-	Yn
-], P = class {
+	Gr
+], F = class {
 	constructor(e) {
 		this.hass = e;
 	}
@@ -19981,6 +24490,13 @@ var Fn = u`
 			duration_minutes: t.duration_minutes
 		});
 	}
+	updateZoneTargetTempStep(e, t) {
+		return this.hass.connection.sendMessagePromise({
+			type: "velair/update_zone_target_temp_step",
+			entity_id: e,
+			target_temp_step: t
+		});
+	}
 	setZoneExecution(e, t) {
 		return this.hass.connection.sendMessagePromise({
 			type: "velair/set_zone_execution",
@@ -20054,62 +24570,62 @@ var Fn = u`
 			expected_revision: n
 		});
 	}
-}, Zn = /^\d{2}:\d{2}$/;
-function Qn(e) {
-	if (!Zn.test(e)) return;
+}, qr = /^\d{2}:\d{2}$/;
+function Jr(e) {
+	if (!qr.test(e)) return;
 	let [t, n] = e.split(":").map((e) => Number(e));
 	if (!(t < 0 || t > 23 || n < 0 || n > 59)) return t * 60 + n;
 }
-function $n(e) {
+function Yr(e) {
 	let t = Math.min(Math.max(e, 0), 1439), n = Math.floor(t / 60), r = t % 60;
 	return `${String(n).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-function er(e) {
-	let t = e ? Qn(e) : void 0;
+function Xr(e) {
+	let t = e ? Jr(e) : void 0;
 	if (t === void 0) return "08:00";
 	let n = Math.floor(t / 60), r = t % 60, i = Math.min(n + 1, 23);
 	return `${String(i).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-function tr(e, t, n) {
+function Zr(e, t, n) {
 	return Math.min(Math.max(e, t), Math.max(t, n));
 }
 //#endregion
 //#region src/velair/domain/schedule-events.ts
-function nr(e, t, n, r = /* @__PURE__ */ new Date()) {
+function Qr(e, t, n, r = /* @__PURE__ */ new Date()) {
 	if (t?.enabled) {
 		if (n) {
-			let r = F(n.until);
+			let r = I(n.until);
 			if (r) {
 				let n = new Date(r);
-				return ir(e, t, n) ?? rr(e, t, n);
+				return ei(e, t, n) ?? $r(e, t, n);
 			}
 		}
-		return rr(e, t, r);
+		return $r(e, t, r);
 	}
 }
-function rr(e, t, n) {
+function $r(e, t, n) {
 	let r;
 	for (let i = 0; i <= 7; i += 1) {
 		let a = new Date(n);
 		a.setDate(n.getDate() + i);
-		let o = sr(a);
+		let o = ri(a);
 		for (let i of t.schedule?.[o] ?? []) {
-			let t = or(a, i.start);
+			let t = ni(a, i.start);
 			if (!t || t <= n) continue;
-			let s = ar(e, i, t, o);
+			let s = ti(e, i, t, o);
 			(!r || t < new Date(r.when)) && (r = s);
 		}
 	}
 	return r;
 }
-function ir(e, t, n) {
-	let r = sr(n), i = n.getHours() * 60 + n.getMinutes(), a = [...t.schedule?.[r] ?? []].map((e) => ({
+function ei(e, t, n) {
+	let r = ri(n), i = n.getHours() * 60 + n.getMinutes(), a = [...t.schedule?.[r] ?? []].map((e) => ({
 		block: e,
-		minute: Qn(e.start)
+		minute: Jr(e.start)
 	})).filter((e) => e.minute !== void 0).sort((e, t) => e.minute - t.minute).filter((e) => e.minute <= i).at(-1)?.block;
-	return a ? ar(e, a, n, r) : void 0;
+	return a ? ti(e, a, n, r) : void 0;
 }
-function ar(e, t, n, r) {
+function ti(e, t, n, r) {
 	return {
 		entity_id: e,
 		when: n.toISOString(),
@@ -20122,7 +24638,7 @@ function ar(e, t, n, r) {
 		start: t.start
 	};
 }
-function or(e, t) {
+function ni(e, t) {
 	let n = /^(\d{1,2}):(\d{2})$/.exec(t);
 	if (!n) return;
 	let r = Number(n[1]), i = Number(n[2]);
@@ -20130,15 +24646,15 @@ function or(e, t) {
 	let a = new Date(e);
 	return a.setHours(r, i, 0, 0), a;
 }
-function sr(e) {
+function ri(e) {
 	return k[e.getDay() === 0 ? 6 : e.getDay() - 1];
 }
-function F(e) {
+function I(e) {
 	if (typeof e != "string") return;
 	let t = new Date(e).getTime();
 	return Number.isNaN(t) ? void 0 : t;
 }
-function cr(e, t) {
+function ii(e, t) {
 	let n = new Map(e.map((e) => [e.entity_id, e]));
 	return t.filter((e) => {
 		let t = n.get(e.entity_id);
@@ -20148,37 +24664,8 @@ function cr(e, t) {
 	}).map((e) => e.entity_id);
 }
 //#endregion
-//#region src/velair/domain/temperature-units.ts
-function lr(e) {
-	return String(e ?? "").toUpperCase().includes("F");
-}
-function ur(e) {
-	return lr(e) ? 70 : 21;
-}
-function dr(e) {
-	return lr(e) ? 1 : .3;
-}
-function fr(e) {
-	return lr(e) ? 4 : 2;
-}
-function pr(e) {
-	return lr(e) ? 1 : .3;
-}
-function mr(e) {
-	return lr(e) ? 14 : 25;
-}
-function hr(e, t) {
-	return lr(e) ? t * 9 / 5 : t;
-}
-function gr(e) {
-	return lr(e) ? [.6, 66.7] : [1, 120];
-}
-function _r(e) {
-	return lr(e) ? [-58, 212] : [-50, 100];
-}
-//#endregion
 //#region src/velair/domain/templates.ts
-function vr(e, t) {
+function ai(e, t) {
 	return (e ?? []).map((e) => ({
 		key: e.key,
 		name: e.name,
@@ -20188,31 +24675,31 @@ function vr(e, t) {
 				start: e.start,
 				hvac_mode: e.hvac_mode ?? ""
 			};
-			return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? ur(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
+			return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? jt(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
 		})
 	}));
 }
-function yr(e) {
+function oi(e) {
 	return e.name ?? e.key;
 }
-function br(e, t) {
-	let n = new Set(t.map((e) => yr(e)));
+function si(e, t) {
+	let n = new Set(t.map((e) => oi(e)));
 	if (!n.has(e)) return e;
 	let r = 2;
 	for (; n.has(`${e} ${r}`);) r += 1;
 	return `${e} ${r}`;
 }
-function xr(e = Date.now(), t = Math.random()) {
+function ci(e = Date.now(), t = Math.random()) {
 	return `custom_${e.toString(36)}_${t.toString(36).slice(2, 8)}`;
 }
-function Sr(e, t) {
+function li(e, t) {
 	return `${e}::${t}`;
 }
-function Cr(e, t, n, r) {
-	let i = Sr(t, n), a = new Set(e);
+function ui(e, t, n, r) {
+	let i = li(t, n), a = new Set(e);
 	return r ? a.add(i) : a.delete(i), a;
 }
-function wr(e, t) {
+function di(e, t) {
 	return [...e].map((e) => {
 		let [t, n] = e.split("::");
 		return {
@@ -20223,19 +24710,19 @@ function wr(e, t) {
 }
 //#endregion
 //#region src/velair/domain/overrides.ts
-function Tr(e, t = Date.now()) {
+function fi(e, t = Date.now()) {
 	if (!e || e.type !== "boost") return !1;
-	let n = Number(e.temperature), r = Number(e.target_temp_low), i = Number(e.target_temp_high), a = F(e.until);
+	let n = Number(e.temperature), r = Number(e.target_temp_low), i = Number(e.target_temp_high), a = I(e.until);
 	return (Number.isFinite(n) || Number.isFinite(r) && Number.isFinite(i) && r <= i) && !!(a && a > t);
 }
-function Er(e, t = Date.now()) {
+function pi(e, t = Date.now()) {
 	if (!e || e.type !== "pause") return !1;
-	let n = F(e.until);
+	let n = I(e.until);
 	return Object.prototype.hasOwnProperty.call(e, "until") && n === void 0 ? !1 : n === void 0 || n > t;
 }
 //#endregion
 //#region src/velair/domain/timeline.ts
-function Dr(e, t) {
+function mi(e, t) {
 	if (t) try {
 		let n = new Intl.DateTimeFormat("en-US", {
 			hour: "2-digit",
@@ -20247,25 +24734,25 @@ function Dr(e, t) {
 	} catch {}
 	return e.getHours() * 60 + e.getMinutes();
 }
-function Or(e, t) {
-	let n = Dr(e, t);
+function hi(e, t) {
+	let n = mi(e, t);
 	return {
-		label: $n(n),
+		label: Yr(n),
 		left: n / 1440 * 100,
 		minute: n
 	};
 }
-function kr(e, t, n, r) {
+function gi(e, t, n, r) {
 	let i = Math.max(0, t - n);
 	if (i <= 1) return 0;
 	let a = Math.max(0, Math.min(100, e)), o = Math.max(0, t - r), s = Math.max(0, n - r), c = r + a / 100 * o, l = r + s * .35;
 	return Math.max(0, Math.min(i, c - l));
 }
-function Ar(e) {
+function _i(e) {
 	let t = e.map((e, t) => ({
 		draft: e,
 		index: t,
-		startMinute: Qn(e.start)
+		startMinute: Jr(e.start)
 	})).filter((e) => e.startMinute !== void 0).sort((e, t) => e.startMinute - t.startMinute);
 	return t.map((e, n) => {
 		let r = e.startMinute, i = t[n + 1], a = i?.startMinute, o = typeof a == "number" && a > r ? a : 1440, s = r / 1440 * 100, c = Math.max((o - r) / 1440 * 100, 3.5);
@@ -20280,11 +24767,11 @@ function Ar(e) {
 		};
 	});
 }
-function jr(e) {
+function vi(e) {
 	let t = e.map((e, t) => ({
 		block: e,
 		index: t,
-		startMinute: Qn(e.start)
+		startMinute: Jr(e.start)
 	})).filter((e) => e.startMinute !== void 0).sort((e, t) => e.startMinute - t.startMinute);
 	return t.map((e, n) => {
 		let r = t[n + 1]?.startMinute, i = typeof r == "number" && r > e.startMinute ? r : 1440, a = e.startMinute / 1440 * 100, o = (i - e.startMinute) / 1440 * 100;
@@ -20298,12 +24785,12 @@ function jr(e) {
 		};
 	});
 }
-function Mr(e, t) {
+function yi(e, t) {
 	let n = k.indexOf(t);
 	if (n < 0) return;
-	let r = Nr(e[t] ?? [])[0]?.startMinute ?? 1440;
+	let r = bi(e[t] ?? [])[0]?.startMinute ?? 1440;
 	if (!(r <= 0)) for (let t = 1; t <= k.length; t += 1) {
-		let i = k[(n - t + k.length) % k.length], a = Nr(e[i] ?? []), o = a[a.length - 1];
+		let i = k[(n - t + k.length) % k.length], a = bi(e[i] ?? []), o = a[a.length - 1];
 		if (o) return {
 			block: o.block,
 			endMinute: r,
@@ -20314,17 +24801,17 @@ function Mr(e, t) {
 		};
 	}
 }
-function Nr(e) {
+function bi(e) {
 	return e.map((e) => ({
 		block: e,
-		startMinute: Qn(e.start)
+		startMinute: Jr(e.start)
 	})).filter((e) => e.startMinute !== void 0).sort((e, t) => e.startMinute - t.startMinute);
 }
-function Pr(e, t = /* @__PURE__ */ new Date()) {
-	if (!Tr(e, t.getTime())) return;
-	let n = Lr(e.until);
+function xi(e, t = /* @__PURE__ */ new Date()) {
+	if (!fi(e, t.getTime())) return;
+	let n = wi(e.until);
 	if (!n) return;
-	let r = Lr(e.started_at) ?? t.getTime(), i = new Date(t);
+	let r = wi(e.started_at) ?? t.getTime(), i = new Date(t);
 	i.setHours(0, 0, 0, 0);
 	let a = new Date(i);
 	a.setDate(i.getDate() + 1);
@@ -20334,7 +24821,7 @@ function Pr(e, t = /* @__PURE__ */ new Date()) {
 	return {
 		block: {
 			action: qe,
-			start: $n(c),
+			start: Yr(c),
 			...Number.isFinite(f) ? { temperature: f } : {},
 			...Number.isFinite(p) && Number.isFinite(m) ? {
 				target_temp_low: p,
@@ -20348,9 +24835,9 @@ function Pr(e, t = /* @__PURE__ */ new Date()) {
 		width: Math.max(Math.min(d, 100 - u), .5)
 	};
 }
-function Fr(e, t = /* @__PURE__ */ new Date()) {
-	if (!Er(e, t.getTime())) return;
-	let n = Lr(e.until), r = new Date(t);
+function Si(e, t = /* @__PURE__ */ new Date()) {
+	if (!pi(e, t.getTime())) return;
+	let n = wi(e.until), r = new Date(t);
 	r.setHours(0, 0, 0, 0);
 	let i = new Date(r);
 	if (i.setDate(r.getDate() + 1), !n) return {
@@ -20360,7 +24847,7 @@ function Fr(e, t = /* @__PURE__ */ new Date()) {
 		startMinute: 0,
 		width: 100
 	};
-	let a = Lr(e.started_at) ?? t.getTime(), o = Math.max(a, r.getTime()), s = Math.min(n, i.getTime());
+	let a = wi(e.started_at) ?? t.getTime(), o = Math.max(a, r.getTime()), s = Math.min(n, i.getTime());
 	if (s <= o || o >= i.getTime() || s <= r.getTime()) return;
 	let c = Math.max(0, Math.min(1440, Math.round((o - r.getTime()) / 6e4))), l = Math.max(c + 1, Math.min(1440, Math.round((s - r.getTime()) / 6e4))), u = c / 1440 * 100, d = (l - c) / 1440 * 100;
 	return {
@@ -20371,23 +24858,23 @@ function Fr(e, t = /* @__PURE__ */ new Date()) {
 		width: Math.max(Math.min(d, 100 - u), .5)
 	};
 }
-function Ir(e) {
+function Ci(e) {
 	return e.map((e, t) => ({
 		block: e,
 		index: t,
-		startMinute: Qn(e.start)
+		startMinute: Jr(e.start)
 	})).sort((e, t) => e.startMinute === void 0 && t.startMinute === void 0 ? e.index - t.index : e.startMinute === void 0 ? 1 : t.startMinute === void 0 ? -1 : e.startMinute - t.startMinute || e.index - t.index).map((e) => e.block);
 }
-function Lr(e) {
+function wi(e) {
 	if (typeof e != "string") return;
 	let t = new Date(e).getTime();
 	return Number.isNaN(t) ? void 0 : t;
 }
-function Rr(e, t, n) {
+function Ti(e, t, n) {
 	let r = n > 0 ? (e - t) / n : 0, i = Math.round(Math.min(Math.max(r, 0), 1) * 1440 / 15) * 15;
 	return Math.min(i, 1425);
 }
-function zr(e) {
+function Ei(e) {
 	if (e.action === "turn_off") return "off";
 	switch (e.hvac_mode) {
 		case "heat": return "heat";
@@ -20402,33 +24889,33 @@ function zr(e) {
 }
 //#endregion
 //#region src/velair/domain/scheduler-state.ts
-function Br(e) {
-	return F(e?.paused_until);
+function Di(e) {
+	return I(e?.paused_until);
 }
-function Vr(e) {
-	return F(e?.paused_started_at);
+function Oi(e) {
+	return I(e?.paused_started_at);
 }
-function Hr(e, t, n = Date.now()) {
+function ki(e, t, n = Date.now()) {
 	if (!e || e >= t) return 100;
 	let r = Math.max(1, t - e), i = Math.max(0, t - n);
 	return Math.min(100, Math.max(0, i / r * 100));
 }
-function Ur(e, t = Date.now()) {
+function Ai(e, t = Date.now()) {
 	return e - t <= 9e4 ? 500 : 1e4;
 }
-function Wr(e, t, n = Date.now()) {
-	let r = [Br(e), ...Object.values(t ?? {}).map((e) => F(e.until))].filter((e) => typeof e == "number" && e > n);
+function ji(e, t, n = Date.now()) {
+	let r = [Di(e), ...Object.values(t ?? {}).map((e) => I(e.until))].filter((e) => typeof e == "number" && e > n);
 	return r.length ? Math.min(...r) : void 0;
 }
 //#endregion
 //#region src/velair/controllers/scheduler-controls.ts
-function I(e) {
+function L(e) {
 	return e;
 }
-function Gr(e) {
+function Mi(e) {
 	return e._data?.global.mode === "paused" || e._data?.operational_status === "paused";
 }
-async function Kr(e, t, n = {}) {
+async function Ni(e, t, n = {}) {
 	let r = e._api();
 	if (!(!r || e._controlAction)) {
 		e._controlAction = "pause", e._error = void 0, e._saveMessage = void 0;
@@ -20442,7 +24929,7 @@ async function Kr(e, t, n = {}) {
 		}
 	}
 }
-async function qr(e, t = {}) {
+async function Pi(e, t = {}) {
 	let n = e._api();
 	if (!(!n || e._controlAction)) {
 		e._controlAction = "resume", e._error = void 0, e._saveMessage = void 0;
@@ -20455,65 +24942,65 @@ async function qr(e, t = {}) {
 		}
 	}
 }
-function Jr(e) {
+function Fi(e) {
 	let t = e.renderRoot.querySelector(".scheduler-menu");
 	t instanceof HTMLDetailsElement && (t.open = !1), e._schedulerMenuOpen = !1;
 }
-function Yr(e, t) {
+function Ii(e, t) {
 	let n = t.currentTarget.closest(".scheduler-menu");
 	e._schedulerMenuOpen = n instanceof HTMLDetailsElement ? !n.open : !e._schedulerMenuOpen;
 }
-function Xr(e) {
+function Li(e) {
 	e._nextEventsOpen = !e._nextEventsOpen;
 }
-function Zr(e) {
-	return Br(e._data?.global);
+function Ri(e) {
+	return Di(e._data?.global);
 }
-function Qr(e, t) {
-	return Hr(Vr(e._data?.global), t);
+function zi(e, t) {
+	return ki(Oi(e._data?.global), t);
 }
-function $r(e) {
-	let t = ei(e);
+function Bi(e) {
+	let t = Vi(e);
 	if (!t || t <= Date.now()) {
 		e._stopPauseTick();
 		return;
 	}
-	let n = Ur(t);
+	let n = Ai(t);
 	(!e._pauseTick || e._pauseTickDelay !== n) && (e._stopPauseTick(), e._pauseTickDelay = n, e._pauseTick = window.setInterval(() => {
 		let t = e._nextCountdownExpirationMs();
-		!t || t <= Date.now() ? e._stopPauseTick() : e._pauseTickDelay !== Ur(t) && e._syncPauseTick(), e.requestUpdate();
+		!t || t <= Date.now() ? e._stopPauseTick() : e._pauseTickDelay !== Ai(t) && e._syncPauseTick(), e.requestUpdate();
 	}, n));
 }
-function ei(e) {
-	return Wr(e._data?.global, e._data?.active_overrides);
+function Vi(e) {
+	return ji(e._data?.global, e._data?.active_overrides);
 }
-function ti(e) {
+function Hi(e) {
 	e._pauseTick && (window.clearInterval(e._pauseTick), e._pauseTick = void 0, e._pauseTickDelay = void 0);
 }
 //#endregion
 //#region src/velair/controllers/notice-actions.ts
-function ni(e) {
+function Ui(e) {
 	return e;
 }
-function ri(e, t) {
-	t === "error" && (e._error = void 0), t === "success" && (e._saveMessage = void 0, oi(e));
+function Wi(e, t) {
+	t === "error" && (e._error = void 0), t === "success" && (e._saveMessage = void 0, qi(e));
 }
-function ii(e, t) {
-	e._saveMessage = t, e._successNoticeStartedAt = Date.now(), oi(e, !1), e._successNoticeTimeout = window.setTimeout(() => {
-		e._saveMessage = void 0, oi(e);
+function Gi(e, t) {
+	e._saveMessage = t, e._successNoticeStartedAt = Date.now(), qi(e, !1), e._successNoticeTimeout = window.setTimeout(() => {
+		e._saveMessage = void 0, qi(e);
 	}, Xe), e._successNoticeTick = window.setInterval(() => e.requestUpdate(), 1e3);
 }
-function ai(e) {
+function Ki(e) {
 	if (!e._successNoticeStartedAt) return 100;
 	let t = Date.now() - e._successNoticeStartedAt;
 	return Math.max(0, Math.min(100, (Xe - t) / Xe * 100));
 }
-function oi(e, t = !0) {
+function qi(e, t = !0) {
 	e._successNoticeTimeout &&= (window.clearTimeout(e._successNoticeTimeout), void 0), e._successNoticeTick &&= (window.clearInterval(e._successNoticeTick), void 0), t && (e._successNoticeStartedAt = void 0);
 }
 //#endregion
 //#region src/velair/controllers/notice-transitions.ts
-var si = 140, ci = class {
+var Ji = 140, Yi = class {
 	constructor(e) {
 		this._changed = e, this._entries = [], this._timers = /* @__PURE__ */ new Map(), this._frames = /* @__PURE__ */ new Map();
 	}
@@ -20526,7 +25013,7 @@ var si = 140, ci = class {
 			let n = t.get(e.id);
 			n ? (this._cancelRemoval(e.id), e.message = n.message, e.phase === "leaving" && (e.phase = "active"), t.delete(e.id)) : e.phase !== "leaving" && (this._cancelActivation(e.id), e.phase = "leaving", this._timers.set(e.id, setTimeout(() => {
 				this._timers.delete(e.id), this._entries = this._entries.filter((t) => t.id !== e.id), this._changed();
-			}, si)));
+			}, Ji)));
 		}
 		for (let n of e) t.has(n.id) && (this._entries.push({
 			...n,
@@ -20572,21 +25059,21 @@ var si = 140, ci = class {
 };
 //#endregion
 //#region src/velair/domain/draft-blocks.ts
-function li(e, t) {
+function Xi(e, t) {
 	return e.map((e) => {
 		let n = {
 			action: e.action ?? "set_temperature",
 			start: e.start,
 			hvac_mode: e.hvac_mode ?? ""
 		};
-		return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? ur(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
+		return e.target_temp_low != null || e.target_temp_high != null ? (n.target_temp_low = e.target_temp_low ?? "", n.target_temp_high = e.target_temp_high ?? "") : n.temperature = Number(e.temperature ?? jt(t)), e.fan_mode && (n.fan_mode = e.fan_mode), e.preset_mode && (n.preset_mode = e.preset_mode), e.swing_mode && (n.swing_mode = e.swing_mode), e.swing_horizontal_mode && (n.swing_horizontal_mode = e.swing_horizontal_mode), e.humidity != null && (n.humidity = e.humidity), n;
 	});
 }
-function ui(e, t, n) {
-	let r = e[e.length - 1], i = L(r) ? {
+function Zi(e, t, n) {
+	let r = e[e.length - 1], i = R(r) ? {
 		target_temp_low: r?.target_temp_low ?? "",
 		target_temp_high: r?.target_temp_high ?? ""
-	} : { temperature: Number(r?.temperature || ur(n)) };
+	} : { temperature: Number(r?.temperature || jt(n)) };
 	return [...e, {
 		action: qe,
 		start: t,
@@ -20594,33 +25081,51 @@ function ui(e, t, n) {
 		hvac_mode: ""
 	}];
 }
-function di(e, t) {
+function Qi(e, t) {
 	return e.filter((e, n) => n !== t);
 }
-function fi(e, t, n, r) {
-	return e[t] ? e.map((e, i) => i === t ? n === "hvac_mode" ? {
-		...e,
-		action: r === "off" ? Je : qe,
-		hvac_mode: r === "off" ? "" : r
-	} : {
-		...e,
-		[n]: r
-	} : e) : e;
+function $i(e, t, n, r) {
+	return e[t] ? e.map((e, i) => {
+		if (i !== t) return e;
+		if (n === "hvac_mode") {
+			let t = e.action || "set_temperature";
+			return {
+				...e,
+				action: r === "off" ? Je : t === "set_hvac_mode" ? A : qe,
+				hvac_mode: r === "off" ? "" : r
+			};
+		}
+		return n === "action" ? r === "set_hvac_mode" ? {
+			...e,
+			action: A,
+			fan_mode: void 0,
+			humidity: void 0,
+			preset_mode: void 0,
+			swing_horizontal_mode: void 0,
+			swing_mode: void 0
+		} : {
+			...e,
+			action: r
+		} : {
+			...e,
+			[n]: r
+		};
+	}) : e;
 }
-function pi(e, t) {
-	if ((e.action || "set_temperature") === "turn_off") return;
-	let n = L(e) ? [e.target_temp_low, e.target_temp_high] : [e.temperature], r = [];
+function ea(e, t) {
+	if ((e.action || "set_temperature") !== "set_temperature") return;
+	let n = R(e) ? [e.target_temp_low, e.target_temp_high] : [e.temperature], r = [];
 	for (let e of n) {
 		let n = String(e ?? "").trim();
 		if (!n || !/^-?\d+(\.\d+)?$/.test(n)) return t.rangeError;
 		let i = Number(n);
 		if (!Number.isFinite(i) || i < t.minTemperature || i > t.maxTemperature) return t.rangeError;
-		if (t.temperatureStep !== void 0 && Math.abs(i / t.temperatureStep - Math.round(i / t.temperatureStep)) > 1e-4) return t.stepError;
+		if (!qt(i, t.minTemperature, t.temperatureStep)) return t.stepError;
 		r.push(i);
 	}
 	if (r.length === 2 && r[0] > r[1]) return t.rangeOrderError ?? t.rangeError;
 }
-function mi(e, t) {
+function ta(e, t) {
 	let n = /* @__PURE__ */ new Set(), r = [];
 	for (let i of e) {
 		let e = String(i.start || "").trim();
@@ -20637,52 +25142,70 @@ function mi(e, t) {
 			ok: !1,
 			error: t.duplicateStartError(e)
 		};
-		if ((i.action || "set_temperature") === "turn_off") {
+		let s = i.action || "set_temperature";
+		if (s === "turn_off") {
 			r.push({
 				start: e,
 				action: Je
 			}), n.add(e);
 			continue;
 		}
-		let s = t.temperatureError(i);
-		if (s) return {
+		if (s === "set_hvac_mode") {
+			if (!i.hvac_mode || i.hvac_mode === "off") return {
+				ok: !1,
+				error: t.invalidTemperatureError(e, "HVAC mode is required")
+			};
+			r.push({
+				start: e,
+				action: A,
+				hvac_mode: i.hvac_mode
+			}), n.add(e);
+			continue;
+		}
+		let c = t.temperatureError(i);
+		if (c) return {
 			ok: !1,
-			error: t.invalidTemperatureError(e, s)
+			error: t.invalidTemperatureError(e, c)
 		};
-		let c = {
+		let l = {
 			action: qe,
 			start: e
 		};
-		if (L(i) ? (c.target_temp_low = Number(i.target_temp_low), c.target_temp_high = Number(i.target_temp_high)) : c.temperature = Number(i.temperature), i.hvac_mode && (c.hvac_mode = i.hvac_mode), i.fan_mode && (c.fan_mode = i.fan_mode), i.preset_mode && (c.preset_mode = i.preset_mode), i.swing_mode && (c.swing_mode = i.swing_mode), i.swing_horizontal_mode && (c.swing_horizontal_mode = i.swing_horizontal_mode), String(i.humidity ?? "").trim()) {
+		if (R(i) ? (l.target_temp_low = Number(i.target_temp_low), l.target_temp_high = Number(i.target_temp_high)) : l.temperature = Number(i.temperature), i.hvac_mode && (l.hvac_mode = i.hvac_mode), i.fan_mode && (l.fan_mode = i.fan_mode), i.preset_mode && (l.preset_mode = i.preset_mode), i.swing_mode && (l.swing_mode = i.swing_mode), i.swing_horizontal_mode && (l.swing_horizontal_mode = i.swing_horizontal_mode), String(i.humidity ?? "").trim()) {
 			let e = Number(i.humidity);
-			Number.isFinite(e) && (c.humidity = e);
+			Number.isFinite(e) && (l.humidity = e);
 		}
-		r.push(c), n.add(e);
+		r.push(l), n.add(e);
 	}
 	return {
 		ok: !0,
 		blocks: r.sort((e, t) => e.start.localeCompare(t.start))
 	};
 }
-function hi(e, t, n) {
+function na(e, t, n) {
 	return e.map((e) => {
-		if ((e.action || "set_temperature") === "turn_off") return { ...e };
+		if ((e.action || "set_temperature") !== "set_temperature") return { ...e };
 		let r = { ...e };
 		return e.temperature != null && (r.temperature = Math.min(n, Math.max(t, Number(e.temperature)))), e.target_temp_low != null && (r.target_temp_low = Math.min(n, Math.max(t, Number(e.target_temp_low)))), e.target_temp_high != null && (r.target_temp_high = Math.min(n, Math.max(t, Number(e.target_temp_high)))), r;
 	});
 }
-function L(e) {
+function R(e) {
 	return !!(e && (e.target_temp_low !== void 0 || e.target_temp_high !== void 0));
 }
-function gi(e, t) {
+function ra(e, t) {
 	let n = new Set(t);
 	return e.find((e) => (e.action || "set_temperature") !== "turn_off" && !!e.hvac_mode && !n.has(e.hvac_mode ?? ""));
 }
-function _i(e, t) {
+function ia(e, t) {
 	return e.map((e) => {
 		if ((e.action || "set_temperature") === "turn_off") return {
 			start: e.start,
 			action: Je
+		};
+		if ((e.action || "set_temperature") === "set_hvac_mode") return {
+			start: e.start,
+			action: A,
+			...e.hvac_mode ? { hvac_mode: e.hvac_mode } : {}
 		};
 		let n = { ...e };
 		return t.fanModes.includes(n.fan_mode ?? "") || delete n.fan_mode, t.presetModes.includes(n.preset_mode ?? "") || delete n.preset_mode, t.swingModes.includes(n.swing_mode ?? "") || delete n.swing_mode, t.swingHorizontalModes.includes(n.swing_horizontal_mode ?? "") || delete n.swing_horizontal_mode, (n.humidity == null || !t.humidityLimits || n.humidity < t.humidityLimits[0] || n.humidity > t.humidityLimits[1]) && delete n.humidity, n;
@@ -20690,15 +25213,15 @@ function _i(e, t) {
 }
 //#endregion
 //#region src/velair/domain/schedule-editor.ts
-var vi = {
+var aa = {
 	weekdays: k.slice(0, 5),
 	weekend: k.slice(5),
 	all: k
 };
-function yi(e, t) {
-	return e === "clear" ? /* @__PURE__ */ new Set() : new Set(vi[e].filter((e) => e !== t));
+function oa(e, t) {
+	return e === "clear" ? /* @__PURE__ */ new Set() : new Set(aa[e].filter((e) => e !== t));
 }
-function bi(e, t) {
+function sa(e, t) {
 	let n = e.length, r = t.implicit_midnight_change_counts_toward_limit && !e.some((e) => e.start === "00:00") ? 1 : 0, i = n + r, a = t.max_switchpoints_per_day;
 	return {
 		scheduled: n,
@@ -20710,33 +25233,33 @@ function bi(e, t) {
 }
 //#endregion
 //#region src/velair/controllers/draft-actions.ts
-function xi(e) {
+function ca(e) {
 	return e;
 }
-function Si(e, t = "schedule") {
-	let n = e._blocksForSource(t), r = e._temperatureUnit(t === "schedule" ? e._selectedEntity : void 0), i = ui(n, er(n.at(-1)?.start), r), a = t === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0;
-	!n.length && It(a) && !Ft(a) && (i = i.map((e, t) => t === i.length - 1 ? {
+function la(e, t = "schedule") {
+	let n = e._blocksForSource(t), r = e._temperatureUnit(t === "schedule" ? e._selectedEntity : void 0), i = Zi(n, Xr(n.at(-1)?.start), r), a = t === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0;
+	!n.length && Xt(a) && !Yt(a) && (i = i.map((e, t) => t === i.length - 1 ? {
 		...e,
 		temperature: void 0,
 		target_temp_low: a?.attributes?.target_temp_low ?? "",
 		target_temp_high: a?.attributes?.target_temp_high ?? ""
 	} : e)), e._setBlocksForSource(t, i), e._markBlocksDirty(t), e._saveMessage = void 0;
 }
-function Ci(e, t, n = "schedule") {
-	e._setBlocksForSource(n, di(e._blocksForSource(n), t)), e._markBlocksDirty(n), e._saveMessage = void 0;
+function ua(e, t, n = "schedule") {
+	e._setBlocksForSource(n, Qi(e._blocksForSource(n), t)), e._markBlocksDirty(n), e._saveMessage = void 0;
 }
-function wi(e, t, n, r, i = "schedule") {
+function da(e, t, n, r, i = "schedule") {
 	let a = e._blocksForSource(i);
 	if (!a[t]) return;
-	let o = fi(a, t, n, r);
+	let o = $i(a, t, n, r);
 	if (n === "hvac_mode") {
-		let n = a[t], s = i === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0, c = i === "template" || It(s);
-		r === "heat_cool" && n.hvac_mode !== "heat_cool" && c && !L(n) ? o = o.map((e, n) => n === t ? {
+		let n = a[t], s = i === "schedule" && e._selectedEntity ? e.hass?.states?.[e._selectedEntity] : void 0, c = i === "template" || Xt(s);
+		r === "heat_cool" && n.hvac_mode !== "heat_cool" && c && !R(n) ? o = o.map((e, n) => n === t ? {
 			...e,
 			temperature: void 0,
 			target_temp_low: s?.attributes?.target_temp_low ?? "",
 			target_temp_high: s?.attributes?.target_temp_high ?? ""
-		} : e) : r !== "" && r !== "heat_cool" && L(n) && (o = o.map((e, n) => n === t ? {
+		} : e) : r !== "" && r !== "heat_cool" && R(n) && (o = o.map((e, n) => n === t ? {
 			...e,
 			target_temp_low: void 0,
 			target_temp_high: void 0,
@@ -20745,36 +25268,36 @@ function wi(e, t, n, r, i = "schedule") {
 	}
 	e._setBlocksForSource(i, o), e._markBlocksDirty(i), e._saveMessage = void 0;
 }
-function Ti(e) {
+function fa(e) {
 	e._dirty = !0, e._dirtyEntityId = e._selectedEntity;
 }
-function Ei(e, t, n, r = {}, i = "schedule") {
+function pa(e, t, n, r = {}, i = "schedule") {
 	let a = e._blocksForSource(i);
 	a[t] && (e._setBlocksForSource(i, a.map((e, r) => r === t ? {
 		...e,
 		start: n
-	} : e)), r.sort && e._setBlocksForSource(i, Ir(e._blocksForSource(i))), e._markBlocksDirty(i), e._saveMessage = void 0);
+	} : e)), r.sort && e._setBlocksForSource(i, Ci(e._blocksForSource(i))), e._markBlocksDirty(i), e._saveMessage = void 0);
 }
-function Di(e, t, n) {
-	!k.includes(t) || t === e._selectedWeekday || (e._copyTargets = rn(e._copyTargets, t, n), e._saveMessage = void 0);
+function ma(e, t, n) {
+	!k.includes(t) || t === e._selectedWeekday || (e._copyTargets = Ln(e._copyTargets, t, n), e._saveMessage = void 0);
 }
-function Oi(e, t) {
-	e._copyTargets = yi(t, e._selectedWeekday), e._saveMessage = void 0;
+function ha(e, t) {
+	e._copyTargets = oa(t, e._selectedWeekday), e._saveMessage = void 0;
 }
-function ki(e, t, n) {
-	!(e._data?.configured_entities ?? []).includes(t) || t === e._selectedEntity || (e._zoneTargets = rn(e._zoneTargets, t, n), e._saveMessage = void 0);
+function ga(e, t, n) {
+	!(e._data?.configured_entities ?? []).includes(t) || t === e._selectedEntity || (e._zoneTargets = Ln(e._zoneTargets, t, n), e._saveMessage = void 0);
 }
 //#endregion
 //#region src/velair/controllers/draft-validation.ts
-function Ai(e) {
+function _a(e) {
 	return e;
 }
-function ji(e, t = "schedule") {
-	return e._blocksForSource(t).some((n) => !!Mi(e, n, t));
+function va(e, t = "schedule") {
+	return e._blocksForSource(t).some((n) => !!ya(e, n, t));
 }
-function Mi(e, t, n = "schedule") {
+function ya(e, t, n = "schedule") {
 	let [r, i] = e._temperatureLimits(n), a = e._temperatureStep(n);
-	return pi(t, {
+	return ea(t, {
 		maxTemperature: i,
 		minTemperature: r,
 		rangeError: e._t("invalidTemperatureRange", {
@@ -20788,13 +25311,13 @@ function Mi(e, t, n = "schedule") {
 }
 //#endregion
 //#region src/velair/domain/portable.ts
-function Ni(e) {
+function ba(e) {
 	let t = Number(e?.model_version), n = e?.temperature_unit, r = n === void 0 || n === "°C" || t >= 3 && n === "°F";
-	if (!e || e.format !== "velair_portable_data" || !Number.isInteger(e.model_version) || t < 1 || t > 8 || !r || !e.sections || typeof e.sections != "object") return {
+	if (!e || e.format !== "velair_portable_data" || !Number.isInteger(e.model_version) || t < 1 || t > 11 || !r || !e.sections || typeof e.sections != "object") return {
 		ok: !1,
 		errorKey: "invalidImportFile"
 	};
-	let i = Pi(e);
+	let i = xa(e);
 	return i.length ? {
 		ok: !0,
 		sections: i
@@ -20803,11 +25326,11 @@ function Ni(e) {
 		errorKey: "noImportSections"
 	};
 }
-function Pi(e) {
+function xa(e) {
 	let t = e?.sections;
 	return !t || typeof t != "object" ? [] : tt.filter((e) => Object.prototype.hasOwnProperty.call(t, e));
 }
-function Fi(e, t) {
+function Sa(e, t) {
 	let n = [];
 	return e.has("zones") && n.push({
 		section: "zones",
@@ -20829,7 +25352,7 @@ function Fi(e, t) {
 		value: t.modes
 	}), n;
 }
-function Ii(e) {
+function Ca(e) {
 	let t = e?.sections;
 	if (!t) return [];
 	let n = [];
@@ -20865,7 +25388,7 @@ function Ii(e) {
 		value: Array.isArray(t.modes) ? t.modes.length : 0
 	}), n;
 }
-function Li(e, t) {
+function wa(e, t) {
 	let n = e?.sections?.preconditioning_learning;
 	if (!n || typeof n != "object" || Array.isArray(n)) return [];
 	let r = new Set(t);
@@ -20873,24 +25396,24 @@ function Li(e, t) {
 }
 //#endregion
 //#region src/velair/controllers/portability-actions.ts
-function R(e) {
+function z(e) {
 	return e;
 }
-function Ri(e, t, n, r) {
+function Ta(e, t, n, r) {
 	let i = new Set(t === "export" ? e._exportSections : e._importSections);
 	r ? i.add(n) : i.delete(n), t === "export" ? e._exportSections = i : e._importSections = i;
 }
-async function zi(e, t) {
+async function Ea(e, t) {
 	let n = t.currentTarget, r = n.files?.[0];
 	if (e._importPayload = void 0, e._importFileName = "", e._importSections = /* @__PURE__ */ new Set(), e._error = void 0, e._saveMessage = void 0, r) try {
-		let t = JSON.parse(await r.text()), n = Ni(t);
+		let t = JSON.parse(await r.text()), n = ba(t);
 		if (!n.ok) throw Error(e._t(n.errorKey));
 		e._importPayload = t, e._importFileName = r.name, e._importSections = new Set(n.sections);
 	} catch (t) {
 		e._error = t instanceof Error ? t.message : e._t("invalidImportFile"), n.value = "";
 	}
 }
-async function Bi(e) {
+async function Da(e) {
 	let t = e._api();
 	if (!(!t || !e._exportSections.size)) {
 		e._portabilityAction = "export", e._error = void 0, e._saveMessage = void 0;
@@ -20904,7 +25427,7 @@ async function Bi(e) {
 		}
 	}
 }
-async function Vi(e) {
+async function Oa(e) {
 	let t = e._api();
 	if (!(!t || !e._importPayload || !e._importSections.size)) {
 		e._portabilityAction = "import", e._error = void 0, e._saveMessage = void 0;
@@ -20918,7 +25441,7 @@ async function Vi(e) {
 		}
 	}
 }
-async function Hi(e) {
+async function ka(e) {
 	let t = e._api();
 	if (!(!t || e._maintenanceAction) && window.confirm(e._t("confirmReset"))) {
 		e._maintenanceAction = "reset", e._error = void 0, e._saveMessage = void 0;
@@ -20932,11 +25455,11 @@ async function Hi(e) {
 		}
 	}
 }
-function Ui(e) {
-	return Pi(e._importPayload);
+function Aa(e) {
+	return xa(e._importPayload);
 }
-function Wi(e) {
-	return Fi(new Set(tt), {
+function ja(e) {
+	return Sa(new Set(tt), {
 		zones: e._data?.configured_entities.length ?? 0,
 		templates: e._scheduleTemplates().length,
 		preconditioningLearning: Object.values(e._data?.preconditioning_learning ?? {}).filter((e) => e.total_samples > 0).length,
@@ -20944,10 +25467,10 @@ function Wi(e) {
 		modes: e._data?.modes?.length ?? 0
 	}).map((t) => e._portableSummaryItem(t));
 }
-function Gi(e) {
-	return Ii(e._importPayload).map((t) => e._portableSummaryItem(t));
+function Ma(e) {
+	return Ca(e._importPayload).map((t) => e._portableSummaryItem(t));
 }
-function Ki(e, t) {
+function Na(e, t) {
 	let n = e._portableSectionLabel(t.section);
 	return {
 		label: n,
@@ -20956,7 +25479,7 @@ function Ki(e, t) {
 		value: t.value === "included" ? e._t("portabilityIncluded") : t.value
 	};
 }
-function qi(e, t) {
+function Pa(e, t) {
 	switch (t) {
 		case "modes": return e._t("portabilityModesSection");
 		case "profiles": return e._t("portabilityProfilesSection");
@@ -20966,20 +25489,20 @@ function qi(e, t) {
 		default: return e._t("portabilityZonesSection");
 	}
 }
-function Ji(e) {
+function Fa(e) {
 	let t = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), n = new Blob([JSON.stringify(e, null, 2)], { type: "application/json" }), r = URL.createObjectURL(n), i = document.createElement("a");
 	i.href = r, i.download = `velair-export-${t}.json`, i.style.display = "none", document.body.append(i), i.click(), i.remove(), URL.revokeObjectURL(r);
 }
 //#endregion
 //#region src/velair/controllers/settings-actions.ts
-function z(e) {
+function B(e) {
 	return e;
 }
-async function Yi(e, t) {
+async function Ia(e, t) {
 	let n = k.includes(t) ? t : "monday";
 	e._selectedWeekday = n, e._copyTargets = /* @__PURE__ */ new Set(), e._zoneTargets = /* @__PURE__ */ new Set(), await e._saveSettings({ first_weekday: n }), e._resetDraftBlocks();
 }
-async function Xi(e, t) {
+async function La(e, t) {
 	let n = e._api(), r = {
 		...e._config,
 		first_weekday: t.first_weekday ?? e._config.first_weekday,
@@ -20997,7 +25520,7 @@ async function Xi(e, t) {
 		}
 	}
 }
-async function Zi(e, t, n) {
+async function Ra(e, t, n) {
 	let r = e._api();
 	if (r) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -21011,7 +25534,7 @@ async function Zi(e, t, n) {
 		}
 	}
 }
-async function Qi(e, t, n) {
+async function za(e, t, n) {
 	let r = e._api();
 	if (r) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -21025,7 +25548,7 @@ async function Qi(e, t, n) {
 		}
 	}
 }
-async function $i(e, t, n, r) {
+async function Ba(e, t, n, r) {
 	let i = e._api();
 	if (i && window.confirm(e._t("confirmResetPreconditioningLearning", { direction: r }))) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -21039,7 +25562,7 @@ async function $i(e, t, n, r) {
 		}
 	}
 }
-async function ea(e, t) {
+async function Va(e, t) {
 	let n = e._api();
 	if (n && window.confirm(e._t("confirmResetPreconditioningSettings"))) {
 		e._settingsSaving = !0, e._error = void 0, e._saveMessage = void 0;
@@ -21053,54 +25576,54 @@ async function ea(e, t) {
 		}
 	}
 }
-function ta(e, t, n) {
+function Ha(e, t, n) {
 	let r = e._orderedZoneIds(e._data?.configured_entities ?? []), i = r.indexOf(t), a = i + n;
 	if (i < 0 || a < 0 || a >= r.length) return;
 	let o = [...r];
 	[o[i], o[a]] = [o[a], o[i]], e._updateSettingsZoneOrder(o);
 }
-function na(e, t, n) {
+function Ua(e, t, n) {
 	e._draggedSettingsEntity = t, n.dataTransfer?.setData("text/plain", t), n.dataTransfer && (n.dataTransfer.effectAllowed = "move");
 }
-function ra(e) {
+function Wa(e) {
 	e.preventDefault(), e.dataTransfer && (e.dataTransfer.dropEffect = "move");
 }
-function ia(e, t, n) {
+function Ga(e, t, n) {
 	n.preventDefault();
 	let r = n.dataTransfer?.getData("text/plain") || e._draggedSettingsEntity;
 	if (e._draggedSettingsEntity = void 0, !r || r === t) return;
 	let i = e._orderedZoneIds(e._data?.configured_entities ?? []).filter((e) => e !== r), a = i.indexOf(t);
 	a < 0 || (i.splice(a, 0, r), e._updateSettingsZoneOrder(i));
 }
-function aa(e) {
+function Ka(e) {
 	e._draggedSettingsEntity = void 0;
 }
-function oa(e, t) {
+function qa(e, t) {
 	let n = new Set(e._data?.configured_entities ?? []), r = t.filter((e) => n.has(e));
 	e._saveSettings({ zone_order: r });
 }
 //#endregion
 //#region src/velair/controllers/timeline-interactions.ts
-function B(e) {
+function Ja(e) {
 	return e;
 }
-function sa(e, t, n, r) {
+function Ya(e, t, n, r) {
 	e._draggedTimelineIndex = t, r.dataTransfer?.setData("text/plain", JSON.stringify({
 		index: t,
 		source: n
 	})), r.dataTransfer && (r.dataTransfer.effectAllowed = "move");
 }
-function ca(e) {
+function Xa(e) {
 	e.preventDefault(), e.dataTransfer && (e.dataTransfer.dropEffect = "move");
 }
-function la(e, t, n = "schedule") {
+function Za(e, t, n = "schedule") {
 	t.preventDefault();
-	let { index: r, source: i } = ua(e, t, n);
+	let { index: r, source: i } = Qa(e, t, n);
 	if (e._draggedTimelineIndex = void 0, !Number.isInteger(r) || !e._blocksForSource(i)[r]) return;
-	let a = t.currentTarget, o = va(e, t.clientX, a);
+	let a = t.currentTarget, o = oo(e, t.clientX, a);
 	e._setDraftBlockStart(r, o, { sort: !0 }, i);
 }
-function ua(e, t, n) {
+function Qa(e, t, n) {
 	let r = t.dataTransfer?.getData("text/plain");
 	if (r) try {
 		let e = JSON.parse(r);
@@ -21120,10 +25643,10 @@ function ua(e, t, n) {
 		source: n
 	};
 }
-function da(e) {
+function $a(e) {
 	e._draggedTimelineIndex = void 0;
 }
-function fa(e, t, n, r, i) {
+function eo(e, t, n, r, i) {
 	i.preventDefault(), i.stopPropagation();
 	let a = i.currentTarget.closest(".timeline-track");
 	a instanceof HTMLElement && (e._timelineResize = {
@@ -21131,57 +25654,57 @@ function fa(e, t, n, r, i) {
 		index: t,
 		source: r,
 		track: a
-	}, e.classList.add("timeline-resizing"), ba(e, "ew-resize"), window.addEventListener("pointermove", e._handleTimelineResizeMove), window.addEventListener("pointerup", e._handleTimelineResizeEnd, { once: !0 }), e._resizeTimelineBlock(t, n, ya(i.clientX, a), r));
+	}, e.classList.add("timeline-resizing"), co(e, "ew-resize"), window.addEventListener("pointermove", e._handleTimelineResizeMove), window.addEventListener("pointerup", e._handleTimelineResizeEnd, { once: !0 }), e._resizeTimelineBlock(t, n, so(i.clientX, a), r));
 }
-function pa(e, t) {
+function to(e, t) {
 	if (!e._timelineResize) return;
 	t.preventDefault();
 	let { edge: n, index: r, source: i, track: a } = e._timelineResize;
-	e._resizeTimelineBlock(r, n, ya(t.clientX, a), i);
+	e._resizeTimelineBlock(r, n, so(t.clientX, a), i);
 }
-function ma(e) {
+function no(e) {
 	window.removeEventListener("pointermove", e._handleTimelineResizeMove);
 	let t = e._timelineResize?.source ?? "schedule";
-	e.classList.remove("timeline-resizing"), e._timelineResize = void 0, xa(e), e._sortDraftBlocksByStart(t);
+	e.classList.remove("timeline-resizing"), e._timelineResize = void 0, lo(e), e._sortDraftBlocksByStart(t);
 }
-function ha(e, t, n, r, i = "schedule") {
-	let a = _a(e, i), o = a.findIndex((e) => e.index === t), s = a[o];
+function ro(e, t, n, r, i = "schedule") {
+	let a = ao(e, i), o = a.findIndex((e) => e.index === t), s = a[o];
 	if (!s) return;
 	if (n === "start") {
 		let n = a[o - 1]?.startMinute, c = typeof n == "number" ? n + 15 : 0, l = s.endMinute - 15;
-		e._setDraftBlockStart(t, $n(tr(r, c, l)), {}, i);
+		e._setDraftBlockStart(t, Yr(Zr(r, c, l)), {}, i);
 		return;
 	}
 	let c = a[o + 1];
 	if (!c) return;
 	let l = a[o + 2]?.startMinute, u = s.startMinute + 15, d = typeof l == "number" ? l - 15 : 1425;
-	e._setDraftBlockStart(c.index, $n(tr(r, u, d)), {}, i);
+	e._setDraftBlockStart(c.index, Yr(Zr(r, u, d)), {}, i);
 }
-function ga(e, t = "schedule") {
-	e._setBlocksForSource(t, Ir(e._blocksForSource(t)));
+function io(e, t = "schedule") {
+	e._setBlocksForSource(t, Ci(e._blocksForSource(t)));
 }
-function _a(e, t = "schedule") {
-	return Ar(e._blocksForSource(t));
+function ao(e, t = "schedule") {
+	return _i(e._blocksForSource(t));
 }
-function va(e, t, n) {
-	return $n(ya(t, n));
+function oo(e, t, n) {
+	return Yr(so(t, n));
 }
-function ya(e, t) {
+function so(e, t) {
 	let n = t.getBoundingClientRect();
-	return Rr(e, n.left, n.width);
+	return Ti(e, n.left, n.width);
 }
-function ba(e, t) {
+function co(e, t) {
 	document.body && (e._previousBodyCursor === void 0 && (e._previousBodyCursor = document.body.style.cursor), e._previousDocumentCursor === void 0 && (e._previousDocumentCursor = document.documentElement.style.cursor), document.body.style.cursor = t, document.documentElement.style.cursor = t);
 }
-function xa(e) {
+function lo(e) {
 	!document.body || e._previousBodyCursor === void 0 || (document.body.style.cursor = e._previousBodyCursor, document.documentElement.style.cursor = e._previousDocumentCursor ?? "", e._previousBodyCursor = void 0, e._previousDocumentCursor = void 0);
 }
 //#endregion
 //#region src/velair/controllers/schedule-actions.ts
-function Sa(e) {
+function uo(e) {
 	return e;
 }
-async function Ca(e) {
+async function fo(e) {
 	let t = e._api();
 	if (!t || !e._selectedEntity || e._saving) return;
 	let n = e._normalizeDraftBlocks();
@@ -21204,7 +25727,7 @@ async function Ca(e) {
 		e._saving = !1;
 	}
 }
-async function wa(e) {
+async function po(e) {
 	let t = e._api();
 	if (!t || !e._selectedEntity || e._copying || e._copyTargets.size === 0) return;
 	let n = e._normalizeDraftBlocks();
@@ -21229,7 +25752,7 @@ async function wa(e) {
 		e._copying = !1;
 	}
 }
-async function Ta(e) {
+async function mo(e) {
 	let t = e._api();
 	if (!t || !e._selectedEntity || e._applyingZones || e._zoneTargets.size === 0) return;
 	let n = e._normalizeDraftBlocks();
@@ -21257,17 +25780,17 @@ async function Ta(e) {
 		e._applyingZones = !1;
 	}
 }
-function Ea(e, t = "schedule") {
-	return mi(e._blocksForSource(t), {
+function ho(e, t = "schedule") {
+	return ta(e._blocksForSource(t), {
 		duplicateStartError: (t) => e._t("duplicateStart", { start: t }),
 		invalidStartError: (t) => e._t("invalidStart", { start: t }),
 		invalidTemperatureError: (t, n) => `${e._t("invalidTemperature", { start: t })}: ${n}`,
 		temperatureError: (n) => e._temperatureError(n, t)
 	});
 }
-function Da(e, t, n) {
+function go(e, t, n) {
 	let [r, i] = e._entityTemperatureLimits(n);
-	return _i(hi(t, r, i), {
+	return ia(na(t, r, i), {
 		fanModes: e._entityFanModeOptions(n),
 		humidityLimits: e._entityHumidityLimits(n),
 		presetModes: e._entityPresetModeOptions(n),
@@ -21275,25 +25798,25 @@ function Da(e, t, n) {
 		swingModes: e._entitySwingModeOptions(n)
 	});
 }
-function Oa(e, t, n) {
-	let r = e.hass?.states?.[n], i = t.find((e) => (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && e.hvac_mode !== void 0 && e.hvac_mode !== "heat_cool");
+function _o(e, t, n) {
+	let r = e.hass?.states?.[n], i = t.find((e) => e.action === "set_temperature" && (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && e.hvac_mode !== void 0 && e.hvac_mode !== "heat_cool");
 	if (i?.hvac_mode) return e._t("unsupportedModeForClimate", {
 		entity: e._friendlyEntityName(n),
 		mode: e._modeLabel(i.hvac_mode),
 		start: i.start
 	});
-	let a = t.find((e) => (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && !Rt(r, "range", e.hvac_mode));
+	let a = t.find((e) => e.action === "set_temperature" && (e.target_temp_low !== void 0 || e.target_temp_high !== void 0) && !Qt(r, "range", e.hvac_mode));
 	if (a) return e._t("unsupportedRangeTargetForClimate", {
 		entity: e._friendlyEntityName(n),
 		start: a.start
 	});
-	let o = gi(t, e._climateSupportedModes(n));
+	let o = ra(t, e._climateSupportedModes(n));
 	if (o?.hvac_mode) return e._t("unsupportedModeForClimate", {
 		entity: e._friendlyEntityName(n),
 		mode: e._modeLabel(o.hvac_mode),
 		start: o.start
 	});
-	let s = t.find((e) => e.temperature !== void 0 && !Rt(r, "scalar", e.hvac_mode));
+	let s = t.find((e) => e.action === "set_temperature" && e.temperature !== void 0 && !Qt(r, "scalar", e.hvac_mode));
 	return s ? e._t("unsupportedSingleTargetForClimate", {
 		entity: e._friendlyEntityName(n),
 		start: s.start
@@ -21301,10 +25824,10 @@ function Oa(e, t, n) {
 }
 //#endregion
 //#region src/velair/controllers/schedule-state.ts
-function V(e) {
+function vo(e) {
 	return e;
 }
-async function ka(e) {
+async function yo(e) {
 	let t = e._api();
 	if (!(!t || e._loading)) {
 		e._loading = !0, e._error = void 0;
@@ -21318,7 +25841,7 @@ async function ka(e) {
 		}
 	}
 }
-async function Aa(e) {
+async function bo(e) {
 	let t = e._api();
 	if (!(!t || e._unsubscribeUpdates || e._subscribing)) {
 		e._subscribing = !0;
@@ -21337,7 +25860,7 @@ async function Aa(e) {
 		}
 	}
 }
-function ja(e, t, n = {}) {
+function xo(e, t, n = {}) {
 	let r = !e._data;
 	e._data = t, e._hasExternalConfig || (e._config = {
 		first_weekday: t.settings.first_weekday,
@@ -21348,26 +25871,26 @@ function ja(e, t, n = {}) {
 	let o = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
 	o ? (n.forceDraft || !e._templateDirty || e._templateDraftKey !== o.key) && e._resetTemplateDraft(o) : e._resetTemplateDraft(), e._syncPauseTick(), (n.forceDraft || !e._dirty) && e._resetDraftBlocks();
 }
-function Ma(e) {
-	e._draftBlocks = li((e._selectedEntity ? e._data?.zones[e._selectedEntity] : void 0)?.schedule?.[e._selectedWeekday] ?? [], e._temperatureUnit(e._selectedEntity)), e._dirty = !1, e._dirtyEntityId = void 0;
+function So(e) {
+	e._draftBlocks = Xi((e._selectedEntity ? e._data?.zones[e._selectedEntity] : void 0)?.schedule?.[e._selectedWeekday] ?? [], e._temperatureUnit(e._selectedEntity)), e._dirty = !1, e._dirtyEntityId = void 0;
 }
-function Na(e, t) {
+function Co(e, t) {
 	return t === e._selectedEntity ? !0 : e._dirty && !e._confirmDiscardChanges() ? !1 : (e._selectedEntity = t, e._saveMessage = void 0, e._copyTargets = /* @__PURE__ */ new Set(), e._zoneTargets = /* @__PURE__ */ new Set(), e._resetDraftBlocks(), !0);
 }
-function Pa(e, t) {
+function wo(e, t) {
 	return k.includes(t) ? t === e._selectedWeekday ? !0 : e._dirty && !e._confirmDiscardChanges() ? !1 : (e._selectedWeekday = t, e._saveMessage = void 0, e._copyTargets = /* @__PURE__ */ new Set(), e._zoneTargets = /* @__PURE__ */ new Set(), e._resetDraftBlocks(), !0) : !1;
 }
-function Fa(e, t) {
+function To(e, t) {
 	return t === "template" ? e._templateDraftBlocks : e._draftBlocks;
 }
-function Ia(e, t, n) {
+function Eo(e, t, n) {
 	if (t === "template") {
 		e._templateDraftBlocks = n;
 		return;
 	}
 	e._draftBlocks = n;
 }
-function La(e, t) {
+function Do(e, t) {
 	if (t === "template") {
 		e._templateDirty = !0;
 		return;
@@ -21376,7 +25899,7 @@ function La(e, t) {
 }
 //#endregion
 //#region src/velair/domain/entity-diagnostics.ts
-function Ra(e, t, n) {
+function Oo(e, t, n) {
 	let r = [], i = "ok";
 	if (!t) return {
 		messageKeys: ["entityDiagnosticMissing"],
@@ -21391,7 +25914,7 @@ function Ra(e, t, n) {
 }
 //#endregion
 //#region src/velair/domain/formatters.ts
-function za(e) {
+function ko(e) {
 	return {
 		de: "de-DE",
 		en: "en",
@@ -21405,7 +25928,7 @@ function za(e) {
 		ru: "ru-RU"
 	}[e] ?? "en";
 }
-function Ba(e) {
+function Ao(e) {
 	let t = String(e ?? "").toLowerCase(), n = t === "12" ? !0 : t === "24" ? !1 : void 0;
 	return {
 		hour: "numeric",
@@ -21413,17 +25936,17 @@ function Ba(e) {
 		...n === void 0 ? {} : { hour12: n }
 	};
 }
-function Va(e, t, n) {
+function jo(e, t, n) {
 	let r = new Date(e);
 	return Number.isNaN(r.getTime()) ? e : r.toLocaleString(t, {
-		...Ba(n),
+		...Ao(n),
 		weekday: "short"
 	});
 }
-function Ha(e, t, n) {
+function Mo(e, t, n) {
 	let r = new Date(e);
 	return Number.isNaN(r.getTime()) ? e : r.toLocaleString(t, {
-		...Ba(n),
+		...Ao(n),
 		day: "2-digit",
 		month: "2-digit",
 		second: "2-digit",
@@ -21431,13 +25954,13 @@ function Ha(e, t, n) {
 		year: "numeric"
 	});
 }
-function Ua(e, t, n) {
+function No(e, t, n) {
 	let r = /^(\d{1,2}):(\d{2})$/.exec(e);
 	if (!r) return e;
 	let i = Number(r[1]), a = Number(r[2]);
-	return i < 0 || i > 23 || a < 0 || a > 59 ? e : new Date(2e3, 0, 1, i, a).toLocaleTimeString(t, Ba(n));
+	return i < 0 || i > 23 || a < 0 || a > 59 ? e : new Date(2e3, 0, 1, i, a).toLocaleTimeString(t, Ao(n));
 }
-function Wa(e) {
+function Po(e) {
 	let t = Math.max(0, Math.ceil(e / 1e3));
 	if (t < 60) return `${t} s`;
 	let n = Math.floor(t / 60);
@@ -21445,141 +25968,150 @@ function Wa(e) {
 	let r = Math.floor(n / 60), i = n % 60;
 	return i ? `${r} h ${i} min` : `${r} h`;
 }
-function Ga(e, t) {
+function Fo(e, t) {
 	return `${e.toFixed(e % 1 == 0 ? 0 : 1)} ${t}`;
 }
-function Ka(e, t) {
+function Io(e, t) {
 	return e ?? t ?? "°C";
 }
-function qa(e, t, n) {
-	return e.action === "turn_off" ? t.off : e.temperature == null ? e.target_temp_low != null && e.target_temp_high != null ? `${n(Number(e.target_temp_low), e.entity_id).replace(/\s+[^\s]+$/, "")}–${n(Number(e.target_temp_high), e.entity_id)}` : t.setTemperature : n(Number(e.temperature), e.entity_id);
+function Lo(e, t, n) {
+	return e.action === "turn_off" ? t.off : e.action === "set_hvac_mode" ? t.deviceControlled ?? t.setTemperature : e.temperature == null ? e.target_temp_low != null && e.target_temp_high != null ? `${n(Number(e.target_temp_low), e.entity_id).replace(/\s+[^\s]+$/, "")}–${n(Number(e.target_temp_high), e.entity_id)}` : t.setTemperature : n(Number(e.temperature), e.entity_id);
 }
-function Ja(e, t, n) {
+function Ro(e, t, n) {
 	return e.hvac_mode ? n(e.hvac_mode) : e.action === "turn_off" ? n("off") : t.keepMode;
 }
 //#endregion
 //#region src/velair/controllers/climate-display.ts
-function H(e) {
+function V(e) {
 	return e;
 }
-function Ya(e, t = "schedule", n = e._selectedEntity) {
+function zo(e, t = "schedule", n = e._selectedEntity) {
 	return t === "template" ? e._templateTemperatureLimits() : e._entityTemperatureLimits(n);
 }
-function Xa(e, t) {
-	return jt(t ? e.hass?.states?.[t] : void 0, e._temperatureUnit(t));
+function Bo(e, t) {
+	return Wt(t ? e.hass?.states?.[t] : void 0, e._temperatureUnit(t));
 }
-function Za(e) {
-	return en((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureLimits(t)));
+function Vo(e) {
+	return Pn((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureLimits(t)));
 }
-function Qa(e, t = "schedule", n = e._selectedEntity) {
-	return t === "template" ? tn((e._data?.configured_entities ?? []).map((t) => e._entityTemperatureStep(t))) : e._entityTemperatureStep(n);
+function Ho(e, t = "schedule", n = e._selectedEntity) {
+	if (t === "template") {
+		let t = e._data?.configured_entities ?? [];
+		return Fn(t.map((t) => e._entityTemperatureStep(t)), t.map((t) => e._entityTemperatureLimits(t)[0]));
+	}
+	return e._entityTemperatureStep(n);
 }
-function $a(e, t) {
-	return Mt(t ? e.hass?.states?.[t] : void 0);
+function Uo(e, t) {
+	let n = Gt(t ? e.hass?.states?.[t] : void 0, e._temperatureUnit(t));
+	if (n !== void 0) return n;
+	let r = t ? e._data?.zones?.[t] : void 0;
+	for (let e of [r?.last_reported_target_temp_step, r?.target_temp_step_override]) if (typeof e == "number" && Number.isFinite(e) && e >= .001) return e;
+	return 1;
 }
-function eo(e, t) {
+function Wo(e, t) {
 	return !!e.hass?.states?.[t];
 }
-function to(e, t) {
+function Go(e, t) {
 	return e.hass?.states?.[t]?.attributes?.friendly_name ?? t;
 }
-function no(e, t) {
-	return Pt(e.hass?.states?.[t]);
+function Ko(e, t) {
+	return Jt(e.hass?.states?.[t]);
 }
-function ro(e, t = "schedule") {
+function qo(e, t = "schedule") {
 	if (t === "template") {
 		let t = e._data?.configured_entities ?? [];
 		return e._uniqueModes(t.flatMap((t) => e._climateSupportedModes(t)));
 	}
 	return e._uniqueModes(e._selectedEntity ? e._climateSupportedModes(e._selectedEntity) : []);
 }
-function io(e, t = "schedule") {
-	return Eo(e, t, zt);
+function Jo(e, t = "schedule") {
+	return hs(e, t, $t);
 }
-function ao(e, t) {
-	return go(zt(e.hass?.states?.[t]));
+function Yo(e, t) {
+	return as($t(e.hass?.states?.[t]));
 }
-function oo(e, t = "schedule") {
-	return Eo(e, t, Bt);
+function Xo(e, t = "schedule") {
+	return hs(e, t, en);
 }
-function so(e, t) {
-	return go(Bt(e.hass?.states?.[t]));
+function Zo(e, t) {
+	return as(en(e.hass?.states?.[t]));
 }
-function co(e, t = "schedule") {
-	return Eo(e, t, Vt);
+function Qo(e, t = "schedule") {
+	return hs(e, t, tn);
 }
-function lo(e, t) {
-	return go(Vt(e.hass?.states?.[t]));
+function $o(e, t) {
+	return as(tn(e.hass?.states?.[t]));
 }
-function uo(e, t = "schedule") {
-	return Eo(e, t, Ht);
+function es(e, t = "schedule") {
+	return hs(e, t, nn);
 }
-function fo(e, t) {
-	return go(Ht(e.hass?.states?.[t]));
+function ts(e, t) {
+	return as(nn(e.hass?.states?.[t]));
 }
-function po(e, t = "schedule") {
+function ns(e, t = "schedule") {
 	if (t === "template") {
-		let t = (e._data?.configured_entities ?? []).map((t) => Ut(e.hass?.states?.[t])).filter((e) => !!e);
+		let t = (e._data?.configured_entities ?? []).map((t) => rn(e.hass?.states?.[t])).filter((e) => !!e);
 		return t.length ? [Math.min(...t.map((e) => e[0])), Math.max(...t.map((e) => e[1]))] : void 0;
 	}
-	return e._selectedEntity ? Ut(e.hass?.states?.[e._selectedEntity]) : void 0;
+	return e._selectedEntity ? rn(e.hass?.states?.[e._selectedEntity]) : void 0;
 }
-function mo(e, t) {
-	return Ut(e.hass?.states?.[t]);
+function rs(e, t) {
+	return rn(e.hass?.states?.[t]);
 }
-function ho(e) {
-	return Wt(e);
+function is(e) {
+	return an(e);
 }
-function go(e) {
+function as(e) {
 	return [...new Set(e)].sort((e, t) => e.localeCompare(t));
 }
-function _o(e, t) {
-	let n = Ra(t, e.hass?.states?.[t], e._climateSupportedModes(t)), r = n.messageKeys.map((t) => e._t(t));
+function os(e, t) {
+	let n = Oo(t, e.hass?.states?.[t], e._climateSupportedModes(t)), r = n.messageKeys.map((t) => e._t(t));
 	return {
 		messages: r,
 		status: n.status,
 		tooltip: r.length ? r.join(" · ") : e._t("entityDiagnosticOk")
 	};
 }
-function vo(e, t) {
-	return Gt(e.hass?.states?.[t]).map((t) => ({
+function ss(e, t) {
+	return on(e.hass?.states?.[t]).map((t) => ({
 		icon: t.icon,
 		label: e._t(t.labelKey)
 	}));
 }
-function yo(e, t) {
-	return Va(t, e._dateLocale(), e.hass?.locale?.time_format);
+function cs(e, t) {
+	return jo(t, e._dateLocale(), e.hass?.locale?.time_format);
 }
-function bo(e, t) {
-	return Ua(t, e._dateLocale(), e.hass?.locale?.time_format);
+function ls(e, t) {
+	return No(t, e._dateLocale(), e.hass?.locale?.time_format);
 }
-function xo(e) {
-	return za(e._language());
+function us(e) {
+	return ko(e._language());
 }
-function So(e, t, n) {
-	return Ga(t, e._temperatureUnit(n));
+function ds(e, t, n) {
+	return Fo(t, e._temperatureUnit(n));
 }
-function Co(e, t) {
-	return qa(t, {
+function fs(e, t) {
+	return Lo(t, {
 		off: e._t("off"),
-		setTemperature: e._t("setTemperature")
+		setTemperature: e._t("setTemperature"),
+		deviceControlled: e._t("deviceControlled")
 	}, (t, n) => e._formatTemperature(t, n));
 }
-function wo(e, t) {
-	return Ja(t, { keepMode: e._t("keepMode") }, (t) => e._modeLabel(t));
+function ps(e, t) {
+	return Ro(t, { keepMode: e._t("keepMode") }, (t) => e._modeLabel(t));
 }
-function To(e, t) {
-	return e._data?.temperature_unit ?? Ka(void 0, e.hass?.config?.unit_system?.temperature);
+function ms(e, t) {
+	return e._data?.temperature_unit ?? Io(void 0, e.hass?.config?.unit_system?.temperature);
 }
-function Eo(e, t, n) {
-	return go(t === "template" ? (e._data?.configured_entities ?? []).flatMap((t) => n(e.hass?.states?.[t])) : e._selectedEntity ? n(e.hass?.states?.[e._selectedEntity]) : []);
+function hs(e, t, n) {
+	return as(t === "template" ? (e._data?.configured_entities ?? []).flatMap((t) => n(e.hass?.states?.[t])) : e._selectedEntity ? n(e.hass?.states?.[e._selectedEntity]) : []);
 }
 //#endregion
 //#region src/velair/controllers/template-actions.ts
-function U(e) {
+function H(e) {
 	return e;
 }
-function Do(e, t) {
+function gs(e, t) {
 	e._selectedTemplateKey = t;
 	let n = e._scheduleTemplates().find((e) => e.key === t);
 	if (e._templateDraftKey !== t && (e._resetTemplateDraft(n), e._templateApplyOpen = !1, e._templateApplyTargets = /* @__PURE__ */ new Set()), e._templateNameDraftKey === t) {
@@ -21588,7 +26120,7 @@ function Do(e, t) {
 	}
 	e._templateNameDraftKey = t, e._templateNameDraft = n ? e._templateLabel(n) : "", e._saveMessage = void 0;
 }
-function Oo(e, t) {
+function _s(e, t) {
 	let n = e._selectedTemplateKey;
 	if (e._selectedTemplateKey = t, e._saveMessage = void 0, t) {
 		if (!e._applySelectedTemplate()) {
@@ -21598,14 +26130,14 @@ function Oo(e, t) {
 		e._selectedTemplateKey = "";
 	}
 }
-function ko(e, t) {
-	e._templateDraftKey = t?.key ?? "", e._templateDraftBlocks = t ? Uo(t.blocks) : [], e._templateDirty = !1;
+function vs(e, t) {
+	e._templateDraftKey = t?.key ?? "", e._templateDraftBlocks = t ? Ms(t.blocks) : [], e._templateDirty = !1;
 }
-function Ao(e, t) {
+function ys(e, t) {
 	let n = ["template-list-wrap"];
 	return t > 5 && n.push("scrollable"), e._templateListCanScrollUp && n.push("can-scroll-up"), e._templateListCanScrollDown && n.push("can-scroll-down"), n.join(" ");
 }
-function jo(e) {
+function bs(e) {
 	let t = e.renderRoot.querySelector(".template-list");
 	if (!(t instanceof HTMLElement)) {
 		e._setTemplateListScrollIndicators(!1, !1);
@@ -21614,16 +26146,16 @@ function jo(e) {
 	let n = t.scrollHeight > t.clientHeight + 1, r = n && t.scrollTop > 1, i = n && t.scrollTop + t.clientHeight < t.scrollHeight - 1;
 	e._setTemplateListScrollIndicators(r, i);
 }
-function Mo(e, t, n) {
+function xs(e, t, n) {
 	e._templateListCanScrollUp !== t && (e._templateListCanScrollUp = t), e._templateListCanScrollDown !== n && (e._templateListCanScrollDown = n);
 }
-function No(e, t) {
+function Ss(e, t) {
 	return e._templateNameDraftKey === t.key ? e._templateNameDraft : e._templateLabel(t);
 }
-function Po(e, t, n) {
+function Cs(e, t, n) {
 	e._templateNameDraftKey = t, e._templateNameDraft = n, e._templateDirty = !0, e._saveMessage = void 0;
 }
-async function Fo(e) {
+async function ws(e) {
 	let t = e._api();
 	if (!t || e._templateAction) return;
 	let n = e._newTemplateKey(), r = e._uniqueTemplateName(e._t("newTemplate"));
@@ -21637,7 +26169,7 @@ async function Fo(e) {
 		e._templateAction = void 0;
 	}
 }
-async function Io(e, t) {
+async function Ts(e, t) {
 	let n = e._api();
 	if (!n || e._templateAction) return;
 	let r = e._templateNameInputValue(t).trim();
@@ -21660,19 +26192,19 @@ async function Io(e, t) {
 		e._templateAction = void 0;
 	}
 }
-function Lo(e, t) {
-	return br(t, e._scheduleTemplates());
+function Es(e, t) {
+	return si(t, e._scheduleTemplates());
 }
-function Ro(e) {
+function Ds(e) {
 	e._templateApplyOpen = !e._templateApplyOpen, e._saveMessage = void 0;
 }
-function zo(e, t) {
-	return Sr(e, t);
+function Os(e, t) {
+	return li(e, t);
 }
-function Bo(e, t, n, r) {
-	!k.includes(n) || !(e._data?.configured_entities ?? []).includes(t) || (e._templateApplyTargets = Cr(e._templateApplyTargets, t, n, r), e._saveMessage = void 0);
+function ks(e, t, n, r) {
+	!k.includes(n) || !(e._data?.configured_entities ?? []).includes(t) || (e._templateApplyTargets = ui(e._templateApplyTargets, t, n, r), e._saveMessage = void 0);
 }
-async function Vo(e, t) {
+async function As(e, t) {
 	let n = e._api();
 	if (!n || e._applyingTemplateTargets || e._templateApplyTargets.size === 0) return;
 	let r = e._normalizeDraftBlocks("template");
@@ -21680,7 +26212,7 @@ async function Vo(e, t) {
 		e._error = r.error;
 		return;
 	}
-	let i = wr(e._templateApplyTargets, e._data?.configured_entities ?? []);
+	let i = di(e._templateApplyTargets, e._data?.configured_entities ?? []);
 	if (i.length) {
 		for (let t of i) {
 			let n = e._unsupportedModeError(r.blocks, t.entityId);
@@ -21701,7 +26233,7 @@ async function Vo(e, t) {
 		}
 	}
 }
-function Ho(e) {
+function js(e) {
 	let t = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
 	if (!t) return !1;
 	if (e._selectedEntity) {
@@ -21711,9 +26243,9 @@ function Ho(e) {
 	return e._draftBlocks.length && !window.confirm(e._t("confirmTemplate", {
 		template: e._templateLabel(t),
 		weekday: e._weekdayName(e._selectedWeekday)
-	})) ? !1 : (e._draftBlocks = Uo(t.blocks), e._markDirty(), e._saveMessage = void 0, !0);
+	})) ? !1 : (e._draftBlocks = Ms(t.blocks), e._markDirty(), e._saveMessage = void 0, !0);
 }
-function Uo(e) {
+function Ms(e) {
 	return e.map((e) => {
 		let t = {
 			action: e.action,
@@ -21723,7 +26255,7 @@ function Uo(e) {
 		return e.target_temp_low !== void 0 || e.target_temp_high !== void 0 ? (t.target_temp_low = e.target_temp_low, t.target_temp_high = e.target_temp_high) : t.temperature = e.temperature, e.fan_mode && (t.fan_mode = e.fan_mode), e.preset_mode && (t.preset_mode = e.preset_mode), e.swing_mode && (t.swing_mode = e.swing_mode), e.swing_horizontal_mode && (t.swing_horizontal_mode = e.swing_horizontal_mode), String(e.humidity ?? "").trim() && (t.humidity = e.humidity), t;
 	});
 }
-async function Wo(e, t) {
+async function Ns(e, t) {
 	let n = e._api();
 	if (!n || e._templateAction) return;
 	let r = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
@@ -21745,10 +26277,10 @@ async function Wo(e, t) {
 		e._templateAction = void 0;
 	}
 }
-function Go() {
-	return xr();
+function Ps() {
+	return ci();
 }
-async function Ko(e) {
+async function Fs(e) {
 	let t = e._api();
 	if (!t || e._templateAction) return;
 	let n = e._scheduleTemplates().find((t) => t.key === e._selectedTemplateKey);
@@ -21766,13 +26298,13 @@ async function Ko(e) {
 }
 //#endregion
 //#region src/velair/host-types.ts
-function qo(e) {
+function Is(e) {
 	return e;
 }
 //#endregion
 //#region src/velair/domain/schedule-compatibility.ts
-var Jo = 1e-4;
-function Yo(e, t, n) {
+var Ls = 1e-4;
+function Rs(e, t, n) {
 	let r = 0;
 	for (let [i, a] of Object.entries(e)) {
 		let e = n(i);
@@ -21782,23 +26314,23 @@ function Yo(e, t, n) {
 			n.temperature,
 			n.target_temp_low,
 			n.target_temp_high
-		].filter((e) => typeof e == "number" && Number.isFinite(e)).some((t) => t < o || t > s || Math.abs(t / e - Math.round(t / e)) > Jo) && (r += 1);
+		].filter((e) => typeof e == "number" && Number.isFinite(e)).some((t) => t < o || t > s || !qt(t, o, e, Ls)) && (r += 1);
 	}
 	return r;
 }
 //#endregion
 //#region node_modules/lit-html/directive.js
-var Xo = {
+var zs = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Zo = (e) => (...t) => ({
+}, Bs = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), Qo = class {
+}), Vs = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -21812,9 +26344,9 @@ var Xo = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: $o } = Re, es = (e) => e, ts = () => document.createComment(""), ns = (e, t, n) => {
+}, { I: Hs } = Re, Us = (e) => e, Ws = () => document.createComment(""), Gs = (e, t, n) => {
 	let r = e._$AA.parentNode, i = t === void 0 ? e._$AB : t._$AA;
-	if (n === void 0) n = new $o(r.insertBefore(ts(), i), r.insertBefore(ts(), i), e, e.options);
+	if (n === void 0) n = new Hs(r.insertBefore(Ws(), i), r.insertBefore(Ws(), i), e, e.options);
 	else {
 		let t = n._$AB.nextSibling, a = n._$AM, o = a !== e;
 		if (o) {
@@ -21824,21 +26356,21 @@ var Xo = {
 		if (t !== i || o) {
 			let e = n._$AA;
 			for (; e !== t;) {
-				let t = es(e).nextSibling;
-				es(r).insertBefore(e, i), e = t;
+				let t = Us(e).nextSibling;
+				Us(r).insertBefore(e, i), e = t;
 			}
 		}
 	}
 	return n;
-}, rs = (e, t, n = e) => (e._$AI(t, n), e), is = {}, as = (e, t = is) => e._$AH = t, os = (e) => e._$AH, ss = (e) => {
+}, Ks = (e, t, n = e) => (e._$AI(t, n), e), qs = {}, Js = (e, t = qs) => e._$AH = t, Ys = (e) => e._$AH, Xs = (e) => {
 	e._$AR(), e._$AA.remove();
-}, cs = (e, t, n) => {
+}, Zs = (e, t, n) => {
 	let r = /* @__PURE__ */ new Map();
 	for (let i = t; i <= n; i++) r.set(e[i], i);
 	return r;
-}, ls = Zo(class extends Qo {
+}, Qs = Bs(class extends Vs {
 	constructor(e) {
-		if (super(e), e.type !== Xo.CHILD) throw Error("repeat() can only be used in text expressions");
+		if (super(e), e.type !== zs.CHILD) throw Error("repeat() can only be used in text expressions");
 	}
 	dt(e, t, n) {
 		let r;
@@ -21854,52 +26386,52 @@ var Xo = {
 		return this.dt(e, t, n).values;
 	}
 	update(e, [t, n, r]) {
-		let i = os(e), { values: a, keys: o } = this.dt(t, n, r);
+		let i = Ys(e), { values: a, keys: o } = this.dt(t, n, r);
 		if (!Array.isArray(i)) return this.ut = o, a;
 		let s = this.ut ??= [], c = [], l, u, d = 0, f = i.length - 1, p = 0, m = a.length - 1;
 		for (; d <= f && p <= m;) if (i[d] === null) d++;
 		else if (i[f] === null) f--;
-		else if (s[d] === o[p]) c[p] = rs(i[d], a[p]), d++, p++;
-		else if (s[f] === o[m]) c[m] = rs(i[f], a[m]), f--, m--;
-		else if (s[d] === o[m]) c[m] = rs(i[d], a[m]), ns(e, c[m + 1], i[d]), d++, m--;
-		else if (s[f] === o[p]) c[p] = rs(i[f], a[p]), ns(e, i[d], i[f]), f--, p++;
-		else if (l === void 0 && (l = cs(o, p, m), u = cs(s, d, f)), l.has(s[d])) if (l.has(s[f])) {
+		else if (s[d] === o[p]) c[p] = Ks(i[d], a[p]), d++, p++;
+		else if (s[f] === o[m]) c[m] = Ks(i[f], a[m]), f--, m--;
+		else if (s[d] === o[m]) c[m] = Ks(i[d], a[m]), Gs(e, c[m + 1], i[d]), d++, m--;
+		else if (s[f] === o[p]) c[p] = Ks(i[f], a[p]), Gs(e, i[d], i[f]), f--, p++;
+		else if (l === void 0 && (l = Zs(o, p, m), u = Zs(s, d, f)), l.has(s[d])) if (l.has(s[f])) {
 			let t = u.get(o[p]), n = t === void 0 ? null : i[t];
 			if (n === null) {
-				let t = ns(e, i[d]);
-				rs(t, a[p]), c[p] = t;
-			} else c[p] = rs(n, a[p]), ns(e, i[d], n), i[t] = null;
+				let t = Gs(e, i[d]);
+				Ks(t, a[p]), c[p] = t;
+			} else c[p] = Ks(n, a[p]), Gs(e, i[d], n), i[t] = null;
 			p++;
-		} else ss(i[f]), f--;
-		else ss(i[d]), d++;
+		} else Xs(i[f]), f--;
+		else Xs(i[d]), d++;
 		for (; p <= m;) {
-			let t = ns(e, c[m + 1]);
-			rs(t, a[p]), c[p++] = t;
+			let t = Gs(e, c[m + 1]);
+			Ks(t, a[p]), c[p++] = t;
 		}
 		for (; d <= f;) {
 			let e = i[d++];
-			e !== null && ss(e);
+			e !== null && Xs(e);
 		}
-		return this.ut = o, as(e, c), we;
+		return this.ut = o, Js(e, c), we;
 	}
 });
 //#endregion
 //#region src/velair/views/notice-view.ts
-function us(e) {
+function $s(e) {
 	return T`
     <div class="notice-stack contextual" aria-live="polite" aria-relevant="additions text">
-      ${ls(e, (e) => e.id, (e) => fs(void 0, e, !0))}
+      ${Qs(e, (e) => e.id, (e) => tc(void 0, e, !0))}
     </div>
   `;
 }
-function ds(e, t) {
+function ec(e, t) {
 	return t.length ? T`
     <div class="notice-stack floating">
-      ${ls(t, (e) => e.id, (t) => fs(e, t, !1))}
+      ${Qs(t, (e) => e.id, (t) => tc(e, t, !1))}
     </div>
   ` : E;
 }
-function fs(e, t, n) {
+function tc(e, t, n) {
 	return T`
     <div class=${`notice-row ${t.phase ?? "active"}`} data-notice-id=${t.id}>
       <div
@@ -21923,14 +26455,14 @@ function fs(e, t, n) {
 }
 //#endregion
 //#region src/velair/views/operation-status-view.ts
-var ps = "velair-operation-status-dismissed", ms;
-function hs(e) {
-	ms = e, window.dispatchEvent(new CustomEvent(ps, { detail: e }));
+var nc = "velair-operation-status-dismissed", rc;
+function ic(e) {
+	rc = e, window.dispatchEvent(new CustomEvent(nc, { detail: e }));
 }
-function gs(e, t, n = Date.now()) {
-	return e.id === t || e.id === ms ? !1 : e.state === "completed" && e.finished_at && Number.isFinite(Date.parse(e.finished_at)) ? n - Date.parse(e.finished_at) < Ze : !0;
+function ac(e, t, n = Date.now()) {
+	return e.id === t || e.id === rc ? !1 : e.state === "completed" && e.finished_at && Number.isFinite(Date.parse(e.finished_at)) ? n - Date.parse(e.finished_at) < Ze : !0;
 }
-function _s(e, t) {
+function oc(e, t) {
 	let n = Math.max(0, t.total), r = Math.max(0, Math.min(t.completed, n)), i = n > 0 ? Math.round(r / n * 100) : 100, a = t.state === "completed_with_errors" || t.state === "failed";
 	return T`
     <section
@@ -21941,11 +26473,11 @@ function _s(e, t) {
       data-operation-id=${t.id}
     >
       <div class="operation-status-icon" aria-hidden="true">
-        ${t.state === "running" ? T`<span class="operation-status-spinner"></span>` : T`<ha-icon icon=${xs(t.state)}></ha-icon>`}
+        ${t.state === "running" ? T`<span class="operation-status-spinner"></span>` : T`<ha-icon icon=${uc(t.state)}></ha-icon>`}
       </div>
       <div class="operation-status-copy">
-        <strong>${vs(e, t)}</strong>
-        <span>${ys(e, t, r, n)}</span>
+        <strong>${sc(e, t)}</strong>
+        <span>${cc(e, t, r, n)}</span>
       </div>
       <div class="operation-status-actions">
         ${n > 0 ? T`<span class="operation-status-count" aria-hidden="true">${r}/${n}</span>` : E}
@@ -21975,11 +26507,11 @@ function _s(e, t) {
     </section>
   `;
 }
-function vs(e, t) {
-	let n = bs(e, t), r = t.state === "running" ? "Running" : t.state === "completed" ? "Completed" : t.state === "completed_with_errors" ? "Partial" : "Failed";
+function sc(e, t) {
+	let n = lc(e, t), r = t.state === "running" ? "Running" : t.state === "completed" ? "Completed" : t.state === "completed_with_errors" ? "Partial" : "Failed";
 	return !t.target_id || t.target_id === "default" ? e._t(`operationDefault${r}`) : e._t(t.kind === "mode_change" ? `operationMode${r}` : `operationProfile${r}`, { target: n });
 }
-function ys(e, t, n, r) {
+function cc(e, t, n, r) {
 	let i = [r > 0 ? e._t("operationProgress", {
 		completed: n,
 		total: r
@@ -21993,24 +26525,284 @@ function ys(e, t, n, r) {
 	}
 	return t.state === "failed" && i.push(t.error_code === "cancelled" ? e._t("operationCancelled") : t.error_message || e._t("operationFailedHelp")), i.join(" · ");
 }
-function bs(e, t) {
+function lc(e, t) {
 	return t.kind === "mode_change" ? t.target_id === "default" ? e._t("modeDefault") : t.target_id === "manual" ? e._t("modeManual") : e._data?.modes?.find((e) => e.key === t.target_id)?.name ?? t.target_id ?? e._t("modeLabel") : e._data?.profiles?.find((e) => e.key === t.target_id)?.name ?? t.target_id ?? e._t("profiles");
 }
-function xs(e) {
+function uc(e) {
 	return e === "completed" ? "mdi:check-circle" : e === "completed_with_errors" ? "mdi:alert-circle" : "mdi:close-circle";
 }
 //#endregion
-//#region src/velair/domain/comfort.ts
-function Ss(e, t) {
+//#region src/velair/views/inline-help.ts
+var dc = /* @__PURE__ */ new WeakMap(), fc = 300, U = 12, pc = 6, W, mc = !1;
+function hc(e) {
+	return e.parentElement?.querySelector(".inline-help-tooltip") ?? null;
+}
+function gc(e) {
+	let t = dc.get(e);
+	t !== void 0 && window.clearTimeout(t), dc.delete(e);
+}
+function _c(e) {
+	for (let t of [
+		"bottom",
+		"left",
+		"max-height",
+		"max-width",
+		"right",
+		"top",
+		"width",
+		"--inline-help-mobile-bottom",
+		"--inline-help-mobile-height",
+		"--inline-help-mobile-left",
+		"--inline-help-mobile-width"
+	]) e.style.removeProperty(t);
+}
+function vc() {
+	mc &&= (document.removeEventListener("pointerdown", Tc, !0), document.removeEventListener("keydown", Ec, !0), window.removeEventListener("resize", wc), window.removeEventListener("scroll", wc, !0), window.visualViewport?.removeEventListener("resize", wc), window.visualViewport?.removeEventListener("scroll", wc), !1);
+}
+function yc(e) {
+	gc(e), e.classList.remove("visible"), delete e.dataset.openCause, (W?.tooltip === e ? W.button : e.parentElement?.querySelector(".inline-help"))?.setAttribute("aria-expanded", "false"), W?.tooltip === e && (W = void 0, vc()), _c(e);
+}
+function bc(e = !1) {
+	let t = W;
+	t && (e && t.button.isConnected && t.button.focus(), yc(t.tooltip));
+}
+function xc(e) {
+	e.dataset.openCause !== "click" && (gc(e), dc.set(e, window.setTimeout(() => yc(e), fc)));
+}
+function Sc() {
+	let e = window.visualViewport, t = e?.offsetLeft ?? 0, n = e?.offsetTop ?? 0, r = e?.width ?? window.innerWidth, i = e?.height ?? window.innerHeight;
 	return {
-		...Cs(t),
-		...e
+		bottom: n + i,
+		height: i,
+		left: t,
+		right: t + r,
+		top: n,
+		width: r
 	};
 }
-function Cs(e) {
+function Cc(e, t) {
+	_c(t);
+	let n = Sc();
+	if (window.matchMedia?.("(max-width: 480px)").matches) {
+		t.style.setProperty("--inline-help-mobile-bottom", `${Math.max(0, window.innerHeight - n.bottom)}px`), t.style.setProperty("--inline-help-mobile-height", `${n.height}px`), t.style.setProperty("--inline-help-mobile-left", `${n.left}px`), t.style.setProperty("--inline-help-mobile-width", `${n.width}px`);
+		return;
+	}
+	let r = e.getBoundingClientRect(), i = Math.max(0, n.width - U * 2), a = Math.max(0, n.height - U * 2);
+	t.style.maxWidth = `${i}px`, t.style.maxHeight = `${a}px`;
+	let o = t.getBoundingClientRect(), s = Math.max(n.left + U, n.right - o.width - U), c = Math.min(Math.max(r.left, n.left + U), s), l = r.bottom + pc, u = r.top - o.height - pc, d = Math.max(n.top + U, n.bottom - o.height - U), f = l + o.height <= n.bottom - U ? l : u >= n.top + U ? u : Math.min(Math.max(l, n.top + U), d);
+	t.style.left = `${Math.round(c)}px`, t.style.top = `${Math.round(f)}px`;
+}
+function wc() {
+	if (W) {
+		if (!W.button.isConnected || !W.tooltip.isConnected) {
+			bc();
+			return;
+		}
+		Cc(W.button, W.tooltip);
+	}
+}
+function Tc(e) {
+	if (!W) return;
+	let t = e.composedPath();
+	t.includes(W.button) || t.includes(W.tooltip) || bc();
+}
+function Ec(e) {
+	e.key !== "Escape" || !W || (e.preventDefault(), e.stopPropagation(), bc(!0));
+}
+function Dc() {
+	mc ||= (document.addEventListener("pointerdown", Tc, !0), document.addEventListener("keydown", Ec, !0), window.addEventListener("resize", wc), window.addEventListener("scroll", wc, !0), window.visualViewport?.addEventListener("resize", wc), window.visualViewport?.addEventListener("scroll", wc), !0);
+}
+function Oc(e, t) {
+	let n = hc(e);
+	n && (W?.tooltip !== n && bc(), gc(n), n.dataset.openCause = t, n.classList.add("visible"), e.setAttribute("aria-expanded", "true"), W = {
+		button: e,
+		tooltip: n
+	}, Dc(), Cc(e, n));
+}
+function kc(e) {
+	e.preventDefault(), e.stopPropagation();
+	let t = e.currentTarget, n = hc(t);
+	if (n) {
+		if (n.classList.contains("visible") && n.dataset.openCause === "click") {
+			yc(n);
+			return;
+		}
+		Oc(t, "click");
+	}
+}
+function G(e, t, n, r = {}) {
+	let i = `${e}-trigger`, a = typeof n == "string" ? void 0 : n;
+	return T`
+    <span class="inline-help-wrapper">
+      <button
+        id=${i}
+        type="button"
+        class="inline-help"
+        aria-label=${t}
+        aria-controls=${e}
+        aria-describedby=${e}
+        aria-expanded="false"
+        @focus=${(e) => Oc(e.currentTarget, "focus")}
+        @focusout=${(e) => {
+		let t = e.currentTarget, n = hc(t);
+		n && n.dataset.openCause !== "click" && !(e.relatedTarget instanceof Node && t.parentElement?.contains(e.relatedTarget)) && yc(n);
+	}}
+        @pointerenter=${(e) => Oc(e.currentTarget, "hover")}
+        @pointerleave=${(e) => {
+		let t = hc(e.currentTarget);
+		t && xc(t);
+	}}
+        @keydown=${Ec}
+        @click=${kc}
+      >
+        <ha-icon icon=${r.icon ?? "mdi:information-outline"}></ha-icon>
+      </button>
+      <span
+        id=${e}
+        class=${`inline-help-tooltip${r.layout === "constrained" ? " constrained" : ""}`}
+        role="tooltip"
+        aria-labelledby=${i}
+        @pointerenter=${(e) => gc(e.currentTarget)}
+        @pointerleave=${(e) => xc(e.currentTarget)}
+      >${a ? T`<span class="inline-help-tooltip-content">
+            ${a.map((e) => T`<span class="inline-help-tooltip-block" role="paragraph">${e}</span>`)}
+          </span>` : n}</span>
+    </span>
+  `;
+}
+//#endregion
+//#region src/velair/domain/comfort.ts
+var Ac = [
+	"humidex",
+	"dew_point",
+	"absolute_humidity"
+];
+function jc(e, t, n) {
+	let r = e?.points;
+	if (e?.model !== "temperature_aware" && e?.model !== "guided" || !r || r.length < 2 || ![
+		e.temperature_min,
+		e.temperature_max,
+		t,
+		n
+	].every(Number.isFinite) || !r.every((e) => [
+		e.temperature,
+		e.humidity_min,
+		e.humidity_max
+	].every(Number.isFinite) && e.humidity_min <= e.humidity_max) || e.temperature_min >= e.temperature_max) return;
+	let i = Math.min(...r.map((e) => e.humidity_min)), a = Math.max(...r.map((e) => e.humidity_max)), o = (e) => 100 - Wc(e, i, a), s = e.effective_humidity_range, c = r.map((t) => `${Wc(t.temperature, e.temperature_min, e.temperature_max)}% ${o(t.humidity_max)}%`), l = [...r].reverse().map((t) => `${Wc(t.temperature, e.temperature_min, e.temperature_max)}% ${o(t.humidity_min)}%`);
+	return {
+		effective: s && [
+			s.temperature,
+			s.minimum,
+			s.maximum
+		].every(Number.isFinite) ? {
+			basisTemperature: s.temperature,
+			maximum: s.maximum,
+			minimum: s.minimum
+		} : void 0,
+		markerX: Wc(t, e.temperature_min, e.temperature_max),
+		markerY: o(n),
+		polygon: [...c, ...l].join(", ")
+	};
+}
+function Mc(e, t) {
+	let n = (t?.locale?.language ?? t?.language ?? t?.selectedLanguage)?.replaceAll("_", "-"), r;
+	try {
+		r = e.toLocaleString(n, { maximumFractionDigits: 2 });
+	} catch (t) {
+		if (!(t instanceof RangeError)) throw t;
+		r = e.toLocaleString(void 0, { maximumFractionDigits: 2 });
+	}
+	return `${r} g/m³`;
+}
+function Nc(e, t, n, r, i) {
+	if (e?.availability !== "current" || t?.availability !== "current" || typeof e.value != "number" || !Number.isFinite(e.value) || typeof t.value != "number" || !Number.isFinite(t.value) || !Number.isFinite(n) || !Number.isFinite(r)) return;
+	let a = At(i), o = a ? zt(n, "°F", "°C") : n, s = a ? zt(r, "°F", "°C") : r;
+	if (o > s) return;
+	let c = a ? zt(t.value, "°F", "°C") : t.value, l = o - 5, u = s + 5, d = u - l, f = (e) => Math.min(96, Math.max(4, (e - l) / d * 100)), p = f(c), m = f(e.value), h = e.temperature_range_position;
+	return {
+		airCondition: t.condition === "cold" || t.condition === "comfortable" || t.condition === "hot" ? t.condition : null,
+		airPosition: p,
+		airValue: t.value,
+		bandEnd: f(s),
+		bandStart: f(o),
+		connectorStart: Math.min(p, m),
+		connectorVisible: Math.abs(e.value - c) >= .1,
+		connectorWidth: Math.abs(m - p),
+		domainMaximum: a ? zt(u, "°C", "°F") : u,
+		domainMinimum: a ? zt(l, "°C", "°F") : l,
+		humidexPosition: m,
+		rangePosition: h === "below" || h === "within" || h === "above" ? h : null
+	};
+}
+function Pc(e, t, n, r) {
+	let i = t?.availability ?? "not_monitored";
+	if (i !== "current" || typeof t?.value != "number") return {
+		availability: i,
+		kind: e,
+		tone: "neutral"
+	};
+	let a = {
+		availability: i,
+		kind: e,
+		tone: "neutral",
+		value: t.value
+	};
+	if (e === "absolute_humidity" || n?.availability !== "current" || typeof n.value != "number") return a;
+	let o = r.toUpperCase().includes("F"), s = o ? (n.value - 32) * 5 / 9 : n.value, c = e === "humidex" ? t.value : o ? (t.value - 32) * 5 / 9 : t.value, l = e === "humidex" ? c - s : s - c, u = o ? l * 9 / 5 : l, d = Number(u.toFixed(1)), f = d === 0 ? 0 : u;
+	if (e === "dew_point") return d === 0 || (a.relation = {
+		delta: f,
+		direction: "neutral",
+		roomTemperature: n.value
+	}), a;
+	let p = d > 0 ? "warmer" : d < 0 ? "cooler" : "neutral";
+	return a.relation = {
+		delta: f,
+		direction: p,
+		roomTemperature: n.value
+	}, a.tone = p === "warmer" ? "warm" : p === "cooler" ? "cool" : "neutral", a;
+}
+function Fc(e, t) {
+	let n = Pc("humidex", e.derived_metrics?.humidex, e.temperature, t);
+	return n.relation?.direction === "warmer" ? n.relation.delta : void 0;
+}
+function Ic(e, t) {
+	let n = Lc(t);
+	return {
+		...n,
+		...e,
+		comfort_model: e?.comfort_model === "temperature_aware" || e?.comfort_model === "guided" ? e.comfort_model : "simple",
+		temperature_aware: {
+			at_temperature_min: {
+				...n.temperature_aware.at_temperature_min,
+				...e?.temperature_aware?.at_temperature_min ?? {}
+			},
+			at_temperature_max: {
+				...n.temperature_aware.at_temperature_max,
+				...e?.temperature_aware?.at_temperature_max ?? {}
+			}
+		},
+		derived_metrics: {
+			dew_point: {
+				...n.derived_metrics.dew_point,
+				...e?.derived_metrics?.dew_point ?? {}
+			},
+			absolute_humidity: {
+				...n.derived_metrics.absolute_humidity,
+				...e?.derived_metrics?.absolute_humidity ?? {}
+			},
+			humidex: {
+				...n.derived_metrics.humidex,
+				...e?.derived_metrics?.humidex ?? {}
+			}
+		}
+	};
+}
+function Lc(e) {
 	let t = e.toUpperCase().includes("F");
 	return {
 		enabled: !1,
+		comfort_model: "simple",
 		temperature_entity_id: null,
 		humidity_enabled: !0,
 		humidity_entity_id: null,
@@ -22019,12 +26811,80 @@ function Cs(e) {
 		temperature_max: t ? 75 : 24,
 		humidity_min: 40,
 		humidity_max: 60,
+		temperature_aware: {
+			at_temperature_min: {
+				minimum: 40,
+				maximum: 60
+			},
+			at_temperature_max: {
+				minimum: 40,
+				maximum: 60
+			}
+		},
 		co2_attention: 1e3,
 		co2_poor: 1500,
-		stale_after_minutes: 120
+		stale_after_minutes: 120,
+		outdoor_comparison_enabled: !1,
+		outdoor_temperature_entity_id: null,
+		outdoor_humidity_entity_id: null,
+		ventilation_temperature_threshold: t ? 1.8 : 1,
+		ventilation_humidity_threshold: 5,
+		ventilation_absolute_humidity_threshold: 1,
+		derived_metrics: {
+			dew_point: {
+				enabled: !1,
+				source: "velair",
+				entity_id: null
+			},
+			absolute_humidity: {
+				enabled: !1,
+				source: "velair",
+				entity_id: null
+			},
+			humidex: {
+				enabled: !1,
+				source: "velair",
+				entity_id: null
+			}
+		}
 	};
 }
-function ws(e, t, n) {
+function Rc(e, t, n) {
+	let r = Object.entries(e?.states ?? {}).filter(([e, r]) => {
+		if (e === t) return !0;
+		if (!e.startsWith("sensor.")) return !1;
+		let i = String(r.attributes?.unit_of_measurement ?? "").trim().toLowerCase().replaceAll("³", "3").replaceAll(" ", "");
+		return n === "absolute_humidity" ? [
+			"g/m3",
+			"g/m^3",
+			"mg/m3",
+			"mg/m^3"
+		].includes(i) : n === "humidex" ? i === "" || i === "°c" || i === "°f" : i === "°c" || i === "°f";
+	}).map(([e, t]) => ({
+		entityId: e,
+		label: t.attributes?.friendly_name || e
+	})).sort((e, t) => e.label.localeCompare(t.label));
+	return t && !r.some((e) => e.entityId === t) && r.unshift({
+		entityId: t,
+		label: t
+	}), r;
+}
+var zc = "__velair__";
+function Bc(e, t) {
+	return e === "entity" ? t ?? "" : zc;
+}
+function Vc(e, t) {
+	if (e === "__velair__") return {
+		source: "velair",
+		entity_id: t
+	};
+	let n = e.trim();
+	return n ? {
+		source: "entity",
+		entity_id: n
+	} : void 0;
+}
+function Hc(e, t, n) {
 	let r = e?.states ?? {}, i = Object.entries(r).filter(([e, r]) => {
 		if (e === t) return !0;
 		if (!e.startsWith("sensor.")) return !1;
@@ -22039,32 +26899,41 @@ function ws(e, t, n) {
 		label: t
 	}), i;
 }
-function Ts(e) {
+function Uc(e) {
 	return e?.availability === "current" && typeof e.value == "number" && typeof e.min == "number" && typeof e.max == "number";
 }
-function Es(e, t, n) {
+function Wc(e, t, n) {
 	let r = Math.max(n - t, .1), i = t - r, a = n + r, o = (e - i) / (a - i) * 100;
 	return Math.max(4, Math.min(96, o));
 }
-function Ds(e, t, n) {
+function Gc(e, t, n) {
 	let r = Math.min(400, t * .5), i = Math.max(n * 1.25, r + 1), a = (e - r) / (i - r) * 100;
 	return Math.max(4, Math.min(96, a));
 }
 //#endregion
 //#region src/velair/views/comfort-view.ts
-var Os = "__humidity_not_monitored__", ks = {
+var Kc = "__humidity_not_monitored__", qc = new Set([
+	"ventilation_may_help_cool",
+	"ventilation_may_help_warm",
+	"ventilation_may_help_reduce_humidity",
+	"ventilation_may_help_increase_humidity",
+	"ventilation_has_tradeoff"
+]), Jc = {
 	showConfiguration: !0,
 	showTemperature: !0,
 	showHumidity: !0,
 	showCo2: !0
-}, As = {
+}, Yc = {
 	comfortTemperatureRange: "comfortTemperatureRangeHelp",
 	comfortHumidityRange: "comfortHumidityRangeHelp",
 	comfortCo2Limits: "comfortCo2LimitsHelp",
-	comfortStaleAfter: "comfortStaleAfterHelp"
+	comfortStaleAfter: "comfortStaleAfterHelp",
+	comfortVentilationTemperatureThreshold: "comfortVentilationTemperatureThresholdHelp",
+	comfortVentilationHumidityThreshold: "comfortVentilationHumidityThresholdHelp",
+	comfortVentilationMoistureThreshold: "comfortVentilationMoistureThresholdHelp"
 };
-function js(e, t, n = {}) {
-	let r = Ms(n);
+function Xc(e, t, n = {}) {
+	let r = Zc(n);
 	return T`
     <section class="comfort-view">
       <header class="comfort-intro">
@@ -22074,18 +26943,18 @@ function js(e, t, n = {}) {
           <small>${e._t("comfortIntroDetail")}</small>
         </span>
       </header>
-      ${t.length ? t.map((t) => Ns(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+      ${t.length ? t.map((t) => Qc(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
     </section>
   `;
 }
-function Ms(e) {
+function Zc(e) {
 	return {
-		...ks,
+		...Jc,
 		...e
 	};
 }
-function Ns(e, t, n) {
-	let r = e._entityExists(t), i = Ss(e._data?.zones[t]?.comfort, e._temperatureUnit(t)), a = e._data?.comfort?.[t], o = r && e._expandedComfortZones.has(t), s = `comfort-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "comfortCollapseClimate" : "comfortExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("comfortUnavailable");
+function Qc(e, t, n) {
+	let r = e._entityExists(t), i = Ic(e._data?.zones[t]?.comfort, e._temperatureUnit(t)), a = e._data?.comfort?.[t], o = r && e._expandedComfortZones.has(t), s = `comfort-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "comfortCollapseClimate" : "comfortExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("comfortUnavailable");
 	return T`
     <section class=${`comfort-zone ${i.enabled ? "enabled" : "disabled"} ${o ? "expanded" : "collapsed"}`}>
       <header class="comfort-zone-heading" @click=${(n) => {
@@ -22116,7 +26985,7 @@ function Ns(e, t, n) {
           </span>
         </button>
         <div class="comfort-zone-actions" @click=${(e) => e.stopPropagation()}>
-          ${i.enabled ? Vs(e, a) : E}
+          ${i.enabled ? wl(e, t, a) : E}
           <ha-switch
             .checked=${i.enabled}
             ?disabled=${e._settingsSaving || !r}
@@ -22129,14 +26998,14 @@ function Ns(e, t, n) {
       </header>
       ${r && o ? T`
             <div id=${s} class="comfort-zone-content">
-              ${i.enabled ? Fs(e, t, a, n) : Ps(e)}
-              ${n.showConfiguration ? Hs(e, t, i) : E}
+              ${i.enabled ? el(e, t, i, a, n) : $c(e)}
+              ${n.showConfiguration ? Tl(e, t, i) : E}
             </div>
           ` : E}
     </section>
   `;
 }
-function Ps(e) {
+function $c(e) {
 	return T`
     <section class="comfort-assessment-card idle">
       <ha-icon icon="mdi:power-standby"></ha-icon>
@@ -22144,28 +27013,187 @@ function Ps(e) {
     </section>
   `;
 }
-function Fs(e, t, n, r = ks) {
-	return n?.enabled ? T`
+function el(e, t, n, r, i = Jc) {
+	return r?.enabled ? T`
     <section class="comfort-assessment-card">
       <div class="comfort-assessment-heading">
-        <span>
-          <ha-icon icon=${ec(n.condition)}></ha-icon>
-          <strong>${$s(e, n)}</strong>
+        <span class="comfort-assessment-heading-pills">
+          ${ql(e, r)}
+          ${Jl(e, r)}
+          ${Yl(e, r.air_quality)}
         </span>
-        ${Qs(e, n.air_quality)}
       </div>
-      ${Is(e, t, n, r)}
+      ${tl(e, t, r)}
+      ${_l(e, t, r, i)}
+      ${kl(e, t, n, r)}
+      ${al(e, t, r)}
     </section>
-  ` : Ps(e);
+  ` : $c(e);
 }
-function Is(e, t, n, r) {
-	let i = r.showTemperature ? n.temperature : void 0, a = r.showHumidity ? n.humidity : void 0, o = Ts(i), s = Ts(a), c = r.showTemperature || r.showHumidity, l = r.showCo2 && Ls(n.co2), u, d = !0;
+function tl(e, t, n) {
+	let r = (n.insights ?? []).flatMap((r) => {
+		if (r.kind !== "context") return [];
+		let i = qc.has(r.code) ? pl(e, r, n) : nl(e, t, n, r);
+		return i ? [{
+			insight: r,
+			label: i
+		}] : [];
+	});
+	return r.length ? T`
+    <div class="comfort-insights">
+      <div class="comfort-insight-context-list">
+        ${r.map(({ insight: e, label: t }) => T`
+          <div
+            class=${`comfort-insight-context tone-${e.tone}`}
+            data-insight-code=${e.code}
+          >
+            <ha-icon icon=${il(e)}></ha-icon>
+            <span>${t}</span>
+          </div>
+        `)}
+      </div>
+    </div>
+  ` : E;
+}
+function nl(e, t, n, r) {
+	let i = rl(r.code);
+	if (!i) return;
+	if (r.code !== "humidex_feels_warmer") return e._t(i);
+	let a = Fc(n, e._temperatureUnit(t));
+	return a === void 0 ? void 0 : e._t(i, { delta: Fl(e, t, a) });
+}
+function rl(e) {
+	return {
+		co2_elevated: "comfortInsightCo2Elevated",
+		co2_poor: "comfortInsightCo2Poor",
+		humidex_feels_warmer: "comfortInsightHumidexWarmer"
+	}[e];
+}
+function il(e) {
+	return e.code === "ventilation_has_tradeoff" ? "mdi:swap-horizontal-bold" : qc.has(e.code) ? "mdi:window-open-variant" : e.code.startsWith("co2_") ? "mdi:molecule-co2" : e.code.startsWith("humidex_") ? "mdi:sun-thermometer-outline" : e.code.startsWith("dew_point_") ? "mdi:thermometer-water" : "mdi:water-outline";
+}
+function al(e, t, n) {
+	let r = n.outdoor;
+	if (!r?.enabled) return E;
+	let i = r.temperature, a = r.comparison?.temperature, o = r.comparison?.humidity, s = r.absolute_humidity, c = r.indoor_absolute_humidity;
+	return T`
+    <section class=${`comfort-outdoor-comparison quality-${r.data_quality}`}>
+      <h3><ha-icon icon="mdi:home-switch-outline"></ha-icon>${e._t("comfortOutdoorComparison")}</h3>
+      <div class="comfort-outdoor-grid">
+        <article class="comfort-outdoor-cell temperature">
+          <header><ha-icon icon="mdi:thermometer-lines"></ha-icon><strong>${e._t("comfortOutdoorTemperatureComparison")}</strong></header>
+          <div class="comfort-outdoor-data">
+            <dl>
+              <div><dt>${e._t("comfortIndoor")}</dt><dd>${sl(e, t, n.temperature)}</dd></div>
+              <div><dt>${e._t("comfortOutdoor")}</dt><dd>${sl(e, t, i)}</dd></div>
+            </dl>
+            ${dl(e, t, a)}
+          </div>
+        </article>
+        <article class="comfort-outdoor-cell humidity">
+          <header><ha-icon icon="mdi:water-sync"></ha-icon><strong>${e._t("comfortOutdoorMoistureComparison")}</strong></header>
+          <div class="comfort-outdoor-data">
+            <dl>
+              <div><dt>${e._t("comfortIndoorAbsoluteHumidity")}</dt><dd>${cl(e, c, "absolute_humidity")}</dd></div>
+              <div><dt>${e._t("comfortOutdoorAbsoluteHumidity")}</dt><dd>${cl(e, s, "absolute_humidity")}</dd></div>
+              <div>
+                <dt class="comfort-outdoor-adjusted-label">
+                  <span>${e._t("comfortOutdoorEquivalentHumidity")}</span>
+                  ${G(`comfort-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-adjusted-outdoor-humidity-help`, e._t("comfortOutdoorEquivalentHumidity"), [e._t("comfortOutdoorAdjustedHumidityHelp"), e._t("comfortOutdoorAdjustedHumidityComparisonHelp")], { layout: "constrained" })}
+                </dt>
+                <dd>${ll(e, o?.equivalent_indoor_relative_humidity, o?.availability)}</dd>
+              </div>
+            </dl>
+            ${fl(e, o)}
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+function ol(e) {
+	return e?.availability === "current" && typeof e.value == "number" ? e.value : void 0;
+}
+function sl(e, t, n) {
+	let r = ol(n);
+	return r === void 0 ? ul(e, n?.availability) : e._formatTemperature(r, t);
+}
+function cl(e, t, n) {
+	let r = ol(t);
+	return r === void 0 ? ul(e, t?.availability) : n === "absolute_humidity" ? Mc(r, e.hass) : String(r);
+}
+function ll(e, t, n) {
+	return typeof t == "number" ? `${t.toLocaleString(void 0, { maximumFractionDigits: 1 })} %` : ul(e, n);
+}
+function ul(e, t) {
+	return t === "stale" ? e._t("comfortMetricStale") : t === "invalid" ? e._t("comfortMetricInvalid") : t === "not_monitored" ? e._t("comfortNotMonitored") : e._t("unavailable");
+}
+function dl(e, t, n) {
+	if (!n || n.availability !== "current" || typeof n.delta != "number") return E;
+	let r = n.effect === "cooler" ? e._t("comfortOutdoorCooler") : n.effect === "warmer" ? e._t("comfortOutdoorWarmer") : e._t("comfortOutdoorSimilar");
+	return T`<p>${e._t("comfortOutdoorTemperatureDelta", {
+		difference: Fl(e, t, n.delta),
+		direction: r
+	})}</p>`;
+}
+function fl(e, t) {
+	if (!t || t.availability !== "current" || typeof t.equivalent_indoor_relative_humidity_delta != "number") return E;
+	let n = Math.round(Math.abs(t.equivalent_indoor_relative_humidity_delta) * 10) / 10, r = e._t(n === 1 ? "comfortPercentagePoint" : "comfortPercentagePoints"), i = t.effect === "drier" ? "comfortOutdoorHumidityLower" : t.effect === "more_humid" ? "comfortOutdoorHumidityHigher" : "comfortOutdoorHumiditySimilarDetail";
+	return T`<p>${e._t(i, {
+		difference: n.toLocaleString(void 0, { maximumFractionDigits: 1 }),
+		unit: r
+	})}</p>`;
+}
+function pl(e, t, n) {
+	let r = {
+		ventilation_may_help_cool: "comfortInsightVentilationCool",
+		ventilation_may_help_warm: "comfortInsightVentilationWarm",
+		ventilation_may_help_reduce_humidity: "comfortInsightVentilationDry",
+		ventilation_may_help_increase_humidity: "comfortInsightVentilationHumidify"
+	};
+	if (t.code !== "ventilation_has_tradeoff") {
+		let i = r[t.code];
+		if (!i) return;
+		let a = e._t(i);
+		return (t.code === "ventilation_may_help_cool" || t.code === "ventilation_may_help_warm") && n.outdoor?.humidity?.availability !== "current" ? `${a} ${e._t("comfortInsightVentilationTemperatureOnly")}` : a;
+	}
+	let i = n.outdoor?.comparison?.temperature, a = n.outdoor?.comparison?.humidity, o = i?.potential ?? a?.potential, s = o === "cooling" ? e._t("comfortVentilationEffectCool") : o === "warming" ? e._t("comfortVentilationEffectWarm") : o === "drying" ? e._t("comfortVentilationEffectDry") : e._t("comfortVentilationEffectHumidify"), c = [...i?.blocked_by ?? [], ...a?.blocked_by ?? []][0] === "temperature" ? e._t("comfortVentilationDimensionTemperature") : e._t("comfortVentilationDimensionHumidity");
+	return e._t("comfortInsightVentilationTradeoff", {
+		effect: s,
+		dimension: c
+	});
+}
+var ml = {
+	humidex: {
+		label: "comfortHumidex",
+		description: "comfortHumidexDescription",
+		icon: "mdi:sun-thermometer-outline"
+	},
+	dew_point: {
+		label: "comfortDewPoint",
+		description: "comfortDewPointDescription",
+		icon: "mdi:thermometer-water"
+	},
+	absolute_humidity: {
+		label: "comfortAbsoluteHumidity",
+		description: "comfortAbsoluteHumidityDescription",
+		icon: "mdi:water"
+	}
+}, hl = Ac.map((e) => ({
+	metric: e,
+	...ml[e]
+}));
+function gl(e, t, n, r) {
+	return r?.availability !== "current" || typeof r.value != "number" ? r?.availability === "stale" ? e._t("comfortMetricStale") : r?.availability === "invalid" ? e._t("comfortMetricInvalid") : e._t("unavailable") : n === "dew_point" ? e._formatTemperature(r.value, t) : n === "absolute_humidity" ? Mc(r.value, e.hass) : r.value.toLocaleString(void 0, { maximumFractionDigits: 1 });
+}
+function _l(e, t, n, r) {
+	let i = r.showTemperature ? n.temperature : void 0, a = r.showHumidity ? n.humidity : void 0, o = Uc(i), s = Uc(a), c = r.showTemperature || r.showHumidity, l = r.showCo2 && vl(n.co2), u, d = !0;
 	if (o && s) {
-		let n = Es(i.value, i.min, i.max), r = 100 - Es(a.value, a.min, a.max), o = [
+		let r = jc(n.comfort_zone, i.value, a.value), o = r?.markerX ?? Wc(i.value, i.min, i.max), s = r?.markerY ?? 100 - Wc(a.value, a.min, a.max), c = [
 			"comfort-map-marker",
-			r < 30 ? "label-below" : "",
-			n < 18 ? "label-left" : "",
-			n > 82 ? "label-right" : ""
+			s < 30 ? "label-below" : "",
+			o < 18 ? "label-left" : "",
+			o > 82 ? "label-right" : ""
 		].filter(Boolean).join(" ");
 		u = T`
       <div class="comfort-map">
@@ -22187,13 +27215,14 @@ function Is(e, t, n, r) {
             <span></span><span></span><span></span>
           </span>
           <span
-            class="comfort-map-zone"
+            class=${`comfort-map-zone ${r ? `shaped ${n.comfort_zone?.model === "temperature_aware" ? "temperature-aware" : n.comfort_zone?.model ?? ""}` : "simple"}`}
+            style=${r ? `--comfort-zone-polygon:polygon(${r.polygon})` : ""}
             role="img"
             aria-label=${e._t("comfortTargetZone")}
           ></span>
           <span
-            class=${o}
-            style=${`--comfort-x:${n}%;--comfort-y:${r}%`}
+            class=${c}
+            style=${`--comfort-x:${o}%;--comfort-y:${s}%`}
           >
             <span class="comfort-map-marker-label">
               <strong>${e._formatTemperature(i.value, t)}</strong>
@@ -22215,27 +27244,50 @@ function Is(e, t, n, r) {
             <i class="comfort-legend-current" aria-hidden="true"></i>
             ${e._t("comfortCurrentReadings")}
           </span>
+          ${r?.effective ? T`
+            <span class="comfort-effective-range">
+              ${e._t("comfortEffectiveHumidityRange", {
+			temperature: e._formatTemperature(r.effective.basisTemperature, t),
+			minimum: r.effective.minimum.toLocaleString(void 0, { maximumFractionDigits: 2 }),
+			maximum: r.effective.maximum.toLocaleString(void 0, { maximumFractionDigits: 2 })
+		})}
+            </span>
+          ` : E}
         </div>
       </div>
     `;
-	} else o ? u = Rs(e, t, i, "comfortTemperature") : s ? u = Rs(e, t, a, "comfortHumidity") : c ? u = T`
+	} else o ? u = xl(e, t, i, "comfortTemperature") : s ? u = xl(e, t, a, "comfortHumidity") : yl(a) ? u = bl(e, a, "comfortHumidity") : c ? u = T`
       <div class="comfort-no-readings">
         <ha-icon icon=${n.data_quality === "stale" ? "mdi:clock-alert-outline" : "mdi:sensor-off"}></ha-icon>
-        <span>${$s(e, n)}</span>
+        <span>${Xl(e, n)}</span>
       </div>
     ` : (u = E, d = !1);
 	return !d && !l ? E : T`
     <div class="comfort-visuals">
       ${u}
-      ${l ? zs(e, n.co2) : E}
+      ${l ? Sl(e, n.co2) : E}
     </div>
   `;
 }
-function Ls(e) {
+function vl(e) {
 	return e?.availability === "current" && typeof e.value == "number" && typeof e.attention == "number" && typeof e.max == "number";
 }
-function Rs(e, t, n, r) {
-	let i = Es(n.value, n.min, n.max), a = n.metric === "temperature" ? e._formatTemperature(n.value, t) : `${Math.round(n.value)}%`, o = n.metric === "temperature" ? e._formatTemperature(n.min, t) : `${Math.round(n.min)}%`, s = n.metric === "temperature" ? e._formatTemperature(n.max, t) : `${Math.round(n.max)}%`;
+function yl(e) {
+	return e?.availability === "current" && typeof e.value == "number" && Number.isFinite(e.value);
+}
+function bl(e, t, n) {
+	let r = t.metric === "humidity" ? `${Math.round(t.value)}%` : t.value.toLocaleString();
+	return T`
+    <div class=${`comfort-range-scale metric-${t.metric} unclassified`}>
+      <header>
+        <span>${e._t(n)}</span>
+        <strong>${r}</strong>
+      </header>
+    </div>
+  `;
+}
+function xl(e, t, n, r) {
+	let i = Wc(n.value, n.min, n.max), a = n.metric === "temperature" ? e._formatTemperature(n.value, t) : `${Math.round(n.value)}%`, o = n.metric === "temperature" ? e._formatTemperature(n.min, t) : `${Math.round(n.min)}%`, s = n.metric === "temperature" ? e._formatTemperature(n.max, t) : `${Math.round(n.max)}%`;
 	return T`
     <div class=${`comfort-range-scale metric-${n.metric}`}>
       <header>
@@ -22252,9 +27304,9 @@ function Rs(e, t, n, r) {
     </div>
   `;
 }
-function zs(e, t) {
+function Sl(e, t) {
 	if (t?.availability !== "current" || typeof t.value != "number" || typeof t.attention != "number" || typeof t.max != "number") return E;
-	let n = Ds(t.value, t.attention, t.max), r = Ds(t.attention, t.attention, t.max), i = Ds(t.max, t.attention, t.max);
+	let n = Gc(t.value, t.attention, t.max), r = Gc(t.attention, t.attention, t.max), i = Gc(t.max, t.attention, t.max);
 	return T`
     <div class="comfort-co2-scale">
       <header>
@@ -22275,82 +27327,463 @@ function zs(e, t) {
     </div>
   `;
 }
-function Bs(e, t) {
-	if (!t?.enabled || t.data_quality === "complete") return E;
-	let n = t.data_issues.length ? t.data_issues.map((t) => e._t(ic(t))).join(" · ") : e._t(rc(t.data_quality));
-	return T`
-    <span
-      class="comfort-data-warning"
-      tabindex="0"
-      title=${n}
-      aria-label=${e._t(rc(t.data_quality))}
-    >
-      <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
-      <span class="comfort-help-tooltip" role="tooltip">${n}</span>
-    </span>
-  `;
+function Cl(e, t, n) {
+	if (!n?.enabled || n.data_quality === "complete") return E;
+	let r = n.data_issues.length ? n.data_issues.map((t) => e._t(eu(t))).join(" · ") : e._t($l(n.data_quality));
+	return T`<span class="comfort-data-warning">
+    ${G(`comfort-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-data-quality-help`, e._t($l(n.data_quality)), r, { icon: "mdi:alert-circle-outline" })}
+  </span>`;
 }
-function Vs(e, t) {
+function wl(e, t, n) {
 	return T`
     <span class="comfort-assessment-summary">
       <span class="comfort-assessment-line">
-        ${Zs(e, t)}
-        ${t ? Qs(e, t.air_quality) : E}
-        ${Bs(e, t)}
+        ${ql(e, n)}
+        ${Jl(e, n)}
+        ${n ? Yl(e, n.air_quality) : E}
+        ${Cl(e, t, n)}
       </span>
     </span>
   `;
 }
-function Hs(e, t, n) {
-	let [r, i] = _r(e._temperatureUnit(t)), a = Gs(e, t, n, "temperature_entity_id", "temperature"), o = Gs(e, t, n, "humidity_entity_id", "humidity"), s = Gs(e, t, n, "co2_entity_id", "co2");
+function Tl(e, t, n) {
+	let [r, i] = Rt(e._temperatureUnit(t)), a = Vl(e, t, n, "temperature_entity_id", "temperature"), o = Vl(e, t, n, "humidity_entity_id", "humidity"), s = Vl(e, t, n, "co2_entity_id", "co2");
 	return T`
-    <section class="comfort-config-section">
-      <h3><ha-icon icon="mdi:clock-check-outline"></ha-icon>${e._t("comfortDataFreshness")}</h3>
-      <div class="comfort-config-rows">
-        ${Js(e, t, "comfortStaleAfter", "stale_after_minutes", n.stale_after_minutes, 5, 1440, 5, e._t("minutesShort"))}
+    <details class="comfort-configuration">
+      <summary>
+        <span class="comfort-configuration-summary">
+          <ha-icon icon="mdi:tune-variant"></ha-icon>
+          <span>
+            <strong>${e._t("comfortConfiguration")}</strong>
+            <small>${e._t("comfortConfigurationDescription")}</small>
+          </span>
+        </span>
+        <ha-icon class="comfort-configuration-chevron" icon="mdi:chevron-down"></ha-icon>
+      </summary>
+      <div class="comfort-configuration-content">
+        <section class="comfort-config-section comfort-data-sources-config-section comfort-freshness-config-section">
+          <h3><ha-icon icon="mdi:database-outline"></ha-icon>${e._t("comfortDataSources")}</h3>
+          <h4 class="comfort-config-subheading">${e._t("comfortDataFreshness")}</h4>
+          <div class="comfort-config-rows">
+            ${Wl(e, t, "comfortStaleAfter", "stale_after_minutes", n.stale_after_minutes, 5, 1440, 5, e._t("minutesShort"))}
+            ${Bl(e, t, n, "temperature_entity_id", "temperature", "comfortTemperatureSensor")}
+            ${Bl(e, t, n, "humidity_entity_id", "humidity", "comfortHumiditySensor")}
+            ${Bl(e, t, n, "co2_entity_id", "co2", "comfortCo2Sensor")}
+          </div>
+        </section>
+        <section class="comfort-config-section comfort-model-config-section">
+          <h3><ha-icon icon="mdi:shape-outline"></ha-icon>${e._t("comfortModel")}</h3>
+          <div class="comfort-config-rows">
+            ${Ll(e, t, n, o)}
+          </div>
+        </section>
+        <section class="comfort-config-section comfort-preferences-config-section">
+          <h3><ha-icon icon="mdi:tune-variant"></ha-icon>${e._t("comfortPreferences")}</h3>
+          <div class="comfort-config-rows">
+            ${a ? Ul(e, t, "comfortTemperatureRange", "temperature_min", n.temperature_min, "temperature_max", n.temperature_max, r, i, .5, e._temperatureUnit(t), "comfortMinimum", "comfortMaximum") : E}
+            ${o ? n.comfort_model === "temperature_aware" ? Rl(e, t, n) : Ul(e, t, n.comfort_model === "guided" ? "comfortGuidedHumidityReference" : "comfortHumidityRange", "humidity_min", n.humidity_min, "humidity_max", n.humidity_max, 0, 100, 1, "%", "comfortMinimum", "comfortMaximum") : E}
+            ${n.comfort_model === "guided" && o ? T`<p class="comfort-guided-reference">
+                  <ha-icon icon="mdi:chart-bell-curve-cumulative"></ha-icon>
+                  <span>${e._t("comfortModelGuidedReference", { temperature: e._formatTemperature((n.temperature_min + n.temperature_max) / 2, t) })}</span>
+                </p>` : E}
+            ${s ? Ul(e, t, "comfortCo2Limits", "co2_attention", n.co2_attention, "co2_poor", n.co2_poor, 400, 1e4, 50, "ppm", "comfortCo2Attention", "comfortCo2Poor") : E}
+          </div>
+        </section>
+        ${El(e, t, n)}
+        ${Ml(e, t, n)}
       </div>
-    </section>
-    ${Us(e, "comfortTemperature", "mdi:thermometer", Ws(e, t, n, "temperature_entity_id", "temperature", "comfortTemperatureSensor"), a ? qs(e, t, "comfortTemperatureRange", "temperature_min", n.temperature_min, "temperature_max", n.temperature_max, r, i, .5, e._temperatureUnit(t), "comfortMinimum", "comfortMaximum") : E)}
-    ${Us(e, "comfortHumidity", "mdi:water-percent", Ws(e, t, n, "humidity_entity_id", "humidity", "comfortHumiditySensor"), o ? qs(e, t, "comfortHumidityRange", "humidity_min", n.humidity_min, "humidity_max", n.humidity_max, 0, 100, 1, "%", "comfortMinimum", "comfortMaximum") : E)}
-    ${Us(e, "comfortCo2", "mdi:molecule-co2", Ws(e, t, n, "co2_entity_id", "co2", "comfortCo2Sensor"), s ? qs(e, t, "comfortCo2Limits", "co2_attention", n.co2_attention, "co2_poor", n.co2_poor, 400, 1e4, 50, "ppm", "comfortCo2Attention", "comfortCo2Poor") : E)}
+    </details>
   `;
 }
-function Us(e, t, n, r, i) {
+function El(e, t, n) {
 	return T`
-    <section class="comfort-config-section comfort-metric-config-section">
-      <h3><ha-icon icon=${n}></ha-icon>${e._t(t)}</h3>
-      <div class="comfort-config-rows">
-        ${r}
-        ${i}
-      </div>
+    <section class="comfort-config-section comfort-outdoor-config-section">
+      <header>
+        <span><ha-icon icon="mdi:home-switch-outline"></ha-icon><strong>${e._t("comfortOutdoorComparison")}</strong></span>
+        <ha-switch
+          .checked=${n.outdoor_comparison_enabled}
+          aria-label=${e._t("comfortOutdoorComparison")}
+          ?disabled=${e._settingsSaving}
+          @change=${(n) => e._saveZoneComfort(t, { outdoor_comparison_enabled: !!n.target.checked })}
+        ></ha-switch>
+      </header>
+      <p class="comfort-config-description">
+        ${Dl(e, t, n)}
+      </p>
+      ${n.outdoor_comparison_enabled ? T`
+        <div class="comfort-config-rows comfort-outdoor-config-rows">
+          ${Ol(e, t, n.outdoor_temperature_entity_id, "temperature", "comfortOutdoorTemperatureSensor", !0)}
+          ${Ol(e, t, n.outdoor_humidity_entity_id, "humidity", "comfortOutdoorHumiditySensor", !1)}
+        </div>
+        <div class="comfort-ventilation-guidance-config">
+          <h4><ha-icon icon="mdi:window-open-variant"></ha-icon>${e._t("comfortVentilationGuidance")}</h4>
+          <div class="comfort-config-rows comfort-ventilation-guidance-rows">
+            ${Wl(e, t, "comfortVentilationTemperatureThreshold", "ventilation_temperature_threshold", n.ventilation_temperature_threshold, e._temperatureUnit(t).toUpperCase().includes("F") ? .2 : .1, e._temperatureUnit(t).toUpperCase().includes("F") ? 18 : 10, .1, e._temperatureUnit(t))}
+            ${n.outdoor_humidity_entity_id ? T`
+              ${Wl(e, t, "comfortVentilationHumidityThreshold", "ventilation_humidity_threshold", n.ventilation_humidity_threshold, .5, 50, .5, e._t("comfortPercentagePoints"))}
+              ${Wl(e, t, "comfortVentilationMoistureThreshold", "ventilation_absolute_humidity_threshold", n.ventilation_absolute_humidity_threshold, .1, 10, .1, "g/m³")}
+            ` : E}
+          </div>
+        </div>
+      ` : E}
     </section>
   `;
 }
-function Ws(e, t, n, r, i, a) {
-	let o = n[r] ?? "", s = i === "humidity" && !n.humidity_enabled ? Os : o, c = ws(e.hass, o, i), l = Ks(e, t, n, r, i), u = i === "co2" ? "comfortDoNotMonitor" : "comfortSelectSensor";
+function Dl(e, t, n) {
+	let r = Fl(e, t, n.ventilation_temperature_threshold);
+	if (!n.outdoor_humidity_entity_id) return e._t("comfortVentilationGuidanceDescription", { temperature: r });
+	let i = n.ventilation_humidity_threshold, a = `${i.toLocaleString(void 0, { maximumFractionDigits: 1 })} ${e._t(i === 1 ? "comfortPercentagePoint" : "comfortPercentagePoints")}`, o = Mc(n.ventilation_absolute_humidity_threshold, e.hass);
+	return e._t("comfortVentilationGuidanceDescriptionWithHumidity", {
+		temperature: r,
+		humidity: a,
+		moisture: o
+	});
+}
+function Ol(e, t, n, r, i, a) {
+	let o = Hc(e.hass, n ?? "", r), s = r === "temperature" ? "outdoor_temperature_entity_id" : "outdoor_humidity_entity_id";
 	return T`
     <label class="comfort-config-row comfort-picker-row">
-      ${Xs(e, a)}
+      ${Kl(e, t, i)}
+      <span class="select-wrap comfort-select-wrap">
+        <span class="comfort-select-control">
+          <select
+            .value=${n ?? ""}
+            value=${n ?? ""}
+            aria-required=${String(a)}
+            ?disabled=${e._settingsSaving}
+            @change=${(n) => e._saveZoneComfort(t, { [s]: n.currentTarget.value || null })}
+          >
+            <option value="" .selected=${!n}>${e._t(a ? "comfortOutdoorSelectTemperature" : "comfortOutdoorNoHumidity")}</option>
+            ${Qs(o, (e) => e.entityId, (e) => T`<option
+                value=${e.entityId}
+                .selected=${e.entityId === n}
+              >${e.label} · ${e.entityId}</option>`)}
+          </select>
+        </span>
+      </span>
+    </label>
+  `;
+}
+function kl(e, t, n, r) {
+	let i = hl.filter(({ metric: e }) => n.derived_metrics[e].enabled);
+	if (!i.length) return E;
+	let a = t.replace(/[^a-zA-Z0-9_-]/g, "-");
+	return T`
+    <section class="comfort-derived-visual-section">
+      <h3>
+        <ha-icon icon="mdi:chart-box-plus-outline"></ha-icon>
+        ${e._t("comfortAdditionalInformation")}
+      </h3>
+      <div class="comfort-derived-visual-list">
+        ${i.map((i) => {
+		let o = r?.derived_metrics?.[i.metric];
+		return i.metric === "humidex" ? T`
+            <article
+              class="comfort-derived-reading"
+              aria-label=${e._t(i.label)}
+            >
+              <header>
+                ${Al(e, i, a)}
+              </header>
+              ${Nl(e, t, i.metric, o, r?.temperature, n.temperature_min, n.temperature_max)}
+            </article>
+          ` : jl(e, t, i, o, r?.temperature, a);
+	})}
+      </div>
+    </section>
+  `;
+}
+function Al(e, t, n) {
+	return T`
+    <ha-icon icon=${t.icon}></ha-icon>
+    <span class="comfort-derived-title">
+      <strong>${e._t(t.label)}</strong>
+      ${G(`comfort-${n}-${t.metric}-help`, e._t(t.label), e._t(t.description))}
+    </span>
+  `;
+}
+function jl(e, t, n, r, i, a) {
+	let o = Pc(n.metric, r, i, e._temperatureUnit(t)), s = gl(e, t, n.metric, r), c;
+	if (n.metric === "dew_point" && o.availability === "current" && o.relation) {
+		let n = Fl(e, t, o.relation.delta);
+		c = e._t(o.relation.delta >= 0 ? "comfortDewPointBelowRoom" : "comfortDewPointAboveRoom", { difference: n });
+	}
+	let l = c ? `${e._t(n.label)}: ${s}. ${c}` : `${e._t(n.label)}: ${s}`;
+	return T`
+    <article class="comfort-derived-reading" aria-label=${e._t(n.label)}>
+      <div
+        class=${`comfort-derived-visual ${n.metric.replace("_", "-")} tone-neutral availability-${o.availability}`}
+        aria-label=${l}
+      >
+        <div class="comfort-derived-summary-row">
+          <header>
+            ${Al(e, n, a)}
+          </header>
+          <strong class="comfort-derived-summary-value">${s}</strong>
+        </div>
+        ${c ? T`<span class="comfort-derived-detail">${c}</span>` : E}
+      </div>
+    </article>
+  `;
+}
+function Ml(e, t, n) {
+	let r = t.replace(/[^a-zA-Z0-9_-]/g, "-");
+	return T`
+    <section class="comfort-config-section comfort-derived-config-section">
+      <h3>
+        <ha-icon icon="mdi:chart-box-plus-outline"></ha-icon>
+        ${e._t("comfortAdditionalInformation")}
+      </h3>
+      <p class="comfort-config-description">
+        ${e._t("comfortAdditionalInformationDescription")}
+      </p>
+      <div class="comfort-derived-config-list">
+        ${hl.map((i) => {
+		let a = n.derived_metrics[i.metric];
+		return T`
+            <article class=${`comfort-derived-config ${a.enabled ? "enabled" : "disabled"}`}>
+              <header>
+                <ha-icon icon=${i.icon}></ha-icon>
+                <span class="comfort-derived-title">
+                  <strong>${e._t(i.label)}</strong>
+                  ${G(`comfort-${r}-${i.metric}-config-help`, e._t(i.label), e._t(i.description))}
+                </span>
+                <ha-switch
+                  .checked=${a.enabled}
+                  ?disabled=${e._settingsSaving}
+                  @change=${(n) => e._saveZoneComfort(t, { derived_metrics: { [i.metric]: {
+			enabled: !!n.target.checked,
+			source: a.source,
+			entity_id: a.entity_id
+		} } })}
+                ></ha-switch>
+              </header>
+              ${a.enabled ? Il(e, t, i.metric, a.source, a.entity_id) : E}
+            </article>
+          `;
+	})}
+      </div>
+    </section>
+  `;
+}
+function Nl(e, t, n, r, i, a, o) {
+	let s = Pc(n, r, i, e._temperatureUnit(t)), c = gl(e, t, n, r);
+	if (s.availability !== "current" || s.value === void 0) return T`
+      <div
+        class=${`comfort-derived-visual humidex tone-neutral availability-${s.availability}`}
+        aria-label=${`${e._t("comfortHumidex")}: ${c}`}
+      >
+        <strong>${c}</strong>
+      </div>
+    `;
+	if (!s.relation) return T`
+      <div class="comfort-derived-visual humidex tone-neutral" aria-label=${`${e._t("comfortHumidex")}: ${c}`}>
+        <strong>${c}</strong>
+      </div>
+    `;
+	let l = Fl(e, t, s.relation.delta), u = s.relation.direction === "warmer" ? "comfortHumidexWarmerRelation" : s.relation.direction === "cooler" ? "comfortHumidexCoolerRelation" : "comfortHumidexNeutralRelation", d = e._t(u, { delta: l }), f = s.relation.direction === "warmer" ? "mdi:arrow-up" : s.relation.direction === "cooler" ? "mdi:arrow-down" : "mdi:minus", p = s.relation.direction === "warmer" ? `+${l}` : s.relation.direction === "cooler" ? `−${l}` : l, m = `${e._t("comfortAir")}: ${e._formatTemperature(s.relation.roomTemperature, t)}. ${e._t("comfortHumidex")}: ${c}. ${d}`, h = Nc(r, i, a, o, e._temperatureUnit(t));
+	return T`
+    <div class=${`comfort-derived-visual humidex tone-${s.tone}`} aria-label=${m}>
+      <div class="comfort-humidex-comparison">
+        <span class="comfort-derived-endpoint">
+          <small>${e._t("comfortAir")}</small>
+          <strong>${e._formatTemperature(s.relation.roomTemperature, t)}</strong>
+        </span>
+        <span class="comfort-humidex-delta" aria-hidden="true">
+          <ha-icon icon=${f}></ha-icon><strong>${p}</strong>
+        </span>
+        <span class="comfort-derived-endpoint humidex">
+          <small>${e._t("comfortHumidex")}</small>
+          <strong>${c}</strong>
+        </span>
+      </div>
+      ${h ? Pl(e, t, c, h) : E}
+      <span class="comfort-derived-relation">${d}</span>
+    </div>
+  `;
+}
+function Pl(e, t, n, r) {
+	let i = r.rangePosition === "below" ? "comfortHumidexRangeBelow" : r.rangePosition === "within" ? "comfortHumidexRangeWithin" : r.rangePosition === "above" ? "comfortHumidexRangeAbove" : "comfortHumidexRangeUnknown", a = e._t(i), o = r.airCondition ?? "neutral";
+	return T`
+    <div class="comfort-humidex-scale" style=${[
+		`--comfort-air-position:${r.airPosition}%`,
+		`--comfort-humidex-position:${r.humidexPosition}%`,
+		`--comfort-band-start:${r.bandStart}%`,
+		`--comfort-band-end:${r.bandEnd}%`,
+		`--comfort-connector-start:${r.connectorStart}%`,
+		`--comfort-connector-width:${r.connectorWidth}%`
+	].join(";")} role="img" aria-label=${e._t("comfortHumidexScaleAria", {
+		air: e._formatTemperature(r.airValue, t),
+		humidex: n,
+		position: a
+	})}>
+      <span class="comfort-humidex-scale-label air">${e._t("comfortAir")}</span>
+      <div class="comfort-humidex-scale-plot">
+        <span class="comfort-humidex-range-band" aria-hidden="true"></span>
+        ${r.connectorVisible ? T`<span class="comfort-humidex-connector" aria-hidden="true"></span>` : E}
+        <span class=${`comfort-humidex-marker air condition-${o}`} aria-hidden="true"></span>
+        <span class=${`comfort-humidex-marker humidex position-${r.rangePosition ?? "neutral"}`} aria-hidden="true"></span>
+      </div>
+      <span class="comfort-humidex-scale-label humidex">${e._t("comfortHumidex")}</span>
+      <div class="comfort-humidex-scale-domain">
+        <span>${e._formatTemperature(r.domainMinimum, t)}</span>
+        <span>${e._t("comfortTemperatureRange")}</span>
+        <span>${e._formatTemperature(r.domainMaximum, t)}</span>
+      </div>
+      <span class=${`comfort-humidex-scale-status position-${r.rangePosition ?? "neutral"}`}>
+        ${a}
+      </span>
+    </div>
+  `;
+}
+function Fl(e, t, n) {
+	return `${Number(Math.abs(n).toFixed(1)).toLocaleString()} ${e._temperatureUnit(t)}`;
+}
+function Il(e, t, n, r, i) {
+	let a = Rc(e.hass, i ?? "", n), o = Bc(r, i);
+	return T`
+    <div class="comfort-derived-source">
+      <label class="comfort-config-row comfort-derived-source-row">
+        ${Kl(e, t, "comfortMetricSource", n)}
+        <span class="select-wrap comfort-select-wrap">
+          <span class="comfort-select-control">
+            <select
+              .value=${o}
+              ?disabled=${e._settingsSaving}
+              @change=${(r) => {
+		let a = Vc(r.currentTarget.value, i);
+		a && e._saveZoneComfort(t, { derived_metrics: { [n]: {
+			enabled: !0,
+			...a
+		} } });
+	}}
+            >
+              <option
+                value=${zc}
+                ?selected=${o === zc}
+              >${e._t("comfortMetricSourceVelair")}</option>
+              ${r === "entity" && !i ? T`<option value="" disabled selected>${e._t("comfortMetricSelectEntity")}</option>` : E}
+              ${a.map((e) => T`
+                <option
+                  value=${e.entityId}
+                  ?selected=${e.entityId === o}
+                >${e.label} · ${e.entityId}</option>
+              `)}
+            </select>
+          </span>
+        </span>
+      </label>
+    </div>
+  `;
+}
+function Ll(e, t, n, r) {
+	let i = n.comfort_model === "guided" ? "comfortModelGuidedDescription" : n.comfort_model === "temperature_aware" ? "comfortModelTemperatureAwareDescription" : "comfortModelSimpleDescription";
+	return T`
+    <label class="comfort-config-row comfort-picker-row comfort-model-row">
+      ${Kl(e, t, "comfortModel")}
+      <span class="select-wrap comfort-select-wrap">
+        <span class="comfort-select-control">
+          <select
+            .value=${n.comfort_model}
+            ?disabled=${e._settingsSaving}
+            @change=${(n) => e._saveZoneComfort(t, { comfort_model: n.currentTarget.value === "temperature_aware" ? "temperature_aware" : n.currentTarget.value === "guided" ? "guided" : "simple" })}
+          >
+            <option value="simple">${e._t("comfortModelSimple")}</option>
+            <option value="guided" ?disabled=${!r}>
+              ${e._t("comfortModelGuided")}
+            </option>
+            <option value="temperature_aware">${e._t("comfortModelTemperatureAware")}</option>
+          </select>
+        </span>
+        <small>${e._t(i)}</small>
+        ${r ? E : T`<small class="comfort-model-requirement">
+              ${e._t("comfortModelHumidityRequired")}
+            </small>`}
+      </span>
+    </label>
+  `;
+}
+function Rl(e, t, n) {
+	let r = [{
+		key: "at_temperature_min",
+		label: e._formatTemperature(n.temperature_min, t),
+		range: n.temperature_aware.at_temperature_min
+	}, {
+		key: "at_temperature_max",
+		label: e._formatTemperature(n.temperature_max, t),
+		range: n.temperature_aware.at_temperature_max
+	}];
+	return T`
+    <div class="comfort-temperature-aware-ranges" aria-label=${e._t("comfortTemperatureAwareHumidityRanges")}>
+      ${r.map((n) => T`
+        <div
+          class="comfort-temperature-aware-range"
+          role="group"
+          aria-label=${`${e._t(n.key === "at_temperature_min" ? "comfortAtMinimumTemperature" : "comfortAtMaximumTemperature")} ${n.label}`}
+        >
+          <div class="comfort-temperature-aware-range-heading">
+            <span>${e._t(n.key === "at_temperature_min" ? "comfortAtMinimumTemperature" : "comfortAtMaximumTemperature")}</span>
+            <strong>${n.label}</strong>
+          </div>
+          <div class="comfort-temperature-aware-fields">
+            ${zl(e, t, n.key, "minimum", n.range.minimum, 0, Math.max(0, n.range.maximum - .1), "comfortMinimum")}
+            ${zl(e, t, n.key, "maximum", n.range.maximum, Math.min(100, n.range.minimum + .1), 100, "comfortMaximum")}
+          </div>
+        </div>
+      `)}
+    </div>
+  `;
+}
+function zl(e, t, n, r, i, a, o, s) {
+	return T`
+    <label class="comfort-temperature-aware-field">
+      <small>${e._t(s)}</small>
+      <span class="comfort-number-with-unit">
+        <input
+          type="number"
+          min=${String(a)}
+          max=${String(o)}
+          step="0.1"
+          .value=${String(i)}
+          ?disabled=${e._settingsSaving}
+          @change=${(s) => {
+		let c = Number(s.currentTarget.value), l = Math.min(o, Math.max(a, Number.isFinite(c) ? c : i));
+		e._saveZoneComfort(t, { temperature_aware: { [n]: { [r]: l } } });
+	}}
+        />
+        <span>%</span>
+      </span>
+    </label>
+  `;
+}
+function Bl(e, t, n, r, i, a) {
+	let o = n[r] ?? "", s = i === "humidity" && !n.humidity_enabled ? Kc : o, c = Hc(e.hass, o, i), l = Hl(e, t, n, r, i), u = i === "co2" ? "comfortDoNotMonitor" : "comfortSelectSensor";
+	return T`
+    <label class="comfort-config-row comfort-picker-row">
+      ${Kl(e, t, a)}
       <span class="select-wrap comfort-select-wrap">
         <span class="comfort-select-control">
           <select
           .value=${s}
           value=${s}
           ?disabled=${e._settingsSaving}
-          @change=${(n) => {
-		let a = n.currentTarget.value.trim();
+          @change=${(a) => {
+		let o = a.currentTarget.value.trim();
 		if (i === "humidity") {
-			if (a === Os) {
-				e._saveZoneComfort(t, { humidity_enabled: !1 });
+			if (o === Kc) {
+				e._saveZoneComfort(t, {
+					humidity_enabled: !1,
+					...n.comfort_model === "guided" ? { comfort_model: "simple" } : {}
+				});
 				return;
 			}
 			e._saveZoneComfort(t, {
 				humidity_enabled: !0,
-				[r]: a || null
+				[r]: o || null
 			});
 			return;
 		}
-		e._saveZoneComfort(t, { [r]: a || null });
+		e._saveZoneComfort(t, { [r]: o || null });
 	}}
         >
           <option value="" ?selected=${s === ""}>
@@ -22358,8 +27791,8 @@ function Ws(e, t, n, r, i, a) {
           </option>
           ${i === "humidity" ? T`
                 <option
-                  value=${Os}
-                  ?selected=${s === Os}
+                  value=${Kc}
+                  ?selected=${s === Kc}
                 >
                   ${e._t("comfortDoNotMonitorHumidity")}
                 </option>
@@ -22376,7 +27809,7 @@ function Ws(e, t, n, r, i, a) {
     </label>
   `;
 }
-function Gs(e, t, n, r, i) {
+function Vl(e, t, n, r, i) {
 	if (i === "humidity" && !n.humidity_enabled) return !1;
 	if (n[r]?.trim() || i === "temperature") return !0;
 	if (i === "humidity") {
@@ -22385,7 +27818,7 @@ function Gs(e, t, n, r, i) {
 	}
 	return !1;
 }
-function Ks(e, t, n, r, i) {
+function Hl(e, t, n, r, i) {
 	if (i === "humidity" && !n.humidity_enabled) return e._t("comfortNotMonitored");
 	let a = n[r]?.trim();
 	if (a) return a;
@@ -22399,40 +27832,40 @@ function Ks(e, t, n, r, i) {
 	}
 	return e._t("comfortNotMonitored");
 }
-function qs(e, t, n, r, i, a, o, s, c, l, u, d, f) {
+function Ul(e, t, n, r, i, a, o, s, c, l, u, d, f) {
 	return T`
     <label class="comfort-config-row comfort-threshold-row">
-      ${Xs(e, n)}
+      ${Kl(e, t, n)}
       <span class="comfort-number-pair">
         <span class="comfort-number-field">
           <small>${e._t(d)}</small>
-          ${Ys(e, t, r, i, s, c, l)}
+          ${Gl(e, t, r, i, s, c, l)}
         </span>
         <span class="comfort-number-separator">–</span>
         <span class="comfort-number-field">
           <small>${e._t(f)}</small>
-          ${Ys(e, t, a, o, s, c, l)}
+          ${Gl(e, t, a, o, s, c, l)}
         </span>
         <span class="comfort-number-unit">${u}</span>
       </span>
     </label>
   `;
 }
-function Js(e, t, n, r, i, a, o, s, c) {
+function Wl(e, t, n, r, i, a, o, s, c) {
 	return T`
     <label class="comfort-config-row">
-      ${Xs(e, n)}
+      ${Kl(e, t, n)}
       <span class="comfort-number-single">
         <span class="comfort-number-field comfort-number-field-single">
           <small aria-hidden="true">&nbsp;</small>
-          ${Ys(e, t, r, i, a, o, s)}
+          ${Gl(e, t, r, i, a, o, s)}
         </span>
         <span class="comfort-number-single-unit">${c}</span>
       </span>
     </label>
   `;
 }
-function Ys(e, t, n, r, i, a, o) {
+function Gl(e, t, n, r, i, a, o) {
 	return T`
     <input
       type="number"
@@ -22448,55 +27881,45 @@ function Ys(e, t, n, r, i, a, o) {
     />
   `;
 }
-function Xs(e, t) {
-	let n = As[t], r = n ? e._t(n) : "";
+function Kl(e, t, n, r, i) {
+	let a = i ?? Yc[n], o = a ? e._t(a) : "", s = t.replace(/[^a-zA-Z0-9_-]/g, "-");
 	return T`
     <span class="label comfort-config-label">
-      <span>${e._t(t)}</span>
-      ${n ? T`
-            <span class="comfort-help" tabindex="0" aria-label=${r}>
-              <ha-icon icon="mdi:information-outline"></ha-icon>
-              <span class="comfort-help-tooltip" role="tooltip">${r}</span>
-            </span>
-          ` : E}
+      <span>${e._t(n)}</span>
+      ${a ? G(`comfort-${s}-${n}${r ? `-${r}` : ""}-help`, o, o) : E}
     </span>
   `;
 }
-function Zs(e, t) {
+function ql(e, t) {
 	return T`
     <span class=${`comfort-condition-pill condition-${t?.condition ?? "monitoring_off"}`}>
-      ${t ? $s(e, t) : e._t("comfortConditionMonitoringOff")}
+      ${t ? Xl(e, t) : e._t("comfortConditionMonitoringOff")}
     </span>
   `;
 }
-function Qs(e, t) {
+function Jl(e, t) {
+	let n = t?.range_summary, r = n?.positions.humidex;
+	return n?.thermal_relation !== "mixed" || !r ? E : T`
+    <span class=${`comfort-humidex-pill position-${r}`}>
+      ${e._t("comfortHumidex")}: ${e._t({
+		below: "comfortHumidexRangeBelow",
+		within: "comfortHumidexRangeWithin",
+		above: "comfortHumidexRangeAbove"
+	}[r])}
+    </span>
+  `;
+}
+function Yl(e, t) {
 	return t === "not_monitored" ? E : T`
     <span class=${`comfort-air-pill air-${t}`}>
-      ${e._t(nc(t))}
+      ${e._t(Ql(t))}
     </span>
   `;
 }
-function $s(e, t) {
-	return t.condition === "no_readings" && t.data_quality === "stale" ? e._t("comfortConditionReadingsOutdated") : e._t(tc(t.condition));
+function Xl(e, t) {
+	return t.condition === "no_readings" && t.data_quality === "stale" ? e._t("comfortConditionReadingsOutdated") : e._t(Zl(t.condition));
 }
-function ec(e) {
-	return {
-		cold: "mdi:snowflake-thermometer",
-		cold_and_dry: "mdi:snowflake",
-		cold_and_humid: "mdi:weather-snowy-rainy",
-		comfortable: "mdi:check-circle-outline",
-		dry: "mdi:water-off-outline",
-		hot: "mdi:sun-thermometer-outline",
-		hot_and_dry: "mdi:weather-sunny-alert",
-		hot_and_humid: "mdi:weather-partly-rainy",
-		humid: "mdi:water-percent",
-		humidity_comfortable: "mdi:water-check-outline",
-		monitoring_off: "mdi:power-standby",
-		no_readings: "mdi:sensor-off",
-		temperature_comfortable: "mdi:thermometer-check"
-	}[e];
-}
-function tc(e) {
+function Zl(e) {
 	return {
 		cold: "comfortConditionCold",
 		cold_and_dry: "comfortConditionColdAndDry",
@@ -22513,7 +27936,7 @@ function tc(e) {
 		temperature_comfortable: "comfortConditionTemperatureComfortable"
 	}[e];
 }
-function nc(e) {
+function Ql(e) {
 	return {
 		elevated: "comfortAirQualityElevated",
 		good: "comfortAirQualityGood",
@@ -22521,14 +27944,14 @@ function nc(e) {
 		unavailable: "comfortAirQualityUnavailable"
 	}[e];
 }
-function rc(e) {
+function $l(e) {
 	return {
 		partial: "comfortDataPartial",
 		stale: "comfortDataStale",
 		unavailable: "comfortDataUnavailable"
 	}[e];
 }
-function ic(e) {
+function eu(e) {
 	return {
 		co2_missing: "comfortDataIssueCo2Missing",
 		co2_stale: "comfortDataIssueCo2Stale",
@@ -22540,7 +27963,7 @@ function ic(e) {
 }
 //#endregion
 //#region src/velair/domain/climate-profiles.ts
-function ac(e) {
+function tu(e) {
 	if (!e) return {
 		name: "",
 		icon: "mdi:account-outline",
@@ -22550,31 +27973,31 @@ function ac(e) {
 	};
 	let t = Object.fromEntries(Object.entries(e.zones).map(([e, t]) => [e, t.behavior === "schedule" ? {
 		behavior: "schedule",
-		schedule: Object.fromEntries(k.map((e) => [e, li(t.schedule[e] ?? [])]))
+		schedule: Object.fromEntries(k.map((e) => [e, Xi(t.schedule[e] ?? [])]))
 	} : structuredClone(t)]));
 	return {
 		...structuredClone(e),
-		color: e.color || W(e.key),
+		color: e.color || K(e.key),
 		zones: t,
-		rememberedSchedules: Object.fromEntries(Object.entries(t).filter(([, e]) => e.behavior === "schedule").map(([e, t]) => [e, fc(t.schedule)]))
+		rememberedSchedules: Object.fromEntries(Object.entries(t).filter(([, e]) => e.behavior === "schedule").map(([e, t]) => [e, cu(t.schedule)]))
 	};
 }
-function oc(e) {
+function nu(e) {
 	let t = new Map((e?.profiles ?? []).map((e) => [e.key, e]));
 	return (e?.global?.active_profile_ids ?? []).map((e) => t.get(e)).filter((e) => !!e);
 }
-function sc(e, t) {
-	let n = oc(e).find((e) => t in e.zones), r = n?.zones[t];
+function ru(e, t) {
+	let n = nu(e).find((e) => t in e.zones), r = n?.zones[t];
 	if (!(!n || !r || r.behavior === "normal")) return {
 		profile: n,
 		zone: r
 	};
 }
-function cc(e, t) {
-	let n = sc(e, t);
+function iu(e, t) {
+	let n = ru(e, t);
 	if (n?.zone.behavior !== "pause") return n?.zone.behavior === "schedule" ? n.zone.schedule : e?.zones[t]?.schedule;
 }
-var lc = [
+var au = [
 	"#3949ab",
 	"#00897b",
 	"#7b1fa2",
@@ -22584,21 +28007,21 @@ var lc = [
 	"#5d4037",
 	"#2e7d32"
 ];
-function W(e, t) {
+function K(e, t) {
 	if (t && /^#[0-9a-f]{6}$/i.test(t)) return t;
 	if (!e) return "#546e7a";
 	let n = 0;
 	for (let t of e) n = (n << 5) - n + t.charCodeAt(0) | 0;
-	return lc[Math.abs(n) % lc.length];
+	return au[Math.abs(n) % au.length];
 }
-function uc(e) {
+function ou(e) {
 	return e?.behavior ?? "normal";
 }
-function dc(e, t, n) {
+function su(e, t, n) {
 	let r = { ...e.zones }, i = { ...e.rememberedSchedules }, a = r[t];
-	return a?.behavior === "schedule" && (i[t] = fc(a.schedule)), n === "normal" ? delete r[t] : n === "schedule" ? r[t] = {
+	return a?.behavior === "schedule" && (i[t] = cu(a.schedule)), n === "normal" ? delete r[t] : n === "schedule" ? r[t] = {
 		behavior: n,
-		schedule: fc(a?.behavior === "schedule" ? a.schedule : i[t])
+		schedule: cu(a?.behavior === "schedule" ? a.schedule : i[t])
 	} : r[t] = {
 		behavior: n,
 		action: "none"
@@ -22608,25 +28031,25 @@ function dc(e, t, n) {
 		rememberedSchedules: i
 	};
 }
-function fc(e) {
+function cu(e) {
 	return Object.fromEntries(k.map((t) => [t, structuredClone(e?.[t] ?? [])]));
 }
-function pc(e, t, n) {
-	let r = fc(e);
+function lu(e, t, n) {
+	let r = cu(e);
 	for (let i of n) i !== t && i in r && (r[i] = structuredClone(e[t] ?? []));
 	return r;
 }
-function mc(e, t, n, r) {
+function uu(e, t, n, r) {
 	let i = e.zones[t];
 	if (i?.behavior !== "schedule" || !k.includes(n)) return e;
 	let a = { ...e.zones }, o = { ...e.rememberedSchedules };
 	for (let e of r) {
 		if (e === t) continue;
-		let r = a[e], s = fc(r?.behavior === "schedule" ? r.schedule : o[e]);
+		let r = a[e], s = cu(r?.behavior === "schedule" ? r.schedule : o[e]);
 		s[n] = structuredClone(i.schedule[n] ?? []), a[e] = {
 			behavior: "schedule",
 			schedule: s
-		}, o[e] = fc(s);
+		}, o[e] = cu(s);
 	}
 	return {
 		...e,
@@ -22634,7 +28057,7 @@ function mc(e, t, n, r) {
 		rememberedSchedules: o
 	};
 }
-function hc(e) {
+function du(e) {
 	let t = new Set(e.map((e) => e.start)), n = [
 		"08:00",
 		"18:00",
@@ -22651,27 +28074,32 @@ function hc(e) {
 	}
 	return "00:00";
 }
-function gc(e, t) {
+function fu(e, t) {
 	let n = new Set(t.map((e) => e.name));
 	if (!n.has(e)) return e;
 	let r = 2;
 	for (; n.has(`${e} ${r}`);) r += 1;
 	return `${e} ${r}`;
 }
-function _c(e) {
+function pu(e) {
 	if (!e.name.trim()) return "name";
 	if (e.icon?.trim() && !/^mdi:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(e.icon.trim())) return "icon";
 	if (e.color && !/^#[0-9a-f]{6}$/i.test(e.color)) return "color";
 	if ((e.description?.trim().length ?? 0) > 500) return "description";
 	for (let t of Object.values(e.zones)) if (t.behavior === "schedule") for (let e of k) {
 		let n = /* @__PURE__ */ new Set();
-		for (let r of t.schedule[e] ?? []) if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start) || n.has(r.start) || (n.add(r.start), r.action !== "turn_off" && !(L(r) ? Number.isFinite(Number(r.target_temp_low)) && Number.isFinite(Number(r.target_temp_high)) && Number(r.target_temp_low) <= Number(r.target_temp_high) : Number.isFinite(Number(r.temperature))))) return "schedule";
+		for (let r of t.schedule[e] ?? []) {
+			if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start) || n.has(r.start)) return "schedule";
+			if (n.add(r.start), r.action === "set_hvac_mode") {
+				if (!r.hvac_mode || r.hvac_mode === "off") return "schedule";
+			} else if (r.action !== "turn_off" && !(R(r) ? Number.isFinite(Number(r.target_temp_low)) && Number.isFinite(Number(r.target_temp_high)) && Number(r.target_temp_low) <= Number(r.target_temp_high) : Number.isFinite(Number(r.temperature)))) return "schedule";
+		}
 	}
 }
-function vc(e) {
+function mu(e) {
 	let t = Object.fromEntries(Object.entries(e.zones).filter(([, e]) => e.behavior !== "normal").map(([e, t]) => [e, t.behavior === "schedule" ? {
 		behavior: "schedule",
-		schedule: Object.fromEntries(k.map((e) => [e, (t.schedule[e] ?? []).map(yc)]))
+		schedule: Object.fromEntries(k.map((e) => [e, (t.schedule[e] ?? []).map(hu)]))
 	} : t]));
 	return {
 		...e.key ? { key: e.key } : {},
@@ -22682,14 +28110,18 @@ function vc(e) {
 		zones: t
 	};
 }
-function yc(e) {
+function hu(e) {
 	return (e.action || "set_temperature") === "turn_off" ? {
 		start: e.start,
 		action: Je
+	} : (e.action || "set_temperature") === "set_hvac_mode" ? {
+		start: e.start,
+		action: A,
+		...e.hvac_mode ? { hvac_mode: e.hvac_mode } : {}
 	} : {
 		start: e.start,
 		action: qe,
-		...L(e) ? {
+		...R(e) ? {
 			target_temp_low: Number(e.target_temp_low),
 			target_temp_high: Number(e.target_temp_high)
 		} : { temperature: Number(e.temperature) },
@@ -22703,7 +28135,7 @@ function yc(e) {
 }
 //#endregion
 //#region src/velair/controllers/overview-data.ts
-var bc = new Set([
+var gu = new Set([
 	"heating",
 	"cooling",
 	"drying",
@@ -22713,27 +28145,27 @@ var bc = new Set([
 	"preheating",
 	"defrosting"
 ]);
-function xc(e) {
+function _u(e) {
 	return e;
 }
-function Sc(e, t, n) {
+function vu(e, t, n) {
 	let r = n?.override ?? e._data?.active_overrides?.[t];
-	return Tr(r) ? r : void 0;
+	return fi(r) ? r : void 0;
 }
-function Cc(e) {
+function yu(e) {
 	return e._data ? e._orderedZoneIds(e._data.configured_entities).filter((t) => {
 		let n = e._data?.zones[t];
-		return !!Sc(e, t, n);
+		return !!vu(e, t, n);
 	}) : [];
 }
-function wc(e, t, n) {
-	if (Er(n?.override)) return {
+function bu(e, t, n) {
+	if (pi(n?.override)) return {
 		...n?.override ?? {},
 		pause_count: n?.pauses?.length ?? 1
 	};
 }
-function Tc(e, t, n) {
-	let r = Number(n.temperature), i = Number(n.target_temp_low), a = Number(n.target_temp_high), o = F(n.until), s = typeof n.hvac_mode == "string" ? n.hvac_mode : "", c = [];
+function xu(e, t, n) {
+	let r = Number(n.temperature), i = Number(n.target_temp_low), a = Number(n.target_temp_high), o = I(n.until), s = typeof n.hvac_mode == "string" ? n.hvac_mode : "", c = [];
 	if (Number.isFinite(r)) c.push(e._formatTemperature(r, t));
 	else if (Number.isFinite(i) && Number.isFinite(a)) {
 		let n = e._formatTemperature(i, t).replace(/\s+[^\s]+$/, "");
@@ -22741,24 +28173,24 @@ function Tc(e, t, n) {
 	}
 	return s && c.push(e._modeLabel(s)), o && c.push(`${e._t("boostUntil")}: ${e._formatRemaining(Math.max(0, o - Date.now()))}`), c.join(" - ") || e._t("boostActive");
 }
-function Ec(e, t) {
-	let n = F(t.started_at), r = F(t.until), i = [], a = Number(t.pause_count);
+function Su(e, t) {
+	let n = I(t.started_at), r = I(t.until), i = [], a = Number(t.pause_count);
 	return Number.isFinite(a) && a > 1 && i.push(`${e._t("pauseReasons")}: ${a}`), n && i.push(`${e._t("pauseFrom")}: ${e._formatDateTime(new Date(n).toISOString())}`), r ? (i.push(`${e._t("pauseTo")}: ${e._formatDateTime(new Date(r).toISOString())}`), i.push(`${e._t("pauseRemaining")}: ${e._formatRemaining(Math.max(0, r - Date.now()))}`), i.join(" - ")) : (i.push(e._t("pauseIndefinite")), i.join(" - "));
 }
-function Dc(e) {
+function Cu(e) {
 	if (!e._data) return [];
 	if (e._data.next_events.length) return e._data.next_events;
-	let t = e._orderedZoneIds(e._data.configured_entities).map((t) => Oc(e, t, e._data?.zones[t])).filter((e) => !!e).sort((e, t) => new Date(e.when).getTime() - new Date(t.when).getTime());
+	let t = e._orderedZoneIds(e._data.configured_entities).map((t) => wu(e, t, e._data?.zones[t])).filter((e) => !!e).sort((e, t) => new Date(e.when).getTime() - new Date(t.when).getTime());
 	return t.length ? t : e._data.next_events;
 }
-function Oc(e, t, n) {
-	let r = cc(e._data, t);
-	if (!(!n || !r)) return nr(t, {
+function wu(e, t, n) {
+	let r = iu(e._data, t);
+	if (!(!n || !r)) return Qr(t, {
 		...n,
 		schedule: r
-	}, Sc(e, t, n));
+	}, vu(e, t, n));
 }
-function kc(e, t = /* @__PURE__ */ new Date()) {
+function Tu(e, t = /* @__PURE__ */ new Date()) {
 	let n = e?.config?.time_zone;
 	if (n) try {
 		let e = new Intl.DateTimeFormat("en-US", {
@@ -22775,138 +28207,62 @@ function kc(e, t = /* @__PURE__ */ new Date()) {
 			"sunday"
 		].includes(e)) return e;
 	} catch {}
-	return sr(t);
+	return ri(t);
 }
-function Ac(e, t) {
+function Eu(e, t) {
 	let n = e.hass?.states?.[t]?.attributes?.hvac_action;
-	return typeof n == "string" && bc.has(n) ? n : void 0;
+	return typeof n == "string" && gu.has(n) ? n : void 0;
 }
 //#endregion
 //#region src/velair/domain/room-assist.ts
-function jc(e, t) {
-	let n = Lc(e.deadband_low, e.deadband_high);
+function Du(e, t) {
+	let n = Pu(e.deadband_low, e.deadband_high);
 	if (n && n.low <= n.high) return n;
 	if (!Number.isFinite(t) || t < 0) return;
-	let r = G(e);
+	let r = Au(e);
 	if (r) return {
 		low: r.low - t,
 		high: r.high + t
 	};
-	let i = Rc(e.target_temperature);
+	let i = Fu(e.target_temperature);
 	return i === void 0 ? void 0 : {
 		low: i - t,
 		high: i + t
 	};
 }
-function Mc(e, t) {
+function Ou(e, t) {
 	return t === "cool" ? -Math.abs(e) : Math.abs(e);
 }
-function Nc(e) {
+function ku(e) {
 	if (typeof e.applied_offset == "number" && Number.isFinite(e.applied_offset)) return e.applied_offset;
-	if (typeof e.assist_delta == "number" && Number.isFinite(e.assist_delta)) return Mc(e.assist_delta, e.direction);
+	if (typeof e.assist_delta == "number" && Number.isFinite(e.assist_delta)) return Ou(e.assist_delta, e.direction);
 }
-function G(e) {
-	return Lc(e.target_temp_low, e.target_temp_high);
+function Au(e) {
+	return Pu(e.target_temp_low, e.target_temp_high);
 }
-function Pc(e) {
-	let t = Lc(e.applied_target_temp_low, e.applied_target_temp_high), n = Lc(e.climate_target_temp_low, e.climate_target_temp_high);
+function ju(e) {
+	let t = Pu(e.applied_target_temp_low, e.applied_target_temp_high), n = Pu(e.climate_target_temp_low, e.climate_target_temp_high);
 	return e.status === "assisting" || e.status === "holding" ? t ?? n : n ?? t;
 }
-function Fc(e) {
-	return Rc(e.range_shift);
+function Mu(e) {
+	return Fu(e.range_shift);
 }
-function Ic(e) {
-	return Rc(e.target_temperature) !== void 0 || G(e) !== void 0;
+function Nu(e) {
+	return Fu(e.target_temperature) !== void 0 || Au(e) !== void 0;
 }
-function Lc(e, t) {
-	let n = Rc(e), r = Rc(t);
+function Pu(e, t) {
+	let n = Fu(e), r = Fu(t);
 	return n !== void 0 && r !== void 0 ? {
 		low: n,
 		high: r
 	} : void 0;
 }
-function Rc(e) {
+function Fu(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : void 0;
 }
 //#endregion
-//#region src/velair/views/inline-help.ts
-var zc = /* @__PURE__ */ new WeakMap(), Bc = 300;
-function Vc(e) {
-	return e.parentElement?.querySelector(".inline-help-tooltip") ?? null;
-}
-function Hc(e) {
-	let t = zc.get(e);
-	t !== void 0 && window.clearTimeout(t), zc.delete(e);
-}
-function Uc(e) {
-	Hc(e), e.classList.remove("visible"), delete e.dataset.openCause;
-}
-function Wc(e) {
-	e.dataset.openCause !== "click" && (Hc(e), zc.set(e, window.setTimeout(() => Uc(e), Bc)));
-}
-function Gc(e, t) {
-	if (window.matchMedia?.("(max-width: 480px)").matches) {
-		t.style.removeProperty("left"), t.style.removeProperty("top");
-		return;
-	}
-	let n = e.getBoundingClientRect(), r = t.getBoundingClientRect(), i = Math.max(12, window.innerWidth - r.width - 12), a = Math.min(Math.max(n.left, 12), i), o = n.bottom + 6, s = n.top - r.height - 6, c = Math.max(12, window.innerHeight - r.height - 12), l = o + r.height <= window.innerHeight - 12 ? o : s >= 12 ? s : Math.min(Math.max(o, 12), c);
-	t.style.left = `${Math.round(a)}px`, t.style.top = `${Math.round(l)}px`;
-}
-function Kc(e, t) {
-	let n = Vc(e);
-	n && (Hc(n), n.dataset.openCause = t, n.classList.add("visible"), Gc(e, n));
-}
-function qc(e) {
-	e.preventDefault(), e.stopPropagation();
-	let t = e.currentTarget, n = Vc(t);
-	if (n) {
-		if (n.classList.contains("visible") && n.dataset.openCause === "click") {
-			Uc(n);
-			return;
-		}
-		Kc(t, "click");
-	}
-}
-function Jc(e, t, n, r = {}) {
-	return T`
-    <span class="inline-help-wrapper">
-      <button
-        type="button"
-        class=${r.compact ? "inline-help compact" : "inline-help"}
-        aria-label=${t}
-        aria-describedby=${e}
-        @focus=${(e) => Kc(e.currentTarget, "focus")}
-        @focusout=${(e) => {
-		let t = Vc(e.currentTarget);
-		t && t.dataset.openCause !== "click" && Uc(t);
-	}}
-        @pointerenter=${(e) => Kc(e.currentTarget, "hover")}
-        @pointerleave=${(e) => {
-		let t = Vc(e.currentTarget);
-		t && Wc(t);
-	}}
-        @click=${qc}
-        @keydown=${(e) => {
-		if (e.key !== "Escape") return;
-		let t = Vc(e.currentTarget);
-		t && (e.preventDefault(), Uc(t));
-	}}
-      >
-        <ha-icon icon="mdi:information-outline"></ha-icon>
-      </button>
-      <span
-        id=${e}
-        class="inline-help-tooltip"
-        role="tooltip"
-        @pointerenter=${(e) => Hc(e.currentTarget)}
-        @pointerleave=${(e) => Wc(e.currentTarget)}
-      >${n}</span>
-    </span>
-  `;
-}
-//#endregion
 //#region src/velair/views/overview-view.ts
-function Yc(e) {
+function Iu(e) {
 	let t = e._pauseExpirationMs();
 	return t && t > Date.now() ? {
 		detail: e._t("overviewStatusPausedDetail"),
@@ -22925,9 +28281,9 @@ function Yc(e) {
 		state: "running"
 	};
 }
-function Xc(e, t) {
+function Lu(e, t) {
 	if (!e._data) return E;
-	let n = Yc(e), r = t.filter((t) => e._data?.zones[t]?.execution?.type === "external").length;
+	let n = Iu(e), r = t.filter((t) => e._data?.zones[t]?.execution?.type === "external").length;
 	return T`
     <section class="overview-summary">
       <div class=${`overview-status-card status-${n.state}`}>
@@ -22939,10 +28295,10 @@ function Xc(e, t) {
               <strong>${n.label}</strong>
             </span>
           </div>
-          ${Bl(e)}
+          ${Dd(e)}
           <span class="overview-scheduler-detail">${n.detail}</span>
         </div>
-        ${Vl(e)}
+        ${Od(e)}
         ${r ? T`
           <div class="notice external-execution-notice overview-external-summary" role="status">
             <ha-icon icon="mdi:information-outline"></ha-icon>
@@ -22953,51 +28309,51 @@ function Xc(e, t) {
     </section>
   `;
 }
-function Zc(e, t) {
+function Ru(e, t) {
 	if (!e._data) return E;
-	let n = xc(e), r = t ? new Set(t) : void 0, i = Cc(n).filter((t) => (!r || r.has(t)) && e._data?.zones[t]?.execution?.type !== "external");
+	let n = _u(e), r = t ? new Set(t) : void 0, i = yu(n).filter((t) => (!r || r.has(t)) && e._data?.zones[t]?.execution?.type !== "external");
 	return T`
     <section class="overview-boost-panel">
       ${i.length ? T`
-            ${Il(e._t("activeBoosts"), "mdi:lightning-bolt")}
+            ${Cd(e._t("activeBoosts"), "mdi:lightning-bolt")}
             <div class="event-list overview-boost-list">
               ${i.map((t) => {
-		let r = Sc(n, t, e._data?.zones[t]);
+		let r = vu(n, t, e._data?.zones[t]);
 		return T`
                   <div class="event">
                     <div>
                       <strong class="overview-climate-name">${e._friendlyEntityName(t)}</strong>
                     </div>
-                    ${r ? Qc(e, t, r) : T`<span>${e._t("boostActive")}</span>`}
+                    ${r ? zu(e, t, r) : T`<span>${e._t("boostActive")}</span>`}
                   </div>
                 `;
 	})}
             </div>
-          ` : zl(e._t("activeBoosts"), "mdi:lightning-bolt", e._t("noActiveBoosts"))}
+          ` : Ed(e._t("activeBoosts"), "mdi:lightning-bolt", e._t("noActiveBoosts"))}
     </section>
   `;
 }
-function Qc(e, t, n) {
+function zu(e, t, n) {
 	let r = Number(n.temperature), i = Number(n.target_temp_low), a = Number(n.target_temp_high), o = typeof n.until == "string" ? new Date(n.until).getTime() : void 0, s = typeof n.hvac_mode == "string" ? n.hvac_mode : "";
 	return T`
     <div class="event-details">
       <span class="event-time">${o && !Number.isNaN(o) ? `${e._formatDateTime(new Date(o).toISOString())} (${e._formatRemaining(Math.max(0, o - Date.now()))})` : e._t("boostActive")}</span>
-      <strong class="event-target">${Number.isFinite(r) ? e._formatTemperature(r, t) : Number.isFinite(i) && Number.isFinite(a) ? Ml(e, i, a, t) : "-"}</strong>
+      <strong class="event-target">${Number.isFinite(r) ? e._formatTemperature(r, t) : Number.isFinite(i) && Number.isFinite(a) ? yd(e, i, a, t) : "-"}</strong>
       <span class="event-mode">${s ? e._modeLabel(s) : e._t("keepMode")}</span>
     </div>
   `;
 }
-function $c(e, t) {
+function Bu(e, t) {
 	return !e._data || !t.length ? E : T`
     <section class="overview-zones">
-      ${Il(e._t("overviewZones"), "mdi:thermostat")}
+      ${Cd(e._t("overviewZones"), "mdi:thermostat")}
       <div class="overview-zone-cards">
-        ${t.map((t) => tl(e, t))}
+        ${t.map((t) => Hu(e, t))}
       </div>
     </section>
   `;
 }
-var el = {
+var Vu = {
 	externally_managed: {
 		icon: "mdi:calendar-export",
 		key: "overviewZoneExternal"
@@ -23027,39 +28383,39 @@ var el = {
 		key: "overviewZoneManual"
 	}
 };
-function tl(e, t) {
+function Hu(e, t) {
 	let n = e._data?.zone_runtime?.[t], r = n != null, i = n ?? { state: "idle" }, a = e._data?.zones[t]?.execution?.type === "external", o = a && i.state !== "externally_managed" ? {
 		...i,
 		state: "externally_managed"
-	} : i, s = e.hass?.states?.[t], c = s && s.state !== "off" && s.state !== "unknown" && s.state !== "unavailable", l = K(i.room_temperature) ?? (r ? void 0 : K(s?.attributes?.current_temperature)), u = K(i.target_temperature) ?? (!r && c ? K(s.attributes?.temperature) : void 0), d = K(i.target_temp_low) ?? (!r && c ? K(s.attributes?.target_temp_low) : void 0), f = K(i.target_temp_high) ?? (!r && c ? K(s.attributes?.target_temp_high) : void 0), p = d !== void 0 && f !== void 0 ? Ml(e, d, f, t) : void 0, m = K(i.applied_temperature), h = o.control_mode === "manual" ? il(e, o) : void 0, g = o.manual_adjustment_allowed !== !1, _ = g ? "" : al(e, o.manual_adjustment_unavailable_reason), v = e._data?.room_sensor_assist?.[t], y = e._data?.comfort?.[t], b = e._data?.external_execution?.zones[t], x = e._data?.external_execution?.systems.find((e) => e.provider === b?.provider), S = a ? {
+	} : i, s = e.hass?.states?.[t], c = s && s.state !== "off" && s.state !== "unknown" && s.state !== "unavailable", l = q(i.room_temperature) ?? (r ? void 0 : q(s?.attributes?.current_temperature)), u = q(i.target_temperature) ?? (!r && c ? q(s.attributes?.temperature) : void 0), d = q(i.target_temp_low) ?? (!r && c ? q(s.attributes?.target_temp_low) : void 0), f = q(i.target_temp_high) ?? (!r && c ? q(s.attributes?.target_temp_high) : void 0), p = d !== void 0 && f !== void 0 ? yd(e, d, f, t) : void 0, m = q(i.applied_temperature), h = o.control_mode === "manual" ? Gu(e, o) : void 0, g = o.manual_adjustment_allowed !== !1, _ = g ? "" : Ku(e, o.manual_adjustment_unavailable_reason), v = e._data?.room_sensor_assist?.[t], y = e._data?.comfort?.[t], b = e._data?.external_execution?.zones[t], x = e._data?.external_execution?.systems.find((e) => e.provider === b?.provider), S = a ? {
 		...o,
 		state: "scheduled"
-	} : o, C = !!(v && (v.status === "assisting" || v.status === "holding") && cl(v)), ee = l !== void 0 || u !== void 0 || p !== void 0 || m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05;
+	} : o, C = !!(v && (v.status === "assisting" || v.status === "holding") && Yu(v)), w = l !== void 0 || u !== void 0 || p !== void 0 || m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05;
 	return T`
     <article class=${`overview-zone-card state-${o.state}`}>
       <div class="overview-zone-card-heading">
         <div class="overview-zone-card-name">
           <strong>${e._friendlyEntityName(t)}</strong><span>${t}</span>
         </div>
-        ${a ? E : rl(e, t, o, h, g, _)}
-        ${sl(e, t, S, el[S.state])}
+        ${a ? E : Wu(e, t, o, h, g, _)}
+        ${Ju(e, t, S, Vu[S.state])}
         <div class="overview-zone-signals">
-          ${ol(e, t)}
-          ${a && b ? nl(e, t, x?.name ?? b.provider ?? e._t("externalProviderUnavailable"), b) : E}
-          ${a ? E : pl(e, v)}
-          ${a ? E : gl(e, y)}
+          ${qu(e, t)}
+          ${a && b ? Uu(e, t, x?.name ?? b.provider ?? e._t("externalProviderUnavailable"), b) : E}
+          ${a ? E : ed(e, v)}
+          ${a ? E : rd(e, y)}
         </div>
       </div>
-      ${C || ee ? T`<div class="overview-zone-details">
-        ${C ? ll(e, t, v) : T`<div class="overview-zone-metrics">
-          ${l === void 0 ? E : hl(e._t("overviewZoneRoom"), l, e, t)}
-          ${u === void 0 ? p === void 0 ? E : jl(e._t("overviewZoneTarget"), p) : hl(e._t("overviewZoneTarget"), u, e, t)}
-          ${m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05 ? hl(e._t("overviewZoneApplied"), m, e, t) : E}
+      ${C || w ? T`<div class="overview-zone-details">
+        ${C ? Xu(e, t, v) : T`<div class="overview-zone-metrics">
+          ${l === void 0 ? E : nd(e._t("overviewZoneRoom"), l, e, t)}
+          ${u === void 0 ? p === void 0 ? E : vd(e._t("overviewZoneTarget"), p) : nd(e._t("overviewZoneTarget"), u, e, t)}
+          ${m !== void 0 && u !== void 0 && Math.abs(m - u) >= .05 ? nd(e._t("overviewZoneApplied"), m, e, t) : E}
         </div>`}
       </div>` : E}
     </article>`;
 }
-function nl(e, t, n, r) {
+function Uu(e, t, n, r) {
 	let i = r.publication, a = r.available ? i?.state === "publishing" ? {
 		icon: "mdi:cloud-sync-outline",
 		key: "overviewExternalStatusPublishing",
@@ -23102,10 +28458,10 @@ function nl(e, t, n, r) {
       role="img"
       title=${o}
     ><ha-icon icon=${a.icon} aria-hidden="true"></ha-icon></span>
-    ${Jc(u, e._t("overviewExternalInfoAction", { provider: n }), s.join(" "), { compact: !0 })}
+    ${G(u, e._t("overviewExternalInfoAction", { provider: n }), s.join(" "))}
   </section>`;
 }
-function rl(e, t, n, r, i, a) {
+function Wu(e, t, n, r, i, a) {
 	let o = n.control_mode === "manual" ? "manual" : "automatic", s = !!e._manualControlActions?.[t], c = n.manual_adjustment_unavailable_reason === "temperature_migration", l = o === "automatic" && !i, u = o === "manual" && c, d = `manual-control-reason-${t.replace(/[^a-z0-9_-]/gi, "-")}`;
 	return T`
     <div class="overview-manual-control">
@@ -23145,7 +28501,7 @@ function rl(e, t, n, r, i, a) {
     </div>
   `;
 }
-function il(e, t) {
+function Gu(e, t) {
 	let n = t.manual_control;
 	if (n?.policy === "until_next_block") return n.until ? e._t("manualSessionNextBlockAt", { time: e._formatDateTime(n.until) }) : e._t("manualSessionNoNextBlock");
 	if (n?.policy === "for_duration") {
@@ -23157,7 +28513,7 @@ function il(e, t) {
 	}
 	return e._t("manualSessionUntilResumed");
 }
-function al(e, t) {
+function Ku(e, t) {
 	return e._t({
 		unavailable: "manualUnavailableClimate",
 		disabled: "manualUnavailableDisabled",
@@ -23169,10 +28525,10 @@ function al(e, t) {
 		external_execution: "externalActionsInactive"
 	}[t ?? "unavailable"]);
 }
-function ol(e, t) {
-	let n = sc(e._data, t);
+function qu(e, t) {
+	let n = ru(e._data, t);
 	if (!n) return E;
-	let r = W(n.profile.key, n.profile.color), i = n.profile.icon || "mdi:account-outline";
+	let r = K(n.profile.key, n.profile.color), i = n.profile.icon || "mdi:account-outline";
 	return T`
     <div
       class="overview-zone-profile"
@@ -23187,13 +28543,13 @@ function ol(e, t) {
     </div>
   `;
 }
-function sl(e, t, n, r) {
+function Ju(e, t, n, r) {
 	let i = "";
 	if (n.state === "paused" && (i = n.until ? e._t("overviewZoneResumes", { time: e._formatDateTime(n.until) }) : e._t("overviewZoneUntilResumed")), n.state === "boost" && n.until && (i = e._t("overviewZoneUntil", { time: e._formatDateTime(n.until) })), n.state === "preconditioning" && n.target_when && (i = e._t("overviewZoneReadyAt", { time: e._formatDateTime(n.target_when) })), n.state === "scheduled") {
 		let n = e._data?.next_events?.find((e) => e.entity_id === t);
 		i = n?.when ? e._t("overviewZoneNextAt", { time: e._formatDateTime(n.when) }) : "";
 	}
-	let a = e._t(r.key), o = n.state === "externally_managed" ? void 0 : Ac(xc(e), t), s = o ? ml[o] : void 0, c = o === "idle" ? r.icon : s?.icon ?? r.icon, l = o ? xc(e)._hvacActionLabel(o) : a, u = [...o ? [a] : [], ...n.hvac_mode ? [e._modeLabel(n.hvac_mode)] : []].join(" · "), d = [
+	let a = e._t(r.key), o = n.state === "externally_managed" ? void 0 : Eu(_u(e), t), s = o ? td[o] : void 0, c = o === "idle" ? r.icon : s?.icon ?? r.icon, l = o ? _u(e)._hvacActionLabel(o) : a, u = [...o ? [a] : [], ...n.hvac_mode ? [e._modeLabel(n.hvac_mode)] : []].join(" · "), d = [
 		l,
 		u,
 		i
@@ -23216,7 +28572,7 @@ function sl(e, t, n, r) {
     </span>
   </section>`;
 }
-function cl(e) {
+function Yu(e) {
 	return [
 		e.room_temperature,
 		e.climate_temperature,
@@ -23232,34 +28588,34 @@ function cl(e) {
 		e.climate_target_temp_low,
 		e.climate_target_temp_high,
 		e.range_shift
-	].some((e) => K(e) !== void 0);
+	].some((e) => q(e) !== void 0);
 }
-function ll(e, t, n) {
-	let r = G(n), i = Pc(n), a = n.status === "assisting" || n.status === "holding" ? K(n.applied_temperature) ?? K(n.climate_target_temperature) : K(n.climate_target_temperature) ?? K(n.applied_temperature), o = Fc(n), s = r ? o : Nc(n);
+function Xu(e, t, n) {
+	let r = Au(n), i = ju(n), a = n.status === "assisting" || n.status === "holding" ? q(n.applied_temperature) ?? q(n.climate_target_temperature) : q(n.climate_target_temperature) ?? q(n.applied_temperature), o = Mu(n), s = r ? o : ku(n);
 	return T`<div class="overview-assist-flow" aria-label=${e._t("overviewZoneRoomAssistThermalFlow")}>
-    ${ul(e._t("overviewZoneTemperature"), [dl(e, t, "overviewZoneClimate", n.climate_temperature), dl(e, t, "overviewZoneSensor", n.room_temperature)])}
-    ${ul(e._t("overviewZoneSetpoint"), [i ? Al(e, t, "overviewZoneAppliedRange", i.low, i.high) : dl(e, t, "overviewZoneClimate", a), r ? Al(e, t, "overviewZoneScheduledRange", r.low, r.high) : dl(e, t, "overviewZoneScheduledSetpoint", n.target_temperature)])}
-    ${s === void 0 ? E : T`<span class="overview-assist-offset"><small>${e._t(o === void 0 ? "overviewZoneOffset" : "overviewZoneRangeShift")}</small><strong>${fl(e, t, s)}</strong></span>`}
+    ${Zu(e._t("overviewZoneTemperature"), [Qu(e, t, "overviewZoneClimate", n.climate_temperature), Qu(e, t, "overviewZoneSensor", n.room_temperature)])}
+    ${Zu(e._t("overviewZoneSetpoint"), [i ? _d(e, t, "overviewZoneAppliedRange", i.low, i.high) : Qu(e, t, "overviewZoneClimate", a), r ? _d(e, t, "overviewZoneScheduledRange", r.low, r.high) : Qu(e, t, "overviewZoneScheduledSetpoint", n.target_temperature)])}
+    ${s === void 0 ? E : T`<span class="overview-assist-offset"><small>${e._t(o === void 0 ? "overviewZoneOffset" : "overviewZoneRangeShift")}</small><strong>${$u(e, t, s)}</strong></span>`}
   </div>`;
 }
-function ul(e, t) {
+function Zu(e, t) {
 	let n = t.filter((e) => e !== E);
 	return n.length ? T`<section class="overview-assist-group"><small>${e}</small><div>${n}</div></section>` : E;
 }
-function dl(e, t, n, r) {
-	let i = K(r);
+function Qu(e, t, n, r) {
+	let i = q(r);
 	return i === void 0 ? E : T`<span class="overview-assist-metric"><small>${e._t(n)}</small><strong>${e._formatTemperature(i, t)}</strong></span>`;
 }
-function fl(e, t, n) {
+function $u(e, t, n) {
 	let r = e._formatTemperature(Math.abs(n), t);
 	return n > 0 ? `+${r}` : n < 0 ? `-${r}` : r;
 }
-function pl(e, t) {
+function ed(e, t) {
 	if (!t || !["assisting", "holding"].includes(t.status)) return E;
 	let n = e._t(t.scheduled_target_guard ? "overviewZoneRoomAssistGuarded" : t.hysteresis_phase === "towards_lower" ? "overviewZoneRoomAssistTowardsLower" : t.hysteresis_phase === "towards_upper" ? "overviewZoneRoomAssistTowardsUpper" : t.status === "holding" ? "overviewZoneRoomAssistHolding" : "overviewZoneRoomAssistActive");
-	return _l("room-assist", "mdi:thermometer-auto", e._t("roomSensorAssistBadge"), n);
+	return id("room-assist", "mdi:thermometer-auto", e._t("roomSensorAssistBadge"), n);
 }
-var ml = {
+var td = {
 	heating: { icon: "mdi:fire" },
 	cooling: { icon: "mdi:snowflake" },
 	drying: { icon: "mdi:water-percent" },
@@ -23275,13 +28631,13 @@ var ml = {
 		styleAction: "drying"
 	}
 };
-function K(e) {
+function q(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : void 0;
 }
-function hl(e, t, n, r) {
+function nd(e, t, n, r) {
 	return T`<span class="overview-zone-metric"><small>${e}</small><strong>${n._formatTemperature(t, r)}</strong></span>`;
 }
-function gl(e, t) {
+function rd(e, t) {
 	if (!t?.enabled) return E;
 	let n = t.data_quality !== "complete" && t.condition !== "no_readings", r = {
 		comfortable: "comfortConditionComfortable",
@@ -23307,25 +28663,25 @@ function gl(e, t) {
 		"humidity_comfortable"
 	].includes(t.condition), o = t.condition === "no_readings" ? "error" : a ? "warning" : "normal", s = t.air_quality === "poor" ? "error" : t.air_quality === "elevated" || t.air_quality === "unavailable" ? "warning" : "normal";
 	return T`
-    ${_l("comfort-environment", "mdi:home-thermometer-outline", e._t("overviewZoneComfortLabel"), e._t(r[t.condition] ?? "comfortConditionNoReadings"), o)}
-    ${t.air_quality === "not_monitored" ? E : _l("comfort-air", "mdi:molecule-co2", e._t("overviewZoneAirLabel"), e._t(i[t.air_quality]), s)}
-    ${n ? _l("comfort-data", "mdi:alert-circle-outline", e._t("overviewZoneDataLabel"), e._t("overviewZoneSensorIssue"), "warning") : E}
+    ${id("comfort-environment", "mdi:home-thermometer-outline", e._t("overviewZoneComfortLabel"), e._t(r[t.condition] ?? "comfortConditionNoReadings"), o)}
+    ${t.air_quality === "not_monitored" ? E : id("comfort-air", "mdi:molecule-co2", e._t("overviewZoneAirLabel"), e._t(i[t.air_quality]), s)}
+    ${n ? id("comfort-data", "mdi:alert-circle-outline", e._t("overviewZoneDataLabel"), e._t("overviewZoneSensorIssue"), "warning") : E}
   `;
 }
-function _l(e, t, n, r, i = "normal") {
+function id(e, t, n, r, i = "normal") {
 	return T`<span class=${`overview-zone-signal ${e} ${i}`} aria-label=${`${n}: ${r}`} title=${`${n}: ${r}`}><ha-icon icon=${t}></ha-icon><span><small>${n}:</small><strong>${r}</strong></span></span>`;
 }
-function vl(e, t) {
+function ad(e, t) {
 	if (!e._data || !t.length) return E;
-	let n = e._currentTimelineNow(), r = Or(n, e.hass?.config?.time_zone), i = kc(e.hass, n);
+	let n = e._currentTimelineNow(), r = hi(n, e.hass?.config?.time_zone), i = Tu(e.hass, n);
 	return T`
     <section class="overview-timeline-panel">
-      ${Il(e._t("todayTimeline"), "mdi:timeline-clock-outline")}
+      ${Cd(e._t("todayTimeline"), "mdi:timeline-clock-outline")}
       <div class="overview-timeline-scroll">
         <div class="overview-timeline-layout">
           <div class="overview-timeline-names">
             <div class="overview-timeline-axis-spacer"></div>
-            ${t.map((t) => bl(e, t))}
+            ${t.map((t) => sd(e, t))}
           </div>
           <div class="overview-timeline-rows" style=${`--overview-now-left: ${r.left}%;`}>
             <div class="overview-timeline-axis">
@@ -23341,8 +28697,8 @@ function vl(e, t) {
             <div class="overview-timeline-now-line" aria-label=${e._t("currentTime", { time: r.label })}></div>
             ${t.map((t) => {
 		e._data?.zones[t];
-		let n = cc(e._data, t);
-		return yl(e, t, n?.[i] ?? [], n, i);
+		let n = iu(e._data, t);
+		return od(e, t, n?.[i] ?? [], n, i);
 	})}
           </div>
         </div>
@@ -23350,19 +28706,19 @@ function vl(e, t) {
     </section>
   `;
 }
-function yl(e, t, n, r, i = kc()) {
-	let a = jr(n), o = r ? Mr(r, i) : void 0, s = xc(e), c = e._data?.zones[t], l = c?.execution?.type === "external", u = l ? void 0 : Sc(s, t, c), d = l ? void 0 : wc(s, t, c), f = l ? void 0 : d ?? xl(e), p = !!(d && e._data?.zone_runtime?.[t]?.control_mode === "manual"), m = u ? Pr(u, e._currentTimelineNow()) : void 0, h = f ? Fr(f, e._currentTimelineNow()) : void 0;
+function od(e, t, n, r, i = Tu()) {
+	let a = vi(n), o = r ? yi(r, i) : void 0, s = _u(e), c = e._data?.zones[t], l = c?.execution?.type === "external", u = l ? void 0 : vu(s, t, c), d = l ? void 0 : bu(s, t, c), f = l ? void 0 : d ?? cd(e), p = !!(d && e._data?.zone_runtime?.[t]?.control_mode === "manual"), m = u ? xi(u, e._currentTimelineNow()) : void 0, h = f ? Si(f, e._currentTimelineNow()) : void 0;
 	return T`
     <div class=${h?.indefinite ? "overview-timeline-track paused-indefinite" : "overview-timeline-track"}>
       ${a.length || o || m || h ? T`
-            ${o ? kl(e, t, o) : E}
-            ${a.map((n) => Sl(e, t, n))}
+            ${o ? gd(e, t, o) : E}
+            ${a.map((n) => ld(e, t, n))}
           ` : T`<span class="overview-timeline-empty">${e._t("noBlocks")}</span>`}
-      ${m && u ? Cl(e, t, m, u) : E}
-      ${h && f ? wl(e, t, h, f, p) : E}
+      ${m && u ? ud(e, t, m, u) : E}
+      ${h && f ? dd(e, t, h, f, p) : E}
       ${e._overviewTimelineDetail && e._overviewTimelineDetailEntityId === t ? T`
             <div
-              class=${`overview-timeline-tap-detail ${Pl(e._overviewTimelineDetailAnchor ?? 50)}`}
+              class=${`overview-timeline-tap-detail ${xd(e._overviewTimelineDetailAnchor ?? 50)}`}
               role="status"
               style=${`--overview-detail-left: ${e._overviewTimelineDetailAnchor ?? 50}%;`}
             >
@@ -23380,8 +28736,8 @@ function yl(e, t, n, r, i = kc()) {
     </div>
   `;
 }
-function bl(e, t) {
-	let n = xc(e), r = e._data?.zones[t], i = r?.execution?.type === "external", a = i ? void 0 : Sc(n, t, r), o = i ? void 0 : wc(n, t, r), s = i ? void 0 : o ?? xl(e), c = !!(o && e._data?.zone_runtime?.[t]?.control_mode === "manual"), l = sc(e._data, t), u = !!(l && !a && !s), d = e._friendlyEntityName(t), f = s ? Ec(n, s) : "", p = l ? `${e._t("profileOverviewLabel")}: ${l.profile.name}` : "", m = s ? [
+function sd(e, t) {
+	let n = _u(e), r = e._data?.zones[t], i = r?.execution?.type === "external", a = i ? void 0 : vu(n, t, r), o = i ? void 0 : bu(n, t, r), s = i ? void 0 : o ?? cd(e), c = !!(o && e._data?.zone_runtime?.[t]?.control_mode === "manual"), l = ru(e._data, t), u = !!(l && !a && !s), d = e._friendlyEntityName(t), f = s ? Su(n, s) : "", p = l ? `${e._t("profileOverviewLabel")}: ${l.profile.name}` : "", m = s ? [
 		e._t("pauseActive"),
 		c ? e._t("manualAdjustment") : "",
 		f
@@ -23389,7 +28745,7 @@ function bl(e, t) {
 	return T`
     <div
       class=${s ? "overview-timeline-name paused" : u ? "overview-timeline-name profiled" : "overview-timeline-name"}
-      style=${u && l ? `--overview-profile-accent: ${W(l.profile.key, l.profile.color)}` : ""}
+      style=${u && l ? `--overview-profile-accent: ${K(l.profile.key, l.profile.color)}` : ""}
       title=${h}
     >
       ${s ? T`<ha-icon
@@ -23401,20 +28757,21 @@ function bl(e, t) {
     </div>
   `;
 }
-function xl(e) {
+function cd(e) {
 	if (e._data?.global?.mode === "paused") return {
 		type: "pause",
 		started_at: e._data.global.paused_started_at,
 		until: e._data.global.paused_until
 	};
 }
-function Sl(e, t, n) {
-	let r = Dl(e, t, n.block), i = Tl(e, t, n.block), a = El(e, t, n.block);
+function ld(e, t, n) {
+	let r = md(e, t, n.block), i = fd(e, t, n.block), a = pd(e, t, n.block);
 	return T`
     <button
       class=${[
 		"overview-timeline-block",
-		`mode-${zr(n.block)}`,
+		`mode-${Ei(n.block)}`,
+		n.startMinute <= 0 ? "overview-timeline-start-edge" : "",
 		n.width < 12 ? "compact" : "",
 		n.width < 6 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -23431,8 +28788,8 @@ function Sl(e, t, n) {
     </button>
   `;
 }
-function Cl(e, t, n, r) {
-	let i = zr({ hvac_mode: n.block.hvac_mode ?? e.hass?.states?.[t]?.state }), a = `${e._t("boostActive")} - ${e._formatScheduleTime(n.block.start)} - ${e._formatScheduleTime(Nl(n.endMinute))} - ${Tc(xc(e), t, r)}`;
+function ud(e, t, n, r) {
+	let i = Ei({ hvac_mode: n.block.hvac_mode ?? e.hass?.states?.[t]?.state }), a = `${e._t("boostActive")} - ${e._formatScheduleTime(n.block.start)} - ${e._formatScheduleTime(bd(n.endMinute))} - ${xu(_u(e), t, r)}`;
 	return T`
     <button
       class=${`overview-timeline-boost mode-${i}`}
@@ -23444,16 +28801,16 @@ function Cl(e, t, n, r) {
     >
       <span class="overview-timeline-block-main">
         <ha-icon icon="mdi:lightning-bolt"></ha-icon>
-        ${Number.isFinite(n.block.temperature) ? T`<span>${e._formatTemperature(Number(n.block.temperature), t)}</span>` : Number.isFinite(n.block.target_temp_low) && Number.isFinite(n.block.target_temp_high) ? T`<span>${Ml(e, Number(n.block.target_temp_low), Number(n.block.target_temp_high), t)}</span>` : E}
+        ${Number.isFinite(n.block.temperature) ? T`<span>${e._formatTemperature(Number(n.block.temperature), t)}</span>` : Number.isFinite(n.block.target_temp_low) && Number.isFinite(n.block.target_temp_high) ? T`<span>${yd(e, Number(n.block.target_temp_low), Number(n.block.target_temp_high), t)}</span>` : E}
       </span>
     </button>
   `;
 }
-function wl(e, t, n, r, i = !1) {
+function dd(e, t, n, r, i = !1) {
 	let a = [
 		e._t("pauseActive"),
 		i ? e._t("manualAdjustment") : "",
-		Ec(xc(e), r)
+		Su(_u(e), r)
 	].filter(Boolean).join(" - ");
 	return T`
     <button
@@ -23474,21 +28831,21 @@ function wl(e, t, n, r, i = !1) {
     </button>
   `;
 }
-function Tl(e, t, n) {
-	return e._formatEventAction(Ol(t, n));
+function fd(e, t, n) {
+	return e._formatEventAction(hd(t, n));
 }
-function El(e, t, n) {
-	return n.action === "turn_off" || n.hvac_mode === "off" ? "" : e._formatEventMode(Ol(t, n));
+function pd(e, t, n) {
+	return n.action === "turn_off" || n.hvac_mode === "off" ? "" : e._formatEventMode(hd(t, n));
 }
-function Dl(e, t, n) {
-	let r = Tl(e, t, n), i = El(e, t, n);
+function md(e, t, n) {
+	let r = fd(e, t, n), i = pd(e, t, n);
 	return [
 		e._formatScheduleTime(n.start),
 		r,
 		i
 	].filter(Boolean).join(" - ");
 }
-function Ol(e, t) {
+function hd(e, t) {
 	return {
 		action: t.action,
 		entity_id: e,
@@ -23497,12 +28854,12 @@ function Ol(e, t) {
 		temperature: t.temperature ?? null,
 		target_temp_low: t.target_temp_low ?? null,
 		target_temp_high: t.target_temp_high ?? null,
-		weekday: kc(),
+		weekday: Tu(),
 		when: (/* @__PURE__ */ new Date()).toISOString()
 	};
 }
-function kl(e, t, n) {
-	let r = Tl(e, t, n.block), i = El(e, t, n.block), a = e._t("timelineContinuesFrom", {
+function gd(e, t, n) {
+	let r = fd(e, t, n.block), i = pd(e, t, n.block), a = e._t("timelineContinuesFrom", {
 		day: e._shortWeekdayName(n.sourceWeekday),
 		time: e._formatScheduleTime(n.block.start)
 	}), o = [
@@ -23515,7 +28872,8 @@ function kl(e, t, n) {
       class=${[
 		"overview-timeline-block",
 		"overview-timeline-carry-over",
-		`mode-${zr(n.block)}`,
+		"overview-timeline-start-edge",
+		`mode-${Ei(n.block)}`,
 		n.width < 12 ? "compact" : "",
 		n.width < 6 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -23533,38 +28891,38 @@ function kl(e, t, n) {
     </button>
   `;
 }
-function Al(e, t, n, r, i) {
-	return T`<span class="overview-assist-metric"><small>${e._t(n)}</small><strong>${Ml(e, r, i, t)}</strong></span>`;
+function _d(e, t, n, r, i) {
+	return T`<span class="overview-assist-metric"><small>${e._t(n)}</small><strong>${yd(e, r, i, t)}</strong></span>`;
 }
-function jl(e, t) {
+function vd(e, t) {
 	return T`<span class="overview-zone-metric"><small>${e}</small><strong>${t}</strong></span>`;
 }
-function Ml(e, t, n, r) {
+function yd(e, t, n, r) {
 	return `${e._formatTemperature(t, r).replace(/\s+[^\s]+$/, "")}–${e._formatTemperature(n, r)}`;
 }
-function Nl(e) {
+function bd(e) {
 	let t = Math.max(0, Math.min(1440, e)), n = Math.floor(t / 60), r = t % 60;
 	return `${String(n).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
-function Pl(e) {
+function xd(e) {
 	return e >= 72 ? "align-end" : e <= 28 ? "align-start" : "align-center";
 }
-function Fl(e, t) {
-	let n = t ? new Set(t) : void 0, r = Dc(xc(e)).filter((e) => !n || n.has(e.entity_id)), i = r.some((e) => e.target_when && e.target_when !== e.when);
+function Sd(e, t) {
+	let n = t ? new Set(t) : void 0, r = Cu(_u(e)).filter((e) => !n || n.has(e.entity_id)), i = r.some((e) => e.target_when && e.target_when !== e.when);
 	return r.length ? T`
     <section class="next">
-      ${Il(e._t(r.length === 1 ? "nextEvent" : "nextEvents"), "mdi:calendar-clock")}
+      ${Cd(e._t(r.length === 1 ? "nextEvent" : "nextEvents"), "mdi:calendar-clock")}
       <div class=${`event-list ${i ? "has-preconditioning" : ""}`}>
-        ${r.map((t) => Ll(e, t))}
+        ${r.map((t) => wd(e, t))}
       </div>
     </section>
   ` : T`
       <section class="next">
-        ${zl(e._t("nextEvent"), "mdi:calendar-clock", e._t("noUpcomingEvent"))}
+        ${Ed(e._t("nextEvent"), "mdi:calendar-clock", e._t("noUpcomingEvent"))}
       </section>
     `;
 }
-function Il(e, t) {
+function Cd(e, t) {
 	return T`
     <div class="overview-section-title section-heading">
       <ha-icon icon=${t}></ha-icon>
@@ -23572,17 +28930,17 @@ function Il(e, t) {
     </div>
   `;
 }
-function Ll(e, t) {
+function wd(e, t) {
 	return T`
     <div class="event">
       <div class="event-identity">
         <strong class="overview-climate-name">${e._friendlyEntityName(t.entity_id)}</strong>
       </div>
-      ${Rl(e, t)}
+      ${Td(e, t)}
     </div>
   `;
 }
-function Rl(e, t) {
+function Td(e, t) {
 	let n = !!(t.target_when && t.target_when !== t.when), r = e._changedNextEventIds?.has(t.entity_id) ? `next-event-updated update-${e._nextEventChangeRevision % 2 == 0 ? "even" : "odd"}` : "";
 	return T`
     <div class=${`event-details ${n ? "preconditioned" : ""}`}>
@@ -23614,7 +28972,7 @@ function Rl(e, t) {
     </div>
   `;
 }
-function zl(e, t, n) {
+function Ed(e, t, n) {
 	return T`
     <div class="overview-empty-state">
       <ha-icon icon=${t}></ha-icon>
@@ -23625,7 +28983,7 @@ function zl(e, t, n) {
     </div>
   `;
 }
-function Bl(e) {
+function Dd(e) {
 	let t = e._canResumeScheduler();
 	return T`
     <div class="overview-controls">
@@ -23634,7 +28992,7 @@ function Bl(e) {
           <input
             type="number"
             min="1"
-            step="5"
+            step="1"
             aria-label=${e._t("pauseDuration")}
             .value=${String(e._pauseDurationMinutes)}
             @input=${(t) => {
@@ -23677,7 +29035,7 @@ function Bl(e) {
     </div>
   `;
 }
-function Vl(e) {
+function Od(e) {
 	let t = e._pauseExpirationMs();
 	if (!t || t <= Date.now()) return E;
 	let n = Math.max(0, t - Date.now()), r = e._pauseProgressPercent(t);
@@ -23694,13 +29052,13 @@ function Vl(e) {
 }
 //#endregion
 //#region src/velair/domain/preconditioning.ts
-function Hl(e, t) {
+function kd(e, t) {
 	let n = e?.config?.unit_system?.temperature, r = e?.states ?? {}, i = Object.entries(r).filter(([e, r]) => {
 		if (!e.startsWith("sensor.")) return !1;
 		let i = r.attributes ?? {};
 		return i.device_class === "temperature" || n !== void 0 && i.unit_of_measurement === n || e === t;
 	}).map(([e, t]) => {
-		let n = t.attributes?.friendly_name ?? e, r = t.attributes?.unit_of_measurement ?? "", i = Wl(t.state, r);
+		let n = t.attributes?.friendly_name ?? e, r = t.attributes?.unit_of_measurement ?? "", i = jd(t.state, r);
 		return {
 			entityId: e,
 			label: i ? `${n} (${i})` : `${n} (${e})`
@@ -23711,11 +29069,11 @@ function Hl(e, t) {
 		label: t
 	}), i;
 }
-function Ul(e, t) {
+function Ad(e, t) {
 	return {
 		enabled: !!e?.enabled,
 		max_lead_minutes: Number(e?.max_lead_minutes ?? 1440),
-		minimum_delta_temperature: Number(e?.minimum_delta_temperature ?? dr(t)),
+		minimum_delta_temperature: Number(e?.minimum_delta_temperature ?? Mt(t)),
 		learning_history_size: Number(e?.learning_history_size ?? 120),
 		similar_sample_count: Number(e?.similar_sample_count ?? 25),
 		comfort_percentile: Number(e?.comfort_percentile ?? 80),
@@ -23723,22 +29081,22 @@ function Ul(e, t) {
 		partial_expiry_days: Number(e?.partial_expiry_days ?? 30),
 		recency_decay_days: Number(e?.recency_decay_days ?? 30),
 		min_start_minutes: Number(e?.min_start_minutes ?? 10),
-		fallback_minutes_per_degree: Number(e?.fallback_minutes_per_degree ?? mr(t)),
+		fallback_minutes_per_degree: Number(e?.fallback_minutes_per_degree ?? Ft(t)),
 		use_outdoor_temperature: e?.use_outdoor_temperature ?? !0,
 		outdoor_temperature_entity_id: e?.outdoor_temperature_entity_id ?? null,
 		room_temperature_entity_id: e?.room_temperature_entity_id ?? null,
 		room_sensor_assist_enabled: e?.room_sensor_assist_enabled ?? !1,
-		room_sensor_assist_deadband: Number(e?.room_sensor_assist_deadband ?? e?.minimum_delta_temperature ?? pr(t)),
-		room_sensor_assist_max_delta: Number(e?.room_sensor_assist_max_delta ?? fr(t)),
+		room_sensor_assist_deadband: Number(e?.room_sensor_assist_deadband ?? e?.minimum_delta_temperature ?? Pt(t)),
+		room_sensor_assist_max_delta: Number(e?.room_sensor_assist_max_delta ?? Nt(t)),
 		room_sensor_assist_debounce_seconds: Number(e?.room_sensor_assist_debounce_seconds ?? 20)
 	};
 }
-function Wl(e, t) {
+function jd(e, t) {
 	return e === void 0 || e === "unknown" || e === "unavailable" || Number.isNaN(Number(e)) ? "" : `${e}${t ? ` ${t}` : ""}`;
 }
 //#endregion
 //#region src/velair/views/preconditioning-view.ts
-var Gl = {
+var Md = {
 	preconditioningAdaptivePercentile: "preconditioningAdaptivePercentileHelp",
 	preconditioningComfortPercentile: "preconditioningComfortPercentileHelp",
 	preconditioningFallbackMinutesPerDegree: "preconditioningFallbackMinutesPerDegreeHelp",
@@ -23752,7 +29110,7 @@ var Gl = {
 	preconditioningSimilarSamples: "preconditioningSimilarSamplesHelp",
 	preconditioningUseOutdoorTemperature: "preconditioningUseOutdoorTemperatureHelp"
 };
-function Kl(e, t) {
+function Nd(e, t) {
 	return T`
     <section class="preconditioning-view">
       <header class="preconditioning-intro">
@@ -23762,11 +29120,11 @@ function Kl(e, t) {
           <small>${e._t("preconditioningIntroDetail")}</small>
         </span>
       </header>
-      ${t.length ? t.map((t) => ql(e, t)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+      ${t.length ? t.map((t) => Pd(e, t)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
     </section>
   `;
 }
-function ql(e, t) {
+function Pd(e, t) {
 	if (e._data?.zones[t]?.execution?.type === "external") return T`
       <section class="preconditioning-zone disabled collapsed">
         <header class="preconditioning-zone-heading">
@@ -23778,7 +29136,7 @@ function ql(e, t) {
         </header>
       </section>
     `;
-	let n = e._entityExists(t), r = e._temperatureUnit?.(t) ?? "°C", i = Ul(e._data?.zones[t]?.preconditioning, r), a = e._data?.preconditioning_learning?.[t], o = n && e._expandedPreconditioningZones.has(t), s = `preconditioning-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = n ? e._t(o ? "preconditioningCollapseClimate" : "preconditioningExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("preconditioningUnavailable");
+	let n = e._entityExists(t), r = e._temperatureUnit?.(t) ?? "°C", i = Ad(e._data?.zones[t]?.preconditioning, r), a = e._data?.preconditioning_learning?.[t], o = n && e._expandedPreconditioningZones.has(t), s = `preconditioning-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = n ? e._t(o ? "preconditioningCollapseClimate" : "preconditioningExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("preconditioningUnavailable");
 	return T`
     <section class=${`preconditioning-zone ${i.enabled ? "enabled" : "disabled"} ${o ? "expanded" : "collapsed"}`}>
       <header class="preconditioning-zone-heading" @click=${(r) => {
@@ -23837,41 +29195,41 @@ function ql(e, t) {
       </header>
       ${n && o ? T`
             <div id=${s} class="preconditioning-zone-content">
-              ${Jl(e, t, i)}
-              ${i.enabled ? Xl(e, t, a) : E}
+              ${Fd(e, t, i)}
+              ${i.enabled ? Ld(e, t, a) : E}
             </div>
           ` : E}
     </section>
   `;
 }
-function Jl(e, t, n) {
-	let r = e._temperatureUnit?.(t) ?? "°C", i = gr(r);
+function Fd(e, t, n) {
+	let r = e._temperatureUnit?.(t) ?? "°C", i = Lt(r);
 	return T`
     <div class="preconditioning-config-sections">
-      ${Yl(e, "preconditioningTiming", "mdi:timer-outline", T`
-          ${q(e, t, "preconditioningMinStart", n.min_start_minutes, "min_start_minutes", 0, 1440, 5)}
-          ${q(e, t, "preconditioningMaxLead", n.max_lead_minutes, "max_lead_minutes", 0, 1440, 15)}
-          ${q(e, t, "preconditioningMinimumDelta", n.minimum_delta_temperature, "minimum_delta_temperature", 0, hr(r, 5), .1, "", { labelUnit: r })}
-          ${q(e, t, "preconditioningFallbackMinutesPerDegree", n.fallback_minutes_per_degree, "fallback_minutes_per_degree", i[0], i[1], .1, "", { labelUnit: `${e._t("minutesShort")}/${r}` })}
+      ${Id(e, "preconditioningTiming", "mdi:timer-outline", T`
+          ${tf(e, t, "preconditioningMinStart", n.min_start_minutes, "min_start_minutes", 0, 1440, 5)}
+          ${tf(e, t, "preconditioningMaxLead", n.max_lead_minutes, "max_lead_minutes", 0, 1440, 15)}
+          ${tf(e, t, "preconditioningMinimumDelta", n.minimum_delta_temperature, "minimum_delta_temperature", 0, It(r, 5), .1, "", { labelUnit: r })}
+          ${tf(e, t, "preconditioningFallbackMinutesPerDegree", n.fallback_minutes_per_degree, "fallback_minutes_per_degree", i[0], i[1], .1, "", { labelUnit: `${e._t("minutesShort")}/${r}` })}
         `)}
-      ${Yl(e, "preconditioningModel", "mdi:tune-variant", T`
-          ${q(e, t, "preconditioningComfortPercentile", n.comfort_percentile, "comfort_percentile", 50, 95, 5)}
-          ${mu(e, t, "preconditioningAdaptivePercentile", n.adaptive_percentile_enabled, "adaptive_percentile_enabled")}
-          ${q(e, t, "preconditioningSimilarSamples", n.similar_sample_count, "similar_sample_count", 5, 100, 5)}
+      ${Id(e, "preconditioningModel", "mdi:tune-variant", T`
+          ${tf(e, t, "preconditioningComfortPercentile", n.comfort_percentile, "comfort_percentile", 50, 95, 5)}
+          ${nf(e, t, "preconditioningAdaptivePercentile", n.adaptive_percentile_enabled, "adaptive_percentile_enabled")}
+          ${tf(e, t, "preconditioningSimilarSamples", n.similar_sample_count, "similar_sample_count", 5, 100, 5)}
         `)}
-      ${Yl(e, "preconditioningHistory", "mdi:history", T`
-          ${q(e, t, "preconditioningHistorySize", n.learning_history_size, "learning_history_size", 10, 500, 10)}
-          ${q(e, t, "preconditioningPartialExpiry", n.partial_expiry_days, "partial_expiry_days", 1, 365, 1)}
-          ${q(e, t, "preconditioningRecencyDecay", n.recency_decay_days, "recency_decay_days", 1, 365, 1)}
+      ${Id(e, "preconditioningHistory", "mdi:history", T`
+          ${tf(e, t, "preconditioningHistorySize", n.learning_history_size, "learning_history_size", 10, 500, 10)}
+          ${tf(e, t, "preconditioningPartialExpiry", n.partial_expiry_days, "partial_expiry_days", 1, 365, 1)}
+          ${tf(e, t, "preconditioningRecencyDecay", n.recency_decay_days, "recency_decay_days", 1, 365, 1)}
         `)}
-      ${Yl(e, "preconditioningOutdoorContext", "mdi:weather-partly-cloudy", T`
-          ${mu(e, t, "preconditioningUseOutdoorTemperature", n.use_outdoor_temperature, "use_outdoor_temperature")}
-          ${hu(e, t, "preconditioningOutdoorTemperatureEntity", n.outdoor_temperature_entity_id ?? "", "outdoor_temperature_entity_id", { inactive: !n.use_outdoor_temperature })}
+      ${Id(e, "preconditioningOutdoorContext", "mdi:weather-partly-cloudy", T`
+          ${nf(e, t, "preconditioningUseOutdoorTemperature", n.use_outdoor_temperature, "use_outdoor_temperature")}
+          ${rf(e, t, "preconditioningOutdoorTemperatureEntity", n.outdoor_temperature_entity_id ?? "", "outdoor_temperature_entity_id", { inactive: !n.use_outdoor_temperature })}
         `)}
     </div>
   `;
 }
-function Yl(e, t, n, r) {
+function Id(e, t, n, r) {
 	return T`
     <section class="preconditioning-config-section">
       <h3><ha-icon icon=${n}></ha-icon>${e._t(t)}</h3>
@@ -23879,9 +29237,9 @@ function Yl(e, t, n, r) {
     </section>
   `;
 }
-function Xl(e, t, n) {
+function Ld(e, t, n) {
 	if (!n) return E;
-	let r = [n.heat.status === "unsupported" ? void 0 : Zl(e, t, "heat", n.heat), n.cool.status === "unsupported" ? void 0 : Zl(e, t, "cool", n.cool)].filter(Boolean);
+	let r = [n.heat.status === "unsupported" ? void 0 : Rd(e, t, "heat", n.heat), n.cool.status === "unsupported" ? void 0 : Rd(e, t, "cool", n.cool)].filter(Boolean);
 	return T`
     <div class=${`preconditioning-learning ${n.status}`}>
       <h3 class="preconditioning-learning-heading">
@@ -23894,8 +29252,8 @@ function Xl(e, t, n) {
     </div>
   `;
 }
-function Zl(e, t, n, r) {
-	let i = e._t(n === "heat" ? "preconditioningHeat" : "preconditioningCool"), a = e._t(pu(r.status)), o = r.total_samples, s = r.model_source === "history", c = e._t(s ? "preconditioningModelHistory" : "preconditioningModelInitial"), l = r.sample_count >= r.required_samples ? String(r.sample_count) : e._t("preconditioningDirectionSamples", {
+function Rd(e, t, n, r) {
+	let i = e._t(n === "heat" ? "preconditioningHeat" : "preconditioningCool"), a = e._t(ef(r.status)), o = r.total_samples, s = r.model_source === "history", c = e._t(s ? "preconditioningModelHistory" : "preconditioningModelInitial"), l = r.sample_count >= r.required_samples ? String(r.sample_count) : e._t("preconditioningDirectionSamples", {
 		count: r.sample_count,
 		required: r.required_samples
 	});
@@ -23919,30 +29277,30 @@ function Zl(e, t, n, r) {
       </div>
       <div class="preconditioning-learning-status-card">
         <div class="preconditioning-learning-summary">
-          ${uu(e._t("preconditioningDirectionStatus"), a, r.status === "ready" ? "mdi:check-circle" : "mdi:progress-clock", r.status)}
-          ${uu(e._t("preconditioningModelSource"), c, s ? "mdi:chart-timeline-variant" : "mdi:calculator-variant-outline", s ? "history" : "initial")}
+          ${Zd(e._t("preconditioningDirectionStatus"), a, r.status === "ready" ? "mdi:check-circle" : "mdi:progress-clock", r.status)}
+          ${Zd(e._t("preconditioningModelSource"), c, s ? "mdi:chart-timeline-variant" : "mdi:calculator-variant-outline", s ? "history" : "initial")}
         </div>
         <div class="preconditioning-sample-card">
           <div class="preconditioning-sample-chips">
-            ${du("complete", e._t("preconditioningReachedEvents"), l)}
-            ${du("partial", e._t("preconditioningPartialEvents"), String(r.partial_sample_count ?? 0))}
-            ${du("invalid", e._t("preconditioningInvalidEvents"), String(r.invalid_sample_count ?? 0))}
+            ${Qd("complete", e._t("preconditioningReachedEvents"), l)}
+            ${Qd("partial", e._t("preconditioningPartialEvents"), String(r.partial_sample_count ?? 0))}
+            ${Qd("invalid", e._t("preconditioningInvalidEvents"), String(r.invalid_sample_count ?? 0))}
           </div>
         </div>
       </div>
-      ${Ql(e, t, n)}
+      ${zd(e, t, n)}
     </div>
   `;
 }
-function Ql(e, t, n) {
-	let r = au(e, t, n);
+function zd(e, t, n) {
+	let r = Kd(e, t, n);
 	if (!r) {
 		let r = e._t(n === "heat" ? "preconditioningHeat" : "preconditioningCool");
 		return T`
       <section class="preconditioning-prediction empty">
         <div class="preconditioning-prediction-heading">
           <span>${e._t("preconditioningNextBlock")}</span>
-          ${eu(e, t, n)}
+          ${Vd(e, t, n)}
         </div>
         <div class="preconditioning-prediction-empty">
           <ha-icon icon="mdi:calendar-search"></ha-icon>
@@ -23951,12 +29309,12 @@ function Ql(e, t, n) {
       </section>
     `;
 	}
-	let i = r.target_when && r.target_when !== r.when ? r.target_when : r.when, a = lu(r.when, i), o = a > 0, s = o ? e._t("preconditioningLeadTime", { minutes: a }) : e._t("preconditioningNormalStart");
+	let i = r.target_when && r.target_when !== r.when ? r.target_when : r.when, a = Xd(r.when, i), o = a > 0, s = o ? e._t("preconditioningLeadTime", { minutes: a }) : e._t("preconditioningNormalStart");
 	return T`
     <section class=${`preconditioning-prediction ${n} ${o ? "early" : "normal"}`}>
       <div class="preconditioning-prediction-heading">
         <span>${e._t("preconditioningNextBlock")}</span>
-        ${eu(e, t, n)}
+        ${Vd(e, t, n)}
       </div>
       <div class=${`preconditioning-block-preview ${o ? "with-prestart" : "normal-start"}`}>
         ${o ? T`
@@ -23970,16 +29328,16 @@ function Ql(e, t, n) {
           <small>${e._t("preconditioningTargetBy")}</small>
           <strong>${e._formatDateTime(i)}</strong>
           <span>${e._formatEventAction(r)}</span>
-          ${$l(e, r, n)}
+          ${Bd(e, r, n)}
           <span>${e._formatEventMode(r)}</span>
         </div>
       </div>
-      ${r.preconditioning_diagnostics ? tu(e, r.preconditioning_diagnostics) : E}
+      ${r.preconditioning_diagnostics ? Hd(e, r.preconditioning_diagnostics) : E}
     </section>
   `;
 }
-function $l(e, t, n) {
-	if (!su(t)) return E;
+function Bd(e, t, n) {
+	if (!Jd(t)) return E;
 	let r = t.preconditioning_diagnostics?.boundary_temperature, i = typeof r == "number" ? r : n === "heat" ? t.target_temp_low : t.target_temp_high;
 	return typeof i == "number" ? T`
     <small class="preconditioning-range-boundary">
@@ -23987,16 +29345,16 @@ function $l(e, t, n) {
     </small>
   ` : E;
 }
-function eu(e, t, n) {
+function Vd(e, t, n) {
 	let r = e._t("preconditioningLivePredictionHelp"), i = t.replace(/[^a-z0-9_-]/gi, "-");
 	return T`
     <span class="preconditioning-live-label">
       <span>${e._t("preconditioningLivePrediction")}</span>
-      ${Jc(`preconditioning-${i}-${n}-live-prediction-help`, r, r)}
+      ${G(`preconditioning-${i}-${n}-live-prediction-help`, r, r)}
     </span>
   `;
 }
-function tu(e, t) {
+function Hd(e, t) {
 	return T`
     <details class="preconditioning-calculation-details">
       <summary>
@@ -24005,31 +29363,31 @@ function tu(e, t) {
       </summary>
       <div class="preconditioning-calculation-grid">
         <div class="preconditioning-calculation-row context">
-          ${ru(e._t("preconditioningCalculationSamples"), e._t("preconditioningCalculationSampleCounts", {
+          ${Wd(e._t("preconditioningCalculationSamples"), e._t("preconditioningCalculationSampleCounts", {
 		reached: t.complete_sample_count,
 		partial: t.partial_sample_count,
 		invalid: t.invalid_sample_count
 	}), "samples")}
-          ${ru(e._t("preconditioningSimilarSamples"), String(t.similar_sample_count), "compact")}
-          ${ru(e._t("preconditioningComfortPercentileLabel"), `${t.comfort_percentile}%`, "compact")}
+          ${Wd(e._t("preconditioningSimilarSamples"), String(t.similar_sample_count), "compact")}
+          ${Wd(e._t("preconditioningComfortPercentileLabel"), `${t.comfort_percentile}%`, "compact")}
         </div>
         <div class="preconditioning-calculation-row estimates">
-          ${ru(e._t("preconditioningCalculationReachedEstimate"), iu(e, t.complete_estimate_minutes))}
-          ${ru(e._t("preconditioningCalculationPartialFloor"), iu(e, t.partial_floor_minutes))}
+          ${Wd(e._t("preconditioningCalculationReachedEstimate"), Gd(e, t.complete_estimate_minutes))}
+          ${Wd(e._t("preconditioningCalculationPartialFloor"), Gd(e, t.partial_floor_minutes))}
         </div>
-        <div class=${`preconditioning-calculation-row result ${nu(t) ? "without-rounded" : "with-rounded"}`}>
-          ${ru(e._t("preconditioningCalculationCombined"), iu(e, t.combined_estimate_minutes))}
-          ${nu(t) ? E : ru(e._t("preconditioningCalculationRounded"), iu(e, t.rounded_estimate_minutes))}
-          ${ru(e._t("preconditioningCalculationFinalLead"), iu(e, t.final_lead_minutes), "final")}
+        <div class=${`preconditioning-calculation-row result ${Ud(t) ? "without-rounded" : "with-rounded"}`}>
+          ${Wd(e._t("preconditioningCalculationCombined"), Gd(e, t.combined_estimate_minutes))}
+          ${Ud(t) ? E : Wd(e._t("preconditioningCalculationRounded"), Gd(e, t.rounded_estimate_minutes))}
+          ${Wd(e._t("preconditioningCalculationFinalLead"), Gd(e, t.final_lead_minutes), "final")}
         </div>
       </div>
     </details>
   `;
 }
-function nu(e) {
+function Ud(e) {
 	return Math.round(e.combined_estimate_minutes * 10) / 10 === e.rounded_estimate_minutes;
 }
-function ru(e, t, n = "") {
+function Wd(e, t, n = "") {
 	return T`
     <span class=${`preconditioning-calculation-item ${n}`}>
       <small
@@ -24045,30 +29403,30 @@ function ru(e, t, n = "") {
     </span>
   `;
 }
-function iu(e, t) {
+function Gd(e, t) {
 	if (typeof t != "number" || !Number.isFinite(t)) return "-";
 	let n = Math.round(t * 10) / 10;
 	return e._t("preconditioningFallbackLead", { minutes: n });
 }
-function au(e, t, n) {
-	return (e._data?.next_events ?? []).find((e) => e.entity_id === t && cu(e) === n && ou(e));
+function Kd(e, t, n) {
+	return (e._data?.next_events ?? []).find((e) => e.entity_id === t && Yd(e) === n && qd(e));
 }
-function ou(e) {
-	return typeof e.temperature == "number" || su(e);
+function qd(e) {
+	return typeof e.temperature == "number" || Jd(e);
 }
-function su(e) {
+function Jd(e) {
 	return typeof e.target_temp_low == "number" && typeof e.target_temp_high == "number";
 }
-function cu(e) {
+function Yd(e) {
 	let t = e.preconditioning_diagnostics?.direction;
 	if (t === "heat" || t === "cool") return t;
 	if (e.hvac_mode === "heat" || e.hvac_mode === "cool") return e.hvac_mode;
 }
-function lu(e, t) {
+function Xd(e, t) {
 	let n = new Date(e).getTime(), r = new Date(t).getTime();
 	return Number.isNaN(n) || Number.isNaN(r) || r <= n ? 0 : Math.round((r - n) / 6e4);
 }
-function uu(e, t, n, r) {
+function Zd(e, t, n, r) {
 	return T`
     <div class=${`preconditioning-learning-indicator ${r}`}>
       <ha-icon icon=${n}></ha-icon>
@@ -24079,7 +29437,7 @@ function uu(e, t, n, r) {
     </div>
   `;
 }
-function du(e, t, n) {
+function Qd(e, t, n) {
 	return T`
     <span class=${`preconditioning-sample-chip ${e}`}>
       <span>${t}:</span>
@@ -24087,25 +29445,25 @@ function du(e, t, n) {
     </span>
   `;
 }
-function fu(e, t, n, r = "") {
-	let i = Gl[n], a = i ? e._t(i) : "", o = t.replace(/[^a-z0-9_-]/gi, "-");
+function $d(e, t, n, r = "") {
+	let i = Md[n], a = i ? e._t(i) : "", o = t.replace(/[^a-z0-9_-]/gi, "-");
 	return T`
     <span class="label preconditioning-config-label">
       <span>${e._t(n)}${r ? ` (${r})` : ""}</span>
       ${i ? T`
-            ${Jc(`preconditioning-${o}-${String(n)}-help`, a, a)}
+            ${G(`preconditioning-${o}-${String(n)}-help`, a, a)}
           ` : E}
     </span>
   `;
 }
-function pu(e) {
+function ef(e) {
 	return e === "ready" ? "preconditioningLearningReady" : e === "disabled" ? "preconditioningLearningDisabled" : "preconditioningLearning";
 }
-function q(e, t, n, r, i, a, o, s, c = "", l = {}) {
+function tf(e, t, n, r, i, a, o, s, c = "", l = {}) {
 	let u = e._settingsSaving || !!l.inactive;
 	return T`
     <label class=${`preconditioning-config-row ${l.inactive ? "inactive" : ""}`}>
-      ${fu(e, t, n, l.labelUnit)}
+      ${$d(e, t, n, l.labelUnit)}
       <span class="preconditioning-number-input"><input
         type="number"
         min=${String(a)}
@@ -24122,11 +29480,11 @@ function q(e, t, n, r, i, a, o, s, c = "", l = {}) {
     </label>
   `;
 }
-function mu(e, t, n, r, i, a = {}) {
+function nf(e, t, n, r, i, a = {}) {
 	let o = e._settingsSaving || !!a.inactive;
 	return T`
     <label class=${`preconditioning-config-row preconditioning-toggle-row ${a.inactive ? "inactive" : ""}`}>
-      ${fu(e, t, n)}
+      ${$d(e, t, n)}
       <ha-switch
         .checked=${r}
         ?disabled=${o}
@@ -24135,11 +29493,11 @@ function mu(e, t, n, r, i, a = {}) {
     </label>
   `;
 }
-function hu(e, t, n, r, i, a = {}) {
-	let o = e._settingsSaving || !!a.inactive, s = a.inactive ? "" : r, c = Hl(e.hass, r);
+function rf(e, t, n, r, i, a = {}) {
+	let o = e._settingsSaving || !!a.inactive, s = a.inactive ? "" : r, c = kd(e.hass, r);
 	return T`
     <label class=${`preconditioning-config-row preconditioning-sensor-row ${a.inactive ? "inactive" : ""}`}>
-      ${fu(e, t, n)}
+      ${$d(e, t, n)}
       <span class="select-wrap">
         <select
           .value=${s}
@@ -24166,7 +29524,7 @@ function hu(e, t, n, r, i, a = {}) {
 }
 //#endregion
 //#region node_modules/lit-html/directives/keyed.js
-var gu = Zo(class extends Qo {
+var af = Bs(class extends Vs {
 	constructor() {
 		super(...arguments), this.key = E;
 	}
@@ -24174,35 +29532,35 @@ var gu = Zo(class extends Qo {
 		return this.key = e, t;
 	}
 	update(e, [t, n]) {
-		return t !== this.key && (as(e), this.key = t), n;
+		return t !== this.key && (Js(e), this.key = t), n;
 	}
 });
 //#endregion
 //#region src/velair/controllers/climate-profile-actions.ts
-async function _u(e, t) {
-	let n = _c(t);
+async function of(e, t) {
+	let n = pu(t);
 	if (n) throw Error(n);
-	return e.setClimateProfile(vc(t));
+	return e.setClimateProfile(mu(t));
 }
-function vu(e, t) {
+function sf(e, t) {
 	return e.deleteClimateProfile(t);
 }
-function yu(e, t) {
+function cf(e, t) {
 	return e.activateProfile(t);
 }
 //#endregion
 //#region src/velair/domain/modes.ts
-var bu = new Set([
+var lf = new Set([
 	"default",
 	"predeterminado",
 	"manual",
 	"unknown",
 	"unavailable"
 ]);
-function xu(e) {
+function uf(e) {
 	return e.normalize("NFKC").toLowerCase().replaceAll("ß", "ss").replaceAll("ς", "σ");
 }
-function Su(e) {
+function df(e) {
 	return e ? {
 		key: e.key,
 		name: e.name,
@@ -24212,12 +29570,12 @@ function Su(e) {
 		profileIds: []
 	};
 }
-function Cu(e, t, n) {
+function ff(e, t, n) {
 	let r = e.name.trim();
 	if (!r || /[\u0000-\u001F\u007F-\u009F]/u.test(e.name)) return "name";
 	if (r.length > 255) return "length";
-	let i = xu(r);
-	if (bu.has(i) || t.some((t) => t.key !== e.key && xu(t.name.trim()) === i)) return "duplicate";
+	let i = uf(r);
+	if (lf.has(i) || t.some((t) => t.key !== e.key && uf(t.name.trim()) === i)) return "duplicate";
 	if (!e.profileIds.length || new Set(e.profileIds).size !== e.profileIds.length) return "profile";
 	let a = new Map((n ?? []).map((e) => [e.key, e])), o = /* @__PURE__ */ new Set();
 	for (let t of e.profileIds) {
@@ -24229,12 +29587,12 @@ function Cu(e, t, n) {
 		}
 	}
 }
-function wu(e) {
+function pf(e) {
 	return e?.global.active_profile_ids?.length ? e.modes?.find((t) => t.key === e.active_mode_id) ?? "manual" : "default";
 }
 //#endregion
 //#region src/velair/styles/profile-styles.ts
-var Tu = u`
+var mf = u`
   :host {
     display: block;
     color: var(--primary-text-color);
@@ -24711,7 +30069,7 @@ var Tu = u`
   }
 
   .mode-item.built-in {
-    grid-template-columns: minmax(0, 1fr) 30px 34px;
+    grid-template-columns: minmax(0, 1fr) 32px 34px;
   }
 
   .mode-item.built-in .mode-item-main,
@@ -24784,55 +30142,9 @@ var Tu = u`
     justify-self: center;
   }
 
-  .mode-help {
-    align-items: center;
+  .mode-item.built-in > .inline-help-wrapper {
     align-self: center;
-    background: transparent;
-    border: 0;
-    color: var(--secondary-text-color);
-    cursor: help;
-    display: inline-flex;
-    height: 30px;
-    justify-content: center;
     justify-self: center;
-    outline: none;
-    padding: 0;
-    position: relative;
-    width: 30px;
-  }
-
-  .mode-help > ha-icon {
-    --mdc-icon-size: 18px;
-  }
-
-  .mode-help-tooltip {
-    background: var(--primary-text-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-    color: var(--primary-background-color);
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 1.35;
-    max-width: min(240px, calc(100vw - 40px));
-    opacity: 0;
-    padding: 7px 8px;
-    pointer-events: none;
-    position: absolute;
-    right: 0;
-    text-align: left;
-    top: calc(100% + 6px);
-    transition: opacity 120ms ease, visibility 120ms ease;
-    visibility: hidden;
-    white-space: normal;
-    width: max-content;
-    z-index: 20;
-  }
-
-  .mode-help:hover .mode-help-tooltip,
-  .mode-help:focus .mode-help-tooltip,
-  .mode-help:focus-visible .mode-help-tooltip {
-    opacity: 1;
-    visibility: visible;
   }
 
   .mode-profile-avatar {
@@ -25620,7 +30932,7 @@ var Tu = u`
 `;
 //#endregion
 //#region src/velair/views/weekly-schedule-editor.ts
-function Eu(e) {
+function hf(e) {
 	return T`
     ${e.dayTabs}
     <div class="schedule-step-heading"><strong>${e.configureHeading}</strong></div>
@@ -25637,7 +30949,7 @@ function Eu(e) {
 }
 //#endregion
 //#region src/velair/views/schedule-editor-controls.ts
-var Du = [
+var gf = [
 	{
 		preset: "weekdays",
 		key: "clonePresetWeekdays",
@@ -25654,11 +30966,11 @@ var Du = [
 		icon: "mdi:calendar-multiselect"
 	}
 ];
-function Ou(e, t, n) {
+function _f(e, t, n) {
 	return T`
     <div class="copy-presets" role="group" aria-label=${e("clonePresetLabel")}>
       <div class="copy-preset-options">
-        ${Du.map(({ preset: n, key: r, icon: i }) => T`
+        ${gf.map(({ preset: n, key: r, icon: i }) => T`
         <button class="copy-preset-button" type="button" @click=${() => t(n)}>
           <ha-icon icon=${i}></ha-icon>
           <span>${e(r)}</span>
@@ -25679,7 +30991,7 @@ function Ou(e, t, n) {
     </div>
   `;
 }
-function ku(e, t) {
+function vf(e, t) {
 	if (!t) return;
 	let n = t.max > 0 ? Math.min(100, t.used / t.max * 100) : 0;
 	return T`
@@ -25707,31 +31019,31 @@ function J(e, t, n, r) {
 //#region src/velair/components/profiles-view-element.ts
 var Y = class extends He {
 	constructor(...e) {
-		super(...e), this.initialWeekday = "", this.compact = !1, this.activeSetupControls = "both", this.workspace = "both", this.scheduleWorkspace = !1, this._selectedKey = "", this._draft = ac(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._dirty = !1, this._expandedZones = /* @__PURE__ */ new Set(), this._selectedModeKey = "", this._modeEditorOpen = !1, this._modeDraft = Su(), this._modeDirty = !1, this._activeLibrary = "profiles", this._selectedEntity = "", this._validationNotices = new ci(() => this.requestUpdate()), this._handleDocumentClick = (e) => {
+		super(...e), this.initialWeekday = "", this.compact = !1, this.activeSetupControls = "both", this.workspace = "both", this.scheduleWorkspace = !1, this._selectedKey = "", this._draft = tu(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._dirty = !1, this._expandedZones = /* @__PURE__ */ new Set(), this._selectedModeKey = "", this._modeEditorOpen = !1, this._modeDraft = df(), this._modeDirty = !1, this._activeLibrary = "profiles", this._selectedEntity = "", this._validationNotices = new Yi(() => this.requestUpdate()), this._handleDocumentClick = (e) => {
 			let t = this.shadowRoot?.querySelector(".active-setup-menu");
 			!t?.open || e.composedPath().includes(t) || (t.open = !1);
 		}, this._clearSelection = () => {
-			this._validationNotices.dispose(), this._selectedKey = "", this._draft = ac(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices();
+			this._validationNotices.dispose(), this._selectedKey = "", this._draft = tu(), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices();
 		}, this._saveDayAsTemplate = async () => {
-			let e = this._templateDialog, t = this.hass ? new P(this.hass) : void 0;
+			let e = this._templateDialog, t = this.hass ? new F(this.hass) : void 0;
 			if (!e || !t || !e.name.trim() || this._busy) return;
 			let n = this._draft.zones[e.entityId];
 			if (n?.behavior !== "schedule") return;
 			let r = n.schedule[e.weekday] ?? [], i = /* @__PURE__ */ new Set();
-			if (r.some((t) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(t.start) || i.has(t.start) ? !0 : (i.add(t.start), t.action === "turn_off" ? !1 : !!this._temperatureError(e.entityId, t) || (L(t) ? !Number.isFinite(Number(t.target_temp_low)) || !Number.isFinite(Number(t.target_temp_high)) : !Number.isFinite(Number(t.temperature)))))) {
+			if (r.some((t) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(t.start) || i.has(t.start) ? !0 : (i.add(t.start), t.action === "set_temperature" ? !!this._temperatureError(e.entityId, t) || (R(t) ? !Number.isFinite(Number(t.target_temp_low)) || !Number.isFinite(Number(t.target_temp_high)) : !Number.isFinite(Number(t.temperature))) : !1))) {
 				this._templateDialog = {
 					...e,
 					error: this._t("profileInvalidSchedule")
 				};
 				return;
 			}
-			let a = vc(this._draft).zones[e.entityId];
+			let a = mu(this._draft).zones[e.entityId];
 			if (a.behavior !== "schedule") return;
 			this._busy = "template-save";
 			let o = Symbol("profile-template-save");
 			this._templateSaveToken = o, this._clearNotices();
 			try {
-				let n = await t.setScheduleTemplate(xr(), e.name.trim(), a.schedule[e.weekday] ?? []);
+				let n = await t.setScheduleTemplate(ci(), e.name.trim(), a.schedule[e.weekday] ?? []);
 				this.data = n, this.dispatchEvent(new CustomEvent("profile-data-changed", {
 					bubbles: !0,
 					composed: !0,
@@ -25761,7 +31073,7 @@ var Y = class extends He {
 					return;
 				}
 			}
-			this._draft = mc(this._draft, e.entityId, e.weekday, e.targets), this._cloneClimateTargets = {
+			this._draft = uu(this._draft, e.entityId, e.weekday, e.targets), this._cloneClimateTargets = {
 				...this._cloneClimateTargets,
 				[e.entityId]: /* @__PURE__ */ new Set()
 			}, this._closeClimateCloneDialog(), this._setDirty(!0);
@@ -25774,7 +31086,7 @@ var Y = class extends He {
 			let e = this._dialogTrigger;
 			this._dialogTrigger = void 0, this.updateComplete.then(() => e?.focus());
 		}, this._createMode = () => {
-			this._discardModeChanges() && (this._selectedModeKey = "", this._modeDraft = Su(), this._modeEditorOpen = !0, this._setModeDirty(!1));
+			this._discardModeChanges() && (this._selectedModeKey = "", this._modeDraft = df(), this._modeEditorOpen = !0, this._setModeDirty(!1));
 		};
 	}
 	connectedCallback() {
@@ -25784,7 +31096,7 @@ var Y = class extends He {
 		this.ownerDocument.removeEventListener("click", this._handleDocumentClick), this._validationNotices.dispose(), super.disconnectedCallback();
 	}
 	_localEntityIds() {
-		return Qt(this.data?.configured_entities ?? [], this.data?.settings?.zone_order ?? []);
+		return Mn(this.data?.configured_entities ?? [], this.data?.settings?.zone_order ?? []);
 	}
 	_externalCapabilities(e) {
 		let t = this.data?.zones?.[e]?.execution;
@@ -25797,12 +31109,12 @@ var Y = class extends He {
 		if (e.has("data")) {
 			if (this._modeEditorOpen && this._selectedModeKey) {
 				let e = this.data?.modes?.find((e) => e.key === this._selectedModeKey);
-				e ? this._modeDirty || (this._modeDraft = Su(e)) : this._clearModeSelection();
+				e ? this._modeDirty || (this._modeDraft = df(e)) : this._clearModeSelection();
 			}
 			let e = this.data?.profiles ?? [], t = this._localEntityIds();
 			(!this._selectedEntity || !t.includes(this._selectedEntity)) && (this._selectedEntity = t[0] ?? "");
 			let n = e.find((e) => e.key === this._selectedKey);
-			this._dirty && this._selectedKey && !n ? (this._clearSelection(), this._error = this._t("profileRemovedElsewhere")) : this._dirty || (n ? this._draft = ac(n) : this._selectedKey && this._clearSelection());
+			this._dirty && this._selectedKey && !n ? (this._clearSelection(), this._error = this._t("profileRemovedElsewhere")) : this._dirty || (n ? this._draft = tu(n) : this._selectedKey && this._clearSelection());
 		}
 		this._validationNotices.sync(this._desiredValidationNotices());
 	}
@@ -25889,7 +31201,7 @@ var Y = class extends He {
 	_renderClimateCloneDialog() {
 		let e = this._climateCloneDialog;
 		if (!e) return E;
-		let t = this.hass?.states?.[e.entityId]?.attributes?.friendly_name ?? e.entityId, n = [...e.targets].map((e) => this.hass?.states?.[e]?.attributes?.friendly_name ?? e), r = [...e.targets].filter((e) => uc(this._draft.zones[e]) !== "schedule");
+		let t = this.hass?.states?.[e.entityId]?.attributes?.friendly_name ?? e.entityId, n = [...e.targets].map((e) => this.hass?.states?.[e]?.attributes?.friendly_name ?? e), r = [...e.targets].filter((e) => ou(this._draft.zones[e]) !== "schedule");
 		return T`
       <div class="profile-dialog-backdrop" @click=${(e) => {
 			e.target === e.currentTarget && this._closeClimateCloneDialog();
@@ -26002,7 +31314,7 @@ var Y = class extends He {
 			e.key === this._selectedKey ? "active" : "",
 			this.workspace === "profiles" ? "profile-definition-item" : ""
 		].filter(Boolean).join(" ")}
-        style=${`--profile-item-accent: ${W(e.key, e.color)}`}
+        style=${`--profile-item-accent: ${K(e.key, e.color)}`}
       >
         <button
           class="template-item-main profile-item-main"
@@ -26044,7 +31356,7 @@ var Y = class extends He {
     `;
 	}
 	_renderActiveSelector() {
-		let e = oc(this.data), t = this.data?.global.active_profile_ids ?? [], n = this.data?.profiles ?? [], r = this.data?.modes ?? [], i = wu(this.data), a = i === "default" ? this._t("modeDefault") : i === "manual" ? this._t("modeManual") : i.name, o = i === "default" ? "default" : i === "manual" ? "manual" : `custom:${i.key}`, s = typeof i == "string" ? [] : i.profile_ids.map((e) => n.find((t) => t.key === e)).filter((e) => !!e), c = i === "default" ? this._t("modeDefaultDescription") : i === "manual" ? this._t("modeManualDescription") : this._t("modeCustomDescription", { profile: s.map((e) => e.name).join(", ") }), l = !!this._busy || this._operationRunning() || this._dirty || this._modeDirty, u = this.activeSetupControls === "modes" || this.activeSetupControls === "profiles" ? this.activeSetupControls : "both", d = u !== "profiles", f = u !== "modes";
+		let e = nu(this.data), t = this.data?.global.active_profile_ids ?? [], n = this.data?.profiles ?? [], r = this.data?.modes ?? [], i = pf(this.data), a = i === "default" ? this._t("modeDefault") : i === "manual" ? this._t("modeManual") : i.name, o = i === "default" ? "default" : i === "manual" ? "manual" : `custom:${i.key}`, s = typeof i == "string" ? [] : i.profile_ids.map((e) => n.find((t) => t.key === e)).filter((e) => !!e), c = i === "default" ? this._t("modeDefaultDescription") : i === "manual" ? this._t("modeManualDescription") : this._t("modeCustomDescription", { profile: s.map((e) => e.name).join(", ") }), l = !!this._busy || this._operationRunning() || this._dirty || this._modeDirty, u = this.activeSetupControls === "modes" || this.activeSetupControls === "profiles" ? this.activeSetupControls : "both", d = u !== "profiles", f = u !== "modes";
 		return T`
       <section class="profile-active-context active-setup-card" aria-label=${this._t("activeSetup")}>
         <div class="active-setup-heading">
@@ -26108,7 +31420,7 @@ var Y = class extends He {
                   ${e.map((e) => T`
                     <span
                       class="active-setup-profile"
-                      style=${`--profile-accent: ${W(e.key, e.color)}`}
+                      style=${`--profile-accent: ${K(e.key, e.color)}`}
                       title=${e.description || e.name}
                     >
                       <ha-icon icon=${e.icon || "mdi:account-outline"}></ha-icon>
@@ -26139,7 +31451,7 @@ var Y = class extends He {
           ${a.length ? T`
               <span class="active-setup-linked-profiles">
                 ${a.map((e) => T`
-                  <span style=${`--profile-accent: ${W(e.key, e.color)}`}>
+                  <span style=${`--profile-accent: ${K(e.key, e.color)}`}>
                     <ha-icon icon=${e.icon || "mdi:account-outline"}></ha-icon>
                     <span>${e.name}</span>
                   </span>
@@ -26155,7 +31467,7 @@ var Y = class extends He {
 		return T`
       <button
         class=${t ? "active-setup-option profile current" : "active-setup-option profile"}
-        style=${`--profile-accent: ${W(e.key, e.color)}`}
+        style=${`--profile-accent: ${K(e.key, e.color)}`}
         type="button"
         data-profile-id=${e.key}
         aria-current=${t ? "true" : E}
@@ -26235,16 +31547,7 @@ var Y = class extends He {
           <ha-icon icon=${e === "default" ? "mdi:calendar-clock-outline" : "mdi:gesture-tap"}></ha-icon>
           <span><strong>${t}</strong></span>
         </div>
-        <button
-          class="mode-help"
-          type="button"
-          aria-label=${this._t("modeInformation", { mode: t })}
-          aria-describedby=${r}
-          @click=${(e) => e.stopPropagation()}
-        >
-          <ha-icon icon="mdi:information-outline"></ha-icon>
-          <span id=${r} class="mode-help-tooltip" role="tooltip">${n}</span>
-        </button>
+        ${G(r, this._t("modeInformation", { mode: t }), n)}
         <ha-icon class="mode-lock" icon="mdi:lock-outline" title=${this._t("modeBuiltInHelp")}></ha-icon>
       </div>
     `;
@@ -26274,7 +31577,7 @@ var Y = class extends He {
             ${t.map(({ profileId: e, profile: t }) => T`
               <span
                 class="mode-profile-avatar"
-                style=${`--mode-profile-color: ${t ? W(e, t.color) : "var(--error-color)"}`}
+                style=${`--mode-profile-color: ${t ? K(e, t.color) : "var(--error-color)"}`}
                 role="img"
                 aria-label=${t ? this._t("modeMappedProfile", { profile: t.name }) : this._t("modeMappedProfileMissing", { profile: e })}
               ><ha-icon icon=${t?.icon || (t ? "mdi:account-outline" : "mdi:alert-outline")}></ha-icon></span>
@@ -26288,7 +31591,7 @@ var Y = class extends He {
     `;
 	}
 	_renderModeEditor() {
-		let e = this.data?.profiles ?? [], t = Cu(this._modeDraft, this.data?.modes ?? [], e);
+		let e = this.data?.profiles ?? [], t = ff(this._modeDraft, this.data?.modes ?? [], e);
 		return T`
       <section class="mode-editor">
         <div class="mode-field mode-name-field">
@@ -26319,7 +31622,7 @@ var Y = class extends He {
               />
               <span
                 class="mode-profile-avatar"
-                style=${`--mode-profile-color: ${W(e.key, e.color)}`}
+                style=${`--mode-profile-color: ${K(e.key, e.color)}`}
               ><ha-icon icon=${e.icon || "mdi:account-outline"}></ha-icon></span>
               <span><strong>${e.name}</strong><code>${e.key}</code></span>
             </label>
@@ -26330,7 +31633,7 @@ var Y = class extends He {
     `;
 	}
 	_renderEditor() {
-		let e = this._draft.icon?.trim() || "mdi:account-outline", t = !this._draft.icon?.trim() || /^mdi:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(e), n = this._draft.color || W(this._draft.key), r = /^#[0-9a-f]{6}$/i.test(n), i = r ? n : W(this._draft.key), a = 500 - (this._draft.description?.length ?? 0), o = a >= 0, s = this._hasScheduleValidationError(), c = this._validationNotices.entries.map((e) => ({
+		let e = this._draft.icon?.trim() || "mdi:account-outline", t = !this._draft.icon?.trim() || /^mdi:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(e), n = this._draft.color || K(this._draft.key), r = /^#[0-9a-f]{6}$/i.test(n), i = r ? n : K(this._draft.key), a = 500 - (this._draft.description?.length ?? 0), o = a >= 0, s = this._hasScheduleValidationError(), c = this._validationNotices.entries.map((e) => ({
 			...e,
 			type: "error"
 		}));
@@ -26367,7 +31670,7 @@ var Y = class extends He {
             </button>
           </div>
         </div>
-        <div class="profile-schedule-error">${us(c)}</div>
+        <div class="profile-schedule-error">${$s(c)}</div>
         <div class="metadata">
           <div class="profile-color-field profile-metadata-row">
             <label for="profile-color-picker">${this._t("profileColor")}</label>
@@ -26456,7 +31759,7 @@ var Y = class extends He {
 	_renderWorkspaceZone() {
 		let e = this._localEntityIds();
 		if (!e.length) return T`<span class="empty">${this._t("noManagedEntities")}</span>`;
-		let t = e.includes(this._selectedEntity) ? this._selectedEntity : e[0], n = this._draft.zones[t], r = uc(n), i = this._zoneScheduleError(t), a = vc(this._draft), o = this._persistedProfileInput();
+		let t = e.includes(this._selectedEntity) ? this._selectedEntity : e[0], n = this._draft.zones[t], r = ou(n), i = this._zoneScheduleError(t), a = mu(this._draft), o = this._persistedProfileInput();
 		return T`
       <section class="schedule-zone-picker profile-workspace-zone-picker">
         <div class="schedule-step-heading"><strong>${this._t("scheduleStepClimate")}</strong></div>
@@ -26529,7 +31832,7 @@ var Y = class extends He {
     `;
 	}
 	_renderZone(e) {
-		let t = this._draft.zones[e], n = uc(t), r = this._zoneScheduleError(e), i = this._expandedZones.has(e), a = `profile-zone-content-${e.replace(/[^a-zA-Z0-9_-]/g, "-")}`, o = this.hass?.states?.[e]?.attributes?.friendly_name ?? e, s = this._t(i ? "profileCollapseClimate" : "profileExpandClimate", { climate: o }), c = () => this._toggleZone(e);
+		let t = this._draft.zones[e], n = ou(t), r = this._zoneScheduleError(e), i = this._expandedZones.has(e), a = `profile-zone-content-${e.replace(/[^a-zA-Z0-9_-]/g, "-")}`, o = this.hass?.states?.[e]?.attributes?.friendly_name ?? e, s = this._t(i ? "profileCollapseClimate" : "profileExpandClimate", { climate: o }), c = () => this._toggleZone(e);
 		return T`
       <article class=${`profile-zone ${i ? "expanded" : "collapsed"} ${r ? "error" : ""}`}>
         <div
@@ -26590,7 +31893,7 @@ var Y = class extends He {
     `;
 	}
 	_renderSchedule(e, t) {
-		let n = Zt(this.data?.settings?.first_weekday ?? k[0]), r = n.includes(this.initialWeekday) ? this.initialWeekday : n[0], i = this._selectedDays[e] ?? r, a = t.schedule[i] ?? [], o = this._externalCapabilities(e), s = new Set([...this._cloneWeekdayTargets[e] ?? []].filter((e) => e !== i)), c = this._localEntityIds().filter((t) => t !== e), l = new Set([...this._cloneClimateTargets[e] ?? []].filter((e) => c.includes(e))), u = this._blockEditorHost(e, i), d = vc(this._draft), f = this._persistedProfileInput(), p = T`<div class="day-tabs">
+		let n = jn(this.data?.settings?.first_weekday ?? k[0]), r = n.includes(this.initialWeekday) ? this.initialWeekday : n[0], i = this._selectedDays[e] ?? r, a = t.schedule[i] ?? [], o = this._externalCapabilities(e), s = new Set([...this._cloneWeekdayTargets[e] ?? []].filter((e) => e !== i)), c = this._localEntityIds().filter((t) => t !== e), l = new Set([...this._cloneClimateTargets[e] ?? []].filter((e) => c.includes(e))), u = this._blockEditorHost(e, i), d = mu(this._draft), f = this._persistedProfileInput(), p = T`<div class="day-tabs">
           ${n.map((n) => {
 			let r = this._profileDayDirty(e, n, d, f), a = M(j(this.hass), n);
 			return T`
@@ -26610,7 +31913,7 @@ var Y = class extends He {
             </button>
           `;
 		})}
-        </div>`, m = Lu(u, e, "template", {
+        </div>`, m = Ef(u, e, "template", {
 			schedule: t.schedule,
 			weekday: i
 		}), h = T`<div class="template-panel">
@@ -26640,10 +31943,10 @@ var Y = class extends He {
             </button>
           </div>`, _ = T`<div class="draft-list profile-block-list">
           ${a.length ? T`
-                ${Vu(u, "template")}
-                ${a.map((t, n) => gu(td("template", `${this._selectedKey}:${e}`, i, n), Uu(u, t, n, "template")))}
-                ${Hu(u, "template")}
-              ` : Hu(u, "template")}
+                ${Af(u, "template")}
+                ${a.map((t, n) => af(Wf("template", `${this._selectedKey}:${e}`, i, n), Mf(u, t, n, "template")))}
+                ${jf(u, "template")}
+              ` : jf(u, "template")}
         </div>`, v = T`<div class="copy-panel profile-day-copy">
           <div class="copy-header">
             <div>
@@ -26651,7 +31954,7 @@ var Y = class extends He {
               <strong>${this._t("otherDays")}</strong>
             </div>
           </div>
-          ${Ou(this._t.bind(this), (t) => this._setCloneDayPreset(e, i, t), s.size > 0)}
+          ${_f(this._t.bind(this), (t) => this._setCloneDayPreset(e, i, t), s.size > 0)}
           <div class="copy-targets">
             ${n.filter((e) => e !== i).map((t) => T`
                 <label class="check-target" title=${M(j(this.hass), t)}>
@@ -26711,13 +32014,13 @@ var Y = class extends He {
         ` : E}`;
 		return T`
       <div class="profile-week">
-        ${Eu({
+        ${hf({
 			dayTabs: p,
 			timeline: m,
 			configureHeading: this._t("scheduleStepConfigure"),
 			helper: this._t("templateOptionalHint"),
 			templatePanel: h,
-			externalUsage: ku(this._t.bind(this), o ? bi(a, o) : void 0),
+			externalUsage: vf(this._t.bind(this), o ? sa(a, o) : void 0),
 			blockList: _,
 			primaryActions: g,
 			copyPanels: v
@@ -26727,18 +32030,18 @@ var Y = class extends He {
 	}
 	async _createProfile() {
 		if (this._dirty && !window.confirm(this._t("profileDiscardChanges"))) return;
-		let e = this.hass ? new P(this.hass) : void 0;
+		let e = this.hass ? new F(this.hass) : void 0;
 		if (!e || this._busy) return;
-		let t = gc(this._t("profileNewName"), this.data?.profiles ?? []);
+		let t = fu(this._t("profileNewName"), this.data?.profiles ?? []);
 		this._busy = "save", this._clearNotices();
 		try {
-			let n = await _u(e, {
-				...ac(),
+			let n = await of(e, {
+				...tu(),
 				name: t
 			});
 			this._emitData(n);
 			let r = n.profiles?.find((e) => e.key === n.profile_id) ?? n.profiles?.find((e) => e.name === t);
-			r && (this._selectedKey = r.key, this._draft = ac(r), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set()), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
+			r && (this._selectedKey = r.key, this._draft = tu(r), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set()), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
 		} catch (e) {
 			this._error = this._errorMessage(e, "profileInvalidSchedule");
 		} finally {
@@ -26746,7 +32049,7 @@ var Y = class extends He {
 		}
 	}
 	_selectProfile(e) {
-		this._dirty && !window.confirm(this._t("profileDiscardChanges")) || (this._selectedKey = e.key, this._draft = ac(e), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices());
+		this._dirty && !window.confirm(this._t("profileDiscardChanges")) || (this._selectedKey = e.key, this._draft = tu(e), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}, this._expandedZones = /* @__PURE__ */ new Set(), this._setDirty(!1), this._clearNotices());
 	}
 	_updateMetadata(e, t) {
 		this._draft = {
@@ -26755,7 +32058,7 @@ var Y = class extends He {
 		}, this._setDirty(!0);
 	}
 	_setZoneBehavior(e, t) {
-		this._isExternalEntity(e) && t === "pause" || (this._draft = dc(this._draft, e, t), this._cloneWeekdayTargets = {
+		this._isExternalEntity(e) && t === "pause" || (this._draft = su(this._draft, e, t), this._cloneWeekdayTargets = {
 			...this._cloneWeekdayTargets,
 			[e]: /* @__PURE__ */ new Set()
 		}, this._cloneClimateTargets = {
@@ -26799,7 +32102,7 @@ var Y = class extends He {
 	_setCloneDayPreset(e, t, n) {
 		this._cloneWeekdayTargets = {
 			...this._cloneWeekdayTargets,
-			[e]: yi(n, t)
+			[e]: oa(n, t)
 		};
 	}
 	_toggleCloneClimateTarget(e, t, n) {
@@ -26817,7 +32120,7 @@ var Y = class extends He {
 				...this._draft.zones,
 				[e]: {
 					...r,
-					schedule: pc(r.schedule, t, n)
+					schedule: lu(r.schedule, t, n)
 				}
 			}
 		}, this._cloneWeekdayTargets = {
@@ -26850,8 +32153,8 @@ var Y = class extends He {
 		}, this._setDirty(!0));
 	}
 	_addBlock(e, t) {
-		let n = this._blocks(e, t), r = ui(n, hc(n), this.data?.temperature_unit), i = this.hass?.states?.[e];
-		!n.length && It(i) && !Ft(i) && (r = r.map((e, t) => t === r.length - 1 ? {
+		let n = this._blocks(e, t), r = Zi(n, du(n), this.data?.temperature_unit), i = this.hass?.states?.[e];
+		!n.length && Xt(i) && !Yt(i) && (r = r.map((e, t) => t === r.length - 1 ? {
 			...e,
 			temperature: void 0,
 			target_temp_low: i?.attributes?.target_temp_low ?? "",
@@ -26859,18 +32162,18 @@ var Y = class extends He {
 		} : e)), this._setBlocks(e, t, r);
 	}
 	_removeBlock(e, t, n) {
-		this._setBlocks(e, t, di(this._blocks(e, t), n));
+		this._setBlocks(e, t, Qi(this._blocks(e, t), n));
 	}
 	_updateBlock(e, t, n, r, i) {
-		let a = this._blocks(e, t), o = a[n], s = fi(a, n, r, i);
+		let a = this._blocks(e, t), o = a[n], s = $i(a, n, r, i);
 		if (o && r === "hvac_mode") {
 			let t = this.hass?.states?.[e];
-			i === "heat_cool" && o.hvac_mode !== "heat_cool" && It(t) && !L(o) ? s = s.map((e, r) => r === n ? {
+			i === "heat_cool" && o.hvac_mode !== "heat_cool" && Xt(t) && !R(o) ? s = s.map((e, r) => r === n ? {
 				...e,
 				temperature: void 0,
 				target_temp_low: t?.attributes?.target_temp_low ?? "",
 				target_temp_high: t?.attributes?.target_temp_high ?? ""
-			} : e) : i !== "" && i !== "heat_cool" && L(o) && (s = s.map((e, r) => r === n ? {
+			} : e) : i !== "" && i !== "heat_cool" && R(o) && (s = s.map((e, r) => r === n ? {
 				...e,
 				target_temp_low: void 0,
 				target_temp_high: void 0,
@@ -26883,7 +32186,7 @@ var Y = class extends He {
 		let r = n.value;
 		if (!r) return;
 		let i = this.data?.templates?.find((e) => e.key === r);
-		i && this._setBlocks(e, t, li(i.blocks, this.data?.temperature_unit)), n.value = "";
+		i && this._setBlocks(e, t, Xi(i.blocks, this.data?.temperature_unit)), n.value = "";
 	}
 	_openTemplateDialog(e, t, n) {
 		this._dialogTrigger = n, this._templateDialog = {
@@ -26912,40 +32215,42 @@ var Y = class extends He {
 	}
 	_cloneCompatibilityError(e, t) {
 		let n = this.hass?.states?.[t], r = n?.attributes?.friendly_name ?? t;
-		for (let i of e) if (i.action !== "turn_off") {
-			if (i.hvac_mode && !Pt(n).includes(i.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", {
+		for (let i of e) {
+			if (i.hvac_mode && !Jt(n).includes(i.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", {
 				entity: r,
 				value: i.hvac_mode,
 				start: i.start
 			});
-			if (!Rt(n, L(i) ? "range" : "scalar", i.hvac_mode)) return this._t("profileCloneDayIncompatibleTarget", {
-				entity: r,
-				start: i.start
-			});
-			if ([
-				[i.fan_mode, zt(n)],
-				[i.preset_mode, Bt(n)],
-				[i.swing_mode, Vt(n)],
-				[i.swing_horizontal_mode, Ht(n)]
-			].some(([e, t]) => e && !t.includes(e))) return this._t("profileCloneDayIncompatibleOptions", {
-				entity: r,
-				start: i.start
-			});
-			if (String(i.humidity ?? "").trim()) {
-				let e = Ut(n), t = Number(i.humidity);
-				if (!e || t < e[0] || t > e[1]) return this._t("profileCloneDayIncompatibleOptions", {
+			if (i.action === "set_temperature") {
+				if (!Qt(n, R(i) ? "range" : "scalar", i.hvac_mode)) return this._t("profileCloneDayIncompatibleTarget", {
+					entity: r,
+					start: i.start
+				});
+				if ([
+					[i.fan_mode, $t(n)],
+					[i.preset_mode, en(n)],
+					[i.swing_mode, tn(n)],
+					[i.swing_horizontal_mode, nn(n)]
+				].some(([e, t]) => e && !t.includes(e))) return this._t("profileCloneDayIncompatibleOptions", {
+					entity: r,
+					start: i.start
+				});
+				if (String(i.humidity ?? "").trim()) {
+					let e = rn(n), t = Number(i.humidity);
+					if (!e || t < e[0] || t > e[1]) return this._t("profileCloneDayIncompatibleOptions", {
+						entity: r,
+						start: i.start
+					});
+				}
+				if (this._temperatureError(t, i)) return this._t("profileCloneDayIncompatibleTemperature", {
 					entity: r,
 					start: i.start
 				});
 			}
-			if (this._temperatureError(t, i)) return this._t("profileCloneDayIncompatibleTemperature", {
-				entity: r,
-				start: i.start
-			});
 		}
 	}
 	_blockEditorHost(e, t) {
-		let n = this.hass?.states?.[e], r = this._externalCapabilities(e), i = jt(n, this.data?.temperature_unit), a = Mt(n), o = {
+		let n = this.hass?.states?.[e], r = this._externalCapabilities(e), i = Wt(n, this.data?.temperature_unit), a = this._entityTemperatureStep(e, n), o = {
 			hass: this.hass,
 			classList: this.classList,
 			renderRoot: this.renderRoot,
@@ -26956,14 +32261,14 @@ var Y = class extends He {
 			_temperatureLimits: () => i,
 			_temperatureStep: () => a,
 			_temperatureUnit: () => this.data?.temperature_unit ?? "°C",
-			_hvacModeOptions: () => r?.supported_hvac_modes ?? Pt(n),
-			_fanModeOptions: () => r && !r.supported_option_fields.includes("fan_mode") ? [] : zt(n),
-			_presetModeOptions: () => r && !r.supported_option_fields.includes("preset_mode") ? [] : Bt(n),
-			_swingModeOptions: () => r && !r.supported_option_fields.includes("swing_mode") ? [] : Vt(n),
-			_swingHorizontalModeOptions: () => r && !r.supported_option_fields.includes("swing_horizontal_mode") ? [] : Ht(n),
-			_humidityLimits: () => r && !r.supported_option_fields.includes("humidity") ? void 0 : Ut(n),
-			_modeLabel: (e) => Et(j(this.hass), "hvacModes", e),
-			_shortWeekdayName: (e) => Tt(j(this.hass), e),
+			_hvacModeOptions: () => r?.supported_hvac_modes ?? Jt(n),
+			_fanModeOptions: () => r && !r.supported_option_fields.includes("fan_mode") ? [] : $t(n),
+			_presetModeOptions: () => r && !r.supported_option_fields.includes("preset_mode") ? [] : en(n),
+			_swingModeOptions: () => r && !r.supported_option_fields.includes("swing_mode") ? [] : tn(n),
+			_swingHorizontalModeOptions: () => r && !r.supported_option_fields.includes("swing_horizontal_mode") ? [] : nn(n),
+			_humidityLimits: () => r && !r.supported_option_fields.includes("humidity") ? void 0 : rn(n),
+			_modeLabel: (e) => Dt(j(this.hass), "hvacModes", e),
+			_shortWeekdayName: (e) => Et(j(this.hass), e),
 			_weekdayName: (e) => M(j(this.hass), e),
 			_updateDraftBlock: (n, r, i) => this._updateBlock(e, t, n, r, i),
 			_removeBlock: (n) => this._removeBlock(e, t, n),
@@ -26971,8 +32276,8 @@ var Y = class extends He {
 			_inputValue: (e) => e.currentTarget.value,
 			_formatTemperatureLimit: (e) => this._formatTemperatureLimit(e),
 			_currentTimelineNow: () => this.timelineNow ?? /* @__PURE__ */ new Date(),
-			_formatScheduleTime: (e) => Ua(e, za(j(this.hass)), this.hass?.locale?.time_format),
-			_formatTemperature: (e) => Ga(e, this.data?.temperature_unit ?? "°C"),
+			_formatScheduleTime: (e) => No(e, ko(j(this.hass)), this.hass?.locale?.time_format),
+			_formatTemperature: (e) => Fo(e, this.data?.temperature_unit ?? "°C"),
 			_blocksForSource: () => this._blocks(e, t),
 			_setBlocksForSource: (n, r) => this._setBlocks(e, t, r)
 		};
@@ -26981,15 +32286,22 @@ var Y = class extends He {
 			a[n] && (a[n] = {
 				...a[n],
 				start: r
-			}, this._setBlocks(e, t, a), i.sort && ga(o, "template"));
-		}, o._sortDraftBlocksByStart = () => ga(o, "template"), o._resizeTimelineBlock = (e, t, n) => ha(o, e, t, n, "template"), o._timelineBlocks = () => _a(o, "template"), o._handleTimelineDragStart = (e, t, n) => sa(o, e, t, n), o._handleTimelineDragOver = (e) => ca(e), o._handleTimelineDrop = (e, t = "template") => la(o, e, t), o._handleTimelineDragEnd = () => da(o), o._handleTimelineResizeStart = (e, t, n, r) => fa(o, e, t, n, r), o._handleTimelineResizeMove = (e) => pa(o, e), o._handleTimelineResizeEnd = (e) => ma(o), o;
+			}, this._setBlocks(e, t, a), i.sort && io(o, "template"));
+		}, o._sortDraftBlocksByStart = () => io(o, "template"), o._resizeTimelineBlock = (e, t, n) => ro(o, e, t, n, "template"), o._timelineBlocks = () => ao(o, "template"), o._handleTimelineDragStart = (e, t, n) => Ya(o, e, t, n), o._handleTimelineDragOver = (e) => Xa(e), o._handleTimelineDrop = (e, t = "template") => Za(o, e, t), o._handleTimelineDragEnd = () => $a(o), o._handleTimelineResizeStart = (e, t, n, r) => eo(o, e, t, n, r), o._handleTimelineResizeMove = (e) => to(o, e), o._handleTimelineResizeEnd = (e) => no(o), o;
 	}
 	_formatTemperatureLimit(e) {
 		return String(Number.isInteger(e) ? e : Number(e.toFixed(2)));
 	}
+	_entityTemperatureStep(e, t = this.hass?.states?.[e]) {
+		let n = Gt(t, this.data?.temperature_unit);
+		if (n !== void 0) return n;
+		let r = this.data?.zones?.[e];
+		for (let e of [r?.last_reported_target_temp_step, r?.target_temp_step_override]) if (typeof e == "number" && Number.isFinite(e) && e >= .001) return e;
+		return 1;
+	}
 	_temperatureError(e, t) {
-		let n = this.hass?.states?.[e], [r, i] = jt(n, this.data?.temperature_unit), a = Mt(n);
-		return pi(t, {
+		let n = this.hass?.states?.[e], [r, i] = Wt(n, this.data?.temperature_unit), a = this._entityTemperatureStep(e, n);
+		return ea(t, {
 			minTemperature: r,
 			maxTemperature: i,
 			temperatureStep: a,
@@ -27002,7 +32314,7 @@ var Y = class extends He {
 		});
 	}
 	_hasScheduleValidationError() {
-		return _c(this._draft) === "schedule" || this._unsupportedScheduleModeError() ? !0 : Object.entries(this._draft.zones).some(([e, t]) => t.behavior === "schedule" && k.some((n) => (t.schedule[n] ?? []).some((t) => !!this._temperatureError(e, t))));
+		return pu(this._draft) === "schedule" || this._unsupportedScheduleModeError() ? !0 : Object.entries(this._draft.zones).some(([e, t]) => t.behavior === "schedule" && k.some((n) => (t.schedule[n] ?? []).some((t) => !!this._temperatureError(e, t))));
 	}
 	_desiredValidationNotices() {
 		if (!this._selectedKey) return [];
@@ -27027,27 +32339,27 @@ var Y = class extends He {
 			if (e && t !== e || n.behavior !== "schedule") continue;
 			let r = this.hass?.states?.[t];
 			for (let e of k) {
-				let i = n.schedule[e] ?? [], a = i.find((e) => L(e) && e.hvac_mode !== void 0 && e.hvac_mode !== "heat_cool");
+				let i = n.schedule[e] ?? [], a = i.find((e) => e.action === "set_temperature" && R(e) && e.hvac_mode !== void 0 && e.hvac_mode !== "heat_cool");
 				if (a?.hvac_mode) return this._t("unsupportedModeForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
-					mode: Et(j(this.hass), "hvacModes", a.hvac_mode),
+					mode: Dt(j(this.hass), "hvacModes", a.hvac_mode),
 					start: a.start,
 					weekday: M(j(this.hass), e)
 				});
-				let o = i.find((e) => L(e) && !Rt(r, "range", e.hvac_mode));
+				let o = i.find((e) => e.action === "set_temperature" && R(e) && !Qt(r, "range", e.hvac_mode));
 				if (o) return this._t("unsupportedRangeTargetForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
 					start: o.start,
 					weekday: M(j(this.hass), e)
 				});
-				let s = gi(i, Pt(r));
+				let s = ra(i, Jt(r));
 				if (s?.hvac_mode) return this._t("unsupportedModeForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
-					mode: Et(j(this.hass), "hvacModes", s.hvac_mode),
+					mode: Dt(j(this.hass), "hvacModes", s.hvac_mode),
 					start: s.start,
 					weekday: M(j(this.hass), e)
 				});
-				let c = i.find((e) => e.action !== "turn_off" && !L(e) && !Rt(r, "scalar", e.hvac_mode));
+				let c = i.find((e) => e.action === "set_temperature" && !R(e) && !Qt(r, "scalar", e.hvac_mode));
 				if (c) return this._t("unsupportedSingleTargetForClimateOnWeekday", {
 					entity: r?.attributes?.friendly_name ?? t,
 					start: c.start,
@@ -27103,13 +32415,13 @@ var Y = class extends He {
 		}
 	}
 	_selectMode(e) {
-		this._discardModeChanges() && (this._selectedModeKey = e.key, this._modeDraft = Su(e), this._modeEditorOpen = !0, this._setModeDirty(!1));
+		this._discardModeChanges() && (this._selectedModeKey = e.key, this._modeDraft = df(e), this._modeEditorOpen = !0, this._setModeDirty(!1));
 	}
 	_discardModeChanges() {
 		return !this._modeDirty || window.confirm(this._t("modeDiscardChanges"));
 	}
 	_clearModeSelection() {
-		this._selectedModeKey = "", this._modeDraft = Su(), this._modeEditorOpen = !1, this._setModeDirty(!1);
+		this._selectedModeKey = "", this._modeDraft = df(), this._modeEditorOpen = !1, this._setModeDirty(!1);
 	}
 	_updateModeDraft(e, t) {
 		this._modeDraft = {
@@ -27125,8 +32437,8 @@ var Y = class extends He {
 		}, this._setModeDirty(!0);
 	}
 	async _saveMode() {
-		let e = this.hass ? new P(this.hass) : void 0;
-		if (!(!e || this._busy || Cu(this._modeDraft, this.data?.modes ?? [], this.data?.profiles ?? []))) {
+		let e = this.hass ? new F(this.hass) : void 0;
+		if (!(!e || this._busy || ff(this._modeDraft, this.data?.modes ?? [], this.data?.profiles ?? []))) {
 			this._busy = "mode-save", this._clearNotices();
 			try {
 				let t = await e.setVelairMode({
@@ -27136,7 +32448,7 @@ var Y = class extends He {
 				});
 				this._emitData(t);
 				let n = this._modeDraft.key ?? t.mode_id, r = t.modes?.find((e) => e.key === n);
-				r && (this._selectedModeKey = r.key, this._modeDraft = Su(r)), this._setModeDirty(!1), this._showSuccess(this._t("modeSaved"));
+				r && (this._selectedModeKey = r.key, this._modeDraft = df(r)), this._setModeDirty(!1), this._showSuccess(this._t("modeSaved"));
 			} catch (e) {
 				this._error = this._errorMessage(e, "modeUnableSave");
 			} finally {
@@ -27145,7 +32457,7 @@ var Y = class extends He {
 		}
 	}
 	async _deleteMode(e) {
-		let t = this.hass ? new P(this.hass) : void 0;
+		let t = this.hass ? new F(this.hass) : void 0;
 		if (!(!t || this._busy || !window.confirm(this._t("modeConfirmDelete", { mode: e.name })))) {
 			this._busy = "mode-delete", this._clearNotices();
 			try {
@@ -27158,12 +32470,12 @@ var Y = class extends He {
 		}
 	}
 	async _activate(e) {
-		let t = this.hass ? new P(this.hass) : void 0;
+		let t = this.hass ? new F(this.hass) : void 0;
 		if (!t || this._busy || this._operationRunning()) return;
 		let n = this.data?.operation_status?.id;
 		this._busy = "activate", this._clearNotices();
 		try {
-			this._emitData(await yu(t, e));
+			this._emitData(await cf(t, e));
 		} catch (e) {
 			let t = this.data?.operation_status;
 			t?.state === "failed" && t.id !== n || (this._error = this._errorMessage(e, "profileUnableActivate"));
@@ -27172,7 +32484,7 @@ var Y = class extends He {
 		}
 	}
 	async _selectActiveMode(e) {
-		let t = this.hass ? new P(this.hass) : void 0;
+		let t = this.hass ? new F(this.hass) : void 0;
 		if (!t || this._busy || this._operationRunning()) return;
 		let n = e === "default" ? { kind: "default" } : e === "manual" ? { kind: "manual" } : e.startsWith("custom:") && e.slice(7) ? {
 			kind: "custom",
@@ -27191,14 +32503,14 @@ var Y = class extends He {
 		}
 	}
 	async _save() {
-		let e = this.hass ? new P(this.hass) : void 0;
+		let e = this.hass ? new F(this.hass) : void 0;
 		if (!(!e || this._busy)) {
 			this._busy = "save", this._clearNotices();
 			try {
-				let t = await _u(e, this._draft);
+				let t = await of(e, this._draft);
 				this._emitData(t);
 				let n = t.profiles?.find((e) => e.key === (this._draft.key ?? t.profile_id)) ?? t.profiles?.find((e) => e.name === this._draft.name.trim());
-				n && (this._selectedKey = n.key, this._draft = ac(n), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
+				n && (this._selectedKey = n.key, this._draft = tu(n), this._selectedDays = {}, this._cloneWeekdayTargets = {}, this._cloneClimateTargets = {}), this._setDirty(!1), this._showSuccess(this._t("profileSaved"));
 			} catch (e) {
 				this._error = e instanceof Error && e.message === "name" ? this._t("profileNameRequired") : e instanceof Error && e.message === "icon" ? this._t("profileInvalidIcon") : e instanceof Error && e.message === "color" ? this._t("profileInvalidColor") : e instanceof Error && e.message === "description" ? this._t("profileDescriptionTooLong", { count: 500 }) : this._errorMessage(e, "profileInvalidSchedule");
 			} finally {
@@ -27207,13 +32519,13 @@ var Y = class extends He {
 		}
 	}
 	async _deleteProfile(e) {
-		let t = this.hass ? new P(this.hass) : void 0;
+		let t = this.hass ? new F(this.hass) : void 0;
 		if (!t || this._busy) return;
 		let n = this.data?.global.active_profile_ids?.includes(e.key) ?? !1;
 		if (window.confirm(this._t(n ? "profileConfirmDeleteActive" : "profileConfirmDelete", { profile: e.name }))) {
 			this._busy = "delete", this._clearNotices();
 			try {
-				this._emitData(await vu(t, e.key)), e.key === this._selectedKey && this._clearSelection(), this._showSuccess(this._t("profileDeleted"));
+				this._emitData(await sf(t, e.key)), e.key === this._selectedKey && this._clearSelection(), this._showSuccess(this._t("profileDeleted"));
 			} catch (e) {
 				this._error = this._errorMessage(e, "profileUnableDelete");
 			} finally {
@@ -27233,10 +32545,10 @@ var Y = class extends He {
 	}
 	_persistedProfileInput() {
 		let e = this.data?.profiles?.find((e) => e.key === this._selectedKey);
-		return e ? vc(ac(e)) : void 0;
+		return e ? mu(tu(e)) : void 0;
 	}
 	_profileZoneSummary(e) {
-		let t = this._draft.zones[e], n = uc(t);
+		let t = this._draft.zones[e], n = ou(t);
 		if (n === "schedule") return this._t("profileBehaviorSchedule");
 		if (n === "pause") {
 			let e = t?.behavior === "pause" && t.action === "turn_off" ? this._t("profilePauseTurnOff") : this._t("profilePauseKeep");
@@ -27244,11 +32556,11 @@ var Y = class extends He {
 		}
 		return this._t("profileBehaviorDefault");
 	}
-	_profileZoneDirty(e, t = vc(this._draft), n = this._persistedProfileInput()) {
+	_profileZoneDirty(e, t = mu(this._draft), n = this._persistedProfileInput()) {
 		let r = t.zones[e] ?? { behavior: "normal" }, i = n?.zones[e] ?? { behavior: "normal" };
 		return this._canonicalJson(r) !== this._canonicalJson(i);
 	}
-	_profileDayDirty(e, t, n = vc(this._draft), r = this._persistedProfileInput()) {
+	_profileDayDirty(e, t, n = mu(this._draft), r = this._persistedProfileInput()) {
 		let i = n.zones[e];
 		if (i?.behavior !== "schedule") return !1;
 		let a = r?.zones[e], o = a?.behavior === "schedule" ? a.schedule[t] ?? [] : [];
@@ -27256,7 +32568,7 @@ var Y = class extends He {
 	}
 	_profileDraftChanged() {
 		let e = this._persistedProfileInput();
-		return e ? this._canonicalJson(vc(this._draft)) !== this._canonicalJson(e) : !1;
+		return e ? this._canonicalJson(mu(this._draft)) !== this._canonicalJson(e) : !1;
 	}
 	_canonicalJson(e) {
 		return JSON.stringify(e, (e, t) => !t || typeof t != "object" || Array.isArray(t) ? t : Object.fromEntries(Object.entries(t).sort(([e], [t]) => e.localeCompare(t))));
@@ -27301,10 +32613,10 @@ var Y = class extends He {
 		return e instanceof Error && e.message && e.message !== "schedule" ? e.message : this._t(t);
 	}
 	_t(e, t = {}) {
-		return wt(j(this.hass), e, t);
+		return Tt(j(this.hass), e, t);
 	}
 	static {
-		this.styles = [Xn, Tu];
+		this.styles = [Kr, mf];
 	}
 };
 J([D({ attribute: !1 })], Y.prototype, "hass", void 0), J([D({ attribute: !1 })], Y.prototype, "data", void 0), J([D({ attribute: "initial-weekday" })], Y.prototype, "initialWeekday", void 0), J([D({ attribute: !1 })], Y.prototype, "timelineNow", void 0), J([D({ type: Boolean })], Y.prototype, "compact", void 0), J([D({ attribute: "active-setup-controls" })], Y.prototype, "activeSetupControls", void 0), J([D({ type: String })], Y.prototype, "workspace", void 0), J([D({
@@ -27313,9 +32625,9 @@ J([D({ attribute: !1 })], Y.prototype, "hass", void 0), J([D({ attribute: !1 })]
 })], Y.prototype, "scheduleWorkspace", void 0), J([O()], Y.prototype, "_selectedKey", void 0), J([O()], Y.prototype, "_draft", void 0), J([O()], Y.prototype, "_selectedDays", void 0), J([O()], Y.prototype, "_cloneWeekdayTargets", void 0), J([O()], Y.prototype, "_cloneClimateTargets", void 0), J([O()], Y.prototype, "_busy", void 0), J([O()], Y.prototype, "_dirty", void 0), J([O()], Y.prototype, "_error", void 0), J([O()], Y.prototype, "_expandedZones", void 0), J([O()], Y.prototype, "_selectedModeKey", void 0), J([O()], Y.prototype, "_modeEditorOpen", void 0), J([O()], Y.prototype, "_modeDraft", void 0), J([O()], Y.prototype, "_modeDirty", void 0), J([O()], Y.prototype, "_activeLibrary", void 0), J([O()], Y.prototype, "_selectedEntity", void 0), J([O()], Y.prototype, "_templateDialog", void 0), J([O()], Y.prototype, "_climateCloneDialog", void 0), customElements.get("velair-profiles-view") || customElements.define("velair-profiles-view", Y);
 //#endregion
 //#region src/velair/views/schedule-view.ts
-function Au(e, t, n, r) {
+function yf(e, t, n, r) {
 	return !e._hasExternalConfig && e._scheduleSource === "profile" ? T`
-      ${ju(e)}
+      ${bf(e)}
       <velair-profiles-view
         workspace="profiles"
         schedule-workspace
@@ -27331,12 +32643,12 @@ function Au(e, t, n, r) {
         @profile-success=${(t) => e._showSuccess(t.detail)}
       ></velair-profiles-view>
     ` : T`
-    ${e._hasExternalConfig ? E : ju(e)}
-    ${Nu(e, t, n)}
-    ${n && r ? Pu(e, n, r) : T`<div class="notice">${e._t("noManagedEntities")}</div>`}
+    ${e._hasExternalConfig ? E : bf(e)}
+    ${Sf(e, t, n)}
+    ${n && r ? Cf(e, n, r) : T`<div class="notice">${e._t("noManagedEntities")}</div>`}
   `;
 }
-function ju(e) {
+function bf(e) {
 	return T`
     <div class="schedule-source-selector" role="group" aria-label=${e._t("scheduleSourceLabel")}>
       <button
@@ -27360,7 +32672,7 @@ function ju(e) {
     </div>
   `;
 }
-function Mu(e, t, n) {
+function xf(e, t, n) {
 	return T`
     <section class="zones">
       ${t.map((t) => T`
@@ -27379,17 +32691,17 @@ function Mu(e, t, n) {
     </section>
   `;
 }
-function Nu(e, t, n) {
+function Sf(e, t, n) {
 	return t.length ? T`
     <section class="schedule-zone-picker">
       <div class="schedule-step-heading">
         <strong>${e._t("scheduleStepClimate")}</strong>
       </div>
-      ${Mu(e, t, n)}
+      ${xf(e, t, n)}
     </section>
   ` : E;
 }
-function Pu(e, t, n) {
+function Cf(e, t, n) {
 	let r = e._hasDraftValidationError("schedule"), i = n.execution?.type === "external", a = i ? e._data?.external_execution?.systems.find((e) => e.provider === n.execution?.provider)?.capabilities : void 0;
 	return T`
     <section class="schedule">
@@ -27405,25 +32717,25 @@ function Pu(e, t, n) {
       ${i ? T`<div class="notice external-execution-notice" role="status">
           <ha-icon icon="mdi:information-outline"></ha-icon>
           <span>${e._t("externalActionsInactive")}</span>
-        </div>` : Fu(e, t, n)}
-      ${Eu({
+        </div>` : wf(e, t, n)}
+      ${hf({
 		dayTabs: T`<div class="day-tabs">
-          ${e._orderedWeekdays().map((t) => Iu(e, t, n.schedule[t] ?? []))}
+          ${e._orderedWeekdays().map((t) => Tf(e, t, n.schedule[t] ?? []))}
         </div>`,
-		timeline: Lu(e, t, "schedule", {
+		timeline: Ef(e, t, "schedule", {
 			schedule: n.schedule,
 			weekday: e._selectedWeekday
 		}),
 		configureHeading: e._t("scheduleStepConfigure"),
 		helper: e._t("templateOptionalHint"),
-		templatePanel: Bu(e),
-		externalUsage: ku(e._t.bind(e), a ? bi(e._draftBlocks, a) : void 0),
+		templatePanel: kf(e),
+		externalUsage: vf(e._t.bind(e), a ? sa(e._draftBlocks, a) : void 0),
 		blockList: T`<div class="draft-list">
           ${e._draftBlocks.length ? T`
-                ${Vu(e, "schedule")}
-                ${e._draftBlocks.map((n, r) => gu(td("schedule", t, e._selectedWeekday, r), Uu(e, n, r, "schedule")))}
-                ${Hu(e, "schedule")}
-              ` : Hu(e, "schedule")}
+                ${Af(e, "schedule")}
+                ${e._draftBlocks.map((n, r) => af(Wf("schedule", t, e._selectedWeekday, r), Mf(e, n, r, "schedule")))}
+                ${jf(e, "schedule")}
+              ` : jf(e, "schedule")}
         </div>`,
 		primaryActions: T`<div class="schedule-save-actions">
           <button
@@ -27448,24 +32760,24 @@ function Pu(e, t, n) {
         </div>`,
 		copyPanels: T`
           <div class="schedule-copy-helper">${e._t("scheduleCopyHint")}</div>
-          ${rd(e)}
-          ${ad(e)}
+          ${Kf(e)}
+          ${Jf(e)}
         `
 	})}
     </section>
   `;
 }
-function Fu(e, t, n) {
+function wf(e, t, n) {
 	let r = n.override ?? e._data?.active_overrides?.[t];
-	if (!Tr(r)) return E;
-	let i = Number(r.temperature), a = Number(r.target_temp_low), o = Number(r.target_temp_high), s = F(r.until), c = typeof r.hvac_mode == "string" ? r.hvac_mode : "";
+	if (!fi(r)) return E;
+	let i = Number(r.temperature), a = Number(r.target_temp_low), o = Number(r.target_temp_high), s = I(r.until), c = typeof r.hvac_mode == "string" ? r.hvac_mode : "";
 	return T`
     <div class="boost-status">
       <ha-icon icon="mdi:lightning-bolt"></ha-icon>
       <div>
         <strong>${e._t("boostActive")}</strong>
         <span>
-          ${Number.isFinite(i) ? T`${e._t("boostTarget")}: ${e._formatTemperature(i, t)}` : Number.isFinite(a) && Number.isFinite(o) ? T`${e._t("boostTarget")}: ${Ju(e, a, o, t)}` : E}
+          ${Number.isFinite(i) ? T`${e._t("boostTarget")}: ${e._formatTemperature(i, t)}` : Number.isFinite(a) && Number.isFinite(o) ? T`${e._t("boostTarget")}: ${Lf(e, a, o, t)}` : E}
           ${c ? T` - ${e._modeLabel(c)}` : E}
           ${s ? T` - ${e._t("boostUntil")}: ${e._formatRemaining(Math.max(0, s - Date.now()))}` : E}
         </span>
@@ -27473,7 +32785,7 @@ function Fu(e, t, n) {
     </div>
   `;
 }
-function Iu(e, t, n) {
+function Tf(e, t, n) {
 	return T`
     <button
       type="button"
@@ -27485,8 +32797,8 @@ function Iu(e, t, n) {
     </button>
   `;
 }
-function Lu(e, t, n = "schedule", r) {
-	let i = e._timelineBlocks(n), a = r ? Mr({
+function Ef(e, t, n = "schedule", r) {
+	let i = e._timelineBlocks(n), a = r ? yi({
 		...r.schedule,
 		[r.weekday]: i.map((e) => e.draft)
 	}, r.weekday) : void 0;
@@ -27500,7 +32812,7 @@ function Lu(e, t, n = "schedule", r) {
           <span>12</span>
           <span>18</span>
           <span>24</span>
-          ${Ru(e)}
+          ${Df(e)}
         </div>
       </div>
       <div
@@ -27509,15 +32821,15 @@ function Lu(e, t, n = "schedule", r) {
         @drop=${(t) => e._handleTimelineDrop(t, n)}
       >
         ${i.length || a ? T`
-              ${a ? Wu(e, a, t) : E}
-              ${i.map((r) => zu(e, r, t, n))}
+              ${a ? Nf(e, a, t) : E}
+              ${i.map((r) => Of(e, r, t, n))}
             ` : T`<span class="empty timeline-empty">${e._t("noBlocks")}</span>`}
       </div>
     </div>
   `;
 }
-function Ru(e) {
-	let t = Or(e._currentTimelineNow());
+function Df(e) {
+	let t = hi(e._currentTimelineNow());
 	return T`
     <div
       class="timeline-now-marker"
@@ -27529,18 +32841,18 @@ function Ru(e) {
     </div>
   `;
 }
-function zu(e, t, n, r = "schedule") {
-	let i = t.draft.action === Je, a = Number(t.draft.temperature), o = Number(t.draft.target_temp_low), s = Number(t.draft.target_temp_high), c = i ? e._t("off") : L(t.draft) && Number.isFinite(o) && Number.isFinite(s) ? Ju(e, o, s, n) : Number.isFinite(a) ? e._formatTemperature(a, n) : e._t("invalidTemperatureRange"), l = e._formatScheduleTime(t.draft.start), u = i ? "" : t.draft.hvac_mode || e._t("keep"), d = ed(e, t.draft), f = d.map((e) => e.short).join(" • "), p = [
-		`${l} - ${c}`,
-		u ? `${e._t("mode")}: ${u}` : "",
-		...d.map((e) => `${e.label}: ${e.value}`)
+function Of(e, t, n, r = "schedule") {
+	let i = t.draft.action === Je, a = t.draft.action === A, o = Number(t.draft.temperature), s = Number(t.draft.target_temp_low), c = Number(t.draft.target_temp_high), l = i ? e._t("off") : a ? e._t("deviceControlled") : R(t.draft) && Number.isFinite(s) && Number.isFinite(c) ? Lf(e, s, c, n) : Number.isFinite(o) ? e._formatTemperature(o, n) : e._t("invalidTemperatureRange"), u = e._formatScheduleTime(t.draft.start), d = i ? "" : t.draft.hvac_mode || e._t("keep"), f = Uf(e, t.draft), p = f.map((e) => e.short).join(" • "), m = [
+		`${u} - ${l}`,
+		d ? `${e._t("mode")}: ${d}` : "",
+		...f.map((e) => `${e.label}: ${e.value}`)
 	].filter(Boolean).join("\n");
 	return T`
     <div
       class=${[
 		"timeline-block",
 		i ? "off" : "",
-		`mode-${zr(t.draft)}`,
+		`mode-${Ei(t.draft)}`,
 		t.width < 5 ? "compact" : "",
 		t.width < 2.5 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
@@ -27548,7 +32860,7 @@ function zu(e, t, n, r = "schedule") {
       role="button"
       style=${`left: ${t.left}%; width: ${t.width}%;`}
       tabindex="0"
-      title=${p}
+      title=${m}
       @dragstart=${(n) => e._handleTimelineDragStart(t.index, r, n)}
       @dragend=${e._handleTimelineDragEnd}
     >
@@ -27559,9 +32871,9 @@ function zu(e, t, n, r = "schedule") {
         @pointerdown=${(n) => e._handleTimelineResizeStart(t.index, "start", r, n)}
         @dragstart=${(e) => e.preventDefault()}
       ></div>
-      <strong>${l}</strong>
-      <span>${c}</span>
-      ${u || f ? T`<small>${[u, f].filter(Boolean).join(" • ")}</small>` : E}
+      <strong>${u}</strong>
+      <span>${l}</span>
+      ${d || p ? T`<small>${[d, p].filter(Boolean).join(" • ")}</small>` : E}
       ${t.nextIndex === void 0 ? E : T`
             <div
               class="timeline-resize-handle right"
@@ -27574,7 +32886,7 @@ function zu(e, t, n, r = "schedule") {
     </div>
   `;
 }
-function Bu(e) {
+function kf(e) {
 	let t = e._scheduleTemplates();
 	return T`
     <div class="template-panel">
@@ -27599,7 +32911,7 @@ function Bu(e) {
     </div>
   `;
 }
-function Vu(e, t = "schedule") {
+function Af(e, t = "schedule") {
 	let n = e._temperatureUnit?.(t === "schedule" ? e._selectedEntity : void 0) ?? "°C";
 	return T`
     <div class="draft-list-header" aria-hidden="true">
@@ -27611,7 +32923,7 @@ function Vu(e, t = "schedule") {
     </div>
   `;
 }
-function Hu(e, t = "schedule") {
+function jf(e, t = "schedule") {
 	return T`
     <div class="draft-add-row">
       <button
@@ -27626,10 +32938,10 @@ function Hu(e, t = "schedule") {
     </div>
   `;
 }
-function Uu(e, t, n, r = "schedule") {
-	let i = (t.action || "set_temperature") === Je, a = i ? "off" : t.hvac_mode ?? "", o = e._temperatureError(t, r), s = L(t), [c, l] = e._temperatureLimits(r), u = e._temperatureStep(r), d = Nt(c, u), f = e._temperatureUnit?.(r === "schedule" ? e._selectedEntity : void 0) ?? "°C", p = e._hvacModeOptions(r), m = a && !p.includes(a) ? [...p, a] : p, h = e._fanModeOptions(r), g = e._presetModeOptions(r), _ = e._swingModeOptions(r), v = e._swingHorizontalModeOptions(r), y = e._humidityLimits(r), b = !i && (h.length > 0 || g.length > 0 || _.length > 0 || v.length > 0 || !!y), x = ed(e, t), S = x.length > 0, C = b || S, ee = S ? x.map((e) => e.short).join(" • ") : e._t("climateOptionsAdd");
+function Mf(e, t, n, r = "schedule") {
+	let i = t.action || "set_temperature", a = i === Je, o = i === A, s = a ? "off" : t.hvac_mode ?? "", c = e._temperatureError(t, r), l = R(t), [u, d] = e._temperatureLimits(r), f = e._temperatureStep(r), p = Kt(u, f), m = e._temperatureUnit?.(r === "schedule" ? e._selectedEntity : void 0) ?? "°C", h = e._hvacModeOptions(r), g = s && !h.includes(s) ? [...h, s] : h, _ = e._fanModeOptions(r), v = e._presetModeOptions(r), y = e._swingModeOptions(r), b = e._swingHorizontalModeOptions(r), x = e._humidityLimits(r), S = i === "set_temperature" && (_.length > 0 || v.length > 0 || y.length > 0 || b.length > 0 || !!x), C = Uf(e, t), w = C.length > 0, ee = S || w, te = w ? C.map((e) => e.short).join(" • ") : e._t("climateOptionsAdd");
 	return T`
-    <div class=${o ? "editable-block invalid" : "editable-block"}>
+    <div class=${c ? "editable-block invalid" : "editable-block"}>
       <label>
         <span class="label">${e._t("start")}</span>
         <input
@@ -27641,52 +32953,52 @@ function Uu(e, t, n, r = "schedule") {
       <label>
         <span class="label">${e._t("mode")}</span>
         <span class="select-wrap">
-          ${gu(nd(r, n, a, m), T`
+          ${af(Gf(r, n, s, g), T`
               <select
-                value=${a}
-                .value=${a}
+                value=${s}
+                .value=${s}
                 @change=${(t) => e._updateDraftBlock(n, "hvac_mode", e._inputValue(t), r)}
                 @input=${(t) => e._updateDraftBlock(n, "hvac_mode", e._inputValue(t), r)}
               >
-                <option value="" .selected=${a === ""}>${e._t("keep")}</option>
-                ${m.map((t) => T`
-                  <option value=${t} .selected=${t === a}>${e._modeLabel(t)}</option>
+                <option value="" .selected=${s === ""}>${e._t("keep")}</option>
+                ${g.map((t) => T`
+                  <option value=${t} .selected=${t === s}>${e._modeLabel(t)}</option>
                 `)}
               </select>
             `)}
         </span>
       </label>
-      ${s ? Ku(e, t, n, r, d, l, u, i, o, f) : Gu(e, t, n, r, "temperature", "temp", f, d, l, u, i, o)}
-      ${C ? T`
-            <details class="advanced-climate-options" @toggle=${Zu}>
+      ${l ? Ff(e, t, n, r, p, d, f, a || o, c, m, s !== "", o) : Pf(e, t, n, r, "temperature", "temp", m, p, d, f, a || o, c, s !== "", o)}
+      ${ee ? T`
+            <details class="advanced-climate-options" @toggle=${Bf}>
               <summary
                 class="icon-button climate-options-toggle"
-                title=${x.map((e) => `${e.label}: ${e.value}`).join("\n") || e._t("climateOptions")}
+                title=${C.map((e) => `${e.label}: ${e.value}`).join("\n") || e._t("climateOptions")}
                 aria-label=${e._t("climateOptions")}
-                @click=${Yu}
+                @click=${Rf}
               >
                 <ha-icon icon="mdi:tune-variant"></ha-icon>
-                ${S ? T`<span class="climate-options-badge">${x.length}</span>` : E}
+                ${w ? T`<span class="climate-options-badge">${C.length}</span>` : E}
               </summary>
               <button
                 class="climate-options-scrim"
                 type="button"
                 aria-label=${e._t("dismiss")}
-                @click=${Xu}
+                @click=${zf}
               ></button>
               <fieldset class="advanced-climate-options-fields">
                 <legend>${e._t("climateOptions")}</legend>
-                ${$u(e, t, n, r, "fan_mode", "fanMode", h)}
-                ${$u(e, t, n, r, "preset_mode", "presetMode", g)}
-                ${$u(e, t, n, r, "swing_mode", "swingMode", _)}
-                ${$u(e, t, n, r, "swing_horizontal_mode", "horizontalSwingMode", v)}
-                ${y || String(t.humidity ?? "").trim() ? T`
+                ${Hf(e, t, n, r, "fan_mode", "fanMode", _)}
+                ${Hf(e, t, n, r, "preset_mode", "presetMode", v)}
+                ${Hf(e, t, n, r, "swing_mode", "swingMode", y)}
+                ${Hf(e, t, n, r, "swing_horizontal_mode", "horizontalSwingMode", b)}
+                ${x || String(t.humidity ?? "").trim() ? T`
                       <label>
                         <span class="label">${e._t("targetHumidity")}</span>
                         <input
                           type="number"
-                          min=${String(y?.[0] ?? 0)}
-                          max=${String(y?.[1] ?? 100)}
+                          min=${String(x?.[0] ?? 0)}
+                          max=${String(x?.[1] ?? 100)}
                           step="1"
                           placeholder=${e._t("notSet")}
                           .value=${String(t.humidity ?? "")}
@@ -27706,25 +33018,25 @@ function Uu(e, t, n, r = "schedule") {
       >
         <ha-icon icon="mdi:trash-can"></ha-icon>
       </button>
-      ${S ? T`
+      ${w ? T`
             <small
               class="climate-options-inline-summary"
-              title=${x.map((e) => `${e.label}: ${e.value}`).join("\n")}
+              title=${C.map((e) => `${e.label}: ${e.value}`).join("\n")}
             >
-              ${ee}
+              ${te}
             </small>
           ` : E}
     </div>
   `;
 }
-function Wu(e, t, n) {
-	let r = t.block, i = r.action === Je, a = Number(r.temperature), o = Number(r.target_temp_low), s = Number(r.target_temp_high), c = i ? e._t("off") : L(r) && Number.isFinite(o) && Number.isFinite(s) ? Ju(e, o, s, n) : Number.isFinite(a) ? e._formatTemperature(a, n) : e._t("invalidTemperatureRange"), l = i ? "" : r.hvac_mode || e._t("keep"), u = e._t("timelineContinuesFrom", {
+function Nf(e, t, n) {
+	let r = t.block, i = r.action === Je, a = r.action === A, o = Number(r.temperature), s = Number(r.target_temp_low), c = Number(r.target_temp_high), l = i ? e._t("off") : a ? e._t("deviceControlled") : R(r) && Number.isFinite(s) && Number.isFinite(c) ? Lf(e, s, c, n) : Number.isFinite(o) ? e._formatTemperature(o, n) : e._t("invalidTemperatureRange"), u = i ? "" : r.hvac_mode || e._t("keep"), d = e._t("timelineContinuesFrom", {
 		day: e._shortWeekdayName(t.sourceWeekday),
 		time: e._formatScheduleTime(r.start)
-	}), d = [
-		u,
-		c,
-		l ? `${e._t("mode")}: ${l}` : ""
+	}), f = [
+		d,
+		l,
+		u ? `${e._t("mode")}: ${u}` : ""
 	].filter(Boolean).join(" - ");
 	return T`
     <div
@@ -27732,54 +33044,82 @@ function Wu(e, t, n) {
 		"timeline-block",
 		"timeline-carry-over",
 		i ? "off" : "",
-		`mode-${zr(r)}`,
+		`mode-${Ei(r)}`,
 		t.width < 5 ? "compact" : "",
 		t.width < 2.5 ? "tiny" : ""
 	].filter(Boolean).join(" ")}
       draggable="false"
       role="img"
       style=${`left: 0%; width: ${t.width}%;`}
-      title=${d}
-      aria-label=${d}
+      title=${f}
+      aria-label=${f}
     >
-      <strong>${u}</strong>
-      <span>${c}</span>
-      ${l ? T`<small>${l}</small>` : E}
+      <strong>${d}</strong>
+      <span>${l}</span>
+      ${u ? T`<small>${u}</small>` : E}
     </div>
   `;
 }
-function Gu(e, t, n, r, i, a, o, s, c, l, u, d) {
+function Pf(e, t, n, r, i, a, o, s, c, l, u, d, f = !1, p = !1) {
+	let m = `velair-${r}-${n}-${i}`;
 	return T`
-    <label class=${i === "temperature" ? "single-temperature-field" : "range-temperature-field"}>
-      <span class="label">${e._t(a)} (${o})</span>
+    <div class=${i === "temperature" ? "single-temperature-field target-action-field" : "range-temperature-field"}>
+      <label class="label" for=${m}>${e._t(a)} (${o})</label>
       <input
+        id=${m}
         class=${d ? "invalid" : ""}
         type="number"
         min=${String(s)}
         max=${String(c)}
         step=${l === void 0 ? "any" : String(l)}
         ?disabled=${u}
-        placeholder=${u ? e._t("off") : ""}
+        placeholder=${p ? "—" : u ? e._t("off") : ""}
         .value=${u ? "" : String(t[i] ?? "")}
         @input=${(t) => e._updateDraftBlock(n, i, e._inputValue(t), r)}
         @change=${(t) => e._updateDraftBlock(n, i, e._inputValue(t), r)}
       />
+      ${i === "temperature" && (!u || p) ? T`
+            <button
+              class=${p ? "target-action-toggle device-controlled" : "target-action-toggle"}
+              type="button"
+              ?disabled=${!p && !f}
+              title=${p ? e._t("restoreTemperatureTarget") : f ? e._t("useDeviceControlledTarget") : e._t("chooseModeForDeviceControlled")}
+              aria-label=${e._t("includeTargetTemperature")}
+              aria-pressed=${String(!p)}
+              @click=${() => e._updateDraftBlock(n, "action", p ? qe : A, r)}
+            >
+              <ha-icon icon=${p ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
+            </button>
+          ` : E}
       ${i === "temperature" && d ? T`<small class="field-error">${d}</small>` : E}
-    </label>
+    </div>
   `;
 }
-function Ku(e, t, n, r, i, a, o, s, c, l = "°C") {
+function Ff(e, t, n, r, i, a, o, s, c, l = "°C", u = !1, d = !1) {
 	return T`
-    <div class="temperature-range-fields" role="group" aria-label=${e._t("temperatureRange")}>
+    <div class="temperature-range-fields target-action-range" role="group" aria-label=${e._t("temperatureRange")}>
       <div class=${c ? "temperature-range-control invalid" : "temperature-range-control"}>
-        ${qu(e, t, n, r, "target_temp_low", "minimumShort", "heatBelow", i, a, o, s, l)}
-        ${qu(e, t, n, r, "target_temp_high", "maximumShort", "coolAbove", i, a, o, s, l)}
+        ${If(e, t, n, r, "target_temp_low", "minimumShort", "heatBelow", i, a, o, s, l, d)}
+        ${If(e, t, n, r, "target_temp_high", "maximumShort", "coolAbove", i, a, o, s, l, d)}
       </div>
+      ${!s || d ? T`
+            <button
+              class=${d ? "target-action-toggle device-controlled" : "target-action-toggle"}
+              type="button"
+              ?disabled=${!d && !u}
+              title=${d ? e._t("restoreTemperatureTarget") : u ? e._t("useDeviceControlledTarget") : e._t("chooseModeForDeviceControlled")}
+              aria-label=${e._t("includeTargetTemperature")}
+              aria-pressed=${String(!d)}
+              @click=${() => e._updateDraftBlock(n, "action", d ? qe : A, r)}
+            >
+              <ha-icon icon=${d ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
+            </button>
+          ` : E}
       ${c ? T`<small class="field-error range-error">${c}</small>` : E}
     </div>
   `;
 }
-function qu(e, t, n, r, i, a, o, s, c, l, u, d) {
+function If(e, t, n, r, i, a, o, s, c, l, u, d, f = !1) {
 	return T`
     <label class="range-temperature-field">
       <span class="range-input-label" aria-hidden="true">${e._t(a)}</span>
@@ -27790,7 +33130,7 @@ function qu(e, t, n, r, i, a, o, s, c, l, u, d) {
         max=${String(c)}
         step=${l === void 0 ? "any" : String(l)}
         ?disabled=${u}
-        placeholder=${u ? e._t("off") : ""}
+        placeholder=${f ? "—" : u ? e._t("off") : ""}
         aria-label=${`${e._t(o)} (${d})`}
         .value=${u ? "" : String(t[i] ?? "")}
         @input=${(t) => e._updateDraftBlock(n, i, e._inputValue(t), r)}
@@ -27799,10 +33139,10 @@ function qu(e, t, n, r, i, a, o, s, c, l, u, d) {
     </label>
   `;
 }
-function Ju(e, t, n, r) {
+function Lf(e, t, n, r) {
 	return `${e._formatTemperature(t, r).replace(/\s+[^\s]+$/, "")}–${e._formatTemperature(n, r)}`;
 }
-function Yu(e) {
+function Rf(e) {
 	let t = e.currentTarget;
 	if (!(t instanceof HTMLElement)) return;
 	let n = t.closest("details"), r = t.getRootNode();
@@ -27810,24 +33150,24 @@ function Yu(e) {
 		e !== n && (e.open = !1);
 	});
 }
-function Xu(e) {
+function zf(e) {
 	e.preventDefault();
 	let t = e.currentTarget;
 	if (!(t instanceof HTMLElement)) return;
 	let n = t.closest("details");
 	n instanceof HTMLDetailsElement && (n.open = !1);
 }
-function Zu(e) {
+function Bf(e) {
 	let t = e.currentTarget;
 	if (!(t instanceof HTMLDetailsElement) || !t.open) return;
 	let n = t.querySelector("summary");
-	n instanceof HTMLElement && Qu(n, t);
+	n instanceof HTMLElement && Vf(n, t);
 }
-function Qu(e, t) {
+function Vf(e, t) {
 	let n = e.getBoundingClientRect(), r = window.innerWidth || document.documentElement.clientWidth || 0, i = window.innerHeight || document.documentElement.clientHeight || 0, a = Math.max(280, Math.min(420, r - 32)), o = n.left + n.width / 2 - a / 2, s = Math.max(16, Math.min(o, r - a - 16)), c = Math.max(0, i - n.bottom - 8 - 16), l = Math.max(0, n.top - 8 - 16), u = l > c && c < 260, d = Math.max(180, u ? l : c), f = u ? n.top - 8 : n.bottom + 8;
 	t.style.setProperty("--climate-options-left", `${Math.round(s)}px`), t.style.setProperty("--climate-options-top", `${Math.round(f)}px`), t.style.setProperty("--climate-options-width", `${Math.round(a)}px`), t.style.setProperty("--climate-options-max-height", `${Math.round(d)}px`), t.style.setProperty("--climate-options-translate-y", u ? "-100%" : "0");
 }
-function $u(e, t, n, r, i, a, o) {
+function Hf(e, t, n, r, i, a, o) {
 	let s = String(t[i] ?? ""), c = s && !o.includes(s) ? [...o, s] : o;
 	return !c.length && !s ? E : T`
     <label>
@@ -27847,7 +33187,7 @@ function $u(e, t, n, r, i, a, o) {
     </label>
   `;
 }
-function ed(e, t) {
+function Uf(e, t) {
 	let n = [], r = (t, r) => {
 		if (typeof r != "string" || !r.trim()) return;
 		let i = e._t(t);
@@ -27867,7 +33207,7 @@ function ed(e, t) {
 	}
 	return n;
 }
-function td(e, t, n, r) {
+function Wf(e, t, n, r) {
 	return [
 		e,
 		t ?? "",
@@ -27875,7 +33215,7 @@ function td(e, t, n, r) {
 		r
 	].join(":");
 }
-function nd(e, t, n, r) {
+function Gf(e, t, n, r) {
 	return [
 		e,
 		t,
@@ -27883,7 +33223,7 @@ function nd(e, t, n, r) {
 		r.join(",")
 	].join(":");
 }
-function rd(e) {
+function Kf(e) {
 	let t = e._orderedWeekdays();
 	return T`
     <div class="copy-panel">
@@ -27893,9 +33233,9 @@ function rd(e) {
           <strong>${e._t("otherDays")}</strong>
         </div>
       </div>
-      ${Ou(e._t.bind(e), (t) => e._setCopyTargetPreset(t), e._copyTargets.size > 0)}
+      ${_f(e._t.bind(e), (t) => e._setCopyTargetPreset(t), e._copyTargets.size > 0)}
       <div class="copy-targets">
-        ${t.map((t) => id(e, t))}
+        ${t.map((t) => qf(e, t))}
       </div>
       <div class="copy-actions">
         <button
@@ -27911,7 +33251,7 @@ function rd(e) {
     </div>
   `;
 }
-function id(e, t) {
+function qf(e, t) {
 	return t === e._selectedWeekday ? T`
       <span class="check-target disabled" title=${e._weekdayName(t)}>
         <span>${e._shortWeekdayName(t)}</span>
@@ -27927,7 +33267,7 @@ function id(e, t) {
     </label>
   `;
 }
-function ad(e) {
+function Jf(e) {
 	let t = e._visibleZoneIds(e._data?.configured_entities ?? []).filter((t) => t !== e._selectedEntity);
 	return t.length ? T`
     <div class="copy-panel">
@@ -27965,7 +33305,7 @@ function ad(e) {
 }
 //#endregion
 //#region src/velair/views/sensors-view.ts
-var od = {
+var Yf = {
 	appliedHigh: "var(--sensor-scale-applied-color)",
 	appliedLow: "var(--sensor-scale-applied-color)",
 	climate: "var(--secondary-text-color)",
@@ -27974,7 +33314,7 @@ var od = {
 	scheduledHigh: "var(--sensor-scale-scheduled-color)",
 	scheduledLow: "var(--sensor-scale-scheduled-color)",
 	target: "var(--sensor-scale-scheduled-color)"
-}, sd = {
+}, Xf = {
 	target: 0,
 	scheduledLow: 0,
 	scheduledHigh: 1,
@@ -27983,13 +33323,13 @@ var od = {
 	appliedLow: 3,
 	appliedHigh: 4,
 	climate: 5
-}, cd = 1.25, ld = 22, ud = 10, dd = 24, fd = {
+}, Zf = 1.25, Qf = 22, $f = 10, ep = 24, tp = {
 	roomSensorAssist: "roomSensorAssistHelp",
 	roomSensorAssistDeadband: "roomSensorAssistDeadbandHelp",
 	roomSensorAssistMaxDelta: "roomSensorAssistMaxDeltaHelp",
 	roomSensorAssistDebounce: "roomSensorAssistDebounceHelp",
 	roomSensorTemperatureEntity: "roomSensorTemperatureEntityHelp"
-}, pd = {
+}, np = {
 	showAssistSwitch: !0,
 	showDeadband: !0,
 	showDebounce: !0,
@@ -27997,8 +33337,8 @@ var od = {
 	showMaxDelta: !0,
 	showRoomSensor: !0
 };
-function md(e, t, n = {}) {
-	let r = hd(n);
+function rp(e, t, n = {}) {
+	let r = ip(n);
 	return T`
     <section class="sensors-view">
       <header class="sensors-intro">
@@ -28008,17 +33348,17 @@ function md(e, t, n = {}) {
           <small>${e._t("roomSensorIntroDetail")}</small>
         </span>
       </header>
-      ${t.length ? t.map((t) => gd(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+      ${t.length ? t.map((t) => ap(e, t, r)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
     </section>
   `;
 }
-function hd(e) {
+function ip(e) {
 	return {
-		...pd,
+		...np,
 		...e
 	};
 }
-function gd(e, t, n) {
+function ap(e, t, n) {
 	if (e._data?.zones[t]?.execution?.type === "external") return T`
       <section class="sensor-zone disabled">
         <header class="sensor-zone-heading">
@@ -28032,7 +33372,7 @@ function gd(e, t, n) {
         </div>
       </section>
     `;
-	let r = e._entityExists(t), i = Ul(e._data?.zones[t]?.preconditioning, e._temperatureUnit(t)), a = e._data?.room_sensor_assist?.[t], o = r && e._expandedPreconditioningZones.has(t), s = `sensor-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "roomSensorCollapseClimate" : "roomSensorExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("roomSensorUnavailable"), l = r && !!i.room_temperature_entity_id;
+	let r = e._entityExists(t), i = Ad(e._data?.zones[t]?.preconditioning, e._temperatureUnit(t)), a = e._data?.room_sensor_assist?.[t], o = r && e._expandedPreconditioningZones.has(t), s = `sensor-zone-content-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}`, c = r ? e._t(o ? "roomSensorCollapseClimate" : "roomSensorExpandClimate", { climate: e._friendlyEntityName(t) }) : e._t("roomSensorUnavailable"), l = r && !!i.room_temperature_entity_id;
 	return T`
     <section class=${`sensor-zone ${i.room_sensor_assist_enabled ? "enabled" : "disabled"} ${o ? "expanded" : "collapsed"}`}>
       <header class="sensor-zone-heading" @click=${(n) => {
@@ -28079,28 +33419,28 @@ function gd(e, t, n) {
       </header>
       ${r && o ? T`
             <div id=${s} class="sensor-zone-content">
-              ${_d(e, t, i, n)}
-              ${n.showLiveStatus && i.room_temperature_entity_id && !i.room_sensor_assist_enabled ? vd(e) : E}
-              ${n.showLiveStatus && i.room_temperature_entity_id && i.room_sensor_assist_enabled ? yd(e, t, a, i, n.showDeadband) : E}
+              ${op(e, t, i, n)}
+              ${n.showLiveStatus && i.room_temperature_entity_id && !i.room_sensor_assist_enabled ? sp(e) : E}
+              ${n.showLiveStatus && i.room_temperature_entity_id && i.room_sensor_assist_enabled ? cp(e, t, a, i, n.showDeadband) : E}
             </div>
           ` : E}
     </section>
   `;
 }
-function _d(e, t, n, r) {
+function op(e, t, n, r) {
 	return !r.showRoomSensor && !r.showDeadband && !r.showMaxDelta && !r.showDebounce ? E : T`
     <section class="sensor-config-section">
       <h3><ha-icon icon="mdi:tune-variant"></ha-icon>${e._t("roomSensorAssist")}</h3>
       <div class="sensor-config-rows">
-        ${r.showRoomSensor ? Bd(e, t, n.room_temperature_entity_id ?? "") : E}
-        ${r.showDeadband ? Vd(e, t, "roomSensorAssistDeadband", "room_sensor_assist_deadband", n.room_sensor_assist_deadband, 0, hr(e._temperatureUnit(t), 5), .1, e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
-        ${r.showMaxDelta ? Vd(e, t, "roomSensorAssistMaxDelta", "room_sensor_assist_max_delta", n.room_sensor_assist_max_delta, Ud(e._temperatureUnit(t)), Hd(e._temperatureUnit(t)), Ud(e._temperatureUnit(t)), e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
-        ${r.showDebounce ? Vd(e, t, "roomSensorAssistDebounce", "room_sensor_assist_debounce_seconds", n.room_sensor_assist_debounce_seconds, 0, 300, 1, e._t("secondsShort"), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
+        ${r.showRoomSensor ? Ap(e, t, n.room_temperature_entity_id ?? "") : E}
+        ${r.showDeadband ? jp(e, t, "roomSensorAssistDeadband", "room_sensor_assist_deadband", n.room_sensor_assist_deadband, 0, It(e._temperatureUnit(t), 5), .1, e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
+        ${r.showMaxDelta ? jp(e, t, "roomSensorAssistMaxDelta", "room_sensor_assist_max_delta", n.room_sensor_assist_max_delta, Np(e._temperatureUnit(t)), Mp(e._temperatureUnit(t)), Np(e._temperatureUnit(t)), e._temperatureUnit(t), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
+        ${r.showDebounce ? jp(e, t, "roomSensorAssistDebounce", "room_sensor_assist_debounce_seconds", n.room_sensor_assist_debounce_seconds, 0, 300, 1, e._t("secondsShort"), { inactive: !n.room_temperature_entity_id || !n.room_sensor_assist_enabled }) : E}
       </div>
     </section>
   `;
 }
-function vd(e) {
+function sp(e) {
 	return T`
     <section class="sensor-runtime-section sensor-inactive-section">
       <h3>
@@ -28111,9 +33451,9 @@ function vd(e) {
     </section>
   `;
 }
-function yd(e, t, n, r, i = !0) {
+function cp(e, t, n, r, i = !0) {
 	if (!n) return E;
-	let a = r?.room_sensor_assist_deadband ?? 0, o = i ? jc(n, a) : void 0, s = Xd(e, t, n, o), c = Ic(n) && !!n.start;
+	let a = r?.room_sensor_assist_deadband ?? 0, o = i ? Du(n, a) : void 0, s = Bp(e, t, n, o), c = Nu(n) && !!n.start;
 	return T`
     <section class="sensor-runtime-section">
       <h3 class="sensor-runtime-heading">
@@ -28121,26 +33461,31 @@ function yd(e, t, n, r, i = !0) {
           <ha-icon icon="mdi:pulse"></ha-icon>
           ${e._t("roomSensorLiveStatus")}
         </span>
-        ${bd(e, n)}
+        ${up(e, n)}
       </h3>
       <div class="sensor-status-card">
-        ${c ? Sd(e, t, n) : xd(e)}
-        ${c ? wd(e, t, n) : E}
-        ${c ? Td(e, t, n) : E}
-        ${c && s.markers.length ? Cd(e, t, s, n, o, a) : E}
+        ${c ? fp(e, t, n) : dp(e)}
+        ${c ? mp(e, t, n) : E}
+        ${c ? hp(e, t, n) : E}
+        ${c && s.markers.length ? pp(e, t, s, n, o, a) : E}
       </div>
     </section>
   `;
 }
-function bd(e, t) {
+function lp(e, t, n, r) {
+	if (!n || !Nu(n) || !n.start) return E;
+	let i = r?.room_sensor_assist_deadband ?? 0, a = Du(n, i), o = Bp(e, t, n, a);
+	return o.markers.length ? pp(e, t, o, n, a, i) : E;
+}
+function up(e, t) {
 	let n = t?.status ?? "not_configured";
 	return T`
     <span class=${`sensor-status-pill ${n}`}>
-      ${e._t(of(n))}
+      ${e._t(Yp(n))}
     </span>
   `;
 }
-function xd(e) {
+function dp(e) {
 	return T`
     <div class="sensor-idle-state">
       <ha-icon icon="mdi:clock-outline"></ha-icon>
@@ -28148,8 +33493,8 @@ function xd(e) {
     </div>
   `;
 }
-function Sd(e, t, n) {
-	let r = n.start ? e._formatScheduleTime(n.start) : "", i = af(e, n.active_from), a = !!(n.target_when && n.active_from), o = G(n), s = typeof n.target_temperature == "number" ? e._formatTemperature(n.target_temperature, t) : o ? $d(e, t, o.low, o.high) : e._t("roomSensorValueUnavailable"), c = n.hvac_mode ? e._modeLabel(n.hvac_mode) : e._t("roomSensorValueUnavailable"), l = typeof n.hysteresis_target == "number" ? e._formatTemperature(n.hysteresis_target, t) : "", u = n.hysteresis_phase === "towards_lower" ? "roomSensorHysteresisTowardsLower" : n.hysteresis_phase === "towards_upper" ? "roomSensorHysteresisTowardsUpper" : void 0;
+function fp(e, t, n) {
+	let r = n.start ? e._formatScheduleTime(n.start) : "", i = Jp(e, n.active_from), a = !!(n.target_when && n.active_from), o = Au(n), s = typeof n.target_temperature == "number" ? e._formatTemperature(n.target_temperature, t) : o ? Up(e, t, o.low, o.high) : e._t("roomSensorValueUnavailable"), c = n.hvac_mode ? e._modeLabel(n.hvac_mode) : e._t("roomSensorValueUnavailable"), l = typeof n.hysteresis_target == "number" ? e._formatTemperature(n.hysteresis_target, t) : "", u = n.hysteresis_phase === "towards_lower" ? "roomSensorHysteresisTowardsLower" : n.hysteresis_phase === "towards_upper" ? "roomSensorHysteresisTowardsUpper" : void 0;
 	return T`
     <div class="sensor-block-summary">
       ${a ? T`
@@ -28190,11 +33535,11 @@ function Sd(e, t, n) {
     </div>
   `;
 }
-function Cd(e, t, n, r, i, a = 0) {
-	let { markers: o } = n, s = r.hvac_mode ? `mode-${At(r.hvac_mode)}` : "mode-keep", c = Gd(e, t, o, r), l = Kd(e, t, o, r), u = Ed(e, t, o, r), d = u.length === 2, f = Od(o), p = d ? ef(o.filter((e) => !Dd(e.key))) : o, m = i && a > 0 ? {
-		left: Zd(i.low, n),
-		width: Zd(i.high, n) - Zd(i.low, n)
-	} : void 0, h = r.hysteresis_phase === "towards_lower" ? " towards-lower" : r.hysteresis_phase === "towards_upper" ? " towards-upper" : "", g = r.hysteresis_phase === "towards_lower" || r.hysteresis_phase === "towards_upper", _ = G(r) !== void 0, v = r.hvac_mode === "heat" || r.hvac_mode === "cool", y = !_ && (r.hvac_mode === "auto" || r.hvac_mode === "heat_cool"), b = Jd(e, t, a), x = i ? a === 0 ? e._t("roomSensorDeadbandZoneZero", { value: b }) : _ ? e._t("roomSensorDeadbandZoneRange", { value: b }) : g || v ? e._t("roomSensorDeadbandZoneSingle", { value: b }) : y ? e._t("roomSensorDeadbandZoneAutomatic", { value: b }) : e._t("roomSensorDeadbandZoneGeneric", { value: b }) : "", S = i ? _ || g || v ? e._t("roomSensorDeadbandZoneHelp") : y ? e._t("roomSensorDeadbandZoneHelpAutomatic") : e._t("roomSensorDeadbandZoneHelpGeneric") : "", C = i && a > 0 ? $d(e, t, i.low, i.high) : "", ee = C ? `${x}. ${C}. ${S}` : `${x}. ${S}`;
+function pp(e, t, n, r, i, a = 0) {
+	let { markers: o } = n, s = r.hvac_mode ? `mode-${Ut(r.hvac_mode)}` : "mode-keep", c = Fp(e, t, o, r), l = Ip(e, t, o, r), u = gp(e, t, o, r), d = u.length === 2, f = vp(o), p = d ? Wp(o.filter((e) => !_p(e.key))) : o, m = i && a > 0 ? {
+		left: Vp(i.low, n),
+		width: Vp(i.high, n) - Vp(i.low, n)
+	} : void 0, h = r.hysteresis_phase === "towards_lower" ? " towards-lower" : r.hysteresis_phase === "towards_upper" ? " towards-upper" : "", g = r.hysteresis_phase === "towards_lower" || r.hysteresis_phase === "towards_upper", _ = Au(r) !== void 0, v = r.hvac_mode === "heat" || r.hvac_mode === "cool", y = !_ && (r.hvac_mode === "auto" || r.hvac_mode === "heat_cool"), b = Rp(e, t, a), x = i ? a === 0 ? e._t("roomSensorDeadbandZoneZero", { value: b }) : _ ? e._t("roomSensorDeadbandZoneRange", { value: b }) : g || v ? e._t("roomSensorDeadbandZoneSingle", { value: b }) : y ? e._t("roomSensorDeadbandZoneAutomatic", { value: b }) : e._t("roomSensorDeadbandZoneGeneric", { value: b }) : "", S = i ? _ || g || v ? e._t("roomSensorDeadbandZoneHelp") : y ? e._t("roomSensorDeadbandZoneHelpAutomatic") : e._t("roomSensorDeadbandZoneHelpGeneric") : "", C = i && a > 0 ? Up(e, t, i.low, i.high) : "", w = C ? `${x}. ${C}. ${S}` : `${x}. ${S}`;
 	return T`
     <div class=${`sensor-temperature-scale ${s} ${d ? "has-range" : ""}`}>
       <div
@@ -28234,10 +33579,10 @@ function Cd(e, t, n, r, i, a = 0) {
             ` : E}
         ${f.map((e) => T`
             <span
-              class=${Ad(e)}
-              style=${Md(e)}
+              class=${bp(e)}
+              style=${Sp(e)}
               role="img"
-              aria-label=${Fd(e)}
+              aria-label=${Tp(e)}
             >
               <span class=${`sensor-scale-dot ${e.markers.length > 1 ? "segmented" : ""}`}></span>
             </span>
@@ -28258,16 +33603,16 @@ function Cd(e, t, n, r, i, a = 0) {
           `)}
         ${p.map((n) => T`
             <span
-              class=${`sensor-scale-callout-marker marker-${n.key} marker-${jd(n.key)} lane-${n.lane} ${Id(n)} ${n.shifted ? "shifted" : ""}`}
+              class=${`sensor-scale-callout-marker marker-${n.key} marker-${xp(n.key)} lane-${n.lane} ${Ep(n)} ${n.shifted ? "shifted" : ""}`}
               style=${`--callout-left: ${n.calloutPosition.toFixed(2)}%;`}
             >
-              ${Ld(e, t, n, r)}
+              ${Dp(e, t, n, r)}
             </span>
           `)}
       </div>
       <div class="sensor-scale-bounds">
-        <span>${Wd(e, t, n.lowerBound)}</span>
-        <span>${Wd(e, t, n.upperBound)}</span>
+        <span>${Pp(e, t, n.lowerBound)}</span>
+        <span>${Pp(e, t, n.upperBound)}</span>
       </div>
       ${i && m ? T`
             <div class="sensor-scale-deadband-legend-track">
@@ -28279,7 +33624,7 @@ function Cd(e, t, n, r, i, a = 0) {
                   <div
                     class="sensor-scale-deadband-legend"
                     role="note"
-                    aria-label=${ee}
+                    aria-label=${w}
                     title=${S}
                   >
                     <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
@@ -28294,7 +33639,7 @@ function Cd(e, t, n, r, i, a = 0) {
             <div
               class="sensor-scale-deadband-legend is-zero"
               role="note"
-              aria-label=${ee}
+              aria-label=${w}
               title=${S}
             >
               <span class="sensor-scale-deadband-swatch" aria-hidden="true"></span>
@@ -28304,9 +33649,9 @@ function Cd(e, t, n, r, i, a = 0) {
     </div>
   `;
 }
-function wd(e, t, n) {
+function mp(e, t, n) {
 	if (!n.limited_by || typeof n.limit_temperature != "number") return E;
-	let r = n.requested_target_temp_low != null && n.requested_target_temp_high != null ? $d(e, t, n.requested_target_temp_low, n.requested_target_temp_high) : void 0, i = n.applied_target_temp_low != null && n.applied_target_temp_high != null ? $d(e, t, n.applied_target_temp_low, n.applied_target_temp_high) : void 0, a = r ?? Wd(e, t, n.requested_temperature), o = i ?? Wd(e, t, n.applied_temperature), s = e._formatTemperature(n.limit_temperature, t), c = n.limited_by === "maximum" ? "roomSensorLimitMaximumTitle" : "roomSensorLimitMinimumTitle", l = n.limited_by === "maximum" ? "roomSensorLimitMaximumDetail" : "roomSensorLimitMinimumDetail";
+	let r = n.requested_target_temp_low != null && n.requested_target_temp_high != null ? Up(e, t, n.requested_target_temp_low, n.requested_target_temp_high) : void 0, i = n.applied_target_temp_low != null && n.applied_target_temp_high != null ? Up(e, t, n.applied_target_temp_low, n.applied_target_temp_high) : void 0, a = r ?? Pp(e, t, n.requested_temperature), o = i ?? Pp(e, t, n.applied_temperature), s = e._formatTemperature(n.limit_temperature, t), c = n.limited_by === "maximum" ? "roomSensorLimitMaximumTitle" : "roomSensorLimitMinimumTitle", l = n.limited_by === "maximum" ? "roomSensorLimitMaximumDetail" : "roomSensorLimitMinimumDetail";
 	return T`
     <div class="sensor-limit-warning" role="status">
       <ha-icon icon="mdi:alert-outline"></ha-icon>
@@ -28321,7 +33666,7 @@ function wd(e, t, n) {
     </div>
   `;
 }
-function Td(e, t, n) {
+function hp(e, t, n) {
 	if (!n.scheduled_target_guard || typeof n.calculated_temperature != "number" || typeof n.applied_temperature != "number") return E;
 	let r = e._formatTemperature(n.calculated_temperature, t), i = e._formatTemperature(n.applied_temperature, t), a = n.scheduled_target_guard === "cooling_floor" ? "roomSensorScheduledGuardCoolingDetail" : "roomSensorScheduledGuardHeatingDetail";
 	return T`
@@ -28337,33 +33682,33 @@ function Td(e, t, n) {
     </div>
   `;
 }
-function Ed(e, t, n, r) {
-	let i = G(r), a = Pc(r);
+function gp(e, t, n, r) {
+	let i = Au(r), a = ju(r);
 	if (!i || !a) return [];
 	let o = n.find((e) => e.key === "scheduledLow"), s = n.find((e) => e.key === "scheduledHigh"), c = n.find((e) => e.key === "appliedLow"), l = n.find((e) => e.key === "appliedHigh");
 	return !o || !s || !c || !l ? [] : [{
 		kind: "scheduled",
 		label: e._t("roomSensorScheduledRange"),
-		formatted: $d(e, t, i.low, i.high),
+		formatted: Up(e, t, i.low, i.high),
 		left: Math.min(o.position, s.position),
 		width: Math.abs(s.position - o.position)
 	}, {
 		kind: "applied",
 		label: e._t("roomSensorAppliedRange"),
-		formatted: $d(e, t, a.low, a.high),
+		formatted: Up(e, t, a.low, a.high),
 		left: Math.min(c.position, l.position),
 		width: Math.abs(l.position - c.position)
 	}];
 }
-function Dd(e) {
+function _p(e) {
 	return e === "scheduledLow" || e === "scheduledHigh" || e === "appliedLow" || e === "appliedHigh";
 }
-function Od(e) {
-	let t = [...e].sort((e, t) => e.position - t.position || sd[e.key] - sd[t.key]), n = [];
+function vp(e) {
+	let t = [...e].sort((e, t) => e.position - t.position || Xf[e.key] - Xf[t.key]), n = [];
 	for (let e of t) {
 		let t = n[n.length - 1];
-		if (t && Math.abs(e.position - t.position) <= cd) {
-			t.markers = [...t.markers, e].sort((e, t) => sd[e.key] - sd[t.key]), t.position = kd(t.markers);
+		if (t && Math.abs(e.position - t.position) <= Zf) {
+			t.markers = [...t.markers, e].sort((e, t) => Xf[e.key] - Xf[t.key]), t.position = yp(t.markers);
 			continue;
 		}
 		n.push({
@@ -28373,42 +33718,42 @@ function Od(e) {
 	}
 	return n;
 }
-function kd(e) {
+function yp(e) {
 	return e.reduce((e, t) => e + t.position, 0) / e.length;
 }
-function Ad(e) {
+function bp(e) {
 	return [
 		"sensor-scale-marker",
 		`count-${e.markers.length}`,
 		...e.markers.map((e) => `marker-${e.key}`),
-		...new Set(e.markers.map((e) => `marker-${jd(e.key)}`))
+		...new Set(e.markers.map((e) => `marker-${xp(e.key)}`))
 	].join(" ");
 }
-function jd(e) {
+function xp(e) {
 	return e === "scheduledLow" || e === "scheduledHigh" ? "target" : e === "appliedLow" || e === "appliedHigh" ? "climateTarget" : e;
 }
-function Md(e) {
+function Sp(e) {
 	let t = [`left: ${e.position.toFixed(2)}%;`];
-	return e.markers.length > 1 && t.push(`--sensor-scale-dot-segments: ${Nd(e.markers)};`), t.join(" ");
+	return e.markers.length > 1 && t.push(`--sensor-scale-dot-segments: ${Cp(e.markers)};`), t.join(" ");
 }
-function Nd(e) {
-	let t = [...e].sort((e, t) => t.calloutPosition - e.calloutPosition || e.lane - t.lane || sd[e.key] - sd[t.key]), n = 360 / t.length;
+function Cp(e) {
+	let t = [...e].sort((e, t) => t.calloutPosition - e.calloutPosition || e.lane - t.lane || Xf[e.key] - Xf[t.key]), n = 360 / t.length;
 	return `conic-gradient(${t.map((e, t) => {
-		let r = Pd(t * n), i = Pd((t + 1) * n);
-		return `${od[e.key]} ${r}deg ${i}deg`;
+		let r = wp(t * n), i = wp((t + 1) * n);
+		return `${Yf[e.key]} ${r}deg ${i}deg`;
 	}).join(", ")})`;
 }
-function Pd(e) {
+function wp(e) {
 	return Math.round(e * 100) / 100;
 }
-function Fd(e) {
+function Tp(e) {
 	return e.markers.map((e) => `${e.label}: ${e.formatted}`).join(", ");
 }
-function Id(e) {
-	return e.calloutPosition <= ud ? "edge-left" : e.calloutPosition >= 100 - ud ? "edge-right" : "";
+function Ep(e) {
+	return e.calloutPosition <= $f ? "edge-left" : e.calloutPosition >= 100 - $f ? "edge-right" : "";
 }
-function Ld(e, t, n, r) {
-	let i = Nc(r), a = Fc(r), o = Qd(r, "applied"), s = n.key === "climateTarget" ? i : n.key === o ? a : null, c = typeof s == "number" ? Yd(e, t, s) : "", l = o && n.key === o ? e._t("roomSensorRangeShiftHelp") : n.key === "climateTarget" ? Rd(e, t, r) : e._t("roomSensorAssistOffsetHelp"), u = !!c || n.key === "climateTarget", d = `room-assist-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-${n.key}-help`;
+function Dp(e, t, n, r) {
+	let i = ku(r), a = Mu(r), o = Hp(r, "applied"), s = n.key === "climateTarget" ? i : n.key === o ? a : null, c = typeof s == "number" ? zp(e, t, s) : "", l = o && n.key === o ? e._t("roomSensorRangeShiftHelp") : n.key === "climateTarget" ? Op(e, t, r) : e._t("roomSensorAssistOffsetHelp"), u = !!c || n.key === "climateTarget", d = `room-assist-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-${n.key}-help`;
 	return T`
     <span class=${c ? "sensor-scale-callout has-offset" : "sensor-scale-callout"}>
       <small>${n.label}</small>
@@ -28417,14 +33762,14 @@ function Ld(e, t, n, r) {
         ${u ? T`
               <span class=${c ? "sensor-scale-offset" : "sensor-scale-offset help-only"}>
                 ${c ? T`<span>${c}</span>` : E}
-                ${Jc(d, l, l, { compact: !0 })}
+                ${G(d, l, l)}
               </span>
             ` : E}
       </span>
     </span>
   `;
 }
-function Rd(e, t, n) {
+function Op(e, t, n) {
 	let r = n.applied_temperature, i = (n.status === "assisting" || n.status === "holding") && typeof r == "number", a = e._t(i ? "roomSensorClimateTargetAppliedHelp" : "roomSensorClimateTargetHelp");
 	return !i || typeof r != "number" || typeof n.pre_step_temperature != "number" || typeof n.target_temp_step != "number" ? a : `${a} ${e._t("roomSensorClimateTargetStepHelp", {
 		calculated: e._formatTemperature(n.pre_step_temperature, t),
@@ -28432,8 +33777,8 @@ function Rd(e, t, n) {
 		applied: e._formatTemperature(r, t)
 	})}`;
 }
-function zd(e, t, n = {}) {
-	let r = fd[t], i = r ? e._t(r) : "";
+function kp(e, t, n = {}) {
+	let r = tp[t], i = r ? e._t(r) : "";
 	return r && n.persistentHelp ? T`
       <span class="sensor-config-label sensor-config-label-stacked">
         <span>${e._t(t)}</span>
@@ -28442,27 +33787,15 @@ function zd(e, t, n = {}) {
     ` : T`
     <span class="label sensor-config-label">
       <span>${e._t(t)}</span>
-      ${r ? T`
-            <span
-              class="sensor-help"
-              tabindex="0"
-              aria-label=${i}
-              @click=${(e) => {
-		e.preventDefault(), e.stopPropagation();
-	}}
-            >
-              <ha-icon icon="mdi:information-outline"></ha-icon>
-              <span class="sensor-help-tooltip" role="tooltip">${i}</span>
-            </span>
-          ` : E}
+      ${r ? G(n.helpId ?? `sensor-${t}-help`, i, i) : E}
     </span>
   `;
 }
-function Bd(e, t, n) {
-	let r = e._settingsSaving, i = Hl(e.hass, n);
+function Ap(e, t, n) {
+	let r = e._settingsSaving, i = kd(e.hass, n);
 	return T`
     <label class="sensor-config-row sensor-picker-row">
-      ${zd(e, "roomSensorTemperatureEntity")}
+      ${kp(e, "roomSensorTemperatureEntity", { helpId: `room-sensor-${t.replace(/[^a-zA-Z0-9_-]/g, "-")}-temperature-entity-help` })}
       <span class="select-wrap">
         <select
           .value=${n}
@@ -28490,11 +33823,14 @@ function Bd(e, t, n) {
     </label>
   `;
 }
-function Vd(e, t, n, r, i, a, o, s, c, l = {}) {
-	let u = e._settingsSaving || !!l.inactive, d = r === "room_sensor_assist_deadband" || r === "room_sensor_assist_max_delta";
+function jp(e, t, n, r, i, a, o, s, c, l = {}) {
+	let u = e._settingsSaving || !!l.inactive, d = r === "room_sensor_assist_deadband" || r === "room_sensor_assist_max_delta", f = t.replace(/[^a-zA-Z0-9_-]/g, "-");
 	return T`
     <label class=${`sensor-config-row ${l.inactive ? "inactive" : ""}`}>
-      ${zd(e, n, { persistentHelp: d })}
+      ${kp(e, n, {
+		helpId: `room-sensor-${f}-${r}-help`,
+		persistentHelp: d
+	})}
       <span class="sensor-number-input">
         <input
           type="number"
@@ -28507,7 +33843,7 @@ function Vd(e, t, n, r, i, a, o, s, c, l = {}) {
 		if (u) return;
 		let c = n.currentTarget.value.trim(), l = Number(c);
 		if (r === "room_sensor_assist_deadband") {
-			if (c === "" || !Number.isFinite(l) || l < a || l > o || Math.abs(l / s - Math.round(l / s)) > 1e-6) {
+			if (c === "" || !Number.isFinite(l) || l < a || l > o || !qt(l, a, s, 1e-6)) {
 				n.currentTarget.value = String(i);
 				return;
 			}
@@ -28523,21 +33859,21 @@ function Vd(e, t, n, r, i, a, o, s, c, l = {}) {
     </label>
   `;
 }
-function Hd(e) {
-	return hr(e, 10);
+function Mp(e) {
+	return It(e, 10);
 }
-function Ud(e) {
+function Np(e) {
 	return .1;
 }
-function Wd(e, t, n) {
+function Pp(e, t, n) {
 	return typeof n == "number" ? e._formatTemperature(n, t) : e._t("roomSensorValueUnavailable");
 }
-function Gd(e, t, n, r) {
-	let i = n.find((e) => e.key === "room"), a = G(r), o = a && i ? i.value < a.low ? "scheduledLow" : i.value > a.high ? "scheduledHigh" : void 0 : "target", s = n.find((e) => e.key === o);
+function Fp(e, t, n, r) {
+	let i = n.find((e) => e.key === "room"), a = Au(r), o = a && i ? i.value < a.low ? "scheduledLow" : i.value > a.high ? "scheduledHigh" : void 0 : "target", s = n.find((e) => e.key === o);
 	if (!s || !i) return null;
 	let c = Math.abs(s.value - i.value);
 	if (c < (e._temperatureUnit(t).toUpperCase().includes("F") ? .1 : .05)) return null;
-	let l = Jd(e, t, c), u = i.value < s.value ? "below" : "above";
+	let l = Rp(e, t, c), u = i.value < s.value ? "below" : "above";
 	return {
 		label: e._t(u === "below" ? "roomSensorGapBelowTarget" : "roomSensorGapAboveTarget", { value: l }),
 		left: Math.min(s.position, i.position),
@@ -28545,10 +33881,10 @@ function Gd(e, t, n, r) {
 		width: Math.abs(s.position - i.position)
 	};
 }
-function Kd(e, t, n, r) {
-	let i = Fc(r), a = i === void 0 ? void 0 : qd(n, "scheduledLow", "scheduledHigh"), o = i === void 0 ? void 0 : qd(n, "appliedLow", "appliedHigh"), s = n.find((e) => e.key === "climate"), c = n.find((e) => e.key === "climateTarget"), l = i ?? Nc(r), u = i === void 0 ? s?.position : a, d = i === void 0 ? c?.position : o;
+function Ip(e, t, n, r) {
+	let i = Mu(r), a = i === void 0 ? void 0 : Lp(n, "scheduledLow", "scheduledHigh"), o = i === void 0 ? void 0 : Lp(n, "appliedLow", "appliedHigh"), s = n.find((e) => e.key === "climate"), c = n.find((e) => e.key === "climateTarget"), l = i ?? ku(r), u = i === void 0 ? s?.position : a, d = i === void 0 ? c?.position : o;
 	if (u === void 0 || d === void 0 || l === void 0) return null;
-	let f = e._temperatureUnit(t).toUpperCase().includes("F") ? .1 : .05, p = Math.abs(l) >= f ? "active" : "holding", m = Yd(e, t, l);
+	let f = e._temperatureUnit(t).toUpperCase().includes("F") ? .1 : .05, p = Math.abs(l) >= f ? "active" : "holding", m = zp(e, t, l);
 	return {
 		label: i === void 0 ? p === "active" ? e._t("roomSensorAssistCorrectionValue", { value: m }) : e._t("roomSensorAssistNoCorrection") : e._t("roomSensorRangeShiftValue", { value: m }),
 		left: Math.min(u, d),
@@ -28557,19 +33893,19 @@ function Kd(e, t, n, r) {
 		width: Math.abs(u - d)
 	};
 }
-function qd(e, t, n) {
+function Lp(e, t, n) {
 	let r = e.find((e) => e.key === t), i = e.find((e) => e.key === n);
 	return r && i ? (r.position + i.position) / 2 : void 0;
 }
-function Jd(e, t, n) {
+function Rp(e, t, n) {
 	return e._formatTemperature(Math.abs(n), t);
 }
-function Yd(e, t, n) {
-	let r = Jd(e, t, n);
+function zp(e, t, n) {
+	let r = Rp(e, t, n);
 	return n > 0 ? `+${r}` : n < 0 ? `-${r}` : r;
 }
-function Xd(e, t, n, r) {
-	let i = G(n), a = Pc(n), o = i ? void 0 : n.status === "assisting" || n.status === "holding" ? n.applied_temperature ?? n.climate_target_temperature : n.climate_target_temperature ?? n.applied_temperature, s = [
+function Bp(e, t, n, r) {
+	let i = Au(n), a = ju(n), o = i ? void 0 : n.status === "assisting" || n.status === "holding" ? n.applied_temperature ?? n.climate_target_temperature : n.climate_target_temperature ?? n.applied_temperature, s = [
 		{
 			key: "target",
 			label: e._t("roomSensorScheduledTarget"),
@@ -28619,7 +33955,7 @@ function Xd(e, t, n, r) {
 	let c = [...s.map((e) => e.value), ...r ? [r.low, r.high] : []], l = Math.min(...c), u = Math.max(...c), d = e._temperatureUnit(t).toUpperCase().includes("F") ? 2 : 1, f = u - l, p = Math.max(f, d), m = (l + u) / 2, h = m - p * .58, g = m + p * .58, _ = g - h;
 	return {
 		lowerBound: h,
-		markers: ef(s.map((n) => ({
+		markers: Wp(s.map((n) => ({
 			...n,
 			calloutPosition: 0,
 			formatted: e._formatTemperature(n.value, t),
@@ -28630,38 +33966,38 @@ function Xd(e, t, n, r) {
 		upperBound: g
 	};
 }
-function Zd(e, t) {
+function Vp(e, t) {
 	let n = t.upperBound - t.lowerBound;
-	return n <= 0 ? 50 : rf((e - t.lowerBound) / n * 100, 0, 100);
+	return n <= 0 ? 50 : qp((e - t.lowerBound) / n * 100, 0, 100);
 }
-function Qd(e, t) {
-	let n = G(e);
+function Hp(e, t) {
+	let n = Au(e);
 	if (!n) return;
 	let r = typeof e.room_temperature == "number" ? e.room_temperature : void 0;
 	return `${t}${e.direction === "cool" || r !== void 0 && r > n.high ? "High" : "Low"}`;
 }
-function $d(e, t, n, r) {
+function Up(e, t, n, r) {
 	return `${e._formatTemperature(n, t).replace(/\s+[^\s]+$/, "")}–${e._formatTemperature(r, t)}`;
 }
-function ef(e) {
+function Wp(e) {
 	let t = [...e].sort((e, t) => e.position - t.position), n = /* @__PURE__ */ new Map(), r = [], i = [], a = () => {
 		i.length && (r.push(i), i = []);
 	};
 	for (let e of t) {
 		let t = i[i.length - 1];
-		t && e.position - t.position > ld && a(), i.push(e);
+		t && e.position - t.position > Qf && a(), i.push(e);
 	}
 	a();
 	for (let e = 0; e < r.length - 1;) {
-		let t = tf(r[e]), n = tf(r[e + 1]), i = t[t.length - 1];
-		if (n[0] - i < dd) {
+		let t = Gp(r[e]), n = Gp(r[e + 1]), i = t[t.length - 1];
+		if (n[0] - i < ep) {
 			r.splice(e, 2, [...r[e], ...r[e + 1]]), e = Math.max(0, e - 1);
 			continue;
 		}
 		e += 1;
 	}
 	for (let e of r) {
-		let t = tf(e);
+		let t = Gp(e);
 		e.forEach((e, r) => {
 			let i = t[r] ?? e.position;
 			n.set(e.key, {
@@ -28680,26 +34016,26 @@ function ef(e) {
 		}
 	}));
 }
-function tf(e) {
+function Gp(e) {
 	let t = e.reduce((e, t) => e + t.position, 0) / e.length;
-	return nf(e.length, t);
+	return Kp(e.length, t);
 }
-function nf(e, t) {
-	if (e <= 1) return [rf(t, ud, 100 - ud)];
-	let n = Math.min(dd, (100 - 2 * ud) / (e - 1)), r = (e - 1) * n, i = t - r / 2, a = ud, o = 100 - ud;
-	return i < a ? i = a : i + r > o && (i = o - r), Array.from({ length: e }, (e, t) => rf(i + t * n, a, o));
+function Kp(e, t) {
+	if (e <= 1) return [qp(t, $f, 100 - $f)];
+	let n = Math.min(ep, (100 - 2 * $f) / (e - 1)), r = (e - 1) * n, i = t - r / 2, a = $f, o = 100 - $f;
+	return i < a ? i = a : i + r > o && (i = o - r), Array.from({ length: e }, (e, t) => qp(i + t * n, a, o));
 }
-function rf(e, t, n) {
+function qp(e, t, n) {
 	return Math.min(n, Math.max(t, e));
 }
-function af(e, t) {
+function Jp(e, t) {
 	if (!t) return "";
 	let n = new Date(t);
 	if (Number.isNaN(n.getTime())) return t;
 	let r = `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
 	return e._formatScheduleTime(r);
 }
-function of(e) {
+function Yp(e) {
 	return {
 		assisting: "roomSensorStatusAssisting",
 		blocked: "roomSensorStatusBlocked",
@@ -28713,11 +34049,11 @@ function of(e) {
 }
 //#endregion
 //#region src/velair/views/settings-view.ts
-function sf(e, t) {
+function Xp(e, t) {
 	let n = e._firstWeekday(), r = !!e._data?.settings?.apply_active_schedule_on_startup;
 	return T`
     <section class="settings-view">
-      ${df(e)}
+      ${em(e)}
 
       <label class="settings-field">
         <span class="label">${e._t("firstWeekday")}</span>
@@ -28749,9 +34085,9 @@ function sf(e, t) {
         ></ha-switch>
       </section>
 
-      ${cf(e)}
+      ${Zp(e)}
 
-      ${mf(e)}
+      ${rm(e)}
 
       <section class="settings-zone-order">
         <div class="section-heading">
@@ -28762,15 +34098,15 @@ function sf(e, t) {
           </div>
         </div>
         <div class="settings-zone-list">
-          ${t.length ? t.map((n, r) => gf(e, n, r, t.length)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
+          ${t.length ? t.map((n, r) => am(e, n, r, t.length)) : T`<span class="empty">${e._t("noManagedEntities")}</span>`}
         </div>
       </section>
 
-      ${ff(e)}
+      ${tm(e)}
     </section>
   `;
 }
-function cf(e) {
+function Zp(e) {
 	let t = e._data?.external_execution;
 	if (!t || !t.systems.length && !Object.keys(t.zones).length) return E;
 	let n = /* @__PURE__ */ new Map();
@@ -28781,7 +34117,7 @@ function cf(e) {
 			name: e.name
 		}), n.set(t, r);
 	}
-	let r = Array.from(new Set([...n.keys(), ...Object.keys(t.zones)])), i = new Map(t.systems.map((e) => [e.provider, e])), a = uf(t);
+	let r = Array.from(new Set([...n.keys(), ...Object.keys(t.zones)])), i = new Map(t.systems.map((e) => [e.provider, e])), a = $p(t);
 	return T`
     <section class="settings-startup external-systems-settings">
       <ha-icon class="settings-startup-icon" icon="mdi:calendar-export"></ha-icon>
@@ -28832,9 +34168,9 @@ function cf(e) {
                 ${t.capabilities ? T`
                   <ul>
                     ${t.capabilities.supports_profile_schedules ? T`<li>${e._t("externalConditionProfilesSupported")}</li>` : E}
-                    <li>${e._t("externalConditionHvacModes", { modes: lf(e, "hvac", t.capabilities.supported_hvac_modes) })}</li>
-                    <li>${e._t("externalConditionTargetTypes", { types: lf(e, "target", t.capabilities.supported_target_types) })}</li>
-                    <li>${e._t("externalConditionActions", { actions: lf(e, "action", t.capabilities.supported_actions) })}</li>
+                    <li>${e._t("externalConditionHvacModes", { modes: Qp(e, "hvac", t.capabilities.supported_hvac_modes) })}</li>
+                    <li>${e._t("externalConditionTargetTypes", { types: Qp(e, "target", t.capabilities.supported_target_types) })}</li>
+                    <li>${e._t("externalConditionActions", { actions: Qp(e, "action", t.capabilities.supported_actions) })}</li>
                     ${t.capabilities.supported_actions.includes("turn_off") ? E : T`<li>${e._t("externalConditionTurnOffUnsupported")}</li>`}
                     <li>${t.capabilities.supported_option_fields.length ? e._t("externalConditionOptionFields", { fields: t.capabilities.supported_option_fields.join(", ") }) : e._t("externalConditionOptionsUnsupported")}</li>
                     <li>${e._t("externalConditionMaxChanges", { count: t.capabilities.max_switchpoints_per_day })}</li>
@@ -28851,13 +34187,13 @@ function cf(e) {
     </section>
   `;
 }
-function lf(e, t, n) {
+function Qp(e, t, n) {
 	return n.map((n) => {
 		let r = `externalCapability_${t}_${n}`, i = e._t(r);
 		return i === r ? n.replaceAll("_", " ") : i;
 	}).join(", ");
 }
-function uf(e) {
+function $p(e) {
 	let t = new Map(e.systems.map((e) => [e.provider, e]));
 	return Array.from(new Set(Object.values(e.zones).map((e) => e.provider))).map((e) => t.get(e) ?? {
 		provider: e,
@@ -28865,7 +34201,7 @@ function uf(e) {
 		capabilities: null
 	});
 }
-function df(e) {
+function em(e) {
 	let t = !!e._data?.temperature_migration?.required, n = e._data?.home_assistant_temperature_unit ?? e._temperatureUnit(), r = e._data?.temperature_migration, i = r?.reason === "legacy_celsius_upgrade_reset_required", a = r?.source_unit, o = r?.target_unit ?? n;
 	return T`
     <section class=${t ? "settings-temperature migration-required" : "settings-temperature"}>
@@ -28914,8 +34250,8 @@ function df(e) {
     </section>
   `;
 }
-function ff(e) {
-	let t = e._data?.versions ?? {}, r = t.portable_model ?? 8, i = t.storage ?? 1, a = t.model ?? 1, o = e._maintenanceAction === "reset", s = !!e._data?.temperature_migration?.required, c = e._data?.temperature_migration?.reason === "legacy_celsius_upgrade_reset_required";
+function tm(e) {
+	let t = e._data?.versions ?? {}, r = t.portable_model ?? 11, i = t.storage ?? 1, a = t.model ?? 1, o = e._maintenanceAction === "reset", s = !!e._data?.temperature_migration?.required, c = e._data?.temperature_migration?.reason === "legacy_celsius_upgrade_reset_required";
 	return T`
     <section class="settings-maintenance">
       <div class="settings-portability-heading">
@@ -28927,10 +34263,10 @@ function ff(e) {
       </div>
 
       <div class="maintenance-grid">
-        ${pf(e._t("frontendBuild"), n)}
-        ${pf(e._t("portableFormatVersion"), `v${r}`)}
-        ${pf(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${pf(e._t("integrationVersion"), "1.7.0")}
+        ${nm(e._t("frontendBuild"), n)}
+        ${nm(e._t("portableFormatVersion"), `v${r}`)}
+        ${nm(e._t("internalStorageVersion"), `v${i} / v${a}`)}
+        ${nm(e._t("integrationVersion"), "1.8.0-beta.1")}
       </div>
     </section>
 
@@ -28952,7 +34288,7 @@ function ff(e) {
     </section>
   `;
 }
-function pf(e, t) {
+function nm(e, t) {
 	return T`
     <div class="maintenance-item">
       <span class="label">${e}</span>
@@ -28960,8 +34296,8 @@ function pf(e, t) {
     </div>
   `;
 }
-function mf(e) {
-	let t = e._importAvailableSections(), n = e._exportSections.size > 0 && !e._portabilityAction, r = !!e._importPayload && e._importSections.size > 0 && !e._portabilityAction, i = new Map(e._portableExportSummaryItems().map((e) => [e.section, e])), a = new Map(e._portableImportSummaryItems().map((e) => [e.section, e])), o = e._importSections.has("preconditioning_learning") ? Li(e._importPayload, e._data?.configured_entities ?? []) : [], s = !!(e._importPayload && e._importPayload.temperature_unit === void 0);
+function rm(e) {
+	let t = e._importAvailableSections(), n = e._exportSections.size > 0 && !e._portabilityAction, r = !!e._importPayload && e._importSections.size > 0 && !e._portabilityAction, i = new Map(e._portableExportSummaryItems().map((e) => [e.section, e])), a = new Map(e._portableImportSummaryItems().map((e) => [e.section, e])), o = e._importSections.has("preconditioning_learning") ? wa(e._importPayload, e._data?.configured_entities ?? []) : [], s = !!(e._importPayload && e._importPayload.temperature_unit === void 0);
 	return T`
     <section class="settings-portability">
       <div class="settings-portability-heading">
@@ -28975,7 +34311,7 @@ function mf(e) {
       <div class="portability-grid">
         <div class="portability-card portability-export-card">
           <div class="portability-options">
-            ${tt.map((t) => hf(e, "export", t, e._exportSections.has(t), !1, i.get(t)))}
+            ${tt.map((t) => im(e, "export", t, e._exportSections.has(t), !1, i.get(t)))}
           </div>
           <button
             class="command-button primary"
@@ -29027,7 +34363,7 @@ function mf(e) {
                 </div>
               ` : E}
           <div class="portability-options">
-            ${t.length ? t.map((t) => hf(e, "import", t, e._importSections.has(t), !1, a.get(t))) : T`<span class="empty">${e._t("noImportSections")}</span>`}
+            ${t.length ? t.map((t) => im(e, "import", t, e._importSections.has(t), !1, a.get(t))) : T`<span class="empty">${e._t("noImportSections")}</span>`}
           </div>
           <button
             class="command-button success"
@@ -29043,7 +34379,7 @@ function mf(e) {
     </section>
   `;
 }
-function hf(e, t, n, r, i, a) {
+function im(e, t, n, r, i, a) {
 	return T`
     <label class="portable-option" title=${a?.title ?? e._portableSectionLabel(n)}>
       <input
@@ -29057,7 +34393,7 @@ function hf(e, t, n, r, i, a) {
     </label>
   `;
 }
-function gf(e, t, n, r) {
+function am(e, t, n, r) {
 	return T`
     <div
       class="settings-zone-row"
@@ -29083,7 +34419,10 @@ function gf(e, t, n, r) {
           </div>
           <span>${t}</span>
         </div>
-        ${_f(e, t)}
+        <div class="settings-zone-configuration">
+          ${sm(e, t)}
+          ${om(e, t)}
+        </div>
       </div>
       <div class="settings-row-actions">
         <button
@@ -29108,7 +34447,41 @@ function gf(e, t, n, r) {
     </div>
   `;
 }
-function _f(e, t) {
+function om(e, t) {
+	if (Gt(e.hass?.states?.[t]) !== void 0) return E;
+	let n = e._data?.zones?.[t], r = n?.last_reported_target_temp_step ?? n?.target_temp_step_override ?? 1, [i, a] = e._entityTemperatureLimits(t), o = Math.max(.001, a - i), s = t.replace(/[^a-z0-9_-]/gi, "-"), c = `target-temp-step-label-${s}`, l = `target-temp-step-help-${s}`;
+	return T`
+    <div class="settings-target-temp-step">
+      <div class="settings-policy-heading">
+        <span class="label" id=${c}>${e._t("targetTempStepFallback")}</span>
+        ${G(l, e._t("targetTempStepFallbackInfoAction"), e._t("targetTempStepFallbackDescription"))}
+      </div>
+      <label class="settings-target-temp-step-control">
+        <input
+          type="number"
+          inputmode="decimal"
+          min="0.001"
+          max=${String(o)}
+          step="any"
+          required
+          aria-labelledby=${c}
+          .value=${String(r)}
+          ?disabled=${e._settingsSaving}
+          @change=${(n) => {
+		let i = n.currentTarget, a = Number(i.value);
+		if (!i.reportValidity() || !Number.isFinite(a) || a < .001) {
+			i.value = String(r);
+			return;
+		}
+		e._saveZoneTargetTempStep(t, a);
+	}}
+        />
+        <span>${e._temperatureUnit(t)}</span>
+      </label>
+    </div>
+  `;
+}
+function sm(e, t) {
 	if (e._data?.zones[t]?.execution?.type === "external") return T`<small>${e._t("externalActionsInactive")}</small>`;
 	let n = e._data?.zones[t]?.external_change_policy ?? {
 		action: "keep_automatic",
@@ -29118,7 +34491,7 @@ function _f(e, t) {
     <div class="settings-external-policy">
       <div class="settings-policy-heading">
         <span class="label" id=${i}>${e._t("externalChangePolicy")}</span>
-        ${Jc(a, e._t("externalAdjustmentInfoAction"), e._t("externalChangePolicyDescription"))}
+        ${G(a, e._t("externalAdjustmentInfoAction"), e._t("externalChangePolicyDescription"))}
       </div>
       <div class="settings-policy-controls">
         <span class="select-wrap">
@@ -29160,7 +34533,7 @@ function _f(e, t) {
 }
 //#endregion
 //#region src/velair/views/diagnostics-view.ts
-var vf = [
+var cm = [
 	"control",
 	"room_assist",
 	"preconditioning",
@@ -29168,10 +34541,10 @@ var vf = [
 	"delivery",
 	"availability"
 ];
-function yf(e) {
+function lm(e) {
 	let t = e._data?.diagnostics;
 	if (!t) return T`<p class="empty">${e._t("diagnosticsUnavailable")}</p>`;
-	let n = t.overall.unit_counts, r = bf(e, t), i = xf(e, r), a = i ? t.units[i] : void 0;
+	let n = t.overall.unit_counts, r = um(e, t), i = dm(e, r), a = i ? t.units[i] : void 0;
 	return T`<section class="diagnostics-view">
     <header class="diagnostics-intro">
       <ha-icon icon="mdi:stethoscope"></ha-icon>
@@ -29182,7 +34555,7 @@ function yf(e) {
         title=${e._t("diagnosticsDownloadActionDescription")}
         aria-expanded=${e._diagnosticsExportOpen ? "true" : "false"}
         aria-controls="diagnostics-export-options"
-        @click=${() => Ip(e)}>
+        @click=${() => Eh(e)}>
         <ha-icon icon="mdi:download"></ha-icon>
         <span><strong>${e._t("diagnosticsDownloadAction")}</strong>
           <small>${e._t("diagnosticsDownloadActionDescription")}</small></span>
@@ -29200,8 +34573,8 @@ function yf(e) {
       <p>${e._t("diagnosticsOperationalIdsAlwaysRedacted")}</p>
       ${e._diagnosticsRedactEntityIds ? E : T`<p class="diagnostics-export-warning" role="alert">
         ${e._t("diagnosticsRawEntityIdsWarning")}</p>`}
-      <div><button class="command-button" type="button" @click=${() => Lp(e)}>${e._t("cancel")}</button>
-      <button class="command-button success" type="button" @click=${() => Fp(e)}>${e._t(e._diagnosticsRedactEntityIds ? "diagnosticsDownloadNow" : "diagnosticsDownloadWithEntityIds")}</button></div>
+      <div><button class="command-button" type="button" @click=${() => Dh(e)}>${e._t("cancel")}</button>
+      <button class="command-button success" type="button" @click=${() => Th(e)}>${e._t(e._diagnosticsRedactEntityIds ? "diagnosticsDownloadNow" : "diagnosticsDownloadWithEntityIds")}</button></div>
       </div>` : E}
     </section>
     <section class=${`diagnostics-summary status-${t.overall.status}`}>
@@ -29218,42 +34591,42 @@ function yf(e) {
 	})}</small>
       </div>
     </section>
-    ${t.overall.issues.length ? T`<div class="diagnostics-issues">${t.overall.issues.map((t) => Nf(e, t))}</div>` : E}
+    ${t.overall.issues.length ? T`<div class="diagnostics-issues">${t.overall.issues.map((t) => Cm(e, t))}</div>` : E}
     <div class="diagnostics-master-detail">
       <nav class="diagnostics-unit-list" aria-label=${e._t("diagnosticsUnits")}>
         ${r.map(([t, n]) => T`<button
           class=${`diagnostics-unit-option status-${n.status}${t === i ? " selected" : ""}`}
           type="button" aria-pressed=${t === i ? "true" : "false"}
           aria-current=${t === i ? "true" : "false"}
-          @click=${() => Sf(e, t)}>
-          ${gp(e, t)}
+          @click=${() => fm(e, t)}>
+          ${oh(e, t)}
           <span class="diagnostics-unit-name"><strong>${e._friendlyEntityName(t)}</strong><small>${t}</small></span>
-          <span class="diagnostics-unit-state">${vp(e, n.state)}</span>
+          <span class="diagnostics-unit-state">${ch(e, n.state)}</span>
           <span class=${`diagnostics-status-dot ${n.status}`} role="img"
-            title=${hp(e, n)}
-            aria-label=${hp(e, n)}></span>
+            title=${ah(e, n)}
+            aria-label=${ah(e, n)}></span>
         </button>`)}
       </nav>
-      ${a && i ? Cf(e, i, a) : T`<div class="empty diagnostics-detail-panel diagnostics-unit-placeholder">
+      ${a && i ? pm(e, i, a) : T`<div class="empty diagnostics-detail-panel diagnostics-unit-placeholder">
             <ha-icon icon="mdi:cursor-default-click-outline"></ha-icon>
             <span>${e._t(r.length ? "diagnosticsSelectUnit" : "diagnosticsNoUnits")}</span>
           </div>`}
     </div>
-    ${Mf(e, t)}
-    ${Ff(e, t, r)}
+    ${Sm(e, t)}
+    ${Tm(e, t, r)}
     <p class="diagnostics-privacy">${e._t("diagnosticsPrivacy")}</p>
   </section>`;
 }
-function bf(e, t) {
-	return yn(e, Object.keys(t.units)).map((e) => [e, t.units[e]]);
+function um(e, t) {
+	return Qn(e, Object.keys(t.units)).map((e) => [e, t.units[e]]);
 }
-function xf(e, t) {
+function dm(e, t) {
 	if (e._selectedDiagnosticEntity && t.some(([t]) => t === e._selectedDiagnosticEntity)) return e._selectedDiagnosticEntity;
 }
-function Sf(e, t) {
+function fm(e, t) {
 	e._selectedDiagnosticEntity = t, e.requestUpdate();
 }
-function Cf(e, t, n) {
+function pm(e, t, n) {
 	let r = X(n.configuration), i = X(r.preconditioning), a = X(r.comfort), o = [
 		{
 			label: "diagnosticsCurrentState",
@@ -29262,11 +34635,11 @@ function Cf(e, t, n) {
 		},
 		{
 			label: "diagnosticsCalculatedIntent",
-			value: ip(e, n.intent, t)
+			value: Jm(e, n.intent, t)
 		},
 		{
 			label: "diagnosticsLastApplication",
-			value: ap(e, n.last_application, t)
+			value: Ym(e, n.last_application, t)
 		},
 		{
 			label: "diagnosticsDeliveryStatus",
@@ -29279,12 +34652,12 @@ function Cf(e, t, n) {
 		},
 		{
 			label: "diagnosticsLastError",
-			value: pp(e, n.delivery.last_error)
+			value: rh(e, n.delivery.last_error)
 		}
 	], s = [
 		{
 			label: "diagnosticsScheduleSource",
-			value: yp(e, n.effective_setup.schedule_source)
+			value: lh(e, n.effective_setup.schedule_source)
 		},
 		{
 			label: "diagnosticsMode",
@@ -29296,7 +34669,7 @@ function Cf(e, t, n) {
 		},
 		{
 			label: "diagnosticsOverride",
-			value: fp(e, n.override)
+			value: nh(e, n.override)
 		},
 		{
 			label: "diagnosticsPauses",
@@ -29310,40 +34683,40 @@ function Cf(e, t, n) {
 		},
 		{
 			label: "diagnosticsTemperatureRange",
-			value: rp(e, t, n.capabilities.min_temperature, n.capabilities.max_temperature)
+			value: qm(e, t, n.capabilities.min_temperature, n.capabilities.max_temperature)
 		},
 		{
 			label: "diagnosticsTemperatureStep",
-			value: np(e, t, n.capabilities.target_temperature_step)
+			value: Km(e, t, n.capabilities.target_temperature_step)
 		}
 	];
 	return T`<article class=${`diagnostics-detail-panel status-${n.status}`}>
-    <header class="diagnostics-unit-heading">${gp(e, t)}
+    <header class="diagnostics-unit-heading">${oh(e, t)}
       <div class="diagnostics-unit-identity"><h3>${e._friendlyEntityName(t)}</h3><small>${t}</small>
         <span class="diagnostics-feature-chips">
-          ${i.room_sensor_assist_enabled ? wf(e, "diagnosticsRoomAssist", "mdi:thermometer-auto") : E}
-          ${i.enabled ? wf(e, "diagnosticsPreconditioning", "mdi:clock-fast") : E}
-          ${a.enabled ? wf(e, "diagnosticsComfort", "mdi:home-heart") : E}
+          ${i.room_sensor_assist_enabled ? mm(e, "diagnosticsRoomAssist", "mdi:thermometer-auto") : E}
+          ${i.enabled ? mm(e, "diagnosticsPreconditioning", "mdi:clock-fast") : E}
+          ${a.enabled ? mm(e, "diagnosticsComfort", "mdi:home-heart") : E}
         </span>
       </div>
       <span class=${`diagnostics-status-dot ${n.status}`} role="img"
-        title=${hp(e, n)}
-        aria-label=${hp(e, n)}></span>
+        title=${ah(e, n)}
+        aria-label=${ah(e, n)}></span>
     </header>
-    ${n.issues.length ? T`<div class="diagnostics-issues">${n.issues.map((t) => Nf(e, t))}</div>` : E}
+    ${n.issues.length ? T`<div class="diagnostics-issues">${n.issues.map((t) => Cm(e, t))}</div>` : E}
     <div class="diagnostics-groups">
-      ${Df(e, "diagnosticsStatusDelivery", "mdi:send-check-outline", o)}
-      ${Df(e, "diagnosticsActiveConfiguration", "mdi:tune-variant", s)}
-      ${Tf(e, t, n, i, a)}
-      ${Ef(e, n, c)}
+      ${_m(e, "diagnosticsStatusDelivery", "mdi:send-check-outline", o)}
+      ${_m(e, "diagnosticsActiveConfiguration", "mdi:tune-variant", s)}
+      ${hm(e, t, n, i, a)}
+      ${gm(e, n, c)}
     </div>
   </article>`;
 }
-function wf(e, t, n) {
+function mm(e, t, n) {
 	let r = e._t(t);
 	return T`<span title=${r} aria-label=${r}><ha-icon icon=${n}></ha-icon>${r}</span>`;
 }
-function Tf(e, t, n, r, i) {
+function hm(e, t, n, r, i) {
 	let a = [
 		{
 			title: "diagnosticsRoomAssist",
@@ -29356,11 +34729,11 @@ function Tf(e, t, n, r, i) {
 				},
 				{
 					label: "diagnosticsFunctionState",
-					value: Ep(e, X(n.room_assist).status)
+					value: gh(e, X(n.room_assist).status)
 				},
 				{
 					label: "diagnosticsAppliedTarget",
-					value: sp(e, X(n.room_assist), t)
+					value: Zm(e, X(n.room_assist), t)
 				}
 			]
 		},
@@ -29392,81 +34765,81 @@ function Tf(e, t, n, r, i) {
 				value: i.enabled === !1 && n.comfort ? !1 : void 0
 			}, {
 				label: "diagnosticsFunctionState",
-				value: Dp(e, X(n.comfort).condition ?? X(n.comfort).status)
+				value: _h(e, X(n.comfort).condition ?? X(n.comfort).status)
 			}]
 		}
 	].filter((e) => e.visible);
 	return a.length ? T`<section class="diagnostics-group"><h4><ha-icon icon="mdi:puzzle-outline"></ha-icon><span>${e._t("diagnosticsFunctions")}</span></h4>
     <div class="diagnostics-function-grid">${a.map((t) => T`<section class="diagnostics-function">
-      <strong><ha-icon icon=${t.icon}></ha-icon><span>${e._t(t.title)}</span></strong>${Of(e, t.rows)}</section>`)}</div>
+      <strong><ha-icon icon=${t.icon}></ha-icon><span>${e._t(t.title)}</span></strong>${vm(e, t.rows)}</section>`)}</div>
   </section>` : E;
 }
-function Ef(e, t, n) {
-	return !$f(n).length && !t.sensors.length ? E : T`<section class="diagnostics-group"><h4><ha-icon icon="mdi:devices"></ha-icon><span>${e._t("diagnosticsDeviceSensors")}</span></h4>
-    ${Of(e, n)}
+function gm(e, t, n) {
+	return !Um(n).length && !t.sensors.length ? E : T`<section class="diagnostics-group"><h4><ha-icon icon="mdi:devices"></ha-icon><span>${e._t("diagnosticsDeviceSensors")}</span></h4>
+    ${vm(e, n)}
     ${t.sensors.length ? T`<ul class="diagnostics-sensors">${t.sensors.map((t) => T`<li>
-      <strong>${e._t(Cp(t.purpose))}</strong>
+      <strong>${e._t(ph(t.purpose))}</strong>
       <span class="diagnostics-sensor-detail">
-        <ha-icon icon=${wp(t.purpose)}></ha-icon>
+        <ha-icon icon=${mh(t.purpose)}></ha-icon>
         <span class="diagnostics-sensor-entity" title=${t.entity_id}>${t.entity_id}</span>
-        <small class="diagnostics-sensor-value">${_p(e, t)}</small>
+        <small class="diagnostics-sensor-value">${sh(e, t)}</small>
       </span></li>`)}</ul>` : E}
   </section>`;
 }
-function Df(e, t, n, r) {
-	let i = $f(r);
-	return i.length ? T`<section class="diagnostics-group"><h4><ha-icon icon=${n}></ha-icon><span>${e._t(t)}</span></h4>${Of(e, i)}</section>` : E;
+function _m(e, t, n, r) {
+	let i = Um(r);
+	return i.length ? T`<section class="diagnostics-group"><h4><ha-icon icon=${n}></ha-icon><span>${e._t(t)}</span></h4>${vm(e, i)}</section>` : E;
 }
-function Of(e, t) {
-	return T`<dl class="diagnostics-rows">${$f(t).map((t) => T`<div>
-    <dt>${e._t(t.label)}</dt><dd>${kf(e, t)}</dd></div>`)}</dl>`;
+function vm(e, t) {
+	return T`<dl class="diagnostics-rows">${Um(t).map((t) => T`<div>
+    <dt>${e._t(t.label)}</dt><dd>${ym(e, t)}</dd></div>`)}</dl>`;
 }
-function kf(e, t) {
+function ym(e, t) {
 	if (t.presentation === "mode") return [
 		"missing",
 		"unknown",
 		"unavailable"
-	].includes(String(t.value)) ? T`<span class=${`diagnostics-state-chip ${t.value === "missing" ? "error" : "warning"}`}>${vp(e, t.value)}</span>` : Af(e, t.value);
-	if (t.presentation === "modes" && Array.isArray(t.value)) return T`<span class="diagnostics-mode-list">${t.value.map((t) => Af(e, t))}</span>`;
+	].includes(String(t.value)) ? T`<span class=${`diagnostics-state-chip ${t.value === "missing" ? "error" : "warning"}`}>${ch(e, t.value)}</span>` : bm(e, t.value);
+	if (t.presentation === "modes" && Array.isArray(t.value)) return T`<span class="diagnostics-mode-list">${t.value.map((t) => bm(e, t))}</span>`;
 	if (t.presentation === "delivery-status") {
 		let n = String(t.value ?? "");
-		return T`<span class=${`diagnostics-state-chip ${jf(n)}`}>
-      ${Sp(e, n)}
+		return T`<span class=${`diagnostics-state-chip ${xm(n)}`}>
+      ${fh(e, n)}
     </span>`;
 	}
-	return ep(e, t.value);
+	return Wm(e, t.value);
 }
-function Af(e, t) {
+function bm(e, t) {
 	let n = String(t ?? "");
-	return n ? T`<span class=${`mode-chip mode-${At(n)}`}>${e._modeLabel(n)}</span>` : E;
+	return n ? T`<span class=${`mode-chip mode-${Ut(n)}`}>${e._modeLabel(n)}</span>` : E;
 }
-function jf(e) {
+function xm(e) {
 	return e === "success" ? "success" : [
 		"failed",
 		"exhausted",
 		"invalid_intent"
 	].includes(e) ? "error" : ["retrying", "unavailable"].includes(e) ? "warning" : "neutral";
 }
-function Mf(e, t) {
+function Sm(e, t) {
 	return T`<section class="diagnostics-history-policy"><header><div class="diagnostics-section-heading">
       <ha-icon icon="mdi:history"></ha-icon><div><h3>${e._t("diagnosticsHistorySettings")}</h3>
       <p>${e._t("diagnosticsHistoryExplanation", { limit: Z(e, t.history_limit) })}</p>
       </div></div><button class="command-button diagnostics-clear-history" type="button"
       title=${e._t("diagnosticsClearHistory")} aria-label=${e._t("diagnosticsClearHistory")}
       ?disabled=${e._diagnosticsHistorySaving || t.history.length === 0}
-      @click=${() => Pp(e)}><ha-icon icon="mdi:delete-outline"></ha-icon>
+      @click=${() => wh(e)}><ha-icon icon="mdi:delete-outline"></ha-icon>
       <span>${e._t("diagnosticsClearHistory")}</span></button></header>
-    <div class="diagnostics-category-grid">${vf.map((n) => T`<label><input type="checkbox"
+    <div class="diagnostics-category-grid">${cm.map((n) => T`<label><input type="checkbox"
       .checked=${t.history_policy.categories[n]} ?disabled=${e._diagnosticsHistorySaving}
-      @change=${(r) => Np(e, t, n, r.currentTarget.checked)} />
-      <span><strong>${e._t(jp(n))}</strong><small>${e._t(Mp(n))}</small></span>
+      @change=${(r) => Ch(e, t, n, r.currentTarget.checked)} />
+      <span><strong>${e._t(xh(n))}</strong><small>${e._t(Sh(n))}</small></span>
     </label>`)}</div>
   </section>`;
 }
-function Nf(e, t) {
-	return T`<p class=${`diagnostics-issue ${t.severity}`}><ha-icon icon=${t.severity === "error" ? "mdi:alert-circle" : "mdi:alert"}></ha-icon><span>${Pf(e, t.code)}</span></p>`;
+function Cm(e, t) {
+	return T`<p class=${`diagnostics-issue ${t.severity}`}><ha-icon icon=${t.severity === "error" ? "mdi:alert-circle" : "mdi:alert"}></ha-icon><span>${wm(e, t.code)}</span></p>`;
 }
-function Pf(e, t) {
+function wm(e, t) {
 	let n = {
 		entity_missing: "entityDiagnosticMissing",
 		entity_unavailable: "diagnosticsEntityUnavailable",
@@ -29484,43 +34857,43 @@ function Pf(e, t) {
 	};
 	return n[t] ? e._t(n[t]) : Q(t) ?? t;
 }
-function Ff(e, t, n) {
-	let r = n.map(([e]) => e), i = En(e._diagnosticsHistoryFilters ?? Sn, r), a = Cn(i), o = wn(t.history, i);
+function Tm(e, t, n) {
+	let r = n.map(([e]) => e), i = ar(e._diagnosticsHistoryFilters ?? tr, r), a = nr(i), o = rr(t.history, i);
 	return T`<section class="diagnostics-history" aria-labelledby="diagnostics-history-title">
     <header><div><h3 id="diagnostics-history-title">${e._t("diagnosticsHistoryLog")}</h3>
       <p>${e._t("diagnosticsRecentHistory", {
 		count: Z(e, t.history.length),
 		limit: Z(e, t.history_limit)
 	})}</p></div>
-      <button class=${`command-button diagnostics-clear-filters${Tn(i) ? " success" : ""}`} type="button"
-        ?disabled=${!Tn(i)}
-        @click=${() => Bf(e, Sn)}>
+      <button class=${`command-button diagnostics-clear-filters${ir(i) ? " success" : ""}`} type="button"
+        ?disabled=${!ir(i)}
+        @click=${() => Am(e, tr)}>
         <ha-icon icon="mdi:filter-off-outline"></ha-icon>
         <span>${e._t("diagnosticsHistoryClearFilters")}</span>
       </button></header>
     <div class="diagnostics-history-filters">
-      ${If(e, i, r)}
+      ${Em(e, i, r)}
       <label><span>${e._t("diagnosticsHistoryCategoryFilter")}</span><select
         .value=${i.category}
-        @change=${(t) => Bf(e, {
+        @change=${(t) => Am(e, {
 		...i,
 		category: t.currentTarget.value
 	})}>
         <option value="all">${e._t("diagnosticsHistoryAllCategories")}</option>
-        ${vf.map((t) => T`<option value=${t}>${e._t(jp(t))}</option>`)}
+        ${cm.map((t) => T`<option value=${t}>${e._t(xh(t))}</option>`)}
       </select></label>
-      ${zf(e, i, "from", "diagnosticsHistoryFrom")}
-      ${zf(e, i, "to", "diagnosticsHistoryTo")}
+      ${km(e, i, "from", "diagnosticsHistoryFrom")}
+      ${km(e, i, "to", "diagnosticsHistoryTo")}
     </div>
     ${a ? E : T`<p class="diagnostics-filter-error" role="alert">${e._t("diagnosticsHistoryInvalidRange")}</p>`}
     <p class="diagnostics-history-results" aria-live="polite">${e._t("diagnosticsHistoryResults", {
 		visible: Z(e, o.length),
 		total: Z(e, t.history.length)
 	})}</p>
-    ${Vf(e, t.history, o)}
+    ${jm(e, t.history, o)}
   </section>`;
 }
-function If(e, t, n) {
+function Em(e, t, n) {
 	let r = e._diagnosticsSourceFilterOpen, i = t.sources, a = (e) => i === null || i.has(e);
 	return T`<div class="diagnostics-source-filter"
     @keydown=${(t) => {
@@ -29530,7 +34903,7 @@ function If(e, t, n) {
     <button class="diagnostics-source-trigger" type="button"
       aria-expanded=${r ? "true" : "false"} aria-controls="diagnostics-source-options"
       @click=${() => e._setDiagnosticsSourceFilterOpen(!r)}>
-      <span>${Lf(e, t, n)}</span>
+      <span>${Dm(e, t, n)}</span>
       <ha-icon icon=${r ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>
     </button>
     ${r ? T`<div id="diagnostics-source-options"
@@ -29538,16 +34911,16 @@ function If(e, t, n) {
       style=${e._diagnosticsSourceMaxHeight === void 0 ? E : `max-height:${e._diagnosticsSourceMaxHeight}px`}>
       <fieldset><legend>${e._t("diagnosticsHistorySourcesLegend")}</legend>
         <label><input type="checkbox" .checked=${i === null}
-          @change=${(n) => Bf(e, {
+          @change=${(n) => Am(e, {
 		...t,
 		sources: n.currentTarget.checked ? null : /* @__PURE__ */ new Set()
 	})} /><span>${e._t("diagnosticsHistoryAllSources")}</span></label>
-        <label><input type="checkbox" .checked=${a(xn)}
-          @change=${(r) => Rf(e, t, n, xn, r.currentTarget.checked)} />
+        <label><input type="checkbox" .checked=${a(er)}
+          @change=${(r) => Om(e, t, n, er, r.currentTarget.checked)} />
           <span>${e._t("diagnosticsHistoryVelairOnly")}</span></label>
         ${n.map((r) => T`<label><input type="checkbox"
           .checked=${a(r)}
-          @change=${(i) => Rf(e, t, n, r, i.currentTarget.checked)} />
+          @change=${(i) => Om(e, t, n, r, i.currentTarget.checked)} />
           <span>${e._friendlyEntityName(r)}</span></label>`)}
       </fieldset>
       <button class="command-button diagnostics-source-done" type="button"
@@ -29555,9 +34928,9 @@ function If(e, t, n) {
     </div>` : E}
   </div>`;
 }
-function Lf(e, t, n) {
+function Dm(e, t, n) {
 	if (t.sources === null) return e._t("diagnosticsHistoryAllSources");
-	let r = t.sources.has(xn), i = n.filter((e) => t.sources?.has(e));
+	let r = t.sources.has(er), i = n.filter((e) => t.sources?.has(e));
 	if (!i.length) return r ? e._t("diagnosticsHistoryVelairOnly") : e._t("diagnosticsHistoryNoSources");
 	if (i.length === 1) {
 		let t = e._friendlyEntityName(i[0]);
@@ -29565,173 +34938,173 @@ function Lf(e, t, n) {
 	}
 	return e._t(r ? "diagnosticsHistorySourceCountWithVelair" : "diagnosticsHistorySourceCount", { count: Z(e, i.length) });
 }
-function Rf(e, t, n, r, i) {
-	let a = new Set(t.sources ?? [xn, ...n]);
-	i ? a.add(r) : a.delete(r), Bf(e, En({
+function Om(e, t, n, r, i) {
+	let a = new Set(t.sources ?? [er, ...n]);
+	i ? a.add(r) : a.delete(r), Am(e, ar({
 		...t,
 		sources: a
 	}, n));
 }
-function zf(e, t, n, r) {
+function km(e, t, n, r) {
 	return T`<label><span>${e._t(r)}</span><input type="datetime-local"
     .value=${t[n]}
-    aria-invalid=${Cn(t) ? "false" : "true"}
-    @input=${(r) => Bf(e, {
+    aria-invalid=${nr(t) ? "false" : "true"}
+    @input=${(r) => Am(e, {
 		...t,
 		[n]: r.currentTarget.value
 	})} /></label>`;
 }
-function Bf(e, t) {
+function Am(e, t) {
 	e._diagnosticsHistoryFilters = { ...t }, e.requestUpdate();
 }
-function Vf(e, t, n) {
+function jm(e, t, n) {
 	if (!t.length) return T`<p class="empty">${e._t("diagnosticsNoHistory")}</p>`;
 	if (!n.length) return T`<p class="empty">${e._t("diagnosticsHistoryNoMatches")}</p>`;
-	let r = Pn(e._diagnosticsLogColumns ?? On, e._diagnosticsLogAvailableWidth);
+	let r = kr(e._diagnosticsLogColumns ?? Cr, e._diagnosticsLogAvailableWidth);
 	return T`<div class="diagnostics-history-table" style=${`--diagnostics-log-time:${r.time}px;--diagnostics-log-climate:${r.climate}px;--diagnostics-log-type:${r.type}px`}>
     <div class="diagnostics-history-header" role="row">
-      <span>${e._t("diagnosticsLogTime")}</span>${Uf(e, "time", r.time)}
-      <span>${e._t("diagnosticsLogClimate")}</span>${Uf(e, "climate", r.climate)}
-      <span>${e._t("diagnosticsLogType")}</span>${Uf(e, "type", r.type)}
+      <span>${e._t("diagnosticsLogTime")}</span>${Nm(e, "time", r.time)}
+      <span>${e._t("diagnosticsLogClimate")}</span>${Nm(e, "climate", r.climate)}
+      <span>${e._t("diagnosticsLogType")}</span>${Nm(e, "type", r.type)}
       <span>${e._t("diagnosticsLogMessage")}</span>
     </div>
     <ol>${n.map((t) => T`<li>
-    <time datetime=${t.at} title=${t.at}>${tp(e, t.at)}</time>
+    <time datetime=${t.at} title=${t.at}>${Gm(e, t.at)}</time>
       <span class="diagnostics-history-climate">${t.entity_id ? e._friendlyEntityName(t.entity_id) : "Velair"}</span>
-      <span class="diagnostics-history-type">${Tp(e, t)}</span>
-    <span class="diagnostics-history-message">${Xf(e, t)}</span></li>`)}</ol>
+      <span class="diagnostics-history-type">${hh(e, t)}</span>
+    <span class="diagnostics-history-message">${Bm(e, t)}</span></li>`)}</ol>
   </div>`;
 }
-var Hf = /* @__PURE__ */ new WeakMap();
-function Uf(e, t, n) {
+var Mm = /* @__PURE__ */ new WeakMap();
+function Nm(e, t, n) {
 	let r = `diagnosticsLog${t[0].toUpperCase()}${t.slice(1)}`;
 	return T`<span class="diagnostics-log-resizer" role="separator" tabindex="0"
-    aria-orientation="vertical" aria-valuemin=${kn[t]}
-    aria-valuemax=${Mn(e._diagnosticsLogColumns ?? On, t, e._diagnosticsLogAvailableWidth)}
+    aria-orientation="vertical" aria-valuemin=${wr[t]}
+    aria-valuemax=${Dr(e._diagnosticsLogColumns ?? Cr, t, e._diagnosticsLogAvailableWidth)}
     aria-valuenow=${Math.round(n)} aria-label=${e._t("diagnosticsLogResizeColumn", { column: e._t(r) })}
-    @pointerdown=${(r) => Kf(e, t, n, r)}
-    @pointermove=${(t) => qf(e, t)}
-    @pointerup=${(t) => Jf(e, t)}
-    @pointercancel=${(t) => Jf(e, t)}
-    @lostpointercapture=${(t) => Jf(e, t)}
-    @keydown=${(n) => Yf(e, t, n)}
-    @dblclick=${(n) => Gf(e, t, On[t], Wf(n.currentTarget))}></span>`;
+    @pointerdown=${(r) => Im(e, t, n, r)}
+    @pointermove=${(t) => Lm(e, t)}
+    @pointerup=${(t) => Rm(e, t)}
+    @pointercancel=${(t) => Rm(e, t)}
+    @lostpointercapture=${(t) => Rm(e, t)}
+    @keydown=${(n) => zm(e, t, n)}
+    @dblclick=${(n) => Fm(e, t, Cr[t], Pm(n.currentTarget))}></span>`;
 }
-function Wf(e) {
+function Pm(e) {
 	let t = e?.closest(".diagnostics-history-table")?.getBoundingClientRect().width;
-	return jn(t && t > 0 ? t : 900);
+	return Er(t && t > 0 ? t : 900);
 }
-function Gf(e, t, n, r) {
-	e._diagnosticsLogColumns = Nn(e._diagnosticsLogColumns ?? On, t, n, r), e._diagnosticsLogAvailableWidth = r, e.requestUpdate();
+function Fm(e, t, n, r) {
+	e._diagnosticsLogColumns = Or(e._diagnosticsLogColumns ?? Cr, t, n, r), e._diagnosticsLogAvailableWidth = r, e.requestUpdate();
 }
-function Kf(e, t, n, r) {
-	!r.isPrimary || r.button !== 0 || Hf.has(e) || (Hf.set(e, {
+function Im(e, t, n, r) {
+	!r.isPrimary || r.button !== 0 || Mm.has(e) || (Mm.set(e, {
 		column: t,
 		pointerId: r.pointerId,
 		startX: r.clientX,
 		startWidth: n
 	}), r.currentTarget.setPointerCapture?.(r.pointerId));
 }
-function qf(e, t) {
-	let n = Hf.get(e);
-	!n || n.pointerId !== t.pointerId || Gf(e, n.column, n.startWidth + t.clientX - n.startX, Wf(t.currentTarget));
+function Lm(e, t) {
+	let n = Mm.get(e);
+	!n || n.pointerId !== t.pointerId || Fm(e, n.column, n.startWidth + t.clientX - n.startX, Pm(t.currentTarget));
 }
-function Jf(e, t) {
-	let n = Hf.get(e);
+function Rm(e, t) {
+	let n = Mm.get(e);
 	if (!n || n.pointerId !== t.pointerId) return;
-	Hf.delete(e);
+	Mm.delete(e);
 	let r = t.currentTarget;
 	r.hasPointerCapture?.(t.pointerId) && r.releasePointerCapture?.(t.pointerId);
 }
-function Yf(e, t, n) {
-	let r = e._diagnosticsLogColumns ?? On, i = Wf(n.currentTarget), a;
-	n.key === "ArrowLeft" && (a = r[t] - (n.shiftKey ? 25 : 10)), n.key === "ArrowRight" && (a = r[t] + (n.shiftKey ? 25 : 10)), n.key === "Home" && (a = kn[t]), n.key === "End" && (a = Mn(r, t, i)), a !== void 0 && (n.preventDefault(), Gf(e, t, a, i));
+function zm(e, t, n) {
+	let r = e._diagnosticsLogColumns ?? Cr, i = Pm(n.currentTarget), a;
+	n.key === "ArrowLeft" && (a = r[t] - (n.shiftKey ? 25 : 10)), n.key === "ArrowRight" && (a = r[t] + (n.shiftKey ? 25 : 10)), n.key === "Home" && (a = wr[t]), n.key === "End" && (a = Dr(r, t, i)), a !== void 0 && (n.preventDefault(), Fm(e, t, a, i));
 }
-function Xf(e, t) {
+function Bm(e, t) {
 	let n = t.data;
 	return t.category === "room_assist" ? [
 		n.direction ? e._modeLabel(String(n.direction)) : void 0,
-		Zf(e._t("roomSensorAppliedTarget"), sp(e, n, t.entity_id ?? "")),
-		Qf(e, "roomSensorRoomTemperature", n.room_temperature, t.entity_id),
-		Qf(e, "roomSensorClimateTemperature", n.climate_temperature, t.entity_id),
-		bp(e, n.reason)
+		Vm(e._t("roomSensorAppliedTarget"), Zm(e, n, t.entity_id ?? "")),
+		Hm(e, "roomSensorRoomTemperature", n.room_temperature, t.entity_id),
+		Hm(e, "roomSensorClimateTemperature", n.climate_temperature, t.entity_id),
+		uh(e, n.reason)
 	].filter(Boolean).join(" · ") : t.category === "preconditioning" ? [
 		n.direction ? e._modeLabel(String(n.direction)) : void 0,
 		typeof n.lead_minutes == "number" ? e._t("preconditioningLeadTime", { minutes: Z(e, n.lead_minutes) }) : void 0,
-		Ap(e, n.model_source),
-		op(e, n, t.entity_id ?? ""),
-		bp(e, n.reason)
+		bh(e, n.model_source),
+		Xm(e, n, t.entity_id ?? ""),
+		uh(e, n.reason)
 	].filter(Boolean).join(" · ") : t.category === "comfort" ? [
-		Dp(e, n.condition),
-		Op(e, n.air_quality),
-		kp(e, n.data_quality)
-	].filter(Boolean).join(" · ") : t.category === "availability" ? [vp(e, n.state)].filter(Boolean).join(" · ") : t.category === "control" ? n.event === "external_climate_change_detected" ? up(e, t) : n.event === "zone_control_changed" ? dp(e, t) : [
+		_h(e, n.condition),
+		vh(e, n.air_quality),
+		yh(e, n.data_quality)
+	].filter(Boolean).join(" · ") : t.category === "availability" ? [ch(e, n.state)].filter(Boolean).join(" · ") : t.category === "control" ? n.event === "external_climate_change_detected" ? eh(e, t) : n.event === "zone_control_changed" ? th(e, t) : [
 		n.hvac_mode ? e._modeLabel(String(n.hvac_mode)) : void 0,
-		xp(e, n.action ?? n.operation),
-		op(e, n, t.entity_id ?? ""),
-		bp(e, n.reason)
-	].filter(Boolean).join(" · ") : [n.reason ? bp(e, n.reason) : n.error ? Q(n.error) : n.state ? vp(e, n.state) : void 0].filter(Boolean).join(" · ");
+		dh(e, n.action ?? n.operation),
+		Xm(e, n, t.entity_id ?? ""),
+		uh(e, n.reason)
+	].filter(Boolean).join(" · ") : [n.reason ? uh(e, n.reason) : n.error ? Q(n.error) : n.state ? ch(e, n.state) : void 0].filter(Boolean).join(" · ");
 }
-function Zf(e, t) {
+function Vm(e, t) {
 	return t ? `${e}: ${t}` : void 0;
 }
-function Qf(e, t, n, r) {
+function Hm(e, t, n, r) {
 	return typeof n == "number" ? `${e._t(t)}: ${e._formatTemperature(n, r ?? void 0)}` : void 0;
 }
-function $f(e) {
+function Um(e) {
 	return e.filter((e) => e.value !== void 0 && e.value !== null && e.value !== "");
 }
 function X(e) {
 	return e && typeof e == "object" && !Array.isArray(e) ? e : {};
 }
-function ep(e, t) {
+function Wm(e, t) {
 	return typeof t == "boolean" ? e._t(t ? "diagnosticsOn" : "diagnosticsOff") : typeof t == "number" ? Z(e, t) : String(t);
 }
-function tp(e, t) {
-	return Ha(t, za(e._language()), e.hass?.locale?.time_format);
+function Gm(e, t) {
+	return Mo(t, ko(e._language()), e.hass?.locale?.time_format);
 }
-function np(e, t, n) {
+function Km(e, t, n) {
 	return typeof n == "number" ? e._formatTemperature(n, t) : void 0;
 }
-function rp(e, t, n, r) {
+function qm(e, t, n, r) {
 	return typeof n == "number" && typeof r == "number" ? `${e._formatTemperature(n, t)} – ${e._formatTemperature(r, t)}` : void 0;
 }
-function ip(e, t, n) {
+function Jm(e, t, n) {
 	let r = X(t);
 	return [
-		cp(e, r.control_mode),
-		vp(e, r.state),
+		Qm(e, r.control_mode),
+		ch(e, r.state),
 		r.hvac_mode ? e._modeLabel(String(r.hvac_mode)) : void 0,
-		op(e, r, n)
+		Xm(e, r, n)
 	].filter(Boolean).join(" · ") || void 0;
 }
-function ap(e, t, n) {
+function Ym(e, t, n) {
 	let r = X(t);
 	return [
 		r.at ? e._formatDateTime(String(r.at)) : void 0,
 		r.hvac_mode ? e._modeLabel(String(r.hvac_mode)) : void 0,
-		op(e, r, n)
+		Xm(e, r, n)
 	].filter(Boolean).join(" · ") || void 0;
 }
-function op(e, t, n) {
+function Xm(e, t, n) {
 	let r = t.temperature ?? t.target_temperature;
 	return typeof r == "number" ? e._formatTemperature(r, n) : typeof t.target_temp_low == "number" && typeof t.target_temp_high == "number" ? `${e._formatTemperature(t.target_temp_low, n)} – ${e._formatTemperature(t.target_temp_high, n)}` : void 0;
 }
-function sp(e, t, n) {
+function Zm(e, t, n) {
 	let r = t.applied_temperature ?? t.applied_target;
 	return typeof r == "number" ? e._formatTemperature(r, n) : typeof t.applied_target_temp_low == "number" && typeof t.applied_target_temp_high == "number" ? `${e._formatTemperature(t.applied_target_temp_low, n)} – ${e._formatTemperature(t.applied_target_temp_high, n)}` : void 0;
 }
-function cp(e, t) {
+function Qm(e, t) {
 	if (t === "manual") return e._t("diagnosticsControlManual");
 	if (t === "automatic") return e._t("diagnosticsControlAutomatic");
 }
-function lp(e, t, n) {
+function $m(e, t, n) {
 	if (t === "keep_automatic") return e._t("externalChangeKeepAutomatic");
 	if (t === "until_next_block") return e._t("externalChangeUntilNextBlock");
 	if (t === "for_duration") return [e._t("externalChangeForDuration"), typeof n == "number" ? e._t("manualSessionDuration", { minutes: n }) : void 0].filter(Boolean).join(" · ");
 	if (t === "until_resumed") return e._t("externalChangeUntilResumed");
 }
-function up(e, t) {
+function eh(e, t) {
 	let n = t.data, r = X(n.previous), i = X(n.current), a = new Set(Array.isArray(n.changed_fields) ? n.changed_fields.map(String) : []), o = t.entity_id ?? "", s = [];
 	a.has("hvac_mode") && r.hvac_mode && i.hvac_mode && s.push(e._t("diagnosticsHvacModeChanged", {
 		previous: e._modeLabel(String(r.hvac_mode)),
@@ -29742,7 +35115,7 @@ function up(e, t) {
 	}));
 	let c = a.has("target_temp_low"), l = a.has("target_temp_high");
 	if (c || l) {
-		let t = rp(e, o, r.target_temp_low, r.target_temp_high), n = rp(e, o, i.target_temp_low, i.target_temp_high);
+		let t = qm(e, o, r.target_temp_low, r.target_temp_high), n = qm(e, o, i.target_temp_low, i.target_temp_high);
 		t && n && c && l && s.push(e._t("diagnosticsRangeChanged", {
 			previous: t,
 			current: n
@@ -29754,25 +35127,25 @@ function up(e, t) {
 			current: e._formatTemperature(i.target_temp_high, o)
 		})));
 	}
-	return s.push(lp(e, n.policy, n.duration_minutes)), s.filter(Boolean).join(" · ");
+	return s.push($m(e, n.policy, n.duration_minutes)), s.filter(Boolean).join(" · ");
 }
-function dp(e, t) {
-	let n = t.data, r = cp(e, n.previous_control_mode), i = cp(e, n.control_mode);
+function th(e, t) {
+	let n = t.data, r = Qm(e, n.previous_control_mode), i = Qm(e, n.control_mode);
 	return [
 		r && i ? e._t("diagnosticsControlChanged", {
 			previous: r,
 			current: i
 		}) : i,
-		lp(e, n.policy, n.duration_minutes),
+		$m(e, n.policy, n.duration_minutes),
 		n.until ? e._t("diagnosticsUntil", { time: e._formatDateTime(String(n.until)) }) : void 0,
-		bp(e, n.reason)
+		uh(e, n.reason)
 	].filter(Boolean).join(" · ");
 }
-function fp(e, t) {
+function nh(e, t) {
 	let n = X(t), r = n.action ?? n.status;
 	return (r === "turn_off" ? e._t("diagnosticsOverrideTurnOff") : r === "none" ? e._t("diagnosticsNone") : r ? Q(r) : void 0) ?? (n.expires_at ? e._formatDateTime(String(n.expires_at)) : void 0) ?? (Object.keys(n).length ? e._t("diagnosticsActive") : void 0);
 }
-function pp(e, t) {
+function rh(e, t) {
 	let n = X(t), r = String(n.code ?? ""), i = {
 		exhausted: "diagnosticsDeliveryExhausted",
 		failed: "diagnosticsDeliveryFailed",
@@ -29785,33 +35158,33 @@ function pp(e, t) {
 function Z(e, t) {
 	return new Intl.NumberFormat(e._language()).format(t);
 }
-function mp(e, t) {
+function ih(e, t) {
 	return e._t({
 		ok: "diagnosticsStatusHealthy",
 		warning: "diagnosticsStatusWarning",
 		error: "diagnosticsStatusError"
 	}[t]);
 }
-function hp(e, t) {
-	let n = mp(e, t.status);
+function ah(e, t) {
+	let n = ih(e, t.status);
 	return t.issues.length ? e._t("diagnosticsStatusWithIssues", {
 		status: n,
-		issues: t.issues.map((t) => Pf(e, t.code)).join("; ")
+		issues: t.issues.map((t) => wm(e, t.code)).join("; ")
 	}) : n;
 }
-function gp(e, t) {
+function oh(e, t) {
 	let n = e.hass?.states?.[t];
 	return n ? T`<ha-state-icon class="diagnostics-climate-icon" .hass=${e.hass} .stateObj=${n}></ha-state-icon>` : T`<ha-icon class="diagnostics-climate-icon" icon="mdi:thermostat"></ha-icon>`;
 }
-function _p(e, t) {
-	let n = vp(e, t.state);
+function sh(e, t) {
+	let n = ch(e, t.state);
 	if (["unknown", "unavailable"].includes(t.state)) return n;
 	let r = Number(t.state);
 	if (!Number.isFinite(r)) return n;
 	let i = (e.hass?.states?.[t.entity_id])?.attributes?.unit_of_measurement, a = t.purpose === "comfort_humidity" ? "%" : t.purpose === "comfort_co2" ? "ppm" : t.purpose.includes("temperature") ? e._temperatureUnit(t.entity_id) : void 0, o = i ?? a, s = Z(e, r);
 	return o ? `${s} ${o}` : s;
 }
-function vp(e, t) {
+function ch(e, t) {
 	if (!(t == null || t === "")) return t === "unavailable" ? e._t("roomSensorStatusUnavailable") : t === "unknown" ? e._t("diagnosticsEntityUnknown") : t === "missing" ? e._t("entityDiagnosticMissing") : t === "stopped" ? e._t("diagnosticsReasonStopped") : [
 		"idle",
 		"override_active",
@@ -29819,7 +35192,7 @@ function vp(e, t) {
 		"scheduled"
 	].includes(String(t)) ? e._schedulerStatusLabel(String(t)) : e._modeLabel(String(t));
 }
-function yp(e, t) {
+function lh(e, t) {
 	return t === "default" ? e._t("defaultSchedules") : t === "profile" ? e._t("profileSchedules") : t === "profile_pause" ? e._t("diagnosticsScheduleSourceProfilePause") : t ? Q(t) : void 0;
 }
 function Q(e) {
@@ -29827,7 +35200,7 @@ function Q(e) {
 	let t = String(e).replace(/[_-]+/g, " ").trim();
 	return t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}` : void 0;
 }
-function bp(e, t) {
+function uh(e, t) {
 	let n = {
 		assist_disabled: "diagnosticsReasonAssistDisabled",
 		boost_started: "diagnosticsEventBoostStarted",
@@ -29863,7 +35236,7 @@ function bp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function xp(e, t) {
+function dh(e, t) {
 	let n = {
 		added: "diagnosticsOperationAdded",
 		boost_ended: "diagnosticsEventBoostEnded",
@@ -29893,7 +35266,7 @@ function xp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function Sp(e, t) {
+function fh(e, t) {
 	let n = String(t ?? ""), r = {
 		cancelled: "operationCancelled",
 		exhausted: "diagnosticsDeliveryExhausted",
@@ -29906,7 +35279,7 @@ function Sp(e, t) {
 	};
 	return r[n] ? e._t(r[n]) : Q(n);
 }
-function Cp(e) {
+function ph(e) {
 	return {
 		comfort_co2: "comfortCo2Sensor",
 		comfort_humidity: "comfortHumiditySensor",
@@ -29915,13 +35288,13 @@ function Cp(e) {
 		room_temperature: "roomSensorTemperatureEntity"
 	}[e] ?? "diagnosticsAssociatedSensors";
 }
-function wp(e) {
+function mh(e) {
 	return e === "comfort_humidity" ? "mdi:water-percent" : e === "comfort_co2" ? "mdi:molecule-co2" : e === "outdoor_temperature" ? "mdi:thermometer-chevron-down" : "mdi:thermometer";
 }
-function Tp(e, t) {
-	return t.category === "delivery" ? Sp(e, t.data.status) ?? e._t(jp(t.category)) : t.data.event ? xp(e, t.data.event) ?? e._t(jp(t.category)) : e._t(jp(t.category));
+function hh(e, t) {
+	return t.category === "delivery" ? fh(e, t.data.status) ?? e._t(xh(t.category)) : t.data.event ? dh(e, t.data.event) ?? e._t(xh(t.category)) : e._t(xh(t.category));
 }
-function Ep(e, t) {
+function gh(e, t) {
 	let n = {
 		assisting: "roomSensorStatusAssisting",
 		blocked: "roomSensorStatusBlocked",
@@ -29934,7 +35307,7 @@ function Ep(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function Dp(e, t) {
+function _h(e, t) {
 	let n = {
 		cold: "comfortConditionCold",
 		cold_and_dry: "comfortConditionColdAndDry",
@@ -29952,7 +35325,7 @@ function Dp(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function Op(e, t) {
+function vh(e, t) {
 	let n = {
 		elevated: "comfortAirQualityElevated",
 		good: "comfortAirQualityGood",
@@ -29961,7 +35334,7 @@ function Op(e, t) {
 	}, r = String(t ?? "");
 	return n[r] ? e._t(n[r]) : Q(r);
 }
-function kp(e, t) {
+function yh(e, t) {
 	let n = {
 		partial: "comfortDataPartial",
 		stale: "comfortDataStale",
@@ -29969,32 +35342,32 @@ function kp(e, t) {
 	}, r = String(t ?? "");
 	return r === "complete" ? e._t("comfortCurrentReadings") : n[r] ? e._t(n[r]) : Q(r);
 }
-function Ap(e, t) {
+function bh(e, t) {
 	return t === "history" ? e._t("preconditioningModelHistory") : t === "initial_model" || t === "initial" ? e._t("preconditioningModelInitial") : Q(t);
 }
-function jp(e) {
+function xh(e) {
 	return `diagnosticsHistoryCategory${e.replace(/(^|_)(\w)/g, (e, t, n) => n.toUpperCase())}`;
 }
-function Mp(e) {
-	return `${jp(e)}Description`;
+function Sh(e) {
+	return `${xh(e)}Description`;
 }
-async function Np(e, t, n, r) {
+async function Ch(e, t, n, r) {
 	if (!e.hass || e._diagnosticsHistorySaving) return;
-	let i = vf.filter((e) => e === n ? r : t.history_policy.categories[e]);
+	let i = cm.filter((e) => e === n ? r : t.history_policy.categories[e]);
 	e._diagnosticsHistorySaving = !0, e.requestUpdate();
 	try {
-		e._applyDiagnosticsSnapshot(await new P(e.hass).updateDiagnosticsHistory(i));
+		e._applyDiagnosticsSnapshot(await new F(e.hass).updateDiagnosticsHistory(i));
 	} catch {
 		e._error = e._t("diagnosticsHistoryUpdateError");
 	} finally {
 		e._diagnosticsHistorySaving = !1, e.requestUpdate();
 	}
 }
-async function Pp(e) {
+async function wh(e) {
 	if (!(!e.hass || e._diagnosticsHistorySaving)) {
 		e._diagnosticsHistorySaving = !0, e.requestUpdate();
 		try {
-			e._applyDiagnosticsSnapshot(await new P(e.hass).clearDiagnosticsHistory());
+			e._applyDiagnosticsSnapshot(await new F(e.hass).clearDiagnosticsHistory());
 		} catch {
 			e._error = e._t("diagnosticsHistoryClearError");
 		} finally {
@@ -30002,28 +35375,28 @@ async function Pp(e) {
 		}
 	}
 }
-async function Fp(e) {
+async function Th(e) {
 	if (e.hass) try {
 		e._error = void 0;
-		let t = await new P(e.hass).exportDiagnostics(e._diagnosticsRedactEntityIds), n = URL.createObjectURL(new Blob([JSON.stringify(t, null, 2)], { type: "application/json" })), r = document.createElement("a");
-		r.href = n, r.download = `velair-diagnostics-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, r.style.display = "none", document.body.append(r), r.click(), r.remove(), window.setTimeout(() => URL.revokeObjectURL(n), 0), Lp(e);
+		let t = await new F(e.hass).exportDiagnostics(e._diagnosticsRedactEntityIds), n = URL.createObjectURL(new Blob([JSON.stringify(t, null, 2)], { type: "application/json" })), r = document.createElement("a");
+		r.href = n, r.download = `velair-diagnostics-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, r.style.display = "none", document.body.append(r), r.click(), r.remove(), window.setTimeout(() => URL.revokeObjectURL(n), 0), Dh(e);
 	} catch {
 		e._error = e._t("diagnosticsExportError"), e.requestUpdate();
 	}
 }
-function Ip(e) {
-	e._diagnosticsExportOpen ? Lp(e) : (e._diagnosticsExportOpen = !0, e.requestUpdate());
+function Eh(e) {
+	e._diagnosticsExportOpen ? Dh(e) : (e._diagnosticsExportOpen = !0, e.requestUpdate());
 }
-function Lp(e) {
+function Dh(e) {
 	e._diagnosticsExportOpen = !1, e._diagnosticsRedactEntityIds = !0, e.requestUpdate();
 }
 //#endregion
 //#region src/velair/views/templates-view.ts
-function Rp(e, t) {
+function Oh(e, t) {
 	let n = e._scheduleTemplates(), r = n.find((t) => t.key === e._selectedTemplateKey), i = e._hasDraftValidationError("template"), a = r ? e._templateNameInputValue(r) : "", o = r ? e._templateDraftBlocks : [];
 	return n.length ? T`
     <section class="templates-view">
-      ${zp(e)}
+      ${kh(e)}
       <div class="template-library">
         <div class="template-library-layout">
         <div class=${e._templateListClass(n.length)}>
@@ -30108,15 +35481,15 @@ function Rp(e, t) {
                     </button>
                   </div>
                 </div>
-                ${Bp(e, r)}
+                ${Ah(e, r)}
                 <div class="editor template-editor">
-                  ${Lu(e, t, "template")}
+                  ${Ef(e, t, "template")}
                   <div class="draft-list template-block-list">
                     ${o.length ? T`
-                          ${Vu(e, "template")}
-                          ${o.map((t, n) => gu(td("template", r.key, void 0, n), Uu(e, t, n, "template")))}
-                          ${Hu(e, "template")}
-                        ` : Hu(e, "template")}
+                          ${Af(e, "template")}
+                          ${o.map((t, n) => af(Wf("template", r.key, void 0, n), Mf(e, t, n, "template")))}
+                          ${jf(e, "template")}
+                        ` : jf(e, "template")}
                   </div>
                 </div>
               ` : T`
@@ -30130,7 +35503,7 @@ function Rp(e, t) {
     </section>
   ` : T`
       <section class="templates-view">
-        ${zp(e)}
+        ${kh(e)}
         <div class="template-library">
           <div class="template-placeholder compact">
             <span>${e._t("noTemplates")}</span>
@@ -30148,7 +35521,7 @@ function Rp(e, t) {
       </section>
     `;
 }
-function zp(e) {
+function kh(e) {
 	return T`
     <header class="template-intro">
       <ha-icon icon="mdi:content-copy"></ha-icon>
@@ -30159,7 +35532,7 @@ function zp(e) {
     </header>
   `;
 }
-function Bp(e, t) {
+function Ah(e, t) {
 	if (!e._templateApplyOpen) return E;
 	let n = e._visibleZoneIds(e._data?.configured_entities ?? []), r = e._orderedWeekdays(), i = e._hasDraftValidationError("template"), a = e._templateApplyTargets.size > 0;
 	return T`
@@ -30209,9 +35582,885 @@ function Bp(e, t) {
   `;
 }
 //#endregion
+//#region src/velair/controllers/horizontal-drag-scroll.ts
+var jh = 5, Mh = /* @__PURE__ */ new WeakMap(), Nh = /* @__PURE__ */ new WeakSet();
+function Ph(e) {
+	if (e.pointerType === "touch" || e.button !== 0 || !e.isPrimary) return;
+	let t = e.currentTarget;
+	Mh.set(t, {
+		pointerId: e.pointerId,
+		startX: e.clientX,
+		startScrollLeft: t.scrollLeft,
+		dragging: !1
+	});
+}
+function Fh(e) {
+	let t = e.currentTarget, n = Mh.get(t);
+	if (!n || n.pointerId !== e.pointerId) return;
+	let r = e.clientX - n.startX;
+	if (!(!n.dragging && Math.abs(r) < jh)) {
+		if (!n.dragging) {
+			n.dragging = !0, t.classList.add("horizontal-dragging");
+			try {
+				t.setPointerCapture?.(e.pointerId);
+			} catch {}
+		}
+		t.scrollLeft = n.startScrollLeft - r, e.preventDefault();
+	}
+}
+function Ih(e) {
+	Rh(e, !0);
+}
+function Lh(e) {
+	Rh(e, !1);
+}
+function Rh(e, t) {
+	let n = e.currentTarget, r = Mh.get(n);
+	if (!(!r || r.pointerId !== e.pointerId)) {
+		r.dragging && t && (Nh.add(n), window.setTimeout(() => Nh.delete(n), 0)), n.classList.remove("horizontal-dragging");
+		try {
+			n.hasPointerCapture?.(e.pointerId) && n.releasePointerCapture(e.pointerId);
+		} catch {}
+		Mh.delete(n);
+	}
+}
+var zh = {
+	capture: !0,
+	handleEvent(e) {
+		let t = e.currentTarget;
+		Nh.has(t) && (Nh.delete(t), e.preventDefault(), e.stopImmediatePropagation());
+	}
+};
+//#endregion
+//#region src/velair/views/climate-card-view.ts
+function Bh(e, t) {
+	if (!e._data || !t) return T`<div class="climate-card-empty">${e._t("noManagedEntities")}</div>`;
+	let n = e.hass?.states?.[t];
+	n?.attributes;
+	let r = Dn(n), i = n?.state || "off", a = yn(e._data, t), o = e._data.zone_runtime?.[t], s = e._data.external_execution?.zones[t], c = e._data.external_execution?.systems.find((e) => e.provider === s?.provider), l = ru(e._data, t), u = e._data.modes?.find((t) => t.key === (e._data?.active_mode_id ?? e._data?.mode_id)), d = l ? u : void 0, f = !!(n && n.state !== "unavailable" && n.state !== "unknown"), p = !f || r === "off" || r !== i, m = p ? kn(r) : On(i), h = p ? Fg(e, r) : e._modeLabel(i), g = e._config.climate_show_name !== !1, _ = e._config.climate_show_operation !== !1;
+	return T`
+    <section class=${`climate-card-view climate-action-${r} climate-mode-${i}`}>
+      ${e._config.climate_show_state_bar === !1 ? E : T`<div class="climate-card-state-line" aria-hidden="true"></div>`}
+      <header class="climate-card-header">
+        ${_ ? T`<ha-icon
+          class="climate-card-operation-icon"
+          icon=${m}
+          title=${h}
+          aria-hidden="true"
+        ></ha-icon>` : E}
+        ${g || _ ? T`<div class="climate-card-header-content">
+          ${g ? T`<div class="climate-card-title">
+            <h2>${e._config.climate_name === void 0 ? e._friendlyEntityName(t) : e._config.climate_name}</h2>
+            <ha-icon
+              class=${f ? "available" : "unavailable"}
+              icon=${f ? "mdi:check-circle" : "mdi:alert-circle"}
+              title=${e._t(f ? "climateCardAvailable" : "climateCardUnavailable")}
+              role="img"
+              aria-label=${e._t(f ? "climateCardAvailable" : "climateCardUnavailable")}
+            ></ha-icon>
+          </div>` : E}
+          ${_ ? T`<div class="climate-card-operation">
+            <strong>${h}</strong>
+            ${f ? T`<small>${Ig(e, a)}${p && i !== "off" ? T` · ${e._modeLabel(i)}` : E}</small>` : E}
+          </div>` : E}
+        </div>` : E}
+        <button
+          class="climate-card-brand"
+          type="button"
+          title=${e._t("climateCardOpenVelair")}
+          aria-label=${e._t("climateCardOpenVelair")}
+          @click=${e._navigateToVelair}
+        >
+          <img src=${Qe} alt="" width="20" height="20">
+          <span class="climate-card-brand-copy"><strong>Velair</strong><small>by cgonfer</small></span>
+        </button>
+      </header>
+
+      ${Vh(e, t, a, f, o)}
+
+      ${a === "external" ? Pg(e, t, c?.name ?? s?.provider, s) : T`
+            ${qh(e, t)}
+            ${o?.state === "paused" || o?.state === "boost" ? Mg(e, o) : E}
+            ${e._config.climate_show_timeline === !1 ? E : dg(e, t, l, d)}
+            ${fg(e, t)}
+          `}
+    </section>
+  `;
+}
+function Vh(e, t, n, r, i) {
+	let a = e._config.climate_show_target_control !== !1 && n !== "external", o = e._config.climate_show_hvac_mode_control !== !1 && n !== "external", s = e._config.climate_show_native_climate_link !== !1, c = e._config.climate_show_control_mode !== !1, l = e.hass?.states?.[t], u = a && l?.state !== "off" ? mr(l) : void 0, d = o ? _r(l) : [], f = n !== "external" && c, p = !!(u || d.length || s), m = Cg(e, n, r, i), h = e._config.climate_show_actions !== !1 && m.visibleControls > 0, g = h && m.actions.some((e) => e.type === "boost") && e._climateCardBoost?.entityId === t, _ = h && m.actions.some((e) => e.type === "pause") && e._climateCardPause?.entityId === t, v = g || _ || p, y = f || h;
+	if (!y && !v) return E;
+	let b = vr(n, i), x = !!e._climateCardThermostatAction, S = !!e._manualControlActions[t], C = x || S, w = n === "manual" && r && !b && !S, ee = e._temperatureUnit(t), te = e._entityTemperatureStep(t), ne = hr(l, ee, te), re = Gh(e, n, r, i, b, !!u && !ne), ie = n === "automatic" && r && !b && i?.manual_adjustment_allowed === !0 && !C, ae = n === "manual" && i?.manual_adjustment_unavailable_reason === "temperature_migration", oe = n === "automatic" && !ie, se = `climate-card-control-reason-${t.replace(/[^a-z0-9_-]/gi, "-")}`;
+	return T`<section class=${`climate-card-thermostat-controls${y ? " has-toolbar" : ""}${v ? " has-pane" : ""}${f ? " has-authority" : ""}${h ? " has-actions" : ""}`} aria-label=${e._t("climateCardThermostatControls")}>
+    ${y ? T`<div class="climate-card-control-toolbar">
+      ${f ? T`<div class="climate-card-manual-control">
+        <div class="climate-card-manual-segmented" role="group" aria-label=${e._t("velairControl")} aria-busy=${String(C)}>
+          <button type="button" aria-pressed=${String(n === "automatic")} aria-disabled=${String(C || ae)}
+            aria-describedby=${ae && re ? se : E}
+            @click=${() => {
+		n === "manual" && !C && !ae && e._resumeAutomaticControl(t);
+	}}>
+            <ha-icon icon="mdi:calendar-clock" aria-hidden="true"></ha-icon><span>${e._t("overviewControlAutomatic")}</span>
+          </button>
+          <button type="button" aria-pressed=${String(n === "manual")} aria-disabled=${String(C || oe)}
+            aria-describedby=${oe && re ? se : E}
+            @click=${() => {
+		n === "automatic" && ie && e._enterManualAdjustment(t);
+	}}>
+            <ha-icon icon="mdi:hand-back-right-outline" aria-hidden="true"></ha-icon><span>${e._t("overviewControlManual")}</span>
+          </button>
+        </div>
+        ${re ? T`<small class="climate-card-control-reason" id=${se}>${re}</small>` : E}
+      </div>` : E}
+      ${h ? wg(e, t, m) : E}
+    </div>` : E}
+    ${g ? Og(e, t) : _ ? jg(e, t) : p ? T`<div class="climate-card-control-surface" aria-busy=${String(x)}>
+      ${d.length ? Hh(e, t, l?.state ?? "off", d, w, x) : E}
+      ${u?.kind === "single" ? Wh(e, t, "temperature", e._t("climateCardTargetTemperature"), u.temperature, w, x, ee, te) : u?.kind === "range" ? T`<div class="climate-card-range-controls">
+            ${Wh(e, t, "target_temp_low", e._t("climateCardLowerTarget"), u.low, w, x, ee, te)}
+            ${Wh(e, t, "target_temp_high", e._t("climateCardUpperTarget"), u.high, w, x, ee, te)}
+          </div>` : E}
+      ${s ? T`<button class="climate-card-native-link" type="button"
+        title=${e._t("climateCardOpenInHomeAssistant")} aria-label=${e._t("climateCardOpenInHomeAssistant")}
+        @click=${() => e._openClimateEntity(t)}><ha-icon icon="mdi:home-assistant"></ha-icon></button>` : E}
+    </div>` : E}
+  </section>`;
+}
+function Hh(e, t, n, r, i, a) {
+	return T`<details class="climate-card-mode-control" data-mode=${n} ?data-disabled=${!i} ?data-pending=${a}
+    @focusout=${(e) => {
+		let t = e.currentTarget;
+		(!e.relatedTarget || !t.contains(e.relatedTarget)) && t.removeAttribute("open");
+	}}
+    @keydown=${(e) => {
+		let t = e.currentTarget;
+		e.key !== "Escape" || !t.open || (e.preventDefault(), t.removeAttribute("open"), t.querySelector("summary")?.focus());
+	}}>
+    <summary aria-label=${e._t("mode")} aria-disabled=${String(!i || a)} aria-busy=${String(a)}
+      @click=${(e) => Uh(e, r.length, i && !a)}>
+      <ha-icon icon=${On(n)} aria-hidden="true"></ha-icon>
+      <strong>${e._modeLabel(n)}</strong>
+      <ha-icon class="select-indicator" icon="mdi:chevron-down" aria-hidden="true"></ha-icon>
+    </summary>
+    <div class="climate-card-mode-options" aria-label=${e._t("mode")}>
+      ${r.map((r) => T`<button type="button" data-mode=${r} aria-current=${r === n ? "true" : E}
+        @click=${(i) => {
+		i.currentTarget.closest("details")?.removeAttribute("open"), r !== n && e._setClimateCardHvacMode(t, r);
+	}}>
+        <ha-icon icon=${On(r)} aria-hidden="true"></ha-icon>
+        <span>${e._modeLabel(r)}</span>
+        ${r === n ? T`<ha-icon class="selected" icon="mdi:check" aria-hidden="true"></ha-icon>` : E}
+      </button>`)}
+    </div>
+  </details>`;
+}
+function Uh(e, t, n) {
+	if (!n) {
+		e.preventDefault();
+		return;
+	}
+	let r = e.currentTarget.closest("details");
+	if (!r || r.open) return;
+	let i = r.getBoundingClientRect(), a = Math.min(240, t * 40 + 10), o = Math.max(0, i.top), s = Math.max(0, window.innerHeight - i.bottom), c = s < a && o > s, l = c ? o : s;
+	r.dataset.placement = c ? "up" : "down", r.style.setProperty("--climate-card-mode-menu-max-height", `${Math.max(80, Math.min(240, l - 12))}px`);
+}
+function Wh(e, t, n, r, i, a, o, s, c) {
+	let l = e.hass?.states?.[t], u = a && !!gr(l, n, -1, s, c), d = a && !!gr(l, n, 1, s, c);
+	return T`<div class="climate-card-target-control" ?data-pending=${o} aria-busy=${String(o)}>
+    <div class="climate-card-target-stepper">
+      <button type="button" aria-label=${e._t("climateCardDecreaseTarget")} aria-disabled=${String(!u || o)} ?disabled=${!u}
+        @click=${() => {
+		o || e._adjustClimateCardTarget(t, n, -1);
+	}}><ha-icon icon="mdi:minus"></ha-icon></button>
+      <span class="climate-card-target-value"><small>${r}</small><strong>${e._formatTemperature(i, t)}</strong></span>
+      <button type="button" aria-label=${e._t("climateCardIncreaseTarget")} aria-disabled=${String(!d || o)} ?disabled=${!d}
+        @click=${() => {
+		o || e._adjustClimateCardTarget(t, n, 1);
+	}}><ha-icon icon="mdi:plus"></ha-icon></button>
+    </div>
+  </div>`;
+}
+function Gh(e, t, n, r, i, a) {
+	if (!n) return e._t("climateCardControlsUnavailable");
+	if (r?.state === "boost") return e._t("climateCardControlsBlockedBoost");
+	if (r?.state === "paused" && i) return e._t("climateCardControlsBlockedPause");
+	if (r?.state === "stopped") return e._t("climateCardControlsBlockedStopped");
+	if (a) return e._t("climateCardControlsMissingStep");
+	if (t !== "automatic" || r?.manual_adjustment_allowed === !0) return;
+	let o = r?.manual_adjustment_unavailable_reason ? {
+		unavailable: "manualUnavailableClimate",
+		disabled: "manualUnavailableDisabled",
+		temperature_migration: "manualUnavailableTemperatureMigration",
+		scheduler_not_auto: "manualUnavailableScheduler",
+		profile_paused: "manualUnavailableProfilePause",
+		zone_paused: "manualUnavailableZonePause",
+		already_manual: "manualAdjustmentActive",
+		external_execution: "externalActionsInactive"
+	}[r.manual_adjustment_unavailable_reason] : void 0;
+	return o ? e._t(o) : e._t("climateCardManualAdjustmentUnavailable");
+}
+function Kh(e) {
+	return (t) => {
+		t.key !== "Enter" && t.key !== " " || (t.preventDefault(), e());
+	};
+}
+function qh(e, t, n = !0) {
+	let r = e.hass?.states?.[t]?.attributes, i = e._config.climate_show_current_temperature === !1 ? void 0 : r?.current_temperature, a = e._config.climate_humidity_entity, o = e._config.climate_show_current_humidity === !1 ? void 0 : a ? Tn(e.hass, a) : r?.current_humidity, s = e._config.climate_show_outdoor_temperature === !1 ? void 0 : e._config.climate_outdoor_temperature_entity, c = s ? e.hass?.states?.[s] : void 0, l = Tn(e.hass, s), u = typeof l == "number" ? zt(l, c?.attributes?.unit_of_measurement, e._temperatureUnit(t)) : void 0, d = e._config.climate_show_windows === !1 ? [] : wn(e.hass, e._config.climate_window_entities ?? []), f = e._data?.comfort?.[t], p = n && e._config.climate_show_comfort !== !1 && f?.enabled ? f : void 0, m = p?.data_quality === "unavailable" ? void 0 : p, h = typeof i == "number" || typeof o == "number", g = !!s || d.length > 0;
+	if (!h && !g && !p) return E;
+	let _ = e._climateCardCurrentStateCollapsed;
+	return T`
+    <section class=${`climate-card-panel climate-card-current${_ ? " collapsed" : ""}`}>
+      <div
+        class="climate-card-current-heading"
+        @click=${(t) => {
+		_ || t.target?.closest(".climate-card-current-toggle") || e._toggleClimateCardCurrentState();
+	}}
+      >
+        <h3><ha-icon icon="mdi:home-thermometer-outline"></ha-icon>${e._t("climateCardCurrentState")}</h3>
+        <div class="climate-card-current-summary-wrap" aria-hidden=${String(!_)} ?inert=${!_}>
+          ${Jh(e, t, i, a, o, s, u, d)}
+        </div>
+        <button
+          class="climate-card-current-toggle"
+          type="button"
+          aria-expanded=${String(!_)}
+          title=${e._t(_ ? "climateCardExpandCurrentState" : "climateCardCollapseCurrentState")}
+          aria-label=${e._t(_ ? "climateCardExpandCurrentState" : "climateCardCollapseCurrentState")}
+          @click=${e._toggleClimateCardCurrentState}
+        ><ha-icon icon="mdi:chevron-up"></ha-icon></button>
+      </div>
+      ${m ? Yh(e, t, m, _) : E}
+      <div class="climate-card-current-body" aria-hidden=${String(_)} ?inert=${_}>
+        <div class="climate-card-current-body-inner">
+          <div class=${`climate-card-current-grid${h ? " has-readings" : ""}${g ? " has-context" : ""}`}>
+            ${h ? T`<div class="climate-card-current-readings">
+              ${typeof i == "number" ? Zh(e, t, "mdi:thermometer", e._formatTemperature(i, t), "currentTemperature") : E}
+              ${typeof o == "number" ? Zh(e, a ?? t, "mdi:water-percent", `${o}%`, "currentHumidity") : E}
+            </div>` : E}
+            ${g ? T`<div class="climate-card-current-context">
+              ${s ? Qh(e, t, s, u, i) : E}
+              ${d.length ? $h(e, d) : E}
+            </div>` : E}
+            ${p ? eg(e, t, p) : E}
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+function Jh(e, t, n, r, i, a, o, s) {
+	let c = s.filter((e) => e.state === "open").length, l = s.filter((e) => e.state === "closed").length, u = s.length - c - l, d = a ? e.hass?.states?.[a]?.attributes?.friendly_name ?? e._t("climateCardOutdoor") : void 0, f = typeof o == "number" && typeof n == "number" ? o - n : void 0, p = d && typeof f == "number" ? `${d} · ${e._t(f >= 0 ? "climateCardOutdoorWarmer" : "climateCardOutdoorColder", { delta: e._formatTemperature(Math.abs(f), t) })}` : d;
+	return T`<div class="climate-card-current-summary">
+    ${typeof n == "number" ? Xh("temperature", "mdi:thermometer", e._formatTemperature(n, t), e._t("currentTemperature"), () => e._openEntityHistory(t)) : E}
+    ${typeof i == "number" ? Xh("humidity", "mdi:water-percent", `${i}%`, e._t("currentHumidity"), () => e._openEntityHistory(r ?? t)) : E}
+    ${a ? Xh("outdoor", "mdi:home-export-outline", typeof o == "number" ? e._formatTemperature(o, t) : e._t("unavailable"), p ?? e._t("climateCardOutdoor"), () => e._openEntityHistory(a)) : E}
+    ${s.length ? T`<span class="climate-card-current-summary-item windows" title=${e._t("climateCardWindows")}>
+      <ha-icon icon=${c ? "mdi:window-open-variant" : "mdi:window-closed-variant"}></ha-icon>
+      <strong>
+        ${c ? T`<span class="open">${e._t("climateCardWindowsOpen", { count: c })}</span>` : E}
+        ${c && (l || u) ? T`<span aria-hidden="true">·</span>` : E}
+        ${l ? T`<span>${e._t("climateCardWindowsClosed", { count: l })}</span>` : E}
+        ${l && u ? T`<span aria-hidden="true">·</span>` : E}
+        ${u ? T`<span>${e._t("climateCardWindowsUnavailable", { count: u })}</span>` : E}
+      </strong>
+    </span>` : E}
+  </div>`;
+}
+function Yh(e, t, n, r) {
+	let i = En(n), a = ig(e, t, n, !0), o = a.map((e) => e.text).join(" · ");
+	return T`<div
+    class="climate-card-current-collapsed-comfort"
+    aria-hidden=${String(!r)}
+    ?inert=${!r}
+  ><div class="climate-card-current-collapsed-comfort-inner">
+    <div class=${`climate-card-current-collapsed-comfort-row ${i}`} title=${o} style=${tg(n)}>
+      <ha-icon icon="mdi:sofa-outline"></ha-icon>
+      <div class="climate-card-comfort-chip-list">
+        ${a.map((e) => ag(e))}
+      </div>
+    </div>
+  </div></div>`;
+}
+function Xh(e, t, n, r, i) {
+	let a = i ? Kh(i) : void 0;
+	return T`<span
+    class=${`climate-card-current-summary-item ${e}${i ? " clickable" : ""}`}
+    title=${r}
+    role=${i ? "button" : E}
+    tabindex=${i ? "0" : E}
+    @click=${i}
+    @keydown=${a}
+  >
+    <ha-icon icon=${t}></ha-icon><strong>${n}</strong>
+  </span>`;
+}
+function Zh(e, t, n, r, i) {
+	let a = i === "currentTemperature" ? "temperature" : i === "currentHumidity" ? "humidity" : "default", o = e._t("climateCardOpenMetricHistory", { metric: e._t(i) });
+	return T`<div class=${`climate-card-metric ${a}`} title=${e._t(i)}>
+    <ha-icon icon=${n}></ha-icon><strong>${r}</strong>
+    <button
+      class="climate-card-metric-history"
+      type="button"
+      title=${o}
+      aria-label=${o}
+      @click=${() => e._openEntityHistory(t)}
+    ><ha-icon icon="mdi:chart-line"></ha-icon></button>
+  </div>`;
+}
+function Qh(e, t, n, r, i) {
+	let a = typeof r == "number" && typeof i == "number" ? r - i : void 0, o = e.hass?.states?.[n]?.attributes?.friendly_name ?? e._t("climateCardOutdoor"), s = e._t("climateCardOpenMetricHistory", { metric: o });
+	return T`<div class="climate-card-context-item outdoor with-history">
+    <ha-icon icon="mdi:home-export-outline"></ha-icon>
+    <div><small title=${o}>${o}</small>
+      <div class="climate-card-context-detail">
+        <strong>${typeof r == "number" ? e._formatTemperature(r, t) : e._t("unavailable")}</strong>
+        ${typeof a == "number" ? T`<span>${e._t(a >= 0 ? "climateCardOutdoorWarmer" : "climateCardOutdoorColder", { delta: e._formatTemperature(Math.abs(a), t) })}</span>` : E}
+      </div>
+    </div>
+    <button
+      class="climate-card-metric-history"
+      type="button"
+      title=${s}
+      aria-label=${s}
+      @click=${() => e._openEntityHistory(n)}
+    ><ha-icon icon="mdi:chart-line"></ha-icon></button>
+  </div>`;
+}
+function $h(e, t) {
+	if (e._config.climate_window_display === "individual") return T`<div class="climate-card-context-item windows individual">
+      <ha-icon icon="mdi:window-closed-variant"></ha-icon>
+      <div><small>${e._t("climateCardWindows")}</small>
+        <div class="climate-card-window-list">${t.map((e) => T`
+          <span class=${e.state} title=${e.entityId}>
+            <ha-icon icon=${e.state === "open" ? "mdi:window-open-variant" : "mdi:window-closed-variant"}></ha-icon>
+            ${e.name}
+          </span>`)}
+        </div>
+      </div>
+    </div>`;
+	let n = t.filter((e) => e.state === "open").length, r = t.filter((e) => e.state === "closed").length, i = t.length - n - r;
+	return T`<div class="climate-card-context-item windows">
+    <ha-icon icon=${n ? "mdi:window-open-variant" : "mdi:window-closed-variant"}></ha-icon>
+    <div><small>${e._t("climateCardWindows")}</small>
+      <div class="climate-card-context-detail">
+        ${n || r ? T`<strong class="climate-card-window-summary">
+          ${n ? T`<span class="open">${e._t("climateCardWindowsOpen", { count: n })}</span>` : E}
+          ${n && r ? T`<span class="separator" aria-hidden="true">·</span>` : E}
+          ${r ? T`<span class="closed">${e._t("climateCardWindowsClosed", { count: r })}</span>` : E}
+        </strong>` : E}
+        ${i ? T`<span>${e._t("climateCardWindowsUnavailable", { count: i })}</span>` : E}
+      </div>
+    </div>
+  </div>`;
+}
+function eg(e, t, n) {
+	let r = En(n), i = ig(e, t, n, !1), a = og(e, t, n), o = cg(e, t, n);
+	return T`<div class=${`climate-card-comfort ${r}`} style=${tg(n)}>
+    <ha-icon icon="mdi:sofa-outline"></ha-icon>
+    <div class="climate-card-comfort-content">
+      <div class="climate-card-comfort-heading-row">
+        <strong>${e._t("comfort")}: ${Lg(e, n)}</strong>
+      </div>
+      ${i.length ? T`<div class="climate-card-comfort-chip-list">
+        ${i.map((e) => ag(e))}
+      </div>` : E}
+      ${a.length ? T`<div class="climate-card-comfort-notices">
+        ${a.map((e) => T`<span class=${`climate-card-comfort-notice ${e.tone}`}><ha-icon icon=${e.icon}></ha-icon>${e.text}</span>`)}
+      </div>` : E}
+      ${o.length ? T`<div class="climate-card-comfort-metrics">
+        ${o.map((e) => ag(e))}
+      </div>` : E}
+    </div>
+  </div>`;
+}
+function tg(e) {
+	let t = ng(e), n = e.range_summary?.thermal_relation === "mixed" ? e.range_summary.positions.humidex : void 0;
+	return `--comfort-primary-accent:${t};--comfort-secondary-accent:${n ? rg(n) : t};`;
+}
+function ng(e) {
+	return !e.enabled || e.data_quality === "unavailable" || e.condition === "no_readings" || e.condition === "monitoring_off" ? "var(--secondary-text-color)" : e.condition === "comfortable" || e.condition.endsWith("_comfortable") ? "var(--success-color, #65a56f)" : e.condition.includes("hot") ? "var(--deep-orange-color, var(--warning-color, #e67e45))" : e.condition.includes("cold") ? "var(--cyan-color, var(--info-color, #3aa7c9))" : e.condition.includes("humid") ? "var(--info-color, #3aa7c9)" : e.condition.includes("dry") ? "var(--warning-color, #e69b35)" : "var(--secondary-text-color)";
+}
+function rg(e) {
+	return e === "within" ? "var(--success-color, #65a56f)" : e === "below" ? "var(--cyan-color, var(--info-color, #3aa7c9))" : e === "above" ? "var(--warning-color, #e69b35)" : "var(--secondary-text-color)";
+}
+function ig(e, t, n, r) {
+	let i = r ? [{
+		label: e._t("comfort"),
+		text: Lg(e, n),
+		tone: En(n)
+	}] : [], a = sg(e, n);
+	if (a && i.push(a), r) {
+		let r = ug(e, t, n);
+		r && i.push({
+			icon: "mdi:thermometer-lines",
+			text: r,
+			tone: "info"
+		}), e._config.climate_show_comfort_collapsed_readings === !0 && i.push(...cg(e, t, n));
+	}
+	return i;
+}
+function ag(e) {
+	return T`<span class=${`climate-card-comfort-chip ${e.tone ?? "neutral"}`} title=${e.label ? `${e.label}: ${e.text}` : e.text}>
+    ${e.icon ? T`<ha-icon icon=${e.icon}></ha-icon>` : E}
+    ${e.label ? T`<small>${e.label}</small>` : E}
+    <strong>${e.text}</strong>
+  </span>`;
+}
+function og(e, t, n) {
+	let r = ug(e, t, n), i = [];
+	return r && i.push({
+		icon: "mdi:thermometer-lines",
+		text: r,
+		tone: "info"
+	}), n.data_quality !== "complete" && i.push({
+		icon: "mdi:alert-circle-outline",
+		text: e._t(Rg(n.data_quality)),
+		tone: "warning"
+	}), i;
+}
+function sg(e, t) {
+	let n = t.range_summary?.positions.humidex;
+	if (t.range_summary?.thermal_relation !== "mixed" || !n) return;
+	let r = n === "below" ? "comfortHumidexRangeBelow" : n === "within" ? "comfortHumidexRangeWithin" : "comfortHumidexRangeAbove";
+	return {
+		icon: "mdi:thermometer-lines",
+		label: e._t("comfortHumidex"),
+		text: e._t(r),
+		tone: n === "within" ? "good" : "warning"
+	};
+}
+function cg(e, t, n) {
+	let r = {
+		humidex: {
+			icon: "mdi:weather-sunny-alert",
+			label: "comfortHumidex",
+			config: "climate_show_comfort_humidex"
+		},
+		dew_point: {
+			icon: "mdi:water-thermometer-outline",
+			label: "comfortDewPoint",
+			config: "climate_show_comfort_dew_point"
+		},
+		absolute_humidity: {
+			icon: "mdi:water",
+			label: "comfortAbsoluteHumidity",
+			config: "climate_show_comfort_absolute_humidity"
+		}
+	};
+	return Ac.flatMap((i) => {
+		let a = r[i];
+		if (e._config[a.config] === !1) return [];
+		let o = n.derived_metrics?.[i];
+		return o?.availability !== "current" || typeof o.value != "number" ? [] : [{
+			icon: a.icon,
+			label: e._t(a.label),
+			text: lg(e, t, i, o.value),
+			tone: i === "humidex" ? "info" : "neutral"
+		}];
+	});
+}
+function lg(e, t, n, r) {
+	return n === "dew_point" ? e._formatTemperature(r, t) : n === "absolute_humidity" ? Mc(r, e.hass) : r.toLocaleString(void 0, { maximumFractionDigits: 1 });
+}
+function ug(e, t, n) {
+	let r = {
+		co2_elevated: "comfortInsightCo2Elevated",
+		co2_poor: "comfortInsightCo2Poor",
+		humidex_feels_warmer: "comfortInsightHumidexWarmer",
+		ventilation_may_help_cool: "comfortInsightVentilationCool",
+		ventilation_may_help_warm: "comfortInsightVentilationWarm",
+		ventilation_may_help_reduce_humidity: "comfortInsightVentilationDry",
+		ventilation_may_help_increase_humidity: "comfortInsightVentilationHumidify",
+		ventilation_has_tradeoff: "comfortInsightVentilationTradeoff"
+	}, i = n.insights?.find((e) => e.kind === "context" && r[e.code] !== void 0), a = i ? r[i.code] : void 0;
+	if (!a) return;
+	if (i?.code === "ventilation_has_tradeoff") {
+		let t = n.outdoor?.comparison?.temperature, r = n.outdoor?.comparison?.humidity, i = t?.potential ?? r?.potential, o = i === "cooling" ? "comfortVentilationEffectCool" : i === "warming" ? "comfortVentilationEffectWarm" : i === "drying" ? "comfortVentilationEffectDry" : "comfortVentilationEffectHumidify", s = [...t?.blocked_by ?? [], ...r?.blocked_by ?? []][0] === "temperature" ? "comfortVentilationDimensionTemperature" : "comfortVentilationDimensionHumidity";
+		return e._t(a, {
+			effect: e._t(o),
+			dimension: e._t(s)
+		});
+	}
+	if (i && (i.code === "ventilation_may_help_cool" || i.code === "ventilation_may_help_warm") && n.outdoor?.humidity?.availability !== "current") return `${e._t(a)} ${e._t("comfortInsightVentilationTemperatureOnly")}`;
+	if (i?.code !== "humidex_feels_warmer") return e._t(a);
+	let o = Fc(n, e._temperatureUnit(t));
+	if (o === void 0) return;
+	let s = Number(Math.abs(o).toFixed(1));
+	return e._t(a, { delta: `${s.toLocaleString()} ${e._temperatureUnit(t)}` });
+}
+function dg(e, t, n, r) {
+	let i = e._currentTimelineNow(), a = hi(i, e.hass?.config?.time_zone), o = Tu(e.hass, i), s = iu(e._data, t), c = e._config.climate_show_timeline_title !== !1, l = e._config.climate_show_timeline_profile !== !1 && !!n, u = e._config.climate_show_timeline_mode !== !1 && !!r, d = c || l || u;
+	return T`<section class=${`climate-card-timeline${d ? "" : " no-heading"}`}>
+    <div class="climate-card-timeline-grid">
+      ${d ? T`<div class="climate-card-timeline-meta">
+        ${c ? T`<h3><ha-icon icon="mdi:timeline-clock-outline"></ha-icon>${e._t("todayTimeline")}</h3>` : E}
+        <div class="climate-card-context-chips">
+        ${l && n ? T`<span class="climate-card-context-chip is-profile" style=${`--climate-chip-accent:${K(n.profile.key, n.profile.color)}`}>
+          <span class="climate-card-chip-accent"><ha-icon icon=${n.profile.icon || "mdi:account-outline"}></ha-icon><small>${e._t("profileOverviewLabel")}</small></span><strong>${n.profile.name}</strong>
+        </span>` : E}
+        ${u && r ? T`<span class="climate-card-context-chip is-mode"><span class="climate-card-chip-accent"><ha-icon icon="mdi:format-list-bulleted"></ha-icon><small>${e._t("mode")}</small></span><strong>${r.name}</strong></span>` : E}
+        </div>
+      </div>` : E}
+      <div class="overview-timeline-scroll climate-card-timeline-scroll">
+        <div class="overview-timeline-layout climate-card-timeline-layout">
+          <div class="overview-timeline-rows" style=${`--overview-now-left:${a.left}%;`}>
+            <div class="overview-timeline-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span><div class="overview-timeline-now-label" title=${e._t("currentTime", { time: a.label })}>${a.label}</div></div>
+            <div class="overview-timeline-now-line"></div>
+            ${od(e, t, s?.[o] ?? [], s, o)}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+function fg(e, t) {
+	let n = e._data?.room_sensor_assist?.[t], r = e._config.climate_show_room_assist !== !1, i = e._config.climate_show_preconditioning !== !1, a = e._config.climate_room_assist_display ?? "both", o = e._config.climate_preconditioning_display ?? "both", s = r && !!n?.configured, c = r && a !== "chart" && !!n?.configured, l = r && a !== "text" && n?.configured && !!n.start && Nu(n), u = i ? hg(e, t) : void 0;
+	return !s && !u ? E : T`<section class="climate-card-features">
+    ${n && s ? pg(e, t, n, c, !!l) : E}
+    ${u ? mg(e, u, o) : E}
+  </section>`;
+}
+function pg(e, t, n, r, i) {
+	let a = i && e._climateCardRoomAssistCollapsed, o = _g(e, t, n), s = e._t("roomSensorAssistBadge"), c = e._t(bg(n.status)), l = `climate-card-room-assist-${t.replace(/[^a-z0-9_-]/gi, "-")}`, u = `${l}-title`, d = `${l}-status`, f = `${l}-description`, p = T`<span class="climate-card-feature-heading-content">
+    <span class="climate-card-feature-title-row">
+      <span class="climate-card-feature-title"><ha-icon icon="mdi:thermometer-auto"></ha-icon><strong id=${u}>${s}</strong></span>
+      <strong id=${d} class=${`climate-card-feature-status ${n.status}`}>${c}</strong>
+    </span>
+    ${r ? T`<span id=${f} class="climate-card-feature-description">${o}</span>` : E}
+  </span>`;
+	return T`<section class=${`climate-card-feature-panel room-assist${a ? " collapsed" : ""}`}>
+    ${i ? T`<button
+        type="button"
+        class="climate-card-feature-heading"
+        aria-expanded=${String(!a)}
+        aria-labelledby=${`${u} ${d}`}
+        aria-describedby=${r ? f : E}
+        title=${e._t(a ? "climateCardExpandSection" : "climateCardCollapseSection", { name: s })}
+        @click=${() => e._toggleClimateCardRoomAssist()}
+      >${p}<ha-icon class="climate-card-feature-chevron" icon="mdi:chevron-up"></ha-icon></button>` : T`<div class="climate-card-feature-heading static">${p}</div>`}
+    ${i ? T`<div class="climate-card-feature-body" aria-hidden=${String(a)} ?inert=${a}>
+      <div class="climate-card-feature-body-inner">
+        ${Sg(e, t, n)}
+      </div>
+    </div>` : E}
+  </section>`;
+}
+function mg(e, t, n) {
+	let r = n !== "chart", i = n !== "text", a = i && e._climateCardPreconditioningCollapsed, o = e._t("preconditioning"), s = t.target_when, c = `${e._t("preconditioningStarts")} ${e._formatDateTime(t.when)} · ${e._t("preconditioningTargetBy")} ${e._formatDateTime(s)} · ${e._formatEventAction(t)} · ${e._formatEventMode(t)}`, l = new Date(t.when).getTime() <= e._currentTimelineNow().getTime(), u = e._t(l ? "climateCardPreconditioningActive" : "scheduled"), d = `climate-card-preconditioning-${t.entity_id.replace(/[^a-z0-9_-]/gi, "-")}`, f = `${d}-title`, p = `${d}-status`, m = `${d}-description`, h = T`<span class="climate-card-feature-heading-content">
+    <span class="climate-card-feature-title-row">
+      <span class="climate-card-feature-title"><ha-icon icon="mdi:clock-fast"></ha-icon><strong id=${f}>${o}</strong></span>
+      <strong id=${p} class=${`climate-card-feature-status ${l ? "active" : "scheduled"}`}>${u}</strong>
+    </span>
+    ${r ? T`<span id=${m} class="climate-card-feature-description preconditioning" title=${c}>
+      <span><small>${e._t("preconditioningStarts")}</small><strong>${e._formatDateTime(t.when)}</strong></span>
+      <span class="separator">·</span>
+      <span><small>${e._t("preconditioningTargetBy")}</small><strong>${e._formatDateTime(s)}</strong></span>
+      <span class="separator">·</span>
+      <span><strong>${e._formatEventAction(t)}</strong><small>${e._formatEventMode(t)}</small></span>
+    </span>` : E}
+  </span>`;
+	return T`<section class=${`climate-card-feature-panel preconditioning${a ? " collapsed" : ""}`}>
+    ${i ? T`<button
+        type="button"
+        class="climate-card-feature-heading"
+        aria-expanded=${String(!a)}
+        aria-labelledby=${`${f} ${p}`}
+        aria-describedby=${r ? m : E}
+        title=${e._t(a ? "climateCardExpandSection" : "climateCardCollapseSection", { name: o })}
+        @click=${() => e._toggleClimateCardPreconditioning()}
+      >${h}<ha-icon class="climate-card-feature-chevron" icon="mdi:chevron-up"></ha-icon></button>` : T`<div class="climate-card-feature-heading static">${h}</div>`}
+    ${i ? T`<div class="climate-card-feature-body" aria-hidden=${String(a)} ?inert=${a}>
+      <div class="climate-card-feature-body-inner">${gg(e, t)}</div>
+    </div>` : E}
+  </section>`;
+}
+function hg(e, t) {
+	let n = e._currentTimelineNow().getTime();
+	return e._data?.next_events.find((e) => {
+		if (e.entity_id !== t || !e.target_when || e.target_when === e.when) return !1;
+		let r = new Date(e.when).getTime(), i = new Date(e.target_when).getTime(), a = e.preconditioning_diagnostics?.direction ?? e.hvac_mode;
+		return Number.isFinite(r) && Number.isFinite(i) && i > r && i > n && (a === "heat" || a === "cool");
+	});
+}
+function gg(e, t) {
+	let n = t.target_when, r = Math.round((new Date(n).getTime() - new Date(t.when).getTime()) / 6e4);
+	return T`<div class=${`climate-card-preconditioning-preview ${t.preconditioning_diagnostics?.direction === "cool" || t.hvac_mode === "cool" ? "cool" : "heat"}`}>
+    <div class="climate-card-preconditioning-start">
+      <small>${e._t("preconditioningStarts")}</small>
+      <strong>${e._formatDateTime(t.when)}</strong>
+      <span>${e._t("preconditioningLeadTime", { minutes: r })}</span>
+    </div>
+    <div class="climate-card-preconditioning-target">
+      <small>${e._t("preconditioningTargetBy")}</small>
+      <strong>${e._formatDateTime(n)}</strong>
+      <span>${e._formatEventAction(t)} · ${e._formatEventMode(t)}</span>
+    </div>
+  </div>`;
+}
+function _g(e, t, n) {
+	let r = vg(e, t, n.target_temperature, n.target_temp_low, n.target_temp_high), i = vg(e, t, n.applied_temperature ?? n.climate_target_temperature, n.applied_target_temp_low ?? n.climate_target_temp_low, n.applied_target_temp_high ?? n.climate_target_temp_high);
+	return n.status === "assisting" && yg(n) && r && i ? e._t("climateCardRoomAssistSummaryAssistingAdjusted", {
+		target: r,
+		applied: i
+	}) : e._t(xg(n.status));
+}
+function vg(e, t, n, r, i) {
+	if (typeof n == "number") return e._formatTemperature(n, t);
+	if (typeof r == "number" && typeof i == "number") return `${e._formatTemperature(r, t)} – ${e._formatTemperature(i, t)}`;
+}
+function yg(e) {
+	let t = e.target_temperature, n = e.applied_temperature ?? e.climate_target_temperature;
+	if (typeof t == "number" && typeof n == "number") return Math.abs(t - n) >= .05;
+	let r = e.target_temp_low, i = e.target_temp_high, a = e.applied_target_temp_low ?? e.climate_target_temp_low, o = e.applied_target_temp_high ?? e.climate_target_temp_high;
+	return typeof r == "number" && typeof i == "number" && typeof a == "number" && typeof o == "number" && (Math.abs(r - a) >= .05 || Math.abs(i - o) >= .05);
+}
+function bg(e) {
+	return {
+		not_configured: "climateCardRoomAssistNotConfigured",
+		disabled: "climateCardRoomAssistDisabled",
+		idle: "climateCardRoomAssistIdle",
+		ready: "climateCardRoomAssistReady",
+		assisting: "climateCardRoomAssistAssisting",
+		holding: "climateCardRoomAssistHolding",
+		blocked: "climateCardRoomAssistBlocked",
+		unavailable: "climateCardRoomAssistUnavailable"
+	}[e];
+}
+function xg(e) {
+	return {
+		not_configured: "climateCardRoomAssistSummaryNotConfigured",
+		disabled: "climateCardRoomAssistSummaryDisabled",
+		idle: "climateCardRoomAssistSummaryIdle",
+		ready: "climateCardRoomAssistSummaryReady",
+		assisting: "climateCardRoomAssistSummaryAssisting",
+		holding: "climateCardRoomAssistSummaryHolding",
+		blocked: "climateCardRoomAssistSummaryBlocked",
+		unavailable: "climateCardRoomAssistSummaryUnavailable"
+	}[e];
+}
+function Sg(e, t, n) {
+	return T`<div class="climate-card-room-assist-graph">
+    ${lp(e, t, n, Ad(e._data?.zones[t]?.preconditioning, e._temperatureUnit(t)))}
+  </div>`;
+}
+function Cg(e, t, n, r) {
+	let i = r?.state === "paused", a = i && r?.manual_pause === !0 && r.pause_count === 1, o = r?.state === "boost", s = t === "manual", c = n && t !== "external" && r?.state !== "stopped", l = fn(e._config, e.hass, {
+		velairActionsAvailable: c,
+		manual: s
+	}), { direct: u, overflow: d } = pn(l);
+	return {
+		actions: l,
+		direct: u,
+		overflow: d,
+		visibleControls: u.length + +!!d.length,
+		state: {
+			boost: o,
+			manual: s,
+			paused: i,
+			resumablePause: a,
+			boostPanelOpen: !1,
+			pausePanelOpen: !1
+		}
+	};
+}
+function wg(e, t, n) {
+	let { direct: r, overflow: i, visibleControls: a, state: o } = n;
+	if (!a) return E;
+	let s = [...r.map((e) => ({
+		type: "action",
+		action: e
+	})), ...i.length ? [{ type: "more" }] : []], c = {
+		...o,
+		boostPanelOpen: e._climateCardBoost?.entityId === t,
+		pausePanelOpen: e._climateCardPause?.entityId === t
+	}, l = new Set(i.filter((e) => e.type === "script").map((e) => `${e.sourceIndex}:${e.action.script}`)), u = !!(e._climateCardScriptAction && l.has(e._climateCardScriptAction)), d = e._climateCardScriptFeedback && l.has(e._climateCardScriptFeedback.key) ? e._climateCardScriptFeedback : void 0, f = u ? "running" : d?.status;
+	return T`<div class=${`climate-card-actions controls-${a}`} role="group" aria-label=${e._t("climateCardActions")}>
+    <div class=${`climate-card-actions-scroll${e._climateCardActionsHasOverflow ? " has-overflow" : ""}${e._climateCardActionsCanScrollLeft ? " can-scroll-left" : ""}${e._climateCardActionsCanScrollRight ? " can-scroll-right" : ""}`}>
+      <button class="climate-card-actions-scroll-button scroll-previous" type="button"
+        aria-label=${`${e._t("climateCardActions")} ←`}
+        aria-hidden=${String(!e._climateCardActionsCanScrollLeft)}
+        ?disabled=${!e._climateCardActionsCanScrollLeft}
+        @click=${() => e._scrollClimateCardActions(-1)}><ha-icon icon="mdi:chevron-left"></ha-icon></button>
+      <div class="climate-card-actions-row"
+        @scroll=${e._handleClimateCardActionsScroll}
+        @pointerdown=${Ph}
+        @pointermove=${Fh}
+        @pointerup=${Ih}
+        @pointercancel=${Lh}
+        @click=${zh}>
+      ${s.map((n) => n.type === "action" ? Tg(e, t, n.action, c) : T`<button class=${`more icon-only climate-card-actions-menu-trigger${f ? ` feedback-${f}` : ""}`} type="button"
+            title=${d?.message ?? e._t("more")}
+            aria-label=${d ? `${e._t("more")}. ${d.message}` : e._t("more")}
+            aria-busy=${String(u)}
+            aria-haspopup="dialog"
+            aria-expanded=${e._climateCardActionsMenuOpen ? "true" : "false"}
+            aria-controls="climate-card-actions-menu"
+            @click=${e._openClimateCardActionsMenu}>${Eg("mdi:dots-horizontal")}</button>`)}
+      </div>
+      <button class="climate-card-actions-scroll-button scroll-next" type="button"
+        aria-label=${`${e._t("climateCardActions")} →`}
+        aria-hidden=${String(!e._climateCardActionsCanScrollRight)}
+        ?disabled=${!e._climateCardActionsCanScrollRight}
+        @click=${() => e._scrollClimateCardActions(1)}><ha-icon icon="mdi:chevron-right"></ha-icon></button>
+    </div>
+    ${e._climateCardScriptFeedback ? T`<span class="climate-card-action-feedback-label" role="status">${e._climateCardScriptFeedback.message}</span>` : E}
+    ${e._climateCardActionsMenuOpen && i.length ? Dg(e, t, i, o) : E}
+  </div>`;
+}
+function Tg(e, t, n, r, i = !1) {
+	let a = !!e._climateCardServiceAction, o = (t) => () => {
+		i && e._closeClimateCardActionsMenu(), t();
+	};
+	if (n.type === "boost") {
+		let s = e._t(r.boost ? "cancelBoost" : "boost"), c = !i && n.hideName;
+		return T`<button class=${`boost${c ? " icon-only name-hidden" : ""}${r.boost ? " runtime-active" : ""}${r.boostPanelOpen ? " panel-open" : ""}`} type="button" ?disabled=${a} title=${s} aria-label=${s}
+      aria-pressed=${i ? E : String(r.boostPanelOpen)}
+      @click=${o(r.boost ? () => e._runClimateCardService("cancel-boost", t) : () => e._openClimateCardBoost(t))}>
+      <ha-icon icon="mdi:lightning-bolt"></ha-icon>${c ? E : T`<span>${s}</span>`}${i ? E : T`<ha-icon class="panel-close" icon="mdi:close" aria-hidden="true"></ha-icon>`}
+    </button>`;
+	}
+	if (n.type === "pause") {
+		if (r.manual) {
+			let r = e._t("resumeAutomaticControl"), s = !i && n.hideName;
+			return T`<button class=${`resume${s ? " icon-only" : ""}`} type="button" ?disabled=${a} title=${r} aria-label=${r}
+        @click=${o(() => e._resumeAutomaticControl(t))}><ha-icon icon="mdi:autorenew"></ha-icon>${s ? E : T`<span>${r}</span>`}</button>`;
+		}
+		let s = e._t(r.resumablePause ? "resume" : r.paused ? "climateCardManagePause" : "pause"), c = !i && n.hideName;
+		return T`<button class=${`pause${c ? " icon-only name-hidden" : ""}${r.paused ? " runtime-active" : ""}${r.pausePanelOpen ? " panel-open" : ""}`} type="button" ?disabled=${a} title=${s} aria-label=${s}
+      aria-pressed=${i ? E : String(r.pausePanelOpen)}
+      @click=${o(r.resumablePause ? () => e._runClimateCardService("resume", t) : r.paused ? e._navigateToVelair : () => e._openClimateCardPause(t))}>
+      <ha-icon icon=${r.paused ? "mdi:play-circle" : "mdi:pause-circle"}></ha-icon>${c ? E : T`<span>${s}</span>`}${i ? E : T`<ha-icon class="panel-close" icon="mdi:close" aria-hidden="true"></ha-icon>`}
+    </button>`;
+	}
+	let s = e.hass?.states?.[n.action.script], c = `${n.sourceIndex}:${n.action.script}`, l = e._climateCardScriptAction === c, u = e._climateCardScriptFeedback?.key === c ? e._climateCardScriptFeedback : void 0, d = fr(n.action.icon) ?? fr(s?.attributes?.icon) ?? "mdi:script-text-outline", f = pr(n.action.color) ?? "var(--primary-color)", p = n.action.name.trim() || e._friendlyEntityName(n.action.script), m = !i && n.action.hide_name === !0;
+	return T`<button class=${`custom${m ? " icon-only" : ""}${l ? " feedback-running" : u ? ` feedback-${u.status}` : ""}`} type="button"
+    style=${`--custom-action-color:${f}`}
+    ?disabled=${!n.available || !!e._climateCardScriptAction}
+    title=${u?.message ?? (n.available ? p : e._t("climateCardScriptUnavailable"))}
+    aria-label=${u ? `${p}. ${u.message}` : p}
+    aria-busy=${String(l)}
+    @click=${() => e._runClimateCardScriptAction(n.action, n.sourceIndex)}>
+    ${Eg(d)}
+    ${m ? E : T`<span>${p}</span>`}
+  </button>`;
+}
+function Eg(e) {
+	return T`<span class="climate-card-action-icon-stack" aria-hidden="true">
+    <ha-icon class="action-result-default" icon=${e}></ha-icon>
+    <ha-icon class="action-result-running" icon="mdi:loading"></ha-icon>
+    <ha-icon class="action-result-success" icon="mdi:check"></ha-icon>
+    <ha-icon class="action-result-error" icon="mdi:alert-outline"></ha-icon>
+  </span>`;
+}
+function Dg(e, t, n, r) {
+	return T`<div id="climate-card-actions-menu" class="climate-card-actions-menu" popover="auto" role="dialog" aria-label=${e._t("climateCardActions")}
+    @toggle=${(t) => {
+		t.newState === "closed" && e._climateCardActionsMenuOpen && e._closeClimateCardActionsMenu(!0);
+	}}
+    @keydown=${(t) => {
+		t.key === "Escape" && (t.preventDefault(), e._closeClimateCardActionsMenu(!0));
+	}}>
+    ${n.map((n) => Tg(e, t, n, r, !0))}
+    <div class="climate-card-actions-menu-separator" aria-hidden="true"></div>
+    <button type="button" @click=${e._navigateToVelair}>
+      <img class="climate-card-actions-menu-brand" src=${Qe} alt="" width="22" height="22"><span>${e._t("climateCardOpenVelairMenu")}</span>
+    </button>
+  </div>`;
+}
+function Og(e, t) {
+	let n = e._climateCardBoost, [r, i] = e._entityTemperatureLimits(t), a = e._entityTemperatureStep(t) ?? .5, o = e.hass?.states?.[t], s = Yt(o), c = Xt(o);
+	return T`<form class="climate-card-boost-form climate-card-control-pane" @submit=${(n) => {
+		n.preventDefault(), e._runClimateCardService("boost", t);
+	}}>
+    <strong>${e._t("climateCardConfigureBoost")}</strong>
+    <div>
+      ${s && c ? T`<label><span>${e._t("boostTarget")}</span><select .value=${n.targetKind} @change=${(t) => e._updateClimateCardBoostOption("targetKind", t.currentTarget.value)}><option value="single">${e._t("externalCapability_target_scalar")}</option><option value="range">${e._t("externalCapability_target_range")}</option></select></label>` : E}
+      ${n.targetKind === "range" ? T`${Ng(e, "low", n.low, r, i, a)}${Ng(e, "high", n.high, r, i, a)}` : Ng(e, "target", n.target, r, i, a)}
+      <label><span>${e._t("durationMinutes")}</span><input type="number" min="1" max="10080" step="1" required .value=${String(n.durationMinutes)} @input=${(t) => e._updateClimateCardBoost("durationMinutes", t.currentTarget.value)}></label>
+      ${kg(e, "hvacMode", "mode", e._climateSupportedModes(t).filter((e) => e !== "off"), n.hvacMode)}
+      ${kg(e, "fanMode", "fanMode", e._entityFanModeOptions(t), n.fanMode)}
+      ${kg(e, "presetMode", "presetMode", e._entityPresetModeOptions(t), n.presetMode)}
+      ${kg(e, "swingMode", "swingMode", e._entitySwingModeOptions(t), n.swingMode)}
+      ${kg(e, "swingHorizontalMode", "horizontalSwingMode", e._entitySwingHorizontalModeOptions(t), n.swingHorizontalMode)}
+      ${Ag(e, t, n.humidity)}
+    </div>
+    <footer><button type="button" @click=${e._cancelClimateCardBoost}>${e._t("cancel")}</button><button class="primary" type="submit">${e._t("apply")}</button></footer>
+  </form>`;
+}
+function kg(e, t, n, r, i) {
+	return r.length ? T`<label><span>${e._t(n)}</span><select .value=${i ?? ""} @change=${(n) => e._updateClimateCardBoostOption(t, n.currentTarget.value)}><option value="">${e._t("keep")}</option>${r.map((n) => T`<option value=${n}>${t === "hvacMode" ? e._modeLabel(n) : n}</option>`)}</select></label>` : E;
+}
+function Ag(e, t, n) {
+	let r = e._entityHumidityLimits(t);
+	return r ? T`<label><span>${e._t("targetHumidity")}</span><input type="number" min=${r[0]} max=${r[1]} step="1" .value=${n === void 0 ? "" : String(n)} @input=${(t) => e._updateClimateCardBoost("humidity", t.currentTarget.value)}></label>` : E;
+}
+function jg(e, t) {
+	let n = e._climateCardPause;
+	return T`<form class="climate-card-boost-form climate-card-pause-form climate-card-control-pane" @submit=${(n) => {
+		n.preventDefault(), e._runClimateCardService("pause", t);
+	}}>
+    <strong>${e._t("pause")}</strong>
+    <div>
+      <label><span>${e._t("pauseDuration")}</span><input type="number" min="1" max="10080" step="1" ?disabled=${n.indefinite} required .value=${String(n.durationMinutes)} @input=${(t) => e._updateClimateCardPause("durationMinutes", t.currentTarget.value)}></label>
+      <label><span>${e._t("profilePauseAction")}</span><select .value=${n.action} @change=${(t) => e._updateClimateCardPause("action", t.currentTarget.value)}><option value="none">${e._t("profilePauseKeep")}</option><option value="turn_off">${e._t("profilePauseTurnOff")}</option></select></label>
+      <label class="climate-card-form-checkbox"><input type="checkbox" .checked=${n.indefinite} @change=${(t) => e._updateClimateCardPause("indefinite", t.currentTarget.checked)}><span>${e._t("pauseIndefinite")}</span></label>
+    </div>
+    <footer><button type="button" @click=${e._cancelClimateCardPause}>${e._t("cancel")}</button><button class="primary" type="submit">${e._t("apply")}</button></footer>
+  </form>`;
+}
+function Mg(e, t) {
+	let n = t.state === "paused", r = n ? t.until ? e._t("overviewZoneResumes", { time: e._formatDateTime(t.until) }) : e._t("overviewZoneUntilResumed") : t.until ? e._t("overviewZoneUntil", { time: e._formatDateTime(t.until) }) : e._t("boostActive");
+	return T`<div class=${`climate-card-runtime ${n ? "paused" : "boost"}`}>
+    <ha-icon icon=${n ? "mdi:pause-circle" : "mdi:lightning-bolt"}></ha-icon>
+    <strong>${e._t(n ? "overviewZonePaused" : "overviewZoneBoost")}</strong>
+    <span>${r}</span>
+  </div>`;
+}
+function Ng(e, t, n, r, i, a) {
+	return T`<label><span>${e._t({
+		target: "targetTemperature",
+		low: "minimumShort",
+		high: "maximumShort"
+	}[t])}</span><input type="number" min=${r} max=${i} step=${a} required .value=${n === void 0 ? "" : String(n)} @input=${(n) => e._updateClimateCardBoost(t, n.currentTarget.value)}></label>`;
+}
+function Pg(e, t, n, r) {
+	let i = r?.publication?.state;
+	e.hass?.states?.[t]?.attributes;
+	let a = e._data?.next_events.find((e) => e.entity_id === t) ?? (e._data?.next_event?.entity_id === t ? e._data.next_event : void 0), o = r?.available === !1 ? "externalProviderUnavailable" : i ? `externalPublication_${i}` : "externalProviderAvailable";
+	return T`<section class="climate-card-panel climate-card-external">
+    <ha-icon icon="mdi:connection"></ha-icon><div><strong>${e._t("climateCardExternalManaged", { provider: n || e._t("unknown") })}</strong>
+      <small>${e._t(o)}</small></div>
+    <button type="button" @click=${e._navigateToVelair}>${e._t("climateCardOpenVelair")}</button>
+    <div class="climate-card-external-readings">
+      ${a ? T`<div class="climate-card-context-item"><ha-icon icon="mdi:clock-outline"></ha-icon><div><small>${e._t("nextEvent")}</small><strong>${e._formatDateTime(a.when)}</strong><span>${e._formatEventAction(a)}</span></div></div>` : E}
+    </div>
+  </section>${qh(e, t, !1)}`;
+}
+function Fg(e, t) {
+	return t === "unavailable" ? e._t("climateCardUnavailable") : e._hvacActionLabel(t);
+}
+function Ig(e, t) {
+	return t === "manual" ? e._t("manualControl") : t === "external" ? e._t("climateCardExternalControl") : e._t("scheduled");
+}
+function Lg(e, t) {
+	let n = `comfortCondition${t.condition.split("_").map(zg).join("")}`;
+	return e._t(n);
+}
+function Rg(e) {
+	return {
+		complete: "current",
+		partial: "comfortDataPartial",
+		stale: "comfortDataStale",
+		unavailable: "comfortDataUnavailable"
+	}[e];
+}
+function zg(e) {
+	return e && `${e[0].toUpperCase()}${e.slice(1)}`;
+}
+//#endregion
 //#region src/velair/views/card-content.ts
-function Vp(e) {
-	let t = e._effectiveView(), n = !e._hasExternalConfig || t === "active-setup", r = e._orderedZoneIds(e._data?.configured_entities ?? []), i = e._visibleZoneIds(e._data?.configured_entities ?? []), a = e._selectedEntity && i.includes(e._selectedEntity) ? e._selectedEntity : i[0], o = a ? e._data?.zones[a] : void 0, s = e._data && !e._data.temperature_migration.required ? Yo(e._data.zones, (t) => e._entityTemperatureLimits(t), (t) => e._entityTemperatureStep(t)) : 0;
+function Bg(e) {
+	let t = e._effectiveView(), n = !e._hasExternalConfig || t === "active-setup", r = e._orderedZoneIds(e._data?.configured_entities ?? []), i = e._visibleZoneIds(e._data?.configured_entities ?? []), a = e._selectedEntity && i.includes(e._selectedEntity) ? e._selectedEntity : i[0], o = a ? e._data?.zones[a] : void 0, s = e._data && !e._data.temperature_migration.required ? Rs(e._data.zones, (t) => e._entityTemperatureLimits(t), (t) => e._entityTemperatureStep(t)) : 0;
 	return T`
     <ha-card>
       <div
@@ -30220,8 +36469,8 @@ function Vp(e) {
       >
         ${e._schedulerMenuOpen ? T`<button class="card-scrim" type="button" @click=${e._closeSchedulerMenu}></button>` : E}
 
-        ${n && e._data?.operation_status && gs(e._data.operation_status, e._dismissedOperationId) ? _s(e, e._data.operation_status) : E}
-        ${ds(e, e._noticeStackEntries?.() ?? [...e._saveMessage ? [{
+        ${n && e._data?.operation_status && ac(e._data.operation_status, e._dismissedOperationId) ? oc(e, e._data.operation_status) : E}
+        ${ec(e, e._noticeStackEntries?.() ?? [...e._saveMessage ? [{
 		id: "success",
 		type: "success",
 		message: e._saveMessage
@@ -30273,32 +36522,32 @@ function Vp(e) {
               </div>
             ` : E}
 
-        ${e._data ? Hp(e, t, r, i, a, o) : E}
+        ${e._data ? Vg(e, t, r, i, a, o) : E}
       </div>
     </ha-card>
   `;
 }
-function Hp(e, t, n, r, i, a) {
+function Vg(e, t, n, r, i, a) {
 	return e._data?.temperature_migration?.required && t !== "settings" && t !== "diagnostics" ? T`<div class="notice">${e._t(e._data.temperature_migration.reason === "legacy_celsius_upgrade_reset_required" ? "temperatureLegacyResetStopped" : "temperatureMigrationStopped")}</div>` : t === "overview" ? T`
-      ${Xc(e, n)}
-      ${Up(e)}
-      ${Zc(e, r)}
-      ${Fl(e, r)}
-      ${vl(e, r)}
-      ${$c(e, r)}
-    ` : t === "modes" || t === "profiles" ? T`<velair-profiles-view
+      ${Lu(e, n)}
+      ${Hg(e)}
+      ${Ru(e, r)}
+      ${Sd(e, r)}
+      ${ad(e, r)}
+      ${Bu(e, r)}
+    ` : t === "climate" ? Bh(e, i) : t === "modes" || t === "profiles" ? T`<velair-profiles-view
       workspace="modes"
       .hass=${e.hass}
       .data=${e._data}
       @profile-data-changed=${(t) => e._applyScheduleData(t.detail, { forceDraft: !1 })}
       @profile-error=${(t) => e._showError(t.detail ?? void 0)}
       @profile-success=${(t) => e._showSuccess(t.detail)}
-    ></velair-profiles-view>` : t === "overview-status" ? Xc(e, n) : t === "active-setup" ? Up(e) : t === "overview-boosts" ? Zc(e, r) : t === "overview-events" ? Fl(e, r) : t === "overview-timeline" ? vl(e, r) : t === "overview-zones" ? $c(e, r) : t === "schedules" ? Au(e, r, i, a) : t === "templates" ? Rp(e, i) : t === "sensors" ? md(e, r, Kp(e)) : t === "comfort" ? js(e, r, Gp(e)) : t === "preconditioning" ? Kl(e, r) : t === "diagnostics" ? yf(e) : t === "settings" ? sf(e, r) : Xc(e, n);
+    ></velair-profiles-view>` : t === "overview-status" ? Lu(e, n) : t === "active-setup" ? Hg(e) : t === "overview-boosts" ? Ru(e, r) : t === "overview-events" ? Sd(e, r) : t === "overview-timeline" ? ad(e, r) : t === "overview-zones" ? Bu(e, r) : t === "schedules" ? yf(e, r, i, a) : t === "templates" ? Oh(e, i) : t === "sensors" ? rp(e, r, Gg(e)) : t === "comfort" ? Xc(e, r, Wg(e)) : t === "preconditioning" ? Nd(e, r) : t === "diagnostics" ? lm(e) : t === "settings" ? Xp(e, r) : Lu(e, n);
 }
-function Up(e) {
+function Hg(e) {
 	return T`<velair-profiles-view
     compact
-    .activeSetupControls=${Wp(e._config?.active_setup_controls)}
+    .activeSetupControls=${Ug(e._config?.active_setup_controls)}
     .hass=${e.hass}
     .data=${e._data}
     @profile-data-changed=${(t) => e._applyScheduleData(t.detail, { forceDraft: !1 })}
@@ -30306,10 +36555,10 @@ function Up(e) {
     @profile-success=${(t) => e._showSuccess(t.detail)}
   ></velair-profiles-view>`;
 }
-function Wp(e) {
+function Ug(e) {
 	return e === "modes" || e === "profiles" ? e : "both";
 }
-function Gp(e) {
+function Wg(e) {
 	return {
 		showCo2: e._config.show_comfort_co2 !== !1,
 		showConfiguration: e._config.show_comfort_configuration !== !1,
@@ -30317,7 +36566,7 @@ function Gp(e) {
 		showTemperature: e._config.show_comfort_temperature !== !1
 	};
 }
-function Kp(e) {
+function Gg(e) {
 	return {
 		showAssistSwitch: e._config.show_room_assist_switch !== !1,
 		showDeadband: e._config.show_room_assist_deadband !== !1,
@@ -30331,7 +36580,7 @@ function Kp(e) {
 //#region src/velair/components/velair-card-element.ts
 var $ = class extends He {
 	constructor(...e) {
-		super(...e), this.view = "overview-status", this._config = {}, this._changedNextEventIds = /* @__PURE__ */ new Set(), this._loading = !1, this._showInitialLoading = !1, this._saving = !1, this._scheduleSource = "default", this._profileScheduleDirty = !1, this._selectedWeekday = "monday", this._draftBlocks = [], this._dirty = !1, this._copyTargets = /* @__PURE__ */ new Set(), this._copying = !1, this._zoneTargets = /* @__PURE__ */ new Set(), this._applyingZones = !1, this._selectedTemplateKey = "", this._templateNameDraft = "", this._templateNameDraftKey = "", this._templateDraftBlocks = [], this._templateDraftKey = "", this._templateDirty = !1, this._templateApplyOpen = !1, this._templateApplyTargets = /* @__PURE__ */ new Set(), this._applyingTemplateTargets = !1, this._templateListCanScrollUp = !1, this._templateListCanScrollDown = !1, this._settingsSaving = !1, this._diagnosticsHistorySaving = !1, this._diagnosticsHistoryFilters = { ...Sn }, this._diagnosticsSourceFilterOpen = !1, this._diagnosticsSourcePlacement = "down", this._diagnosticsLogColumns = { ...On }, this._diagnosticsLogAvailableWidth = jn(900), this._diagnosticsExportOpen = !1, this._diagnosticsRedactEntityIds = !0, this._exportSections = new Set(tt), this._expandedComfortZones = /* @__PURE__ */ new Set(), this._expandedPreconditioningZones = /* @__PURE__ */ new Set(), this._importSections = /* @__PURE__ */ new Set(), this._importFileName = "", this._pauseDurationMinutes = 60, this._manualControlActions = {}, this._schedulerMenuOpen = !1, this._nextEventsOpen = !1, this._nextEventChangeRevision = 0, this._timelineNow = /* @__PURE__ */ new Date(), this._subscribingDiagnostics = !1, this._diagnosticsSubscriptionGeneration = 0, this._diagnosticsSnapshotAuthoritative = !1, this._subscribing = !1, this._operationalNotices = new ci(() => this.requestUpdate()), this._temperatureUnitReloadPending = !1, this._overviewTimelineScrollInitialized = !1, this._hasExternalConfig = !1, this._handleOperationStatusDismissed = (e) => {
+		super(...e), this.view = "overview-status", this._config = {}, this._changedNextEventIds = /* @__PURE__ */ new Set(), this._climateCardActionsMenuOpen = !1, this._climateCardActionsHasOverflow = !1, this._climateCardActionsCanScrollLeft = !1, this._climateCardActionsCanScrollRight = !1, this._climateCardCurrentStateCollapsed = !0, this._climateCardPreconditioningCollapsed = !0, this._climateCardRoomAssistCollapsed = !0, this._loading = !1, this._showInitialLoading = !1, this._saving = !1, this._scheduleSource = "default", this._profileScheduleDirty = !1, this._selectedWeekday = "monday", this._draftBlocks = [], this._dirty = !1, this._copyTargets = /* @__PURE__ */ new Set(), this._copying = !1, this._zoneTargets = /* @__PURE__ */ new Set(), this._applyingZones = !1, this._selectedTemplateKey = "", this._templateNameDraft = "", this._templateNameDraftKey = "", this._templateDraftBlocks = [], this._templateDraftKey = "", this._templateDirty = !1, this._templateApplyOpen = !1, this._templateApplyTargets = /* @__PURE__ */ new Set(), this._applyingTemplateTargets = !1, this._templateListCanScrollUp = !1, this._templateListCanScrollDown = !1, this._settingsSaving = !1, this._diagnosticsHistorySaving = !1, this._diagnosticsHistoryFilters = { ...tr }, this._diagnosticsSourceFilterOpen = !1, this._diagnosticsSourcePlacement = "down", this._diagnosticsLogColumns = { ...Cr }, this._diagnosticsLogAvailableWidth = Er(900), this._diagnosticsExportOpen = !1, this._diagnosticsRedactEntityIds = !0, this._exportSections = new Set(tt), this._expandedComfortZones = /* @__PURE__ */ new Set(), this._expandedPreconditioningZones = /* @__PURE__ */ new Set(), this._importSections = /* @__PURE__ */ new Set(), this._importFileName = "", this._pauseDurationMinutes = 60, this._manualControlActions = {}, this._schedulerMenuOpen = !1, this._nextEventsOpen = !1, this._nextEventChangeRevision = 0, this._timelineNow = /* @__PURE__ */ new Date(), this._subscribingDiagnostics = !1, this._diagnosticsSubscriptionGeneration = 0, this._diagnosticsSnapshotAuthoritative = !1, this._subscribing = !1, this._operationalNotices = new Yi(() => this.requestUpdate()), this._temperatureUnitReloadPending = !1, this._overviewTimelineScrollInitialized = !1, this._hasExternalConfig = !1, this._handleOperationStatusDismissed = (e) => {
 			let t = e.detail;
 			t === this._data?.operation_status?.id && (this._dismissedOperationId = t, this._clearOperationStatusTimer());
 		}, this._handleDiagnosticsOutsidePointerDown = (e) => {
@@ -30342,54 +36591,83 @@ var $ = class extends He {
 			e && (this._diagnosticsSourcePositionFrame = e.requestAnimationFrame(() => {
 				this._diagnosticsSourcePositionFrame = void 0, this._positionDiagnosticsSourceFilter();
 			}));
+		}, this._handleClimateCardActionsOutsidePointerDown = (e) => {
+			this._climateCardActionsMenuOpen && (e.composedPath().some((e) => e instanceof Element && (e.classList.contains("climate-card-actions-menu") || e.classList.contains("climate-card-actions-menu-trigger"))) || this._closeClimateCardActionsMenu());
+		}, this._scheduleClimateCardActionsMenuPosition = () => {
+			if (this._climateCardActionsMenuPositionFrame !== void 0) return;
+			let e = this.ownerDocument.defaultView;
+			e && (this._climateCardActionsMenuPositionFrame = e.requestAnimationFrame(() => {
+				this._climateCardActionsMenuPositionFrame = void 0, this._positionClimateCardActionsMenu();
+			}));
 		}, this._handleTemplateListScroll = () => {
 			this._syncTemplateListScrollIndicators();
 		}, this._addBlock = (e = "schedule") => {
-			Si(xi(this), e);
-		}, this._applySelectedTemplate = () => Ho(U(this)), this._pauseScheduler = async (e, t = {}) => {
-			await Kr(I(this), e, t);
+			la(ca(this), e);
+		}, this._applySelectedTemplate = () => js(H(this)), this._pauseScheduler = async (e, t = {}) => {
+			await Ni(L(this), e, t);
 		}, this._resumeScheduler = async (e = {}) => {
-			await qr(I(this), e);
+			await Pi(L(this), e);
 		}, this._handleSchedulerMenuToggle = (e) => {
-			Yr(I(this), e);
+			Ii(L(this), e);
 		}, this._toggleNextEvents = () => {
-			Xr(I(this));
+			Li(L(this));
 		}, this._handleTimelineDragOver = (e) => {
-			ca(e);
+			Xa(e);
 		}, this._handleTimelineDragEnd = () => {
-			da(B(this));
+			$a(Ja(this));
 		}, this._handleTimelineResizeMove = (e) => {
-			pa(B(this), e);
+			to(Ja(this), e);
 		}, this._handleTimelineResizeEnd = () => {
-			ma(B(this));
+			no(Ja(this));
+		}, this._openClimateCardActionsMenu = () => {
+			if (this._climateCardActionsMenuOpen) {
+				this._closeClimateCardActionsMenu(!0);
+				return;
+			}
+			this._climateCardActionsMenuOpen = !0, this.ownerDocument.addEventListener("pointerdown", this._handleClimateCardActionsOutsidePointerDown, !0), this.ownerDocument.defaultView?.addEventListener("resize", this._scheduleClimateCardActionsMenuPosition), this.ownerDocument.addEventListener("scroll", this._scheduleClimateCardActionsMenuPosition, !0), this.ownerDocument.defaultView?.visualViewport?.addEventListener("resize", this._scheduleClimateCardActionsMenuPosition), this.ownerDocument.defaultView?.visualViewport?.addEventListener("scroll", this._scheduleClimateCardActionsMenuPosition), this.requestUpdate(), this.updateComplete.then(() => {
+				if (!this._climateCardActionsMenuOpen) return;
+				let e = this.renderRoot.querySelector(".climate-card-actions-menu");
+				if (e) {
+					try {
+						e.showPopover?.();
+					} catch {}
+					this._positionClimateCardActionsMenu(), this.ownerDocument.defaultView?.requestAnimationFrame(() => {
+						e.querySelector("button:not(:disabled)")?.focus();
+					});
+				}
+			});
+		}, this._handleClimateCardActionsScroll = (e) => {
+			this._updateClimateCardActionsScrollState(e.currentTarget);
 		}, this._handleSettingsZoneDragEnd = () => {
-			aa(z(this));
+			Ka(B(this));
 		};
 	}
 	get hass() {
 		return this._hass;
 	}
 	set hass(e) {
-		let t = this._hass, n = t?.config?.unit_system?.temperature !== e?.config?.unit_system?.temperature, r = ln(N(this), e, t);
+		let t = this._hass, n = t?.config?.unit_system?.temperature !== e?.config?.unit_system?.temperature, r = Hn(P(this), e, t);
 		this._hass = e, this._shouldUpdateForHass(e, t) && this.requestUpdate("hass", t), r && this._schedulePreconditioningRefresh(), n && t && this._data && (this._temperatureUnitReloadPending = !0, this._loadSchedule());
 	}
 	_api() {
-		return this.hass ? new P(this.hass) : void 0;
+		return this.hass ? new F(this.hass) : void 0;
 	}
 	setConfig(e) {
-		this._hasExternalConfig = !0;
-		let t = this._selectedEntity;
-		if (this._config = e ?? {}, this._selectedEntity = e?.selected_entity, this._data) {
+		this._climateCardActionsMenuOpen && this._closeClimateCardActionsMenu();
+		let t = this._config, n = this._hasExternalConfig, r = e ?? {};
+		(!n || t.climate_current_state_default_collapsed !== r.climate_current_state_default_collapsed) && (this._climateCardCurrentStateCollapsed = r.climate_current_state_default_collapsed !== !1), (!n || t.climate_room_assist_default_collapsed !== r.climate_room_assist_default_collapsed) && (this._climateCardRoomAssistCollapsed = r.climate_room_assist_default_collapsed !== !1), (!n || t.climate_preconditioning_default_collapsed !== r.climate_preconditioning_default_collapsed) && (this._climateCardPreconditioningCollapsed = r.climate_preconditioning_default_collapsed !== !1), this._hasExternalConfig = !0;
+		let i = this._selectedEntity;
+		if (this._config = r, this._selectedEntity = e?.selected_entity, this._data) {
 			let e = this._visibleZoneIds(this._data.configured_entities);
 			(!this._selectedEntity || !e.includes(this._selectedEntity)) && (this._selectedEntity = e[0]);
 		}
-		this._selectedWeekday = this._firstWeekday(), this._selectedEntity !== t && this._resetDraftBlocks();
+		this._selectedWeekday = this._firstWeekday(), this._selectedEntity !== i && this._resetDraftBlocks();
 	}
 	connectedCallback() {
-		super.connectedCallback(), this._loadSchedule(), this._syncInitialLoadingState(), this._subscribeUpdates(), this._syncDiagnosticsSubscription(), this._syncTimelineNowTick(), window.addEventListener(ps, this._handleOperationStatusDismissed);
+		super.connectedCallback(), this._loadSchedule(), this._syncInitialLoadingState(), this._subscribeUpdates(), this._syncDiagnosticsSubscription(), this._syncTimelineNowTick(), window.addEventListener(nc, this._handleOperationStatusDismissed);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this.ownerDocument.removeEventListener("pointerdown", this._handleDiagnosticsOutsidePointerDown, !0), this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleDiagnosticsSourcePosition), this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, !0), this._cancelDiagnosticsSourcePosition(), this._diagnosticsSourceFilterOpen = !1, this._resetDiagnosticsExport(), this._disconnectDiagnosticsLogResizeObserver(), this._diagnosticsSubscriptionGeneration += 1, this._unsubscribeUpdates &&= (this._unsubscribeUpdates(), void 0), this._unsubscribeDiagnostics &&= (this._unsubscribeDiagnostics(), void 0), this._clearSuccessNoticeTimer(), this._operationalNotices.dispose(), this._clearOperationStatusTimer(), this._clearNextEventChangeTimer(), this._clearPreconditioningRefreshTimer(), this._clearOverviewTimelineDetail(), this._clearInitialLoadingTimer(), this._stopPauseTick(), this._stopTimelineNowTick(), window.removeEventListener(ps, this._handleOperationStatusDismissed);
+		super.disconnectedCallback(), this.ownerDocument.removeEventListener("pointerdown", this._handleDiagnosticsOutsidePointerDown, !0), this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleDiagnosticsSourcePosition), this.ownerDocument.removeEventListener("scroll", this._scheduleDiagnosticsSourcePosition, !0), this._cancelDiagnosticsSourcePosition(), this._diagnosticsSourceFilterOpen = !1, this._closeClimateCardActionsMenu(), this._resetDiagnosticsExport(), this._disconnectDiagnosticsLogResizeObserver(), this._disconnectClimateCardActionsResizeObserver(), this._diagnosticsSubscriptionGeneration += 1, this._unsubscribeUpdates &&= (this._unsubscribeUpdates(), void 0), this._unsubscribeDiagnostics &&= (this._unsubscribeDiagnostics(), void 0), this._clearSuccessNoticeTimer(), this._clearClimateCardScriptFeedback(), this._operationalNotices.dispose(), this._clearOperationStatusTimer(), this._clearNextEventChangeTimer(), this._clearPreconditioningRefreshTimer(), this._clearOverviewTimelineDetail(), this._clearInitialLoadingTimer(), this._stopPauseTick(), this._stopTimelineNowTick(), window.removeEventListener(nc, this._handleOperationStatusDismissed);
 	}
 	getCardSize() {
 		return 8;
@@ -30412,7 +36690,7 @@ var $ = class extends He {
 		return document.createElement("velair-card-editor");
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !this._data && !this._loading && this._loadSchedule(), e.has("hass") && this.hass && this._subscribeUpdates(), e.has("_saveMessage") && !this._saveMessage && this._clearSuccessNoticeTimer(), e.has("_data") && this._syncOperationStatusTimer(), (e.has("_loading") || e.has("_data")) && this._syncInitialLoadingState(), this._effectiveView() === "templates" && (e.has("view") || e.has("_data") || e.has("_selectedTemplateKey") || e.has("_templateListCanScrollUp") || e.has("_templateListCanScrollDown")) && window.requestAnimationFrame(() => this._syncTemplateListScrollIndicators()), (e.has("view") || e.has("_data")) && this._syncTimelineNowTick(), (e.has("view") || e.has("_config") || e.has("hass")) && this._syncDiagnosticsSubscription(), this._syncDiagnosticsLogResizeObserver(), (e.has("_dirty") || e.has("_profileScheduleDirty")) && this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
+		e.has("hass") && this.hass && !this._data && !this._loading && this._loadSchedule(), e.has("hass") && this.hass && this._subscribeUpdates(), e.has("_saveMessage") && !this._saveMessage && this._clearSuccessNoticeTimer(), e.has("_data") && this._syncOperationStatusTimer(), (e.has("_loading") || e.has("_data")) && this._syncInitialLoadingState(), this._effectiveView() === "templates" && (e.has("view") || e.has("_data") || e.has("_selectedTemplateKey") || e.has("_templateListCanScrollUp") || e.has("_templateListCanScrollDown")) && window.requestAnimationFrame(() => this._syncTemplateListScrollIndicators()), (e.has("view") || e.has("_data")) && this._syncTimelineNowTick(), (e.has("view") || e.has("_config") || e.has("hass")) && this._syncDiagnosticsSubscription(), this._syncDiagnosticsLogResizeObserver(), this._syncClimateCardActionsResizeObserver(), (e.has("_dirty") || e.has("_profileScheduleDirty")) && this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
 			bubbles: !0,
 			composed: !0,
 			detail: {
@@ -30421,10 +36699,10 @@ var $ = class extends He {
 			}
 		}));
 		let t = this._effectiveView();
-		t === "overview" || t === "overview-timeline" ? this._data && !this._overviewTimelineScrollInitialized && (this._overviewTimelineScrollInitialized = !0, window.requestAnimationFrame(() => this._scrollOverviewTimelineToNow())) : this._overviewTimelineScrollInitialized = !1;
+		t === "overview" || t === "overview-timeline" || t === "climate" ? this._data && !this._overviewTimelineScrollInitialized && (this._overviewTimelineScrollInitialized = !0, window.requestAnimationFrame(() => this._scrollOverviewTimelineToNow())) : this._overviewTimelineScrollInitialized = !1, this._climateCardActionsMenuOpen && (!this.renderRoot.querySelector(".climate-card-actions-menu-trigger") || !this.renderRoot.querySelector(".climate-card-actions-menu")) && this._closeClimateCardActionsMenu();
 	}
 	render() {
-		return Vp(qo(this));
+		return Bg(Is(this));
 	}
 	willUpdate() {
 		this._operationalNotices.sync([...this._saveMessage ? [{
@@ -30443,7 +36721,7 @@ var $ = class extends He {
 	}
 	_dismissOperationStatus() {
 		let e = this._data?.operation_status?.id;
-		e && hs(e);
+		e && ic(e);
 	}
 	_syncOperationStatusTimer() {
 		this._clearOperationStatusTimer();
@@ -30478,12 +36756,12 @@ var $ = class extends He {
 		this._initialLoadingTimer !== void 0 && (window.clearTimeout(this._initialLoadingTimer), this._initialLoadingTimer = void 0);
 	}
 	_effectiveView() {
-		return sn(this.getAttribute("view"), this.view, this._config.view);
+		return Bn(this.getAttribute("view"), this.view, this._config.view);
 	}
 	_timelineShouldTick() {
 		if (!this._data) return !1;
 		let e = this._effectiveView();
-		return e === "overview" || e.startsWith("overview-") || e === "schedules" || e === "templates";
+		return e === "overview" || e.startsWith("overview-") || e === "climate" || e === "schedules" || e === "templates";
 	}
 	_syncTimelineNowTick() {
 		if (!this._timelineShouldTick()) {
@@ -30507,7 +36785,7 @@ var $ = class extends He {
 	}
 	_scrollOverviewTimelineToNow() {
 		let e = this.renderRoot.querySelector(".overview-timeline-scroll"), t = e?.querySelector(".overview-timeline-names");
-		!e || !t || e.scrollWidth <= e.clientWidth + 1 || (e.scrollLeft = kr(Or(this._currentTimelineNow()).left, e.scrollWidth, e.clientWidth, t.offsetWidth));
+		!e || e.scrollWidth <= e.clientWidth + 1 || (e.scrollLeft = gi(hi(this._currentTimelineNow(), this.hass?.config?.time_zone).left, e.scrollWidth, e.clientWidth, t?.offsetWidth ?? 0));
 	}
 	_showOverviewTimelineDetail(e, t, n, r) {
 		window.matchMedia("(hover: none), (pointer: coarse)").matches && (r.preventDefault(), r.stopPropagation(), this._overviewTimelineDetail = t, this._overviewTimelineDetailAnchor = Math.max(0, Math.min(100, n)), this._overviewTimelineDetailEntityId = e);
@@ -30516,64 +36794,64 @@ var $ = class extends He {
 		this._overviewTimelineDetail = void 0, this._overviewTimelineDetailAnchor = void 0, this._overviewTimelineDetailEntityId = void 0;
 	}
 	_isCardView(e) {
-		return on(e);
+		return zn(e);
 	}
 	_shouldUpdateForHass(e, t) {
-		return cn(N(this), e, t);
+		return Vn(P(this), e, t);
 	}
 	_canResumeScheduler() {
-		return Gr(I(this));
+		return Mi(L(this));
 	}
 	_selectTemplate(e) {
-		Do(U(this), e);
+		gs(H(this), e);
 	}
 	_selectScheduleTemplate(e) {
-		Oo(U(this), e);
+		_s(H(this), e);
 	}
 	_resetTemplateDraft(e) {
-		ko(U(this), e);
+		vs(H(this), e);
 	}
 	_templateListClass(e) {
-		return Ao(U(this), e);
+		return ys(H(this), e);
 	}
 	_syncTemplateListScrollIndicators() {
-		jo(U(this));
+		bs(H(this));
 	}
 	_setTemplateListScrollIndicators(e, t) {
-		Mo(U(this), e, t);
+		xs(H(this), e, t);
 	}
 	_templateNameInputValue(e) {
-		return No(U(this), e);
+		return Ss(H(this), e);
 	}
 	_updateTemplateNameDraft(e, t) {
-		Po(U(this), e, t);
+		Cs(H(this), e, t);
 	}
 	async _createTemplate() {
-		await Fo(U(this));
+		await ws(H(this));
 	}
 	async _saveSelectedTemplateFromLibrary(e) {
-		await Io(U(this), e);
+		await Ts(H(this), e);
 	}
 	_uniqueTemplateName(e) {
-		return Lo(U(this), e);
+		return Es(H(this), e);
 	}
 	_scheduleTemplates() {
-		return vr(this._data?.templates, this._temperatureUnit());
+		return ai(this._data?.templates, this._temperatureUnit());
 	}
 	_templateLabel(e) {
-		return yr(e);
+		return oi(e);
 	}
 	async _loadSchedule() {
 		if (!this._loading) do
-			this._temperatureUnitReloadPending = !1, await ka(V(this));
+			this._temperatureUnitReloadPending = !1, await yo(vo(this));
 		while (this._temperatureUnitReloadPending);
 	}
 	async _subscribeUpdates() {
-		await Aa(V(this));
+		await bo(vo(this));
 	}
 	_applyScheduleData(e, t = {}) {
-		let n = cr(this._data?.next_events ?? [], e.next_events);
-		ja(V(this), {
+		let n = ii(this._data?.next_events ?? [], e.next_events);
+		xo(vo(this), {
 			...e,
 			diagnostics: this._diagnosticsSnapshotAuthoritative ? this._latestDiagnostics : e.diagnostics ?? this._data?.diagnostics
 		}, t), this._markChangedNextEvents(n);
@@ -30616,8 +36894,8 @@ var $ = class extends He {
 			return;
 		}
 		typeof ResizeObserver > "u" || e === this._diagnosticsLogObservedElement || (this._disconnectDiagnosticsLogResizeObserver(), this._diagnosticsLogObservedElement = e, this._diagnosticsLogResizeObserver = new ResizeObserver((e) => {
-			let t = e[0]?.contentRect.width, n = t ? jn(t) : 0;
-			!n || n === this._diagnosticsLogAvailableWidth || (this._diagnosticsLogAvailableWidth = n, this._diagnosticsLogColumns = Pn(this._diagnosticsLogColumns, n));
+			let t = e[0]?.contentRect.width, n = t ? Er(t) : 0;
+			!n || n === this._diagnosticsLogAvailableWidth || (this._diagnosticsLogAvailableWidth = n, this._diagnosticsLogColumns = kr(this._diagnosticsLogColumns, n));
 		}), this._diagnosticsLogResizeObserver.observe(e));
 	}
 	_resetDiagnosticsExport() {
@@ -30675,13 +36953,13 @@ var $ = class extends He {
 		this._nextEventChangeTimeout !== void 0 && (window.clearTimeout(this._nextEventChangeTimeout), this._nextEventChangeTimeout = void 0), e && this._changedNextEventIds.size && (this._changedNextEventIds = /* @__PURE__ */ new Set());
 	}
 	_resetDraftBlocks() {
-		Ma(V(this));
+		So(vo(this));
 	}
 	_selectEntity(e) {
-		Na(V(this), e);
+		Co(vo(this), e);
 	}
 	_selectWeekday(e) {
-		Pa(V(this), e);
+		wo(vo(this), e);
 	}
 	_confirmDiscardChanges() {
 		return window.confirm(this._t("discardUnsavedChanges"));
@@ -30700,145 +36978,145 @@ var $ = class extends He {
 		this._profileScheduleDirty = e;
 	}
 	_blocksForSource(e) {
-		return Fa(V(this), e);
+		return To(vo(this), e);
 	}
 	_setBlocksForSource(e, t) {
-		Ia(V(this), e, t);
+		Eo(vo(this), e, t);
 	}
 	_markBlocksDirty(e) {
-		La(V(this), e);
+		Do(vo(this), e);
 	}
 	_toggleTemplateApplyPanel() {
-		Ro(U(this));
+		Ds(H(this));
 	}
 	_templateApplyTargetKey(e, t) {
-		return zo(e, t);
+		return Os(e, t);
 	}
 	_toggleTemplateApplyTarget(e, t, n) {
-		Bo(U(this), e, t, n);
+		ks(H(this), e, t, n);
 	}
 	async _applyTemplateToTargets(e) {
-		await Vo(U(this), e);
+		await As(H(this), e);
 	}
 	async _saveTemplate(e) {
-		await Wo(U(this), e);
+		await Ns(H(this), e);
 	}
 	_newTemplateKey() {
-		return Go();
+		return Ps();
 	}
 	async _deleteSelectedTemplate() {
-		await Ko(U(this));
+		await Fs(H(this));
 	}
 	_closeSchedulerMenu() {
-		Jr(I(this));
+		Fi(L(this));
 	}
 	_removeBlock(e, t = "schedule") {
-		Ci(xi(this), e, t);
+		ua(ca(this), e, t);
 	}
 	_updateDraftBlock(e, t, n, r = "schedule") {
-		wi(xi(this), e, t, n, r);
+		da(ca(this), e, t, n, r);
 	}
 	_markDirty() {
-		Ti(xi(this));
+		fa(ca(this));
 	}
 	_handleTimelineDragStart(e, t, n) {
-		sa(B(this), e, t, n);
+		Ya(Ja(this), e, t, n);
 	}
 	_handleTimelineDrop(e, t = "schedule") {
-		la(B(this), e, t);
+		Za(Ja(this), e, t);
 	}
 	_handleTimelineResizeStart(e, t, n, r) {
-		fa(B(this), e, t, n, r);
+		eo(Ja(this), e, t, n, r);
 	}
 	_resizeTimelineBlock(e, t, n, r = "schedule") {
-		ha(B(this), e, t, n, r);
+		ro(Ja(this), e, t, n, r);
 	}
 	_setDraftBlockStart(e, t, n = {}, r = "schedule") {
-		Ei(xi(this), e, t, n, r);
+		pa(ca(this), e, t, n, r);
 	}
 	_sortDraftBlocksByStart(e = "schedule") {
-		ga(B(this), e);
+		io(Ja(this), e);
 	}
 	_toggleCopyTarget(e, t) {
-		Di(xi(this), e, t);
+		ma(ca(this), e, t);
 	}
 	_setCopyTargetPreset(e) {
-		Oi(xi(this), e);
+		ha(ca(this), e);
 	}
 	_toggleZoneTarget(e, t) {
-		ki(xi(this), e, t);
+		ga(ca(this), e, t);
 	}
 	_dismissNotice(e) {
-		ri(ni(this), e);
+		Wi(Ui(this), e);
 	}
 	_showSuccess(e) {
-		ii(ni(this), e);
+		Gi(Ui(this), e);
 	}
 	_showError(e) {
 		this._error = e ?? void 0;
 	}
 	_successNoticeProgress() {
-		return ai(ni(this));
+		return Ki(Ui(this));
 	}
 	_clearSuccessNoticeTimer(e = !0) {
-		oi(ni(this), e);
+		qi(Ui(this), e);
 	}
 	_hasDraftValidationError(e = "schedule") {
-		return ji(Ai(this), e);
+		return va(_a(this), e);
 	}
 	_temperatureError(e, t = "schedule") {
-		return Mi(Ai(this), e, t);
+		return ya(_a(this), e, t);
 	}
 	async _saveSelectedDay() {
-		await Ca(Sa(this));
+		await fo(uo(this));
 	}
 	async _copySelectedDay() {
-		await wa(Sa(this));
+		await po(uo(this));
 	}
 	async _applySelectedDayToZones() {
-		await Ta(Sa(this));
+		await mo(uo(this));
 	}
 	_normalizeDraftBlocks(e = "schedule") {
-		return Ea(Sa(this), e);
+		return ho(uo(this), e);
 	}
 	_clampBlocksForEntity(e, t) {
-		return Da(Sa(this), e, t);
+		return go(uo(this), e, t);
 	}
 	_unsupportedModeError(e, t) {
-		return Oa(Sa(this), e, t);
+		return _o(uo(this), e, t);
 	}
 	_pauseExpirationMs() {
-		return Zr(I(this));
+		return Ri(L(this));
 	}
 	_pauseProgressPercent(e) {
-		return Qr(I(this), e);
+		return zi(L(this), e);
 	}
 	_syncPauseTick() {
-		$r(I(this));
+		Bi(L(this));
 	}
 	_nextCountdownExpirationMs() {
-		return ei(I(this));
+		return Vi(L(this));
 	}
 	_stopPauseTick() {
-		ti(I(this));
+		Hi(L(this));
 	}
 	_timelineBlocks(e = "schedule") {
-		return _a(B(this), e);
+		return ao(Ja(this), e);
 	}
 	_inputValue(e) {
-		return an(e);
+		return Rn(e);
 	}
 	_t(e, t = {}) {
-		return pn(N(this), e, t);
+		return Kn(P(this), e, t);
 	}
 	_language() {
-		return fn(N(this));
+		return Gn(P(this));
 	}
 	_weekdayName(e) {
-		return mn(N(this), e);
+		return qn(P(this), e);
 	}
 	_shortWeekdayName(e) {
-		return hn(N(this), e);
+		return Jn(P(this), e);
 	}
 	_modeLabel(e) {
 		return this._dictionaryLabel("hvacModes", e);
@@ -30853,28 +37131,28 @@ var $ = class extends He {
 		return this._dictionaryLabel("hvacActions", e);
 	}
 	_dictionaryLabel(e, t) {
-		return gn(N(this), e, t);
+		return Yn(P(this), e, t);
 	}
 	_firstWeekday() {
-		return _n(N(this));
+		return Xn(P(this));
 	}
 	_initialScheduleWeekday(e) {
-		return this._effectiveView() === "schedules" ? sr(this._currentTimelineNow()) : e;
+		return this._effectiveView() === "schedules" ? ri(this._currentTimelineNow()) : e;
 	}
 	_orderedWeekdays() {
-		return vn(N(this));
+		return Zn(P(this));
 	}
 	_orderedZoneIds(e) {
-		return yn(N(this), e);
+		return Qn(P(this), e);
 	}
 	_visibleZoneIds(e) {
-		return bn(N(this), e);
+		return $n(P(this), e);
 	}
 	async _updateSettingsFirstWeekday(e) {
-		await Yi(z(this), e);
+		await Ia(B(this), e);
 	}
 	async _saveSettings(e) {
-		await Xi(z(this), e);
+		await La(B(this), e);
 	}
 	async _saveExternalChangePolicy(e, t) {
 		let n = this._api();
@@ -30910,7 +37188,7 @@ var $ = class extends He {
 	}
 	async _resumeAutomaticControl(e) {
 		let t = this._api();
-		if (!(!t || this._manualControlActions[e])) {
+		if (!(!t || this._manualControlActions[e] || this._climateCardThermostatAction)) {
 			this._manualControlActions = {
 				...this._manualControlActions,
 				[e]: "resume"
@@ -30925,9 +37203,283 @@ var $ = class extends He {
 			}
 		}
 	}
+	async _saveZoneTargetTempStep(e, t) {
+		let n = this._api();
+		if (!(!n || this._settingsSaving)) {
+			this._settingsSaving = !0, this._error = void 0;
+			try {
+				this._applyScheduleData(await n.updateZoneTargetTempStep(e, t)), this._showSuccess(this._t("targetTempStepSaved"));
+			} catch (e) {
+				this._error = e instanceof Error ? e.message : this._t("unableSaveSettings");
+			} finally {
+				this._settingsSaving = !1;
+			}
+		}
+	}
+	_openClimateCardBoost(e) {
+		if (this._climateCardBoost?.entityId === e) {
+			this._climateCardBoost = void 0;
+			return;
+		}
+		this._climateCardPause = void 0;
+		let t = this.hass?.states?.[e]?.attributes, n = this._data?.zone_runtime?.[e], r = t?.target_temp_low ?? n?.target_temp_low, i = t?.target_temp_high ?? n?.target_temp_high, a = t?.temperature ?? n?.target_temperature ?? t?.current_temperature;
+		this._climateCardBoost = {
+			entityId: e,
+			durationMinutes: 60,
+			targetKind: typeof r == "number" && typeof i == "number" ? "range" : "single",
+			target: a,
+			low: typeof r == "number" ? r : typeof a == "number" ? a - 1 : void 0,
+			high: typeof i == "number" ? i : typeof a == "number" ? a + 1 : void 0
+		};
+	}
+	_cancelClimateCardBoost() {
+		this._climateCardBoost = void 0;
+	}
+	_openClimateCardPause(e) {
+		if (this._climateCardPause?.entityId === e) {
+			this._climateCardPause = void 0;
+			return;
+		}
+		this._climateCardBoost = void 0, this._climateCardPause = {
+			entityId: e,
+			indefinite: !1,
+			durationMinutes: 60,
+			action: "none"
+		};
+	}
+	_cancelClimateCardPause() {
+		this._climateCardPause = void 0;
+	}
+	_closeClimateCardActionsMenu(e = !1) {
+		let t = this._climateCardActionsMenuOpen;
+		this._climateCardActionsMenuOpen = !1, this.ownerDocument.removeEventListener("pointerdown", this._handleClimateCardActionsOutsidePointerDown, !0), this.ownerDocument.defaultView?.removeEventListener("resize", this._scheduleClimateCardActionsMenuPosition), this.ownerDocument.removeEventListener("scroll", this._scheduleClimateCardActionsMenuPosition, !0), this.ownerDocument.defaultView?.visualViewport?.removeEventListener("resize", this._scheduleClimateCardActionsMenuPosition), this.ownerDocument.defaultView?.visualViewport?.removeEventListener("scroll", this._scheduleClimateCardActionsMenuPosition), this._climateCardActionsMenuPositionFrame !== void 0 && (this.ownerDocument.defaultView?.cancelAnimationFrame(this._climateCardActionsMenuPositionFrame), this._climateCardActionsMenuPositionFrame = void 0);
+		let n = this.renderRoot?.querySelector(".climate-card-actions-menu");
+		try {
+			n?.hidePopover?.();
+		} catch {}
+		t && this.requestUpdate(), e && t && this.ownerDocument.defaultView?.requestAnimationFrame(() => {
+			this.renderRoot?.querySelector(".climate-card-actions-menu-trigger")?.focus();
+		});
+	}
+	_positionClimateCardActionsMenu() {
+		if (!this._climateCardActionsMenuOpen) return;
+		let e = this.renderRoot.querySelector(".climate-card-actions-menu-trigger"), t = this.renderRoot.querySelector(".climate-card-actions-menu"), n = this.ownerDocument.defaultView;
+		if (!e || !t || !n) return;
+		let r = n.visualViewport, i = dr(e.getBoundingClientRect(), t.scrollWidth || 280, t.scrollHeight || 240, {
+			top: r?.offsetTop ?? 0,
+			left: r?.offsetLeft ?? 0,
+			width: r?.width ?? n.innerWidth,
+			height: r?.height ?? n.innerHeight
+		});
+		t.dataset.placement = i.placement, t.style.left = `${i.left}px`, t.style.top = `${i.top}px`, t.style.width = `${i.width}px`, t.style.maxHeight = `${i.maxHeight}px`;
+	}
+	async _runClimateCardScriptAction(e, t) {
+		if (!this.hass || this._climateCardScriptAction) return;
+		if (!mn(e.script)) {
+			this._error = this._t("climateCardScriptUnavailable"), this._closeClimateCardActionsMenu();
+			return;
+		}
+		let n = this.hass.states?.[e.script];
+		if (!n || n.state === "unavailable" || n.state === "unknown") {
+			this._error = this._t("climateCardScriptUnavailable");
+			return;
+		}
+		let r = e.name.trim() || this._friendlyEntityName(e.script);
+		if (e.confirmation && !window.confirm(this._t("climateCardConfirmScriptAction", { name: r }))) return;
+		let i = `${t}:${e.script}`;
+		this._clearClimateCardScriptFeedback(), this._climateCardScriptAction = i, this._closeClimateCardActionsMenu(!0), this._error = void 0;
+		try {
+			await this.hass.callService("script", "turn_on", { entity_id: e.script });
+			let t = this._t("climateCardScriptExecuted", { name: r });
+			this._showSuccess(t), this._setClimateCardScriptFeedback({
+				key: i,
+				status: "success",
+				message: t
+			});
+		} catch (e) {
+			let t = e instanceof Error ? e.message : this._t("climateCardActionFailed");
+			this._error = t, this._setClimateCardScriptFeedback({
+				key: i,
+				status: "error",
+				message: t
+			});
+		} finally {
+			this._climateCardScriptAction = void 0;
+		}
+	}
+	_setClimateCardScriptFeedback(e) {
+		this._clearClimateCardScriptFeedback(), this._climateCardScriptFeedback = e, this._climateCardScriptFeedbackTimeout = this.ownerDocument.defaultView?.setTimeout(() => {
+			this._climateCardScriptFeedbackTimeout = void 0, this._climateCardScriptFeedback = void 0;
+		}, 2e3);
+	}
+	_clearClimateCardScriptFeedback() {
+		this._climateCardScriptFeedbackTimeout !== void 0 && (this.ownerDocument.defaultView?.clearTimeout(this._climateCardScriptFeedbackTimeout), this._climateCardScriptFeedbackTimeout = void 0), this._climateCardScriptFeedback = void 0;
+	}
+	_scrollClimateCardActions(e) {
+		let t = this.renderRoot.querySelector(".climate-card-actions-row");
+		if (!t) return;
+		let n = this.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches === !0;
+		t.scrollBy({
+			left: e * Math.max(96, t.clientWidth * .7),
+			behavior: n ? "auto" : "smooth"
+		});
+	}
+	_syncClimateCardActionsResizeObserver() {
+		let e = this.renderRoot.querySelector(".climate-card-actions-row");
+		if (e === this._climateCardActionsObservedElement) {
+			e && this._updateClimateCardActionsScrollState(e);
+			return;
+		}
+		if (this._disconnectClimateCardActionsResizeObserver(), !e) {
+			this._setClimateCardActionsScrollState(!1, !1, !1);
+			return;
+		}
+		this._climateCardActionsObservedElement = e, this._updateClimateCardActionsScrollState(e), typeof ResizeObserver < "u" && (this._climateCardActionsResizeObserver = new ResizeObserver(() => this._updateClimateCardActionsScrollState(e)), this._climateCardActionsResizeObserver.observe(e));
+	}
+	_disconnectClimateCardActionsResizeObserver() {
+		this._climateCardActionsResizeObserver?.disconnect(), this._climateCardActionsResizeObserver = void 0, this._climateCardActionsObservedElement = void 0;
+	}
+	_updateClimateCardActionsScrollState(e) {
+		let t = e.parentElement?.clientWidth || e.clientWidth, n = e.scrollWidth > t + 1;
+		this._setClimateCardActionsScrollState(n, n && e.scrollLeft > 1, n && e.scrollLeft + e.clientWidth < e.scrollWidth - 1);
+	}
+	_setClimateCardActionsScrollState(e, t, n) {
+		this._climateCardActionsHasOverflow !== e && (this._climateCardActionsHasOverflow = e), this._climateCardActionsCanScrollLeft !== t && (this._climateCardActionsCanScrollLeft = t), this._climateCardActionsCanScrollRight !== n && (this._climateCardActionsCanScrollRight = n);
+	}
+	_updateClimateCardBoost(e, t) {
+		if (!this._climateCardBoost) return;
+		let n = Number(t);
+		this._climateCardBoost = {
+			...this._climateCardBoost,
+			[e]: Number.isFinite(n) ? n : void 0
+		};
+	}
+	_updateClimateCardBoostOption(e, t) {
+		this._climateCardBoost &&= {
+			...this._climateCardBoost,
+			[e]: t || void 0
+		};
+	}
+	_updateClimateCardPause(e, t) {
+		this._climateCardPause &&= {
+			...this._climateCardPause,
+			[e]: e === "durationMinutes" ? Number(t) : t
+		};
+	}
+	async _runClimateCardService(e, t) {
+		if (!(!this.hass || this._climateCardServiceAction)) {
+			this._climateCardServiceAction = e, this._error = void 0;
+			try {
+				if (e === "boost") {
+					let e = this._climateCardBoost;
+					if (!e || e.entityId !== t) return;
+					let n = {
+						entity_id: t,
+						duration_minutes: e.durationMinutes,
+						...e.targetKind === "range" && typeof e.low == "number" && typeof e.high == "number" ? {
+							target_temp_low: e.low,
+							target_temp_high: e.high
+						} : { temperature: e.target }
+					};
+					e.hvacMode && (n.hvac_mode = e.hvacMode), e.fanMode && (n.fan_mode = e.fanMode), e.presetMode && (n.preset_mode = e.presetMode), e.swingMode && (n.swing_mode = e.swingMode), e.swingHorizontalMode && (n.swing_horizontal_mode = e.swingHorizontalMode), typeof e.humidity == "number" && (n.humidity = e.humidity), await this.hass.callService("velair", "boost", n), this._climateCardBoost = void 0, this._showSuccess(this._t("climateCardBoostStarted"));
+				} else if (e === "cancel-boost") await this.hass.callService("velair", "cancel_boost", { entity_id: t }), this._showSuccess(this._t("climateCardBoostCancelled"));
+				else if (e === "pause") {
+					let e = this._climateCardPause;
+					if (!e || e.entityId !== t) return;
+					await this.hass.callService("velair", "pause_zone", {
+						entity_id: t,
+						action: e.action,
+						...e.indefinite ? {} : { duration_minutes: e.durationMinutes }
+					}), this._climateCardPause = void 0, this._showSuccess(this._t("climateCardZonePaused"));
+				} else await this.hass.callService("velair", "resume_zone", {
+					entity_id: t,
+					apply_current_schedule: !0,
+					resume_all: !0
+				}), this._showSuccess(this._t("climateCardZoneResumed"));
+				await this._loadSchedule();
+			} catch (e) {
+				this._error = e instanceof Error ? e.message : this._t("climateCardActionFailed");
+			} finally {
+				this._climateCardServiceAction = void 0;
+			}
+		}
+	}
+	_navigateToVelair() {
+		this._closeClimateCardActionsMenu(), window.history.pushState(null, "", "/velair"), window.dispatchEvent(new Event("location-changed"));
+	}
+	_openClimateEntity(e) {
+		this.hass?.states?.[e] && this.dispatchEvent(new CustomEvent("hass-more-info", {
+			bubbles: !0,
+			composed: !0,
+			detail: { entityId: e }
+		}));
+	}
+	_openEntityHistory(e) {
+		this.hass?.states?.[e] && this.dispatchEvent(new CustomEvent("hass-more-info", {
+			bubbles: !0,
+			composed: !0,
+			detail: {
+				entityId: e,
+				view: "history"
+			}
+		}));
+	}
+	_toggleClimateCardCurrentState() {
+		this._climateCardCurrentStateCollapsed = !this._climateCardCurrentStateCollapsed;
+	}
+	_toggleClimateCardRoomAssist() {
+		this._climateCardRoomAssistCollapsed = !this._climateCardRoomAssistCollapsed;
+	}
+	_toggleClimateCardPreconditioning() {
+		this._climateCardPreconditioningCollapsed = !this._climateCardPreconditioningCollapsed;
+	}
+	async _adjustClimateCardTarget(e, t, n) {
+		if (!this._climateCardThermostatReady(e)) return;
+		let r = this.hass;
+		if (!r) return;
+		let i = r.states?.[e], a = gr(i, t, n, this._temperatureUnit(e), this._entityTemperatureStep(e));
+		if (a) {
+			this._climateCardThermostatAction = "temperature", this._error = void 0;
+			try {
+				await r.callService("climate", "set_temperature", {
+					entity_id: e,
+					...a
+				});
+			} catch (e) {
+				this._error = e instanceof Error ? e.message : this._t("climateCardThermostatActionFailed");
+			} finally {
+				this._climateCardThermostatAction = void 0;
+			}
+		}
+	}
+	async _setClimateCardHvacMode(e, t) {
+		if (!this._climateCardThermostatReady(e)) return;
+		let n = this.hass;
+		if (!n) return;
+		let r = n.states?.[e];
+		if (_r(r).includes(t)) {
+			this._climateCardThermostatAction = "hvac-mode", this._error = void 0;
+			try {
+				await n.callService("climate", "set_hvac_mode", {
+					entity_id: e,
+					hvac_mode: t
+				});
+			} catch (e) {
+				this._error = e instanceof Error ? e.message : this._t("climateCardThermostatActionFailed");
+			} finally {
+				this._climateCardThermostatAction = void 0;
+			}
+		}
+	}
+	_climateCardThermostatReady(e) {
+		let t = this.hass;
+		if (!t || !this._data || this._climateCardThermostatAction || this._manualControlActions[e] || !this._data.configured_entities.includes(e) || yn(this._data, e) !== "manual") return !1;
+		let n = t.states?.[e], r = this._data.zone_runtime?.[e];
+		return !!(n && n.state !== "unavailable" && n.state !== "unknown" && !vr("manual", r));
+	}
 	async _enterManualAdjustment(e) {
 		let t = this._api();
-		if (!(!t || this._manualControlActions[e])) {
+		if (!(!t || this._manualControlActions[e] || this._climateCardThermostatAction)) {
 			this._manualControlActions = {
 				...this._manualControlActions,
 				[e]: "enter"
@@ -30943,7 +37495,7 @@ var $ = class extends He {
 		}
 	}
 	async _saveZonePreconditioning(e, t) {
-		await Zi(z(this), e, t);
+		await Ra(B(this), e, t);
 	}
 	async _resolveTemperatureMigration(e) {
 		let t = this._api(), n = this._data?.temperature_migration;
@@ -30956,7 +37508,7 @@ var $ = class extends He {
 			this._temperatureMigrationAction = e, this._error = void 0;
 			try {
 				let r = globalThis.crypto?.randomUUID?.() ?? `velair-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-				this._applyScheduleData(await t.resolveTemperatureMigration(e, r, n.temperature_revision ?? 0), { forceDraft: !0 }), ii(ni(this), this._t("temperatureMigrationComplete"));
+				this._applyScheduleData(await t.resolveTemperatureMigration(e, r, n.temperature_revision ?? 0), { forceDraft: !0 }), Gi(Ui(this), this._t("temperatureMigrationComplete"));
 			} catch (e) {
 				this._error = e instanceof Error ? e.message : this._t("temperatureMigrationFailed");
 			} finally {
@@ -30965,7 +37517,7 @@ var $ = class extends He {
 		}
 	}
 	async _saveZoneComfort(e, t) {
-		await Qi(z(this), e, t);
+		await za(B(this), e, t);
 	}
 	_togglePreconditioningZone(e) {
 		let t = new Set(this._expandedPreconditioningZones);
@@ -30976,167 +37528,167 @@ var $ = class extends He {
 		t.has(e) ? t.delete(e) : t.add(e), this._expandedComfortZones = t;
 	}
 	async _resetZonePreconditioningLearning(e, t, n) {
-		await $i(z(this), e, t, n);
+		await Ba(B(this), e, t, n);
 	}
 	async _resetZonePreconditioningSettings(e) {
-		await ea(z(this), e);
+		await Va(B(this), e);
 	}
 	_togglePortableSection(e, t, n) {
-		Ri(R(this), e, t, n);
+		Ta(z(this), e, t, n);
 	}
 	async _handlePortableImportFile(e) {
-		await zi(R(this), e);
+		await Ea(z(this), e);
 	}
 	async _exportPortableData() {
-		await Bi(R(this));
+		await Da(z(this));
 	}
 	async _importPortableData() {
-		await Vi(R(this));
+		await Oa(z(this));
 	}
 	async _resetVelairData() {
-		await Hi(R(this));
+		await ka(z(this));
 	}
 	_importAvailableSections() {
-		return Ui(R(this));
+		return Aa(z(this));
 	}
 	_portableExportSummaryItems() {
-		return Wi(R(this));
+		return ja(z(this));
 	}
 	_portableImportSummaryItems() {
-		return Gi(R(this));
+		return Ma(z(this));
 	}
 	_portableSummaryItem(e) {
-		return Ki(R(this), e);
+		return Na(z(this), e);
 	}
 	_portableSectionLabel(e) {
-		return qi(R(this), e);
+		return Pa(z(this), e);
 	}
 	_downloadPortablePayload(e) {
-		Ji(e);
+		Fa(e);
 	}
 	_moveSettingsZone(e, t) {
-		ta(z(this), e, t);
+		Ha(B(this), e, t);
 	}
 	_handleSettingsZoneDragStart(e, t) {
-		na(z(this), e, t);
+		Ua(B(this), e, t);
 	}
 	_handleSettingsZoneDragOver(e) {
-		ra(e);
+		Wa(e);
 	}
 	_handleSettingsZoneDrop(e, t) {
-		ia(z(this), e, t);
+		Ga(B(this), e, t);
 	}
 	_updateSettingsZoneOrder(e) {
-		oa(z(this), e);
+		qa(B(this), e);
 	}
 	_temperatureLimits(e = "schedule", t = this._selectedEntity) {
-		return Ya(H(this), e, t);
+		return zo(V(this), e, t);
 	}
 	_entityTemperatureLimits(e) {
-		return Xa(H(this), e);
+		return Bo(V(this), e);
 	}
 	_templateTemperatureLimits() {
-		return Za(H(this));
+		return Vo(V(this));
 	}
 	_temperatureStep(e = "schedule", t = this._selectedEntity) {
-		return Qa(H(this), e, t);
+		return Ho(V(this), e, t);
 	}
 	_entityTemperatureStep(e) {
-		return $a(H(this), e);
+		return Uo(V(this), e);
 	}
 	_formatTemperatureLimit(e) {
-		return nn(e);
+		return In(e);
 	}
 	_entityExists(e) {
-		return eo(H(this), e);
+		return Wo(V(this), e);
 	}
 	_entityFanModeOptions(e) {
-		return ao(H(this), e);
+		return Yo(V(this), e);
 	}
 	_entityPresetModeOptions(e) {
-		return so(H(this), e);
+		return Zo(V(this), e);
 	}
 	_entitySwingModeOptions(e) {
-		return lo(H(this), e);
+		return $o(V(this), e);
 	}
 	_entitySwingHorizontalModeOptions(e) {
-		return fo(H(this), e);
+		return ts(V(this), e);
 	}
 	_entityHumidityLimits(e) {
-		return mo(H(this), e);
+		return rs(V(this), e);
 	}
 	_friendlyEntityName(e) {
-		return to(H(this), e);
+		return Go(V(this), e);
 	}
 	_climateSupportedModes(e) {
-		return no(H(this), e);
+		return Ko(V(this), e);
 	}
 	_hvacModeOptions(e = "schedule") {
-		return ro(H(this), e);
+		return qo(V(this), e);
 	}
 	_fanModeOptions(e = "schedule") {
-		return io(H(this), e);
+		return Jo(V(this), e);
 	}
 	_presetModeOptions(e = "schedule") {
-		return oo(H(this), e);
+		return Xo(V(this), e);
 	}
 	_swingModeOptions(e = "schedule") {
-		return co(H(this), e);
+		return Qo(V(this), e);
 	}
 	_swingHorizontalModeOptions(e = "schedule") {
-		return uo(H(this), e);
+		return es(V(this), e);
 	}
 	_humidityLimits(e = "schedule") {
-		return po(H(this), e);
+		return ns(V(this), e);
 	}
 	_uniqueModes(e) {
-		return ho(e);
+		return is(e);
 	}
 	_entityDiagnostic(e) {
-		return _o(H(this), e);
+		return os(V(this), e);
 	}
 	_climateProvidedData(e) {
-		return vo(H(this), e);
+		return ss(V(this), e);
 	}
 	_formatDateTime(e) {
-		return yo(H(this), e);
+		return cs(V(this), e);
 	}
 	_formatScheduleTime(e) {
-		return bo(H(this), e);
+		return ls(V(this), e);
 	}
 	_dateLocale() {
-		return xo(H(this));
+		return us(V(this));
 	}
 	_formatRemaining(e) {
-		return Wa(e);
+		return Po(e);
 	}
 	_formatTemperature(e, t) {
-		return So(H(this), e, t);
+		return ds(V(this), e, t);
 	}
 	_formatEventAction(e) {
-		return Co(H(this), e);
+		return fs(V(this), e);
 	}
 	_formatEventMode(e) {
-		return wo(H(this), e);
+		return ps(V(this), e);
 	}
 	_temperatureUnit(e) {
-		return To(H(this), e);
+		return ms(V(this), e);
 	}
 	static {
-		this.styles = Xn;
+		this.styles = Kr;
 	}
 };
-J([D({ type: String })], $.prototype, "view", void 0), J([O()], $.prototype, "_config", void 0), J([O()], $.prototype, "_changedNextEventIds", void 0), J([O()], $.prototype, "_data", void 0), J([O()], $.prototype, "_error", void 0), J([O()], $.prototype, "_loading", void 0), J([O()], $.prototype, "_showInitialLoading", void 0), J([O()], $.prototype, "_saving", void 0), J([O()], $.prototype, "_saveMessage", void 0), J([O()], $.prototype, "_selectedEntity", void 0), J([O()], $.prototype, "_scheduleSource", void 0), J([O()], $.prototype, "_profileScheduleDirty", void 0), J([O()], $.prototype, "_selectedWeekday", void 0), J([O()], $.prototype, "_draftBlocks", void 0), J([O()], $.prototype, "_dirty", void 0), J([O()], $.prototype, "_dismissedOperationId", void 0), J([O()], $.prototype, "_dirtyEntityId", void 0), J([O()], $.prototype, "_copyTargets", void 0), J([O()], $.prototype, "_copying", void 0), J([O()], $.prototype, "_zoneTargets", void 0), J([O()], $.prototype, "_applyingZones", void 0), J([O()], $.prototype, "_selectedTemplateKey", void 0), J([O()], $.prototype, "_templateNameDraft", void 0), J([O()], $.prototype, "_templateNameDraftKey", void 0), J([O()], $.prototype, "_templateDraftBlocks", void 0), J([O()], $.prototype, "_templateDraftKey", void 0), J([O()], $.prototype, "_templateDirty", void 0), J([O()], $.prototype, "_templateApplyOpen", void 0), J([O()], $.prototype, "_templateApplyTargets", void 0), J([O()], $.prototype, "_applyingTemplateTargets", void 0), J([O()], $.prototype, "_templateListCanScrollUp", void 0), J([O()], $.prototype, "_templateListCanScrollDown", void 0), J([O()], $.prototype, "_templateAction", void 0), J([O()], $.prototype, "_settingsSaving", void 0), J([O()], $.prototype, "_selectedDiagnosticEntity", void 0), J([O()], $.prototype, "_diagnosticsHistorySaving", void 0), J([O()], $.prototype, "_diagnosticsHistoryFilters", void 0), J([O()], $.prototype, "_diagnosticsSourceFilterOpen", void 0), J([O()], $.prototype, "_diagnosticsSourcePlacement", void 0), J([O()], $.prototype, "_diagnosticsSourceMaxHeight", void 0), J([O()], $.prototype, "_diagnosticsLogColumns", void 0), J([O()], $.prototype, "_diagnosticsLogAvailableWidth", void 0), J([O()], $.prototype, "_diagnosticsExportOpen", void 0), J([O()], $.prototype, "_diagnosticsRedactEntityIds", void 0), J([O()], $.prototype, "_temperatureMigrationAction", void 0), J([O()], $.prototype, "_maintenanceAction", void 0), J([O()], $.prototype, "_portabilityAction", void 0), J([O()], $.prototype, "_exportSections", void 0), J([O()], $.prototype, "_expandedComfortZones", void 0), J([O()], $.prototype, "_expandedPreconditioningZones", void 0), J([O()], $.prototype, "_importSections", void 0), J([O()], $.prototype, "_importPayload", void 0), J([O()], $.prototype, "_importFileName", void 0), J([O()], $.prototype, "_pauseDurationMinutes", void 0), J([O()], $.prototype, "_controlAction", void 0), J([O()], $.prototype, "_manualControlActions", void 0), J([O()], $.prototype, "_schedulerMenuOpen", void 0), J([O()], $.prototype, "_nextEventsOpen", void 0), J([O()], $.prototype, "_nextEventChangeRevision", void 0), J([O()], $.prototype, "_overviewTimelineDetail", void 0), J([O()], $.prototype, "_overviewTimelineDetailAnchor", void 0), J([O()], $.prototype, "_overviewTimelineDetailEntityId", void 0), J([O()], $.prototype, "_successNoticeStartedAt", void 0), J([O()], $.prototype, "_timelineNow", void 0);
+J([D({ type: String })], $.prototype, "view", void 0), J([O()], $.prototype, "_config", void 0), J([O()], $.prototype, "_changedNextEventIds", void 0), J([O()], $.prototype, "_climateCardBoost", void 0), J([O()], $.prototype, "_climateCardPause", void 0), J([O()], $.prototype, "_climateCardServiceAction", void 0), J([O()], $.prototype, "_climateCardThermostatAction", void 0), J([O()], $.prototype, "_climateCardActionsMenuOpen", void 0), J([O()], $.prototype, "_climateCardActionsHasOverflow", void 0), J([O()], $.prototype, "_climateCardActionsCanScrollLeft", void 0), J([O()], $.prototype, "_climateCardActionsCanScrollRight", void 0), J([O()], $.prototype, "_climateCardCurrentStateCollapsed", void 0), J([O()], $.prototype, "_climateCardPreconditioningCollapsed", void 0), J([O()], $.prototype, "_climateCardRoomAssistCollapsed", void 0), J([O()], $.prototype, "_climateCardScriptAction", void 0), J([O()], $.prototype, "_climateCardScriptFeedback", void 0), J([O()], $.prototype, "_data", void 0), J([O()], $.prototype, "_error", void 0), J([O()], $.prototype, "_loading", void 0), J([O()], $.prototype, "_showInitialLoading", void 0), J([O()], $.prototype, "_saving", void 0), J([O()], $.prototype, "_saveMessage", void 0), J([O()], $.prototype, "_selectedEntity", void 0), J([O()], $.prototype, "_scheduleSource", void 0), J([O()], $.prototype, "_profileScheduleDirty", void 0), J([O()], $.prototype, "_selectedWeekday", void 0), J([O()], $.prototype, "_draftBlocks", void 0), J([O()], $.prototype, "_dirty", void 0), J([O()], $.prototype, "_dismissedOperationId", void 0), J([O()], $.prototype, "_dirtyEntityId", void 0), J([O()], $.prototype, "_copyTargets", void 0), J([O()], $.prototype, "_copying", void 0), J([O()], $.prototype, "_zoneTargets", void 0), J([O()], $.prototype, "_applyingZones", void 0), J([O()], $.prototype, "_selectedTemplateKey", void 0), J([O()], $.prototype, "_templateNameDraft", void 0), J([O()], $.prototype, "_templateNameDraftKey", void 0), J([O()], $.prototype, "_templateDraftBlocks", void 0), J([O()], $.prototype, "_templateDraftKey", void 0), J([O()], $.prototype, "_templateDirty", void 0), J([O()], $.prototype, "_templateApplyOpen", void 0), J([O()], $.prototype, "_templateApplyTargets", void 0), J([O()], $.prototype, "_applyingTemplateTargets", void 0), J([O()], $.prototype, "_templateListCanScrollUp", void 0), J([O()], $.prototype, "_templateListCanScrollDown", void 0), J([O()], $.prototype, "_templateAction", void 0), J([O()], $.prototype, "_settingsSaving", void 0), J([O()], $.prototype, "_selectedDiagnosticEntity", void 0), J([O()], $.prototype, "_diagnosticsHistorySaving", void 0), J([O()], $.prototype, "_diagnosticsHistoryFilters", void 0), J([O()], $.prototype, "_diagnosticsSourceFilterOpen", void 0), J([O()], $.prototype, "_diagnosticsSourcePlacement", void 0), J([O()], $.prototype, "_diagnosticsSourceMaxHeight", void 0), J([O()], $.prototype, "_diagnosticsLogColumns", void 0), J([O()], $.prototype, "_diagnosticsLogAvailableWidth", void 0), J([O()], $.prototype, "_diagnosticsExportOpen", void 0), J([O()], $.prototype, "_diagnosticsRedactEntityIds", void 0), J([O()], $.prototype, "_temperatureMigrationAction", void 0), J([O()], $.prototype, "_maintenanceAction", void 0), J([O()], $.prototype, "_portabilityAction", void 0), J([O()], $.prototype, "_exportSections", void 0), J([O()], $.prototype, "_expandedComfortZones", void 0), J([O()], $.prototype, "_expandedPreconditioningZones", void 0), J([O()], $.prototype, "_importSections", void 0), J([O()], $.prototype, "_importPayload", void 0), J([O()], $.prototype, "_importFileName", void 0), J([O()], $.prototype, "_pauseDurationMinutes", void 0), J([O()], $.prototype, "_controlAction", void 0), J([O()], $.prototype, "_manualControlActions", void 0), J([O()], $.prototype, "_schedulerMenuOpen", void 0), J([O()], $.prototype, "_nextEventsOpen", void 0), J([O()], $.prototype, "_nextEventChangeRevision", void 0), J([O()], $.prototype, "_overviewTimelineDetail", void 0), J([O()], $.prototype, "_overviewTimelineDetailAnchor", void 0), J([O()], $.prototype, "_overviewTimelineDetailEntityId", void 0), J([O()], $.prototype, "_successNoticeStartedAt", void 0), J([O()], $.prototype, "_timelineNow", void 0);
 //#endregion
 //#region src/velair/registration.ts
-function qp(e) {
+function Kg(e) {
 	Object.entries(e.elements).forEach(([e, t]) => {
 		customElements.get(e) || customElements.define(e, t);
 	}), window.velairFrontendBuild = e.build, window.velairFrontendVersion = e.version || void 0, window.customCards = window.customCards ?? [], window.customCards.some((t) => t.type === e.customCard.type) || window.customCards.push(e.customCard);
 }
 //#endregion
 //#region src/velair/views/card-editor.ts
-var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
+var qg = new Set(["schedules"]), Jg = new Set(["active-setup"]), Yg = new Set([
 	"comfort",
 	"overview",
 	"overview-boosts",
@@ -31148,21 +37700,30 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
 	"sensors",
 	"preconditioning",
 	"settings"
-]), Zp = new Set(["comfort"]), Qp = [
+]), Xg = new Set(["comfort"]), Zg = [
 	["show_comfort_configuration", "comfortCardShowConfiguration"],
 	["show_comfort_temperature", "comfortCardShowTemperature"],
 	["show_comfort_humidity", "comfortCardShowHumidity"],
 	["show_comfort_co2", "comfortCardShowCo2"]
-], $p = new Set(["sensors"]), em = [
+], Qg = new Set(["sensors"]), $g = new Set(["climate"]), e_ = "https://github.com/cgonfer/velair/blob/main/docs/user/blueprints/pause-zone-for-open-windows.md", t_ = [
 	["show_room_assist_switch", "roomAssistShowSwitch"],
 	["show_room_assist_sensor", "roomAssistShowSensor"],
 	["show_room_assist_deadband", "roomAssistShowDeadband"],
 	["show_room_assist_max_delta", "roomAssistShowMaxDelta"],
 	["show_room_assist_debounce", "roomAssistShowDebounce"],
 	["show_room_assist_live_status", "roomAssistShowLiveStatus"]
-], tm = class extends He {
+], n_ = class extends He {
 	constructor(...e) {
-		super(...e), this._config = {}, this._entities = [], this._loading = !1, this._loaded = !1, this._handleZoneDragEnd = () => {
+		super(...e), this._config = {}, this._entities = [], this._loading = !1, this._loaded = !1, this._resetClimateName = () => {
+			let e = { ...this._config };
+			delete e.climate_name, this._emitConfig(e);
+		}, this._addWindowEntity = () => {
+			let e = Object.keys(this.hass?.states ?? {}).find((e) => e.startsWith("binary_sensor."));
+			e && this._emitConfig({
+				...this._config,
+				climate_window_entities: [...this._config.climate_window_entities ?? [], e]
+			});
+		}, this._handleZoneDragEnd = () => {
 			this._draggedEntity = void 0;
 		};
 	}
@@ -31170,16 +37731,16 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
 		this._config = e ?? {};
 	}
 	updated(e) {
-		(e.has("hass") || e.has("_config")) && this.hass && this._showsThermostatOptions() && !this._loaded && !this._loading && this._loadManagedEntities();
+		(e.has("hass") || e.has("_config")) && this.hass && (this._showsThermostatOptions() || this._showsClimateCardOptions()) && !this._loaded && !this._loading && this._loadManagedEntities();
 	}
 	render() {
-		let e = this._firstWeekday(), t = this._showsActiveSetupControls(), n = this._orderedEntities(), r = this._showsFirstWeekdayOption(), i = this._showsComfortVisibilityOptions(), a = this._showsThermostatOptions(), o = this._showsRoomAssistVisibilityOptions();
+		let e = this._firstWeekday(), t = this._showsActiveSetupControls(), n = this._orderedEntities(), r = this._showsFirstWeekdayOption(), i = this._showsComfortVisibilityOptions(), a = this._showsThermostatOptions(), o = this._showsRoomAssistVisibilityOptions(), s = this._showsClimateCardOptions();
 		return T`
       <div class="editor">
         ${this._error ? T`<div class="notice error">${this._error}</div>` : E}
         ${this._loading ? T`<div class="notice">${this._t("loadingEntities")}</div>` : E}
 
-        <label>
+        ${s ? E : T`<label>
           <span>${this._t("title")}</span>
           <input
             type="text"
@@ -31187,7 +37748,7 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
             placeholder="Velair"
             @input=${(e) => this._updateConfig("title", this._inputValue(e))}
           />
-        </label>
+        </label>`}
 
         <label>
           <span>${this._t("cardView")}</span>
@@ -31245,6 +37806,8 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
               </section>
             ` : E}
 
+        ${s ? this._renderClimateCardOptions() : E}
+
         ${i ? T`
               <section class="card-visibility-options">
                 <div>
@@ -31252,7 +37815,7 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
                   <p>${this._t("comfortCardVisibilityDescription")}</p>
                 </div>
                 <div class="visibility-list">
-                  ${Qp.map(([e, t]) => this._renderVisibilityOption(e, t))}
+                  ${Zg.map(([e, t]) => this._renderVisibilityOption(e, t))}
                 </div>
               </section>
             ` : E}
@@ -31264,12 +37827,300 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
                   <p>${this._t("roomAssistCardVisibilityDescription")}</p>
                 </div>
                 <div class="visibility-list">
-                  ${em.map(([e, t]) => this._renderVisibilityOption(e, t))}
+                  ${t_.map(([e, t]) => this._renderVisibilityOption(e, t))}
                 </div>
               </section>
             ` : E}
       </div>
     `;
+	}
+	_renderClimateCardOptions() {
+		let e = this._config.entities?.length === 1 ? this._config.entities[0] : void 0, t = this._config.selected_entity ?? e ?? this._orderedEntities()[0] ?? "", n = this._config.climate_window_entities ?? [], r = Object.keys(this.hass?.states ?? {}).filter((e) => e.startsWith("binary_sensor.")).sort((e, t) => this._friendlyEntityName(e).localeCompare(this._friendlyEntityName(t))), i = Object.entries(this.hass?.states ?? {}).filter(([e, t]) => e.startsWith("sensor.") && (t.attributes?.device_class === "temperature" || String(t.attributes?.unit_of_measurement ?? "").includes("°"))).map(([e]) => e).sort((e, t) => this._friendlyEntityName(e).localeCompare(this._friendlyEntityName(t))), a = Object.entries(this.hass?.states ?? {}).filter(([e, t]) => e.startsWith("sensor.") && (t.attributes?.device_class === "humidity" || String(t.attributes?.unit_of_measurement ?? "").trim() === "%")).map(([e]) => e).sort((e, t) => this._friendlyEntityName(e).localeCompare(this._friendlyEntityName(t))), o = this._config.climate_humidity_entity, s = o && !a.includes(o) ? [o, ...a] : a, c = this._config.climate_show_outdoor_temperature !== !1 && !!this._config.climate_outdoor_temperature_entity, l = this._config.climate_show_windows !== !1 && n.length > 0, u = this._config.climate_show_timeline !== !1;
+		this._config.climate_show_room_assist;
+		let d = this._config.climate_show_preconditioning !== !1, f = this._config.climate_preconditioning_display ?? "both";
+		return T`<section class="climate-card-options">
+      <div><span class="section-label">${this._t("climateCardConfiguration")}</span><p>${this._t("climateCardConfigurationDescription")}</p></div>
+      <label><span>${this._t("climateCardManagedClimate")}</span><select .value=${t} @change=${(e) => this._setClimateEntity(this._inputValue(e))}>
+        ${this._orderedEntities().map((e) => T`<option value=${e} ?selected=${e === t}>${this._friendlyEntityName(e)}</option>`)}
+      </select></label>
+      <details class="climate-card-option-group climate-card-header-editor" open>
+        <summary><span class="section-label">${this._t("climateCardHeaderOptions")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+        <div class="climate-card-option-content">
+        ${this._renderClimateToggle("climateCardShowStateBar", "climate_show_state_bar")}
+        ${this._renderClimateToggle("climateCardShowName", "climate_show_name")}
+        ${this._config.climate_show_name === !1 ? E : T`<div class="nested-option"><label><span>${this._t("climateCardCustomName")}</span><div class="climate-card-name-row"><input type="text" maxlength="80" .value=${this._config.climate_name ?? this._friendlyEntityName(t)} @input=${(e) => this._setClimateName(this._inputValue(e))}><button class="icon-button" type="button" title=${this._t("climateCardResetName")} ?disabled=${this._config.climate_name === void 0} @click=${this._resetClimateName}><ha-icon icon="mdi:restore"></ha-icon></button></div></label></div>`}
+        ${this._renderClimateToggle("climateCardShowOperation", "climate_show_operation")}
+        </div>
+      </details>
+      <details class="climate-card-option-group climate-card-thermostat-editor" open>
+        <summary><span class="section-label">${this._t("climateCardThermostatControls")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+        <div class="climate-card-option-content">
+          <div class="climate-card-feature-editor-body">
+            ${this._renderClimateToggle("climateCardShowControlMode", "climate_show_control_mode")}
+            ${this._renderClimateActionsGroup()}
+            ${this._renderClimateToggle("climateCardShowTargetControl", "climate_show_target_control")}
+            ${this._renderClimateToggle("climateCardShowHvacModeControl", "climate_show_hvac_mode_control")}
+            ${this._renderClimateToggle("climateCardShowNativeClimateLink", "climate_show_native_climate_link")}
+            <small class="option-description">${this._t("climateCardThermostatControlsDescription")}</small>
+          </div>
+        </div>
+      </details>
+      <details class="climate-card-option-group climate-card-current-editor" open>
+        <summary><span class="section-label">${this._t("climateCardCurrentState")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+        <div class="climate-card-option-content">
+        ${this._renderClimateToggle("climateCardCollapsedByDefault", "climate_current_state_default_collapsed")}
+        ${this._renderClimateToggle("climateCardShowCurrentTemperature", "climate_show_current_temperature")}
+        ${this._renderClimateToggle("climateCardShowCurrentHumidity", "climate_show_current_humidity")}
+        ${this._config.climate_show_current_humidity === !1 ? E : T`<div class="nested-option climate-card-humidity-source"><label><span>${this._t("climateCardHumiditySource")}</span><select .value=${o ?? ""} @change=${(e) => this._setStringConfig("climate_humidity_entity", this._inputValue(e))}>
+          <option value="" ?selected=${!o}>${this._t("climateCardHumidityClimateSource")}</option>
+          ${s.map((e) => T`<option value=${e} ?selected=${e === o}>${this._friendlyEntityName(e)}</option>`)}
+        </select><small>${this._t("climateCardHumiditySourceDescription")}</small></label></div>`}
+        <label class="visibility-option"><input type="checkbox" .checked=${c} ?disabled=${!i.length} @change=${(e) => this._toggleClimateOutdoor(!!e.currentTarget.checked, i[0])}><span>${this._t("climateCardShowOutdoorTemperature")}</span></label>
+        ${c ? T`<div class="nested-option climate-card-outdoor-source"><label><span>${this._t("climateCardOutdoorSensor")}</span><select .value=${this._config.climate_outdoor_temperature_entity ?? ""} @change=${(e) => this._setStringConfig("climate_outdoor_temperature_entity", this._inputValue(e))}>
+          ${i.map((e) => T`<option value=${e} ?selected=${e === this._config.climate_outdoor_temperature_entity}>${this._friendlyEntityName(e)}</option>`)}
+        </select><small>${this._t("climateCardOutdoorSensorDescription")}</small></label></div>` : E}
+        <label class="visibility-option"><input type="checkbox" .checked=${l} ?disabled=${!r.length} @change=${(e) => this._toggleClimateWindows(!!e.currentTarget.checked, r[0])}><span>${this._t("climateCardShowWindows")}</span></label>
+        ${l ? T`<div class="nested-option climate-card-window-editor">
+        <label><span>${this._t("climateCardWindowDisplay")}</span><select .value=${this._config.climate_window_display ?? "grouped"} @change=${(e) => this._setStringConfig("climate_window_display", this._inputValue(e))}>
+          <option value="grouped" ?selected=${!this._config.climate_window_display || this._config.climate_window_display === "grouped"}>${this._t("climateCardWindowGrouped")}</option><option value="individual" ?selected=${this._config.climate_window_display === "individual"}>${this._t("climateCardWindowIndividual")}</option>
+        </select></label>
+          ${n.map((e, t) => T`<div class="climate-card-window-row"><select .value=${e} @change=${(e) => this._updateWindowEntity(t, this._inputValue(e))}>
+            ${r.map((t) => T`<option value=${t} ?selected=${t === e}>${this._friendlyEntityName(t)}</option>`)}
+          </select><button type="button" class="icon-button" title=${this._t("remove")} @click=${() => this._removeWindowEntity(t)}><ha-icon icon="mdi:delete-outline"></ha-icon></button></div>`)}
+          <button type="button" class="add-window" @click=${this._addWindowEntity}><ha-icon icon="mdi:plus"></ha-icon>${this._t("climateCardAddWindow")}</button>
+          <small class="option-description">${this._t("climateCardWindowsDescription")} <a href=${e_} target="_blank" rel="noopener noreferrer">${this._t("climateCardWindowBlueprintLink")}</a></small>
+        </div>` : E}
+        ${this._renderClimateToggle("climateCardShowComfort", "climate_show_comfort")}
+        ${this._config.climate_show_comfort === !1 ? E : T`<div class="nested-option visibility-list">
+          ${this._renderClimateToggle("comfortHumidex", "climate_show_comfort_humidex")}
+          ${this._renderClimateToggle("comfortDewPoint", "climate_show_comfort_dew_point")}
+          ${this._renderClimateToggle("comfortAbsoluteHumidity", "climate_show_comfort_absolute_humidity")}
+          <label class="visibility-option climate-card-collapsed-comfort-readings"><input type="checkbox" .checked=${this._config.climate_show_comfort_collapsed_readings === !0} @change=${(e) => this._setBooleanConfig("climate_show_comfort_collapsed_readings", !!e.currentTarget.checked, !1)}><span>${this._t("climateCardShowCollapsedComfortReadings")}</span></label>
+        </div>`}
+        </div>
+      </details>
+      <details class="climate-card-option-group climate-card-timeline-editor" open>
+        <summary><span class="section-label">${this._t("todayTimeline")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+        <div class="climate-card-option-content">
+        <label class="visibility-option"><input type="checkbox" .checked=${u} @change=${(e) => this._setBooleanConfig("climate_show_timeline", !!e.currentTarget.checked)}><span>${this._t("climateCardShowTimeline")}</span></label>
+        ${u ? T`<div class="nested-option visibility-list">
+          ${this._renderClimateToggle("climateCardTimelineShowTitle", "climate_show_timeline_title")}
+          ${this._renderClimateToggle("climateCardTimelineShowProfile", "climate_show_timeline_profile")}
+          ${this._renderClimateToggle("climateCardTimelineShowMode", "climate_show_timeline_mode")}
+        </div>` : E}
+        </div>
+      </details>
+      ${this._renderClimateRoomAssistGroup()}
+      <details class="climate-card-option-group climate-card-preconditioning-editor" open>
+        <summary><span class="section-label">${this._t("preconditioning")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+        <div class="climate-card-option-content climate-card-feature-editor-body">
+          <label class="visibility-option"><input type="checkbox" .checked=${d} @change=${(e) => this._setBooleanConfig("climate_show_preconditioning", !!e.currentTarget.checked)}><span>${this._t("climateCardShowPreconditioning")}</span></label>
+          ${d ? T`<label class="nested-option"><span>${this._t("climateCardPreconditioningDisplay")}</span><select .value=${f} @change=${(e) => this._setStringConfig("climate_preconditioning_display", this._inputValue(e))}>
+            <option value="both" ?selected=${f === "both"}>${this._t("climateCardDisplayBoth")}</option>
+            <option value="chart" ?selected=${f === "chart"}>${this._t("climateCardDisplayChart")}</option>
+            <option value="text" ?selected=${f === "text"}>${this._t("climateCardDisplayText")}</option>
+          </select></label>
+          ${f === "text" ? E : T`<div class="nested-option visibility-list">
+            ${this._renderClimateToggle("climateCardCollapsedByDefault", "climate_preconditioning_default_collapsed")}
+          </div>`}` : E}
+        </div>
+      </details>
+    </section>`;
+	}
+	_setClimateEntity(e) {
+		if (!e) return;
+		let t = {
+			...this._config,
+			selected_entity: e
+		};
+		delete t.entities, delete t.climate_name, this._emitConfig(t);
+	}
+	_setClimateName(e) {
+		this._emitConfig({
+			...this._config,
+			climate_name: e
+		});
+	}
+	_renderClimateToggle(e, t) {
+		return T`<label class="visibility-option"><input type="checkbox" .checked=${this._config[t] !== !1} @change=${(e) => this._setBooleanConfig(t, !!e.currentTarget.checked)}><span>${this._t(e)}</span></label>`;
+	}
+	_renderClimateRoomAssistGroup() {
+		let e = this._config.climate_show_room_assist !== !1, t = this._config.climate_room_assist_display ?? "both";
+		return T`<details class="climate-card-option-group climate-card-room-assist-editor" open>
+      <summary><span class="section-label">${this._t("roomSensorAssistBadge")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+      <div class="climate-card-option-content climate-card-feature-editor-body">
+        <label class="visibility-option"><input type="checkbox" .checked=${e} @change=${(e) => this._setBooleanConfig("climate_show_room_assist", !!e.currentTarget.checked)}><span>${this._t("climateCardShowRoomAssist")}</span></label>
+        ${e ? T`<label class="nested-option"><span>${this._t("climateCardRoomAssistDisplay")}</span><select .value=${t} @change=${(e) => this._setStringConfig("climate_room_assist_display", this._inputValue(e))}>
+          <option value="both" ?selected=${t === "both"}>${this._t("climateCardDisplayBoth")}</option>
+          <option value="chart" ?selected=${t === "chart"}>${this._t("climateCardDisplayChart")}</option>
+          <option value="text" ?selected=${t === "text"}>${this._t("climateCardDisplayText")}</option>
+        </select></label>
+        ${t === "text" ? E : T`<div class="nested-option visibility-list">
+          ${this._renderClimateToggle("climateCardCollapsedByDefault", "climate_room_assist_default_collapsed")}
+        </div>`}` : E}
+      </div>
+    </details>`;
+	}
+	_renderClimateActionsGroup() {
+		let e = this._config.climate_show_actions !== !1, t = N(this._config), n = Object.keys(this.hass?.states ?? {}).filter((e) => e.startsWith("script.")).sort((e, t) => this._friendlyEntityName(e).localeCompare(this._friendlyEntityName(t)));
+		return T`<details class="climate-card-actions-editor" open>
+      <summary><span class="section-label">${this._t("climateCardActions")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
+      <div class="climate-card-option-content">
+      ${this._renderClimateToggle("climateCardShowActions", "climate_show_actions")}
+      ${e ? T`<div class="climate-card-feature-editor-body">
+        <div class="climate-card-custom-actions">
+          <div><small>${this._t("climateCardActionsOrderDescription")}</small><small>${this._t("climateCardCustomActionsDescription")}</small></div>
+          ${t.map((e, r) => this._renderClimateAction(e, r, t.length, n))}
+          <button class="add-window" type="button" ?disabled=${!n.length} @click=${() => this._addClimateCustomAction(n[0])}><ha-icon icon="mdi:plus"></ha-icon>${this._t("climateCardAddCustomAction")}</button>
+          ${n.length ? E : T`<small class="option-description">${this._t("climateCardNoScripts")}</small>`}
+        </div>
+      </div>` : E}
+      </div>
+    </details>`;
+	}
+	_renderClimateAction(e, t, n, r) {
+		let i = e.type === "boost" || e.type === "pause", a = e.type === "boost", o = i ? this._t(a ? "boost" : "pause") : e.name || this._friendlyEntityName(e.script), s = i ? this._t("climateCardProvidedByVelair") : e.script, c = i ? a ? "mdi:lightning-bolt" : "mdi:pause-circle" : fr(e.icon) ?? "mdi:script-text-outline", l = i ? void 0 : pr(e.color) ?? "var(--primary-color)", u = this._expandedClimateAction === t;
+		return T`<div class=${`climate-card-action-editor ${i ? `climate-card-fixed-action ${e.type}` : "climate-card-custom-action"}`}>
+      <div class="climate-card-action-heading">
+        ${this._renderClimateActionMoveControls(t, n)}
+        <ha-icon icon=${c} style=${l ? `color:${l}` : ""}></ha-icon>
+        <span><strong>${o}</strong><small>${s}</small></span>
+        ${i ? E : T`<button class="icon-button climate-card-action-remove" type="button" title=${this._t("climateCardRemoveCustomAction")} aria-label=${this._t("climateCardRemoveCustomAction")} @click=${() => this._removeClimateCustomAction(t)}><ha-icon icon="mdi:delete-outline"></ha-icon></button>`}
+        <button class="icon-button climate-card-action-disclosure" type="button" aria-expanded=${String(u)} aria-label=${this._t(u ? "climateCardCollapseAction" : "climateCardExpandAction", { name: o })} @click=${() => this._toggleClimateActionExpanded(t)}><ha-icon icon="mdi:chevron-down"></ha-icon></button>
+      </div>
+      ${u ? T`<div class="climate-card-custom-action-body">
+        ${i ? T`
+          <label class="visibility-option"><input type="checkbox" aria-label=${this._t(a ? "climateCardShowBoostAction" : "climateCardShowPauseAction")} .checked=${e.enabled !== !1} @change=${(e) => this._toggleClimateAction(t, !!e.currentTarget.checked)}><span>${this._t(a ? "climateCardShowBoostAction" : "climateCardShowPauseAction")}</span></label>
+          ${this._renderClimateActionPlacement(e, t)}
+          ${this._renderClimateActionNameVisibility(e, t)}
+        ` : T`
+          ${this._renderClimateActionPlacement(e, t)}
+          ${this._renderClimateActionNameVisibility(e, t)}
+          ${this._renderClimateCustomActionFields(e, t, r)}
+        `}
+      </div>` : E}
+    </div>`;
+	}
+	_renderClimateActionMoveControls(e, t) {
+		return T`<div class="climate-card-custom-action-controls">
+      <button class="icon-button" type="button" title=${this._t("moveUp")} ?disabled=${e === 0} @click=${() => this._moveClimateAction(e, -1)}><ha-icon icon="mdi:arrow-up"></ha-icon></button>
+      <button class="icon-button" type="button" title=${this._t("moveDown")} ?disabled=${e === t - 1} @click=${() => this._moveClimateAction(e, 1)}><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+    </div>`;
+	}
+	_renderClimateActionPlacement(e, t) {
+		let n = e.placement ?? "auto";
+		return T`<label><span>${this._t("climateCardActionPlacement")}</span><select .value=${n} @change=${(e) => this._updateClimateActionPlacement(t, this._inputValue(e))}>
+      <option value="auto" ?selected=${n === "auto"}>${this._t("climateCardActionPlacementAuto")}</option>
+      <option value="more" ?selected=${n === "more"}>${this._t("climateCardActionPlacementMore")}</option>
+    </select><small class="option-description">${this._t(n === "more" ? "climateCardActionPlacementMoreDescription" : "climateCardActionPlacementAutoDescription")}</small></label>`;
+	}
+	_renderClimateActionNameVisibility(e, t) {
+		return T`<label class="visibility-option"><input type="checkbox" .checked=${e.hide_name === !0} @change=${(e) => this._toggleClimateActionName(t, !!e.currentTarget.checked)}><span>${this._t("climateCardHideActionName")}</span></label>`;
+	}
+	_renderClimateCustomActionFields(e, t, n) {
+		let r = e.script && !n.includes(e.script) ? [e.script, ...n] : n;
+		return T`
+      <label><span>${this._t("climateCardCustomActionName")}</span><input type="text" maxlength="60" .value=${e.name} @input=${(e) => this._updateClimateCustomAction(t, "name", this._inputValue(e))}></label>
+      <label><span>${this._t("climateCardCustomActionScript")}</span><select .value=${e.script} @change=${(e) => this._selectClimateCustomActionScript(t, this._inputValue(e))}>
+        ${r.map((t) => T`<option value=${t} ?selected=${t === e.script}>${n.includes(t) ? this._friendlyEntityName(t) : `${t} · ${this._t("climateCardScriptUnavailable")}`}</option>`)}
+      </select></label>
+      <div class="climate-card-custom-action-appearance">
+        <label><span class="climate-card-custom-action-icon-heading">${this._t("climateCardCustomActionIcon")}<a href="https://pictogrammers.com/library/mdi/" target="_blank" rel="noopener noreferrer">${this._t("profileBrowseIcons")}</a></span><input type="text" spellcheck="false" placeholder="mdi:script-text-outline" .value=${e.icon ?? ""} @input=${(e) => this._updateClimateCustomAction(t, "icon", this._inputValue(e))}></label>
+        <label><span>${this._t("climateCardCustomActionColor")}</span><input type="color" .value=${pr(e.color) ?? "#03a9f4"} @input=${(e) => this._updateClimateCustomAction(t, "color", this._inputValue(e))}></label>
+      </div>
+      <label class="visibility-option"><input type="checkbox" .checked=${e.confirmation === !0} @change=${(e) => this._updateClimateCustomAction(t, "confirmation", !!e.currentTarget.checked)}><span>${this._t("climateCardCustomActionConfirmation")}</span></label>
+    `;
+	}
+	_toggleClimateOutdoor(e, t) {
+		let n = { ...this._config };
+		e ? (delete n.climate_show_outdoor_temperature, !n.climate_outdoor_temperature_entity && t && (n.climate_outdoor_temperature_entity = t)) : n.climate_show_outdoor_temperature = !1, this._emitConfig(n);
+	}
+	_toggleClimateWindows(e, t) {
+		let n = { ...this._config };
+		e ? (delete n.climate_show_windows, !n.climate_window_entities?.length && t && (n.climate_window_entities = [t])) : n.climate_show_windows = !1, this._emitConfig(n);
+	}
+	_addClimateCustomAction(e) {
+		if (!e) return;
+		let t = {
+			type: "script",
+			name: this._friendlyEntityName(e),
+			script: e,
+			icon: this.hass?.states?.[e]?.attributes?.icon ?? "mdi:script-text-outline",
+			color: "#03a9f4",
+			confirmation: !1
+		};
+		this._writeClimateActions([...N(this._config), t]);
+	}
+	_updateClimateCustomAction(e, t, n) {
+		let r = [...N(this._config)];
+		!r[e] || r[e].type !== "script" || (r[e] = {
+			...r[e],
+			[t]: n
+		}, this._writeClimateActions(r));
+	}
+	_selectClimateCustomActionScript(e, t) {
+		let n = [...N(this._config)];
+		!n[e] || n[e].type !== "script" || !t || (n[e] = {
+			...n[e],
+			script: t,
+			name: this._friendlyEntityName(t)
+		}, this._writeClimateActions(n));
+	}
+	_moveClimateAction(e, t) {
+		let n = [...N(this._config)], r = e + t;
+		!n[e] || r < 0 || r >= n.length || ([n[e], n[r]] = [n[r], n[e]], this._expandedClimateAction = void 0, this._writeClimateActions(n));
+	}
+	_removeClimateCustomAction(e) {
+		this._expandedClimateAction = void 0, this._writeClimateActions(N(this._config).filter((t, n) => n !== e));
+	}
+	_toggleClimateActionExpanded(e) {
+		this._expandedClimateAction = this._expandedClimateAction === e ? void 0 : e;
+	}
+	_updateClimateActionPlacement(e, t) {
+		let n = [...N(this._config)], r = n[e];
+		!r || t !== "auto" && t !== "more" || (n[e] = {
+			...r,
+			placement: t
+		}, this._writeClimateActions(n));
+	}
+	_toggleClimateAction(e, t) {
+		let n = [...N(this._config)], r = n[e];
+		!r || r.type === "script" || (n[e] = {
+			...r,
+			enabled: t
+		}, this._writeClimateActions(n));
+	}
+	_toggleClimateActionName(e, t) {
+		let n = [...N(this._config)], r = n[e];
+		if (!r) return;
+		let i = { ...r };
+		t ? i.hide_name = !0 : delete i.hide_name, n[e] = i, this._writeClimateActions(n);
+	}
+	_writeClimateActions(e) {
+		let t = {
+			...this._config,
+			climate_actions: e
+		};
+		delete t.climate_custom_actions, delete t.climate_show_boost_action, delete t.climate_show_pause_action, this._emitConfig(t);
+	}
+	_setStringConfig(e, t) {
+		let n = { ...this._config };
+		t ? n[e] = t : delete n[e], this._emitConfig(n);
+	}
+	_setBooleanConfig(e, t, n = !0) {
+		let r = { ...this._config };
+		t === n ? delete r[e] : r[e] = t, this._emitConfig(r);
+	}
+	_updateWindowEntity(e, t) {
+		let n = [...this._config.climate_window_entities ?? []];
+		t ? n[e] = t : n.splice(e, 1), this._emitConfig({
+			...this._config,
+			climate_window_entities: n
+		});
+	}
+	_removeWindowEntity(e) {
+		let t = (this._config.climate_window_entities ?? []).filter((t, n) => n !== e), n = { ...this._config };
+		t.length ? n.climate_window_entities = t : delete n.climate_window_entities, this._emitConfig(n);
 	}
 	_renderVisibilityOption(e, t) {
 		return T`
@@ -31417,7 +38268,7 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
 		return e.currentTarget.value;
 	}
 	_t(e, t = {}) {
-		return wt(this._language(), e, t);
+		return Tt(this._language(), e, t);
 	}
 	_updateView(e) {
 		let t = { ...this._config };
@@ -31436,6 +38287,7 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
 	_viewLabel(e) {
 		return this._t({
 			overview: "overview",
+			climate: "cardViewClimate",
 			profiles: "profiles",
 			modes: "modesTitle",
 			"overview-status": "cardViewOverviewStatus",
@@ -31458,19 +38310,22 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
 		return e && et.includes(e) ? e : "overview-status";
 	}
 	_showsFirstWeekdayOption() {
-		return Jp.has(this._selectedView());
+		return qg.has(this._selectedView());
 	}
 	_showsActiveSetupControls() {
-		return Yp.has(this._selectedView());
+		return Jg.has(this._selectedView());
 	}
 	_showsComfortVisibilityOptions() {
-		return Zp.has(this._selectedView());
+		return Xg.has(this._selectedView());
 	}
 	_showsThermostatOptions() {
-		return Xp.has(this._selectedView());
+		return Yg.has(this._selectedView());
 	}
 	_showsRoomAssistVisibilityOptions() {
-		return $p.has(this._selectedView());
+		return Qg.has(this._selectedView());
+	}
+	_showsClimateCardOptions() {
+		return $g.has(this._selectedView());
 	}
 	_friendlyEntityName(e) {
 		return this.hass?.states?.[e]?.attributes?.friendly_name ?? e;
@@ -31513,6 +38368,60 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
       min-height: 40px;
       padding: 8px;
       width: 100%;
+    }
+
+    .climate-card-options, .climate-card-window-editor { display: grid; gap: 12px; }
+    .climate-card-option-group { background: color-mix(in srgb, var(--secondary-background-color) 72%, var(--card-background-color)); border: 1px solid var(--divider-color); border-radius: 10px; padding: 11px; }
+    .climate-card-actions-editor { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 9px; padding: 9px 10px; }
+    .climate-card-option-group > summary, .climate-card-actions-editor > summary { align-items: center; cursor: pointer; display: flex; gap: 8px; justify-content: space-between; list-style: none; min-height: 24px; }
+    .climate-card-option-group > summary::-webkit-details-marker, .climate-card-actions-editor > summary::-webkit-details-marker { display: none; }
+    .climate-card-option-group > summary > ha-icon, .climate-card-actions-editor > summary > ha-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); flex: 0 0 auto; transition: transform .16s ease; }
+    .climate-card-option-group[open] > summary > ha-icon, .climate-card-actions-editor[open] > summary > ha-icon { transform: rotate(180deg); }
+    .climate-card-option-content { display: grid; gap: 10px; padding-top: 10px; }
+    .climate-card-option-group label > small { color: var(--secondary-text-color); display: block; font-size: 11px; line-height: 1.4; margin-top: 5px; }
+    .climate-card-name-row { align-items: center; display: grid; gap: 7px; grid-template-columns: minmax(0, 1fr) auto; }
+    .climate-card-name-row .icon-button { min-height: 40px; width: 40px; }
+    .climate-card-feature-editor-body { border-left: 2px solid color-mix(in srgb, var(--primary-color) 32%, var(--divider-color)); display: grid; gap: 9px; padding-left: 10px; }
+    .nested-option { border-left: 2px solid color-mix(in srgb, var(--primary-color) 45%, var(--divider-color)); display: grid; gap: 8px; margin-left: 9px; padding-left: 10px; }
+    .option-description { color: var(--secondary-text-color); font-size: 11px; line-height: 1.4; }
+    .option-description a { color: var(--primary-color); }
+    .climate-card-window-row { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; }
+    .add-window { align-items: center; background: transparent; border: 1px dashed var(--divider-color); border-radius: 8px; color: var(--primary-color); cursor: pointer; display: inline-flex; gap: 6px; justify-content: center; padding: 8px; }
+    .add-window:disabled { color: var(--disabled-text-color, var(--secondary-text-color)); cursor: default; opacity: .65; }
+    .climate-card-custom-actions { border-top: 1px solid var(--divider-color); display: grid; gap: 10px; padding-top: 10px; }
+    .climate-card-custom-actions > div:first-child { display: grid; gap: 3px; }
+    .climate-card-custom-actions > div:first-child small { color: var(--secondary-text-color); line-height: 1.4; }
+    .climate-card-action-editor { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 9px; padding: 9px 10px; }
+    .climate-card-action-heading { align-items: center; display: grid; gap: 7px; grid-template-columns: auto auto minmax(0, 1fr) auto auto; }
+    .climate-card-action-heading > ha-icon { --mdc-icon-size: 20px; }
+    .climate-card-fixed-action.boost .climate-card-action-heading > ha-icon { color: var(--warning-color, #e69b35); }
+    .climate-card-fixed-action.pause .climate-card-action-heading > ha-icon { color: var(--info-color, #3aa7c9); }
+    .climate-card-action-heading > span { display: grid; min-width: 0; }
+    .climate-card-action-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .climate-card-action-heading small { color: var(--secondary-text-color); font-size: 10px; line-height: 1.3; margin-top: 2px; overflow-wrap: anywhere; white-space: normal; }
+    .climate-card-custom-action-body { border-top: 1px solid var(--divider-color); display: grid; gap: 9px; margin-top: 9px; padding-top: 10px; }
+    .climate-card-custom-action-controls { display: flex; gap: 2px; }
+    .climate-card-custom-action-controls .icon-button, .climate-card-action-heading > .icon-button { min-height: 36px; width: 36px; }
+    .climate-card-action-disclosure ha-icon { transition: transform .16s ease; }
+    .climate-card-action-disclosure { grid-column: -2 / -1; }
+    .climate-card-action-disclosure[aria-expanded="true"] ha-icon { transform: rotate(180deg); }
+    .climate-card-action-remove { color: color-mix(in srgb, var(--error-color, #db5a5a) 78%, var(--primary-text-color)); }
+    .climate-card-action-remove:hover, .climate-card-action-remove:focus-visible { background: color-mix(in srgb, var(--error-color, #db5a5a) 10%, var(--card-background-color)); border-color: color-mix(in srgb, var(--error-color, #db5a5a) 45%, var(--divider-color)); }
+    .climate-card-custom-action-appearance { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) 72px; }
+    label .climate-card-custom-action-icon-heading { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+    .climate-card-custom-action-icon-heading > a { color: var(--link-text-color, var(--primary-color)); font-size: 12px; line-height: 1.3; text-decoration: none; white-space: nowrap; }
+    .climate-card-custom-action-icon-heading > a:hover { text-decoration: underline; }
+    .climate-card-custom-action-icon-heading > a:focus-visible { border-radius: 3px; outline: 2px solid var(--primary-color); outline-offset: 2px; }
+    .climate-card-custom-action input[type="color"] { cursor: pointer; padding: 4px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .climate-card-option-group > summary > ha-icon, .climate-card-actions-editor > summary > ha-icon, .climate-card-action-disclosure ha-icon { transition: none; }
+    }
+
+    @media (max-width: 420px) {
+      .climate-card-action-editor { padding-inline: 7px; }
+      .climate-card-action-heading { gap: 4px; }
+      .climate-card-custom-action-controls .icon-button, .climate-card-action-heading > .icon-button { min-height: 36px; width: 36px; }
     }
 
     .notice {
@@ -31637,10 +38546,10 @@ var Jp = new Set(["schedules"]), Yp = new Set(["active-setup"]), Xp = new Set([
   `;
 	}
 };
-J([D({ attribute: !1 })], tm.prototype, "hass", void 0), J([O()], tm.prototype, "_config", void 0), J([O()], tm.prototype, "_entities", void 0), J([O()], tm.prototype, "_loading", void 0), J([O()], tm.prototype, "_loaded", void 0), J([O()], tm.prototype, "_error", void 0);
+J([D({ attribute: !1 })], n_.prototype, "hass", void 0), J([O()], n_.prototype, "_config", void 0), J([O()], n_.prototype, "_entities", void 0), J([O()], n_.prototype, "_loading", void 0), J([O()], n_.prototype, "_loaded", void 0), J([O()], n_.prototype, "_error", void 0), J([O()], n_.prototype, "_expandedClimateAction", void 0);
 //#endregion
 //#region src/velair/views/tabs.ts
-var nm = [
+var r_ = [
 	{
 		icon: "mdi:view-dashboard-outline",
 		labelKey: "overview",
@@ -31687,12 +38596,12 @@ var nm = [
 		view: "settings"
 	}
 ];
-function rm(e) {
-	return nm.find((t) => t.view === e)?.icon ?? "mdi:circle";
+function i_(e) {
+	return r_.find((t) => t.view === e)?.icon ?? "mdi:circle";
 }
 //#endregion
 //#region src/velair/views/panel.ts
-var im = class extends He {
+var a_ = class extends He {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._activeView = "overview", this._activeViewDirty = !1;
 	}
@@ -31728,7 +38637,7 @@ var im = class extends He {
     `;
 	}
 	_renderActiveView() {
-		return gu(this._activeView, T`<velair-panel-card
+		return af(this._activeView, T`<velair-panel-card
         .hass=${this.hass}
         .view=${this._activeView}
         view=${this._activeView}
@@ -31760,10 +38669,10 @@ var im = class extends He {
 		return typeof e == "string" && $e.includes(e);
 	}
 	_viewIcon(e) {
-		return rm(e);
+		return i_(e);
 	}
 	_t(e, t = {}) {
-		return wt(this._language(), e, t);
+		return Tt(this._language(), e, t);
 	}
 	_language() {
 		return j(this.hass);
@@ -31970,7 +38879,7 @@ var im = class extends He {
   `;
 	}
 };
-J([D({ attribute: !1 })], im.prototype, "hass", void 0), J([D({ type: Boolean })], im.prototype, "narrow", void 0), J([D({ attribute: !1 })], im.prototype, "panel", void 0), J([D({ attribute: !1 })], im.prototype, "route", void 0), J([O()], im.prototype, "_activeView", void 0), J([O()], im.prototype, "_activeViewDirty", void 0), qp({
+J([D({ attribute: !1 })], a_.prototype, "hass", void 0), J([D({ type: Boolean })], a_.prototype, "narrow", void 0), J([D({ attribute: !1 })], a_.prototype, "panel", void 0), J([D({ attribute: !1 })], a_.prototype, "route", void 0), J([O()], a_.prototype, "_activeView", void 0), J([O()], a_.prototype, "_activeViewDirty", void 0), Kg({
 	build: n,
 	customCard: {
 		type: "velair-card",
@@ -31979,9 +38888,9 @@ J([D({ attribute: !1 })], im.prototype, "hass", void 0), J([D({ type: Boolean })
 	},
 	elements: {
 		"velair-card": $,
-		"velair-card-editor": tm,
+		"velair-card-editor": n_,
 		"velair-panel-card": class extends $ {},
-		"velair-sidebar-panel": im
+		"velair-sidebar-panel": a_
 	},
 	version: r
 });

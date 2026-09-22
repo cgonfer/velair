@@ -77,6 +77,18 @@
           "hot_and_humid": "Hot and humid"
         }
       },
+      "zone_ventilation_opportunity": {
+        "name": "{zone} ventilation opportunity",
+        "state": {
+          "unavailable": "Unavailable",
+          "no_opportunity": "No opportunity",
+          "may_help": "May help",
+          "comfort_possible": "Comfort possible",
+          "trade_off": "Trade-off",
+          "already_comfortable": "Already comfortable"
+        }
+      },
+
       "zone_air_quality": {
         "name": "{zone} air quality",
         "state": {
@@ -94,6 +106,27 @@
           "boost": "Boost",
           "paused": "Paused",
           "disabled": "Disabled"
+        }
+      },
+      "zone_control": {
+        "name": "{zone} control",
+        "state": {
+          "automatic": "Automatic",
+          "manual": "Manual",
+          "external": "External"
+        }
+      },
+      "zone_delivery_diagnostics": {
+        "name": "{zone} delivery diagnostics",
+        "state": {
+          "idle": "Idle",
+          "success": "Success",
+          "failed": "Failed",
+          "retrying": "Retrying",
+          "exhausted": "Retries exhausted",
+          "invalid_intent": "Invalid intent",
+          "cancelled": "Cancelled",
+          "unavailable": "Unavailable"
         }
       },
       "zone_preconditioning_start": {

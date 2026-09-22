@@ -43,12 +43,27 @@ async def async_setup_entry(
                 entity_id,
                 zone_name=_climate_name(hass, entity_id),
             ),
+            ZoneVentilationOpportunitySensor(
+                entry,
+                entity_id,
+                zone_name=_climate_name(hass, entity_id),
+            ),
             ZoneAirQualitySensor(
                 entry,
                 entity_id,
                 zone_name=_climate_name(hass, entity_id),
             ),
             ZoneOverrideStateSensor(
+                entry,
+                entity_id,
+                zone_name=_climate_name(hass, entity_id),
+            ),
+            ZoneControlSensor(
+                entry,
+                entity_id,
+                zone_name=_climate_name(hass, entity_id),
+            ),
+            ZoneDeliveryDiagnosticsSensor(
                 entry,
                 entity_id,
                 zone_name=_climate_name(hass, entity_id),
@@ -313,14 +328,98 @@ class ZoneEnvironmentalConditionSensor(_ZoneSensor):
             {
                 "data_quality": assessment.get("data_quality"),
                 "data_issues": assessment.get("data_issues"),
+                "range_summary": assessment.get("range_summary"),
+                "ventilation_opportunity": assessment.get(
+                    "ventilation_opportunity"
+                ),
+                "comfort_zone": assessment.get("comfort_zone"),
                 "temperature_source": _metric_entity_id(
                     assessment.get("temperature")
                 ),
                 "humidity_source": _metric_entity_id(
                     assessment.get("humidity")
                 ),
+                "derived_metrics": _active_derived_metrics(
+                    assessment.get("derived_metrics")
+                ),
+                "outdoor": assessment.get("outdoor"),
+                "insights": assessment.get("insights"),
             }
         )
+
+
+class ZoneVentilationOpportunitySensor(_ZoneSensor):
+    """Sensor exposing cautious, observational ventilation guidance."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [
+        "unavailable",
+        "no_opportunity",
+        "may_help",
+        "comfort_possible",
+        "trade_off",
+        "already_comfortable",
+    ]
+    _attr_translation_key = "zone_ventilation_opportunity"
+
+    def __init__(
+        self,
+        entry: VelairConfigEntry,
+        climate_entity_id: str,
+        *,
+        zone_name: str | None = None,
+    ) -> None:
+        """Initialize the ventilation opportunity sensor."""
+        super().__init__(
+            entry,
+            climate_entity_id,
+            "ventilation_opportunity",
+            zone_name=zone_name,
+        )
+
+    @property
+    def native_value(self) -> str:
+        """Return the current ventilation opportunity."""
+        assessment = self.scheduler.get_comfort_assessment(
+            self._climate_entity_id
+        )
+        projection = assessment.get("ventilation_opportunity")
+        state = projection.get("state") if isinstance(projection, dict) else None
+        return state if state in self._attr_options else "unavailable"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Return compact evidence for the projected state."""
+        assessment = self.scheduler.get_comfort_assessment(
+            self._climate_entity_id
+        )
+        projection = assessment.get("ventilation_opportunity")
+        projection = projection if isinstance(projection, dict) else {}
+        outdoor = assessment.get("outdoor")
+        outdoor = outdoor if isinstance(outdoor, dict) else {}
+        attributes = _compact_attributes(
+            {
+                "evaluation_scope": projection.get("evaluation_scope"),
+                "reason": projection.get("reason"),
+                "data_quality": outdoor.get("data_quality"),
+                "data_issues": outdoor.get("data_issues"),
+                "outdoor_temperature_source": _metric_entity_id(
+                    outdoor.get("temperature")
+                ),
+                "outdoor_humidity_source": _metric_entity_id(
+                    outdoor.get("humidity")
+                ),
+            }
+        ) or {}
+        potential_effects = projection.get("potential_effects")
+        blocked_by = projection.get("blocked_by")
+        attributes["potential_effects"] = (
+            list(potential_effects) if isinstance(potential_effects, list) else []
+        )
+        attributes["blocked_by"] = (
+            list(blocked_by) if isinstance(blocked_by, list) else []
+        )
+        return attributes
 
 
 class ZoneAirQualitySensor(_ZoneSensor):
@@ -413,6 +512,185 @@ class ZoneOverrideStateSensor(_ZoneSensor):
                 )
             }
         )
+
+
+class ZoneControlSensor(_ZoneSensor):
+    """Sensor exposing the compact control context for one zone."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["automatic", "manual", "external"]
+    _attr_translation_key = "zone_control"
+
+    @property
+    def available(self) -> bool:
+        """Keep non-temperature control ownership available during migration."""
+        return True
+
+    def __init__(
+        self,
+        entry: VelairConfigEntry,
+        climate_entity_id: str,
+        *,
+        zone_name: str | None = None,
+    ) -> None:
+        """Initialize the zone control sensor."""
+        self._status_cache: dict[str, object] | None = None
+        super().__init__(
+            entry,
+            climate_entity_id,
+            "control",
+            zone_name=zone_name,
+        )
+        self._attr_suggested_object_id = (
+            f"velair_control_{climate_entity_id.partition('.')[2]}"
+        )
+
+    @property
+    def native_value(self) -> str:
+        """Return the current control owner."""
+        status = self._status()
+        value = status.get("control_mode")
+        return value if isinstance(value, str) else "automatic"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Return low-churn schedule and Manual-control context."""
+        status = self._status()
+        return _compact_attributes(
+            {
+                key: status.get(key)
+                for key in (
+                    "runtime_state",
+                    "schedule_source",
+                    "profile_id",
+                    "profile_name",
+                    "mode_id",
+                    "mode_name",
+                    "manual_source",
+                    "manual_started_at",
+                    "manual_until",
+                    "manual_policy",
+                )
+            }
+        )
+
+    def _status(self) -> dict[str, object]:
+        if self._status_cache is None:
+            self._status_cache = self.scheduler.get_zone_control_status(
+                self._climate_entity_id
+            )
+        return self._status_cache
+
+    @callback
+    def _handle_scheduler_update(self) -> None:
+        """Refresh the shared property snapshot before writing state."""
+        self._status_cache = self.scheduler.get_zone_control_status(
+            self._climate_entity_id
+        )
+        super()._handle_scheduler_update()
+
+
+class ZoneDeliveryDiagnosticsSensor(_ZoneSensor):
+    """Sensor exposing safe, runtime-only delivery evidence for one zone."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_options = [
+        "idle",
+        "success",
+        "failed",
+        "retrying",
+        "exhausted",
+        "invalid_intent",
+        "cancelled",
+        "unavailable",
+    ]
+    _attr_translation_key = "zone_delivery_diagnostics"
+
+    @property
+    def available(self) -> bool:
+        """Keep unit-labelled runtime evidence available during migration."""
+        return True
+
+    def __init__(
+        self,
+        entry: VelairConfigEntry,
+        climate_entity_id: str,
+        *,
+        zone_name: str | None = None,
+    ) -> None:
+        """Initialize the zone delivery diagnostics sensor."""
+        self._status_cache: dict[str, object] | None = None
+        super().__init__(
+            entry,
+            climate_entity_id,
+            "delivery_diagnostics",
+            zone_name=zone_name,
+        )
+        self._attr_suggested_object_id = (
+            "velair_delivery_diagnostics_"
+            f"{climate_entity_id.partition('.')[2]}"
+        )
+
+    def _status(self) -> dict[str, object]:
+        if self._status_cache is None:
+            self._status_cache = (
+                self._entry.runtime_data.diagnostics.zone_delivery_diagnostics(
+                    self._climate_entity_id
+                )
+            )
+        return self._status_cache
+
+    @property
+    def native_value(self) -> str:
+        """Return the latest delivery outcome."""
+        value = self._status().get("status")
+        return value if isinstance(value, str) else "idle"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Return safe delivery timestamps, codes, and accepted target context."""
+        status = self._status()
+        return _compact_attributes(
+            {
+                key: status.get(key)
+                for key in (
+                    "updated_at",
+                    "retry_count",
+                    "last_error_at",
+                    "last_error_code",
+                    "last_accepted_at",
+                    "last_accepted_source",
+                    "last_accepted_action",
+                    "last_accepted_hvac_mode",
+                    "last_accepted_temperature_unit",
+                    "last_accepted_temperature",
+                    "last_accepted_target_temp_low",
+                    "last_accepted_target_temp_high",
+                )
+            }
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe only to diagnostic changes without polling."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_DIAGNOSTICS_UPDATED,
+                self._handle_diagnostics_update,
+            )
+        )
+
+    @callback
+    def _handle_diagnostics_update(self) -> None:
+        """Write the latest delivery state."""
+        self._status_cache = (
+            self._entry.runtime_data.diagnostics.zone_delivery_diagnostics(
+                self._climate_entity_id
+            )
+        )
+        self.async_write_ha_state()
 
 
 class ZonePreconditioningStartSensor(_ZoneSensor):
@@ -591,6 +869,18 @@ def _metric_entity_id(metric: object) -> str | None:
     return entity_id if isinstance(entity_id, str) else None
 
 
+def _active_derived_metrics(metrics: object) -> dict[str, object] | None:
+    """Return only configured derived metrics for compact entity attributes."""
+    if not isinstance(metrics, dict):
+        return None
+    active = {
+        metric: value
+        for metric, value in metrics.items()
+        if isinstance(value, dict) and value.get("availability") != "not_monitored"
+    }
+    return active or None
+
+
 def _compact_attributes(values: dict[str, object]) -> dict[str, object] | None:
     """Drop unavailable optional attributes."""
     attributes = {
@@ -629,4 +919,4 @@ def _climate_name(hass: HomeAssistant, entity_id: str) -> str:
     friendly_name = attributes.get("friendly_name")
     if isinstance(friendly_name, str) and friendly_name:
         return friendly_name
-    return entity_id
+    return entity_id.partition(".")[2] or entity_id

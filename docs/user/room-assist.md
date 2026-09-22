@@ -306,9 +306,9 @@ requires it.
 while Room Assist is ready or blocked. While Room Assist is assisting or
 holding an applied scalar target, it instead shows the temporary setpoint
 Velair sent to the entity. Neither value is the scheduled room target or the
-active hysteresis limit. A climate can
-only accept the `target_temp_step` it reports to Home Assistant, so Velair may
-need to align the final setpoint to that step.
+active hysteresis limit. A climate accepts targets on a device-specific grid,
+so Velair may need to align the final setpoint to its effective published,
+last-reported, manual, or default step.
 
 For example, in fixed cooling Room Assist may calculate `23.9 °C` for a
 climate that accepts `0.5 °C` steps. Velair applies `24.0 °C`: cooling is
@@ -316,7 +316,7 @@ aligned upward so it does not cool more aggressively than the calculation.
 Fixed heating is aligned downward, while scalar automatic modes use the nearest
 step. The information button beside **Climate target** adapts its explanation
 to the value currently shown and, when alignment actually changed the committed setpoint,
-shows the calculation, published step, and applied value. Physical minimum or
+shows the calculation, effective step, and applied value. Physical minimum or
 maximum limits and scheduled-target protection are reported separately and are
 not described as step alignment.
 
@@ -365,10 +365,14 @@ recovery.
 
 ## When Velair Does Nothing
 
-Room Assist requires the managed climate to publish a valid positive
-`target_temp_step`. If that capability is missing, Velair reports Room Assist as
-unavailable with `missing_target_step` and does not infer a fallback or send an
-assisted target.
+Room Assist requires a valid positive effective target step. Velair uses the
+managed climate's published `target_temp_step` first. When it is missing, the
+last valid step previously reported by that entity protects the same target
+grid. The manual per-zone fallback shown in Settings is next and defaults to `1`
+when neither value exists. Saving the field while the attribute is missing makes
+that explicit value authoritative by clearing the remembered observation; a
+later valid report is remembered again. Velair does not infer a relationship
+with another entity.
 
 Room Assist does not apply an assisted target when:
 

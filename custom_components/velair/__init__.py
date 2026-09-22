@@ -93,6 +93,7 @@ async def async_setup_entry(
         storage.async_save,
         climate_delivery,
         external_execution=external_execution,
+        target_applied_observer=diagnostics.observe_target_applied,
     )
     scheduler.set_temperature_migration_blocked(
         storage.temperature_migration_required
@@ -133,7 +134,12 @@ async def async_setup_entry(
     entry.async_on_unload(diagnostics.async_stop)
 
     @callback
-    def _handle_temperature_unit_update(_event: Event) -> None:
+    def _handle_temperature_unit_update(event: Event) -> None:
+        entity_id = event.data.get("entity_id")
+        if isinstance(entity_id, str):
+            hass.async_create_task(
+                scheduler.async_capture_reported_target_temp_steps(entity_id)
+            )
         blocked = bool(
             storage.temperature_migration_required
             or runtime.get("operation_active")
@@ -173,6 +179,8 @@ async def async_setup_entry(
             _handle_temperature_unit_update,
         )
     )
+
+    await scheduler.async_capture_reported_target_temp_steps()
 
     if storage.temperature_migration_required:
         await async_notify_temperature_migration(

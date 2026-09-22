@@ -76,6 +76,26 @@ expectations, including the climate's published `target_temp_step`. This is done
 per field: if one update contains a Velair-owned temperature and an unrelated
 HVAC mode, only the temperature is classified as Velair-owned.
 
+Some climate devices report several values while processing one command. They
+may briefly return to an older target, publish an intermediate target, or
+report mode and temperature out of order. Velair keeps a short, bounded
+settling period for only the fields it changed so those device updates do not
+incorrectly create a Manual adjustment. The period does not restart when an
+echo arrives; it is finalized once the complete Home Assistant service sequence
+returns. A clearly user-originated Home Assistant change, or one from another
+identifiable script or automation, still remains external, and changes made
+after settling are handled normally.
+
+When an anonymous update during settling cannot be distinguished reliably from
+device convergence, Velair conservatively keeps Automatic control. This avoids
+turning a rejected or delayed Velair command into a false Manual adjustment.
+The settling state is runtime-only and is cleared on restart.
+If the climate still differs from the requested value when settling ends,
+Velair keeps Automatic control and records a runtime command-settling warning.
+The next fresh Diagnostics snapshot exposes the warning; its report payload
+includes the expected and observed values. Velair does not retry the command
+blindly or turn the mismatch into a delayed Manual adjustment.
+
 The expectation ledger is bounded, expires automatically, is never persisted,
 and does not poll. A source does not have to preserve Home Assistant `Context`
 for correlation to work, although a preserved context makes candidate matching

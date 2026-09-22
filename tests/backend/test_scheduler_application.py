@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from zoneinfo import ZoneInfo
 
 from .helpers import (
+    ACTION_SET_HVAC_MODE,
     ACTION_SET_TEMPERATURE,
     ACTION_TURN_OFF,
     DEFAULT_PRECONDITIONING_MAX_LEAD_MINUTES,
@@ -233,6 +234,283 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(assessment["temperature"]["value"], 22.0)
         self.assertEqual(assessment["humidity"]["value"], 45.0)
         self.assertEqual(assessment["co2"]["value"], 850.0)
+        self.assertEqual(assessment["comfort_zone"]["model"], "simple")
+        self.assertEqual(
+            assessment["comfort_zone"]["effective_humidity_range"],
+            {"temperature": 22.0, "minimum": 40.0, "maximum": 60.0},
+        )
+        self.assertEqual(
+            assessment["derived_metrics"]["dew_point"],
+            {
+                "availability": "not_monitored",
+                "condition": None,
+                "entity_id": None,
+                "metric": "dew_point",
+                "source": "velair",
+                "value": None,
+                "issues": [],
+                "unit": "°C",
+                "input_entity_ids": [],
+            },
+        )
+        self.assertNotIn(
+            "temperature_range_position",
+            assessment["derived_metrics"]["dew_point"],
+        )
+        self.assertNotIn(
+            "temperature_range_position",
+            assessment["derived_metrics"]["absolute_humidity"],
+        )
+        self.assertIsNone(
+            assessment["derived_metrics"]["humidex"][
+                "temperature_range_position"
+            ]
+        )
+
+    async def test_outdoor_comparison_is_observational_and_uses_explicit_sensors(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 28, "current_humidity": 70},
+        )
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="20", attributes={"unit_of_measurement": "°C"}
+        )
+        self.hass.states["sensor.outdoor_humidity"] = SimpleNamespace(
+            state="80", attributes={"unit_of_measurement": "%"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+                "outdoor_humidity_entity_id": "sensor.outdoor_humidity",
+                "ventilation_temperature_threshold": 2.5,
+                "ventilation_humidity_threshold": 8,
+                "ventilation_absolute_humidity_threshold": 2,
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+        outdoor = assessment["outdoor"]
+        self.assertEqual(assessment["condition"], "hot_and_humid")
+        self.assertEqual(outdoor["data_quality"], "complete")
+        self.assertEqual(outdoor["temperature"]["value"], 20)
+        self.assertEqual(outdoor["humidity"]["value"], 80)
+        self.assertEqual(
+            outdoor["indoor_absolute_humidity"]["metric"],
+            "indoor_absolute_humidity",
+        )
+        self.assertEqual(
+            outdoor["indoor_absolute_humidity"]["availability"], "current"
+        )
+        self.assertEqual(outdoor["indoor_absolute_humidity"]["unit"], "g/m³")
+        self.assertIsInstance(outdoor["indoor_absolute_humidity"]["value"], float)
+        self.assertEqual(outdoor["absolute_humidity"]["unit"], "g/m³")
+        self.assertEqual(
+            outdoor["guidance_thresholds"],
+            {
+                "temperature_delta": 2.5,
+                "temperature_unit": "°C",
+                "humidity_delta_percentage_points": 8.0,
+                "absolute_humidity_delta_g_m3": 2.0,
+            },
+        )
+        self.assertEqual(
+            outdoor["comparison"]["temperature"]["potential"], "cooling"
+        )
+        self.assertEqual(
+            outdoor["comparison"]["humidity"]["potential"], "drying"
+        )
+        self.assertEqual(self.climate.calls, [])
+        self.assertIn(
+            "sensor.outdoor_temperature",
+            self.scheduler._comfort_candidate_entities(),
+        )
+        self.assertIn(
+            "sensor.outdoor_humidity",
+            self.scheduler._comfort_candidate_entities(),
+        )
+
+    async def test_ventilation_threshold_patch_preserves_siblings_and_validates(self) -> None:
+        settings = await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "ventilation_temperature_threshold": 2,
+                "ventilation_humidity_threshold": 7,
+                "ventilation_absolute_humidity_threshold": 1.5,
+            },
+        )
+        settings = await self.scheduler.async_update_zone_comfort(
+            self.entity_id, {"ventilation_humidity_threshold": 9}
+        )
+
+        self.assertEqual(settings["ventilation_temperature_threshold"], 2)
+        self.assertEqual(settings["ventilation_humidity_threshold"], 9)
+        self.assertEqual(settings["ventilation_absolute_humidity_threshold"], 1.5)
+        with self.assertRaises(ValueError):
+            await self.scheduler.async_update_zone_comfort(
+                self.entity_id, {"ventilation_temperature_threshold": 10.1}
+            )
+
+    async def test_outdoor_comparison_preserves_sources_while_disabled(self) -> None:
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+                "outdoor_humidity_entity_id": "sensor.outdoor_humidity",
+            },
+        )
+        settings = await self.scheduler.async_update_zone_comfort(
+            self.entity_id, {"outdoor_comparison_enabled": False}
+        )
+
+        self.assertFalse(settings["outdoor_comparison_enabled"])
+        self.assertEqual(
+            settings["outdoor_temperature_entity_id"], "sensor.outdoor_temperature"
+        )
+        self.assertEqual(
+            settings["outdoor_humidity_entity_id"], "sensor.outdoor_humidity"
+        )
+        self.assertNotIn("outdoor", self.scheduler.get_comfort_assessment(self.entity_id))
+        self.assertNotIn(
+            "sensor.outdoor_temperature",
+            self.scheduler._comfort_candidate_entities(),
+        )
+
+    async def test_outdoor_comparison_rejects_invalid_units_without_polluting_indoor_quality(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 50},
+        )
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="12", attributes={"unit_of_measurement": "K"}
+        )
+        self.hass.states["sensor.outdoor_humidity"] = SimpleNamespace(
+            state="55", attributes={"unit_of_measurement": "g/m³"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+                "outdoor_humidity_entity_id": "sensor.outdoor_humidity",
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+        self.assertEqual(assessment["data_quality"], "complete")
+        self.assertEqual(assessment["data_issues"], [])
+        self.assertEqual(assessment["outdoor"]["data_quality"], "unavailable")
+        self.assertEqual(
+            assessment["outdoor"]["data_issues"],
+            ["outdoor_humidity_invalid", "outdoor_temperature_invalid"],
+        )
+
+    async def test_outdoor_freshness_is_independent_from_indoor_quality(self) -> None:
+        old = scheduler_module.dt_util.now() - timedelta(minutes=121)
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 50},
+        )
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="12", attributes={"unit_of_measurement": "°C"},
+            last_updated=old,
+        )
+        self.hass.states["sensor.outdoor_humidity"] = SimpleNamespace(
+            state="55", attributes={"unit_of_measurement": "%"},
+            last_updated=old,
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+                "outdoor_humidity_entity_id": "sensor.outdoor_humidity",
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+        self.assertEqual(assessment["data_quality"], "complete")
+        self.assertEqual(assessment["outdoor"]["data_quality"], "stale")
+        self.assertEqual(
+            assessment["outdoor"]["comparison"]["temperature"]["availability"],
+            "stale",
+        )
+
+    async def test_outdoor_humidity_without_temperature_is_partial_and_inert(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 70},
+        )
+        self.hass.states["sensor.outdoor_humidity"] = SimpleNamespace(
+            state="40", attributes={"unit_of_measurement": "%"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_humidity_entity_id": "sensor.outdoor_humidity",
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+        outdoor = assessment["outdoor"]
+        self.assertEqual(outdoor["data_quality"], "partial")
+        self.assertEqual(outdoor["data_issues"], ["outdoor_temperature_missing"])
+        self.assertEqual(outdoor["temperature"]["availability"], "missing")
+        self.assertEqual(outdoor["humidity"]["availability"], "current")
+        self.assertEqual(
+            outdoor["comparison"]["humidity"]["availability"], "missing"
+        )
+        self.assertFalse(any(
+            item["code"].startswith("ventilation_")
+            for item in assessment["insights"]
+        ))
+        self.assertEqual(self.climate.calls, [])
+
+    async def test_outdoor_fahrenheit_projects_absolute_values_and_deltas(self) -> None:
+        self.climate.temperature_unit = lambda _entity_id: "°F"
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 82.4, "current_humidity": 70},
+        )
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="20", attributes={"unit_of_measurement": "°C"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "temperature_min": 68,
+                "temperature_max": 75.2,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+        outdoor = assessment["outdoor"]
+        self.assertEqual(outdoor["temperature"]["value"], 68)
+        self.assertEqual(outdoor["comparison"]["temperature"]["delta"], -14.4)
+        self.assertEqual(
+            outdoor["comparison"]["temperature"]["potential"], "cooling"
+        )
+        self.assertEqual(
+            assessment["ventilation_opportunity"],
+            {
+                "state": "may_help",
+                "evaluation_scope": "temperature_only",
+                "potential_effects": ["cooling"],
+                "blocked_by": [],
+                "reason": "outdoor_humidity_not_configured",
+            },
+        )
 
     async def test_comfort_listener_tracks_only_enabled_zones(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -254,6 +532,53 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
             self.scheduler._comfort_candidate_entities(),
             {self.entity_id, "sensor.salon_temperature"},
         )
+
+    async def test_comfort_listener_deduplicates_reconfigures_and_stops(self) -> None:
+        original_tracker = scheduler_module.async_track_state_change_event
+        first_unsub = Mock()
+        second_unsub = Mock()
+        tracker = Mock(side_effect=[first_unsub, second_unsub])
+        scheduler_module.async_track_state_change_event = tracker
+        self.addCleanup(
+            setattr,
+            scheduler_module,
+            "async_track_state_change_event",
+            original_tracker,
+        )
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22},
+        )
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.shared_outdoor",
+                "outdoor_humidity_entity_id": "sensor.shared_outdoor",
+            },
+        )
+
+        tracker.assert_called_once()
+        self.assertEqual(
+            tracker.call_args.args[1],
+            [self.entity_id, "sensor.shared_outdoor"],
+        )
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"outdoor_comparison_enabled": False},
+        )
+
+        first_unsub.assert_called_once_with()
+        self.assertEqual(tracker.call_count, 2)
+        self.assertEqual(tracker.call_args.args[1], [self.entity_id])
+
+        await self.scheduler.async_stop()
+
+        second_unsub.assert_called_once_with()
+        self.assertEqual(self.scheduler._comfort_entities, ())
 
     async def test_comfort_ignores_disabled_humidity_source(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -291,11 +616,13 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
             self.entity_id,
             {
                 "enabled": True,
+                "humidity_enabled": False,
                 "temperature_entity_id": "sensor.salon_temperature",
                 "temperature_min": 20,
                 "temperature_max": 24,
             },
         )
+        self.assertEqual(self.hass.bus.events, [])
         self.hass.bus.events.clear()
 
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -318,6 +645,31 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(event_data["air_quality"], "not_monitored")
         self.assertEqual(event_data["data_quality"], "complete")
         self.assertEqual(event_data["data_issues"], [])
+        self.assertEqual(
+            event_data["previous_range_summary"],
+            {
+                "status": "within_range",
+                "thermal_relation": "not_evaluated",
+                "positions": {
+                    "temperature": "within",
+                    "humidity": None,
+                    "humidex": None,
+                },
+            },
+        )
+        self.assertEqual(event_data["range_summary"]["status"], "outside_range")
+        self.assertTrue(event_data["range_summary_changed"])
+        self.assertTrue(event_data["range_status_changed"])
+        self.assertEqual(
+            event_data["ventilation_opportunity"],
+            {
+                "state": "unavailable",
+                "evaluation_scope": None,
+                "potential_effects": [],
+                "blocked_by": [],
+                "reason": "outdoor_comparison_disabled",
+            },
+        )
 
     async def test_comfort_event_reports_partial_assessment_when_sensor_is_missing(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -355,6 +707,105 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(event_data["condition"], "temperature_comfortable")
         self.assertEqual(event_data["data_quality"], "partial")
         self.assertEqual(event_data["data_issues"], ["humidity_missing"])
+        self.assertEqual(
+            event_data["previous_range_summary"]["status"], "within_range"
+        )
+        self.assertEqual(event_data["range_summary"]["status"], "unavailable")
+        self.assertTrue(event_data["range_summary_changed"])
+        self.assertTrue(event_data["range_status_changed"])
+
+    async def test_comfort_range_positions_can_change_without_status_change(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 26, "current_humidity": 50},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "temperature_min": 20,
+                "temperature_max": 24,
+                "humidity_min": 40,
+                "humidity_max": 60,
+            },
+        )
+        self.hass.bus.events.clear()
+
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 70},
+        )
+        self.scheduler._handle_comfort_state_change(
+            SimpleNamespace(data={"entity_id": self.entity_id})
+        )
+
+        self.assertEqual(len(self.hass.bus.events), 1)
+        _, event_data = self.hass.bus.events[0]
+        self.assertEqual(
+            event_data["previous_range_summary"]["positions"],
+            {"temperature": "above", "humidity": "within", "humidex": None},
+        )
+        self.assertEqual(
+            event_data["range_summary"]["positions"],
+            {"temperature": "within", "humidity": "above", "humidex": None},
+        )
+        self.assertEqual(event_data["range_summary"]["status"], "outside_range")
+        self.assertTrue(event_data["range_summary_changed"])
+        self.assertFalse(event_data["range_status_changed"])
+
+    async def test_comfort_air_quality_change_keeps_range_flags_false(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 45},
+        )
+        self.hass.states["sensor.salon_co2"] = SimpleNamespace(
+            state="850", attributes={}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "co2_entity_id": "sensor.salon_co2",
+                "co2_attention": 1000,
+                "co2_poor": 1500,
+            },
+        )
+        self.hass.bus.events.clear()
+
+        self.hass.states["sensor.salon_co2"] = SimpleNamespace(
+            state="1200", attributes={}
+        )
+        self.scheduler._handle_comfort_state_change(
+            SimpleNamespace(data={"entity_id": "sensor.salon_co2"})
+        )
+
+        self.assertEqual(len(self.hass.bus.events), 1)
+        _, event_data = self.hass.bus.events[0]
+        self.assertEqual(event_data["air_quality"], "elevated")
+        self.assertFalse(event_data["range_summary_changed"])
+        self.assertFalse(event_data["range_status_changed"])
+        self.assertEqual(
+            event_data["previous_range_summary"], event_data["range_summary"]
+        )
+
+    async def test_disabling_comfort_removes_baseline_without_event(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 45},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"enabled": True},
+        )
+        self.hass.bus.events.clear()
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"enabled": False},
+        )
+
+        self.assertEqual(self.hass.bus.events, [])
+        self.assertNotIn(self.entity_id, self.scheduler._comfort_assessment_snapshots)
 
     async def test_comfort_uses_current_humidity_when_temperature_is_missing(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -382,6 +833,214 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
             assessment["data_issues"],
             ["temperature_missing"],
         )
+
+    async def test_temperature_aware_comfort_uses_interpolated_humidity_range(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 56},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "comfort_model": "temperature_aware",
+                "temperature_min": 20,
+                "temperature_max": 24,
+                "temperature_aware": {
+                    "at_temperature_min": {"minimum": 40, "maximum": 60},
+                    "at_temperature_max": {"minimum": 34, "maximum": 50},
+                },
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessments()[self.entity_id]
+
+        self.assertEqual(
+            assessment["comfort_zone"]["effective_humidity_range"],
+            {"temperature": 22.0, "minimum": 37.0, "maximum": 55.0},
+        )
+        self.assertEqual(assessment["humidity"]["condition"], "humid")
+        self.assertEqual(assessment["humidity"]["min"], 37.0)
+        self.assertEqual(assessment["humidity"]["max"], 55.0)
+        self.assertEqual(assessment["condition"], "humid")
+        self.assertEqual(
+            assessment["range_summary"]["positions"]["humidity"], "above"
+        )
+
+    async def test_guided_comfort_uses_backend_psychrometric_curve(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 24, "current_humidity": 56},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "comfort_model": "guided",
+                "temperature_min": 20,
+                "temperature_max": 24,
+                "humidity_min": 40,
+                "humidity_max": 60,
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+
+        self.assertEqual(assessment["comfort_zone"]["model"], "guided")
+        self.assertEqual(len(assessment["comfort_zone"]["points"]), 17)
+        self.assertEqual(
+            assessment["comfort_zone"]["reference"],
+            {"temperature": 22.0, "humidity_min": 40.0, "humidity_max": 60.0},
+        )
+        self.assertLess(
+            assessment["comfort_zone"]["effective_humidity_range"]["maximum"],
+            56,
+        )
+        self.assertEqual(assessment["humidity"]["condition"], "humid")
+
+    async def test_guided_comfort_cannot_disable_required_humidity(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 50},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"comfort_model": "guided"},
+        )
+
+        with self.assertRaisesRegex(ValueError, "requires humidity"):
+            await self.scheduler.async_update_zone_comfort(
+                self.entity_id,
+                {"humidity_enabled": False},
+            )
+
+        saved = self.scheduler._data["zones"][self.entity_id]["comfort"]
+        self.assertEqual(saved["comfort_model"], "guided")
+        self.assertTrue(saved["humidity_enabled"])
+
+    async def test_temperature_aware_humidity_is_not_evaluated_without_temperature(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_humidity": 45},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "comfort_model": "temperature_aware",
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessments()[self.entity_id]
+
+        self.assertIsNone(
+            assessment["comfort_zone"]["effective_humidity_range"]
+        )
+        self.assertEqual(assessment["humidity"]["availability"], "current")
+        self.assertIsNone(assessment["humidity"]["condition"])
+        self.assertFalse(assessment["humidity"]["effective_range_available"])
+        self.assertEqual(assessment["condition"], "no_readings")
+        self.assertEqual(assessment["range_summary"]["status"], "unavailable")
+
+    async def test_temperature_aware_partial_patch_preserves_sibling_limits(self) -> None:
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "comfort_model": "temperature_aware",
+                "temperature_aware": {
+                    "at_temperature_min": {"minimum": 42, "maximum": 64},
+                    "at_temperature_max": {"minimum": 34, "maximum": 52},
+                },
+            },
+        )
+
+        saved = await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "temperature_aware": {
+                    "at_temperature_max": {"maximum": 50},
+                }
+            },
+        )
+
+        self.assertEqual(
+            saved["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 42.0, "maximum": 64.0},
+                "at_temperature_max": {"minimum": 34.0, "maximum": 50.0},
+            },
+        )
+
+    async def test_simple_range_changes_initialize_untouched_temperature_aware_ranges(self) -> None:
+        saved = await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"humidity_min": 42, "humidity_max": 58},
+        )
+
+        self.assertEqual(
+            saved["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 42.0, "maximum": 58.0},
+                "at_temperature_max": {"minimum": 42.0, "maximum": 58.0},
+            },
+        )
+
+    async def test_simple_range_changes_preserve_previously_customized_temperature_aware_ranges(self) -> None:
+        custom = {
+            "at_temperature_min": {"minimum": 42, "maximum": 64},
+            "at_temperature_max": {"minimum": 34, "maximum": 52},
+        }
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"comfort_model": "temperature_aware", "temperature_aware": custom},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"comfort_model": "simple"},
+        )
+
+        saved = await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"humidity_min": 45, "humidity_max": 55},
+        )
+
+        self.assertEqual(
+            saved["temperature_aware"],
+            {
+                "at_temperature_min": {"minimum": 42.0, "maximum": 64.0},
+                "at_temperature_max": {"minimum": 34.0, "maximum": 52.0},
+            },
+        )
+
+    async def test_temperature_aware_fahrenheit_runtime_uses_percentage_endpoints(self) -> None:
+        self.climate.temperature_unit = lambda _entity_id: "°F"
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 71.6, "current_humidity": 56},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "comfort_model": "temperature_aware",
+                "temperature_min": 68,
+                "temperature_max": 75.2,
+                "temperature_aware": {
+                    "at_temperature_min": {"minimum": 40, "maximum": 60},
+                    "at_temperature_max": {"minimum": 34, "maximum": 50},
+                },
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+
+        self.assertEqual(
+            assessment["comfort_zone"]["effective_humidity_range"],
+            {"temperature": 71.6, "minimum": 37.0, "maximum": 55.0},
+        )
+        self.assertEqual(assessment["comfort_zone"]["points"][0]["humidity_min"], 40.0)
+        self.assertEqual(assessment["humidity"]["condition"], "humid")
+        self.assertEqual(assessment["range_summary"]["positions"]["humidity"], "above")
 
     async def test_comfort_uses_climate_humidity_attribute(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -566,6 +1225,584 @@ class VelairSchedulerComfortTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(settings["temperature_entity_id"], "sensor.salon_temperature")
         self.assertEqual(settings["humidity_entity_id"], "sensor.salon_humidity")
         self.assertEqual(settings["co2_entity_id"], "sensor.salon_co2")
+
+    async def test_comfort_calculates_native_derived_metrics_without_changing_condition(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 25, "current_humidity": 50},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "derived_metrics": {
+                    metric: {"enabled": True, "source": "velair"}
+                    for metric in ("dew_point", "absolute_humidity", "humidex")
+                },
+            },
+        )
+
+        assessment = self.scheduler.get_comfort_assessment(self.entity_id)
+
+        self.assertEqual(assessment["condition"], "hot")
+        derived = assessment["derived_metrics"]
+        self.assertAlmostEqual(derived["dew_point"]["value"], 13.86, places=2)
+        self.assertAlmostEqual(derived["absolute_humidity"]["value"], 11.49, places=2)
+        self.assertAlmostEqual(derived["humidex"]["value"], 28.29, places=2)
+        self.assertEqual(derived["humidex"]["unit"], None)
+        self.assertEqual(
+            derived["humidex"]["temperature_range_position"], "above"
+        )
+        self.assertEqual(
+            assessment["range_summary"],
+            {
+                "status": "outside_range",
+                "thermal_relation": "aligned",
+                "positions": {
+                    "temperature": "above",
+                    "humidity": "within",
+                    "humidex": "above",
+                },
+            },
+        )
+        self.assertNotIn("temperature_range_position", derived["dew_point"])
+        self.assertNotIn(
+            "temperature_range_position", derived["absolute_humidity"]
+        )
+        self.assertEqual(
+            [insight["code"] for insight in assessment["insights"]],
+            [
+                "humidex_feels_warmer",
+            ],
+        )
+
+    async def test_comfort_native_derived_metrics_are_equivalent_in_fahrenheit(self) -> None:
+        self.climate.temperature_unit = lambda _entity_id: "°F"
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 77, "current_humidity": 50},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "temperature_min": 68,
+                "temperature_max": 75.2,
+                "derived_metrics": {
+                    metric: {"enabled": True, "source": "velair"}
+                    for metric in ("dew_point", "absolute_humidity", "humidex")
+                },
+            },
+        )
+
+        derived = self.scheduler.get_comfort_assessment(self.entity_id)["derived_metrics"]
+        self.assertAlmostEqual(derived["dew_point"]["value"], 56.94, places=2)
+        self.assertEqual(derived["dew_point"]["unit"], "°F")
+        self.assertAlmostEqual(derived["absolute_humidity"]["value"], 11.49, places=2)
+        self.assertAlmostEqual(derived["humidex"]["value"], 28.29, places=2)
+        self.assertEqual(
+            derived["humidex"]["temperature_range_position"], "above"
+        )
+        self.assertEqual(
+            derived["dew_point"]["input_entity_ids"],
+            [self.entity_id],
+        )
+
+    async def test_comfort_external_metric_is_event_driven_and_deep_patch_preserves_siblings(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 50},
+        )
+        self.hass.states["sensor.dew_point"] = SimpleNamespace(
+            state="50",
+            attributes={"unit_of_measurement": "°F"},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "derived_metrics": {
+                    "dew_point": {
+                        "enabled": True,
+                        "source": "entity",
+                        "entity_id": "sensor.dew_point",
+                    },
+                    "humidex": {"enabled": True, "source": "velair"},
+                },
+            },
+        )
+
+        settings = await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {"derived_metrics": {"dew_point": {"source": "velair"}}},
+        )
+
+        self.assertTrue(settings["derived_metrics"]["dew_point"]["enabled"])
+        self.assertEqual(
+            settings["derived_metrics"]["dew_point"]["entity_id"],
+            "sensor.dew_point",
+        )
+        self.assertTrue(settings["derived_metrics"]["humidex"]["enabled"])
+        self.assertNotIn(
+            "sensor.dew_point",
+            self.scheduler._comfort_candidate_entities(),
+        )
+
+    async def test_derived_source_change_from_velair_to_external_emits_one_event(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 45},
+        )
+        self.hass.states["sensor.dew_point_a"] = SimpleNamespace(
+            state="10", attributes={"unit_of_measurement": "°C"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "derived_metrics": {
+                    "dew_point": {"enabled": True, "source": "velair"}
+                },
+            },
+        )
+        self.hass.bus.events.clear()
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "derived_metrics": {
+                    "dew_point": {
+                        "source": "entity",
+                        "entity_id": "sensor.dew_point_a",
+                    }
+                }
+            },
+        )
+
+        events = [
+            payload
+            for event_type, payload in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and payload.get("event") == EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(
+            events[0]["derived_metrics"]["dew_point"]["entity_id"],
+            "sensor.dew_point_a",
+        )
+
+    async def test_derived_external_entity_change_emits_one_event(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 45},
+        )
+        for suffix, value in (("a", "10"), ("b", "11")):
+            self.hass.states[f"sensor.dew_point_{suffix}"] = SimpleNamespace(
+                state=value, attributes={"unit_of_measurement": "°C"}
+            )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "derived_metrics": {
+                    "dew_point": {
+                        "enabled": True,
+                        "source": "entity",
+                        "entity_id": "sensor.dew_point_a",
+                    }
+                },
+            },
+        )
+        self.hass.bus.events.clear()
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "derived_metrics": {
+                    "dew_point": {"entity_id": "sensor.dew_point_b"}
+                }
+            },
+        )
+
+        events = [
+            payload
+            for event_type, payload in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and payload.get("event") == EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(
+            events[0]["derived_metrics"]["dew_point"]["entity_id"],
+            "sensor.dew_point_b",
+        )
+
+    async def test_derived_numeric_change_refreshes_without_automation_event(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22, "current_humidity": 45},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "derived_metrics": {
+                    "dew_point": {"enabled": True, "source": "velair"}
+                },
+            },
+        )
+        self.hass.bus.events.clear()
+
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22.2, "current_humidity": 45},
+        )
+        self.scheduler._handle_comfort_state_change(
+            SimpleNamespace(data={"entity_id": self.entity_id})
+        )
+
+        self.assertEqual(self.hass.bus.events, [])
+        self.assertNotEqual(
+            self.scheduler.get_comfort_assessment(self.entity_id)["derived_metrics"][
+                "dew_point"
+            ]["value"],
+            9.52,
+        )
+
+    async def test_outdoor_events_ignore_numeric_churn_but_emit_semantic_change(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 28, "current_humidity": 70},
+        )
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="20", attributes={"unit_of_measurement": "°C"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+            },
+        )
+        self.hass.bus.events.clear()
+
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="19", attributes={"unit_of_measurement": "°C"}
+        )
+        self.scheduler._handle_comfort_state_change(
+            SimpleNamespace(data={"entity_id": "sensor.outdoor_temperature"})
+        )
+        self.assertEqual(self.hass.bus.events, [])
+
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="30", attributes={"unit_of_measurement": "°C"}
+        )
+        self.scheduler._handle_comfort_state_change(
+            SimpleNamespace(data={"entity_id": "sensor.outdoor_temperature"})
+        )
+        events = [
+            payload for event_type, payload in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and payload.get("event") == EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(
+            events[0]["outdoor"]["comparison"]["temperature"]["effect"],
+            "warmer",
+        )
+        self.assertFalse(events[0]["range_summary_changed"])
+        self.assertFalse(events[0]["range_status_changed"])
+
+    async def test_guidance_threshold_edits_emit_only_when_semantics_change(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 28, "current_humidity": 50},
+        )
+        self.hass.states["sensor.outdoor_temperature"] = SimpleNamespace(
+            state="20", attributes={"unit_of_measurement": "°C"}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "outdoor_comparison_enabled": True,
+                "outdoor_temperature_entity_id": "sensor.outdoor_temperature",
+            },
+        )
+        self.hass.bus.events.clear()
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id, {"ventilation_temperature_threshold": 2}
+        )
+        self.assertEqual(self.hass.bus.events, [])
+        self.assertEqual(
+            self.scheduler.get_comfort_assessment(self.entity_id)["outdoor"][
+                "guidance_thresholds"
+            ]["temperature_delta"],
+            2,
+        )
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id, {"ventilation_temperature_threshold": 9}
+        )
+        events = [
+            payload
+            for event_type, payload in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and payload.get("event") == EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(
+            events[0]["outdoor"]["comparison"]["temperature"]["effect"],
+            "similar",
+        )
+        self.assertIsNone(
+            events[0]["outdoor"]["comparison"]["temperature"]["potential"]
+        )
+
+    async def test_temperature_aware_edits_emit_only_when_effective_semantics_change(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 20, "current_humidity": 55},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "comfort_model": "temperature_aware",
+                "temperature_min": 20,
+                "temperature_max": 24,
+                "temperature_aware": {
+                    "at_temperature_min": {"minimum": 40, "maximum": 60},
+                    "at_temperature_max": {"minimum": 34, "maximum": 50},
+                },
+            },
+        )
+        self.hass.bus.events.clear()
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "temperature_aware": {
+                    "at_temperature_max": {"maximum": 48},
+                }
+            },
+        )
+        self.assertEqual(self.hass.bus.events, [])
+
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "temperature_aware": {
+                    "at_temperature_min": {"maximum": 54},
+                }
+            },
+        )
+        events = [
+            payload
+            for event_type, payload in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and payload.get("event") == EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["humidity"]["condition"], "humid")
+        self.assertEqual(
+            events[0]["comfort_zone"]["effective_humidity_range"]["maximum"],
+            54.0,
+        )
+
+    async def test_temperature_aware_numeric_interpolation_does_not_emit_event(self) -> None:
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 20, "current_humidity": 50},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "comfort_model": "temperature_aware",
+                "temperature_min": 20,
+                "temperature_max": 24,
+                "temperature_aware": {
+                    "at_temperature_min": {"minimum": 40, "maximum": 60},
+                    "at_temperature_max": {"minimum": 35, "maximum": 55},
+                },
+            },
+        )
+        self.hass.bus.events.clear()
+
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 21, "current_humidity": 50},
+        )
+        self.scheduler._async_update_comfort_snapshots(fire_events=True)
+
+        self.assertEqual(self.hass.bus.events, [])
+        assessment = self.scheduler.get_comfort_assessments()[self.entity_id]
+        self.assertEqual(
+            assessment["comfort_zone"]["effective_humidity_range"],
+            {"temperature": 21.0, "minimum": 38.75, "maximum": 58.75},
+        )
+
+    async def test_humidex_insight_transitions_emit_only_semantic_events(self) -> None:
+        """Crossing the insight margin emits; values within one state do not."""
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 20, "current_humidity": 45},
+        )
+        self.hass.states["sensor.salon_humidex"] = SimpleNamespace(
+            state="20.5", attributes={}
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "temperature_min": 18,
+                "temperature_max": 24,
+                "humidity_min": 30,
+                "humidity_max": 60,
+                "derived_metrics": {
+                    "humidex": {
+                        "enabled": True,
+                        "source": "entity",
+                        "entity_id": "sensor.salon_humidex",
+                    }
+                },
+            },
+        )
+        self.hass.bus.events.clear()
+
+        def update_humidex(value: str) -> list[dict[str, object]]:
+            self.hass.states["sensor.salon_humidex"] = SimpleNamespace(
+                state=value, attributes={}
+            )
+            self.scheduler._handle_comfort_state_change(
+                SimpleNamespace(data={"entity_id": "sensor.salon_humidex"})
+            )
+            events = [
+                payload
+                for event_type, payload in self.hass.bus.events
+                if event_type == EVENT_VELAIR
+                and payload.get("event")
+                == EVENT_TYPE_COMFORT_ASSESSMENT_CHANGED
+            ]
+            self.hass.bus.events.clear()
+            return events
+
+        appeared = update_humidex("21")
+        self.assertEqual(len(appeared), 1)
+        self.assertEqual(
+            appeared[0]["insights"],
+            [
+                {
+                    "code": "humidex_feels_warmer",
+                    "kind": "context",
+                    "tone": "warm",
+                    "metrics": ["temperature", "humidex"],
+                }
+            ],
+        )
+        self.assertFalse(appeared[0]["range_summary_changed"])
+        self.assertFalse(appeared[0]["range_status_changed"])
+
+        self.assertEqual(update_humidex("22"), [])
+
+        crossed_range = update_humidex("25")
+        self.assertEqual(len(crossed_range), 1)
+        self.assertEqual(
+            crossed_range[0]["derived_metrics"]["humidex"][
+                "temperature_range_position"
+            ],
+            "above",
+        )
+        self.assertTrue(crossed_range[0]["range_summary_changed"])
+        self.assertTrue(crossed_range[0]["range_status_changed"])
+
+        disappeared = update_humidex("20.5")
+        self.assertEqual(len(disappeared), 1)
+        self.assertEqual(disappeared[0]["insights"], [])
+
+    async def test_comfort_validates_and_converts_external_metric_units(self) -> None:
+        self.climate.temperature_unit = lambda _entity_id: "°F"
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="cool",
+            attributes={"current_temperature": 77, "current_humidity": 50},
+        )
+        self.hass.states["sensor.dew_point"] = SimpleNamespace(
+            state="10",
+            attributes={"unit_of_measurement": "°C"},
+        )
+        self.hass.states["sensor.absolute_humidity"] = SimpleNamespace(
+            state="11490",
+            attributes={"unit_of_measurement": "mg/m³"},
+        )
+        await self.scheduler.async_update_zone_comfort(
+            self.entity_id,
+            {
+                "enabled": True,
+                "derived_metrics": {
+                    "dew_point": {
+                        "enabled": True,
+                        "source": "entity",
+                        "entity_id": "sensor.dew_point",
+                    },
+                    "absolute_humidity": {
+                        "enabled": True,
+                        "source": "entity",
+                        "entity_id": "sensor.absolute_humidity",
+                    },
+                },
+            },
+        )
+
+        derived = self.scheduler.get_comfort_assessment(self.entity_id)["derived_metrics"]
+        self.assertEqual(derived["dew_point"]["value"], 50.0)
+        self.assertEqual(derived["dew_point"]["unit"], "°F")
+        self.assertEqual(
+            derived["dew_point"]["input_entity_ids"], ["sensor.dew_point"]
+        )
+        self.assertEqual(derived["absolute_humidity"]["value"], 11.49)
+
+        self.hass.states["sensor.dew_point"] = SimpleNamespace(
+            state="10",
+            attributes={"unit_of_measurement": "%"},
+        )
+        invalid = self.scheduler.get_comfort_assessment(self.entity_id)["derived_metrics"]["dew_point"]
+        self.assertEqual(invalid["availability"], "invalid")
+        self.assertEqual(invalid["issues"], ["invalid_unit_or_value"])
+        self.assertEqual(invalid["unit"], "°F")
+
+        for state_value in ("unknown", "unavailable"):
+            with self.subTest(state=state_value):
+                self.hass.states["sensor.dew_point"] = SimpleNamespace(
+                    state=state_value,
+                    attributes={"unit_of_measurement": "°C"},
+                )
+                missing = self.scheduler.get_comfort_assessment(self.entity_id)[
+                    "derived_metrics"
+                ]["dew_point"]
+                self.assertEqual(missing["availability"], "missing")
+                self.assertEqual(missing["unit"], "°F")
+
+        self.hass.states["sensor.dew_point"] = SimpleNamespace(
+            state="not a number",
+            attributes={"unit_of_measurement": "°C"},
+        )
+        invalid_text = self.scheduler.get_comfort_assessment(self.entity_id)[
+            "derived_metrics"
+        ]["dew_point"]
+        self.assertEqual(invalid_text["availability"], "invalid")
+        self.assertEqual(invalid_text["unit"], "°F")
+
+        self.hass.states["sensor.absolute_humidity"] = SimpleNamespace(
+            state="-1",
+            attributes={"unit_of_measurement": "g/m³"},
+        )
+        negative = self.scheduler.get_comfort_assessment(self.entity_id)[
+            "derived_metrics"
+        ]["absolute_humidity"]
+        self.assertEqual(negative["availability"], "invalid")
+        self.assertEqual(negative["unit"], "g/m³")
 
 
 class VelairSchedulerSavedScheduleTest(unittest.IsolatedAsyncioTestCase):
@@ -777,6 +2014,53 @@ class VelairSchedulerSavedScheduleTest(unittest.IsolatedAsyncioTestCase):
             self.climate.calls,
             [("set_temperature", self.entity_id, 21, True, "heat")],
         )
+
+    async def test_saving_mode_only_block_calls_only_set_hvac_mode(self) -> None:
+        self.climate.hvac_modes[self.entity_id] = ["off", "auto", "heat"]
+
+        await self.scheduler.async_set_daily_schedule(
+            self.entity_id,
+            "tuesday",
+            [
+                {
+                    "start": "17:00",
+                    "action": ACTION_SET_HVAC_MODE,
+                    "hvac_mode": "auto",
+                }
+            ],
+        )
+
+        self.assertEqual(
+            self.climate.calls,
+            [("set_hvac_mode", self.entity_id, "auto")],
+        )
+        applied = [
+            data
+            for event_type, data in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and data.get("event") == EVENT_TYPE_CLIMATE_TARGET_APPLIED
+        ][-1]
+        self.assertEqual(applied["action"], ACTION_SET_HVAC_MODE)
+        self.assertEqual(applied["hvac_mode"], "auto")
+        self.assertNotIn("temperature", applied)
+
+    async def test_mode_only_block_rejects_unsupported_mode(self) -> None:
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat"]
+
+        with self.assertRaisesRegex(ValueError, "does not support HVAC mode auto"):
+            await self.scheduler.async_set_daily_schedule(
+                self.entity_id,
+                "tuesday",
+                [
+                    {
+                        "start": "17:00",
+                        "action": ACTION_SET_HVAC_MODE,
+                        "hvac_mode": "auto",
+                    }
+                ],
+            )
+
+        self.assertEqual(self.climate.calls, [])
 
     async def test_saving_today_applies_supported_optional_climate_settings(self) -> None:
         self.climate.climate_options[self.entity_id] = {
@@ -1243,6 +2527,190 @@ class VelairSchedulerSavedScheduleTest(unittest.IsolatedAsyncioTestCase):
             ),
             self.hass.bus.events,
         )
+
+    async def test_service_hvac_modes_are_serialized_and_publish_only_after_success(self) -> None:
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat", "cool", "auto"]
+        clear_assist = AsyncMock()
+        self.scheduler._async_clear_room_sensor_assist = clear_assist
+
+        async def assert_delivery_owner(entity_id: str, hvac_mode: str) -> None:
+            self.assertIs(
+                asyncio.current_task(),
+                self.scheduler._climate_delivery._owners.get(entity_id),
+            )
+            self.climate.calls.append(("set_hvac_mode", entity_id, hvac_mode))
+
+        self.climate.async_set_hvac_mode = assert_delivery_owner
+        for mode in ("heat", "cool", "auto"):
+            with self.subTest(mode=mode):
+                self.climate.calls.clear()
+                clear_assist.reset_mock()
+                await self.scheduler.async_set_hvac_mode(
+                    self.entity_id,
+                    mode,
+                    event_source="service_set_hvac_mode",
+                )
+
+                self.assertEqual(
+                    [("set_hvac_mode", self.entity_id, mode)],
+                    self.climate.calls,
+                )
+                clear_assist.assert_awaited_once_with(
+                    self.entity_id,
+                    restore=False,
+                    reason="mode_only",
+                )
+                applied = [
+                    data
+                    for event_type, data in self.hass.bus.events
+                    if event_type == EVENT_VELAIR
+                    and data.get("event") == EVENT_TYPE_CLIMATE_TARGET_APPLIED
+                ][-1]
+                self.assertEqual(
+                    {
+                        "domain": "velair",
+                        "event": EVENT_TYPE_CLIMATE_TARGET_APPLIED,
+                        "entity_id": self.entity_id,
+                        "action": ACTION_SET_HVAC_MODE,
+                        "hvac_mode": mode,
+                        "source": "service_set_hvac_mode",
+                    },
+                    applied,
+                )
+                self.assertNotIn("temperature", applied)
+
+    async def test_service_hvac_mode_failure_keeps_assist_and_publishes_no_success(self) -> None:
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat"]
+        clear_assist = AsyncMock()
+        self.scheduler._async_clear_room_sensor_assist = clear_assist
+        self.climate.async_set_hvac_mode = AsyncMock(
+            side_effect=scheduler_module.HomeAssistantError("device rejected mode")
+        )
+
+        with self.assertRaisesRegex(
+            scheduler_module.HomeAssistantError, "device rejected mode"
+        ):
+            await self.scheduler.async_set_hvac_mode(
+                self.entity_id,
+                "heat",
+                event_source="service_set_hvac_mode",
+            )
+
+        clear_assist.assert_not_awaited()
+        self.assertFalse(any(
+            event_type == EVENT_VELAIR
+            and data.get("event") == EVENT_TYPE_CLIMATE_TARGET_APPLIED
+            and data.get("source") == "service_set_hvac_mode"
+            for event_type, data in self.hass.bus.events
+        ))
+
+    async def test_unavailable_service_hvac_mode_is_not_retried_or_deferred(self) -> None:
+        self.hass.states[self.entity_id].state = "unavailable"
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat"]
+        clear_assist = AsyncMock()
+        self.scheduler._async_clear_room_sensor_assist = clear_assist
+
+        with self.assertRaisesRegex(
+            scheduler_module.HomeAssistantError,
+            "Cannot apply HVAC mode while climate.salon is unavailable",
+        ):
+            await self.scheduler.async_set_hvac_mode(
+                self.entity_id,
+                "heat",
+                event_source="service_set_hvac_mode",
+            )
+
+        self.assertEqual([], self.climate.calls)
+        clear_assist.assert_not_awaited()
+        self.assertFalse(self.scheduler._climate_delivery.is_deferred(self.entity_id))
+        self.assertFalse(self.scheduler._climate_delivery._tasks.get(self.entity_id))
+
+    async def test_newer_service_mode_supersedes_concurrent_scheduled_delivery(self) -> None:
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat", "cool"]
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "17:00",
+                "action": ACTION_SET_HVAC_MODE,
+                "hvac_mode": "heat",
+            }
+        ]
+        scheduled_started = asyncio.Event()
+        release_scheduled = asyncio.Event()
+        calls: list[tuple[str, str, str]] = []
+        clear_assist = AsyncMock()
+        self.scheduler._async_clear_room_sensor_assist = clear_assist
+
+        async def controlled_mode(entity_id: str, hvac_mode: str) -> None:
+            calls.append(("set_hvac_mode", entity_id, hvac_mode))
+            if hvac_mode == "heat":
+                scheduled_started.set()
+                await release_scheduled.wait()
+
+        self.climate.async_set_hvac_mode = controlled_mode
+        scheduled = asyncio.create_task(
+            self.scheduler.async_apply_current_schedule(
+                self.entity_id,
+                source="scheduled_event",
+            )
+        )
+        await scheduled_started.wait()
+        service = asyncio.create_task(
+            self.scheduler.async_set_hvac_mode(
+                self.entity_id,
+                "cool",
+                event_source="service_set_hvac_mode",
+            )
+        )
+        await asyncio.sleep(0)
+        release_scheduled.set()
+
+        self.assertFalse(await scheduled)
+        await service
+        self.assertEqual(
+            [
+                ("set_hvac_mode", self.entity_id, "heat"),
+                ("set_hvac_mode", self.entity_id, "cool"),
+            ],
+            calls,
+        )
+        successful = [
+            data
+            for event_type, data in self.hass.bus.events
+            if event_type == EVENT_VELAIR
+            and data.get("event") == EVENT_TYPE_CLIMATE_TARGET_APPLIED
+        ]
+        self.assertEqual(1, len(successful))
+        self.assertEqual("service_set_hvac_mode", successful[0]["source"])
+        self.assertEqual("cool", successful[0]["hvac_mode"])
+        clear_assist.assert_awaited_once_with(
+            self.entity_id,
+            restore=False,
+            reason="mode_only",
+        )
+
+    async def test_service_hvac_mode_rejects_invalid_ownership_and_modes_before_delivery(self) -> None:
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat"]
+        for mode, message in (
+            ("off", "off is not supported"),
+            ("cool", "does not support HVAC mode cool"),
+        ):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, message):
+                await self.scheduler.async_set_hvac_mode(self.entity_id, mode)
+
+        with self.assertRaisesRegex(ValueError, "not managed by Velair"):
+            await self.scheduler.async_set_hvac_mode("climate.unmanaged", "heat")
+
+        authority = ExecutionAuthority(self.data)
+        self.scheduler._execution_authority = authority
+        self.data["zones"][self.entity_id]["execution"] = {
+            "type": "external",
+            "provider": "test",
+        }
+        with self.assertRaisesRegex(
+            ExternalExecutionError, "executed by an external system"
+        ):
+            await self.scheduler.async_set_hvac_mode(self.entity_id, "heat")
+        self.assertEqual([], self.climate.calls)
 
     async def test_replacing_boost_preserves_original_previous_state(self) -> None:
         original_state = {"hvac_mode": "cool", "temperature": 19}
@@ -5601,10 +7069,10 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn(self.entity_id, self.scheduler._room_sensor_assist_states)
 
-    async def test_room_sensor_assist_missing_step_is_unavailable_and_only_restores(
+    async def test_room_sensor_assist_missing_step_uses_default_fallback(
         self,
     ) -> None:
-        self.climate.steps[self.entity_id] = 0.5
+        self.climate.temperature_step = lambda _entity_id: None
         self.hass.states[self.entity_id] = SimpleNamespace(
             state="heat",
             attributes={"current_temperature": 17.1, "temperature": 25},
@@ -5638,30 +7106,167 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn(self.entity_id, self.scheduler._room_sensor_assist_states)
 
-        self.climate.temperature_step = lambda _entity_id: None
         status = self.scheduler._room_sensor_assist_status(self.entity_id)
 
-        self.assertEqual(status["status"], "unavailable")
-        self.assertEqual(status["reason"], "missing_target_step")
-        self.assertIsNone(status["applied_temperature"])
-        self.assertIsNone(status["direction"])
-        self.assertEqual(status["assist_delta"], 0.0)
-        self.assertEqual(status["applied_offset"], 0.0)
+        self.assertEqual(status["status"], "assisting")
+        self.assertEqual(status["target_temp_step"], 1.0)
 
-        self.climate.calls.clear()
-        await self.scheduler._async_refresh_room_sensor_assist(
-            self.entity_id,
-            target_temperature=25,
-            hvac_mode="heat",
-            weekday="tuesday",
-            start="17:00",
-            reason="test",
+    async def test_target_step_prefers_published_then_last_reported_then_configured_then_default(self) -> None:
+        self.data["zones"][self.entity_id]["target_temp_step_override"] = 0.25
+        self.data["zones"][self.entity_id]["last_reported_target_temp_step"] = 0.2
+
+        self.climate.steps[self.entity_id] = 0.5
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.5)
+
+        self.climate.temperature_step = lambda _entity_id: None
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.2)
+
+        del self.data["zones"][self.entity_id]["last_reported_target_temp_step"]
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.25)
+
+        del self.data["zones"][self.entity_id]["target_temp_step_override"]
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 1.0)
+
+    async def test_fahrenheit_reported_step_survives_disappearance_and_reappearance(self) -> None:
+        zone = self.data["zones"][self.entity_id]
+        zone["target_temp_step_override"] = 1.8
+        self.climate.limits[self.entity_id] = (41, 95)
+        self.climate.steps[self.entity_id] = 0.9
+
+        self.assertTrue(
+            await self.scheduler.async_capture_reported_target_temp_steps(
+                self.entity_id
+            )
+        )
+        self.climate.temperature_step = lambda _entity_id: None
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.9)
+        self.assertEqual(
+            self.scheduler.normalize_target_temperature(self.entity_id, 68),
+            68,
         )
 
-        self.assertNotIn(self.entity_id, self.scheduler._room_sensor_assist_states)
-        self.assertEqual(len(self.climate.calls), 1)
-        self.assertEqual(self.climate.calls[0][0], "set_temperature")
-        self.assertEqual(self.climate.calls[0][2], 25)
+        self.climate.temperature_step = lambda _entity_id: 1.8
+        self.assertTrue(
+            await self.scheduler.async_capture_reported_target_temp_steps(
+                self.entity_id
+            )
+        )
+        self.climate.temperature_step = lambda _entity_id: None
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 1.8)
+        self.assertEqual(zone["target_temp_step_override"], 1.8)
+
+    async def test_update_target_step_persists_dormant_fallback(self) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+        self.data["zones"][self.entity_id]["last_reported_target_temp_step"] = 0.5
+
+        result = await self.scheduler.async_update_zone_target_temp_step_override(
+            self.entity_id, 0.25
+        )
+
+        self.assertEqual(result, 0.25)
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["target_temp_step_override"], 0.25
+        )
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["last_reported_target_temp_step"],
+            0.5,
+        )
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.5)
+        self.assertEqual(self.save_count, 1)
+
+    async def test_captured_step_survives_missing_attribute_and_restart(self) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+
+        self.assertTrue(await self.scheduler.async_capture_reported_target_temp_steps())
+        self.assertEqual(self.save_count, 1)
+        self.assertFalse(await self.scheduler.async_capture_reported_target_temp_steps())
+        self.assertEqual(self.save_count, 1)
+
+        self.climate.temperature_step = lambda _entity_id: None
+        self.assertFalse(
+            await self.scheduler.async_capture_reported_target_temp_steps(self.entity_id)
+        )
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.5)
+        self.assertEqual(
+            self.scheduler.normalize_target_temperature(self.entity_id, 20.5), 20.5
+        )
+
+        restarted_data = normalize_schedule_data(self.data, [self.entity_id])
+        restarted = VelairScheduler(self.hass, restarted_data, self.climate, AsyncMock())
+        self.assertEqual(restarted.get_temperature_step(self.entity_id), 0.5)
+        self.assertEqual(
+            restarted.normalize_target_temperature(self.entity_id, 20.5), 20.5
+        )
+
+    async def test_capture_updates_even_with_dormant_manual_override(self) -> None:
+        self.climate.steps[self.entity_id] = 0.5
+        await self.scheduler.async_capture_reported_target_temp_steps(self.entity_id)
+
+        self.climate.steps[self.entity_id] = 0.25
+        await self.scheduler.async_capture_reported_target_temp_steps(self.entity_id)
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["last_reported_target_temp_step"], 0.25
+        )
+
+        self.data["zones"][self.entity_id]["target_temp_step_override"] = 0.2
+        self.climate.steps[self.entity_id] = 0.1
+        self.assertTrue(
+            await self.scheduler.async_capture_reported_target_temp_steps(self.entity_id)
+        )
+        self.assertEqual(
+            self.data["zones"][self.entity_id]["last_reported_target_temp_step"], 0.1
+        )
+
+    async def test_published_step_replaces_old_manual_fallback_after_disappearing(self) -> None:
+        zone = self.data["zones"][self.entity_id]
+        zone["target_temp_step_override"] = 1
+        self.climate.steps[self.entity_id] = 0.5
+
+        await self.scheduler.async_capture_reported_target_temp_steps(self.entity_id)
+        self.climate.temperature_step = lambda _entity_id: None
+
+        self.assertEqual(self.scheduler.get_temperature_step(self.entity_id), 0.5)
+        self.assertEqual(
+            self.scheduler.normalize_target_temperature(self.entity_id, 20.5), 20.5
+        )
+        self.assertEqual(zone["target_temp_step_override"], 1)
+
+    async def test_manual_fallback_replaces_last_reported_when_step_is_missing(self) -> None:
+        zone = self.data["zones"][self.entity_id]
+        zone["last_reported_target_temp_step"] = 0.5
+        self.climate.temperature_step = lambda _entity_id: None
+
+        await self.scheduler.async_update_zone_target_temp_step_override(
+            self.entity_id, 0.25
+        )
+
+        self.assertEqual(zone["target_temp_step_override"], 0.25)
+        self.assertNotIn("last_reported_target_temp_step", zone)
+
+    async def test_update_target_step_restores_last_reported_step_on_save_failure(self) -> None:
+        zone = self.data["zones"][self.entity_id]
+        zone["last_reported_target_temp_step"] = 0.5
+        self.climate.temperature_step = lambda _entity_id: None
+
+        async def fail_save() -> None:
+            raise RuntimeError("save failed")
+
+        self.scheduler._async_save_data = fail_save
+        with self.assertRaisesRegex(RuntimeError, "save failed"):
+            await self.scheduler.async_update_zone_target_temp_step_override(
+                self.entity_id, 0.25
+            )
+
+        self.assertNotIn("target_temp_step_override", zone)
+        self.assertEqual(zone["last_reported_target_temp_step"], 0.5)
+
+    async def test_update_target_step_rejects_invalid_values(self) -> None:
+        for value in (0, -0.5, float("nan"), float("inf"), 31):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    await self.scheduler.async_update_zone_target_temp_step_override(
+                        self.entity_id, value
+                    )
 
     async def test_enable_room_sensor_assist_requires_configured_sensor(self) -> None:
         with self.assertRaisesRegex(ValueError, "requires a configured room"):
@@ -6644,18 +8249,24 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     def test_room_sensor_assist_step_metadata_uses_native_fahrenheit_values(self) -> None:
         self.climate.temperature_unit = lambda _entity_id: scheduler_module.FAHRENHEIT
         self.climate.steps[self.entity_id] = 1
-        self.climate.limits[self.entity_id] = (41, 95)
+        self.climate.limits[self.entity_id] = (41.3, 95)
         config = normalize_preconditioning_data(
             {"room_sensor_assist_deadband": 0, "room_sensor_assist_max_delta": 9}
         )
 
-        result = self.scheduler._room_sensor_assist_target(
-            self.entity_id, config, "cool", 72, 73, 74.4
+        cases = (
+            ("cool", 72.3, 73.3, 74.4, 73.4, 74.3),
+            ("heat", 72.3, 71.3, 70.4, 71.4, 71.3),
         )
+        for direction, target, room, climate, pre_step, applied in cases:
+            with self.subTest(direction=direction):
+                result = self.scheduler._room_sensor_assist_target(
+                    self.entity_id, config, direction, target, room, climate
+                )
 
-        self.assertEqual(result.pre_step_temperature, 73.4)
-        self.assertEqual(result.target_temp_step, 1)
-        self.assertEqual(result.applied_temperature, 74)
+                self.assertEqual(result.pre_step_temperature, pre_step)
+                self.assertEqual(result.target_temp_step, 1)
+                self.assertEqual(result.applied_temperature, applied)
 
     def test_room_assist_deadband_is_independent_from_preconditioning_delta(self) -> None:
         self.climate.steps[self.entity_id] = 0.1
@@ -7531,11 +9142,11 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
 
         state = self.scheduler._room_sensor_assist_states[self.entity_id]
         self.assertEqual(state.applied_temperature, 23.0)
-        self.assertIsNone(state.pre_step_temperature)
-        self.assertIsNone(state.target_temp_step)
+        self.assertEqual(state.pre_step_temperature, 23.2)
+        self.assertEqual(state.target_temp_step, 0.3)
         status = self.scheduler._room_sensor_assist_status(self.entity_id)
-        self.assertNotIn("pre_step_temperature", status)
-        self.assertNotIn("target_temp_step", status)
+        self.assertEqual(status["pre_step_temperature"], 23.2)
+        self.assertEqual(status["target_temp_step"], 0.3)
 
     async def test_room_sensor_assist_slow_scalar_refresh_is_restored_by_pause(
         self,
@@ -9434,7 +11045,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
     def test_room_sensor_assist_range_uses_native_fahrenheit_step_and_limits(self) -> None:
         self.climate.temperature_unit = lambda _entity_id: scheduler_module.FAHRENHEIT
         self.climate.steps[self.entity_id] = 1
-        self.climate.limits[self.entity_id] = (41, 95)
+        self.climate.limits[self.entity_id] = (41.3, 95)
         config = normalize_preconditioning_data(
             {"room_sensor_assist_deadband": 1, "room_sensor_assist_max_delta": 4}
         )
@@ -9442,8 +11053,8 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         result = self.scheduler._room_sensor_assist_range_target(
             self.entity_id,
             config,
-            68,
-            75,
+            68.3,
+            75.3,
             64,
             77,
         )
@@ -9456,7 +11067,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
                 result.range_shift,
                 result.limited_by,
             ),
-            (81, 88, 4, 13, None),
+            (80.3, 87.3, 4, 12.0, None),
         )
         self.assertEqual(result.applied_high - result.applied_low, 7)
 
@@ -10157,6 +11768,115 @@ class VelairSchedulerZoneRuntimeStatusTest(unittest.TestCase):
         self.assertEqual(18, profile_runtime["target_temperature"])
         self.assertEqual("heat", profile_runtime["hvac_mode"])
         self.assertEqual("externally_managed", profile_runtime["state"])
+
+    def test_zone_control_projects_effective_profile_and_mode(self) -> None:
+        self.data["profiles"] = [
+            {
+                "key": "away",
+                "name": "Away",
+                "color": "#336699",
+                "zones": {
+                    self.entity_id: {
+                        "behavior": "schedule",
+                        "schedule": empty_week_schedule(),
+                    }
+                },
+            }
+        ]
+        self.data["modes"] = [
+            {"key": "holiday", "name": "Holiday", "profile_ids": ["away"]}
+        ]
+        self.data["global_"]["active_profile_ids"] = ["away"]
+        self.data["global_"]["active_mode_id"] = "holiday"
+        self.scheduler._get_active_zone_override = Mock(return_value=None)
+
+        status = self.scheduler.get_zone_control_status(self.entity_id)
+
+        self.assertEqual("automatic", status["control_mode"])
+        self.assertEqual("profile", status["schedule_source"])
+        self.assertEqual("away", status["profile_id"])
+        self.assertEqual("Away", status["profile_name"])
+        self.assertEqual("holiday", status["mode_id"])
+        self.assertEqual("Holiday", status["mode_name"])
+        self.assertNotIn("manual_source", status)
+
+    def test_zone_control_exposes_manual_fields_only_while_manual(self) -> None:
+        self.scheduler._get_active_zone_override = Mock(return_value=None)
+        self.scheduler._manual_control_status = Mock(
+            return_value={
+                "source": "external_change",
+                "started_at": "2026-09-04T10:00:00+00:00",
+                "until": "2026-09-04T12:00:00+00:00",
+                "policy": "for_duration",
+            }
+        )
+
+        status = self.scheduler.get_zone_control_status(self.entity_id)
+
+        self.assertEqual("manual", status["control_mode"])
+        self.assertEqual("external_change", status["manual_source"])
+        self.assertEqual("2026-09-04T10:00:00+00:00", status["manual_started_at"])
+        self.assertEqual("2026-09-04T12:00:00+00:00", status["manual_until"])
+        self.assertEqual("for_duration", status["manual_policy"])
+
+    def test_profile_pause_remains_automatic_with_paused_runtime_state(self) -> None:
+        self.data["profiles"] = [
+            {
+                "key": "away",
+                "name": "Away",
+                "color": "#336699",
+                "zones": {
+                    self.entity_id: {
+                        "behavior": "pause",
+                        "action": "none",
+                    }
+                },
+            }
+        ]
+        self.data["global_"]["active_profile_ids"] = ["away"]
+        self.scheduler._get_active_zone_override = Mock(return_value=None)
+
+        status = self.scheduler.get_zone_control_status(self.entity_id)
+
+        self.assertEqual("automatic", status["control_mode"])
+        self.assertEqual("paused", status["runtime_state"])
+        self.assertEqual("profile_pause", status["schedule_source"])
+        self.assertEqual("away", status["profile_id"])
+
+    def test_external_zone_control_is_explicitly_external(self) -> None:
+        self.scheduler._is_external_execution = Mock(return_value=True)
+        self.scheduler._effective_schedule = Mock(return_value=empty_week_schedule())
+        self.scheduler._current_schedule_event_for_schedule = Mock(return_value=None)
+
+        status = self.scheduler.get_zone_control_status(self.entity_id)
+
+        self.assertEqual("external", status["control_mode"])
+        self.assertEqual("externally_managed", status["runtime_state"])
+        self.assertNotIn("manual_policy", status)
+
+    def test_zone_control_avoids_thermal_projection_during_unit_migration(self) -> None:
+        self.scheduler._temperature_migration_blocked = True
+        self.scheduler._zone_runtime_status = Mock(
+            side_effect=AssertionError("thermal projection must remain blocked")
+        )
+
+        status = self.scheduler.get_zone_control_status(self.entity_id)
+
+        self.assertEqual("temperature_migration_required", status["runtime_state"])
+
+    def test_target_applied_observer_receives_internal_evidence(self) -> None:
+        observer = Mock()
+        self.scheduler._target_applied_observer = observer
+        data = {
+            "entity_id": self.entity_id,
+            "action": "set_temperature",
+            "temperature": 21,
+            "source": "scheduled_event",
+        }
+
+        self.scheduler._async_fire_climate_target_applied_data(data)
+
+        observer.assert_called_once_with(data)
 
     def test_idle_rejects_a_climate_target_outside_supported_limits(self) -> None:
         self.scheduler._get_active_zone_override = Mock(return_value=None)

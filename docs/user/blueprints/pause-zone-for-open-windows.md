@@ -9,6 +9,9 @@ Pause one or more Velair-managed climates when any selected window or door remai
 
 [View changelog](../../../blueprints/changelogs/window_pause.md) · [Back to the blueprint index](../blueprints.md)
 
+Questions, testing notes, and constructive feedback are welcome in the
+[official blueprint topic on the Home Assistant Community forum](https://community.home-assistant.io/t/velair-blueprint-pause-a-zone-while-windows-are-open/1021389).
+
 ## When to use it
 
 Use this blueprint when opening a window or door should temporarily stop Velair from changing one or more climates that share the same openings. It is useful for heating and cooling systems and can either leave every climate in its current state or turn them off while paused.

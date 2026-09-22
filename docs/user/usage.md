@@ -9,6 +9,7 @@ Velair manages schedules for the `climate.*` entities selected during integratio
 A schedule is made of weekday blocks. A block starts at a specific time and can:
 
 - set a target temperature, optionally with an HVAC mode and supported climate options such as fan mode, preset mode, swing mode, horizontal swing mode, or target humidity;
+- change only the HVAC mode and leave the target under device control;
 - turn the climate entity off.
 
 A block remains active until the next block in the weekly schedule starts. This
@@ -54,6 +55,15 @@ exact service/event YAML, and step-by-step real-world timelines. See
 
 Velair calculates upcoming events in the backend and schedules exact one-shot callbacks through Home Assistant. The frontend subscribes to backend updates over WebSocket, so it does not need continuous polling.
 
+When a managed climate does not publish `target_temp_step`, its row in
+**Settings** shows **Temperature step**. Velair uses `1` by default and lets the
+user provide the device's actual positive step. Velair remembers the last valid
+step reported by Home Assistant, so an entity that stops publishing it does not
+invalidate existing decimal targets. A currently published step always takes
+priority. Saving a manual value while the attribute is missing replaces the
+remembered value as the fallback. If the entity later publishes a step again,
+Velair remembers that newer grid even though the manual fallback remains stored.
+
 The panel's **Diagnostics** section provides a read-only scheduler and per-zone
 snapshot, a bounded runtime-only history, and a redacted JSON report for issue
 attachments. It does not add polling or depend on Recorder.
@@ -90,10 +100,23 @@ automation events:
   readable states such as comfortable, cold, humid, or hot and humid. It keeps
   data quality and source entity IDs as compact attributes without copying the
   original temperature or humidity readings.
+- **Ventilation opportunity** is created once per managed climate. It exposes a
+  conservative, observational enum describing whether outdoor air may move the
+  room toward its configured Comfort zone. It does not open windows or control
+  the climate.
 - **Air quality** is created once per managed climate and keeps the independent
   CO2 assessment: good, elevated, poor, unavailable, or not monitored.
 - **Zone override** shows whether that climate currently has no override, an
   active boost, or an active zone pause.
+- **Zone control** is created once per managed climate and exposes whether
+  local control is `automatic`, a Manual adjustment is active, or an external
+  schedule provider owns physical execution. Its attributes provide the
+  current scheduler, Profile, Mode, and Manual-adjustment context.
+- **Zone delivery diagnostics** is created once per managed climate as a
+  disabled-by-default diagnostic sensor. It exposes the latest runtime-only
+  climate delivery outcome and the last target whose complete service sequence
+  Home Assistant accepted, without raw error text or a claim about what the
+  physical device did.
 - **Preconditioning start** is a timestamp sensor containing the calculated
   start for the next or currently active early-start block. Its attributes
   include the scheduled target time, lead, direction, model source, target
@@ -112,6 +135,12 @@ automation events:
 These entities reuse backend snapshots, use dispatcher updates, and do not poll
 Home Assistant. Events are useful for reacting to transitions; entities are
 useful when an automation or dashboard needs to query the current state.
+Room Assist can adjust the target sent after the accepted control target; use
+the dedicated **Room Assist** sensor for that applied adjustment context.
+See [Sensor Reference](sensors.md) for a complete list of Velair sensors with
+their main attributes and examples. See
+[Zone Control and Delivery Sensors](zone-sensors.md) for the deeper ownership,
+Comfort, ventilation, and delivery contracts.
 
 When a climate is removed from the Velair integration options, Velair removes
 its generated zone sensors from the Home Assistant entity registry on reload.
@@ -156,6 +185,7 @@ understated; warning color is reserved for conditions that need attention.
 
 The Lovelace card supports these `view` values:
 
+- `climate`;
 - `overview-status`;
 - `overview-boosts`;
 - `overview-events`;
@@ -166,6 +196,201 @@ The Lovelace card supports these `view` values:
 - `sensors`;
 - `comfort`;
 - `preconditioning`.
+
+### Climate status and control card
+
+Use `view: climate` for a compact card dedicated to one Velair-managed
+`climate.*` entity. It follows the active Home Assistant theme through Home
+Assistant color and surface variables, and it adapts to light, dark, mobile,
+tablet, and desktop layouts.
+
+The card combines the device-reported temperature, humidity, HVAC mode and
+`hvac_action` with Velair's current ownership and runtime data. It reuses the
+same effective daily timeline, Profile icon and Profile color as the Overview
+tab. Mode, Profile, Comfort, Room Assist, and preconditioning information is
+shown only when it is configured and relevant. An externally executed climate
+shows the external provider and publication state instead of local-only Velair
+features or actions.
+
+```yaml
+type: custom:velair-card
+view: climate
+selected_entity: climate.living_room
+climate_name: Living room
+climate_humidity_entity: sensor.living_room_humidity
+climate_outdoor_temperature_entity: sensor.outdoor_temperature
+climate_window_entities:
+  - binary_sensor.living_room_window
+  - binary_sensor.patio_door
+climate_window_display: grouped
+climate_room_assist_display: both
+climate_preconditioning_display: both
+climate_show_control_mode: true
+climate_show_target_control: true
+climate_show_hvac_mode_control: true
+climate_show_native_climate_link: true
+climate_actions:
+  - type: boost
+  - type: pause
+    placement: more
+  - type: script
+    name: Ventilate room
+    script: script.ventilate_living_room
+    icon: mdi:window-open-variant
+    color: "#03a9f4"
+    confirmation: true
+    placement: auto
+```
+
+The climate control surface combines ordered quick actions with the independently
+configurable Automatic/Manual selector, using the same ownership model as
+Overview. Its lower pane keeps the HVAC mode, the current target when the climate
+is on, and a shortcut to Home Assistant's native climate dialog together. Each
+published HVAC mode is shown with its icon. Direct
+changes remain read-only while Velair owns the active schedule:
+select **Manual** first, wait for the Manual adjustment to be confirmed, and
+then use the target and mode controls. Select **Automatic** to resume scheduling.
+Boost,
+independent pauses, stopped, and unavailable states block direct editing with an
+explanation. The internal pause that represents Manual adjustment itself does
+not block these controls.
+Externally executed zones show only the native Home Assistant shortcut.
+
+Scalar targets and native `heat_cool` ranges are supported. Range changes send
+both boundaries together. Velair uses `min_temp`, `max_temp`, and `hvac_modes`
+published by the climate entity. Target adjustments use `target_temp_step` when
+published. If that attribute disappears, Velair keeps using the last valid step
+it reported so existing decimal targets remain valid. A manual per-zone fallback
+configured in Settings is next, followed by `1` when no step has ever been
+reported or configured. It does not invent HVAC modes.
+
+Cards created before the ordered action list used
+`climate_show_boost_action`, `climate_show_pause_action`, and
+`climate_custom_actions`. Velair continues to read those legacy fields, while
+the visual editor writes `climate_actions` when the action list changes.
+
+By default, current humidity and its history shortcut use the attributes of the
+selected climate entity. Set `climate_humidity_entity` to use the live value and
+native Home Assistant history of a dedicated humidity sensor instead. Velair
+does not infer this relationship because Home Assistant integrations do not
+publish it consistently.
+
+The outdoor temperature and window entities are optional dashboard context.
+Velair does not discover, manage, or automate them through this card. Window
+states are informational only, including when a separate automation or the
+Velair [window blueprint](blueprints/pause-zone-for-open-windows.md)
+uses those entities. Set `climate_window_display` to `grouped` or `individual`;
+the visual editor provides separate checkboxes for the outdoor reading and
+windows, and it does not show either section until an entity is selected.
+The complete Current state heading collapses the panel when it is expanded. Its
+compact readings and context use wrapping chips instead of horizontal scrolling,
+so every enabled sensor remains visible at narrow widths. An available Comfort
+assessment uses a separate descriptive row below the collapsed heading, with its
+condition, contextual Comfort insight, icon, and state accent. The card editor
+can also show enabled derived Comfort readings in that collapsed row; otherwise
+those values stay in the expanded row. The Comfort row is omitted when the
+assessment is unavailable. The expand control remains fixed while the chips use
+as many compact rows as the available card width requires. This presentation
+state is kept only for the live card session. Current state starts collapsed by
+default. The visual editor can instead make it start expanded; changing that
+default does not prevent manual collapse or expansion during use.
+
+The visual editor follows the same top-to-bottom order as the card. It can
+independently hide the state bar, climate name, operating
+state, individual thermostat controls and actions, current temperature, humidity, outdoor reading, windows,
+Comfort, optional collapsed Comfort readings, timeline, Room Assist, and preconditioning. The climate name can
+also be replaced with an independent card-local label, including an empty
+label, and reset to the entity's current friendly name. If every Current state
+item is disabled, the complete Current state container is omitted. Omitted
+visibility values default to visible so existing cards keep their current
+presentation. Each visible current-temperature or humidity reading includes a
+compact shortcut to its configured source's native Home Assistant history; the
+shortcut is omitted together with its reading. Each configuration category can be collapsed, and individual
+custom script actions stay collapsed until they need to be edited, keeping the
+editor practical on narrow screens. Selecting another script refreshes that
+shortcut's name from the script entity; it can then be customized again.
+The Velair header shortcut is always present so the card remains identifiable
+and provides a consistent way back to the integration. Every direct action can
+hide its visible name and collapse to an icon-sized button; its accessible label
+and its full name inside the More menu are preserved.
+
+Quick actions share the top row of the climate control surface with the
+Automatic/Manual selector. They remain in an independent island aligned to the
+opposite end of the same row at every card width. If their labels exceed the
+available space, every complete label keeps its natural width and that island
+scrolls horizontally instead of wrapping or truncating it. Opening Boost
+or Pause replaces the normal thermostat pane in place, and either Cancel or a
+second press on the selected action returns to the normal controls.
+The native scrollbar stays hidden. When actions overflow, directional controls
+use fixed outer slots and become visible only while more actions remain off-screen,
+without covering or resizing the action row; when every action fits, those slots
+are removed entirely. The same row supports touch swiping and mouse or pen
+dragging without executing the action used to begin a drag. Script actions briefly confirm accepted execution or
+failure on the button itself, and an open Boost or Pause action shows a close icon.
+
+The climate header uses the current operating action as its leading visual
+signal and keeps the action, execution source, and HVAC mode together below the
+climate name. A compact Velair signature remains available as the shortcut to
+the main panel, keeping the project name and author on two lines at every card
+width.
+
+The timeline and Room Assist sections reuse the corresponding Velair graphics,
+including horizontal scrolling on narrow screens. Set
+`climate_room_assist_display` to `text`, `chart`, or `both` to choose whether
+the concise runtime explanation, temperature graphic, or both are shown. The
+Room Assist state always remains beside its title, while the explanation uses a
+second line when enabled. Only displays that include the graphic can collapse;
+text-only mode stays visible and has no misleading expansion control.
+
+`climate_preconditioning_display` follows the same `text`, `chart`, or `both`
+model. Its heading keeps the scheduled or active state visible, and its optional
+second line identifies the target and calculated start. The graphic-only mode
+keeps just that state above the expandable preview. Both graphical sections
+start collapsed unless configured otherwise, and the initial-state option is
+shown in the visual editor only when a graphic is selected. Timeline title,
+active Profile, and active Mode each retain their own visibility option; the
+Mode and Profile chips use a reduced card-specific height. Manual expansion
+state remains local to the live card session.
+
+Boost opens an in-card form for every option supported by the climate and the
+service: target or range, duration, HVAC mode, fan, preset, swing, horizontal
+swing, and humidity. Pause lets the user choose a finite or indefinite duration
+and whether to leave the climate unchanged or turn it off. The card does not
+expose `pause_id`, which is reserved for identifying automation-owned reasons.
+When a pause may have another owner or reason, the card opens Velair instead of
+clearing reasons implicitly. Manual control can be returned to automatic
+control from the card. These local actions are never shown for externally
+executed zones. Boost and Pause/Resume can be hidden independently and moved in
+the same ordered action list as script shortcuts. Their behavior, labels, icons,
+and forms are supplied by Velair and are not customizable.
+
+The action list can also contain user-selected Home Assistant `script.*`
+entities. Each shortcut has a card-local name, MDI icon, color, and optional
+confirmation. Velair stores only those presentation settings in the Lovelace
+card and runs the selected entity through `script.turn_on`; the script itself,
+its permissions, and its actions remain owned by Home Assistant. The card does
+not accept arbitrary JavaScript, templates, service payloads, or embedded action
+sequences. Script shortcuts must therefore be able to run without required input
+fields; define any required values inside the Home Assistant script or provide
+defaults there. Each action can use `placement: auto` or `placement: more`.
+Automatic actions use the first three available direct positions and overflow
+into **More** when those positions are full. Actions assigned to `more` always
+stay in that menu, independently of their position in the ordered list. The
+three-position limit is fixed rather than another display setting. **More** is
+omitted when it contains no actions; **Open Velair** remains its fixed final item
+and does not make the menu appear by itself.
+Script shortcuts remain available for externally executed zones because they
+are independent Home Assistant actions, while Velair-only actions keep their
+normal ownership and availability restrictions.
+
+The thin line at the top is a semantic operating-state indicator, not progress.
+Heating and preheating use a warm accent, cooling a cool accent, drying and fan
+remain steady, idle is an attenuated form of the active mode, off is neutral, and
+unavailable uses an interrupted error treatment. Motion is a brief state-change
+cue and is disabled when reduced motion is requested. An `off` HVAC mode takes
+priority over a stale `idle` action, so the card shows **Off** with a power icon;
+idle while an active mode remains selected uses a neutral thermostat icon and
+does not resemble a Velair pause.
 
 Zone-based Lovelace cards can also limit which thermostats they show. This is only a dashboard display filter; it does not change Velair's stored schedules or the scheduler behavior. Global cards such as `overview-status` and `active-setup` do not show thermostat selection or weekday options in the card editor because they are not tied to one thermostat or schedule editor.
 
@@ -227,6 +452,23 @@ Profile schedules, or refreshed backend data.
 4. Add a block.
 5. Choose the start time.
 6. Choose an HVAC mode or leave it as `Keep current mode`.
+
+After selecting an explicit non-off HVAC mode, use the compact thermometer
+button in the Target cell to disable its temperature input. The grey input then
+shows a dash, and the block calls only Home Assistant's
+`climate.set_hvac_mode` service without sending a scalar or range target. This
+is useful for modes such as `auto`, where the climate integration or device may
+resume its own program, but it is available for every non-off HVAC mode reported
+by the entity. Use the same button to enable the input again; Velair restores
+the previous draft target, which must be valid before the schedule can be saved.
+Existing blocks keep their current target behavior.
+
+Mode-only blocks do not run preconditioning or Room Assist because
+Velair has no temperature target to reach or adjust. Optional climate settings
+are also unavailable for these blocks so the persisted action remains one
+unambiguous HVAC-mode change. External schedule providers must explicitly
+advertise support for this action; Velair never converts it into a temperature
+block.
 7. Enter the target temperature, or the lower and upper targets for a range.
 8. Save.
 
@@ -318,8 +560,8 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Portable model v8 exports preserve raw values and declare their unit. Older
-supported files, including V4 and V5, remain importable. Imports
+Current portable model v11 exports preserve raw values and declare their unit.
+Older supported files, including v4, v5, v8, and v9, remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
 Velair versions that produced those files stored Celsius values. Export remains
@@ -327,16 +569,17 @@ available while scheduling is stopped for a unit update, so a reference copy can
 be saved before resetting and imported afterward.
 
 If a climate was unavailable while data was migrated or imported, Velair checks
-its limits and exact temperature step when Home Assistant publishes them. The
-panel warns when a stored schedule target is no longer compatible so it can be
-edited before relying on that schedule.
+its limits and effective temperature step. A valid `target_temp_step` published
+by Home Assistant takes priority over the last reported step, then the manually
+configured per-zone fallback. The panel warns when a stored schedule target is
+no longer compatible so it can be edited before relying on that schedule.
 
 The complete upgrade, migration, backup, and recovery behavior is documented in
 [Temperature Units and Migration](temperature-units.md).
 
 When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. A neutral striped band marks the lower and upper deadband limits. With fixed `heat` or `cool`, the status also shows whether control is moving towards the lower or upper limit; with scalar automatic modes, the band remains a neutral margin. For a native range it extends from the scheduled low minus the deadband to the scheduled high plus the deadband; separate brackets still show the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. The complete translated legend stays centered on the represented deadband range, including when that range is narrower than the label; a zero deadband removes the surface and is stated explicitly. Hiding `show_room_assist_deadband` hides its setting, band, and legend together. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
 
-Room Sensor Assist is event-driven. Velair does not poll temperatures. It listens only to the configured room sensor and climate entity while assistance is active, debounces changes using the per-climate Refresh delay setting, aligns temporary targets to the climate entity's supported temperature step, ignores movements smaller than that step, and restores the real scheduled target when the scheduler is paused, a zone is paused, a boost starts, the block turns off, the sensor becomes unusable, or the feature is disabled. Clearing that runtime state also clears any fixed-mode hysteresis phase. If Adaptive Preconditioning has already started a future block early, Room Sensor Assist follows that future target until the scheduled comfort time instead of falling back to the previous time block.
+Room Sensor Assist is event-driven. Velair does not poll temperatures. It listens only to the configured room sensor and climate entity while assistance is active, debounces changes using the per-climate Refresh delay setting, aligns temporary targets to the effective published, last-reported, or configured temperature step, ignores movements smaller than that step, and restores the real scheduled target when the scheduler is paused, a zone is paused, a boost starts, the block turns off, the sensor becomes unusable, or the feature is disabled. Clearing that runtime state also clears any fixed-mode hysteresis phase. If Adaptive Preconditioning has already started a future block early, Room Sensor Assist follows that future target until the scheduled comfort time instead of falling back to the previous time block.
 
 When preconditioning is disabled for a climate, Velair does not register preconditioning temperature listeners, schedule recalculation callbacks, start learning sessions, or save new observations for that climate. Previously learned samples are preserved and can be reused if preconditioning is enabled again.
 
@@ -360,13 +603,32 @@ Developer-oriented details about local learning states, API output, and predicti
 
 ## Environmental Comfort
 
-The Comfort tab lists managed climates in the order configured in Settings. For each climate it can monitor room temperature, humidity, and CO2.
+The Comfort tab lists managed climates in the order configured in Settings. For each climate it can monitor room temperature, humidity, and CO2. It can also show optional dew point, absolute humidity, and Humidex readings calculated locally from the effective temperature and humidity or supplied by an existing Home Assistant sensor.
 
 Comfort is monitoring-only. It does not change schedule blocks, climate targets, fan modes, presets, or pauses. Instead, Velair describes the room with human conditions such as `Cold and humid`, keeps CO2 air quality separate, indicates whether readings are complete, and emits automation events when that assessment changes.
 
 Temperature can use a dedicated Comfort temperature sensor, the Room Assist room temperature sensor when one is configured, or the climate entity's own `current_temperature`. Humidity can use a selected humidity sensor or the climate entity's `current_humidity` when available. CO2 is only evaluated when a CO2 sensor is selected.
 
-When Comfort is disabled for a climate, Velair does not register comfort sensor listeners for that climate. When enabled, it listens only to the relevant selected sensors and climate entity. There is no continuous polling.
+The default Simple Comfort model uses one rectangular temperature-and-humidity
+range. Guided mode turns one midpoint humidity reference into a
+temperature-dependent psychrometric curve. The custom temperature-aware model lets the humidity limits differ at
+the cooler and warmer temperature endpoints; Velair interpolates the effective
+range and shows its sloped target area without making a universal comfort
+claim. Existing zones remain on the Simple model unless changed explicitly.
+
+These additional readings are disabled by default and remain informational: they do not change Comfort classifications or climate behavior. When Comfort is disabled for a climate, Velair does not register comfort sensor listeners for that climate. When enabled, it listens only to the relevant selected sensors and climate entity. There is no continuous polling.
+
+Comfort can also compare the room with explicit outdoor temperature and
+optional humidity sensors. The **Indoor vs outdoor** block shows the temperature
+difference, indoor and outdoor absolute humidity, and the relative humidity the
+outdoor air would have at the indoor temperature. When the backend identifies a
+useful direction or a conflict, Velair shows one cautious ventilation message;
+it never treats the comparison as a command. Configuration is kept inside the
+collapsed Comfort setup panel, and disabling the comparison preserves the
+selected sensor IDs. Per-climate **Ventilation guidance** controls let users
+require larger or smaller temperature, projected-humidity, and air-moisture
+differences before that message appears; the original cautious margins remain
+the defaults.
 
 Detailed setup, heating, cooling, CO2, automation, and privacy examples are documented in [Environmental Comfort](comfort.md).
 
@@ -550,10 +812,12 @@ only when none remain.
 
 Every new export records its temperature unit. When importing a file from the
 other unit system, Velair converts the selected thermal values to the current
-Home Assistant unit. Values tied to an available climate are aligned with that
-entity's exact target step; standalone values use safe precision when no common
-device step is available. Legacy exports without a recorded unit are announced
-in the import screen and interpreted as Celsius.
+Home Assistant unit. Values tied to an available climate are aligned with its
+effective target step; standalone values use safe precision when no common
+device step is available. The manual per-zone fallback is portable, while the
+last step observed from a local climate entity is intentionally not exported.
+Legacy exports without a recorded unit are announced in the import screen and
+interpreted as Celsius.
 
 Adaptive preconditioning learning is matched by the exact Home Assistant climate entity ID. Learning from climates that are not currently managed is shown before import and skipped. For matching climates, the imported learning replaces that climate's existing calibration. Learning for local climates that are not present in the file is kept unchanged.
 
@@ -582,6 +846,7 @@ confirmation before doing this.
 Velair exposes Home Assistant services for automations and scripts:
 
 - `velair.set_temperature`
+- `velair.set_hvac_mode`
 - `velair.apply_schedule`
 - `velair.boost`
 - `velair.cancel_boost`
@@ -656,6 +921,31 @@ data:
 
 `temperature` and the range fields are mutually exclusive. Both range limits
 are required together.
+
+### `velair.set_hvac_mode`
+
+Set one advertised non-off HVAC mode without sending a target temperature.
+Velair accepts only managed climates whose execution is local, validates the
+mode against the entity, and records the command as a Velair-owned action so it
+is not mistaken for an external adjustment.
+
+```yaml
+action: velair.set_hvac_mode
+data:
+  entity_id: climate.living_room
+  hvac_mode: auto
+```
+
+Use this service when a Velair automation should change only HVAC mode. Velair
+does not include a scalar or range target in the call; the climate integration
+or device may still adjust its own state internally when the mode changes. A
+successful delivery disables active Room Assist because Velair no longer owns a
+temperature target for that command. A failed delivery leaves Room Assist
+unchanged and emits no successful target event.
+
+Use Home Assistant's native `climate.set_hvac_mode` for generic control outside
+Velair. The `off` mode is deliberately rejected; use the appropriate Velair
+pause, schedule, or climate action for that separate intent.
 
 ### `velair.apply_schedule`
 

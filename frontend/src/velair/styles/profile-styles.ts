@@ -477,7 +477,7 @@ export const profileStyles = css`
   }
 
   .mode-item.built-in {
-    grid-template-columns: minmax(0, 1fr) 30px 34px;
+    grid-template-columns: minmax(0, 1fr) 32px 34px;
   }
 
   .mode-item.built-in .mode-item-main,
@@ -550,55 +550,9 @@ export const profileStyles = css`
     justify-self: center;
   }
 
-  .mode-help {
-    align-items: center;
+  .mode-item.built-in > .inline-help-wrapper {
     align-self: center;
-    background: transparent;
-    border: 0;
-    color: var(--secondary-text-color);
-    cursor: help;
-    display: inline-flex;
-    height: 30px;
-    justify-content: center;
     justify-self: center;
-    outline: none;
-    padding: 0;
-    position: relative;
-    width: 30px;
-  }
-
-  .mode-help > ha-icon {
-    --mdc-icon-size: 18px;
-  }
-
-  .mode-help-tooltip {
-    background: var(--primary-text-color);
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-    color: var(--primary-background-color);
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 1.35;
-    max-width: min(240px, calc(100vw - 40px));
-    opacity: 0;
-    padding: 7px 8px;
-    pointer-events: none;
-    position: absolute;
-    right: 0;
-    text-align: left;
-    top: calc(100% + 6px);
-    transition: opacity 120ms ease, visibility 120ms ease;
-    visibility: hidden;
-    white-space: normal;
-    width: max-content;
-    z-index: 20;
-  }
-
-  .mode-help:hover .mode-help-tooltip,
-  .mode-help:focus .mode-help-tooltip,
-  .mode-help:focus-visible .mode-help-tooltip {
-    opacity: 1;
-    visibility: visible;
   }
 
   .mode-profile-avatar {
