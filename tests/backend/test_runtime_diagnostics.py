@@ -988,6 +988,71 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         self.assertNotIn("context", item["data"])
         self.assertNotIn("private", str(item["data"]))
 
+
+    def test_external_change_history_includes_runtime_context(self) -> None:
+        self.manager.observe_target_applied(
+            {
+                "domain": "velair",
+                "event": "climate_target_applied",
+                "entity_id": "climate.living_room",
+                "source": "current_schedule",
+                "action": "set_temperature",
+                "hvac_mode": "heat",
+                "temperature": 20.0,
+            }
+        )
+        self.manager.observe_delivery("climate.living_room", "success")
+        self.manager.async_start(self.runtime)
+        self.runtime["climate_manager"] = SimpleNamespace(
+            command_settling_diagnostics=lambda _entity_id: {
+                "active": False,
+                "fields": [],
+                "mismatches": {},
+                "window_seconds": 45.0,
+            }
+        )
+
+        self.manager._handle_event(
+            SimpleNamespace(
+                data={
+                    "domain": "velair",
+                    "event": "external_climate_change_detected",
+                    "entity_id": "climate.living_room",
+                    "changed_fields": ["temperature"],
+                    "previous": {"temperature": 20.0},
+                    "current": {"temperature": 21.0},
+                    "policy": "until_next_block",
+                    "ha_context": {
+                        "has_context_id": True,
+                        "has_parent_id": False,
+                        "has_user_id": True,
+                    },
+                },
+                time_fired=None,
+            )
+        )
+
+        item = self.manager.snapshot(self.runtime)["history"][0]
+        self.assertEqual(
+            {
+                "has_context_id": True,
+                "has_parent_id": False,
+                "has_user_id": True,
+            },
+            item["data"]["ha_context"],
+        )
+        diagnostics_context = item["data"]["diagnostics_context"]
+        self.assertEqual("success", diagnostics_context["delivery"]["status"])
+        self.assertEqual("heat_cool", diagnostics_context["intent"]["hvac_mode"])
+        self.assertEqual("ready", diagnostics_context["room_assist"]["status"])
+        self.assertEqual({}, diagnostics_context["command_settling"]["mismatches"])
+        self.assertEqual(
+            "current_schedule",
+            diagnostics_context["last_application"]["source"],
+        )
+        self.assertIsInstance(
+            diagnostics_context["last_application_age_seconds"], int
+        )
     def test_zone_control_changed_remains_in_control_category(self) -> None:
         self.manager._handle_event(
             SimpleNamespace(

@@ -24,6 +24,7 @@ from .const import (
     DOMAIN,
     EVENT_VELAIR,
     EVENT_TYPE_DIAGNOSTIC_ISSUE_CHANGED,
+    EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED,
     SIGNAL_DIAGNOSTICS_UPDATED,
     SIGNAL_SCHEDULER_UPDATED,
 )
@@ -399,6 +400,14 @@ class RuntimeDiagnosticsManager:
                 snapshot = _sanitized_control_snapshot(data.get(key))
                 if snapshot:
                     safe_data[key] = snapshot
+        if event_name in _MANUAL_CONTROL_EVENTS:
+            ha_context = _sanitized_ha_context(data.get("ha_context"))
+            if ha_context:
+                safe_data["ha_context"] = ha_context
+        if event_name == EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED:
+            diagnostics_context = self._external_change_diagnostics_context(entity_id)
+            if diagnostics_context:
+                safe_data["diagnostics_context"] = diagnostics_context
         self._record(
             "event",
             "info",
@@ -407,6 +416,48 @@ class RuntimeDiagnosticsManager:
             category=category,
         )
         self._schedule_notify()
+
+    def _external_change_diagnostics_context(
+        self, entity_id: str | None
+    ) -> dict[str, Any]:
+        """Return runtime evidence attached to one external climate change."""
+        if entity_id is None:
+            return {}
+        context: dict[str, Any] = {}
+        last_application = self._last_applied.get(entity_id)
+        if isinstance(last_application, dict):
+            context["last_application"] = deepcopy(last_application)
+            age_seconds = _age_seconds(last_application.get("at"))
+            if age_seconds is not None:
+                context["last_application_age_seconds"] = age_seconds
+        delivery = self._delivery.get(entity_id)
+        if isinstance(delivery, dict):
+            context["delivery"] = deepcopy(delivery)
+        if self._runtime is not None:
+            scheduler = self._runtime.get("scheduler")
+            if scheduler is not None:
+                try:
+                    zone_runtime = scheduler.get_zone_runtime_statuses().get(entity_id)
+                except Exception:
+                    zone_runtime = None
+                if isinstance(zone_runtime, dict):
+                    context["intent"] = deepcopy(zone_runtime)
+                try:
+                    room_assist = scheduler.get_room_sensor_assist_statuses().get(entity_id)
+                except Exception:
+                    room_assist = None
+                if isinstance(room_assist, dict):
+                    context["room_assist"] = deepcopy(room_assist)
+            climate_manager = self._runtime.get("climate_manager")
+            settling_diagnostics = getattr(
+                climate_manager, "command_settling_diagnostics", None
+            )
+            if callable(settling_diagnostics):
+                try:
+                    context["command_settling"] = settling_diagnostics(entity_id)
+                except Exception:
+                    pass
+        return context
 
     @callback
     def _handle_climate_state_change(self, event: Event) -> None:
@@ -1092,6 +1143,28 @@ def _sanitized_control_snapshot(value: Any) -> dict[str, Any]:
     return snapshot
 
 
+def _sanitized_ha_context(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        key: bool(value.get(key))
+        for key in ("has_context_id", "has_parent_id", "has_user_id")
+        if key in value
+    }
+
+
+def _age_seconds(value: Any) -> int | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return max(0, int((datetime.now(UTC) - parsed.astimezone(UTC)).total_seconds()))
+
+
 def _event_time(event: Event) -> str:
     value = getattr(event, "time_fired", None)
     return value.isoformat() if value is not None else _now_iso()
@@ -1125,15 +1198,18 @@ def _replace_entity_ids_in_string(value: str, aliases: dict[str, str]) -> str:
 def _redacted_operational_identifier(key: Any, value: Any) -> bool:
     """Hide user-chosen closed identifiers while retaining structural evidence."""
     return value is not None and key in {
+        "context_id",
         "mode_id",
         "mode_name",
         "pause_id",
         "pause_ids",
+        "parent_id",
         "previous_profile_ids",
         "profile_id",
         "profile_ids",
         "profile_owner_id",
         "profile_owner_name",
+        "user_id",
     }
 
 

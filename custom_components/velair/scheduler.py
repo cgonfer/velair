@@ -2283,6 +2283,7 @@ class VelairScheduler:
         previous: dict[str, object],
         current: dict[str, object],
         observed_snapshot: dict[str, object] | None = None,
+        change_context: dict[str, object] | None = None,
     ) -> None:
         """Serialize an external control transition with other zone overrides."""
         async with self._zone_override_lock(entity_id):
@@ -2294,6 +2295,7 @@ class VelairScheduler:
                 previous=previous,
                 current=current,
                 observed_snapshot=observed_snapshot,
+                change_context=change_context,
             )
 
     async def _async_handle_external_climate_change_locked(
@@ -2304,6 +2306,7 @@ class VelairScheduler:
         previous: dict[str, object],
         current: dict[str, object],
         observed_snapshot: dict[str, object] | None = None,
+        change_context: dict[str, object] | None = None,
     ) -> None:
         """Apply the configured policy to an external climate change."""
         self.ensure_managed_entity(entity_id)
@@ -2325,15 +2328,18 @@ class VelairScheduler:
                 ),
             }
             source = str(existing_manual.get("source", source))
+        event_data: dict[str, object] = {
+            "entity_id": entity_id,
+            "changed_fields": changed_fields,
+            "previous": previous,
+            "current": current,
+            "policy": session_policy["action"],
+        }
+        if change_context:
+            event_data["ha_context"] = change_context
         self._async_fire_event(
             EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED,
-            {
-                "entity_id": entity_id,
-                "changed_fields": changed_fields,
-                "previous": previous,
-                "current": current,
-                "policy": session_policy["action"],
-            },
+            event_data,
         )
         if (
             existing_manual is None

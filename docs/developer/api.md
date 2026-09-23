@@ -244,7 +244,7 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
     "portable_model": 11,
     "storage": 1,
     "model": 7,
-    "integration": "1.8.0-beta.1"
+    "integration": "1.8.0-beta.2"
   }
 }
 ```
