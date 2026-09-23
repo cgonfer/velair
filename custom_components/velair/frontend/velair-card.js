@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20260922194616", r = "1.8.0-beta.1", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
+}, n = "20260923155743", r = "1.8.0-beta.2", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
 	constructor(e, t, n) {
 		if (this._$cssResult$ = !0, n !== o) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
 		this.cssText = e, this.t = t;
@@ -34266,7 +34266,7 @@ function tm(e) {
         ${nm(e._t("frontendBuild"), n)}
         ${nm(e._t("portableFormatVersion"), `v${r}`)}
         ${nm(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${nm(e._t("integrationVersion"), "1.8.0-beta.1")}
+        ${nm(e._t("integrationVersion"), "1.8.0-beta.2")}
       </div>
     </section>
 

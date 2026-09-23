@@ -90,13 +90,24 @@ class ClimateChangeMonitor:
 
         async def _async_process() -> None:
             try:
-                await self._scheduler.async_handle_external_climate_change(
-                    new_state.entity_id,
-                    changed_fields=external_fields,
-                    previous=previous,
-                    current=current,
-                    observed_snapshot=observed_snapshot,
-                )
+                context_snapshot = _event_context_snapshot(event)
+                if context_snapshot is not None:
+                    await self._scheduler.async_handle_external_climate_change(
+                        new_state.entity_id,
+                        changed_fields=external_fields,
+                        previous=previous,
+                        current=current,
+                        observed_snapshot=observed_snapshot,
+                        change_context=context_snapshot,
+                    )
+                else:
+                    await self._scheduler.async_handle_external_climate_change(
+                        new_state.entity_id,
+                        changed_fields=external_fields,
+                        previous=previous,
+                        current=current,
+                        observed_snapshot=observed_snapshot,
+                    )
             except Exception:
                 _LOGGER.exception(
                     "Failed to process external climate change for %s",
@@ -129,3 +140,16 @@ def _projection(state: Any) -> dict[str, object]:
         if isinstance(value, int | float):
             result[key] = float(value)
     return result
+
+
+def _event_context_snapshot(event: Any) -> dict[str, object] | None:
+    """Return redaction-friendly Home Assistant context evidence."""
+    context = getattr(event, "context", None)
+    if context is None:
+        return None
+    snapshot = {
+        "has_context_id": getattr(context, "id", None) is not None,
+        "has_parent_id": getattr(context, "parent_id", None) is not None,
+        "has_user_id": getattr(context, "user_id", None) is not None,
+    }
+    return snapshot if any(snapshot.values()) else None

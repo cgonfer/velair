@@ -1273,3 +1273,55 @@ class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):
             current={"hvac_mode": "heat"},
             observed_snapshot={"hvac_mode": "heat", "temperature": 21.0},
         )
+
+    async def test_external_change_forwards_redaction_safe_ha_context(self) -> None:
+        manager = SimpleNamespace(
+            owned_state_change_fields=lambda *_args: set(),
+            climate_state_snapshot_from_state=lambda _entity_id, state: {
+                "hvac_mode": state.state,
+                "temperature": state.attributes["temperature"],
+            },
+        )
+        scheduler = SimpleNamespace(
+            async_handle_external_climate_change=AsyncMock()
+        )
+        monitor = ClimateChangeMonitor(
+            FakeHass(), ["climate.salon"], manager, scheduler
+        )
+        old = SimpleNamespace(
+            entity_id="climate.salon",
+            state="off",
+            attributes={"temperature": 20.0},
+            context=None,
+        )
+        new = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={"temperature": 21.0},
+            context=None,
+        )
+        context = SimpleNamespace(
+            id="private-context",
+            parent_id=None,
+            user_id="private-user",
+        )
+        monitor._handle_state_change(
+            SimpleNamespace(
+                data={"old_state": old, "new_state": new},
+                context=context,
+            )
+        )
+        await asyncio.sleep(0)
+
+        scheduler.async_handle_external_climate_change.assert_awaited_once_with(
+            "climate.salon",
+            changed_fields=["hvac_mode", "temperature"],
+            previous={"hvac_mode": "off", "temperature": 20.0},
+            current={"hvac_mode": "heat", "temperature": 21.0},
+            observed_snapshot={"hvac_mode": "heat", "temperature": 21.0},
+            change_context={
+                "has_context_id": True,
+                "has_parent_id": False,
+                "has_user_id": True,
+            },
+        )
