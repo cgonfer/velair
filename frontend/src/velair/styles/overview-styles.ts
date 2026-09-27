@@ -824,6 +824,11 @@ export const overviewStyles = css`
   border-color: color-mix(in srgb, var(--warning-color, #f9a825) 38%, var(--divider-color));
 }
 .overview-zone-signal.comfort-data ha-icon { color: var(--warning-color, #f9a825); }
+.overview-zone-signal.comfort-data.info {
+  background: color-mix(in srgb, var(--info-color, #039be5) 9%, var(--card-background-color));
+  border-color: color-mix(in srgb, var(--info-color, #039be5) 38%, var(--divider-color));
+}
+.overview-zone-signal.comfort-data.info ha-icon { color: var(--info-color, #039be5); }
 .overview-zone-signal.warning {
   background: color-mix(in srgb, var(--warning-color, #f9a825) 10%, var(--card-background-color));
   border-color: color-mix(in srgb, var(--warning-color, #f9a825) 45%, var(--divider-color));

@@ -689,7 +689,13 @@ function renderOverviewComfortSignals(host: OverviewViewHost, comfort?: ComfortA
       ? renderOverviewSignal("comfort-air", "mdi:molecule-co2", host._t("overviewZoneAirLabel"), host._t(airKeys[comfort.air_quality] as never), airSeverity)
       : nothing}
     ${qualityIssue
-      ? renderOverviewSignal("comfort-data", "mdi:alert-circle-outline", host._t("overviewZoneDataLabel"), host._t("overviewZoneSensorIssue"), "warning")
+      ? renderOverviewSignal(
+        "comfort-data",
+        comfort.data_quality === "unverified" ? "mdi:information-outline" : "mdi:alert-circle-outline",
+        host._t("overviewZoneDataLabel"),
+        host._t(comfort.data_quality === "unverified" ? "comfortDataUnverified" : "overviewZoneSensorIssue"),
+        comfort.data_quality === "unverified" ? "info" : "warning",
+      )
       : nothing}
   `;
 }
@@ -1215,6 +1221,11 @@ function overviewTimelineEvent(entityId: string, block: ScheduleBlock): Schedule
     action: block.action,
     entity_id: entityId,
     hvac_mode: block.hvac_mode ?? null,
+    fan_mode: block.fan_mode ?? null,
+    preset_mode: block.preset_mode ?? null,
+    swing_mode: block.swing_mode ?? null,
+    swing_horizontal_mode: block.swing_horizontal_mode ?? null,
+    humidity: block.humidity ?? null,
     start: block.start,
     temperature: block.temperature ?? null,
     target_temp_low: block.target_temp_low ?? null,

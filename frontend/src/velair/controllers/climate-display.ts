@@ -243,6 +243,7 @@ export function formatEventActionForHost(host: ClimateDisplayHost, event: Schedu
       off: host._t("off"),
       setTemperature: host._t("setTemperature"),
       deviceControlled: host._t("deviceControlled"),
+      climateOptionsOnly: host._t("climateOptionsOnly"),
     },
     (value, entityId) => host._formatTemperature(value, entityId),
   );

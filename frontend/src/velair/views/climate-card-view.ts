@@ -620,6 +620,7 @@ type ClimateCardComfortChip = {
   label?: string;
   text: string;
   tone?: string;
+  freshness?: "reported" | "unverified";
 };
 
 function comfortCardAccentStyle(comfort: ComfortAssessment): string {
@@ -677,8 +678,20 @@ function climateCardComfortChips(
   if (compact) {
     const insight = climateCardContextComfortInsight(host, entityId, comfort);
     if (insight) chips.push({ icon: "mdi:thermometer-lines", text: insight, tone: "info" });
+    if (comfort.data_quality === "unverified") {
+      chips.push({ icon: "mdi:information-outline", text: host._t("comfortDataUnverified"), tone: "info" });
+    }
     if (host._config.climate_show_comfort_collapsed_readings === true) {
-      chips.push(...climateCardComfortMetricChips(host, entityId, comfort));
+      const metrics = climateCardComfortMetricChips(host, entityId, comfort);
+      chips.push(...metrics);
+      const unverified = metrics.filter((metric) => metric.freshness === "unverified");
+      if (unverified.length) {
+        chips.push({
+          icon: "mdi:information-outline",
+          text: `${host._t("comfortDataUnverified")}: ${unverified.map((metric) => metric.label).join(", ")}`,
+          tone: "info",
+        });
+      }
     }
   }
   return chips;
@@ -702,7 +715,21 @@ function climateCardComfortNotices(
     notices.push({ icon: "mdi:thermometer-lines", text: insight, tone: "info" });
   }
   if (comfort.data_quality !== "complete") {
-    notices.push({ icon: "mdi:alert-circle-outline", text: host._t(comfortQualityKey(comfort.data_quality)), tone: "warning" });
+    const informational = comfort.data_quality === "unverified";
+    notices.push({
+      icon: informational ? "mdi:information-outline" : "mdi:alert-circle-outline",
+      text: host._t(comfortQualityKey(comfort.data_quality)),
+      tone: informational ? "info" : "warning",
+    });
+  }
+  const unverified = climateCardComfortMetricChips(host, entityId, comfort)
+    .filter((metric) => metric.freshness === "unverified");
+  if (unverified.length) {
+    notices.push({
+      icon: "mdi:information-outline",
+      text: `${host._t("comfortDataUnverified")}: ${unverified.map((metric) => metric.label).join(", ")}`,
+      tone: "info",
+    });
   }
   return notices;
 }
@@ -746,6 +773,7 @@ function climateCardComfortMetricChips(
       label: host._t(definition.label),
       text: climateCardFormatDerivedComfortMetric(host, entityId, metric, reading.value),
       tone: metric === "humidex" ? "info" : "neutral",
+      freshness: reading.freshness,
     }];
   });
 }
@@ -1384,7 +1412,7 @@ function comfortConditionLabel(host: VelairViewHost, comfort: ComfortAssessment)
 }
 
 function comfortQualityKey(quality: ComfortAssessment["data_quality"]): TranslationKey {
-  return ({ complete: "current", partial: "comfortDataPartial", stale: "comfortDataStale", unavailable: "comfortDataUnavailable" } as const)[quality];
+  return ({ complete: "current", unverified: "comfortDataUnverified", partial: "comfortDataPartial", stale: "comfortDataStale", unavailable: "comfortDataUnavailable" } as const)[quality];
 }
 
 function comfortAirQualityKey(quality: ComfortAssessment["air_quality"]): TranslationKey {

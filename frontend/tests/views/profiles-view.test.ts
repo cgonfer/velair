@@ -20,6 +20,33 @@ async function selectFirstProfile(element: VelairProfilesView): Promise<void> {
 }
 
 describe("profiles view", () => {
+  it("filters copied Profile options and rejects a block with no supported controls", () => {
+    const profiles = new VelairProfilesView();
+    profiles.hass = {
+      language: "en",
+      states: {
+        "climate.office": {
+          state: "cool",
+          attributes: { friendly_name: "Office", hvac_modes: ["off", "cool"],
+            fan_modes: ["quiet"], preset_modes: [] },
+        },
+      },
+    } as never;
+    const internal = profiles as unknown as {
+      _filterCopiedBlocks: (entityId: string, blocks: unknown) => Array<Record<string, unknown>>;
+      _cloneCompatibilityError: (blocks: unknown, entityId: string) => string | undefined;
+    };
+    const mixed = [{ action: "set_climate_options", start: "08:00", hvac_mode: "",
+      preset_mode: "eco", fan_mode: "quiet" }];
+    expect(internal._filterCopiedBlocks("climate.office", mixed)).toEqual([{
+      action: "set_climate_options", start: "08:00", hvac_mode: "", fan_mode: "quiet",
+    }]);
+    const unsupported = [{ action: "set_climate_options", start: "08:00",
+      hvac_mode: "", preset_mode: "eco" }];
+    expect(internal._cloneCompatibilityError(unsupported, "climate.office"))
+      .toContain("Office");
+  });
+
   it("accepts mode-only profile blocks on climates without temperature targets", () => {
     const profiles = new VelairProfilesView();
     profiles.hass = {
@@ -391,6 +418,7 @@ describe("profiles view", () => {
     await selectFirstProfile(element);
 
     const week = element.shadowRoot!.querySelector(".profile-week")!;
+    expect(week.querySelectorAll(".schedule-step-heading .inline-help")).toHaveLength(0);
     const ordered = [".day-tabs", ".timeline-panel", ".schedule-config-row", ".profile-block-list", ".schedule-save-actions", ".profile-day-copy"]
       .map((selector) => week.querySelector(selector)!);
     ordered.slice(0, -1).forEach((node, index) => {

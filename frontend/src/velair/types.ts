@@ -338,6 +338,7 @@ export type ComfortZoneAssessment = {
 export type ComfortMetricAssessment = {
   attention?: number;
   availability: "current" | "missing" | "stale" | "invalid" | "not_monitored";
+  freshness?: "reported" | "unverified";
   condition:
     | "cold"
     | "comfortable"
@@ -383,7 +384,7 @@ export type ComfortOutdoorComparisonDimension = {
 
 export type ComfortOutdoorAssessment = {
   enabled: boolean;
-  data_quality: "complete" | "partial" | "stale" | "unavailable";
+  data_quality: "complete" | "unverified" | "partial" | "stale" | "unavailable";
   data_issues: string[];
   temperature?: ComfortMetricAssessment;
   humidity?: ComfortMetricAssessment;
@@ -432,7 +433,7 @@ export type ComfortAssessment = {
     | "hot_and_dry"
     | "hot_and_humid";
   air_quality: "not_monitored" | "unavailable" | "good" | "elevated" | "poor";
-  data_quality: "complete" | "partial" | "stale" | "unavailable";
+  data_quality: "complete" | "unverified" | "partial" | "stale" | "unavailable";
   data_issues: string[];
   comfort_zone?: ComfortZoneAssessment;
   range_summary?: {

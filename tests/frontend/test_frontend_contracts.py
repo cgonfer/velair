@@ -270,6 +270,7 @@ def _loaded_velair_integration(frontend_module):
     install_module(
         "homeassistant.helpers.event",
         async_track_state_change_event=lambda *_args, **_kwargs: lambda: None,
+        async_track_state_report_event=lambda *_args, **_kwargs: lambda: None,
     )
     install_module("homeassistant.helpers.typing", ConfigType=dict)
     install_module("custom_components.velair.api", async_setup_api=lambda *_args: None)

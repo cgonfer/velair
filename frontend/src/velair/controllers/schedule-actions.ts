@@ -3,6 +3,7 @@ import {
   filterBlocksForClimateOptions,
   firstUnsupportedModeBlock,
   normalizeDraftBlocks as normalizeDraftBlocksDomain,
+  UnsupportedClimateOptionsError,
 } from "../domain/draft-blocks";
 import {
   climateTargetCompatibleForConfiguration,
@@ -152,6 +153,23 @@ export async function applySelectedDayToZones(host: ScheduleActionsHost): Promis
     }
   }
 
+  const targetBlocks = new Map<string, ScheduleBlock[]>();
+  let checkedEntityId = "";
+  try {
+    for (const entityId of targetEntities) {
+      checkedEntityId = entityId;
+      targetBlocks.set(entityId, host._clampBlocksForEntity(normalized.blocks, entityId));
+    }
+  } catch (error) {
+    host._error = error instanceof UnsupportedClimateOptionsError
+      ? host._t("climateOptionsUnsupportedAt", {
+        entity: host._friendlyEntityName(checkedEntityId),
+        start: error.start,
+      })
+      : error instanceof Error ? error.message : host._t("unableApplyThermostats");
+    return;
+  }
+
   host._applyingZones = true;
   host._error = undefined;
   host._saveMessage = undefined;
@@ -165,7 +183,7 @@ export async function applySelectedDayToZones(host: ScheduleActionsHost): Promis
       data = await api.setDailySchedule(
         entityId,
         host._selectedWeekday,
-        host._clampBlocksForEntity(normalized.blocks, entityId),
+        targetBlocks.get(entityId) ?? [],
       );
     }
 
@@ -190,6 +208,10 @@ export function normalizeDraftBlocks(host: ScheduleActionsHost, source: BlockDra
     duplicateStartError: (start) => host._t("duplicateStart", { start }),
     invalidStartError: (start) => host._t("invalidStart", { start }),
     invalidTemperatureError: (start, error) => `${host._t("invalidTemperature", { start })}: ${error}`,
+    invalidClimateOptionsError: (start, reason) => host._t(
+      reason === "required" ? "climateOptionsRequiredAt" : "climateOptionsHumidityInvalidAt",
+      { start },
+    ),
     temperatureError: (block) => host._temperatureError(block, source),
   });
 }

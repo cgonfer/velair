@@ -1,8 +1,9 @@
 import { html, nothing } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 import { firstTemperatureStepAtOrAbove } from "../domain/climate";
-import { draftBlockUsesRange } from "../domain/draft-blocks";
-import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
+import { keepTargetMismatch } from "../domain/block-guidance";
+import { draftBlockHasClimateOptions, draftBlockUsesRange } from "../domain/draft-blocks";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import { isActiveBoostOverride } from "../domain/overrides";
 import { dateMs } from "../domain/schedule-events";
 import { externalSwitchpointUsage } from "../domain/schedule-editor";
@@ -174,7 +175,10 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
                 ${host._draftBlocks.map((block: DraftScheduleBlock, index: number) =>
                   keyed(
                     editableBlockRowKey("schedule", entityId, host._selectedWeekday, index),
-                    renderEditableBlock(host, block, index, "schedule"),
+                    renderEditableBlock(host, block, index, "schedule", externallyManaged ? undefined : {
+                      entityId,
+                      dayBlocks: host._draftBlocks,
+                    }),
                   ),
                 )}
                 ${renderAddBlockButton(host, "schedule")}
@@ -326,6 +330,7 @@ export function renderTimelineBlock(
 ) {
   const isTurnOff = block.draft.action === ACTION_TURN_OFF;
   const isModeOnly = block.draft.action === ACTION_SET_HVAC_MODE;
+  const isOptionsOnly = block.draft.action === ACTION_SET_CLIMATE_OPTIONS;
   const temperature = Number(block.draft.temperature);
   const low = Number(block.draft.target_temp_low);
   const high = Number(block.draft.target_temp_high);
@@ -333,13 +338,15 @@ export function renderTimelineBlock(
     ? host._t("off")
     : isModeOnly
       ? host._t("deviceControlled")
+    : isOptionsOnly
+      ? host._t("climateOptionsOnly")
     : draftBlockUsesRange(block.draft) && Number.isFinite(low) && Number.isFinite(high)
       ? formatRange(host, low, high, entityId)
       : Number.isFinite(temperature)
       ? host._formatTemperature(temperature, entityId)
       : host._t("invalidTemperatureRange");
   const displayStart = host._formatScheduleTime(block.draft.start);
-  const mode = isTurnOff ? "" : block.draft.hvac_mode || host._t("keep");
+  const mode = isTurnOff || isOptionsOnly ? "" : block.draft.hvac_mode || host._t("keep");
   const optionItems = climateOptionSummaryItems(host, block.draft);
   const optionSummary = optionItems.map((item) => item.short).join(" • ");
   const title = [
@@ -455,15 +462,22 @@ export function renderAddBlockButton(host: ScheduleViewHost, source: BlockDraftS
   `;
 }
 
+export type BlockGuidanceContext = {
+  entityId: string;
+  dayBlocks: DraftScheduleBlock[];
+};
+
 export function renderEditableBlock(
   host: ScheduleViewHost,
   block: DraftScheduleBlock,
   index: number,
   source: BlockDraftSource = "schedule",
+  guidance?: BlockGuidanceContext,
 ) {
   const action = block.action || ACTION_SET_TEMPERATURE;
   const isTurnOff = action === ACTION_TURN_OFF;
   const isModeOnly = action === ACTION_SET_HVAC_MODE;
+  const isOptionsOnly = action === ACTION_SET_CLIMATE_OPTIONS;
   const selectedMode = isTurnOff ? "off" : block.hvac_mode ?? "";
   const temperatureError = host._temperatureError(block, source);
   const usesRange = draftBlockUsesRange(block);
@@ -480,7 +494,7 @@ export function renderEditableBlock(
   const swingModeOptions = host._swingModeOptions(source);
   const swingHorizontalModeOptions = host._swingHorizontalModeOptions(source);
   const humidityLimits = host._humidityLimits(source);
-  const hasSupportedClimateOptions = action === ACTION_SET_TEMPERATURE && (
+  const hasSupportedClimateOptions = (action === ACTION_SET_TEMPERATURE || isOptionsOnly) && (
     fanModeOptions.length > 0 ||
     presetModeOptions.length > 0 ||
     swingModeOptions.length > 0 ||
@@ -490,12 +504,26 @@ export function renderEditableBlock(
   const optionItems = climateOptionSummaryItems(host, block);
   const hasSelectedClimateOptions = optionItems.length > 0;
   const hasClimateOptions = hasSupportedClimateOptions || hasSelectedClimateOptions;
+  const optionError = isOptionsOnly
+    ? String(block.humidity ?? "").trim() && !Number.isFinite(Number(block.humidity))
+      ? host._t("climateOptionsHumidityInvalidAt", { start: block.start })
+      : !draftBlockHasClimateOptions(block)
+        ? host._t("climateOptionsRequiredAt", { start: block.start })
+        : undefined
+    : undefined;
   const optionSummary = hasSelectedClimateOptions
     ? optionItems.map((item) => item.short).join(" • ")
     : host._t("climateOptionsAdd");
+  const keepGuidance = !temperatureError && (
+    isOptionsOnly || (action === ACTION_SET_TEMPERATURE && !selectedMode)
+  );
+  const guidanceState = guidance?.entityId ? host.hass?.states?.[guidance.entityId] : undefined;
+  const mismatch = keepGuidance && !isOptionsOnly && guidance
+    ? keepTargetMismatch(block, guidance.dayBlocks, guidanceState)
+    : undefined;
 
   return html`
-    <div class=${temperatureError ? "editable-block invalid" : "editable-block"}>
+    <div class=${temperatureError || optionError ? "editable-block invalid" : "editable-block"}>
       <label>
         <span class="label">${host._t("start")}</span>
         <input
@@ -511,6 +539,7 @@ export function renderEditableBlock(
             editableBlockModeSelectKey(source, index, selectedMode, displayedModeOptions),
             html`
               <select
+                ?disabled=${isOptionsOnly}
                 value=${selectedMode}
                 .value=${selectedMode}
                 @change=${(event: Event) => host._updateDraftBlock(index, "hvac_mode", host._inputValue(event), source)}
@@ -534,15 +563,16 @@ export function renderEditableBlock(
             inputMinTemperature,
             maxTemperature,
             temperatureStep,
-            isTurnOff || isModeOnly,
+            isTurnOff || isModeOnly || isOptionsOnly,
             temperatureError,
             temperatureUnit,
-            selectedMode !== "",
-            isModeOnly,
+            (selectedMode !== "") !== hasSelectedClimateOptions,
+            isModeOnly || isOptionsOnly,
+            hasSelectedClimateOptions,
           )
         : renderTargetInput(host, block, index, source, "temperature", "temp", temperatureUnit,
-            inputMinTemperature, maxTemperature, temperatureStep, isTurnOff || isModeOnly,
-            temperatureError, selectedMode !== "", isModeOnly)}
+            inputMinTemperature, maxTemperature, temperatureStep, isTurnOff || isModeOnly || isOptionsOnly,
+            temperatureError, (selectedMode !== "") !== hasSelectedClimateOptions, isModeOnly || isOptionsOnly, hasSelectedClimateOptions)}
       ${hasClimateOptions
         ? html`
             <details class="advanced-climate-options" @toggle=${handleClimateOptionsToggle}>
@@ -565,6 +595,8 @@ export function renderEditableBlock(
               ></button>
               <fieldset class="advanced-climate-options-fields">
                 <legend>${host._t("climateOptions")}</legend>
+                ${renderBlockCommandPreview(host, block, optionSummary, hasSelectedClimateOptions,
+                  guidance?.entityId, temperatureError)}
                 ${renderAdvancedOptionSelect(
                   host,
                   block,
@@ -632,7 +664,9 @@ export function renderEditableBlock(
       >
         <ha-icon icon="mdi:trash-can"></ha-icon>
       </button>
-      ${hasSelectedClimateOptions
+      ${optionError
+        ? html`<small class="climate-options-inline-summary invalid" role="alert">${optionError}</small>`
+        : hasSelectedClimateOptions
         ? html`
             <small
               class="climate-options-inline-summary"
@@ -642,6 +676,61 @@ export function renderEditableBlock(
             </small>
           `
         : nothing}
+      ${mismatch
+        ? html`
+            <small class="block-mode-warning" role="status">
+              <ha-icon icon="mdi:alert-outline" aria-hidden="true"></ha-icon>
+              <span>
+                ${host._t(mismatch.source === "schedule" ? "keepModePrevious" : "keepModeCurrent", {
+                  mode: host._modeLabel(mismatch.mode),
+                })}
+                ${host._t(mismatch.target === "scalar" ? "keepModeScalarWarning" : "keepModeRangeWarning")}
+                ${hasSelectedClimateOptions ? host._t("keepModeOnlyOptionsHint") : nothing}
+              </span>
+            </small>
+          `
+        : nothing}
+    </div>
+  `;
+}
+
+function renderBlockCommandPreview(
+  host: ScheduleViewHost,
+  block: DraftScheduleBlock,
+  optionSummary: string,
+  hasOptions: boolean,
+  entityId?: string,
+  temperatureError?: string,
+) {
+  if (block.action === ACTION_SET_CLIMATE_OPTIONS) {
+    return html`
+      <div class="block-command-preview" aria-live="polite">
+        <strong>${host._t("blockSendHelp")}</strong>
+        <span>${host._t("blockNoTarget")}</span>
+        <span>${hasOptions
+          ? host._t("blockOptionsOnlySummary", { options: optionSummary })
+          : host._t("climateOptionsAdd")}</span>
+      </div>
+    `;
+  }
+  const isRange = draftBlockUsesRange(block);
+  const low = Number(block.target_temp_low);
+  const high = Number(block.target_temp_high);
+  const temperature = Number(block.temperature);
+  const target = temperatureError
+    ? undefined
+    : isRange
+      ? formatRange(host, low, high, entityId)
+      : host._formatTemperature(temperature, entityId);
+  return html`
+    <div class="block-command-preview" aria-live="polite">
+      <strong>${host._t("blockSendHelp")}</strong>
+      <span>${target ? host._t("blockSendsTarget", { target }) : temperatureError}</span>
+      <span>${block.hvac_mode
+        ? `${host._t("mode")}: ${host._modeLabel(block.hvac_mode)}`
+        : host._t("blockKeepModeSummary")}</span>
+      ${!isRange && target ? html`<span>${host._t("blockSingleNoRange")}</span>` : nothing}
+      ${hasOptions ? html`<span>${host._t("blockAlsoSendsOptions", { options: optionSummary })}</span>` : nothing}
     </div>
   `;
 }
@@ -654,6 +743,7 @@ export function renderTimelineCarryOverBlock(
   const block = carryOver.block;
   const isTurnOff = block.action === ACTION_TURN_OFF;
   const isModeOnly = block.action === ACTION_SET_HVAC_MODE;
+  const isOptionsOnly = block.action === ACTION_SET_CLIMATE_OPTIONS;
   const temperature = Number(block.temperature);
   const low = Number(block.target_temp_low);
   const high = Number(block.target_temp_high);
@@ -661,17 +751,20 @@ export function renderTimelineCarryOverBlock(
     ? host._t("off")
     : isModeOnly
       ? host._t("deviceControlled")
+    : isOptionsOnly
+      ? host._t("climateOptionsOnly")
     : draftBlockUsesRange(block) && Number.isFinite(low) && Number.isFinite(high)
       ? formatRange(host, low, high, entityId)
       : Number.isFinite(temperature)
         ? host._formatTemperature(temperature, entityId)
         : host._t("invalidTemperatureRange");
-  const mode = isTurnOff ? "" : block.hvac_mode || host._t("keep");
+  const mode = isTurnOff || isOptionsOnly ? "" : block.hvac_mode || host._t("keep");
   const continuation = host._t("timelineContinuesFrom", {
     day: host._shortWeekdayName(carryOver.sourceWeekday),
     time: host._formatScheduleTime(block.start),
   });
-  const detail = [continuation, label, mode ? `${host._t("mode")}: ${mode}` : ""]
+  const options = climateOptionSummaryItems(host, block).map((item) => item.short).join(" • ");
+  const detail = [continuation, label, mode ? `${host._t("mode")}: ${mode}` : "", options]
     .filter(Boolean)
     .join(" - ");
   const blockClass = [
@@ -694,7 +787,7 @@ export function renderTimelineCarryOverBlock(
     >
       <strong>${continuation}</strong>
       <span>${label}</span>
-      ${mode ? html`<small>${mode}</small>` : nothing}
+      ${mode || options ? html`<small>${[mode, options].filter(Boolean).join(" • ")}</small>` : nothing}
     </div>
   `;
 }
@@ -713,7 +806,8 @@ function renderTargetInput(
   disabled: boolean,
   error?: string,
   canUseDeviceTarget = false,
-  isModeOnly = false,
+  isTargetless = false,
+  hasSelectedOptions = false,
 ) {
   const inputId = `velair-${source}-${index}-${field}`;
   return html`
@@ -727,32 +821,34 @@ function renderTargetInput(
         max=${String(maximum)}
         step=${step === undefined ? "any" : String(step)}
         ?disabled=${disabled}
-        placeholder=${isModeOnly ? "—" : disabled ? host._t("off") : ""}
+        placeholder=${isTargetless ? "—" : disabled ? host._t("off") : ""}
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
         @change=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
       />
-      ${field === "temperature" && (!disabled || isModeOnly)
+      ${field === "temperature" && (!disabled || isTargetless)
         ? html`
             <button
-              class=${isModeOnly ? "target-action-toggle device-controlled" : "target-action-toggle"}
+              class=${isTargetless ? "target-action-toggle device-controlled" : "target-action-toggle"}
               type="button"
-              ?disabled=${!isModeOnly && !canUseDeviceTarget}
-              title=${isModeOnly
+              ?disabled=${!isTargetless && !canUseDeviceTarget}
+              title=${isTargetless
                 ? host._t("restoreTemperatureTarget")
-                : canUseDeviceTarget
-                  ? host._t("useDeviceControlledTarget")
-                  : host._t("chooseModeForDeviceControlled")}
+                : hasSelectedOptions
+                  ? host._t(canUseDeviceTarget ? "useClimateOptionsWithoutTarget" : "chooseKeepModeForClimateOptions")
+                  : canUseDeviceTarget
+                    ? host._t("useDeviceControlledTarget")
+                    : host._t("chooseModeForDeviceControlled")}
               aria-label=${host._t("includeTargetTemperature")}
-              aria-pressed=${String(!isModeOnly)}
+              aria-pressed=${String(!isTargetless)}
               @click=${() => host._updateDraftBlock(
                 index,
                 "action",
-                isModeOnly ? ACTION_SET_TEMPERATURE : ACTION_SET_HVAC_MODE,
+                isTargetless ? ACTION_SET_TEMPERATURE : hasSelectedOptions ? ACTION_SET_CLIMATE_OPTIONS : ACTION_SET_HVAC_MODE,
                 source,
               )}
             >
-              <ha-icon icon=${isModeOnly ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
+              <ha-icon icon=${isTargetless ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
             </button>
           `
         : nothing}
@@ -773,7 +869,8 @@ function renderRangeTargetInputs(
   error?: string,
   unit = "°C",
   canUseDeviceTarget = false,
-  isModeOnly = false,
+  isTargetless = false,
+  hasSelectedOptions = false,
 ) {
   return html`
     <div class="temperature-range-fields target-action-range" role="group" aria-label=${host._t("temperatureRange")}>
@@ -791,7 +888,7 @@ function renderRangeTargetInputs(
           step,
           disabled,
           unit,
-          isModeOnly,
+          isTargetless,
         )}
         ${renderRangeTargetInput(
           host,
@@ -806,30 +903,32 @@ function renderRangeTargetInputs(
           step,
           disabled,
           unit,
-          isModeOnly,
+          isTargetless,
         )}
       </div>
-      ${!disabled || isModeOnly
+      ${!disabled || isTargetless
         ? html`
             <button
-              class=${isModeOnly ? "target-action-toggle device-controlled" : "target-action-toggle"}
+              class=${isTargetless ? "target-action-toggle device-controlled" : "target-action-toggle"}
               type="button"
-              ?disabled=${!isModeOnly && !canUseDeviceTarget}
-              title=${isModeOnly
+              ?disabled=${!isTargetless && !canUseDeviceTarget}
+              title=${isTargetless
                 ? host._t("restoreTemperatureTarget")
-                : canUseDeviceTarget
-                  ? host._t("useDeviceControlledTarget")
-                  : host._t("chooseModeForDeviceControlled")}
+                : hasSelectedOptions
+                  ? host._t(canUseDeviceTarget ? "useClimateOptionsWithoutTarget" : "chooseKeepModeForClimateOptions")
+                  : canUseDeviceTarget
+                    ? host._t("useDeviceControlledTarget")
+                    : host._t("chooseModeForDeviceControlled")}
               aria-label=${host._t("includeTargetTemperature")}
-              aria-pressed=${String(!isModeOnly)}
+              aria-pressed=${String(!isTargetless)}
               @click=${() => host._updateDraftBlock(
                 index,
                 "action",
-                isModeOnly ? ACTION_SET_TEMPERATURE : ACTION_SET_HVAC_MODE,
+                isTargetless ? ACTION_SET_TEMPERATURE : hasSelectedOptions ? ACTION_SET_CLIMATE_OPTIONS : ACTION_SET_HVAC_MODE,
                 source,
               )}
             >
-              <ha-icon icon=${isModeOnly ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
+              <ha-icon icon=${isTargetless ? "mdi:thermometer-off" : "mdi:thermometer"}></ha-icon>
             </button>
           `
         : nothing}
@@ -851,7 +950,7 @@ function renderRangeTargetInput(
   step: number | undefined,
   disabled: boolean,
   unit: string,
-  isModeOnly = false,
+  isTargetless = false,
 ) {
   return html`
     <label class="range-temperature-field">
@@ -863,7 +962,7 @@ function renderRangeTargetInput(
         max=${String(maximum)}
         step=${step === undefined ? "any" : String(step)}
         ?disabled=${disabled}
-        placeholder=${isModeOnly ? "—" : disabled ? host._t("off") : ""}
+        placeholder=${isTargetless ? "—" : disabled ? host._t("off") : ""}
         aria-label=${`${host._t(accessibleLabelKey)} (${unit})`}
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
@@ -976,7 +1075,7 @@ function renderAdvancedOptionSelect(
   `;
 }
 
-function climateOptionSummaryItems(host: ScheduleViewHost, block: DraftScheduleBlock) {
+function climateOptionSummaryItems(host: ScheduleViewHost, block: ScheduleBlock | DraftScheduleBlock) {
   const items: Array<{ label: string; short: string; value: string }> = [];
   const add = (labelKey: Parameters<ScheduleViewHost["_t"]>[0], value: unknown) => {
     if (typeof value !== "string" || !value.trim()) {

@@ -1,4 +1,5 @@
-import { draftBlockTemperatureError } from "../domain/draft-blocks";
+import { ACTION_SET_CLIMATE_OPTIONS } from "../constants";
+import { draftBlockHasClimateOptions, draftBlockTemperatureError } from "../domain/draft-blocks";
 import type { BlockDraftSource, DraftScheduleBlock } from "../types";
 
 type DraftValidationHost = {
@@ -17,7 +18,12 @@ export function hasDraftValidationError(
   host: DraftValidationHost,
   source: BlockDraftSource = "schedule",
 ): boolean {
-  return host._blocksForSource(source).some((block) => Boolean(temperatureError(host, block, source)));
+  return host._blocksForSource(source).some((block) =>
+    Boolean(temperatureError(host, block, source))
+    || (block.action === ACTION_SET_CLIMATE_OPTIONS
+      && (!draftBlockHasClimateOptions(block)
+        || (String(block.humidity ?? "").trim() && !Number.isFinite(Number(block.humidity))))),
+  );
 }
 
 export function temperatureError(

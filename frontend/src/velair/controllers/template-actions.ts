@@ -1,4 +1,5 @@
-import { WEEKDAYS } from "../constants";
+import { ACTION_SET_CLIMATE_OPTIONS, WEEKDAYS } from "../constants";
+import { UnsupportedClimateOptionsError } from "../domain/draft-blocks";
 import {
   newTemplateKey,
   templateApplyTargetKey,
@@ -263,6 +264,20 @@ export async function applyTemplateToTargets(host: TemplateActionsHost, template
     }
   }
 
+  const targetBlocks = new Map<string, ScheduleBlock[]>();
+  let checkedEntityId = "";
+  try {
+    for (const target of targets) {
+      checkedEntityId = target.entityId;
+      targetBlocks.set(target.entityId, host._clampBlocksForEntity(normalized.blocks, target.entityId));
+    }
+  } catch (error) {
+    host._error = error instanceof UnsupportedClimateOptionsError
+      ? host._t("climateOptionsUnsupportedAt", { entity: checkedEntityId, start: error.start })
+      : error instanceof Error ? error.message : host._t("unableCopy");
+    return;
+  }
+
   host._applyingTemplateTargets = true;
   host._error = undefined;
   host._saveMessage = undefined;
@@ -272,7 +287,7 @@ export async function applyTemplateToTargets(host: TemplateActionsHost, template
       data = await api.setDailySchedule(
         target.entityId,
         target.weekday,
-        host._clampBlocksForEntity(normalized.blocks, target.entityId),
+        targetBlocks.get(target.entityId) ?? [],
       );
     }
 
@@ -333,7 +348,7 @@ function normalizeTemplateDraftBlocks(blocks: DraftScheduleBlock[]): DraftSchedu
     if (block.target_temp_low !== undefined || block.target_temp_high !== undefined) {
       draft.target_temp_low = block.target_temp_low;
       draft.target_temp_high = block.target_temp_high;
-    } else {
+    } else if (block.action !== ACTION_SET_CLIMATE_OPTIONS) {
       draft.temperature = block.temperature;
     }
     if (block.fan_mode) {

@@ -58,4 +58,19 @@ describe("templates view", () => {
     expect(placeholder?.querySelector("ha-icon")).toBeNull();
     expect(placeholder?.querySelector("h2")).toBeNull();
   });
+
+  it("keeps block explanations inside the options panel without an extra heading", () => {
+    const container = document.createElement("div");
+    const viewHost = {
+      ...host({ templates: [{ key: "comfort", name: "Comfort", blocks: [] }] }),
+      _selectedTemplateKey: "comfort",
+      _timelineBlocks: () => [],
+      _currentTimelineNow: () => new Date(2026, 8, 27, 12, 0),
+    } as VelairViewHost;
+
+    render(renderTemplatesView(viewHost), container);
+
+    expect(container.querySelector(".template-block-heading")).toBeNull();
+    expect(container.querySelector(".template-block-list")).not.toBeNull();
+  });
 });

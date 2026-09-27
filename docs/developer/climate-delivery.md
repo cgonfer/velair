@@ -31,15 +31,20 @@ not an authoritative resolver.
 
 `ClimateManager` uses blocking Home Assistant service calls for every physical
 target operation. A scalar or range application can include HVAC mode and
-supported fan, preset, swing, horizontal swing, and humidity calls. The entire
-sequence must complete before the scheduler:
+supported fan, preset, swing, horizontal swing, and humidity calls. An
+option-only block uses the same boundary but sends only its selected option
+services, without a target or HVAC mode. Those calls are sequential, so a
+failure can leave earlier controls changed without reporting a successful
+block application. The entire sequence must complete before the scheduler
+can perform applicable success effects:
 
 - emits `climate_target_applied` or Room Assist applied/restored events;
 - writes an applied logbook entry;
 - marks an early target applied;
 - starts an Adaptive Preconditioning learning session.
 
-That success boundary records command acceptance, not physical convergence.
+The early-target and learning effects apply only to target-based
+preconditioning. That success boundary records command acceptance, not physical convergence.
 Physical confirmation remains the responsibility of the climate integration's
 state reporting.
 

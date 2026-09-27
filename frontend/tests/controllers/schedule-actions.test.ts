@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
 import { applySelectedDayToZones, clampBlocksForEntity, saveSelectedDay, unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
 import type { DraftScheduleBlock, ScheduleBlock, ScheduleResponse } from "../../src/velair/types";
 
@@ -190,6 +190,16 @@ describe("schedule actions controller", () => {
 
     expect(api.setDailySchedule).not.toHaveBeenCalled();
     expect(state._error).toBe("unsupported cool for climate.office");
+  });
+
+  it("reports unsupported options for a target before saving any schedule", async () => {
+    const { api, state } = host([{
+      action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "eco",
+    }]);
+    state._zoneTargets = new Set(["climate.bedroom"]);
+    await applySelectedDayToZones(state);
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+    expect(state._error).toBe('climateOptionsUnsupportedAt:{"entity":"climate.bedroom","start":"08:00"}');
   });
 
   it("applies a selected day to target zones with per-entity clamping", async () => {

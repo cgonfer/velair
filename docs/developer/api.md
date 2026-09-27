@@ -241,10 +241,10 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 11,
+    "portable_model": 12,
     "storage": 1,
     "model": 7,
-    "integration": "1.8.0-beta.2"
+    "integration": "1.8.0-beta.3"
   }
 }
 ```
@@ -312,7 +312,7 @@ These fields are optional so existing stored and portable observations remain
 valid. Temperature migration converts both optional boundaries as absolute
 temperatures.
 
-`comfort` is the local runtime Environmental Comfort assessment. It contains the compatible physical `condition`, independent CO2 `air_quality`, `data_quality`, `data_issues`, and raw metric payloads.
+`comfort` is the local runtime Environmental Comfort assessment. It contains the compatible physical `condition`, independent CO2 `air_quality`, `data_quality`, `data_issues`, and raw metric payloads. Current metrics expose `freshness: reported | unverified`; `data_quality: unverified` means all monitored readings are usable but at least one lacks verifiable freshness. Direct sensors use `last_reported`; climate attributes remain unverified.
 
 `comfort_zone` identifies the selected Simple, Guided, or custom temperature-aware model, its backend-owned geometry points, and the humidity range effective at the current temperature. Its temperatures use the managed climate's runtime unit. Guided also exposes its midpoint `reference`. For Guided and custom temperature-aware models, `effective_humidity_range` is `null` when temperature cannot be evaluated; clients must not substitute the Simple range.
 
@@ -550,6 +550,7 @@ await hass.connection.sendMessagePromise({
       preset_mode: "eco"
     },
     { start: "12:00", action: "set_hvac_mode", hvac_mode: "auto" },
+    { start: "18:00", action: "set_climate_options", preset_mode: "comfort" },
     { start: "23:30", action: "turn_off" }
   ],
 });
@@ -567,6 +568,11 @@ dropped; `turn_off` blocks never keep target or optional climate settings.
 `set_hvac_mode` blocks require an explicit supported mode other than `off` and
 contain no temperature target or optional climate settings. They change only
 the HVAC mode and leave the device target untouched.
+`set_climate_options` blocks require at least one supported climate option,
+contain neither a temperature target nor `hvac_mode`, and send only the
+corresponding Home Assistant climate services. Unsupported options are filtered
+for a specific entity; a block with no remaining options is rejected. This
+action does not turn on a climate that is off.
 
 ## Copy Day Schedule
 
@@ -655,7 +661,15 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Templates are capability-neutral storage. They can contain optional climate settings from any managed climate. Filtering happens later when a template is applied to one concrete climate schedule. A `set_hvac_mode` template block follows the same contract as a daily schedule block: it requires a non-`off` `hvac_mode` and contains neither a temperature target nor optional climate settings.
+Templates are capability-neutral storage. They can contain optional climate
+settings from any managed climate. Filtering happens later when a template is
+applied to one concrete climate schedule. A `set_hvac_mode` template block
+follows the same contract as a daily schedule block: it requires a non-`off`
+`hvac_mode` and contains neither a temperature target nor optional climate
+settings. A
+`set_climate_options` template block contains one or more optional climate
+settings and no temperature target or `hvac_mode`; applying it fails for a
+climate that supports none of them.
 
 ### External-change Policy
 
@@ -986,7 +1000,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 11,
+  "model_version": 12,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}

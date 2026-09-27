@@ -23,7 +23,7 @@ Temperature uses the first available source in this order:
 Humidity uses:
 
 1. the humidity sensor selected in the Comfort tab;
-2. the climate entity's `current_humidity` or `humidity` attribute, when available.
+2. the climate entity's measured `current_humidity` attribute, when available. The `humidity` attribute is a target setting, not a reading.
 
 The default `Use automatic source` option keeps this automatic behavior. Select `Do not monitor humidity` when humidity should not influence that climate's environmental condition or data quality. The saved sensor selection is retained, but Velair does not read or listen to it while humidity monitoring is disabled.
 
@@ -294,12 +294,13 @@ A room can therefore show, for example, `Hot and humid` together with `CO2 eleva
 
 Velair exposes one data-quality value:
 
-- `complete`: every monitored metric has a current reading;
+- `complete`: every monitored metric has a current reading backed by a recent Home Assistant report;
+- `unverified`: every monitored metric can be used, but at least one reading has no verifiable report timestamp;
 - `partial`: an assessment is available, but at least one monitored reading is missing or stale;
 - `stale`: no current reading exists and every monitored source is stale;
 - `unavailable`: no current reading can be used for another reason.
 
-The interface shows a compact warning icon for non-complete data. Its tooltip identifies the affected readings.
+The panel groups usable readings whose freshness cannot be verified in the zone's **Data freshness** section, instead of repeating the same note beside each derived reading. A Lovelace Comfort card that hides configuration shows one summary above the readings; Diagnostics also exposes freshness context. The collapsed panel zone list omits this routine status to stay readable. This is a valid automatic climate-source setup, not a configuration error. Missing or stale readings still show a warning in the zone list.
 
 ## Visual Status
 
@@ -368,11 +369,13 @@ card falls back to the same single-metric scale used by the main Velair panel.
 
 ## Freshness
 
-`Stale after` is the maximum age of the Home Assistant `last_updated` timestamp used by a monitored source.
+`Stale after` is the maximum time since a selected sensor last reported its state to Home Assistant (`last_reported`). Repeating the same value refreshes its report timestamp and keeps the reading current. Velair listens for those reports and schedules the next expiry, so the panel, sensors, and events can show `stale` when the deadline passes without another report.
 
-Velair does not poll sensors and does not run an expiry loop. It reevaluates Comfort when a tracked entity changes, settings change, or the current state is requested.
+The setting sits in its own **Data freshness** section after the source controls. That section also groups the current readings with unverifiable freshness, including enabled derived metrics and outdoor sensor readings, without repeating calculated outdoor values. It lists the direct sources covered by the limit, including Room Assist, CO2, outdoor, or external derived-metric sensors. Outdoor sensors can keep it active even when indoor temperature and humidity both come from the climate; the limit does not expire those climate readings. You can set it before enabling Comfort. If no direct source is configured, the field is disabled with an explanation; its saved value is kept for a future sensor selection.
 
-Repeating the same displayed value only refreshes the reading if Home Assistant advances `last_updated` and exposes a state change. Some integrations keep `last_updated` unchanged when both state and attributes are identical.
+The automatic `climate.*` temperature and humidity attributes have no independent report timestamp. Velair keeps a valid value visible and labels its freshness `unverified`; changes to the climate target do not verify a new measurement. Choose the original temperature or humidity sensor when available. If a selected sensor has no `last_reported`, its valid value is also `unverified`. An `unavailable` or `unknown` entity cannot supply a usable reading, even if old numeric attributes remain.
+
+A Home Assistant report does not prove the physical sensor sampled again. An integration that only reports on value changes will eventually be marked stale when its value stays constant.
 
 ## Automation Event
 
@@ -419,6 +422,7 @@ Example payload:
   "temperature": {
     "metric": "temperature",
     "availability": "current",
+    "freshness": "reported",
     "condition": "cold",
     "source": "sensor",
     "entity_id": "sensor.living_room_temperature",
@@ -429,6 +433,7 @@ Example payload:
   "humidity": {
     "metric": "humidity",
     "availability": "current",
+    "freshness": "reported",
     "condition": "humid",
     "source": "sensor",
     "entity_id": "sensor.living_room_humidity",
@@ -439,6 +444,7 @@ Example payload:
   "co2": {
     "metric": "co2",
     "availability": "current",
+    "freshness": "reported",
     "condition": "elevated",
     "source": "sensor",
     "entity_id": "sensor.living_room_co2",
@@ -450,6 +456,7 @@ Example payload:
     "dew_point": {
       "metric": "dew_point",
       "availability": "current",
+      "freshness": "reported",
       "source": "velair",
       "entity_id": null,
       "value": 12.9,

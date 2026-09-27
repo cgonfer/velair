@@ -34,6 +34,8 @@ class ComfortMetricsDocumentationTests(unittest.TestCase):
             "**Guided psychrometric range**",
             "**Custom range by temperature**",
             "does not classify it or produce humidity guidance",
+            "last_reported",
+            "freshness cannot be verified",
         ):
             self.assertIn(phrase, guide)
 
@@ -57,6 +59,8 @@ class ComfortMetricsDocumentationTests(unittest.TestCase):
             "samples 17 points",
             "clamp((T - temperature_min)",
             "does not fall back to the Simple range",
+            "state_reported",
+            "freshness: unverified",
         ):
             self.assertIn(phrase, guide)
 
@@ -83,7 +87,7 @@ class ComfortMetricsDocumentationTests(unittest.TestCase):
         self.assertIn("Range position does not create an insight", api)
         self.assertIn("Portable model v11 adds each zone's Comfort model", api)
         self.assertIn("comfort_zone", diagnostics)
-        self.assertIn("portable model v11", manual)
+        self.assertIn("portable model v12", manual)
 
 
 if __name__ == "__main__":

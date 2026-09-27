@@ -237,10 +237,12 @@ reason.
 
 ### Resume from `off` when the block says Keep current mode
 
-**Keep current mode** means the block does not provide an HVAC mode. On resume,
-Velair follows the normal climate delivery rule:
+**Keep current mode** means the block does not provide an HVAC mode. For a
+block with a temperature target, Velair follows the normal climate delivery
+rule on resume:
 
-- if the climate is already on, preserve its current compatible mode;
+- if the climate is already on, keep its current mode and apply the target if
+  that mode accepts it; otherwise delivery fails without switching modes;
 - if the climate is `off`, choose the first compatible supported mode advertised
   by the climate that is not `off`, then apply the block target.
 
@@ -250,6 +252,9 @@ For a heat-only climate advertising `[off, heat]`, an active Keep-mode block at
 several compatible modes; Velair uses their advertised order and does not infer
 heating or cooling from season, geography, or the numeric target. Set an
 explicit HVAC mode in the block when that choice must be deterministic.
+
+For an option-only block, resuming applies only its selected climate controls.
+It does not send a temperature or turn on a climate that is off.
 
 ## Complete Real-World Examples
 

@@ -175,9 +175,9 @@ Header checks:
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v11 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v12 records the
    effective `temperature_unit`.
-2. Import each newly exported portable v10 file back into the same installation
+2. Import each newly exported portable v12 file back into the same installation
    and confirm the frontend accepts it and the selected sections round-trip.
 3. Import a portable v10 file into the opposite unit and confirm selected
    thermal sections convert. Confirm its Comfort derived-metric and outdoor-
@@ -325,7 +325,27 @@ external adjustment.
     compact thermometer button and confirm the grey field shows a dash without
     adding a column or depending on visible explanatory text. Enable it again,
     confirm the previous draft target returns, and verify Save requires that
-    restored target to be valid.
+    restored target to be valid. In Keep current mode, choose a preset and
+    disable Target; confirm the grey input shows a dash, the preset remains
+    editable, and the saved block shows the preset without a temperature.
+    Repeat with multiple options, a heat climate, a cool climate, and Spanish.
+    Confirm choosing an explicit HVAC mode prevents turning this into an
+    options-only block. Apply the preset-only block to a climate that derives
+    its own target: Velair must send only `climate.set_preset_mode`, keep an off
+    climate off, and avoid reapplying when the derived target changes. For a Keep
+    block with a target, confirm the row retains only the compact selected-option
+    summary. Open its options panel and confirm the command preview lists the
+    temperature, mode behavior, and selected controls; switching to an
+    options-only block must remove the target from that preview. Check the
+    absence of a separate block-help button in Default schedules, Profiles,
+    and templates. The explanation belongs inside the options panel.
+    Put a scalar target after an explicit `heat_cool` range
+    block: the editor must warn without disabling Save. Check the equivalent
+    live-mode warning when no earlier block selects a mode; switch to a
+    compatible range or disable the target and confirm the warning clears.
+    Repeat with a range after `heat` and `cool`, and review the preview and
+    warning in Spanish, on 320–340 px mobile widths, and with keyboard, touch,
+    and screen-reader navigation. The options panel must remain within the viewport.
 15. Listen for `velair_event` and confirm profile activation, return to Default,
     and deletion of the active profile emit `profile_changed` with the expected
     `profile_ids` and `previous_profile_ids`. Re-selecting the current set must
@@ -803,7 +823,7 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
     humidity stays visible but has no condition, the effective range is absent,
     the summary is unavailable, and no humidity ventilation opportunity is
     produced. Restore temperature and confirm evaluation returns.
-43. Reload Velair and Home Assistant, export/import portable model v11, and
+43. Reload Velair and Home Assistant, export/import portable model v12, and
     confirm the selected model and both endpoint ranges survive. Import a v10
     payload and confirm it uses the Simple model. In Fahrenheit, confirm endpoint
     temperature labels and exported thermal values use Fahrenheit while the

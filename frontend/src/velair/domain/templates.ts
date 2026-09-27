@@ -1,4 +1,4 @@
-import { ACTION_SET_TEMPERATURE, WEEKDAYS } from "../constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, WEEKDAYS } from "../constants";
 import type { DraftScheduleBlock, ScheduleTemplate, StoredScheduleTemplate } from "../types";
 import { defaultTargetTemperature } from "./temperature-units";
 
@@ -15,7 +15,7 @@ export function scheduleTemplatesFromStored(templates: StoredScheduleTemplate[] 
       if (block.target_temp_low != null || block.target_temp_high != null) {
         draft.target_temp_low = block.target_temp_low ?? "";
         draft.target_temp_high = block.target_temp_high ?? "";
-      } else {
+      } else if (block.action !== ACTION_SET_CLIMATE_OPTIONS) {
         draft.temperature = Number(block.temperature ?? defaultTargetTemperature(unit));
       }
       if (block.fan_mode) {

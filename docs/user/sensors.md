@@ -168,8 +168,8 @@ Main attributes:
 
 | Attribute | Meaning |
 | --- | --- |
-| `data_quality` | `complete`, `partial`, `stale`, or `unavailable`. |
-| `data_issues` | Stable codes for missing, stale, or invalid readings. |
+| `data_quality` | `complete`, `unverified`, `partial`, `stale`, or `unavailable`. |
+| `data_issues` | Stable codes for missing, stale, invalid, or usable but freshness-unverified readings. |
 | `range_summary` | Current Comfort range result and Humidex reconciliation. |
 | `ventilation_opportunity` | Full ventilation opportunity payload. |
 | `comfort_zone` | Selected Comfort model and effective humidity range. |

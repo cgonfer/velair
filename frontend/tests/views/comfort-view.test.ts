@@ -31,6 +31,7 @@ function host(
     missingHumidity?: boolean;
     assessment?: ComfortAssessment;
     temperatureUnit?: string;
+    roomTemperatureEntityId?: string;
   } = {},
 ) {
   const saveZoneComfort = vi.fn(async () => {});
@@ -76,7 +77,9 @@ function host(
             co2_entity_id: "sensor.first_co2",
             ...options.comfort,
           },
-          preconditioning: {},
+          preconditioning: options.roomTemperatureEntityId
+            ? { room_temperature_entity_id: options.roomTemperatureEntityId }
+            : {},
           schedule: {},
         },
       },
@@ -224,6 +227,8 @@ describe("comfort view", () => {
     expect(configuration.querySelector(".comfort-derived-config-section")).not.toBeNull();
     expect(configuration.querySelector(".comfort-freshness-config-section")).not.toBeNull();
     expect(configuration.querySelector(".comfort-configuration-content")?.firstElementChild)
+      .toBe(configuration.querySelector(".comfort-data-sources-config-section"));
+    expect(configuration.querySelector(".comfort-data-sources-config-section")?.nextElementSibling)
       .toBe(configuration.querySelector(".comfort-freshness-config-section"));
     expect(comfortStyles.cssText).toMatch(
       /\.comfort-configuration > summary\s*\{[^}]*min-height:\s*48px;/,
@@ -373,6 +378,93 @@ describe("comfort view", () => {
     expect(warning?.querySelector('[role="tooltip"]')?.textContent)
       .toContain("comfortDataIssueHumidityMissing");
     expect(container.querySelector(".comfort-assessment-heading .comfort-data-warning")).toBeNull();
+  });
+
+  it("keeps an unverified climate reading visible with informational context", () => {
+    const { viewHost } = host({
+      enabled: true,
+      expanded: true,
+      assessment: {
+        enabled: true,
+        condition: "comfortable",
+        air_quality: "not_monitored",
+        data_quality: "unverified",
+        data_issues: ["temperature_unverified"],
+        temperature: {
+          availability: "current",
+          freshness: "unverified",
+          condition: "comfortable",
+          entity_id: "climate.first",
+          metric: "temperature",
+          min: 20,
+          max: 24,
+          source: "climate",
+          value: 22,
+        },
+      },
+    });
+    const container = document.createElement("div");
+
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    expect(container.querySelector(".comfort-zone-heading .comfort-data-warning")).toBeNull();
+    const freshness = container.querySelector(".comfort-freshness-config-section");
+    expect(freshness?.textContent).toContain("comfortDataUnverified (comfortTemperature)");
+    expect(freshness?.textContent).toContain("comfortClimateSourceFreshnessHelp");
+    expect(container.querySelector(".comfort-assessment-card .comfort-freshness-note")).toBeNull();
+    expect(container.textContent).toContain("22 C");
+    expect(en.comfortDataIssueTemperatureUnverified).not.toContain("direct sensor");
+    expect(es.comfortDataIssueTemperatureUnverified).not.toContain("sensor directo");
+    expect(en.comfortClimateSourceFreshnessHelp).toContain("can be used");
+    expect(en.comfortClimateSourceFreshnessHelp).not.toContain("select");
+  });
+
+  it("keeps unverified freshness out of the collapsed zone summary", () => {
+    const { viewHost } = host({
+      enabled: true,
+      assessment: {
+        enabled: true, condition: "comfortable", air_quality: "not_monitored",
+        data_quality: "unverified", data_issues: ["temperature_unverified"],
+        temperature: {
+          availability: "current", freshness: "unverified", condition: "comfortable",
+          entity_id: "climate.first", metric: "temperature", source: "climate", value: 22,
+        },
+      },
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    expect(container.querySelector(".comfort-zone-heading .comfort-data-warning")).toBeNull();
+    expect(container.querySelector(".comfort-freshness-status")).toBeNull();
+  });
+
+  it("keeps a real missing humidity warning when climate temperature freshness is unverified", () => {
+    const { viewHost } = host({
+      enabled: true,
+      expanded: true,
+      assessment: {
+        enabled: true,
+        condition: "temperature_comfortable",
+        air_quality: "not_monitored",
+        data_quality: "partial",
+        data_issues: ["humidity_missing", "temperature_unverified"],
+        temperature: {
+          availability: "current", freshness: "unverified", condition: "comfortable",
+          entity_id: "climate.first", metric: "temperature", source: "climate", value: 22,
+        },
+        humidity: { availability: "missing", condition: null, metric: "humidity", source: "sensor", value: null },
+      },
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    const warning = container.querySelector(".comfort-zone-heading .comfort-data-warning");
+    expect(warning?.classList.contains("informational")).toBe(false);
+    expect(warning?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:alert-circle-outline");
+    expect(warning?.querySelector('[role="tooltip"]')?.textContent)
+      .toContain("comfortDataIssueHumidityMissing");
+    expect(warning?.querySelector('[role="tooltip"]')?.textContent)
+      .toContain("comfortClimateSourceFreshnessHelp");
   });
 
   it("renders a temperature and humidity map with a separate CO2 scale", () => {
@@ -608,7 +700,101 @@ describe("comfort view", () => {
     expect(container.textContent).not.toContain("comfortCo2Limits");
   });
 
-  it("shows thresholds for metrics with an automatic or selected source", () => {
+  it("disables Stale after when no configured direct source can use it", () => {
+    const { viewHost } = host({
+      comfort: {
+        temperature_entity_id: "climate.other",
+        humidity_enabled: false,
+        humidity_entity_id: "sensor.retained_humidity",
+        co2_entity_id: null,
+        outdoor_comparison_enabled: false,
+        outdoor_temperature_entity_id: "sensor.retained_outdoor_temperature",
+        outdoor_humidity_entity_id: "sensor.retained_outdoor_humidity",
+        stale_after_minutes: 45,
+      },
+      expanded: true,
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    const freshness = container.querySelector(".comfort-freshness-config-section");
+    expect(freshness?.textContent).toContain("comfortStaleAfterNotApplicable");
+    expect(freshness?.querySelector<HTMLInputElement>(".comfort-number-field-single input")?.disabled)
+      .toBe(true);
+    const input = freshness?.querySelector<HTMLInputElement>(".comfort-number-field-single input");
+    const explanation = freshness?.querySelector<HTMLElement>(".comfort-freshness-sources");
+    expect(input?.getAttribute("aria-describedby")).toBe(explanation?.id);
+    expect(freshness?.textContent).not.toContain("comfortStaleAfterSources");
+  });
+
+  it("keeps Stale after configurable for an active outdoor sensor", () => {
+    const { viewHost } = host({
+      comfort: {
+        temperature_entity_id: null,
+        humidity_enabled: false,
+        co2_entity_id: null,
+        outdoor_comparison_enabled: true,
+        outdoor_temperature_entity_id: "sensor.outdoor_temperature",
+        outdoor_humidity_entity_id: "sensor.outdoor_humidity",
+        stale_after_minutes: 45,
+      },
+      expanded: true,
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    const freshness = container.querySelector(".comfort-freshness-config-section");
+    expect(freshness?.textContent).toContain("comfortStaleAfter");
+    expect(freshness?.textContent).not.toContain("comfortStaleAfterNotApplicable");
+    expect(freshness?.textContent).toContain("comfortStaleAfterSources:sensor.outdoor_temperature, sensor.outdoor_humidity");
+    expect(freshness?.querySelector<HTMLInputElement>(".comfort-number-field-single input")?.value)
+      .toBe("45");
+    expect(en.comfortStaleAfterSources).toContain("outdoor readings");
+    expect(en.comfortStaleAfterSources).toContain("does not expire climate temperature or humidity");
+    expect(es.comfortStaleAfterSources).toContain("incluidos los del exterior");
+    expect(es.comfortStaleAfterSources).toContain("No caduca las lecturas");
+  });
+
+  it("names the Room Assist sensor when automatic temperature uses it", () => {
+    const { viewHost } = host({
+      expanded: true,
+      roomTemperatureEntityId: "sensor.room_temperature",
+      comfort: {
+        temperature_entity_id: null,
+        humidity_enabled: false,
+        co2_entity_id: null,
+      },
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    const freshness = container.querySelector(".comfort-freshness-config-section");
+    expect(freshness?.querySelector<HTMLInputElement>(".comfort-number-field-single input")?.disabled)
+      .toBe(false);
+    expect(freshness?.textContent).toContain("comfortStaleAfterSources:sensor.room_temperature");
+  });
+
+  it("allows preconfiguring Stale after before enabling Comfort", () => {
+    const { viewHost } = host({
+      enabled: false,
+      expanded: true,
+      comfort: {
+        temperature_entity_id: "sensor.first_temperature",
+        humidity_enabled: false,
+        co2_entity_id: null,
+      },
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    const freshness = container.querySelector(".comfort-freshness-config-section");
+    expect(freshness?.querySelector<HTMLInputElement>(".comfort-number-field-single input")?.disabled)
+      .toBe(false);
+    expect(freshness?.textContent).toContain("comfortStaleAfterSources:sensor.first_temperature");
+    expect(freshness?.textContent).not.toContain("comfortStaleAfterNotApplicable");
+  });
+
+  it("does not treat target humidity as an automatic measured source", () => {
     const { viewHost } = host({
       comfort: {
         temperature_entity_id: null,
@@ -629,7 +815,7 @@ describe("comfort view", () => {
     render(renderComfortView(viewHost, ["climate.first"]), container);
 
     expect(container.textContent).toContain("comfortTemperatureRange");
-    expect(container.textContent).toContain("comfortHumidityRange");
+    expect(container.textContent).not.toContain("comfortHumidityRange");
     expect(container.textContent).toContain("comfortCo2Limits");
   });
 
@@ -997,6 +1183,46 @@ describe("comfort view", () => {
     expect(container.querySelectorAll("select")).toHaveLength(0);
   });
 
+  it("groups current derived freshness uncertainty in Data freshness", () => {
+    const { viewHost } = host({
+      enabled: true,
+      expanded: true,
+      comfort: { derived_metrics: {
+        humidex: { enabled: true, source: "velair", entity_id: null },
+        dew_point: { enabled: true, source: "velair", entity_id: null },
+        absolute_humidity: { enabled: true, source: "velair", entity_id: null },
+      } },
+      assessment: {
+        enabled: true, condition: "comfortable", air_quality: "not_monitored",
+        data_quality: "complete", data_issues: [],
+        derived_metrics: {
+          humidex: { availability: "current", freshness: "unverified", condition: null,
+            metric: "humidex", source: "velair", value: 25.7 },
+          dew_point: { availability: "current", freshness: "unverified", condition: null,
+            metric: "dew_point", source: "velair", value: 16.2 },
+          absolute_humidity: { availability: "current", freshness: "unverified", condition: null,
+            metric: "absolute_humidity", source: "velair", value: 13.4 },
+        },
+      },
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    const freshnessStatus = container.querySelector(".comfort-freshness-config-section .comfort-freshness-status");
+    expect(freshnessStatus?.textContent).toContain("comfortDataUnverified");
+    expect(freshnessStatus?.textContent).toContain("comfortHumidex, comfortDewPoint, comfortAbsoluteHumidity");
+    expect(container.querySelectorAll(".comfort-derived-reading .comfort-data-warning")).toHaveLength(0);
+    expect(container.querySelector(".comfort-derived-visual.humidex")?.textContent).toMatch(/25[,.]7/);
+
+    const cardWithoutConfiguration = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"], { showConfiguration: false }), cardWithoutConfiguration);
+    expect(cardWithoutConfiguration.querySelector(".comfort-freshness-config-section")).toBeNull();
+    expect(cardWithoutConfiguration.querySelectorAll(".comfort-assessment-card > .comfort-freshness-status"))
+      .toHaveLength(1);
+    expect(cardWithoutConfiguration.querySelector(".comfort-freshness-status")?.textContent)
+      .toContain("comfortHumidex, comfortDewPoint, comfortAbsoluteHumidity");
+  });
+
   it("shows simple Humidex values and availability without a Current readings row", () => {
     const current = host({
       enabled: true,
@@ -1146,6 +1372,35 @@ describe("comfort view", () => {
 
     expect(container.querySelector(".comfort-derived-visual-section")).toBeNull();
     expect(container.querySelector(".comfort-configuration")).toBeNull();
+  });
+
+  it("shows outdoor freshness uncertainty alongside partial data", () => {
+    const { viewHost } = host({
+      enabled: true, expanded: true,
+      assessment: {
+        enabled: true, condition: "no_readings", air_quality: "not_monitored",
+        data_quality: "partial", data_issues: ["temperature_missing"],
+        outdoor: {
+          enabled: true, data_quality: "partial",
+          data_issues: ["outdoor_temperature_unverified", "outdoor_humidity_missing"],
+          temperature: { availability: "current", freshness: "unverified", condition: null,
+            metric: "outdoor_temperature", source: "sensor", value: 17 },
+          humidity: { availability: "missing", condition: null,
+            metric: "outdoor_humidity", source: "sensor", value: null },
+          indoor_absolute_humidity: { availability: "current", freshness: "unverified", condition: null,
+            metric: "indoor_absolute_humidity", source: "velair", value: 10 },
+        },
+      },
+    });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+
+    expect(container.querySelector(".comfort-outdoor-comparison.quality-partial .comfort-data-warning")).toBeNull();
+    expect(container.querySelector(".comfort-freshness-config-section .comfort-freshness-status")?.textContent)
+      .toContain("comfortOutdoorTemperatureSensor");
+    expect(container.querySelector(".comfort-freshness-config-section .comfort-freshness-status")?.textContent)
+      .not.toContain("comfortIndoorAbsoluteHumidity");
+    expect(container.querySelector(".comfort-outdoor-cell.temperature")?.textContent).toContain("17 C");
   });
 
   it("renders the backend outdoor comparison without inferring an opportunity", () => {

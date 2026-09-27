@@ -6,6 +6,7 @@ import asyncio
 from copy import deepcopy
 import unittest
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from .helpers import (
     ACTION_SET_HVAC_MODE,
@@ -760,6 +761,49 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
             "climate.salon",
             scheduler._preconditioning_replan_entity_ids(NOW),
         )
+
+    async def test_options_only_profile_filters_per_entity_and_rejects_empty(self) -> None:
+        scheduler, data, manager, saves = self._scheduler()
+        manager.climate_options["climate.salon"] = {
+            "preset_mode": ["sleep"], "fan_mode": ["low"]
+        }
+        manager.climate_options["climate.bedroom"] = {
+            "preset_mode": ["sleep"]
+        }
+        manager.async_apply_climate_options = AsyncMock()
+        profile = _profile()
+        options_block = {
+            "start": "17:00", "action": "set_climate_options",
+            "preset_mode": "sleep", "fan_mode": "low",
+        }
+        profile["zones"]["climate.salon"]["schedule"]["tuesday"] = [
+            dict(options_block)
+        ]
+        profile["zones"]["climate.bedroom"] = {
+            "behavior": "schedule",
+            "schedule": {
+                weekday: ([dict(options_block)] if weekday == "tuesday" else [])
+                for weekday in data["zones"]["climate.bedroom"]["schedule"]
+            },
+        }
+        await scheduler.async_set_profile(profile)
+        saved = data["profiles"][0]["zones"]
+        self.assertEqual(
+            saved["climate.salon"]["schedule"]["tuesday"][0],
+            options_block,
+        )
+        self.assertEqual(
+            saved["climate.bedroom"]["schedule"]["tuesday"][0],
+            {"start": "17:00", "action": "set_climate_options",
+             "preset_mode": "sleep"},
+        )
+        before = deepcopy(data)
+        save_count = len(saves)
+        manager.climate_options["climate.bedroom"] = {}
+        with self.assertRaisesRegex(ValueError, "no supported climate options"):
+            await scheduler.async_set_profile(profile)
+        self.assertEqual(data, before)
+        self.assertEqual(len(saves), save_count)
 
     async def test_profile_write_rejects_unmanaged_zone(self) -> None:
         scheduler, _data, _manager, _saves = self._scheduler()

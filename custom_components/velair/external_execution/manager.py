@@ -10,6 +10,7 @@ import logging
 from typing import Any, Awaitable, Callable
 
 from ..const import (
+    ACTION_SET_CLIMATE_OPTIONS,
     ACTION_SET_TEMPERATURE,
     ATTR_FAN_MODE,
     ATTR_HUMIDITY,
@@ -150,6 +151,7 @@ class ExternalExecutionManager:
             ATTR_SWING_MODE,
         }
         has_temperature = False
+        has_option_action = False
         for weekday in WEEKDAYS:
             blocks = schedule.get(weekday)
             if not isinstance(blocks, list):
@@ -187,8 +189,15 @@ class ExternalExecutionManager:
                     raise ValueError(f"External schedules do not support HVAC mode {hvac_mode}")
                 uses_range = "target_temp_low" in block or "target_temp_high" in block
                 target_type = "range" if uses_range else "scalar"
-                if target_type not in capabilities.supported_target_types:
-                    raise ValueError(f"External schedules do not support {target_type} targets")
+                if (
+                    action != ACTION_SET_CLIMATE_OPTIONS
+                    and target_type not in capabilities.supported_target_types
+                ):
+                    raise ValueError(
+                        f"External schedules do not support {target_type} targets"
+                    )
+                if action == ACTION_SET_CLIMATE_OPTIONS:
+                    has_option_action = True
                 if action == ACTION_SET_TEMPERATURE:
                     value = block.get("temperature")
                     if target_type == "scalar" and not isinstance(value, int | float):
@@ -200,7 +209,7 @@ class ExternalExecutionManager:
                 }
                 if unsupported_options:
                     raise ValueError("External schedules do not support climate options")
-        if not has_temperature:
+        if not has_temperature and not has_option_action:
             raise ExternalScheduleRequiredError(
                 "External schedules require at least one temperature block"
             )

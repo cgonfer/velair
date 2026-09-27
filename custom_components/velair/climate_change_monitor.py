@@ -80,8 +80,21 @@ class ClimateChangeMonitor:
         owned_fields = self._climate_manager.owned_state_change_fields(
             new_state.entity_id, new_state, old_state
         )
+        room_assist_owned_fields = set()
+        room_assist_owned_state_change_fields = getattr(
+            self._scheduler,
+            "room_sensor_assist_owned_state_change_fields",
+            None,
+        )
+        if callable(room_assist_owned_state_change_fields):
+            room_assist_owned_fields = room_assist_owned_state_change_fields(
+                new_state.entity_id,
+                new_state,
+            )
         external_fields = [
-            field for field in changed_fields if field not in owned_fields
+            field
+            for field in changed_fields
+            if field not in owned_fields and field not in room_assist_owned_fields
         ]
         if not external_fields:
             return

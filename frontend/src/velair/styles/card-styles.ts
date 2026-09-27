@@ -1182,6 +1182,11 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       white-space: nowrap;
     }
 
+    .climate-options-inline-summary.invalid {
+      color: var(--error-color, #db4437);
+      white-space: normal;
+    }
+
     .climate-options-inline-summary::before {
       background: color-mix(in srgb, var(--primary-color) 42%, transparent);
       border-radius: 999px;
@@ -1191,6 +1196,56 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       position: absolute;
       top: 6px;
       width: 2px;
+    }
+
+    .block-mode-warning {
+      align-items: flex-start;
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 11px;
+      gap: 3px 5px;
+      grid-column: 1 / -1;
+      line-height: 1.4;
+      min-width: 0;
+      padding: 6px 8px;
+      white-space: normal;
+    }
+
+    .block-command-preview {
+      border-bottom: 1px solid var(--divider-color);
+      color: var(--secondary-text-color);
+      display: grid;
+      font-size: 12px;
+      gap: 3px;
+      grid-column: 1 / -1;
+      line-height: 1.4;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      padding: 2px 2px 8px;
+    }
+
+    .block-command-preview strong {
+      color: var(--primary-text-color);
+      font-weight: 600;
+    }
+
+    .block-mode-warning {
+      background: color-mix(in srgb, var(--warning-color, #e69b00) 9%, transparent);
+      border-left: 2px solid var(--warning-color, #e69b00);
+      border-radius: 4px;
+      color: var(--primary-text-color);
+      margin: -2px 0 6px;
+    }
+
+    .block-mode-warning ha-icon {
+      --mdc-icon-size: 16px;
+      color: var(--warning-color, #e69b00);
+      flex: 0 0 16px;
+    }
+
+    .block-mode-warning span {
+      flex: 1 1 180px;
+      min-width: 0;
     }
 
     input,

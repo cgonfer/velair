@@ -16,6 +16,7 @@ from .helpers import (
     normalize_schedule_data,
     NOW,
 )
+from custom_components.velair import scheduler as scheduler_module
 from custom_components.velair.climate_change_monitor import (
     ClimateChangeMonitor,
     _control_change,
@@ -1068,6 +1069,142 @@ class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0)
 
         scheduler.async_handle_external_climate_change.assert_not_awaited()
+
+    async def test_room_assist_echo_is_not_forwarded_as_manual(self) -> None:
+        manager = SimpleNamespace(
+            owned_state_change_fields=lambda *_args: set(),
+            climate_state_snapshot_from_state=lambda _entity_id, state: {
+                "hvac_mode": state.state,
+                "temperature": state.attributes["temperature"],
+            },
+        )
+        scheduler = SimpleNamespace(
+            async_handle_external_climate_change=AsyncMock(),
+            room_sensor_assist_owned_state_change_fields=Mock(
+                return_value={"temperature"}
+            ),
+        )
+        monitor = ClimateChangeMonitor(
+            FakeHass(), ["climate.salon"], manager, scheduler
+        )
+        old = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={"temperature": 17.0},
+            context=None,
+        )
+        new = SimpleNamespace(
+            entity_id="climate.salon",
+            state="heat",
+            attributes={"temperature": 18.0},
+            context=SimpleNamespace(id="device-echo", parent_id=None, user_id=None),
+        )
+
+        monitor._handle_state_change(
+            SimpleNamespace(data={"old_state": old, "new_state": new})
+        )
+        await asyncio.sleep(0)
+
+        scheduler.room_sensor_assist_owned_state_change_fields.assert_called_once_with(
+            "climate.salon",
+            new,
+        )
+        scheduler.async_handle_external_climate_change.assert_not_awaited()
+
+    async def test_room_assist_owned_fields_require_anonymous_matching_echo(
+        self,
+    ) -> None:
+        entity_id = "climate.salon"
+        hass = FakeHass()
+        hass.config.units = SimpleNamespace(temperature_unit="°C")
+        hass.states[entity_id] = SimpleNamespace(
+            entity_id=entity_id,
+            state="heat",
+            attributes={
+                "temperature": 17.0,
+                "target_temp_step": 1.0,
+                "min_temp": 5.0,
+                "max_temp": 35.0,
+                "supported_features": 1,
+                "hvac_modes": ["off", "heat", "cool"],
+            },
+            context=None,
+        )
+        data = normalize_schedule_data(
+            {
+                "zones": {
+                    entity_id: {
+                        "enabled": True,
+                        "schedule": empty_week_schedule(),
+                    }
+                }
+            },
+            [entity_id],
+        )
+        manager = ClimateManager(hass)
+        scheduler = VelairScheduler(hass, data, manager, AsyncMock())
+        scheduler._room_sensor_assist_target_event = Mock(
+            return_value=SimpleNamespace(
+                weekday="sunday",
+                start="07:15",
+                temperature=20.0,
+                target_temp_low=None,
+                target_temp_high=None,
+            )
+        )
+        scheduler._room_sensor_assist_states[entity_id] = (
+            scheduler_module._RoomSensorAssistState(
+                entity_id=entity_id,
+                target_temperature=20.0,
+                applied_temperature=18.0,
+                applied_offset=-2.0,
+                direction="heat",
+                hvac_mode="heat",
+                room_temperature_entity_id="sensor.room",
+                weekday="sunday",
+                start="07:15",
+            )
+        )
+        anonymous_echo = SimpleNamespace(
+            entity_id=entity_id,
+            state="heat",
+            attributes={**hass.states[entity_id].attributes, "temperature": 18.0},
+            context=SimpleNamespace(id="device-echo", parent_id=None, user_id=None),
+        )
+        user_change = SimpleNamespace(
+            entity_id=entity_id,
+            state="heat",
+            attributes={**hass.states[entity_id].attributes, "temperature": 18.0},
+            context=SimpleNamespace(id="user-change", parent_id=None, user_id="user"),
+        )
+        different_value = SimpleNamespace(
+            entity_id=entity_id,
+            state="heat",
+            attributes={**hass.states[entity_id].attributes, "temperature": 19.0},
+            context=SimpleNamespace(id="device-echo", parent_id=None, user_id=None),
+        )
+
+        self.assertEqual(
+            {"temperature"},
+            scheduler.room_sensor_assist_owned_state_change_fields(
+                entity_id,
+                anonymous_echo,
+            ),
+        )
+        self.assertEqual(
+            set(),
+            scheduler.room_sensor_assist_owned_state_change_fields(
+                entity_id,
+                user_change,
+            ),
+        )
+        self.assertEqual(
+            set(),
+            scheduler.room_sensor_assist_owned_state_change_fields(
+                entity_id,
+                different_value,
+            ),
+        )
 
     async def test_expected_then_intermediate_then_expected_stays_automatic(
         self,

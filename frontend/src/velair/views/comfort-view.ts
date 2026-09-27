@@ -167,7 +167,7 @@ function renderComfortZone(
                 ? renderComfortRuntime(host, entityId, settings, assessment, options)
                 : renderComfortDisabled(host)}
               ${options.showConfiguration
-                ? renderComfortConfigurationDetails(host, entityId, settings)
+                ? renderComfortConfigurationDetails(host, entityId, settings, assessment)
                 : nothing}
             </div>
           `
@@ -204,6 +204,7 @@ function renderComfortRuntime(
           ${renderComfortAirQualityPill(host, assessment.air_quality)}
         </span>
       </div>
+      ${options.showConfiguration ? nothing : renderComfortFreshnessSummary(host, settings, assessment)}
       ${renderComfortInsights(host, entityId, assessment)}
       ${renderComfortVisual(host, entityId, assessment, options)}
       ${renderDerivedMetricsVisualSection(host, entityId, settings, assessment)}
@@ -772,14 +773,18 @@ function renderComfortDataWarning(
   entityId: string,
   assessment?: ComfortAssessment,
 ) {
-  if (!assessment?.enabled || assessment.data_quality === "complete") {
+  if (!assessment?.enabled || assessment.data_quality === "complete" || assessment.data_quality === "unverified") {
     return nothing;
   }
-  const detail = assessment.data_issues.length
-    ? assessment.data_issues
-      .map((issue) => host._t(comfortDataIssueLabelKey(issue)))
-      .join(" · ")
-    : host._t(comfortDataQualityLabelKey(assessment.data_quality));
+  const details = assessment.data_issues.length
+    ? assessment.data_issues.map((issue) => host._t(comfortDataIssueLabelKey(issue)))
+    : [host._t(comfortDataQualityLabelKey(assessment.data_quality))];
+  if (
+    [assessment.temperature, assessment.humidity].some(
+      (metric) => metric?.source === "climate" && metric.freshness === "unverified",
+    )
+  ) details.push(host._t("comfortClimateSourceFreshnessHelp"));
+  const detail = details.join(" · ");
   const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
   return html`<span class="comfort-data-warning">
     ${renderInlineHelp(
@@ -812,6 +817,7 @@ function renderComfortConfigurationDetails(
   host: ComfortViewHost,
   entityId: string,
   settings: ComfortSettings,
+  assessment?: ComfortAssessment,
 ) {
   const [temperatureMinimum, temperatureMaximum] = absoluteTemperatureBounds(
     host._temperatureUnit(entityId),
@@ -837,6 +843,8 @@ function renderComfortConfigurationDetails(
     "co2_entity_id",
     "co2",
   );
+  const directSources = configuredDirectComfortSources(host, entityId, settings);
+  const freshnessSourcesId = `comfort-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}-freshness-sources`;
   return html`
     <details class="comfort-configuration">
       <summary>
@@ -850,9 +858,16 @@ function renderComfortConfigurationDetails(
         <ha-icon class="comfort-configuration-chevron" icon="mdi:chevron-down"></ha-icon>
       </summary>
       <div class="comfort-configuration-content">
-        <section class="comfort-config-section comfort-data-sources-config-section comfort-freshness-config-section">
+        <section class="comfort-config-section comfort-data-sources-config-section">
           <h3><ha-icon icon="mdi:database-outline"></ha-icon>${host._t("comfortDataSources")}</h3>
-          <h4 class="comfort-config-subheading">${host._t("comfortDataFreshness")}</h4>
+          <div class="comfort-config-rows">
+            ${renderComfortSensorPicker(host, entityId, settings, "temperature_entity_id", "temperature", "comfortTemperatureSensor")}
+            ${renderComfortSensorPicker(host, entityId, settings, "humidity_entity_id", "humidity", "comfortHumiditySensor")}
+            ${renderComfortSensorPicker(host, entityId, settings, "co2_entity_id", "co2", "comfortCo2Sensor")}
+          </div>
+        </section>
+        <section class="comfort-config-section comfort-freshness-config-section">
+          <h3><ha-icon icon="mdi:clock-check-outline"></ha-icon>${host._t("comfortDataFreshness")}</h3>
           <div class="comfort-config-rows">
             ${renderComfortNumber(
               host,
@@ -864,11 +879,16 @@ function renderComfortConfigurationDetails(
               1440,
               5,
               host._t("minutesShort"),
+              directSources.length === 0,
+              freshnessSourcesId,
             )}
-            ${renderComfortSensorPicker(host, entityId, settings, "temperature_entity_id", "temperature", "comfortTemperatureSensor")}
-            ${renderComfortSensorPicker(host, entityId, settings, "humidity_entity_id", "humidity", "comfortHumiditySensor")}
-            ${renderComfortSensorPicker(host, entityId, settings, "co2_entity_id", "co2", "comfortCo2Sensor")}
           </div>
+          <p id=${freshnessSourcesId} class="comfort-config-description comfort-freshness-sources">
+            ${directSources.length
+              ? host._t("comfortStaleAfterSources", { entities: directSources.join(", ") })
+              : host._t("comfortStaleAfterNotApplicable")}
+          </p>
+          ${renderComfortFreshnessSummary(host, settings, assessment)}
         </section>
         <section class="comfort-config-section comfort-model-config-section">
           <h3><ha-icon icon="mdi:shape-outline"></ha-icon>${host._t("comfortModel")}</h3>
@@ -1692,6 +1712,71 @@ function renderComfortSensorPicker(
   `;
 }
 
+function configuredDirectComfortSources(
+  host: ComfortViewHost,
+  entityId: string,
+  settings: ComfortSettings,
+): string[] {
+  const roomSensor = host._data?.zones[entityId]?.preconditioning?.room_temperature_entity_id;
+  const sources = [
+    settings.temperature_entity_id || roomSensor,
+    settings.humidity_enabled ? settings.humidity_entity_id : null,
+    settings.co2_entity_id,
+    ...(settings.outdoor_comparison_enabled
+      ? [settings.outdoor_temperature_entity_id, settings.outdoor_humidity_entity_id]
+      : []),
+    ...Object.values(settings.derived_metrics)
+      .filter((metric) => metric.enabled && metric.source === "entity")
+      .map((metric) => metric.entity_id),
+  ];
+  return [...new Set(sources
+    .map((source) => source?.trim())
+    .filter((source): source is string => Boolean(source && !source.startsWith("climate."))))];
+}
+
+function comfortUnverifiedReadingLabels(
+  host: ComfortViewHost,
+  settings: ComfortSettings,
+  assessment?: ComfortAssessment,
+): string[] {
+  if (!settings.enabled || !assessment?.enabled) return [];
+  const readings: Array<[ComfortMetricAssessment | undefined, TranslationKey]> = [
+    [assessment.temperature, "comfortTemperature"],
+    [assessment.humidity, "comfortHumidity"],
+    [assessment.co2, "comfortCo2"],
+    ...DERIVED_METRICS
+      .filter(({ metric }) => settings.derived_metrics[metric].enabled)
+      .map(({ metric, label }): [ComfortMetricAssessment | undefined, TranslationKey] => [
+        assessment.derived_metrics?.[metric], label,
+      ]),
+  ];
+  if (assessment.outdoor?.enabled) {
+    readings.push(
+      [assessment.outdoor.temperature, "comfortOutdoorTemperatureSensor"],
+      [assessment.outdoor.humidity, "comfortOutdoorHumiditySensor"],
+    );
+  }
+  return readings
+    .filter(([reading]) => reading?.availability === "current" && reading.freshness === "unverified")
+    .map(([, label]) => host._t(label));
+}
+
+function renderComfortFreshnessSummary(
+  host: ComfortViewHost,
+  settings: ComfortSettings,
+  assessment?: ComfortAssessment,
+) {
+  const unverifiedReadings = comfortUnverifiedReadingLabels(host, settings, assessment);
+  if (!unverifiedReadings.length) return nothing;
+  const climateUnverified = [assessment?.temperature, assessment?.humidity].some(
+    (metric) => metric?.source === "climate" && metric.freshness === "unverified",
+  );
+  return html`<div class="comfort-freshness-status">
+    <p>${host._t("comfortDataUnverified")} (${unverifiedReadings.join(", ")})</p>
+    ${climateUnverified ? html`<p>${host._t("comfortClimateSourceFreshnessHelp")}</p>` : nothing}
+  </div>`;
+}
+
 function hasComfortMetricSource(
   host: ComfortViewHost,
   entityId: string,
@@ -1712,7 +1797,7 @@ function hasComfortMetricSource(
     const attributes = host.hass?.states?.[entityId]?.attributes;
     return Boolean(
       attributes
-      && ("current_humidity" in attributes || "humidity" in attributes),
+      && "current_humidity" in attributes,
     );
   }
   return false;
@@ -1740,7 +1825,7 @@ function comfortSensorSourceDetail(
     const attributes = host.hass?.states?.[entityId]?.attributes;
     if (
       attributes
-      && ("current_humidity" in attributes || "humidity" in attributes)
+      && "current_humidity" in attributes
     ) {
       return host._t("comfortAutomaticSourceValue", { entity: entityId });
     }
@@ -1792,6 +1877,8 @@ function renderComfortNumber(
   max: number,
   step: number,
   unit: string,
+  disabled = false,
+  describedBy?: string,
 ) {
   return html`
     <label class="comfort-config-row">
@@ -1799,7 +1886,7 @@ function renderComfortNumber(
       <span class="comfort-number-single">
         <span class="comfort-number-field comfort-number-field-single">
           <small aria-hidden="true">&nbsp;</small>
-          ${renderComfortNumberInput(host, entityId, field, value, min, max, step)}
+          ${renderComfortNumberInput(host, entityId, field, value, min, max, step, disabled, describedBy)}
         </span>
         <span class="comfort-number-single-unit">${unit}</span>
       </span>
@@ -1815,6 +1902,8 @@ function renderComfortNumberInput(
   min: number,
   max: number,
   step: number,
+  disabled = false,
+  describedBy?: string,
 ) {
   return html`
     <input
@@ -1823,7 +1912,8 @@ function renderComfortNumberInput(
       max=${String(max)}
       step=${String(step)}
       .value=${String(value)}
-      ?disabled=${host._settingsSaving}
+      ?disabled=${host._settingsSaving || disabled}
+      aria-describedby=${describedBy ?? nothing}
       @change=${(event: Event) => {
         const rawValue = Number((event.currentTarget as HTMLInputElement).value);
         const boundedValue = Math.min(
@@ -1961,6 +2051,7 @@ function comfortDataQualityLabelKey(
     TranslationKey
   > = {
     partial: "comfortDataPartial",
+    unverified: "comfortDataUnverified",
     stale: "comfortDataStale",
     unavailable: "comfortDataUnavailable",
   };
@@ -1971,10 +2062,13 @@ function comfortDataIssueLabelKey(issue: string): TranslationKey {
   const keys: Record<string, TranslationKey> = {
     co2_missing: "comfortDataIssueCo2Missing",
     co2_stale: "comfortDataIssueCo2Stale",
+    co2_unverified: "comfortDataIssueCo2Unverified",
     humidity_missing: "comfortDataIssueHumidityMissing",
     humidity_stale: "comfortDataIssueHumidityStale",
+    humidity_unverified: "comfortDataIssueHumidityUnverified",
     temperature_missing: "comfortDataIssueTemperatureMissing",
     temperature_stale: "comfortDataIssueTemperatureStale",
+    temperature_unverified: "comfortDataIssueTemperatureUnverified",
   };
   return keys[issue] ?? "comfortDataUnavailable";
 }

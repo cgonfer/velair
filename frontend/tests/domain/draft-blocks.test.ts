@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
 import {
   addDraftBlock,
   clampBlocksToTemperatureLimits,
@@ -27,10 +27,45 @@ const normalize = (blocks: DraftScheduleBlock[]) =>
     duplicateStartError: (start) => `duplicate:${start}`,
     invalidStartError: (start) => `invalid-start:${start}`,
     invalidTemperatureError: (start, error) => `invalid-temperature:${start}:${error}`,
+    invalidClimateOptionsError: (start, reason) => `invalid-options:${start}:${reason}`,
     temperatureError,
   });
 
 describe("draft block domain", () => {
+  it("saves preset-only without a target or HVAC mode and restores the draft target", () => {
+    const original: DraftScheduleBlock = { action: ACTION_SET_TEMPERATURE, start: "08:00",
+      hvac_mode: "cool", temperature: 23, preset_mode: "none" };
+    const disabled = updateDraftBlock([original], 0, "action", ACTION_SET_CLIMATE_OPTIONS);
+    expect(disabled[0]).toMatchObject({ temperature: 23, hvac_mode: "", preset_mode: "none" });
+    expect(normalize(disabled)).toEqual({ ok: true, blocks: [{
+      action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "none",
+    }] });
+    expect(updateDraftBlock(disabled, 0, "action", ACTION_SET_TEMPERATURE)[0].temperature).toBe(23);
+  });
+
+  it("requires at least one valid option for an options-only block", () => {
+    expect(normalize([{ action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00",
+      hvac_mode: "", temperature: 20 }])).toEqual({
+      ok: false, error: "invalid-options:08:00:required",
+    });
+    expect(normalize([{ action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00",
+      hvac_mode: "", humidity: "bad" }])).toEqual({
+      ok: false, error: "invalid-options:08:00:humidity",
+    });
+  });
+
+  it("keeps compatible controls and rejects an empty options-only transfer", () => {
+    const blocks = [{ action: ACTION_SET_CLIMATE_OPTIONS, start: "09:00", preset_mode: "eco",
+      fan_mode: "quiet" }];
+    const support = { fanModes: ["quiet"], presetModes: [], swingModes: [],
+      swingHorizontalModes: [] };
+    expect(filterBlocksForClimateOptions(blocks, support)).toEqual([{
+      action: ACTION_SET_CLIMATE_OPTIONS, start: "09:00", fan_mode: "quiet",
+    }]);
+    expect(() => filterBlocksForClimateOptions(blocks, { ...support, fanModes: [] }))
+      .toThrow("No supported climate options");
+  });
+
   it("adds a block using the previous temperature and provided start", () => {
     expect(addDraftBlock([
       { action: ACTION_SET_TEMPERATURE, hvac_mode: "heat", start: "08:00", temperature: 19.5 },

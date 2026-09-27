@@ -364,6 +364,39 @@ describe("diagnostics view", () => {
       .not.toContain("diagnosticsConfigured");
   });
 
+  it("shows unverified Comfort freshness in current unit diagnostics", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].configuration.comfort = { enabled: true };
+    snapshot.units["climate.warning"].comfort = {
+      condition: "comfortable", data_quality: "unverified",
+    };
+    const viewHost = host(snapshot);
+    viewHost._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+
+    render(renderDiagnosticsView(viewHost), container);
+
+    expect(container.querySelector(".diagnostics-function-grid")?.textContent)
+      .toContain("comfortDataUnverified");
+  });
+
+  it("identifies unverified derived metrics when primary Comfort data is complete", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].configuration.comfort = { enabled: true };
+    snapshot.units["climate.warning"].comfort = {
+      condition: "comfortable", data_quality: "complete",
+      derived_metrics: { absolute_humidity: {
+        availability: "current", freshness: "unverified", value: 9.2,
+      } },
+    };
+    const viewHost = host(snapshot);
+    viewHost._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+    expect(container.querySelector(".diagnostics-function-grid")?.textContent)
+      .toContain("comfortDataUnverified: comfortAbsoluteHumidity");
+  });
+
   it("shows Off only when disabled configuration still has residual function runtime", () => {
     const snapshot = diagnostics();
     snapshot.units["climate.warning"].configuration.preconditioning = {
@@ -746,6 +779,24 @@ describe("diagnostics view", () => {
     expect(container.textContent).toContain("diagnosticsDeliverySuccess");
     expect(container.querySelector(".diagnostics-ok")).toBeNull();
     expect(container.querySelectorAll(".diagnostics-group h4 ha-icon").length).toBeGreaterThan(1);
+  });
+
+  it("labels unverified Comfort freshness in retained history", () => {
+    const snapshot = diagnostics();
+    snapshot.history = [{
+      at: "2026-08-18T10:02:00Z", kind: "event", category: "comfort",
+      severity: "info", entity_id: "climate.warning",
+      data: {
+        event: "comfort_assessment_changed", condition: "comfortable",
+        air_quality: "good", data_quality: "unverified",
+      },
+    }];
+    const container = document.createElement("div");
+
+    render(renderDiagnosticsView(host(snapshot)), container);
+
+    expect(container.querySelector(".diagnostics-history li")?.textContent)
+      .toContain("comfortDataUnverified");
   });
 
   it("shows safe feature evidence in retained history", () => {

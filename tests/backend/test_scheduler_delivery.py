@@ -328,6 +328,42 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual([event["temperature"] for event in applied], [24])
 
+    async def test_options_only_partial_failure_reports_delivery_diagnostic(self) -> None:
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [{
+            "start": "17:00",
+            "action": "set_climate_options",
+            "fan_mode": "auto",
+            "preset_mode": "sleep",
+        }]
+        self.climate.climate_options[self.entity_id] = {
+            "fan_mode": ["auto"],
+            "preset_mode": ["sleep"],
+        }
+        diagnostics = []
+        self.scheduler._climate_delivery._observer = (
+            lambda entity_id, status, details: diagnostics.append(
+                (entity_id, status, details)
+            )
+        )
+
+        async def fail_after_fan_mode(_entity_id, **_options) -> None:
+            self.climate.calls.append(("set_fan_mode", self.entity_id, "auto"))
+            raise HomeAssistantError("preset service failed")
+
+        self.climate.async_apply_climate_options = fail_after_fan_mode
+        with patch("custom_components.velair.climate_delivery.RETRY_DELAYS", (60,)):
+            await self.scheduler.async_apply_current_schedule()
+
+        self.assertEqual(
+            self.climate.calls, [("set_fan_mode", self.entity_id, "auto")]
+        )
+        self.assertTrue(any(status == "failed" for _, status, _ in diagnostics))
+        self.assertFalse(any(
+            event_type == EVENT_VELAIR
+            and data.get("event") == EVENT_TYPE_CLIMATE_TARGET_APPLIED
+            for event_type, data in self.hass.bus.events
+        ))
+
     async def test_room_assist_failure_retries_before_applied_side_effects(self) -> None:
         attempts = 0
 

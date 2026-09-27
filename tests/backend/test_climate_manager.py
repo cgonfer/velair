@@ -67,6 +67,60 @@ class _TimedLogicalActionRecorder:
         self.clock.return_value = 100.0 + (30.0 * self.calls)
 
 
+class ClimateManagerOptionsOnlyTest(unittest.IsolatedAsyncioTestCase):
+    async def test_optional_services_run_in_order_without_temperature_or_power(self) -> None:
+        services = _ServiceRecorder()
+        hass = SimpleNamespace(
+            services=services,
+            states={"climate.room": SimpleNamespace(state="off", attributes={})},
+        )
+        manager = ClimateManager(hass)
+        await manager.async_apply_climate_options(
+            "climate.room",
+            fan_mode="auto",
+            preset_mode="sleep",
+            swing_mode="vertical",
+            swing_horizontal_mode="auto",
+            humidity=45,
+        )
+        self.assertEqual(
+            [service for _domain, service, _data, _blocking in services.calls],
+            ["set_fan_mode", "set_preset_mode", "set_swing_mode",
+             "set_swing_horizontal_mode", "set_humidity"],
+        )
+        self.assertTrue(all(blocking for *_rest, blocking in services.calls))
+
+
+class ClimateManagerOptionsFailureTest(unittest.IsolatedAsyncioTestCase):
+    async def test_second_service_failure_leaves_first_applied_and_stops_sequence(self) -> None:
+        class FailingServices(_ServiceRecorder):
+            async def async_call(
+                self, domain, service, data, *, blocking=False
+            ) -> None:
+                await super().async_call(
+                    domain, service, data, blocking=blocking
+                )
+                if service == "set_preset_mode":
+                    raise RuntimeError("preset service failed")
+
+        services = FailingServices()
+        manager = ClimateManager(SimpleNamespace(
+            services=services,
+            states={"climate.room": SimpleNamespace(state="off", attributes={})},
+        ))
+        with self.assertRaisesRegex(RuntimeError, "preset service failed"):
+            await manager.async_apply_climate_options(
+                "climate.room",
+                fan_mode="auto",
+                preset_mode="sleep",
+                swing_mode="vertical",
+            )
+        self.assertEqual(
+            [service for _domain, service, _data, _blocking in services.calls],
+            ["set_fan_mode", "set_preset_mode"],
+        )
+
+
 class ClimateManagerOwnershipLedgerTest(unittest.IsolatedAsyncioTestCase):
     def _manager(self, *, fail: bool = False) -> ClimateManager:
         state = SimpleNamespace(

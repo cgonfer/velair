@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
 import {
   applySelectedTemplate,
   applyTemplateToTargets,
@@ -9,6 +9,7 @@ import {
   toggleTemplateApplyTargetForHost,
   updateTemplateNameDraft,
 } from "../../src/velair/controllers/template-actions";
+import { UnsupportedClimateOptionsError } from "../../src/velair/domain/draft-blocks";
 import { unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
 import type { ScheduleBlock, ScheduleTemplate } from "../../src/velair/types";
 
@@ -191,6 +192,22 @@ describe("template actions controller", () => {
       { action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 22, hvac_mode: "heat" },
     ]);
     expect(state._templateApplyTargets.size).toBe(0);
+  });
+
+  it("reports unsupported options before applying a template to any target", async () => {
+    const { api, state } = host();
+    state._templateDraftBlocks = [{
+      action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "eco",
+    }];
+    state._clampBlocksForEntity = (_blocks: ScheduleBlock[], entityId: string) => {
+      if (entityId === "climate.bedroom") throw new UnsupportedClimateOptionsError("08:00");
+      return state._templateDraftBlocks;
+    };
+    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
+    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
+    await applyTemplateToTargets(state, template);
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+    expect(state._error).toBe('climateOptionsUnsupportedAt:{"entity":"climate.bedroom","start":"08:00"}');
   });
 
   it("stops template application when a target climate does not support a mode", async () => {

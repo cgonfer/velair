@@ -9,6 +9,7 @@ Velair manages schedules for the `climate.*` entities selected during integratio
 A schedule is made of weekday blocks. A block starts at a specific time and can:
 
 - set a target temperature, optionally with an HVAC mode and supported climate options such as fan mode, preset mode, swing mode, horizontal swing mode, or target humidity;
+- set one or more supported climate options without sending a target temperature or changing the HVAC mode;
 - change only the HVAC mode and leave the target under device control;
 - turn the climate entity off.
 
@@ -452,6 +453,8 @@ Profile schedules, or refreshed backend data.
 4. Add a block.
 5. Choose the start time.
 6. Choose an HVAC mode or leave it as `Keep current mode`.
+7. Enter a target temperature or range, or select climate options without a target.
+8. Save.
 
 After selecting an explicit non-off HVAC mode, use the compact thermometer
 button in the Target cell to disable its temperature input. The grey input then
@@ -469,14 +472,51 @@ are also unavailable for these blocks so the persisted action remains one
 unambiguous HVAC-mode change. External schedule providers must explicitly
 advertise support for this action; Velair never converts it into a temperature
 block.
-7. Enter the target temperature, or the lower and upper targets for a range.
-8. Save.
+
+To schedule a preset or another climate option without a target temperature,
+choose the option in the block's additional controls and disable the Target
+input. The block may combine preset, fan, swing, horizontal swing, and target
+humidity settings. It calls only the corresponding Home Assistant climate
+services; it does not send `climate.set_temperature`, change the HVAC mode, or
+turn on a climate that is off. A block must contain at least one supported
+option. Changes made directly to those options between scheduled events are
+not immediately restored by Velair. Option-only blocks do not run
+preconditioning or Room Assist. When a block has several controls, Home
+Assistant receives separate service calls in sequence. If a later call fails,
+earlier controls may already have changed; Velair reports the failed delivery.
+
+When a template or Profile is applied to another climate, Velair keeps the
+options that climate supports. If none remain in an option-only block, the
+destination schedule is rejected rather than storing an empty action.
 
 Velair uses the selected climate entity capabilities when editing a schedule. Unsupported modes are not offered for that climate, and temperatures are constrained to the climate entity range.
 
-`Keep current mode` still applies the target and any climate options in the block. A Keep block can be saved when the climate advertises at least one non-off mode compatible with its target type; this does not change merely because the device is temporarily off while the schedule is edited. Some integrations only advertise their single-temperature target feature after a mode starts, so Velair selects the compatible mode before sending that target and lets the Home Assistant service report any device-specific failure. If the climate is already running, Velair preserves its current HVAC mode. Native ranges still require explicit range support, and Velair never converts a single target into a range or a range into a single target.
+In a temperature block, `Keep current mode` sends the target and any selected
+climate options without requesting another mode while the climate is on. If
+the climate is off, Velair starts it in the first supported mode compatible
+with the target. A Keep block can be saved when the climate advertises at
+least one non-off mode compatible with its target type; this does not
+guarantee that the running mode will be compatible when the block executes.
+If the running mode cannot accept the target, delivery fails without
+switching to another mode. Some integrations only advertise their
+single-temperature target feature after a mode starts, so Velair starts
+the compatible mode before sending the target and lets the Home Assistant
+service report any device-specific failure. Native ranges still require
+explicit range support, and Velair never converts a single target into a
+range or a range into a single target.
 
-Velair blocks contain either one target temperature or a complete lower and upper target range. The editor uses the capabilities published by the climate entity and defaults new `heat_cool` blocks to a range when supported. A range is shown as, for example, `20–24 °C`. Velair never invents a range from one temperature and rejects incomplete, inverted, or incompatible targets before sending a command.
+The editor keeps selected climate options visible in a compact line. For a
+block with climate options, open its options control to see what it will send:
+the target (if any), how the HVAC mode is handled, and the selected options.
+The explanation also clarifies that a single temperature is not converted
+into a range. This works in schedules, Profiles, and templates. The editor
+warns without blocking a save if an earlier block on that day selects a mode that may
+not accept the target type. When no earlier explicit mode or turn-off
+block determines the mode, it uses the climate's current mode for this
+hint. The mode can change before the block runs, so the warning is
+conditional.
+
+Temperature blocks contain either one target temperature or a complete lower and upper target range. The editor uses the capabilities published by the climate entity and defaults new `heat_cool` blocks to a range when supported. A range is shown as, for example, `20–24 °C`. Velair never invents a range from one temperature and rejects incomplete, inverted, or incompatible targets before sending a command.
 
 Native ranges are limited to `heat_cool` in this first phase. Velair does not
 assume that a device's `auto` mode uses the same lower and upper target model.
@@ -560,8 +600,10 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v11 exports preserve raw values and declare their unit.
-Older supported files, including v4, v5, v8, and v9, remain importable. Imports
+Current portable model v12 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v12 exports; use a version that supports
+v12 to restore them. Older supported files, including v4, v5, v8, and v9,
+remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
 Velair versions that produced those files stored Celsius values. Export remains
@@ -1094,6 +1136,24 @@ data:
 ```
 
 Schedule blocks may include optional `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode`, and `humidity` values. Unsupported values are removed for the target climate before the schedule is stored or applied.
+
+Use `action: set_climate_options` with one or more of these fields and no
+temperature or `hvac_mode` to call only their Home Assistant services. For example:
+
+```yaml
+action: velair.set_daily_schedule
+data:
+  entity_id: climate.living_room
+  weekday: monday
+  blocks:
+    - start: "06:30"
+      action: set_climate_options
+      preset_mode: comfort
+    - start: "22:00"
+      action: set_climate_options
+      preset_mode: eco
+      fan_mode: quiet
+```
 
 ### `velair.copy_day_schedule`
 
