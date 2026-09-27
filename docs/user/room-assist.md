@@ -36,10 +36,11 @@ Selecting a room sensor alone only stores the sensor. Velair starts using it as 
 
 Room Sensor Assist does not require Adaptive Preconditioning. It can run on normal scheduled blocks and on blocks that Adaptive Preconditioning has started early.
 
-A block set to **Keep current mode** still applies its scheduled target. Room
-Assist uses the mode that the climate is actually running; if the climate is
-off, Velair starts it in a compatible supported mode. **Keep current mode**
-does not mean "keep the thermostat target unchanged".
+A temperature block set to **Keep current mode** still applies its scheduled
+target. Room Assist uses the mode that the climate is actually running; if the
+climate is off, Velair starts it in a compatible supported mode. **Keep current
+mode** does not mean "keep the thermostat target unchanged" for a temperature
+block. An option-only block has no target, so Room Assist does not run for it.
 
 Refresh delay is the debounce applied after the room sensor or climate temperature changes. The default is `20` seconds. Set it to `0` for immediate recalculation, or up to `300` seconds to group frequent sensor updates.
 

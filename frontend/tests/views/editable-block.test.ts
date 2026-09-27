@@ -3,7 +3,7 @@
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 
-import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
 import { cardStyles } from "../../src/velair/styles/card-styles";
 import { responsiveStyles } from "../../src/velair/styles/responsive-styles";
 import { renderEditableBlock } from "../../src/velair/views/schedule-view";
@@ -12,6 +12,7 @@ import type { BlockDraftSource, DraftScheduleBlock } from "../../src/velair/type
 function host() {
   return {
     _fanModeOptions: () => ["quiet"],
+    _formatTemperature: (value: number) => String(value) + " °C",
     _humidityLimits: () => [30, 70] as [number, number],
     _hvacModeOptions: () => ["heat", "cool", "off"],
     _inputValue: (event: Event) => (event.target as HTMLInputElement | HTMLSelectElement).value,
@@ -25,6 +26,35 @@ function host() {
     _temperatureLimits: () => [5, 30] as [number, number],
     _temperatureStep: () => 0.5,
     _updateDraftBlock: vi.fn(),
+  };
+}
+
+function translatedHost() {
+  const viewHost = host();
+  return {
+    ...viewHost,
+    _t: (key: string, replacements: Record<string, string | number> = {}) => {
+      const messages: Record<string, string> = {
+        blockNoTarget: "No temperature target.",
+        blockSendHelp: "What this block sends",
+        blockOptionsOnlySummary: "Sends only {options}. Does not change the HVAC mode or turn on the climate.",
+        blockSendsTarget: "Sends target {target}.",
+        blockKeepModeSummary: "Keeps the current mode while on; if off, turns on in a compatible mode.",
+        blockSingleNoRange: "One temperature is never converted into a range.",
+        blockAlsoSendsOptions: "Also sends {options}.",
+        keepModePrevious: "An earlier block selects {mode}.",
+        keepModeCurrent: "The climate is currently in {mode}.",
+        keepModeScalarWarning: "If that mode remains active, the single temperature will fail.",
+        keepModeRangeWarning: "If that mode remains active, the range will fail.",
+        keepModeOnlyOptionsHint: "Disable the target to apply only options.",
+        presetMode: "Preset",
+        swingMode: "Swing",
+      };
+      return Object.entries(replacements).reduce(
+        (message, [name, value]) => message.replace("{" + name + "}", String(value)),
+        messages[key] ?? key,
+      );
+    },
   };
 }
 
@@ -46,6 +76,148 @@ function modeSelect(container: HTMLElement): HTMLSelectElement {
 }
 
 describe("editable schedule block view", () => {
+  it("shows a clear inline message when the final option is removed", () => {
+    const container = document.createElement("div");
+    render(renderEditableBlock(host(), {
+      action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", hvac_mode: "",
+    }, 0), container);
+    expect(container.querySelector('[role="alert"]')?.textContent)
+      .toBe("climateOptionsRequiredAt");
+    expect(container.querySelector(".editable-block.invalid")).not.toBeNull();
+  });
+
+  it("uses selected options to disable the target and keeps their controls accessible", () => {
+    const container = document.createElement("div");
+    const viewHost = host();
+    render(renderEditableBlock(viewHost, { ...block(""), preset_mode: "eco" }, 0), container);
+    const toggle = container.querySelector<HTMLButtonElement>(".target-action-toggle");
+    expect(toggle?.disabled).toBe(false);
+    toggle?.click();
+    expect(viewHost._updateDraftBlock).toHaveBeenCalledWith(
+      0, "action", ACTION_SET_CLIMATE_OPTIONS, "schedule",
+    );
+    render(renderEditableBlock(viewHost, { ...block(""), action: ACTION_SET_CLIMATE_OPTIONS,
+      preset_mode: "eco" }, 0), container);
+    expect(container.querySelector<HTMLInputElement>(".single-temperature-field input")?.disabled).toBe(true);
+    expect(container.querySelector<HTMLSelectElement>('select')?.disabled).toBe(true);
+    expect(container.querySelector(".advanced-climate-options")).not.toBeNull();
+    expect(container.textContent).toContain("presetMode");
+    expect(container.querySelector<HTMLButtonElement>(".target-action-toggle")?.disabled).toBe(false);
+  });
+
+  it("keeps selected options compact and previews the commands inside their panel", () => {
+    const container = document.createElement("div");
+    const viewHost = translatedHost();
+    const draft = { ...block(""), temperature: 19, preset_mode: "boost", swing_mode: "auto" };
+
+    render(renderEditableBlock(viewHost, draft, 0), container);
+    expect(container.querySelector(".block-action-guidance")).toBeNull();
+    expect(container.querySelector(".climate-options-inline-summary")?.textContent)
+      .toContain("Preset: boost • Swing: auto");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Sends target 19 °C.");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Also sends Preset: boost • Swing: auto.");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Keeps the current mode while on");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("One temperature is never converted into a range.");
+    expect(container.querySelector(".advanced-climate-options-fields .block-command-preview")).not.toBeNull();
+
+    render(renderEditableBlock(viewHost, { ...draft, action: ACTION_SET_CLIMATE_OPTIONS }, 0), container);
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("No temperature target.");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Sends only Preset: boost • Swing: auto.");
+    expect(container.querySelector(".block-command-preview")?.textContent).not.toContain("19 °C");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .not.toContain("One temperature is never converted into a range.");
+    expect(container.querySelector(".block-mode-warning")).toBeNull();
+  });
+
+  it("previews an explicit mode and either a single target or a range", () => {
+    const container = document.createElement("div");
+    const viewHost = translatedHost();
+    render(renderEditableBlock(viewHost, { ...block("heat"), preset_mode: "eco" }, 0), container);
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Sends target 21 °C.");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("mode: heat");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Also sends Preset: eco.");
+
+    render(renderEditableBlock(viewHost, {
+      ...block("heat_cool"), temperature: undefined,
+      target_temp_low: 20, target_temp_high: 24, preset_mode: "eco",
+    }, 0), container);
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("Sends target 20–24 °C.");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("mode: heat_cool");
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .not.toContain("One temperature is never converted into a range.");
+  });
+
+  it("warns about a preceding Heat/cool range while keeping the block valid", () => {
+    const container = document.createElement("div");
+    const viewHost = {
+      ...translatedHost(),
+      hass: { states: { "climate.room": {
+        state: "heat",
+        attributes: { supported_features: 3 },
+      } } },
+    };
+    const first = {
+      ...block("heat_cool"), start: "00:00",
+      temperature: undefined, target_temp_low: 20, target_temp_high: 24,
+    };
+    const later = { ...block(""), start: "13:45", temperature: 19, preset_mode: "boost" };
+    render(renderEditableBlock(viewHost, later, 1, "schedule", {
+      entityId: "climate.room", dayBlocks: [first, later],
+    }), container);
+
+    const warning = container.querySelector(".block-mode-warning");
+    expect(warning?.getAttribute("role")).toBe("status");
+    expect(warning?.textContent).toContain("An earlier block selects heat_cool.");
+    expect(warning?.textContent).toContain("the single temperature will fail");
+    expect(warning?.textContent).toContain("Disable the target to apply only options.");
+    expect(container.querySelector(".editable-block.invalid")).toBeNull();
+
+    render(renderEditableBlock(viewHost, { ...later, action: ACTION_SET_CLIMATE_OPTIONS }, 1, "schedule", {
+      entityId: "climate.room", dayBlocks: [first, later],
+    }), container);
+    expect(container.querySelector(".block-mode-warning")).toBeNull();
+    expect(container.querySelector(".block-command-preview")?.textContent)
+      .toContain("No temperature target.");
+  });
+
+  it("uses the live mode when no earlier block selects one, and stays general in templates", () => {
+    const container = document.createElement("div");
+    const viewHost = {
+      ...translatedHost(),
+      hass: { states: { "climate.room": {
+        state: "heat_cool",
+        attributes: { supported_features: 3 },
+      } } },
+    };
+    const draft = { ...block(""), temperature: 19 };
+    const context = { entityId: "climate.room", dayBlocks: [draft] };
+    render(renderEditableBlock(viewHost, draft, 0, "schedule", context), container);
+    expect(container.querySelector(".block-mode-warning")?.textContent)
+      .toContain("The climate is currently in heat_cool.");
+
+    render(renderEditableBlock(viewHost, draft, 0, "template"), container);
+    expect(container.querySelector(".block-action-guidance")).toBeNull();
+    expect(container.querySelector(".block-mode-warning")).toBeNull();
+  });
+
+  it("keeps exceptional warnings wrapped and the in-panel preview readable", () => {
+    const css = cardStyles.map((style) => style.cssText).join("\n");
+    expect(css).toMatch(/\.block-mode-warning\s*\{[^}]*grid-column:\s*1 \/ -1;/);
+    expect(css).toMatch(/\.block-mode-warning\s*\{[^}]*white-space:\s*normal;/);
+    expect(css).toMatch(/\.block-command-preview\s*\{[^}]*overflow-wrap:\s*anywhere;/);
+  });
+
   it("gives the target three mobile grid segments at 320–340 px", () => {
     expect(responsiveStyles.cssText).toMatch(
       /(?:@container|@media) \(max-width: 340px\)[\s\S]*"mode target target target";[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 36px 36px 36px;/,

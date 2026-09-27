@@ -155,6 +155,30 @@ class ExternalProviderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(5, capabilities.time_step_minutes)
         self.assertTrue(capabilities.implicit_midnight_change_counts_toward_limit)
 
+    def test_options_only_requires_explicit_provider_action_support(self) -> None:
+        schedule = empty_week_schedule()
+        for day in WEEKDAYS:
+            schedule[day] = [{
+                "start": "00:00",
+                "action": "set_climate_options",
+                "preset_mode": "sleep",
+            }]
+        data = {"zones": {"climate.zone": {"schedule": schedule}}}
+        base = RamsesCcScheduleProvider.capabilities
+        provider = SimpleNamespace(capabilities=base)
+        manager = ExternalExecutionManager(
+            data, {"provider": provider}, lambda: None, lambda _entity: "°C"
+        )
+        with self.assertRaisesRegex(ValueError, "do not support set_climate_options"):
+            manager.ensure_schedule_supported("climate.zone", schedule, "provider")
+
+        provider.capabilities = replace(
+            base,
+            supported_actions=("set_temperature", "set_climate_options"),
+            supported_option_fields=("preset_mode",),
+        )
+        manager.ensure_schedule_supported("climate.zone", schedule, "provider")
+
     def test_provider_must_support_velair_publish_contract(self) -> None:
         data = {"zones": {"climate.zone": {"schedule": _schedule()}}}
         for field in ("can_publish", "supports_profile_schedules"):

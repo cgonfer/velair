@@ -77,10 +77,11 @@ unchanged. To reuse the day in other managed climates, select them in the
 summarizes the selected climates and identifies any Default or Pause zones that
 will change to **Profile schedule**. Cloning replaces only the matching weekday,
 preserves all other remembered days, and remains part of the Profile draft.
-Velair validates target type, HVAC mode, optional settings, temperature limits,
-and temperature step for every selected climate first; if one target is
-incompatible, none of the draft changes. Cloned days are persisted only when
-the Profile is saved.
+Velair validates target type, HVAC mode, temperature limits, and temperature
+step for every selected climate before changing the draft. It removes optional
+controls unsupported by each destination climate. If an option-only block has
+no supported controls left, or a target or mode is incompatible, none of the
+draft changes. Cloned days are persisted only when the Profile is saved.
 
 Each profile day uses the same editable timeline as default schedules and
 templates, including drag and resize interactions for adjusting block times.

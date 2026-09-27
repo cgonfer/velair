@@ -21,6 +21,8 @@ from custom_components.velair.models import (
     DEFAULT_PRECONDITIONING_MAX_LEAD_MINUTES,
     MIN_PRECONDITIONING_COMPLETE_SAMPLES,
     normalize_preconditioning_data,
+    normalize_climate_profiles,
+    normalize_schedule_templates,
     predict_preconditioning_lead,
     validate_pause_id,
     zone_pause_override_from_reasons,
@@ -449,6 +451,55 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
         self.assertEqual(
             data["zones"]["climate.salon"]["last_reported_target_temp_step"],
             0.5,
+        )
+
+    def test_options_only_block_requires_valid_control_without_target(self) -> None:
+        block = {
+            "start": "22:00",
+            "action": "set_climate_options",
+            "preset_mode": "sleep",
+            "humidity": 48,
+        }
+        self.assertEqual(normalize_schedule_blocks([block]), [block])
+        for invalid in (
+            {"start": "22:00", "action": "set_climate_options"},
+            {**block, "temperature": 20},
+            {**block, "hvac_mode": "heat"},
+            {**block, "preset_mode": ""},
+            {**block, "humidity": float("nan")},
+        ):
+            with self.subTest(block=invalid), self.assertRaises(ValueError):
+                normalize_schedule_blocks([invalid])
+
+        schedule = empty_week_schedule()
+        schedule["tuesday"] = [block]
+        data = normalize_schedule_data(
+            {"zones": {"climate.salon": {"schedule": schedule}}},
+            ["climate.salon"],
+        )
+        self.assertEqual(data["zones"]["climate.salon"]["schedule"]["tuesday"], [block])
+
+    def test_options_only_survives_template_and_profile_storage(self) -> None:
+        block = {
+            "start": "22:00",
+            "action": "set_climate_options",
+            "preset_mode": "sleep",
+        }
+        templates = normalize_schedule_templates(
+            [{"key": "night", "name": "Night", "blocks": [block]}]
+        )
+        self.assertEqual(templates[0]["blocks"], [block])
+        schedule = empty_week_schedule()
+        schedule["tuesday"] = [block]
+        profiles = normalize_climate_profiles(
+            [{"key": "night", "name": "Night", "zones": {
+                "climate.salon": {"behavior": "schedule", "schedule": schedule}
+            }}],
+            ["climate.salon"],
+        )
+        self.assertEqual(
+            profiles[0]["zones"]["climate.salon"]["schedule"]["tuesday"],
+            [block],
         )
 
     def test_normalize_mode_only_block_requires_only_non_off_mode(self) -> None:

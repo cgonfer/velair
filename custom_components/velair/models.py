@@ -10,6 +10,7 @@ import unicodedata
 from typing import Any, Literal, NotRequired, TypedDict
 
 from .const import (
+    ACTION_SET_CLIMATE_OPTIONS,
     ACTION_SET_HVAC_MODE,
     ACTION_SET_TEMPERATURE,
     ACTION_TURN_OFF,
@@ -613,6 +614,39 @@ def normalize_schedule_blocks(raw_blocks: list[dict[str, Any]]) -> list[Schedule
             seen_starts.add(start)
             continue
 
+        if action == ACTION_SET_CLIMATE_OPTIONS:
+            if any(
+                field in block
+                for field in ("temperature", "target_temp_low", "target_temp_high", "hvac_mode")
+            ):
+                raise ValueError(
+                    f"Options-only schedule block cannot include a temperature or HVAC mode: {start}"
+                )
+            for field in CLIMATE_OPTION_STRING_FIELDS:
+                if field in block and (
+                    not isinstance(block[field], str) or not block[field]
+                ):
+                    raise ValueError(f"Schedule block {field} must be non-empty text: {start}")
+            if ATTR_HUMIDITY in block:
+                humidity = block[ATTR_HUMIDITY]
+                if (
+                    not isinstance(humidity, (int, float))
+                    or isinstance(humidity, bool)
+                    or not isfinite(float(humidity))
+                    or not 0 <= float(humidity) <= 100
+                ):
+                    raise ValueError(
+                        f"Schedule block humidity must be between 0 and 100: {start}"
+                    )
+            _copy_climate_options(block, normalized_block)
+            if not climate_options_from_block(normalized_block):
+                raise ValueError(
+                    f"Options-only schedule block requires a climate option: {start}"
+                )
+            normalized.append(normalized_block)
+            seen_starts.add(start)
+            continue
+
         if action != ACTION_SET_TEMPERATURE:
             raise ValueError(f"Invalid schedule action: {action}")
 
@@ -758,6 +792,7 @@ def normalize_schedule_data(
                         or "target_temp_high" in block
                         or block.get("action") == ACTION_TURN_OFF
                         or block.get("action") == ACTION_SET_HVAC_MODE
+                        or block.get("action") == ACTION_SET_CLIMATE_OPTIONS
                     )
                 ]
                 try:
@@ -1126,6 +1161,7 @@ def normalize_climate_profiles(
                                 or "target_temp_high" in block
                                 or block.get("action") == ACTION_TURN_OFF
                                 or block.get("action") == ACTION_SET_HVAC_MODE
+                                or block.get("action") == ACTION_SET_CLIMATE_OPTIONS
                             )
                         ]
                         try:
@@ -1292,7 +1328,18 @@ def validate_climate_profiles(
                                 f"Mode-only block requires a non-off HVAC mode for {entity_id}"
                             )
                         continue
-                    if action != ACTION_SET_TEMPERATURE:
+                    if action == ACTION_SET_CLIMATE_OPTIONS:
+                        if set(block) & {
+                            "temperature", "target_temp_low", "target_temp_high", "hvac_mode"
+                        }:
+                            raise ValueError(
+                                f"Options-only block cannot contain a temperature or HVAC mode for {entity_id}"
+                            )
+                        if not set(block) & set(CLIMATE_OPTION_FIELDS):
+                            raise ValueError(
+                                f"Options-only block requires a climate option for {entity_id}"
+                            )
+                    elif action != ACTION_SET_TEMPERATURE:
                         raise ValueError(f"Invalid schedule action for {entity_id}: {action}")
                     if any(
                         isinstance(block.get(field), bool)
@@ -1306,12 +1353,13 @@ def validate_climate_profiles(
                         raise ValueError(
                             f"Schedule block temperatures must be numbers for {entity_id}"
                         )
-                    try:
-                        target = temperature_target_from_mapping(block)
-                    except (KeyError, TypeError, ValueError) as err:
-                        raise ValueError(
-                            f"Invalid schedule block target for {entity_id}: {err}"
-                        ) from err
+                    if action == ACTION_SET_TEMPERATURE:
+                        try:
+                            temperature_target_from_mapping(block)
+                        except (KeyError, TypeError, ValueError) as err:
+                            raise ValueError(
+                                f"Invalid schedule block target for {entity_id}: {err}"
+                            ) from err
                     for field in ("hvac_mode", *CLIMATE_OPTION_STRING_FIELDS):
                         if field in block and (
                             not isinstance(block[field], str) or not block[field]
@@ -2417,6 +2465,7 @@ def normalize_schedule_templates(raw_templates: Any) -> list[ScheduleTemplateDat
                 or "target_temp_high" in block
                 or block.get("action") == ACTION_TURN_OFF
                 or block.get("action") == ACTION_SET_HVAC_MODE
+                or block.get("action") == ACTION_SET_CLIMATE_OPTIONS
             )
         ]
 

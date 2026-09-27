@@ -1,4 +1,4 @@
-import { ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import type { DraftScheduleBlock, NormalizedBlocks, ScheduleBlock } from "../types";
 import { temperatureMatchesStep } from "./climate";
 import { defaultTargetTemperature } from "./temperature-units";
@@ -16,6 +16,7 @@ type NormalizeDraftBlockOptions = {
   duplicateStartError: (start: string) => string;
   invalidStartError: (start: string) => string;
   invalidTemperatureError: (start: string, error: string) => string;
+  invalidClimateOptionsError: (start: string, reason: "required" | "humidity") => string;
   temperatureError: (block: DraftScheduleBlock) => string | undefined;
 };
 
@@ -29,7 +30,7 @@ export function draftBlocksFromScheduleBlocks(blocks: ScheduleBlock[], unit?: st
     if (block.target_temp_low != null || block.target_temp_high != null) {
       draft.target_temp_low = block.target_temp_low ?? "";
       draft.target_temp_high = block.target_temp_high ?? "";
-    } else {
+    } else if (block.action !== ACTION_SET_CLIMATE_OPTIONS) {
       draft.temperature = Number(block.temperature ?? defaultTargetTemperature(unit));
     }
     if (block.fan_mode) {
@@ -103,6 +104,9 @@ export function updateDraftBlock(
     }
 
     if (field === "action") {
+      if (value === ACTION_SET_CLIMATE_OPTIONS) {
+        return { ...block, action: value, hvac_mode: "" };
+      }
       if (value === ACTION_SET_HVAC_MODE) {
         return {
           ...block,
@@ -212,23 +216,33 @@ export function normalizeDraftBlocks(
       continue;
     }
 
-    const temperatureError = options.temperatureError(block);
+    if (action === ACTION_SET_CLIMATE_OPTIONS && String(block.humidity ?? "").trim()
+      && !Number.isFinite(Number(block.humidity))) {
+      return { ok: false, error: options.invalidClimateOptionsError(start, "humidity") };
+    }
+    if (action === ACTION_SET_CLIMATE_OPTIONS && !draftBlockHasClimateOptions(block)) {
+      return { ok: false, error: options.invalidClimateOptionsError(start, "required") };
+    }
+
+    const temperatureError = action === ACTION_SET_TEMPERATURE ? options.temperatureError(block) : undefined;
     if (temperatureError) {
       return { ok: false, error: options.invalidTemperatureError(start, temperatureError) };
     }
 
     const normalizedBlock: ScheduleBlock = {
-      action: ACTION_SET_TEMPERATURE,
+      action: action === ACTION_SET_CLIMATE_OPTIONS ? action : ACTION_SET_TEMPERATURE,
       start,
     };
-    if (draftBlockUsesRange(block)) {
+    if (action === ACTION_SET_CLIMATE_OPTIONS) {
+      // The draft retains its former target; this action does not send it.
+    } else if (draftBlockUsesRange(block)) {
       normalizedBlock.target_temp_low = Number(block.target_temp_low);
       normalizedBlock.target_temp_high = Number(block.target_temp_high);
     } else {
       normalizedBlock.temperature = Number(block.temperature);
     }
 
-    if (block.hvac_mode) {
+    if (action === ACTION_SET_TEMPERATURE && block.hvac_mode) {
       normalizedBlock.hvac_mode = block.hvac_mode;
     }
     if (block.fan_mode) {
@@ -287,6 +301,10 @@ export function draftBlockUsesRange(block?: Pick<DraftScheduleBlock, "target_tem
   return Boolean(block && (block.target_temp_low !== undefined || block.target_temp_high !== undefined));
 }
 
+export function draftBlockHasClimateOptions(block: Pick<DraftScheduleBlock, "fan_mode" | "preset_mode" | "swing_mode" | "swing_horizontal_mode" | "humidity">): boolean {
+  return Boolean(block.fan_mode || block.preset_mode || block.swing_mode || block.swing_horizontal_mode || String(block.humidity ?? "").trim());
+}
+
 export function firstUnsupportedModeBlock(
   blocks: Array<Pick<ScheduleBlock, "action" | "hvac_mode" | "start">>,
   supportedModes: string[],
@@ -297,6 +315,12 @@ export function firstUnsupportedModeBlock(
     Boolean(block.hvac_mode) &&
     !supported.has(block.hvac_mode ?? "")
   );
+}
+
+export class UnsupportedClimateOptionsError extends Error {
+  constructor(readonly start: string) {
+    super(`No supported climate options for block at ${start}`);
+  }
 }
 
 export type ClimateOptionSupport = {
@@ -344,6 +368,9 @@ export function filterBlocksForClimateOptions(
       filtered.humidity > support.humidityLimits[1]
     ) {
       delete filtered.humidity;
+    }
+    if (filtered.action === ACTION_SET_CLIMATE_OPTIONS && !draftBlockHasClimateOptions(filtered)) {
+      throw new UnsupportedClimateOptionsError(filtered.start);
     }
     return filtered;
   });

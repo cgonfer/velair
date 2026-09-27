@@ -93,7 +93,7 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 11
+EXPORT_MODEL_VERSION = 12
 EXPORT_SECTIONS = (
     "zones",
     "templates",

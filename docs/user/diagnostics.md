@@ -29,12 +29,12 @@ association; the first version does not attempt heuristic device matching.
 
 For Comfort, Diagnostics includes the saved source for every enabled derived
 reading, the effective input or external entity, its current availability, and
-stable issue codes for missing, stale, or invalid data. Dew point, absolute
+stable issue codes for missing, stale, invalid, or unverified data. Dew point, absolute
 humidity, and Humidex remain observational here: their presence in a report does
 not mean that they influenced scheduling or climate control. The same enabled
 payloads are exposed in the `derived_metrics` attribute of the zone
 **Environmental condition** sensor; Velair does not create separate proxy
-entities for them.
+entities for them. Current readings include `freshness: reported` or `unverified`; the latter stays visible with an informational label and can be traced to its source.
 When outdoor comparison is enabled, the same Comfort report also contains its
 explicit sensor availability, independent outdoor data quality, normalized
 comparison, explicit indoor/outdoor absolute humidity, and any opportunity or

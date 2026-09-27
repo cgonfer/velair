@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../../src/velair/constants";
 import {
   formatDiagnosticDateTime,
   dateLocale,
@@ -88,6 +88,12 @@ describe("formatters", () => {
     const modeLabel = (mode: string) => mode.toUpperCase();
 
     expect(formatEventAction(baseEvent, labels, formatEventTemperature)).toBe("21 °C");
+    expect(formatEventAction({ ...baseEvent, action: ACTION_SET_CLIMATE_OPTIONS,
+      temperature: null, preset_mode: "eco", fan_mode: "quiet" },
+    { ...labels, climateOptionsOnly: "Climate options" }, formatEventTemperature))
+      .toBe("Climate options · eco · quiet");
+    expect(formatEventMode({ ...baseEvent, action: ACTION_SET_CLIMATE_OPTIONS,
+      temperature: null }, keepLabels, modeLabel)).toBe("");
     expect(formatEventAction({
       ...baseEvent,
       temperature: null,

@@ -5,12 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { VelairCard } from "../../src/velair/components/velair-card-element";
-import { ACTION_SET_HVAC_MODE } from "../../src/velair/constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE } from "../../src/velair/constants";
 import { timelineBlocksFromDrafts } from "../../src/velair/domain/timeline";
 import { cardStyles } from "../../src/velair/styles/card-styles";
 import type { DraftScheduleBlock } from "../../src/velair/types";
 import {
   renderScheduleEditor,
+  renderTimelineBlock,
   renderSchedulesView,
   renderTemplatePanel,
   renderTimeline,
@@ -36,6 +37,24 @@ function host() {
 }
 
 describe("schedule view", () => {
+  it("shows option values rather than a temperature in an options-only timeline block", () => {
+    const container = document.createElement("div");
+    const viewHost = {
+      _t: (key: string) => key,
+      _formatScheduleTime: (value: string) => value,
+      _formatTemperature: (value: number) => `${value} °C`,
+    } as unknown as VelairViewHost;
+    render(renderTimelineBlock(viewHost, {
+      index: 0, startMinute: 480, endMinute: 600, left: 33, width: 8,
+      draft: { action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00",
+        hvac_mode: "", preset_mode: "eco" },
+    }, "climate.living_room"), container);
+    expect(container.textContent).toContain("climateOptionsOnly");
+    expect(container.textContent).toContain("presetMode: eco");
+    expect(container.textContent).not.toContain("invalidTemperatureRange");
+    expect(container.querySelector(".timeline-block")?.getAttribute("title")).toContain("presetMode: eco");
+  });
+
   it("applies Default clone presets without cloning and excludes the source day", () => {
     const element = document.createElement(TEST_SCHEDULE_CARD_TAG) as VelairCard;
     const clone = vi.fn();
@@ -117,6 +136,7 @@ describe("schedule view", () => {
     } as const;
 
     render(renderScheduleEditor(viewHost, "climate.office", externalZone), container);
+    expect(container.querySelectorAll(".schedule-step-heading .inline-help")).toHaveLength(0);
     const externalNotice = container.querySelector(".external-execution-notice");
     expect(externalNotice).not.toBeNull();
     expect(externalNotice?.getAttribute("role")).toBe("status");

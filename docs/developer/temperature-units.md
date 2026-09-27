@@ -71,7 +71,7 @@ until the integration reloads or Home Assistant restarts.
 
 ## Portable Data
 
-Current portable model v11 exports raw stored values and declares
+Current portable model v12 exports raw stored values and declares
 `temperature_unit`. Model v5 historically added the non-thermal `modes`
 section, v8 separated the Room Assist deadband, v9 added derived Comfort metric
 configuration, and v10 added outdoor comparison configuration. Older supported

@@ -1046,6 +1046,28 @@ class PortableTemperatureContractTest(unittest.TestCase):
             {"enabled": True, "source": "entity", "entity_id": None},
         )
 
+    def test_options_only_schedule_round_trips_in_portable_model_v12(self) -> None:
+        export_runtime = self._runtime(api_module.CELSIUS)
+        export_runtime["entry"] = SimpleNamespace(options={})
+        block = {
+            "start": "08:00",
+            "action": "set_climate_options",
+            "preset_mode": "sleep",
+            "humidity": 45,
+        }
+        export_runtime["storage"].data["zones"]["climate.salon"]["schedule"][
+            "monday"
+        ] = [block]
+        payload = api_module._build_export_payload(export_runtime, ["zones"])
+        self.assertEqual(payload["model_version"], 12)
+        imported = api_module._build_import_data(
+            self._runtime(api_module.FAHRENHEIT), payload, ["zones"]
+        )
+        self.assertEqual(
+            imported["zones"]["climate.salon"]["schedule"]["monday"],
+            [{**block, "humidity": 45.0}],
+        )
+
     def test_comfort_settings_round_trip_in_portable_model_v11(self) -> None:
         export_runtime = self._runtime(api_module.CELSIUS)
         export_runtime["entry"] = SimpleNamespace(options={})
@@ -1080,7 +1102,7 @@ class PortableTemperatureContractTest(unittest.TestCase):
         )
         comfort = imported["zones"]["climate.salon"]["comfort"]
 
-        self.assertEqual(payload["model_version"], 11)
+        self.assertEqual(payload["model_version"], 12)
         self.assertTrue(comfort["outdoor_comparison_enabled"])
         self.assertEqual(
             comfort["outdoor_temperature_entity_id"],

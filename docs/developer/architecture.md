@@ -359,6 +359,17 @@ It does not participate in preconditioning or Room Assist. External execution
 rejects it unless the provider explicitly lists `set_hvac_mode` in its supported
 actions.
 
+A block may also persist `action: set_climate_options` with one or more of
+`preset_mode`, `fan_mode`, `swing_mode`, `swing_horizontal_mode`, or
+`humidity`, and no temperature or HVAC mode. Local delivery calls only the
+corresponding Home Assistant services without turning the climate on. When
+applied to an entity, unsupported options are filtered; an empty result is
+rejected. No target-dependent preconditioning or Room Assist runs. Since this
+action owns no target or HVAC mode, subsequent device-computed setpoint changes
+do not trigger an automatic reassertion or Manual adjustment. Option changes
+between scheduled events are not continuously enforced. External providers
+reject this action unless they explicitly advertise support.
+
 Physical delivery is coordinated in runtime memory per managed entity.
 Blocking Home Assistant calls expose invocation failures; generation
 invalidation and an async lock prevent obsolete or overlapping commits.
@@ -467,7 +478,7 @@ value is device-local runtime context.
 
 Persisted thermal values use the raw runtime unit recorded in storage metadata.
 Load, save, and Home Assistant unit-change events never convert them. Current
-portable model v11 preserves those raw values and declares the stored unit.
+portable model v12 preserves those raw values and declares the stored unit.
 Imports convert selected thermal sections when the source and current Home
 Assistant units differ. Model v2 and unitless v1 exports are treated as Celsius
 for backward compatibility.
@@ -493,7 +504,7 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 11,
+  "model_version": 12,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {

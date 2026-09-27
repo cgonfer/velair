@@ -39,6 +39,7 @@ import {
   draftBlockUsesRange,
   draftBlocksFromScheduleBlocks,
   firstUnsupportedModeBlock,
+  filterBlocksForClimateOptions,
   removeDraftBlock,
   updateDraftBlock,
 } from "../domain/draft-blocks";
@@ -62,7 +63,7 @@ import {
   timelineBlocks,
 } from "../controllers/timeline-interactions";
 import { dictionaryLabel, languageFromHass, shortWeekdayName, translate, weekdayName } from "../i18n";
-import { ACTION_SET_TEMPERATURE, DEFAULT_TARGET_TEMP_STEP, PROFILE_DESCRIPTION_MAX_LENGTH, MODE_NAME_MAX_LENGTH, WEEKDAYS } from "../constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, DEFAULT_TARGET_TEMP_STEP, PROFILE_DESCRIPTION_MAX_LENGTH, MODE_NAME_MAX_LENGTH, WEEKDAYS } from "../constants";
 import { orderedWeekdays, orderedZoneIds } from "../domain/settings";
 import {
   cloneDayPresetTargets,
@@ -81,6 +82,7 @@ import type {
   HomeAssistant,
   VelairMode,
   ScheduleResponse,
+  ScheduleBlock,
 } from "../types";
 import type { TranslationKey } from "../translations";
 import {
@@ -1239,7 +1241,10 @@ export class VelairProfilesView extends LitElement {
                 ${renderDraftListHeader(blockHost, "template")}
                 ${blocks.map((block, index) => keyed(
                   editableBlockRowKey("template", `${this._selectedKey}:${entityId}`, weekday, index),
-                  renderEditableBlock(blockHost, block, index, "template"),
+                  renderEditableBlock(blockHost, block, index, "template", external ? undefined : {
+                    entityId,
+                    dayBlocks: blocks,
+                  }),
                 ))}
                 ${renderAddBlockButton(blockHost, "template")}
               `
@@ -1553,11 +1558,18 @@ export class VelairProfilesView extends LitElement {
     if (!key) return;
     const template = this.data?.templates?.find((candidate) => candidate.key === key);
     if (template) {
-      this._setBlocks(
-        entityId,
-        weekday,
-        draftBlocksFromScheduleBlocks(template.blocks, this.data?.temperature_unit),
-      );
+      try {
+        const blocks = this._filterCopiedBlocks(
+          entityId,
+          draftBlocksFromScheduleBlocks(template.blocks, this.data?.temperature_unit),
+        );
+        this._setBlocks(entityId, weekday, blocks);
+      } catch {
+        this._error = this._t("profileCloneDayIncompatibleOptions", {
+          entity: this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
+          start: template.blocks.find((block) => block.action === ACTION_SET_CLIMATE_OPTIONS)?.start ?? "",
+        });
+      }
     }
     select.value = "";
   }
@@ -1619,7 +1631,15 @@ export class VelairProfilesView extends LitElement {
       const error = this._cloneCompatibilityError(blocks, entityId);
       if (error) { this._climateCloneDialog = { ...dialog, error }; return; }
     }
-    this._draft = cloneProfileDayToClimates(this._draft, dialog.entityId, dialog.weekday, dialog.targets);
+    const copied = cloneProfileDayToClimates(this._draft, dialog.entityId, dialog.weekday, dialog.targets);
+    for (const entityId of dialog.targets) {
+      const zone = copied.zones[entityId];
+      if (zone?.behavior !== "schedule") continue;
+      const schedule = { ...zone.schedule, [dialog.weekday]: this._filterCopiedBlocks(entityId, zone.schedule[dialog.weekday] ?? []) };
+      copied.zones[entityId] = { behavior: "schedule", schedule };
+      copied.rememberedSchedules[entityId] = schedule;
+    }
+    this._draft = copied;
     this._cloneClimateTargets = {
       ...this._cloneClimateTargets,
       [dialog.entityId]: new Set(),
@@ -1686,11 +1706,24 @@ export class VelairProfilesView extends LitElement {
     }
   }
 
+  private _filterCopiedBlocks(entityId: string, blocks: DraftScheduleBlock[]): DraftScheduleBlock[] {
+    const state = this.hass?.states?.[entityId];
+    const filtered = filterBlocksForClimateOptions(blocks as ScheduleBlock[], {
+      fanModes: climateFanModeOptions(state),
+      humidityLimits: climateHumidityLimits(state),
+      presetModes: climatePresetModeOptions(state),
+      swingHorizontalModes: climateSwingHorizontalModeOptions(state),
+      swingModes: climateSwingModeOptions(state),
+    });
+    return draftBlocksFromScheduleBlocks(filtered, this.data?.temperature_unit);
+  }
+
   private _cloneCompatibilityError(blocks: DraftScheduleBlock[], entityId: string): string | undefined {
     const state = this.hass?.states?.[entityId];
     const name = state?.attributes?.friendly_name ?? entityId;
     for (const block of blocks) {
       if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
+      if (block.action === ACTION_SET_CLIMATE_OPTIONS) continue;
       if (block.action !== ACTION_SET_TEMPERATURE) continue;
       if (!climateTargetCompatibleForConfiguration(
         state,
@@ -1699,14 +1732,12 @@ export class VelairProfilesView extends LitElement {
       )) {
         return this._t("profileCloneDayIncompatibleTarget", { entity: name, start: block.start });
       }
-      const optionSets: Array<[string | undefined, string[]]> = [[block.fan_mode, climateFanModeOptions(state)], [block.preset_mode, climatePresetModeOptions(state)], [block.swing_mode, climateSwingModeOptions(state)], [block.swing_horizontal_mode, climateSwingHorizontalModeOptions(state)]];
-      if (optionSets.some(([value, options]) => value && !options.includes(value))) return this._t("profileCloneDayIncompatibleOptions", { entity: name, start: block.start });
-      if (String(block.humidity ?? "").trim()) {
-        const limits = climateHumidityLimits(state);
-        const humidity = Number(block.humidity);
-        if (!limits || humidity < limits[0] || humidity > limits[1]) return this._t("profileCloneDayIncompatibleOptions", { entity: name, start: block.start });
-      }
       if (this._temperatureError(entityId, block)) return this._t("profileCloneDayIncompatibleTemperature", { entity: name, start: block.start });
+    }
+    try {
+      this._filterCopiedBlocks(entityId, blocks);
+    } catch {
+      return this._t("profileCloneDayIncompatibleOptions", { entity: name, start: blocks.find((block) => block.action === ACTION_SET_CLIMATE_OPTIONS)?.start ?? "" });
     }
     return undefined;
   }

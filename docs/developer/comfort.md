@@ -59,10 +59,19 @@ Assessments are derived at runtime and are not stored as history. Disabling the
 outdoor comparison preserves both selected sensor IDs for later reuse.
 
 In the frontend, the collapsed **Comfort configuration** panel presents
-`stale_after_minutes` under **Data freshness** first, followed by temperature,
-humidity, CO2, and optional derived environmental metrics. This order keeps the
-runtime-reading policy visible before individual sensor and threshold settings;
-it does not change persistence or assessment behavior.
+temperature, humidity, and CO2 source selectors, followed immediately by a
+separate **Data freshness** section with `stale_after_minutes` and the effective
+direct source IDs alongside it. Current `freshness: unverified` readings are
+summarized once there, including enabled derived metrics and outdoor sensor
+readings, while value cards omit repeated informational freshness badges. A
+Lovelace Comfort card with configuration hidden renders that same summary once
+above its readings. The explanation says climate temperature and humidity are
+excluded even when outdoor sensors keep the field active. The field can be
+prepared while Comfort itself is off. Without a configured direct source it is
+disabled with an explanation, while the saved value remains intact. Model,
+preferences, outdoor comparison, and derived metric controls follow.
+The source list mirrors the backend's selected report sources; this does not
+change persistence or assessment behavior.
 
 `temperature_min` and `temperature_max` are absolute temperatures stored in the
 recorded runtime unit. Unit migration and portable import convert both values;
@@ -427,7 +436,8 @@ It remains separate from the environmental condition so combinations do not grow
 1. `stale` when no current metric exists and every monitored metric is stale;
 2. `unavailable` when no current metric exists for any other reason;
 3. `partial` when at least one metric is current and another monitored metric is missing or stale;
-4. `complete` when every monitored metric is current.
+4. `unverified` when every monitored metric is current but at least one has unverified freshness;
+5. `complete` when every monitored metric is current and reported.
 
 `data_issues` contains machine-readable identifiers:
 
@@ -436,23 +446,20 @@ It remains separate from the environmental condition so combinations do not grow
 - `humidity_missing`;
 - `humidity_stale`;
 - `co2_missing`;
-- `co2_stale`.
+- `co2_stale`;
+- `temperature_unverified`, `humidity_unverified`, or `co2_unverified` for usable readings with unverifiable freshness.
 
-Optional humidity and CO2 sources with `availability: not_monitored` do not create data issues. Automatic climate humidity is considered monitored when the climate exposes either `current_humidity` or `humidity`, even if its current value is temporarily unreadable.
+Optional humidity and CO2 sources with `availability: not_monitored` do not create data issues. Automatic climate humidity is considered monitored only when the climate exposes measured `current_humidity`, even if its value is temporarily unreadable. `humidity` is the climate target and is never a measurement.
 
 When `humidity_enabled` is false, humidity always returns `availability: not_monitored`. Its configured entity ID and thresholds remain persisted, but the source is excluded from listener registration, assessment calculation, and data quality.
 
 ## Freshness
 
-Staleness uses:
+For direct sensors, staleness begins at `state.last_reported + stale_after_minutes` (inclusive). Repeated reports of the same value advance `last_reported`. A valid direct reading without `last_reported` remains `availability: current` with `freshness: unverified`; it cannot be timed.
 
-```text
-now - state.last_updated > stale_after_minutes
-```
+Climate `current_temperature` and `current_humidity` have no measurement-specific report timestamp. Their valid readings remain current with `freshness: unverified`, regardless of the climate entity's `last_updated` or `last_reported`. `unknown` and `unavailable` states are rejected before reading attributes. Current derived metrics carry `freshness: unverified` when any input is unverified.
 
-States without `last_updated` are treated as current for compatibility with test fakes.
-
-There is no polling or expiry timer. Reevaluation happens after tracked state changes, Comfort setting changes, and API assessment reads.
+One filtered `state_reported` listener tracks selected direct sensors. A single one-shot timer covers the earliest pending deadline across enabled zones, and is recalculated on reports or configuration changes and canceled on unload. The normal state-change listener also updates values and missing states. A Home Assistant report is not proof of a fresh physical sample.
 
 ## Runtime Listener
 
@@ -464,7 +471,7 @@ The scheduler registers `async_track_state_change_event` only for entities that 
 - enabled external derived-metric sensor entities.
 - enabled outdoor temperature and optional humidity sensor entities.
 
-When no zone has Comfort enabled, the listener is removed.
+When no zone has Comfort enabled, both listeners and the expiry timer are removed.
 
 ## API Response
 

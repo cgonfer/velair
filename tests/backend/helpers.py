@@ -91,6 +91,7 @@ def _install_homeassistant_stubs() -> None:
     event = ModuleType("homeassistant.helpers.event")
     event.async_track_point_in_time = lambda *args, **kwargs: (lambda: None)
     event.async_track_state_change_event = lambda *args, **kwargs: (lambda: None)
+    event.async_track_state_report_event = lambda *args, **kwargs: (lambda: None)
     sys.modules["homeassistant.helpers.event"] = event
 
     util = ModuleType("homeassistant.util")
@@ -273,7 +274,14 @@ class FakeServices:
 
 
 class FakeStates(dict):
-    """Tiny state registry stand-in."""
+    """Tiny state registry stand-in with Home Assistant report timestamps."""
+
+    def __setitem__(self, entity_id, state) -> None:
+        if not hasattr(state, "last_reported"):
+            from homeassistant.util import dt as dt_util
+
+            state.last_reported = dt_util.now()
+        super().__setitem__(entity_id, state)
 
 
 class FakeBus:

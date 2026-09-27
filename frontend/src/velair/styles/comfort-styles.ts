@@ -272,6 +272,10 @@ export const comfortStyles = css`
   display: inline-flex;
 }
 
+.comfort-data-warning.informational {
+  color: var(--info-color, #0277bd);
+}
+
 .comfort-condition-pill.range-mixed {
   border-color: color-mix(in srgb, var(--info-color, #039be5) 35%, var(--divider-color));
   color: var(--info-color, #0277bd);
@@ -1389,13 +1393,6 @@ export const comfortStyles = css`
   color: var(--primary-color);
 }
 
-.comfort-config-subheading {
-  color: var(--secondary-text-color);
-  font-size: 12px;
-  font-weight: 600;
-  margin: 0 0 6px;
-}
-
 .comfort-config-rows {
   display: grid;
   gap: 8px;
@@ -1562,6 +1559,30 @@ export const comfortStyles = css`
 
 .comfort-freshness-config-section .comfort-number-field-single small {
   display: none;
+}
+
+.comfort-freshness-sources {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.comfort-freshness-status {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 6px 0 0;
+}
+
+.comfort-freshness-status p {
+  margin: 0;
+}
+
+.comfort-freshness-status p + p {
+  margin-top: 4px;
+}
+
+.comfort-assessment-card > .comfort-freshness-status {
+  margin: 0 0 10px;
 }
 
 .comfort-temperature-aware-ranges {

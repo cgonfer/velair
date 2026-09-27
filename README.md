@@ -3,7 +3,7 @@ Climate automation that adapts to your life.
 
 [Explore Velair on the project website](https://cgonfer.github.io/velair/)
 
-[![Version](https://img.shields.io/badge/version-1.8.0--beta.2-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
+[![Version](https://img.shields.io/badge/version-1.8.0--beta.3-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -34,8 +34,8 @@ Contributions, testing, bug reports, and constructive feedback are always welcom
 - Visual schedule editor for managed `climate.*` entities.
 - Weekly schedules per climate zone.
 - Weekly continuity across midnight and empty days, with inherited periods identified in the timeline.
-- Schedule blocks for temperature targets, changing only the HVAC mode while keeping the device target, or turning a climate entity off.
-- Optional HVAC mode per block. `Keep current mode` still applies the block target; stored compatibility is based on advertised HVAC modes, while runtime delivery preserves a compatible running mode or starts an off climate in a compatible mode before sending the target.
+- Schedule blocks for temperature targets, climate options without a target (such as preset-only control), changing only the HVAC mode, or turning a climate entity off.
+- A temperature block with `Keep current mode` sends its target without changing an active HVAC mode. If the climate is off, Velair starts it in the first supported mode compatible with the target; an incompatible running mode can reject it. An option-only block sends no temperature or HVAC mode and does not turn an off climate on.
 - Support for heating, cooling, dry, fan-only, and off modes where the climate entity supports them. Climate entities can use either a single target or separate lower and upper targets for range-based modes such as `heat_cool`.
 - Drag and resize interactions on a 24-hour timeline.
 - Day cloning to other weekdays or other managed climates.

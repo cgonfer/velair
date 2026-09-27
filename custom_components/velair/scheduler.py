@@ -19,12 +19,14 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_time,
     async_track_state_change_event,
+    async_track_state_report_event,
 )
 from homeassistant.util import dt as dt_util
 
 from .climate_delivery import ClimateDeliveryCoordinator, CurrentGuard, Delivery
 from .climate_manager import ClimateManager
 from .const import (
+    ACTION_SET_CLIMATE_OPTIONS,
     ACTION_SET_HVAC_MODE,
     ACTION_SET_TEMPERATURE,
     ACTION_TURN_OFF,
@@ -33,6 +35,7 @@ from .const import (
     ATTR_PRESET_MODE,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_MODE,
+    ATTR_TEMPERATURE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     DOMAIN,
@@ -353,6 +356,8 @@ class VelairScheduler:
         self._unsub_room_sensor_assist_listener: CALLBACK_TYPE | None = None
         self._unsub_room_sensor_assist_timer: CALLBACK_TYPE | None = None
         self._unsub_comfort_listener: CALLBACK_TYPE | None = None
+        self._unsub_comfort_report_listener: CALLBACK_TYPE | None = None
+        self._unsub_comfort_expiry_timer: CALLBACK_TYPE | None = None
         self._applied_preconditioning_targets: dict[
             str,
             _AppliedPreconditioningTarget,
@@ -371,6 +376,7 @@ class VelairScheduler:
         self._room_sensor_assist_limit_notifications: dict[str, tuple[object, ...]] = {}
         self._room_sensor_assist_notification_cleanup_done: set[str] = set()
         self._comfort_entities: tuple[str, ...] = ()
+        self._comfort_report_entities: frozenset[str] = frozenset()
         self._comfort_assessment_snapshots: dict[str, tuple[object, ...]] = {}
         self.next_event: ClimateEvent | None = None
         self.next_events: list[ClimateEvent] = []
@@ -1649,6 +1655,17 @@ class VelairScheduler:
             if action == ACTION_TURN_OFF:
                 continue
 
+            if action == ACTION_SET_CLIMATE_OPTIONS:
+                options = climate_options_from_block(block)
+                if (
+                    not options
+                    or self._climate_options_for_entity(entity_id, options) != options
+                ):
+                    raise ValueError(
+                        f"{entity_id} does not support all requested climate options"
+                    )
+                continue
+
             if action == ACTION_SET_HVAC_MODE:
                 hvac_mode = block.get("hvac_mode")
                 supported_modes = self._climate_manager.supported_hvac_modes(entity_id)
@@ -1751,9 +1768,6 @@ class VelairScheduler:
     ) -> list[ScheduleBlock]:
         """Return blocks with unsupported optional climate settings removed."""
         supported_options = self._supported_climate_options(entity_id)
-        if not supported_options:
-            return [_block_without_climate_options(block) for block in blocks]
-
         return [
             _filter_block_climate_options(block, supported_options)
             for block in blocks
@@ -2311,6 +2325,14 @@ class VelairScheduler:
         """Apply the configured policy to an external climate change."""
         self.ensure_managed_entity(entity_id)
         zone = self._data["zones"][entity_id]
+        # Options-only blocks are point-in-time commands. They own neither
+        # target nor HVAC mode, including device-derived changes after a preset.
+        active_event = self._resolve_authoritative_delivery_event(entity_id)
+        if (
+            active_event is not None
+            and active_event.action == ACTION_SET_CLIMATE_OPTIONS
+        ):
+            return
         configured_policy = zone["external_change_policy"]
         now = dt_util.now()
         existing_override = self._get_active_zone_override(entity_id, now)
@@ -4134,11 +4156,12 @@ class VelairScheduler:
             validated_zones = deepcopy(zones)
             for entity_id, zone in validated_zones.items():
                 for weekday in WEEKDAYS:
-                    blocks = zone["schedule"][weekday]
+                    blocks = self._blocks_for_entity_capabilities(
+                        entity_id, zone["schedule"][weekday]
+                    )
                     self.ensure_blocks_in_temperature_limits(entity_id, blocks)
-                    zone["schedule"][weekday] = self._blocks_for_entity_capabilities(
-                        entity_id,
-                        self._snap_blocks_for_entity(entity_id, blocks),
+                    zone["schedule"][weekday] = self._snap_blocks_for_entity(
+                        entity_id, blocks
                     )
             zones = validated_zones
         if profiles is not None:
@@ -5537,6 +5560,34 @@ class VelairScheduler:
             )
             return
 
+        if event.action == ACTION_SET_CLIMATE_OPTIONS:
+            options = {
+                key: value for key, value in (
+                    (ATTR_FAN_MODE, event.fan_mode),
+                    (ATTR_PRESET_MODE, event.preset_mode),
+                    (ATTR_SWING_MODE, event.swing_mode),
+                    (ATTR_SWING_HORIZONTAL_MODE, event.swing_horizontal_mode),
+                    (ATTR_HUMIDITY, event.humidity),
+                )
+                if value is not None
+            }
+            if (
+                not options
+                or self._climate_options_for_entity(event.entity_id, options) != options
+            ):
+                raise ValueError(
+                    f"{event.entity_id} does not support all requested climate options"
+                )
+            await self._climate_manager.async_apply_climate_options(
+                event.entity_id,
+                fan_mode=event.fan_mode,
+                humidity=event.humidity,
+                preset_mode=event.preset_mode,
+                swing_mode=event.swing_mode,
+                swing_horizontal_mode=event.swing_horizontal_mode,
+            )
+            return
+
         is_range = (
             event.target_temp_low is not None and event.target_temp_high is not None
         )
@@ -5654,6 +5705,24 @@ class VelairScheduler:
                 hvac_mode=event.hvac_mode,
                 source=source,
             )
+            return
+
+        if event.action == ACTION_SET_CLIMATE_OPTIONS:
+            await self._async_clear_room_sensor_assist(
+                event.entity_id, restore=False, reason="options_only"
+            )
+            if not delivery_is_current():
+                return
+            await self._async_logbook(
+                self._message(
+                    f"Set climate options for {self._friendly_entity_name(event.entity_id)} without changing its target",
+                    f"Opciones de clima aplicadas a {self._friendly_entity_name(event.entity_id)} sin cambiar su consigna",
+                ),
+                entity_id=event.entity_id,
+            )
+            if not delivery_is_current():
+                return
+            self._async_fire_climate_target_applied(event, hvac_mode=None, source=source)
             return
 
         is_range = (
@@ -6589,6 +6658,56 @@ class VelairScheduler:
             and abs(state.target_temp_low - target_event.target_temp_low) < 0.000001
             and abs(state.target_temp_high - target_event.target_temp_high) < 0.000001
         )
+
+    def room_sensor_assist_owned_state_change_fields(
+        self,
+        entity_id: str,
+        new_state: object,
+    ) -> set[str]:
+        """Return control fields that match the active Room Sensor Assist intent."""
+        context = getattr(new_state, "context", None)
+        if context is not None and (
+            getattr(context, "user_id", None) is not None
+            or getattr(context, "parent_id", None) is not None
+        ):
+            return set()
+
+        assist_state = self._room_sensor_assist_inflight.get(
+            entity_id
+        ) or self._room_sensor_assist_states.get(entity_id)
+        if assist_state is None or not self._room_sensor_assist_state_matches_target_event(
+            assist_state,
+            self._room_sensor_assist_target_event(entity_id),
+        ):
+            return set()
+
+        attributes = getattr(new_state, "attributes", {})
+        owned: set[str] = set()
+        if (
+            assist_state.applied_temperature is not None
+            and self._climate_manager._target_values_match(
+                entity_id,
+                attributes.get(ATTR_TEMPERATURE),
+                assist_state.applied_temperature,
+            )
+        ):
+            owned.add(ATTR_TEMPERATURE)
+
+        range_fields = (
+            (ATTR_TARGET_TEMP_LOW, assist_state.applied_target_temp_low),
+            (ATTR_TARGET_TEMP_HIGH, assist_state.applied_target_temp_high),
+        )
+        for field, expected in range_fields:
+            if expected is None:
+                continue
+            if self._climate_manager._target_values_match(
+                entity_id,
+                attributes.get(field),
+                expected,
+            ):
+                owned.add(field)
+
+        return owned
 
     def _room_sensor_assist_status(self, entity_id: str) -> dict[str, object]:
         """Return a user-facing Room Sensor Assist runtime snapshot."""
@@ -8519,9 +8638,16 @@ class VelairScheduler:
             if metric["availability"] == "current"
         ]
         data_issues = sorted(
-            f"{metric['metric']}_{metric['availability']}"
-            for metric in monitored_metrics
-            if metric["availability"] in ("missing", "stale")
+            [
+                f"{metric['metric']}_{metric['availability']}"
+                for metric in monitored_metrics
+                if metric["availability"] in ("missing", "stale")
+            ]
+            + [
+                f"{metric['metric']}_unverified"
+                for metric in current_metrics
+                if metric.get("freshness") == "unverified"
+            ]
         )
         if not current_metrics:
             data_quality = (
@@ -8530,8 +8656,10 @@ class VelairScheduler:
                 and all(metric["availability"] == "stale" for metric in monitored_metrics)
                 else "unavailable"
             )
-        elif data_issues:
+        elif any(metric["availability"] != "current" for metric in monitored_metrics):
             data_quality = "partial"
+        elif data_issues:
+            data_quality = "unverified"
         else:
             data_quality = "complete"
 
@@ -8609,9 +8737,11 @@ class VelairScheduler:
             if metric["availability"] == "current"
         ]
         issues = sorted(
-            f"{metric['metric']}_{metric['availability']}"
-            for metric in configured_metrics
-            if metric["availability"] in ("missing", "stale", "invalid")
+            [f"{metric['metric']}_{metric['availability']}"
+             for metric in configured_metrics
+             if metric["availability"] in ("missing", "stale", "invalid")]
+            + [f"{metric['metric']}_unverified" for metric in current_metrics
+               if metric.get("freshness") == "unverified"]
         )
         if not current_metrics:
             data_quality = (
@@ -8620,8 +8750,10 @@ class VelairScheduler:
                 and all(metric["availability"] == "stale" for metric in configured_metrics)
                 else "unavailable"
             )
-        elif issues:
+        elif any(metric["availability"] != "current" for metric in configured_metrics):
             data_quality = "partial"
+        elif issues:
+            data_quality = "unverified"
         else:
             data_quality = "complete"
 
@@ -8693,47 +8825,38 @@ class VelairScheduler:
         if not source_entity_id:
             metric = self._unavailable_comfort_metric(
                 "outdoor_temperature", source="sensor", entity_id=None,
-                availability="missing"
+                availability="missing",
             )
             metric["unit"] = unit
             return metric
         state = self._hass.states.get(source_entity_id)
-        if state is None or str(getattr(state, "state", "")).lower() in (
-            "unknown", "unavailable"
-        ):
+        if not _comfort_state_available(state):
             metric = self._unavailable_comfort_metric(
                 "outdoor_temperature", source="sensor",
-                entity_id=source_entity_id, availability="missing"
-            )
-            metric["unit"] = unit
-            return metric
-        if _state_is_stale(state, config["stale_after_minutes"]):
-            metric = self._unavailable_comfort_metric(
-                "outdoor_temperature", source="sensor",
-                entity_id=source_entity_id, availability="stale"
+                entity_id=source_entity_id, availability="missing",
             )
             metric["unit"] = unit
             return metric
         attributes = getattr(state, "attributes", {})
         source_unit = attributes.get("unit_of_measurement")
-        value = _state_numeric_temperature(state)
+        value = _state_numeric_value(state)
         if source_unit not in (CELSIUS, FAHRENHEIT) or value is None:
+            availability = "invalid"
+        else:
+            value_c = absolute_temperature(float(value), source_unit, CELSIUS)
+            availability = "current" if -100 < value_c < 100 else "invalid"
+        freshness = _comfort_state_freshness(state, config["stale_after_minutes"])
+        if availability == "current" and freshness == "stale":
+            availability = "stale"
+        if availability != "current":
             metric = self._unavailable_comfort_metric(
                 "outdoor_temperature", source="sensor",
-                entity_id=source_entity_id, availability="invalid"
-            )
-            metric["unit"] = unit
-            return metric
-        value_c = absolute_temperature(float(value), source_unit, CELSIUS)
-        if not -100 < value_c < 100:
-            metric = self._unavailable_comfort_metric(
-                "outdoor_temperature", source="sensor",
-                entity_id=source_entity_id, availability="invalid"
+                entity_id=source_entity_id, availability=availability,
             )
             metric["unit"] = unit
             return metric
         return {
-            "availability": "current", "condition": None,
+            "availability": "current", "freshness": freshness, "condition": None,
             "entity_id": source_entity_id, "metric": "outdoor_temperature",
             "source": "sensor", "unit": unit,
             "value": round(absolute_temperature(value_c, CELSIUS, unit), 2),
@@ -8742,37 +8865,33 @@ class VelairScheduler:
     def _comfort_outdoor_humidity_metric(
         self, config: ComfortData
     ) -> dict[str, object]:
-        """Return a validated optional explicit outdoor humidity sensor reading."""
+        """Return a validated optional explicit outdoor humidity reading."""
         source_entity_id = config.get("outdoor_humidity_entity_id")
         if not source_entity_id:
             metric = self._unavailable_comfort_metric(
                 "outdoor_humidity", source="sensor", entity_id=None,
-                availability="not_monitored"
+                availability="not_monitored",
             )
             metric["unit"] = "%"
             return metric
         state = self._hass.states.get(source_entity_id)
-        if state is None or str(getattr(state, "state", "")).lower() in (
-            "unknown", "unavailable"
-        ):
+        freshness = "unverified"
+        value = None
+        if not _comfort_state_available(state):
             availability = "missing"
-            value = None
-        elif _state_is_stale(state, config["stale_after_minutes"]):
-            availability = "stale"
-            value = None
         else:
             attributes = getattr(state, "attributes", {})
-            value = _state_numeric_humidity(state)
-            availability = (
-                "current"
-                if attributes.get("unit_of_measurement") == "%"
-                and value is not None and 0 <= value <= 100
-                else "invalid"
-            )
+            value = _state_numeric_value(state)
+            if attributes.get("unit_of_measurement") != "%" or value is None or not 0 <= value <= 100:
+                availability = "invalid"
+            else:
+                freshness = _comfort_state_freshness(state, config["stale_after_minutes"])
+                availability = "stale" if freshness == "stale" else "current"
         return {
-            "availability": availability, "condition": None,
-            "entity_id": source_entity_id, "metric": "outdoor_humidity",
-            "source": "sensor", "unit": "%",
+            "availability": availability,
+            **({"freshness": freshness} if availability == "current" else {}),
+            "condition": None, "entity_id": source_entity_id,
+            "metric": "outdoor_humidity", "source": "sensor", "unit": "%",
             "value": round(value, 2) if availability == "current" else None,
         }
 
@@ -8809,6 +8928,8 @@ class VelairScheduler:
         )
         return {
             "availability": "current" if value is not None else "invalid",
+            **({"freshness": _comfort_combined_freshness(temperature, humidity)}
+               if value is not None else {}),
             "condition": None, "entity_id": None,
             "metric": "outdoor_absolute_humidity", "source": "velair",
             "unit": "g/m³", "value": round(value, 2) if value is not None else None,
@@ -8856,6 +8977,8 @@ class VelairScheduler:
         )
         return {
             "availability": "current" if value is not None else "invalid",
+            **({"freshness": _comfort_combined_freshness(temperature, humidity)}
+               if value is not None else {}),
             "condition": None,
             "entity_id": None,
             "metric": "indoor_absolute_humidity",
@@ -9007,6 +9130,7 @@ class VelairScheduler:
             metric,
             {
                 "availability": "current",
+                "freshness": _comfort_combined_freshness(temperature, humidity),
                 "condition": None,
                 "entity_id": None,
                 "metric": metric,
@@ -9072,39 +9196,15 @@ class VelairScheduler:
         """Validate and normalize an external derived-metric entity."""
         if not source_entity_id:
             return self._unavailable_comfort_metric(
-                metric,
-                source="entity",
-                entity_id=None,
-                availability="missing",
+                metric, source="entity", entity_id=None, availability="missing",
             )
         state = self._hass.states.get(source_entity_id)
-        if state is None:
+        if not _comfort_state_available(state):
             return self._unavailable_comfort_metric(
-                metric,
-                source="entity",
-                entity_id=source_entity_id,
-                availability="missing",
-            )
-        raw_state = getattr(state, "state", None)
-        if isinstance(raw_state, str) and raw_state.lower() in (
-            "unknown",
-            "unavailable",
-        ):
-            return self._unavailable_comfort_metric(
-                metric,
-                source="entity",
-                entity_id=source_entity_id,
+                metric, source="entity", entity_id=source_entity_id,
                 availability="missing",
             )
         value = _state_numeric_value(state)
-        if _state_is_stale(state, config["stale_after_minutes"]):
-            return self._unavailable_comfort_metric(
-                metric,
-                source="entity",
-                entity_id=source_entity_id,
-                availability="stale",
-                value=value,
-            )
         attributes = getattr(state, "attributes", {})
         source_unit = str(attributes.get("unit_of_measurement") or "").strip()
         target_unit = self._comfort_temperature_unit(entity_id)
@@ -9122,7 +9222,7 @@ class VelairScheduler:
                 value = None
             unit = None
         else:
-            normalized_unit = source_unit.lower().replace("³", "3").replace(" ", "")
+            normalized_unit = source_unit.lower().replace(" ", "").replace("³", "3")
             if normalized_unit in ("mg/m3", "mg/m^3") and value is not None:
                 value /= 1000
             elif normalized_unit not in ("g/m3", "g/m^3"):
@@ -9132,23 +9232,23 @@ class VelairScheduler:
             unit = "g/m³"
         if value is None:
             payload = self._unavailable_comfort_metric(
-                metric,
-                source="entity",
-                entity_id=source_entity_id,
+                metric, source="entity", entity_id=source_entity_id,
                 availability="invalid",
             )
             payload["unit"] = unit
             payload["issues"] = ["invalid_unit_or_value"]
             return payload
+        freshness = _comfort_state_freshness(state, config["stale_after_minutes"])
+        if freshness == "stale":
+            return self._unavailable_comfort_metric(
+                metric, source="entity", entity_id=source_entity_id,
+                availability="stale", value=value,
+            )
         return {
-            "availability": "current",
-            "condition": None,
-            "entity_id": source_entity_id,
-            "metric": metric,
-            "source": "entity",
-            "issues": [],
-            "unit": unit,
-            "value": round(value, 2),
+            "availability": "current", "freshness": freshness,
+            "condition": None, "entity_id": source_entity_id,
+            "metric": metric, "source": "entity", "issues": [],
+            "unit": unit, "value": round(value, 2),
         }
 
     def _comfort_temperature_unit(self, entity_id: str) -> str:
@@ -9216,7 +9316,7 @@ class VelairScheduler:
         entity_id: str,
         config: ComfortData,
     ) -> dict[str, object]:
-        """Return comfort temperature metric details."""
+        """Return comfort temperature from a direct sensor or climate attribute."""
         source_entity_id = config.get("temperature_entity_id")
         source = "sensor"
         if not source_entity_id:
@@ -9227,22 +9327,36 @@ class VelairScheduler:
             source = "room_sensor"
         if not source_entity_id:
             source_entity_id = entity_id
+        if source_entity_id.startswith("climate."):
             source = "climate"
 
         state = self._hass.states.get(source_entity_id)
-        value = (
-            self._external_temperature(entity_id, source_entity_id)
-            if source_entity_id != entity_id
-            else _state_numeric_temperature(state)
-        )
-        stale = (
-            _state_is_stale(state, config["stale_after_minutes"])
-            if state is not None
-            else False
-        )
+        value = None
+        freshness = "unverified"
+        if _comfort_state_available(state):
+            if source == "climate":
+                value = _state_temperature(state)
+                if value is not None and source_entity_id != entity_id:
+                    target_unit = self._comfort_temperature_unit(entity_id)
+                    source_unit = state_temperature_unit(state, target_unit)
+                    value = round(
+                        absolute_temperature(value, source_unit, target_unit), 6
+                    )
+            else:
+                reading = _state_numeric_value(state)
+                if reading is not None:
+                    target_unit = self._comfort_temperature_unit(entity_id)
+                    source_unit = state_temperature_unit(state, target_unit)
+                    value = round(
+                        absolute_temperature(reading, source_unit, target_unit), 6
+                    )
+                freshness = _comfort_state_freshness(
+                    state, config["stale_after_minutes"]
+                )
         return self._comfort_range_metric(
             value,
-            stale,
+            freshness == "stale" and value is not None,
+            freshness=freshness,
             source=source,
             entity_id=source_entity_id,
             metric="temperature",
@@ -9256,69 +9370,67 @@ class VelairScheduler:
         config: ComfortData,
         comfort_zone: dict[str, object],
     ) -> dict[str, object]:
-        """Return comfort humidity metric details."""
+        """Return measured humidity, never the climate target humidity."""
         if not config["humidity_enabled"]:
             return self._unavailable_comfort_metric(
-                "humidity",
-                source="disabled",
-                entity_id=None,
+                "humidity", source="disabled", entity_id=None,
                 availability="not_monitored",
             )
 
         source_entity_id = config.get("humidity_entity_id")
         source = "sensor"
+        automatic_source = not source_entity_id
         if not source_entity_id:
             source_entity_id = entity_id
+        if source_entity_id.startswith("climate."):
             source = "climate"
-            state = self._hass.states.get(entity_id)
-            attributes = getattr(state, "attributes", {}) if state is not None else {}
-            if (
-                "current_humidity" not in attributes
-                and "humidity" not in attributes
-            ):
+            state = self._hass.states.get(source_entity_id)
+            if not _comfort_state_available(state):
                 return self._unavailable_comfort_metric(
-                    "humidity",
-                    source="missing",
-                    entity_id=None,
+                    "humidity", source="climate", entity_id=source_entity_id,
+                    availability="missing",
+                )
+            if automatic_source and "current_humidity" not in getattr(state, "attributes", {}):
+                return self._unavailable_comfort_metric(
+                    "humidity", source="missing", entity_id=None,
                     availability="not_monitored",
                 )
 
-        value, stale = self._comfort_numeric_state_value(
-            source_entity_id,
-            "humidity",
-            config,
-        )
+        state = self._hass.states.get(source_entity_id)
+        freshness = "unverified"
+        value = None
+        if _comfort_state_available(state):
+            if source == "climate":
+                value = _state_numeric_humidity(state)
+            else:
+                value = _state_numeric_value(state)
+                freshness = _comfort_state_freshness(
+                    state, config["stale_after_minutes"]
+                )
+        if value is not None and not 0 <= value <= 100:
+            value = None
+        stale = freshness == "stale" and value is not None
         effective = comfort_zone.get("effective_humidity_range")
         if not isinstance(effective, dict):
             if stale:
                 return self._unavailable_comfort_metric(
-                    "humidity",
-                    source=source,
-                    entity_id=source_entity_id,
-                    availability="stale",
-                    value=value,
+                    "humidity", source=source, entity_id=source_entity_id,
+                    availability="stale", value=value,
                 )
             if value is None:
                 return self._unavailable_comfort_metric(
-                    "humidity",
-                    source=source,
-                    entity_id=source_entity_id,
+                    "humidity", source=source, entity_id=source_entity_id,
                     availability="missing",
                 )
             return {
-                "availability": "current",
-                "condition": None,
-                "entity_id": source_entity_id,
-                "metric": "humidity",
-                "source": source,
-                "value": value,
+                "availability": "current", "freshness": freshness,
+                "condition": None, "entity_id": source_entity_id,
+                "metric": "humidity", "source": source, "value": value,
                 "effective_range_available": False,
             }
         return self._comfort_range_metric(
-            value,
-            stale,
-            source=source,
-            entity_id=source_entity_id,
+            value, stale, freshness=freshness,
+            source=source, entity_id=source_entity_id,
             metric="humidity",
             minimum=float(effective["minimum"]),
             maximum=float(effective["maximum"]),
@@ -9335,12 +9447,10 @@ class VelairScheduler:
                 availability="not_monitored",
             )
 
-        value, stale = self._comfort_numeric_state_value(
-            source_entity_id,
-            "co2",
-            config,
+        value, freshness = self._comfort_numeric_state_value(
+            source_entity_id, "co2", config
         )
-        if stale:
+        if freshness == "stale" and value is not None:
             return self._unavailable_comfort_metric(
                 "co2",
                 source="sensor",
@@ -9364,6 +9474,7 @@ class VelairScheduler:
 
         return {
             "availability": "current",
+            "freshness": freshness,
             "condition": condition,
             "entity_id": source_entity_id,
             "max": config["co2_poor"],
@@ -9378,6 +9489,7 @@ class VelairScheduler:
         value: float | None,
         stale: bool,
         *,
+        freshness: str,
         source: str,
         entity_id: str | None,
         metric: str,
@@ -9413,6 +9525,7 @@ class VelairScheduler:
 
         return {
             "availability": "current",
+            "freshness": freshness,
             "condition": condition,
             "entity_id": entity_id,
             "metric": metric,
@@ -9460,17 +9573,15 @@ class VelairScheduler:
         entity_id: str,
         metric: str,
         config: ComfortData,
-    ) -> tuple[float | None, bool]:
-        """Return a numeric state value and whether the source is stale."""
+    ) -> tuple[float | None, str]:
+        """Return a direct sensor reading and report freshness."""
         state = self._hass.states.get(entity_id)
-        if state is None:
-            return None, False
-        stale = _state_is_stale(state, config["stale_after_minutes"])
-        if metric == "temperature":
-            return _state_numeric_temperature(state), stale
-        if metric == "humidity":
-            return _state_numeric_humidity(state), stale
-        return _state_numeric_value(state), stale
+        if not _comfort_state_available(state):
+            return None, "unverified"
+        return (
+            _state_numeric_value(state),
+            _comfort_state_freshness(state, config["stale_after_minutes"]),
+        )
 
     def _comfort_candidate_entities(self) -> set[str]:
         """Return entities that should wake comfort recalculation."""
@@ -9502,34 +9613,126 @@ class VelairScheduler:
                     entity_ids.add(candidate)
         return entity_ids
 
+    def _comfort_report_sources(self) -> list[tuple[str, int]]:
+        """Return direct monitored sources and their per-zone expiry limits."""
+        sources: list[tuple[str, int]] = []
+        for entity_id, zone in self._data["zones"].items():
+            config = self._normalize_comfort_for_entity(entity_id, zone.get("comfort"))
+            if not config["enabled"]:
+                continue
+            preconditioning = normalize_preconditioning_data(zone.get("preconditioning"))
+            candidates = [
+                config.get("temperature_entity_id")
+                or preconditioning.get("room_temperature_entity_id"),
+                config.get("humidity_entity_id") if config["humidity_enabled"] else None,
+                config.get("co2_entity_id"),
+            ]
+            if config["outdoor_comparison_enabled"]:
+                candidates.extend((
+                    config.get("outdoor_temperature_entity_id"),
+                    config.get("outdoor_humidity_entity_id"),
+                ))
+            candidates.extend(
+                metric_config.get("entity_id")
+                for metric_config in config["derived_metrics"].values()
+                if metric_config["enabled"] and metric_config["source"] == "entity"
+            )
+            sources.extend(
+                (candidate, config["stale_after_minutes"])
+                for candidate in candidates
+                if isinstance(candidate, str) and not candidate.startswith("climate.")
+            )
+        return sources
+
     def _refresh_comfort_listener(self) -> None:
-        """Listen only to entities that can affect enabled comfort monitoring."""
+        """Listen only to state changes and reports that affect Comfort."""
         entity_ids = sorted(self._comfort_candidate_entities())
+        report_ids = frozenset(source for source, _ in self._comfort_report_sources())
         next_entities = tuple(entity_ids)
-        if next_entities == self._comfort_entities:
+        if (
+            next_entities == self._comfort_entities
+            and report_ids == self._comfort_report_entities
+        ):
+            self._schedule_comfort_expiry()
             return
 
         self._clear_comfort_listener()
         self._comfort_entities = next_entities
+        self._comfort_report_entities = report_ids
         if not entity_ids:
             self._comfort_assessment_snapshots.clear()
             return
 
         self._async_update_comfort_snapshots(fire_events=False)
         self._unsub_comfort_listener = async_track_state_change_event(
-            self._hass,
-            entity_ids,
-            self._handle_comfort_state_change,
+            self._hass, entity_ids, self._handle_comfort_state_change,
         )
+        if report_ids:
+            self._unsub_comfort_report_listener = async_track_state_report_event(
+                self._hass, sorted(report_ids), self._handle_comfort_state_reported,
+            )
+        self._schedule_comfort_expiry()
 
     @callback
     def _handle_comfort_state_change(self, event) -> None:
-        """Refresh the comfort assessment after a tracked entity changes."""
+        """Refresh the assessment after a tracked entity changes."""
         entity_id = event.data.get("entity_id")
         if not isinstance(entity_id, str) or entity_id not in self._comfort_entities:
             return
         if self._async_update_comfort_snapshots(fire_events=True):
             self._async_write_state()
+        if entity_id in self._comfort_report_entities:
+            self._schedule_comfort_expiry()
+
+    @callback
+    def _handle_comfort_state_reported(self, event) -> None:
+        """Refresh freshness when a direct sensor republishes the same value."""
+        if event.data.get("entity_id") not in self._comfort_report_entities:
+            return
+        if self._async_update_comfort_snapshots(fire_events=True):
+            self._async_write_state()
+        self._schedule_comfort_expiry()
+
+    def _schedule_comfort_expiry(self) -> None:
+        """Arm one timer for the next direct-source report deadline."""
+        self._clear_comfort_expiry_timer()
+        if self._stopped:
+            return
+        now = dt_util.now()
+        deadlines: list[datetime] = []
+        for entity_id, minutes in self._comfort_report_sources():
+            state = self._hass.states.get(entity_id)
+            if not _comfort_state_available(state) or _state_numeric_value(state) is None:
+                continue
+            last_reported = getattr(state, "last_reported", None)
+            if last_reported is None:
+                continue
+            try:
+                deadline = last_reported + timedelta(minutes=minutes)
+                if deadline > now:
+                    deadlines.append(deadline)
+            except TypeError:
+                continue
+        if deadlines:
+            self._unsub_comfort_expiry_timer = async_track_point_in_time(
+                self._hass, self._handle_comfort_expiry, min(deadlines),
+            )
+
+    @callback
+    def _handle_comfort_expiry(self, now: datetime) -> None:
+        """Publish the transition to stale at a source's report deadline."""
+        self._unsub_comfort_expiry_timer = None
+        if self._stopped:
+            return
+        if self._async_update_comfort_snapshots(fire_events=True):
+            self._async_write_state()
+        self._schedule_comfort_expiry()
+
+    def _clear_comfort_expiry_timer(self) -> None:
+        """Cancel the pending Comfort freshness deadline."""
+        if self._unsub_comfort_expiry_timer is not None:
+            self._unsub_comfort_expiry_timer()
+            self._unsub_comfort_expiry_timer = None
 
     def _async_update_comfort_snapshots(self, *, fire_events: bool) -> bool:
         """Update cached comfort assessments and emit meaningful changes."""
@@ -9791,6 +9994,7 @@ class VelairScheduler:
             return None
         return (
             metric.get("availability"),
+            metric.get("freshness"),
             metric.get("condition"),
             metric.get("value"),
             metric.get("entity_id"),
@@ -9798,11 +10002,16 @@ class VelairScheduler:
         )
 
     def _clear_comfort_listener(self) -> None:
-        """Stop listening for comfort sensor state changes."""
+        """Stop Comfort state/report listeners and its one-shot timer."""
+        self._clear_comfort_expiry_timer()
         if self._unsub_comfort_listener is not None:
             self._unsub_comfort_listener()
             self._unsub_comfort_listener = None
+        if self._unsub_comfort_report_listener is not None:
+            self._unsub_comfort_report_listener()
+            self._unsub_comfort_report_listener = None
         self._comfort_entities = ()
+        self._comfort_report_entities = frozenset()
 
     def _clear_timer(self) -> None:
         """Cancel the active timer if one exists."""
@@ -10141,7 +10350,11 @@ class VelairScheduler:
                 if event.action != ACTION_TURN_OFF
                 else {"temperature": None}
             ),
-            "hvac_mode": hvac_mode,
+            **(
+                {"hvac_mode": hvac_mode}
+                if event.action != ACTION_SET_CLIMATE_OPTIONS
+                else {}
+            ),
             **_climate_options_from_event(event),
             "weekday": event.weekday,
             "start": event.start,
@@ -11001,7 +11214,7 @@ def _block_without_climate_options(block: ScheduleBlock) -> ScheduleBlock:
     if action == ACTION_SET_HVAC_MODE:
         if block.get("hvac_mode"):
             clean_block["hvac_mode"] = block["hvac_mode"]
-    elif action != ACTION_TURN_OFF:
+    elif action == ACTION_SET_TEMPERATURE:
         clean_block.update(temperature_target_from_mapping(block))
         if block.get("hvac_mode"):
             clean_block["hvac_mode"] = block["hvac_mode"]
@@ -11014,12 +11227,17 @@ def _filter_block_climate_options(
 ) -> ScheduleBlock:
     """Return a block with only supported optional climate settings."""
     clean_block = _block_without_climate_options(block)
-    if clean_block.get("action") != ACTION_SET_TEMPERATURE:
+    action = clean_block.get("action")
+    if action not in (ACTION_SET_TEMPERATURE, ACTION_SET_CLIMATE_OPTIONS):
         return clean_block
 
     for attr, value in climate_options_from_block(block).items():
-        filtered_options = _filter_climate_options({attr: value}, supported_options)
-        clean_block.update(filtered_options)
+        clean_block.update(_filter_climate_options({attr: value}, supported_options))
+    if (
+        action == ACTION_SET_CLIMATE_OPTIONS
+        and not climate_options_from_block(clean_block)
+    ):
+        raise ValueError("Options-only schedule block has no supported climate options")
     return clean_block
 
 
@@ -11123,16 +11341,18 @@ def _state_numeric_temperature(state) -> float | None:
 
 
 def _state_numeric_humidity(state) -> float | None:
-    """Return numeric humidity from state or current_humidity attribute."""
+    """Return measured humidity from a climate's current_humidity attribute."""
     if state is None:
         return None
     attributes = getattr(state, "attributes", {})
-    for attribute in ("current_humidity", "humidity"):
-        try:
-            return float(attributes[attribute])
-        except (KeyError, TypeError, ValueError):
-            continue
-    return _state_numeric_value(state)
+    try:
+        value = attributes["current_humidity"]
+        if isinstance(value, bool):
+            return None
+        humidity = float(value)
+    except (KeyError, TypeError, ValueError):
+        return None
+    return humidity if math.isfinite(humidity) else None
 
 
 def _state_numeric_value(state) -> float | None:
@@ -11157,16 +11377,31 @@ def _finite_float_or_none(value: object) -> float | None:
     return numeric if math.isfinite(numeric) else None
 
 
-def _state_is_stale(state, stale_after_minutes: int) -> bool:
-    """Return whether a Home Assistant state is older than the configured limit."""
-    last_updated = getattr(state, "last_updated", None)
-    if last_updated is None:
-        return False
+def _comfort_combined_freshness(*metrics: dict[str, object]) -> str:
+    """A computed reading cannot be better verified than its inputs."""
+    return (
+        "reported" if all(metric.get("freshness") == "reported" for metric in metrics)
+        else "unverified"
+    )
+
+
+def _comfort_state_available(state) -> bool:
+    """Reject unavailable sources before reading retained attributes."""
+    return state is not None and str(getattr(state, "state", "")).lower() not in (
+        "unknown", "unavailable"
+    )
+
+
+def _comfort_state_freshness(state, stale_after_minutes: int) -> str:
+    """Classify the age of a direct source's latest Home Assistant report."""
+    last_reported = getattr(state, "last_reported", None)
+    if last_reported is None:
+        return "unverified"
     try:
-        age = dt_util.now() - last_updated
+        age = dt_util.now() - last_reported
     except TypeError:
-        return False
-    return age > timedelta(minutes=stale_after_minutes)
+        return "unverified"
+    return "stale" if age >= timedelta(minutes=stale_after_minutes) else "reported"
 
 
 def _event_has_explicit_target(event: ClimateEvent) -> bool:

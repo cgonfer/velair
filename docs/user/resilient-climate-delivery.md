@@ -28,4 +28,7 @@ operation.
 
 This behavior works for heating, cooling, scalar targets, native `heat_cool`
 ranges, turn-off actions, and supported fan, preset, swing, and humidity
-options.
+options. Option-only blocks use the same delivery boundary without setting a
+target or HVAC mode. Their service calls run sequentially: if a later call
+fails, an earlier option may already have changed, but Velair does not report
+the complete block as applied.

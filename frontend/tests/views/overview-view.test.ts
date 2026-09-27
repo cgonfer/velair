@@ -16,6 +16,7 @@ import { ru } from "../../src/velair/translations/ru";
 import { translationTemplate } from "../../src/velair/translations/template";
 import type { ScheduleEvent } from "../../src/velair/types";
 import {
+  overviewTimelineBlockLabel,
   renderEvent,
   renderEventDetails,
   renderNextEvents,
@@ -45,6 +46,21 @@ function host() {
 }
 
 describe("overview next events", () => {
+  it("passes climate options to the overview timeline action formatter", () => {
+    const formatter = vi.fn((event: ScheduleEvent) => event.preset_mode ?? "");
+    const timelineHost = { ...host(), _formatEventAction: formatter } as VelairViewHost;
+    const label = overviewTimelineBlockLabel(timelineHost, "climate.office", {
+      action: "set_climate_options", start: "08:00", preset_mode: "eco",
+      fan_mode: "quiet", swing_mode: "vertical", swing_horizontal_mode: "left",
+      humidity: 45,
+    });
+    expect(label).toBe("eco");
+    expect(formatter).toHaveBeenCalledWith(expect.objectContaining({
+      fan_mode: "quiet", preset_mode: "eco", swing_mode: "vertical",
+      swing_horizontal_mode: "left", humidity: 45,
+    }));
+  });
+
   it("shows externally executed zones as an informational notice in the scheduler status", () => {
     const container = document.createElement("div");
     const overviewHost = {
@@ -1772,5 +1788,29 @@ describe("overview timeline", () => {
     expect(overviewStyles.cssText).not.toMatch(/\.overview-zone-profile\s*\{[^}]*border-radius:\s*999px/);
     expect(overviewStyles.cssText).toMatch(/\.overview-timeline-name ha-icon\s*\{[^}]*display:\s*inline-flex/);
     expect(overviewStyles.cssText).toMatch(/\.overview-timeline-name ha-icon\s*\{[^}]*height:\s*100%/);
+  });
+
+  it("shows an unverified climate reading as information in the zone overview", () => {
+    const container = document.createElement("div");
+    const overviewHost = {
+      ...host(),
+      _data: {
+        zones: { "climate.office": { enabled: true, schedule: {} } },
+        comfort: { "climate.office": {
+          enabled: true,
+          condition: "comfortable",
+          air_quality: "not_monitored",
+          data_quality: "unverified",
+          data_issues: ["temperature_unverified"],
+        } },
+      },
+    } as unknown as VelairViewHost;
+
+    render(renderOverviewZones(overviewHost, ["climate.office"]), container);
+
+    const data = container.querySelector(".overview-zone-signal.comfort-data");
+    expect(data?.classList).toContain("info");
+    expect(data?.querySelector("ha-icon")?.getAttribute("icon"))
+      .toBe("mdi:information-outline");
   });
 });

@@ -444,6 +444,58 @@ describe("climate card view", () => {
       .toMatch(/comfortInsightHumidexWarmer 10[,.]3 °F/);
   });
 
+  it("explains unverified Comfort freshness without warning about a valid climate reading", () => {
+    const container = document.createElement("div");
+    const cardHost = host();
+    cardHost._data!.comfort = { "climate.office": {
+      enabled: true,
+      condition: "comfortable",
+      air_quality: "not_monitored",
+      data_quality: "unverified",
+      data_issues: ["temperature_unverified"],
+      temperature: {
+        availability: "current", freshness: "unverified", condition: "comfortable",
+        metric: "temperature", source: "climate", value: 20,
+      },
+    } };
+
+    render(renderClimateCard(cardHost, "climate.office"), container);
+
+    expect(container.querySelector(".climate-card-comfort-notices")?.textContent)
+      .toContain("comfortDataUnverified");
+    expect(container.querySelector(".climate-card-comfort-notices .climate-card-comfort-notice.info ha-icon")?.getAttribute("icon"))
+      .toBe("mdi:information-outline");
+    expect(container.querySelector(".climate-card-comfort")?.textContent)
+      .toContain("comfortConditionComfortable");
+  });
+
+  it("flags a visible derived reading with unverified freshness when primary data is complete", () => {
+    const cardHost = host();
+    cardHost._data!.comfort = { "climate.office": {
+      enabled: true, condition: "comfortable", air_quality: "good",
+      data_quality: "complete", data_issues: [],
+      derived_metrics: { dew_point: {
+        availability: "current", freshness: "unverified", condition: null,
+        metric: "dew_point", source: "velair", value: 12.4,
+      } },
+    } };
+    const expanded = document.createElement("div");
+    render(renderClimateCard(cardHost, "climate.office"), expanded);
+    expect(expanded.querySelector(".climate-card-comfort-notices")?.textContent)
+      .toContain("comfortDataUnverified: comfortDewPoint");
+    expect(expanded.querySelector(".climate-card-comfort-notices .climate-card-comfort-notice.info ha-icon")?.getAttribute("icon"))
+      .toBe("mdi:information-outline");
+    expect(expanded.querySelector(".climate-card-comfort-metrics")?.textContent)
+      .toContain("12.4");
+
+    cardHost._climateCardCurrentStateCollapsed = true;
+    cardHost._config.climate_show_comfort_collapsed_readings = true;
+    const collapsed = document.createElement("div");
+    render(renderClimateCard(cardHost, "climate.office"), collapsed);
+    expect(collapsed.querySelector(".climate-card-current-collapsed-comfort-row")?.textContent)
+      .toContain("comfortDataUnverified: comfortDewPoint");
+  });
+
   it("uses the first prioritized outdoor Comfort insight in the compact card", () => {
     const container = document.createElement("div");
     const cardHost = host();
@@ -978,6 +1030,23 @@ describe("climate card view", () => {
     expect(collapsedComfort?.querySelectorAll('ha-icon[icon="mdi:sofa-outline"]')).toHaveLength(1);
     expect(collapsedComfort?.getAttribute("style")).toContain("--comfort-primary-accent:var(--success-color, #65a56f)");
     expect(collapsedComfort?.getAttribute("style")).toContain("--comfort-secondary-accent:var(--success-color, #65a56f)");
+  });
+
+  it("shows unverified climate freshness as information in the collapsed Comfort row", () => {
+    const container = document.createElement("div");
+    const cardHost = host() as VelairViewHost & { _data: any };
+    cardHost._climateCardCurrentStateCollapsed = true;
+    cardHost._data.comfort = { "climate.office": {
+      enabled: true, condition: "comfortable", air_quality: "not_monitored",
+      data_quality: "unverified", data_issues: ["temperature_unverified"],
+    } };
+    render(renderClimateCard(cardHost, "climate.office"), container);
+
+    const info = [...container.querySelectorAll(".climate-card-current-collapsed-comfort-row .climate-card-comfort-chip.info")]
+      .find((chip) => chip.textContent?.includes("comfortDataUnverified"));
+    expect(info?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:information-outline");
+    expect(container.querySelector(".climate-card-current-collapsed-comfort-row .climate-card-comfort-chip.warning"))
+      .toBeNull();
   });
 
   it("shows additional Comfort readings while collapsed only when configured", () => {

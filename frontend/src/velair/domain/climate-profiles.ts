@@ -1,11 +1,12 @@
 import { WEEKDAYS } from "../constants";
 import {
+  ACTION_SET_CLIMATE_OPTIONS,
   ACTION_SET_HVAC_MODE,
   ACTION_SET_TEMPERATURE,
   ACTION_TURN_OFF,
   PROFILE_DESCRIPTION_MAX_LENGTH,
 } from "../constants";
-import { draftBlocksFromScheduleBlocks, draftBlockUsesRange } from "./draft-blocks";
+import { draftBlocksFromScheduleBlocks, draftBlockHasClimateOptions, draftBlockUsesRange } from "./draft-blocks";
 import type {
   ClimateProfile,
   ClimateProfileInput,
@@ -257,6 +258,9 @@ export function climateProfileValidationError(draft: ClimateProfileDraft): strin
         starts.add(block.start);
         if (block.action === ACTION_SET_HVAC_MODE) {
           if (!block.hvac_mode || block.hvac_mode === "off") return "schedule";
+        } else if (block.action === ACTION_SET_CLIMATE_OPTIONS) {
+          if (!draftBlockHasClimateOptions(block) || (String(block.humidity ?? "").trim()
+            && !Number.isFinite(Number(block.humidity)))) return "schedule";
         } else if (block.action !== ACTION_TURN_OFF) {
           const validTarget = draftBlockUsesRange(block)
             ? Number.isFinite(Number(block.target_temp_low))
@@ -308,14 +312,14 @@ function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock {
   }
   return {
     start: block.start,
-    action: ACTION_SET_TEMPERATURE,
-    ...(draftBlockUsesRange(block)
+    action: block.action === ACTION_SET_CLIMATE_OPTIONS ? ACTION_SET_CLIMATE_OPTIONS : ACTION_SET_TEMPERATURE,
+    ...(block.action === ACTION_SET_CLIMATE_OPTIONS ? {} : draftBlockUsesRange(block)
       ? {
           target_temp_low: Number(block.target_temp_low),
           target_temp_high: Number(block.target_temp_high),
         }
       : { temperature: Number(block.temperature) }),
-    ...(block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
+    ...(block.action !== ACTION_SET_CLIMATE_OPTIONS && block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
     ...(block.fan_mode ? { fan_mode: block.fan_mode } : {}),
     ...(block.preset_mode ? { preset_mode: block.preset_mode } : {}),
     ...(block.swing_mode ? { swing_mode: block.swing_mode } : {}),

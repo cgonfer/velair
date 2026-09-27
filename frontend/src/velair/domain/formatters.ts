@@ -1,4 +1,4 @@
-import { ACTION_SET_HVAC_MODE, ACTION_TURN_OFF } from "../constants";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_TURN_OFF } from "../constants";
 import type { ScheduleEvent } from "../types";
 import type { SupportedLanguage } from "../translations";
 
@@ -119,7 +119,7 @@ export function temperatureUnit(entityUnit?: string, systemUnit?: string): strin
 
 export function formatEventAction(
   event: ScheduleEvent,
-  labels: { off: string; setTemperature: string; deviceControlled?: string },
+  labels: { off: string; setTemperature: string; deviceControlled?: string; climateOptionsOnly?: string },
   formatEventTemperature: (value: number, entityId?: string) => string,
 ): string {
   if (event.action === ACTION_TURN_OFF) {
@@ -127,6 +127,11 @@ export function formatEventAction(
   }
   if (event.action === ACTION_SET_HVAC_MODE) {
     return labels.deviceControlled ?? labels.setTemperature;
+  }
+  if (event.action === ACTION_SET_CLIMATE_OPTIONS) {
+    const values = [event.preset_mode, event.fan_mode, event.swing_mode, event.swing_horizontal_mode,
+      event.humidity == null ? undefined : `${event.humidity}%`].filter(Boolean);
+    return [labels.climateOptionsOnly ?? labels.setTemperature, ...values].join(" · ");
   }
   if (event.temperature == null) {
     if (event.target_temp_low != null && event.target_temp_high != null) {
@@ -150,6 +155,9 @@ export function formatEventMode(
   }
   if (event.action === ACTION_TURN_OFF) {
     return modeLabel("off");
+  }
+  if (event.action === ACTION_SET_CLIMATE_OPTIONS) {
+    return "";
   }
   return labels.keepMode;
 }

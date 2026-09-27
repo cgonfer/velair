@@ -218,6 +218,8 @@ function renderFunctions(host: VelairViewHost, entityId: string, unit: UnitDiagn
         { label: "diagnosticsConfigured" as TranslationKey,
           value: comfortConfig.enabled === false && unit.comfort ? false : undefined },
         { label: "diagnosticsFunctionState" as TranslationKey, value: comfortStateLabel(host, record(unit.comfort).condition ?? record(unit.comfort).status) },
+        { label: "comfortDataFreshness" as TranslationKey, value: record(unit.comfort).data_quality === "unverified" ? comfortDataQualityLabel(host, "unverified") : undefined },
+        { label: "comfortAdditionalInformation" as TranslationKey, value: unverifiedDerivedMetricDetail(host, unit.comfort) },
       ] },
   ].filter((item) => item.visible);
   if (!functions.length) return nothing;
@@ -1058,9 +1060,26 @@ function comfortAirQualityLabel(host: VelairViewHost, value: unknown): string | 
   return keys[state] ? host._t(keys[state]) : humanizeIdentifier(state);
 }
 
+function unverifiedDerivedMetricDetail(host: VelairViewHost, comfort: unknown): string | undefined {
+  const readings = record(record(comfort).derived_metrics);
+  const labels: Array<[string, TranslationKey]> = [
+    ["humidex", "comfortHumidex"],
+    ["dew_point", "comfortDewPoint"],
+    ["absolute_humidity", "comfortAbsoluteHumidity"],
+  ];
+  const unverified = labels
+    .filter(([metric]) => {
+      const reading = record(readings[metric]);
+      return reading.availability === "current" && reading.freshness === "unverified";
+    })
+    .map(([, label]) => host._t(label));
+  return unverified.length ? `${host._t("comfortDataUnverified")}: ${unverified.join(", ")}` : undefined;
+}
+
 function comfortDataQualityLabel(host: VelairViewHost, value: unknown): string | undefined {
   const keys: Record<string, TranslationKey> = {
     partial: "comfortDataPartial",
+    unverified: "comfortDataUnverified",
     stale: "comfortDataStale",
     unavailable: "comfortDataUnavailable",
   };

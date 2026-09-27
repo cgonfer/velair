@@ -216,8 +216,9 @@ paused_started_at: "2026-07-09T17:00:00+02:00"
 ## Climate Target Applied
 
 `climate_target_applied` is emitted after Velair applies a scheduled target,
-mode-only action, turn-off action, restored schedule, startup schedule, or
-`velair.set_temperature` / `velair.set_hvac_mode` service call.
+mode-only action, option-only action, turn-off action, restored schedule,
+startup schedule, or `velair.set_temperature` / `velair.set_hvac_mode`
+service call.
 Unsupported optional settings are omitted.
 
 ```yaml
@@ -257,6 +258,11 @@ automations distinguish a mode handoff from a target change.
 The same payload shape is used by `velair.set_hvac_mode`, with
 `source: service_set_hvac_mode` and without schedule-only `weekday` or `start`
 fields.
+
+For an option-only block, `action` is `set_climate_options`. The event includes
+the applied optional fields, such as `preset_mode` or `fan_mode`, and omits
+temperature targets and `hvac_mode`. These blocks do not turn on a climate that
+is off.
 
 ## Preconditioning Plan Updated
 
@@ -467,6 +473,7 @@ range_status_changed: true
 temperature:
   metric: temperature
   availability: current
+  freshness: reported
   condition: hot
   source: sensor
   entity_id: sensor.office_temperature
@@ -476,6 +483,7 @@ temperature:
 humidity:
   metric: humidity
   availability: current
+  freshness: reported
   condition: humid
   source: sensor
   entity_id: sensor.office_humidity
@@ -689,6 +697,7 @@ numeric movement within the same semantic result does not emit another event.
 `guidance_thresholds` reports the effective per-zone sensitivity used to reach
 that result. Editing a threshold without changing the semantic result refreshes
 current state but does not emit an event.
+Current metric payloads include `freshness: reported | unverified`. The indoor or outdoor `data_quality` can be `unverified` when all readings are usable but at least one has no verifiable report timestamp. Direct sensors can become stale at their report deadline without a state-value change.
 The subtree provides indoor absolute humidity explicitly; consumers must not
 reconstruct it from rounded deltas.
 The ventilation codes describe an opportunity or trade-off only. They do not
