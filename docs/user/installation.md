@@ -76,6 +76,7 @@ view: overview-status
 
 Supported `view` values:
 
+- `climate`: status and controls for one managed climate.
 - `overview-status`: scheduler state and pause/stop/resume controls.
 - `overview-boosts`: active boosts.
 - `overview-events`: next events.
@@ -86,6 +87,7 @@ Supported `view` values:
 - `sensors`: Room Assist configuration and live status.
 - `comfort`: environmental comfort configuration and status.
 - `preconditioning`: adaptive preconditioning configuration and local learning status.
+- `diagnostics`: runtime health, bounded history, filters, and issue-report export.
 
 ## Updating
 

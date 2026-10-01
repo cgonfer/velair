@@ -3,7 +3,7 @@ Climate automation that adapts to your life.
 
 [Explore Velair on the project website](https://cgonfer.github.io/velair/)
 
-[![Version](https://img.shields.io/badge/version-1.8.0--beta.3-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -13,55 +13,35 @@ Climate automation that adapts to your life.
 ![Velair Logo](custom_components/velair/brand/logo_readme.png)
 
 
-Velair is a Home Assistant custom integration for managing clear, local-first climate schedules on top of standard `climate.*` entities. It provides a sidebar panel, an optional Lovelace card, schedule templates, Adaptive Preconditioning, Room Assist, Environmental Comfort monitoring, per-zone boosts, and automation-friendly services without depending on any thermostat vendor cloud.
+Velair brings local-first scheduling to the `climate.*` entities you already use in Home Assistant. Plan heating and cooling from its sidebar panel, and add the optional Lovelace card if you want to check on a room or control it from your dashboard.
 
-Velair does not replace your thermostat integration. It works through Home Assistant entities, so it can manage any compatible climate device that is already exposed to Home Assistant.
+Velair works with your existing thermostat integration rather than replacing it. Its scheduler runs in Home Assistant; whether the device itself needs a cloud connection depends on that integration.
 
 ## Why Velair Exists
 
-Velair started from a practical Home Assistant use case: keeping climate control local and reliable while recovering scheduling features that were becoming harder to use from a vendor app because of subscription changes and rate limits.
+I started Velair because the scheduling features I used in a vendor app were becoming harder to use as subscriptions and rate limits changed. I wanted to keep my climate schedules in Home Assistant and make that option useful to people with other compatible thermostats too. It's a community contribution, not a criticism of any brand.
 
-The project is not intended to criticize or offend any brand. It is a community contribution for users who want local-first home automation, simple day-to-day workflows, and a scheduler that can work across different climate integrations.
+## When plans change
 
-Velair is maintained by Cristian Gonzalez Fernandez, a Home Assistant enthusiast who enjoys building software projects in his free time to solve practical everyday problems through automation and technology.
-
-Contributions, testing, bug reports, and constructive feedback are always welcome. This project is maintained on a best-effort basis alongside work and daily life, so responses and updates may sometimes take a little time.
+Set up your normal week once. When plans change, switch to another Mode, boost one room, or pause a schedule without rebuilding it. Velair shows what's active and what's coming next for each climate.
 
 ## Features
 
-- Home Assistant sidebar panel registered automatically by the integration.
-- Optional Lovelace card using the same bundled frontend.
-- Visual schedule editor for managed `climate.*` entities.
-- Weekly schedules per climate zone.
-- Weekly continuity across midnight and empty days, with inherited periods identified in the timeline.
-- Schedule blocks for temperature targets, climate options without a target (such as preset-only control), changing only the HVAC mode, or turning a climate entity off.
-- A temperature block with `Keep current mode` sends its target without changing an active HVAC mode. If the climate is off, Velair starts it in the first supported mode compatible with the target; an incompatible running mode can reject it. An option-only block sends no temperature or HVAC mode and does not turn an off climate on.
-- Support for heating, cooling, dry, fan-only, and off modes where the climate entity supports them. Climate entities can use either a single target or separate lower and upper targets for range-based modes such as `heat_cool`.
-- Drag and resize interactions on a 24-hour timeline.
-- Day cloning to other weekdays or other managed climates.
-- Editable schedule templates with import/export support.
-- One schedule workspace for Default and Profile schedules, with coordinated per-zone behavior, in-editor day cloning, pauses, configurable Modes, and a native Home Assistant select entity for automations.
-- Optional external schedule execution for compatible controllers. Velair publishes the effective Default, Profile, or Mode week while keeping direct climate actions disabled for externally managed zones.
-- Overview tab with scheduler status, active boosts, next events, and responsive zone cards that separate Velair intent from live device activity.
-- Per-climate handling for external setpoint or HVAC-mode changes: keep Velair automatic by default or yield through a configurable Manual adjustment, plus an Overview action that can hold the live climate state and explicitly return to the currently authoritative Default, Profile, Mode, pause, or Off intent.
-- Dedicated Adaptive preconditioning tab with per-climate controls and local learning status.
-- Dedicated Room Assist tab for setups that need a separate room temperature sensor, including width-preserving assistance for native `heat_cool` ranges.
-- Dedicated Comfort tab with readable temperature/humidity conditions, independent CO2 air quality, data-quality warnings, optional dew point, absolute humidity and Humidex, and responsive live visualizations.
-- Optional climate controls per block where supported, including fan mode, preset mode, swing mode, horizontal swing mode, and target humidity.
-- Dedicated Diagnostics tab with live runtime health, bounded history, filters, and privacy-aware issue reports.
-- Settings tab with climate ordering, fallback target steps for incomplete climate entities, startup behavior, portability tools, and maintenance information.
-- Global pause, stop, and resume controls, plus per-zone pause and resume.
-- Velair-scoped services for activating climate profiles, starting and cancelling boosts, pauses, schedule application, schedule editing, day cloning, and schedule clearing.
-- Automation events through `velair_event` for Profile changes, scheduler mode changes, Adaptive Preconditioning plans, cancellations and observations, Room Assist state and target changes, Comfort assessments, applied climate targets, boosts, and per-zone pause/resume lifecycle changes.
-- Push updates through Home Assistant WebSocket events, without frontend polling.
-- Complete English, Spanish, German, French, Italian, Dutch, Polish, Brazilian Portuguese, European Portuguese, and community-reviewed Russian UI coverage, with English fallback for unsupported languages.
-- Native Celsius and Fahrenheit workflows using Home Assistant's configured unit, including unit-aware defaults, explicit stored-data migration, and legacy backup conversion.
+- A weekly schedule editor for each climate, with reusable templates and Profiles.
+- Schedule blocks that can set a temperature or range, change only the HVAC mode, send supported options such as a preset without a temperature, or turn the climate off.
+- Manual adjustment when you want to take direct control of a climate.
+- Optional Adaptive Preconditioning and Room Assist for earlier starts and separate room-temperature sensors.
+- Environmental Comfort and air-quality readings, with optional outdoor comparisons and ventilation guidance. These are observations; Velair does not open windows or adjust the climate based on them.
+- See what Velair is doing in Overview, investigate problems in Diagnostics, or add a card for one climate to your dashboard.
+- Home Assistant entities, services, events, and blueprints for automations. Compatible external controllers can also receive published schedules.
+
+Velair's interface is available in English, Spanish, German, French, Italian,
+Dutch, Polish, Russian, and Portuguese for Brazil and Portugal.
 
 ## Screenshots
 
-The following examples use Velair's deterministic English demo data and dark
-Home Assistant theme. See [more screenshots](docs/project/screenshots.md) for
-the complete desktop, tablet, and mobile set.
+These screenshots use example data and Home Assistant's dark theme. See
+[more screenshots](docs/project/screenshots.md) for desktop, tablet, and mobile views.
 
 | Desktop | Mobile |
 | --- | --- |
@@ -71,241 +51,81 @@ the complete desktop, tablet, and mobile set.
 
 Velair is available in the default HACS store and can also be installed manually.
 
-<details>
-  <summary>HACS</summary>
+1. In HACS, search for **Velair** under integrations and select **Download**.
+2. Restart Home Assistant.
+3. Add Velair from **Settings > Devices & services** and select the `climate.*` entities it may manage.
 
-  <br>
-  1. Open HACS.
-  2. Search for **Velair** in the available integrations.
-  3. Open Velair and select **Download**.
-  4. Restart Home Assistant.
-  5. Add Velair from **Settings > Devices & services**.
-
-  [![Open Velair on Home Assistant Community Store (HACS).](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cgonfer&repository=velair&category=integration)
-</details>
+[![Open Velair on Home Assistant Community Store (HACS).](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cgonfer&repository=velair&category=integration)
 
 <details>
-  <summary>Manual</summary>
+  <summary>Manual installation</summary>
 
   <br>
-  For manual installation from a release, download `velair-custom-component-<version>.zip` from the GitHub Release assets and extract it so Home Assistant has:
-  
+  Download `velair-custom-component-<version>.zip` from the latest GitHub release and extract it so Home Assistant has:
+
   ```text
   <home_assistant_config>/custom_components/velair
   ```
-  
-  For manual installation from a repository checkout, copy this directory:
-  
-  ```text
-  custom_components/velair
-  ```
-  
-  to:
-  
-  ```text
-  <home_assistant_config>/custom_components/velair
-  ```
-  
+
   Restart Home Assistant and add Velair from **Settings > Devices & services**.
-  
-</details>
 
-For development builds, see [docs/developer/development.md](docs/developer/development.md).
+  See the [installation guide](docs/user/installation.md) for repository-checkout and development-build instructions.
+</details>
 
 ## Basic Usage
 
-1. Add the Velair integration.
-2. Select the `climate.*` entities Velair may manage.
-3. Open Velair from the Home Assistant sidebar.
-4. Choose a climate and weekday.
-5. Add schedule blocks.
-6. Save the day.
-7. Clone the day or create templates when useful.
+1. Open Velair from the Home Assistant sidebar.
+2. Choose one of your managed climates and a day of the week.
+3. Add schedule blocks and save the day.
 
-See [docs/user/usage.md](docs/user/usage.md) for the full workflow. The
-[sensor reference](docs/user/sensors.md) lists every Velair sensor, its main
-attributes, and practical automation examples.
-
-Optional Home Assistant blueprints can connect Velair to occupancy or pause a
-zone while windows remain open. They keep the automation logic in Home
-Assistant and run from state changes rather than polling. See
-[Automation Blueprints](docs/user/blueprints.md).
-
-Velair uses the temperature unit configured in Home Assistant. New installations
-receive matching defaults automatically. If you are upgrading older Velair data
-or importing a backup created in another unit, read
-[Temperature Units and Migration](docs/user/temperature-units.md) before changing
-stored thermal data.
+Clone days or create templates when useful. The [usage guide](docs/user/usage.md)
+covers the full workflow. Velair follows Home Assistant's temperature unit; if
+you are upgrading older data or importing a backup from another unit, read
+[Temperature Units and Migration](docs/user/temperature-units.md) first.
 
 ## Optional Lovelace Card
 
-The sidebar panel is the main Velair experience. The Lovelace card is optional.
-
-Before adding a card, install and configure the Velair integration first. The Lovelace resource is served by the integration, so it is available after Home Assistant has loaded Velair.
-
-### Add The Lovelace Resource
-
-1. Open Home Assistant.
-2. Go to **Settings > Dashboards**.
-3. Open the three-dot menu.
-4. Select **Resources**.
-5. Select **Add resource**.
-6. Use this URL:
-
-```text
-/velair_frontend/velair-card.js
-```
-
-7. Select **JavaScript module** as the resource type.
-8. Save the resource.
-9. Reload the browser or the Home Assistant companion app.
-
-The resource can also be represented as YAML:
+The sidebar panel is the main Velair experience. To add the optional card,
+first install and configure the integration. In **Settings > Dashboards**,
+open the three-dot menu and select **Resources**. Add this resource as a
+**JavaScript module**, then reload the browser or Home Assistant companion app:
 
 ```yaml
 url: /velair_frontend/velair-card.js
 type: module
 ```
 
-### Add Your First Card
-
-1. Open a dashboard.
-2. Select **Edit dashboard**.
-3. Select **Add card**.
-4. Select **Manual**.
-5. Paste this example:
+In an editable dashboard, add a manual card for one Velair-managed climate:
 
 ```yaml
 type: custom:velair-card
-view: overview-status
+view: climate
+selected_entity: climate.living_room
 ```
 
-6. Save the card.
-
-This first card shows the scheduler status and pause/stop/resume controls. You can add more Velair cards to the same dashboard by changing the `view` value.
-
-The Active setup card can allow changes through Modes, direct Profiles, or
-both. The visual card editor exposes the same choice. Omit
-`active_setup_controls` to keep both:
-
-```yaml
-type: custom:velair-card
-view: active-setup
-active_setup_controls: modes
-```
-
-Supported values are `modes`, `profiles`, and `both`. The current Mode and
-applied Profiles remain visible in every variant. Directly activating a Profile
-replaces every previously active Profile and changes the Mode to Manual. Zones
-not covered by that Profile return to their Default schedules instead of
-keeping the previous Mode's configuration. To activate additional
-non-overlapping Profiles together, create and select a Mode.
-The `profiles` variant also keeps a Default schedules action available.
-
-You can also limit a Lovelace card to specific thermostats. This only changes what that card displays; it does not change the scheduler or stored schedules.
-
-```yaml
-type: custom:velair-card
-view: overview-events
-entities:
-  - climate.living_room
-  - climate.bedroom
-zone_order:
-  - climate.bedroom
-  - climate.living_room
-```
-
-Comfort cards can also hide configuration or individual live graphs:
-
-```yaml
-type: custom:velair-card
-view: comfort
-entities:
-  - climate.living_room
-show_comfort_configuration: false
-show_comfort_temperature: true
-show_comfort_humidity: false
-show_comfort_co2: true
-```
-
-Supported `view` values:
-
-- `climate`: compact status and controls for one managed climate, with optional outdoor-temperature and window sensors.
-- `overview-status`: scheduler state and pause/stop/resume controls.
-- `overview-boosts`: active boosts.
-- `overview-events`: next events.
-- `overview-timeline`: today's timeline.
-- `overview-zones`: zone overview.
-- `active-setup`: current Mode and Profiles, with optional controls.
-- `schedules`: full schedule editor.
-- `sensors`: Room Assist configuration and live status.
-- `comfort`: environmental comfort configuration and status.
-- `preconditioning`: adaptive preconditioning configuration and local learning status.
-- `diagnostics`: runtime health, bounded history, filters, and issue-report export.
-
-If Home Assistant shows a custom element error, confirm that Velair is installed, the resource URL is exactly `/velair_frontend/velair-card.js`, and the browser or companion app has been reloaded after adding the resource.
+Replace `climate.living_room` with your managed climate. The
+[card usage guide](docs/user/usage.md#climate-status-and-control-card) covers the
+visual editor, other views, actions, and display options. If Home Assistant shows a
+custom element error, see [troubleshooting](docs/user/troubleshooting.md).
 
 ## Documentation
 
-### User Guides
-
-- [Documentation index](docs/README.md)
-- [Usage guide](docs/user/usage.md)
-- [External changes and Manual adjustment](docs/user/manual-control.md)
-- [External schedule execution](docs/user/external-systems.md)
-- [Diagnostics](docs/user/diagnostics.md)
-- [Sensor reference](docs/user/sensors.md)
-- [Zone control and delivery sensors](docs/user/zone-sensors.md)
-- [Climate Profiles](docs/user/climate-profiles.md)
-- [Automation Events](docs/user/automation-events.md)
-- [Automation Blueprints](docs/user/blueprints.md)
-- [Adaptive Preconditioning](docs/user/adaptive-preconditioning.md)
-- [Room Assist](docs/user/room-assist.md)
-- [Resilient climate delivery](docs/user/resilient-climate-delivery.md)
-- [Environmental Comfort](docs/user/comfort.md)
-- [Temperature Units and Migration](docs/user/temperature-units.md)
-- [Installation](docs/user/installation.md)
-- [Troubleshooting](docs/user/troubleshooting.md)
-
-### Developer Guides
-
-- [Architecture](docs/developer/architecture.md)
-- [WebSocket API](docs/developer/api.md)
-- [Adaptive preconditioning internals](docs/developer/adaptive-preconditioning.md)
-- [Room Assist internals](docs/developer/room-assist.md)
-- [Climate delivery internals](docs/developer/climate-delivery.md)
-- [Environmental Comfort internals](docs/developer/comfort.md)
-- [Temperature unit internals](docs/developer/temperature-units.md)
-- [Frontend development](docs/developer/frontend.md)
-- [Development guide](docs/developer/development.md)
-- [Manual testing](docs/developer/manual-testing.md)
-
-### Project Notes
-
-- [Screenshot capture](docs/project/screenshots.md)
-
-## Repository Structure
-
-```text
-custom_components/velair/     Home Assistant integration
-frontend/                     TypeScript/Lit frontend source and build tooling
-docs/                         User, developer, and project documentation grouped by topic
-tests/                        Unit tests
-screenshots/                  Real screenshots for public documentation
-hacs.json                     HACS metadata
-```
+Start with the [documentation index](docs/README.md), or go directly to the
+[usage guide](docs/user/usage.md), [Environmental Comfort](docs/user/comfort.md),
+[sensor reference](docs/user/sensors.md), or [troubleshooting](docs/user/troubleshooting.md).
+The [development guide](docs/developer/development.md) covers the repository and
+contribution workflow.
 
 ## Contributing
 
-Contributions are welcome. The project especially benefits from:
-
-- Testing with different climate platforms.
-- Reports about unsupported HVAC modes or thermostat capabilities.
-- Mobile and tablet UX feedback.
-- Documentation improvements.
-- Pull requests that keep the code maintainable and aligned with Home Assistant conventions.
-
-Please read [docs/developer/development.md](docs/developer/development.md) before opening a pull request.
+I'm Cristian Gonzalez Fernandez, and I maintain Velair in my free time. Reports
+from different climate integrations, mobile and tablet feedback, documentation
+improvements, and pull requests are all welcome. Please read the
+[development guide](docs/developer/development.md) before contributing. I may
+not always reply quickly, but I appreciate the feedback. For help, check
+[troubleshooting](docs/user/troubleshooting.md) or ask in the
+[Home Assistant community thread](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394).
+To report a reproducible bug, [open an issue](https://github.com/cgonfer/velair/issues).
 
 ## Donations
 

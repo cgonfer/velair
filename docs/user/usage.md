@@ -196,7 +196,8 @@ The Lovelace card supports these `view` values:
 - `schedules`;
 - `sensors`;
 - `comfort`;
-- `preconditioning`.
+- `preconditioning`;
+- `diagnostics`.
 
 ### Climate status and control card
 

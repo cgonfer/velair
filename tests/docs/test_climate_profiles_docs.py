@@ -70,11 +70,12 @@ class ClimateProfilesDocumentationTest(unittest.TestCase):
 
     def test_related_guides_cover_profile_controls_and_events(self) -> None:
         readme = README.read_text(encoding="utf-8")
+        docs_index = DOCS_INDEX.read_text(encoding="utf-8")
         events = AUTOMATION_EVENTS.read_text(encoding="utf-8")
         manual_testing = MANUAL_TESTING.read_text(encoding="utf-8")
 
-        self.assertIn("[Automation Events](docs/user/automation-events.md)", readme)
-        self.assertIn("Profile changes, scheduler mode changes", readme)
+        self.assertIn("[documentation index](docs/README.md)", readme)
+        self.assertIn("[Automation Events](user/automation-events.md)", docs_index)
         self.assertIn("event: profile_changed", events)
         self.assertIn("'away' in trigger.event.data.profile_ids", events)
         self.assertIn("trigger.event.data.profile_ids == []", events)
@@ -90,7 +91,8 @@ class ClimateProfilesDocumentationTest(unittest.TestCase):
         usage = USAGE.read_text(encoding="utf-8")
         frontend = FRONTEND_GUIDE.read_text(encoding="utf-8")
 
-        for document in (readme, usage, frontend):
+        self.assertIn("docs/user/usage.md#climate-status-and-control-card", readme)
+        for document in (usage, frontend):
             self.assertIn("active_setup_controls", document)
             self.assertIn("view: active-setup", document)
             for value in ("`modes`", "`profiles`", "`both`"):
