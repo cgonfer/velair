@@ -1,6 +1,6 @@
 # Screenshot Assets
 
-The screenshots below use the same deterministic English demo data and dark Home Assistant theme.
+These screenshots use the same example data and Home Assistant's dark theme.
 
 ### Overview
 

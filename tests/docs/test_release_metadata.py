@@ -66,6 +66,7 @@ class ReleaseMetadataTest(unittest.TestCase):
             "## 🚀 Improved",
             "## 🛠️ Fixed",
             "## 🧭 Notes",
+            "## 📸 Screenshots",
         }
         headings = re.findall(r"^## .+$", release_notes, flags=re.MULTILINE)
         change_headings = allowed_headings - {"## 🧭 Notes"}
@@ -83,11 +84,19 @@ class ReleaseMetadataTest(unittest.TestCase):
                 if index + 1 < len(headings)
                 else len(release_notes)
             )
-            self.assertRegex(
-                release_notes[section_start:section_end],
-                r"(?m)^- ",
-                f"{heading} must contain user-facing release information",
-            )
+            section = release_notes[section_start:section_end]
+            if heading == "## 📸 Screenshots":
+                self.assertRegex(
+                    section,
+                    r"(?m)^!\[[^\]]+\]\(https://[^)]+\)$",
+                    "The screenshots section must contain a hosted image",
+                )
+            else:
+                self.assertRegex(
+                    section,
+                    r"(?m)^- ",
+                    f"{heading} must contain user-facing release information",
+                )
         self.assertIn(
             'RELEASE_NOTES=".github/release-notes/v${RELEASE_VERSION}.md"',
             workflow,

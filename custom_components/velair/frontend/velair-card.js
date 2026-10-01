@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20260927123856", r = "1.8.0-beta.3", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
+}, n = "20261001162634", r = "1.8.0", i = globalThis, a = i.ShadowRoot && (i.ShadyCSS === void 0 || i.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, o = Symbol(), s = /* @__PURE__ */ new WeakMap(), c = class {
 	constructor(e, t, n) {
 		if (this._$cssResult$ = !0, n !== o) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
 		this.cssText = e, this.t = t;
@@ -34820,7 +34820,7 @@ function lm(e) {
         ${um(e._t("frontendBuild"), n)}
         ${um(e._t("portableFormatVersion"), `v${r}`)}
         ${um(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${um(e._t("integrationVersion"), "1.8.0-beta.3")}
+        ${um(e._t("integrationVersion"), "1.8.0")}
       </div>
     </section>
 

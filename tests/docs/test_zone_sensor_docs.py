@@ -67,7 +67,7 @@ class ZoneSensorDocumentationTest(unittest.TestCase):
             DOCS_INDEX.read_text(encoding="utf-8"),
         )
         self.assertIn(
-            "docs/user/zone-sensors.md",
+            "[documentation index](docs/README.md)",
             ROOT_README.read_text(encoding="utf-8"),
         )
         self.assertIn(

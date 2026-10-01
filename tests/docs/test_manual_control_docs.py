@@ -30,7 +30,11 @@ class ManualControlDocsTest(unittest.TestCase):
     """Keep the user guide discoverable and aligned with public contracts."""
 
     def test_guide_is_discoverable_from_primary_docs(self) -> None:
-        for path in (DOCS_INDEX, ROOT_README, USAGE, ROOM_ASSIST, AUTOMATION_EVENTS):
+        self.assertIn(
+            "[documentation index](docs/README.md)",
+            ROOT_README.read_text(encoding="utf-8"),
+        )
+        for path in (DOCS_INDEX, USAGE, ROOM_ASSIST, AUTOMATION_EVENTS):
             self.assertIn(
                 "manual-control.md",
                 path.read_text(encoding="utf-8"),

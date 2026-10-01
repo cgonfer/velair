@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 README = ROOT / "README.md"
+DOCS_INDEX = ROOT / "docs" / "README.md"
 API_DOC = ROOT / "docs" / "developer" / "api.md"
 API_SOURCE = ROOT / "custom_components" / "velair" / "api.py"
 ARCHITECTURE = ROOT / "docs" / "developer" / "architecture.md"
@@ -139,11 +140,14 @@ class BetaFeatureDocsTest(unittest.TestCase):
 
     def test_public_navigation_points_to_the_diagnostics_workspace(self) -> None:
         readme = " ".join(README.read_text(encoding="utf-8").split())
+        docs_index = DOCS_INDEX.read_text(encoding="utf-8")
+        usage = USAGE.read_text(encoding="utf-8")
         manual_testing = " ".join(MANUAL_TESTING.read_text(encoding="utf-8").split())
 
-        self.assertIn("Dedicated Diagnostics tab", readme)
-        self.assertIn("[Diagnostics](docs/user/diagnostics.md)", readme)
-        self.assertIn("`diagnostics`: runtime health", readme)
+        self.assertIn("Diagnostics", readme)
+        self.assertIn("[documentation index](docs/README.md)", readme)
+        self.assertIn("[Diagnostics](user/diagnostics.md)", docs_index)
+        self.assertIn("`diagnostics`.", usage)
         self.assertNotIn("thermostat diagnostics", readme)
         self.assertIn(
             "Preconditioning, Diagnostics, and Settings tabs render in that order",
