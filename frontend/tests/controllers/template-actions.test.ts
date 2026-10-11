@@ -4,12 +4,12 @@ import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATUR
 import {
   applySelectedTemplate,
   applyTemplateToTargets,
+  asTemplateActionsHost,
   saveTemplate,
   selectScheduleTemplate,
   toggleTemplateApplyTargetForHost,
   updateTemplateNameDraft,
 } from "../../src/velair/controllers/template-actions";
-import { UnsupportedClimateOptionsError } from "../../src/velair/domain/draft-blocks";
 import { unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
 import type { ScheduleBlock, ScheduleTemplate } from "../../src/velair/types";
 
@@ -23,6 +23,10 @@ function host() {
   const api = {
     setDailySchedule: vi.fn().mockResolvedValue({ ok: true }),
     setScheduleTemplate: vi.fn().mockResolvedValue({ ok: true }),
+    previewDailySchedule: vi.fn(async (entity: string, _day: string, input: { blocks: ScheduleBlock[] }) => {
+      if (entity === "climate.bedroom" && input.blocks.some((block) => block.hvac_mode === "heat")) throw new Error("unsupported heat");
+      return { materialized_blocks: input.blocks };
+    }),
   };
   const state = {
     renderRoot: { querySelector: () => undefined },
@@ -75,10 +79,23 @@ afterEach(() => {
 });
 
 describe("template actions controller", () => {
-  it("loads a selected schedule template and marks the schedule dirty", () => {
+  it("commits valid shared template changes directly with the backend revision", async () => {
+    const { api, state } = host();
+    const blocks = [{ start: "09:00", slot_id: "existing", action: "turn_off" }];
+    const preview = vi.fn().mockResolvedValue({ template: { key: "comfort", name: "Updated", blocks }, usages: [{ source: "default", entity_id: "climate.office", weekday: "monday" }], added_slot_ids: [], removed_slot_ids: [], configuration_revision: 7, proposals: [], pending: [], destination_errors: [] });
+    Object.assign(api, { previewScheduleTemplateUpdate: preview });
+    Object.assign(state, { _data: { ...state._data, configuration_revision: 7 }, _normalizeDraftBlocks: () => ({ ok: true, blocks }) });
+    vi.stubGlobal("window", { prompt: () => "Updated" });
+    await saveTemplate(asTemplateActionsHost(state), false);
+    expect(preview).toHaveBeenCalledWith("comfort", "Updated", blocks, 7);
+    expect(api.setScheduleTemplate).toHaveBeenCalledTimes(1);
+    expect(api.setScheduleTemplate).toHaveBeenCalledWith("comfort", "Updated", blocks, { expected_revision: 7, assignments: [] });
+    expect(state._applyScheduleData).toHaveBeenCalled();
+  });
+  it("loads a selected schedule template and marks the schedule dirty", async () => {
     const { state } = host();
 
-    selectScheduleTemplate(state, "comfort");
+    await selectScheduleTemplate(state, "comfort");
 
     expect(state._draftBlocks).toEqual(template.blocks);
     expect(state._markDirty).toHaveBeenCalled();
@@ -86,18 +103,18 @@ describe("template actions controller", () => {
     expect(state._selectedTemplateKey).toBe("");
   });
 
-  it("confirms before replacing existing draft blocks", () => {
+  it("confirms before replacing existing draft blocks", async () => {
     const { state } = host();
     state._draftBlocks = [{ action: ACTION_SET_TEMPERATURE, start: "10:00", temperature: 18, hvac_mode: "heat" }];
     vi.stubGlobal("window", { confirm: vi.fn().mockReturnValue(false) });
 
-    const applied = applySelectedTemplate(state);
+    const applied = await applySelectedTemplate(state);
 
     expect(applied).toBe(false);
     expect(state._draftBlocks).toEqual([{ action: ACTION_SET_TEMPERATURE, start: "10:00", temperature: 18, hvac_mode: "heat" }]);
   });
 
-  it("applies a mode-only template with an auxiliary target to a climate without target support", () => {
+  it("applies a mode-only template with an auxiliary target to a climate without target support", async () => {
     const { state } = host();
     const modeOnlyTemplate: ScheduleTemplate = {
       blocks: [{
@@ -127,7 +144,7 @@ describe("template actions controller", () => {
     state._unsupportedModeError = (blocks, entityId) =>
       unsupportedModeError(state as never, blocks as ScheduleBlock[], entityId);
 
-    expect(applySelectedTemplate(state)).toBe(true);
+    expect(await applySelectedTemplate(state)).toBe(true);
     expect(state._draftBlocks[0]).toMatchObject({
       action: ACTION_SET_HVAC_MODE,
       hvac_mode: "auto",
@@ -199,10 +216,10 @@ describe("template actions controller", () => {
     state._templateDraftBlocks = [{
       action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "eco",
     }];
-    state._clampBlocksForEntity = (_blocks: ScheduleBlock[], entityId: string) => {
-      if (entityId === "climate.bedroom") throw new UnsupportedClimateOptionsError("08:00");
-      return state._templateDraftBlocks;
-    };
+    api.previewDailySchedule.mockImplementation(async (entityId, _day, input) => {
+      if (entityId === "climate.bedroom") throw new Error('climateOptionsUnsupportedAt:{"entity":"climate.bedroom","start":"08:00"}');
+      return { materialized_blocks: input.blocks };
+    });
     toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
     toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
     await applyTemplateToTargets(state, template);
@@ -218,5 +235,77 @@ describe("template actions controller", () => {
 
     expect(api.setDailySchedule).not.toHaveBeenCalled();
     expect(state._error).toBe("unsupported heat");
+  });
+
+  it("copies only backend materialized manual values and retains preset references", async () => {
+    const { api, state } = host();
+    const shared = { ...template, blocks: [{ start: "08:00", temperature: 18.3, action: ACTION_SET_TEMPERATURE }, { start: "12:00", preset_key: "comfort" }] };
+    state._scheduleTemplates = () => [shared];
+    const materialized = [{ start: "08:00", temperature: 18.5, action: ACTION_SET_TEMPERATURE }, { start: "12:00", preset_key: "comfort" }];
+    api.previewDailySchedule.mockResolvedValue({ materialized_blocks: materialized });
+    expect(await applySelectedTemplate(state)).toBe(true);
+    expect(api.previewDailySchedule).toHaveBeenCalledWith("climate.office", "monday", { blocks: shared.blocks });
+    expect(state._draftBlocks[0].temperature).toBe(18.5);
+    expect(state._draftBlocks[1].preset_key).toBe("comfort");
+    expect(shared.blocks[0].temperature).toBe(18.3);
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+  });
+
+  it("discards a delayed template copy when the destination day changes", async () => {
+    const { api, state } = host();
+    let finish!: (value: { materialized_blocks: ScheduleBlock[] }) => void;
+    api.previewDailySchedule.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const copying = applySelectedTemplate(state);
+    state._selectedWeekday = "tuesday";
+    finish({ materialized_blocks: template.blocks });
+    expect(await copying).toBe(false);
+    expect(state._draftBlocks).toEqual([]);
+    expect(state._markDirty).not.toHaveBeenCalled();
+  });
+
+  it("previews each destination before writing and uses its adapted values", async () => {
+    const { api, state } = host();
+    state._templateDraftBlocks = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.3 }];
+    api.previewDailySchedule.mockImplementation(async (entity, _day, input) => ({ materialized_blocks: [{ ...input.blocks[0], temperature: entity === "climate.office" ? 18.5 : 18 }] }));
+    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
+    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
+    await applyTemplateToTargets(state, template);
+    expect(api.previewDailySchedule).toHaveBeenCalledTimes(2);
+    expect(api.setDailySchedule).toHaveBeenNthCalledWith(1, "climate.office", "tuesday", [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.5 }]);
+    expect(api.setDailySchedule).toHaveBeenNthCalledWith(2, "climate.bedroom", "tuesday", [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18 }]);
+    expect(Math.max(...api.previewDailySchedule.mock.invocationCallOrder)).toBeLessThan(Math.min(...api.setDailySchedule.mock.invocationCallOrder));
+    expect(state._templateDraftBlocks[0].temperature).toBe(18.3);
+  });
+
+  it("saves a full linked day as a template using materialized manual values and presets", async () => {
+    const { api, state } = host();
+    Object.assign(state, { _draftTemplateLink: { mode: "full", template_key: "comfort" }, _data: { ...state._data, configuration_revision: 4 } });
+    state._draftBlocks = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.3 }, { start: "12:00", preset_key: "comfort" }];
+    const materialized = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.5 }, { start: "12:00", preset_key: "comfort" }];
+    api.previewDailySchedule.mockResolvedValue({ materialized_blocks: materialized });
+    vi.stubGlobal("window", { prompt: () => "Copied full" });
+    await saveTemplate(asTemplateActionsHost(state), true);
+    expect(state._normalizeDraftBlocks).not.toHaveBeenCalled();
+    expect(api.previewDailySchedule).toHaveBeenCalledWith("climate.office", "monday", { template_link: { mode: "full", template_key: "comfort" } });
+    expect(api.setScheduleTemplate).toHaveBeenCalledWith("custom_key", "Copied full", materialized, { expected_revision: 4 });
+    expect(state._draftBlocks[0].temperature).toBe(18.3);
+  });
+
+  it("continues template writes when their own revisions arrive through subscriptions", async () => {
+    const { api, state } = host();
+    Object.assign(state._data, { configuration_revision: 4, zones: { "climate.office": { template_links: {} }, "climate.bedroom": { template_links: {} } } });
+    state._templateDraftBlocks = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.3 }];
+    let revision = 4;
+    api.setDailySchedule.mockImplementation(async () => {
+      const updated = { ...state._data, configuration_revision: ++revision };
+      Object.assign(state, { _data: updated });
+      return updated as never;
+    });
+    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
+    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
+    await applyTemplateToTargets(asTemplateActionsHost(state), template);
+    expect(api.setDailySchedule).toHaveBeenCalledTimes(2);
+    expect(api.setDailySchedule.mock.calls.map((call) => call[3])).toEqual([{ expected_revision: 4, unlink_template: false }, { expected_revision: 5, unlink_template: false }]);
+    expect(state._showSuccess).toHaveBeenCalled();
   });
 });

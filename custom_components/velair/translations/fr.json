@@ -88,7 +88,6 @@
           "already_comfortable": "Déjà confortable"
         }
       },
-
       "zone_air_quality": {
         "name": "Qualité de l’air de {zone}",
         "state": {
@@ -154,6 +153,133 @@
     "switch": {
       "automatic_scheduling": {
         "name": "Programmation automatique"
+      }
+    }
+  },
+  "services": {
+    "start_planned_return": {
+      "name": "I'm leaving",
+      "description": "Planifie un retour ponctuel à une date et une heure futures avec les modes enregistrés et la programmation automatique. Avec des sources de présence configurées, attend une absence confirmée avant le mode Absence ; sans sources, active ce mode immédiatement. Fonctionne sans routine hebdomadaire et modifie une absence active.",
+      "fields": {
+        "return_date": {
+          "name": "Return date",
+          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+        },
+        "return_time": {
+          "name": "Return time",
+          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+        }
+      }
+    },
+    "cancel_planned_return": {
+      "name": "Annuler le retour pr\u00e9vu",
+      "description": "Annule un retour en attente ou actif, ou ferme l\u2019avis d\u2019un retour inactif. Conserve le mode actuel et arr\u00eate le retour automatique pour cette absence. Vous pouvez ensuite planifier explicitement un nouveau retour."
+    },
+    "update_block_preset": {
+      "name": "Mettre à jour le preset Velair",
+      "description": "Mettre à jour durablement un preset partagé et recalculer ses programmations. Les valeurs omises sont conservées avec update.",
+      "fields": {
+        "preset_key": {
+          "name": "Identifiant du preset Velair",
+          "description": "Identifiant stable copié depuis l’éditeur. Les modifications affectent toutes les références."
+        },
+        "temperature": {
+          "name": "Température cible",
+          "description": "Cible unique dans l’unité de température de Velair. Omettre pour la conserver."
+        },
+        "target_temp_low": {
+          "name": "Température cible minimale",
+          "description": "Envoyer les deux limites. Une plage remplace la cible unique."
+        },
+        "target_temp_high": {
+          "name": "Température cible maximale",
+          "description": "Envoyer les deux limites. Une plage remplace la cible unique."
+        },
+        "hvac_mode": {
+          "name": "Mode HVAC",
+          "description": "Omettre pour conserver le mode. Pour éteindre, utiliser replace avec turn_off."
+        },
+        "fan_mode": {
+          "name": "Mode du ventilateur"
+        },
+        "preset_mode": {
+          "name": "Preset de l’appareil",
+          "description": "Mode preset de l’appareil, distinct du preset partagé de Velair."
+        },
+        "swing_mode": {
+          "name": "Mode d’oscillation"
+        },
+        "swing_horizontal_mode": {
+          "name": "Mode d’oscillation horizontale"
+        },
+        "humidity": {
+          "name": "Humidité cible"
+        },
+        "operation": {
+          "name": "Opération",
+          "description": "update conserve les champs omis et l’action. replace supprime les champs omis et exige action."
+        },
+        "action": {
+          "name": "Action de remplacement",
+          "description": "Uniquement pour replace. Choisir l’action complète résultante."
+        },
+        "clear_fields": {
+          "name": "Supprimer des réglages",
+          "description": "Uniquement pour update. Retirer des réglages sans réinitialiser l’appareil. Le résultat doit rester valide."
+        }
+      },
+      "sections": {
+        "temperature_range": {
+          "name": "Plage de température"
+        },
+        "climate_settings": {
+          "name": "Mode et réglages supplémentaires"
+        },
+        "advanced": {
+          "name": "Avancé"
+        }
+      }
+    },
+    "copy_day_schedule": {
+      "name": "Cloner la programmation quotidienne",
+      "description": "Clone un jour enregistré vers les jours et thermostats gérés de destination, en conservant les liens aux modèles et les références aux préréglages Velair.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat source",
+          "description": "Thermostat géré dont le jour enregistré sera cloné."
+        },
+        "source_weekday": {
+          "name": "Jour source",
+          "description": "Jour enregistré à cloner, avec son lien au modèle et ses références aux préréglages."
+        },
+        "target_weekdays": {
+          "name": "Jours de destination",
+          "description": "Remplace ces jours enregistrés dans chaque thermostat de destination sélectionné. Les autres jours restent inchangés."
+        },
+        "target_entity_ids": {
+          "name": "Thermostats de destination",
+          "description": "Omettre pour cloner dans le thermostat source. Toutes les destinations sont validées et enregistrées ensemble."
+        },
+        "expected_revision": {
+          "name": "Révision de configuration",
+          "description": "Vérification facultative des modifications simultanées. Omettre pour cloner la dernière source enregistrée sous le verrou de configuration."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset_update_operation": {
+      "options": {
+        "update": "Mettre à jour des champs",
+        "replace": "Remplacer la configuration"
+      }
+    },
+    "preset_update_action": {
+      "options": {
+        "set_temperature": "Température et réglages",
+        "set_hvac_mode": "Mode uniquement",
+        "set_climate_options": "Réglages supplémentaires uniquement",
+        "turn_off": "Éteindre"
       }
     }
   }

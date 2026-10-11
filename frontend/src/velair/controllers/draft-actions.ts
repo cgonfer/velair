@@ -1,4 +1,5 @@
 import { WEEKDAYS } from "../constants";
+import { newTemplateKey } from "../domain/templates";
 import { nextStartTime } from "../schedule-time";
 import {
   addDraftBlock,
@@ -13,6 +14,7 @@ import { cloneDayPresetTargets, type CloneDayPreset } from "../domain/schedule-e
 import type { BlockDraftSource, DraftScheduleBlock, ScheduleResponse } from "../types";
 
 type DraftActionsHost = {
+  _draftTemplateLink?: import("../types").TemplateLink;
   readonly hass?: import("../types").HomeAssistant;
   _copyTargets: Set<string>;
   _data?: ScheduleResponse;
@@ -33,9 +35,14 @@ export function asDraftActionsHost(host: unknown): DraftActionsHost {
 }
 
 export function addBlock(host: DraftActionsHost, source: BlockDraftSource = "schedule"): void {
+  if (source === "schedule" && host._draftTemplateLink) return;
   const blocks = host._blocksForSource(source);
   const unit = host._temperatureUnit(source === "schedule" ? host._selectedEntity : undefined);
   let updated = addDraftBlock(blocks, nextStartTime(blocks.at(-1)?.start), unit);
+  if (source === "template") {
+    updated = updated.map((block, index) => index === updated.length - 1
+      ? { ...block, slot_id: `slot_${newTemplateKey()}` } : block);
+  }
   const state = source === "schedule" && host._selectedEntity
     ? host.hass?.states?.[host._selectedEntity]
     : undefined;
@@ -53,6 +60,7 @@ export function addBlock(host: DraftActionsHost, source: BlockDraftSource = "sch
 }
 
 export function removeBlock(host: DraftActionsHost, index: number, source: BlockDraftSource = "schedule"): void {
+  if (source === "schedule" && host._draftTemplateLink) return;
   host._setBlocksForSource(source, removeDraftBlockDomain(host._blocksForSource(source), index));
   host._markBlocksDirty(source);
   host._saveMessage = undefined;
@@ -65,6 +73,7 @@ export function updateDraftBlock(
   value: string,
   source: BlockDraftSource = "schedule",
 ): void {
+  if (source === "schedule" && host._draftTemplateLink && (field === "start" || host._draftTemplateLink.mode === "full")) return;
   const blocks = host._blocksForSource(source);
   if (!blocks[index]) {
     return;

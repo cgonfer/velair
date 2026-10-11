@@ -1,6 +1,15 @@
 import { css } from "lit";
 
 export const overviewStyles = css`
+.overview-planned-return-summary { width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr) 20px; gap: 10px; align-items: center; text-align: start; min-height: 44px; padding: 12px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--purple-color, #9c6ade) 35%, var(--divider-color)); border-radius: 10px; color: var(--primary-text-color); background: color-mix(in srgb, var(--purple-color, #9c6ade) 8%, var(--card-background-color)); cursor: pointer; }
+.overview-planned-return-summary:hover { background: color-mix(in srgb, var(--purple-color, #9c6ade) 14%, var(--card-background-color)); }
+.overview-planned-return-summary > span { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.overview-planned-return-summary small { color: var(--secondary-text-color); line-height: 1.5; }
+.overview-planned-return-summary ha-icon, .overview-planned-return-signal ha-icon { --mdc-icon-size: 20px; color: var(--purple-color, #9c6ade); }
+.overview-planned-return-signal, .overview-planned-return-forecast { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+.overview-planned-return-signal { color: var(--primary-text-color); }
+.overview-planned-return-forecast { color: var(--secondary-text-color); }
+.overview-planned-return-forecast ha-icon { --mdc-icon-size: 16px; }
 .overview-summary {
   margin: 0;
 }

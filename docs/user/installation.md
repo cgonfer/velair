@@ -1,4 +1,9 @@
 # Installation
+<!-- velair-docs:start -->
+Translations: [English original](installation.md) · [Español](installation.es.md) · [Français](installation.fr.md) · [Deutsch](installation.de.md) · [Italiano](installation.it.md) · [Nederlands](installation.nl.md) · [Polski](installation.pl.md) · [Português (Brasil)](installation.pt-br.md) · [Português (Portugal)](installation.pt-pt.md) · [Русский](installation.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair is available in the default HACS store. Manual installation remains
 available for users who do not use HACS or who need to test a specific build.
@@ -76,7 +81,7 @@ view: overview-status
 
 Supported `view` values:
 
-- `climate`: status and controls for one managed climate.
+- `climate`: status and controls for one managed climate, with an optional household One-off return action alongside Boost and Pause. Existing cards keep that action hidden; new card-picker configurations enable it.
 - `overview-status`: scheduler state and pause/stop/resume controls.
 - `overview-boosts`: active boosts.
 - `overview-events`: next events.
@@ -87,6 +92,7 @@ Supported `view` values:
 - `sensors`: Room Assist configuration and live status.
 - `comfort`: environmental comfort configuration and status.
 - `preconditioning`: adaptive preconditioning configuration and local learning status.
+- `planned-return`: compact one-off return controls, configured occupancy counts and a confirmed-departure timeline. Without saved occupancy sources, Plan return applies Away immediately; the automatic weekly routine still requires sources.
 - `diagnostics`: runtime health, bounded history, filters, and issue-report export.
 
 ## Updating

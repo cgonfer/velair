@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -87,7 +88,15 @@ class ComfortMetricsDocumentationTests(unittest.TestCase):
         self.assertIn("Range position does not create an insight", api)
         self.assertIn("Portable model v11 adds each zone's Comfort model", api)
         self.assertIn("comfort_zone", diagnostics)
-        self.assertIn("portable model v12", manual)
+        export_version = re.search(
+            r"^EXPORT_MODEL_VERSION\s*=\s*(\d+)\s*$",
+            (ROOT / "custom_components" / "velair" / "api.py").read_text(
+                encoding="utf-8"
+            ),
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(export_version)
+        self.assertIn(f"portable model v{export_version.group(1)}", manual)
 
 
 if __name__ == "__main__":

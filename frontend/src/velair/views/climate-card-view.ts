@@ -1,3 +1,4 @@
+import { renderPlannedReturn } from "./planned-return-view";
 import { html, nothing } from "lit";
 import { VELAIR_LOADING_ICON_URL } from "../constants";
 import type { VelairViewHost } from "../host-types";
@@ -164,7 +165,11 @@ function renderThermostatControls(
   const pausePaneOpen = showActions
     && actionPresentation.actions.some((action) => action.type === "pause")
     && host._climateCardPause?.entityId === entityId;
-  const showControlPane = boostPaneOpen || pausePaneOpen || showControlSurface;
+  const returnPaneOpen = showActions
+    && actionPresentation.actions.some((action) => action.type === "planned-return")
+    && host._climateCardPlannedReturnOpen;
+  const returnPaneNeedsClose = actionPresentation.overflow.some((action) => action.type === "planned-return");
+  const showControlPane = boostPaneOpen || pausePaneOpen || returnPaneOpen || showControlSurface;
   const showToolbar = showAuthority || showActions;
   if (!showToolbar && !showControlPane) return nothing;
 
@@ -210,7 +215,17 @@ function renderThermostatControls(
       </div>` : nothing}
       ${showActions ? renderActions(host, entityId, actionPresentation) : nothing}
     </div>` : nothing}
-    ${boostPaneOpen
+    ${returnPaneOpen
+      ? html`<div id="climate-card-return-pane"
+          class=${`climate-card-return-pane climate-card-control-pane${returnPaneNeedsClose ? " has-close" : ""}`}>
+          ${returnPaneNeedsClose ? html`<button class="climate-card-return-close" type="button"
+            title=${host._t("close")} aria-label=${host._t("close")} ?disabled=${host._plannedReturnBusy}
+            @click=${() => host._closeClimateCardPlannedReturn()}>
+            <ha-icon icon="mdi:close" aria-hidden="true"></ha-icon>
+          </button>` : nothing}
+          ${renderPlannedReturn(host, false, true, true)}
+        </div>`
+      : boostPaneOpen
       ? renderBoostForm(host, entityId)
       : pausePaneOpen
         ? renderPauseForm(host, entityId)
@@ -1120,7 +1135,11 @@ function climateCardActionPresentation(
   const boost = runtime?.state === "boost";
   const manual = owner === "manual";
   const velairActionsAvailable = available && owner !== "external" && runtime?.state !== "stopped";
-  const actions = climateCardEligibleActions(host._config, host.hass, { velairActionsAvailable, manual });
+  const actions = climateCardEligibleActions(host._config, host.hass, {
+    velairActionsAvailable,
+    manual,
+    plannedReturnAvailable: Boolean(host._data?.planned_return_status),
+  });
   const { direct, overflow } = splitClimateCardActions(actions);
   const visibleControls = direct.length + (overflow.length ? 1 : 0);
   return {
@@ -1221,11 +1240,26 @@ function renderClimateCardActionButton(
   state: ClimateCardActionState,
   menu = false,
 ) {
-  const busy = Boolean(host._climateCardServiceAction);
+  const busy = Boolean(host._climateCardServiceAction || host._plannedReturnBusy);
   const invoke = (callback: () => unknown) => () => {
     if (menu) host._closeClimateCardActionsMenu();
     callback();
   };
+  if (action.type === "planned-return") {
+    const label = host._t("plannedReturnControls");
+    const hideName = !menu && action.hideName;
+    return html`<button
+      class=${`planned-return${hideName ? " icon-only name-hidden" : ""}${host._climateCardPlannedReturnOpen ? " panel-open" : ""}`}
+      type="button" ?disabled=${busy} title=${label} aria-label=${label}
+      aria-pressed=${menu ? nothing : String(Boolean(host._climateCardPlannedReturnOpen))}
+      aria-expanded=${String(Boolean(host._climateCardPlannedReturnOpen))}
+      aria-controls="climate-card-return-pane"
+      @click=${invoke(() => host._openClimateCardPlannedReturn())}>
+      <ha-icon icon="mdi:home-clock-outline" aria-hidden="true"></ha-icon>
+      ${hideName ? nothing : html`<span>${label}</span>`}
+      ${!menu ? html`<ha-icon class="panel-close" icon="mdi:close" aria-hidden="true"></ha-icon>` : nothing}
+    </button>`;
+  }
   if (action.type === "boost") {
     const label = host._t(state.boost ? "cancelBoost" : "boost");
     const hideName = !menu && action.hideName;

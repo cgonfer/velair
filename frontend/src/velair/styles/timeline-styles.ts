@@ -272,19 +272,51 @@ export const timelineStyles = css`
     font-size: 11px;
   }
 
-  .timeline-block.compact span,
-  .timeline-block.compact small {
-    display: none;
+  .timeline-block .timeline-primary-line {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
   }
 
-  .timeline-block.tiny strong {
-    font-size: 0;
+  .timeline-primary-line ha-icon {
+    --mdc-icon-size: 12px;
+    flex: 0 0 12px;
+    pointer-events: none;
   }
 
-  .timeline-block.tiny strong::after {
-    content: "...";
-    font-size: 11px;
+  .timeline-primary-line > span { min-width: 0; }
+  strong.timeline-primary-line > span { font-size: inherit; }
+  .timeline-block.compact small { display: none; }
+  .timeline-block,
+  .timeline-block.compact,
+  .timeline-block.tiny {
+    container-type: inline-size;
+    container-name: timeline-block;
+    --timeline-content-inset: 10px;
+    padding-inline: 2px;
   }
+
+  .timeline-block.compact { --timeline-content-inset: 8px; }
+  .timeline-block.tiny { --timeline-content-inset: 4px; }
+
+  .timeline-block .timeline-primary-line,
+  .timeline-block > small {
+    box-sizing: border-box;
+    padding-inline: var(--timeline-content-inset);
+    width: 100%;
+  }
+
+  .timeline-primary-line > span { flex: 1; }
+
+  @container timeline-block (max-width: 64px) {
+    .timeline-block .timeline-primary-line { gap: 0; }
+    .timeline-primary-line ha-icon { display: none; }
+    .timeline-block .timeline-primary-line,
+    .timeline-block > small { padding-inline: 0; }
+    .timeline-block > small { display: none; }
+  }
+  .timeline-block:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
 
   .timeline-empty {
     left: 12px;
@@ -307,6 +339,8 @@ export const timelineStyles = css`
     opacity: 0.82;
     pointer-events: none;
   }
+
+  .timeline-block.timeline-carry-over { pointer-events: auto; cursor: help; }
 
   .overview-timeline-block.overview-timeline-carry-over {
     cursor: pointer;

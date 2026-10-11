@@ -638,17 +638,32 @@ def _snap_migrated_editable_temperatures(
                     preconditioning[key] = _nearest_step(preconditioning[key], 0.1)
 
 
+def _convert_link_bindings(zone: Any, source: str, target: str) -> None:
+    """Convert each independent binding once; preset references have no values."""
+    links = zone.get("template_links", {}) if isinstance(zone, dict) else {}
+    if not isinstance(links, dict):
+        return
+    for link in links.values():
+        bindings = link.get("bindings", {}) if isinstance(link, dict) else {}
+        if isinstance(bindings, dict):
+            _convert_blocks(list(bindings.values()), source, target)
+
+
 def _convert_scheduler_temperatures(
     data: dict[str, Any],
     source: str,
     target: str,
 ) -> None:
     """Explicitly migrate every persisted thermal field source to target."""
+    for preset in data.get("block_presets", []):
+        if isinstance(preset, dict):
+            _convert_blocks([preset.get("config")], source, target)
     zones = data.get("zones", {})
     if isinstance(zones, dict):
         for entity_id, zone in zones.items():
             if not isinstance(zone, dict):
                 continue
+            _convert_link_bindings(zone, source, target)
             schedule = zone.get("schedule", {})
             if isinstance(schedule, dict):
                 for blocks in schedule.values():
@@ -730,6 +745,7 @@ def _convert_scheduler_temperatures(
             if not isinstance(profile_zones, dict):
                 continue
             for profile_zone in profile_zones.values():
+                _convert_link_bindings(profile_zone, source, target)
                 schedule = profile_zone.get("schedule") if isinstance(profile_zone, dict) else None
                 if isinstance(schedule, dict):
                     for blocks in schedule.values():

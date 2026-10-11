@@ -37,6 +37,20 @@ function host() {
 }
 
 describe("schedule view", () => {
+  it("uses effective backend mode for linked preset timelines and never claims Keep before resolution", () => {
+    const container = document.createElement("div");
+    const viewHost = { _t: (key: string) => key, _formatScheduleTime: (value: string) => value, _formatTemperature: (value: number) => `${value} °C`,
+      _data: { block_presets: [{ key: "comfort", name: "Comfort", config: { action: "set_temperature", temperature: 22, hvac_mode: "heat" } }] },
+      _effectivePresetBlock: () => undefined,
+    } as unknown as VelairViewHost;
+    const block = { index: 0, startMinute: 480, endMinute: 600, left: 33, width: 8, draft: { preset_key: "comfort", action: "", start: "08:00", hvac_mode: "" } };
+    render(renderTimelineBlock(viewHost, block, "climate.living_room"), container);
+    expect(container.querySelector(".timeline-block")?.getAttribute("aria-label")).not.toContain("keep");
+    viewHost._effectivePresetBlock = () => ({ start: "08:00", action: "set_temperature", temperature: 22, hvac_mode: "heat" });
+    render(renderTimelineBlock(viewHost, block, "climate.living_room"), container);
+    expect(container.querySelector(".timeline-block")?.getAttribute("aria-label")).toContain("mode: heat");
+    expect(container.querySelector(".timeline-block")?.classList.contains("mode-heat")).toBe(true);
+  });
   it("shows option values rather than a temperature in an options-only timeline block", () => {
     const container = document.createElement("div");
     const viewHost = {
@@ -50,9 +64,9 @@ describe("schedule view", () => {
         hvac_mode: "", preset_mode: "eco" },
     }, "climate.living_room"), container);
     expect(container.textContent).toContain("climateOptionsOnly");
-    expect(container.textContent).toContain("presetMode: eco");
+    expect(container.textContent).toContain("devicePreset: eco");
     expect(container.textContent).not.toContain("invalidTemperatureRange");
-    expect(container.querySelector(".timeline-block")?.getAttribute("title")).toContain("presetMode: eco");
+    expect(container.querySelector(".timeline-block")?.getAttribute("aria-label")).toContain("devicePreset: eco");
   });
 
   it("applies Default clone presets without cloning and excludes the source day", () => {
@@ -219,7 +233,7 @@ describe("schedule view", () => {
     render(renderSchedulesView(viewHost, []), container);
 
     const group = container.querySelector<HTMLElement>('.schedule-source-selector[role="group"]');
-    const tabs = group?.querySelectorAll<HTMLElement>("button") ?? [];
+    const tabs = group?.querySelectorAll<HTMLElement>(".schedule-source-option > button") ?? [];
     expect(group?.getAttribute("aria-label")).toBe("scheduleSourceLabel");
     expect(tabs).toHaveLength(2);
     expect(tabs[0]?.getAttribute("aria-pressed")).toBe("true");
@@ -314,7 +328,9 @@ describe("schedule view", () => {
     const carry = container.querySelector(".timeline-carry-over");
     expect(carry?.getAttribute("draggable")).toBe("false");
     expect(carry?.getAttribute("role")).toBe("img");
-    expect(carry?.getAttribute("title")).toContain("timelineContinuesFrom:mon22:00");
+    expect(carry?.getAttribute("title")).toBe(carry?.getAttribute("aria-label"));
+    expect(carry?.hasAttribute("tabindex")).toBe(false);
+    expect(carry?.getAttribute("aria-label")).toContain("timelineContinuesFrom:mon22:00");
     expect(carry?.textContent).toContain("off");
     expect(carry?.querySelector(".timeline-resize-handle")).toBeNull();
     expect(container.querySelectorAll(".timeline-block:not(.timeline-carry-over)")).toHaveLength(1);
@@ -360,8 +376,8 @@ describe("schedule view", () => {
       expect(block?.classList.contains("mode-auto")).toBe(true);
       expect(block?.querySelector("small")?.textContent).toBe("auto");
       expect(block?.querySelector("span")?.textContent).not.toBe("invalidTemperatureRange");
-      expect(block?.getAttribute("title")).not.toContain("invalidTemperatureRange");
-      expect(block?.getAttribute("title")).not.toMatch(/\b\d+(?:\.\d+)?\s*C\b/);
+      expect(block?.getAttribute("aria-label")).not.toContain("invalidTemperatureRange");
+      expect(block?.getAttribute("aria-label")).not.toMatch(/\b\d+(?:\.\d+)?\s*C\b/);
     }
   });
 

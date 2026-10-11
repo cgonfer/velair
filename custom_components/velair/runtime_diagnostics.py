@@ -66,6 +66,11 @@ _MANUAL_CONTROL_EVENTS = {
     "zone_control_changed",
 }
 _FEATURE_EVENT_FIELDS: dict[str, tuple[str, ...]] = {
+    "planned_return": (
+        "event", "transition", "origin", "state", "previous_state", "reason",
+        "departure_at", "return_at", "previous_return_at", "absence_confirm_at",
+        "away_mode_id", "destination_mode_id", "mode_id", "profile_id", "effect",
+    ),
     "room_assist": (
         "applied_offset",
         "applied_target_temp_high",
@@ -410,7 +415,7 @@ class RuntimeDiagnosticsManager:
                 safe_data["diagnostics_context"] = diagnostics_context
         self._record(
             "event",
-            "info",
+            "error" if category == "planned_return" and data.get("transition") == "error" else "info",
             entity_id=entity_id,
             data=safe_data,
             category=category,
@@ -844,6 +849,11 @@ class RuntimeDiagnosticsManager:
             counts[unit["status"]] += 1
 
         issues: list[dict[str, Any]] = []
+        planned_status = scheduler.get_planned_return_status() if callable(getattr(scheduler, "get_planned_return_status", None)) else None
+        if planned_status is not None:
+            planned_status = {**planned_status, "weekly_enabled": bool(data.get("planned_return", {}).get("enabled"))}
+        if planned_status and planned_status.get("error"):
+            issues.append({"severity": "error", "code": "planned_return_error"})
         if storage.temperature_migration_required:
             issues.append({"severity": "error", "code": "temperature_migration_required"})
         if runtime.get("operation_recovery"):
@@ -871,6 +881,7 @@ class RuntimeDiagnosticsManager:
                 "issues": issues,
             },
             "units": units,
+            "planned_return": deepcopy(planned_status),
             "history": list(reversed(self._history)),
         }
 
@@ -889,6 +900,8 @@ class RuntimeDiagnosticsManager:
     ) -> dict[str, Any]:
         """Return a report with local entity identifiers replaced."""
         snapshot = self.snapshot(runtime)
+        if isinstance(snapshot.get("planned_return"), dict) and snapshot["planned_return"].get("error"):
+            snapshot["planned_return"]["error"] = "REDACTED"
         aliases = {
             entity_id: f"climate_unit_{index}"
             for index, entity_id in enumerate(self._entity_ids, start=1)
@@ -1106,6 +1119,8 @@ def _now_iso() -> str:
 def _event_history_category(event_name: str) -> str:
     """Classify known feature events; unknown future events remain visible."""
     normalized = event_name.lower()
+    if normalized == "planned_return_changed":
+        return "planned_return"
     if "room_assist" in normalized or "room_sensor_assist" in normalized:
         return "room_assist"
     if normalized.startswith("preconditioning_"):
@@ -1201,6 +1216,11 @@ def _redacted_operational_identifier(key: Any, value: Any) -> bool:
         "context_id",
         "mode_id",
         "mode_name",
+        "away_mode_id",
+        "away_mode_name",
+        "destination_mode_id",
+        "destination_mode_name",
+        "profile_name",
         "pause_id",
         "pause_ids",
         "parent_id",

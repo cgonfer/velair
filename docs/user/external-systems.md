@@ -1,4 +1,9 @@
 # External schedule execution
+<!-- velair-docs:start -->
+Translations: [English original](external-systems.md) · [Español](external-systems.es.md) · [Français](external-systems.fr.md) · [Deutsch](external-systems.de.md) · [Italiano](external-systems.it.md) · [Nederlands](external-systems.nl.md) · [Polski](external-systems.pl.md) · [Português (Brasil)](external-systems.pt-br.md) · [Português (Portugal)](external-systems.pt-pt.md) · [Русский](external-systems.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair normally owns both schedule storage and climate execution. For compatible
 climates, **Settings → External systems** can instead publish the effective

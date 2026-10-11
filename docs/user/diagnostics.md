@@ -1,4 +1,9 @@
 # Diagnostics
+<!-- velair-docs:start -->
+Translations: [English original](diagnostics.md) · [Español](diagnostics.es.md) · [Français](diagnostics.fr.md) · [Deutsch](diagnostics.de.md) · [Italiano](diagnostics.it.md) · [Nederlands](diagnostics.nl.md) · [Polski](diagnostics.pl.md) · [Português (Brasil)](diagnostics.pt-br.md) · [Português (Portugal)](diagnostics.pt-pt.md) · [Русский](diagnostics.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 The **Diagnostics** section gives a local, read-only view of what Velair can
 verify without requiring Home Assistant Recorder or external services.

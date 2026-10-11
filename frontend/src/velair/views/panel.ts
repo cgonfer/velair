@@ -1,19 +1,126 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { PANEL_VIEWS } from "../constants";
 import { languageFromHass, translate } from "../i18n";
 import type { SupportedLanguage, TranslationKey } from "../translations";
 import type { HomeAssistant, VelairPanelInfo, VelairPanelRoute, VelairPanelView } from "../types";
+import { panelDestination, panelPath, parsePanelPath, type PanelDestination, type PanelSubsection } from "../domain/panel-routes";
+import type { VelairCard } from "../components/velair-card-element";
 import { panelTabIcon } from "./tabs";
+import { PanelScheduleSession } from "../controllers/panel-schedule-session";
 
 export class VelairPanel extends LitElement {
+  private readonly _scheduleSession = new PanelScheduleSession();
   @property({ attribute: false }) public hass?: HomeAssistant;
   @property({ type: Boolean }) public narrow = false;
   @property({ attribute: false }) public panel?: VelairPanelInfo;
   @property({ attribute: false }) public route?: VelairPanelRoute;
   @state() private _activeView: VelairPanelView = "overview";
   @state() private _activeViewDirty = false;
+  @state() private _pendingResourceUsage?: import("../types").ResourceUsage;
+  @state() private _pendingPresetKey?: string;
+  private _usesScopedDirtyEvents = false;
+  @state() private _activeSubsection?: PanelSubsection;
+  private _routeInitialized = false;
+  private _applyingDestination = false;
+  private _historyPosition = 0;
+  private _restoringHistory = false;
+  private readonly _locationChanged = (event: Event) => this._readLocation(
+    window.location.pathname,
+    event.type === "location-changed" && !(event as CustomEvent<{ replace?: boolean }>).detail?.replace,
+  );
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this._scheduleSession.connect(this.hass);
+    window.addEventListener("popstate", this._locationChanged);
+    window.addEventListener("location-changed", this._locationChanged);
+  }
+
+  public disconnectedCallback(): void {
+    this._scheduleSession.disconnect();
+    window.removeEventListener("popstate", this._locationChanged);
+    window.removeEventListener("location-changed", this._locationChanged);
+    super.disconnectedCallback();
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has("hass")) this._scheduleSession.setHass(this.hass);
+    if (changed.has("route") || !this._routeInitialized) {
+      if (!this.route && !window.location.pathname.startsWith("/velair")) return;
+      // Home Assistant supplies a path relative to the panel prefix.
+      const routePath = this.route?.path || "";
+      const path = !this._routeInitialized && this.route
+        ? (routePath.startsWith(this._prefix()) ? routePath : `${this._prefix()}/${routePath.replace(/^\/+/, "")}`)
+        : window.location.pathname;
+      this._readLocation(path);
+    }
+  }
+
+  private _prefix(): string { return this.route?.prefix?.replace(/\/$/, "") || "/velair"; }
+
+  private _destination(): PanelDestination { return panelDestination(this._activeView, this._activeSubsection); }
+
+  private _readLocation(path = window.location.pathname, pushedByHa = false): void {
+    if (!window.location.pathname.startsWith(`${this._prefix()}/`) && window.location.pathname !== this._prefix()) return;
+    if (this._restoringHistory) {
+      if (window.history.state?.velairPosition === this._historyPosition) this._restoringHistory = false;
+      return;
+    }
+    const destination = parsePanelPath(path, this._prefix());
+    const existingPosition = window.history.state?.velairPosition as number | undefined;
+    const position = existingPosition ?? (pushedByHa && this._routeInitialized
+      ? this._historyPosition + 1 : undefined);
+    if (pushedByHa && existingPosition === undefined && position !== undefined) {
+      window.history.replaceState({ ...window.history.state, velairPosition: position }, "");
+    }
+    if (!this._selectDestination(destination)) {
+      if (typeof position === "number" && position !== this._historyPosition) {
+        this._restoringHistory = true;
+        window.history.go(this._historyPosition - position);
+      } else this._writeLocation(this._destination(), true);
+      return;
+    }
+    this._historyPosition = position ?? this._historyPosition;
+    this._routeInitialized = true;
+    this._writeLocation(destination, true);
+  }
+
+  private _writeLocation(destination: PanelDestination, replace = false): void {
+    const path = panelPath(destination, this._prefix());
+    const current = window.location.pathname;
+    if (!replace && path === current) return;
+    if (!replace) this._historyPosition++;
+    // Match HA navigation semantics: replaced entries retain router/dialog state,
+    // while pushed entries point back to the actual previous URL.
+    const state = replace
+      ? { ...window.history.state, velairPosition: this._historyPosition }
+      : { from: `${current}${window.location.search}${window.location.hash}`, velairPosition: this._historyPosition };
+    window.history[replace ? "replaceState" : "pushState"](state, "", `${path}${window.location.search}${window.location.hash}`);
+    if (path !== current) window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace } }));
+  }
+
+  private _selectDestination(destination: PanelDestination): boolean {
+    const activeCard = this.renderRoot.querySelector<VelairCard>("velair-panel-card");
+    if ((destination.view !== this._activeView || destination.subsection !== this._activeSubsection) && activeCard?.canNavigatePanel && !activeCard.canNavigatePanel()) return false;
+    if (destination.view !== this._activeView) {
+      if (this._activeViewDirty && !window.confirm(this._t("discardUnsavedChanges"))) return false;
+      this._activeViewDirty = false;
+      this._usesScopedDirtyEvents = false;
+      this._pendingResourceUsage = undefined;
+      this._pendingPresetKey = undefined;
+    } else if (destination.subsection !== this._activeSubsection) {
+      const card = this.renderRoot.querySelector<VelairCard>("velair-panel-card");
+      this._applyingDestination = true;
+      try {
+        if (card?.selectPanelSubsection && !card.selectPanelSubsection(destination.subsection)) return false;
+      } finally { this._applyingDestination = false; }
+    }
+    this._activeView = destination.view;
+    this._activeSubsection = destination.subsection;
+    return true;
+  }
 
   protected render() {
     return html`
@@ -53,15 +160,29 @@ export class VelairPanel extends LitElement {
     return keyed(
       this._activeView,
       html`<velair-panel-card
+        .scheduleSession=${this._scheduleSession}
         .hass=${this.hass}
         .view=${this._activeView}
+        .subsection=${this._activeSubsection}
+        @velair-subsection-changed=${(event: CustomEvent<PanelSubsection>) => {
+          if (this._applyingDestination) return;
+          const destination = panelDestination(this._activeView, event.detail);
+          this._activeSubsection = destination.subsection;
+          this._writeLocation(destination);
+        }}
+        .resourceUsage=${this._pendingResourceUsage}
+        .presetKey=${this._pendingPresetKey}
         view=${this._activeView}
         @velair-dirty-changed=${(event: CustomEvent<{ dirty: boolean }>) => {
+          this._usesScopedDirtyEvents = true;
           this._activeViewDirty = Boolean(event.detail?.dirty);
         }}
+        @velair-open-resource-usage=${(event: CustomEvent<import("../types").ResourceUsage>) => { if (this._selectView("schedules", undefined, event.detail.source === "default" ? "default" : "profiles")) this._pendingResourceUsage = event.detail; }}
+        @velair-open-planned-return=${() => this._selectView("preconditioning", undefined, "planned-return")}
+        @velair-open-preset=${(event: CustomEvent<string>) => { if (this._selectView("templates", undefined, "presets")) this._pendingPresetKey = event.detail; }}
         @profile-dirty-changed=${(event: CustomEvent<boolean>) => {
           // Compatibility for an already-rendered 1.5/early-1.6 Profile view.
-          this._activeViewDirty = Boolean(event.detail);
+          if (!this._usesScopedDirtyEvents || event.detail) this._activeViewDirty = Boolean(event.detail);
         }}
       ></velair-panel-card>`,
     );
@@ -73,21 +194,13 @@ export class VelairPanel extends LitElement {
     this._selectView(view, event);
   }
 
-  private _selectView(view: VelairPanelView, source?: Event | HTMLElement): void {
-    if (!PANEL_VIEWS.includes(view)) {
-      return;
-    }
-    if (
-      view !== this._activeView
-      && this._activeViewDirty
-      && !window.confirm(this._t("discardUnsavedChanges"))
-    ) {
-      return;
-    }
-
-    this._activeViewDirty = false;
-    this._activeView = view;
+  private _selectView(view: VelairPanelView, source?: Event | HTMLElement, subsection?: PanelSubsection): boolean {
+    if (!PANEL_VIEWS.includes(view)) return false;
+    const destination = panelDestination(view, subsection ?? (view === this._activeView ? this._activeSubsection : undefined));
+    if (!this._selectDestination(destination)) return false;
+    this._writeLocation(destination);
     this._syncTabGroupActive(view, source);
+    return true;
   }
 
   private _syncTabGroupActive(view: VelairPanelView, source?: Event | HTMLElement): void {

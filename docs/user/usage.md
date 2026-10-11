@@ -1,6 +1,102 @@
 # Usage Guide
+<!-- velair-docs:start -->
+Translations: [English original](usage.md) · [Español](usage.es.md) · [Français](usage.fr.md) · [Deutsch](usage.de.md) · [Italiano](usage.it.md) · [Nederlands](usage.nl.md) · [Polski](usage.pl.md) · [Português (Brasil)](usage.pt-br.md) · [Português (Portugal)](usage.pt-pt.md) · [Русский](usage.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 This guide explains Velair from a Home Assistant user's point of view.
+
+## Panel navigation and direct links
+
+The sidebar panel updates its URL when you change tabs or switch between the
+Schedules, Templates and Preconditioning subsections. Refreshing or opening a copied URL restores
+that section. Browser Back and Forward also follow this navigation.
+
+| Section | Path |
+| --- | --- |
+| Overview | `/velair` |
+| Schedules: Default | `/velair/schedules/default` |
+| Schedules: Profiles | `/velair/schedules/profiles` |
+| Modes | `/velair/modes` |
+| Templates: Templates | `/velair/templates/templates` |
+| Templates: Climate presets | `/velair/templates/presets` |
+| Sensors | `/velair/sensors` |
+| Comfort | `/velair/comfort` |
+| Preconditioning: Adaptive Preconditioning | `/velair/preconditioning/preconditioning` |
+| Preconditioning: Planned Return | `/velair/preconditioning/planned-return` |
+| Diagnostics | `/velair/diagnostics` |
+| Settings | `/velair/settings` |
+
+Use these paths in Home Assistant dashboard navigation actions, or append them
+to your Home Assistant address to create a full link. Opening a link selects a
+section; it does not activate a Mode or change climate settings.
+
+For example, a dashboard button can open the Climate presets library:
+
+```yaml
+type: button
+name: Velair climate presets
+icon: mdi:thermometer-lines
+tap_action:
+  action: navigate
+  navigation_path: /velair/templates/presets
+```
+
+Change `navigation_path` to any path in the table. This uses Home Assistant's
+standard [dashboard navigation action](https://www.home-assistant.io/dashboards/actions/).
+For a bookmark or link from another application, use your own Home Assistant
+address followed by the path, for example
+`https://your-home-assistant.example/velair/schedules/profiles`.
+
+`/velair/schedules` opens Default and `/velair/templates` opens Templates.
+`/velair/preconditioning` opens Adaptive Preconditioning. The subsection
+selector switches between adaptive schedule preparation and Planned Return.
+`/velair/overview` opens Overview, and the legacy `/velair/profiles` path opens
+Modes. An unknown subsection opens its tab's default subsection; an unknown tab
+opens Overview. These paths are normalized without adding a history entry.
+
+Links do not preserve an individual climate, weekday, Profile, template, or
+preset selection. Unsaved edits are not recovered after a refresh. Existing
+discard confirmations apply when navigation would discard unsaved changes;
+cancelling keeps the current section and URL. Optional Lovelace cards keep their
+dashboard URLs.
+
+While the sidebar panel is open, its tabs share the latest confirmed backend
+data. After the first load, switching tabs does not repeat that initial load.
+Updates continue during navigation, and existing unsaved-edit confirmations
+still apply. Refreshing the page loads data again and does not recover drafts.
+Optional Lovelace cards use a separate session from the panel. Mounted cards on
+the same Home Assistant connection share their initial data load and live
+updates, while keeping their own controls and unsaved edits. Lovelace may keep
+cards mounted when you visit another dashboard view, allowing you to return
+without loading them again. The shared session closes when the last card is
+unmounted; refreshing the page starts a fresh load. No YAML changes are needed.
+
+## Help and documentation
+
+Open **Settings → Help and community** to browse the documentation, report a
+problem in GitHub Issues, or share questions and suggestions in Discussions.
+Use the help icon beside a section heading or on the right of a submenu choice
+to open a brief explanation and an **Open guide** link. Opening help on a submenu
+does not select it or change your edits. The explanation and guide correspond
+to that choice, including when it is not the active section. In Settings, the
+help icon for **External adjustments** also offers its guide. Help icons use a
+consistent question-mark symbol and become highlighted on hover; information
+icons continue to provide brief field explanations.
+Close the help dialog with its close button, Escape, or a click outside it;
+keyboard focus returns to the help icon.
+
+Brief explanations remain available inside Velair in all supported interface
+languages, including without an Internet connection. Guide links use your Home
+Assistant language when a translation is available and fall back to English per
+guide. The link only shows **In English** when English is the fallback for your
+language. Translated guides show their source synchronization and linguistic review
+status, with a link to the English original when changes are pending. Published
+release builds open documentation from their matching version tag; development
+builds open the current `main` documentation. Documentation and community links open GitHub in a new tab
+and require Internet access only when opened; they do not upload diagnostics or
+local configuration automatically.
 
 ## Concepts
 
@@ -56,6 +152,22 @@ exact service/event YAML, and step-by-step real-world timelines. See
 
 Velair calculates upcoming events in the backend and schedules exact one-shot callbacks through Home Assistant. The frontend subscribes to backend updates over WebSocket, so it does not need continuous polling.
 
+During a Planned Return episode, Overview shows a compact household summary
+with the weekly or one-off origin, current process and applicable confirmation
+or arrival time. Select it to open Planned Return in Preconditioning; the summary
+does not duplicate the departure controls. An incidence can remain visible even
+when no departure is currently running.
+
+Each affected climate shows a violet Planned Return signal when the backend
+reports current Away or arrival-preparation authority. Its normal operating
+state, Profile and Room Assist information remain visible. Future preparation
+times are prospective information, not an active-control signal. Manual control,
+Boost, independent pauses, stopped scheduling and external execution retain their
+priority. A climate that simply keeps Default scheduling under a custom Away Mode
+does not acquire an Away signal. The indicator describes control intent, not
+proof that a command was successfully delivered or that the room has reached its
+target.
+
 When a managed climate does not publish `target_temp_step`, its row in
 **Settings** shows **Temperature step**. Velair uses `1` by default and lets the
 user provide the device's actual positive step. Velair remembers the last valid
@@ -71,6 +183,16 @@ attachments. It does not add polling or depend on Recorder.
 On desktop, the runtime log columns can be resized for the current session;
 their widths reset when the panel reloads and are never persisted. On mobile,
 the same events use a compact responsive layout instead of resize controls.
+
+Diagnostics also shows the household's Planned Return state and the selected
+climate's effective participation, preparation estimate and any suspension reason.
+A disabled weekly routine is separate from the availability of one-off returns.
+The **Planned Return** history category records accepted planning, confirmation,
+departure, arrival adjustments, preparation starts, completion, cancellation and
+errors. It shares the existing 100-event limit and clears on restart; category
+preferences remain saved. Refreshing either view does not add history entries.
+Reports include this context, with Mode and Profile identifiers removed even
+when entity IDs are explicitly included.
 
 ## Home Assistant Entities
 
@@ -197,7 +319,90 @@ The Lovelace card supports these `view` values:
 - `sensors`;
 - `comfort`;
 - `preconditioning`;
+- `planned-return`;
 - `diagnostics`.
+
+### Planned Return card
+
+Add the same household return controls used by the sidebar to any dashboard:
+
+```yaml
+type: custom:velair-card
+view: planned-return
+```
+
+While absence is being confirmed, a timer row explains the empty-home check and
+shows its backend deadline in Home Assistant local time. The Away Mode activates
+only after confirmation if all sources still report absence. There is no live
+countdown or departure timeline before confirmation.
+
+The visual card editor calls this view **Planned return**. It shows only the
+compact **One-off return** controls, with occupied, empty and unknown source
+counts at the top right of the header. The saved absence confirmation
+delay appears there only before a confirmed active absence. Without saved
+occupancy sources, these indicators are omitted: **Plan return** explicitly
+confirms departure and activates Away immediately, without waiting. The saved
+arrival still controls preparation and destination activation; Velair cannot
+detect physical arrival without sources. Configured unknown/unavailable sources
+keep their normal waiting behavior, and the weekly routine requires sources. Set a future return date and time before leaving or
+while already away. An active episode offers only **Cancel** and **Change
+arrival**. Cancel stops the return automation and restores the previous
+Mode/Profile selection after confirmed departure; pending confirmation does not
+change selection. For example, start from Comfort with a five-minute delay:
+cancelling after two minutes leaves Comfort active; cancelling after Away is
+applied restores Comfort and its original Profiles. See the
+[cancellation examples](planned-return.md#cancelling-a-return-examples), including
+sensorless starts, arrival edits and explicit Mode selections. Once the return finishes or is cancelled, the card shows a fresh date/time form,
+even if household presence still says everyone is away. **Plan return** remains
+visible but disabled when the saved configuration or scheduler is unavailable.
+The sidebar uses the same Cancel/Change arrival buttons and fresh planning form.
+Only trailing occupancy/delay indicators are card-specific; the sidebar retains
+the complete weekly, presence and preparation configuration. Both surfaces show a
+compact phase subtitle attached to the title, with a native tooltip explaining
+the phase. During confirmation the process heading supplies that context. Before confirmed departure, an accessible arrival icon and **Expected arrival** label identify the saved
+return, aligned with the title/state text; its saved value is a compact
+clickable chip without pencil or underline. The confirmed graph instead keeps
+its underlined date/time and leading pencil. Either opens the same arrival editor. The blue **Back** button with a left arrow in the editor action row discards the arrival edit and closes it locally, restoring the latest saved
+arrival. Its warning and navigation guard clear; independent unsaved routine
+configuration remains protected. Reopening starts from the saved value. Success closes
+it, while failed saves and live updates preserve the draft. Departure and arrival
+values use matching typography; Cancel is a compact red filled action with white text below the episode data on
+the left, shown only when an active return can be cancelled and its editor is
+closed. While editing, **Back** closes the editor from the left and Change arrival stays
+on the right with a compact green surface. Back and Change arrival have
+32-pixel visible surfaces within 44-pixel touch targets. Card occupancy indicators stay in the header at the top right; the delay indicator disappears after confirmed departure.
+
+Configure occupancy sources, modes, absence confirmation and the weekly
+routine in **Preconditioning > Planned Return** in the sidebar. The card uses
+that saved household configuration; it does not expose configuration fields
+or the weekly routine switch. Thermostat display filters do not limit this
+household card. Dashboard and sidebar controls update the same backend episode;
+arrival drafts remain local to each open card until submitted.
+
+During a confirmed absence, departure/arrival icons flank the timeline rail.
+Saved times sit directly below the endpoint icons; the arrival value retains its pencil. Back closes the editor from the action row; no close control sits
+beside the time. Plain icon-and-text Mode labels below the saved times identify Away/Return without
+repeating labels. The timeline shows the actual confirmed departure
+and saved return time, with the episode's Away and Return Mode names. The current-time point has a localized **Now** tooltip and
+marks elapsed UTC time between those endpoints, clamped to the bar. Dates appear
+when departure and arrival are on different days in Home Assistant's time zone.
+Editing an arrival does not move the endpoint until the backend accepts it.
+Pending, completed, cancelled, skipped or errored returns have no moving bar.
+The local clock refreshes once per minute while the active card or sidebar is visible;
+it does not poll Home Assistant. The colored elapsed rail represents time, not
+room temperature progress. If no reliable first start is available, a small
+information button beside the One-off return title explains suspended, reached, arrival-only or excluded rooms
+when the current preview agrees; missing or mixed information stays inconclusive.
+Hover or focus the button on desktop, or tap it on mobile; Escape or an outside
+interaction closes the help. A backend estimate can add an Estimated
+preparation clock marker for the earliest eligible room. Its softly blue-tinted
+caption expands to show eligible rooms and estimated start times, ordered
+chronologically. It starts collapsed; each room may start separately. Ordinary
+updates keep the list open, while a changed saved arrival or episode closes it.
+Arrival editing hides the callout and fallback help, preserving the saved rail
+estimate; Back restores the same episode’s disclosure state. This is an advisory estimate, not actual
+HVAC or thermal progress. The weekly summary, source list and room preparation
+detail remain in the sidebar.
 
 ### Climate status and control card
 
@@ -212,7 +417,8 @@ same effective daily timeline, Profile icon and Profile color as the Overview
 tab. Mode, Profile, Comfort, Room Assist, and preconditioning information is
 shown only when it is configured and relevant. An externally executed climate
 shows the external provider and publication state instead of local-only Velair
-features or actions.
+features or climate-specific actions. The optional One-off return action controls
+the household and remains independent of the selected climate's ownership.
 
 ```yaml
 type: custom:velair-card
@@ -235,6 +441,8 @@ climate_actions:
   - type: boost
   - type: pause
     placement: more
+  - type: planned-return
+    enabled: true
   - type: script
     name: Ventilate room
     script: script.ventilate_living_room
@@ -256,7 +464,8 @@ Boost,
 independent pauses, stopped, and unavailable states block direct editing with an
 explanation. The internal pause that represents Manual adjustment itself does
 not block these controls.
-Externally executed zones show only the native Home Assistant shortcut.
+Externally executed zones keep the native Home Assistant shortcut; an enabled
+One-off return action can still open the household departure controls.
 
 Scalar targets and native `heat_cool` ranges are supported. Range changes send
 both boundaries together. Velair uses `min_temp`, `max_temp`, and `hvac_modes`
@@ -270,6 +479,31 @@ Cards created before the ordered action list used
 `climate_show_boost_action`, `climate_show_pause_action`, and
 `climate_custom_actions`. Velair continues to read those legacy fields, while
 the visual editor writes `climate_actions` when the action list changes.
+
+**One-off return** is another Velair-provided action. It supports the same
+visibility, hidden-name and automatic/More placement options as Boost
+and Pause. The editor lists the provided actions first: Boost, Pause, then
+One-off return, including actions that are hidden. One-off return uses a violet
+accent to distinguish it from Pause. Opening it replaces the lower control pane with the compact departure
+form or the current episode's timeline and controls. Close the pane with its X
+to return to the climate controls; closing does not cancel an active departure.
+Unsaved arrival edits require confirmation before closing, and a pending action
+must finish first. Departure settings and effects apply to the whole household,
+not just the selected climate.
+
+The Boost, Pause and One-off return panes join the toolbar's border and surface,
+like the normal thermostat controls. Direct icon-only actions keep their compact
+width and center their icon; opening a pane adds space for its close icon.
+
+Existing cards keep this action hidden unless explicitly enabled. Cards created
+through Home Assistant's card picker include it enabled in their initial action
+list; this also applies when changing that new card's view to `climate`. A YAML
+card without a `planned-return` action keeps it hidden. Enable it in the visual
+editor or add the action shown above.
+
+The editor keeps the provided actions in their fixed section and offers ordering
+controls for custom actions. Opening the editor does not reorder the saved
+dashboard action list.
 
 By default, current humidity and its history shortcut use the attributes of the
 selected climate entity. Set `climate_humidity_entity` to use the live value and
@@ -450,12 +684,19 @@ Profile schedules, or refreshed backend data.
 
 1. Select the climate you want to configure.
 2. Select the weekday.
-3. Choose a template or configure the blocks manually.
+3. Use **Own schedule** for independent blocks, or select a template with
+   **Times only** or **Times and settings**. For independent blocks, continue below.
 4. Add a block.
 5. Choose the start time.
 6. Choose an HVAC mode or leave it as `Keep current mode`.
 7. Enter a target temperature or range, or select climate options without a target.
 8. Save.
+
+In Additional settings, a **Velair preset** can supply the block's climate
+configuration while keeping its time independent. Linked days follow the
+chosen template scope. See [the complete rules](linked-schedules.md) and
+[practical household examples](linked-schedule-examples.md) before choosing
+between copying and linking.
 
 After selecting an explicit non-off HVAC mode, use the compact thermometer
 button in the Target cell to disable its temperature input. The grey input then
@@ -536,6 +777,15 @@ The timeline is a visual 24-hour representation of the selected day.
 
 ## Preconditioning
 
+For occupancy-driven absence with preconfigured weekly or one-off arrivals, see
+[Planned Return](planned-return.md). Configure the routine in Preconditioning's
+Planned Return subsection and use
+its live status for individual source states and one-off arrival changes without
+editing the saved week. **Plan return** can wait for confirmed departure with a
+one-off time even when the automatic weekly routine is disabled. With no saved
+occupancy sources, the explicit start instead applies Away immediately; normal
+preparation and the saved arrival still run.
+
 Preconditioning lets Velair start a scheduled comfort target before the visible block time for one managed climate.
 
 When enabled for a climate in the Preconditioning tab, the block time represents the desired comfort time. Velair may apply the target earlier using its adaptive prediction, while keeping the original target time visible in upcoming events.
@@ -601,9 +851,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v12 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v12 exports; use a version that supports
-v12 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v16 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v16 exports; use a version that supports
+v16 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -677,7 +927,9 @@ Detailed setup, heating, cooling, CO2, automation, and privacy examples are docu
 
 ## Templates
 
-Templates are reusable sets of blocks.
+Templates are reusable daily sets of blocks. Their settings may be manual or
+use shared Velair presets. The Templates tab also contains the Climate presets
+library; a Velair preset shares climate settings without sharing block times.
 
 The Templates tab lets you:
 
@@ -685,11 +937,29 @@ The Templates tab lets you:
 - rename a template;
 - edit template blocks;
 - apply a template to selected climates and weekdays;
-- delete templates.
+- delete templates that have no linked days.
+
+In Schedules, select a template as a day's source to link its times or its
+complete configuration. Copying a template remains a separate operation.
 
 The Schedules tab can also save the current day as a new template.
 
-When applying a template to a climate, Velair validates HVAC modes and temperature limits. If a template temperature is outside the target climate range, Velair clamps it to the climate minimum or maximum. If a template uses an unsupported HVAC mode, Velair shows an error so the user can change the block to `Keep` or a supported mode.
+When copying or linking a template to a climate, Velair validates its HVAC modes,
+target types, temperature limits, and provider restrictions. Out-of-range targets
+and incompatible modes are rejected. Manual settings are adapted to supported
+temperature steps; shared preset values are adapted for each destination without
+changing the library. Unsupported optional settings are filtered, provided the
+block still has a valid action.
+
+Copying blocks creates independent template times, but retains live preset
+references. **Times only** links share times with independent climate assignments.
+**Times and settings** links share the complete template, with read-only controls
+in the destination. Template changes validate every linked day, including
+inactive Profiles. Editing preserves the template's library position.
+
+See [Block presets and linked templates](linked-schedules.md) for all rules and
+[Practical examples](linked-schedule-examples.md) for worked setups, new-block
+fallbacks, link conversions, usage counts, and troubleshooting.
 
 Templates can include every optional climate setting available across the managed climates. This makes one template useful for mixed installations. When a template is applied to a specific climate, Velair keeps only the options that climate supports. For example, a template can contain `fan_mode: quiet` for an AC, but that field is dropped automatically when the same template is applied to a TRV that does not expose fan modes.
 
@@ -773,6 +1043,11 @@ available. These shortcuts only change the selected targets; **Clone** remains
 an explicit action and the source day is never included.
 
 Clone actions save pending changes first when needed.
+They copy the source configuration, including the template, link type, hours-only
+assignments, and preset references. Cloning an independent day removes a
+destination's link for that day; unrelated days keep their links. Incompatible
+destinations reject the clone without changing any selected destination.
+Use **Unlink** after cloning when the new day should stop following its template.
 
 ## Pause, Stop, And Resume
 
@@ -818,10 +1093,11 @@ From Settings, you can enable **Apply active schedule after startup**. When enab
 
 ## Automation Blueprints
 
-Velair provides two optional Home Assistant blueprints through its documentation:
+Velair provides optional Home Assistant blueprints through its documentation:
 
 - switch between chosen Home/Away actions from one consolidated occupancy entity;
-- pause one or more managed climates while any selected window or door remains open.
+- pause one or more managed climates while any selected window or door remains open;
+- select seasonal Modes or other actions after a changed temperature remains stable, with immediate notifications for invalid readings.
 
 They use Home Assistant state events and configurable delays, not polling. The
 occupancy blueprint can report when its consolidated group, template sensor, or
@@ -834,6 +1110,13 @@ the affected contact still blocks resumption. See
 [Automation Blueprints](blueprints.md) for setup, examples, startup behavior,
 and the one-automation-per-zone rule for window contacts.
 
+The [seasonal blueprint](blueprints/seasonal-climate-selection.md) waits 30
+minutes by default after each temperature change; continuously changing readings
+can postpone actions indefinitely. Startup checks diagnostics only. Use its
+normal Home Assistant action editor to select Velair Modes. Configure a real
+pause-and-off Mode if mild weather should stop climatization; empty actions
+leave current operation unchanged.
+
 ## Portability
 
 The Settings tab can export and import a versioned JSON file.
@@ -842,10 +1125,19 @@ The file can contain:
 
 - thermostat schedules;
 - templates;
+- shared block presets;
 - panel settings;
 - adaptive preconditioning learning.
 - climate profile definitions.
 - mode definitions.
+
+Model 16 preserves both template link types and preset references. Exporting
+schedules or Profiles includes required templates and presets, shown as additional
+selected sections. Imports validate the combined configuration, including existing
+consumers of replaced shared resources. Presets merge by stable key: matching keys
+are replaced, while local presets absent from the file remain. Existing backups
+remain importable; older Velair versions cannot import model 16 files. See
+[the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 
 When importing, Velair lets you choose which sections to overwrite. Importing
 replaces selected data, so export first if you need a recovery point. Profile
@@ -907,8 +1199,19 @@ Velair exposes Home Assistant services for automations and scripts:
 - `velair.set_daily_schedule`
 - `velair.copy_day_schedule`
 - `velair.clear_schedule`
+- `velair.update_block_preset`
 
 Services that target an entity only work with climates selected during setup. If an unmanaged climate entity is passed, Velair rejects the service call before changing anything.
+
+### `velair.update_block_preset`
+
+Update a saved shared preset using its stable `preset_key`. Partial updates
+preserve omitted fields; explicit replacement can change its action. Changes
+affect every reference and use the normal validation, override authority, and
+Preconditioning recalculation. See [Preset automations](preset-automations.md)
+for the field reference and outdoor-temperature, range, device-option, and
+Off/restore examples. This service changes a shared definition; it does not
+select another preset for a block.
 
 ### `velair.activate_profile`
 
@@ -1158,7 +1461,10 @@ data:
 
 ### `velair.copy_day_schedule`
 
-Copy one weekday schedule to other weekdays for the same managed climate.
+Copy a saved Default day, including its template link and preset references,
+to selected weekdays. Omit `target_entity_ids` to copy within the source climate,
+or provide that list to copy to other managed climates. Every selected
+climate/weekday combination is validated and saved in one transaction.
 
 ```yaml
 action: velair.copy_day_schedule
@@ -1170,6 +1476,26 @@ data:
     - wednesday
     - thursday
 ```
+
+To copy the same Monday configuration to other thermostats:
+
+```yaml
+action: velair.copy_day_schedule
+data:
+  entity_id: climate.living_room
+  source_weekday: monday
+  target_weekdays:
+    - monday
+  target_entity_ids:
+    - climate.study
+    - climate.bedroom
+```
+
+The service copies the latest saved source under the configuration lock.
+Optional `expected_revision` rejects the operation if configuration has changed;
+the panel supplies its current revision automatically. Profiles are edited and
+saved through their own complete-Profile workflow. Copying a saved independent
+day removes the selected destination days' template links; other days are kept.
 
 ### `velair.clear_schedule`
 

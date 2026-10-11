@@ -1,6 +1,7 @@
 import { DOMAIN } from "../constants";
 import type {
   HomeAssistant,
+  PlannedReturnConfig, PlannedReturnStatus,
   ComfortSettings,
   ComfortSettingsUpdate,
   DiagnosticsSnapshot,
@@ -15,10 +16,33 @@ import type {
   ScheduleUpdateMessage,
   ExternalChangePolicy,
   VelairPortablePayload,
+  BlockPreset, TemplateLink, TemplateAssignment, TemplateUpdatePreview,
 } from "../types";
 
 export class VelairApiClient {
   public constructor(private readonly hass: HomeAssistant) {}
+
+  public updatePlannedReturn(planned_return: PlannedReturnConfig): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/update_planned_return", planned_return });
+  }
+  public getPlannedReturnStatus(): Promise<PlannedReturnStatus> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/get_planned_return_status" });
+  }
+  public adjustPlannedReturn(return_at: string): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/adjust_planned_return", return_at });
+  }
+  public startPlannedReturn(return_at: string): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/start_planned_return", return_at });
+  }
+  public cancelPlannedReturn(): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/cancel_planned_return" });
+  }
+  public skipPlannedReturn(): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/skip_planned_return" });
+  }
+  public arrivePlannedReturn(): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/arrive_planned_return" });
+  }
 
   public getSchedule(): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
@@ -66,12 +90,13 @@ export class VelairApiClient {
     });
   }
 
-  public setDailySchedule(entityId: string, weekday: string, blocks: ScheduleBlock[]): Promise<ScheduleResponse> {
+  public setDailySchedule(entityId: string, weekday: string, blocks: ScheduleBlock[], options: { expected_revision?: number; unlink_template?: boolean; template_link?: TemplateLink } = {}): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/set_daily_schedule",
       entity_id: entityId,
       weekday,
-      blocks,
+      ...(options.template_link ? { template_link: options.template_link } : { blocks }),
+      ...options,
     });
   }
 
@@ -87,12 +112,14 @@ export class VelairApiClient {
     entityId: string,
     sourceWeekday: string,
     targetWeekdays: string[],
+    options?: { target_entity_ids?: string[]; expected_revision?: number },
   ): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/copy_day_schedule",
       entity_id: entityId,
       source_weekday: sourceWeekday,
       target_weekdays: targetWeekdays,
+      ...options,
     });
   }
 
@@ -100,12 +127,14 @@ export class VelairApiClient {
     key: string,
     name: string,
     blocks: ScheduleBlock[],
+    options: { expected_revision?: number; assignments?: TemplateAssignment[] } = {},
   ): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/set_schedule_template",
       key,
       name,
       blocks,
+      ...options,
     });
   }
 
@@ -116,11 +145,28 @@ export class VelairApiClient {
     });
   }
 
-  public setClimateProfile(profile: ClimateProfileInput): Promise<ScheduleResponse> {
+  public setClimateProfile(profile: ClimateProfileInput, expectedRevision?: number): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/set_profile",
       profile,
+      ...(expectedRevision === undefined ? {} : { expected_revision: expectedRevision }),
     });
+  }
+
+  public setBlockPreset(preset: BlockPreset, expectedRevision?: number): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/set_block_preset", ...preset, expected_revision: expectedRevision });
+  }
+  public deleteBlockPreset(key: string, expectedRevision?: number): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/delete_block_preset", key, expected_revision: expectedRevision });
+  }
+  public previewScheduleTemplateUpdate(key: string, name: string, blocks: ScheduleBlock[], expectedRevision?: number, assignments?: TemplateAssignment[]): Promise<TemplateUpdatePreview> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_schedule_template_update", key, name, blocks, ...(expectedRevision === undefined ? {} : { expected_revision: expectedRevision }), ...(assignments === undefined ? {} : { assignments }) });
+  }
+  public previewDailySchedule(entityId: string, weekday: string, input: { blocks?: ScheduleBlock[]; template_link?: TemplateLink }): Promise<{ blocks: ScheduleBlock[]; materialized_blocks?: ScheduleBlock[]; configuration_revision?: number }> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_daily_schedule", entity_id: entityId, weekday, ...input });
+  }
+  public previewProfile(profile: ClimateProfileInput): Promise<{ profile: ClimateProfileInput; resolved_schedules: Record<string, Record<string, ScheduleBlock[]>>; materialized_schedules?: Record<string, Record<string, ScheduleBlock[]>>; configuration_revision: number }> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_profile", profile });
   }
 
   public deleteClimateProfile(key: string): Promise<ScheduleResponse> {

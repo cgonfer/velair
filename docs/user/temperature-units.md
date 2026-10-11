@@ -1,4 +1,9 @@
 # Temperature Units and Migration
+<!-- velair-docs:start -->
+Translations: [English original](temperature-units.md) · [Español](temperature-units.es.md) · [Français](temperature-units.fr.md) · [Deutsch](temperature-units.de.md) · [Italiano](temperature-units.it.md) · [Nederlands](temperature-units.nl.md) · [Polski](temperature-units.pl.md) · [Português (Brasil)](temperature-units.pt-br.md) · [Português (Portugal)](temperature-units.pt-pt.md) · [Русский](temperature-units.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair supports Celsius and Fahrenheit by following Home Assistant's configured
 temperature unit. Velair does not provide a separate unit selector. The detected

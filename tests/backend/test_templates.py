@@ -57,6 +57,17 @@ class VelairSchedulerTemplateTest(unittest.IsolatedAsyncioTestCase):
             }
         ])
 
+    async def test_editing_templates_preserves_positions_and_new_templates_append(self) -> None:
+        keys = [await self.scheduler.async_set_schedule_template(name, [])
+                for name in ("First", "Middle", "Last")]
+        for index, key in enumerate(keys):
+            with self.subTest(position=index):
+                await self.scheduler.async_set_schedule_template(f"Edited {index}", [], key)
+                self.assertEqual([item["key"] for item in self.data["templates"]], keys)
+                self.assertEqual(self.data["templates"][index]["name"], f"Edited {index}")
+        added = await self.scheduler.async_set_schedule_template("New", [])
+        self.assertEqual([item["key"] for item in self.data["templates"]], keys + [added])
+
     async def test_set_schedule_template_is_not_limited_to_one_climate_range(self) -> None:
         self.climate.limits["climate.salon"] = (18.0, 22.0)
 
@@ -94,7 +105,7 @@ class VelairSchedulerTemplateTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            self.data["templates"],
+            [{**template, "blocks": [{field: value for field, value in block.items() if field != "slot_id"} for block in template["blocks"]]} for template in self.data["templates"]],
             [
                 {
                     "key": key,

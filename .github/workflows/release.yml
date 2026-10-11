@@ -34,6 +34,12 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Validate documentation translations
+        run: node scripts/documentation-translations.mjs check
+
+      - name: Report documentation translation coverage
+        run: node scripts/documentation-translations.mjs report >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run backend tests
         run: python -m unittest discover -s tests
 

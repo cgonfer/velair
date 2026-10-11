@@ -195,6 +195,25 @@ describe("climate card actions", () => {
     expect(card["_climateCardBoost"]?.entityId).toBe("climate.office");
   });
 
+  it("enables the household action only in new stub defaults", () => {
+    expect(VelairCard.getStubConfig().climate_actions).toEqual([{ type: "boost", enabled: true }, { type: "pause", enabled: true }, { type: "planned-return", enabled: true }]);
+  });
+  it("guards return-pane close and switches while preserving the household episode", () => {
+    const card = document.createElement("velair-climate-card-actions-test") as VelairCard & Record<string, any>;
+    const other = document.createElement("velair-climate-card-actions-test") as VelairCard & Record<string, any>;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    card["_openClimateCardPause"]("climate.office"); card["_openClimateCardPlannedReturn"]();
+    expect(card["_climateCardPause"]).toBeUndefined(); expect(card["_climateCardPlannedReturnOpen"]).toBe(true); expect(other["_climateCardPlannedReturnOpen"]).toBe(false);
+    card["_plannedReturnBusy"] = true;
+    expect(card["_closeClimateCardPlannedReturn"]()).toBe(false); card["_openClimateCardBoost"]("climate.office"); expect(card["_climateCardBoost"]).toBeUndefined();
+    card["_plannedReturnBusy"] = false; card["_plannedReturnDirty"] = true;
+    card["_openClimateCardPause"]("climate.office"); expect(card["_climateCardPlannedReturnOpen"]).toBe(true); expect(confirm).toHaveBeenCalledOnce();
+    confirm.mockReturnValue(true); card["_openClimateCardBoost"]("climate.office");
+    expect(card["_climateCardPlannedReturnOpen"]).toBe(false); expect(card["_plannedReturnDirty"]).toBe(false); expect(card["_climateCardBoost"]?.entityId).toBe("climate.office");
+    card["_openClimateCardPlannedReturn"](); expect(card["_climateCardBoost"]).toBeUndefined();
+    card.setConfig({ view: "climate", selected_entity: "climate.bedroom" }); expect(card["_climateCardPlannedReturnOpen"]).toBe(false);
+    confirm.mockRestore();
+  });
   it("runs a configured Home Assistant script without interpreting its logic", async () => {
     const callService = vi.fn().mockResolvedValue(undefined);
     const card = document.createElement("velair-climate-card-actions-test") as VelairCard & Record<string, any>;
@@ -339,14 +358,14 @@ describe("climate card actions", () => {
       zone_runtime: { [entityId]: { state: "scheduled", control_mode: "automatic" } },
     };
     card.hass = {
-      callService: vi.fn(), connection: { sendMessagePromise: vi.fn(), subscribeMessage: vi.fn().mockResolvedValue(vi.fn()) },
+      callService: vi.fn(), connection: { sendMessagePromise: vi.fn().mockResolvedValue(card["_data"]), subscribeMessage: vi.fn().mockResolvedValue(vi.fn()) },
       states: {
         [entityId]: { state: "heat", attributes: {} },
         ...Object.fromEntries(scripts.map((name) => [`script.${name}`, { state: "off", attributes: {} }])),
       },
     } as never;
     document.body.append(card);
-    await card.updateComplete;
+    for (let i = 0; i < 12; i++) { await Promise.resolve(); await card.updateComplete; }
     expect(card.renderRoot.querySelector(".climate-card-actions-menu-trigger")).not.toBeNull();
     const removeListener = vi.spyOn(document, "removeEventListener");
     card["_openClimateCardActionsMenu"]();

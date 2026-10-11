@@ -4,6 +4,7 @@ import { minutesPerDegreeBounds, temperatureDeltaMaximum, temperatureDeltaMinimu
 import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
 import { renderInlineHelp } from "./inline-help";
+import { renderDocumentationHelp } from "./documentation-links";
 import type {
   PreconditioningDiagnostics,
   PreconditioningDirectionLearning,
@@ -32,16 +33,18 @@ const PRECONDITIONING_HELP_KEYS: Partial<Record<TranslationKey, TranslationKey>>
 export function renderPreconditioningView(
   host: PreconditioningViewHost,
   zoneIds: string[],
+  showIntro = true,
 ) {
   return html`
     <section class="preconditioning-view">
-      <header class="preconditioning-intro">
+      ${showIntro ? html`<header class="preconditioning-intro">
         <ha-icon icon="mdi:clock-fast"></ha-icon>
         <span>
           <strong>${host._t("preconditioningIntroTitle")}</strong>
           <small>${host._t("preconditioningIntroDetail")}</small>
         </span>
-      </header>
+        ${renderDocumentationHelp(host, "preconditioning")}
+      </header>` : nothing}
       ${zoneIds.length
         ? zoneIds.map((entityId) => renderPreconditioningZone(host, entityId))
         : html`<span class="empty">${host._t("noManagedEntities")}</span>`}

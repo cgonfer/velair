@@ -1,4 +1,9 @@
 # Velair Sensor Reference
+<!-- velair-docs:start -->
+Translations: [English original](sensors.md) · [Español](sensors.es.md) · [Français](sensors.fr.md) · [Deutsch](sensors.de.md) · [Italiano](sensors.it.md) · [Nederlands](sensors.nl.md) · [Polski](sensors.pl.md) · [Português (Brasil)](sensors.pt-br.md) · [Português (Portugal)](sensors.pt-pt.md) · [Русский](sensors.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair creates Home Assistant entities so dashboards and automations can read
 the current scheduler, comfort, delivery, and per-climate context without

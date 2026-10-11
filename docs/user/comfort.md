@@ -1,4 +1,9 @@
 # Environmental Comfort
+<!-- velair-docs:start -->
+Translations: [English original](comfort.md) · [Español](comfort.es.md) · [Français](comfort.fr.md) · [Deutsch](comfort.de.md) · [Italiano](comfort.it.md) · [Nederlands](comfort.nl.md) · [Polski](comfort.pl.md) · [Português (Brasil)](comfort.pt-br.md) · [Português (Portugal)](comfort.pt-pt.md) · [Русский](comfort.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 The default comfortable temperature range is `20–24 °C` or the practical
 whole-degree default `68–75 °F` for Fahrenheit installations.

@@ -10,6 +10,7 @@ afterEach(() => {
   document.dispatchEvent(new Event("pointerdown", { bubbles: true, composed: true }));
   document.body.replaceChildren();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -25,6 +26,170 @@ function setup() {
 }
 
 describe("inline help", () => {
+  it("opens after a settled 500ms hover and cancels a fast pass", () => {
+    vi.useFakeTimers();
+    const { button, tooltip } = setup();
+    button.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(499);
+    expect(tooltip.classList).not.toContain("visible");
+    button.dispatchEvent(new Event("pointerleave"));
+    vi.advanceTimersByTime(1000);
+    expect(tooltip.classList).not.toContain("visible");
+    button.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(500);
+    expect(tooltip.classList).toContain("visible");
+  });
+
+  it.each(["pointerleave", "pointercancel", "outside", "Escape", "scroll", "remove"])("cancels pending hover on %s", (action) => {
+    vi.useFakeTimers();
+    const { button, tooltip, container } = setup();
+    button.dispatchEvent(new Event("pointerenter"));
+    if (action === "outside") document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    else if (action === "Escape") document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    else if (action === "scroll") window.dispatchEvent(new Event("scroll"));
+    else if (action === "remove") container.remove();
+    else button.dispatchEvent(new Event(action));
+    vi.advanceTimersByTime(600);
+    expect(tooltip.classList).not.toContain("visible");
+  });
+
+  it("opens on touch click and keyboard focus immediately, with click remaining pinned", () => {
+    vi.useFakeTimers();
+    const { button, tooltip } = setup();
+    const touch = new Event("pointerenter");
+    Object.defineProperty(touch, "pointerType", { value: "touch" });
+    button.dispatchEvent(touch);
+    vi.advanceTimersByTime(600);
+    expect(tooltip.classList).not.toContain("visible");
+    button.click();
+    expect(tooltip.dataset.openCause).toBe("click");
+    button.dispatchEvent(new Event("pointerleave"));
+    button.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(600);
+    expect(tooltip.dataset.openCause).toBe("click");
+    button.click();
+    expect(tooltip.classList).not.toContain("visible");
+    button.dispatchEvent(new FocusEvent("focus"));
+    expect(tooltip.dataset.openCause).toBe("focus");
+  });
+
+  it("keeps keyboard help open while its button still has focus", () => {
+    vi.useFakeTimers();
+    const { button, tooltip } = setup();
+    button.focus();
+    button.dispatchEvent(new Event("pointerleave"));
+    vi.advanceTimersByTime(600);
+    expect(tooltip.classList).toContain("visible");
+    button.blur();
+    expect(tooltip.classList).not.toContain("visible");
+  });
+
+  it("replaces an earlier pending hover when moving to another help", () => {
+    vi.useFakeTimers();
+    const container = document.createElement("div");
+    render(html`${renderInlineHelp("first-help", "First", "First text")}${renderInlineHelp("second-help", "Second", "Second text")}`, container);
+    document.body.append(container);
+    const buttons = container.querySelectorAll<HTMLButtonElement>("button");
+    buttons[0].dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(250);
+    buttons[1].dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(500);
+    expect(buttons[0].getAttribute("aria-expanded")).toBe("false");
+    expect(buttons[1].getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it.each(["outside", "scroll", "Escape"])("still cancels the next hover on %s after the previous help closes", (action) => {
+    vi.useFakeTimers();
+    const container = document.createElement("div");
+    render(html`${renderInlineHelp("first-help", "First", "First text")}${renderInlineHelp("second-help", "Second", "Second text")}`, container);
+    document.body.append(container);
+    const buttons = container.querySelectorAll<HTMLButtonElement>("button");
+    buttons[0].dispatchEvent(new FocusEvent("focus"));
+    buttons[0].dispatchEvent(new Event("pointerleave"));
+    buttons[1].dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(300);
+    if (action === "outside") document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    else if (action === "scroll") window.dispatchEvent(new Event("scroll"));
+    else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    vi.advanceTimersByTime(300);
+    expect(buttons[1].getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("closes immediately, clears its position and recalculates on reopening", () => {
+    vi.useFakeTimers();
+    const { button, tooltip } = setup();
+    const rect = vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+      bottom: 100, height: 32, left: 40, right: 72, top: 68, width: 32,
+      x: 40, y: 68, toJSON: () => ({}),
+    });
+    button.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(500);
+    expect(tooltip.style.left).toBe("40px");
+    expect(tooltip.style.top).toBe("100px");
+
+    button.dispatchEvent(new Event("pointerleave"));
+    expect(tooltip.classList).not.toContain("visible");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(tooltip.style.left).toBe("");
+    expect(tooltip.style.top).toBe("");
+    expect(inlineHelpStyles.cssText).not.toContain("transition:");
+
+    rect.mockReturnValue({
+      bottom: 140, height: 32, left: 80, right: 112, top: 108, width: 32,
+      x: 80, y: 108, toJSON: () => ({}),
+    });
+    button.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(500);
+    expect(tooltip.classList).toContain("visible");
+    expect(tooltip.style.left).toBe("80px");
+    expect(tooltip.style.top).toBe("140px");
+  });
+
+  it("keeps narrow-screen hover adjacent at fractional coordinates and uses the mobile band on tap", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const { button, tooltip } = setup();
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+      bottom: 100.6, height: 32, left: 40, right: 72, top: 68.6, width: 32,
+      x: 40, y: 68.6, toJSON: () => ({}),
+    });
+    button.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(500);
+    expect(tooltip.style.top).toBe("100.6px");
+    expect(tooltip.style.getPropertyValue("--inline-help-mobile-width")).toBe("");
+    button.dispatchEvent(new MouseEvent("pointerleave", { relatedTarget: tooltip }));
+    expect(tooltip.classList).toContain("visible");
+    tooltip.dispatchEvent(new MouseEvent("pointerleave", { relatedTarget: document.body }));
+    expect(tooltip.classList).not.toContain("visible");
+    button.click();
+    expect(tooltip.dataset.openCause).toBe("click");
+    expect(tooltip.style.top).toBe("");
+    expect(tooltip.style.getPropertyValue("--inline-help-mobile-width")).not.toBe("");
+  });
+
+  it("reuses the help engine over a disabled input without an icon or input interaction", () => {
+    const container = document.createElement("div");
+    const input = vi.fn();
+    render(html`<div><label for="locked-time">Start</label><span class="linked-time-input"><input id="locked-time" type="time" value="07:00" disabled @input=${input}>${renderInlineHelp("locked-help", "Linked time", "Edit the template or unlink", { appearance: "overlay" })}</span></div>`, container);
+    document.body.append(container);
+    const button = container.querySelector<HTMLButtonElement>(".inline-help-overlay")!;
+    const tooltip = container.querySelector<HTMLElement>('[role="tooltip"]')!;
+    expect(button.querySelector("ha-icon")).toBeNull();
+    expect(button.closest("label")).toBeNull();
+    expect(button.getAttribute("aria-describedby")).toBe("locked-help");
+    expect(button.getAttribute("aria-label")).toBe("Linked time");
+    button.dispatchEvent(new FocusEvent("focus"));
+    expect(tooltip.classList).toContain("visible");
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.click();
+    expect(tooltip.dataset.openCause).toBe("click");
+    button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(tooltip.classList).not.toContain("visible");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect((container.querySelector("input") as HTMLInputElement).value).toBe("07:00");
+    expect(input).not.toHaveBeenCalled();
+  });
   it("links a real button to its tooltip without dialog state", () => {
     const { button, container, tooltip } = setup();
     expect(button.getAttribute("aria-describedby")).toBe("policy-help");
@@ -49,9 +214,10 @@ describe("inline help", () => {
       x: 0, y: 0, toJSON: () => ({}),
     });
 
-    button.dispatchEvent(new Event("pointerenter"));
+    button.dispatchEvent(new FocusEvent("focus"));
     expect(tooltip.style.left).toBe("188px");
-    expect(tooltip.style.top).toBe("104px");
+    expect(tooltip.style.maxWidth).toBe("min(var(--inline-help-max-width, 260px), 296px)");
+    expect(tooltip.style.top).toBe("110px");
     expect(Number.parseInt(tooltip.style.left) + 120).toBeLessThanOrEqual(308);
     expect(Number.parseInt(tooltip.style.top) + 60).toBeLessThanOrEqual(188);
 
@@ -63,7 +229,7 @@ describe("inline help", () => {
       bottom: 176, height: 176, left: 0, right: 120, top: 0, width: 120,
       x: 0, y: 0, toJSON: () => ({}),
     });
-    button.dispatchEvent(new Event("pointerenter"));
+    button.dispatchEvent(new FocusEvent("focus"));
     expect(tooltip.style.left).toBe("12px");
     expect(tooltip.style.top).toBe("12px");
   });
@@ -72,10 +238,15 @@ describe("inline help", () => {
     vi.useFakeTimers();
     const { button, tooltip } = setup();
     button.dispatchEvent(new Event("pointerenter"));
-    button.dispatchEvent(new Event("pointerleave"));
+    vi.advanceTimersByTime(500);
+    button.dispatchEvent(new MouseEvent("pointerleave", { relatedTarget: tooltip }));
     tooltip.dispatchEvent(new Event("pointerenter"));
     vi.advanceTimersByTime(400);
     expect(tooltip.classList).toContain("visible");
+    tooltip.dispatchEvent(new MouseEvent("pointerleave", { relatedTarget: button }));
+    expect(tooltip.classList).toContain("visible");
+    tooltip.dispatchEvent(new MouseEvent("pointerleave", { relatedTarget: document.body }));
+    expect(tooltip.classList).not.toContain("visible");
 
     button.click();
     expect(tooltip.classList).toContain("visible");
@@ -97,7 +268,7 @@ describe("inline help", () => {
     const css = inlineHelpStyles.cssText;
     expect(css).toMatch(/\.inline-help-tooltip\.visible\s*\{[^}]*pointer-events:\s*auto/);
     expect(css).toMatch(/\.inline-help-tooltip\s*\{[^}]*max-height:\s*calc\(100dvh - 24px\)[^}]*position:\s*fixed/);
-    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip,[\s\S]*\.inline-help-tooltip\.constrained\s*\{[^}]*bottom:\s*calc\(var\(--inline-help-mobile-bottom, 0px\) \+ max\(12px, env\(safe-area-inset-bottom\)\)\)/);
+    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip:not\(\[data-open-cause="hover"\]\),[\s\S]*\.inline-help-tooltip\.constrained:not\(\[data-open-cause="hover"\]\)\s*\{[^}]*bottom:\s*calc\(var\(--inline-help-mobile-bottom, 0px\) \+ max\(12px, env\(safe-area-inset-bottom\)\)\)/);
     expect(css).toContain("var(--inline-help-mobile-width, 100dvw)");
     expect(css).toContain("env(safe-area-inset-left)");
   });
@@ -123,7 +294,7 @@ describe("inline help", () => {
       /\.inline-help-tooltip\.constrained\s*\{[^}]*max-width:\s*min\(236px, calc\(100dvw - 24px\)\);[^}]*width:\s*min\(236px, calc\(100dvw - 24px\)\);/,
     );
     expect(inlineHelpStyles.cssText).toMatch(
-      /@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip,[\s\S]*\.inline-help-tooltip\.constrained\s*\{[^}]*width:\s*calc\(/,
+      /@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip:not\(\[data-open-cause="hover"\]\),[\s\S]*\.inline-help-tooltip\.constrained:not\(\[data-open-cause="hover"\]\)\s*\{[^}]*width:\s*calc\(/,
     );
   });
 

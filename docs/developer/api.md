@@ -1,5 +1,8 @@
 # WebSocket API
 
+For live block preset references, hours-only and complete template links, configuration revisions,
+and preview commands, see [Linked schedule internals](linked-schedules.md).
+
 Velair exposes WebSocket commands for the sidebar panel and optional Lovelace card.
 
 Frontend code should use Home Assistant's WebSocket connection:
@@ -10,11 +13,77 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
+## Planned Return Services
+
+Home Assistant actions `velair.start_planned_return` and
+`velair.cancel_planned_return` reuse the same scheduler operations as their
+WebSocket counterparts. Start requires `return_date` (valid `YYYY-MM-DD`) and `return_time` (strict 24-hour `HH:MM`);
+the time selector's `HH:MM:00` is also accepted and normalized to minute precision.
+Cancel accepts no fields and withdraws a pending or active return, or closes any
+terminal notice. For a confirmed absence, it atomically restores the episode's
+saved previous Mode/Profile selection together with a dismissed cancellation
+latch. A pending confirmation or terminal acknowledgement leaves selection
+unchanged. The latch prevents immediate weekly departure restart while away.
+Neither accepts a climate target or edits schedule/Profile definitions.
+
+The service resolves the selected date and wall time in Home Assistant's time zone, rejects
+nonexistent daylight-saving times, and chooses the earliest future UTC instant
+when the wall time repeats. The existing runtime validates configuration,
+operation availability, external execution, and episode phase. Validation failures
+become `HomeAssistantError`; start does not require the weekly routine enabled.
+For explicit starts, occupancy sources are optional. With an empty saved
+`occupancy_entity_ids` list, start persists a confirmed manual departure and
+applies Away immediately, bypassing only absence detection and its delay.
+Configured unknown/unavailable sources still arm a request; missing configured
+entities are rejected. Weekly automatic departures still require sources.
+Start and adjust WebSocket commands accept an aware ISO `return_at` instant,
+which must be strictly in the future and is persisted in UTC. One-off returns
+can span multiple days; weekly times remain same-day. Destination schedules are
+resolved in Home Assistant local time, while preparation leads and confirmation
+delays use elapsed UTC time. Changing the arrival resets the preparation latch,
+invalidates pending delivery and restores current Away authority for formerly
+preparing zones; submitting the same instant preserves the latch.
+
+```yaml
+action: velair.start_planned_return
+data:
+  return_date: "2026-10-09"
+  return_time: "19:25"
+```
+
+```yaml
+action: velair.cancel_planned_return
+data: {}
+```
+
 ## Schedule Response
+
+The response also includes backend-owned `planned_return` configuration and a
+derived `planned_return_status` with `state`, `occupancy`, `sources`, `origin`,
+`can_start`, `episode_active`, `can_cancel`, `return_at`, `departure_at`, `away_mode_id`, `destination_mode_id`,
+`absence_confirm_at`, per-zone preparation entries, and an optional `error`.
+`departure_at` is the timezone-aware instant when monitored absence or an
+explicit sensorless departure was confirmed and the Away transition was saved. It is null while waiting for departure and for
+older episodes without this metadata. It survives arrival adjustments, restarts,
+and retained terminal episodes. The mode identifiers come from the episode,
+including `default`, and are null when there is no episode. These fields support
+the compact card's elapsed-time display; they do not report thermal progress.
+See [Planned Return](../user/planned-return.md) for behavior and limits.
 
 Most write commands return the full schedule response:
 
 The response includes a runtime-only `zone_runtime` mapping. It is derived by the backend and never persisted. Each managed climate reports an authoritative `state` (`stopped`, `paused`, `boost`, `preconditioning`, `scheduled`, `idle`, or `externally_managed`) plus the minimal available room, target, applied setpoint, HVAC mode, and relevant timing fields used by Overview.
+
+An optional `zone_runtime[entity_id].planned_return` identifies current effective
+Planned Return authority. Its shape is `{ phase: "away" | "preparing", origin:
+"automatic" | "manual", mode_id: string, profile_id?: string | null, effect:
+"schedule" | "pause" | "turn_off" }`. `mode_id` refers to Away during absence and
+the destination during preparation. Absence of this field means no current
+Planned Return attribution; a future estimate or ordinary preconditioning state
+does not establish it. Current Manual, Boost, independent-pause, external,
+disabled-zone and scheduler authority gates apply. The field describes intent,
+not delivery confirmation, and does not replace `state`. Clients must tolerate
+its absence when using an older backend.
 
 ```json
 {
@@ -244,7 +313,7 @@ The response includes a runtime-only `zone_runtime` mapping. It is derived by th
     "portable_model": 12,
     "storage": 1,
     "model": 7,
-    "integration": "1.8.0"
+    "integration": "1.9.0-beta.1"
   }
 }
 ```
@@ -429,6 +498,7 @@ interface DiagnosticsSnapshot {
     issues: Array<Record<string, unknown>>;
   };
   units: Record<string, Record<string, unknown>>;
+  planned_return?: PlannedReturnStatus;
   history: Array<Record<string, unknown>>;
 }
 
@@ -436,12 +506,37 @@ type DiagnosticsCategory =
   | "control"
   | "room_assist"
   | "preconditioning"
+  | "planned_return"
   | "comfort"
   | "delivery"
   | "availability";
 ```
 
 The command returns `not_loaded` when the integration runtime is unavailable.
+
+`planned_return` contains the existing household `PlannedReturnStatus` shape,
+with `weekly_enabled` indicating whether the weekly routine is enabled.
+Per-climate current attribution is copied into `units[entity_id].intent.planned_return`.
+Prospective preparation details remain in the household preparation projection;
+they must not be interpreted as current zone authority. Weekly enablement and
+one-off availability are independent.
+
+The `planned_return` history category retains `planned_return_changed` events
+with a `transition` of `registered`, `confirmation_started`, `confirmation_reset`,
+`departed`, `arrival_changed`, `preparation_started`, `fulfilled`, `cancelled`,
+`skipped` or `error`. Zone preparation transitions use the standard top-level
+`entity_id`; household transitions do not. Safe event data contains only bounded
+transition/origin/state/reason, timestamp and Mode/Profile context fields.
+Accepted durable transitions are emitted after successful persistence; timer
+confirmation transitions describe accepted runtime changes. Failed saves and
+unchanged refreshes do not emit accepted-transition events. Repeated identical
+errors and preparation retries do not create duplicate rows. History category
+retention does not suppress automation events.
+
+These events share the existing 100-entry runtime-only history. Newly introduced
+category preferences default to enabled while retaining previous choices.
+Exports remove `away_mode_id`, `destination_mode_id` and related operational
+Mode/Profile identifiers even when raw entity IDs are requested.
 
 ### Export Diagnostics
 
@@ -576,6 +671,11 @@ action does not turn on a climate that is off.
 
 ## Copy Day Schedule
 
+Clone the saved Default day, preserving its template link mode, hours-only
+assignments, and preset references. Other destination weekdays are unchanged.
+All selected destinations are validated and committed together; an incompatible
+destination rejects the operation without modifying any clone destination.
+
 ```ts
 await hass.connection.sendMessagePromise({
   type: "velair/copy_day_schedule",
@@ -584,6 +684,27 @@ await hass.connection.sendMessagePromise({
   target_weekdays: ["tuesday", "wednesday"],
 });
 ```
+
+Optional `target_entity_ids` selects other managed climates; omitting it targets
+the source climate. The selected source day is cloned to every combination of
+target climate and weekday. Optional `expected_revision` rejects stale requests;
+omitting it clones the latest saved source under the configuration lock. The
+panel supplies the revision returned by saving pending source-day changes.
+That source save is separate from the atomic destination clone.
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/copy_day_schedule",
+  entity_id: "climate.living_room",
+  source_weekday: "monday",
+  target_weekdays: ["monday"],
+  target_entity_ids: ["climate.study", "climate.bedroom"],
+  expected_revision: configuration.configuration_revision,
+});
+```
+
+Profile cloning operates on the draft, validates it through `preview_profile`,
+and persists only when the complete Profile is saved.
 
 ## Clear Schedule
 
@@ -991,7 +1112,7 @@ Deletes local adaptive preconditioning observations for one managed climate dire
 ```ts
 await hass.connection.sendMessagePromise({
   type: "velair/export_data",
-  sections: ["zones", "templates", "settings", "preconditioning_learning", "profiles", "modes"],
+  sections: ["zones", "templates", "block_presets", "settings", "preconditioning_learning", "profiles", "modes"],
 });
 ```
 
@@ -1000,7 +1121,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 12,
+  "model_version": 16,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1017,7 +1138,14 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
-Selected sections overwrite existing data. Profile and Mode definitions are
+Selected sections replace their existing data, except `block_presets`, which
+merges by immutable key and retains local presets absent from the file.
+Referenced template and preset libraries are included automatically, including
+presets used by templates reached from selected Default or Profile schedules.
+Portable model 16 supports complete template links and template-owned presets;
+links from earlier files without a mode remain hours-only. Import
+validates the complete combined graph, including existing local consumers,
+before saving. Profile and Mode definitions are
 portable, but the active Profile set and selected Mode are never exported or
 selected by import. Replacing definitions retains active IDs that still exist
 and returns to default schedules only when the active set becomes empty.
@@ -1076,12 +1204,110 @@ Diagnostics category policy and runtime log are not schedule data reset by this
 command. The frontend must ask the user for confirmation before calling this
 command.
 
+## Planned Return Commands
+
+These commands require administrator access and return the complete schedule
+response. Configuration uses stable Mode keys; `default` means Default.
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/update_planned_return",
+  planned_return: {
+    enabled: true,
+    occupancy_entity_ids: ["zone.home", "input_boolean.guests_home"],
+    away_mode_id: "away",
+    destination_mode_id: "home",
+    absence_delay_minutes: 10,
+    weekly: {
+      monday: "18:15", tuesday: "18:15", wednesday: "18:15",
+      thursday: "18:15", friday: "18:15", saturday: null, sunday: null
+    }
+  }
+});
+await hass.connection.sendMessagePromise({
+  type: "velair/start_planned_return",
+  return_at: "2026-10-07T19:25:00+02:00"
+});
+await hass.connection.sendMessagePromise({ type: "velair/cancel_planned_return" });
+await hass.connection.sendMessagePromise({
+  type: "velair/adjust_planned_return",
+  return_at: "2026-10-07T19:45:00+02:00"
+});
+await hass.connection.sendMessagePromise({ type: "velair/skip_planned_return" });
+await hass.connection.sendMessagePromise({ type: "velair/arrive_planned_return" });
+```
+
+Start and arrival adjustment accept a timezone-aware strictly future instant on
+any arrival date, not only the current Home Assistant local date. Instants are
+persisted in UTC; destination schedules use the Home Assistant local calendar. Start uses saved sources and Mode settings and can arm
+a request with the automatic routine disabled. With an empty saved source list,
+explicit start instead creates a confirmed manual departure immediately and
+applies Away without a confirmation timer; `occupancy` remains unknown and
+`sources` remains empty. Normal preparation, arrival, restart and cancellation
+authority are unchanged. A pending request has episode state
+`armed` and origin `manual`; while its absence delay is running, public state is
+`confirming_absence`. Cancel withdraws pending and active return authority,
+removes preparation, and retains a dismissed cancellation latch. For active
+confirmed absence it restores the persisted `previous_selection` snapshot
+(`mode_id`, ordered `profile_ids`); pending and terminal states do not restore.
+The optional snapshot is captured for fresh episodes and survives arrival edits
+and normalization across restart. Legacy episodes without it retain selection.
+A removed/changed Mode loses its marker while its saved valid Profiles are
+restored; missing/invalid/conflicting Profiles leave selection unchanged with
+a runtime restoration error, without preventing accepted cancellation. It also closes
+any terminal notice. Cancellation works with missing sources, a stopped scheduler,
+or unresolved temperature migration; exclusive data operations still block writes. Starting during an
+active absence updates its arrival date and time without reapplying Away. Any fulfilled, skipped, or cancelled episode
+can be replaced by an explicit start using current saved settings: a fresh
+manual pending episode and delay when sources exist, or an immediately confirmed
+manual departure when the saved source list is empty. Cancellation remains an automatic
+departure latch until occupancy or explicit replacement, including across restart.
+Validation or save failure preserves that latch and the current Mode.
+
+`sources` contains `{entity_id, state}` entries (`home`, `away`, `unknown`);
+`occupancy` is their fixed aggregate. `origin` is `automatic`, `manual` or null;
+`can_start` reports whether saved settings, episode state and scheduler conditions
+permit a start. `episode_active` identifies underlying armed/away authority even when public
+`state` is `error`. `can_cancel` permits withdrawal or closing any undismissed
+episode independently of scheduler/configuration availability. `can_dismiss`
+permits closing an unacknowledged terminal episode,
+even when its public state is masked by an error; `dismissed` persists acknowledgement
+of that notice while `state` retains its cancellation semantics. These fields do not
+authorize climate changes. An unknown source state can wait for confirmation; a missing source
+cannot start a new request. Adjustment changes a pending or active episode only.
+
+Portable model 16 stores `occupancy_entity_ids`. Legacy singular
+`occupancy_entity_id` configuration is migrated, including model 15 imports.
+Imports validate references against
+the resulting Mode set and always disable the imported routine. Episodes and
+timers are not portable.
+
+### Per-Room Preparation Diagnostics
+
+`planned_return_status.preparation` is additive, derived read-only status. It
+contains `context` (`configuration` or `arrival`), `mode_id`, `return_at` and
+`zones` for all managed climate entities. Arrival context requires an armed or
+active absence with a future arrival and uses its saved destination; other states
+describe current saved configuration without invented targets or start times.
+
+Each zone contains `entity_id`, `profile_id`, `schedule_source` (`profile`,
+`default`, `paused`), `preparation` (`adaptive`, `arrival_only`, `none`), `state`
+(`configured`, `pending`, `preparing`, `reached`, `suspended`, `unavailable`),
+`reason`, `start_at` and an optional `target` temperature mapping. `start_at`
+denotes a predicted start, never an episode's departure time. Profile normal
+behavior and sparse Mode membership resolve to Default. Capability classification
+is distinct from temporary delivery suspension. Existing `zones` remains for
+compatibility, but the panel renders only the comprehensive preparation list.
+The projection does not persist configuration, start timers, learn observations
+or apply climate actions; consumers must not derive scheduler decisions from it.
+
 ## Error Behavior
 
 - `not_loaded`: the integration is not loaded.
 - `invalid_schedule`: a schedule is invalid or targets an unmanaged climate.
 - `invalid_template`: a template is invalid or unknown.
 - `invalid_settings`: settings are invalid.
+- `invalid_planned_return`: the routine, Mode references, or episode action is invalid.
 - `invalid_external_change_policy`: an external-change policy or target is invalid.
 - `manual_adjustment_not_allowed`: the requested zone cannot enter Manual adjustment in its current state.
 - `invalid_entity`: the requested entity is not managed by Velair.

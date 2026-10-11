@@ -22,10 +22,12 @@ type NormalizeDraftBlockOptions = {
 
 export function draftBlocksFromScheduleBlocks(blocks: ScheduleBlock[], unit?: string): DraftScheduleBlock[] {
   return blocks.map((block) => {
+    if (block.preset_key) return { start: block.start, preset_key: block.preset_key, action: "", hvac_mode: "", ...(block.slot_id ? { slot_id: block.slot_id } : {}) };
     const draft: DraftScheduleBlock = {
       action: block.action ?? ACTION_SET_TEMPERATURE,
       start: block.start,
       hvac_mode: block.hvac_mode ?? "",
+      ...(block.slot_id ? { slot_id: block.slot_id } : {}),
     };
     if (block.target_temp_low != null || block.target_temp_high != null) {
       draft.target_temp_low = block.target_temp_low ?? "";
@@ -135,6 +137,7 @@ export function draftBlockTemperatureError(
   block: DraftScheduleBlock,
   options: TemperatureErrorOptions,
 ): string | undefined {
+  if (block.preset_key) return undefined;
   if ((block.action || ACTION_SET_TEMPERATURE) !== ACTION_SET_TEMPERATURE) {
     return undefined;
   }
@@ -196,6 +199,11 @@ export function normalizeDraftBlocks(
       return { ok: false, error: options.duplicateStartError(start) };
     }
 
+    if (block.preset_key) {
+      blocks.push({ start, preset_key: block.preset_key });
+      seen.add(start);
+      continue;
+    }
     const action = block.action || ACTION_SET_TEMPERATURE;
     if (action === ACTION_TURN_OFF) {
       blocks.push({ start, action: ACTION_TURN_OFF });
@@ -270,7 +278,7 @@ export function normalizeDraftBlocks(
 
   return {
     ok: true,
-    blocks: blocks.sort((left, right) => left.start.localeCompare(right.start)),
+    blocks: blocks.map((block) => ({ ...block, ...(draftBlocks.find((draft) => draft.start === block.start)?.slot_id ? { slot_id: draftBlocks.find((draft) => draft.start === block.start)!.slot_id } : {}) })).sort((left, right) => left.start.localeCompare(right.start)),
   };
 }
 

@@ -47,7 +47,7 @@ function translatedHost() {
         keepModeScalarWarning: "If that mode remains active, the single temperature will fail.",
         keepModeRangeWarning: "If that mode remains active, the range will fail.",
         keepModeOnlyOptionsHint: "Disable the target to apply only options.",
-        presetMode: "Preset",
+        devicePreset: "Device preset",
         swingMode: "Swing",
       };
       return Object.entries(replacements).reduce(
@@ -76,6 +76,15 @@ function modeSelect(container: HTMLElement): HTMLSelectElement {
 }
 
 describe("editable schedule block view", () => {
+  it.each([{ temperature: "" }, { temperature: undefined }, { temperature: "invalid" }, { target_temp_low: 20, target_temp_high: "" }])("never invents a target in the global command summary for incomplete input %o", (target) => {
+    const container = document.createElement("div");
+    const state = { ...host(), _setPresetForBlock: vi.fn() };
+    render(renderEditableBlock(state, { start: "08:00", action: "set_temperature", hvac_mode: "heat", ...target }, 0), container);
+    const summary = container.querySelector(".advanced-climate-options-fields > .block-command-preview")!;
+    expect(summary).not.toBeNull(); expect(summary.textContent).toContain("invalidTemperatureRange");
+    expect(summary.textContent).not.toContain("NaN"); expect(summary.textContent).not.toContain("blockSendsTarget");
+    expect(container.querySelector(".device-settings-fields .block-command-preview")).toBeNull();
+  });
   it("shows a clear inline message when the final option is removed", () => {
     const container = document.createElement("div");
     render(renderEditableBlock(host(), {
@@ -101,7 +110,7 @@ describe("editable schedule block view", () => {
     expect(container.querySelector<HTMLInputElement>(".single-temperature-field input")?.disabled).toBe(true);
     expect(container.querySelector<HTMLSelectElement>('select')?.disabled).toBe(true);
     expect(container.querySelector(".advanced-climate-options")).not.toBeNull();
-    expect(container.textContent).toContain("presetMode");
+    expect(container.textContent).toContain("devicePreset");
     expect(container.querySelector<HTMLButtonElement>(".target-action-toggle")?.disabled).toBe(false);
   });
 
@@ -113,11 +122,11 @@ describe("editable schedule block view", () => {
     render(renderEditableBlock(viewHost, draft, 0), container);
     expect(container.querySelector(".block-action-guidance")).toBeNull();
     expect(container.querySelector(".climate-options-inline-summary")?.textContent)
-      .toContain("Preset: boost • Swing: auto");
+      .toContain("Device preset: boost • Swing: auto");
     expect(container.querySelector(".block-command-preview")?.textContent)
       .toContain("Sends target 19 °C.");
     expect(container.querySelector(".block-command-preview")?.textContent)
-      .toContain("Also sends Preset: boost • Swing: auto.");
+      .toContain("Also sends Device preset: boost • Swing: auto.");
     expect(container.querySelector(".block-command-preview")?.textContent)
       .toContain("Keeps the current mode while on");
     expect(container.querySelector(".block-command-preview")?.textContent)
@@ -126,9 +135,9 @@ describe("editable schedule block view", () => {
 
     render(renderEditableBlock(viewHost, { ...draft, action: ACTION_SET_CLIMATE_OPTIONS }, 0), container);
     expect(container.querySelector(".block-command-preview")?.textContent)
-      .toContain("No temperature target.");
+      .toContain("Sends only Device preset:");
     expect(container.querySelector(".block-command-preview")?.textContent)
-      .toContain("Sends only Preset: boost • Swing: auto.");
+      .toContain("Sends only Device preset: boost • Swing: auto.");
     expect(container.querySelector(".block-command-preview")?.textContent).not.toContain("19 °C");
     expect(container.querySelector(".block-command-preview")?.textContent)
       .not.toContain("One temperature is never converted into a range.");
@@ -144,7 +153,7 @@ describe("editable schedule block view", () => {
     expect(container.querySelector(".block-command-preview")?.textContent)
       .toContain("mode: heat");
     expect(container.querySelector(".block-command-preview")?.textContent)
-      .toContain("Also sends Preset: eco.");
+      .toContain("Also sends Device preset: eco.");
 
     render(renderEditableBlock(viewHost, {
       ...block("heat_cool"), temperature: undefined,
@@ -188,7 +197,7 @@ describe("editable schedule block view", () => {
     }), container);
     expect(container.querySelector(".block-mode-warning")).toBeNull();
     expect(container.querySelector(".block-command-preview")?.textContent)
-      .toContain("No temperature target.");
+      .toContain("Sends only Device preset:");
   });
 
   it("uses the live mode when no earlier block selects one, and stays general in templates", () => {
@@ -227,10 +236,10 @@ describe("editable schedule block view", () => {
   it("keeps the explicit target label aligned with existing desktop and mobile visibility rules", () => {
     const cardCssText = cardStyles.map((style) => style.cssText).join("\n");
     expect(cardCssText).toMatch(
-      /\.editable-block > label > \.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*none;/,
+      /\.editable-block > label > \.label,\s*\.editable-block > \.block-time-field > label\.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*none;/,
     );
     expect(responsiveStyles.cssText).toMatch(
-      /(?:@container|@media) \(max-width: 340px\)[\s\S]*\.editable-block > label > \.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*block;/,
+      /(?:@container|@media) \(max-width: 340px\)[\s\S]*\.editable-block > label > \.label,\s*\.editable-block > \.block-time-field > label\.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*block;/,
     );
   });
 
@@ -394,12 +403,12 @@ describe("editable schedule block view", () => {
     }, 0, "template" as BlockDraftSource), container);
     await Promise.resolve();
 
-    expect(container.textContent).toContain("climateOptions");
+    expect(container.textContent).toContain("deviceOptions");
     expect(container.querySelector(".climate-options-toggle")).not.toBeNull();
     expect(container.querySelector(".climate-options-badge")?.textContent).toBe("5");
     expect(container.querySelector(".climate-options-inline-summary")?.textContent).toContain("fanMode: quiet");
     expect(container.textContent).toContain("fanMode");
-    expect(container.textContent).toContain("presetMode");
+    expect(container.textContent).toContain("devicePreset");
     expect(container.textContent).toContain("swingMode");
     expect(container.textContent).toContain("horizontalSwingMode");
     expect(container.textContent).toContain("targetHumidity");

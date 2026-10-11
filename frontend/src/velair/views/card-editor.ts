@@ -367,9 +367,17 @@ export class VelairCardEditor extends LitElement {
     </details>`;
   }
 
+  private _climateEditorActions(): ClimateCardAction[] {
+    const actions = [...climateCardConfiguredActions(this._config)];
+    for (const type of ["boost", "pause", "planned-return"] as const) {
+      if (!actions.some((action) => action.type === type)) actions.push({ type, enabled: false });
+    }
+    return actions;
+  }
+
   private _renderClimateActionsGroup() {
     const shown = this._config.climate_show_actions !== false;
-    const actions = climateCardConfiguredActions(this._config);
+    const actions = this._climateEditorActions();
     const scripts = Object.keys(this.hass?.states ?? {})
       .filter((entityId) => entityId.startsWith("script."))
       .sort((left, right) => this._friendlyEntityName(left).localeCompare(this._friendlyEntityName(right)));
@@ -380,7 +388,12 @@ export class VelairCardEditor extends LitElement {
       ${shown ? html`<div class="climate-card-feature-editor-body">
         <div class="climate-card-custom-actions">
           <div><small>${this._t("climateCardActionsOrderDescription")}</small><small>${this._t("climateCardCustomActionsDescription")}</small></div>
-          ${actions.map((action, index) => this._renderClimateAction(action, index, actions.length, scripts))}
+          ${actions.map((action, index) => ({ action, index }))
+            .sort((left, right) => {
+              const order = ["boost", "pause", "planned-return", "script"];
+              return order.indexOf(left.action.type) - order.indexOf(right.action.type);
+            })
+            .map(({ action, index }) => this._renderClimateAction(action, index, actions.length, scripts))}
           <button class="add-window" type="button" ?disabled=${!scripts.length} @click=${() => this._addClimateCustomAction(scripts[0])}><ha-icon icon="mdi:plus"></ha-icon>${this._t("climateCardAddCustomAction")}</button>
           ${scripts.length ? nothing : html`<small class="option-description">${this._t("climateCardNoScripts")}</small>`}
         </div>
@@ -390,14 +403,14 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _renderClimateAction(action: ClimateCardAction, index: number, count: number, scripts: string[]) {
-    const builtIn = action.type === "boost" || action.type === "pause";
+    const builtIn = action.type === "boost" || action.type === "pause" || action.type === "planned-return";
     const boost = action.type === "boost";
     const name = builtIn
-      ? this._t(boost ? "boost" : "pause")
+      ? this._t(boost ? "boost" : action.type === "planned-return" ? "plannedReturnControls" : "pause")
       : action.name || this._friendlyEntityName(action.script);
     const subtitle = builtIn ? this._t("climateCardProvidedByVelair") : action.script;
     const icon = builtIn
-      ? (boost ? "mdi:lightning-bolt" : "mdi:pause-circle")
+      ? (boost ? "mdi:lightning-bolt" : action.type === "planned-return" ? "mdi:home-clock-outline" : "mdi:pause-circle")
       : validClimateCardActionIcon(action.icon) ?? "mdi:script-text-outline";
     const color = builtIn
       ? undefined
@@ -405,7 +418,7 @@ export class VelairCardEditor extends LitElement {
     const expanded = this._expandedClimateAction === index;
     return html`<div class=${`climate-card-action-editor ${builtIn ? `climate-card-fixed-action ${action.type}` : "climate-card-custom-action"}`}>
       <div class="climate-card-action-heading">
-        ${this._renderClimateActionMoveControls(index, count)}
+        ${builtIn ? nothing : this._renderClimateActionMoveControls(index)}
         <ha-icon icon=${icon} style=${color ? `color:${color}` : ""}></ha-icon>
         <span><strong>${name}</strong><small>${subtitle}</small></span>
         ${builtIn ? nothing : html`<button class="icon-button climate-card-action-remove" type="button" title=${this._t("climateCardRemoveCustomAction")} aria-label=${this._t("climateCardRemoveCustomAction")} @click=${() => this._removeClimateCustomAction(index)}><ha-icon icon="mdi:delete-outline"></ha-icon></button>`}
@@ -413,7 +426,7 @@ export class VelairCardEditor extends LitElement {
       </div>
       ${expanded ? html`<div class="climate-card-custom-action-body">
         ${builtIn ? html`
-          <label class="visibility-option"><input type="checkbox" aria-label=${this._t(boost ? "climateCardShowBoostAction" : "climateCardShowPauseAction")} .checked=${action.enabled !== false} @change=${(event: Event) => this._toggleClimateAction(index, Boolean((event.currentTarget as HTMLInputElement).checked))}><span>${this._t(boost ? "climateCardShowBoostAction" : "climateCardShowPauseAction")}</span></label>
+          <label class="visibility-option"><input type="checkbox" aria-label=${this._t(boost ? "climateCardShowBoostAction" : action.type === "planned-return" ? "climateCardShowPlannedReturnAction" : "climateCardShowPauseAction")} .checked=${action.enabled !== false} @change=${(event: Event) => this._toggleClimateAction(index, Boolean((event.currentTarget as HTMLInputElement).checked))}><span>${this._t(boost ? "climateCardShowBoostAction" : action.type === "planned-return" ? "climateCardShowPlannedReturnAction" : "climateCardShowPauseAction")}</span></label>
           ${this._renderClimateActionPlacement(action, index)}
           ${this._renderClimateActionNameVisibility(action, index)}
         ` : html`
@@ -425,10 +438,12 @@ export class VelairCardEditor extends LitElement {
     </div>`;
   }
 
-  private _renderClimateActionMoveControls(index: number, count: number) {
+  private _renderClimateActionMoveControls(index: number) {
+    const indices = this._climateEditorActions().flatMap((action, candidate) => action.type === "script" ? [candidate] : []);
+    const position = indices.indexOf(index);
     return html`<div class="climate-card-custom-action-controls">
-      <button class="icon-button" type="button" title=${this._t("moveUp")} ?disabled=${index === 0} @click=${() => this._moveClimateAction(index, -1)}><ha-icon icon="mdi:arrow-up"></ha-icon></button>
-      <button class="icon-button" type="button" title=${this._t("moveDown")} ?disabled=${index === count - 1} @click=${() => this._moveClimateAction(index, 1)}><ha-icon icon="mdi:arrow-down"></ha-icon></button>
+      <button class="icon-button" type="button" title=${this._t("moveUp")} ?disabled=${position === 0} @click=${() => this._moveClimateAction(index, -1)}><ha-icon icon="mdi:arrow-up"></ha-icon></button>
+      <button class="icon-button" type="button" title=${this._t("moveDown")} ?disabled=${position === indices.length - 1} @click=${() => this._moveClimateAction(index, 1)}><ha-icon icon="mdi:arrow-down"></ha-icon></button>
     </div>`;
   }
 
@@ -493,7 +508,7 @@ export class VelairCardEditor extends LitElement {
       color: "#03a9f4",
       confirmation: false,
     };
-    this._writeClimateActions([...climateCardConfiguredActions(this._config), action]);
+    this._writeClimateActions([...this._climateEditorActions(), action]);
   }
 
   private _updateClimateCustomAction(
@@ -501,14 +516,14 @@ export class VelairCardEditor extends LitElement {
     field: keyof ClimateCardCustomAction,
     value: string | boolean,
   ): void {
-    const actions = [...climateCardConfiguredActions(this._config)];
+    const actions = [...this._climateEditorActions()];
     if (!actions[index] || actions[index].type !== "script") return;
     actions[index] = { ...actions[index], [field]: value };
     this._writeClimateActions(actions);
   }
 
   private _selectClimateCustomActionScript(index: number, script: string): void {
-    const actions = [...climateCardConfiguredActions(this._config)];
+    const actions = [...this._climateEditorActions()];
     if (!actions[index] || actions[index].type !== "script" || !script) return;
     actions[index] = {
       ...actions[index],
@@ -519,9 +534,10 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _moveClimateAction(index: number, direction: -1 | 1): void {
-    const actions = [...climateCardConfiguredActions(this._config)];
-    const target = index + direction;
-    if (!actions[index] || target < 0 || target >= actions.length) return;
+    const actions = [...this._climateEditorActions()];
+    const indices = actions.flatMap((action, candidate) => action.type === "script" ? [candidate] : []);
+    const target = indices[indices.indexOf(index) + direction];
+    if (!actions[index] || target === undefined) return;
     [actions[index], actions[target]] = [actions[target], actions[index]];
     this._expandedClimateAction = undefined;
     this._writeClimateActions(actions);
@@ -529,7 +545,7 @@ export class VelairCardEditor extends LitElement {
 
   private _removeClimateCustomAction(index: number): void {
     this._expandedClimateAction = undefined;
-    this._writeClimateActions(climateCardConfiguredActions(this._config).filter((_, candidate) => candidate !== index));
+    this._writeClimateActions(this._climateEditorActions().filter((_, candidate) => candidate !== index));
   }
 
   private _toggleClimateActionExpanded(index: number): void {
@@ -537,7 +553,7 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _updateClimateActionPlacement(index: number, placement: string): void {
-    const actions = [...climateCardConfiguredActions(this._config)];
+    const actions = [...this._climateEditorActions()];
     const action = actions[index];
     if (!action || (placement !== "auto" && placement !== "more")) return;
     actions[index] = { ...action, placement };
@@ -545,7 +561,7 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _toggleClimateAction(index: number, enabled: boolean): void {
-    const actions = [...climateCardConfiguredActions(this._config)];
+    const actions = [...this._climateEditorActions()];
     const action = actions[index];
     if (!action || action.type === "script") return;
     actions[index] = { ...action, enabled };
@@ -553,7 +569,7 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _toggleClimateActionName(index: number, hidden: boolean): void {
-    const actions = [...climateCardConfiguredActions(this._config)];
+    const actions = [...this._climateEditorActions()];
     const action = actions[index];
     if (!action) return;
     const updated: ClimateCardAction = { ...action };
@@ -901,6 +917,7 @@ export class VelairCardEditor extends LitElement {
       "sensors": "cardViewSensors",
       "comfort": "cardViewComfort",
       "preconditioning": "cardViewPreconditioning",
+      "planned-return": "plannedReturn",
       "diagnostics": "diagnostics",
       "settings": "settings",
     };
@@ -1006,6 +1023,7 @@ export class VelairCardEditor extends LitElement {
     .climate-card-action-heading { align-items: center; display: grid; gap: 7px; grid-template-columns: auto auto minmax(0, 1fr) auto auto; }
     .climate-card-action-heading > ha-icon { --mdc-icon-size: 20px; }
     .climate-card-fixed-action.boost .climate-card-action-heading > ha-icon { color: var(--warning-color, #e69b35); }
+    .climate-card-fixed-action.planned-return .climate-card-action-heading > ha-icon { color: var(--velair-planned-return-color, #9575cd); }
     .climate-card-fixed-action.pause .climate-card-action-heading > ha-icon { color: var(--info-color, #3aa7c9); }
     .climate-card-action-heading > span { display: grid; min-width: 0; }
     .climate-card-action-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

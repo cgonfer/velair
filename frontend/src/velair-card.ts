@@ -1,5 +1,7 @@
 import { VELAIR_FRONTEND_BUILD, VELAIR_RELEASE_VERSION } from "./velair/build-info";
 import { VelairCard } from "./velair/components/velair-card-element";
+import "./velair/components/preset-library-element";
+import "./velair/components/planned-return-element";
 import { registerVelairFrontend } from "./velair/registration";
 import { VelairCardEditor } from "./velair/views/card-editor";
 import { VelairPanel } from "./velair/views/panel";

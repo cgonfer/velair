@@ -1,3 +1,4 @@
+import { climateCardConfiguredActions } from "../domain/climate-card-actions";
 import { LOVELACE_CARD_VIEWS, PANEL_VIEWS } from "../constants";
 import {
   dictionaryLabel,
@@ -75,6 +76,22 @@ export function shouldUpdateForHass(
   }
   if (!oldValue) {
     return true;
+  }
+  if (host._config.view === "planned-return" || host._config.view === "climate" && climateCardConfiguredActions(host._config).some((action) => action.type === "planned-return" && action.enabled !== false)) {
+    if (value.connection !== oldValue.connection
+      || languageFromHass(value) !== languageFromHass(oldValue)
+      || value.config?.time_zone !== oldValue.config?.time_zone
+      || value.locale?.time_format !== oldValue.locale?.time_format) return true;
+    const sourceIds = new Set(host._data?.planned_return?.occupancy_entity_ids ?? []);
+    const ids = new Set([...sourceIds, ...(host._data?.configured_entities ?? [])]);
+    const changed = [...ids].some((id) => {
+      const current = value.states?.[id];
+      const previous = oldValue.states?.[id];
+      return (sourceIds.has(id) && current?.state !== previous?.state)
+        || current?.attributes?.friendly_name !== previous?.attributes?.friendly_name
+        || current?.attributes?.icon !== previous?.attributes?.icon;
+    });
+    if (changed || host._config.view === "planned-return") return changed;
   }
   const entityIds = visibleZoneIds(host._data?.configured_entities ?? [], host._config);
   if (!entityIds.length) {

@@ -1,6 +1,7 @@
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
 import { draftBlocksFromScheduleBlocks } from "../domain/draft-blocks";
+import { linkedDraftBlocks } from "../domain/linked-schedules";
 import type {
   BlockDraftSource,
   DraftScheduleBlock,
@@ -10,6 +11,8 @@ import type {
 } from "../types";
 
 type ScheduleStateHost = {
+  _draftTemplateLink?: import("../types").TemplateLink;
+  _draftConfigurationRevision?: number;
   _config: VelairCardConfig;
   _copyTargets: Set<string>;
   _data?: ScheduleResponse;
@@ -24,6 +27,7 @@ type ScheduleStateHost = {
   _selectedTemplateKey: string;
   _selectedWeekday: string;
   _subscribing: boolean;
+  _scheduleSubscriptionGeneration?: number;
   _templateDirty: boolean;
   _templateDraftBlocks: DraftScheduleBlock[];
   _templateDraftKey: string;
@@ -55,15 +59,17 @@ export async function loadSchedule(host: ScheduleStateHost): Promise<void> {
     return;
   }
 
+  const generation = host._scheduleSubscriptionGeneration;
+  const current = () => generation === host._scheduleSubscriptionGeneration;
   host._loading = true;
   host._error = undefined;
   try {
     const data = await api.getSchedule();
-    host._applyScheduleData(data);
+    if (current()) host._applyScheduleData(data);
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableLoad");
+    if (current()) host._error = error instanceof Error ? error.message : host._t("unableLoad");
   } finally {
-    host._loading = false;
+    if (current()) host._loading = false;
   }
 }
 
@@ -134,7 +140,9 @@ export function applyScheduleData(
 export function resetDraftBlocks(host: ScheduleStateHost): void {
   const zone = host._selectedEntity ? host._data?.zones[host._selectedEntity] : undefined;
   const blocks = zone?.schedule?.[host._selectedWeekday] ?? [];
-  host._draftBlocks = draftBlocksFromScheduleBlocks(
+  host._draftTemplateLink = structuredClone(zone?.template_links?.[host._selectedWeekday]);
+  host._draftConfigurationRevision = host._data?.configuration_revision;
+  host._draftBlocks = host._draftTemplateLink ? linkedDraftBlocks(host._draftTemplateLink, host._data?.templates ?? [], host._temperatureUnit(host._selectedEntity)) : draftBlocksFromScheduleBlocks(
     blocks,
     host._temperatureUnit(host._selectedEntity),
   );

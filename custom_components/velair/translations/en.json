@@ -88,7 +88,6 @@
           "already_comfortable": "Already comfortable"
         }
       },
-
       "zone_air_quality": {
         "name": "{zone} air quality",
         "state": {
@@ -154,6 +153,133 @@
     "switch": {
       "automatic_scheduling": {
         "name": "Automatic scheduling"
+      }
+    }
+  },
+  "services": {
+    "start_planned_return": {
+      "name": "I'm leaving",
+      "description": "Plan a one-off return for a future date and time using saved Modes and Automatic scheduling. With configured occupancy sources, waits for confirmed absence before activating Away; without sources, activates Away immediately. Works with the weekly routine disabled and updates an active absence.",
+      "fields": {
+        "return_date": {
+          "name": "Return date",
+          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+        },
+        "return_time": {
+          "name": "Return time",
+          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+        }
+      }
+    },
+    "cancel_planned_return": {
+      "name": "Cancel planned return",
+      "description": "Cancels a planned return or closes an inactive return notice. After confirmed departure, restores the Mode and Profiles selected before the episode started; during absence confirmation, leaves selection unchanged. Stops automatic return for this absence. You can explicitly plan a new return afterward."
+    },
+    "update_block_preset": {
+      "name": "Update Velair preset",
+      "description": "Persistently update an existing shared preset and reconcile its schedules. Omitted values are preserved in update mode.",
+      "fields": {
+        "preset_key": {
+          "name": "Velair preset identifier",
+          "description": "Stable identifier copied from the preset editor. Changes affect all references."
+        },
+        "temperature": {
+          "name": "Target temperature",
+          "description": "Single target in the Velair temperature unit. Omit to preserve it."
+        },
+        "target_temp_low": {
+          "name": "Lower target temperature",
+          "description": "Send both range limits. A range replaces the single target."
+        },
+        "target_temp_high": {
+          "name": "Upper target temperature",
+          "description": "Send both range limits. A range replaces the single target."
+        },
+        "hvac_mode": {
+          "name": "HVAC mode",
+          "description": "Omit to preserve the mode. For an Off-only action, use replace with action turn_off."
+        },
+        "fan_mode": {
+          "name": "Fan mode"
+        },
+        "preset_mode": {
+          "name": "Device preset",
+          "description": "Device preset mode, distinct from the shared Velair preset."
+        },
+        "swing_mode": {
+          "name": "Swing mode"
+        },
+        "swing_horizontal_mode": {
+          "name": "Horizontal swing mode"
+        },
+        "humidity": {
+          "name": "Target humidity"
+        },
+        "operation": {
+          "name": "Operation",
+          "description": "update preserves omitted fields and action. replace removes omitted fields and requires action."
+        },
+        "action": {
+          "name": "Replacement action",
+          "description": "Only for replace. Select the complete resulting action."
+        },
+        "clear_fields": {
+          "name": "Remove settings",
+          "description": "Only for update. Remove settings without resetting the device. The result must remain valid."
+        }
+      },
+      "sections": {
+        "temperature_range": {
+          "name": "Temperature range"
+        },
+        "climate_settings": {
+          "name": "Mode and additional settings"
+        },
+        "advanced": {
+          "name": "Advanced"
+        }
+      }
+    },
+    "copy_day_schedule": {
+      "name": "Clone day schedule",
+      "description": "Clone a saved weekday to target days and managed climates, preserving template links and Velair preset references.",
+      "fields": {
+        "entity_id": {
+          "name": "Source climate",
+          "description": "Managed climate whose saved day will be cloned."
+        },
+        "source_weekday": {
+          "name": "Source weekday",
+          "description": "Saved day to clone, including its template link and preset references."
+        },
+        "target_weekdays": {
+          "name": "Target weekdays",
+          "description": "Replace these saved days in every selected target climate. Other days are unchanged."
+        },
+        "target_entity_ids": {
+          "name": "Target climates",
+          "description": "Omit to clone within the source climate. All destinations are validated and saved together."
+        },
+        "expected_revision": {
+          "name": "Configuration revision",
+          "description": "Optional optimistic concurrency check. Omit to clone the latest saved source under the configuration lock."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset_update_operation": {
+      "options": {
+        "update": "Update fields",
+        "replace": "Replace configuration"
+      }
+    },
+    "preset_update_action": {
+      "options": {
+        "set_temperature": "Temperature and settings",
+        "set_hvac_mode": "Mode only",
+        "set_climate_options": "Additional settings only",
+        "turn_off": "Turn off"
       }
     }
   }

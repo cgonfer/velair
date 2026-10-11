@@ -118,6 +118,7 @@ describe("frontend entrypoint", () => {
       { label: "Room Assist: configuration and status", value: "sensors" },
       { label: "Comfort: configuration and status", value: "comfort" },
       { label: "Preconditioning: configuration and status", value: "preconditioning" },
+      { label: "Planned return", value: "planned-return" },
     ]);
     expect((viewSelect as HTMLSelectElement | null)?.value).toBe("preconditioning");
 
@@ -302,7 +303,7 @@ describe("frontend entrypoint", () => {
     preconditioningDisplay.dispatchEvent(new Event("change"));
     await editor.updateComplete;
     expect(editor.shadowRoot?.querySelector<HTMLInputElement>(".climate-card-preconditioning-editor .visibility-list input")?.checked).toBe(true);
-    expect(editor.shadowRoot?.querySelectorAll(".climate-card-fixed-action")).toHaveLength(2);
+    expect(editor.shadowRoot?.querySelectorAll(".climate-card-fixed-action")).toHaveLength(3);
     editor.shadowRoot?.querySelector<HTMLButtonElement>(".climate-card-fixed-action.boost .climate-card-action-disclosure")?.click();
     await editor.updateComplete;
     expect(editor.shadowRoot?.querySelector<HTMLInputElement>(".climate-card-fixed-action.boost input")?.getAttribute("aria-label"))
@@ -358,6 +359,79 @@ describe("frontend entrypoint", () => {
     expect(changedConfig?.selected_entity).toBe("climate.office");
     expect(changedConfig?.entities).toBeUndefined();
     expect(changedConfig?.climate_name).toBeUndefined();
+    editor.remove();
+  });
+
+  it("roundtrips the optional household action through the climate editor", async () => {
+    await import("../../src/velair-card");
+    const editor = document.createElement("velair-card-editor") as HTMLElement & {
+      setConfig(config: Record<string, unknown>): void;
+      updateComplete?: Promise<boolean>;
+    };
+    editor.setConfig({ view: "climate", climate_actions: [{ type: "script", name: "Night", script: "script.night" }] });
+    document.body.append(editor);
+    await editor.updateComplete;
+    let changedConfig: any;
+    editor.addEventListener("config-changed", ((event: CustomEvent) => {
+      changedConfig = event.detail.config;
+    }) as EventListener);
+    const row = () => editor.shadowRoot!.querySelector<HTMLElement>(".climate-card-fixed-action.planned-return")!;
+    row().querySelector<HTMLButtonElement>(".climate-card-action-disclosure")!.click();
+    await editor.updateComplete;
+    const enabled = row().querySelector<HTMLInputElement>("input")!;
+    expect(enabled.checked).toBe(false);
+    expect(row().querySelector(".climate-card-action-remove")).toBeNull();
+    enabled.checked = true;
+    enabled.dispatchEvent(new Event("change"));
+    await editor.updateComplete;
+    const placement = row().querySelector<HTMLSelectElement>("select")!;
+    placement.value = "more";
+    placement.dispatchEvent(new Event("change"));
+    await editor.updateComplete;
+    const hideName = row().querySelectorAll<HTMLInputElement>("input")[1];
+    hideName.checked = true;
+    hideName.dispatchEvent(new Event("change"));
+    await editor.updateComplete;
+    expect(changedConfig.climate_actions).toEqual([
+      expect.objectContaining({ type: "script", script: "script.night" }),
+      { type: "planned-return", enabled: true, placement: "more", hide_name: true },
+      { type: "boost", enabled: false },
+      { type: "pause", enabled: false },
+    ]);
+    expect(row().querySelector(".climate-card-custom-action-controls")).toBeNull();
+    const displayed = [...editor.shadowRoot!.querySelectorAll(".climate-card-action-editor")];
+    expect(displayed.map((entry) => entry.classList.contains("climate-card-custom-action") ? "script" : [...entry.classList].at(-1)))
+      .toEqual(["boost", "pause", "planned-return", "script"]);
+    expect(row().querySelector<HTMLInputElement>("input")!.getAttribute("aria-label")).toBe("Show One-off return");
+    editor.setConfig(changedConfig);
+    await editor.updateComplete;
+    expect(row().textContent).toContain("One-off return");
+    editor.remove();
+  });
+
+  it("reorders custom scripts through projected editor rows without moving builtin runtime slots", async () => {
+    await import("../../src/velair-card");
+    const editor = document.createElement("velair-card-editor") as HTMLElement & {
+      setConfig(config: Record<string, unknown>): void;
+      updateComplete?: Promise<boolean>;
+    };
+    editor.setConfig({ view: "climate", climate_actions: [
+      { type: "script", name: "First", script: "script.first" },
+      { type: "pause", enabled: false },
+      { type: "script", name: "Second", script: "script.second" },
+      { type: "boost", enabled: true },
+    ] });
+    document.body.append(editor);
+    await editor.updateComplete;
+    let changed: any;
+    editor.addEventListener("config-changed", ((event: CustomEvent) => { changed = event.detail.config; }) as EventListener);
+    const scripts = editor.shadowRoot!.querySelectorAll(".climate-card-custom-action");
+    scripts[1].querySelector<HTMLButtonElement>(".climate-card-custom-action-controls button")!.click();
+    await editor.updateComplete;
+    expect(changed.climate_actions.map((action: any) => action.script ?? action.type))
+      .toEqual(["script.second", "pause", "script.first", "boost", "planned-return"]);
+    expect(changed.climate_actions[1]).toEqual({ type: "pause", enabled: false });
+    expect(changed.climate_actions[3]).toEqual({ type: "boost", enabled: true });
     editor.remove();
   });
 

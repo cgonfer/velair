@@ -75,6 +75,56 @@
           "default": "minutes: 5"
         }
       }
+    },
+    "automation/velair/seasonal_climate_selection.yaml": {
+      "major_version": 1,
+      "inputs": {
+        "temperature_sensor": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  entity:\n    filter:\n      - domain: sensor\n        device_class: temperature",
+          "required": true
+        },
+        "threshold_unit": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  select:\n    options:\n      - °C\n      - °F",
+          "default": "°C"
+        },
+        "winter_threshold": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  number:\n    min: -100\n    max: 150\n    step: 0.1\n    mode: box",
+          "default": "20"
+        },
+        "summer_threshold": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  number:\n    min: -100\n    max: 150\n    step: 0.1\n    mode: box",
+          "default": "27"
+        },
+        "winter_actions": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  action: {}",
+          "default": "[]"
+        },
+        "mild_actions": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  action: {}",
+          "default": "[]"
+        },
+        "summer_actions": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  action: {}",
+          "default": "[]"
+        },
+        "stability_delay": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  duration: {}",
+          "default": "minutes: 30"
+        },
+        "notification_language": {
+          "introduced_in": "1.0.0",
+          "selector": "selector:\n  select:\n    mode: dropdown\n    options:\n      - value: en\n      - value: es\n      - value: de\n      - value: fr\n      - value: it\n      - value: nl\n      - value: pl\n      - value: pt-pt\n      - value: pt-br\n      - value: ru",
+          "default": "en"
+        }
+      }
     }
   }
 }

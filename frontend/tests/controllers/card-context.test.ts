@@ -177,4 +177,18 @@ describe("climate card Home Assistant updates", () => {
     running.states!["script.ventilate"].state = "on";
     expect(shouldUpdateForHass(host, running, available)).toBe(false);
   });
+  it("updates enabled household controls for occupancy, other room metadata and HA locale changes", () => {
+    const original = hass(18, "10"); original.states!["binary_sensor.home"] = { state: "off", attributes: { friendly_name: "Home" } };
+    const value = { _data: { ...data(), planned_return: { occupancy_entity_ids: ["binary_sensor.home"] } }, _config: { view: "climate", selected_entity: "climate.office", climate_actions: [{ type: "planned-return", enabled: true }] } } as any;
+    for (const change of [(next: HomeAssistant) => { next.states!["binary_sensor.home"].state = "on"; }, (next: HomeAssistant) => { next.states!["climate.bedroom"].attributes.friendly_name = "Bedroom renamed"; }, (next: HomeAssistant) => { next.language = "es"; },
+      (next: HomeAssistant) => { next.connection = {} as never; },
+      (next: HomeAssistant) => { next.locale = { ...next.locale, time_format: "24" } as never; },
+      (next: HomeAssistant) => { next.states!["climate.bedroom"].attributes.icon = "mdi:bed"; }, (next: HomeAssistant) => { next.config = { ...next.config, time_zone: "Europe/Madrid" } as never; }]) {
+      const next = structuredClone(original); change(next); expect(shouldUpdateForHass(value, next, original)).toBe(true);
+    }
+    value._config.climate_actions[0].enabled = false;
+    const next = structuredClone(original); next.states!["binary_sensor.home"].state = "on";
+    expect(shouldUpdateForHass(value, next, original)).toBe(false);
+  });
+
 });

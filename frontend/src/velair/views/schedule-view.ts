@@ -1,3 +1,6 @@
+import { availableScheduleTemplates } from "../domain/templates";
+import { renderInlineHelp } from "./inline-help";
+import { renderDocumentationHelp } from "./documentation-links";
 import { html, nothing } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 import { firstTemperatureStepAtOrAbove } from "../domain/climate";
@@ -19,8 +22,77 @@ import type { BlockDraftSource, DraftScheduleBlock, ScheduleBlock, ScheduleTempl
 import "../components/profiles-view-element";
 import { renderWeeklyScheduleEditor } from "./weekly-schedule-editor";
 import { renderCloneDayPresets, renderExternalSwitchpointUsage } from "./schedule-editor-controls";
+import { availableBlockPresets, resolvedResourceBlock } from "../domain/resource-display";
 
 type ScheduleViewHost = VelairViewHost;
+const editorHelpIds = new WeakMap<object, number>();
+let nextEditorHelpId = 0;
+
+export function presetConfigurationSummary(config: import("../types").BlockConfiguration, host?: ScheduleViewHost): string {
+  if (!host) return Object.entries(config).filter(([key, value]) => value !== undefined && !["start", "slot_id", "preset_key"].includes(key)).map(([key, value]) => `${key}: ${value}`).join(" · ");
+  const items: string[] = [];
+  if (config.action === "turn_off") return host._t("off");
+  if (config.hvac_mode) items.push(host._modeLabel(config.hvac_mode));
+  if (config.temperature !== undefined) items.push(host._formatTemperature(config.temperature));
+  if (config.target_temp_low !== undefined && config.target_temp_high !== undefined) items.push(`${host._formatTemperature(config.target_temp_low)} – ${host._formatTemperature(config.target_temp_high)}`);
+  const labels = { fan_mode: "fanMode", preset_mode: "presetMode", swing_mode: "swingMode", swing_horizontal_mode: "horizontalSwingMode", humidity: "targetHumidity" } as const;
+  for (const [field, label] of Object.entries(labels)) { const value = config[field as keyof typeof labels]; if (value !== undefined) items.push(`${host._t(label)}: ${value}`); }
+  return items.join(" · ");
+}
+
+export function renderLinkedHoursControl(host: ScheduleViewHost) {
+  const link = host._draftTemplateLink;
+  const helpId = scheduleHelpId(host, "source");
+  return html`
+    <div class=${link ? "hours-source-control linked" : "hours-source-control"}>
+      <div class="hours-source-field">
+        <span class="hours-source-label">
+          <label class="label" for=${`${helpId}-select`}>${host._t("scheduleHoursSource")}</label>
+          ${renderInlineHelp(helpId, host._t("scheduleHoursSource"), host._t(link?.mode === "full" ? "linkedFullHelp" : "linkedHoursHelp"))}
+        </span>
+        <span class="select-wrap">
+          <select
+            id=${`${helpId}-select`}
+            aria-label=${host._t("scheduleHoursSource")}
+            .value=${link?.template_key ?? ""}
+            ?disabled=${host._materializingTemplate}
+            @change=${async (event: Event) => {
+              const select = event.currentTarget as HTMLSelectElement;
+              const previous = link?.template_key ?? "";
+              const key = host._inputValue(event);
+              const changed = await (key ? host._setDayTemplateLink?.(key) : host._restoreOwnDaySchedule?.());
+              if (changed === false) select.value = previous;
+            }}
+          >
+            <option value="" .selected=${!link}>${host._t("ownSchedule")}</option>
+            ${availableScheduleTemplates(host._data?.templates).map((template) => html`<option value=${template.key} .selected=${template.key === link?.template_key}>${template.name}</option>`)}
+          </select>
+        </span>
+      </div>
+      ${link ? html`
+        <label class="template-link-scope"><span class="label">${host._t("templateLinkScope")}</span>
+          <span class="select-wrap"><select aria-label=${host._t("templateLinkScope")} .value=${link.mode ?? "hours"}
+            ?disabled=${host._materializingTemplate}
+            @change=${async (event: Event) => { const select = event.currentTarget as HTMLSelectElement; if (await host._setDayTemplateScope?.(select.value as "hours" | "full") === false) select.value = link.mode ?? "hours"; }}>
+            <option value="hours">${host._t("templateLinkHours")}</option><option value="full">${host._t("templateLinkFull")}</option>
+          </select></span>
+        </label>
+        <div class="hours-source-actions">
+          <button type="button" class="command-button" ?disabled=${host._materializingTemplate} @click=${() => host._unlinkDayTemplate?.()}>
+            <ha-icon icon="mdi:link-off"></ha-icon>
+            <span>${host._t("unlinkHours")}</span>
+          </button>
+        </div>
+      ` : nothing}
+    </div>
+  `;
+}
+
+function scheduleHelpId(host: ScheduleViewHost, suffix: string): string {
+  const editor = host.renderRoot ?? host;
+  if (!editorHelpIds.has(editor)) editorHelpIds.set(editor, ++nextEditorHelpId);
+  return ["velair-hours", editorHelpIds.get(editor), host._resourceProfileKey === undefined ? "default" : "profile", host._resourceProfileKey ?? "", host._selectedEntity ?? "reference", host._selectedWeekday ?? "daily", suffix].map((part) => encodeURIComponent(String(part))).join("-");
+}
 
 export function renderSchedulesView(
   host: ScheduleViewHost,
@@ -45,6 +117,7 @@ export function renderSchedulesView(
         @profile-data-changed=${(event: CustomEvent) => host._applyScheduleData(event.detail, { forceDraft: false })}
         @profile-error=${(event: CustomEvent<string | null>) => host._showError(event.detail ?? undefined)}
         @profile-success=${(event: CustomEvent<string>) => host._showSuccess(event.detail)}
+        @velair-edit-preset=${(event: CustomEvent<string>) => host._editPreset?.(event.detail)}
       ></velair-profiles-view>
     `;
   }
@@ -60,6 +133,7 @@ export function renderSchedulesView(
 export function renderScheduleSourceSelector(host: ScheduleViewHost) {
   return html`
     <div class="schedule-source-selector" role="group" aria-label=${host._t("scheduleSourceLabel")}>
+      <div class=${host._scheduleSource === "default" ? "schedule-source-option active" : "schedule-source-option"}>
       <button
         type="button"
         aria-pressed=${String(host._scheduleSource === "default")}
@@ -69,6 +143,9 @@ export function renderScheduleSourceSelector(host: ScheduleViewHost) {
         <ha-icon icon="mdi:calendar-clock"></ha-icon>
         <span><strong>${host._t("defaultSchedules")}</strong><small>${host._t("defaultSchedulesDescription")}</small></span>
       </button>
+      ${renderDocumentationHelp(host, "schedules", { title: "defaultSchedules", summary: "defaultSchedulesDescription" })}
+      </div>
+      <div class=${host._scheduleSource === "profile" ? "schedule-source-option active" : "schedule-source-option"}>
       <button
         type="button"
         aria-pressed=${String(host._scheduleSource === "profile")}
@@ -78,6 +155,8 @@ export function renderScheduleSourceSelector(host: ScheduleViewHost) {
         <ha-icon icon="mdi:account-switch-outline"></ha-icon>
         <span><strong>${host._t("profileSchedules")}</strong><small>${host._t("profileSchedulesDescription")}</small></span>
       </button>
+      ${renderDocumentationHelp(host, "profiles", { title: "profileSchedules", summary: "profileSchedulesDescription" })}
+      </div>
     </div>
   `;
 }
@@ -115,6 +194,7 @@ export function renderScheduleZonePicker(host: ScheduleViewHost, zoneIds: string
     <section class="schedule-zone-picker">
       <div class="schedule-step-heading">
         <strong>${host._t("scheduleStepClimate")}</strong>
+        ${host._hasExternalConfig ? renderDocumentationHelp(host, "schedules") : nothing}
       </div>
       ${renderZones(host, zoneIds, selectedEntity)}
     </section>
@@ -132,6 +212,7 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
 
   return html`
     <section class="schedule">
+      ${(host._data?.resource_diagnostics ?? []).filter((item) => item.source === "default" && item.entity_id === entityId).map((item) => html`<div class="notice error">${item.message}</div>`)}
       <div class="schedule-editor-heading">
         <div>
           <strong>${host._t("scheduleStepDay")}</strong>
@@ -153,15 +234,16 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
         : renderBoostStatus(host, entityId, zone)}
       ${renderWeeklyScheduleEditor({
         dayTabs: html`<div class="day-tabs">
-          ${host._orderedWeekdays().map((weekday: string) => renderDayTab(host, weekday, zone.schedule[weekday] ?? []))}
+          ${host._orderedWeekdays().map((weekday: string) => renderDayTab(host, weekday, host._data?.resolved_default_schedules?.[entityId]?.[weekday] ?? zone.schedule[weekday] ?? []))}
         </div>`,
         timeline: renderTimeline(host, entityId, "schedule", {
-          schedule: zone.schedule,
+          schedule: host._data?.resolved_default_schedules?.[entityId] ?? zone.schedule,
           weekday: host._selectedWeekday,
+          resolved: Boolean(host._data?.resolved_default_schedules?.[entityId]),
         }),
         configureHeading: host._t("scheduleStepConfigure"),
         helper: host._t("templateOptionalHint"),
-        templatePanel: renderTemplatePanel(host),
+        templatePanel: html`<div class="template-panel">${renderLinkedHoursControl(host)}${host._draftTemplateLink ? nothing : renderTemplatePanel(host)}</div>`,
         externalUsage: renderExternalSwitchpointUsage(
           host._t.bind(host),
           externalCapabilities
@@ -199,7 +281,7 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
           <button
             class="command-button primary"
             type="button"
-            ?disabled=${host._saving || !host._dirty || hasValidationError}
+            ?disabled=${host._saving || host._materializingTemplate || !host._dirty || hasValidationError}
             @click=${host._saveSelectedDay}
           >
             <ha-icon icon="mdi:content-save"></ha-icon>
@@ -268,6 +350,7 @@ export function renderTimeline(
   weekly?: {
     schedule: Partial<Record<string, readonly (ScheduleBlock | DraftScheduleBlock)[]>>;
     weekday: string;
+    resolved?: boolean;
   },
 ) {
   const timelineBlocks = host._timelineBlocks(source);
@@ -277,6 +360,9 @@ export function renderTimeline(
         [weekly.weekday]: timelineBlocks.map((block) => block.draft),
       }, weekly.weekday)
     : undefined;
+  const carryOverIndex = carryOver && carryOver.sourceWeekday === weekly?.weekday
+    ? timelineBlocks.find((item) => item.draft === carryOver.block)?.index
+    : carryOver ? weekly?.schedule[carryOver.sourceWeekday]?.findIndex((item) => item.start === carryOver.block.start) : undefined;
 
   return html`
     <div class="timeline-panel">
@@ -298,13 +384,73 @@ export function renderTimeline(
       >
         ${timelineBlocks.length || carryOver
           ? html`
-              ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId) : nothing}
+              ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId, source, Boolean(weekly?.resolved && carryOver.sourceWeekday !== weekly.weekday), carryOverIndex ?? 0) : nothing}
               ${timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))}
             `
           : html`<span class="empty timeline-empty">${host._t("noBlocks")}</span>`}
       </div>
     </div>
   `;
+}
+
+function timelinePresentation(
+  host: ScheduleViewHost,
+  reference: ScheduleBlock | DraftScheduleBlock,
+  entityId: string | undefined,
+  source: BlockDraftSource,
+  weekday: string,
+  index: number,
+  carryOver = false,
+  resolved = false,
+) {
+  const scheduleContext = source === "schedule" || host._resourceProfileKey !== undefined;
+  const profile = host._data?.profiles?.find((item) => item.key === host._resourceProfileKey);
+  const profileZone = entityId ? profile?.zones[entityId] : undefined;
+  const usesDefault = profile && !host._timelineTemplateLinkForDay && (!profileZone || profileZone.behavior === "normal");
+  const profileKey = scheduleContext && !usesDefault ? host._resourceProfileKey : undefined;
+  const origin = profileKey === undefined ? "default" : "profile";
+  const metadata = scheduleContext && carryOver
+    ? (origin === "profile" ? host._data?.resolved_block_metadata?.profiles?.[profileKey!]?.[entityId ?? ""]?.[weekday] : host._data?.resolved_block_metadata?.default?.[entityId ?? ""]?.[weekday])
+      ?.find((item) => reference.slot_id ? item.slot_id === reference.slot_id : item.start === reference.start)
+    : undefined;
+  const presetKey = reference.preset_key ?? (resolved ? metadata?.preset_key : undefined);
+  const rawZone = origin === "default" ? host._data?.zones?.[entityId ?? ""] : profileZone;
+  const link = !scheduleContext ? undefined : !carryOver ? host._draftTemplateLink : host._timelineTemplateLinkForDay
+    ? host._timelineTemplateLinkForDay(weekday)
+    : rawZone && "template_links" in rawZone ? rawZone.template_links?.[weekday] : undefined;
+  const templateKey = link?.template_key ?? (scheduleContext && carryOver && resolved && !host._timelineTemplateLinkForDay && !rawZone ? metadata?.template_key : undefined);
+  const effective = (presetKey || link?.mode === "full")
+    ? resolved ? reference
+      : carryOver ? host._effectivePresetBlockForDay?.(reference as DraftScheduleBlock, index, weekday)
+        ?? (!host._effectivePresetBlockForDay ? resolvedResourceBlock(host._data, { source: origin, profile_key: profileKey, entity_id: entityId ?? "", weekday, start: reference.start, slot_id: reference.slot_id }, presetKey)?.block : undefined)
+        : host._effectivePresetBlock?.(reference as DraftScheduleBlock, index, source)
+    : reference;
+  const status = effective ? undefined : carryOver
+    ? host._presetSettingsStatusForDay?.(reference as DraftScheduleBlock, index, weekday) ?? "unavailable"
+    : host._presetSettingsStatus?.(reference as DraftScheduleBlock, index, source) ?? "unavailable";
+  const block = effective ?? reference;
+  const off = Boolean(effective && block.action === ACTION_TURN_OFF);
+  const modeOnly = Boolean(effective && block.action === ACTION_SET_HVAC_MODE);
+  const optionsOnly = Boolean(effective && block.action === ACTION_SET_CLIMATE_OPTIONS);
+  const hasScalar = String(block.temperature ?? "").trim() !== "" && Number.isFinite(Number(block.temperature));
+  const hasRange = String(block.target_temp_low ?? "").trim() !== "" && String(block.target_temp_high ?? "").trim() !== "" && Number.isFinite(Number(block.target_temp_low)) && Number.isFinite(Number(block.target_temp_high));
+  const label = !effective ? host._t(!presetKey && link?.mode === "full" ? status === "loading" ? "linkedConfigurationLoading" : "linkedConfigurationUnavailable" : status === "loading" ? "presetSettingsLoading" : "sharedPresetUnavailable")
+    : off ? host._t("off") : modeOnly ? host._t("deviceControlled") : optionsOnly ? host._t("climateOptionsOnly")
+      : draftBlockUsesRange(block) && hasRange ? formatRange(host, Number(block.target_temp_low), Number(block.target_temp_high), entityId)
+        : hasScalar ? host._formatTemperature(Number(block.temperature), entityId) : host._t("invalidTemperatureRange");
+  const mode = !effective || off || optionsOnly ? "" : block.hvac_mode ? (host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode) : host._t("keep");
+  const options = effective ? climateOptionSummaryItems(host, block) : [];
+  const presetName = presetKey ? availableBlockPresets(host._data).find((item) => item.key === presetKey)?.name ?? host._t("missingPreset") : undefined;
+  const templateName = templateKey ? availableScheduleTemplates(host._data?.templates).find((item) => item.key === templateKey)?.name ?? templateKey : undefined;
+  const details = [
+    `${host._formatScheduleTime(reference.start)} - ${label}`,
+    effective ? `${host._t("action")}: ${host._t(off ? "off" : modeOnly ? "deviceControlled" : optionsOnly ? "climateOptionsOnly" : "setTemperature")}` : "",
+    mode ? `${host._t("mode")}: ${mode}` : "",
+    ...options.map((item) => `${item.label}: ${item.value}`),
+    presetName ? `${host._t("velairPreset")}: ${presetName}` : "",
+    templateName ? `${host._t("timelineLinkedTemplate")}: ${templateName}` : "",
+  ].filter(Boolean);
+  return { block, off, label, mode, options, presetKey, templateKey, details };
 }
 
 export function renderTimelineNowMarker(host: ScheduleViewHost) {
@@ -328,77 +474,52 @@ export function renderTimelineBlock(
   entityId: string | undefined,
   source: BlockDraftSource = "schedule",
 ) {
-  const isTurnOff = block.draft.action === ACTION_TURN_OFF;
-  const isModeOnly = block.draft.action === ACTION_SET_HVAC_MODE;
-  const isOptionsOnly = block.draft.action === ACTION_SET_CLIMATE_OPTIONS;
-  const temperature = Number(block.draft.temperature);
-  const low = Number(block.draft.target_temp_low);
-  const high = Number(block.draft.target_temp_high);
-  const label = isTurnOff
-    ? host._t("off")
-    : isModeOnly
-      ? host._t("deviceControlled")
-    : isOptionsOnly
-      ? host._t("climateOptionsOnly")
-    : draftBlockUsesRange(block.draft) && Number.isFinite(low) && Number.isFinite(high)
-      ? formatRange(host, low, high, entityId)
-      : Number.isFinite(temperature)
-      ? host._formatTemperature(temperature, entityId)
-      : host._t("invalidTemperatureRange");
-  const displayStart = host._formatScheduleTime(block.draft.start);
-  const mode = isTurnOff || isOptionsOnly ? "" : block.draft.hvac_mode || host._t("keep");
-  const optionItems = climateOptionSummaryItems(host, block.draft);
-  const optionSummary = optionItems.map((item) => item.short).join(" • ");
-  const title = [
-    `${displayStart} - ${label}`,
-    mode ? `${host._t("mode")}: ${mode}` : "",
-    ...optionItems.map((item) => `${item.label}: ${item.value}`),
-  ].filter(Boolean).join("\n");
-  const blockClass = [
-    "timeline-block",
-    isTurnOff ? "off" : "",
-    `mode-${timelineModeClass(block.draft)}`,
-    block.width < 5 ? "compact" : "",
-    block.width < 2.5 ? "tiny" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const presentation = timelinePresentation(host, block.draft, entityId, source, host._selectedWeekday, block.index);
+  return renderPresentedTimelineBlock(host, presentation, block.draft.start, block.left, block.width,
+    scheduleHelpId(host, `${source}-timeline-${block.draft.slot_id ?? block.index}`), {
+      block, source,
+    });
+}
 
+function renderPresentedTimelineBlock(
+  host: ScheduleViewHost,
+  presentation: ReturnType<typeof timelinePresentation>,
+  start: string,
+  left: number,
+  width: number,
+  id: string,
+  editable?: { block: TimelineBlock; source: BlockDraftSource },
+  continuation?: string,
+) {
+  const details = [continuation, ...presentation.details].filter(Boolean).join("\n");
+  const classes = ["timeline-block", editable ? "" : "timeline-carry-over",
+    presentation.off ? "off" : "", `mode-${timelineModeClass(presentation.block)}`,
+    width < 12 ? "compact" : "", width < 2.5 ? "tiny" : ""].filter(Boolean).join(" ");
+  const resize = (edge: "start" | "end") => html`
+    <div class=${`timeline-resize-handle ${edge === "start" ? "left" : "right"}`}
+      title=${host._t(edge === "start" ? "resizeStart" : "resizeEnd")} draggable="false"
+      @pointerdown=${(event: PointerEvent) => host._handleTimelineResizeStart(editable!.block.index, edge, editable!.source, event)}
+      @dragstart=${(event: DragEvent) => event.preventDefault()}></div>`;
   return html`
-    <div
-      class=${blockClass}
-      draggable="true"
-      role="button"
-      style=${`left: ${block.left}%; width: ${block.width}%;`}
-      tabindex="0"
-      title=${title}
-      @dragstart=${(event: DragEvent) => host._handleTimelineDragStart(block.index, source, event)}
-      @dragend=${host._handleTimelineDragEnd}
-    >
-      <div
-        class="timeline-resize-handle left"
-        title=${host._t("resizeStart")}
-        draggable="false"
-        @pointerdown=${(event: PointerEvent) => host._handleTimelineResizeStart(block.index, "start", source, event)}
-        @dragstart=${(event: DragEvent) => event.preventDefault()}
-      ></div>
-      <strong>${displayStart}</strong>
-      <span>${label}</span>
-      ${mode || optionSummary
-        ? html`<small>${[mode, optionSummary].filter(Boolean).join(" • ")}</small>`
-        : nothing}
-      ${block.nextIndex !== undefined
-        ? html`
-            <div
-              class="timeline-resize-handle right"
-              title=${host._t("resizeEnd")}
-              draggable="false"
-              @pointerdown=${(event: PointerEvent) =>
-                host._handleTimelineResizeStart(block.index, "end", source, event)}
-              @dragstart=${(event: DragEvent) => event.preventDefault()}
-            ></div>
-          `
-        : nothing}
+    <div id=${id} class=${classes} role=${editable ? "button" : "img"} tabindex=${editable ? "0" : nothing}
+      draggable=${String(Boolean(editable) && !(host._linkedHours ?? (editable?.source === "schedule" && Boolean(host._draftTemplateLink))))}
+      style=${`left: ${left}%; width: ${width}%;`}
+      title=${details} aria-label=${details}
+      @dragstart=${(event: DragEvent) => {
+        if (editable) host._handleTimelineDragStart(editable.block.index, editable.source, event);
+      }} @dragend=${host._handleTimelineDragEnd}>
+      ${editable ? resize("start") : nothing}
+      <strong class="timeline-primary-line">
+        ${presentation.templateKey ? html`<ha-icon icon="mdi:content-copy" aria-hidden="true"></ha-icon>` : nothing}
+        <span>${host._formatScheduleTime(start)}</span>
+      </strong>
+      <span class="timeline-primary-line timeline-target">
+        ${presentation.presetKey ? html`<ha-icon icon="mdi:link-variant" aria-hidden="true"></ha-icon>` : nothing}
+        <span>${presentation.label}</span>
+      </span>
+      ${presentation.mode || presentation.options.length
+        ? html`<small>${[presentation.mode, ...presentation.options.map((item) => item.short)].filter(Boolean).join(" • ")}</small>` : nothing}
+      ${editable?.block.nextIndex !== undefined ? resize("end") : nothing}
     </div>
   `;
 }
@@ -407,7 +528,7 @@ export function renderTemplatePanel(host: ScheduleViewHost) {
   const templates = host._scheduleTemplates();
 
   return html`
-    <div class="template-panel">
+    <div class="copy-template-control">
       <div>
         <span class="label">${host._t("templates")}</span>
         <span class="select-wrap">
@@ -447,6 +568,7 @@ export function renderDraftListHeader(host: ScheduleViewHost, source: BlockDraft
 }
 
 export function renderAddBlockButton(host: ScheduleViewHost, source: BlockDraftSource = "schedule") {
+  if (host._linkedHours ?? (source === "schedule" && Boolean(host._draftTemplateLink))) return nothing;
   return html`
     <div class="draft-add-row">
       <button
@@ -467,6 +589,31 @@ export type BlockGuidanceContext = {
   dayBlocks: DraftScheduleBlock[];
 };
 
+function renderBlockDelete(host: ScheduleViewHost, index: number, source: BlockDraftSource) {
+  return html`<button class="icon-button danger" type="button" title=${host._t("deleteBlock")}
+    ?disabled=${host._linkedHours ?? (source === "schedule" && Boolean(host._draftTemplateLink))}
+    @click=${() => host._removeBlock(index, source)}><ha-icon icon="mdi:trash-can"></ha-icon></button>`;
+}
+
+function renderVelairPresetSettings(host: ScheduleViewHost, block: DraftScheduleBlock, index: number, source: BlockDraftSource, unavailable: boolean) {
+  const presets = availableBlockPresets(host._data);
+  return html`<section class="velair-preset-settings">
+    <label><span class="label">${host._t("velairPreset")}</span><span class="select-wrap"><select .value=${block.preset_key ?? ""}
+      @change=${(event: Event) => {
+        const key = host._inputValue(event);
+        if (key) host._setPresetForBlock?.(index, key, source);
+        else if (block.preset_key) {
+          (event.currentTarget as HTMLSelectElement).value = block.preset_key;
+          host._unlinkPresetBlock?.(index, source);
+        }
+      }}>
+      <option value="" .selected=${!block.preset_key} ?disabled=${Boolean(block.preset_key) && unavailable}>${host._t("noVelairPreset")}</option>
+      ${block.preset_key && !presets.some((preset) => preset.key === block.preset_key) ? html`<option .selected=${true} value=${block.preset_key}>${host._t("missingPreset")}</option>` : nothing}
+      ${presets.map((preset) => html`<option .selected=${preset.key === block.preset_key} value=${preset.key}>${preset.name}</option>`)}
+    </select></span></label>
+  </section>`;
+}
+
 export function renderEditableBlock(
   host: ScheduleViewHost,
   block: DraftScheduleBlock,
@@ -474,12 +621,23 @@ export function renderEditableBlock(
   source: BlockDraftSource = "schedule",
   guidance?: BlockGuidanceContext,
 ) {
+  const allowPresets = host._allowBlockPresets ?? (source === "schedule" && Boolean(host._setPresetForBlock));
+  const presets = availableBlockPresets(host._data);
+  const referenceBlock = block;
+  const preset = presets.find((item) => item.key === referenceBlock.preset_key);
+  const isPreset = Boolean(referenceBlock.preset_key);
+  const fullLinked = host._fullTemplateLinked ?? ((source === "schedule" || Boolean(host._resourceProfileKey)) && host._draftTemplateLink?.mode === "full");
+  const readonly = isPreset || fullLinked;
+  const legacyResolved = !host._effectivePresetBlock && isPreset ? resolvedResourceBlock(host._data, { source: host._resourceProfileKey ? "profile" : "default", profile_key: host._resourceProfileKey, entity_id: host._selectedEntity ?? "", weekday: host._selectedWeekday, start: block.start, slot_id: block.slot_id }, referenceBlock.preset_key!) : undefined;
+  const effective = readonly ? (host._effectivePresetBlock ? host._effectivePresetBlock(referenceBlock, index, source) : legacyResolved?.block) : undefined;
+  const presetStatus = isPreset ? host._presetSettingsStatus?.(referenceBlock, index, source) ?? (!effective ? "unavailable" : undefined) : undefined;
+  if (readonly) block = { ...effective, start: referenceBlock.start, action: effective?.action ?? ACTION_SET_TEMPERATURE, hvac_mode: effective?.hvac_mode ?? "" };
   const action = block.action || ACTION_SET_TEMPERATURE;
   const isTurnOff = action === ACTION_TURN_OFF;
   const isModeOnly = action === ACTION_SET_HVAC_MODE;
   const isOptionsOnly = action === ACTION_SET_CLIMATE_OPTIONS;
   const selectedMode = isTurnOff ? "off" : block.hvac_mode ?? "";
-  const temperatureError = host._temperatureError(block, source);
+  const temperatureError = readonly ? undefined : host._temperatureError(block, source);
   const usesRange = draftBlockUsesRange(block);
   const [minTemperature, maxTemperature] = host._temperatureLimits(source);
   const temperatureStep = host._temperatureStep(source);
@@ -503,8 +661,9 @@ export function renderEditableBlock(
   );
   const optionItems = climateOptionSummaryItems(host, block);
   const hasSelectedClimateOptions = optionItems.length > 0;
-  const hasClimateOptions = hasSupportedClimateOptions || hasSelectedClimateOptions;
-  const optionError = isOptionsOnly
+  const hasDeviceOptions = (!isPreset || Boolean(effective)) && (hasSupportedClimateOptions || hasSelectedClimateOptions);
+  const hasClimateOptions = hasDeviceOptions || allowPresets || isPreset;
+  const optionError = isOptionsOnly && !isPreset
     ? String(block.humidity ?? "").trim() && !Number.isFinite(Number(block.humidity))
       ? host._t("climateOptionsHumidityInvalidAt", { start: block.start })
       : !draftBlockHasClimateOptions(block)
@@ -514,7 +673,7 @@ export function renderEditableBlock(
   const optionSummary = hasSelectedClimateOptions
     ? optionItems.map((item) => item.short).join(" • ")
     : host._t("climateOptionsAdd");
-  const keepGuidance = !temperatureError && (
+  const keepGuidance = !isPreset && !temperatureError && (
     isOptionsOnly || (action === ACTION_SET_TEMPERATURE && !selectedMode)
   );
   const guidanceState = guidance?.entityId ? host.hass?.states?.[guidance.entityId] : undefined;
@@ -523,29 +682,35 @@ export function renderEditableBlock(
     : undefined;
 
   return html`
-    <div class=${temperatureError || optionError ? "editable-block invalid" : "editable-block"}>
-      <label>
-        <span class="label">${host._t("start")}</span>
+    <div class=${isPreset ? "editable-block preset-linked-block" : temperatureError || optionError ? "editable-block invalid" : "editable-block"}>
+      <div class="block-time-field">
+        <label class="label" for=${scheduleHelpId(host, `${source}-${referenceBlock.slot_id ?? index}-time`)}>${host._t("start")}</label>
+        <span class="linked-time-input">
         <input
+          id=${scheduleHelpId(host, `${source}-${referenceBlock.slot_id ?? index}-time`)}
           type="time"
+          ?disabled=${host._linkedHours ?? (source === "schedule" && Boolean(host._draftTemplateLink))}
           .value=${block.start}
           @input=${(event: Event) => host._updateDraftBlock(index, "start", host._inputValue(event), source)}
         />
-      </label>
+        ${(host._linkedHours ?? (source === "schedule" && Boolean(host._draftTemplateLink))) && host._unlinkDayTemplate
+          ? renderInlineHelp(scheduleHelpId(host, `${source}-${referenceBlock.slot_id ?? index}-locked`), host._t("lockedHoursHelp"), host._t("lockedHoursHelp"), { appearance: "overlay" }) : nothing}
+        </span>
+      </div>
       <label>
-        <span class="label">${host._t("mode")}</span>
+        <span class="label">${host._t("mode")}${fullLinked ? renderInlineHelp(scheduleHelpId(host, `${source}-${referenceBlock.slot_id ?? index}-full`), host._t("templateLinkFull"), host._t("templateFullReadonlyHelp")) : nothing}</span>
         <span class="select-wrap">
           ${keyed(
             editableBlockModeSelectKey(source, index, selectedMode, displayedModeOptions),
             html`
               <select
-                ?disabled=${isOptionsOnly}
+                ?disabled=${readonly || isOptionsOnly}
                 value=${selectedMode}
                 .value=${selectedMode}
                 @change=${(event: Event) => host._updateDraftBlock(index, "hvac_mode", host._inputValue(event), source)}
                 @input=${(event: Event) => host._updateDraftBlock(index, "hvac_mode", host._inputValue(event), source)}
               >
-                <option value="" .selected=${selectedMode === ""}>${host._t("keep")}</option>
+                <option value="" .selected=${selectedMode === ""}>${host._t(presetStatus === "loading" ? "presetSettingsLoading" : presetStatus === "unavailable" ? "sharedPresetUnavailable" : "keep")}</option>
                 ${displayedModeOptions.map((mode: string) => html`
                   <option value=${mode} .selected=${mode === selectedMode}>${host._modeLabel(mode)}</option>
                 `)}
@@ -569,22 +734,25 @@ export function renderEditableBlock(
             (selectedMode !== "") !== hasSelectedClimateOptions,
             isModeOnly || isOptionsOnly,
             hasSelectedClimateOptions,
+            readonly,
           )
         : renderTargetInput(host, block, index, source, "temperature", "temp", temperatureUnit,
             inputMinTemperature, maxTemperature, temperatureStep, isTurnOff || isModeOnly || isOptionsOnly,
-            temperatureError, (selectedMode !== "") !== hasSelectedClimateOptions, isModeOnly || isOptionsOnly, hasSelectedClimateOptions)}
+            temperatureError, (selectedMode !== "") !== hasSelectedClimateOptions, isModeOnly || isOptionsOnly, hasSelectedClimateOptions, readonly)}
       ${hasClimateOptions
         ? html`
-            <details class="advanced-climate-options" @toggle=${handleClimateOptionsToggle}>
+            <details class="advanced-climate-options" @toggle=${handleClimateOptionsToggle} @keydown=${(event: KeyboardEvent) => {
+              if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); const details = event.currentTarget as HTMLDetailsElement; details.open = false; details.querySelector<HTMLElement>("summary")?.focus(); }
+            }}>
               <summary
                 class="icon-button climate-options-toggle"
-                title=${optionItems.map((item) => `${item.label}: ${item.value}`).join("\n") || host._t("climateOptions")}
-                aria-label=${host._t("climateOptions")}
+                title=${optionItems.map((item) => `${item.label}: ${item.value}`).join("\n") || host._t("additionalSettings")}
+                aria-label=${host._t("additionalSettings")}
                 @click=${handleClimateOptionsSummaryClick}
               >
                 <ha-icon icon="mdi:tune-variant"></ha-icon>
-                ${hasSelectedClimateOptions
-                  ? html`<span class="climate-options-badge">${optionItems.length}</span>`
+                ${hasSelectedClimateOptions || isPreset
+                  ? html`<span class="climate-options-badge">${optionItems.length + (isPreset ? 1 : 0)}</span>`
                   : nothing}
               </summary>
               <button
@@ -594,9 +762,9 @@ export function renderEditableBlock(
                 @click=${closeClimateOptionsDialog}
               ></button>
               <fieldset class="advanced-climate-options-fields">
-                <legend>${host._t("climateOptions")}</legend>
-                ${renderBlockCommandPreview(host, block, optionSummary, hasSelectedClimateOptions,
-                  guidance?.entityId, temperatureError)}
+                <legend>${host._t("additionalSettings")}</legend>
+                ${allowPresets || isPreset ? fullLinked ? html`<p class="full-template-settings">${host._t("linkedFullHelp")}</p>` : renderVelairPresetSettings(host, referenceBlock, index, source, !effective && isPreset) : nothing}
+                ${hasDeviceOptions ? html`<fieldset class="device-settings-fields" ?disabled=${readonly}><legend>${host._t("deviceOptions")}</legend>
                 ${renderAdvancedOptionSelect(
                   host,
                   block,
@@ -612,7 +780,7 @@ export function renderEditableBlock(
                   index,
                   source,
                   "preset_mode",
-                  "presetMode",
+                  "devicePreset",
                   presetModeOptions,
                 )}
                 ${renderAdvancedOptionSelect(
@@ -652,19 +820,15 @@ export function renderEditableBlock(
                       </label>
                     `
                   : nothing}
+                </fieldset>` : nothing}
+                ${isPreset && !effective ? html`<div class="block-command-preview" aria-live="polite"><strong>${host._t("blockSendHelp")}</strong><span>${host._t(presetStatus === "loading" ? "presetSettingsLoading" : "sharedPresetUnavailable")}</span>${presetStatus === "unavailable" && host._retryPresetSettings ? html`<button class="preset-preview-retry" type="button" @click=${() => host._retryPresetSettings?.(referenceBlock, index, source)}>${host._t("retryPresetSettings")}</button>` : nothing}</div>` : renderBlockCommandPreview(host, block, optionSummary, hasSelectedClimateOptions, guidance?.entityId, temperatureError)}
               </fieldset>
             </details>
           `
         : html`<span class="advanced-climate-options-placeholder" aria-hidden="true"></span>`}
-      <button
-        class="icon-button danger"
-        type="button"
-        @click=${() => host._removeBlock(index, source)}
-        title=${host._t("deleteBlock")}
-      >
-        <ha-icon icon="mdi:trash-can"></ha-icon>
-      </button>
-      ${optionError
+      ${renderBlockDelete(host, index, source)}
+      ${fullLinked && !isPreset && !effective ? html`<small class="climate-options-inline-summary" role="status">${host._t(host._presetSettingsStatus?.(referenceBlock, index, source) === "loading" ? "linkedConfigurationLoading" : "linkedConfigurationUnavailable")}</small>` : nothing}
+      ${isPreset ? html`<small class="climate-options-inline-summary preset-link-summary"><ha-icon icon="mdi:link-variant"></ha-icon><strong>${host._t("velairPreset")}: ${preset?.name ?? host._t("missingPreset")}</strong>${presetStatus ? html`<span role="status">${host._t(presetStatus === "loading" ? "presetSettingsLoading" : "sharedPresetUnavailable")}</span>${presetStatus === "unavailable" && host._retryPresetSettings ? html`<button class="preset-preview-retry" type="button" @click=${() => host._retryPresetSettings?.(referenceBlock, index, source)}>${host._t("retryPresetSettings")}</button>` : nothing}` : hasSelectedClimateOptions ? html`<span>${optionSummary}</span>` : nothing}</small>` : optionError
         ? html`<small class="climate-options-inline-summary invalid" role="alert">${optionError}</small>`
         : hasSelectedClimateOptions
         ? html`
@@ -702,11 +866,16 @@ function renderBlockCommandPreview(
   entityId?: string,
   temperatureError?: string,
 ) {
+  if (block.action === ACTION_TURN_OFF) {
+    return html`<div class="block-command-preview" aria-live="polite"><strong>${host._t("blockSendHelp")}</strong><span>${host._t("diagnosticsOverrideTurnOff")}</span></div>`;
+  }
+  if (block.action === ACTION_SET_HVAC_MODE) {
+    return html`<div class="block-command-preview" aria-live="polite"><strong>${host._t("blockSendHelp")}</strong><span>${host._t("blockNoTarget")}</span><span>${block.hvac_mode ? `${host._t("mode")}: ${(host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode)}` : host._t("chooseModeForDeviceControlled")}</span></div>`;
+  }
   if (block.action === ACTION_SET_CLIMATE_OPTIONS) {
     return html`
       <div class="block-command-preview" aria-live="polite">
         <strong>${host._t("blockSendHelp")}</strong>
-        <span>${host._t("blockNoTarget")}</span>
         <span>${hasOptions
           ? host._t("blockOptionsOnlySummary", { options: optionSummary })
           : host._t("climateOptionsAdd")}</span>
@@ -717,7 +886,10 @@ function renderBlockCommandPreview(
   const low = Number(block.target_temp_low);
   const high = Number(block.target_temp_high);
   const temperature = Number(block.temperature);
-  const target = temperatureError
+  const validTarget = isRange
+    ? Boolean(String(block.target_temp_low ?? "").trim() && String(block.target_temp_high ?? "").trim()) && Number.isFinite(low) && Number.isFinite(high) && low <= high
+    : Boolean(String(block.temperature ?? "").trim()) && Number.isFinite(temperature);
+  const target = temperatureError || !validTarget
     ? undefined
     : isRange
       ? formatRange(host, low, high, entityId)
@@ -725,9 +897,9 @@ function renderBlockCommandPreview(
   return html`
     <div class="block-command-preview" aria-live="polite">
       <strong>${host._t("blockSendHelp")}</strong>
-      <span>${target ? host._t("blockSendsTarget", { target }) : temperatureError}</span>
+      <span>${target ? host._t("blockSendsTarget", { target }) : temperatureError ?? host._t("invalidTemperatureRange")}</span>
       <span>${block.hvac_mode
-        ? `${host._t("mode")}: ${host._modeLabel(block.hvac_mode)}`
+        ? `${host._t("mode")}: ${(host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode)}`
         : host._t("blockKeepModeSummary")}</span>
       ${!isRange && target ? html`<span>${host._t("blockSingleNoRange")}</span>` : nothing}
       ${hasOptions ? html`<span>${host._t("blockAlsoSendsOptions", { options: optionSummary })}</span>` : nothing}
@@ -739,57 +911,19 @@ export function renderTimelineCarryOverBlock(
   host: ScheduleViewHost,
   carryOver: TimelineCarryOverBlock<ScheduleBlock | DraftScheduleBlock>,
   entityId?: string,
+  source: BlockDraftSource = "schedule",
+  resolved = false,
+  index = 0,
 ) {
   const block = carryOver.block;
-  const isTurnOff = block.action === ACTION_TURN_OFF;
-  const isModeOnly = block.action === ACTION_SET_HVAC_MODE;
-  const isOptionsOnly = block.action === ACTION_SET_CLIMATE_OPTIONS;
-  const temperature = Number(block.temperature);
-  const low = Number(block.target_temp_low);
-  const high = Number(block.target_temp_high);
-  const label = isTurnOff
-    ? host._t("off")
-    : isModeOnly
-      ? host._t("deviceControlled")
-    : isOptionsOnly
-      ? host._t("climateOptionsOnly")
-    : draftBlockUsesRange(block) && Number.isFinite(low) && Number.isFinite(high)
-      ? formatRange(host, low, high, entityId)
-      : Number.isFinite(temperature)
-        ? host._formatTemperature(temperature, entityId)
-        : host._t("invalidTemperatureRange");
-  const mode = isTurnOff || isOptionsOnly ? "" : block.hvac_mode || host._t("keep");
+  const presentation = timelinePresentation(host, block, entityId, source, carryOver.sourceWeekday, index, true, resolved);
   const continuation = host._t("timelineContinuesFrom", {
     day: host._shortWeekdayName(carryOver.sourceWeekday),
     time: host._formatScheduleTime(block.start),
   });
-  const options = climateOptionSummaryItems(host, block).map((item) => item.short).join(" • ");
-  const detail = [continuation, label, mode ? `${host._t("mode")}: ${mode}` : "", options]
-    .filter(Boolean)
-    .join(" - ");
-  const blockClass = [
-    "timeline-block",
-    "timeline-carry-over",
-    isTurnOff ? "off" : "",
-    `mode-${timelineModeClass(block)}`,
-    carryOver.width < 5 ? "compact" : "",
-    carryOver.width < 2.5 ? "tiny" : "",
-  ].filter(Boolean).join(" ");
-
-  return html`
-    <div
-      class=${blockClass}
-      draggable="false"
-      role="img"
-      style=${`left: 0%; width: ${carryOver.width}%;`}
-      title=${detail}
-      aria-label=${detail}
-    >
-      <strong>${continuation}</strong>
-      <span>${label}</span>
-      ${mode || options ? html`<small>${[mode, options].filter(Boolean).join(" • ")}</small>` : nothing}
-    </div>
-  `;
+  return renderPresentedTimelineBlock(host, presentation, block.start, 0, carryOver.width,
+    scheduleHelpId(host, `${source}-carry-${carryOver.sourceWeekday}-${block.slot_id ?? block.start}`),
+    undefined, continuation);
 }
 
 function renderTargetInput(
@@ -808,6 +942,7 @@ function renderTargetInput(
   canUseDeviceTarget = false,
   isTargetless = false,
   hasSelectedOptions = false,
+  readonly = false,
 ) {
   const inputId = `velair-${source}-${index}-${field}`;
   return html`
@@ -817,10 +952,10 @@ function renderTargetInput(
         id=${inputId}
         class=${error ? "invalid" : ""}
         type="number"
-        min=${String(minimum)}
-        max=${String(maximum)}
+        min=${host._unboundedTemperatureTargets ? nothing : String(minimum)}
+        max=${host._unboundedTemperatureTargets ? nothing : String(maximum)}
         step=${step === undefined ? "any" : String(step)}
-        ?disabled=${disabled}
+        ?disabled=${disabled || readonly}
         placeholder=${isTargetless ? "—" : disabled ? host._t("off") : ""}
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
@@ -831,7 +966,7 @@ function renderTargetInput(
             <button
               class=${isTargetless ? "target-action-toggle device-controlled" : "target-action-toggle"}
               type="button"
-              ?disabled=${!isTargetless && !canUseDeviceTarget}
+              ?disabled=${readonly || (!isTargetless && !canUseDeviceTarget)}
               title=${isTargetless
                 ? host._t("restoreTemperatureTarget")
                 : hasSelectedOptions
@@ -871,6 +1006,7 @@ function renderRangeTargetInputs(
   canUseDeviceTarget = false,
   isTargetless = false,
   hasSelectedOptions = false,
+  readonly = false,
 ) {
   return html`
     <div class="temperature-range-fields target-action-range" role="group" aria-label=${host._t("temperatureRange")}>
@@ -889,6 +1025,7 @@ function renderRangeTargetInputs(
           disabled,
           unit,
           isTargetless,
+          readonly,
         )}
         ${renderRangeTargetInput(
           host,
@@ -904,6 +1041,7 @@ function renderRangeTargetInputs(
           disabled,
           unit,
           isTargetless,
+          readonly,
         )}
       </div>
       ${!disabled || isTargetless
@@ -911,7 +1049,7 @@ function renderRangeTargetInputs(
             <button
               class=${isTargetless ? "target-action-toggle device-controlled" : "target-action-toggle"}
               type="button"
-              ?disabled=${!isTargetless && !canUseDeviceTarget}
+              ?disabled=${readonly || (!isTargetless && !canUseDeviceTarget)}
               title=${isTargetless
                 ? host._t("restoreTemperatureTarget")
                 : hasSelectedOptions
@@ -951,6 +1089,7 @@ function renderRangeTargetInput(
   disabled: boolean,
   unit: string,
   isTargetless = false,
+  readonly = false,
 ) {
   return html`
     <label class="range-temperature-field">
@@ -958,10 +1097,10 @@ function renderRangeTargetInput(
       <input
         type="number"
         inputmode="decimal"
-        min=${String(minimum)}
-        max=${String(maximum)}
+        min=${host._unboundedTemperatureTargets ? nothing : String(minimum)}
+        max=${host._unboundedTemperatureTargets ? nothing : String(maximum)}
         step=${step === undefined ? "any" : String(step)}
-        ?disabled=${disabled}
+        ?disabled=${disabled || readonly}
         placeholder=${isTargetless ? "—" : disabled ? host._t("off") : ""}
         aria-label=${`${host._t(accessibleLabelKey)} (${unit})`}
         .value=${disabled ? "" : String(block[field] ?? "")}
@@ -1090,7 +1229,7 @@ function climateOptionSummaryItems(host: ScheduleViewHost, block: ScheduleBlock 
   };
 
   add("fanMode", block.fan_mode);
-  add("presetMode", block.preset_mode);
+  add("devicePreset", block.preset_mode);
   add("swingMode", block.swing_mode);
   add("horizontalSwingMode", block.swing_horizontal_mode);
   if (String(block.humidity ?? "").trim()) {

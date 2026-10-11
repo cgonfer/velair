@@ -39,6 +39,7 @@ import {
   scheduledAssistRange,
 } from "../domain/room-assist";
 import { renderInlineHelp } from "./inline-help";
+import { renderPlannedReturnOverview, renderPlannedReturnZoneSignal } from "./planned-return-visibility";
 import type { VelairViewHost } from "../host-types";
 import type { ComfortAssessment, ExternalExecutionInfo, RoomSensorAssistStatus, ScheduleBlock, ScheduleEvent, ScheduleZone, ZoneRuntimeStatus } from "../types";
 
@@ -126,6 +127,7 @@ export function renderOverviewSummary(host: OverviewViewHost, zoneIds: string[])
   ).length;
   return html`
     <section class="overview-summary">
+      ${renderPlannedReturnOverview(host)}
       <div class=${`overview-status-card status-${schedulerState.state}`}>
         <div class="overview-status-heading">
           <div class="overview-scheduler-state">
@@ -316,6 +318,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
           zoneStatePresentation[activityStatus.state],
         )}
         <div class="overview-zone-signals">
+          ${externallyManaged ? nothing : renderPlannedReturnZoneSignal(host, entityId)}
           ${renderOverviewZoneProfile(host, entityId)}
           ${externallyManaged && externalExecution
             ? renderExternalControllerSignal(

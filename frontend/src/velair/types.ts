@@ -72,6 +72,7 @@ export type ClimateCardCustomAction = {
 
 export type ClimateCardAction =
   | { type: "boost"; enabled?: boolean; hide_name?: boolean; placement?: ClimateCardActionPlacement }
+  | { type: "planned-return"; enabled?: boolean; hide_name?: boolean; placement?: ClimateCardActionPlacement }
   | { type: "pause"; enabled?: boolean; hide_name?: boolean; placement?: ClimateCardActionPlacement }
   | ({ type: "script" } & ClimateCardCustomAction);
 
@@ -163,9 +164,11 @@ export type VelairOverviewCardView =
   | "overview-zones";
 // `profiles` remains accepted as a legacy panel/card route. New navigation
 // exposes Profiles through the Schedules workspace and uses `modes` here.
-export type VelairCardView = VelairPanelView | VelairOverviewCardView | "climate" | "profiles";
+export type VelairCardView = VelairPanelView | VelairOverviewCardView | "climate" | "profiles" | "planned-return";
 
 export type ScheduleBlock = {
+  preset_key?: string;
+  slot_id?: string;
   action?: string;
   fan_mode?: string;
   start: string;
@@ -181,7 +184,7 @@ export type ScheduleBlock = {
 
 export type ClimateProfileZone =
   | { behavior: "normal" }
-  | { behavior: "schedule"; schedule: Record<string, ScheduleBlock[]> }
+  | { behavior: "schedule"; schedule: Record<string, ScheduleBlock[]>; template_links?: Record<string, TemplateLink> }
   | { behavior: "pause"; action: "none" | "turn_off" };
 
 export type ClimateProfile = {
@@ -215,6 +218,8 @@ export type VelairModeInput = {
 };
 
 export type DraftScheduleBlock = {
+  preset_key?: string;
+  slot_id?: string;
   action: string;
   fan_mode?: string;
   start: string;
@@ -238,6 +243,31 @@ export type StoredScheduleTemplate = {
   key: string;
   name: string;
   blocks: ScheduleBlock[];
+};
+
+export type BlockConfiguration = Omit<ScheduleBlock, "start" | "slot_id">;
+export type BlockPreset = { key: string; name: string; config: BlockConfiguration };
+export type PresetLibraryDraft = { key: string; name: string; reference: string; block: DraftScheduleBlock; revision?: number; baseline?: string | null };
+export type TemplateLink = { template_key: string; mode?: "hours"; bindings: Record<string, BlockConfiguration> } | { template_key: string; mode: "full"; bindings?: never };
+export type ResourceDestination = { source: "default" | "profile"; entity_id: string; weekday: string; profile_key?: string };
+export type ResourceUsage = ResourceDestination & { slot_id?: string; start?: string; mode?: "hours" | "full"; template_key?: string; indirect?: boolean };
+export type TemplatePresetUsage = { source: "template"; template_key: string; slot_id: string; start?: string };
+export type PresetResourceUsage = ResourceUsage | TemplatePresetUsage;
+export type TemplateAssignment = ResourceDestination & { bindings: Record<string, BlockConfiguration> };
+export type TemplateAssignmentProposal = {
+  destination: ResourceDestination; slot_id: string; binding: BlockConfiguration;
+  origin: "template" | "saved_match" | "saved_previous" | "saved_next" | "manual" | "full";
+  donor_slot_id?: string; donor_start?: string; effective_config?: BlockConfiguration;
+};
+export type TemplateUpdatePreview = {
+  template: StoredScheduleTemplate; required_assignments?: ResourceUsage[]; usages?: ResourceUsage[];
+  added_slot_ids: string[]; removed_slot_ids: string[]; configuration_revision: number;
+  resolved_template_blocks?: ScheduleBlock[];
+  resolved_destinations?: Array<{ destination: ResourceUsage; blocks?: ScheduleBlock[]; metadata?: Array<Record<string, unknown>>; error?: { code?: string; message?: string } | string }>;
+  proposals?: TemplateAssignmentProposal[];
+  pending?: Array<{ destination: ResourceDestination; slot_id: string; reason: string; message: string }>;
+  destination_errors?: Array<{ destination: ResourceDestination; code: string; message: string }>;
+  changes?: Array<{ destination: ResourceDestination; slot_id: string; kind: "added" | "removed" | "moved" | "configuration"; previous_start?: string; start?: string }>;
 };
 
 export type PreconditioningSettings = {
@@ -528,6 +558,7 @@ export type RoomSensorAssistStatus = {
 };
 
 export type ScheduleZone = {
+  template_links?: Record<string, TemplateLink>;
   enabled: boolean;
   schedule: Record<string, ScheduleBlock[]>;
   override?: Record<string, unknown> | null;
@@ -592,7 +623,16 @@ export type ManualControl = {
   changed_fields?: string[];
 };
 
+export type PlannedReturnControl = {
+  phase: "away" | "preparing";
+  origin: "automatic" | "manual";
+  mode_id: string;
+  profile_id?: string | null;
+  effect: "schedule" | "pause" | "turn_off";
+};
+
 export type ZoneRuntimeStatus = {
+  planned_return?: PlannedReturnControl | null;
   state: "stopped" | "paused" | "boost" | "preconditioning" | "scheduled" | "idle" | "externally_managed";
   room_temperature?: number | null;
   target_temperature?: number | null;
@@ -694,7 +734,8 @@ export type DiagnosticHistoryCategory =
   | "preconditioning"
   | "comfort"
   | "delivery"
-  | "availability";
+  | "availability"
+  | "planned_return";
 export type DiagnosticHistoryItem = {
   at: string;
   kind: string;
@@ -710,7 +751,7 @@ export type UnitDiagnostics = {
   capabilities: Record<string, unknown>;
   configuration: Record<string, unknown>;
   effective_setup: Record<string, unknown>;
-  intent?: Record<string, unknown> | null;
+  intent?: (Record<string, unknown> & { planned_return?: PlannedReturnControl | null }) | null;
   last_application?: Record<string, unknown> | null;
   delivery: Record<string, unknown>;
   override?: Record<string, unknown> | null;
@@ -721,10 +762,11 @@ export type UnitDiagnostics = {
   sensors: Array<{ purpose: string; entity_id: string; state: string }>;
 };
 export type DiagnosticsSnapshot = {
+  planned_return?: (PlannedReturnStatus & { weekly_enabled?: boolean }) | null;
   generated_at: string;
   history_limit: number;
   history_policy: {
-    categories: Record<DiagnosticHistoryCategory, boolean>;
+    categories: Partial<Record<DiagnosticHistoryCategory, boolean>>;
     runtime_only: true;
     cleared_on_restart: true;
   };
@@ -739,7 +781,65 @@ export type DiagnosticsSnapshot = {
   history: DiagnosticHistoryItem[];
 };
 
+export type PlannedReturnConfig = {
+  enabled: boolean;
+  occupancy_entity_ids: string[];
+  away_mode_id: string;
+  destination_mode_id: string;
+  absence_delay_minutes: number;
+  weekly: Record<string, string | null>;
+};
+export type PlannedReturnPreparationZone = {
+  entity_id: string;
+  profile_id: string | null;
+  schedule_source: "profile" | "default" | "paused";
+  preparation: "adaptive" | "arrival_only" | "none";
+  state: "configured" | "pending" | "preparing" | "reached" | "suspended" | "unavailable";
+  reason: string | null;
+  start_at: string | null;
+  target?: { temperature?: number; target_temp_low?: number; target_temp_high?: number; hvac_mode?: string } | null;
+};
+export type PlannedReturnPreparation = {
+  context: "configuration" | "arrival";
+  return_at: string | null;
+  mode_id: string;
+  zones: PlannedReturnPreparationZone[];
+};
+export type PlannedReturnStatus = {
+  state: "armed" | "disabled" | "idle" | "confirming_absence" | "away" | "preparing" | "fulfilled" | "cancelled" | "skipped" | "error";
+  occupancy: "home" | "away" | "unknown";
+  sources: Array<{ entity_id: string; state: "home" | "away" | "unknown" }>;
+  origin: "automatic" | "manual" | null;
+  can_start: boolean;
+  episode_active?: boolean;
+  can_cancel?: boolean;
+  can_dismiss?: boolean;
+  dismissed?: boolean;
+  notice?: string | null;
+  return_at: string | null;
+  absence_confirm_at: string | null;
+  departure_at?: string | null;
+  away_mode_id?: string | null;
+  destination_mode_id?: string | null;
+  preparation?: PlannedReturnPreparation;
+  zones: Array<{ entity_id: string; start_at: string; target_when: string; temperature?: number; target_temp_low?: number; target_temp_high?: number; preparing: boolean }>;
+  error: string | null;
+};
+
 export type ScheduleResponse = {
+  planned_return?: PlannedReturnConfig;
+  planned_return_status?: PlannedReturnStatus;
+  resource_diagnostics?: Array<{ source: "default" | "profile"; entity_id: string; profile_key?: string; code: string; message: string }>;
+  resolved_block_metadata?: { default: Record<string, Record<string, ResolvedBlockMetadata[]>>; profiles: Record<string, Record<string, Record<string, ResolvedBlockMetadata[]>>> };
+  resolved_template_blocks?: Record<string, ScheduleBlock[] | null>;
+  resource_usages?: { presets: Record<string, PresetResourceUsage[]>; templates: Record<string, ResourceUsage[]> };
+  block_presets?: BlockPreset[];
+  configuration_revision?: number;
+  preset_usages?: Record<string, PresetResourceUsage[]>;
+  template_usages?: Record<string, ResourceUsage[]>;
+  resolved_default_schedules?: Record<string, Record<string, ScheduleBlock[]>>;
+  resolved_profile_schedules?: Record<string, Record<string, Record<string, ScheduleBlock[]>>>;
+  effective_schedules?: Record<string, Record<string, ScheduleBlock[]> | null>;
   profile_id?: string;
   mode_id?: string;
   configured_entities: string[];
@@ -796,12 +896,16 @@ export type ScheduleResponse = {
   };
 };
 
+export type ResolvedBlockMetadata = { start: string; preset_key?: string; template_key?: string; slot_id?: string; adaptations?: Record<string, { requested: unknown; effective: unknown }> };
+
 export type ScheduleUpdateMessage = {
   loaded: boolean;
   schedule?: ScheduleResponse;
 };
 
 export type PortableSection =
+  | "planned_return"
+  | "block_presets"
   | "zones"
   | "templates"
   | "settings"

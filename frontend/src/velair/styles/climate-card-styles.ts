@@ -86,7 +86,7 @@ export const climateCardStyles = css`
   .climate-card-manual-segmented[aria-busy="true"] button[aria-disabled="true"] { cursor: wait; opacity: 1; }
   .climate-card-manual-segmented button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -3px; position: relative; z-index: 1; }
   .climate-card-manual-segmented button[aria-pressed="true"]:focus-visible { outline-color: var(--text-primary-color, var(--card-background-color)); }
-  .climate-card-control-reason { color: var(--secondary-text-color); font-size: 10px; grid-column: 1 / -1; line-height: 1.3; min-width: 0; }
+  .climate-card-control-reason { color: var(--secondary-text-color); contain: inline-size; display: block; font-size: 10px; grid-column: 1 / -1; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
   .climate-card-control-surface { align-items: stretch; background: linear-gradient(145deg, var(--climate-card-elevated-surface), var(--secondary-background-color)); border: 1px solid var(--climate-card-border); border-radius: 11px; box-shadow: var(--climate-card-soft-shadow); display: grid; grid-template-columns: minmax(88px, 1fr) auto 56px; min-width: 0; overflow: visible; }
   .climate-card-thermostat-controls.has-authority.has-actions .climate-card-control-surface,
   .climate-card-thermostat-controls.has-authority.has-actions .climate-card-control-pane { border-radius: 0 0 11px 11px; }
@@ -331,14 +331,16 @@ export const climateCardStyles = css`
   .climate-card-actions button { align-items: center; background: color-mix(in srgb, var(--card-background-color) 92%, var(--climate-card-action-accent, var(--primary-color)) 8%); border: 1px solid color-mix(in srgb, var(--divider-color) 82%, var(--climate-card-action-accent, var(--primary-color)) 18%); border-radius: 8px; color: var(--primary-text-color); cursor: pointer; display: inline-flex; gap: 5px; justify-content: center; min-height: 32px; padding: 5px 8px; transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, flex-basis 160ms ease, transform 160ms ease, width 160ms ease; }
   .climate-card-external button, .climate-card-boost-form button { align-items: center; background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 10px; color: var(--primary-text-color); cursor: pointer; display: inline-flex; gap: 6px; justify-content: center; min-height: 40px; padding: 8px 10px; }
   .climate-card-actions-row > button { flex: 0 0 auto; min-width: max-content; }
+  .climate-card-actions-row > button.icon-only:not(.panel-open) { gap: 0; }
   .climate-card-actions-row > button.icon-only { flex: 0 0 34px; min-width: 34px; padding-inline: 0; width: 34px; }
   .climate-card-actions-row > button.icon-only.name-hidden.panel-open { flex-basis: 52px; min-width: 52px; width: 52px; }
   .climate-card-actions-row > button > span:not(.climate-card-action-icon-stack) { white-space: nowrap; }
   .climate-card-actions ha-icon { --mdc-icon-size: 17px; color: var(--secondary-text-color); }
   .climate-card-actions .boost { --climate-card-action-accent: var(--warning-color, #e69b35); }
+  .climate-card-actions .planned-return { --climate-card-action-accent: var(--velair-planned-return-color, #9575cd); }
   .climate-card-actions .pause, .climate-card-actions .resume { --climate-card-action-accent: var(--info-color, #3aa7c9); }
   .climate-card-actions .custom { --climate-card-action-accent: var(--custom-action-color, var(--primary-color)); }
-  .climate-card-actions .boost ha-icon, .climate-card-actions .pause ha-icon, .climate-card-actions .resume ha-icon, .climate-card-actions .custom ha-icon { color: var(--climate-card-action-accent); }
+  .climate-card-actions .planned-return ha-icon, .climate-card-actions .boost ha-icon, .climate-card-actions .pause ha-icon, .climate-card-actions .resume ha-icon, .climate-card-actions .custom ha-icon { color: var(--climate-card-action-accent); }
   .climate-card-actions .more ha-icon { color: var(--primary-color); }
   .climate-card-actions .climate-card-action-icon-stack { display: grid; flex: 0 0 17px; height: 17px; overflow: visible; place-items: center; width: 17px; }
   .climate-card-action-icon-stack ha-icon { grid-area: 1 / 1; opacity: 0; transform: scale(.62); transition: opacity 140ms ease, transform 180ms ease; }
@@ -377,7 +379,14 @@ export const climateCardStyles = css`
   .climate-card-actions-menu-separator { border-top: 1px solid var(--divider-color); margin: 3px 5px; }
   @keyframes climate-card-menu-spin { to { transform: rotate(360deg); } }
   .climate-card-boost-form { background: var(--secondary-background-color); border: 1px solid var(--divider-color); border-radius: 12px; display: grid; gap: 10px; padding: 12px; }
-  .climate-card-control-pane { border-width: 0; }
+  .climate-card-control-pane { background: linear-gradient(145deg, var(--climate-card-elevated-surface), var(--secondary-background-color)); border: 1px solid var(--climate-card-border); box-shadow: var(--climate-card-soft-shadow); }
+  .climate-card-actions-menu .planned-return ha-icon { color: var(--velair-planned-return-color, #9575cd); }
+  .climate-card-return-pane { position: relative; min-width: 0; padding: 0; }
+  .climate-card-return-pane.has-close { padding-top: 40px; }
+  .climate-card-return-close { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--secondary-text-color); }
+  .climate-card-return-close:hover, .climate-card-return-close:focus-visible { background: color-mix(in srgb, var(--primary-color) 8%, transparent); }
+  .climate-card-return-close ha-icon { --mdc-icon-size: 20px; }
+  .climate-card-return-pane .planned-return-view { padding: 0; margin: 0; }
   .climate-card-boost-form > div { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
   .climate-card-boost-form label span { color: var(--secondary-text-color); display: block; font-size: 11px; margin-bottom: 3px; }
   .climate-card-boost-form input, .climate-card-boost-form select { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; box-sizing: border-box; color: var(--primary-text-color); min-height: 38px; padding: 9px; width: 100%; }

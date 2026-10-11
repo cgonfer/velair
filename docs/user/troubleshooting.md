@@ -1,4 +1,9 @@
 # Troubleshooting
+<!-- velair-docs:start -->
+Translations: [English original](troubleshooting.md) · [Español](troubleshooting.es.md) · [Français](troubleshooting.fr.md) · [Deutsch](troubleshooting.de.md) · [Italiano](troubleshooting.it.md) · [Nederlands](troubleshooting.nl.md) · [Polski](troubleshooting.pl.md) · [Português (Brasil)](troubleshooting.pt-br.md) · [Português (Portugal)](troubleshooting.pt-pt.md) · [Русский](troubleshooting.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 ## A Lovelace Card Shows Configuration Error
 
@@ -55,7 +60,7 @@ When applying templates or cloning schedules, Velair rejects unsupported modes w
 
 ## Temperature Is Adjusted When Applying Templates
 
-Template temperatures are portable. If a template temperature is outside a target climate range, Velair clamps it to the climate minimum or maximum when applying it.
+When applying a template, Velair validates its resolved climate settings against the destination thermostat. Velair first rejects temperatures outside the thermostat's minimum and maximum. Values within those limits can then be rounded to its supported temperature step, including near a range boundary. This validation also applies to shared presets and linked templates; an incompatible shared configuration prevents the affected operation from being saved. Adjust the temperature or choose a compatible destination before trying again.
 
 ## Export Does Not Download On Mobile
 

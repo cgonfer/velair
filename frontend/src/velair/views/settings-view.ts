@@ -10,6 +10,8 @@ import { unmatchedPreconditioningLearningEntities } from "../domain/portable";
 import { entityTemperatureStep } from "../domain/climate";
 import type { VelairViewHost } from "../host-types";
 import { renderInlineHelp } from "./inline-help";
+import { COMMUNITY_LINKS, documentationDestination } from "../domain/documentation";
+import { renderDocumentationHelp } from "./documentation-links";
 import type { ExternalExecutionInfo, PortableSection } from "../types";
 
 type SettingsViewHost = VelairViewHost;
@@ -76,9 +78,37 @@ export function renderSettingsView(host: SettingsViewHost, zoneIds: string[]) {
         </div>
       </section>
 
+      ${renderHelpCommunitySettings(host)}
+
       ${renderMaintenanceSettings(host)}
     </section>
   `;
+}
+
+export function renderHelpCommunitySettings(host: SettingsViewHost) {
+  const documentation = documentationDestination("index", host.hass);
+  const links = [
+    { href: documentation.href, label: "documentation", description: documentation.translated ? "documentationLocalizedDescription" : "documentationDescription", icon: "mdi:book-open-page-variant" },
+    { href: COMMUNITY_LINKS.issues, label: "reportIssue", description: "reportIssueDescription", icon: "mdi:bug-outline" },
+    { href: COMMUNITY_LINKS.discussions, label: "questionsSuggestions", description: "questionsSuggestionsDescription", icon: "mdi:forum-outline" },
+  ] as const;
+  return html`<section class="settings-help">
+    <div class="section-heading">
+      <ha-icon icon="mdi:help-circle-outline" aria-hidden="true"></ha-icon>
+      <div>
+        <span class="section-label">${host._t("helpCommunity")}</span>
+        <p>${host._t("helpCommunityDescription")}</p>
+      </div>
+    </div>
+    <div class="settings-help-links">
+      ${links.map((link) => html`<a class="documentation-link help-community-link" href=${link.href}
+        target="_blank" rel="noopener noreferrer">
+        <ha-icon icon=${link.icon} aria-hidden="true"></ha-icon>
+        <span><strong>${host._t(link.label)}</strong><small>${host._t(link.description)}</small></span>
+        <ha-icon icon="mdi:open-in-new" aria-hidden="true"></ha-icon>
+      </a>`)}
+    </div>
+  </section>`;
 }
 
 export function renderExternalSystemsSettings(host: SettingsViewHost) {
@@ -104,7 +134,10 @@ export function renderExternalSystemsSettings(host: SettingsViewHost) {
     <section class="settings-startup external-systems-settings">
       <ha-icon class="settings-startup-icon" icon="mdi:calendar-export"></ha-icon>
       <div class="settings-startup-copy">
-        <span class="section-label">${host._t("externalSystems")}</span>
+        <div class="documentation-heading">
+          <span class="section-label">${host._t("externalSystems")}</span>
+          ${renderDocumentationHelp(host, "externalSystems")}
+        </div>
         <p>${host._t("externalSystemsDescription")}</p>
         <div class="settings-zone-list">
           ${entityIds.map((entityId) => {
@@ -612,16 +645,14 @@ export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entit
   };
   const key = entityId.replace(/[^a-z0-9_-]/gi, "-");
   const labelId = `external-adjustment-label-${key}`;
-  const helpId = `external-adjustment-info-${key}`;
   return html`
     <div class="settings-external-policy">
       <div class="settings-policy-heading">
         <span class="label" id=${labelId}>${host._t("externalChangePolicy")}</span>
-        ${renderInlineHelp(
-          helpId,
-          host._t("externalAdjustmentInfoAction"),
-          host._t("externalChangePolicyDescription"),
-        )}
+        ${renderDocumentationHelp(host, "manualControl", {
+          title: "externalChangePolicy",
+          summary: "externalChangePolicyDescription",
+        })}
       </div>
       <div class="settings-policy-controls">
         <span class="select-wrap">

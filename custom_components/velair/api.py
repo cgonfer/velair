@@ -78,6 +78,7 @@ from .models import (
     serialize_schedule_data,
     validate_climate_profiles,
     validate_modes,
+    validate_planned_return,
 )
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .temperature import (
@@ -93,7 +94,7 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 12
+EXPORT_MODEL_VERSION = 16
 EXPORT_SECTIONS = (
     "zones",
     "templates",
@@ -101,6 +102,8 @@ EXPORT_SECTIONS = (
     "preconditioning_learning",
     "profiles",
     "modes",
+    "block_presets",
+    "planned_return",
 )
 EXPORT_SECTION_SCHEMA = vol.All(
     cv.ensure_list,
@@ -143,9 +146,10 @@ def _sensor_entity_id(value: Any) -> str:
         raise vol.Invalid("expected a sensor entity")
     return normalized
 
-SCHEDULE_BLOCK_SCHEMA = vol.Schema(
+INLINE_SCHEDULE_BLOCK_SCHEMA = vol.Schema(
     {
         vol.Required("start"): cv.string,
+        vol.Optional("slot_id"): cv.string,
         vol.Optional(ATTR_ACTION, default=ACTION_SET_TEMPERATURE): vol.In(ACTION_OPTIONS),
         vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
         vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
@@ -158,6 +162,30 @@ SCHEDULE_BLOCK_SCHEMA = vol.Schema(
         vol.Optional(ATTR_HUMIDITY): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
     }
 )
+
+def _exclusive_preset_reference(block):
+    if "preset_key" in block and set(block) != {"start", "preset_key"}:
+        raise vol.Invalid("Preset references cannot contain inline settings")
+    return block
+
+
+SCHEDULE_BLOCK_SCHEMA = vol.All(_exclusive_preset_reference, vol.Any(
+    vol.Schema({vol.Required("start"): cv.string, vol.Required("preset_key"): cv.string}),
+    INLINE_SCHEDULE_BLOCK_SCHEMA,
+))
+
+
+TEMPLATE_BLOCK_SCHEMA = vol.Any(
+    vol.Schema({vol.Required("start"): cv.string, vol.Optional("slot_id"): cv.string, vol.Required("preset_key"): cv.string}),
+    INLINE_SCHEDULE_BLOCK_SCHEMA,
+)
+
+
+def _daily_schedule_choice(data: dict[str, Any]) -> dict[str, Any]:
+    """Keep linked and independent day writes mutually exclusive."""
+    if (ATTR_BLOCKS in data) == ("template_link" in data):
+        raise vol.Invalid("Provide exactly one of blocks or template_link")
+    return data
 
 PRECONDITIONING_SCHEMA = vol.Schema(
     {
@@ -315,12 +343,23 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_clear_schedule)
     websocket_api.async_register_command(hass, ws_set_schedule_template)
     websocket_api.async_register_command(hass, ws_delete_schedule_template)
+    websocket_api.async_register_command(hass, ws_set_block_preset)
+    websocket_api.async_register_command(hass, ws_delete_block_preset)
+    websocket_api.async_register_command(hass, ws_preview_schedule_template_update)
+    websocket_api.async_register_command(hass, ws_preview_profile)
+    websocket_api.async_register_command(hass, ws_preview_daily_schedule)
     websocket_api.async_register_command(hass, ws_set_profile)
     websocket_api.async_register_command(hass, ws_delete_profile)
     websocket_api.async_register_command(hass, ws_activate_profile)
     websocket_api.async_register_command(hass, ws_set_mode)
     websocket_api.async_register_command(hass, ws_delete_mode)
     websocket_api.async_register_command(hass, ws_select_mode)
+    websocket_api.async_register_command(hass, ws_start_planned_return)
+    websocket_api.async_register_command(hass, ws_cancel_planned_return)
+    websocket_api.async_register_command(hass, ws_update_planned_return)
+    websocket_api.async_register_command(hass, ws_adjust_planned_return)
+    websocket_api.async_register_command(hass, ws_skip_planned_return)
+    websocket_api.async_register_command(hass, ws_arrive_planned_return)
     websocket_api.async_register_command(hass, ws_update_settings)
     websocket_api.async_register_command(hass, ws_set_zone_execution)
     websocket_api.async_register_command(hass, ws_update_external_change_policy)
@@ -574,7 +613,10 @@ def ws_subscribe_updates(
         vol.Required("type"): f"{DOMAIN}/set_daily_schedule",
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_WEEKDAY): vol.In(WEEKDAYS),
-        vol.Required(ATTR_BLOCKS): vol.All(cv.ensure_list, [SCHEDULE_BLOCK_SCHEMA]),
+        vol.Optional(ATTR_BLOCKS): vol.All(cv.ensure_list, [SCHEDULE_BLOCK_SCHEMA]),
+        vol.Optional("template_link"): dict,
+        vol.Optional("unlink_template", default=False): bool,
+        vol.Optional("expected_revision"): vol.All(int, vol.Range(min=0)),
     }
 )
 @websocket_api.async_response
@@ -593,14 +635,17 @@ async def ws_set_daily_schedule(
     try:
         if _reject_temperature_migration_mutation(runtime, connection, msg):
             return
-        blocks = normalize_schedule_blocks(msg[ATTR_BLOCKS])
+        _daily_schedule_choice(msg)
+        blocks = normalize_schedule_blocks(msg[ATTR_BLOCKS]) if ATTR_BLOCKS in msg else None
+        options = {key: msg[key] for key in ("template_link", "unlink_template", "expected_revision") if key in msg}
         await scheduler.async_set_daily_schedule(
             msg[ATTR_ENTITY_ID],
             msg[ATTR_WEEKDAY],
             blocks,
+            **options,
         )
     except ValueError as err:
-        connection.send_error(msg["id"], "invalid_schedule", str(err))
+        _send_configuration_error(connection, msg, err, "invalid_schedule")
         return
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
@@ -611,6 +656,8 @@ async def ws_set_daily_schedule(
         vol.Required("type"): f"{DOMAIN}/copy_day_schedule",
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_SOURCE_WEEKDAY): vol.In(WEEKDAYS),
+        vol.Optional("target_entity_ids"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+        vol.Optional("expected_revision"): vol.All(vol.Coerce(int), vol.Range(min=0)),
         vol.Required(ATTR_TARGET_WEEKDAYS): vol.All(
             cv.ensure_list,
             [vol.In(WEEKDAYS)],
@@ -638,9 +685,11 @@ async def ws_copy_day_schedule(
             msg[ATTR_ENTITY_ID],
             msg[ATTR_SOURCE_WEEKDAY],
             msg[ATTR_TARGET_WEEKDAYS],
+            target_entity_ids=msg.get("target_entity_ids"),
+            expected_revision=msg.get("expected_revision"),
         )
     except ValueError as err:
-        connection.send_error(msg["id"], "invalid_schedule", str(err))
+        _send_configuration_error(connection, msg, err, "invalid_schedule")
         return
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
@@ -685,7 +734,9 @@ async def ws_clear_schedule(
         vol.Required("type"): f"{DOMAIN}/set_schedule_template",
         vol.Optional(ATTR_KEY): cv.string,
         vol.Required(ATTR_NAME): cv.string,
-        vol.Required(ATTR_BLOCKS): vol.All(cv.ensure_list, [SCHEDULE_BLOCK_SCHEMA]),
+        vol.Required(ATTR_BLOCKS): vol.All(cv.ensure_list, [TEMPLATE_BLOCK_SCHEMA]),
+        vol.Optional("assignments"): [dict],
+        vol.Optional("expected_revision"): vol.All(int, vol.Range(min=0)),
     }
 )
 @websocket_api.async_response
@@ -709,14 +760,15 @@ async def ws_set_schedule_template(
 
     scheduler = runtime["scheduler"]
     try:
-        blocks = normalize_schedule_blocks(msg[ATTR_BLOCKS])
+        blocks = deepcopy(msg[ATTR_BLOCKS])
         await scheduler.async_set_schedule_template(
             name,
             blocks,
             msg.get(ATTR_KEY),
+            **{key: msg[key] for key in ("assignments", "expected_revision") if key in msg},
         )
     except ValueError as err:
-        connection.send_error(msg["id"], "invalid_template", str(err))
+        _send_configuration_error(connection, msg, err, "invalid_template")
         return
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
@@ -726,6 +778,7 @@ async def ws_set_schedule_template(
     {
         vol.Required("type"): f"{DOMAIN}/set_profile",
         vol.Required("profile"): dict,
+        vol.Optional("expected_revision"): vol.All(int, vol.Range(min=0)),
     }
 )
 @websocket_api.async_response
@@ -742,9 +795,9 @@ async def ws_set_profile(
     try:
         if _reject_temperature_migration_mutation(runtime, connection, msg):
             return
-        key = await runtime["scheduler"].async_set_profile(msg["profile"])
+        key = await runtime["scheduler"].async_set_profile(msg["profile"], **({"expected_revision": msg["expected_revision"]} if "expected_revision" in msg else {}))
     except ValueError as err:
-        connection.send_error(msg["id"], "invalid_profile", str(err))
+        _send_configuration_error(connection, msg, err, "invalid_profile")
         return
     response = _build_schedule_response(runtime)
     response["profile_id"] = key
@@ -905,6 +958,115 @@ async def ws_select_mode(
         connection.send_error(msg["id"], "invalid_mode", str(err))
         return
     connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+
+async def _planned_return_mutation(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    method: str,
+    *args: Any,
+) -> None:
+    """Authorize and route routine changes through scheduler-owned persistence."""
+    if not getattr(getattr(connection, "user", None), "is_admin", False):
+        connection.send_error(msg["id"], "unauthorized", "Administrator access is required")
+        return
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if (method != "async_cancel_planned_return" or runtime.get("operation_active")
+            or runtime.get("operation_recovery")) and _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        if method in ("async_update_planned_return", "async_start_planned_return"):
+            raw_config = args[0] if method == "async_update_planned_return" else runtime["storage"].data.get("planned_return", {})
+            config = validate_planned_return(raw_config, runtime["storage"].data.get("modes", []))
+            if method == "async_start_planned_return" or config["enabled"]:
+                sources = config["occupancy_entity_ids"]
+                if any(hass.states.get(entity) is None for entity in sources):
+                    raise ValueError("Configured occupancy sources must exist in Home Assistant")
+        await getattr(runtime["scheduler"], method)(*args)
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_planned_return", str(err))
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/start_planned_return",
+    vol.Required("return_at"): str,
+})
+@websocket_api.async_response
+async def ws_start_planned_return(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Start a one-time return using the persisted occupancy and mode configuration."""
+    await _planned_return_mutation(hass, connection, msg, "async_start_planned_return", msg["return_at"])
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/cancel_planned_return"})
+@websocket_api.async_response
+async def ws_cancel_planned_return(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Withdraw a planned return or close a terminal notice."""
+    await _planned_return_mutation(hass, connection, msg, "async_cancel_planned_return")
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/update_planned_return",
+    vol.Required("planned_return"): dict,
+})
+@websocket_api.async_response
+async def ws_update_planned_return(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Update the whole-home planned return configuration."""
+    await _planned_return_mutation(hass, connection, msg, "async_update_planned_return", msg["planned_return"])
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/adjust_planned_return",
+    vol.Required("return_at"): str,
+})
+@websocket_api.async_response
+async def ws_adjust_planned_return(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Adjust the current episode without modifying the weekly routine."""
+    await _planned_return_mutation(hass, connection, msg, "async_adjust_planned_return", msg["return_at"])
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/skip_planned_return"})
+@websocket_api.async_response
+async def ws_skip_planned_return(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Skip preparation and the timed return for this absence."""
+    await _planned_return_mutation(hass, connection, msg, "async_skip_planned_return")
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/arrive_planned_return"})
+@websocket_api.async_response
+async def ws_arrive_planned_return(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Resume the destination immediately for the current absence."""
+    await _planned_return_mutation(hass, connection, msg, "async_arrive_planned_return")
 
 
 @websocket_api.websocket_command(
@@ -1478,6 +1640,7 @@ async def ws_reset_data(
     {
         vol.Required("type"): f"{DOMAIN}/delete_schedule_template",
         vol.Required(ATTR_KEY): cv.string,
+        vol.Optional("expected_revision"): int,
     }
 )
 @websocket_api.async_response
@@ -1496,9 +1659,9 @@ async def ws_delete_schedule_template(
     try:
         if _reject_temperature_migration_mutation(runtime, connection, msg):
             return
-        await scheduler.async_delete_schedule_template(msg[ATTR_KEY])
+        await scheduler.async_delete_schedule_template(msg[ATTR_KEY], **({"expected_revision": msg["expected_revision"]} if "expected_revision" in msg else {}))
     except ValueError as err:
-        connection.send_error(msg["id"], "invalid_template", str(err))
+        _send_configuration_error(connection, msg, err, "invalid_template")
         return
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
@@ -1601,6 +1764,116 @@ def _mark_operation_recovery(
         diagnostics.async_runtime_changed()
 
 
+
+def _send_configuration_error(connection, msg, err, fallback="invalid_configuration") -> None:
+    """Expose typed dependency errors without losing their affected destinations."""
+    details = getattr(err, "details", getattr(err, "usages", None))
+    if details and hasattr(connection, "send_message"):
+        connection.send_message({"id": msg["id"], "type": "result", "success": False, "error": {"code": getattr(err, "code", fallback), "message": str(err), "details": details}})
+    else:
+        connection.send_error(msg["id"], getattr(err, "code", fallback), str(err))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/set_block_preset",
+    vol.Optional("key"): cv.string,
+    vol.Required("name"): cv.string,
+    vol.Required("config"): dict,
+    vol.Required("expected_revision"): int,
+})
+@websocket_api.async_response
+async def ws_set_block_preset(hass, connection, msg) -> None:
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        await runtime["scheduler"].async_set_block_preset(
+            msg["name"], msg["config"], msg.get("key"), expected_revision=msg["expected_revision"]
+        )
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/delete_block_preset",
+    vol.Required("key"): cv.string,
+    vol.Required("expected_revision"): int,
+})
+@websocket_api.async_response
+async def ws_delete_block_preset(hass, connection, msg) -> None:
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        await runtime["scheduler"].async_delete_block_preset(msg["key"], expected_revision=msg["expected_revision"])
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/preview_schedule_template_update",
+    vol.Optional("key"): cv.string,
+    vol.Required("name"): cv.string,
+    vol.Required("blocks"): [TEMPLATE_BLOCK_SCHEMA],
+    vol.Optional("assignments"): [dict],
+    vol.Optional("expected_revision"): vol.All(vol.Coerce(int), vol.Range(min=0)),
+})
+@websocket_api.async_response
+async def ws_preview_schedule_template_update(hass, connection, msg) -> None:
+    await _configuration_preview(hass, connection, msg, "preview_schedule_template_update", msg["name"], msg["blocks"], msg.get("key"), **{key: msg[key] for key in ("assignments", "expected_revision") if key in msg})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/preview_profile",
+    vol.Required("profile"): dict,
+})
+@websocket_api.async_response
+async def ws_preview_profile(hass, connection, msg) -> None:
+    await _configuration_preview(hass, connection, msg, "preview_profile", msg["profile"])
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/preview_daily_schedule",
+    vol.Required("entity_id"): cv.entity_id,
+    vol.Required("weekday"): vol.In(WEEKDAYS),
+    vol.Optional("blocks"): [SCHEDULE_BLOCK_SCHEMA],
+    vol.Optional("template_link"): dict,
+})
+@websocket_api.async_response
+async def ws_preview_daily_schedule(hass, connection, msg) -> None:
+    try:
+        _daily_schedule_choice(msg)
+    except (ValueError, vol.Invalid) as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    await _configuration_preview(hass, connection, msg, "preview_daily_schedule", msg["entity_id"], msg["weekday"], msg.get("blocks"), template_link=msg.get("template_link"))
+
+
+async def _configuration_preview(hass, connection, msg, method, *args, **kwargs) -> None:
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        result = getattr(runtime["scheduler"], method)(*args, **kwargs)
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    connection.send_result(msg["id"], result)
+
+
 def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     """Build the schedule API response."""
     scheduler = runtime["scheduler"]
@@ -1615,6 +1888,7 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     }
 
     return {
+        **getattr(scheduler, "get_configuration_resources", lambda: {})(),
         "configured_entities": list(storage.data["zones"]),
         "temperature_unit": getattr(storage, "effective_temperature_unit", CELSIUS),
         "home_assistant_temperature_unit": getattr(
@@ -1628,6 +1902,8 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         "operation_recovery": runtime.get("operation_recovery"),
         "operation_status": getattr(scheduler, "operation_status", None),
         "global": stored_data["global"],
+        "planned_return": stored_data["planned_return"],
+        "planned_return_status": getattr(scheduler, "get_planned_return_status", lambda: {"state": "disabled", "occupancy": "unknown", "return_at": None, "absence_confirm_at": None, "zones": [], "error": None, "origin": None, "sources": [], "can_start": False})(),
         "profiles": stored_data.get("profiles", []),
         "active_profile_ids": stored_data["global"].get("active_profile_ids", []),
         "modes": stored_data.get("modes", []),
@@ -1675,6 +1951,42 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _reference_dependencies(value: Any) -> tuple[set[str], set[str]]:
+    """Find resource references in raw portable configuration."""
+    presets: set[str] = set()
+    templates: set[str] = set()
+    if isinstance(value, dict):
+        if isinstance(value.get("preset_key"), str):
+            presets.add(value["preset_key"])
+        if isinstance(value.get("template_key"), str):
+            templates.add(value["template_key"])
+        for item in value.values():
+            found_presets, found_templates = _reference_dependencies(item)
+            presets.update(found_presets)
+            templates.update(found_templates)
+    elif isinstance(value, list):
+        for item in value:
+            found_presets, found_templates = _reference_dependencies(item)
+            presets.update(found_presets)
+            templates.update(found_templates)
+    return presets, templates
+
+
+def _with_dependency_sections(sections: list[str], payload: dict[str, Any]) -> list[str]:
+    selected = list(sections)
+    while True:
+        presets, templates = _reference_dependencies({key: payload.get(key) for key in selected})
+        previous = len(selected)
+        for section, needed in (("templates", templates), ("block_presets", presets)):
+            if needed and section not in selected:
+                if section not in payload:
+                    raise ValueError(f"Referenced {section} are missing from the portable file")
+                selected.append(section)
+        if len(selected) == previous:
+            break
+    return selected
+
+
 def _build_export_payload(
     runtime: dict[str, Any],
     sections: list[str],
@@ -1688,7 +2000,10 @@ def _build_export_payload(
         if callable(raw_data)
         else serialize_schedule_data(storage.data)
     )
+    sections = _with_dependency_sections(sections, stored_data)
     exported_sections: dict[str, Any] = {}
+    if "block_presets" in sections:
+        exported_sections["block_presets"] = deepcopy(stored_data.get("block_presets", []))
 
     if "zones" in sections:
         exported_sections["zones"] = _export_zones(stored_data["zones"])
@@ -1712,6 +2027,9 @@ def _build_export_payload(
             stored_data.get("modes", [])
         )
 
+    if "planned_return" in sections:
+        exported_sections["planned_return"] = deepcopy(stored_data.get("planned_return", {}))
+
     return {
         "format": EXPORT_FORMAT,
         "model_version": EXPORT_MODEL_VERSION,
@@ -1727,7 +2045,22 @@ def _build_import_data(
     sections: list[str],
 ) -> dict[str, Any]:
     """Validate a portable import payload and return normalized scheduler data."""
-    payload_sections = _validate_import_payload(payload)
+    payload_sections = deepcopy(_validate_import_payload(payload))
+    if payload["model_version"] < 14:
+        raw_zones = payload_sections.get("zones", {})
+        legacy_zones = list(raw_zones.values()) if isinstance(raw_zones, dict) else []
+        raw_profiles = payload_sections.get("profiles", [])
+        for profile in raw_profiles if isinstance(raw_profiles, list) else []:
+            if isinstance(profile, dict) and isinstance(profile.get("zones"), dict):
+                legacy_zones.extend(profile["zones"].values())
+        for zone in legacy_zones:
+            links = zone.get("template_links", {}) if isinstance(zone, dict) else {}
+            for link in links.values() if isinstance(links, dict) else []:
+                if isinstance(link, dict):
+                    if link.get("mode", "hours") != "hours":
+                        raise ValueError("Older portable models only support template hours links")
+                    link["mode"] = "hours"
+    sections = _with_dependency_sections(sections, payload_sections)
     storage = runtime["storage"]
     payload_unit = payload.get("temperature_unit", CELSIUS)
     target_unit = getattr(storage, "effective_temperature_unit", CELSIUS)
@@ -1816,6 +2149,24 @@ def _build_import_data(
             raw_profiles,
             list(current_zones),
         )
+    if "block_presets" in sections:
+        from .schedule_resources import normalize_config
+        raw_presets = payload_sections["block_presets"]
+        if not isinstance(raw_presets, list):
+            raise ValueError("Block presets section is not valid")
+        merged_presets = {preset["key"]: deepcopy(preset) for preset in storage.data.get("block_presets", [])}
+        imported_keys = set()
+        for preset in raw_presets:
+            if not isinstance(preset, dict) or not isinstance(preset.get("key"), str) or not preset["key"] or not isinstance(preset.get("name"), str) or not preset["name"].strip():
+                raise ValueError("Block preset is not valid")
+            if preset["key"] in imported_keys:
+                raise ValueError("Duplicate block preset key")
+            imported_keys.add(preset["key"])
+            merged_presets[preset["key"]] = {"key": preset["key"], "name": preset["name"].strip(), "config": normalize_config(preset.get("config"))}
+        names = [preset["name"].casefold() for preset in merged_presets.values()]
+        if len(names) != len(set(names)):
+            raise ValueError("Block preset names must be unique")
+        import_data["block_presets"] = list(merged_presets.values())
     if "modes" in sections:
         raw_modes = payload_sections["modes"]
         profile_zones = {
@@ -1828,6 +2179,22 @@ def _build_import_data(
             raw_modes, profile_zones
         )
 
+    if "planned_return" in sections:
+        import_data["planned_return"] = validate_planned_return(
+            payload_sections["planned_return"],
+            import_data.get("modes", storage.data.get("modes", [])),
+        )
+        # Portability must never authorize a presence automation on another home.
+        import_data["planned_return"]["enabled"] = False
+
+    candidate = deepcopy(storage.data)
+    candidate.update({key: value for key, value in import_data.items() if key in EXPORT_SECTIONS})
+    validate_planned_return(candidate.get("planned_return", {}), candidate.get("modes", []))
+    from .schedule_resources import validate_reference_graph
+    validate_reference_graph(candidate)
+    validator = getattr(runtime.get("scheduler"), "_validate_configuration_resources", None)
+    if callable(validator):
+        validator(candidate)
     return import_data
 
 
@@ -1946,6 +2313,7 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
         entity_id: {
             "enabled": bool(zone.get("enabled", True)),
             "schedule": deepcopy(zone.get("schedule", {})),
+            "template_links": deepcopy(zone.get("template_links", {})),
             "preconditioning": deepcopy(zone.get("preconditioning", {})),
             "comfort": deepcopy(zone.get("comfort", {})),
             "external_change_policy": deepcopy(
@@ -2431,7 +2799,12 @@ def _validate_portable_templates(raw_templates: Any) -> None:
         if key in seen_keys:
             raise ValueError(f"Template key is duplicated: {key}")
         seen_keys.add(key)
-        _validate_portable_blocks(template.get("blocks"), context=f"template {key}")
+        raw_blocks = template.get("blocks")
+        _validate_portable_blocks([{field: value for field, value in block.items() if field != "slot_id"} if isinstance(block, dict) else block for block in raw_blocks] if isinstance(raw_blocks, list) else raw_blocks, context=f"template {key}")
+        from .schedule_resources import normalize_binding, template_blocks
+        for block in template["blocks"]:
+            normalize_binding({field: value for field, value in block.items() if field not in ("start", "slot_id")})
+        template_blocks(template["blocks"])
 
 
 def _validate_portable_blocks(raw_blocks: Any, *, context: str) -> None:

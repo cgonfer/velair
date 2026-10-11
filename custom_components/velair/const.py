@@ -18,6 +18,7 @@ DIAGNOSTIC_HISTORY_CATEGORIES = (
     "control",
     "room_assist",
     "preconditioning",
+    "planned_return",
     "comfort",
     "delivery",
     "availability",
@@ -63,9 +64,12 @@ SERVICE_DISABLE_ROOM_SENSOR_ASSIST = "disable_room_sensor_assist"
 SERVICE_SET_DAILY_SCHEDULE = "set_daily_schedule"
 SERVICE_SET_HVAC_MODE = "set_hvac_mode"
 SERVICE_SET_TEMPERATURE = "set_temperature"
+SERVICE_UPDATE_BLOCK_PRESET = "update_block_preset"
 SERVICE_SET_EXTERNAL_CHANGE_POLICY = "set_external_change_policy"
 SERVICE_ENTER_MANUAL_ADJUSTMENT = "enter_manual_adjustment"
 SERVICE_RESUME_AUTOMATIC_CONTROL = "resume_automatic_control"
+SERVICE_START_PLANNED_RETURN = "start_planned_return"
+SERVICE_CANCEL_PLANNED_RETURN = "cancel_planned_return"
 
 ATTR_ACTION = "action"
 ATTR_APPLY_CURRENT_SCHEDULE = "apply_current_schedule"

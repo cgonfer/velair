@@ -15,8 +15,11 @@ import { settingsStyles } from "./settings-styles";
 import { templateStyles } from "./template-styles";
 import { timelineStyles } from "./timeline-styles";
 import { responsiveStyles } from "./responsive-styles";
+import { resourceUsageStyles } from "./resource-usage-styles";
+import { linkedHoursStyles } from "./linked-hours-styles";
+import { documentationStyles } from "./documentation-styles";
 
-export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, css`
+export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, linkedHoursStyles, resourceUsageStyles, documentationStyles, css`
     .temperature-migration-banner {
       align-items: start;
       background: color-mix(in srgb, var(--warning-color, #c99500) 12%, var(--card-background-color));
@@ -112,7 +115,8 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       margin-bottom: 16px;
     }
 
-    .schedule-source-selector > button {
+    .schedule-source-selector > button,
+    .schedule-source-option > button {
       align-items: center;
       background: var(--card-background-color);
       border: 1px solid var(--divider-color);
@@ -132,18 +136,49 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       border-color: var(--primary-color);
     }
 
-    .schedule-source-selector ha-icon {
+    .schedule-source-option {
+      align-items: center;
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 44px;
+      min-width: 0;
+      padding-right: 4px;
+    }
+
+    .schedule-source-option.active {
+      background: color-mix(in srgb, var(--primary-color) 10%, var(--card-background-color));
+      border-color: var(--primary-color);
+    }
+
+    .schedule-source-option > button {
+      background: transparent;
+      border: 0;
+      height: 100%;
+    }
+
+    .schedule-source-option > button:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: -3px;
+    }
+
+    .schedule-source-selector > button > ha-icon,
+    .schedule-source-option > button > ha-icon {
       color: var(--primary-color);
     }
 
-    .schedule-source-selector span {
+    .schedule-source-selector > button > span,
+    .schedule-source-option > button > span {
       display: grid;
       gap: 2px;
       min-width: 0;
     }
 
-    .schedule-source-selector small {
+    .schedule-source-selector > button small,
+    .schedule-source-option > button small {
       color: var(--secondary-text-color);
+      font-size: 12px;
       line-height: 1.35;
     }
 
@@ -666,7 +701,7 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       align-items: end;
       display: grid;
       gap: 12px;
-      grid-template-columns: minmax(180px, 340px) minmax(24px, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto;
       margin: 8px 0 12px;
       min-width: 0;
     }
@@ -676,7 +711,7 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
     }
 
     .schedule-config-row .schedule-block-actions {
-      grid-column: 3;
+      grid-column: 2;
     }
 
     .external-switchpoint-usage {
@@ -809,6 +844,17 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       display: contents;
     }
 
+    .climate-options-inline-summary.preset-link-summary { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; }
+    .climate-options-inline-summary.preset-link-summary::before { display: none; }
+    .preset-link-summary ha-icon { --mdc-icon-size: 14px; color: var(--primary-color); flex: 0 0 auto; }
+    .preset-link-summary strong { color: var(--primary-color); font-weight: 600; }
+    .preset-preview-retry { background: transparent; border: 0; color: var(--primary-color); cursor: pointer; font: inherit; padding: 2px 4px; text-decoration: underline; }
+    .velair-preset-settings { border-bottom: 1px solid var(--divider-color); display: grid; gap: 8px; grid-column: 1 / -1; padding-bottom: 12px; min-width: 0; }
+    .velair-preset-settings > label { display: grid; gap: 4px; }
+    .device-settings-fields { border: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); grid-column: 1 / -1; margin: 0; padding: 0; min-width: 0; }
+    .advanced-climate-options-fields .device-settings-fields > legend { background: transparent; margin: 0; padding: 0 0 8px; color: var(--primary-text-color); font-size: 12px; font-weight: 600; text-transform: none; }
+    .advanced-climate-options-fields > .block-command-preview { margin-top: 4px; }
+
     .draft-add-row {
       align-items: center;
       display: flex;
@@ -843,6 +889,7 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       background: var(--card-background-color);
       border: 1px solid var(--divider-color);
       border-radius: 6px;
+      box-sizing: border-box;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       height: 38px;
@@ -908,6 +955,7 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
     }
 
     .editable-block > label > .label,
+    .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label {
       display: none;
     }
@@ -980,14 +1028,17 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
 
     .target-action-toggle {
       align-items: center;
+      align-self: start;
       background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color));
       border: 1px solid var(--divider-color);
       border-end-end-radius: 6px;
       border-inline-start: 0;
       border-start-end-radius: 6px;
+      box-sizing: border-box;
       color: var(--primary-color);
       cursor: pointer;
       display: inline-flex;
+      height: 38px;
       justify-content: center;
       min-width: 0;
       padding: 0;

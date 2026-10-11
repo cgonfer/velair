@@ -17,6 +17,7 @@ describe("climate card ordered actions", () => {
       { type: "boost", enabled: false },
       { type: "pause", enabled: true },
       { type: "script", name: "Ventilate", script: "script.ventilate" },
+      { type: "planned-return", enabled: false },
     ]);
   });
 
@@ -35,13 +36,28 @@ describe("climate card ordered actions", () => {
       { type: "boost", enabled: true, hide_name: true },
       { type: "script", script: "script.safe_action", name: "safe action" },
       { type: "script", script: "script.long", name: longName.trim().slice(0, 60), icon: "mdi:fan", color: "#123456", confirmation: true, hide_name: true },
+      { type: "planned-return", enabled: false },
     ]);
     expect(climateCardConfiguredActions({ climate_custom_actions: null } as unknown)).toEqual([
       { type: "boost", enabled: true },
       { type: "pause", enabled: true },
+      { type: "planned-return", enabled: false },
     ]);
   });
 
+  it("appends a disabled household action without moving existing script indices", () => {
+    const config = { climate_actions: [{ type: "script" as const, name: "Scene", script: "script.scene" }] };
+    expect(climateCardConfiguredActions(config).map((action) => action.type)).toEqual(["script", "planned-return"]);
+    const eligible = climateCardEligibleActions(config, undefined, { manual: true, velairActionsAvailable: false, plannedReturnAvailable: true });
+    expect(eligible).toEqual([expect.objectContaining({ type: "script", sourceIndex: 0 })]);
+  });
+  it("supports household enable, hidden name and More placement independently of selected climate authority", () => {
+    const config = { climate_actions: [{ type: "planned-return" as const, hide_name: true, placement: "more" as const }, { type: "planned-return" as const }] };
+    const actions = climateCardEligibleActions(config, undefined, { manual: true, velairActionsAvailable: false, plannedReturnAvailable: true });
+    expect(actions).toEqual([{ type: "planned-return", hideName: true, placement: "more" }]);
+    expect(splitClimateCardActions(actions)).toEqual({ direct: [], overflow: actions });
+    expect(climateCardEligibleActions(config, undefined, { manual: false, velairActionsAvailable: true, plannedReturnAvailable: false })).toEqual([]);
+  });
   it("filters Velair actions before choosing three direct actions", () => {
     const config = { climate_actions: [
       { type: "boost" as const },
@@ -112,6 +128,7 @@ describe("climate card ordered actions", () => {
       { type: "pause", enabled: true },
       { type: "script", name: "One", script: "script.one", placement: "more" },
       { type: "script", name: "Two", script: "script.two" },
+      { type: "planned-return", enabled: false },
     ]);
   });
 });

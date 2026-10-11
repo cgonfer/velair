@@ -1,4 +1,6 @@
 import { html, nothing } from "lit";
+import { renderDocumentationHelp } from "./documentation-links";
+import { renderPlannedReturnDiagnostics, renderPlannedReturnUnitDiagnostics, plannedReturnOrigin, plannedReturnModeName } from "./planned-return-visibility";
 import { VelairApiClient } from "../api/client";
 import { orderedZoneIdsForHost } from "../controllers/card-context";
 import {
@@ -33,7 +35,7 @@ import type {
 import type { TranslationKey } from "../translations";
 
 const HISTORY_CATEGORIES: DiagnosticHistoryCategory[] = [
-  "control", "room_assist", "preconditioning", "comfort", "delivery", "availability",
+  "control", "room_assist", "preconditioning", "planned_return", "comfort", "delivery", "availability",
 ];
 
 type DetailRow = {
@@ -44,7 +46,15 @@ type DetailRow = {
 
 export function renderDiagnosticsView(host: VelairViewHost) {
   const diagnostics = host._data?.diagnostics;
-  if (!diagnostics) return html`<p class="empty">${host._t("diagnosticsUnavailable")}</p>`;
+  if (!diagnostics) return html`<section class="diagnostics-view">
+    <header class="diagnostics-intro">
+      <ha-icon icon="mdi:stethoscope"></ha-icon>
+      <span><strong>${host._t("diagnostics")}</strong><small>${host._t("diagnosticsDescription")}</small></span>
+      ${renderDocumentationHelp(host, "diagnostics")}
+    </header>
+    <p class="empty">${host._t("diagnosticsUnavailable")}</p>
+
+  </section>`;
   const counts = diagnostics.overall.unit_counts;
   const units = orderedUnits(host, diagnostics);
   const selectedId = selectedUnitId(host, units);
@@ -53,7 +63,9 @@ export function renderDiagnosticsView(host: VelairViewHost) {
     <header class="diagnostics-intro">
       <ha-icon icon="mdi:stethoscope"></ha-icon>
       <span><strong>${host._t("diagnostics")}</strong><small>${host._t("diagnosticsDescription")}</small></span>
+      ${renderDocumentationHelp(host, "diagnostics")}
     </header>
+
     <section class=${`diagnostics-export-section${host._diagnosticsExportOpen ? " open" : ""}`}>
       <button class="diagnostics-download" type="button"
         title=${host._t("diagnosticsDownloadActionDescription")}
@@ -94,6 +106,7 @@ export function renderDiagnosticsView(host: VelairViewHost) {
       </div>
     </section>
     ${diagnostics.overall.issues.length ? html`<div class="diagnostics-issues">${diagnostics.overall.issues.map((issue) => renderIssue(host, issue))}</div>` : nothing}
+    ${renderPlannedReturnDiagnostics(host)}
     <div class="diagnostics-master-detail">
       <nav class="diagnostics-unit-list" aria-label=${host._t("diagnosticsUnits")}>
         ${units.map(([entityId, unit]) => html`<button
@@ -181,6 +194,7 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
     </header>
     ${unit.issues.length ? html`<div class="diagnostics-issues">${unit.issues.map((issue) => renderIssue(host, issue))}</div>` : nothing}
     <div class="diagnostics-groups">
+      ${renderPlannedReturnUnitDiagnostics(host, entityId)}
       ${renderGroup(host, "diagnosticsStatusDelivery", "mdi:send-check-outline", statusRows)}
       ${renderGroup(host, "diagnosticsActiveConfiguration", "mdi:tune-variant", setupRows)}
       ${renderFunctions(host, entityId, unit, preconditioning, comfortConfiguration)}
@@ -297,7 +311,7 @@ function renderHistoryPolicy(host: VelairViewHost, diagnostics: DiagnosticsSnaps
       @click=${() => clearHistory(host)}><ha-icon icon="mdi:delete-outline"></ha-icon>
       <span>${host._t("diagnosticsClearHistory")}</span></button></header>
     <div class="diagnostics-category-grid">${HISTORY_CATEGORIES.map((category) => html`<label><input type="checkbox"
-      .checked=${diagnostics.history_policy.categories[category]} ?disabled=${host._diagnosticsHistorySaving}
+      .checked=${Boolean(diagnostics.history_policy.categories[category])} ?disabled=${host._diagnosticsHistorySaving}
       @change=${(event: Event) => updateHistoryCategory(host, diagnostics, category, (event.currentTarget as HTMLInputElement).checked)} />
       <span><strong>${host._t(categoryLabel(category))}</strong><small>${host._t(categoryDescription(category))}</small></span>
     </label>`)}</div>
@@ -311,6 +325,7 @@ function renderIssue(host: VelairViewHost, issue: DiagnosticIssue) {
 function issueText(host: VelairViewHost, code: string): string {
   const keys: Record<string, TranslationKey> = {
     entity_missing: "entityDiagnosticMissing", entity_unavailable: "diagnosticsEntityUnavailable",
+    planned_return_error: "plannedReturnEventError",
     entity_unknown: "diagnosticsEntityUnknown", hvac_modes_not_reported: "entityDiagnosticNoModes",
     temperature_range_not_reported: "entityDiagnosticNoRange", temperature_migration_required: "temperatureMigrationRequired",
     operation_recovery_required: "operationRecoveryRequired", delivery_failed: "diagnosticsDeliveryFailed",
@@ -602,6 +617,14 @@ function keyboardLogResize(host: VelairViewHost, column: DiagnosticsLogColumn, e
 
 function historyDescription(host: VelairViewHost, item: DiagnosticHistoryItem): string {
   const data = item.data;
+  if (item.category === "planned_return") {
+    return [plannedReturnOrigin(host, data.origin), plannedReturnModeName(host, typeof data.mode_id === "string" ? data.mode_id : undefined),
+      typeof data.away_mode_id === "string" ? `${host._t("plannedReturnAway")}: ${plannedReturnModeName(host, data.away_mode_id)}` : undefined,
+      typeof data.destination_mode_id === "string" ? `${host._t("plannedReturnDestination")}: ${plannedReturnModeName(host, data.destination_mode_id)}` : undefined,
+      typeof data.return_at === "string" ? host._formatDateTime(data.return_at) : undefined,
+      typeof data.absence_confirm_at === "string" ? host._formatDateTime(data.absence_confirm_at) : undefined,
+      data.error ? host._t("plannedReturnEventError") : undefined].filter(Boolean).join(" · ");
+  }
   if (item.category === "room_assist") {
     return [
       data.direction ? host._modeLabel(String(data.direction)) : undefined,
@@ -1004,6 +1027,16 @@ function sensorPurposeIcon(purpose: string): string {
 }
 
 function historyEventLabel(host: VelairViewHost, item: DiagnosticHistoryItem): string {
+  if (item.category === "planned_return") {
+    const labels: Record<string, TranslationKey> = {
+      registered: "plannedReturnEventRegistered", confirmation_started: "plannedReturnEventConfirmationStarted",
+      confirmation_reset: "plannedReturnEventConfirmationReset", departed: "plannedReturnEventDeparted",
+      arrival_changed: "plannedReturnEventArrivalChanged", preparation_started: "plannedReturnEventPreparationStarted",
+      fulfilled: "plannedReturnEventFulfilled", cancelled: "plannedReturnEventCancelled",
+      skipped: "plannedReturnEventSkipped", error: "plannedReturnEventError",
+    };
+    return host._t(labels[String(item.data.transition)] ?? "diagnosticsHistoryCategoryPlannedReturn");
+  }
   if (item.category === "delivery") {
     return deliveryStatusLabel(host, item.data.status) ?? host._t(categoryLabel(item.category));
   }
