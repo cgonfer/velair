@@ -24,6 +24,18 @@
       "minimum_home_assistant": "2024.6.0",
       "source_url": "https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/window_pause.yaml",
       "changelog": "changelogs/window_pause.md"
+    },
+    {
+      "id": "seasonal_climate_selection",
+      "name": "Velair - Seasonal climate selection",
+      "domain": "automation",
+      "file": "automation/velair/seasonal_climate_selection.yaml",
+      "version": "1.0.0",
+      "released_with_velair": "1.9.0-beta.1",
+      "minimum_velair": null,
+      "minimum_home_assistant": "2024.6.0",
+      "source_url": "https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/seasonal_climate_selection.yaml",
+      "changelog": "changelogs/seasonal_climate_selection.md"
     }
   ]
 }

@@ -88,7 +88,6 @@
           "already_comfortable": "Bereits komfortabel"
         }
       },
-
       "zone_air_quality": {
         "name": "Luftqualität in {zone}",
         "state": {
@@ -154,6 +153,133 @@
     "switch": {
       "automatic_scheduling": {
         "name": "Automatische Zeitplanung"
+      }
+    }
+  },
+  "services": {
+    "start_planned_return": {
+      "name": "I'm leaving",
+      "description": "Plant eine einmalige Rückkehr für ein zukünftiges Datum und eine Uhrzeit mit gespeicherten Modi und automatischer Planung. Mit konfigurierten Belegungsquellen wird Abwesenheit vor dem Abwesenheitsmodus bestätigt; ohne Quellen wird er sofort aktiviert. Funktioniert ohne Wochenroutine und aktualisiert eine aktive Abwesenheit.",
+      "fields": {
+        "return_date": {
+          "name": "Return date",
+          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+        },
+        "return_time": {
+          "name": "Return time",
+          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+        }
+      }
+    },
+    "cancel_planned_return": {
+      "name": "Geplante R\u00fcckkehr abbrechen",
+      "description": "Bricht eine ausstehende oder aktive R\u00fcckkehr ab oder schlie\u00dft einen Hinweis zu einer inaktiven R\u00fcckkehr. Der aktuelle Modus bleibt unver\u00e4ndert und die automatische R\u00fcckkehr wird f\u00fcr diese Abwesenheit gestoppt. Danach kannst du ausdr\u00fccklich eine neue R\u00fcckkehr planen."
+    },
+    "update_block_preset": {
+      "name": "Velair-Preset aktualisieren",
+      "description": "Ein gemeinsames Preset dauerhaft aktualisieren und seine Zeitpläne abgleichen. Ausgelassene Werte bleiben bei update erhalten.",
+      "fields": {
+        "preset_key": {
+          "name": "Velair-Preset-ID",
+          "description": "Stabile ID aus dem Preset-Editor. Änderungen gelten für alle Verknüpfungen."
+        },
+        "temperature": {
+          "name": "Zieltemperatur",
+          "description": "Einzelziel in der Temperatureinheit von Velair. Auslassen, um es beizubehalten."
+        },
+        "target_temp_low": {
+          "name": "Untere Zieltemperatur",
+          "description": "Beide Bereichsgrenzen senden. Ein Bereich ersetzt das Einzelziel."
+        },
+        "target_temp_high": {
+          "name": "Obere Zieltemperatur",
+          "description": "Beide Bereichsgrenzen senden. Ein Bereich ersetzt das Einzelziel."
+        },
+        "hvac_mode": {
+          "name": "HVAC-Modus",
+          "description": "Auslassen, um den Modus beizubehalten. Zum Ausschalten replace mit turn_off verwenden."
+        },
+        "fan_mode": {
+          "name": "Lüftermodus"
+        },
+        "preset_mode": {
+          "name": "Geräte-Preset",
+          "description": "Preset-Modus des Geräts, unabhängig vom gemeinsamen Velair-Preset."
+        },
+        "swing_mode": {
+          "name": "Schwenkmodus"
+        },
+        "swing_horizontal_mode": {
+          "name": "Horizontaler Schwenkmodus"
+        },
+        "humidity": {
+          "name": "Zielluftfeuchtigkeit"
+        },
+        "operation": {
+          "name": "Vorgang",
+          "description": "update behält ausgelassene Felder und die Aktion bei. replace entfernt ausgelassene Felder und erfordert action."
+        },
+        "action": {
+          "name": "Ersatzaktion",
+          "description": "Nur für replace. Die vollständige resultierende Aktion auswählen."
+        },
+        "clear_fields": {
+          "name": "Einstellungen entfernen",
+          "description": "Nur für update. Einstellungen entfernen, ohne das Gerät zurückzusetzen. Das Ergebnis muss gültig bleiben."
+        }
+      },
+      "sections": {
+        "temperature_range": {
+          "name": "Temperaturbereich"
+        },
+        "climate_settings": {
+          "name": "Modus und zusätzliche Einstellungen"
+        },
+        "advanced": {
+          "name": "Erweitert"
+        }
+      }
+    },
+    "copy_day_schedule": {
+      "name": "Tagesplan klonen",
+      "description": "Klont einen gespeicherten Wochentag auf Zieltage und verwaltete Thermostate und erhält Vorlagenverknüpfungen und Verweise auf Velair-Presets.",
+      "fields": {
+        "entity_id": {
+          "name": "Quellthermostat",
+          "description": "Verwaltetes Thermostat, dessen gespeicherter Tag geklont wird."
+        },
+        "source_weekday": {
+          "name": "Quellwochentag",
+          "description": "Zu klonender gespeicherter Tag einschließlich Vorlagenverknüpfung und Preset-Verweisen."
+        },
+        "target_weekdays": {
+          "name": "Zielwochentage",
+          "description": "Ersetzt diese gespeicherten Tage in jedem ausgewählten Zielthermostat. Andere Tage bleiben unverändert."
+        },
+        "target_entity_ids": {
+          "name": "Zielthermostate",
+          "description": "Leer lassen, um innerhalb des Quellthermostats zu klonen. Alle Ziele werden gemeinsam validiert und gespeichert."
+        },
+        "expected_revision": {
+          "name": "Konfigurationsrevision",
+          "description": "Optionale Prüfung auf gleichzeitige Änderungen. Leer lassen, um die zuletzt gespeicherte Quelle unter der Konfigurationssperre zu klonen."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset_update_operation": {
+      "options": {
+        "update": "Felder aktualisieren",
+        "replace": "Konfiguration ersetzen"
+      }
+    },
+    "preset_update_action": {
+      "options": {
+        "set_temperature": "Temperatur und Einstellungen",
+        "set_hvac_mode": "Nur Modus",
+        "set_climate_options": "Nur zusätzliche Einstellungen",
+        "turn_off": "Ausschalten"
       }
     }
   }

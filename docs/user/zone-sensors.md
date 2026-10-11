@@ -1,4 +1,9 @@
 # Zone Control And Delivery Sensors
+<!-- velair-docs:start -->
+Translations: [English original](zone-sensors.md) · [Español](zone-sensors.es.md) · [Français](zone-sensors.fr.md) · [Deutsch](zone-sensors.de.md) · [Italiano](zone-sensors.it.md) · [Nederlands](zone-sensors.nl.md) · [Polski](zone-sensors.pl.md) · [Português (Brasil)](zone-sensors.pt-br.md) · [Português (Portugal)](zone-sensors.pt-pt.md) · [Русский](zone-sensors.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair creates two context sensors for every managed `climate.*` entity:
 
@@ -53,7 +58,7 @@ about personal comfort.
 
 | Attribute | Meaning |
 | --- | --- |
-| `data_quality` | `complete`, `partial`, `stale`, or `unavailable` for the monitored indoor readings. |
+| `data_quality` | `complete`, `unverified`, `partial`, `stale`, or `unavailable` for the monitored indoor readings. `unverified` means the readings are usable, but at least one has no verifiable report timestamp. |
 | `data_issues` | Stable codes explaining missing, stale, or invalid indoor data. Omitted when empty. |
 | `range_summary` | Factual configured-range summary, including optional Humidex reconciliation. |
 | `ventilation_opportunity` | Current backend-owned ventilation state, scope, effects, blockers, and reason. |

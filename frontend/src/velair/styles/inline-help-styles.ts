@@ -33,24 +33,38 @@ export const inlineHelpStyles = css`
   outline-offset: 1px;
 }
 
+.inline-help-wrapper.inline-help-overlay-wrapper {
+  inset: 0;
+  position: absolute;
+}
+
+.inline-help.inline-help-overlay {
+  border-radius: var(--ha-card-border-radius, 6px);
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.inline-help.inline-help-overlay:focus-visible {
+  outline-offset: -2px;
+}
+
 .inline-help-tooltip {
-  background: var(--primary-text-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
+  background: Canvas;
+  border: 1px solid GrayText;
+  border-radius: 0;
   box-sizing: border-box;
-  color: var(--primary-background-color);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.35;
+  color: CanvasText;
+  font: 400 12px/1.2 system-ui, sans-serif;
   max-height: calc(100dvh - 24px);
   max-width: min(260px, calc(100dvw - 24px));
   opacity: 0;
   overflow-wrap: anywhere;
   overflow-y: auto;
-  padding: 7px 8px;
+  padding: 4px 7px;
   pointer-events: none;
   position: fixed;
-  transition: opacity 120ms ease, visibility 120ms ease;
   visibility: hidden;
   white-space: normal;
   width: max-content;
@@ -64,6 +78,7 @@ export const inlineHelpStyles = css`
 }
 
 .inline-help-tooltip.constrained {
+  --inline-help-max-width: 236px;
   max-width: min(236px, calc(100dvw - 24px));
   width: min(236px, calc(100dvw - 24px));
 }
@@ -77,11 +92,27 @@ export const inlineHelpStyles = css`
   display: block;
 }
 
+@media (prefers-color-scheme: dark) {
+  .inline-help-tooltip {
+    background: #252525;
+    border-color: #bfbfbf;
+    color: #fff;
+  }
+}
+
+@media (forced-colors: active) {
+  .inline-help-tooltip {
+    background: Canvas;
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+}
+
 @media (max-width: 480px) {
   .inline-help-wrapper { position: static; }
 
-  .inline-help-tooltip,
-  .inline-help-tooltip.constrained {
+  .inline-help-tooltip:not([data-open-cause="hover"]),
+  .inline-help-tooltip.constrained:not([data-open-cause="hover"]) {
     bottom: calc(var(--inline-help-mobile-bottom, 0px) + max(12px, env(safe-area-inset-bottom)));
     left: calc(var(--inline-help-mobile-left, 0px) + max(12px, env(safe-area-inset-left)));
     max-height: min(

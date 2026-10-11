@@ -1,3 +1,108 @@
+update_block_preset:
+  name: Update Velair preset
+  description: Persistently update an existing shared preset and reconcile its schedules. Omitted values are preserved in update mode.
+  fields:
+    preset_key:
+      name: Velair preset identifier
+      description: Stable identifier copied from the preset editor. Changes affect all references.
+      required: true
+      selector:
+        text:
+    temperature:
+      name: Target temperature
+      description: Single target in the Velair temperature unit. Omit to preserve it.
+      selector:
+        number:
+          mode: box
+    temperature_range:
+      name: Temperature range
+      collapsed: true
+      fields:
+        target_temp_low:
+          name: Lower target temperature
+          description: Send both range limits. A range replaces the single target.
+          selector:
+            number:
+              mode: box
+        target_temp_high:
+          name: Upper target temperature
+          description: Send both range limits. A range replaces the single target.
+          selector:
+            number:
+              mode: box
+    climate_settings:
+      name: Mode and additional settings
+      collapsed: true
+      fields:
+        hvac_mode:
+          name: HVAC mode
+          description: Omit to preserve the mode. For an Off-only action, use replace with action turn_off.
+          selector:
+            select:
+              options: ["off", heat, cool, heat_cool, auto, dry, fan_only]
+        fan_mode:
+          name: Fan mode
+          selector:
+            text:
+        preset_mode:
+          name: Device preset
+          description: Device preset mode, distinct from the shared Velair preset.
+          selector:
+            text:
+        swing_mode:
+          name: Swing mode
+          selector:
+            text:
+        swing_horizontal_mode:
+          name: Horizontal swing mode
+          selector:
+            text:
+        humidity:
+          name: Target humidity
+          selector:
+            number:
+              min: 0
+              max: 100
+              mode: box
+    advanced:
+      name: Advanced
+      collapsed: true
+      fields:
+        operation:
+          name: Operation
+          description: update preserves omitted fields and action. replace removes omitted fields and requires action.
+          default: update
+          selector:
+            select:
+              translation_key: preset_update_operation
+              options:
+                - value: update
+                  label: Update fields
+                - value: replace
+                  label: Replace configuration
+        action:
+          name: Replacement action
+          description: Only for replace. Select the complete resulting action.
+          selector:
+            select:
+              translation_key: preset_update_action
+              options:
+                - value: set_temperature
+                  label: Temperature and settings
+                - value: set_hvac_mode
+                  label: Mode only
+                - value: set_climate_options
+                  label: Additional settings only
+                - value: turn_off
+                  label: Turn off
+        clear_fields:
+          name: Remove settings
+          description: Only for update. Remove settings without resetting the device. The result must remain valid.
+          selector:
+            select:
+              multiple: true
+              options: [temperature, target_temp_low, target_temp_high, hvac_mode, fan_mode, preset_mode, swing_mode, swing_horizontal_mode, humidity]
+
 set_temperature:
   name: Set temperature
   description: Set a single target or a lower and upper target range for one climate entity through Home Assistant.
@@ -374,8 +479,8 @@ set_daily_schedule:
             - saturday
             - sunday
     blocks:
-      required: true
-      description: List of schedule blocks. Temperature blocks need start and temperature. Mode-only blocks need action set_hvac_mode and a non-off hvac_mode. Turn-off blocks need start and action turn_off.
+      required: false
+      description: Provide exactly one of blocks or template_link. Blocks use start and preset_key for a linked Velair preset, or inline settings. Temperature blocks need start and temperature. Mode-only blocks need action set_hvac_mode and a non-off hvac_mode. Turn-off blocks need start and action turn_off.
       example:
         - start: "06:00"
           action: set_temperature
@@ -395,21 +500,53 @@ set_daily_schedule:
           hvac_mode: cool
           fan_mode: low
           preset_mode: sleep
-          swing_mode: off
+          swing_mode: "off"
       selector:
         object:
+    template_link:
+      description: Link this day to a template. Use mode hours with template_key and bindings keyed by slot_id, or mode full with template_key and no bindings. Omitted mode means hours. Use instead of blocks.
+      selector:
+        object:
+    unlink_template:
+      description: Explicitly replace a template link with independent blocks.
+      selector:
+        boolean:
+    expected_revision:
+      description: Configuration revision returned by Velair, required when changing shared references.
+      selector:
+        number:
+          min: 0
+          mode: box
 
 copy_day_schedule:
-  name: Copy day schedule
-  description: Copy one weekday schedule to one or more target weekdays for one managed climate entity.
+  name: Clone day schedule
+  description: Clone a saved weekday to target days and managed climates, preserving template links and Velair preset references.
   fields:
+    target_entity_ids:
+      name: Target climates
+      description: Omit to clone within the source climate. All destinations are validated and saved together.
+      selector:
+        entity:
+          domain: climate
+          multiple: true
+    expected_revision:
+      name: Configuration revision
+      description: Optional optimistic concurrency check. Omit to clone the latest saved source under the configuration lock.
+      selector:
+        number:
+          min: 0
+          mode: box
     entity_id:
+      name: Source climate
+      description: Managed climate whose saved day will be cloned.
       required: true
       example: climate.living_room
       selector:
         entity:
           domain: climate
     source_weekday:
+      name: Source weekday
+      description: Saved day to clone, including its template link and preset references.
       required: true
       example: monday
       selector:
@@ -423,6 +560,8 @@ copy_day_schedule:
             - saturday
             - sunday
     target_weekdays:
+      name: Target weekdays
+      description: Replace these saved days in every selected target climate. Other days are unchanged.
       required: true
       example:
         - tuesday
@@ -523,6 +662,30 @@ resume_automatic_control:
       selector:
         entity:
           domain: climate
+
+start_planned_return:
+  name: I'm leaving
+  description: Plan a one-off return for a future date and time. With saved occupancy sources, Velair waits for confirmed household absence before activating Away; without sources, explicit start activates Away immediately. Works with the weekly routine disabled; requires saved setups and Automatic scheduling. Updates the arrival time if an absence is already active.
+  fields:
+    return_date:
+      name: Return date
+      description: Arrival date in Home Assistant's time zone. The date and time together must be in the future.
+      required: true
+      example: "2026-10-09"
+      selector:
+        date:
+    return_time:
+      name: Return time
+      description: Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent times during daylight saving changes are rejected.
+      required: true
+      example: "19:25"
+      selector:
+        time:
+
+cancel_planned_return:
+  name: Cancel planned return
+  description: Cancel a planned return or close an ended return notice. After confirmed departure, restores the Mode and Profiles selected before the episode started; during absence confirmation, leaves selection unchanged. Removes return preparation and prevents automatic rearming while away. An explicit new return can replace the ended episode.
+  fields: {}
 
 enter_manual_adjustment:
   name: Enter Manual adjustment

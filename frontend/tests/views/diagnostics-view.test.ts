@@ -24,6 +24,7 @@ const categories = {
   comfort: true,
   delivery: true,
   availability: true,
+  planned_return: true,
 };
 
 function unit(status: UnitDiagnostics["status"]): UnitDiagnostics {
@@ -75,6 +76,33 @@ function host(snapshot = diagnostics()): VelairViewHost {
 }
 
 describe("diagnostics view", () => {
+  it("renders localized Planned Return transitions and their actual mode fields", () => {
+    const snapshot = diagnostics();
+    snapshot.history = ["registered", "confirmation_started", "confirmation_reset", "departed", "arrival_changed", "preparation_started", "fulfilled", "cancelled", "skipped", "error"].map(transition => ({
+      at: "2026-10-10T12:00:00Z", kind: "planned_return_changed", category: "planned_return", severity: "info",
+      data: { event: "planned_return_changed", transition, origin: "manual", away_mode_id: "away", destination_mode_id: "return" },
+    }));
+    const current = host(snapshot);
+    current._data!.modes = [{ key: "away", name: "Holidays", profile_ids: [] }, { key: "return", name: "Welcome", profile_ids: [] }];
+    const container = document.createElement("div"); render(renderDiagnosticsView(current), container);
+    expect(container.textContent).toContain("plannedReturnEventRegistered");
+    expect(container.textContent).toContain("plannedReturnEventConfirmationReset");
+    expect(container.textContent).toContain("plannedReturnEventPreparationStarted");
+    expect(container.textContent).toContain("Holidays"); expect(container.textContent).toContain("Welcome");
+    expect(container.querySelector('option[value="planned_return"]')).not.toBeNull();
+  });
+
+  it("filters Planned Return independently from thermal learning events", () => {
+    const snapshot = diagnostics();
+    snapshot.history = [{ at: "2026-10-10T12:00:00Z", kind: "planned_return_changed", category: "planned_return", severity: "info", data: { transition: "departed" } },
+      { at: "2026-10-10T12:00:00Z", kind: "preconditioning_plan_updated", category: "preconditioning", severity: "info", data: { event: "preconditioning_plan_updated" } }];
+    const current = host(snapshot);
+    current._diagnosticsHistoryFilters = { sources: null, category: "planned_return", from: "", to: "" };
+    const container = document.createElement("div"); render(renderDiagnosticsView(current), container);
+    expect(container.textContent).toContain("plannedReturnEventDeparted");
+    expect(container.textContent).not.toContain("diagnosticsEventPreconditioningPlanUpdated");
+  });
+
   it("uses a horizontal climate strip above one detail panel", () => {
     expect(diagnosticsStyles.cssText).toContain(".diagnostics-unit-list { display: flex; gap: 8px");
     expect(diagnosticsStyles.cssText).toContain("overflow-x: auto; padding: 2px 0 4px");
@@ -263,7 +291,7 @@ describe("diagnostics view", () => {
     expect(container.querySelector(".diagnostics-download small")?.textContent)
       .toContain("diagnosticsDownloadActionDescription");
     expect(container.querySelector("#diagnostics-export-options")).toBeNull();
-    expect(container.querySelectorAll(".diagnostics-category-grid label")).toHaveLength(6);
+    expect(container.querySelectorAll(".diagnostics-category-grid label")).toHaveLength(7);
     expect(container.querySelector(".diagnostics-clear-history ha-icon")?.getAttribute("icon"))
       .toBe("mdi:delete-outline");
   });

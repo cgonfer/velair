@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -11,6 +12,7 @@ from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util import dt as dt_util
 
 from .const import (
     ACTION_OPTIONS,
@@ -55,14 +57,45 @@ from .const import (
     SERVICE_SET_DAILY_SCHEDULE,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
+    SERVICE_UPDATE_BLOCK_PRESET,
     SERVICE_SET_EXTERNAL_CHANGE_POLICY,
     SERVICE_ENTER_MANUAL_ADJUSTMENT,
     SERVICE_RESUME_AUTOMATIC_CONTROL,
+    SERVICE_START_PLANNED_RETURN,
+    SERVICE_CANCEL_PLANNED_RETURN,
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_OPTIONS,
     EXTERNAL_CHANGE_POLICY_OPTIONS,
 )
 from .models import WEEKDAYS, normalize_schedule_blocks, validate_pause_id
+from .schedule_resources import ConfigurationResourceError, PRESET_CONFIG_FIELDS, validate_preset_update_request
+
+
+def _validate_block_preset_update(data):
+    """Validate the flat service request, leaving omission meaningful."""
+    try:
+        if not isinstance(data.get("preset_key"), str) or not data["preset_key"].strip():
+            raise ValueError("preset_key is required")
+        operation = data.get("operation", "update")
+        if operation == "replace" and "clear_fields" in data:
+            raise ValueError("clear_fields is only supported by update")
+        validate_preset_update_request(operation, {
+            key: value for key, value in data.items() if key in PRESET_CONFIG_FIELDS or key == "action"
+        }, data.get("clear_fields", []))
+    except (ValueError, TypeError) as err:
+        raise vol.Invalid(str(err)) from err
+    return data
+
+
+UPDATE_BLOCK_PRESET_SCHEMA = vol.All(
+    vol.Schema({
+        vol.Required("preset_key"): cv.string,
+        vol.Optional("operation", default="update"): vol.In(("update", "replace")),
+        vol.Optional("clear_fields"): [cv.string],
+        **{vol.Optional(field): lambda value: value for field in PRESET_CONFIG_FIELDS | {"action"}},
+    }, extra=vol.PREVENT_EXTRA),
+    _validate_block_preset_update,
+)
 
 
 def _validate_pause_id(value: str) -> str:
@@ -98,7 +131,7 @@ def _validate_temperature_target_data(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-SCHEDULE_BLOCK_SCHEMA = vol.Schema(
+INLINE_SCHEDULE_BLOCK_SCHEMA = vol.Schema(
     {
         vol.Required("start"): cv.string,
         vol.Optional(ATTR_ACTION, default=ACTION_SET_TEMPERATURE): vol.In(ACTION_OPTIONS),
@@ -113,6 +146,24 @@ SCHEDULE_BLOCK_SCHEMA = vol.Schema(
         vol.Optional(ATTR_HUMIDITY): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
     }
 )
+
+def _exclusive_preset_reference(block):
+    if "preset_key" in block and set(block) != {"start", "preset_key"}:
+        raise vol.Invalid("Preset references cannot contain inline settings")
+    return block
+
+
+SCHEDULE_BLOCK_SCHEMA = vol.All(_exclusive_preset_reference, vol.Any(
+    vol.Schema({vol.Required("start"): cv.string, vol.Required("preset_key"): cv.string}),
+    INLINE_SCHEDULE_BLOCK_SCHEMA,
+))
+
+
+def _daily_schedule_choice(data):
+    if (ATTR_BLOCKS in data) == ("template_link" in data):
+        raise vol.Invalid("Provide exactly one of blocks or template_link")
+    return data
+
 
 SET_TEMPERATURE_SCHEMA = vol.All(
     vol.Schema(
@@ -199,18 +250,23 @@ RESUME_ZONE_SCHEMA = vol.All(
     _validate_resume_zone_data,
 )
 
-SET_DAILY_SCHEDULE_SCHEMA = vol.Schema(
+SET_DAILY_SCHEDULE_SCHEMA = vol.All(vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_WEEKDAY): vol.In(WEEKDAYS),
-        vol.Required(ATTR_BLOCKS): vol.All(cv.ensure_list, [SCHEDULE_BLOCK_SCHEMA]),
+        vol.Optional(ATTR_BLOCKS): vol.All(cv.ensure_list, [SCHEDULE_BLOCK_SCHEMA]),
+        vol.Optional("template_link"): dict,
+        vol.Optional("unlink_template"): bool,
+        vol.Optional("expected_revision"): int,
     }
-)
+), _daily_schedule_choice)
 
 COPY_DAY_SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_SOURCE_WEEKDAY): vol.In(WEEKDAYS),
+        vol.Optional("target_entity_ids"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+        vol.Optional("expected_revision"): vol.All(vol.Coerce(int), vol.Range(min=0)),
         vol.Required(ATTR_TARGET_WEEKDAYS): vol.All(
             cv.ensure_list,
             [vol.In(WEEKDAYS)],
@@ -258,10 +314,84 @@ ENTER_MANUAL_ADJUSTMENT_SCHEMA = vol.Schema(
 )
 
 
+def _validate_return_time(value: str) -> str:
+    """Keep automation inputs at the panel's minute resolution."""
+    if not isinstance(value, str) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d(?::00)?", value):
+        raise vol.Invalid("return_time must use 24-hour HH:MM format (optional seconds must be 00)")
+    return value[:5]
+
+
+def _validate_start_return_data(data: dict[str, Any]) -> dict[str, Any]:
+    value = data.get("return_date")
+    try:
+        if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError
+        return_date = date.fromisoformat(value)
+    except ValueError as err:
+        raise vol.Invalid("return_date must be a valid YYYY-MM-DD date") from err
+    return {"return_date": return_date.isoformat(), "return_time": _validate_return_time(data.get("return_time"))}
+
+
+START_PLANNED_RETURN_SCHEMA = vol.All(
+    vol.Schema({vol.Required("return_date"): cv.string, vol.Required("return_time"): cv.string}, extra=vol.PREVENT_EXTRA),
+    _validate_start_return_data,
+)
+CANCEL_PLANNED_RETURN_SCHEMA = vol.Schema({}, extra=vol.PREVENT_EXTRA)
+
+
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Register integration services."""
     if hass.services.has_service(DOMAIN, SERVICE_SET_TEMPERATURE):
         return
+
+    async def async_start_planned_return(call: ServiceCall) -> None:
+        # Reuse the scheduler's DST occurrence resolver; explicit nonexistent
+        # wall times must be rejected rather than shifted like schedule blocks.
+        from .scheduler import _local_schedule_occurrences
+
+        scheduler = _get_scheduler(hass)
+        hour, minute = map(int, call.data["return_time"].split(":"))
+        now = dt_util.now()
+        requested_date = date.fromisoformat(call.data["return_date"])
+        requested = time(hour, minute)
+        arrival = next((candidate for candidate in _local_schedule_occurrences(
+            requested_date, requested, dt_util.as_local(now).tzinfo,
+        ) if candidate.date() == requested_date and candidate.time() == requested
+            and dt_util.as_utc(candidate) > dt_util.as_utc(now)), None)
+        if arrival is None:
+            raise HomeAssistantError("Return date and time must be valid and in the future in the Home Assistant time zone")
+        try:
+            await scheduler.async_start_planned_return(dt_util.as_utc(arrival).isoformat())
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_cancel_planned_return(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass, allow_migration_blocked=True)
+        try:
+            await scheduler.async_cancel_planned_return()
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_update_block_preset(call: ServiceCall) -> None:
+        scheduler = _get_scheduler(hass)
+        try:
+            await scheduler.async_update_block_preset(
+                call.data["preset_key"],
+                {key: value for key, value in call.data.items() if key in PRESET_CONFIG_FIELDS or key == "action"},
+                operation=call.data.get("operation", "update"),
+                clear_fields=call.data.get("clear_fields", []),
+            )
+        except ConfigurationResourceError as err:
+            affected = [
+                f"{'Default' if usage.get('source') == 'default' else 'Profile ' + str(usage.get('profile_key', '?'))}: {usage.get('entity_id', '?')}"
+                for usage in err.usages
+            ]
+            message = str(err)
+            if affected:
+                message += "; affected destinations: " + "; ".join(affected)
+            raise HomeAssistantError(message) from err
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
 
     async def async_set_temperature(call: ServiceCall) -> None:
         scheduler = _get_scheduler(hass)
@@ -415,11 +545,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         entity_id = call.data[ATTR_ENTITY_ID]
         _ensure_managed_entity(scheduler, entity_id)
         try:
-            blocks = normalize_schedule_blocks(call.data[ATTR_BLOCKS])
+            _daily_schedule_choice(call.data)
+            blocks = normalize_schedule_blocks(call.data[ATTR_BLOCKS]) if ATTR_BLOCKS in call.data else None
             await scheduler.async_set_daily_schedule(
                 entity_id,
                 call.data[ATTR_WEEKDAY],
                 blocks,
+                **{key: call.data[key] for key in ("template_link", "unlink_template", "expected_revision") if key in call.data},
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
@@ -433,6 +565,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 entity_id,
                 call.data[ATTR_SOURCE_WEEKDAY],
                 call.data[ATTR_TARGET_WEEKDAYS],
+                target_entity_ids=call.data.get("target_entity_ids"),
+                expected_revision=call.data.get("expected_revision"),
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
@@ -497,6 +631,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
 
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_UPDATE_BLOCK_PRESET,
+        async_update_block_preset,
+        schema=UPDATE_BLOCK_PRESET_SCHEMA,
+    )
     hass.services.async_register(
         DOMAIN,
         SERVICE_SET_TEMPERATURE,
@@ -611,9 +751,20 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
 
 
+    hass.services.async_register(
+        DOMAIN, SERVICE_START_PLANNED_RETURN, async_start_planned_return,
+        schema=START_PLANNED_RETURN_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_CANCEL_PLANNED_RETURN, async_cancel_planned_return,
+        schema=CANCEL_PLANNED_RETURN_SCHEMA,
+    )
+
+
 async def async_unload_services(hass: HomeAssistant) -> None:
     """Remove integration services."""
     for service in (
+        SERVICE_UPDATE_BLOCK_PRESET,
         SERVICE_SET_TEMPERATURE,
         SERVICE_SET_HVAC_MODE,
         SERVICE_APPLY_SCHEDULE,
@@ -633,11 +784,13 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_SET_EXTERNAL_CHANGE_POLICY,
         SERVICE_ENTER_MANUAL_ADJUSTMENT,
         SERVICE_RESUME_AUTOMATIC_CONTROL,
+        SERVICE_START_PLANNED_RETURN,
+        SERVICE_CANCEL_PLANNED_RETURN,
     ):
         hass.services.async_remove(DOMAIN, service)
 
 
-def _get_scheduler(hass: HomeAssistant) -> Any:
+def _get_scheduler(hass: HomeAssistant, *, allow_migration_blocked: bool = False) -> Any:
     """Return the active scheduler instance."""
     entries = hass.data.get(DOMAIN, {})
     if not entries:
@@ -650,7 +803,9 @@ def _get_scheduler(hass: HomeAssistant) -> Any:
         or runtime.get("operation_active")
         or runtime.get("operation_recovery")
     ))
-    if getattr(scheduler, "temperature_migration_blocked", False):
+    if getattr(scheduler, "temperature_migration_blocked", False) and (
+        not allow_migration_blocked or runtime.get("operation_active") or runtime.get("operation_recovery")
+    ):
         raise HomeAssistantError(
             "Velair is stopped until the temperature-data migration is resolved"
         )

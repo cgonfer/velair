@@ -1072,9 +1072,48 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         self.assertEqual("automatic", item["data"]["control_mode"])
         self.assertEqual("manual", item["data"]["previous_control_mode"])
 
+    def test_planned_return_snapshot_error_policy_and_report_redaction(self) -> None:
+        self.runtime['scheduler'].get_planned_return_status = lambda: {
+            'state': 'error', 'error': 'Unknown return mode: private_holiday',
+            'away_mode_id': 'private_holiday', 'destination_mode_id': 'private_home',
+            'origin': 'manual', 'episode_active': True, 'can_start': True,
+        }
+        self.runtime['storage'].data['planned_return'] = {'enabled': False}
+        snapshot = self.manager.snapshot(self.runtime)
+        self.assertEqual(snapshot['overall']['status'], 'error')
+        self.assertIn({'severity': 'error', 'code': 'planned_return_error'}, snapshot['overall']['issues'])
+        self.assertFalse(snapshot['planned_return']['weekly_enabled'])
+        self.assertEqual(snapshot['planned_return']['away_mode_id'], 'private_holiday')
+        for redact in (True, False):
+            report = self.manager.export_snapshot(self.runtime, redact_entity_ids=redact)['diagnostics']
+            self.assertEqual(report['planned_return']['away_mode_id'], 'REDACTED')
+            self.assertEqual(report['planned_return']['destination_mode_id'], 'REDACTED')
+            self.assertEqual(report['planned_return']['error'], 'REDACTED')
+            self.assertNotIn('private_holiday', repr(report))
+
+    def test_planned_return_history_safe_fields_bounded_and_disabled(self) -> None:
+        self.manager._history_categories['planned_return'] = False
+        event = SimpleNamespace(data={'domain': 'velair', 'event': 'planned_return_changed',
+            'transition': 'error', 'reason': 'transition_failed', 'error': 'private detail',
+            'unsafe': 'private', 'away_mode_id': 'holiday'}, time_fired=None)
+        self.manager._handle_event(event)
+        self.assertEqual(len(self.manager._history), 0)
+        self.manager._history_categories['planned_return'] = True
+        for _ in range(110):
+            self.manager._handle_event(event)
+        self.assertEqual(len(self.manager._history), 100)
+        item = self.manager._history[-1]
+        self.assertEqual(item['category'], 'planned_return')
+        self.assertEqual(item['severity'], 'error')
+        self.assertNotIn('error', item['data'])
+        self.assertNotIn('unsafe', item['data'])
+        self.assertEqual(diagnostics_module._replace_entity_ids(item, {})['data']['away_mode_id'], 'REDACTED')
+        self.assertEqual(len(diagnostics_module.RuntimeDiagnosticsManager(self.hass, [])._history), 0)
+
     def test_all_history_categories_keep_useful_safe_evidence(self) -> None:
         events = (
             ("future_control_event", {"temperature": 20, "unsafe": "secret"}),
+            ("planned_return_changed", {"transition": "departed", "origin": "manual", "away_mode_id": "holiday", "unsafe": "secret"}),
             (
                 "room_sensor_assist_updated",
                 {

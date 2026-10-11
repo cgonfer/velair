@@ -22,7 +22,7 @@ type SchedulerControlsHost = {
   requestUpdate(): void;
   _api(): VelairApiClient | undefined;
   _closeSchedulerMenu(): void;
-  _loadSchedule(): Promise<void>;
+  _loadSchedule(invalidate?: boolean): Promise<void>;
   _nextCountdownExpirationMs(): number | undefined;
   _showSuccess(message: string): void;
   _stopPauseTick(): void;
@@ -61,7 +61,7 @@ export async function pauseScheduler(
     if (options.showSuccess !== false) {
       host._showSuccess(host._t("pauseApplied"));
     }
-    await host._loadSchedule();
+    await host._loadSchedule(true);
     host._closeSchedulerMenu();
   } catch (error) {
     host._error = error instanceof Error ? error.message : host._t("unablePause");
@@ -87,7 +87,7 @@ export async function resumeScheduler(
     if (options.showSuccess !== false) {
       host._showSuccess(host._t("resumed"));
     }
-    await host._loadSchedule();
+    await host._loadSchedule(true);
     host._closeSchedulerMenu();
   } catch (error) {
     host._error = error instanceof Error ? error.message : host._t("unableResume");

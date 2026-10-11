@@ -41,6 +41,30 @@ custom_components/velair/
 
 ## Data Model
 
+Planned Return adds backend-owned `planned_return` configuration and a persisted
+`planned_return_episode`. `planned_return.py` owns combined-occupancy
+listeners, absence confirmation and arrival timers. It resolves arrival targets
+through the existing effective weekly schedule, predictor and serialized delivery
+authority. Temporary preparation participates in Room Assist without changing
+weekly blocks. Completed/cancelled episodes remain latched until occupied.
+Automatic Mode transitions preserve explicit overrides; manual selections cancel
+pending or active episodes. Fresh episodes persist the previous selected Mode
+and ordered Profile IDs: one-off returns record them at manual registration,
+weekly returns immediately before confirmed departure applies Away. Explicit
+episode cancellation restores that selection
+only after confirmed departure; pending confirmation and terminal acknowledgement
+do not change selection. Restoration and withdrawal commit atomically. Selection
+restoration preserves explicit overrides and does not restore historical device
+states. Legacy episodes without metadata and invalid saved Profiles cannot invent
+a replacement selection. See the
+[cancellation examples](../user/planned-return.md#cancelling-a-return-examples). Sources use a fixed any-home/all-away/otherwise-unknown
+rule; the home zone consumes Home Assistant's existing person count. A persisted
+manual `armed` episode waits for confirmed departure and expires at its deadline
+without Mode changes if departure was not confirmed. Manual episodes are independent
+of automatic enable state; one-off times override only their absence. Terminal
+episodes remain latched until known occupancy, including when automation is disabled.
+See [Planned Return](../user/planned-return.md).
+
 The storage model is intentionally simple and versioned:
 
 ```json
@@ -334,6 +358,37 @@ Timer callback
 
 Before an early start begins, relevant climate temperature changes are debounced and may recalculate the next action. During an active learning session, emitted temperature changes can complete the observation as soon as the target threshold is reached. Velair uses Home Assistant state listeners and timers rather than continuous polling.
 
+The scheduler distinguishes three views of the same effective schedule:
+
+- The visible next-event projection keeps one event per zone for panel and
+  prediction output. An applied early-start target can remain visible until its
+  comfort time; this projection is not the complete timer queue.
+- Action deadlines include pending weekly starts and nominal block boundaries
+  across all eligible zones, together with temporary-state and learning
+  expirations. Each applied early start is represented by its remaining comfort
+  boundary before choosing the earliest deadline. One zone's visible plan cannot
+  hide another zone's transition.
+- Current authorized intent is resolved at delivery time, using current schedules,
+  time and runtime gates. The climate delivery coordinator remains the single
+  serialized delivery boundary.
+
+A weekly predicted early-start window must start strictly after the preceding
+nominal effective block for that zone, including `Off`; a crossing prediction
+falls back to its nominal comfort time. Predecessor lookup includes overnight and
+weekly wraparound. Heating, cooling and native ranges use the same boundary rule.
+This restriction belongs to weekly scheduling, not the raw thermal predictor or
+Planned Return's destination-arrival calculation. The `until_next_block` manual
+policy also uses nominal effective block times, including `Off`, independently
+of the visible preconditioning projection.
+
+Serialized timer processing retains a runtime transition cursor. If a callback
+or climate delivery spans further transitions, the scheduler identifies affected
+zones and re-resolves their current authorized intent before sending an action.
+It does not replay each obsolete intermediate command. Pauses, boosts, manual
+control, disabled zones and externally executed schedules retain their normal
+authority. This cursor does not add storage or continuous polling, and startup
+continues to respect the configured active-schedule application option.
+
 Velair stores temporary modes as timestamps:
 
 - Global pause suspends every schedule until it expires or the scheduler is resumed.
@@ -391,6 +446,21 @@ The frontend communicates with the backend through `api.py` WebSocket commands. 
 - reset behavior.
 
 The frontend should never persist Velair configuration to `localStorage`.
+
+### Panel route ownership
+
+The sidebar panel owns URL and browser-history synchronization. Routes identify
+a panel tab and, for Schedules and Templates, a library subsection. The panel
+passes the subsection to its child card and receives accepted subsection changes
+through an event; child components do not register global history listeners.
+Route parsing and canonical path generation are pure frontend helpers.
+
+Navigation follows Home Assistant's history semantics, respects existing draft
+discard confirmations, and keeps the child card mounted for changes within the
+same tab. URL state contains no saved configuration or editor drafts and triggers
+no climate actions. Lovelace cards retain their dashboard's routing ownership.
+See the [Usage Guide](../user/usage.md#panel-navigation-and-direct-links) for the
+public paths and aliases.
 
 ## Frontend Modules
 
@@ -478,7 +548,7 @@ value is device-local runtime context.
 
 Persisted thermal values use the raw runtime unit recorded in storage metadata.
 Load, save, and Home Assistant unit-change events never convert them. Current
-portable model v12 preserves those raw values and declares the stored unit.
+portable model v16 preserves those raw values and declares the stored unit.
 Imports convert selected thermal sections when the source and current Home
 Assistant units differ. Model v2 and unitless v1 exports are treated as Celsius
 for backward compatibility.
@@ -504,12 +574,13 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 12,
+  "model_version": 16,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
     "zones": {},
     "templates": [],
+    "block_presets": [],
     "settings": {},
     "preconditioning_learning": {},
     "profiles": [],

@@ -1,6 +1,9 @@
 import { css } from "lit";
 
 export const diagnosticsStyles = css`
+  .diagnostics-planned-return { padding: 12px; border: 1px solid var(--divider-color); border-radius: 10px; background: var(--card-background-color); }
+  .diagnostics-planned-return h4 ha-icon, .diagnostics-planned-return-unit h4 ha-icon { color: var(--purple-color, #9c6ade); }
+  .diagnostics-planned-return-unit > p { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--secondary-text-color); }
   .diagnostics-view { display: grid; gap: 14px; }
   .diagnostics-intro { align-items: center; display: grid; gap: 10px; grid-template-columns: 24px minmax(0, 1fr); padding: 2px 4px 4px; }
   .diagnostics-intro > ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }

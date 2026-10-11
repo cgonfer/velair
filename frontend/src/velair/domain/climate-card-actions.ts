@@ -9,6 +9,7 @@ export const CLIMATE_CARD_DIRECT_ACTION_LIMIT = 3;
 
 export type ClimateCardEligibleAction =
   | { type: "boost"; hideName: boolean; placement: "auto" | "more" }
+  | { type: "planned-return"; hideName: boolean; placement: "auto" | "more" }
   | { type: "pause"; hideName: boolean; placement: "auto" | "more" }
   | {
       type: "script";
@@ -22,9 +23,9 @@ export function climateCardConfiguredActions(config: VelairCardConfig | unknown)
   const value = asRecord(config);
   if (Array.isArray(value.climate_actions)) {
     const builtIns = new Set<string>();
-    return value.climate_actions.flatMap((candidate): ClimateCardAction[] => {
+    const actions = value.climate_actions.flatMap((candidate): ClimateCardAction[] => {
       const action = asRecord(candidate);
-      if (action.type === "boost" || action.type === "pause") {
+      if (action.type === "boost" || action.type === "pause" || action.type === "planned-return") {
         if (builtIns.has(action.type)) return [];
         builtIns.add(action.type);
         return [{
@@ -37,6 +38,10 @@ export function climateCardConfiguredActions(config: VelairCardConfig | unknown)
       const script = sanitizedScriptAction(action);
       return action.type === "script" && script ? [{ type: "script", ...script }] : [];
     });
+    if (!builtIns.has("planned-return")) {
+      actions.push({ type: "planned-return", enabled: false });
+    }
+    return actions;
   }
   const legacyActions = Array.isArray(value.climate_custom_actions)
     ? value.climate_custom_actions.flatMap((candidate): ClimateCardCustomAction[] => {
@@ -48,6 +53,7 @@ export function climateCardConfiguredActions(config: VelairCardConfig | unknown)
     { type: "boost", enabled: value.climate_show_boost_action !== false },
     { type: "pause", enabled: value.climate_show_pause_action !== false },
     ...legacyActions.map((action) => ({ type: "script" as const, ...action })),
+    { type: "planned-return", enabled: false },
   ];
 }
 
@@ -57,6 +63,7 @@ export function climateCardEligibleActions(
   options: {
     velairActionsAvailable: boolean;
     manual: boolean;
+    plannedReturnAvailable?: boolean;
   },
 ): ClimateCardEligibleAction[] {
   const eligible: ClimateCardEligibleAction[] = [];
@@ -70,6 +77,16 @@ export function climateCardEligibleActions(
     if (action.type === "pause") {
       if (action.enabled !== false && options.velairActionsAvailable) {
         eligible.push({ type: "pause", hideName: action.hide_name === true, placement: action.placement ?? "auto" });
+      }
+      return;
+    }
+    if (action.type === "planned-return") {
+      if (action.enabled !== false && options.plannedReturnAvailable) {
+        eligible.push({
+          type: "planned-return",
+          hideName: action.hide_name === true,
+          placement: action.placement ?? "auto",
+        });
       }
       return;
     }

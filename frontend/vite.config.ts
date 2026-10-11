@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { buildDocumentationAvailability } from "../scripts/documentation-translations.mjs";
 import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +29,7 @@ export default defineConfig(({ mode }) => {
     plugins: [copyBundleToIntegration()],
     define: {
       __VELAIR_BUILD_ID__: JSON.stringify(buildId),
+      __VELAIR_DOCUMENTATION_AVAILABILITY__: JSON.stringify(buildDocumentationAvailability(resolve(rootDir, ".."))),
       __VELAIR_RELEASE_VERSION__: JSON.stringify(isReleaseBuild ? integrationVersion : ""),
     },
     build: {

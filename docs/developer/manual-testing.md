@@ -2,6 +2,40 @@
 
 Use this checklist before publishing a release or after changing scheduler behavior.
 
+## Scheduler Transition Regressions
+
+Use explicit HVAC modes and inspect actual climate service calls as well as the
+next-event display. Repeat applicable scenarios for heating, cooling and native
+`heat_cool` ranges; verify both range limits are preserved.
+
+1. Set climate A to start early at `03:45` for `05:30` comfort. Give climate B
+   an early start at `04:15` and a normal block at `05:00`. Verify both B actions
+   occur on time while A's comfort target remains visible. Repeat with B's
+   preconditioning disabled and with simultaneous transitions across zones.
+2. In one zone, set `Off` at `19:00` and heating at `20:00`, with a thermal
+   prediction of `18:00`. Verify the early start is suppressed, `Off` applies
+   at `19:00` and heating at `20:00`. Repeat with a preceding temperature or
+   option-only block. Check an `Off` block at `22:00` the previous evening does
+   not prevent a `05:35` early start for `07:00` without an intervening block.
+3. Enter `until_next_block` Manual adjustment at `18:05` in the preceding
+   scenario. Verify its deadline is `19:00`, then `Off` is authoritative.
+   Repeat without the intervening `Off`: the deadline is the nominal comfort
+   time, not its predicted early start. Repeat with Default and Profile schedules.
+4. Delay A's `19:30` climate service until `19:32`; give B a block at `19:31`.
+   Verify B receives its currently valid target after the delay. Cross several
+   B transitions and verify only the current intent is applied, rather than
+   every missed intermediate order. Delay the callback itself as a separate case.
+5. During that delay, edit a schedule or Profile, activate a pause, Boost or
+   Manual adjustment, disable a zone, or delegate it to External schedule
+   execution. Verify current authority is resolved before delivery and no stale
+   schedule target bypasses those changes. Edit a schedule during an active early
+   window and verify superseded preconditioning targets are not restored.
+6. Repeat boundary cases across midnight, the weekly wrap and Home Assistant's
+   configured DST changes. Restart with active-schedule application enabled and
+   disabled; verify each retains its documented behavior without replaying
+   historical transitions. Verify Planned Return arrival prediction and delivery
+   remain independent of the weekly overlap restriction.
+
 ## Preparation
 
 - Use a non-critical Home Assistant instance.
@@ -24,6 +58,100 @@ to:
 ```
 
 Restart Home Assistant.
+
+## Panel Navigation And Direct Links
+
+Run these checks on desktop, mobile, tablet, and the Home Assistant Companion
+app, with English and Spanish selected. These are validation steps, not a claim
+that live-device testing has already been completed.
+
+1. Open every canonical path in the
+   [route table](../user/usage.md#panel-navigation-and-direct-links), refresh it,
+   and copy it into another browser session. Confirm the same tab and subsection
+   load, including Profiles and Climate presets when backend loading is slow.
+2. Switch tabs and subsections. Confirm the URL follows the accepted selection,
+   and selecting the current destination does not add a history entry. Use Back
+   and Forward to revisit both tabs and subsections.
+3. Try the bare Schedules/Templates paths, Overview and legacy Profiles aliases,
+   an unknown tab, and an unknown subsection. Confirm the documented fallback
+   and canonical URL without an extra history entry.
+4. Edit an unsaved Default or Profile schedule. Navigate away, cancel, and
+   confirm the draft, section, and URL remain. Repeat with browser Back twice,
+   then accept and use Forward. Confirm one prompt per attempt and that no
+   previous destination disappears from history. Check tab changes with dirty
+   templates and presets too; subsection switches retain existing draft behavior.
+5. Open a section using the dashboard-button example in the Usage Guide, then
+   repeat Back/Forward with a dirty draft. Follow the existing resource-usage
+   and Edit preset shortcuts; verify the matching subsection and that cancelled
+   navigation does not open the pending resource.
+6. Leave Velair for another Home Assistant page while its panel remains mounted.
+   Confirm it does not redirect back to Velair. Use optional Lovelace cards and
+   confirm their local view changes do not overwrite the dashboard URL.
+7. Confirm opening any route does not activate a Mode, write configuration, or
+   change a climate. Refreshing restores the section only, not an individual
+   climate/day/resource selection or an unsaved draft.
+
+## Panel Data Session
+
+Run on desktop, mobile, tablet, and Companion. These are checks to perform on a
+live instance, not a record of completed device testing.
+
+1. Enter Velair with a slow connection. Confirm the initial loading indicator
+   still works. After data arrives, visit every tab, including Diagnostics,
+   and use Back/Forward. There should be one schedule subscription for the
+   mounted panel, with no new `velair/get_schedule` request caused solely by a
+   tab or subsection switch. Feature-specific requests remain valid.
+2. Edit Default schedules, Profiles, templates, presets, and Planned Return.
+   Receive an external update while editing; confirm the draft remains intact.
+   Cancel navigation and confirm draft, URL, and screen stay together. Accept
+   navigation and confirm the established discard behavior.
+3. Save a change, then immediately switch tabs and return. Repeat with import,
+   reset, Mode/override actions, and nested Profile/preset/Planned Return editors.
+   Confirm the next tab uses the confirmed state, including runtime updates
+   that do not change the configuration revision.
+4. Disconnect and reconnect Home Assistant without leaving the panel. Repeat
+   with a replaced connection. Confirm current data is recovered, unsaved
+   drafts survive, and delayed old requests or callbacks cannot overwrite it.
+5. Enter and leave Diagnostics while receiving diagnostic messages. Confirm
+   its separate subscription closes when the view is removed and its overlay
+   does not replace the shared schedule snapshot.
+6. Leave Velair until Home Assistant unmounts the panel. Confirm its schedule
+   subscription closes, including when subscription setup is still pending.
+   Reopen Velair and confirm a fresh session starts. Browser backgrounding
+   alone need not unmount the panel.
+7. Open Lovelace cards with the panel closed. Confirm their loading, updates,
+   drafts, and cleanup still work independently and keep the dashboard URL.
+
+## Lovelace Data Session
+
+Run these scenarios on desktop, mobile, tablet, and Companion. Synthetic browser
+checks do not replace live Home Assistant lifecycle validation.
+
+1. Compare a fresh page load with one Climate card, two cards (Climate and
+   Planned Return), and six cards (Active setup, Events, Preconditioning,
+   Sensors, Comfort, and Climate). Check one `velair/get_schedule` request and
+   one `velair/subscribe_updates` subscription for all mounted cards on the
+   same connection. The subscription's initial snapshot remains expected.
+2. Visit a different Lovelace view and return without refreshing. Cards that
+   Home Assistant retains mounted should keep receiving data and reuse the
+   session. Hide/show cards, then remove them; the last actual unmount should
+   close the subscription. Reopening after all cards unmount starts a new load.
+3. Use different entity filters, climate selections, weekday starts, and zone
+   orders. Confirm each card retains its configuration and draft. Receive an
+   external change during editing, save from another card, and cancel a discard
+   confirmation. No unrelated draft should reset and the dashboard URL should
+   remain unchanged. Repeat with heating and cooling schedules.
+4. Change an indoor/outdoor sensor relevant to multiple cards. Confirm their
+   refresh requests are grouped and the eventual snapshot includes the current
+   state. Repeat while a previous request is still pending.
+5. Disconnect/reconnect Home Assistant, replace a card's connection, and remove
+   all cards while setup or a save is pending. Confirm stale callbacks cannot
+   replace newer data and a late subscription handle is released. Cards on
+   different connections must have different sessions.
+6. Open the sidebar panel alongside cards retained by Lovelace. Confirm the
+   panel keeps its own session and closing either set of owners does not stop
+   the other. Diagnostics remains view-local; save/conflict errors and unsaved
+   Planned Return edits must survive unrelated runtime updates.
 
 ## Climate Card Editor And Actions
 
@@ -175,9 +303,9 @@ Header checks:
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v12 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v16 records the
    effective `temperature_unit`.
-2. Import each newly exported portable v12 file back into the same installation
+2. Import each newly exported portable v16 file back into the same installation
    and confirm the frontend accepts it and the selected sections round-trip.
 3. Import a portable v10 file into the opposite unit and confirm selected
    thermal sections convert. Confirm its Comfort derived-metric and outdoor-
@@ -535,6 +663,28 @@ Use at least one scalar heat or cool climate and, when available, one native
     starts and resumes Manual adjustment like the Overview selector. Controls
     must be read-only in Automatic and enabled only after the backend confirms
     Manual. Confirm this remains independent of the quick-actions section.
+    Enable **One-off return** in the action editor and verify its order, hidden
+    name, and automatic/More placement match Boost and Pause. Existing omitted
+    and explicit action lists must keep it hidden; a fresh card-picker stub
+    must enable it. Open the action and verify the shared compact planning form,
+    confirmation process, active timeline, arrival editor, cancellation and
+    terminal planning form. Close using X, including from More; closing must
+    not cancel the episode. Busy actions block closing, and unsaved arrival
+    edits require discard confirmation. Switching panes must not bypass that
+    guard. Repeat with an unavailable, manual, paused and externally executed
+    selected climate: the household action remains accessible. Check EN/ES,
+    light/dark, mobile/tablet widths, multiple cards and live episode updates.
+    Confirm the editor always lists Boost, Pause and One-off return first,
+    including disabled actions, and that the new checkbox reads **Show One-off
+    return** / **Mostrar regreso puntual**. Editing must target the correct
+    stored action when the display order differs; opening the editor must not
+    reorder saved actions. Reorder custom scripts and verify their mapping.
+    Check all direct hidden-name icons are centered without reserved space for
+    the hidden X, and remain centered as a pair when a pane opens. One-off return
+    must use a violet accent distinct from Pause in direct actions, More and the
+    editor. Open Boost, Pause and One-off return with either/both toolbar islands
+    visible; their outer borders must join the toolbar without a gap or inset
+    card. The standalone return card and sidebar must keep their own borders.
 23. Repeat with scalar heat, scalar cool, and native `heat_cool`. Confirm the
     card follows the entity's effective step and limits, sends both range
     boundaries, offers only published HVAC modes, and does not optimistically
@@ -671,6 +821,173 @@ be changed independently from the external room sensor.
     with the retained target.
 
 ## Adaptive Preconditioning Smoke Test
+
+For Planned Return, additionally confirm:
+
+1. Configure several occupancy sources, including `zone.home` and a guest helper,
+   Away/Destination Modes and today's
+   future arrival; enable preparation for one heating and one cooling zone.
+2. Send empty, then occupied before absence confirmation. No Away change occurs.
+3. Confirm empty long enough. Away applies once and the target resolved at arrival
+   determines each zone's preparation, including ranges and cross-day continuity.
+4. Restart before preparation, during preparation, and after expected arrival
+   while still empty. No duplicate Away action or next-day return is created.
+5. Change the arrival time, skip an episode, and select a Mode/Profile explicitly
+   (including the current one). Restart and arrive; cancelled intent stays cancelled.
+6. Verify early arrival, late arrival, an unscheduled day, unknown occupancy,
+   sensor rebinding, Boost, window/manual pauses and a stopped scheduler.
+7. At phone/tablet widths in English and Spanish, open Preconditioning's Planned
+   Return subsection, save a week, edit and clear individual arrival times, review
+   preparation and use all episode controls. Open each subsection directly by
+   URL, refresh and use Back/Forward. Reject a navigation with an unsaved draft
+   and confirm the current subsection, URL and draft remain intact. Settings and
+   Overview must not contain the moved Planned Return controls.
+   Set First weekday to Sunday, then Wednesday: verify display order and edits
+   still address the intended weekdays. Confirm entity and Mode selectors
+   use Velair's styled dropdowns with icons and titles, and Cancel/Save stay at the
+   right of the footer without overflowing on phones.
+   Verify contextual descriptions appear in the relevant sections, the time zone
+   is shown inside Weekly arrival times, and no copy controls or day-selection
+   checkboxes remain.
+8. Export/import the routine with its Mode/Profile dependencies. No episode is
+   exported and the imported routine stays disabled until explicitly enabled.
+   Import a model 15 routine with the legacy single sensor and confirm migration.
+9. Disable the weekly routine and use Plan return with a future date and time.
+   Occupied or unknown sources must keep the request pending; all absent sources
+   must apply Away once after confirmation. Change/cancel the pending request,
+   test expiration during confirmation, then repeat from an active absence.
+   Repeat with all sources already absent and no active episode: confirmation
+   starts without another sensor event. Verify the One-off return title, compact
+   date/time/action controls and explanation below; on mobile, Plan return
+   sits below the fields with its right edge aligned to the time field; occupancy chevrons point down when
+   collapsed and up when expanded.
+10. Restart while armed, away, preparing and fulfilled with automation disabled.
+    Editing weekly times or toggling automation preserves manual requests; source
+    or Mode changes invalidate them. Manual Mode/Profile selections cancel them.
+    Completed/cancelled absences must not reapply Away upon re-enabling while away.
+    After cancellation caused by source/Mode edits or explicit Mode selection,
+    plan a new return without waiting for the old arrival time. Verify current
+    settings are used, the cancelled arrival is hidden, and no Mode changes until
+    the full new absence delay passes. Repeat after restart, with occupied and
+    unknown sources, and with the weekly routine disabled. Fulfilled/skipped
+    episodes must also offer a fresh explicit departure while still away.
+    With missing sources or stopped scheduling, verify the fresh form remains
+    visible with Plan disabled and an explanation. An active pending/away/error
+    episode must still allow Cancel. Pending confirmation leaves selection unchanged;
+    confirmed departure restores the recorded previous Mode/Profile selection. Restart
+    while away with weekly scheduling enabled: no repeated Away action.
+    Restore valid settings and plan a new return; detect occupancy to clear the
+    retained automatic latch.
+    Expand Room preparation beneath the routine flow. Check every managed climate
+    appears once, including Default fallback, explicit normal behavior, Profile
+    schedules/pauses, disabled and externally executed zones. With no future return,
+    show configuration capability without target/time claims. During weekly and
+    one-off returns check arrival targets, different planned starts, pending before
+    confirmed absence, heating/cooling/range target reached, missing temperatures
+    or estimates and Boost/manual/pause suspension. Expanding must not mark drafts
+    dirty or send commands. Edit the destination without saving: diagnostics must
+    still describe saved settings without an extra reminder. Check vertical row
+    alignment and sensor state labels ending before the disclosure arrow.
+    Check collapsed summary, keyboard access, long room names,
+    mobile/tablet, EN/ES and absence of the older duplicate zone list.
+11. In the status bar, toggle the automatic routine with the keyboard and on
+    mobile. Confirm this edits the draft, Save persists it, and Cancel restores
+    the saved setting. Confirm status and occupancy remain understandable without
+    relying on color, and presence add/remove icon buttons have accessible labels.
+    Confirm add/remove icons retain their semantic color without a background at
+    rest and show hover/focus feedback. Read the form in order: occupancy sources,
+    compact absence delay and Away Mode, then arrival times and destination Mode.
+    Verify the configured source list starts collapsed, and its summary counts
+    occupied, empty and unknown sources separately. Expand it with the keyboard:
+    the list must align with the source selector and opening it must not mark the
+    form as edited. Add/remove a source and verify counts follow the draft; Cancel
+    restores the saved sources.
+    Verify expanded rows have balanced icon insets and the source-summary header
+    has a thin separator only while expanded.
+    Occupancy counters must use the same presence/absence/unknown order in both
+    summaries, and runtime sensor rows must share the configured list's spacing.
+    Check the add button's hover with an eligible
+    source selected, and confirm both action icons match the block editor.
+    The destination description must use the section's available width even
+    when the destination selector is narrower.
+    Verify the weekly summary spans its own row and shows Away Mode, absence
+    confirmation delay, adaptive preparation and destination without a redundant
+    enabled/disabled text. Each summary block uses the normal settings-container
+    border and radius, with no shared side rule, enclosing card or outer padding.
+    Occupancy counts and its disclosure belong to one
+    section: its source list starts collapsed and stays neutral even when the
+    occupied header is tinted. Unknown signals must not be labelled occupied.
+    Confirm the separate quick-return section groups departure, pending and
+    active episode controls, preparation details and relevant messages. Verify
+    there is only one arrival editor through each phase.
+    Pending/active episodes must not repeat the feature title or arrival time.
+    Show phase as a compact subtitle attached to the title, with a localized
+    native tooltip explaining each active state. During confirmation the process
+    block supplies that context instead, without a repeated subtitle. An accessible arrival icon and Expected arrival text identify the saved return;
+    keep the label outside the edit target. Pending saved values use a compact
+    chip without pencil/underline; confirmed values keep the pencil/underline.
+    Both use a keyboard-accessible 44 px button. By default inputs and Change are hidden; activating that target
+    reveals the inline editor without changing the saved return. Test pending
+    and no-departure episodes with a standalone target, and confirmed episodes
+    where the timeline arrival endpoint is the sole target.
+    Back uses its compact blue fill and Change its compact green fill. Cancel uses a compact red fill with white icon/text
+    below the episode data and visible hover/focus feedback. Check
+    text contrast against both light and dark backgrounds; disabled controls
+    retain the distinct neutral palette and not-allowed cursor. Cancel must remain
+    left below the data only with the editor closed; Change arrival is right-aligned
+    below the open editor, where Cancel is completely hidden. Verify this in pending, away, preparing and active-error states, including
+    mobile wrapping in both languages. Inactive terminals show a fresh form;
+    Plan return stays on the right. Panel and card must offer the same actions,
+    without Skip, I'm home or Close.
+    With the arrival unchanged, Change arrival must be disabled with a neutral
+    background, muted text/icons and a not-allowed cursor. Hover must not restore
+    its accent color. Edit the date or time and verify the action gains color;
+    restore the saved value and verify it returns to the neutral disabled style.
+    Check disabled controls in both light and dark themes, including busy actions.
+    Edit an arrival without applying it: verify the unsaved notice and navigation
+    protection, preservation during routine Save, and cleanup after a successful
+    arrival change or episode cancellation. Returning the input to its saved value
+    must clear the arrival warning. Failed actions must keep the edit and warning.
+    Switch the delay between minutes and hours without changing its saved duration;
+    edit it in hours, Save, reload, and confirm the effective duration remains the
+    same. Cancel must restore the saved delay and Modes. Check the inline controls
+    wrap naturally without stretching the number input across half the screen.
+12. From Home Assistant actions or an automation, call
+    `velair.start_planned_return` with `return_date: "2026-10-10"` and
+    `return_time: "19:25"`, choosing a future date/time in Home Assistant's time zone. With the routine disabled, confirm the
+    notice still waits for whole-home absence. Cancel it with
+    `velair.cancel_planned_return`; no Mode change should occur. Repeat while
+    already away and confirm Away is not applied twice. Cancel after confirmed
+    departure and verify the original Mode and ordered Profile selection return;
+    repeat after arrival edits and a restart, during preparation, without
+    sensors, and with Boost or independent pauses. Default restores an empty
+    Profile selection. Terminal acknowledgement must not restore again. Delete
+    a saved Profile: cancellation must still succeed with a restoration warning.
+    Inject a failed save: neither selection nor cancellation may commit. Invalid or elapsed times,
+    stopped scheduling and incompatible external transitions must report errors.
+
+Check the mobile configured-source summary against the full selector/Add row: its
+left and right edges must match, and total, occupied and empty counts must share
+one line in EN/ES. Include 24 sources and unknown states. Compact state numbers
+retain accessible descriptions and align to the summary's trailing edge; the
+mobile expanded list uses the full summary width, with Remove at the row end.
+Desktop retains full state labels and its original summary width.
+
+13. Plan tomorrow's return with a clock time earlier than the current clock time;
+    then plan a return across a month/year boundary. Reject past dates and today's
+    elapsed time, including a time that passes while the form remains open.
+    Change both date and time while pending and already away; navigation/reload
+    must warn about unsaved edits to either field. Test mobile/tablet wrapping.
+14. Give the destination different targets before and after local midnight and
+    on different weekdays. Verify preparation selects the target at the HA-local
+    arrival, even with the browser in a different zone. Restart across midnight
+    while waiting, away and preparing. Test early presence and manual cancellation.
+    Postpone an already-preparing return by days: Away targets must resume until
+    the new preparation is due, while Boost, manual adjustments and pauses remain.
+15. In a DST-observing HA time zone, reject nonexistent arrival wall times. For
+    repeated wall times choose the earliest future occurrence consistently in
+    panel and service. Verify preparation crossing the clock change measures lead
+    in elapsed minutes for heating, cooling and ranges, preserving overrides.
 
 Prefer a non-critical test climate. Do not use real heating or cooling hardware when an unexpected target change would waste energy or create discomfort.
 
@@ -823,7 +1140,7 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
     humidity stays visible but has no condition, the effective range is absent,
     the summary is unavailable, and no humidity ventilation opportunity is
     produced. Restore temperature and confirm evaluation returns.
-43. Reload Velair and Home Assistant, export/import portable model v12, and
+43. Reload Velair and Home Assistant, export/import portable model v16, and
     confirm the selected model and both endpoint ranges survive. Import a v10
     payload and confirm it uses the Simple model. In Fahrenheit, confirm endpoint
     temperature labels and exported thermal values use Fahrenheit while the
@@ -894,6 +1211,36 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 
 ## Diagnostics Smoke Test
 
+### Planned Return visibility
+
+1. Exercise a weekly departure and a one-off departure, including a sensorless
+   one-off start. Check Overview origin, process, confirmation deadline and arrival
+   time. Opening the summary navigates to Planned Return without changing the
+   episode. An inactive routine without an incidence adds no Overview summary.
+2. Compare confirmed Away scheduling, an explicit Default Away Mode, unmapped
+   Default fallback under a custom Away Mode, and Away Profiles using pause/off.
+   Only actual backend-owned participation gets a violet signal. Preserve the
+   climate's normal operating state and Profile information.
+3. Check future, due, reached, suspended and unavailable preparation with heating,
+   cooling and native ranges. Ordinary preconditioning at the same timestamp must
+   not become Planned Return. Manual, Boost, independent pauses, stopped/global
+   paused scheduling and external execution retain their priority.
+4. In Diagnostics, inspect the household section and selected climate's current
+   intent, estimate, suspension reason and delivery evidence. Weekly disabled
+   must not imply one-off returns are unavailable. Repeat after arrival changes,
+   cancellation, completion, configuration changes and restart.
+5. Filter the Planned Return history category and exercise every transition.
+   Reject a save and repeat refreshes/retries: no false accepted transition or
+   duplicate start/error entries may appear. Disable collection and confirm its
+   preference persists while raw automation events remain available. Exceed 100
+   retained events and verify the common limit; restart clears history.
+6. Export both default and raw-entity reports. New household/per-zone/history
+   context must be present, with Mode/Profile operational IDs removed in both
+   variants. Check EN/ES, long labels, light/dark and mobile/tablet. Existing
+   standalone return cards and the full Planned Return panel remain unchanged.
+
+### General diagnostics
+
 1. Open Diagnostics and confirm it loads without polling, reports the current
    scheduler and each managed climate, and updates after a real runtime change.
 2. Enable and disable each history category. Confirm the selection survives a
@@ -929,9 +1276,304 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 5. Restart Home Assistant.
 6. Confirm Velair restores state without forcing climate targets.
 
+## Seasonal Blueprint Checks
+
+1. Import `seasonal_climate_selection.yaml` into a non-critical Home Assistant instance. Check its three sections on desktop and mobile; choose Modes using the standard action editor without typing Profile IDs.
+2. Use a test temperature sensor and shorten the positive delay. Change it to 18, 23, and 30 °C; verify the corresponding action runs only after stability. Check exactly 20 and 27 °C select mild weather.
+3. Change the value repeatedly before the delay ends, including changes within one season. Verify the last eligible stable change runs once and attribute-only updates do not select a season.
+   Check `21 → 22 → 21` starts a fresh delay, while `21 → 21.0` preserves a pending wait without creating another decision. An invalid unit must interrupt a pending wait; restoring that attribute alone dismisses the warning without selecting a season.
+4. Set the sensor unavailable during a pending wait. Confirm the persistent notification appears immediately in English and Spanish, does not duplicate, and no stale seasonal action runs. Restore a valid reading and verify the fresh stability wait.
+5. Test a Fahrenheit reading with Celsius thresholds, then configure Fahrenheit thresholds explicitly. Test unsupported or missing units and invalid thresholds/delay.
+6. Restart Home Assistant with valid and invalid readings. Confirm valid startup selects nothing, invalid startup warns, and pending delays are not recovered after restart or automation reload.
+7. Verify an empty mild-weather action list leaves the current routine unchanged. Then configure a real pause-and-off Mode and check it stops the selected zones.
+8. Test a manual Away selection followed by a new stable sensor value; confirm the configured action can replace it, as documented. Inspect normal traces for a failing user action.
+9. Re-import from the stable URL once published. Confirm HACS integration installation alone does not import the blueprint and **Take control** creates an independent automation.
+
 ## Release UI Checks
 
 1. Run `npm.cmd run build:release`.
 2. Confirm the Settings maintenance section shows `v<version>`.
 3. Confirm Settings maintenance shows the same integration version.
 4. Run the normal development build again if you are returning to local development.
+
+## Planned Return Dashboard Card
+
+1. Add `type: custom:velair-card`, `view: planned-return` to a dashboard. Select
+   Planned return in the visual editor in English and Spanish; confirm there
+   is no thermostat filter or weekly configuration form/switch.
+2. Check 360 px, tablet and desktop card widths. Confirm the card contains only
+   One-off return, with header counts and confirmation delay; verify the full
+   sidebar still has weekly, occupancy and preparation panels. Plan a future
+   return before leaving and while already away.
+3. Edit the arrival while a backend state update arrives; confirm the draft is
+   preserved. Submit it and check the sidebar and a second card show the same
+   episode while each card keeps its own unsubmitted draft.
+4. Test pending and active Cancel and Change arrival in the card; it must not
+   show Skip, I'm home or Close. Verify Cancel stays left below the episode data only when not editing, and Change arrival
+   right. Fulfil a return while occupancy remains away and immediately plan a
+   new one. Check cancelled/skipped/error inactive episodes also show the fresh
+   planning form. Invalid configuration keeps this form visible with Plan
+   disabled, while Cancel remains available on an active errored episode.
+   Confirm the sidebar uses identical Cancel/Change and terminal planning actions.
+   Only the card shows trailing source/delay indicators; both surfaces show the timeline;
+   the sidebar retains the full weekly, presence and preparation configuration.
+5. Navigate away and back and replace/reconnect the WebSocket connection. Verify
+   one shared schedule subscription per Home Assistant connection for mounted
+   Lovelace cards, with the sidebar's session separate. Confirm cleanup when
+   the final card detaches and that no old subscription callback or delayed
+   load overwrites current data.
+6. Confirm no timeline appears before absence is confirmed or in terminal/error
+   states. During Away/Preparing, verify departure and saved arrival Mode/time
+   endpoints, Now position, multi-day dates and DST elapsed-time calculations.
+   Edit the arrival and verify the timeline stays on the saved value until accepted.
+7. Hide the dashboard tab during an active episode and resume it later. Verify
+   the marker immediately catches up, ticks only once per minute while visible,
+   and makes no API request. Remove/remount the card and check timer cleanup.
+
+## Return Arrival Disclosure And Estimated Preparation
+
+1. At 344/360 px, tablet and desktop widths in EN/ES and light/dark themes, check
+   the compact title-attached state subtitle and localized native tooltip (or
+   the sole confirmation process block during that phase),
+   long Mode names, card counts at the top right of the header, underlined arrival value target,
+   non-clickable accessible pending arrival icon and label aligned to title/state
+   text, pending compact chip without pencil/underline, and confirmed rail arrival
+   icon/pencil with 44 px touch targets. The default active panel has no visible inputs.
+2. Open the arrival editor by keyboard, edit its date/time and push a sensor update.
+   Keep the draft and navigation guard. Fail an adjustment and retain the editor;
+   succeed and verify it closes with focus restored to the saved arrival trigger.
+3. Check backend arrival-context adaptive pending/preparing zone estimates. Show
+   only the earliest valid estimate for the exact saved arrival. Configuration,
+   stale, invalid, suspended, reached, unavailable and arrival-only data must not
+   create a marker; never use a runtime-zone fallback.
+4. Put Now and the estimate near each other and near either endpoint. Their labels
+   must not collide: Now has no visible text label, the estimate tick stays on the rail with a separate
+   caption. An estimate before departure clamps its position without changing its
+   displayed actual date/time. Respect HA's 12/24-hour setting everywhere.
+5. Confirm visible minute ticks and hidden-tab cleanup/resume in both sidebar and
+   card without API polling. Pending/terminal/error states have no moving timeline.
+
+6. Compare departure/arrival value font, weight, line height and vertical alignment;
+   action icons flank the rail and Mode labels wrap below the saved times. Confirm the compact
+   Cancel action remains left below episode data when not editing, is hidden while
+   editing, and Change remains right in the editor. Measure normal/hover text contrast with dark/light theme error colors,
+   and check focus/disabled affordances with the compact red fill and white foreground.
+
+
+### Local arrival editor and estimate fallback
+
+1. On the sidebar and Planned return card, open an active arrival editor. Blue Back/Volver
+   with a left arrow appears on the left of its action row and green Change arrival
+   on the right. Back has a localized Discard arrival changes and close editor title/accessible label
+   and is absent from the saved-time row. Close it with keyboard and touch; focus returns to the saved value.
+   Check subtle editor/control transitions and no animation with reduced motion.
+2. Edit date/time, use Back, then push occupancy updates. Clear the arrival
+   warning and arrival-only navigation/reload guard; reopen the latest saved value. Local close
+   makes no backend request and does not cancel the return. A successful change
+   still closes the editor and clears only the accepted arrival draft.
+3. With no marker, check a current matching arrival preview: all reached, all
+   suspended (including arrival-only rooms), all arrival-only and all excluded
+   rows have accurate summaries. Missing, stale, malformed or mixed preview data
+   gives a neutral no-active-estimate message, never a claim that preparation is
+   disabled. Open the information button immediately beside the One-off return title by hover/focus
+   and mobile tap. No fallback help row or reserved space remains above the rail.
+   Check its 44 px target and open help remain contained on mobile with long titles;
+   keep the interactive helper outside the progressbar and aria-hidden dot. Check its
+   accessible name, expanded/controls state, Escape/outside closing, and cleanup
+   on backend updates or detach. Keep a valid estimated-start caption visible.
+4. Check the elapsed gradient rail, endpoint ticks, Now halo and separate estimated
+   preparation indicator at 344/360/768/1024 px in light/dark themes. Draft edits
+   must not move the saved timeline or estimate. Endpoint/estimate labels and the Now tooltip
+   remain legible near either end; the rail does not imply thermal progress.
+
+
+### Wide sidebar arrival editor
+
+1. Open the active return editor in the sidebar at 768/1024 px and wider. The
+   date/time fields form a bounded group aligned to the arrival endpoint on the
+   right; neither field stretches across half the whole panel. Cancel remains left below episode data only when not editing and Change arrival
+   below the editor on the right, with visible separation. Do not repeat the
+   card-only source/delay strip above existing occupancy/routine information.
+2. Repeat at 344/360 px and on the card. Preserve the existing responsive field
+   layout, shared timeline and local Back behavior. Dirty configuration and arrival
+   drafts remain independent: changing arrival uses saved backend settings and
+   leaves the unsaved configuration intact.
+
+
+### Absence confirmation process
+
+1. On card and sidebar, transition from Armed to Confirming absence. Show the
+   timer process row above arrival controls, with a prominent backend deadline
+   directly after the process heading, wrapping in the same text column when needed,
+   and conditional explanation; omit the old repeated deadline footer. Do not
+   create a countdown or departure timeline before confirmation.
+2. Check Home Assistant time zone and both 12/24-hour formats. Show the date when
+   confirmation ends on a different local day. Missing, invalid or timezone-naive
+   deadlines show the explanation without a fabricated time.
+3. Check automatic weekly confirmation with no episode yet: retain the new-plan
+   form and show the process. Confirming-to-Away removes the process and reveals
+   the existing saved departure timeline. Armed and active Error retain their
+   valid controls without a misleading confirmation deadline.
+4. At 344/360/768/1024 px in English/Spanish, ensure the unbordered process row
+   wraps comfortably, preserves arrival drafts and serves as the sole confirmation
+   phase explanation without duplicating current occupancy information.
+
+
+### Return header and icon alignment
+
+1. On sidebar and card, verify the first row has title left and card-only indicators
+   right. Compact Cancel belongs below the data on the left, only for an active
+   episode with cancellation capability and a closed arrival editor. Active errors
+   and stopped/invalid settings must not hide an available Cancel. Busy disables
+   it; unavailable cancellation and inactive terminal states omit it entirely.
+2. The phase subtitle stays attached to the title without a detached background
+   chip; confirmation uses only the process heading. Only the card adds a single
+   top-right source strip in the header, with delay only before a
+   confirmed active absence. Check 344/360 px and Spanish long states:
+   subtitle text and large counts wrap within their groups without overflowing
+   or repeating phase information.
+3. No header Cancel, duplicate Cancel or empty action footer remains. Open the editor:
+   Change arrival appears at its right edge and retains busy/dirty guards. Local
+   close and successful adjustment remove that footer.
+4. Check icon/text vertical centering in title, Cancel, subtitle, counters, endpoint
+   labels, arrival value/pencil, Back, preparation captions and Change action. Keep
+   44 px touch targets, readable quiet colors, keyboard focus and theme contrast.
+
+
+### Rail endpoint and compact cancellation layout
+
+1. At 344/360/768/1024 px on card and sidebar, check departure/arrival action
+   icons flank the elapsed rail. Native tooltips and role/labels describe them;
+   keep these semantic icons outside the progressbar accessibility subtree.
+   Saved times appear only once, below the rail, aligned left/right and contained
+   for cross-day dates and 12/24-hour formats.
+2. Away/Return Mode names use plain icon-and-text labels below saved times,
+   without background, border or padding. Long names wrap; labels are not clickable. Do not
+   repeat the former action-label/time/Mode columns above the graph.
+3. Keep the Now point on the elapsed rail, its localized native tooltip and the preparation
+   tick on the rail with its clock caption below the times, with enough separation from endpoint icons and saved times.
+   Test both points near 0/100%, and preserve backend-only marker/fallback rules.
+4. The footer Cancel has a 32 px visible red surface with white icon/text, within
+   a 44 px hit area. Measure normal/hover contrast in dark/light themes; busy is
+   distinctly neutral and not allowed. Arrival pencil/Back/draft/focus semantics,
+   pending confirmation process and no-fake-departure states are unchanged.
+
+
+### Tight endpoint spacing and contextual phase
+
+1. Check sidebar/card at 344/360/768/1024 px, long Mode names and multi-day dates.
+   Mode labels follow the left/right endpoint edges; endpoint times sit within
+   a modest rail-to-time gap and a smaller time-to-Mode gap. Center time text
+   in its 44 px touch area; each endpoint independently follows wrapped text.
+   Arrival pencil and editor Back remain vertically centered; wrapped dates stay inside their column.
+2. The active phase is a small title subtitle, not a detached background chip.
+   During confirming absence, only the existing timer process block supplies
+   phase context and native help. Card counts stay grouped at the top right of the header;
+   the sidebar does not duplicate it. Active errors keep available Cancel.
+3. Put Now and preparation at 0/100%. Now has no visible text label or empty upper row when an estimate exists. Mode labels
+   appear below saved times. The backend preparation position is a small rail tick;
+   its role/title/aria stay accessible outside the progressbar. The full clock
+   caption remains below times in a softly blue-tinted rounded container; check
+   readable contrast and centered icon/text wrapping without clock/time overlap.
+
+
+### Contextual card indicators and endpoint hierarchy
+
+1. On the card, source counts sit at the top right of the header. The sidebar has no duplicate card strip because it retains the
+   occupancy section. Keep the delay icon for idle/armed/confirming and errors
+   before departure; hide it for active Away/Preparing and active errors with a
+   departure timestamp. An inactive historical departure must not hide it.
+2. At 344/360/768/1024 px, check the tighter endpoint icon/time layout without
+   overlapping edit targets. Below times, Mode labels align to the same left/right outer
+   endpoint edges. Long names/dates wrap inside columns; the hierarchy reads as
+   icon, time, Mode. No visible Now label competes with the Mode labels.
+3. Confirm Cancel capability/busy guards, editor Back and saved-arrival draft
+   semantics are unchanged. Check Now/preparation at 0/100%; backend tick and
+   estimate caption remain contained with no thermal progress implication.
+
+
+### Proportional endpoint data and editor-only close
+
+1. Compare visible rail-to-time and time-to-Mode gaps independently at each
+   endpoint in EN/ES, 12/24-hour time, same/multi-day dates and long Mode names.
+   The Mode label should sit closer to its time than the time sits to the rail; use the departure text span and arrival
+   value span rather than their 44 px control boxes when measuring. Keep Mode
+   labels below their own time values, without a shared row forcing extra gaps.
+2. Card-only sensors/delay are at the header’s top right. Their existing delay
+   phase visibility is unchanged; the main panel has no duplicate card strip.
+3. Cancel is left below all episode data/preparation caption only while the
+   editor is closed and cancellation is available. Opening hides Cancel entirely;
+   Change appears right. Blue Back with a left arrow appears left in the editor action row, closes
+   the editor and discards arrival edits, then restores Cancel. Independent
+   unsaved configuration and its navigation guard remain.
+4. Push an active error with can_start=false while editing. Back remains usable;
+   closing restores enabled Cancel and focuses it if the saved-time trigger is
+   disabled. Check hover/focus/disabled colors and reduced-motion transitions.
+
+
+### Back action and closer Mode labels
+
+1. Verify plain Mode icon/text labels stay close below their own saved time,
+   without chip background, border or padding and without overlapping edit targets. Check wrapped
+   dates/long Mode names independently on both endpoints in card and sidebar.
+2. Open the editor: there is no × or other close control beside the time. The
+   action row shows blue Back/Volver with left arrow on the left and Change
+   arrival on the right, separated clearly. Back has a localized explicit editor
+   close title/aria label and is disabled only while busy.
+3. Back discards the arrival edit locally without a backend request, clears its
+   warning and arrival-only navigation guard, and restores Cancel. Reopening
+   uses the latest saved arrival, including a push during the exit animation.
+   Failed-adjustment errors clear locally; backend status errors remain visible. Failed adjustment and sensor updates preserve the editor.
+   Active error/config blocked still allows Back, then focuses restored Cancel.
+4. Keep subtle editor/Back entry and exit transitions, respect reduced motion,
+   and maintain readable blue Back/green Change normal and hover colors, with
+   neutral disabled surfaces. Both use 32 px visible faces and 44 px targets.
+
+### Per-room estimated preparation disclosure
+
+1. In the card and sidebar, verify the blue estimated-start callout starts
+   collapsed. Its full header is keyboard/touch accessible with expanded/controls
+   state, down/up chevron and a light divider above the expanded list.
+2. Show room names/icons and right-aligned estimated starts in chronological
+   order. Test long names, cross-day estimates, HA time zone and 12/24-hour time
+   at 344/360/768/1024 px. A predeparture estimate retains its actual timestamp.
+3. Include only adaptive pending/preparing rows from the current saved-arrival
+   preview. Retained times on suspended/reached/unavailable or arrival-only rows
+   must not appear. The earliest row and rail marker use the same eligibility.
+4. Opening makes no API request. Source pushes and minute updates preserve the
+   open list; changed saved arrival, episode or no eligible rows close it.
+   Weekly Room preparation expansion remains independent. Back still discards
+   arrival edits and does not change the saved estimate.
+
+5. Open the arrival editor: the estimated-start disclosure and fallback helper
+   disappear from the DOM, while the saved timeline/tick stay unchanged. Opening
+   dismisses any visible help and its listeners. Failed adjustments keep them
+   hidden. Back restores same-episode expansion and Cancel; a saved arrival change
+   resets the disclosure. Check the visible Cancel surface sits about 12 px below
+   the blue callout at mobile/tablet/desktop widths.
+
+### Explicit one-off return without occupancy sources
+
+1. Save no occupancy sources with the weekly routine disabled and valid Modes.
+   In card/sidebar, Plan return remains available when backend can_start permits.
+   Help explicitly states that pressing it applies Away immediately, without an
+   absence timer. Do not show zero sensor counters or an irrelevant delay icon;
+   sidebar occupancy says Not monitored rather than treating the home as empty.
+   Its explanation aligns with the heading's text column and wraps within the
+   container padding on mobile and desktop.
+2. Start a future return: verify immediate persisted Away and confirmed departure,
+   normal per-room preparation and destination at arrival. Restart, adjust and
+   Cancel retain existing behavior. No presence-triggered arrival is available.
+3. A nonempty saved list with unavailable/unknown sources remains monitored and
+   waits normally; missing configured entities cannot be treated as sensorless.
+   Unsaved source edits must not change runtime guidance or eligibility. Weekly
+   routine configuration still requires a valid nonempty source list.
+
+### Compact title and phase with preparation help
+
+Check the fallback information icon stays beside the title without pushing the
+phase subtitle down. The title/phase gap stays small while the graph retains
+breathing room. The help reserves its own column and keeps a 44 px target;
+wrapped title and phase text must not overlap it at 360 px with long EN/ES text
+and source counts. Verify keyboard/tap help and viewport popup placement remain
+unchanged, with no transformed ancestor.

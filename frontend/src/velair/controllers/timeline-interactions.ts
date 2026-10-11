@@ -15,6 +15,8 @@ type TimelineResizeState = {
 };
 
 type TimelineHost = {
+  _linkedHours?: boolean;
+  _draftTemplateLink?: import("../types").TemplateLink;
   readonly classList: DOMTokenList;
   _draggedTimelineIndex?: number;
   _previousBodyCursor?: string;
@@ -39,6 +41,7 @@ export function handleTimelineDragStart(
   source: BlockDraftSource,
   event: DragEvent,
 ): void {
+  if (host._linkedHours || (source === "schedule" && host._draftTemplateLink)) { event.preventDefault(); return; }
   host._draggedTimelineIndex = index;
   event.dataTransfer?.setData("text/plain", JSON.stringify({ index, source }));
   if (event.dataTransfer) {
@@ -61,6 +64,7 @@ export function handleTimelineDrop(
   event.preventDefault();
   const dragData = timelineDragData(host, event, fallbackSource);
   const { index, source } = dragData;
+  if (host._linkedHours || (source === "schedule" && host._draftTemplateLink)) return;
   host._draggedTimelineIndex = undefined;
   if (!Number.isInteger(index) || !host._blocksForSource(source)[index]) {
     return;
@@ -105,6 +109,7 @@ export function handleTimelineResizeStart(
   source: BlockDraftSource,
   event: PointerEvent,
 ): void {
+  if (host._linkedHours || (source === "schedule" && host._draftTemplateLink)) { event.preventDefault(); return; }
   event.preventDefault();
   event.stopPropagation();
   const track = (event.currentTarget as HTMLElement).closest(".timeline-track");

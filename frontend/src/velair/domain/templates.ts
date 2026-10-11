@@ -2,15 +2,24 @@ import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, WEEKDAYS } from "..
 import type { DraftScheduleBlock, ScheduleTemplate, StoredScheduleTemplate } from "../types";
 import { defaultTargetTemperature } from "./temperature-units";
 
+/** Filter only the view; damaged persisted resources remain owned by the backend. */
+export function availableScheduleTemplates(templates: unknown): StoredScheduleTemplate[] {
+  return Array.isArray(templates) ? templates.filter((template): template is StoredScheduleTemplate =>
+    Boolean(template && typeof template.key === "string" && Array.isArray(template.blocks) &&
+      template.blocks.every((block: unknown) => Boolean(block && typeof block === "object" && typeof (block as { start?: unknown }).start === "string")))) : [];
+}
+
 export function scheduleTemplatesFromStored(templates: StoredScheduleTemplate[] | undefined, unit?: string): ScheduleTemplate[] {
-  return (templates ?? []).map((template) => ({
+  return availableScheduleTemplates(templates).map((template) => ({
     key: template.key,
     name: template.name,
     blocks: template.blocks.map((block) => {
+      if (block.preset_key) return { start: block.start, slot_id: block.slot_id, preset_key: block.preset_key, action: "" as const, hvac_mode: "" };
       const draft: DraftScheduleBlock = {
         action: block.action ?? ACTION_SET_TEMPERATURE,
         start: block.start,
         hvac_mode: block.hvac_mode ?? "",
+        ...(block.slot_id ? { slot_id: block.slot_id } : {}),
       };
       if (block.target_temp_low != null || block.target_temp_high != null) {
         draft.target_temp_low = block.target_temp_low ?? "";

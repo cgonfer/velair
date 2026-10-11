@@ -14,17 +14,19 @@ import type {
   DraftScheduleBlock,
   ScheduleBlock,
   ScheduleResponse,
+  TemplateLink,
 } from "../types";
 
 export type ClimateProfileDraftZone =
   | { behavior: "normal" }
-  | { behavior: "schedule"; schedule: Record<string, DraftScheduleBlock[]> }
+  | { behavior: "schedule"; schedule: Record<string, DraftScheduleBlock[]>; template_links?: Record<string, TemplateLink> }
   | { behavior: "pause"; action: "none" | "turn_off" };
 
 export type ClimateProfileDraft = Omit<ClimateProfile, "key" | "zones"> & {
   key?: string;
   zones: Record<string, ClimateProfileDraftZone>;
   rememberedSchedules: Record<string, Record<string, DraftScheduleBlock[]>>;
+  rememberedTemplateLinks?: Record<string, Record<string, TemplateLink>>;
 };
 
 export function emptyProfileSchedule(): Record<string, DraftScheduleBlock[]> {
@@ -46,6 +48,7 @@ export function createClimateProfileDraft(profile?: ClimateProfile): ClimateProf
     zone.behavior === "schedule"
       ? {
           behavior: "schedule",
+          template_links: structuredClone(zone.template_links ?? {}),
           schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
             weekday,
             draftBlocksFromScheduleBlocks(zone.schedule[weekday] ?? []),
@@ -97,6 +100,7 @@ export function effectiveClimateSchedule(
   data: ScheduleResponse | undefined,
   entityId: string,
 ): Record<string, ScheduleBlock[]> | undefined {
+  if (data?.effective_schedules && entityId in data.effective_schedules) return data.effective_schedules[entityId] ?? undefined;
   const effect = activeClimateProfileZoneEffect(data, entityId);
   if (effect?.zone.behavior === "pause") {
     return undefined;
@@ -139,15 +143,19 @@ export function withProfileZoneBehavior(
 ): ClimateProfileDraft {
   const zones = { ...draft.zones };
   const rememberedSchedules = { ...draft.rememberedSchedules };
+  const rememberedTemplateLinks = structuredClone(draft.rememberedTemplateLinks ?? {});
   const existing = zones[entityId];
   if (existing?.behavior === "schedule") {
     rememberedSchedules[entityId] = cloneProfileSchedule(existing.schedule);
+    rememberedTemplateLinks[entityId] = structuredClone(existing.template_links ?? {});
   }
   if (behavior === "normal") {
     delete zones[entityId];
   } else if (behavior === "schedule") {
+    const links = existing?.behavior === "schedule" ? existing.template_links : rememberedTemplateLinks[entityId];
     zones[entityId] = {
       behavior,
+      ...(links && Object.keys(links).length ? { template_links: structuredClone(links) } : {}),
       schedule: cloneProfileSchedule(
         existing?.behavior === "schedule"
           ? existing.schedule
@@ -157,7 +165,7 @@ export function withProfileZoneBehavior(
   } else {
     zones[entityId] = { behavior, action: "none" };
   }
-  return { ...draft, zones, rememberedSchedules };
+  return { ...draft, zones, rememberedSchedules, rememberedTemplateLinks };
 }
 
 export function cloneProfileSchedule(
@@ -193,6 +201,7 @@ export function cloneProfileDayToClimates(
   if (sourceZone?.behavior !== "schedule" || !WEEKDAYS.includes(weekday)) return draft;
   const zones = { ...draft.zones };
   const rememberedSchedules = { ...draft.rememberedSchedules };
+  const rememberedTemplateLinks = structuredClone(draft.rememberedTemplateLinks ?? {});
   for (const entityId of targetEntityIds) {
     if (entityId === sourceEntityId) continue;
     const existing = zones[entityId];
@@ -201,11 +210,38 @@ export function cloneProfileDayToClimates(
         ? existing.schedule
         : rememberedSchedules[entityId],
     );
-    schedule[weekday] = structuredClone(sourceZone.schedule[weekday] ?? []);
-    zones[entityId] = { behavior: "schedule", schedule };
+    const links = structuredClone(existing?.behavior === "schedule" ? existing.template_links ?? {} : rememberedTemplateLinks[entityId] ?? {});
+    const sourceLink = sourceZone.template_links?.[weekday];
+    if (sourceLink) links[weekday] = structuredClone(sourceLink);
+    else delete links[weekday];
+    schedule[weekday] = sourceLink ? [] : structuredClone(sourceZone.schedule[weekday] ?? []);
+    zones[entityId] = { behavior: "schedule", schedule, template_links: links };
     rememberedSchedules[entityId] = cloneProfileSchedule(schedule);
+    rememberedTemplateLinks[entityId] = structuredClone(links);
   }
-  return { ...draft, zones, rememberedSchedules };
+  return { ...draft, zones, rememberedSchedules, rememberedTemplateLinks };
+}
+
+export function cloneProfileDayToDays(
+  draft: ClimateProfileDraft,
+  entityId: string,
+  sourceWeekday: string,
+  targetWeekdays: Iterable<string>,
+): ClimateProfileDraft {
+  const zone = draft.zones[entityId];
+  if (zone?.behavior !== "schedule" || !WEEKDAYS.includes(sourceWeekday)) return draft;
+  const schedule = cloneProfileSchedule(zone.schedule);
+  const links = structuredClone(zone.template_links ?? {});
+  const sourceLink = zone.template_links?.[sourceWeekday];
+  for (const target of targetWeekdays) {
+    if (target === sourceWeekday || !WEEKDAYS.includes(target)) continue;
+    schedule[target] = sourceLink ? [] : structuredClone(zone.schedule[sourceWeekday] ?? []);
+    if (sourceLink) links[target] = structuredClone(sourceLink);
+    else delete links[target];
+  }
+  return { ...draft, zones: { ...draft.zones, [entityId]: { ...zone, schedule, template_links: links } },
+    rememberedSchedules: { ...draft.rememberedSchedules, [entityId]: cloneProfileSchedule(schedule) },
+    rememberedTemplateLinks: { ...draft.rememberedTemplateLinks, [entityId]: structuredClone(links) } };
 }
 
 export function nextProfileBlockStart(blocks: Array<Pick<ScheduleBlock, "start">>): string {
@@ -256,6 +292,7 @@ export function climateProfileValidationError(draft: ClimateProfileDraft): strin
           return "schedule";
         }
         starts.add(block.start);
+        if (block.preset_key) continue;
         if (block.action === ACTION_SET_HVAC_MODE) {
           if (!block.hvac_mode || block.hvac_mode === "off") return "schedule";
         } else if (block.action === ACTION_SET_CLIMATE_OPTIONS) {
@@ -282,6 +319,7 @@ export function climateProfileInput(draft: ClimateProfileDraft): ClimateProfileI
       .map(([entityId, zone]) => [entityId, zone.behavior === "schedule"
         ? {
             behavior: "schedule",
+            template_links: structuredClone(zone.template_links ?? {}),
             schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
               weekday,
               (zone.schedule[weekday] ?? []).map(profileDraftBlockInput),
@@ -299,7 +337,8 @@ export function climateProfileInput(draft: ClimateProfileDraft): ClimateProfileI
   };
 }
 
-function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock {
+export function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock {
+  if (block.preset_key) return { start: block.start, preset_key: block.preset_key };
   if ((block.action || ACTION_SET_TEMPERATURE) === ACTION_TURN_OFF) {
     return { start: block.start, action: ACTION_TURN_OFF };
   }

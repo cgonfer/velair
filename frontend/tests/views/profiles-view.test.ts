@@ -1493,7 +1493,17 @@ describe("profiles view", () => {
       }],
     } as unknown as ScheduleResponse;
     const element = new VelairProfilesView();
+    const previewProfile = vi.fn().mockImplementation((message) => {
+      expect(message.type).toBe("velair/preview_profile");
+      expect(message.profile.zones["climate.office"].template_links.sunday).toEqual({ mode: "full", template_key: "full" });
+      expect(message.profile.zones["climate.office"].schedule.sunday).toEqual([]);
+      return Promise.resolve({ configuration_revision: 1,
+        materialized_schedules: { "climate.office": { sunday: scheduled.templates[0].blocks } },
+        resolved_schedules: { "climate.office": { sunday: scheduled.templates[0].blocks } },
+      });
+    });
     element.hass = {
+      connection: { sendMessagePromise: previewProfile },
       language: "en",
       states: {
         "climate.office": {
@@ -1529,7 +1539,7 @@ describe("profiles view", () => {
     expect(element.shadowRoot?.querySelector(".editable-block")).not.toBeNull();
     expect(element.shadowRoot?.querySelector(".profile-week .timeline-panel")).not.toBeNull();
     expect(element.shadowRoot?.querySelector(".profile-week .timeline-carry-over")?.getAttribute("draggable")).toBe("false");
-    expect(element.shadowRoot?.querySelector(".profile-week .timeline-carry-over")?.getAttribute("title"))
+    expect(element.shadowRoot?.querySelector(".profile-week .timeline-carry-over")?.getAttribute("aria-label"))
       .toContain("From Sun,");
     expect(element.shadowRoot?.querySelector(".profile-week .timeline-block:not(.timeline-carry-over)")?.getAttribute("draggable")).toBe("true");
     expect(element.shadowRoot?.querySelector(".day-tabs .day-tab.active")?.textContent).toContain("Sun");
@@ -1538,7 +1548,7 @@ describe("profiles view", () => {
     expect(element.shadowRoot?.querySelectorAll(".select-wrap").length).toBeGreaterThan(2);
     expect(element.shadowRoot?.querySelector(".profile-icon-preview ha-icon")?.getAttribute("icon")).toBe("mdi:briefcase-outline");
     expect(element.shadowRoot?.querySelector(".profile-icon-field .help")?.textContent).toContain("mdi:briefcase-outline");
-    expect(element.shadowRoot?.querySelector(".schedule-config-helper")?.textContent).toContain("Choose a template or manually configure the schedule.");
+    expect(element.shadowRoot?.querySelector(".schedule-config-helper")?.textContent).toContain("Configure blocks manually, copy a template, or link its times or full configuration. You can also use Velair presets.");
     expect(element.shadowRoot?.querySelector(".profile-template-select option")?.textContent).toBe("Select a template");
 
     const timelineTrack = element.shadowRoot?.querySelector(".profile-week .timeline-track") as HTMLElement;
@@ -1574,9 +1584,10 @@ describe("profiles view", () => {
     templateSelect.value = "full";
     templateSelect.dispatchEvent(new Event("change"));
     await element.updateComplete;
-    expect(templateSelect.value).toBe("");
-    expect([...element.shadowRoot!.querySelectorAll<HTMLSelectElement>(".advanced-climate-options-fields select")]
-      .map((select) => select.value)).toEqual(expect.arrayContaining(["auto", "eco", "on", "middle"]));
+    await vi.waitFor(() => expect(templateSelect.value).toBe(""));
+    await vi.waitFor(() => expect([...element.shadowRoot!.querySelectorAll<HTMLSelectElement>(".advanced-climate-options-fields select")]
+      .map((select) => select.value)).toEqual(expect.arrayContaining(["auto", "eco", "on", "middle"])));
+    expect(previewProfile).toHaveBeenCalledTimes(1);
     element.remove();
   });
 
@@ -1778,6 +1789,7 @@ describe("profiles view", () => {
     const element = new VelairProfilesView();
     element.hass = {
       language: "en",
+      connection: { sendMessagePromise: vi.fn().mockResolvedValue({}) },
       states: {
         "climate.office": {
           state: "heat",
@@ -1849,6 +1861,7 @@ describe("profiles view", () => {
     ) as HTMLButtonElement;
     expect(cloneButton.disabled).toBe(false);
     cloneButton.click();
+    await vi.waitFor(() => expect((element as unknown as { _busy?: string })._busy).toBeUndefined());
     await element.updateComplete;
 
     const viewState = element as unknown as {
@@ -2118,7 +2131,7 @@ describe("profiles view", () => {
     } as unknown as ScheduleResponse;
     const climate = (name: string, modes = ["off", "heat"]) => ({ state: "heat", attributes: { friendly_name: name, supported_features: 1, hvac_modes: modes, min_temp: 5, max_temp: 35, target_temp_step: 0.5 } });
     const element = new VelairProfilesView();
-    element.hass = { language: "en", states: { "climate.office": climate("Office"), "climate.default": climate("Default room"), "climate.paused": climate("Paused room") } } as never;
+    element.hass = { language: "en", connection: { sendMessagePromise: vi.fn().mockResolvedValue({}) }, states: { "climate.office": climate("Office"), "climate.default": climate("Default room"), "climate.paused": climate("Paused room") } } as never;
     element.data = scheduled;
     document.body.append(element);
     await element.updateComplete;
@@ -2142,6 +2155,7 @@ describe("profiles view", () => {
     expect(dialog.textContent).toContain("Default room, Paused room");
     expect(element.shadowRoot!.querySelector(".profile-climate-clone-dialog")!.textContent).toContain("Default room, Paused room");
     [...element.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await vi.waitFor(() => expect((element as unknown as { _draft: ClimateProfileDraft })._draft.zones["climate.default"]?.behavior).toBe("schedule"));
     await element.updateComplete;
     const state = element as unknown as { _draft: ClimateProfileDraft; _dirty: boolean };
     expect(state._draft.zones["climate.default"].behavior).toBe("schedule");
@@ -2152,7 +2166,7 @@ describe("profiles view", () => {
     )].every((check) => !check.checked)).toBe(true);
 
     const incompatible = new VelairProfilesView();
-    incompatible.hass = { language: "en", states: { "climate.office": climate("Office"), "climate.default": climate("Cooling only", ["off", "cool"]), "climate.paused": climate("Paused room") } } as never;
+    incompatible.hass = { language: "en", connection: { sendMessagePromise: vi.fn().mockRejectedValue(new Error("does not support mode heat")) }, states: { "climate.office": climate("Office"), "climate.default": climate("Cooling only", ["off", "cool"]), "climate.paused": climate("Paused room") } } as never;
     incompatible.data = scheduled;
     document.body.append(incompatible);
     await incompatible.updateComplete;
@@ -2167,6 +2181,7 @@ describe("profiles view", () => {
     await incompatible.updateComplete;
     const before = structuredClone((incompatible as unknown as { _draft: ClimateProfileDraft })._draft);
     [...incompatible.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-dialog-actions button")][1].click();
+    await vi.waitFor(() => expect(incompatible.shadowRoot?.querySelector(".profile-dialog-error")?.textContent).toContain("does not support mode heat"));
     await incompatible.updateComplete;
     expect(incompatible.shadowRoot?.querySelector(".profile-dialog-error")?.textContent).toContain("does not support mode heat");
     expect((incompatible as unknown as { _draft: ClimateProfileDraft })._draft).toEqual(before);

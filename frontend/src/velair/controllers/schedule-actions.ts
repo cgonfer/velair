@@ -1,3 +1,4 @@
+import { backendErrorMessage } from "../domain/backend-errors";
 import {
   clampBlocksToTemperatureLimits,
   filterBlocksForClimateOptions,
@@ -9,6 +10,7 @@ import {
   climateTargetCompatibleForConfiguration,
 } from "../domain/climate";
 import { ACTION_SET_TEMPERATURE } from "../constants";
+import { bindingsFromBlocks } from "../domain/linked-schedules";
 import type { VelairApiClient } from "../api/client";
 import type {
   BlockDraftSource,
@@ -20,6 +22,8 @@ import type {
 } from "../types";
 
 type ScheduleActionsHost = {
+  _draftTemplateLink?: import("../types").TemplateLink;
+  _draftConfigurationRevision?: number;
   hass?: HomeAssistant;
   _applyingZones: boolean;
   _copying: boolean;
@@ -36,6 +40,7 @@ type ScheduleActionsHost = {
   _zoneTargets: Set<string>;
   _api(): VelairApiClient | undefined;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
+  _isScheduleResponseCurrent?(data: ScheduleResponse): boolean;
   _blocksForSource(source: BlockDraftSource): DraftScheduleBlock[];
   _clampBlocksForEntity(blocks: ScheduleBlock[], entityId: string): ScheduleBlock[];
   _climateSupportedModes(entityId: string): string[];
@@ -58,13 +63,21 @@ export function asScheduleActionsHost(host: unknown): ScheduleActionsHost {
   return host as ScheduleActionsHost;
 }
 
+async function saveDraftDay(host: ScheduleActionsHost, api: VelairApiClient, blocks: ScheduleBlock[]): Promise<ScheduleResponse> {
+  if (host._data?.configuration_revision === undefined && !host._draftTemplateLink) return api.setDailySchedule(host._selectedEntity!, host._selectedWeekday, blocks);
+  return api.setDailySchedule(host._selectedEntity!, host._selectedWeekday, blocks.map(({ slot_id: _slot, ...block }) => block), {
+    expected_revision: host._draftConfigurationRevision,
+    ...(host._draftTemplateLink ? { template_link: bindingsFromBlocks(host._draftTemplateLink, blocks) } : { unlink_template: Boolean(host._data?.zones[host._selectedEntity!]?.template_links?.[host._selectedWeekday]) }),
+  });
+}
+
 export async function saveSelectedDay(host: ScheduleActionsHost): Promise<void> {
   const api = host._api();
   if (!api || !host._selectedEntity || host._saving) {
     return;
   }
 
-  const normalized = host._normalizeDraftBlocks();
+  const normalized = host._draftTemplateLink?.mode === "full" ? { ok: true as const, blocks: [] } : host._normalizeDraftBlocks();
   if (!normalized.ok) {
     host._error = normalized.error;
     return;
@@ -79,13 +92,21 @@ export async function saveSelectedDay(host: ScheduleActionsHost): Promise<void> 
   host._error = undefined;
   host._saveMessage = undefined;
   try {
-    const data = await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks);
+    const input = host._draftTemplateLink ? { template_link: bindingsFromBlocks(host._draftTemplateLink, normalized.blocks) } : { blocks: normalized.blocks };
+    const dependent = Boolean(host._draftTemplateLink || normalized.blocks.some((block) => block.preset_key));
+    if (dependent) await api.previewDailySchedule(host._selectedEntity, host._selectedWeekday, input);
+    const options = {
+      expected_revision: host._draftConfigurationRevision,
+      ...(host._draftTemplateLink ? { template_link: bindingsFromBlocks(host._draftTemplateLink, normalized.blocks) } : { unlink_template: Boolean(host._data?.zones[host._selectedEntity]?.template_links?.[host._selectedWeekday]) }),
+    };
+    const data = host._data?.configuration_revision === undefined && !dependent ? await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks) : await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks, options);
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._dirty = false;
     host._dirtyEntityId = undefined;
     host._applyScheduleData(data, { forceDraft: true });
     host._showSuccess(host._t("saved"));
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableSave");
+    host._error = backendErrorMessage(error, host._t("unableSave"));
   } finally {
     host._saving = false;
   }
@@ -97,7 +118,7 @@ export async function copySelectedDay(host: ScheduleActionsHost): Promise<void> 
     return;
   }
 
-  const normalized = host._normalizeDraftBlocks();
+  const normalized = host._draftTemplateLink?.mode === "full" ? { ok: true as const, blocks: [] } : host._normalizeDraftBlocks();
   if (!normalized.ok) {
     host._error = normalized.error;
     return;
@@ -109,15 +130,29 @@ export async function copySelectedDay(host: ScheduleActionsHost): Promise<void> 
   }
 
   const targetWeekdays = [...host._copyTargets];
+  const sourceEntity = host._selectedEntity;
+  const sourceDay = host._selectedWeekday;
+  const context = () => JSON.stringify([host._selectedEntity, host._selectedWeekday,
+    host._draftTemplateLink, host._draftBlocks, [...host._copyTargets]]);
+  const originalContext = context();
   host._copying = true;
   host._error = undefined;
   host._saveMessage = undefined;
   try {
+    let revision = host._draftConfigurationRevision ?? host._data?.configuration_revision;
     if (host._dirty) {
-      await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks);
+      const saved = await saveDraftDay(host, api, normalized.blocks);
+      if (host._isScheduleResponseCurrent?.(saved) === false) return;
+      revision = saved.configuration_revision;
+      if (context() !== originalContext) return;
+      host._draftConfigurationRevision = revision;
     }
 
-    const data = await api.copyDaySchedule(host._selectedEntity, host._selectedWeekday, targetWeekdays);
+    if (context() !== originalContext) return;
+    const data = await api.copyDaySchedule(sourceEntity, sourceDay, targetWeekdays,
+      ...(revision !== undefined ? [{ expected_revision: revision }] : []));
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
+    if (context() !== originalContext) return;
     host._dirty = false;
     host._dirtyEntityId = undefined;
     host._copyTargets = new Set();
@@ -138,66 +173,43 @@ export async function applySelectedDayToZones(host: ScheduleActionsHost): Promis
     return;
   }
 
-  const normalized = host._normalizeDraftBlocks();
+  const normalized = host._draftTemplateLink?.mode === "full" ? { ok: true as const, blocks: [] } : host._normalizeDraftBlocks();
   if (!normalized.ok) {
     host._error = normalized.error;
     return;
   }
-
   const targetEntities = [...host._zoneTargets];
-  for (const entityId of targetEntities) {
-    const unsupportedModeError = host._unsupportedModeError(normalized.blocks, entityId);
-    if (unsupportedModeError) {
-      host._error = unsupportedModeError;
-      return;
-    }
-  }
-
-  const targetBlocks = new Map<string, ScheduleBlock[]>();
-  let checkedEntityId = "";
-  try {
-    for (const entityId of targetEntities) {
-      checkedEntityId = entityId;
-      targetBlocks.set(entityId, host._clampBlocksForEntity(normalized.blocks, entityId));
-    }
-  } catch (error) {
-    host._error = error instanceof UnsupportedClimateOptionsError
-      ? host._t("climateOptionsUnsupportedAt", {
-        entity: host._friendlyEntityName(checkedEntityId),
-        start: error.start,
-      })
-      : error instanceof Error ? error.message : host._t("unableApplyThermostats");
-    return;
-  }
-
+  const sourceEntity = host._selectedEntity;
+  const sourceDay = host._selectedWeekday;
+  const context = () => JSON.stringify([host._selectedEntity, host._selectedWeekday,
+    host._draftTemplateLink, host._draftBlocks, [...host._zoneTargets]]);
+  const originalContext = context();
   host._applyingZones = true;
   host._error = undefined;
   host._saveMessage = undefined;
   try {
-    let data: ScheduleResponse | undefined;
+    let revision = host._draftConfigurationRevision ?? host._data?.configuration_revision;
     if (host._dirty) {
-      data = await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks);
+      const saved = await saveDraftDay(host, api, normalized.blocks);
+      if (host._isScheduleResponseCurrent?.(saved) === false) return;
+      revision = saved.configuration_revision;
+      if (context() !== originalContext) return;
+      host._draftConfigurationRevision = revision;
     }
-
-    for (const entityId of targetEntities) {
-      data = await api.setDailySchedule(
-        entityId,
-        host._selectedWeekday,
-        targetBlocks.get(entityId) ?? [],
-      );
-    }
-
+    if (context() !== originalContext) return;
+    const data = await api.copyDaySchedule(sourceEntity, sourceDay, [sourceDay], {
+      target_entity_ids: targetEntities,
+      ...(revision !== undefined ? { expected_revision: revision } : {}),
+    });
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
+    if (context() !== originalContext) return;
     host._dirty = false;
     host._dirtyEntityId = undefined;
     host._zoneTargets = new Set();
-    if (data) {
-      host._applyScheduleData(data, { forceDraft: true });
-    }
-    host._showSuccess(host._t("appliedThermostats", {
-      count: targetEntities.length,
-    }));
+    host._applyScheduleData(data, { forceDraft: true });
+    host._showSuccess(host._t("appliedThermostats", { count: targetEntities.length }));
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableApplyThermostats");
+    host._error = backendErrorMessage(error, host._t("unableApplyThermostats"));
   } finally {
     host._applyingZones = false;
   }

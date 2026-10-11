@@ -187,7 +187,11 @@ class AutomationBlueprintContractTest(unittest.TestCase):
         }
         self.assertEqual(
             compatibility,
-            {"occupancy_home_away": None, "window_pause": "1.6.0"},
+            {
+                "occupancy_home_away": None,
+                "seasonal_climate_selection": None,
+                "window_pause": "1.6.0",
+            },
         )
 
         for entry in entries:
@@ -230,11 +234,22 @@ class AutomationBlueprintContractTest(unittest.TestCase):
                 metadata.index("  description:"):metadata.index("  domain:")
             ]
 
-            self.assertIn(f"Blueprint version {entry['version']}.", description)
-            self.assertIn(
-                f"Home Assistant {entry['minimum_home_assistant']} or newer",
-                description,
-            )
+            technical_metadata_in_headers = entry["id"] == "seasonal_climate_selection"
+            if technical_metadata_in_headers:
+                self.assertIn(f"# Velair blueprint version: {entry['version']}", source)
+                self.assertIn(
+                    f"# Released with Velair: {entry['released_with_velair']}", source
+                )
+                self.assertIn(
+                    f"# Minimum Home Assistant version: {entry['minimum_home_assistant']}",
+                    source,
+                )
+            else:
+                self.assertIn(f"Blueprint version {entry['version']}.", description)
+                self.assertIn(
+                    f"Home Assistant {entry['minimum_home_assistant']} or newer",
+                    description,
+                )
             self.assertIn(
                 f"homeassistant:\n    min_version: {entry['minimum_home_assistant']}",
                 metadata,
@@ -250,11 +265,16 @@ class AutomationBlueprintContractTest(unittest.TestCase):
 
             minimum_velair = entry["minimum_velair"]
             if minimum_velair is None:
-                self.assertIn("does not require Velair", description)
-                self.assertIn(
-                    f"Released with Velair {entry['released_with_velair']}",
-                    description,
-                )
+                if technical_metadata_in_headers:
+                    self.assertIn("# Velair is only required by configured actions.", source)
+                    self.assertNotIn("Blueprint version", description)
+                    self.assertNotIn("Released with Velair", description)
+                else:
+                    self.assertIn("does not require Velair", description)
+                    self.assertIn(
+                        f"Released with Velair {entry['released_with_velair']}",
+                        description,
+                    )
             else:
                 self.assertIn(
                     f"Requires Velair {minimum_velair} or newer",
@@ -541,9 +561,35 @@ class AutomationBlueprintContractTest(unittest.TestCase):
             self.assertIn(phrase, normalized_detail)
         self.assertIn("occupancy becomes unavailable", catalog)
 
+    def test_seasonal_notification_languages_match_velair(self) -> None:
+        """Keep language choices aligned with the translation index discovery."""
+        translations = ROOT / "frontend" / "src" / "velair" / "translations"
+        language_modules = {
+            path.stem.replace("_", "-")
+            for path in translations.glob("*.ts")
+            if path.stem not in {"index", "template", "types"}
+            and re.search(
+                rf"export const {re.escape(path.stem)}\s*=",
+                path.read_text(encoding="utf-8"),
+            )
+        }
+        source = (BLUEPRINTS / "seasonal_climate_selection.yaml").read_text(
+            encoding="utf-8"
+        )
+        contract = _blueprint_input_contract(source)["notification_language"]
+        choices = re.findall(r"^\s*- value: (.+)$", contract["selector"], re.MULTILINE)
+        self.assertEqual(set(choices), language_modules)
+        self.assertEqual(len(choices), len(set(choices)))
+        self.assertEqual(contract["default"], "en")
+        self.assertIn("mode: dropdown", contract["selector"])
+
     def test_every_blueprint_has_exactly_one_catalog_and_detail_page(self) -> None:
         guide = GUIDE.read_text(encoding="utf-8")
-        detail_paths = sorted(DETAILS.glob("*.md"))
+        # Translated siblings supplement the canonical detail page for a blueprint.
+        detail_paths = sorted(
+            path for path in DETAILS.glob("*.md")
+            if not re.search(r"\.(es|fr|de|it|nl|pl|pt-br|pt-pt|ru)\.md$", path.name)
+        )
         blueprints = _blueprint_files()
         self.assertEqual(len(detail_paths), len(blueprints))
 
@@ -651,11 +697,8 @@ class AutomationBlueprintContractTest(unittest.TestCase):
 
         self.assertEqual(claimed_details, set(detail_paths))
         self.assertEqual(
-            [position for _title, position in catalog_entries],
-            [
-                position
-                for _title, position in sorted(catalog_entries, key=lambda item: item[0])
-            ],
+            [title for title, _position in sorted(catalog_entries, key=lambda item: item[1])],
+            sorted(title for title, _position in catalog_entries),
         )
 
 if __name__ == "__main__":

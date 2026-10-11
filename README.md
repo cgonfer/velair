@@ -3,7 +3,7 @@ Climate automation that adapts to your life.
 
 [Explore Velair on the project website](https://cgonfer.github.io/velair/)
 
-[![Version](https://img.shields.io/badge/version-1.8.0-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
+[![Version](https://img.shields.io/badge/version-1.9.0--beta.1-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -31,6 +31,7 @@ Set up your normal week once. When plans change, switch to another Mode, boost o
 - Schedule blocks that can set a temperature or range, change only the HVAC mode, send supported options such as a preset without a temperature, or turn the climate off.
 - Manual adjustment when you want to take direct control of a climate.
 - Optional Adaptive Preconditioning and Room Assist for earlier starts and separate room-temperature sensors.
+- Optional [Planned Return](docs/user/planned-return.md): confirm whole-home absence and prepare for weekly or one-off arrivals, with current control context in Overview and Diagnostics.
 - Environmental Comfort and air-quality readings, with optional outdoor comparisons and ventilation guidance. These are observations; Velair does not open windows or adjust the climate based on them.
 - See what Velair is doing in Overview, investigate problems in Diagnostics, or add a card for one climate to your dashboard.
 - Home Assistant entities, services, events, and blueprints for automations. Compatible external controllers can also receive published schedules.
@@ -83,6 +84,12 @@ covers the full workflow. Velair follows Home Assistant's temperature unit; if
 you are upgrading older data or importing a backup from another unit, read
 [Temperature Units and Migration](docs/user/temperature-units.md) first.
 
+Every panel tab and the Default/Profiles and Templates/Climate presets
+subsections have a direct URL. Refreshing keeps the current section, and browser
+Back/Forward follows your navigation. See
+[Panel navigation and direct links](docs/user/usage.md#panel-navigation-and-direct-links)
+for the route table and a dashboard-button example.
+
 ## Optional Lovelace Card
 
 The sidebar panel is the main Velair experience. To add the optional card,
@@ -108,11 +115,24 @@ Replace `climate.living_room` with your managed climate. The
 visual editor, other views, actions, and display options. If Home Assistant shows a
 custom element error, see [troubleshooting](docs/user/troubleshooting.md).
 
+For household presence and One-off return controls, add a card with
+`type: custom:velair-card` and `view: planned-return`. Configure the household
+in the sidebar first. Occupancy sources are optional for an explicit one-off
+return, which applies Away immediately without them; weekly automation requires
+sources. See the [Planned Return card](docs/user/usage.md#planned-return-card).
+
 ## Documentation
 
 Start with the [documentation index](docs/README.md), or go directly to the
 [usage guide](docs/user/usage.md), [Environmental Comfort](docs/user/comfort.md),
 [sensor reference](docs/user/sensors.md), or [troubleshooting](docs/user/troubleshooting.md).
+
+For reusable schedules, see the
+[preset and linked-template examples](docs/user/linked-schedule-examples.md):
+shared heating routines, Winter/Summer Profiles, independent copies, and
+shared-edit troubleshooting.
+For automated changes to shared targets and device settings, see
+[preset automation examples](docs/user/preset-automations.md).
 The [development guide](docs/developer/development.md) covers the repository and
 contribution workflow.
 

@@ -18,6 +18,34 @@ export type PortableSummaryItem = {
   value: PortableSummaryValue;
 };
 
+/** Select reference libraries alongside their consumers; resolution stays in the backend. */
+export function portableSectionsWithDependencies(
+  selected: Iterable<PortableSection>,
+  data: unknown,
+): Set<PortableSection> {
+  const result = new Set(selected);
+  const source = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  if (result.has("planned_return")) {
+    const routine = source.planned_return as { away_mode_id?: string; destination_mode_id?: string } | undefined;
+    if ([routine?.away_mode_id, routine?.destination_mode_id].some((key) => key && key !== "default")) {
+      result.add("modes"); result.add("profiles");
+    }
+  }
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    const record = value as Record<string, unknown>;
+    if (typeof record.template_key === "string") result.add("templates");
+    if (typeof record.preset_key === "string") result.add("block_presets");
+    Object.values(record).forEach(visit);
+  };
+  for (const section of result) visit(source[section]);
+  return result;
+}
+
 export function validatePortablePayload(payload: VelairPortablePayload): PortableValidationResult {
   const modelVersion = Number(payload?.model_version);
   const declaredUnit = payload?.temperature_unit;
@@ -55,9 +83,11 @@ export function portableSectionsFromPayload(payload?: VelairPortablePayload): Po
 
 export function portableExportSummaryItems(
   sections: Set<PortableSection>,
-  counts: { zones: number; templates: number; preconditioningLearning: number; profiles: number; modes: number },
+  counts: { zones: number; templates: number; preconditioningLearning: number; profiles: number; modes: number; blockPresets?: number },
 ): PortableSummaryItem[] {
   const items: PortableSummaryItem[] = [];
+  if (sections instanceof Set ? sections.has("planned_return") : Object.prototype.hasOwnProperty.call(sections, "planned_return")) items.push({ section: "planned_return", value: "included" });
+  if (sections.has("block_presets")) items.push({ section: "block_presets", value: counts.blockPresets ?? 0 });
   if (sections.has("zones")) {
     items.push({ section: "zones", value: counts.zones });
   }
@@ -89,6 +119,8 @@ export function portableImportSummaryItems(payload?: VelairPortablePayload): Por
   }
 
   const items: PortableSummaryItem[] = [];
+  if (sections instanceof Set ? sections.has("planned_return") : Object.prototype.hasOwnProperty.call(sections, "planned_return")) items.push({ section: "planned_return", value: "included" });
+  if (Object.prototype.hasOwnProperty.call(sections, "block_presets")) items.push({ section: "block_presets", value: Array.isArray(sections.block_presets) ? sections.block_presets.length : 0 });
   if (Object.prototype.hasOwnProperty.call(sections, "zones")) {
     const zones = sections.zones;
     items.push({

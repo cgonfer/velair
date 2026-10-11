@@ -1,7 +1,12 @@
+import { timelineCarryOverFromWeeklySchedule } from "../domain/timeline";
+import { backendErrorMessage } from "../domain/backend-errors";
+import { PresetPreviewCache, presetPreviewKey } from "../domain/preset-preview";
+import { resolvedResourceBlock } from "../domain/resource-display";
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { renderInlineHelp } from "../views/inline-help";
+import { renderDocumentationHelp } from "../views/documentation-links";
 import { VelairApiClient } from "../api/client";
 import { activateClimateProfile, deleteClimateProfile, saveClimateProfile } from "../controllers/climate-profile-actions";
 import {
@@ -9,17 +14,19 @@ import {
   climateProfileAccentColor,
   climateProfileInput,
   climateProfileValidationError,
-  cloneProfileScheduleDay,
+  cloneProfileDayToDays,
   cloneProfileDayToClimates,
   createClimateProfileDraft,
   nextProfileBlockStart,
   profileZoneBehavior,
+  profileDraftBlockInput,
   uniqueClimateProfileName,
   withProfileZoneBehavior,
   type ClimateProfileDraft,
   type ClimateProfileDraftZone,
 } from "../domain/climate-profiles";
-import { newTemplateKey } from "../domain/templates";
+import { availableScheduleTemplates, newTemplateKey } from "../domain/templates";
+import { bindingsFromBlocks, linkedDayBlocks, linkDraftDay, linkedDraftBlocks, preserveSlotIds } from "../domain/linked-schedules";
 import {
   climateFanModeOptions,
   climateHumidityLimits,
@@ -91,12 +98,22 @@ import {
   renderDraftListHeader,
   renderEditableBlock,
   renderTimeline,
+  renderLinkedHoursControl,
 } from "../views/schedule-view";
 import { renderWeeklyScheduleEditor } from "../views/weekly-schedule-editor";
 import { renderContextualNoticeStack } from "../views/notice-view";
 import { renderCloneDayPresets, renderExternalSwitchpointUsage } from "../views/schedule-editor-controls";
 
 export class VelairProfilesView extends LitElement {
+  public focusUsage(usage: import("../types").ResourceUsage): void {
+    const profile = this.data?.profiles?.find((item) => item.key === usage.profile_key);
+    if (!profile) return;
+    this._selectProfile(profile);
+    if (this._selectedKey !== profile.key) return;
+    this._selectedEntity = usage.entity_id;
+    this._selectedDays = { ...this._selectedDays, [usage.entity_id]: usage.weekday };
+    this._expandedZones = new Set([usage.entity_id]);
+  }
   @property({ attribute: false }) public hass?: HomeAssistant;
   @property({ attribute: false }) public data?: ScheduleResponse;
   @property({ attribute: "initial-weekday" }) public initialWeekday = "";
@@ -117,8 +134,63 @@ export class VelairProfilesView extends LitElement {
   @state() private _selectedDays: Record<string, string> = {};
   @state() private _cloneWeekdayTargets: Record<string, Set<string>> = {};
   @state() private _cloneClimateTargets: Record<string, Set<string>> = {};
-  @state() private _busy?: "activate" | "save" | "delete" | "mode-save" | "mode-delete" | "mode-activate" | "template-save";
+  @state() private _busy?: "activate" | "save" | "delete" | "mode-save" | "mode-delete" | "mode-activate" | "template-save" | "materialize" | "clone";
   @state() private _dirty = false;
+  private _configurationRevision?: number;
+  private readonly _presetPreviews = new PresetPreviewCache();
+
+  private _effectiveWeekday(entityId: string): string {
+    const weekdays = orderedWeekdays(this.data?.settings?.first_weekday ?? WEEKDAYS[0]);
+    return this._selectedDays[entityId] ?? (weekdays.includes(this.initialWeekday) ? this.initialWeekday : weekdays[0]);
+  }
+
+  private _presetPreviewKey(entityId: string, weekday: string, block: DraftScheduleBlock, index: number): string {
+    return presetPreviewKey([this._selectedKey, this._selectedEntity, entityId, weekday, index, this.data?.configuration_revision, this.data?.temperature_unit], block);
+  }
+
+  private _effectivePresetBlock(entityId: string, weekday: string, block: DraftScheduleBlock, index: number): ScheduleBlock | undefined {
+    const cached = this._presetPreviews.get(this._presetPreviewKey(entityId, weekday, block, index))?.block;
+    if (cached) return { ...cached, start: block.start };
+    const resolved = block.preset_key ? resolvedResourceBlock(this.data, { source: "profile", profile_key: this._selectedKey, entity_id: entityId, weekday, start: block.start, slot_id: block.slot_id }, block.preset_key)?.block : undefined;
+    if (resolved) this._presetPreviews.remember(this._presetPreviewKey(entityId, weekday, block, index), resolved);
+    return resolved ? { ...resolved, start: block.start } : undefined;
+  }
+
+  private _refreshPresetPreviews(): void {
+    const visible = Object.entries(this._draft.zones).filter(([entityId, zone]) => zone.behavior === "schedule" && (entityId === this._selectedEntity || (!this.scheduleWorkspace && this._expandedZones.has(entityId))));
+    const contexts = visible.flatMap(([entityId]) => {
+      const selectedDay = this._effectiveWeekday(entityId);
+      const week = Object.fromEntries(WEEKDAYS.map((day) => [day, this._blocks(entityId, day)]));
+      const carry = timelineCarryOverFromWeeklySchedule(week, selectedDay);
+      const blocks = week[selectedDay].map((block, index) => ({ entityId, weekday: selectedDay, selectedDay, block, index }));
+      const carryZone = this._draft.zones[entityId];
+      if (carry && (carry.block.preset_key || (carryZone?.behavior === "schedule" && carryZone.template_links?.[carry.sourceWeekday]?.mode === "full"))) {
+        const index = week[carry.sourceWeekday].findIndex((block) => block.start === carry.block.start);
+        blocks.push({ entityId, weekday: carry.sourceWeekday, selectedDay, block: carry.block, index });
+      }
+      return blocks;
+    });
+    this._presetPreviews.retain(new Set(contexts.map(({ entityId, weekday, block, index }) => this._presetPreviewKey(entityId, weekday, block, index))));
+    for (const { entityId, weekday, selectedDay, block, index } of contexts) {
+      const zone = this._draft.zones[entityId];
+      const full = zone?.behavior === "schedule" && zone.template_links?.[weekday]?.mode === "full";
+      if ((!block.preset_key && !full) || this._effectivePresetBlock(entityId, weekday, block, index)) continue;
+      const key = this._presetPreviewKey(entityId, weekday, block, index);
+      const start = block.start;
+      this._presetPreviews.request(key, async () => {
+        if (!this.hass) throw new Error(this._t("unableLoad"));
+        if (full) {
+          const response = await new VelairApiClient(this.hass).previewProfile(climateProfileInput(this._draft));
+          if (response.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
+          return response.resolved_schedules[entityId]?.[weekday]?.find((item) => item.start === start);
+        }
+        const response = await new VelairApiClient(this.hass).previewDailySchedule(entityId, weekday, { blocks: [{ start, preset_key: block.preset_key }] });
+        return response.blocks.find((item) => item.start === start);
+      }, () => this._effectiveWeekday(entityId) === selectedDay && key === this._presetPreviewKey(entityId, weekday, this._blocks(entityId, weekday)[index] ?? {} as DraftScheduleBlock, index),
+      () => this.requestUpdate(), () => undefined);
+    }
+  }
+
   @state() private _error?: string;
   @state() private _expandedZones = new Set<string>();
   @state() private _selectedModeKey = "";
@@ -200,6 +272,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   protected updated(changed: Map<string, unknown>): void {
+    this._refreshPresetPreviews();
     if (changed.has("_error") && this._error) {
       this.dispatchEvent(new CustomEvent("profile-error", {
         bubbles: true,
@@ -225,6 +298,7 @@ export class VelairProfilesView extends LitElement {
             <strong>${this._t("modesTitle")}</strong>
             <small>${this._t("modesDescription")} ${this._t("modesEntityNote")}</small>
           </span>
+          ${renderDocumentationHelp({ hass: this.hass, _t: (key, values) => this._t(key, values) }, "profiles")}
         </header>
         ${selector}
         ${this._renderModes()}
@@ -237,6 +311,7 @@ export class VelairProfilesView extends LitElement {
           <strong>${this._t("profilesAndModes")}</strong>
           <small>${this._t("profilesPanelIntro")}</small>
         </span>
+        ${renderDocumentationHelp({ hass: this.hass, _t: (key, values) => this._t(key, values) }, "profiles")}
       </header>
       ${selector}
       ${this._renderLibrarySelector()}
@@ -306,7 +381,7 @@ export class VelairProfilesView extends LitElement {
           ${dialog.error ? html`<div class="notice error profile-dialog-error" role="alert">${dialog.error}</div>` : nothing}
           <div class="profile-dialog-actions">
             <button type="button" @click=${this._closeClimateCloneDialog}>${this._t("cancel")}</button>
-            <button class="command-button success" type="button" ?disabled=${dialog.targets.size === 0} @click=${this._confirmCloneDayToClimates}>${this._t("cloneAction")}</button>
+            <button class="command-button success" type="button" ?disabled=${dialog.targets.size === 0 || Boolean(this._busy)} @click=${this._confirmCloneDayToClimates}>${this._t("cloneAction")}</button>
           </div>
         </section>
       </div>`;
@@ -404,6 +479,8 @@ export class VelairProfilesView extends LitElement {
               <div class="section-heading">
                 <ha-icon icon="mdi:account-switch-outline"></ha-icon>
                 <span class="section-label">${this._t("profiles")} (${profiles.length})</span>
+                ${this.workspace === "profiles" && !this.scheduleWorkspace
+                  ? renderDocumentationHelp({ hass: this.hass, _t: (key, values) => this._t(key, values) }, "profiles") : nothing}
               </div>
               <button
                 class="icon-button primary"
@@ -1168,9 +1245,8 @@ export class VelairProfilesView extends LitElement {
 
   private _renderSchedule(entityId: string, zone: Extract<ClimateProfileDraftZone, { behavior: "schedule" }>) {
     const weekdays = orderedWeekdays(this.data?.settings?.first_weekday ?? WEEKDAYS[0]);
-    const initialWeekday = weekdays.includes(this.initialWeekday) ? this.initialWeekday : weekdays[0];
-    const weekday = this._selectedDays[entityId] ?? initialWeekday;
-    const blocks = zone.schedule[weekday] ?? [];
+    const weekday = this._effectiveWeekday(entityId);
+    const blocks = this._blocks(entityId, weekday);
     const externalCapabilities = this._externalCapabilities(entityId);
     const cloneWeekdayTargets = new Set(
       [...(this._cloneWeekdayTargets[entityId] ?? [])].filter((day) => day !== weekday),
@@ -1198,16 +1274,18 @@ export class VelairProfilesView extends LitElement {
               @click=${() => this._selectDay(entityId, day)}
             >
               <span>${dayLabel.slice(0, 3)}</span>
-              <strong>${zone.schedule[day]?.length ?? 0}</strong>
+              <strong>${this._blocks(entityId, day).length}</strong>
             </button>
           `;})}
         </div>`;
     const timeline = renderTimeline(blockHost, entityId, "template", {
-          schedule: zone.schedule,
+          // Include linked days when displaying continuity across midnight.
+          // This assembles editable hours/references; execution remains backend-owned.
+          schedule: Object.fromEntries(WEEKDAYS.map((day) => [day, this._blocks(entityId, day)])),
           weekday,
         });
-    const templatePanel = html`<div class="template-panel">
-            <div>
+    const templatePanel = html`<div class="template-panel">${(this.data?.resource_diagnostics ?? []).filter((item) => item.source === "profile" && item.profile_key === this._selectedKey && item.entity_id === entityId).map((item) => html`<div class="notice error">${item.message}</div>`)}${renderLinkedHoursControl(blockHost)}${blockHost._draftTemplateLink ? nothing : html`
+            <div class="copy-template-control">
               <span class="label">${this._t("templates")}</span>
               <span class="select-wrap profile-template-select">
                 <select
@@ -1218,12 +1296,12 @@ export class VelairProfilesView extends LitElement {
                   ${this.data?.templates?.length
                     ? html`
                         <option value="">${this._t("selectTemplatePlaceholder")}</option>
-                        ${this.data.templates.map((template) => html`<option value=${template.key}>${template.name}</option>`)}
+                        ${availableScheduleTemplates(this.data.templates).map((template) => html`<option value=${template.key}>${template.name}</option>`)}
                       `
                     : html`<option value="">${this._t("noTemplates")}</option>`}
                 </select>
               </span>
-            </div>
+            </div>`}
           </div>`;
     const primaryActions = html`<div class="schedule-save-actions profile-day-actions">
             <button
@@ -1284,7 +1362,7 @@ export class VelairProfilesView extends LitElement {
             <button
               class="command-button success"
               type="button"
-              ?disabled=${cloneWeekdayTargets.size === 0 || this._hasScheduleValidationError()}
+              ?disabled=${Boolean(this._busy) || cloneWeekdayTargets.size === 0 || this._hasScheduleValidationError()}
               @click=${() => this._cloneSelectedDay(entityId, weekday, cloneWeekdayTargets)}
             >
               <ha-icon icon="mdi:content-copy"></ha-icon>
@@ -1320,7 +1398,7 @@ export class VelairProfilesView extends LitElement {
               <button
                 class="command-button success"
                 type="button"
-                ?disabled=${cloneClimateTargets.size === 0 || this._hasScheduleValidationError()}
+                ?disabled=${Boolean(this._busy) || cloneClimateTargets.size === 0 || this._hasScheduleValidationError()}
                 @click=${(event: Event) => this._openClimateCloneDialog(
                   entityId,
                   weekday,
@@ -1400,6 +1478,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _selectProfile(profile: ClimateProfile): void {
+    if (this._materializingTemplate) return;
     if (this._dirty && !window.confirm(this._t("profileDiscardChanges"))) {
       return;
     }
@@ -1432,6 +1511,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _selectDay(entityId: string, weekday: string): void {
+    if (this._materializingTemplate) return;
     this._selectedDays = { ...this._selectedDays, [entityId]: weekday };
     const targets = new Set(this._cloneWeekdayTargets[entityId] ?? []);
     targets.delete(weekday);
@@ -1460,25 +1540,30 @@ export class VelairProfilesView extends LitElement {
     this._cloneClimateTargets = { ...this._cloneClimateTargets, [entityId]: targets };
   }
 
-  private _cloneSelectedDay(
+  private async _cloneSelectedDay(
     entityId: string,
     weekday: string,
     targetWeekdays: Set<string>,
-  ): void {
+  ): Promise<void> {
     const zone = this._draft.zones[entityId];
     if (zone?.behavior !== "schedule" || targetWeekdays.size === 0) return;
-    this._draft = {
-      ...this._draft,
-      zones: {
-        ...this._draft.zones,
-        [entityId]: {
-          ...zone,
-          schedule: cloneProfileScheduleDay(zone.schedule, weekday, targetWeekdays),
-        },
-      },
-    };
-    this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: new Set() };
-    this._setDirty(true);
+    if (this._busy || !this.hass?.connection) return;
+    const context = () => JSON.stringify([this._selectedKey, this._selectedEntity, this._selectedDays, this._draft, this.data?.configuration_revision, this._cloneWeekdayTargets[entityId] ? [...this._cloneWeekdayTargets[entityId]] : [...targetWeekdays]]);
+    const originalContext = context();
+    const candidate = cloneProfileDayToDays(this._draft, entityId, weekday, targetWeekdays);
+    this._busy = "clone";
+    try {
+      const preview = await new VelairApiClient(this.hass).previewProfile(climateProfileInput(candidate));
+      if (context() !== originalContext) return;
+      if (preview.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
+      this._draft = candidate;
+      this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: new Set() };
+      this._setDirty(true);
+    } catch (error) {
+      if (context() === originalContext) this._error = backendErrorMessage(error, this._t("unableCopy"));
+    } finally {
+      this._busy = undefined;
+    }
   }
 
   private _toggleZone(entityId: string): void {
@@ -1490,12 +1575,127 @@ export class VelairProfilesView extends LitElement {
 
   private _blocks(entityId: string, weekday: string): DraftScheduleBlock[] {
     const zone = this._draft.zones[entityId];
+    if (zone?.behavior === "schedule" && zone.template_links?.[weekday]) return linkedDraftBlocks(zone.template_links[weekday], this.data?.templates ?? [], this.data?.temperature_unit);
     return zone?.behavior === "schedule" ? [...(zone.schedule[weekday] ?? [])] : [];
   }
 
+  private _linkHours(entityId: string, weekday: string, key: string): boolean {
+    if (this._materializingTemplate) return false;
+    const zone = this._draft.zones[entityId];
+    if (zone?.behavior === "schedule" && zone.template_links?.[weekday]?.template_key === key) return true;
+    const template = availableScheduleTemplates(this.data?.templates).find((item) => item.key === key);
+    if (zone?.behavior !== "schedule" || !template || !window.confirm(this._t("hoursReplaceConfirmation", { name: template.name ?? template.key }))) return false;
+    const link = zone.template_links?.[weekday]?.mode === "full" ? { mode: "full" as const, template_key: key } : linkDraftDay(template, this._blocks(entityId, weekday));
+    this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: [] }, template_links: { ...zone.template_links, [weekday]: link } } } };
+    this._setDirty(true);
+    return true;
+  }
+
+  @state() private _materializingTemplate = false;
+  private _materializationError?: string;
+  private async _materializeFullDay(entityId: string, weekday: string, link: import("../types").TemplateLink, savedProfile = false, candidate?: ClimateProfileInput): Promise<DraftScheduleBlock[] | undefined> {
+    if (!this.hass || this._materializingTemplate || this._busy) return undefined;
+    const fingerprint = () => JSON.stringify([this._selectedKey, this._selectedEntity, this._selectedDays, this.data?.configuration_revision, this._draft]);
+    const snapshot = fingerprint();
+    const revision = this.data?.configuration_revision;
+    if (this._error === this._materializationError) this._error = undefined;
+    this._materializationError = undefined;
+    this._materializingTemplate = true;
+    this._busy = "materialize";
+    try {
+      const input = candidate ?? (savedProfile ? this._persistedProfileInput() : climateProfileInput(this._draft));
+      if (!input) return undefined;
+      const preview = await new VelairApiClient(this.hass).previewProfile(input);
+      if (snapshot !== fingerprint()) return undefined;
+      const blocks = preview.materialized_schedules?.[entityId]?.[weekday];
+      if ((revision !== undefined && preview.configuration_revision !== revision) || !Array.isArray(blocks)) throw new Error(this._t("linkedConfigurationUnavailable"));
+      return draftBlocksFromScheduleBlocks(blocks, this.data?.temperature_unit);
+    } catch (error) {
+      if (snapshot === fingerprint()) {
+        this._materializationError = backendErrorMessage(error, this._t("unableLoad"));
+        this._error = this._materializationError;
+      }
+      return undefined;
+    } finally { this._materializingTemplate = false; this._busy = undefined; }
+  }
+
+  private async _setHoursScope(entityId: string, weekday: string, mode: "hours" | "full"): Promise<boolean> {
+    if (this._materializingTemplate) return false;
+    const zone = this._draft.zones[entityId];
+    const link = zone?.behavior === "schedule" ? zone.template_links?.[weekday] : undefined;
+    if (!link || zone?.behavior !== "schedule" || (link.mode ?? "hours") === mode) return true;
+    const template = availableScheduleTemplates(this.data?.templates).find((item) => item.key === link.template_key);
+    if (!template || (mode === "full" && !window.confirm(this._t("templateFullReplaceConfirmation")))) return false;
+    const blocks = mode === "hours" ? await this._materializeFullDay(entityId, weekday, link) : this._blocks(entityId, weekday);
+    if (!blocks) return false;
+    const next = mode === "full" ? { mode, template_key: link.template_key } : linkDraftDay(template, blocks);
+    this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, template_links: { ...zone.template_links, [weekday]: next } } } };
+    this._setDirty(true);
+    return true;
+  }
+
+  private async _restoreOwnHours(entityId: string, weekday: string): Promise<boolean> {
+    if (this._materializingTemplate) return false;
+    const zone = this._draft.zones[entityId];
+    if (zone?.behavior !== "schedule" || !window.confirm(this._t("hoursRestoreConfirmation"))) return false;
+    const saved = this._persistedProfileInput()?.zones[entityId];
+    const savedLink = saved?.behavior === "schedule" ? saved.template_links?.[weekday] : undefined;
+    const blocks = savedLink?.mode === "full" ? await this._materializeFullDay(entityId, weekday, savedLink, true) : savedLink
+      ? linkedDraftBlocks(savedLink, this.data?.templates ?? [], this.data?.temperature_unit)
+      : draftBlocksFromScheduleBlocks(saved?.behavior === "schedule" ? saved.schedule[weekday] ?? [] : [], this.data?.temperature_unit);
+    if (!blocks) return false;
+    const links = { ...zone.template_links };
+    delete links[weekday];
+    this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks.map(({ slot_id: _slot, ...block }) => block) }, template_links: links } } };
+    this._setDirty(true);
+    return true;
+  }
+
+  private async _unlinkHours(entityId: string, weekday: string): Promise<void> {
+    if (this._materializingTemplate) return;
+    const zone = this._draft.zones[entityId];
+    if (zone?.behavior !== "schedule" || !zone.template_links?.[weekday]) return;
+    const materialized = zone.template_links[weekday].mode === "full" ? await this._materializeFullDay(entityId, weekday, zone.template_links[weekday]) : this._blocks(entityId, weekday);
+    if (!materialized) return;
+    const blocks = materialized.map(({ slot_id: _id, ...block }) => block);
+    const links = { ...zone.template_links };
+    delete links[weekday];
+    this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks }, template_links: links } } };
+    this._setDirty(true);
+  }
+
+  private async _unlinkPreset(entityId: string, weekday: string, index: number): Promise<void> {
+    const blocks = this._blocks(entityId, weekday);
+    if (!blocks[index]?.preset_key) return;
+    const key = this._presetPreviewKey(entityId, weekday, blocks[index], index);
+    const start = blocks[index].start;
+    const current = () => weekday === this._effectiveWeekday(entityId) && start === this._blocks(entityId, weekday)[index]?.start && key === this._presetPreviewKey(entityId, weekday, this._blocks(entityId, weekday)[index] ?? {} as DraftScheduleBlock, index);
+    try {
+      let effective = this._effectivePresetBlock(entityId, weekday, blocks[index], index);
+      if (!effective) {
+        if (!this.hass) throw new Error(this._t("unableLoad"));
+        const preview = await new VelairApiClient(this.hass).previewDailySchedule(entityId, weekday, { blocks: [{ start: blocks[index].start, preset_key: blocks[index].preset_key }] });
+        effective = preview.blocks.find((block) => block.start === blocks[index].start);
+      }
+      if (!effective || !current()) return;
+      const replacement = draftBlocksFromScheduleBlocks([{ ...effective, slot_id: blocks[index].slot_id }], this.data?.temperature_unit)[0];
+      this._setBlocks(entityId, weekday, this._blocks(entityId, weekday).map((block, i) => i === index ? replacement : block));
+    } catch (error) { if (current()) this._error = backendErrorMessage(error, this._t("unableSave")); }
+  }
+
   private _setBlocks(entityId: string, weekday: string, blocks: DraftScheduleBlock[]): void {
+    if (this._materializingTemplate) return;
     const zone = this._draft.zones[entityId];
     if (zone?.behavior !== "schedule") return;
+    const link = zone.template_links?.[weekday];
+    if (link?.mode === "full") return;
+    if (link) {
+      const template = availableScheduleTemplates(this.data?.templates).find((item) => item.key === link.template_key);
+      if (!template) return;
+      this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, template_links: { ...zone.template_links, [weekday]: linkDraftDay(template, blocks) } } } };
+      this._setDirty(true);
+      return;
+    }
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks } } } };
     this._setDirty(true);
   }
@@ -1553,24 +1753,22 @@ export class VelairProfilesView extends LitElement {
     this._setBlocks(entityId, weekday, updated);
   }
 
-  private _copyTemplate(entityId: string, weekday: string, select: HTMLSelectElement): void {
+  private async _copyTemplate(entityId: string, weekday: string, select: HTMLSelectElement): Promise<void> {
     const key = select.value;
-    if (!key) return;
-    const template = this.data?.templates?.find((candidate) => candidate.key === key);
-    if (template) {
-      try {
-        const blocks = this._filterCopiedBlocks(
-          entityId,
-          draftBlocksFromScheduleBlocks(template.blocks, this.data?.temperature_unit),
-        );
-        this._setBlocks(entityId, weekday, blocks);
-      } catch {
-        this._error = this._t("profileCloneDayIncompatibleOptions", {
-          entity: this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
-          start: template.blocks.find((block) => block.action === ACTION_SET_CLIMATE_OPTIONS)?.start ?? "",
-        });
-      }
-    }
+    const template = availableScheduleTemplates(this.data?.templates).find((item) => item.key === key);
+    const zone = this._draft.zones[entityId];
+    if (!template || zone?.behavior !== "schedule" || this._materializingTemplate) return;
+    const link = { mode: "full" as const, template_key: key };
+    const input = climateProfileInput(this._draft);
+    const current = input.zones[entityId];
+    if (current?.behavior !== "schedule") return;
+    input.zones[entityId] = { ...current, schedule: { ...current.schedule, [weekday]: [] }, template_links: { ...current.template_links, [weekday]: link } };
+    const blocks = await this._materializeFullDay(entityId, weekday, link, false, input);
+    if (!blocks) { select.value = ""; return; }
+    const links = { ...zone.template_links };
+    delete links[weekday];
+    this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks }, template_links: links } } };
+    this._setDirty(true);
     select.value = "";
   }
 
@@ -1580,7 +1778,8 @@ export class VelairProfilesView extends LitElement {
     if (!dialog || !api || !dialog.name.trim() || this._busy) return;
     const zone = this._draft.zones[dialog.entityId];
     if (zone?.behavior !== "schedule") return;
-    const draftBlocks = zone.schedule[dialog.weekday] ?? [];
+    const draftBlocks = zone.template_links?.[dialog.weekday]?.mode === "full" ? await this._materializeFullDay(dialog.entityId, dialog.weekday, zone.template_links[dialog.weekday]) : this._blocks(dialog.entityId, dialog.weekday);
+    if (!draftBlocks || this._templateDialog !== dialog) return;
     const starts = new Set<string>();
     const invalid = draftBlocks.some((block) => {
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(block.start) || starts.has(block.start)) return true;
@@ -1602,7 +1801,9 @@ export class VelairProfilesView extends LitElement {
     this._templateSaveToken = token;
     this._clearNotices();
     try {
-      const response = await api.setScheduleTemplate(newTemplateKey(), dialog.name.trim(), inputZone.schedule[dialog.weekday] ?? []);
+      const raw = draftBlocks.map(profileDraftBlockInput);
+      const effective = raw;
+      const response = await api.setScheduleTemplate(newTemplateKey(), dialog.name.trim(), effective.map(({ slot_id: _slot, ...block }) => block));
       this.data = response;
       this.dispatchEvent(new CustomEvent("profile-data-changed", { bubbles: true, composed: true, detail: response }));
       if (this._templateSaveToken === token && this._templateDialog === dialog) {
@@ -1621,31 +1822,30 @@ export class VelairProfilesView extends LitElement {
     }
   };
 
-  private _confirmCloneDayToClimates = (): void => {
+  private _confirmCloneDayToClimates = async (): Promise<void> => {
     const dialog = this._climateCloneDialog;
     if (!dialog?.targets.size) return;
     const source = this._draft.zones[dialog.entityId];
     if (source?.behavior !== "schedule") return;
-    const blocks = source.schedule[dialog.weekday] ?? [];
-    for (const entityId of dialog.targets) {
-      const error = this._cloneCompatibilityError(blocks, entityId);
-      if (error) { this._climateCloneDialog = { ...dialog, error }; return; }
+    if (!this.hass?.connection || this._busy) return;
+    const context = () => JSON.stringify([this._selectedKey, this._selectedEntity, this._selectedDays, this._draft, this.data?.configuration_revision]);
+    const originalContext = context();
+    const candidate = cloneProfileDayToClimates(this._draft, dialog.entityId, dialog.weekday, dialog.targets);
+    const current = () => this._climateCloneDialog === dialog && context() === originalContext;
+    this._busy = "clone";
+    try {
+      const preview = await new VelairApiClient(this.hass).previewProfile(climateProfileInput(candidate));
+      if (!current()) return;
+      if (preview.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
+      this._draft = candidate;
+      this._cloneClimateTargets = { ...this._cloneClimateTargets, [dialog.entityId]: new Set() };
+      this._closeClimateCloneDialog();
+      this._setDirty(true);
+    } catch (error) {
+      if (current()) this._climateCloneDialog = { ...dialog, error: backendErrorMessage(error, this._t("unableApplyThermostats")) };
+    } finally {
+      this._busy = undefined;
     }
-    const copied = cloneProfileDayToClimates(this._draft, dialog.entityId, dialog.weekday, dialog.targets);
-    for (const entityId of dialog.targets) {
-      const zone = copied.zones[entityId];
-      if (zone?.behavior !== "schedule") continue;
-      const schedule = { ...zone.schedule, [dialog.weekday]: this._filterCopiedBlocks(entityId, zone.schedule[dialog.weekday] ?? []) };
-      copied.zones[entityId] = { behavior: "schedule", schedule };
-      copied.rememberedSchedules[entityId] = schedule;
-    }
-    this._draft = copied;
-    this._cloneClimateTargets = {
-      ...this._cloneClimateTargets,
-      [dialog.entityId]: new Set(),
-    };
-    this._closeClimateCloneDialog();
-    this._setDirty(true);
   };
 
   private _openTemplateDialog(entityId: string, weekday: string, trigger: HTMLElement): void {
@@ -1748,6 +1948,40 @@ export class VelairProfilesView extends LitElement {
     const temperatureLimits = entityTemperatureLimits(state, this.data?.temperature_unit);
     const temperatureStep = this._entityTemperatureStep(entityId, state);
     const host: Record<string, unknown> = {
+      _materializingTemplate: this._materializingTemplate,
+      _allowBlockPresets: true,
+      _timelineTemplateLinkForDay: (day: string) => { const zone = this._draft.zones[entityId]; return zone?.behavior === "schedule" ? zone.template_links?.[day] : undefined; },
+      _effectivePresetBlockForDay: (block: DraftScheduleBlock, _index: number, day: string) => {
+        const index = this._blocks(entityId, day).findIndex((item) => block.slot_id ? item.slot_id === block.slot_id : item.start === block.start);
+        return index < 0 ? undefined : this._effectivePresetBlock(entityId, day, block, index);
+      },
+      _presetSettingsStatusForDay: (block: DraftScheduleBlock, _index: number, day: string) => {
+        const index = this._blocks(entityId, day).findIndex((item) => block.slot_id ? item.slot_id === block.slot_id : item.start === block.start);
+        return index < 0 ? "unavailable" : this._effectivePresetBlock(entityId, day, block, index) ? undefined
+          : this._presetPreviews.get(this._presetPreviewKey(entityId, day, block, index))?.status ?? "loading";
+      },
+      _effectivePresetBlock: (block: DraftScheduleBlock, index: number) => this._effectivePresetBlock(entityId, weekday, block, index),
+      _presetSettingsStatus: (block: DraftScheduleBlock, index: number) => this._effectivePresetBlock(entityId, weekday, block, index) ? undefined : this._presetPreviews.get(this._presetPreviewKey(entityId, weekday, block, index))?.status ?? "loading",
+      _retryPresetSettings: (block: DraftScheduleBlock, index: number) => {
+        this._presetPreviews.invalidate(this._presetPreviewKey(entityId, weekday, block, index));
+        this._refreshPresetPreviews();
+      },
+      _resourceProfileKey: this._selectedKey,
+      _selectedWeekday: weekday,
+      _editPreset: (key: string) => this.dispatchEvent(new CustomEvent("velair-edit-preset", { bubbles: true, composed: true, detail: key })),
+      _linkedHours: Boolean(this._draft.zones[entityId]?.behavior === "schedule" && (this._draft.zones[entityId] as Extract<ClimateProfileDraftZone, { behavior: "schedule" }>).template_links?.[weekday]),
+      _draftTemplateLink: this._draft.zones[entityId]?.behavior === "schedule" ? (this._draft.zones[entityId] as Extract<ClimateProfileDraftZone, { behavior: "schedule" }>).template_links?.[weekday] : undefined,
+      _setDayTemplateScope: (mode: "hours" | "full") => this._setHoursScope(entityId, weekday, mode),
+      _setDayTemplateLink: (key: string) => this._linkHours(entityId, weekday, key),
+      _restoreOwnDaySchedule: () => this._restoreOwnHours(entityId, weekday),
+      _unlinkDayTemplate: () => this._unlinkHours(entityId, weekday),
+      _setPresetForBlock: (index: number, key: string) => {
+        if (!key) { void this._unlinkPreset(entityId, weekday, index); return; }
+        const previous = this._blocks(entityId, weekday)[index];
+        if (previous) this._presetPreviews.invalidate(this._presetPreviewKey(entityId, weekday, previous, index));
+        this._setBlocks(entityId, weekday, this._blocks(entityId, weekday).map((block, i) => i === index ? { start: block.start, slot_id: block.slot_id, preset_key: key, action: "", hvac_mode: "" } : block));
+      },
+      _unlinkPresetBlock: (index: number) => this._unlinkPreset(entityId, weekday, index),
       hass: this.hass,
       classList: this.classList,
       renderRoot: this.renderRoot,
@@ -1867,7 +2101,7 @@ export class VelairProfilesView extends LitElement {
     if (this._unsupportedScheduleModeError()) return true;
     return Object.entries(this._draft.zones).some(([entityId, zone]) =>
       zone.behavior === "schedule"
-      && WEEKDAYS.some((weekday) => (zone.schedule[weekday] ?? []).some((block) =>
+      && WEEKDAYS.some((weekday) => zone.template_links?.[weekday]?.mode !== "full" && this._blocks(entityId, weekday).some((block) =>
         Boolean(this._temperatureError(entityId, block)))),
     );
   }
@@ -1908,7 +2142,8 @@ export class VelairProfilesView extends LitElement {
       if (zone.behavior !== "schedule") continue;
       const state = this.hass?.states?.[entityId];
       for (const weekday of WEEKDAYS) {
-        const blocks = zone.schedule[weekday] ?? [];
+        if (zone.template_links?.[weekday]?.mode === "full") continue;
+        const blocks = this._blocks(entityId, weekday);
         const unsupportedRangeMode = blocks.find((block) =>
           block.action === ACTION_SET_TEMPERATURE
           && draftBlockUsesRange(block)
@@ -1981,8 +2216,9 @@ export class VelairProfilesView extends LitElement {
     const climate = this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
     const external = this._externalCapabilities(entityId);
     for (const weekday of WEEKDAYS) {
+      if (zone.template_links?.[weekday]?.mode === "full") continue;
       const starts = new Set<string>();
-      const blocks = zone.schedule[weekday] ?? [];
+      const blocks = this._blocks(entityId, weekday);
       const externalChanges = blocks.length + (external?.implicit_midnight_change_counts_toward_limit && blocks[0]?.start !== "00:00" ? 1 : 0);
       if (external && externalChanges > external.max_switchpoints_per_day) {
         return this._t("profileExternalMaxChanges", {
@@ -2183,7 +2419,9 @@ export class VelairProfilesView extends LitElement {
     this._busy = "save";
     this._clearNotices();
     try {
-      const data = await saveClimateProfile(api, this._draft);
+      const input = climateProfileInput(this._draft);
+      if (Object.values(input.zones).some((zone) => zone.behavior === "schedule" && (Object.keys(zone.template_links ?? {}).length || Object.values(zone.schedule).some((blocks) => blocks.some((block) => block.preset_key))))) await api.previewProfile(input);
+      const data = await api.setClimateProfile(input, this._configurationRevision ?? this.data?.configuration_revision);
       this._emitData(data);
       const saved = data.profiles?.find((profile) => profile.key === (this._draft.key ?? data.profile_id))
         ?? data.profiles?.find((profile) => profile.name === this._draft.name.trim());
@@ -2272,7 +2510,8 @@ export class VelairProfilesView extends LitElement {
     if (current?.behavior !== "schedule") return false;
     const persisted = persistedInput?.zones[entityId];
     const baseline = persisted?.behavior === "schedule" ? persisted.schedule[weekday] ?? [] : [];
-    return this._canonicalJson(current.schedule[weekday] ?? []) !== this._canonicalJson(baseline);
+    return this._canonicalJson(current.schedule[weekday] ?? []) !== this._canonicalJson(baseline)
+      || this._canonicalJson(current.template_links?.[weekday]) !== this._canonicalJson(persisted?.behavior === "schedule" ? persisted.template_links?.[weekday] : undefined);
   }
 
   private _profileDraftChanged(): boolean {
@@ -2308,6 +2547,8 @@ export class VelairProfilesView extends LitElement {
     }));
   }
   private _setDirty(dirty: boolean): void {
+    this._refreshPresetPreviews();
+    if (dirty && !this._dirty) this._configurationRevision = this.data?.configuration_revision;
     const nextDirty = dirty && this._profileDraftChanged();
     if (this._dirty === nextDirty) return;
     this._dirty = nextDirty;
@@ -2331,7 +2572,7 @@ export class VelairProfilesView extends LitElement {
       detail: { dirty, scope: this.workspace === "modes" ? "mode" : "profile" },
     }));
   }
-  private _errorMessage(error: unknown, fallback: TranslationKey): string { return error instanceof Error && error.message && error.message !== "schedule" ? error.message : this._t(fallback); }
+  private _errorMessage(error: unknown, fallback: TranslationKey): string { const message = backendErrorMessage(error, this._t(fallback)); return message === "schedule" ? this._t(fallback) : message; }
   private _t(key: TranslationKey, replacements: Record<string, string | number> = {}): string { return translate(languageFromHass(this.hass), key, replacements); }
 
   static styles = [cardStyles, profileStyles];

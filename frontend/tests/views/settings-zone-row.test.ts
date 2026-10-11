@@ -532,17 +532,19 @@ describe("settings climate row", () => {
     expect(container.querySelector(".settings-external-policy input")).toBeNull();
   });
 
-  it("renders shared focusable inline help without dialog state", () => {
+  it("offers manual-control help through the consistent help action", () => {
     const container = document.createElement("div");
     render(renderSettingsZoneOrderRow(host(false), "climate.office", 0, 1), container);
 
-    const trigger = container.querySelector(".inline-help")!;
-    const tooltip = container.querySelector('[role="tooltip"]')!;
-    expect(trigger.getAttribute("aria-describedby")).toBe(tooltip.id);
-    expect(trigger.getAttribute("aria-label")).toBe("externalAdjustmentInfoAction");
-    expect(tooltip.textContent).toBe("externalChangePolicyDescription");
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
-    expect(container.querySelector(".popover-close")).toBeNull();
+    const trigger = container.querySelector(".documentation-help-button")!;
+    const dialog = container.querySelector("dialog")!;
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(trigger.getAttribute("aria-label")).toBe("documentationHelpFor");
+    expect(trigger.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:help-circle-outline");
+    expect(dialog.querySelector("p")?.textContent).toBe("externalChangePolicyDescription");
+    expect(dialog.open).toBe(false);
+    expect(container.querySelectorAll(".documentation-help-button")).toHaveLength(1);
+    expect(container.querySelector('[role="tooltip"]')).toBeNull();
   });
 
   it("aligns the temperature-step control without changing the external policy layout", () => {

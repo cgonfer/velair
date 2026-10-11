@@ -1,4 +1,9 @@
 # Adaptive Preconditioning
+<!-- velair-docs:start -->
+Translations: [English original](adaptive-preconditioning.md) · [Español](adaptive-preconditioning.es.md) · [Français](adaptive-preconditioning.fr.md) · [Deutsch](adaptive-preconditioning.de.md) · [Italiano](adaptive-preconditioning.it.md) · [Nederlands](adaptive-preconditioning.nl.md) · [Polski](adaptive-preconditioning.pl.md) · [Português (Brasil)](adaptive-preconditioning.pt-br.md) · [Português (Portugal)](adaptive-preconditioning.pt-pt.md) · [Русский](adaptive-preconditioning.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Adaptive Preconditioning lets Velair start heating or cooling before a scheduled block so the room is closer to the target temperature when the block begins.
 
@@ -11,6 +16,12 @@ controller. Zones delegated through External schedule execution do not use
 Adaptive Preconditioning; only their effective weekly schedule is published.
 
 ## Setup
+
+The Preconditioning tab offers two tools in its subsection selector. Adaptive
+Preconditioning opens by default; choose Planned Return to configure occupancy
+and weekly arrivals and manage the current absence. Their direct panel paths are
+`/velair/preconditioning/preconditioning` and
+`/velair/preconditioning/planned-return`. See [Planned Return](planned-return.md).
 
 1. Open the Preconditioning tab.
 2. Expand the climate you want to configure.
@@ -52,6 +63,12 @@ delta = current temperature - target temperature
 ```
 
 If the gap is smaller than Minimum temperature delta, Velair keeps the normal block time and does not start early.
+
+## Schedule Boundaries And Other Climates
+
+A weekly early start must not reach or cross the immediately preceding effective schedule block for the same climate, including an `Off` block. If the calculated window reaches or crosses that boundary, Velair keeps the normal comfort time. For example, with `Off` at `19:00` and `heat` at `20:00`, a calculated start at `18:00` is suppressed: `Off` applies at `19:00` and heating starts at `20:00`. An `Off` block at `22:00` the previous evening does not prevent a `05:35` start for `07:00` when there is no intervening block. This rule also applies to cooling and native `heat_cool` ranges; it does not change Planned Return arrival predictions.
+
+A climate already preconditioning does not delay scheduled blocks or early starts for other climates. If processing an action crosses another transition, Velair resolves the currently authorized target for the affected climate instead of replaying obsolete orders. Pauses, boosts, Manual adjustment, disabled zones and External schedule execution still control whether a target can be delivered. This recovery applies while the scheduler is running; the configured startup application behavior is unchanged.
 
 ## Initial Model Example
 

@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from math import ceil, exp, isfinite
 import re
 import unicodedata
+from copy import deepcopy
+from uuid import uuid4
 from typing import Any, Literal, NotRequired, TypedDict
 
 from .const import (
@@ -115,6 +117,8 @@ class ScheduleBlock(TypedDict):
     """A single schedule change."""
 
     start: str
+    preset_key: NotRequired[str]
+    slot_id: NotRequired[str]
     action: NotRequired[str]
     temperature: NotRequired[float]
     target_temp_low: NotRequired[float]
@@ -340,11 +344,28 @@ class PreconditioningLearningData(TypedDict):
     cool: PreconditioningDirectionLearningData
 
 
+class BlockPresetData(TypedDict):
+    """Reusable climate action without schedule timing."""
+
+    key: str
+    name: str
+    config: dict[str, Any]
+
+
+class TemplateLinkData(TypedDict):
+    """Hours supplied by a daily template, with per-destination actions."""
+
+    template_key: str
+    mode: NotRequired[str]
+    bindings: NotRequired[dict[str, dict[str, Any]]]
+
+
 class ZoneData(TypedDict):
     """Stored state for one climate zone."""
 
     enabled: bool
     schedule: dict[str, list[ScheduleBlock]]
+    template_links: NotRequired[dict[str, TemplateLinkData]]
     override: NotRequired[ZoneOverride | None]
     pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
@@ -387,6 +408,7 @@ class ClimateProfileZoneData(TypedDict):
 
     behavior: str
     schedule: NotRequired[dict[str, list[ScheduleBlock]]]
+    template_links: NotRequired[dict[str, TemplateLinkData]]
     action: NotRequired[str]
 
 
@@ -431,6 +453,8 @@ class SchedulerData(TypedDict):
     """Stored scheduler data."""
 
     version: int
+    block_presets: NotRequired[list[BlockPresetData]]
+    configuration_revision: NotRequired[int]
     zones: dict[str, ZoneData]
     global_: GlobalData
     settings: PanelSettingsData
@@ -440,6 +464,8 @@ class SchedulerData(TypedDict):
     preconditioning_learning: dict[str, PreconditioningLearningData]
     profiles: list[ClimateProfileData]
     modes: list[VelairModeData]
+    planned_return: NotRequired[dict[str, Any]]
+    planned_return_episode: NotRequired[dict[str, Any] | None]
 
 
 DEFAULT_SCHEDULE_TEMPLATES: list[ScheduleTemplateData] = [
@@ -572,6 +598,12 @@ def normalize_schedule_blocks(raw_blocks: list[dict[str, Any]]) -> list[Schedule
         if start in seen_starts:
             raise ValueError(f"Duplicate schedule start time: {start}")
 
+        if "preset_key" in block:
+            if set(block) != {"start", "preset_key"} or not isinstance(block["preset_key"], str) or not block["preset_key"].strip():
+                raise ValueError("Preset reference cannot contain local settings")
+            normalized.append({"start": start, "preset_key": block["preset_key"]})
+            seen_starts.add(start)
+            continue
         action = str(block.get("action", ACTION_SET_TEMPERATURE))
         normalized_block: ScheduleBlock = {
             "start": start,
@@ -787,7 +819,8 @@ def normalize_schedule_data(
                     if isinstance(block, dict)
                     and "start" in block
                     and (
-                        "temperature" in block
+                        "preset_key" in block
+                        or "temperature" in block
                         or "target_temp_low" in block
                         or "target_temp_high" in block
                         or block.get("action") == ACTION_TURN_OFF
@@ -796,9 +829,11 @@ def normalize_schedule_data(
                     )
                 ]
                 try:
+                    if any(isinstance(block, dict) and "preset_key" in block for block in raw_blocks):
+                        valid_blocks = raw_blocks
                     schedule[weekday] = normalize_schedule_blocks(valid_blocks)
-                except ValueError:
-                    schedule[weekday] = []
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    schedule[weekday] = deepcopy(raw_blocks) if any(isinstance(block, dict) and "preset_key" in block for block in raw_blocks) else []
 
         pauses = _normalize_zone_pauses(zone_data)
         override = _normalize_zone_override(zone_data.get("override"))
@@ -821,6 +856,8 @@ def normalize_schedule_data(
                 zone_data.get("external_change_policy")
             ),
         }
+        if "template_links" in zone_data:
+            zones[entity_id]["template_links"] = _stored_template_link_modes(zone_data["template_links"])
         target_temp_step_override = normalize_target_temp_step_override(
             zone_data.get("target_temp_step_override")
         )
@@ -867,6 +904,7 @@ def normalize_schedule_data(
     )
     templates = normalize_schedule_templates(data.get("templates"))
     default_templates = normalize_schedule_templates(DEFAULT_SCHEDULE_TEMPLATES)
+    seeded_template_keys = [item["key"] for item in default_templates] if not templates_seeded else []
     if not templates_seeded:
         templates = [
             *default_templates,
@@ -881,6 +919,44 @@ def normalize_schedule_data(
             templates_seeded_version,
         )
         templates_seeded_version = DEFAULT_SCHEDULE_TEMPLATES_VERSION
+
+    # A referenced malformed template must survive load for repair; never turn
+    # its damaged day into an empty schedule through tolerant legacy filtering.
+    linked_keys = set()
+    raw_destinations = list(data.get("zones", {}).values())
+    for raw_profile in data.get("profiles", []):
+        if isinstance(raw_profile, dict) and isinstance(raw_profile.get("zones"), dict):
+            raw_destinations.extend(raw_profile["zones"].values())
+    for raw_zone in raw_destinations:
+        if isinstance(raw_zone, dict) and isinstance(raw_zone.get("template_links"), dict):
+            linked_keys.update(link.get("template_key") for link in raw_zone["template_links"].values() if isinstance(link, dict) and isinstance(link.get("template_key"), str))
+    preserved_linked_templates = []
+    for raw_template in data.get("templates", []) or []:
+        if not isinstance(raw_template, dict):
+            continue
+        raw_blocks = raw_template.get("blocks")
+        references = isinstance(raw_blocks, list) and any(isinstance(block, dict) and "preset_key" in block for block in raw_blocks)
+        if raw_template.get("key") not in linked_keys and not references:
+            continue
+        preserved = deepcopy(raw_template)
+        if isinstance(preserved.get("blocks"), list):
+            for block in preserved["blocks"]:
+                if isinstance(block, dict):
+                    if raw_template.get("key") not in linked_keys:
+                        block.setdefault("slot_id", uuid4().hex)
+                    try:
+                        block["start"] = normalize_start_time(block["start"])
+                    except (KeyError, TypeError, ValueError):
+                        pass
+        preserved_linked_templates.append(preserved)
+
+    templates = _dedupe_schedule_templates([item for item in templates if item["key"] not in {entry.get("key") for entry in preserved_linked_templates}]) + preserved_linked_templates
+    # Preserving referenced resources for repair must not move them in the library.
+    template_positions = {key: index for index, key in enumerate(seeded_template_keys)}
+    for raw_template in data.get("templates", []) or []:
+        if isinstance(raw_template, dict) and isinstance(raw_template.get("key"), str):
+            template_positions.setdefault(raw_template["key"], len(template_positions))
+    templates.sort(key=lambda item: template_positions.get(item["key"], len(template_positions)))
 
     profiles = normalize_climate_profiles(data.get("profiles"), climate_entities)
     profile_keys = {profile["key"] for profile in profiles}
@@ -928,8 +1004,11 @@ def normalize_schedule_data(
     ):
         active_mode_id = None
 
+    planned_return = normalize_planned_return(data.get("planned_return"), modes)
     return {
         "version": 7,
+        "block_presets": deepcopy(data.get("block_presets", [])),
+        "configuration_revision": int(data.get("configuration_revision", 0)),
         "zones": zones,
         "global_": {
             "mode": mode,
@@ -939,7 +1018,7 @@ def normalize_schedule_data(
             "active_mode_id": active_mode_id,
         },
         "settings": normalize_panel_settings(data.get("settings"), climate_entities),
-        "templates": _dedupe_schedule_templates(templates),
+        "templates": templates,
         "templates_seeded": templates_seeded,
         "templates_seeded_version": templates_seeded_version,
         "preconditioning_learning": normalize_preconditioning_learning_data(
@@ -952,7 +1031,150 @@ def normalize_schedule_data(
         ),
         "profiles": profiles,
         "modes": modes,
+        "planned_return": planned_return,
+        "planned_return_episode": normalize_planned_return_episode(data.get("planned_return_episode"), planned_return),
     }
+
+
+
+def default_planned_return() -> dict[str, Any]:
+    """Return a disabled whole-home return routine."""
+    return {
+        "enabled": False,
+        "occupancy_entity_ids": [],
+        "away_mode_id": "default",
+        "destination_mode_id": "default",
+        "absence_delay_minutes": 10,
+        "weekly": {day: None for day in WEEKDAYS},
+    }
+
+
+def validate_planned_return(raw: Any, modes: Any) -> dict[str, Any]:
+    """Strictly validate a routine and its stable mode references."""
+    defaults = default_planned_return()
+    if not isinstance(raw, dict) or set(raw) - (set(defaults) | {"occupancy_entity_id"}):
+        raise ValueError("Planned return configuration is not valid")
+    raw = deepcopy(raw)
+    if "occupancy_entity_id" in raw:
+        if "occupancy_entity_ids" in raw:
+            raise ValueError("Use one occupancy source configuration format")
+        legacy_entity = raw.pop("occupancy_entity_id")
+        raw["occupancy_entity_ids"] = [] if legacy_entity is None else [legacy_entity]
+    result = {**defaults, **raw}
+    if not isinstance(result["enabled"], bool):
+        raise ValueError("Planned return enabled must be a boolean")
+    entities = result["occupancy_entity_ids"]
+    if not isinstance(entities, list) or any(
+        not isinstance(entity, str) or (
+            entity != "zone.home"
+            and re.fullmatch(r"(?:binary_sensor|input_boolean|group)\.[a-z0-9_]+", entity) is None
+        ) for entity in entities
+    ):
+        raise ValueError("Select supported occupancy sources or zone.home")
+    if len(set(entities)) != len(entities):
+        raise ValueError("Occupancy sources must be unique")
+    if result["enabled"] and not entities:
+        raise ValueError("An occupancy source is required")
+    mode_keys = (
+        {mode["key"] for mode in modes if isinstance(mode, dict) and isinstance(mode.get("key"), str)}
+        if isinstance(modes, list) else set(modes)
+    )
+    for field in ("away_mode_id", "destination_mode_id"):
+        if not isinstance(result[field], str) or result[field] not in {"default", *mode_keys}:
+            raise ValueError("Planned return references an unknown mode")
+    delay = result["absence_delay_minutes"]
+    if isinstance(delay, bool) or not isinstance(delay, int) or not 0 <= delay <= 1440:
+        raise ValueError("Absence confirmation must be between 0 and 1440 minutes")
+    weekly = result["weekly"]
+    if not isinstance(weekly, dict) or set(weekly) - set(WEEKDAYS):
+        raise ValueError("Planned return weekdays are not valid")
+    result["weekly"] = {day: weekly.get(day) for day in WEEKDAYS}
+    for value in result["weekly"].values():
+        if value is not None and (
+            not isinstance(value, str)
+            or re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is None
+        ):
+            raise ValueError("Return times must use HH:MM")
+    return result
+
+
+def normalize_planned_return(raw: Any, modes: Any) -> dict[str, Any]:
+    """Default legacy or damaged routines to a safe disabled configuration."""
+    try:
+        return validate_planned_return(raw, modes)
+    except (TypeError, ValueError):
+        return default_planned_return()
+
+
+def normalize_planned_return_episode(raw: Any, config: dict[str, Any]) -> dict[str, Any] | None:
+    """Retain only safe persisted absence episodes, including fulfilled ones."""
+    if not isinstance(raw, dict):
+        return None
+    origin = raw.get("origin", "automatic")
+    if origin not in ("automatic", "manual"):
+        return None
+    state = raw.get("state")
+    if state not in ("armed", "away", "fulfilled", "cancelled", "skipped"):
+        return None
+    terminal = state in ("fulfilled", "cancelled", "skipped")
+    # Terminal episodes are a presence latch, not an authorization to act.
+    # Retain them while disabled so re-enabling outside cannot repeat departure.
+    if not terminal:
+        if not config["enabled"] and origin != "manual":
+            return None
+        if state == "armed" and not config.get("occupancy_entity_ids"):
+            return None
+    if any(raw.get(field) != config[field] for field in ("away_mode_id", "destination_mode_id")):
+        return None
+    for field in ("started_at", "return_at"):
+        value = raw.get(field)
+        if value is None and field == "return_at":
+            continue
+        if not isinstance(value, str):
+            return None
+        try:
+            instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if instant.tzinfo is None:
+            return None
+    if raw.get("state") == "armed" and (origin != "manual" or not raw.get("return_at")):
+        return None
+    preparing = raw.get("preparing_entities", [])
+    if not isinstance(preparing, list) or any(
+        not isinstance(entity, str) or re.fullmatch(r"climate\.[a-z0-9_]+", entity) is None
+        for entity in preparing
+    ):
+        return None
+    episode = {key: deepcopy(raw.get(key)) for key in (
+        "state", "started_at", "return_at", "away_mode_id", "destination_mode_id"
+    )} | {"origin": origin, "preparing_entities": list(dict.fromkeys(preparing))}
+    # Departure is recorded after confirmed absence or explicit sensorless Start. Old episodes and
+    # damaged optional display metadata must not invent a confirmed departure.
+    departure_at = raw.get("departure_at")
+    if isinstance(departure_at, str) and state != "armed":
+        try:
+            departure = datetime.fromisoformat(departure_at.replace("Z", "+00:00"))
+        except ValueError:
+            departure = None
+        if departure is None or departure.tzinfo is None:
+            departure_at = None
+    else:
+        departure_at = None
+    if departure_at is not None:
+        episode["departure_at"] = departure_at
+    if terminal and raw.get("dismissed") is True:
+        episode["dismissed"] = True
+    selection = raw.get("previous_selection")
+    if isinstance(selection, dict):
+        mode_id = selection.get("mode_id")
+        profile_ids = selection.get("profile_ids")
+        if ("mode_id" in selection and (mode_id is None or isinstance(mode_id, str) and bool(mode_id.strip()) and mode_id == mode_id.strip())
+                and isinstance(profile_ids, list)
+                and all(isinstance(key, str) and bool(key.strip()) and key == key.strip() for key in profile_ids)
+                and len(set(profile_ids)) == len(profile_ids)):
+            episode["previous_selection"] = {"mode_id": mode_id, "profile_ids": list(profile_ids)}
+    return episode
 
 
 def normalize_zone_execution(raw_execution: Any) -> ZoneExecutionData | None:
@@ -972,6 +1194,8 @@ def serialize_schedule_data(data: SchedulerData) -> dict[str, Any]:
     """Serialize scheduler data using storage-friendly keys."""
     return {
         "version": data["version"],
+        "block_presets": deepcopy(data.get("block_presets", [])),
+        "configuration_revision": data.get("configuration_revision", 0),
         "zones": data["zones"],
         "global": data["global_"],
         "settings": data.get(
@@ -994,6 +1218,8 @@ def serialize_schedule_data(data: SchedulerData) -> dict[str, Any]:
         ),
         "profiles": data.get("profiles", []),
         "modes": data.get("modes", []),
+        "planned_return": deepcopy(data.get("planned_return", default_planned_return())),
+        "planned_return_episode": deepcopy(data.get("planned_return_episode")),
     }
 
 
@@ -1156,7 +1382,8 @@ def normalize_climate_profiles(
                             if isinstance(block, dict)
                             and "start" in block
                             and (
-                                "temperature" in block
+                                "preset_key" in block
+                        or "temperature" in block
                                 or "target_temp_low" in block
                                 or "target_temp_high" in block
                                 or block.get("action") == ACTION_TURN_OFF
@@ -1165,10 +1392,14 @@ def normalize_climate_profiles(
                             )
                         ]
                         try:
+                            if any(isinstance(block, dict) and "preset_key" in block for block in blocks):
+                                valid_blocks = blocks
                             schedule[weekday] = normalize_schedule_blocks(valid_blocks)
-                        except ValueError:
-                            schedule[weekday] = []
+                        except (ValueError, KeyError, TypeError, AttributeError):
+                            schedule[weekday] = deepcopy(blocks) if any(isinstance(block, dict) and "preset_key" in block for block in blocks) else []
                 zones[entity_id] = {"behavior": "schedule", "schedule": schedule}
+                if "template_links" in raw_zone:
+                    zones[entity_id]["template_links"] = _stored_template_link_modes(raw_zone["template_links"])
 
         color = raw_profile.get("color")
         if not isinstance(color, str) or not PROFILE_COLOR_PATTERN.fullmatch(color):
@@ -1200,8 +1431,9 @@ def validate_climate_profiles(
     seen_keys: set[str] = set()
     prepared: list[dict[str, Any]] = []
     profile_fields = {"key", "name", "icon", "color", "description", "zones"}
-    zone_fields = {"behavior", "action", "schedule"}
+    zone_fields = {"behavior", "action", "schedule", "template_links"}
     block_fields = {
+        "preset_key",
         "start",
         "action",
         "temperature",
@@ -1277,7 +1509,7 @@ def validate_climate_profiles(
                 }
                 continue
 
-            if set(raw_zone) != {"behavior", "schedule"}:
+            if set(raw_zone) - {"behavior", "schedule", "template_links"} or "schedule" not in raw_zone:
                 raise ValueError(f"Schedule profile behavior is invalid for {entity_id}")
             raw_schedule = raw_zone.get("schedule")
             if not isinstance(raw_schedule, dict) or set(raw_schedule) != set(WEEKDAYS):
@@ -1304,6 +1536,9 @@ def validate_climate_profiles(
                         raise ValueError(
                             f"Schedule block start must be text for {entity_id}"
                         )
+                    if "preset_key" in block:
+                        normalize_schedule_blocks([block])
+                        continue
                     action = block.get("action", ACTION_SET_TEMPERATURE)
                     if not isinstance(action, str):
                         raise ValueError(f"Invalid schedule action for {entity_id}")
@@ -1387,6 +1622,11 @@ def validate_climate_profiles(
                 "behavior": "schedule",
                 "schedule": schedule,
             }
+            if "template_links" in raw_zone:
+                from .schedule_resources import normalize_links
+                prepared_zones[entity_id]["template_links"] = normalize_links(raw_zone["template_links"])
+                if any(schedule[day] for day in prepared_zones[entity_id]["template_links"]):
+                    raise ValueError("Linked days cannot contain local blocks")
 
         prepared.append(
             {
@@ -2436,6 +2676,16 @@ def _normalize_preconditioning_delta(value: Any) -> float:
     return delta
 
 
+def _stored_template_link_modes(links):
+    """Add the legacy hours mode without discarding malformed repair data."""
+    result = deepcopy(links)
+    if isinstance(result, dict):
+        for link in result.values():
+            if isinstance(link, dict):
+                link.setdefault("mode", "hours")
+    return result
+
+
 def normalize_schedule_templates(raw_templates: Any) -> list[ScheduleTemplateData]:
     """Normalize stored custom schedule templates."""
     if not isinstance(raw_templates, list):
@@ -2460,7 +2710,8 @@ def normalize_schedule_templates(raw_templates: Any) -> list[ScheduleTemplateDat
             if isinstance(block, dict)
             and "start" in block
             and (
-                "temperature" in block
+                "preset_key" in block
+                        or "temperature" in block
                 or "target_temp_low" in block
                 or "target_temp_high" in block
                 or block.get("action") == ACTION_TURN_OFF
@@ -2470,7 +2721,9 @@ def normalize_schedule_templates(raw_templates: Any) -> list[ScheduleTemplateDat
         ]
 
         try:
-            blocks = normalize_schedule_blocks(valid_blocks)
+            blocks = normalize_schedule_blocks([{key: value for key, value in block.items() if key != "slot_id"} for block in valid_blocks])
+            slot_ids = {normalize_start_time(block["start"]): block.get("slot_id") or uuid4().hex for block in valid_blocks}
+            blocks = [{**block, "slot_id": slot_ids[block["start"]]} for block in blocks]
         except ValueError:
             continue
 

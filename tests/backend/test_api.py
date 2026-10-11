@@ -493,6 +493,7 @@ class DiagnosticsApiTest(unittest.IsolatedAsyncioTestCase):
                 "control",
                 "room_assist",
                 "preconditioning",
+                "planned_return",
                 "comfort",
                 "delivery",
                 "availability",
@@ -1059,7 +1060,7 @@ class PortableTemperatureContractTest(unittest.TestCase):
             "monday"
         ] = [block]
         payload = api_module._build_export_payload(export_runtime, ["zones"])
-        self.assertEqual(payload["model_version"], 12)
+        self.assertEqual(payload["model_version"], api_module.EXPORT_MODEL_VERSION)
         imported = api_module._build_import_data(
             self._runtime(api_module.FAHRENHEIT), payload, ["zones"]
         )
@@ -1102,7 +1103,7 @@ class PortableTemperatureContractTest(unittest.TestCase):
         )
         comfort = imported["zones"]["climate.salon"]["comfort"]
 
-        self.assertEqual(payload["model_version"], 12)
+        self.assertEqual(payload["model_version"], api_module.EXPORT_MODEL_VERSION)
         self.assertTrue(comfort["outdoor_comparison_enabled"])
         self.assertEqual(
             comfort["outdoor_temperature_entity_id"],

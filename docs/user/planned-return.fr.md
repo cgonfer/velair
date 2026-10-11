@@ -1,0 +1,584 @@
+<a id="planned-return"></a>
+# Retour prévu
+<!-- velair-docs:start -->
+Traductions: [Original en anglais](planned-return.md) · [Español](planned-return.es.md) · [Français](planned-return.fr.md) · [Deutsch](planned-return.de.md) · [Italiano](planned-return.it.md) · [Nederlands](planned-return.nl.md) · [Polski](planned-return.pl.md) · [Português (Brasil)](planned-return.pt-br.md) · [Português (Portugal)](planned-return.pt-pt.md) · [Русский](planned-return.ru.md) · [État des traductions](../translation-status.md)
+
+<details>
+<summary>État de cette traduction</summary>
+
+| Information | État |
+| --- | --- |
+| Version de référence | 1.9.0-beta.1 |
+| Dernière synchronisation | 2026-10-11 |
+| Révision linguistique | Traduction assistée par IA |
+| Par rapport à l’original | Synchronisée avec l’original anglais. |
+
+</details>
+
+---
+<!-- velair-docs:end -->
+
+Le retour prévu prépare le logement pour une heure d’arrivée régulière ou ponctuelle après
+que les signaux d’occupation sélectionnés confirment que tout le logement est vide, ou après un
+démarrage ponctuel explicite si aucune source d’occupation n’est configurée. Configurez-le dans
+Velair ; aucun blueprint supplémentaire ni action quotidienne n’est nécessaire pour une routine
+hebdomadaire stable. La routine automatique est désactivée par défaut et fonctionne localement
+dans Home Assistant. Les retours ponctuels nécessitent des modes Absence/Retour enregistrés et une
+programmation automatique opérationnelle ; les sources d’occupation sont facultatives pour les
+démarrages explicites. La routine hebdomadaire exige au moins une source d’occupation.
+
+<a id="setup"></a>
+## Configuration
+
+1. Créez les modes Absence et Présence souhaités, ou utilisez Par défaut comme destination.
+   Les profils d’absence peuvent éteindre les appareils ou utiliser des programmations
+   hebdomadaires moins exigeantes.
+2. Ouvrez **Anticipation**, choisissez **Retour prévu** dans le sélecteur de sous-section
+   et ajoutez des signaux d’occupation pour les départs surveillés ou hebdomadaires. Utilisez
+   des capteurs binaires, booléens d’entrée, groupes ou la zone du domicile Home Assistant
+   (`zone.home`). Incluez les signaux de toute personne susceptible de rester, y compris les
+   invités. Home Assistant reste responsable du suivi des personnes et lieux ; des règles
+   complexes peuvent toujours être combinées dans un assistant.
+3. Dans la section absence, choisissez la durée pendant laquelle le logement doit rester vide
+   et le mode Absence à activer. La valeur par défaut est de dix minutes ; la commande compacte
+   accepte minutes ou heures. L’arrivée est reconnue immédiatement.
+4. Dans la section arrivée, saisissez l’heure habituelle pour chaque jour concerné, puis
+   sélectionnez le mode de destination. Les jours sans heure n’ont pas de retour automatique.
+   Velair utilise la programmation de destination à l’arrivée pour préparer chaque zone.
+5. Activez le préconditionnement adaptatif pour les zones qui doivent démarrer en avance.
+   Les réglages existants et l’apprentissage local chauffage/refroidissement sont réutilisés.
+6. Utilisez l’interrupteur de la barre d’état pour activer la routine, puis Enregistrer.
+   L’interrupteur modifie le brouillon ; Annuler restaure le réglage enregistré. Arrêtez toute
+   automatisation Présence/Absence qui sélectionne des modes pour ce même logement ; deux
+   contrôleurs entreraient en concurrence.
+
+Les jours suivent la préférence **Premier jour de la semaine** enregistrée dans les paramètres
+Velair. Saisissez directement une heure d’arrivée pour chaque jour. Si vous partez un jour sans
+heure, Velair applique Absence après confirmation, ne programme aucune préparation anticipée et
+rétablit la destination lorsque l’occupation est détectée. Le fuseau horaire Home Assistant est
+affiché à côté de la routine hebdomadaire. Les changements restent dans le brouillon jusqu’à
+l’enregistrement. Annuler et Enregistrer sont à droite du pied de formulaire.
+
+Le résumé supérieur regroupe trois parties de la routine dans des conteneurs bordés distincts
+correspondant aux sections de réglages, sans carte englobante ni bordure latérale commune. La
+routine hebdomadaire montre le mode Absence, le délai de confirmation, la préparation adaptative
+et le mode de destination dans une présentation simple ; l’interrupteur modifie son activation. Le délai
+est le temps pendant lequel le logement doit rester vide, pas une estimation du temps de préparation.
+La section occupation montre le résultat combiné et les nombres de sources ; développez-la pour
+examiner chaque signal. Les signaux inconnus empêchent une nouvelle absence et se distinguent
+de la présence confirmée. La section retour rapide regroupe le départ ponctuel et les commandes
+d’arrivée de l’épisode actuel. Les actions d’exécution utilisent la configuration enregistrée ;
+enregistrez ou annulez donc les modifications en attente avant d’annoncer un nouveau départ.
+
+Le formulaire suit le départ et l’arrivée dans l’ordre : sources d’occupation, délai d’absence
+et mode Absence, puis heures hebdomadaires et mode de destination. Les sources de présence utilisent
+l’action Ajouter circulaire verte de l’éditeur de blocs lorsqu’une source est sélectionnée.
+Ajouter et Supprimer désactivés gardent leur aspect transparent ; les actions activées fournissent
+un retour visuel au survol et au focus.
+La liste des sources configurées commence repliée. Son résumé montre le total et les nombres de
+signaux occupés, vides et inconnus ; développez-la pour examiner ou supprimer des sources individuelles.
+Sur mobile, le résumé couvre toute la ligne sélecteur/Ajouter ; icônes d’état et nombres gardent
+les compteurs ensemble, avec des libellés accessibles complets.
+Les compteurs sont alignés à droite du résumé. Sur mobile, la liste développée partage sa
+largeur, avec Supprimer au bout de chaque ligne et plus d’espace pour noms et identifiants. Sur
+ordinateur, les listes ont la même largeur que le sélecteur. Développer la liste ne modifie pas
+la configuration. Les délais saisis en heures sont arrondis à la minute la plus proche ; le délai
+équivalent est affiché à côté de la commande.
+
+Les états occupés reconnus sont `on` et `home` ; les états vides sont `off` et `not_home`.
+Pour la zone du domicile, zéro personne signifie vide et un nombre positif signifie occupé.
+Un signal occupé suffit à rendre le logement occupé ; seule l’absence rapportée par tous les
+signaux le rend vide. Si aucun signal ne rapporte de présence et qu’un est inconnu ou indisponible,
+l’occupation est inconnue : de nouvelles absences ne peuvent pas démarrer. Un retour accepté reste
+programmé. Le panneau montre le résultat combiné et chaque source.
+
+Sélectionnez des signaux représentant l’occupation : un capteur de mouvement éteint ne signifie
+pas nécessairement que personne n’est à la maison.
+
+<a id="room-preparation"></a>
+## Préparation des pièces
+
+Développez **Room preparation** (préparation des pièces) sous le flux de routine pour voir chaque appareil de chauffage ou de climatisation
+géré. La liste commence repliée, avec des compteurs de préparation adaptative, de fonctionnement
+à l’arrivée uniquement et d’absence de préparation. La développer ne change pas les réglages
+et n’envoie pas de commandes climatiques. La même vue s’applique aux retours hebdomadaires et ponctuels.
+
+Chaque ligne identifie la pièce, la source de sa programmation de destination et l’état de
+préparation. Un appareil absent des profils du mode de destination utilise encore sa programmation
+**Par défaut** ; un comportement normal explicite utilise aussi Par défaut. Une programmation de
+profil utilise le nom de ce profil. Une pause du profil de destination, une zone désactivée ou une
+exécution externe est identifiée séparément au lieu d’être marquée arrivée uniquement. Sans
+préconditionnement adaptatif, une pièce locale activée suit sa programmation effective à l’arrivée ;
+elle n’est pas automatiquement exclue des changements de mode.
+
+Sans retour futur, cette liste décrit les possibilités offertes par la configuration enregistrée, pas une
+prédiction de démarrage anticipé. Une fois un retour accepté, elle résout chaque consigne de
+destination à cette heure et montre les états en attente, en préparation, consigne atteinte,
+suspendu ou indisponible avec leur raison. L’absence de données de température ou d’estimation
+valide empêche la préparation anticipée ; Forçage, Réglage manuel et pauses explicites gardent
+leur priorité normale. Un départ non confirmé ne peut pas apparaître en préparation.
+**En préparation** décrit l’intention active de préparation de Velair, pas une confirmation que
+l’appareil a reçu une commande ou fonctionne physiquement. **Consigne atteinte** correspond à une
+température actuelle mesurée dans la tolérance de préparation et peut déjà être le cas avant le
+départ ; cela ne démarre pas une absence et ne contourne pas la confirmation.
+
+**Début prévu** est une estimation, pas une preuve de commande climatique ni de préparation
+physique. Les consignes prennent en charge le chauffage, le refroidissement et les plages de température.
+Les retours terminés, annulés et ignorés reviennent aux informations de configuration plutôt que
+d’afficher des horaires de préparation obsolètes. Le diagnostic continue d’utiliser les réglages
+enregistrés du backend jusqu’à la réussite d’Enregistrer, sans rappel de préparation supplémentaire.
+Cette liste complète remplace l’ancienne liste de zones limitée à l’épisode.
+
+<a id="one-off-return"></a>
+## Retour ponctuel
+
+Dans **One-off return** (retour ponctuel), choisissez une date et une heure futures puis **Plan return** (planifier le retour).
+Date et heure restent ensemble. Sur mobile, **Plan return** se trouve sur la ligne suivante,
+aligné au bord droit du champ d’heure ; sur les dispositions larges, l’action reste à côté des
+champs. L’explication est sous les commandes.
+Vous pouvez le faire avant de partir ou lorsque vous êtes déjà absent. Velair utilise les réglages
+de modes et présence enregistrés. Avec des sources d’occupation configurées, il garde la demande
+en attente et applique Absence uniquement après que toutes les sources rapportent l’absence pendant
+le délai de confirmation, protégeant les personnes restées chez elles.
+Sans sources d’occupation enregistrées, **Plan return** est votre confirmation explicite
+de départ : Absence démarre immédiatement, sans délai. Velair ne déduit pas que le logement est vide
+et ne détecte pas votre retour physique dans ce cas ; il prépare normalement les pièces et active
+la destination à l’arrivée enregistrée. Une source configurée inconnue/indisponible reste en attente ;
+une entité manquante ne peut pas être considérée comme une liste vide de sources.
+
+La date et l’heure ponctuelles remplacent l’heure hebdomadaire pour cette absence uniquement.
+Cela fonctionne aussi avec la routine automatique désactivée. Vous pouvez modifier ou annuler
+l’annonce en attente ; si le départ n’est pas confirmé avant l’heure d’arrivée, elle expire sans
+changer de modes. Si toutes les sources indiquent déjà une absence et qu’aucun épisode n’est actif,
+planifier le retour démarre immédiatement le délai de confirmation configuré ; aucun nouveau
+changement de capteur n’est nécessaire. Si une absence est déjà active, modifiez la date et l’heure
+d’arrivée avec l’éditeur existant de l’épisode ; le retour devient ainsi ponctuel sans appliquer à
+nouveau Absence.
+Reporter une arrivée termine la préparation déjà engagée et restaure le comportement Absence actuel
+jusqu’à l’heure de début de la nouvelle préparation. Forçage et dérogations manuelles restent protégés.
+La consigne de destination est résolue à la date locale d’arrivée sélectionnée, y compris si la
+préparation commence la veille. Soumettre le même instant ne réinitialise pas la préparation.
+Les arrivées passées ou actuelles et les heures locales inexistantes lors du changement d’heure
+sont rejetées ; une heure répétée utilise sa première occurrence future.
+
+Les épisodes terminés, ignorés et annulés restent verrouillés pour la routine automatique jusqu’à
+détection de l’occupation, afin qu’un logement vide ne démarre pas seul un nouveau départ hebdomadaire.
+Vous pouvez choisir explicitement **Plan return** après tout épisode inactif sans attendre
+d’être de retour chez vous. La nouvelle demande utilise les sources et modes actuels. Avec des sources, elle
+confirme à nouveau l’absence pendant le délai configuré même si tout le monde est déjà absent,
+sans changer immédiatement le mode. Sans sources, l’enregistrement explicite active immédiatement
+Absence. Le panneau latéral et la carte de tableau de bord affichent tous deux un nouveau formulaire
+dès qu’un épisode devient inactif. Si la planification est indisponible, le formulaire reste visible
+avec **Plan return** désactivé et une explication des réglages enregistrés et de l’état
+du planificateur requis. Un retour actif peut toujours être annulé dans cette situation.
+
+Après confirmation du départ, utilisez **Annuler** pour arrêter le retour et restaurer les modes
+et profils précédents enregistrés, ou **Modifier l’arrivée** pour actualiser sa date et son heure.
+Pendant la confirmation d’absence, annuler laisse la sélection active inchangée, car le mode Absence
+n’a pas été appliqué. Désactiver la routine automatique ou modifier les heures hebdomadaires n’annule
+pas un retour manuel. Modifier ses sources de présence ou modes invalide l’annonce précédente.
+Les sélections explicites de modes/profils annulent les retours en attente et actifs. Un planificateur
+arrêté n’exécute pas le retour.
+
+La première ligne garde le titre Retour ponctuel à gauche et les indicateurs d’occupation propres
+à la carte à droite. La phase actuelle est un sous-titre compact placé avec le titre, sans étiquette
+ni ligne séparée. Pendant la confirmation, le titre du processus de temporisation fournit la phase
+à sa place. La carte de tableau de bord regroupe les compteurs d’occupation en haut à droite si des
+sources sont configurées. Sans sources, les compteurs et l’icône de délai inutilisée sont omis,
+et le panneau indique **Non surveillée** plutôt qu’une occupation inconnue. L’icône de délai de
+confirmation n’apparaît qu’avant confirmation d’une absence active ; elle est masquée pendant
+Absence/Préparation et les erreurs actives avec départ confirmé.
+Le panneau latéral ne répète pas ces indicateurs. Survolez-le pour une brève explication de cette phase.
+Pendant la confirmation d’absence, une ligne discrète de temporisation explique que Velair vérifie
+que le logement reste vide. **Jusqu’à** montre l’échéance de confirmation du backend à l’heure
+locale de Home Assistant, avec la date si elle diffère d’aujourd’hui. Velair active le mode Absence après
+confirmation uniquement si chaque source sélectionnée indique toujours une absence. C’est une
+échéance, pas un compte à rebours en direct ni un départ confirmé. Le même processus apparaît
+pendant la confirmation hebdomadaire avant qu’un épisode existe ; des données d’échéance manquantes
+ne produisent pas d’heure inventée.
+Avant confirmation, une icône d’arrivée et le libellé **Arrivée prévue** identifient le retour
+enregistré avec libellé accessible et infobulle. Cette ligne est alignée avec le titre et le texte
+d’état. Sa date/heure enregistrée est une étiquette compacte cliquable, sans crayon ni soulignement.
+La chronologie confirmée utilise la même icône ; seuls la date/heure enregistrée soulignée et le
+crayon à sa gauche forment le bouton de modification. Sélectionnez cette valeur pour ouvrir
+l’éditeur intégré. Sa ligne d’actions contient un bouton bleu **Retour** avec flèche gauche à gauche
+et **Modifier l’arrivée** vert à droite. Retour abandonne les modifications non enregistrées et
+ferme l’éditeur sans changer le retour.
+Sur un panneau latéral large, l’éditeur reste compact et aligné sur l’extrémité arrivée ; l’action
+de modification reste à droite sous l’éditeur. Les écrans étroits et la carte conservent leur
+disposition adaptative.
+Les champs restent masqués jusqu’à demande. **Retour** restaure la dernière arrivée enregistrée
+et masque les champs. Il efface l’avertissement d’arrivée et la protection de navigation ; la
+configuration indépendante non enregistrée de la routine reste protégée. Rouvrir repart de l’arrivée
+enregistrée. Pendant une absence confirmée, l’extrémité arrivée de la chronologie est ce même
+bouton, donc aucune arrivée n’est dupliquée.
+Annuler apparaît sous le graphique et la légende de préparation à gauche uniquement lorsque
+l’éditeur est fermé. Pendant la modification, Annuler est masqué ; **Modifier l’arrivée** est à
+droite et **Retour** à gauche, abandonnant localement la modification. Changer le champ ne change
+pas le retour planifié tant que **Modifier l’arrivée** ne réussit pas. Une modification réussie
+ferme l’éditeur et redonne le focus à l’arrivée enregistrée. Les échecs et mises à jour des capteurs
+conservent le brouillon ouvert.
+Un avis de modifications non enregistrées signale une modification en attente ; navigation ou
+rechargement avertit avant de l’abandonner. Enregistrer la configuration de routine n’applique pas
+une modification d’arrivée. Retour et Modifier l’arrivée utilisent respectivement des surfaces
+pleines compactes bleues et vertes. Leurs surfaces visibles font 32 pixels de haut dans des cibles
+tactiles de 44 pixels. L’annulation utilise une surface pleine rouge compacte avec icône/texte
+blancs sous les données de l’épisode. Sa surface visible fait 32 pixels de haut dans une cible de
+44 pixels ; survol et focus restent clairs. Les couleurs de premier plan s’adaptent au thème pour
+que textes et icônes restent lisibles.
+Les actions indisponibles utilisent un fond neutre et des textes/icônes atténués, avec un curseur
+d’interdiction. Modifier l’arrivée devient vert lorsque l’arrivée est modifiée. La phase reste
+affichée avec le titre. Annuler reste à gauche sous les données hors édition ; Modifier l’arrivée est
+aligné à droite sous l’éditeur ouvert. Panneau et carte préservent ce regroupement sur mobile.
+Plan return reste aligné à droite dans le nouveau formulaire.
+Les actions réussies mettent à jour l’épisode sans message d’enregistrement supplémentaire.
+
+<a id="home-assistant-actions"></a>
+### Actions Home Assistant
+
+Les automatisations, scripts et tableaux de bord peuvent annoncer un départ avec
+`velair.start_planned_return`. `return_date` (`YYYY-MM-DD`) et `return_time` (24 heures `HH:MM`)
+sont tous deux obligatoires. Ensemble, ils doivent identifier une arrivée future dans le fuseau
+horaire Home Assistant. Le sélecteur d’heure natif peut envoyer `HH:MM:00` ; les secondes nulles
+sont acceptées et normalisées à la minute. Choisissez une date future pour l’exemple suivant :
+
+```yaml
+action: velair.start_planned_return
+data:
+  return_date: "2026-10-09"
+  return_time: "19:25"
+```
+
+Cela utilise les réglages de présence et modes enregistrés, ainsi que le même comportement de
+confirmation, préparation et dérogations que **Plan return**. Cela fonctionne lorsque
+la routine hebdomadaire est désactivée et actualise la date et l’heure si une absence est déjà
+active, sans appliquer à nouveau Absence. Les modes enregistrés et la programmation automatique
+doivent être opérationnels. Les sources sont facultatives pour les retours ponctuels : une liste
+enregistrée vide applique Absence immédiatement ; des sources configurées gardent les règles
+normales de confirmation. Une arrivée passée ou à l’instant présent est rejetée sans remplacer
+le retour précédent. Une heure expirée ou inexistante au changement d’heure est rejetée ; pendant
+une heure répétée, Velair choisit la première occurrence encore future.
+
+Annuler un retour en attente ou actif :
+
+```yaml
+action: velair.cancel_planned_return
+data: {}
+```
+
+La même action d’annulation ferme aussi l’avis d’un épisode inactif. Elle arrête la préparation
+et le retour temporisé, en conservant le verrou d’annulation automatique. Après départ confirmé,
+elle restaure le mode et la sélection exacte de profils enregistrés avant le début de l’épisode.
+Pendant la confirmation, elle laisse la sélection actuelle inchangée. Un nouveau **Planifier le
+retour** explicite peut remplacer cet épisode inactif. Panneau et carte utilisent la même action.
+
+<a id="cancelling-a-return-examples"></a>
+## Annuler un retour : exemples
+
+Le délai de confirmation d’absence intervient **avant** l’application du mode Absence. Annuler
+pendant ce délai ne nécessite aucune restauration : le mode et les profils précédents restent
+actifs. Annuler après un départ confirmé restaure la sélection enregistrée au début de l’épisode,
+plutôt que d’activer immédiatement le mode Retour configuré.
+
+Pour les exemples suivants, supposons :
+
+- **Confort** est actif, sélectionnant les profils **Confort salon** et **Confort chambre**.
+- Le mode Absence est **Absent**, le mode Retour est **Soirée** et l’arrivée est prévue à 18:00.
+- Les sources rapportent un logement vide à 13:00 et le délai de confirmation est de cinq minutes.
+
+<a id="cancel-before-confirmation-finishes"></a>
+### Annuler avant la fin de la confirmation
+
+| Heure | Ce qui se passe | Mode et profils sélectionnés |
+| --- | --- | --- |
+| 13:00 | Démarrer un retour. Velair vérifie que le logement reste vide jusqu’à 13:05. | Confort et ses deux profils restent actifs. |
+| 13:02 | Sélectionner **Annuler** pendant la confirmation d’absence. | Confort et ses deux profils restent actifs ; Absence n’a jamais été appliqué. |
+
+L’arrivée prévue à 18:00 est retirée. Cet épisode annulé n’active plus tard ni Absence ni Soirée.
+
+<a id="cancel-after-departure-is-confirmed"></a>
+### Annuler après confirmation du départ
+
+Il s’agit d’un épisode distinct utilisant la même configuration initiale :
+
+| Heure | Ce qui se passe | Mode et profils sélectionnés |
+| --- | --- | --- |
+| 13:00 | Démarrer un retour et commencer la confirmation. | Confort et ses deux profils restent actifs. |
+| 13:05 | Toutes les sources configurées rapportent toujours l’absence. | Velair applique Absence et ses profils. |
+| 13:10 | Sélectionner **Annuler**. | Velair restaure Confort et les deux profils d’origine, puis retire l’arrivée. |
+
+Le résultat est Confort, **pas** le mode Retour Soirée configuré. Si la préparation de Soirée avait
+déjà commencé, l’annulation la retire aussi et restaure la sélection d’origine. Les forçages actifs,
+ajustements manuels et pauses indépendantes gardent leur priorité.
+
+<a id="start-without-occupancy-sensors"></a>
+### Démarrer sans capteurs d’occupation
+
+Sans sources d’occupation configurées, **Plan return** applique immédiatement Absence.
+Il n’y a pas d’étape de confirmation de cinq minutes. Annuler ce retour actif restaure Confort
+et les deux profils enregistrés juste avant son démarrage. Un capteur configuré inconnu ou
+indisponible ne correspond pas à une absence de capteurs : il continue de bloquer une nouvelle
+confirmation d’absence.
+
+<a id="default-arrival-edits-and-restart"></a>
+### Par défaut, modifications d’arrivée et redémarrage
+
+Si l’épisode démarre depuis **Par défaut** sans profils actifs, annuler après confirmation du
+départ revient à Par défaut sans profils actifs. Une combinaison manuelle de profils est restaurée
+dans son ordre d’origine.
+
+Modifier l’arrivée de 18:00 à 19:00 ou redémarrer Home Assistant ne remplace pas la sélection
+précédente enregistrée. Annuler restaure toujours celle d’avant le début de cet épisode. Cela
+ne récupère pas les anciennes températures des appareils ni leurs états HVAC : la sélection
+restaurée utilise ses programmations actuelles, sous réserve des dérogations existantes.
+
+<a id="choose-another-mode-instead-of-cancelling"></a>
+### Choisir un autre mode au lieu d’annuler
+
+Si vous sélectionnez explicitement **Eco** pendant un retour actif, cette sélection retire le
+retour et conserve Eco. Velair ne restaure pas ensuite Confort lorsque l’occupation change ou que
+l’avis de fin d’épisode est fermé. Cela préserve votre choix explicite ; c’est une action différente du
+bouton **Annuler** de l’épisode.
+
+<a id="distinguish-the-controls"></a>
+### Distinguer les commandes
+
+- **Annuler** dans les commandes de retour retire l’épisode comme décrit ci-dessus.
+- **Retour** dans l’éditeur d’arrivée abandonne les modifications non appliquées ; le retour enregistré continue.
+- Le **X** du panneau d’actions générique de la carte climatique ferme ce panneau sans annuler le retour.
+- **Annuler** à côté d’**Enregistrer** dans la configuration de routine abandonne les réglages non enregistrés, sans annuler un épisode.
+
+Pour les épisodes anciens sans sélection précédente enregistrée, ou si les profils enregistrés
+ne sont plus valides, consultez [les limites de restauration](#restoration-limits).
+
+<a id="daily-behavior"></a>
+## Fonctionnement quotidien
+
+Configurez par exemple du lundi au vendredi à 18:15. Une fois que le logement est resté vide pendant
+le délai de confirmation, Velair active Absence et résout la programmation Présence à 18:15.
+Chaque zone utilise sa propre estimation de préparation. Une zone nécessitant une heure peut
+démarrer à 17:15 tandis qu’une zone plus rapide démarre plus tard.
+
+La consigne est celle du bloc effectif **à l’arrivée**, y compris la continuité hebdomadaire.
+Si Présence demande 17 degrés avant 18:00 puis 21 après, un retour à 18:15 prépare 21 degrés même
+si la préparation commence avant 18:00. La programmation hebdomadaire n’est ni modifiée ni remplie
+de blocs temporaires.
+
+À l’heure prévue, Velair sélectionne la destination et continue sa programmation habituelle.
+Un signal d’occupation précoce sélectionne immédiatement la destination. Une arrivée tardive ne
+remet pas le logement en Absence. Pauses, Forçage, Réglage manuel, zones désactivées et planificateur
+arrêté gardent leurs conditions existantes de transmission. La préparation prend en charge le chauffage,
+le refroidissement et plages natives de température. Elle vise à rapprocher la pièce de la consigne ;
+elle ne peut pas garantir une température exacte.
+
+<a id="preparation-and-room-assist"></a>
+### Préparation et Room Assist
+
+Le mode de destination définit la configuration nécessaire à l’arrivée. Chaque zone démarre à
+sa propre heure estimée ; le mode complet est sélectionné à l’arrivée, pas au démarrage de la
+première zone. Les zones qui n’ont pas encore démarré continuent de suivre la programmation Absence.
+
+Une fois qu’une zone commence à se préparer, sa consigne temporaire d’arrivée est prioritaire
+sur les blocs ultérieurs de la programmation Absence. Par exemple, avec une absence de dix heures
+et un retour à 19:25 :
+
+| Heure | Consigne pour cette pièce |
+|---|---|
+| 09:25, absence confirmée | Absence demande 16 degrés |
+| 16:25, cette zone commence à se préparer | La programmation d’arrivée demande 21 degrés |
+| 17:00, un bloc Absence demande 18 degrés | La préparation continue vers 21 degrés |
+| 19:25, arrivée planifiée | Le mode de destination démarre sa programmation normale |
+
+Un bloc de programmation Absence n’annule pas la préparation du retour de la zone. Cette priorité
+s’applique aussi au refroidissement et aux plages de température.
+
+Si Room Assist est activé, il suit la même consigne temporaire d’arrivée. Dans cet exemple, il aide
+la pièce à atteindre 21 degrés plutôt que de la corriger vers la consigne Absence de 16 degrés.
+La consigne envoyée à l’appareil peut différer de 21 degrés, car Room Assist compense les écarts
+entre le capteur ambiant et la mesure propre de l’appareil. Les corrections en attente sont
+revalidées par rapport à la consigne actuelle avant transmission.
+
+Une modification directe de température par l’utilisateur suit la politique d’ajustement externe
+de la zone. **Conserver le contrôle automatique** réapplique la consigne qui fait autorité, qui
+pendant la préparation est celle de l’arrivée. Un maintien **Réglage manuel** suspend la
+transmission automatique et Room Assist pour cette zone tant qu’il est actif. Forçage et pauses
+explicites de zone gardent leur priorité existante ; ils n’annulent pas le retour du logement
+entier. Consultez [Room Assist](room-assist.fr.md) et [Réglage manuel](manual-control.fr.md).
+
+<a id="exceptions-and-restarts"></a>
+## Exceptions et redémarrages
+
+La sous-section Retour prévu montre ensemble le retour accepté, la préparation de chaque zone
+et la routine enregistrée. Ouvrez-la directement avec `/velair/preconditioning/planned-return` ;
+`/velair/preconditioning/preconditioning` ouvre le préconditionnement adaptatif, sous-section par
+défaut de l’onglet. Ajuster l’heure d’arrivée ne modifie que cette absence, pas la semaine enregistrée.
+**Annuler** retire la préparation et le changement automatique de destination. Avant confirmation,
+la sélection active reste inchangée ; après confirmation, les modes et profils enregistrés avant
+le début de cet épisode sont restaurés.
+
+Une sélection explicite de mode ou profil annule le retour automatique de l’épisode. Un rapport
+de présence ultérieur ou un redémarrage ne doit pas écraser cette sélection. Velair mémorise les
+absences terminées ou annulées jusqu’à ce que le logement soit à nouveau occupé.
+
+Cette sélection explicite annule également la préparation déjà en cours pour l’épisode, même si
+la configuration du mode ou profil sélectionné est déjà active. Elle diffère d’un changement de
+température programmé dans le mode Absence, qui n’annule pas la préparation. Ni le panneau ni la
+carte ne proposent de boutons Ignorer, Je suis à la maison ou Fermer ; les commandes partagées sont
+Annuler et Modifier l’arrivée. Le backend conserve des opérations distinctes pour ignorer le retour
+et signaler l’arrivée aux consommateurs d’API ; leurs contrats sont documentés dans
+l’[API développeur](../developer/api.md).
+L’action `velair.cancel_planned_return` annule un retour en attente ou actif confirmé, ou ferme
+l’avis d’un épisode inactif. L’annulation arrête la préparation et le retour temporisé et empêche
+le redémarrage automatique pour cette absence. Pour un départ confirmé, elle restaure la sélection
+mode/profils précédente enregistrée ; pour une confirmation en attente ou un avis de fin d’épisode, elle
+ne change pas la sélection. Un nouveau **Plan return** explicite peut encore démarrer un épisode.
+
+<a id="restoration-limits"></a>
+### Limites de restauration
+
+Pour un retour ponctuel, Velair enregistre la sélection lorsque vous choisissez **Planifier le
+retour**. Pour la routine hebdomadaire, il l’enregistre lorsque l’absence est confirmée, juste
+avant d’appliquer le mode Absence.
+
+La sélection précédente survit aux modifications d’arrivée et aux redémarrages Home Assistant.
+Cela restaure la sélection de profils, pas les températures historiques ni les états des appareils ;
+les profils restaurés utilisent leurs programmations actuelles et priorités de dérogations existantes.
+Si le mode précédent a été supprimé ou modifié, les profils d’origine peuvent être restaurés comme
+sélection manuelle. Si un profil enregistré manque, est invalide ou entre en conflit avec un autre,
+l’annulation réussit quand même mais conserve la sélection actuelle et indique que la restauration
+était indisponible. Les épisodes créés avant l’existence de ces métadonnées gardent la sélection
+actuelle, car Velair ne peut pas déduire leur sélection précédente.
+
+Au redémarrage, les annonces ponctuelles en attente et absences confirmées sont récupérées plutôt
+que redémarrées. Une absence non confirmée recommence son délai de confirmation. Un capteur qui
+signale une présence permet de mettre à jour l’absence précédente même si l’arrivée a eu lieu pendant que
+Home Assistant était hors ligne.
+
+<a id="limits-and-backups"></a>
+## Limites et sauvegardes
+
+- Une seule routine pour le logement entier est prise en charge. Les arrivées hebdomadaires restent
+  dans la journée : un départ après l’heure du jour, ou un jour sans heure, active Absence sans
+  programmer le retour du lendemain. Les retours ponctuels peuvent utiliser toute date future.
+- Les calendriers, horaires tournants et routines nocturnes automatiques ne sont pas interprétés.
+- Sans préconditionnement activé, mesure de température ou consigne thermique, la destination
+  change toujours à l’arrivée mais cette zone ne démarre pas sa préparation en avance.
+- Les transitions affectant des zones dont les programmations sont exécutées par un système externe sont rejetées avant changement
+  de mode ; Velair ne reprend pas le contrôle local à leur contrôleur.
+- Le blueprint générique Présence/Absence existant reste inchangé et utile à d’autres installations et actions.
+- Les sauvegardes portables comprennent la configuration de routine, pas les épisodes d’occupation
+  ni temporisateurs. Les routines importées restent désactivées jusqu’à activation explicite.
+
+Consultez [Profils climatiques](climate-profiles.fr.md),
+[Préconditionnement adaptatif](adaptive-preconditioning.fr.md) et
+[Réglage manuel](manual-control.fr.md) pour les commandes sous-jacentes.
+
+<a id="overview-and-diagnostics"></a>
+## Vue d’ensemble et diagnostic
+
+La vue d’ensemble affiche un résumé compact du logement pendant un épisode hebdomadaire ou
+ponctuel ou lorsqu’un incident nécessite une intervention. Il identifie l’origine et l’état, et
+montre l’échéance de confirmation ou l’arrivée prévue si applicable. Sélectionnez le résumé pour
+ouvrir les détails complets de cette fonction dans Anticipation.
+
+Un signal violet sur un appareil identifie l’autorité actuelle du Retour prévu. L’état de
+fonctionnement existant reste visible : ce signal explique l’origine au lieu de remplacer les
+états chauffage, refroidissement, pause, programmé ou préconditionnement. Les estimations de
+démarrage futur sont indiquées séparément. Contrôle manuel, Forçage et pauses indépendantes gardent
+leur priorité. L’attribution Absence couvre les profils Absence effectifs de l’épisode, ou Par
+défaut s’il a été explicitement choisi comme mode Absence ; elle ne couvre pas un appareil non
+associé conservant simplement sa programmation Par défaut. La préparation peut légitimement
+utiliser le repli Par défaut de la destination lorsque le backend choisit la consigne d’arrivée
+de cet appareil.
+
+Le diagnostic montre l’état actuel du logement, l’origine de contrôle par appareil et l’état
+de préparation, y compris les raisons de suspension ou d’indisponibilité. La catégorie d’historique
+Retour prévu enregistre les transitions acceptées significatives sans doublons dus au
+rafraîchissement du panneau. Ses entrées partagent la limite existante de 100 événements et sont
+effacées au redémarrage. Les préférences de catégories enregistrées sont conservées. Les rapports
+téléchargés incluent ces informations et retirent les identifiants opérationnels de modes et
+profils. L’intention de contrôle et la réussite de transmission restent distinctes.
+
+<a id="dashboard-card"></a>
+## Carte de tableau de bord
+
+La carte Lovelace facultative montre les commandes compactes du retour ponctuel. Son en-tête
+comprend le nombre de sources indiquant une présence, une absence ou un état inconnu et le délai de confirmation enregistré ;
+le résumé hebdomadaire, la liste des sources et les détails de préparation restent dans le panneau
+latéral. Configurez d’abord le logement dans ce panneau.
+
+```yaml
+type: custom:velair-card
+view: planned-return
+```
+
+Sélectionnez **Retour prévu** dans l’éditeur visuel de carte. La carte agit sur le même épisode
+enregistré que le panneau et les autres cartes. Elle prend en charge les dates et heures futures.
+Les épisodes actifs proposent **Annuler** et **Modifier l’arrivée** ; Annuler arrête le retour
+accepté et restaure la sélection précédente mode/profils enregistrée après départ confirmé ;
+pendant la confirmation, la sélection reste inchangée. Après une fin, annulation ou tout autre
+épisode inactif, la carte montre un nouveau formulaire sans attendre un changement d’occupation.
+Une configuration enregistrée invalide ou un planificateur arrêté désactive planification et
+modifications, mais un retour actif peut toujours être annulé. Le panneau utilise les mêmes
+boutons et cycle de vie ; la configuration hebdomadaire et son interrupteur y restent.
+Seuls les indicateurs de sources/délai à la fin sont propres à la carte ; panneau et carte partagent
+le sous-titre de phase attaché au titre, l’édition d’arrivée et la chronologie. Pendant la
+confirmation, le bloc de temporisation remplace le sous-titre. Cette vue du logement n’a pas de
+filtre de thermostat.
+
+La carte **Thermostat : état et contrôle** peut aussi exposer **One-off return** comme
+action rapide fournie par Velair à côté de Forçage et Pause. Activez-la dans l’éditeur d’actions,
+choisissez d’afficher son nom ou placez-la dans Plus. L’éditeur regroupe Forçage, Pause et Retour
+ponctuel en premier, même désactivés.
+Elle ouvre les mêmes commandes compactes dans le panneau inférieur de contrôle, avec un titre
+simple correspondant à Forçage et Pause. Les trois formulaires utilisent la hauteur compacte
+existante de 38 pixels. Un départ actif montre sa chronologie et son éditeur existants. Le X du
+panneau ferme les commandes sans annuler le départ. Fermer avec des modifications d’arrivée non
+enregistrées demande si elles doivent être abandonnées ; la fermeture est bloquée pendant une action.
+Cette action contrôle toujours le logement entier, indépendamment de l’appareil sélectionné.
+Les configurations existantes la gardent masquée. Les nouvelles cartes créées depuis le sélecteur
+Home Assistant l’incluent activée ; les configurations YAML doivent l’activer explicitement avec
+`type: planned-return` dans `climate_actions`.
+
+Pendant **Absence** et **Préparation de l’arrivée**, la carte montre le départ confirmé et l’arrivée
+enregistrée avec les noms des modes Absence et Retour de l’épisode. Un point d’heure actuelle,
+identifié par son infobulle **Maintenant**, avance selon le temps UTC écoulé, y compris aux changements
+d’heure, et reste dans la barre. Les extrémités incluent les dates si leurs dates calendaires
+Home Assistant diffèrent. Les modifications d’arrivée non enregistrées ne changent pas cette barre.
+Les états en attente et terminaux, ou épisodes sans horodatage confirmé du départ, gardent un état
+statique sans chronologie. Panneau et carte actualisent leur horloge locale une fois par minute
+uniquement lorsqu’ils sont visibles et actifs, et immédiatement lorsqu’ils redeviennent visibles ;
+ce rafraîchissement n’interroge jamais le backend.
+
+Les icônes de départ et d’arrivée encadrent le rail, avec infobulles natives et libellés accessibles.
+Les heures enregistrées restent proches sous leurs icônes ; seule l’arrivée est modifiable.
+Des libellés simples de modes sous les heures identifient les configurations Absence et Retour
+avec une icône générique de mode. Les noms longs et dates sur plusieurs jours reviennent à la
+ligne dans le panneau. Chaque extrémité regroupe son heure et son mode, avec le libellé du mode
+sous l’heure. Les champs de modification date/heure partagent les dimensions compactes des autres
+formulaires ; aucun bouton Fermer n’apparaît à côté de l’heure enregistrée. La position de
+préparation est un petit repère sur le rail, avec son horloge et sa légende explicative sous les
+heures. La portion écoulée du rail, les repères des extrémités et le marqueur Maintenant montrent
+le passage du temps, pas la progression thermique. Sans estimation valide pour la première pièce à préparer,
+un petit bouton d’information à côté du titre Retour ponctuel explique l’aperçu de l’arrivée
+enregistrée actuelle : toutes les pièces concernées peuvent être suspendues, déjà à la consigne,
+exclues ou configurées pour agir uniquement à l’arrivée. Survolez-le ou donnez-lui le focus sur
+ordinateur, ou touchez-le sur mobile. Des informations absentes ou hétérogènes restent non concluantes
+et n’impliquent pas que la préparation anticipée est désactivée. Échap ou une interaction extérieure
+ferme l’aide.
+
+Lorsque le backend dispose d’une estimation adaptative valide pour l’arrivée enregistrée, la
+chronologie ajoute un marqueur d’horloge **Préparation estimée** et une heure. Il identifie la
+première estimation de pièce admissible ; les autres pièces peuvent démarrer plus tard. La légende
+légèrement teintée est une section dépliable, repliée par défaut. Sélectionnez-la pour voir chaque
+pièce admissible et son début estimé, classés par heure. La liste utilise noms de pièces Home
+Assistant, icônes et heure locale, avec les dates si nécessaire. Les pièces suspendues, déjà à
+la consigne ou agissant uniquement à l’arrivée sont exclues. Ouvrir la liste n’interroge pas le
+backend ; les mises à jour ordinaires préservent son état, tandis qu’une nouvelle arrivée enregistrée
+ou un autre épisode la ferme. Pendant l’édition, l’encart et la commande d’information de repli
+sont masqués ; le rail conserve son estimation enregistrée. Retour restaure l’état déplié du même
+épisode. Survolez l’en-tête pour l’explication. C’est une estimation de planification, pas une
+preuve qu’un appareil a démarré ni une mesure de progression thermique. Les pièces suspendues,
+à la consigne, indisponibles et agissant uniquement à l’arrivée ne fournissent pas ce marqueur.
+Sa position reste dans la barre départ/arrivée tandis que le libellé conserve l’estimation réelle,
+y compris une date antérieure.

@@ -1,4 +1,9 @@
 # External Changes and Manual Adjustment
+<!-- velair-docs:start -->
+Translations: [English original](manual-control.md) · [Español](manual-control.es.md) · [Français](manual-control.fr.md) · [Deutsch](manual-control.de.md) · [Italiano](manual-control.it.md) · [Nederlands](manual-control.nl.md) · [Polski](manual-control.pl.md) · [Português (Brasil)](manual-control.pt-br.md) · [Português (Portugal)](manual-control.pt-pt.md) · [Русский](manual-control.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair can recognize when the HVAC mode or target temperature of a managed
 `climate.*` entity changes without matching a climate command sent by Velair.
@@ -142,6 +147,8 @@ The boundary is calculated when Manual adjustment begins. Another external
 adjustment during the same Manual adjustment updates the preserved climate state
 but does not move that boundary. If there is no future effective block, there is
 no automatic expiry; use **Resume automatic scheduling** when desired.
+
+The next-block boundary uses the scheduled block time, including `Off`, rather than a predicted preconditioning start. For example, an adjustment at `18:05` with `Off` at `19:00` and heating at `20:00` ends at `19:00`, even if the heating prediction would otherwise start earlier.
 
 ### Manual for a duration
 

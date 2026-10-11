@@ -14,6 +14,7 @@ import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
 import type { PreconditioningSettings, RoomSensorAssistStatus } from "../types";
 import { renderInlineHelp } from "./inline-help";
+import { renderDocumentationHelp } from "./documentation-links";
 
 type SensorsViewHost = VelairViewHost;
 
@@ -113,6 +114,7 @@ export function renderSensorsView(
           <strong>${host._t("roomSensorIntroTitle")}</strong>
           <small>${host._t("roomSensorIntroDetail")}</small>
         </span>
+        ${renderDocumentationHelp(host, "roomAssist")}
       </header>
       ${zoneIds.length
         ? zoneIds.map((entityId) => renderSensorZone(host, entityId, viewOptions))

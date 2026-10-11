@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
-import { applySelectedDayToZones, clampBlocksForEntity, saveSelectedDay, unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
+import { applySelectedDayToZones, clampBlocksForEntity, copySelectedDay, saveSelectedDay, unsupportedModeError } from "../../src/velair/controllers/schedule-actions";
 import type { DraftScheduleBlock, ScheduleBlock, ScheduleResponse } from "../../src/velair/types";
 
 const response = { configured_entities: [], zones: {}, settings: { first_weekday: "monday", zone_order: [] } } as unknown as ScheduleResponse;
 
 function host(normalizedBlocks: ScheduleBlock[] = [{ action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 21, hvac_mode: "heat" }]) {
   const api = {
-    copyDaySchedule: vi.fn(),
+    copyDaySchedule: vi.fn().mockResolvedValue(response),
     setDailySchedule: vi.fn().mockResolvedValue(response),
   };
   const state = {
@@ -56,6 +56,76 @@ function host(normalizedBlocks: ScheduleBlock[] = [{ action: ACTION_SET_TEMPERAT
 }
 
 describe("schedule actions controller", () => {
+  it("preserves a newer day draft when navigation occurs during source save", async () => {
+    const { state, api } = host();
+    state._copyTargets = new Set(["tuesday"]);
+    api.setDailySchedule.mockImplementation(async () => {
+      state._selectedWeekday = "friday";
+      return response;
+    });
+    await copySelectedDay(state as never);
+    expect(api.copyDaySchedule).not.toHaveBeenCalled();
+    expect(state._dirty).toBe(true);
+    expect(state._applyScheduleData).not.toHaveBeenCalled();
+  });
+
+  it("preserves a newer draft when navigation occurs during atomic cross-climate copying", async () => {
+    const { state, api } = host();
+    state._dirty = false;
+    state._zoneTargets = new Set(["climate.bedroom", "climate.office"]);
+    api.copyDaySchedule.mockImplementation(async () => {
+      state._selectedWeekday = "friday"; state._dirty = true; return response;
+    });
+    await applySelectedDayToZones(state as never);
+    expect(api.copyDaySchedule).toHaveBeenCalledTimes(1);
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+    expect(state._dirty).toBe(true);
+    expect(state._zoneTargets.size).toBe(2);
+    expect(state._applyScheduleData).not.toHaveBeenCalled();
+  });
+  it("saves a dirty full reference before cloning without validating shared raw target steps locally", async () => {
+    const { state, api } = host();
+    Object.assign(state, { _draftTemplateLink: { mode: "full", template_key: "work" }, _draftConfigurationRevision: 3,
+      _data: { ...response, configuration_revision: 3 }, _copyTargets: new Set(["tuesday"]) });
+    state._normalizeDraftBlocks = vi.fn(() => ({ ok: false, error: "wrong local step" })) as never;
+    api.setDailySchedule.mockResolvedValue({ ...response, configuration_revision: 4 });
+    api.copyDaySchedule.mockResolvedValue(response);
+    await copySelectedDay(state as never);
+    expect(state._normalizeDraftBlocks).not.toHaveBeenCalled();
+    expect(api.setDailySchedule).toHaveBeenCalledWith("climate.office", "monday", [], {
+      expected_revision: 3, template_link: { mode: "full", template_key: "work" },
+    });
+    expect(api.copyDaySchedule).toHaveBeenCalledWith("climate.office", "monday", ["tuesday"], { expected_revision: 4 });
+    expect(state._error).toBeUndefined();
+  });
+
+  it.each(["hours", "full"])("clones a saved %s link across climates in one backend transaction without materializing", async (mode) => {
+    const { state, api } = host();
+    Object.assign(state, { _dirty: false, _draftTemplateLink: mode === "full" ? { mode, template_key: "work" } : { mode, template_key: "work", bindings: { a: { preset_key: "night" } } },
+      _data: { ...response, configuration_revision: 3 }, _zoneTargets: new Set(["climate.bedroom", "climate.other"]) });
+    api.copyDaySchedule.mockResolvedValue({ ...response, configuration_revision: 4 });
+    state._clampBlocksForEntity = vi.fn(() => { throw new Error("Do not adapt raw shared refs in frontend"); });
+    await applySelectedDayToZones(state as never);
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+    expect(api.copyDaySchedule).toHaveBeenCalledWith("climate.office", "monday", ["monday"], {
+      target_entity_ids: ["climate.bedroom", "climate.other"], expected_revision: 3,
+    });
+    expect(state._clampBlocksForEntity).not.toHaveBeenCalled();
+    expect(state._error).toBeUndefined();
+    expect(state._zoneTargets.size).toBe(0);
+  });
+  it("retains draft and targets on atomic clone incompatibility", async () => {
+    const { state, api } = host();
+    Object.assign(state, { _dirty: false, _draftTemplateLink: { mode: "full", template_key: "work" },
+      _data: { ...response, configuration_revision: 3 }, _zoneTargets: new Set(["climate.bedroom"]) });
+    api.copyDaySchedule.mockRejectedValue({ message: "Incompatible target" });
+    await applySelectedDayToZones(state as never);
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+    expect((state as any)._draftTemplateLink).toEqual({ mode: "full", template_key: "work" });
+    expect(state._zoneTargets.size).toBe(1);
+    expect(state._error).toContain("Incompatible target");
+    expect(state._applyScheduleData).not.toHaveBeenCalled();
+  });
   it("accepts supported range modes and Keep on an active range-only climate", () => {
     const { state } = host();
     (state as any).hass = {
@@ -192,70 +262,27 @@ describe("schedule actions controller", () => {
     expect(state._error).toBe("unsupported cool for climate.office");
   });
 
-  it("reports unsupported options for a target before saving any schedule", async () => {
-    const { api, state } = host([{
-      action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "eco",
-    }]);
+  it("reports backend-only options incompatibility without locally changing the raw source", async () => {
+    const { api, state } = host([{ action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "eco" }]);
+    state._dirty = false;
     state._zoneTargets = new Set(["climate.bedroom"]);
+    api.copyDaySchedule.mockRejectedValue(new Error("Unsupported options"));
     await applySelectedDayToZones(state);
     expect(api.setDailySchedule).not.toHaveBeenCalled();
-    expect(state._error).toBe('climateOptionsUnsupportedAt:{"entity":"climate.bedroom","start":"08:00"}');
+    expect(state._error).toBe("Unsupported options");
+    expect(state._zoneTargets.size).toBe(1);
   });
-
-  it("applies a selected day to target zones with per-entity clamping", async () => {
+  it("saves a dirty source before cloning raw configuration to all climates", async () => {
     const { api, state } = host();
-    state._zoneTargets = new Set(["climate.bedroom"]);
-
+    state._zoneTargets = new Set(["climate.bedroom", "climate.other"]);
+    Object.assign(state, { _data: { ...response, configuration_revision: 5 }, _draftConfigurationRevision: 5 });
+    api.setDailySchedule.mockResolvedValue({ ...response, configuration_revision: 6 });
     await applySelectedDayToZones(state);
-
-    expect(api.setDailySchedule).toHaveBeenNthCalledWith(1, "climate.office", "monday", [
-      { action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 21, hvac_mode: "heat" },
-    ]);
-    expect(api.setDailySchedule).toHaveBeenNthCalledWith(2, "climate.bedroom", "monday", [
-      { action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 19, hvac_mode: "heat" },
-    ]);
+    expect(api.setDailySchedule).toHaveBeenCalledTimes(1);
+    expect(api.setDailySchedule.mock.calls[0][2]).toEqual([{ action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 21, hvac_mode: "heat" }]);
+    expect(api.copyDaySchedule).toHaveBeenCalledWith("climate.office", "monday", ["monday"], {
+      target_entity_ids: ["climate.bedroom", "climate.other"], expected_revision: 6,
+    });
     expect(state._zoneTargets.size).toBe(0);
-  });
-
-  it("drops unsupported optional climate settings when applying to another zone", async () => {
-    const { api, state } = host([
-      {
-        action: ACTION_SET_TEMPERATURE,
-        fan_mode: "quiet",
-        humidity: 45,
-        hvac_mode: "heat",
-        preset_mode: "eco",
-        start: "08:00",
-        swing_horizontal_mode: "left",
-        swing_mode: "vertical",
-        temperature: 21,
-      },
-    ]);
-    state._zoneTargets = new Set(["climate.bedroom"]);
-
-    await applySelectedDayToZones(state);
-
-    expect(api.setDailySchedule).toHaveBeenNthCalledWith(1, "climate.office", "monday", [
-      {
-        action: ACTION_SET_TEMPERATURE,
-        fan_mode: "quiet",
-        humidity: 45,
-        hvac_mode: "heat",
-        preset_mode: "eco",
-        start: "08:00",
-        swing_horizontal_mode: "left",
-        swing_mode: "vertical",
-        temperature: 21,
-      },
-    ]);
-    expect(api.setDailySchedule).toHaveBeenNthCalledWith(2, "climate.bedroom", "monday", [
-      {
-        action: ACTION_SET_TEMPERATURE,
-        fan_mode: "quiet",
-        hvac_mode: "heat",
-        start: "08:00",
-        temperature: 19,
-      },
-    ]);
   });
 });

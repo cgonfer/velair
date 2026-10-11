@@ -1,4 +1,9 @@
 # Pause a zone while windows are open
+<!-- velair-docs:start -->
+Translations: [English original](pause-zone-for-open-windows.md) · [Español](pause-zone-for-open-windows.es.md) · [Français](pause-zone-for-open-windows.fr.md) · [Deutsch](pause-zone-for-open-windows.de.md) · [Italiano](pause-zone-for-open-windows.it.md) · [Nederlands](pause-zone-for-open-windows.nl.md) · [Polski](pause-zone-for-open-windows.pl.md) · [Português (Brasil)](pause-zone-for-open-windows.pt-br.md) · [Português (Portugal)](pause-zone-for-open-windows.pt-pt.md) · [Русский](pause-zone-for-open-windows.ru.md) · [Translation status](../../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Pause one or more Velair-managed climates when any selected window or door remains open, then resume their schedules only when every contact is confirmed closed and each active pause still belongs to this automation. Home Assistant warns when an unavailable contact prevents a safe resume.
 

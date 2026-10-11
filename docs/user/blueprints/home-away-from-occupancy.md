@@ -1,4 +1,9 @@
 # Home and Away from occupancy
+<!-- velair-docs:start -->
+Translations: [English original](home-away-from-occupancy.md) · [Español](home-away-from-occupancy.es.md) · [Français](home-away-from-occupancy.fr.md) · [Deutsch](home-away-from-occupancy.de.md) · [Italiano](home-away-from-occupancy.it.md) · [Nederlands](home-away-from-occupancy.nl.md) · [Polski](home-away-from-occupancy.pl.md) · [Português (Brasil)](home-away-from-occupancy.pt-br.md) · [Português (Portugal)](home-away-from-occupancy.pt-pt.md) · [Русский](home-away-from-occupancy.ru.md) · [Translation status](../../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Run your chosen Home Assistant actions when one consolidated occupancy entity becomes occupied or empty. This keeps people, guest, and household-specific presence logic in Home Assistant while making common Velair Mode and Profile changes easier to configure. A delayed notification explains when the entity cannot provide a safe Home/Away decision.
 

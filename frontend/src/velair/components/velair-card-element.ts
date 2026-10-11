@@ -1,5 +1,16 @@
-import { LitElement } from "lit";
+import type { PanelSubsection } from "../domain/panel-routes";
+import { isScheduleResponseCurrent, rawScheduleHass, type PanelScheduleSession } from "../controllers/panel-schedule-session";
+import { acquireLovelaceScheduleSession } from "../controllers/lovelace-schedule-sessions";
+import { normalizeTemplateBlocks } from "../controllers/template-impact";
+import { cancelTemplatePreview, queueTemplatePreview, refreshTemplatePreview } from "../controllers/template-preview";
+import { LitElement, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { draftBlocksFromScheduleBlocks } from "../domain/draft-blocks";
+import { PresetPreviewCache, presetPreviewKey } from "../domain/preset-preview";
+import { resolvedResourceBlock } from "../domain/resource-display";
+import { linkDraftDay, linkedDraftBlocks } from "../domain/linked-schedules";
+import { type TemplateImpact } from "../controllers/template-impact";
+import { backendErrorMessage } from "../domain/backend-errors";
 import {
   INITIAL_LOADING_DELAY_MS,
   OPERATION_SUCCESS_VISIBLE_MS,
@@ -64,7 +75,7 @@ import { cardStyles } from "../styles/card-styles";
 import { VelairApiClient } from "../api/client";
 import type { PortableSummaryItem } from "../domain/portable";
 import { changedPreconditioningEventEntityIds, weekdayForDate } from "../domain/schedule-events";
-import { scheduleTemplatesFromStored, templateLabel } from "../domain/templates";
+import { availableScheduleTemplates, scheduleTemplatesFromStored, templateLabel } from "../domain/templates";
 import {
   overviewTimelineInitialScrollLeft,
   timelineNowMarker,
@@ -169,7 +180,6 @@ import {
   selectEntity,
   selectWeekday,
   setBlocksForSource,
-  subscribeUpdates,
 } from "../controllers/schedule-state";
 import {
   asClimateDisplayHost,
@@ -235,13 +245,65 @@ import {
 } from "../views/operation-status-view";
 
 export class VelairCard extends LitElement {
+  private _panelScheduleSession?: PanelScheduleSession;
+  private _lovelaceScheduleLease?: ReturnType<typeof acquireLovelaceScheduleSession>;
+  private _detachPanelSchedule?: () => void;
+
+  public get scheduleSession(): PanelScheduleSession | undefined { return this._panelScheduleSession ?? this._lovelaceScheduleLease?.session; }
+  public set scheduleSession(session: PanelScheduleSession | undefined) {
+    if (session === this._panelScheduleSession) return;
+    this._detachPanelSchedule?.();
+    this._detachPanelSchedule = undefined;
+    this._panelScheduleSession = session;
+    if (this.isConnected) this._syncScheduleSession();
+  }
+
+  private _syncScheduleSession(): void {
+    if (this._panelScheduleSession || !this._hass?.connection || !this.isConnected) {
+      this._releaseLovelaceSchedule();
+    } else {
+      const lease = acquireLovelaceScheduleSession(this._hass, this);
+      if (lease !== this._lovelaceScheduleLease) {
+        this._releaseLovelaceSchedule();
+        this._lovelaceScheduleLease = lease;
+      }
+    }
+    this._attachPanelSchedule();
+  }
+
+  private _releaseLovelaceSchedule(): void {
+    if (!this._lovelaceScheduleLease) return;
+    this._detachPanelSchedule?.();
+    this._detachPanelSchedule = undefined;
+    this._lovelaceScheduleLease.release();
+    this._lovelaceScheduleLease = undefined;
+  }
+
+  private _attachPanelSchedule(): void {
+    if (!this.scheduleSession || this._detachPanelSchedule) return;
+    this._detachPanelSchedule = this.scheduleSession.attach((state) => {
+      if (state.data && state.data !== this._panelScheduleData) {
+        this._panelScheduleData = state.data;
+        this._applyLocalScheduleData(state.data);
+      } else if (!state.data) {
+        this._panelScheduleData = undefined;
+        this._data = undefined;
+      }
+      this._loading = state.loading;
+      if (!this._error || this._error === this._panelScheduleError) this._error = state.error;
+      this._panelScheduleError = state.error;
+    });
+  }
+  private _panelScheduleData?: ScheduleResponse;
+  private _panelScheduleError?: string;
   private _hass?: HomeAssistant;
 
   public get hass(): HomeAssistant | undefined {
-    return this._hass;
+    return this.scheduleSession?.hassFor(this._hass) ?? this._hass;
   }
 
   public set hass(value: HomeAssistant | undefined) {
+    value = value && rawScheduleHass(value);
     const oldValue = this._hass;
     const oldGlobalUnit = oldValue?.config?.unit_system?.temperature;
     const nextGlobalUnit = value?.config?.unit_system?.temperature;
@@ -252,6 +314,23 @@ export class VelairCard extends LitElement {
       oldValue,
     );
     this._hass = value;
+    if (oldValue?.connection !== value?.connection) {
+      if (oldValue?.connection) {
+        this._diagnosticsSubscriptionGeneration += 1;
+        this._subscribingDiagnostics = false;
+        if (this._unsubscribeDiagnostics) void this._unsubscribeDiagnostics();
+        this._unsubscribeDiagnostics = undefined;
+        this._diagnosticsSnapshotAuthoritative = false;
+        this._latestDiagnostics = undefined;
+        if (this._data?.diagnostics) this._data = { ...this._data, diagnostics: undefined };
+      }
+      this._scheduleSubscriptionGeneration += 1;
+      this._subscribing = false;
+      if (!this.scheduleSession) this._loading = false;
+      if (this._unsubscribeUpdates) void this._unsubscribeUpdates();
+      this._unsubscribeUpdates = undefined;
+    }
+    if (this.isConnected) this._syncScheduleSession();
     if (this._shouldUpdateForHass(value, oldValue)) {
       this.requestUpdate("hass", oldValue);
     }
@@ -263,7 +342,10 @@ export class VelairCard extends LitElement {
       // drafts from a Home Assistant state update: doing so can double-convert
       // values while the scheduler is deliberately blocked.
       this._temperatureUnitReloadPending = true;
-      void this._loadSchedule();
+      if (this.scheduleSession && value) {
+        this._temperatureUnitReloadPending = false;
+        void this.scheduleSession.refresh(value);
+      } else void this._loadSchedule();
     }
   }
 
@@ -272,6 +354,22 @@ export class VelairCard extends LitElement {
   }
 
   @property({ type: String }) public view: VelairCardView = "overview-status";
+  @property({ attribute: false }) public resourceUsage?: import("../types").ResourceUsage;
+  @property({ attribute: false }) public subsection?: PanelSubsection;
+  @property({ attribute: false }) public presetKey?: string;
+  private _presetKeyApplied = false;
+  private _resourceUsageApplied = false;
+
+  private async _openResourceUsage(usage: import("../types").ResourceUsage): Promise<void> {
+    if (this._effectiveView() !== "schedules") {
+      this.dispatchEvent(new CustomEvent("velair-open-resource-usage", { bubbles: true, composed: true, detail: usage }));
+      return;
+    }
+    this._selectScheduleSource(usage.source === "default" ? "default" : "profile");
+    if (this._scheduleSource !== (usage.source === "default" ? "default" : "profile")) return;
+    if (usage.source === "default") { this._selectEntity(usage.entity_id); if (this._selectedEntity === usage.entity_id) this._selectWeekday(usage.weekday); }
+    else { await this.updateComplete; this.renderRoot.querySelector<import("./profiles-view-element").VelairProfilesView>("velair-profiles-view")?.focusUsage(usage); }
+  }
 
   @state() private _config: VelairCardConfig = {};
   @state() private _changedNextEventIds = new Set<string>();
@@ -314,9 +412,260 @@ export class VelairCard extends LitElement {
   @state() private _saveMessage?: string;
   @state() private _selectedEntity?: string;
   @state() private _scheduleSource: "default" | "profile" = "default";
+  @state() private _preconditioningSource: "preconditioning" | "planned-return" = "preconditioning";
+  @state() private _climateCardPlannedReturnOpen = false;
+  @state() private _plannedReturnDirty = false;
+  @state() private _plannedReturnBusy = false;
+  private _setPlannedReturnBusy(busy: boolean): void { this._plannedReturnBusy = busy; }
+  public canNavigatePanel(): boolean { return !this._plannedReturnBusy; }
+  private _setPlannedReturnDirty(dirty: boolean): void { this._plannedReturnDirty = dirty; }
+  private _selectPreconditioningSource(source: "preconditioning" | "planned-return"): boolean {
+    if (source === this._preconditioningSource) return true;
+    if (this._plannedReturnBusy) return false;
+    if (this._plannedReturnDirty && !window.confirm(this._t("discardUnsavedChanges"))) return false;
+    this._plannedReturnDirty = false;
+    this._preconditioningSource = source;
+    this._notifySubsection(source);
+    return true;
+  }
   @state() private _profileScheduleDirty = false;
+  @state() private _presetLibraryDirty = false;
+  @state() private _presetLibraryDraft?: import("../types").PresetLibraryDraft;
+  private _setPresetLibraryDirty(dirty: boolean, draft?: import("../types").PresetLibraryDraft): void { this._presetLibraryDirty = dirty; this._presetLibraryDraft = draft; }
   @state() private _selectedWeekday = "monday";
   @state() private _draftBlocks: DraftScheduleBlock[] = [];
+  @state() private _draftTemplateLink?: import("../types").TemplateLink;
+  @state() private _templateImpact?: TemplateImpact;
+  @state() private _templatePreviewPending = false;
+  @state() private _templatePreviewError?: string;
+  @state() private _templateLinkedDaysOpen = false;
+  private _setTemplateLinkedDaysOpen(open: boolean): void { this._templateLinkedDaysOpen = open; }
+  private _templateConfigurationRevision?: number;
+  @state() private _templateLibrarySource: "templates" | "presets" = "templates";
+  public selectPanelSubsection(subsection?: PanelSubsection): boolean {
+    if (this._effectiveView() === "preconditioning") return this._selectPreconditioningSource(subsection === "planned-return" ? "planned-return" : "preconditioning");
+    if (this._effectiveView() === "schedules") {
+      const source = subsection === "profiles" ? "profile" : "default";
+      this._selectScheduleSource(source);
+      return this._scheduleSource === source;
+    }
+    if (this._effectiveView() === "templates") this._selectTemplateLibrarySource(subsection === "presets" ? "presets" : "templates");
+    return true;
+  }
+
+  private _notifySubsection(subsection: PanelSubsection): void {
+    this.dispatchEvent(new CustomEvent("velair-subsection-changed", { bubbles: true, composed: true, detail: subsection }));
+  }
+
+  private _selectTemplateLibrarySource(source: "templates" | "presets"): void {
+    if (source === this._templateLibrarySource) return;
+    this._templateLibrarySource = source;
+    this._notifySubsection(source);
+  }
+  private async _editPreset(key: string): Promise<void> {
+    if (this._effectiveView() !== "templates") {
+      this.dispatchEvent(new CustomEvent("velair-open-preset", { bubbles: true, composed: true, detail: key }));
+      return;
+    }
+    this._selectTemplateLibrarySource("presets");
+    await this.updateComplete;
+    this.renderRoot.querySelector<import("./preset-library-element").VelairPresetLibrary>("velair-preset-library")?.editPreset(key);
+  }
+  private _setTemplateImpact(impact?: TemplateImpact): void {
+    this._templateImpact = impact;
+    this._templateDirty = true;
+    queueTemplatePreview(asTemplateActionsHost(this));
+  }
+  private _draftConfigurationRevision?: number;
+  private readonly _presetPreviews = new PresetPreviewCache();
+
+  private _presetPreviewKey(block: DraftScheduleBlock, index: number, source: BlockDraftSource): string {
+    return presetPreviewKey([this._selectedEntity, this._selectedWeekday, this._scheduleSource, source, index, this._data?.configuration_revision, this._data?.temperature_unit], block);
+  }
+
+  private _effectivePresetBlock(block: DraftScheduleBlock, index: number, source: BlockDraftSource): ScheduleBlock | undefined {
+    if (source === "template") {
+      const candidate = this._templateImpact?.preview;
+      const preview = candidate?.configuration_revision === this._data?.configuration_revision ? candidate : undefined;
+      if (this._templatePreviewPending || this._templatePreviewError) return undefined;
+      const raw = preview?.template.key === this._templateDraftKey
+        ? preview.template.blocks : this._data?.templates?.find((template) => template.key === this._templateDraftKey)?.blocks;
+      const original = raw?.find((item) => block.slot_id ? item.slot_id === block.slot_id : item.start === block.start);
+      if (!original || original.preset_key !== block.preset_key) return undefined;
+      const concrete = preview?.template.key === this._templateDraftKey ? preview.resolved_template_blocks : this._data?.resolved_template_blocks?.[this._templateDraftKey];
+      const effective = concrete?.find((item) => block.slot_id ? item.slot_id === block.slot_id : item.start === original.start);
+      return effective ? { ...effective, start: block.start } : undefined;
+    }
+    const cached = this._presetPreviews.get(this._presetPreviewKey(block, index, source))?.block;
+    if (cached) return { ...cached, start: block.start };
+    if (!block.preset_key || source !== "schedule") return undefined;
+    const resolved = resolvedResourceBlock(this._data, { source: "default", entity_id: this._selectedEntity ?? "", weekday: this._selectedWeekday, start: block.start, slot_id: block.slot_id }, block.preset_key)?.block;
+    if (resolved) this._presetPreviews.remember(this._presetPreviewKey(block, index, source), resolved);
+    return resolved ? { ...resolved, start: block.start } : undefined;
+  }
+
+  private _timelineTemplateLinkForDay(weekday: string): import("../types").TemplateLink | undefined {
+    return weekday === this._selectedWeekday ? this._draftTemplateLink : this._data?.zones[this._selectedEntity ?? ""]?.template_links?.[weekday];
+  }
+
+  private _effectivePresetBlockForDay(block: DraftScheduleBlock, index: number, weekday: string): ScheduleBlock | undefined {
+    if (weekday === this._selectedWeekday) return this._effectivePresetBlock(block, index, "schedule");
+    return (block.preset_key || this._timelineTemplateLinkForDay(weekday)?.mode === "full") ? resolvedResourceBlock(this._data, {
+      source: "default", entity_id: this._selectedEntity ?? "", weekday, start: block.start, slot_id: block.slot_id,
+    }, block.preset_key)?.block : undefined;
+  }
+
+  private _presetSettingsStatusForDay(block: DraftScheduleBlock, index: number, weekday: string): "loading" | "unavailable" | undefined {
+    return weekday === this._selectedWeekday ? this._presetSettingsStatus(block, index, "schedule")
+      : this._effectivePresetBlockForDay(block, index, weekday) ? undefined : "unavailable";
+  }
+
+  private _presetSettingsStatus(block: DraftScheduleBlock, index: number, source: BlockDraftSource): "loading" | "unavailable" | undefined {
+    if (this._effectivePresetBlock(block, index, source)) return undefined;
+    if (source === "template") return this._templatePreviewPending ? "loading" : "unavailable";
+    return this._presetPreviews.get(this._presetPreviewKey(block, index, source))?.status ?? "loading";
+  }
+
+  private _retryPresetSettings(block: DraftScheduleBlock, index: number, source: BlockDraftSource): void {
+    if (source === "template") { void refreshTemplatePreview(asTemplateActionsHost(this)); return; }
+    this._presetPreviews.invalidate(this._presetPreviewKey(block, index, source));
+    this._refreshPresetPreviews();
+  }
+
+  private _refreshPresetPreviews(): void {
+    if (this._draftTemplateLink?.mode === "full") {
+      const blocks = linkedDraftBlocks(this._draftTemplateLink, this._data?.templates ?? [], this._data?.temperature_unit);
+      if (JSON.stringify(blocks) !== JSON.stringify(this._draftBlocks)) this._draftBlocks = blocks;
+    }
+    if (this._scheduleSource !== "default") { this._presetPreviews.retain(new Set()); return; }
+    this._presetPreviews.retain(new Set(this._draftBlocks.map((block, index) => this._presetPreviewKey(block, index, "schedule"))));
+    this._draftBlocks.forEach((block, index) => {
+      if ((!block.preset_key && this._draftTemplateLink?.mode !== "full") || this._effectivePresetBlock(block, index, "schedule")) return;
+      const key = this._presetPreviewKey(block, index, "schedule");
+      const entityId = this._selectedEntity;
+      const weekday = this._selectedWeekday;
+      const start = block.start;
+      this._presetPreviews.request(key, async () => {
+        const api = this._api();
+        if (!api || !entityId) throw new Error(this._t("unableLoad"));
+        const response = await api.previewDailySchedule(entityId, weekday, this._draftTemplateLink?.mode === "full" ? { template_link: this._draftTemplateLink } : { blocks: [{ start, preset_key: block.preset_key }] });
+        return response.blocks.find((item) => item.start === start);
+      }, () => key === this._presetPreviewKey(this._draftBlocks[index] ?? {} as DraftScheduleBlock, index, "schedule"), () => this.requestUpdate(), () => undefined);
+    });
+  }
+
+  private _setPresetForBlock(index: number, key: string, source: BlockDraftSource): void {
+    if (source === "schedule" && this._draftTemplateLink?.mode === "full") return;
+    if (!key) { void this._unlinkPresetBlock(index, source); return; }
+    const blocks = this._blocksForSource(source);
+    if (blocks[index]) this._presetPreviews.invalidate(this._presetPreviewKey(blocks[index], index, source));
+    this._setBlocksForSource(source, blocks.map((block, i) => i === index ? { start: block.start, slot_id: block.slot_id, preset_key: key, action: "", hvac_mode: "" } : block));
+    this._markBlocksDirty(source);
+  }
+
+  private async _unlinkPresetBlock(index: number, source: BlockDraftSource): Promise<void> {
+    const blocks = this._blocksForSource(source);
+    if (!blocks[index]?.preset_key || (source === "schedule" && (!this._selectedEntity || this._draftTemplateLink?.mode === "full"))) return;
+    const key = this._presetPreviewKey(blocks[index], index, source);
+    const start = blocks[index].start;
+    const current = () => start === this._blocksForSource(source)[index]?.start && key === this._presetPreviewKey(this._blocksForSource(source)[index] ?? {} as DraftScheduleBlock, index, source);
+    try {
+      let effective = this._effectivePresetBlock(blocks[index], index, source);
+      if (!effective) {
+        const api = this._api();
+        if (!api) throw new Error(this._t("unableLoad"));
+        if (source === "template") {
+          await refreshTemplatePreview(asTemplateActionsHost(this));
+          effective = this._effectivePresetBlock(blocks[index], index, source);
+        } else {
+          const response = await api.previewDailySchedule(this._selectedEntity!, this._selectedWeekday, { blocks: [{ start: blocks[index].start, preset_key: blocks[index].preset_key }] });
+          effective = response.blocks.find((block) => block.start === blocks[index].start);
+        }
+      }
+      if (!effective || !current()) return;
+      const draft = draftBlocksFromScheduleBlocks([{ ...effective, slot_id: blocks[index].slot_id }], this._data?.temperature_unit)[0];
+      this._setBlocksForSource(source, this._blocksForSource(source).map((block, i) => i === index ? draft : block));
+      this._markBlocksDirty(source);
+    } catch (error) { if (current()) this._error = backendErrorMessage(error, this._t("unableSave")); }
+  }
+
+  private _setDayTemplateLink(key: string): boolean {
+    if (this._materializingTemplate) return false;
+    if (key === this._draftTemplateLink?.template_key) return true;
+    const template = availableScheduleTemplates(this._data?.templates).find((item) => item.key === key);
+    if (!template || !window.confirm(this._t("hoursReplaceConfirmation", { name: template.name ?? template.key }))) return false;
+    this._draftTemplateLink = this._draftTemplateLink?.mode === "full"
+      ? { mode: "full", template_key: key } : linkDraftDay(template, this._draftBlocks);
+    this._draftBlocks = linkedDraftBlocks(this._draftTemplateLink, this._data?.templates ?? [], this._data?.temperature_unit);
+    this._markBlocksDirty("schedule");
+    return true;
+  }
+
+  @state() private _materializingTemplate = false;
+  private _materializationError?: string;
+  private async _materializeFullDay(link: import("../types").TemplateLink): Promise<DraftScheduleBlock[] | undefined> {
+    const api = this._api();
+    if (!api || !this._selectedEntity || this._materializingTemplate) return undefined;
+    const fingerprint = () => JSON.stringify([this._selectedEntity, this._selectedWeekday, this._scheduleSource, this._data?.configuration_revision, this._draftTemplateLink, this._draftBlocks]);
+    const snapshot = fingerprint();
+    const revision = this._data?.configuration_revision;
+    const entity = this._selectedEntity;
+    const day = this._selectedWeekday;
+    if (this._error === this._materializationError) this._error = undefined;
+    this._materializationError = undefined;
+    this._materializingTemplate = true;
+    try {
+      const preview = await api.previewDailySchedule(entity, day, { template_link: link });
+      if (snapshot !== fingerprint()) return undefined;
+      if ((revision !== undefined && preview.configuration_revision !== revision) || !Array.isArray(preview.materialized_blocks)) throw new Error(this._t("linkedConfigurationUnavailable"));
+      return draftBlocksFromScheduleBlocks(preview.materialized_blocks, this._data?.temperature_unit);
+    } catch (error) {
+      if (snapshot === fingerprint()) {
+        this._materializationError = backendErrorMessage(error, this._t("unableLoad"));
+        this._error = this._materializationError;
+      }
+      return undefined;
+    } finally { this._materializingTemplate = false; }
+  }
+
+  private async _setDayTemplateScope(mode: "hours" | "full"): Promise<boolean> {
+    if (this._materializingTemplate) return false;
+    const link = this._draftTemplateLink;
+    if (!link || (link.mode ?? "hours") === mode) return true;
+    const template = availableScheduleTemplates(this._data?.templates).find((item) => item.key === link.template_key);
+    if (!template) return false;
+    if (mode === "full" && !window.confirm(this._t("templateFullReplaceConfirmation"))) return false;
+    const blocks = mode === "hours" ? await this._materializeFullDay(link) : this._draftBlocks;
+    if (!blocks) return false;
+    this._draftTemplateLink = mode === "full" ? { mode, template_key: link.template_key } : linkDraftDay(template, blocks);
+    this._draftBlocks = linkedDraftBlocks(this._draftTemplateLink, this._data?.templates ?? [], this._data?.temperature_unit);
+    this._markBlocksDirty("schedule");
+    return true;
+  }
+
+  private async _restoreOwnDaySchedule(): Promise<boolean> {
+    if (this._materializingTemplate) return false;
+    if (!window.confirm(this._t("hoursRestoreConfirmation"))) return false;
+    const zone = this._selectedEntity ? this._data?.zones[this._selectedEntity] : undefined;
+    const savedLink = zone?.template_links?.[this._selectedWeekday];
+    const blocks = savedLink?.mode === "full" ? await this._materializeFullDay(savedLink) : savedLink
+      ? linkedDraftBlocks(savedLink, this._data?.templates ?? [], this._data?.temperature_unit)
+      : draftBlocksFromScheduleBlocks(zone?.schedule[this._selectedWeekday] ?? [], this._data?.temperature_unit);
+    if (!blocks) return false;
+    this._draftBlocks = blocks.map(({ slot_id: _slot, ...block }) => block);
+    this._draftTemplateLink = undefined;
+    this._markBlocksDirty("schedule");
+    return true;
+  }
+
+  private async _unlinkDayTemplate(): Promise<void> {
+    if (!this._draftTemplateLink || this._materializingTemplate) return;
+    const blocks = this._draftTemplateLink.mode === "full" ? await this._materializeFullDay(this._draftTemplateLink) : this._draftBlocks;
+    if (!blocks) return;
+    this._draftTemplateLink = undefined;
+    this._draftBlocks = blocks.map(({ slot_id: _slot, ...block }) => block);
+    this._markBlocksDirty("schedule");
+  }
   @state() private _dirty = false;
   @state() private _dismissedOperationId?: string;
   @state() private _dirtyEntityId?: string;
@@ -367,6 +716,7 @@ export class VelairCard extends LitElement {
   @state() private _overviewTimelineDetailEntityId?: string;
   @state() private _successNoticeStartedAt?: number;
   @state() private _timelineNow = new Date();
+  private _scheduleSubscriptionGeneration = 0;
   private _unsubscribeUpdates?: () => Promise<void> | void;
   private _unsubscribeDiagnostics?: () => Promise<void> | void;
   private _subscribingDiagnostics = false;
@@ -445,6 +795,7 @@ export class VelairCard extends LitElement {
     });
   };
   public setConfig(config: VelairCardConfig): void {
+    if (this._climateCardPlannedReturnOpen && !this._closeClimateCardPlannedReturn()) return;
     if (this._climateCardActionsMenuOpen) this._closeClimateCardActionsMenu();
     const previousConfig = this._config;
     const hadExternalConfig = this._hasExternalConfig;
@@ -476,7 +827,8 @@ export class VelairCard extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    void this._loadSchedule();
+    this._syncScheduleSession();
+    if (!this.scheduleSession) void this._loadSchedule();
     this._syncInitialLoadingState();
     void this._subscribeUpdates();
     void this._syncDiagnosticsSubscription();
@@ -488,6 +840,15 @@ export class VelairCard extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._detachPanelSchedule?.();
+    this._detachPanelSchedule = undefined;
+    this._releaseLovelaceSchedule();
+    if (this._climateCardPlannedReturnOpen) {
+      this._climateCardPlannedReturnOpen = false;
+      this._plannedReturnDirty = false;
+      this._plannedReturnBusy = false;
+    }
+    cancelTemplatePreview(asTemplateActionsHost(this));
     super.disconnectedCallback();
     this.ownerDocument.removeEventListener(
       "pointerdown", this._handleDiagnosticsOutsidePointerDown, true,
@@ -501,6 +862,9 @@ export class VelairCard extends LitElement {
     this._disconnectDiagnosticsLogResizeObserver();
     this._disconnectClimateCardActionsResizeObserver();
     this._diagnosticsSubscriptionGeneration += 1;
+    this._scheduleSubscriptionGeneration += 1;
+    this._loading = false;
+    this._subscribing = false;
     if (this._unsubscribeUpdates) {
       void this._unsubscribeUpdates();
       this._unsubscribeUpdates = undefined;
@@ -542,6 +906,7 @@ export class VelairCard extends LitElement {
     return {
       title: "Velair",
       view: "overview-status",
+      climate_actions: [{ type: "boost", enabled: true }, { type: "pause", enabled: true }, { type: "planned-return", enabled: true }],
     };
   }
 
@@ -550,7 +915,12 @@ export class VelairCard extends LitElement {
   }
 
   protected updated(changedProperties: Map<string, unknown>): void {
-    if (changedProperties.has("hass") && this.hass && !this._data && !this._loading) {
+    this._refreshPresetPreviews();
+    if (changedProperties.has("presetKey")) this._presetKeyApplied = false;
+    if (changedProperties.has("resourceUsage")) this._resourceUsageApplied = false;
+    if (this.presetKey && this._data && !this._presetKeyApplied) { this._presetKeyApplied = true; void this._editPreset(this.presetKey); }
+    if (this.resourceUsage && this._data && !this._resourceUsageApplied) { this._resourceUsageApplied = true; void this._openResourceUsage(this.resourceUsage); }
+    if (!this.scheduleSession && changedProperties.has("hass") && this.hass && !this._data && !this._loading) {
       void this._loadSchedule();
     }
     if (changedProperties.has("hass") && this.hass) {
@@ -560,6 +930,8 @@ export class VelairCard extends LitElement {
       this._clearSuccessNoticeTimer();
     }
     if (changedProperties.has("_data")) {
+      const previous = changedProperties.get("_data") as ScheduleResponse | undefined;
+      if (previous && previous.configuration_revision !== this._data?.configuration_revision && this._templateDirty && this._templateDraftBlocks.some((block) => block.preset_key)) queueTemplatePreview(asTemplateActionsHost(this));
       this._syncOperationStatusTimer();
     }
     if (changedProperties.has("_loading") || changedProperties.has("_data")) {
@@ -583,12 +955,12 @@ export class VelairCard extends LitElement {
     }
     this._syncDiagnosticsLogResizeObserver();
     this._syncClimateCardActionsResizeObserver();
-    if (changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty")) {
+    if (changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty")) {
       this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
         bubbles: true,
         composed: true,
         detail: {
-          dirty: this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty,
+          dirty: this._plannedReturnDirty || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
           scope: this._scheduleSource === "profile" ? "profile" : "default-schedule",
         },
       }));
@@ -615,7 +987,9 @@ export class VelairCard extends LitElement {
     return renderCardContent(asVelairViewHost(this));
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues = new Map()): void {
+    if (changed.has("subsection") && this.subsection) this.selectPanelSubsection(this.subsection);
+
     this._operationalNotices.sync([
       ...(this._saveMessage ? [{ id: "success", message: this._saveMessage }] : []),
       ...(this._error ? [{ id: "error", message: this._error }] : []),
@@ -797,8 +1171,8 @@ export class VelairCard extends LitElement {
     selectTemplate(asTemplateActionsHost(this), key);
   }
 
-  private _selectScheduleTemplate(key: string): void {
-    selectScheduleTemplate(asTemplateActionsHost(this), key);
+  private async _selectScheduleTemplate(key: string): Promise<void> {
+    await selectScheduleTemplate(asTemplateActionsHost(this), key);
   }
 
   private _resetTemplateDraft(template?: ScheduleTemplate): void {
@@ -827,6 +1201,7 @@ export class VelairCard extends LitElement {
 
   private _updateTemplateNameDraft(key: string, value: string): void {
     updateTemplateNameDraft(asTemplateActionsHost(this), key, value);
+    queueTemplatePreview(asTemplateActionsHost(this));
   }
 
   private async _createTemplate(): Promise<void> {
@@ -849,21 +1224,63 @@ export class VelairCard extends LitElement {
     return templateLabel(template);
   }
 
-  private async _loadSchedule(): Promise<void> {
+  private async _loadSchedule(invalidate = false): Promise<void> {
+    if (this.scheduleSession) {
+      this._temperatureUnitReloadPending = false;
+      await this.scheduleSession.refresh(invalidate ? {} : undefined);
+      return;
+    }
     if (this._loading) {
       return;
     }
+    const generation = this._scheduleSubscriptionGeneration;
     do {
       this._temperatureUnitReloadPending = false;
       await loadSchedule(asScheduleStateHost(this));
-    } while (this._temperatureUnitReloadPending);
+    } while (this._temperatureUnitReloadPending && this.isConnected
+      && generation === this._scheduleSubscriptionGeneration);
   }
 
   private async _subscribeUpdates(): Promise<void> {
-    await subscribeUpdates(asScheduleStateHost(this));
+    if (this.scheduleSession) return;
+    const api = this._api();
+    if (!api || !this.isConnected || this._subscribing || this._unsubscribeUpdates) return;
+    const generation = this._scheduleSubscriptionGeneration;
+    const connection = this.hass?.connection;
+    const current = () => this.isConnected
+      && generation === this._scheduleSubscriptionGeneration
+      && connection === this.hass?.connection;
+    this._subscribing = true;
+    try {
+      const unsubscribe = await api.subscribeUpdates((message) => {
+        if (!current()) return;
+        if (message.loaded && message.schedule) this._applyScheduleData(message.schedule);
+        else void this._loadSchedule();
+      });
+      if (!current()) await unsubscribe();
+      else this._unsubscribeUpdates = unsubscribe;
+    } catch (error) {
+      if (current()) this._error = error instanceof Error ? error.message : this._t("unableSubscribe");
+    } finally {
+      if (current()) this._subscribing = false;
+    }
   }
 
   private _applyScheduleData(data: ScheduleResponse, options: { forceDraft?: boolean } = {}): void {
+    if (!this._isScheduleResponseCurrent(data)) return;
+    if (this.scheduleSession) {
+      const accepted = this.scheduleSession.publish(data);
+      if (accepted) this._applyLocalScheduleData(accepted, options);
+      return;
+    }
+    this._applyLocalScheduleData(data, options);
+  }
+
+  public _isScheduleResponseCurrent(data: ScheduleResponse): boolean {
+    return isScheduleResponseCurrent(this.scheduleSession, data);
+  }
+
+  private _applyLocalScheduleData(data: ScheduleResponse, options: { forceDraft?: boolean } = {}): void {
     const changedEntityIds = changedPreconditioningEventEntityIds(
       this._data?.next_events ?? [],
       data.next_events,
@@ -991,6 +1408,7 @@ export class VelairCard extends LitElement {
   private async _syncDiagnosticsSubscription(): Promise<void> {
     if (this._effectiveView() !== "diagnostics" || !this.hass) {
       this._diagnosticsSubscriptionGeneration += 1;
+      this._subscribingDiagnostics = false;
       const unsubscribe = this._unsubscribeDiagnostics;
       this._unsubscribeDiagnostics = undefined;
       if (unsubscribe) await unsubscribe();
@@ -1030,17 +1448,22 @@ export class VelairCard extends LitElement {
         this._error = this._t("diagnosticsLoadError");
       }
     } finally {
-      this._subscribingDiagnostics = false;
+      if (generation === this._diagnosticsSubscriptionGeneration) this._subscribingDiagnostics = false;
       if (
         generation !== this._diagnosticsSubscriptionGeneration
         && this.isConnected
         && this._effectiveView() === "diagnostics"
         && !this._unsubscribeDiagnostics
+        && !this._subscribingDiagnostics
       ) void this._syncDiagnosticsSubscription();
     }
   }
 
   private _schedulePreconditioningRefresh(): void {
+    if (this.scheduleSession) {
+      this.scheduleSession.schedulePreconditioningRefresh();
+      return;
+    }
     if (this._preconditioningRefreshTimer !== undefined || !this.isConnected) {
       return;
     }
@@ -1086,14 +1509,18 @@ export class VelairCard extends LitElement {
   }
 
   private _selectEntity(entityId: string): void {
+    if (entityId !== this._selectedEntity && this._climateCardPlannedReturnOpen && !this._closeClimateCardPlannedReturn()) return;
+    if (this._materializingTemplate) return;
     selectEntity(asScheduleStateHost(this), entityId);
   }
 
   private _selectWeekday(weekday: string): void {
+    if (this._materializingTemplate) return;
     selectWeekday(asScheduleStateHost(this), weekday);
   }
 
   private _confirmDiscardChanges(): boolean {
+    if (this._materializingTemplate) return false;
     return window.confirm(this._t("discardUnsavedChanges"));
   }
 
@@ -1106,10 +1533,11 @@ export class VelairCard extends LitElement {
     if (this._scheduleSource === "default" && this._dirty) this._resetDraftBlocks();
     this._profileScheduleDirty = false;
     this._scheduleSource = source;
+    this._notifySubsection(source === "profile" ? "profiles" : "default");
     this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
       bubbles: true,
       composed: true,
-      detail: { dirty: false, scope: source === "profile" ? "profile" : "default-schedule" },
+      detail: { dirty: this._presetLibraryDirty, scope: source === "profile" ? "profile" : "default-schedule" },
     }));
   }
 
@@ -1127,6 +1555,8 @@ export class VelairCard extends LitElement {
 
   private _markBlocksDirty(source: BlockDraftSource): void {
     markBlocksDirty(asScheduleStateHost(this), source);
+    if (source === "schedule") this._refreshPresetPreviews();
+    else queueTemplatePreview(asTemplateActionsHost(this));
   }
 
   private _addBlock = (source: BlockDraftSource = "schedule"): void => {
@@ -1149,8 +1579,8 @@ export class VelairCard extends LitElement {
     await applyTemplateToTargets(asTemplateActionsHost(this), template);
   }
 
-  private _applySelectedTemplate = (): boolean => {
-    return applySelectedTemplate(asTemplateActionsHost(this));
+  private _applySelectedTemplate = async (): Promise<boolean> => {
+    return await applySelectedTemplate(asTemplateActionsHost(this));
   };
 
   private async _saveTemplate(saveAsNew: boolean): Promise<void> {
@@ -1273,6 +1703,7 @@ export class VelairCard extends LitElement {
   }
 
   private _hasDraftValidationError(source: BlockDraftSource = "schedule"): boolean {
+    if (source === "schedule" && this._draftTemplateLink?.mode === "full") return false;
     return hasDraftValidationError(asDraftValidationHost(this), source);
   }
 
@@ -1281,6 +1712,7 @@ export class VelairCard extends LitElement {
   }
 
   private async _saveSelectedDay(): Promise<void> {
+    if (this._materializingTemplate) return;
     await saveSelectedDay(asScheduleActionsHost(this));
   }
 
@@ -1293,7 +1725,7 @@ export class VelairCard extends LitElement {
   }
 
   private _normalizeDraftBlocks(source: BlockDraftSource = "schedule"): NormalizedBlocks {
-    return normalizeDraftBlocks(asScheduleActionsHost(this), source);
+    return source === "template" ? normalizeTemplateBlocks({ _t: (key) => this._t(key) }, this._templateDraftBlocks) : normalizeDraftBlocks(asScheduleActionsHost(this), source);
   }
 
   private _clampBlocksForEntity(blocks: ScheduleBlock[], entityId: string): ScheduleBlock[] {
@@ -1491,6 +1923,7 @@ export class VelairCard extends LitElement {
   }
 
   private _openClimateCardBoost(entityId: string): void {
+    if (this._climateCardPlannedReturnOpen && !this._closeClimateCardPlannedReturn()) return;
     if (this._climateCardBoost?.entityId === entityId) {
       this._climateCardBoost = undefined;
       return;
@@ -1516,6 +1949,7 @@ export class VelairCard extends LitElement {
   }
 
   private _openClimateCardPause(entityId: string): void {
+    if (this._climateCardPlannedReturnOpen && !this._closeClimateCardPlannedReturn()) return;
     if (this._climateCardPause?.entityId === entityId) {
       this._climateCardPause = undefined;
       return;
@@ -1529,6 +1963,21 @@ export class VelairCard extends LitElement {
     };
   }
 
+  private _openClimateCardPlannedReturn(): void {
+    if (this._climateCardPlannedReturnOpen) { this._closeClimateCardPlannedReturn(); return; }
+    if (this._plannedReturnBusy) return;
+    this._climateCardBoost = undefined;
+    this._climateCardPause = undefined;
+    this._climateCardPlannedReturnOpen = true;
+  }
+  private _closeClimateCardPlannedReturn(): boolean {
+    if (this._plannedReturnBusy) return false;
+    if (this._plannedReturnDirty && !window.confirm(this._t("discardUnsavedChanges"))) return false;
+    this._climateCardPlannedReturnOpen = false;
+    this._plannedReturnDirty = false;
+    void this.updateComplete.then(() => this.renderRoot.querySelector<HTMLButtonElement>("button.planned-return, .climate-card-actions-menu-trigger")?.focus());
+    return true;
+  }
   private _cancelClimateCardPause(): void {
     this._climateCardPause = undefined;
   }
@@ -1795,7 +2244,7 @@ export class VelairCard extends LitElement {
         });
         this._showSuccess(this._t("climateCardZoneResumed"));
       }
-      await this._loadSchedule();
+      await this._loadSchedule(true);
     } catch (error) {
       this._error = error instanceof Error ? error.message : this._t("climateCardActionFailed");
     } finally {

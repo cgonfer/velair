@@ -1,4 +1,9 @@
 # Documentation
+<!-- velair-docs:start -->
+Translations: [English original](README.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Nederlands](README.nl.md) · [Polski](README.pl.md) · [Português (Brasil)](README.pt-br.md) · [Português (Portugal)](README.pt-pt.md) · [Русский](README.ru.md) · [Translation status](translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair documentation is grouped by audience and topic.
 
@@ -6,12 +11,18 @@ Velair documentation is grouped by audience and topic.
 
 - [Installation](user/installation.md): install Velair through HACS or manually.
 - [Usage](user/usage.md): configure climates, schedules, templates, profiles, boosts, pauses, import/export, and services.
+- [Panel navigation and direct links](user/usage.md#panel-navigation-and-direct-links): link to tabs and subsections, restore the section on refresh, and use browser history.
 - [External changes and Manual adjustment](user/manual-control.md): choose whether Velair keeps automatic authority or yields to HA-card, remote, device, and automation changes.
 - [External schedule execution](user/external-systems.md): publish compatible effective weekly schedules, including Profile and Mode selection, to supported controllers without mixing provider logic into Velair's scheduler.
 - [Climate Profiles](user/climate-profiles.md): coordinate alternate schedules and expose configurable Modes to Home Assistant automations.
+- [Block presets and linked templates](user/linked-schedules.md): reuse climate settings and share daily hours or complete daily schedules across Default and Profile schedules.
+- [Preset and template examples](user/linked-schedule-examples.md): step-by-step household setups, seasonal schedules, copies, shared edits, and troubleshooting.
+- [Preset automations](user/preset-automations.md): update shared targets and device settings from scripts, including outdoor-temperature examples and explicit replacement.
 - [Automation Events](user/automation-events.md): use complete runtime event payloads in Home Assistant automations.
-- [Automation Blueprints](user/blueprints.md): import optional occupancy and open-window helpers without polling.
+- [Automation Blueprints](user/blueprints.md): import optional occupancy, open-window, and seasonal temperature helpers without polling.
+- [Seasonal climate selection](user/blueprints/seasonal-climate-selection.md): choose Modes or other actions from stable temperature changes, with immediate diagnostic notifications.
 - [Adaptive Preconditioning](user/adaptive-preconditioning.md): start scheduled comfort targets early with local learning.
+- [Planned Return](user/planned-return.md): configure occupancy-driven absence and weekly or one-off arrivals, with examples of cancellation before and after confirmed departure.
 - [Room Assist](user/room-assist.md): use a separate room temperature sensor for TRVs, thermostats, and AC units.
 - [Resilient climate delivery](user/resilient-climate-delivery.md): understand deferred retries and reconnection behavior when a climate is temporarily unavailable.
 - [Environmental Comfort](user/comfort.md): understand temperature, humidity, CO2 air quality, and reading freshness through local room assessments.
@@ -24,6 +35,7 @@ Velair documentation is grouped by audience and topic.
 ## Developer Documentation
 
 - [Architecture](developer/architecture.md): backend and frontend module boundaries, persistence model and scheduler flow.
+- [Linked schedule internals](developer/linked-schedules.md): live block presets, hours-only and complete template links, shared transactions, and resolved schedules.
 - [Blueprint maintenance](developer/blueprints.md): add blueprint YAML, catalog entries, consistent detail pages, translations, and tests.
 - [WebSocket API](developer/api.md): frontend/backend API contract.
 - [Adaptive preconditioning internals](developer/adaptive-preconditioning.md): local learning states, similarity weighting, storage, and API output.

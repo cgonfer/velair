@@ -143,13 +143,6 @@ class ExternalExecutionManager:
         capabilities = provider.capabilities
         if set(schedule) != set(WEEKDAYS):
             raise ValueError("External schedules must include every weekday")
-        option_fields = {
-            ATTR_FAN_MODE,
-            ATTR_HUMIDITY,
-            ATTR_PRESET_MODE,
-            ATTR_SWING_HORIZONTAL_MODE,
-            ATTR_SWING_MODE,
-        }
         has_temperature = False
         has_option_action = False
         for weekday in WEEKDAYS:
@@ -167,9 +160,6 @@ class ExternalExecutionManager:
                     f"{weekday} exceeds the {capabilities.max_switchpoints_per_day}-change external limit"
                 )
             for block in blocks:
-                action = block.get("action", ACTION_SET_TEMPERATURE)
-                if action not in capabilities.supported_actions:
-                    raise ValueError(f"External schedules do not support {action} blocks")
                 start = str(block.get("start", ""))
                 try:
                     hour, minute = (int(part) for part in start.split(":"))
@@ -184,35 +174,56 @@ class ExternalExecutionManager:
                         f"{weekday} {start} is not on the required "
                         f"{capabilities.time_step_minutes}-minute grid"
                     )
-                hvac_mode = block.get("hvac_mode")
-                if hvac_mode is not None and hvac_mode not in capabilities.supported_hvac_modes:
-                    raise ValueError(f"External schedules do not support HVAC mode {hvac_mode}")
-                uses_range = "target_temp_low" in block or "target_temp_high" in block
-                target_type = "range" if uses_range else "scalar"
-                if (
-                    action != ACTION_SET_CLIMATE_OPTIONS
-                    and target_type not in capabilities.supported_target_types
-                ):
-                    raise ValueError(
-                        f"External schedules do not support {target_type} targets"
-                    )
-                if action == ACTION_SET_CLIMATE_OPTIONS:
-                    has_option_action = True
-                if action == ACTION_SET_TEMPERATURE:
-                    value = block.get("temperature")
-                    if target_type == "scalar" and not isinstance(value, int | float):
-                        raise ValueError(f"Missing scalar temperature on {weekday} at {start}")
-                    has_temperature = True
-                unsupported_options = {
-                    field for field in option_fields
-                    if field in block and field not in capabilities.supported_option_fields
-                }
-                if unsupported_options:
-                    raise ValueError("External schedules do not support climate options")
+                self.ensure_block_supported(entity_id, block, selected_provider)
+                has_temperature |= block.get("action", ACTION_SET_TEMPERATURE) == ACTION_SET_TEMPERATURE
+                has_option_action |= block.get("action") == ACTION_SET_CLIMATE_OPTIONS
         if not has_temperature and not has_option_action:
             raise ExternalScheduleRequiredError(
                 "External schedules require at least one temperature block"
             )
+
+    def ensure_block_supported(self, entity_id, block, provider_key=None):
+        """Validate climate settings only, independently of weekly structure."""
+        execution = self._data["zones"].get(entity_id, {}).get("execution")
+        selected = provider_key or (execution or {}).get("provider")
+        if selected is None:
+            return
+        provider = self._providers.get(selected)
+        if provider is None or not self._supports_velair_contract(provider):
+            raise ValueError(f"External provider is unavailable for {entity_id}")
+        capabilities = provider.capabilities
+        option_fields = {
+            ATTR_FAN_MODE,
+            ATTR_HUMIDITY,
+            ATTR_PRESET_MODE,
+            ATTR_SWING_HORIZONTAL_MODE,
+            ATTR_SWING_MODE,
+        }
+        action = block.get("action", ACTION_SET_TEMPERATURE)
+        if action not in capabilities.supported_actions:
+            raise ValueError(f"External schedules do not support {action} blocks")
+        hvac_mode = block.get("hvac_mode")
+        if hvac_mode is not None and hvac_mode not in capabilities.supported_hvac_modes:
+            raise ValueError(f"External schedules do not support HVAC mode {hvac_mode}")
+        uses_range = "target_temp_low" in block or "target_temp_high" in block
+        target_type = "range" if uses_range else "scalar"
+        if (
+            action != ACTION_SET_CLIMATE_OPTIONS
+            and target_type not in capabilities.supported_target_types
+        ):
+            raise ValueError(
+                f"External schedules do not support {target_type} targets"
+            )
+        if action == ACTION_SET_TEMPERATURE:
+            value = block.get("temperature")
+            if target_type == "scalar" and not isinstance(value, int | float):
+                raise ValueError("Missing scalar temperature")
+        unsupported_options = {
+            field for field in option_fields
+            if field in block and field not in capabilities.supported_option_fields
+        }
+        if unsupported_options:
+            raise ValueError("External schedules do not support climate options")
 
     async def async_set_execution(
         self,

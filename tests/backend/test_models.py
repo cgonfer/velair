@@ -488,7 +488,8 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
         templates = normalize_schedule_templates(
             [{"key": "night", "name": "Night", "blocks": [block]}]
         )
-        self.assertEqual(templates[0]["blocks"], [block])
+        self.assertEqual([{key: value for key, value in item.items() if key != "slot_id"} for item in templates[0]["blocks"]], [block])
+        self.assertTrue(templates[0]["blocks"][0]["slot_id"])
         schedule = empty_week_schedule()
         schedule["tuesday"] = [block]
         profiles = normalize_climate_profiles(
@@ -2015,7 +2016,7 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            data["templates"],
+            [{**template, "blocks": [{key: value for key, value in block.items() if key != "slot_id"} for block in template["blocks"]]} for template in data["templates"]],
             [
                 {
                     "key": "home_day",
@@ -2125,6 +2126,9 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
                 }
             ],
         )
+
+        reloaded = normalize_schedule_data(data, ["climate.salon"])
+        self.assertEqual(reloaded["templates"], data["templates"])
 
     def test_normalize_schedule_data_does_not_reseed_deleted_templates(self) -> None:
         data = normalize_schedule_data(

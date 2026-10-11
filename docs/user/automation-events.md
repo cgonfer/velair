@@ -1,4 +1,9 @@
 # Automation Events
+<!-- velair-docs:start -->
+Translations: [English original](automation-events.md) · [Español](automation-events.es.md) · [Français](automation-events.fr.md) · [Deutsch](automation-events.de.md) · [Italiano](automation-events.it.md) · [Nederlands](automation-events.nl.md) · [Polski](automation-events.pl.md) · [Português (Brasil)](automation-events.pt-br.md) · [Português (Portugal)](automation-events.pt-pt.md) · [Русский](automation-events.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair emits raw, transient Home Assistant events for runtime changes. The raw
 event-bus payload exists only while Home Assistant delivers it; Velair does not

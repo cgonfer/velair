@@ -20,6 +20,120 @@ the Lovelace `schedules` card, whose established meaning remains the Default
 schedule editor. The canonical panel view for composition is `modes`; the
 legacy `profiles` route is normalized to `modes` for cached links.
 
+## Panel Routing
+
+The sidebar routes tabs and the Schedules (`default`, `profiles`) and Templates
+(`templates`, `presets`) subsections. The
+[Usage Guide](../user/usage.md#panel-navigation-and-direct-links) is the public
+route reference, including aliases, fallbacks, and a dashboard-link example.
+
+- `domain/panel-routes.ts` defines `PanelDestination` and `PanelSubsection`,
+  normalizes destinations with `panelDestination`, parses paths with
+  `parsePanelPath`, and generates canonical paths with `panelPath`.
+- `views/panel.ts` owns the Home Assistant `route` property and the window's
+  `location-changed` and `popstate` subscriptions. It initializes from the
+  incoming route and follows the current URL thereafter, ignoring stale route
+  replays and navigation outside the panel prefix. Subscriptions are removed
+  when the panel disconnects.
+- The panel passes `.subsection` to `velair-panel-card`. The child exposes
+  `selectPanelSubsection(subsection)` with a boolean acceptance result and emits
+  the bubbling, composed `velair-subsection-changed` event with the accepted
+  `PanelSubsection` as its detail. Initial selection works before backend data
+  arrives. Existing resource-usage and preset jumps select the matching route
+  only after the navigation guard accepts.
+
+Accepted destination changes push one history entry; repeated selections add
+none. Canonicalization replaces the current entry. Replaced entries retain
+Home Assistant's history metadata; new entries carry `from` with the previous
+URL rather than inheriting root or dialog state. The panel tracks its history
+position with `velairPosition` and reverses rejected Back/Forward movements
+between tracked entries without adding another entry. For older entries without
+a tracked position, it restores the visible destination by replacing the
+current URL. Home Assistant navigation actions into the panel also receive a
+tracked position. Unknown tab names are handled by `parsePanelPath`.
+
+Switching subsections keeps the card instance and its existing draft behavior.
+Switching tabs recreates the card only after any discard confirmation accepts.
+Cancelled navigation preserves the draft, visible section, and URL. The URL
+contains no draft contents, selected resource IDs, or climate commands; there
+are no backend API or storage changes. Lovelace components do not own these
+global listeners and retain their dashboard URLs.
+
+Automated coverage lives in `tests/domain/panel-routes.test.ts` and
+`tests/views/panel-routing.test.ts`, alongside existing preset-navigation
+regressions. Live validation is described in the
+[manual testing checklist](manual-testing.md#panel-navigation-and-direct-links).
+
+## Panel Data Session
+
+The sidebar panel owns one temporary schedule-data session for its mounted
+lifetime. `controllers/panel-schedule-session.ts` retains the latest backend
+snapshot and owns the schedule request and update subscription. Switching tabs
+reuses that snapshot and subscription; it does not restart the initial load.
+The first entry still needs backend data, and reconnecting resynchronizes it.
+The session is disposed when Home Assistant disconnects the panel element,
+not merely when the browser window loses focus.
+
+The panel still keys its child by tab. Editors therefore retain their existing
+discard confirmations and cleanup, while subsection changes preserve the
+child instance. Shared snapshots contain confirmed backend state, never local
+drafts. Incoming updates use the existing draft-preserving application path;
+an explicit save's draft reset applies only to the originating editor.
+Mutation responses and explicit refreshes feed the same session so later tabs
+do not reopen an older snapshot. Pending responses from a previous session or
+connection are ignored. A newer accepted update supersedes an outstanding
+refresh; configuration revision alone cannot order runtime-only updates or
+configuration resets.
+
+Diagnostics keeps its own view-local subscription and diagnostic overlay.
+Optional Lovelace cards share a separate session with other mounted cards on the
+same Home Assistant connection; they do not consume the panel session.
+Persisted configuration, scheduler
+behavior, and backend APIs are unchanged. The session adds no polling and does
+not persist data across page refreshes.
+
+See the [session checks](manual-testing.md#panel-data-session) for live
+reconnection, mutation, and draft scenarios. Automated regressions are in
+`tests/controllers/panel-schedule-session.test.ts` and
+`tests/components/panel-session.test.ts`, alongside the route/history and
+diagnostics lifecycle tests.
+
+## Lovelace Data Session
+
+Mounted Velair cards on the same Home Assistant connection share one temporary
+backend snapshot, initial schedule request, and schedule-update subscription.
+The initial subscription also sends a snapshot; this change deduplicates work
+between cards without changing that backend protocol. A single card still needs
+an initial load. Sessions are not shared between devices or browser tabs.
+
+`controllers/lovelace-schedule-sessions.ts` uses the actual incoming connection
+as its registry key and a set of card
+instances as owners. Registering or removing an owner is idempotent. A card
+joins on connection and leaves on disconnection; changing its HA connection
+releases the previous session and joins the new one. The last owner closes the
+subscription and releases the session, including subscription setup that
+finishes late. Lovelace can retain cards in hidden views: those mounted cards
+remain owners and continue receiving updates. Visibility alone does not close
+the session, and no data is stored across page refreshes.
+
+Known session connection facades are resolved to their original connection
+before registration and connection comparison. Reassigning a card's exposed
+`hass` object therefore cannot accidentally create another session.
+
+Each card retains its own configuration, entity filters, selected climate,
+drafts, confirmation dialogs, errors, and diagnostic overlay. Filters affect
+presentation, not the shared backend snapshot. Confirmed API mutation responses
+update the session for all owners, while forced draft resets stay local to the
+originating card. Refreshes from multiple owners are grouped to avoid repeated
+requests for the same input change. Reconnection and stale-response guards use
+the same schedule-session machinery as the panel. No polling or frontend
+configuration persistence is added.
+
+See the [Lovelace session checklist](manual-testing.md#lovelace-data-session)
+for real Home Assistant lifecycle and multi-card scenarios. Automated coverage
+is in `tests/components/lovelace-session.test.ts` and the shared session,
+panel-session, and controller action tests.
+
 ## Source Of Truth
 
 The TypeScript source is under:
@@ -199,7 +313,7 @@ This page focuses on frontend-specific operational guidance: runtime elements, b
 - Add layout and Lit templates in `views/`.
 - Add state or lifecycle integration in `components/velair-card-element.ts` only when the state belongs to the element itself.
 - Add CSS in the closest `styles/*-styles.ts` file, and only touch `card-styles.ts` when composing a new style module.
-- Add source strings to `translations/en.ts` and `translations/template.ts`, then update every complete language. Reviewed community languages may omit uncertain strings and use the tested English fallback.
+- Add source strings to `translations/en.ts` and empty entries to `translations/template.ts`. During development, translations may be deferred; omitted strings use the tested English fallback. Review all supported languages before preparing a release.
 
 ## Translations
 
@@ -210,8 +324,7 @@ frontend/src/velair/translations/
 ```
 
 - `en.ts` is the source language and defines the complete key set.
-- `de.ts`, `es.ts`, `fr.ts`, `it.ts`, `nl.ts`, `pl.ts`, `pt_br.ts`, `pt_pt.ts`, and `ru.ts` satisfy the complete source key set.
-- A future staged community translation may contain only reviewed keys. Missing keys fall back to English.
+- Non-English dictionaries may contain only reviewed keys. Missing keys fall back to English, including while new English copy is being developed.
 - `template.ts` contains the same keys with empty string values and can be copied when adding a new language.
 - `index.ts` automatically builds the language map from every translation file in this folder.
 - `types.ts` defines the translation dictionary shape from `en.ts`.
@@ -242,18 +355,19 @@ For example, to add German:
 3. Rename the exported constant from `translationTemplate` to `de`:
 
    ```ts
-   import type { TranslationDictionary } from "./types";
+   import type { PartialTranslationDictionary } from "./types";
 
    export const de = {
      // same keys as the template, translated values filled in
-   } as const satisfies TranslationDictionary;
+   } as const satisfies PartialTranslationDictionary;
    ```
 
-4. Fill every value for a complete translation, or include only reviewed values for a staged community translation. Keep all included keys unchanged. Translate from the key and the UI meaning, not from the English sentence in isolation.
+4. Include only reviewed values and omit pending keys instead of leaving empty strings or copying English to claim coverage. Keep included keys unchanged. Translate from the key and UI meaning, not from the English sentence in isolation.
 5. Run the checks:
 
    ```powershell
    cd frontend
+   npm.cmd run test
    npx.cmd tsc --noEmit
    npm.cmd run build
    cd ..
@@ -262,7 +376,19 @@ For example, to add German:
 
 No manual registration is needed. The frontend build scans `frontend/src/velair/translations/*.ts`, ignores `index.ts`, `template.ts`, and `types.ts`, and uses each remaining file name as the Home Assistant language code. The exported constant must match the file name. For example, `pt_br.ts` exports `pt_br` and is registered as `pt-br`.
 
-Complete translations are checked against every English key and placeholder. Staged community translations are checked as a strict subset: every included key must exist in English and use the same placeholders, while omitted keys are rendered from `en.ts`. Prefer an English fallback over publishing a translation whose technical meaning has not been reviewed.
+Development tests validate every included key, nonempty value, placeholders, encoding, and reserved identifiers; omitted keys are rendered from `en.ts`. English remains complete and the template must have matching keys with empty values. Prefer an English fallback over publishing a translation whose technical meaning has not been reviewed.
+
+Before preparing any release, including a beta, run this read-only audit from `frontend` with an explicitly selected published tag:
+
+```powershell
+npm.cmd run translations:check -- --base v<previous-published-version>
+```
+
+The audit discovers all frontend and integration language catalogs, checks missing/extra keys, empty values and placeholders, and compares English text with that tag. Changes to English are candidates for semantic review in every affected language, even if the translated value also changed. Identical English and translated values are not automatically errors: technical names may legitimately match. The integration uses `translations/en.json` as its canonical English catalog.
+
+Exit codes are `0` for no structural, coverage or review findings, `1` for missing coverage or semantic review candidates, and `2` for invalid input, malformed catalogs, extra keys, empty values, placeholder errors or canonical-source/template mismatches. A tag is required; the command does not infer a stable/beta baseline and never writes catalogs. An unchanged English baseline does not prove translation quality.
+
+Present missing translations and review candidates by language and ask the maintainer whether to complete them or continue with an explicit release exception. Wait for that decision. Re-run the audit after authorized translation work; document accepted coverage/review exceptions. Technical failures (exit `2`) must be corrected before release and cannot be waived as translation deferral.
 
 Every included string must be reviewed in its Velair context. In particular,
 check whether a value is a button action, state, field label, sentence, HVAC

@@ -24,6 +24,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .climate_delivery import ClimateDeliveryCoordinator, CurrentGuard, Delivery
+from .planned_return import PlannedReturnRuntime
 from .climate_manager import ClimateManager
 from .const import (
     ACTION_SET_CLIMATE_OPTIONS,
@@ -75,7 +76,14 @@ from .const import (
     MANUAL_ADJUSTMENT_POLICY_OPTIONS,
     MANUAL_CONTROL_PAUSE_ID,
 )
+from .schedule_resources import (
+    ConfigurationResourceError, destinations, materialize_day, normalize_binding,
+    normalize_config, normalize_links, profile_has_resource_references, resource_usages, resolution_metadata, resolve_binding, resolve_week, template_blocks,
+    referenced_resource, updated_preset_config,
+)
+from .template_assignments import allocate_template_update, destination_identity
 from .models import (
+    normalize_schedule_blocks,
     ClimateEvent,
     ClimateProfileData,
     ClimateProfileZoneData,
@@ -349,6 +357,11 @@ class VelairScheduler:
         if external_execution is not None:
             external_execution.set_update_callback(self._async_write_state)
         self._async_save_data = async_save_data
+        self._timer_lock = asyncio.Lock()
+        self._timer_cursor: datetime | None = None
+        self._timer_generation = 0
+        self._timer_epoch = 0
+        self._attempted_preconditioning_events: set[tuple[object, ...]] = set()
         self._unsub_timer: CALLBACK_TYPE | None = None
         self._unsub_preconditioning_listener: CALLBACK_TYPE | None = None
         self._unsub_preconditioning_replan_listener: CALLBACK_TYPE | None = None
@@ -384,9 +397,10 @@ class VelairScheduler:
         self._next_event_by_entity: dict[str, ClimateEvent] = {}
         self._temperature_migration_blocked = False
         self._stopped = False
-        self._profile_mutation_lock = asyncio.Lock()
+        self._profile_mutation_lock = _ReentrantAsyncLock()
         self._target_temp_step_lock = asyncio.Lock()
         self._operation_status: OperationStatus | None = None
+        self._planned_return = PlannedReturnRuntime(self)
 
     @property
     def mode(self) -> str:
@@ -406,6 +420,9 @@ class VelairScheduler:
     async def async_start(self, *, apply_current_schedule: bool = False) -> None:
         """Start scheduling events."""
         self._stopped = False
+        self._timer_epoch += 1
+        self._timer_cursor = None
+        self._attempted_preconditioning_events.clear()
         for entity_id in sorted(self._data["zones"]):
             if entity_id in self._room_sensor_assist_notification_cleanup_done:
                 continue
@@ -423,6 +440,10 @@ class VelairScheduler:
     async def async_stop(self) -> None:
         """Stop scheduling events."""
         self._stopped = True
+        self._timer_epoch += 1
+        self._timer_cursor = None
+        self._attempted_preconditioning_events.clear()
+        self._planned_return.stop()
         for entity_id in self._data["zones"]:
             self._invalidate_climate_delivery(entity_id)
         try:
@@ -492,6 +513,11 @@ class VelairScheduler:
             if self._is_zone_override_active(target_entity_id, now):
                 continue
 
+            planned_target = self._planned_return.target(target_entity_id, now)
+            if planned_target is not None:
+                applied = await self._async_apply_event(planned_target, source=source)
+                delivery_success = delivery_success and applied
+                continue
             behavior = self._profile_zone_behavior(target_entity_id)
             if behavior["behavior"] == "pause":
                 if behavior.get("action") == ZONE_PAUSE_ACTION_TURN_OFF:
@@ -520,6 +546,99 @@ class VelairScheduler:
             )
             delivery_success = delivery_success and applied
         return delivery_success
+
+    def get_planned_return_status(self) -> dict:
+        """Return backend-owned routine and absence progress."""
+        return self._planned_return.status()
+
+    async def async_update_planned_return(self, config: dict) -> dict:
+        async with self._profile_mutation_lock:
+            return await self._async_update_planned_return_locked(config)
+
+    async def _async_update_planned_return_locked(self, config: dict) -> dict:
+        """Validate and persist an occupancy routine before rebinding listeners."""
+        from .models import normalize_planned_return, validate_planned_return
+        validate_planned_return(config, self.get_modes())
+        normalized = normalize_planned_return(config, self.get_modes())
+        previous = deepcopy(self._data.get("planned_return"))
+        previous_episode = deepcopy(self._data.get("planned_return_episode"))
+        identity_fields = ("occupancy_entity_ids", "away_mode_id", "destination_mode_id")
+        identity_changed = any((previous or {}).get(field) != normalized[field] for field in identity_fields)
+        next_episode = deepcopy(previous_episode)
+        invalidated = bool(next_episode and identity_changed)
+        self._data["planned_return"] = normalized
+        if invalidated:
+            if self._planned_return.occupancy() == "home":
+                next_episode = None
+            else:
+                next_episode = deepcopy(previous_episode)
+                next_episode.update(state="cancelled", preparing_entities=[],
+                                    away_mode_id=normalized["away_mode_id"],
+                                    destination_mode_id=normalized["destination_mode_id"])
+        elif previous_episode and previous_episode.get("origin", "automatic") == "automatic" and not normalized["enabled"]:
+            next_episode = deepcopy(previous_episode)
+            if next_episode["state"] == "away":
+                next_episode.update(state="cancelled", preparing_entities=[])
+        self._planned_return._persistence_depth += 1
+        try:
+            if normalized["occupancy_entity_ids"]:
+                self._planned_return.validate_sources()
+            if normalized["enabled"] or ((next_episode or {}).get("origin") == "manual" and (next_episode or {}).get("state") in ("armed", "away")):
+                self._planned_return.validate_transition()
+            self._data["planned_return_episode"] = next_episode
+            await self._async_save_data()
+        except BaseException:
+            self._data["planned_return"] = previous
+            self._data["planned_return_episode"] = previous_episode
+            raise
+        finally:
+            self._planned_return._persistence_depth -= 1
+        if (previous_episode or {}).get("state") in ("armed", "away") and (next_episode or {}).get("state") not in ("armed", "away"):
+            self._planned_return._emit("cancelled", episode=next_episode or previous_episode,
+                                       reason="configuration_changed")
+        preserve_confirmation = (
+            not identity_changed
+            and (previous or {}).get("absence_delay_minutes") == normalized["absence_delay_minutes"]
+            and (next_episode or {}).get("origin") == "manual"
+            and (next_episode or {}).get("state") == "armed"
+        )
+        self._planned_return.stop(preserve_confirmation=preserve_confirmation)
+        self._planned_return.error = None
+        self._planned_return.notice = "configuration_changed" if invalidated else None
+        for entity_id in self._data["zones"]:
+            self._invalidate_climate_delivery(entity_id)
+        self.async_schedule_next_event()
+        if previous_episode and previous_episode.get("state") == "away" and (next_episode or {}).get("state") != "away":
+            await self.async_apply_current_schedule(source="planned_return_configuration")
+        return normalized
+
+    async def async_start_planned_return(self, return_at: str) -> None:
+        """Start a one-off return, selecting Away immediately without sources."""
+        async with self._profile_mutation_lock:
+            await self._planned_return.start(return_at)
+            self.async_schedule_next_event()
+
+    async def async_cancel_planned_return(self) -> None:
+        """Withdraw any planned return or acknowledge its terminal episode."""
+        async with self._profile_mutation_lock:
+            await self._planned_return.cancel_pending()
+            self.async_schedule_next_event()
+
+    async def async_adjust_planned_return(self, return_at: str) -> None:
+        async with self._profile_mutation_lock:
+            await self._planned_return.adjust(return_at)
+            self.async_schedule_next_event()
+
+    async def async_skip_planned_return(self) -> None:
+        async with self._profile_mutation_lock:
+            await self._planned_return.cancel(skipped=True)
+            await self.async_apply_current_schedule(source="planned_return_skipped")
+            self.async_schedule_next_event()
+
+    async def async_arrive_planned_return(self) -> None:
+        async with self._profile_mutation_lock:
+            await self._planned_return.arrive()
+            self.async_schedule_next_event()
 
     async def async_set_temperature(
         self,
@@ -770,7 +889,7 @@ class VelairScheduler:
             paused_until=paused_until,
         )
 
-    def get_current_event(self, entity_id: str) -> ClimateEvent | None:
+    def get_current_event(self, entity_id: str, *, planned_target=None, planned_target_resolved=False) -> ClimateEvent | None:
         """Return the active event for one climate entity."""
         if entity_id not in self._data["zones"]:
             return None
@@ -793,6 +912,10 @@ class VelairScheduler:
         if _is_pause_override(override):
             return None
 
+        if not planned_target_resolved:
+            planned_target = self._planned_return.target(entity_id)
+        if planned_target is not None:
+            return planned_target
         events = self._iter_current_events(dt_util.now(), entity_id)
         return events[0] if events else None
 
@@ -864,21 +987,31 @@ class VelairScheduler:
         if behavior["behavior"] == "pause":
             return None
         if behavior["behavior"] == "schedule":
-            return behavior.get("schedule")
-        return zone["schedule"]
+            source = behavior
+        else:
+            source = zone
+        try:
+            return self._resolved_resource_week(self._data, entity_id, source)
+        except (ValueError, KeyError, TypeError, AttributeError) as err:
+            _LOGGER.error("Invalid schedule references for %s: %s", entity_id, err)
+            return None
 
     def _effective_schedule_from_profiles(
         self,
         profiles: list[ClimateProfileData],
         entity_id: str,
+        *, data=None,
     ) -> dict[str, list[ScheduleBlock]] | None:
         """Resolve one weekly schedule from an explicit profile selection."""
+        snapshot = data if data is not None else self._data
         _owner, behavior = self._profile_effect_from_profiles(profiles, entity_id)
         if behavior["behavior"] == "pause":
             return None
         if behavior["behavior"] == "schedule":
-            return behavior.get("schedule")
-        return self._data["zones"][entity_id]["schedule"]
+            source = behavior
+        else:
+            source = snapshot["zones"][entity_id]
+        return self._resolved_resource_week(snapshot, entity_id, source)
 
     def _external_profile_schedule_changes(
         self,
@@ -954,9 +1087,10 @@ class VelairScheduler:
             async with self._zone_override_lock(entity_id):
                 await publish()
 
-    def get_active_target_event(self, entity_id: str) -> ClimateEvent | None:
+    def get_active_target_event(self, entity_id: str, *, planned_target=None, planned_target_resolved=False) -> ClimateEvent | None:
         """Return the target Velair is actively managing for one climate."""
-        return self._room_sensor_assist_target_event(entity_id)
+        return self._room_sensor_assist_target_event(
+            entity_id, planned_target=planned_target, planned_target_resolved=planned_target_resolved)
 
     def get_active_overrides(self) -> dict[str, dict]:
         """Return active zone overrides keyed by entity ID."""
@@ -1152,7 +1286,9 @@ class VelairScheduler:
         override = None if externally_managed else self._get_active_zone_override(entity_id, now)
         assist = {} if externally_managed else self._room_sensor_assist_status(entity_id)
         manual_control = None if externally_managed else self._manual_control_status(entity_id, now)
-        target_event = None if externally_managed else self.get_active_target_event(entity_id)
+        planned_target = None if externally_managed else self._planned_return.target(entity_id, now)
+        target_event = None if externally_managed else self.get_active_target_event(
+            entity_id, planned_target=planned_target, planned_target_resolved=True)
         if externally_managed:
             effective_schedule = self._effective_schedule(entity_id, zone)
             scheduled_event = self._current_schedule_event_for_schedule(
@@ -1170,7 +1306,7 @@ class VelairScheduler:
         elif (
             self.mode == MODE_PAUSED
             or _is_pause_override(override)
-            or profile_behavior == "pause"
+            or (profile_behavior == "pause" and planned_target is None)
         ):
             state = "paused"
         elif _is_boost_override(override):
@@ -1218,7 +1354,7 @@ class VelairScheduler:
             ),
         }
         manual_allowed, manual_reason = self._manual_adjustment_availability(
-            entity_id, now, manual_control
+            entity_id, now, manual_control, planned_target=planned_target
         )
         result["manual_adjustment_allowed"] = manual_allowed
         if manual_reason is not None:
@@ -1259,6 +1395,12 @@ class VelairScheduler:
             result["until"] = self._data["global_"].get("paused_until")
         if manual_control is not None:
             result["manual_control"] = manual_control
+        planned_context = self._planned_return.zone_context(
+            entity_id, now, planned_target=planned_target,
+            effective_event=event,
+            blocked=externally_managed or override is not None or manual_control is not None)
+        if planned_context is not None:
+            result["planned_return"] = planned_context
         return result
 
     def _manual_adjustment_availability(
@@ -1266,6 +1408,7 @@ class VelairScheduler:
         entity_id: str,
         now: datetime,
         manual_control: dict[str, object] | None = None,
+        *, planned_target: ClimateEvent | None = None,
     ) -> tuple[bool, str | None]:
         """Project whether an explicit Manual adjustment can start now."""
         if self._manual_control_mutation_blocked():
@@ -1282,7 +1425,7 @@ class VelairScheduler:
             return False, "disabled"
         if self.mode != MODE_AUTO:
             return False, "scheduler_not_auto"
-        if self._profile_zone_behavior(entity_id)["behavior"] == "pause":
+        if self._profile_zone_behavior(entity_id)["behavior"] == "pause" and planned_target is None:
             return False, "profile_paused"
         if any(
             reason.get("pause_id") != MANUAL_CONTROL_PAUSE_ID
@@ -1747,6 +1890,9 @@ class VelairScheduler:
     def _invalidate_climate_delivery(self, entity_id: str) -> None:
         """Synchronously supersede physical and Room Assist work."""
         self._climate_delivery.cancel(entity_id)
+        self._attempted_preconditioning_events = {
+            key for key in self._attempted_preconditioning_events if key[0] != entity_id
+        }
         self._room_sensor_assist_generations[entity_id] = (
             self._room_sensor_assist_generation(entity_id) + 1
         )
@@ -2271,7 +2417,10 @@ class VelairScheduler:
         try:
             next_event = next(
                 (
-                    event for event in self.calculate_next_events_by_zone(now)
+                    event for event in sorted(
+                        self._iter_future_events(now),
+                        key=lambda item: dt_util.as_utc(item.target_when or item.when),
+                    )
                     if event.entity_id == entity_id
                 ),
                 None,
@@ -2445,7 +2594,7 @@ class VelairScheduler:
                 raise ValueError(f"Manual adjustment is not allowed while {entity_id} is disabled")
             if self.mode != MODE_AUTO:
                 raise ValueError("Manual adjustment requires Automatic scheduling")
-            if self._profile_zone_behavior(entity_id)["behavior"] == "pause":
+            if self._profile_zone_behavior(entity_id)["behavior"] == "pause" and self._planned_return.target(entity_id, now) is None:
                 raise ValueError("Manual adjustment is not allowed while the active Profile pauses this climate")
             if other_reasons:
                 raise ValueError("Manual adjustment is not allowed while the climate is paused")
@@ -2647,171 +2796,430 @@ class VelairScheduler:
 
             self.async_schedule_next_event()
 
-    async def async_set_daily_schedule(
-        self,
-        entity_id: str,
-        weekday: str,
-        blocks: list[ScheduleBlock],
-    ) -> None:
-        """Set one weekday schedule for one zone."""
-        self.ensure_managed_entity(entity_id)
-        blocks = self._blocks_for_entity_capabilities(entity_id, blocks)
-        self.ensure_blocks_in_temperature_limits(entity_id, blocks)
-        blocks = self._snap_blocks_for_entity(entity_id, blocks)
-        async with self._zone_override_lock(entity_id):
-            now = dt_util.now()
-            previous_event = self.get_active_target_event(entity_id)
-            previous_schedule = deepcopy(self._data["zones"][entity_id]["schedule"])
-            self._data["zones"][entity_id]["schedule"][weekday] = blocks
-            self._invalidate_changed_schedule_delivery(entity_id, previous_event)
+    def _resolved_resource_week(self, data, entity_id, zone, *, validate=False):
+        schedule = resolve_week(data, zone)
+        references = bool(zone.get("template_links")) or any("preset_key" in block for blocks in zone.get("schedule", {}).values() for block in blocks)
+        if not validate and not references:
+            return schedule
+        validate = validate or references
+        for day, raw in schedule.items():
+            schedule[day] = self._adapt_resource_blocks(entity_id, raw, validate=validate)
+        if validate and self._is_external_execution(entity_id) and self._external_execution is not None:
+            self._external_execution.ensure_schedule_supported(entity_id, schedule)
+        return schedule
+
+    def _adapt_resource_blocks(self, entity_id, raw, *, validate=True):
+        blocks = self._blocks_for_entity_capabilities(entity_id, raw)
+        if validate:
+            self.ensure_blocks_in_temperature_limits(entity_id, blocks)
+            supported_modes = getattr(self._climate_manager, "supported_hvac_modes", lambda _id: [])(entity_id)
+            for block in blocks:
+                if block.get("hvac_mode") and supported_modes and block["hvac_mode"] not in supported_modes:
+                    raise ValueError(f"HVAC mode {block['hvac_mode']} is not supported by {entity_id}")
+        return self._snap_blocks_for_entity(entity_id, blocks)
+
+    def _validate_configuration_resources(self, data):
+        from .schedule_resources import validate_reference_graph
+        validate_reference_graph(data)
+        names = set()
+        keys = set()
+        if not isinstance(data.get("block_presets", []), list):
+            raise ConfigurationResourceError("incompatible_configuration", "Stored preset library must be a list")
+        for preset in data.get("block_presets", []):
+            if not isinstance(preset, dict):
+                raise ConfigurationResourceError("incompatible_configuration", "Invalid stored climate preset")
+            if not isinstance(preset.get("key"), str) or not preset["key"] or preset["key"] in keys:
+                raise ValueError("Duplicate or invalid preset key")
+            if not isinstance(preset.get("name"), str) or not preset["name"].strip() or preset["name"].strip().casefold() in names:
+                raise ValueError("Preset names must be non-empty and unique")
+            keys.add(preset["key"])
+            names.add(preset["name"].strip().casefold())
+            normalize_config(preset["config"])
+        failures = []
+        error_code = "incompatible_configuration"
+        for destination, zone in destinations(data):
             try:
-                if self._is_external_execution(entity_id) and self._external_execution is not None:
-                    effective = self._effective_schedule(
-                        entity_id, self._data["zones"][entity_id]
-                    )
-                    if effective is not None:
-                        self._external_execution.ensure_schedule_supported(
-                            entity_id, effective
-                        )
-                await self._async_save_data()
-            except (asyncio.CancelledError, Exception):
-                self._data["zones"][entity_id]["schedule"] = previous_schedule
-                await self._async_restore_delivery_after_failed_mutation(entity_id)
-                raise
-            await self._async_finalize_schedule_mutation(
-                entity_id,
-                previous_event,
-                now,
-                reason="schedule_changed",
-            )
-            if self._external_execution is not None:
-                schedule = self._effective_schedule(entity_id, self._data["zones"][entity_id])
-                if schedule is not None:
-                    await self._external_execution.async_schedule_saved(
-                        entity_id, deepcopy(schedule)
-                    )
-
-    async def async_copy_day_schedule(
-        self,
-        entity_id: str,
-        source_weekday: str,
-        target_weekdays: list[str],
-    ) -> None:
-        """Copy one weekday schedule to one or more target weekdays."""
-        self.ensure_managed_entity(entity_id)
-        async with self._zone_override_lock(entity_id):
-            source_blocks = [
-                block.copy()
-                for block in self._data["zones"][entity_id]["schedule"][source_weekday]
-            ]
-            source_blocks = self._blocks_for_entity_capabilities(entity_id, source_blocks)
-            self.ensure_blocks_in_temperature_limits(entity_id, source_blocks)
-            now = dt_util.now()
-            previous_event = self.get_active_target_event(entity_id)
-            previous_schedule = deepcopy(self._data["zones"][entity_id]["schedule"])
-
-            for weekday in target_weekdays:
-                self._data["zones"][entity_id]["schedule"][weekday] = [
-                    block.copy() for block in source_blocks
-                ]
-            self._invalidate_changed_schedule_delivery(entity_id, previous_event)
-            try:
-                if self._is_external_execution(entity_id) and self._external_execution is not None:
-                    effective = self._effective_schedule(
-                        entity_id, self._data["zones"][entity_id]
-                    )
-                    if effective is not None:
-                        self._external_execution.ensure_schedule_supported(
-                            entity_id, effective
-                        )
-                await self._async_save_data()
-            except (asyncio.CancelledError, Exception):
-                self._data["zones"][entity_id]["schedule"] = previous_schedule
-                await self._async_restore_delivery_after_failed_mutation(entity_id)
-                raise
-            await self._async_finalize_schedule_mutation(
-                entity_id,
-                previous_event,
-                now,
-                reason="schedule_changed",
-            )
-            if self._external_execution is not None:
-                schedule = self._effective_schedule(entity_id, self._data["zones"][entity_id])
-                if schedule is not None:
-                    await self._external_execution.async_schedule_saved(
-                        entity_id, deepcopy(schedule)
-                    )
-
-    async def async_clear_schedule(
-        self,
-        entity_id: str,
-        weekday: str | None = None,
-    ) -> None:
-        """Clear a zone schedule."""
-        self.ensure_managed_entity(entity_id)
-        async with self._zone_override_lock(entity_id):
-            now = dt_util.now()
-            previous_event = self.get_active_target_event(entity_id)
-            previous_schedule = deepcopy(self._data["zones"][entity_id]["schedule"])
-            if weekday is None:
+                self.ensure_managed_entity(destination["entity_id"])
+                if "template_links" in zone:
+                    zone["template_links"] = normalize_links(zone["template_links"])
+                resolved = self._resolved_resource_week(data, destination["entity_id"], zone, validate=True)
                 for day in WEEKDAYS:
-                    self._data["zones"][entity_id]["schedule"][day] = []
-            else:
-                self._data["zones"][entity_id]["schedule"][weekday] = []
+                    if day not in zone.get("template_links", {}) and not any("preset_key" in block for block in zone["schedule"][day]):
+                        zone["schedule"][day] = resolved[day]
+            except (ValueError, KeyError, TypeError, AttributeError) as err:
+                failures.append({**destination, "message": str(err)})
+                if isinstance(err, ConfigurationResourceError):
+                    error_code = err.code
+        if failures:
+            messages = "; ".join(f"{failure['entity_id']}: {failure['message']}" for failure in failures)
+            raise ConfigurationResourceError(error_code, f"Configuration is invalid for one or more destinations: {messages}", failures)
 
-            self._invalidate_changed_schedule_delivery(entity_id, previous_event)
+    async def _async_commit_configuration(self, candidate, expected_revision=None):
+        state = {"persisted": False}
+        task = asyncio.create_task(self._async_commit_configuration_owned(candidate, expected_revision, commit_state=state))
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            if not state["persisted"]:
+                task.cancel()
             try:
-                if self._is_external_execution(entity_id) and self._external_execution is not None:
-                    effective = self._effective_schedule(
-                        entity_id, self._data["zones"][entity_id]
-                    )
-                    if effective is not None:
-                        self._external_execution.ensure_schedule_supported(
-                            entity_id, effective
-                        )
-                await self._async_save_data()
-            except (asyncio.CancelledError, Exception):
-                self._data["zones"][entity_id]["schedule"] = previous_schedule
-                await self._async_restore_delivery_after_failed_mutation(entity_id)
-                raise
-            await self._async_finalize_schedule_mutation(
-                entity_id,
-                previous_event,
-                now,
-                reason="schedule_cleared",
-            )
-            if self._external_execution is not None:
-                schedule = self._effective_schedule(entity_id, self._data["zones"][entity_id])
-                if schedule is not None:
-                    await self._external_execution.async_schedule_saved(
-                        entity_id, deepcopy(schedule)
-                    )
+                await task
+            except asyncio.CancelledError:
+                pass
+            raise
 
-    async def async_set_schedule_template(
-        self,
-        name: str,
-        blocks: list[ScheduleBlock],
-        key: str | None = None,
-    ) -> str:
-        """Create or update a custom schedule template."""
-        template_key = key or uuid4().hex
-        templates = self._data.setdefault("templates", [])
-        template = {
-            "key": template_key,
-            "name": name.strip(),
-            "blocks": [block.copy() for block in blocks],
+    async def _async_commit_configuration_owned(self, candidate, expected_revision=None, *, commit_state):
+        if expected_revision is not None and expected_revision != self._data.get("configuration_revision", 0):
+            raise ConfigurationResourceError("revision_conflict", "Configuration changed; reload before saving")
+        self._validate_configuration_resources(candidate)
+        previous = deepcopy(self._data)
+        before = {entity: self._effective_schedule(entity, zone) for entity, zone in self._data["zones"].items()}
+        def effective(data, entity):
+            source = data["zones"][entity]
+            for profile in data.get("profiles", []):
+                if profile["key"] not in data["global_"].get("active_profile_ids", []) or entity not in profile["zones"]:
+                    continue
+                behavior = profile["zones"][entity]
+                if behavior["behavior"] == "pause":
+                    return None
+                if behavior["behavior"] == "schedule":
+                    source = behavior
+                break
+            return self._resolved_resource_week(data, entity, source)
+        affected = {entity for entity in self._data["zones"] if before[entity] != effective(candidate, entity)}
+        candidate["configuration_revision"] = self._data.get("configuration_revision", 0) + 1
+        def requested_weeks(data):
+            result = {}
+            for destination, source in destinations(data):
+                key = (destination["source"], destination.get("profile_key"), destination["entity_id"])
+                try:
+                    result[key] = resolve_week(data, source)
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    result[key] = None
+            return result
+
+        old_requested, new_requested = requested_weeks(previous), requested_weeks(candidate)
+        lock_targets = set(affected)
+        lock_targets.update(key[2] for key in old_requested.keys() | new_requested.keys()
+                            if old_requested.get(key) != new_requested.get(key))
+        async with self._profile_zone_mutation_scope(lock_targets):
+            self._validate_configuration_resources(candidate)
+            events = {entity: self.get_active_target_event(entity) for entity in affected}
+            # Keep runtime zone dictionaries live across an awaited storage save.
+            configuration_fields = ("schedule", "template_links")
+            library_fields = ("block_presets", "templates", "profiles", "configuration_revision")
+            for entity, zone in self._data["zones"].items():
+                for field in configuration_fields:
+                    if field in candidate["zones"][entity]:
+                        zone[field] = deepcopy(candidate["zones"][entity][field])
+                    else:
+                        zone.pop(field, None)
+            for field in library_fields:
+                if field in candidate:
+                    self._data[field] = deepcopy(candidate[field])
+            for entity in affected:
+                self._invalidate_changed_schedule_delivery(entity, events[entity])
+            try:
+                await self._async_save_data()
+                commit_state["persisted"] = True
+            except (asyncio.CancelledError, Exception):
+                for entity, zone in self._data["zones"].items():
+                    for field in configuration_fields:
+                        if field in previous["zones"][entity]:
+                            zone[field] = previous["zones"][entity][field]
+                        else:
+                            zone.pop(field, None)
+                for field in library_fields:
+                    if field in previous:
+                        self._data[field] = previous[field]
+                    else:
+                        self._data.pop(field, None)
+                for entity in affected:
+                    await self._async_restore_delivery_after_failed_mutation(entity)
+                raise
+            now = dt_util.now()
+            for entity in affected:
+                zone = self._data["zones"][entity]
+                after = self._effective_schedule(entity, zone)
+                if before[entity] == after:
+                    continue
+                await self._async_finalize_schedule_mutation(entity, events[entity], now, reason="schedule_changed")
+                if self._is_external_execution(entity) and self._external_execution is not None and after is not None:
+                    try:
+                        await self._external_execution.async_schedule_saved(entity, deepcopy(after))
+                    except Exception:
+                        _LOGGER.exception("Failed to publish updated schedule for %s", entity)
+        self.async_schedule_next_event()
+        self._async_write_state()
+
+    async def async_set_block_preset(self, name, config, key=None, *, expected_revision=None):
+        async with self._profile_mutation_lock:
+            if expected_revision is None:
+                raise ConfigurationResourceError("revision_conflict", "Preset edits require a configuration revision")
+            key = key or uuid4().hex
+            candidate = deepcopy(self._data)
+            presets = candidate.setdefault("block_presets", [])
+            preset = {"key": key, "name": name.strip(), "config": normalize_config(config)}
+            index = next((index for index, item in enumerate(presets) if item["key"] == key), None)
+            if index is None:
+                presets.append(preset)
+            else:
+                presets[index] = preset
+            await self._async_commit_configuration(candidate, expected_revision)
+            return key
+
+    async def async_update_block_preset(self, key, fields, *, operation="update", clear_fields=()):
+        """Atomically patch an existing preset using the current stored snapshot."""
+        async with self._profile_mutation_lock:
+            if self._temperature_migration_blocked:
+                raise ValueError("Velair is stopped until the temperature-data migration is resolved")
+            preset = referenced_resource(self._data, "block_presets", key)
+            if preset is None:
+                raise ConfigurationResourceError("reference_not_found", f"Unknown climate preset: {key}")
+            config = updated_preset_config(preset["config"], fields, operation=operation, clear_fields=clear_fields)
+            if config == preset["config"]:
+                return
+            candidate = deepcopy(self._data)
+            referenced_resource(candidate, "block_presets", key)["config"] = config
+            await self._async_commit_configuration(candidate, self._data.get("configuration_revision", 0))
+
+    async def async_delete_block_preset(self, key, *, expected_revision=None):
+        async with self._profile_mutation_lock:
+            if expected_revision is None:
+                raise ConfigurationResourceError("revision_conflict", "Preset edits require a configuration revision")
+            usages = resource_usages(self._data)["presets"].get(key, [])
+            if usages:
+                raise ConfigurationResourceError("resource_in_use", "Climate preset is in use", usages)
+            candidate = deepcopy(self._data)
+            candidate["block_presets"] = [item for item in candidate.get("block_presets", []) if item["key"] != key]
+            if len(candidate["block_presets"]) == len(self._data.get("block_presets", [])):
+                raise ValueError(f"Unknown climate preset: {key}")
+            await self._async_commit_configuration(candidate, expected_revision)
+
+    def _schedule_template_update_candidate(self, name, blocks, key=None, *, assignments=None, expected_revision=None):
+        if expected_revision is not None and expected_revision != self._data.get("configuration_revision", 0):
+            raise ConfigurationResourceError("revision_conflict", "Configuration changed; reload before saving")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("Template name is required")
+        key = key or uuid4().hex
+        usages = resource_usages(self._data)["templates"].get(key, [])
+        existing = next((item for item in self._data.get("templates", []) if item["key"] == key), None)
+        if usages and any(not block.get("slot_id") for block in blocks):
+            # New slots may omit identity; existing ones must explicitly preserve it.
+            existing_starts = {block["start"] for block in existing["blocks"]}
+            if any(not block.get("slot_id") and block["start"] in existing_starts for block in blocks):
+                raise ValueError("Linked template edits require stable slot IDs")
+        normalized = template_blocks(blocks)
+        old_ids = {block["slot_id"] for block in existing["blocks"]} if existing else set()
+        new_ids = {block["slot_id"] for block in normalized}
+        template = {"key": key, "name": name.strip(), "blocks": normalized}
+        provider_errors = {}
+        for usage in usages:
+            entity = usage["entity_id"]
+            if self._is_external_execution(entity) and self._external_execution is not None:
+                try:
+                    execution = self._data["zones"][entity].get("execution", {})
+                    available = getattr(self._external_execution, "ensure_provider_available", None)
+                    if available is not None:
+                        available(entity, execution.get("provider"))
+                except ValueError as err:
+                    provider_errors[entity] = str(err)
+
+        def validate_binding(destination, binding):
+            entity = destination["entity_id"]
+            self.ensure_managed_entity(entity)
+            config = resolve_binding(self._data, binding)
+            effective = self._adapt_resource_blocks(entity, [{"start": "00:00", **config}])[0]
+            effective = {field: value for field, value in effective.items() if field != "start"}
+            if entity not in provider_errors and self._is_external_execution(entity) and self._external_execution is not None:
+                self._external_execution.ensure_block_supported(entity, effective)
+            return effective
+
+        candidate, allocation = allocate_template_update(self._data, template, validate_binding, assignments, blocked_entities=set(provider_errors))
+        destination_errors = []
+        for destination, zone in destinations(candidate):
+            affected = [usage for usage in usages if all(usage.get(field) == value for field, value in destination.items())]
+            if not affected:
+                continue
+            entity = destination["entity_id"]
+            if entity in provider_errors:
+                destination_errors.extend({"destination": usage, "code": "provider_unavailable", "message": provider_errors[entity]} for usage in affected)
+                continue
+            if any(destination_identity(item["destination"]) == destination_identity(usage) for item in allocation["pending"] for usage in affected):
+                continue
+            try:
+                self._resolved_resource_week(candidate, entity, zone, validate=True)
+            except (ValueError, KeyError, TypeError, AttributeError) as err:
+                destination_errors.extend({"destination": usage, "code": getattr(err, "code", "incompatible_configuration"), "message": str(err)} for usage in affected)
+        resolved_template_blocks = [{"start": slot["start"], "slot_id": slot["slot_id"], **resolve_binding(candidate, {field: value for field, value in slot.items() if field not in ("start", "slot_id")})} for slot in normalized]
+        resolved_destinations = []
+        for destination, zone in destinations(candidate):
+            for usage in usages:
+                if not all(usage.get(field) == value for field, value in destination.items()):
+                    continue
+                error = next((item for item in destination_errors if destination_identity(item["destination"]) == destination_identity(usage)), None)
+                if error:
+                    resolved_destinations.append({"destination": usage, "error": error})
+                    continue
+                if any(destination_identity(item["destination"]) == destination_identity(usage) for item in allocation["pending"]):
+                    continue
+                week = self._resolved_resource_week(candidate, destination["entity_id"], zone, validate=True)
+                resolved_destinations.append({"destination": usage, "blocks": week[usage["weekday"]], "metadata": resolution_metadata(candidate, zone, week)[usage["weekday"]]})
+        preview = {"template": template, "resolved_template_blocks": resolved_template_blocks, "resolved_destinations": resolved_destinations, "usages": usages, "required_assignments": [{**usage, "slot_ids": sorted(new_ids - old_ids)} for usage in usages if new_ids - old_ids and usage.get("mode", "hours") == "hours"], "added_slot_ids": sorted(new_ids - old_ids), "removed_slot_ids": sorted(old_ids - new_ids), "configuration_revision": self._data.get("configuration_revision", 0), **allocation, "destination_errors": destination_errors}
+        return candidate, preview
+
+    def preview_schedule_template_update(self, name, blocks, key=None, *, assignments=None, expected_revision=None):
+        return self._schedule_template_update_candidate(name, blocks, key, assignments=assignments, expected_revision=expected_revision)[1]
+
+    def preview_daily_schedule(self, entity_id, weekday, blocks=None, *, template_link=None):
+        self.ensure_managed_entity(entity_id)
+        if weekday not in WEEKDAYS or (blocks is None) == (template_link is None):
+            raise ValueError("Provide blocks or template_link")
+        candidate = deepcopy(self._data)
+        zone = candidate["zones"][entity_id]
+        zone.setdefault("template_links", {}).pop(weekday, None)
+        zone["schedule"][weekday] = normalize_schedule_blocks(blocks) if blocks is not None else []
+        if template_link is not None:
+            zone["template_links"].update(normalize_links({weekday: template_link}))
+        resolved = self._resolved_resource_week(candidate, entity_id, zone, validate=True)
+        return {"blocks": resolved[weekday], "materialized_blocks": self._materialized_resource_day(candidate, entity_id, zone, weekday, resolved=resolved), "configuration_revision": self._data.get("configuration_revision", 0)}
+
+    def _materialized_resource_day(self, data, entity_id, zone, weekday, *, resolved=None):
+        """Keep live presets, but use destination-adapted values for manual copies."""
+        concrete = (resolved if resolved is not None else self._resolved_resource_week(data, entity_id, zone, validate=True))[weekday]
+        by_start = {block["start"]: block for block in concrete}
+        raw = materialize_day(data, zone, weekday, resolve_presets=False)
+        return [deepcopy(block if "preset_key" in block else by_start[block["start"]]) for block in raw]
+
+    def preview_profile(self, profile):
+        raw = deepcopy(profile)
+        raw.setdefault("key", uuid4().hex)
+        normalized = validate_climate_profiles([raw], list(self._data["zones"]))[0]
+        self._validate_profile(normalized)
+        resolved = {entity: self._resolved_resource_week(self._data, entity, zone, validate=True) for entity, zone in normalized["zones"].items() if zone["behavior"] == "schedule"}
+        materialized = {entity: {day: self._materialized_resource_day(self._data, entity, zone, day, resolved=resolved[entity]) for day in WEEKDAYS} for entity, zone in normalized["zones"].items() if zone["behavior"] == "schedule"}
+        return {"profile": normalized, "resolved_schedules": resolved, "materialized_schedules": materialized, "configuration_revision": self._data.get("configuration_revision", 0)}
+
+    def get_configuration_resources(self):
+        diagnostics = []
+        metadata = {"default": {}, "profiles": {}}
+        resolved_templates = {}
+        for template in self._data.get("templates", []):
+            resolved_templates[template["key"]] = self._resolved_template_blocks_safe(template)
+            if resolved_templates[template["key"]] is None:
+                diagnostics.append({"source": "template", "template_key": template["key"], "code": "incompatible_configuration", "message": "Template settings contain invalid configuration or references"})
+
+        def safe(destination, zone):
+            entity = destination["entity_id"]
+            try:
+                week = self._resolved_resource_week(self._data, entity, zone)
+                details = resolution_metadata(self._data, zone, week)
+                target = metadata["default"] if destination["source"] == "default" else metadata["profiles"].setdefault(destination["profile_key"], {})
+                target[entity] = details
+                return week
+            except (ValueError, KeyError, TypeError, AttributeError) as err:
+                diagnostics.append({**destination, "code": getattr(err, "code", "incompatible_configuration"), "message": str(err)})
+                return None
+        defaults = {entity: safe({"source": "default", "entity_id": entity}, zone) for entity, zone in self._data["zones"].items()}
+        profiles = {profile["key"]: {entity: safe({"source": "profile", "profile_key": profile["key"], "entity_id": entity}, zone) for entity, zone in profile["zones"].items() if zone["behavior"] == "schedule"} for profile in self._data.get("profiles", [])}
+        return {
+            "effective_schedules": {entity: self._effective_schedule(entity, zone) for entity, zone in self._data["zones"].items()},
+            "block_presets": deepcopy(self._data.get("block_presets", [])),
+            "resolved_template_blocks": resolved_templates,
+            "configuration_revision": self._data.get("configuration_revision", 0),
+            "resource_usages": resource_usages(self._data),
+            "resolved_default_schedules": defaults,
+            "resolved_profile_schedules": profiles,
+            "resolved_block_metadata": metadata,
+            "resource_diagnostics": diagnostics,
         }
 
-        for index, existing_template in enumerate(templates):
-            if existing_template["key"] == template_key:
-                templates[index] = template
-                break
-        else:
-            templates.append(template)
+    def _resolved_template_blocks_safe(self, template):
+        try:
+            return [{"start": slot["start"], "slot_id": slot["slot_id"], **resolve_binding(self._data, {field: value for field, value in slot.items() if field not in ("start", "slot_id")})} for slot in template_blocks(template["blocks"])]
+        except (ValueError, KeyError, TypeError, AttributeError):
+            return None
 
-        await self._async_save_data()
-        self._async_write_state()
-        return template_key
+    async def async_set_daily_schedule(self, entity_id, weekday, blocks=None, *, template_link=None, unlink_template=False, expected_revision=None):
+        """Atomically save a Default day, including explicit reference changes."""
+        self.ensure_managed_entity(entity_id)
+        if weekday not in WEEKDAYS or (blocks is None) == (template_link is None):
+            raise ValueError("Provide blocks or template_link for one valid weekday")
+        async with self._profile_mutation_lock:
+            candidate = deepcopy(self._data)
+            zone = candidate["zones"][entity_id]
+            links = zone.setdefault("template_links", {})
+            if (template_link is not None or weekday in links or any("preset_key" in block for block in blocks or [])) and expected_revision is None:
+                raise ConfigurationResourceError("revision_conflict", "Linked day edits require a configuration revision")
+            if template_link is not None:
+                links.update(normalize_links({weekday: template_link}))
+                zone["schedule"][weekday] = []
+            else:
+                if weekday in links and not unlink_template:
+                    raise ConfigurationResourceError("unlink_required", "Explicitly unlink template hours first")
+                links.pop(weekday, None)
+                zone["schedule"][weekday] = normalize_schedule_blocks(blocks)
+            await self._async_commit_configuration(candidate, expected_revision)
+
+    async def async_copy_day_schedule(self, entity_id, source_weekday, target_weekdays, *, target_entity_ids=None, expected_revision=None):
+        """Clone a saved day atomically, preserving its resource references."""
+        async with self._profile_mutation_lock:
+            if self._temperature_migration_blocked:
+                raise ValueError("Velair is stopped until the temperature-data migration is resolved")
+            self.ensure_managed_entity(entity_id)
+            if source_weekday not in WEEKDAYS:
+                raise ValueError("Invalid source weekday")
+            if not isinstance(target_weekdays, (list, tuple)) or not target_weekdays or any(day not in WEEKDAYS for day in target_weekdays):
+                raise ValueError("Provide one or more valid target weekdays")
+            targets = [entity_id] if target_entity_ids is None else target_entity_ids
+            if not isinstance(targets, (list, tuple)) or not targets:
+                raise ValueError("Provide one or more managed target climates")
+            for target in targets:
+                self.ensure_managed_entity(target)
+            source = self._data["zones"][entity_id]
+            link = deepcopy(source.get("template_links", {}).get(source_weekday))
+            blocks = deepcopy(source["schedule"][source_weekday])
+            candidate = deepcopy(self._data)
+            for target in targets:
+                zone = candidate["zones"][target]
+                for day in target_weekdays:
+                    if link is None:
+                        zone.setdefault("template_links", {}).pop(day, None)
+                        zone["schedule"][day] = deepcopy(blocks)
+                    else:
+                        zone.setdefault("template_links", {})[day] = deepcopy(link)
+                        zone["schedule"][day] = []
+            await self._async_commit_configuration(candidate, self._data.get("configuration_revision", 0) if expected_revision is None else expected_revision)
+
+    async def async_clear_schedule(self, entity_id, weekday=None):
+        self.ensure_managed_entity(entity_id)
+        async with self._profile_mutation_lock:
+            candidate = deepcopy(self._data)
+            zone = candidate["zones"][entity_id]
+            for day in WEEKDAYS if weekday is None else [weekday]:
+                if day not in WEEKDAYS:
+                    raise ValueError("Invalid weekday")
+                zone.setdefault("template_links", {}).pop(day, None)
+                zone["schedule"][day] = []
+            await self._async_commit_configuration(candidate)
+
+    async def async_set_schedule_template(self, name, blocks, key=None, *, assignments=None, expected_revision=None):
+        async with self._profile_mutation_lock:
+            candidate, preview = self._schedule_template_update_candidate(name, blocks, key, assignments=assignments, expected_revision=expected_revision)
+            if preview["usages"] and expected_revision is None:
+                raise ConfigurationResourceError("revision_conflict", "Linked template edits require a revision")
+            if assignments is not None:
+                supplied = {destination_identity(item): set(item["bindings"]) for item in assignments}
+                required = set(preview["added_slot_ids"])
+                if any(supplied.get(destination_identity(usage), set()) != required for usage in preview["usages"] if usage.get("mode", "hours") == "hours"):
+                    raise ConfigurationResourceError("incomplete_assignments", "Explicit assignments must cover every new slot and linked destination")
+            if preview["pending"]:
+                raise ConfigurationResourceError("incomplete_assignments", "Complete the pending template assignments before saving", preview["pending"])
+            if preview["destination_errors"]:
+                raise ConfigurationResourceError("incompatible_configuration", "Linked schedules are incompatible", preview["destination_errors"])
+            template = preview["template"]
+            await self._async_commit_configuration(candidate, expected_revision)
+            return template["key"]
 
     async def async_update_settings(self, settings: dict) -> PanelSettingsData:
         """Update persisted panel settings."""
@@ -3258,18 +3666,16 @@ class VelairScheduler:
         self.async_schedule_next_event()
         return defaults
 
-    async def async_delete_schedule_template(self, key: str) -> None:
-        """Delete a custom schedule template."""
-        templates = self._data.setdefault("templates", [])
-        next_templates = [
-            template for template in templates if template["key"] != key
-        ]
-        if len(next_templates) == len(templates):
-            raise ValueError(f"Unknown schedule template: {key}")
-
-        self._data["templates"] = next_templates
-        await self._async_save_data()
-        self._async_write_state()
+    async def async_delete_schedule_template(self, key, *, expected_revision=None):
+        async with self._profile_mutation_lock:
+            usages = resource_usages(self._data)["templates"].get(key, [])
+            if usages:
+                raise ConfigurationResourceError("resource_in_use", "Schedule template is in use", usages)
+            candidate = deepcopy(self._data)
+            candidate["templates"] = [item for item in candidate.get("templates", []) if item["key"] != key]
+            if len(candidate["templates"]) == len(self._data.get("templates", [])):
+                raise ValueError(f"Unknown schedule template: {key}")
+            await self._async_commit_configuration(candidate, expected_revision)
 
     async def async_set_velair_mode(self, mode: dict) -> str:
         """Create or replace one user-named mode."""
@@ -3330,6 +3736,9 @@ class VelairScheduler:
     async def async_delete_velair_mode(self, key: str) -> None:
         """Delete one custom mode while retaining its active profile set."""
         async with self._profile_mutation_lock:
+            routine = self._data.get("planned_return", {})
+            if key in (routine.get("away_mode_id"), routine.get("destination_mode_id")):
+                raise ValueError("Change the Return home routine before deleting this mode")
             modes = self._data.setdefault("modes", [])
             next_modes = [mode for mode in modes if mode["key"] != key]
             if len(next_modes) == len(modes):
@@ -3367,6 +3776,7 @@ class VelairScheduler:
     async def async_clear_velair_mode(self) -> None:
         """Select Manual by clearing only the custom mode marker."""
         async with self._profile_mutation_lock:
+            await self._planned_return.cancel()
             if self.active_mode_id is None:
                 return
             self._begin_operation("mode_change", "manual", 0)
@@ -3386,9 +3796,14 @@ class VelairScheduler:
                 raise
             self._finish_operation()
 
-    async def async_set_profile(self, profile: dict) -> str:
+    async def async_set_profile(self, profile: dict, *, expected_revision=None) -> str:
         """Serialize creation and replacement of climate profiles."""
         async with self._profile_mutation_lock:
+            existing = next((item for item in self._data.get("profiles", []) if item["key"] == profile.get("key")), None)
+            if expected_revision is None and (profile_has_resource_references(profile) or profile_has_resource_references(existing)):
+                raise ConfigurationResourceError("revision_conflict", "Linked Profile edits require a configuration revision")
+            if expected_revision is not None and expected_revision != self._data.get("configuration_revision", 0):
+                raise ConfigurationResourceError("revision_conflict", "Configuration changed; reload before saving")
             return await self._async_set_profile_locked(profile)
 
     async def _async_set_profile_locked(self, profile: dict) -> str:
@@ -3418,7 +3833,7 @@ class VelairScheduler:
         if existing == next_profile:
             return key
         candidate_profiles = [
-            next_profile if item["key"] == key else item
+            next_profile if item["key"] == key else deepcopy(item)
             for item in profiles
         ]
         if existing is None:
@@ -3439,6 +3854,9 @@ class VelairScheduler:
                 "Active profiles cannot configure the same zone: "
                 + ", ".join(sorted(conflicting_active_zones))
             )
+        candidate = deepcopy(self._data)
+        candidate["profiles"] = candidate_profiles
+        self._validate_configuration_resources(candidate)
         previous_data = deepcopy(self._data)
         cancelled = False
         if key in self.active_profile_ids:
@@ -3450,6 +3868,8 @@ class VelairScheduler:
                 old_active, next_active
             )
             async with self._profile_zone_mutation_scope(transition_targets):
+                self._validate_configuration_resources(candidate)
+                self._data["configuration_revision"] = previous_data.get("configuration_revision", 0) + 1
                 external_targets = {
                     entity_id
                     for entity_id in transition_targets
@@ -3467,7 +3887,10 @@ class VelairScheduler:
                     external_targets=external_targets,
                     zone_transitions_locked=True,
                 )
+        elif profile_has_resource_references(next_profile) or profile_has_resource_references(existing):
+            await self._async_commit_configuration(candidate, previous_data.get("configuration_revision", 0))
         else:
+            self._data["configuration_revision"] = previous_data.get("configuration_revision", 0) + 1
             self._data["profiles"] = candidate_profiles
             await self._async_save_profile_mutation(previous_data)
             self._async_write_state()
@@ -3487,9 +3910,14 @@ class VelairScheduler:
         if old_profile is None:
             raise ValueError(f"Unknown climate profile: {key}")
         was_active = key in self.active_profile_ids
+        routine = self._data.get("planned_return", {})
+        referenced_modes = {routine.get("away_mode_id"), routine.get("destination_mode_id")}
+        if any(mode["key"] in referenced_modes and key in mode["profile_ids"] for mode in self.get_modes()):
+            raise ValueError("Change the Return home routine before deleting this Profile")
         previous_profile_ids = self.active_profile_ids
         previous_active_profiles = deepcopy(self._active_profiles())
         previous_data = deepcopy(self._data)
+        self._data["configuration_revision"] = self._data.get("configuration_revision", 0) + 1
         next_profiles_data = [profile for profile in profiles if profile["key"] != key]
         removed_mode_keys = {
             mode["key"]
@@ -3596,6 +4024,7 @@ class VelairScheduler:
         rollback_data: SchedulerData | None = None,
         operation_kind: Literal["mode_change", "profile_activation"] | None = None,
         operation_target_id: str | None = None,
+        on_persisted: Callable[[], None] | None = None,
     ) -> None:
         """Activate a conflict-free profile set atomically; empty selects Default."""
         normalized_ids = [
@@ -3634,6 +4063,8 @@ class VelairScheduler:
             previous_profiles, next_profiles
         )
         lock_targets = transition_targets | explicit_publication_targets
+        if source != "planned_return":
+            await self._planned_return.cancel()
         selection_unchanged = (
             normalized_ids == previous_ids and mode_id == self.active_mode_id
         )
@@ -3649,6 +4080,7 @@ class VelairScheduler:
             entity_id
             for entity_id in affected_candidates
             if not self._is_external_execution(entity_id)
+            and not (source == "planned_return" and self._is_zone_override_active(entity_id, dt_util.now()))
         }
         if operation_kind is None:
             operation_kind = "mode_change" if mode_id is not None else "profile_activation"
@@ -3671,6 +4103,7 @@ class VelairScheduler:
                     entity_id
                     for entity_id in affected_candidates
                     if not self._is_external_execution(entity_id)
+                    and not (source == "planned_return" and self._is_zone_override_active(entity_id, dt_util.now()))
                 }
                 self._set_operation_total(len(affected))
                 if selection_unchanged:
@@ -3698,6 +4131,8 @@ class VelairScheduler:
                         track_operation=True,
                         external_targets=external_targets,
                         zone_transitions_locked=True,
+                        preserve_overrides=source == "planned_return",
+                        on_persisted=on_persisted,
                     )
         except asyncio.CancelledError:
             for entity_id in affected:
@@ -3730,7 +4165,7 @@ class VelairScheduler:
         if cancelled:
             raise asyncio.CancelledError
 
-    def _validate_profile(self, profile: ClimateProfileData) -> None:
+    def _validate_profile(self, profile: ClimateProfileData, *, data=None) -> None:
         """Validate and snap every entity-bound schedule in a profile."""
         if not is_valid_climate_profile_color(profile.get("color")):
             raise ValueError("Profile color must use the #RRGGBB format")
@@ -3750,24 +4185,10 @@ class VelairScheduler:
                 )
             if behavior["behavior"] != "schedule":
                 continue
-            supported_modes = getattr(
-                self._climate_manager, "supported_hvac_modes", lambda _entity_id: []
-            )(entity_id)
-            schedule = behavior.get("schedule")
-            if not isinstance(schedule, dict) or set(schedule) != set(WEEKDAYS):
-                raise ValueError(f"Profile schedule for {entity_id} must include every weekday")
-            for weekday in WEEKDAYS:
-                blocks = self._blocks_for_entity_capabilities(entity_id, schedule[weekday])
-                self.ensure_blocks_in_temperature_limits(entity_id, blocks)
-                for block in blocks:
-                    hvac_mode = block.get("hvac_mode")
-                    if hvac_mode and supported_modes and hvac_mode not in supported_modes:
-                        raise ValueError(
-                            f"HVAC mode {hvac_mode} is not supported by {entity_id}"
-                        )
-                schedule[weekday] = self._snap_blocks_for_entity(entity_id, blocks)
-            if self._is_external_execution(entity_id) and self._external_execution is not None:
-                self._external_execution.ensure_schedule_supported(entity_id, schedule)
+            resolved = self._resolved_resource_week(data if data is not None else self._data, entity_id, behavior, validate=True)
+            for day in WEEKDAYS:
+                if day not in behavior.get("template_links", {}) and not any("preset_key" in block for block in behavior["schedule"][day]):
+                    behavior["schedule"][day] = resolved[day]
 
     @staticmethod
     def _conflicting_profile_zones(
@@ -3809,6 +4230,7 @@ class VelairScheduler:
         profiles: list[ClimateProfileData],
         entity_id: str,
         now: datetime,
+        *, data=None,
     ) -> tuple[str | None, str, str | None, ClimateEvent | None]:
         """Return owner, behavior and current intent for transition decisions."""
         owner, behavior = self._profile_effect_from_profiles(profiles, entity_id)
@@ -3816,13 +4238,7 @@ class VelairScheduler:
         pause_action = (
             behavior.get("action") if behavior_kind == "pause" else None
         )
-        zone = self._data["zones"][entity_id]
-        if behavior_kind == "pause":
-            schedule = None
-        elif behavior_kind == "schedule":
-            schedule = behavior.get("schedule")
-        else:
-            schedule = zone["schedule"]
+        schedule = self._effective_schedule_from_profiles(profiles, entity_id, data=data)
         event = self._current_schedule_event_for_schedule(entity_id, schedule, now)
         return owner, behavior_kind, pause_action, event
 
@@ -3838,6 +4254,8 @@ class VelairScheduler:
         publish_external: bool = True,
         external_targets: set[str] | None = None,
         zone_transitions_locked: bool = False,
+        preserve_overrides: bool = False,
+        on_persisted: Callable[[], None] | None = None,
     ) -> bool:
         """Reset affected runtime state and immediately enact effective behavior."""
         now = dt_util.now()
@@ -3845,7 +4263,7 @@ class VelairScheduler:
         metadata_only: set[str] = set()
         for entity_id in self._data["zones"]:
             previous_effect = self._profile_transition_effect(
-                previous_profiles, entity_id, now
+                previous_profiles, entity_id, now, data=rollback_data
             )
             next_effect = self._profile_transition_effect(
                 next_profiles, entity_id, now
@@ -3872,7 +4290,7 @@ class VelairScheduler:
                 metadata_only.add(entity_id)
 
         external_affected = (
-            self._external_profile_schedule_changes(previous_profiles, next_profiles)
+            {entity for entity in self._data["zones"] if self._is_external_execution(entity) and self._effective_schedule_from_profiles(previous_profiles, entity, data=rollback_data) != self._effective_schedule_from_profiles(next_profiles, entity)}
             if external_targets is None
             else set(external_targets)
         )
@@ -3894,10 +4312,12 @@ class VelairScheduler:
         affected = {
             entity_id for entity_id in affected
             if not self._is_external_execution(entity_id)
+            and not (preserve_overrides and self._is_zone_override_active(entity_id, now))
         }
         metadata_only = {
             entity_id for entity_id in metadata_only
             if not self._is_external_execution(entity_id)
+            and not (preserve_overrides and self._is_zone_override_active(entity_id, now))
         }
 
         cancelled_boosts: list[tuple[str, ZoneOverride]] = []
@@ -3906,7 +4326,7 @@ class VelairScheduler:
                 for entity_id in affected:
                     self._invalidate_climate_delivery(entity_id)
                     override = self._data["zones"][entity_id].get("override")
-                    if _is_boost_override(override):
+                    if _is_boost_override(override) and not preserve_overrides:
                         self._data["zones"][entity_id]["override"] = None
                         cancelled_boosts.append((entity_id, override))
                 if affected or persist_change:
@@ -3921,6 +4341,8 @@ class VelairScheduler:
                 await self._async_restore_delivery_after_failed_mutation(entity_id)
             raise
 
+        if on_persisted is not None:
+            on_persisted()
         completion = self._async_complete_profile_transition(
             now=now,
             affected=affected,
@@ -4068,7 +4490,7 @@ class VelairScheduler:
 
     def _restore_profile_mutation_data(self, previous_data: SchedulerData) -> None:
         """Roll back only fields owned by Profile and Mode mutations."""
-        for key in ("profiles", "modes"):
+        for key in ("profiles", "modes", "configuration_revision"):
             if key in previous_data:
                 self._data[key] = deepcopy(previous_data[key])
             else:
@@ -4086,14 +4508,20 @@ class VelairScheduler:
         *,
         zones: dict[str, ZoneData] | None = None,
         templates: list[ScheduleTemplateData] | None = None,
+        block_presets: list[dict] | None = None,
         settings: PanelSettingsData | None = None,
         preconditioning_learning: dict[str, PreconditioningLearningData]
         | None = None,
         profiles: list[ClimateProfileData] | None = None,
         modes: list[VelairModeData] | None = None,
+        planned_return: dict | None = None,
     ) -> None:
         """Serialize portable replacement with profile mutations."""
         async with self._profile_mutation_lock:
+            if block_presets is not None or self._data.get("block_presets") or any(zone.get("template_links") for _destination, zone in destinations({**self._data, **({"zones": zones} if zones is not None else {}), **({"profiles": profiles} if profiles is not None else {})})):
+                async with self._profile_zone_mutation_scope(set(self._data["zones"])):
+                    await self._async_replace_portable_data_locked(zones=zones, templates=templates, block_presets=block_presets, settings=settings, preconditioning_learning=preconditioning_learning, profiles=profiles, modes=modes, planned_return=planned_return, profile_transition_locked=True)
+                return
             profile_transition_locked = profiles is not None and zones is None
             profile_transition_targets: set[str] = set()
             if profile_transition_locked:
@@ -4133,6 +4561,7 @@ class VelairScheduler:
                     preconditioning_learning=preconditioning_learning,
                     profiles=profiles,
                     modes=modes,
+                    planned_return=planned_return,
                     profile_transition_locked=profile_transition_locked,
                 )
             finally:
@@ -4144,18 +4573,45 @@ class VelairScheduler:
         *,
         zones: dict[str, ZoneData] | None = None,
         templates: list[ScheduleTemplateData] | None = None,
+        block_presets: list[dict] | None = None,
         settings: PanelSettingsData | None = None,
         preconditioning_learning: dict[str, PreconditioningLearningData]
         | None = None,
         profiles: list[ClimateProfileData] | None = None,
         modes: list[VelairModeData] | None = None,
+        planned_return: dict | None = None,
         profile_transition_locked: bool = False,
     ) -> None:
         """Replace persisted sections from a portable import."""
+        resource_candidate = deepcopy(self._data)
+        for field, value in (("zones", zones), ("templates", templates), ("block_presets", block_presets), ("profiles", profiles)):
+            if value is not None:
+                resource_candidate[field] = deepcopy(value)
+        self._validate_configuration_resources(resource_candidate)
+        previous_resource_events = {entity: self.get_active_target_event(entity) for entity in self._data["zones"]}
+        resource_changed_targets = set()
+        if templates is not None or block_presets is not None:
+            for entity, zone in self._data["zones"].items():
+                old = self._effective_schedule(entity, zone)
+                next_source = resource_candidate["zones"][entity]
+                for profile in resource_candidate.get("profiles", []):
+                    if profile["key"] in self.active_profile_ids and entity in profile["zones"]:
+                        behavior = profile["zones"][entity]
+                        if behavior["behavior"] == "schedule":
+                            next_source = behavior
+                        elif behavior["behavior"] == "pause":
+                            next_source = None
+                        break
+                next_week = self._resolved_resource_week(resource_candidate, entity, next_source) if next_source is not None else None
+                if old != next_week:
+                    resource_changed_targets.add(entity)
+
         if zones is not None:
             validated_zones = deepcopy(zones)
             for entity_id, zone in validated_zones.items():
                 for weekday in WEEKDAYS:
+                    if weekday in zone.get("template_links", {}) or any("preset_key" in block for block in zone["schedule"][weekday]):
+                        continue
                     blocks = self._blocks_for_entity_capabilities(
                         entity_id, zone["schedule"][weekday]
                     )
@@ -4172,7 +4628,7 @@ class VelairScheduler:
                 list((zones if zones is not None else self._data["zones"])),
             )
             for profile in profiles:
-                self._validate_profile(profile)
+                self._validate_profile(profile, data=resource_candidate)
         target_zones = zones if zones is not None else self._data["zones"]
         if self._external_execution is not None:
             for entity_id, target_zone in target_zones.items():
@@ -4182,7 +4638,7 @@ class VelairScheduler:
                 provider_key = execution.get("provider")
                 self._external_execution.ensure_schedule_supported(
                     entity_id,
-                    target_zone["schedule"],
+                    self._resolved_resource_week(resource_candidate, entity_id, target_zone),
                     provider_key if isinstance(provider_key, str) else None,
                 )
                 for profile in profiles or []:
@@ -4195,7 +4651,7 @@ class VelairScheduler:
                         )
                     self._external_execution.ensure_schedule_supported(
                         entity_id,
-                        behavior["schedule"],
+                        self._resolved_resource_week(resource_candidate, entity_id, behavior),
                         provider_key if isinstance(provider_key, str) else None,
                     )
         target_profiles = (
@@ -4207,6 +4663,9 @@ class VelairScheduler:
         }
         if modes is not None:
             modes = validate_modes(modes, target_profile_zones)
+        from .models import validate_planned_return
+        if planned_return is not None or modes is not None:
+            planned_return = validate_planned_return(planned_return if planned_return is not None else self._data.get("planned_return", {}), modes if modes is not None else self.get_modes())
         if profiles is not None:
             retained_active_profile_ids = [
                 profile_id
@@ -4256,7 +4715,7 @@ class VelairScheduler:
         async def publish_imported_external_schedules() -> None:
             if self._external_execution is None:
                 return
-            candidates = set(zones or {})
+            candidates = set(zones or {}) | resource_changed_targets
             if profiles is not None:
                 candidates.update(self._data["zones"])
             for imported_entity_id in sorted(candidates):
@@ -4278,6 +4737,12 @@ class VelairScheduler:
                     await rollback_portable_mutation()
                     raise
             self._data["zones"] = zones
+        if planned_return is not None:
+            self._data["planned_return"] = deepcopy(planned_return)
+            self._data["planned_return_episode"] = None
+        if block_presets is not None:
+            self._data["block_presets"] = deepcopy(block_presets)
+        self._data["configuration_revision"] = self._data.get("configuration_revision", 0) + 1
         if templates is not None:
             self._data["templates"] = templates
             self._data["templates_seeded"] = True
@@ -4371,6 +4836,8 @@ class VelairScheduler:
             await rollback_portable_mutation()
             raise
         await publish_imported_external_schedules()
+        for entity in resource_changed_targets:
+            await self._async_finalize_schedule_mutation(entity, previous_resource_events[entity], dt_util.now(), reason="portable_import")
         self.async_schedule_next_event()
 
     async def async_prepare_data_reset(self) -> None:
@@ -4397,6 +4864,20 @@ class VelairScheduler:
         if self._is_external_execution(entity_id):
             self.async_schedule_next_event()
             return
+        zone = self._data["zones"][entity_id]
+        schedule = self._effective_schedule(entity_id, zone)
+        session = self._preconditioning_sessions.get(entity_id)
+        if session is not None and not self._preconditioning_session_window_is_valid(session, schedule):
+            self._discard_preconditioning_session(entity_id)
+        for key, marker in list(self._applied_preconditioning_targets.items()):
+            planned_target = self._planned_return.target(entity_id)
+            owns_return_marker = planned_target is not None and key == self._preconditioning_event_key(
+                entity_id, planned_target.weekday, planned_target.start, planned_target.target_when,
+            )
+            if key.startswith(f"{entity_id}|") and not owns_return_marker and not self._preconditioning_window_is_valid(
+                entity_id, schedule, marker.active_from, marker.target_when,
+            ):
+                self._applied_preconditioning_targets.pop(key, None)
         event = self.get_active_target_event(entity_id)
         intent_changed = _event_control_intent(event) != _event_control_intent(
             previous_event
@@ -4479,6 +4960,7 @@ class VelairScheduler:
         """Schedule the next scheduler action."""
         self._clear_timer()
         if self._temperature_migration_blocked:
+            self._planned_return.stop()
             self._clear_preconditioning_sessions()
             self._clear_preconditioning_replan_listener()
             self._clear_preconditioning_replan_timer()
@@ -4492,6 +4974,9 @@ class VelairScheduler:
             self._async_write_state()
             return
         now = dt_util.now()
+        if self._timer_cursor is None:
+            self._timer_cursor = dt_util.as_utc(now)
+        self._planned_return.refresh()
         self._refresh_preconditioning_replan_listener()
 
         if self.mode == MODE_AUTO:
@@ -4522,14 +5007,19 @@ class VelairScheduler:
             self._async_write_state()
             return
 
-        if next_action <= now:
-            self._hass.async_create_task(self._handle_timer(now))
+        generation = self._timer_generation
+
+        async def handle_timer(scheduled: datetime) -> None:
+            await self._handle_timer(scheduled, generation=generation)
+
+        if dt_util.as_utc(next_action) <= dt_util.as_utc(now):
+            self._hass.async_create_task(handle_timer(now))
             self._async_write_state()
             return
 
         self._unsub_timer = async_track_point_in_time(
             self._hass,
-            self._handle_timer,
+            handle_timer,
             next_action,
         )
         self._async_write_state()
@@ -4565,53 +5055,123 @@ class VelairScheduler:
 
         return sorted(events_by_entity.values(), key=lambda event: event.when)
 
-    async def _handle_timer(self, now: datetime) -> None:
-        """Handle the next scheduler action."""
-        if self._temperature_migration_blocked or self._stopped:
-            return
-        expired_overrides = await self._async_clear_expired_zone_overrides(now)
-        await self._async_clear_expired_global_mode(now)
-        await self._async_expire_preconditioning_sessions(now)
-        expired_entities = set(expired_overrides)
+    async def _handle_timer(
+        self, now: datetime, *, generation: int | None = None,
+    ) -> None:
+        """Drain crossed deadlines once, resolving each zone's latest intent."""
+        async with self._timer_lock:
+            if (
+                self._temperature_migration_blocked or self._stopped
+                or (generation is not None and generation != self._timer_generation)
+            ):
+                return
+            epoch = self._timer_epoch
+            cutoff = max(dt_util.as_utc(now), dt_util.as_utc(dt_util.now()))
+            cursor = self._timer_cursor
+            if cursor is None:
+                # Direct callers retain the historical one-minute due window.
+                cursor = dt_util.as_utc(now) - timedelta(minutes=1)
+            delivered_intents: dict[str, tuple[object, ...]] = {}
+            first_scan = True
+            while first_scan or cutoff > cursor:
+                if self._stopped or self._temperature_migration_blocked or epoch != self._timer_epoch:
+                    return
+                first_scan = False
+                action_now = cutoff.astimezone(now.tzinfo)
+                expired_overrides = await self._async_clear_expired_zone_overrides(action_now)
+                await self._async_clear_expired_global_mode(action_now)
+                await self._async_expire_preconditioning_sessions(action_now)
+                if self._stopped or self._temperature_migration_blocked or epoch != self._timer_epoch:
+                    return
+                due_by_entity: dict[str, tuple[datetime, ClimateEvent]] = {}
+                if self.mode == MODE_AUTO:
+                    scan_from = (cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
+                    for event in self._iter_future_events(scan_from, clear_applied=False):
+                        nominal = dt_util.as_utc(event.target_when or event.when)
+                        application = dt_util.as_utc(event.when)
+                        if event.entity_id in expired_overrides:
+                            continue
+                        if self._is_zone_override_active(event.entity_id, cutoff):
+                            continue
+                        if self._is_applied_preconditioning_event(event):
+                            continue
+                        if cursor < nominal <= cutoff:
+                            due_at = nominal
+                        elif event.target_when is not None and application <= cutoff < nominal:
+                            if application <= cursor and self._was_preconditioning_attempted(event):
+                                continue
+                            due_at = application
+                        else:
+                            continue
+                        previous = due_by_entity.get(event.entity_id)
+                        if previous is None or due_at > previous[0]:
+                            due_by_entity[event.entity_id] = (due_at, event)
+                # Publish the scan boundary before yielding to climate delivery.
+                self._timer_cursor = cutoff
+                for _, event in sorted(due_by_entity.values(), key=lambda item: item[0]):
+                    if self._stopped or self._temperature_migration_blocked or epoch != self._timer_epoch:
+                        return
+                    try:
+                        resolved = self._resolve_authoritative_delivery_event(
+                            event.entity_id, requested_event=event, requested_at=action_now,
+                        )
+                        if resolved is None:
+                            continue
+                        intent = (
+                            dt_util.as_utc(resolved.when),
+                            dt_util.as_utc(resolved.target_when) if resolved.target_when else None,
+                            resolved.weekday, resolved.start, _event_control_intent(resolved),
+                        )
+                        if delivered_intents.get(event.entity_id) == intent:
+                            continue
+                        # The coordinator owns recovery after this exact handoff;
+                        # subsequent timer scans must not replace its retries.
+                        if resolved.target_when is not None:
+                            self._attempted_preconditioning_events.add(self._preconditioning_attempt_key(resolved))
+                        applied = await self._async_apply_event(
+                            event, source="scheduled_event", applied_at=action_now,
+                        )
+                        if applied:
+                            delivered_intents[event.entity_id] = intent
+                    except Exception:
+                        _LOGGER.exception("Failed to apply climate event for %s", event.entity_id)
+                for entity_id, override in expired_overrides.items():
+                    if self._stopped or self._temperature_migration_blocked or epoch != self._timer_epoch:
+                        return
+                    async with self._zone_override_lock(entity_id):
+                        if self._data["zones"][entity_id].get("override") is not None:
+                            continue
+                        if _is_boost_override(override):
+                            await self._async_finish_zone_boost(
+                                entity_id, override, action_now, reason="expired",
+                            )
+                        elif _is_pause_override(override):
+                            await self._async_apply_expired_zone_pause(entity_id)
+                cursor = cutoff
+                live_now = dt_util.now()
+                cutoff = max(cutoff, dt_util.as_utc(live_now))
+                if not self._has_crossed_scheduler_deadline(cursor, live_now):
+                    break
+            if not self._stopped and not self._temperature_migration_blocked and epoch == self._timer_epoch:
+                self.async_schedule_next_event()
 
-        due_events: list[ClimateEvent] = []
+    def _has_crossed_scheduler_deadline(self, cursor: datetime, now: datetime) -> bool:
+        """Detect real work after a scan without looping on clock advancement."""
+        cutoff = dt_util.as_utc(now)
+        if cutoff <= cursor:
+            return False
         if self.mode == MODE_AUTO:
-            due_events = [
-                event
-                for event in self._iter_future_events(now - timedelta(minutes=1))
-                if event.when <= now
-                and event.entity_id not in expired_entities
-                and not self._is_zone_override_active(event.entity_id, now)
-                and not self._is_applied_preconditioning_event(event)
-            ]
-
-        for event in due_events:
-            try:
-                await self._async_apply_event(
-                    event,
-                    source="scheduled_event",
-                    applied_at=now,
-                )
-            except Exception:
-                _LOGGER.exception("Failed to apply climate event for %s", event.entity_id)
-
-        for entity_id, override in expired_overrides.items():
-            async with self._zone_override_lock(entity_id):
-                # Another action may have established a new authoritative
-                # override after the expired one was persisted as cleared.
-                if self._data["zones"][entity_id].get("override") is not None:
+            scan_from = (cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
+            for event in self._iter_future_events(scan_from, clear_applied=False):
+                if self._is_applied_preconditioning_event(event):
                     continue
-                if _is_boost_override(override):
-                    await self._async_finish_zone_boost(
-                        entity_id,
-                        override,
-                        now,
-                        reason="expired",
-                    )
-                elif _is_pause_override(override):
-                    await self._async_apply_expired_zone_pause(entity_id)
-
-        self.async_schedule_next_event()
+                if any(cursor < dt_util.as_utc(instant) <= cutoff for instant in (
+                    event.when, event.target_when or event.when,
+                )):
+                    return True
+        expirations = [self._get_global_mode_expiration(), self._get_next_zone_override_expiration()]
+        expirations.extend(session.target_when for session in self._preconditioning_sessions.values())
+        return any(instant is not None and dt_util.as_utc(instant) <= cutoff for instant in expirations)
 
     async def _async_finish_zone_boost(
         self,
@@ -4870,6 +5430,11 @@ class VelairScheduler:
                             target_when,
                         )
                     )
+                    if not self._preconditioning_window_is_valid(
+                        entity_id, schedule, event_when, target_when,
+                    ):
+                        event_when = target_when
+                        preconditioning_diagnostics = None
                     target_when_for_event = (
                         target_when if event_when != target_when else None
                     )
@@ -5040,8 +5605,68 @@ class VelairScheduler:
             target_when=event.target_when,
         )
 
+    def _preconditioning_window_is_valid(
+        self,
+        entity_id: str,
+        schedule: dict[str, list[ScheduleBlock]] | None,
+        active_from: datetime,
+        target_when: datetime,
+    ) -> bool:
+        """Keep an early start strictly after the preceding weekly transition."""
+        if dt_util.as_utc(active_from) >= dt_util.as_utc(target_when):
+            return True
+        predecessor = self._current_schedule_event_for_schedule(
+            entity_id, schedule,
+            (dt_util.as_utc(target_when) - timedelta(microseconds=1)).astimezone(target_when.tzinfo),
+        )
+        return predecessor is None or dt_util.as_utc(active_from) > dt_util.as_utc(predecessor.when)
+
+    def _preconditioning_session_window_is_valid(
+        self,
+        session: _PreconditioningSession,
+        schedule: dict[str, list[ScheduleBlock]] | None,
+    ) -> bool:
+        """Validate the predicted window, including a late accepted start."""
+        planned_target = self._planned_return.target(session.entity_id)
+        if planned_target is not None and (
+            planned_target.weekday, planned_target.start, planned_target.target_when,
+            planned_target.temperature, planned_target.target_temp_low,
+            planned_target.target_temp_high, planned_target.hvac_mode,
+        ) == (
+            session.weekday, session.start, session.target_when,
+            session.target_temperature if session.target_kind == "scalar" else None,
+            session.target_temp_low, session.target_temp_high, session.hvac_mode,
+        ):
+            # Arrival preparation belongs to the destination intent, rather
+            # than to transitions in the currently selected Away week.
+            return True
+        marker = self._applied_preconditioning_targets.get(self._preconditioning_event_key(
+            session.entity_id, session.weekday, session.start, session.target_when,
+        ))
+        return self._preconditioning_window_is_valid(
+            session.entity_id, schedule,
+            marker.active_from if marker is not None else session.started_at,
+            session.target_when,
+        )
+
+    @staticmethod
+    def _preconditioning_attempt_key(event: ClimateEvent) -> tuple[object, ...]:
+        """Identify the exact early plan already handed to climate delivery."""
+        return (
+            event.entity_id, event.weekday, event.start,
+            dt_util.as_utc(event.target_when) if event.target_when else None,
+            dt_util.as_utc(event.when), _event_control_intent(event),
+        )
+
+    def _was_preconditioning_attempted(self, event: ClimateEvent) -> bool:
+        return self._preconditioning_attempt_key(event) in self._attempted_preconditioning_events
+
     def _clear_applied_preconditioning_targets(self, now: datetime) -> None:
         """Forget applied preconditioning targets after their comfort time."""
+        self._attempted_preconditioning_events = {
+            key for key in self._attempted_preconditioning_events
+            if key[3] is not None and key[3] > dt_util.as_utc(now)
+        }
         expired_keys = [
             key
             for key, marker in self._applied_preconditioning_targets.items()
@@ -5052,6 +5677,9 @@ class VelairScheduler:
 
     def _clear_applied_preconditioning_targets_for_entity(self, entity_id: str) -> None:
         """Forget applied early-start markers for one zone after schedule changes."""
+        self._attempted_preconditioning_events = {
+            key for key in self._attempted_preconditioning_events if key[0] != entity_id
+        }
         key_prefix = f"{entity_id}|"
         for key in list(self._applied_preconditioning_targets):
             if key.startswith(key_prefix):
@@ -5447,6 +6075,7 @@ class VelairScheduler:
             or self._stopped
             or self.mode != MODE_AUTO
             or self._is_external_execution(entity_id)
+            or self._planned_return.suppress_departure_delivery()
         ):
             return None
         now = dt_util.now()
@@ -5475,6 +6104,9 @@ class VelairScheduler:
                 hvac_mode=override.get("hvac_mode"),
                 **_climate_options_from_mapping(override),
             )
+        planned_target = self._planned_return.target(entity_id, requested_at or now)
+        if planned_target is not None:
+            return planned_target
         behavior = self._profile_zone_behavior(entity_id)
         if behavior["behavior"] == "pause":
             if behavior.get("action") != ZONE_PAUSE_ACTION_TURN_OFF:
@@ -5924,6 +6556,8 @@ class VelairScheduler:
         now: datetime,
     ) -> bool:
         """Return whether a zone has a future block that temperature can replan."""
+        if any(event.entity_id == entity_id for event in self._planned_return.plans(now)):
+            return True
         schedule = self._effective_schedule(entity_id, zone)
         if schedule is None:
             return False
@@ -6418,11 +7052,22 @@ class VelairScheduler:
             reason="current_schedule",
         )
 
-    def _room_sensor_assist_target_event(self, entity_id: str) -> ClimateEvent | None:
+    def _room_sensor_assist_target_event(self, entity_id: str, *, planned_target=None, planned_target_resolved=False) -> ClimateEvent | None:
         """Return the current target Room Sensor Assist should follow."""
         now = dt_util.now()
+        if not planned_target_resolved:
+            planned_target = self._planned_return.target(entity_id, now)
+        if planned_target is not None:
+            return planned_target
         session = self._preconditioning_sessions.get(entity_id)
-        if session is not None and session.target_when > now:
+        zone = self._data["zones"].get(entity_id)
+        if (
+            session is not None and session.target_when > now
+            and zone is not None
+            and self._preconditioning_session_window_is_valid(
+                session, self._effective_schedule(entity_id, zone),
+            )
+        ):
             if not self._room_sensor_assist_scheduled_target_exists(
                 entity_id,
                 session.weekday,
@@ -6500,7 +7145,7 @@ class VelairScheduler:
             if applied_preconditioning_event is not None:
                 return applied_preconditioning_event
 
-        return self.get_current_event(entity_id)
+        return self.get_current_event(entity_id, planned_target=planned_target, planned_target_resolved=True)
 
     def _room_sensor_assist_applied_preconditioning_event(
         self,
@@ -6526,8 +7171,23 @@ class VelairScheduler:
             return None
 
         key_prefix = f"{entity_id}|{weekday}|{start}|"
-        for key, marker in self._applied_preconditioning_targets.items():
+        for key, marker in list(self._applied_preconditioning_targets.items()):
             if not key.startswith(key_prefix):
+                continue
+            zone = self._data["zones"][entity_id]
+            planned_target = self._planned_return.target(entity_id)
+            owns_return_marker = planned_target is not None and (
+                planned_target.weekday, planned_target.start, planned_target.target_when,
+                planned_target.temperature, planned_target.target_temp_low,
+                planned_target.target_temp_high, planned_target.hvac_mode,
+            ) == (
+                weekday, start, marker.target_when, target_temperature,
+                target_temp_low, target_temp_high, hvac_mode,
+            )
+            if not owns_return_marker and not self._preconditioning_window_is_valid(
+                entity_id, self._effective_schedule(entity_id, zone),
+                marker.active_from, marker.target_when,
+            ):
                 continue
             return ClimateEvent(
                 entity_id=entity_id,
@@ -6595,6 +7255,10 @@ class VelairScheduler:
         target_temp_high: float | None = None,
     ) -> bool:
         """Return whether a runtime Room Sensor Assist target still exists."""
+        planned_target = self._planned_return.target(entity_id)
+        if planned_target is not None and (planned_target.weekday, planned_target.start, planned_target.hvac_mode) == (weekday, start, hvac_mode):
+            if (planned_target.temperature, planned_target.target_temp_low, planned_target.target_temp_high) == (target_temperature, target_temp_low, target_temp_high):
+                return True
         zone = self._data["zones"].get(entity_id)
         if zone is None:
             return False
@@ -10015,6 +10679,7 @@ class VelairScheduler:
 
     def _clear_timer(self) -> None:
         """Cancel the active timer if one exists."""
+        self._timer_generation += 1
         if self._unsub_timer is not None:
             self._unsub_timer()
             self._unsub_timer = None
@@ -10809,21 +11474,29 @@ class VelairScheduler:
         """Return the next timer action."""
         candidates: list[datetime] = []
 
-        if (
-            self.next_event is not None
-            and not (
-                self.next_event.when <= now
-                and self._is_applied_preconditioning_event(self.next_event)
-            )
-        ):
-            candidates.append(self.next_event.when)
-        if (
-            self.next_event is not None
-            and self.next_event.target_when is not None
-            and self.next_event.when <= now
-            and self._is_applied_preconditioning_event(self.next_event)
-        ):
-            candidates.append(self.next_event.target_when)
+        if self.mode == MODE_AUTO:
+            events = self._iter_future_events(now, clear_applied=False)
+            if self._timer_cursor is not None and self._timer_cursor < dt_util.as_utc(now):
+                scan_from = (self._timer_cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
+                if any(
+                    self._timer_cursor < dt_util.as_utc(event.target_when or event.when) <= dt_util.as_utc(now)
+                    and not self._is_applied_preconditioning_event(event)
+                    for event in self._iter_future_events(scan_from, clear_applied=False)
+                ):
+                    candidates.append(now)
+            # Retain the direct-call fallback used by scheduler consumers/tests.
+            if not events and self.next_event is not None:
+                events = [self.next_event]
+            for event in events:
+                action = event.when
+                if self._is_applied_preconditioning_event(event) or (
+                    event.target_when is not None
+                    and dt_util.as_utc(event.when) <= dt_util.as_utc(now)
+                    and self._was_preconditioning_attempted(event)
+                ):
+                    action = event.target_when
+                if action is not None:
+                    candidates.append(action)
 
         if self._preconditioning_sessions:
             candidates.append(
@@ -10841,7 +11514,7 @@ class VelairScheduler:
         if zone_expiration is not None:
             candidates.append(zone_expiration)
 
-        return min(candidates) if candidates else None
+        return min(candidates, key=dt_util.as_utc) if candidates else None
 
     def _get_global_mode_expiration(self) -> datetime | None:
         """Return the temporary global mode expiration time."""

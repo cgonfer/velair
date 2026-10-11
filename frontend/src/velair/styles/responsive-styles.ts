@@ -151,7 +151,7 @@ export const responsiveStyles = css`
       border: 0;
       border-radius: 0;
       column-gap: 4px;
-      grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) minmax(70px, 0.72fr) 30px 30px;
+      grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) minmax(96px, 0.72fr) 30px 30px;
       padding: 0;
       row-gap: 8px;
     }
@@ -169,6 +169,7 @@ export const responsiveStyles = css`
     }
 
     .editable-block > label > .label,
+    .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label {
       display: none;
     }
@@ -196,6 +197,23 @@ export const responsiveStyles = css`
     .editable-block .range-temperature-field input {
       font-size: 12px;
       padding-inline: 1px;
+    }
+
+    .editable-block .target-action-field,
+    .editable-block .target-action-range {
+      grid-template-columns: minmax(0, 1fr) 30px;
+    }
+
+    .editable-block .target-action-field input[type="number"] {
+      appearance: textfield;
+      font-size: 12px;
+      padding-inline: 3px;
+    }
+
+    .editable-block .target-action-field input::-webkit-inner-spin-button,
+    .editable-block .target-action-field input::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
     }
 
     .range-input-label {
@@ -344,7 +362,7 @@ export const responsiveStyles = css`
       border: 0;
       border-radius: 0;
       column-gap: 4px;
-      grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) minmax(70px, 0.72fr) 30px 30px;
+      grid-template-columns: minmax(76px, 0.9fr) minmax(86px, 1.1fr) minmax(96px, 0.72fr) 30px 30px;
       padding: 0;
       row-gap: 8px;
     }
@@ -362,6 +380,7 @@ export const responsiveStyles = css`
     }
 
     .editable-block > label > .label,
+    .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label {
       display: none;
     }
@@ -389,6 +408,23 @@ export const responsiveStyles = css`
     .editable-block .range-temperature-field input {
       font-size: 12px;
       padding-inline: 1px;
+    }
+
+    .editable-block .target-action-field,
+    .editable-block .target-action-range {
+      grid-template-columns: minmax(0, 1fr) 30px;
+    }
+
+    .editable-block .target-action-field input[type="number"] {
+      appearance: textfield;
+      font-size: 12px;
+      padding-inline: 3px;
+    }
+
+    .editable-block .target-action-field input::-webkit-inner-spin-button,
+    .editable-block .target-action-field input::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
     }
 
     .range-input-label {
@@ -645,6 +681,7 @@ export const responsiveStyles = css`
     }
 
     .editable-block > label:first-child { grid-area: time; }
+    .editable-block > .block-time-field { grid-area: time; }
     .editable-block > label:nth-child(2) { grid-area: mode; }
     .editable-block > .single-temperature-field,
     .editable-block > .temperature-range-fields { grid-area: target; }
@@ -652,6 +689,7 @@ export const responsiveStyles = css`
     .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
     .editable-block > .icon-button.danger { grid-area: delete; }
     .editable-block > label > .label,
+    .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label { display: block; }
   }
 
@@ -677,6 +715,7 @@ export const responsiveStyles = css`
     }
 
     .editable-block > label:first-child { grid-area: time; }
+    .editable-block > .block-time-field { grid-area: time; }
     .editable-block > label:nth-child(2) { grid-area: mode; }
     .editable-block > .single-temperature-field,
     .editable-block > .temperature-range-fields { grid-area: target; }
@@ -684,6 +723,7 @@ export const responsiveStyles = css`
     .editable-block > .advanced-climate-options-placeholder { grid-area: options; }
     .editable-block > .icon-button.danger { grid-area: delete; }
     .editable-block > label > .label,
+    .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label { display: block; }
   }
 `;

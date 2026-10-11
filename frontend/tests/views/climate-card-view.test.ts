@@ -41,6 +41,34 @@ function host(external = false): VelairViewHost {
 }
 
 describe("climate card view", () => {
+  it.each([false, true])("opens household return independently of selected climate and supports direct/More close, overflow=%s", (overflow) => {
+    const value = host(true) as VelairViewHost & Record<string, any>;
+    value._config.climate_actions = [{ type: "planned-return", placement: overflow ? "more" : "auto", hide_name: true }];
+    value.hass!.states!["climate.office"].state = "unavailable";
+    value._data!.planned_return_status = { state: "error", episode_active: true, can_start: false, can_cancel: true, occupancy: "unknown", sources: [], return_at: null } as never;
+    value._openClimateCardPlannedReturn = vi.fn(); value._closeClimateCardPlannedReturn = vi.fn(() => true);
+    value._setPlannedReturnBusy = vi.fn(); value._setPlannedReturnDirty = vi.fn(); value._applyScheduleData = vi.fn();
+    value._climateCardActionsMenuOpen = overflow;
+    const container = document.createElement("div"); render(renderClimateCard(value, "climate.office"), container);
+    const action = container.querySelector<HTMLButtonElement>("button.planned-return")!;
+    expect(action.disabled).toBe(false); expect(action.getAttribute("aria-controls")).toBe("climate-card-return-pane");
+    expect(action.classList.contains("name-hidden")).toBe(!overflow); action.click();
+    expect(value._openClimateCardPlannedReturn).toHaveBeenCalledOnce();
+    if (overflow) expect(value._closeClimateCardActionsMenu).toHaveBeenCalled();
+    value._climateCardPlannedReturnOpen = true; render(renderClimateCard(value, "climate.office"), container);
+    const child = container.querySelector("velair-planned-return") as HTMLElement & Record<string, any>;
+    expect(child).not.toBeNull(); expect(child.settings).toBe(false); expect(child.compact).toBe(true); expect(child.embedded).toBe(true);
+    expect(child.embedded).toBe(true); expect(child.data).toBe(value._data);
+    expect(container.querySelector(".climate-card-control-surface")).toBeNull();
+    expect(container.querySelector(".climate-card-return-close") !== null).toBe(overflow);
+    child.dispatchEvent(new CustomEvent("planned-return-busy", { detail: true }));
+    child.dispatchEvent(new CustomEvent("velair-dirty-changed", { detail: { dirty: true } }));
+    child.dispatchEvent(new CustomEvent("planned-return-updated", { detail: value._data }));
+    expect(value._setPlannedReturnBusy).toHaveBeenCalledWith(true); expect(value._setPlannedReturnDirty).toHaveBeenCalledWith(true); expect(value._applyScheduleData).toHaveBeenCalledWith(value._data);
+    value._plannedReturnBusy = true; render(renderClimateCard(value, "climate.office"), container);
+    expect(container.querySelector<HTMLButtonElement>("button.planned-return")!.disabled).toBe(true);
+    if (overflow) expect(container.querySelector<HTMLButtonElement>(".climate-card-return-close")!.disabled).toBe(true);
+  });
   it("shows compact read-only controls in Automatic and enables them only in Manual adjustment", () => {
     const automaticContainer = document.createElement("div");
     const automatic = host();
@@ -1494,6 +1522,10 @@ describe("climate card view", () => {
     expect(climateCardStyles.cssText).toContain("grid-column: 1; grid-row: 1");
     expect(climateCardStyles.cssText).not.toContain(".climate-card-control-bridge");
     expect(climateCardStyles.cssText).toContain(".climate-card-control-toolbar");
+    expect(climateCardStyles.cssText).toContain("button.icon-only:not(.panel-open) { gap: 0; }");
+    expect(climateCardStyles.cssText).toContain("var(--velair-planned-return-color, #9575cd)");
+    expect(climateCardStyles.cssText).not.toContain(".climate-card-control-pane { border-width: 0; }");
+    expect(climateCardStyles.cssText).toMatch(/\.climate-card-control-reason\s*\{[^}]*contain: inline-size;[^}]*overflow-wrap: anywhere/);
     expect(climateCardStyles.cssText).toContain("border-radius: 11px 11px 0 0");
     expect(climateCardStyles.cssText).toContain("font-size: 10px");
     expect(climateCardStyles.cssText).toContain("border-radius: 0 11px 11px 0");

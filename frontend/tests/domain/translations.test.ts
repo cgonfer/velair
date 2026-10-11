@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { languageFromHass, translate } from "../../src/velair/i18n";
+import { dictionaryLabel, languageFromHass, translate, weekdayName } from "../../src/velair/i18n";
+import { translationTemplate } from "../../src/velair/translations/template";
 import { TRANSLATIONS } from "../../src/velair/translations";
 import { de } from "../../src/velair/translations/de";
 import { en } from "../../src/velair/translations/en";
@@ -66,18 +67,35 @@ function occurrenceCount(value: string, term: string): number {
 }
 
 describe("supported translations", () => {
-  it("provide every source key with matching placeholders", () => {
+  it("validates every included key while allowing deferred translations", () => {
     const sourceEntries = new Map(translationEntries(en));
 
     for (const [language, dictionary] of Object.entries(completeTranslations)) {
       const entries = new Map(translationEntries(dictionary));
-      expect([...entries.keys()].sort(), `${language} keys`)
-        .toEqual([...sourceEntries.keys()].sort());
-      for (const [key, source] of sourceEntries) {
-        expect(entries.get(key), `${language}.${key}`).not.toBe("");
-        expect(placeholders(entries.get(key) ?? ""), `${language}.${key} placeholders`)
+      for (const [key, text] of entries) {
+        expect(sourceEntries.has(key), `${language}.${key} source`).toBe(true);
+        const source = sourceEntries.get(key)!;
+        expect(text.trim(), `${language}.${key}`).not.toBe("");
+        expect(placeholders(text), `${language}.${key} placeholders`)
           .toEqual(placeholders(source));
       }
+    }
+  });
+
+  it("keeps the empty template synchronized with canonical English", () => {
+    expect(translationEntries(translationTemplate).map(([key]) => key).sort())
+      .toEqual(translationEntries(en).map(([key]) => key).sort());
+    expect(translationStrings(translationTemplate).every(value => value === "")).toBe(true);
+  });
+
+  it("falls back to English for missing strings and nested values", () => {
+    TRANSLATIONS["audit-partial"] = {};
+    try {
+      expect(translate("audit-partial", "appliedDays", { count: 3 })).toBe(en.appliedDays.replace("{count}", "3"));
+      expect(dictionaryLabel("audit-partial", "hvacModes", "cool")).toBe(en.hvacModes.cool);
+      expect(weekdayName("audit-partial", "monday")).toBe(en.weekdays.monday);
+    } finally {
+      delete TRANSLATIONS["audit-partial"];
     }
   });
 
@@ -166,8 +184,8 @@ describe("supported translations", () => {
         continue;
       }
       const entries = new Map(translationEntries(dictionary));
-      for (const [key, source] of sourceEntries) {
-        const translated = entries.get(key) ?? "";
+      for (const [key, translated] of entries) {
+        const source = sourceEntries.get(key)!;
         for (const term of RESERVED_TRANSLATION_TERMS) {
           expect(
             occurrenceCount(translated, term),

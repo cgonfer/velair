@@ -1,4 +1,9 @@
 # Resilient Climate Delivery
+<!-- velair-docs:start -->
+Translations: [English original](resilient-climate-delivery.md) · [Español](resilient-climate-delivery.es.md) · [Français](resilient-climate-delivery.fr.md) · [Deutsch](resilient-climate-delivery.de.md) · [Italiano](resilient-climate-delivery.it.md) · [Nederlands](resilient-climate-delivery.nl.md) · [Polski](resilient-climate-delivery.pl.md) · [Português (Brasil)](resilient-climate-delivery.pt-br.md) · [Português (Portugal)](resilient-climate-delivery.pt-pt.md) · [Русский](resilient-climate-delivery.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Velair keeps scheduler-owned climate intent safe when a managed thermostat is
 temporarily reconnecting.

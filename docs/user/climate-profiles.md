@@ -1,4 +1,9 @@
 # Climate Profiles
+<!-- velair-docs:start -->
+Translations: [English original](climate-profiles.md) · [Español](climate-profiles.es.md) · [Français](climate-profiles.fr.md) · [Deutsch](climate-profiles.de.md) · [Italiano](climate-profiles.it.md) · [Nederlands](climate-profiles.nl.md) · [Polski](climate-profiles.pl.md) · [Português (Brasil)](climate-profiles.pt-br.md) · [Português (Portugal)](climate-profiles.pt-pt.md) · [Русский](climate-profiles.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Climate profiles let Velair switch several climate zones between coordinated
 weekly plans without replacing their default schedules. Home Assistant remains
@@ -50,15 +55,22 @@ For each managed climate, choose one behavior:
 - **Profile schedule**: use a complete weekly schedule stored in the Profile.
 - **Pause** with **Leave thermostat unchanged**: stop scheduled changes and
   leave the climate as it is.
-- **Pause** with **Turn thermostat off**: stop scheduled changes and turn the
+- **Pause** with **Turn climate off**: stop scheduled changes and turn the
   climate off.
 
 Zones that are not configured in a profile continue using their default
-schedules. Schedule templates can be copied into profile days as editing aids,
-but profiles do not keep live links to templates. A configured profile day can
-also be cloned to one or more other weekdays in the same zone. The copied
-blocks keep their complete climate configuration, including supported HVAC,
-fan, preset, swing, and humidity options.
+schedules. Templates can still be copied as independent blocks, or a Default
+or Profile weekday can link only its hours to a template and keep its own
+climate settings, or follow the complete template with all controls read-only.
+Templates and independent blocks can reference shared Velair presets. See
+[Block presets and linked templates](linked-schedules.md) for propagation,
+unlinking, compatibility, and shared-edit rules, and
+[the Winter/Summer example](linked-schedule-examples.md#2-winter-and-summer-with-one-set-of-times)
+for different climate settings sharing the same hours. Cloning a day preserves
+its template link type, hours-only assignments, and block-preset references.
+Cloning to another thermostat validates the proposed Profile before applying
+the draft; other destination days keep their existing links. Use Unlink after
+cloning if the new day should be independent of the template.
 
 For a zone delegated to an external controller, Profiles and Modes select the
 effective full week that Velair publishes instead of causing direct
@@ -289,6 +301,15 @@ atomic change. Deleting the selected mode leaves its active profiles in place
 and changes the selector to **Manual**. Deleting a profile also removes the
 Modes mapped to it and removes only that profile from the active set; Velair
 returns to **Default** when the set becomes empty.
+
+## Seasonal selection
+
+The [seasonal climate selection blueprint](blueprints/seasonal-climate-selection.md)
+can choose a Mode from a daily maximum or other temperature sensor after a
+stable change. Link winter and summer Profiles to the same template's hours
+and give them different presets. Configure a mild-weather Profile with pause
+and turn-off when no climatization is wanted. Coordinate this automation with
+presence rules: another stable reading can replace a manually selected Away Mode.
 
 ## Interactions
 

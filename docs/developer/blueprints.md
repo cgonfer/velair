@@ -20,10 +20,18 @@ arbitrary Home Assistant actions; the actions a user chooses may still depend
 on Velair. The window blueprint requires Velair 1.6.0 for owned simultaneous
 pause reasons. Both require Home Assistant 2024.6.0 or newer.
 
-Keep the version and compatibility statement inside `blueprint.description` so
-Home Assistant shows it during import and configuration. A header comment may
-repeat the statement. Do not add custom version or Velair requirement keys to
-the Home Assistant `blueprint:` mapping.
+Seasonal climate selection is version 1.0.0, included with Velair 1.9.0-beta.1.
+It requires Home Assistant 2024.6.0 and no intrinsic minimum Velair version
+because its actions are generic.
+
+The occupancy and window blueprints retain their version and compatibility
+statements inside `blueprint.description`. Seasonal climate selection uses a
+short behavior-focused description; its technical versions and compatibility
+are recorded in YAML header comments, the canonical manifest, changelog, and
+user documentation. Keep these records consistent. The native
+`homeassistant.min_version` continues to enforce the minimum runtime during
+import. Do not add custom version or Velair requirement keys to the Home
+Assistant `blueprint:` mapping.
 
 The compatibility rules are:
 
@@ -38,6 +46,10 @@ The compatibility rules are:
 - Snapshot normalized selector behavior, including selector type, filters,
   `multiple`, option values, and mode. Exclude option display labels so copy
   changes and translations are not treated as breaking behavior.
+- Adding notification-language options while retaining existing values and the
+  default is compatible. Extend the selector snapshot additively; do not remove
+  or rename existing language values. The seasonal language contract follows
+  the same discovered translation modules as Velair's translation index.
 - Publish a breaking change under a new filename ending in `_vN.yaml`, where
   `N` is the new major version. Keep the previous major available at its
   established URL.
@@ -60,7 +72,7 @@ docs/user/blueprints/<descriptive-slug>.md
 ## Adding a blueprint
 
 1. Add the YAML blueprint with a new stable filename, version and requirements
-   in its description, stable `source_url`, author, domain, and minimum Home
+   in its description or technical headers, stable `source_url`, author, domain, and minimum Home
    Assistant version.
 2. Add exactly one entry to `blueprints/manifest.json` and create its individual
    changelog.
@@ -69,7 +81,9 @@ docs/user/blueprints/<descriptive-slug>.md
 4. Add one detail page using every required section below.
 5. Add the initial major-version input snapshot and update the blueprint
    documentation contract tests.
-6. Run the relevant checks required by `AGENTS.md`.
+6. Run `python -m unittest discover -s tests/docs` and
+   `node scripts/documentation-translations.mjs check`. If the blueprint changes
+   runtime behavior, also run the applicable backend and Home Assistant tests.
 
 Do not add blueprint configuration to Velair storage. Home Assistant owns the resulting automation.
 
@@ -111,8 +125,9 @@ HACS integration installation does not copy these files into a Home Assistant bl
 
 - a one-to-one mapping between YAML files and the canonical manifest;
 - semantic version, compatibility, stable `source_url`, and changelog metadata;
-- the version and requirements visible in each blueprint description without
-  unsupported metadata keys;
+- version and compatibility statements in legacy blueprint descriptions or
+  seasonal technical headers, with native minimum-runtime metadata and no
+  unsupported schema keys;
 - exact, append-only snapshot coverage for every version 1 blueprint, including
   input identifiers, defaults, `introduced_in`, and normalized selector
   behavior, plus defaults for inputs introduced after 1.0.0;
@@ -124,6 +139,23 @@ HACS integration installation does not copy these files into a Home Assistant bl
 - matching repository, catalog, import, and detail URLs;
 - alphabetical catalog order;
 - the complete section template for every detail page.
+
+Seasonal behavior also has isolated real Home Assistant automation-engine
+tests, separately from the integration's stub-based unit suite. Keep this suite
+in CI when changing triggers or templates: static YAML checks cannot verify
+native timers, availability interruption, and notification behavior.
+
+In a separate Python 3.12 environment, install the pinned requirements and run:
+
+```shell
+python -m pip install -r tests/ha_blueprints/requirements.txt
+python -m pytest -c tests/ha_blueprints/pytest.ini tests/ha_blueprints -q
+```
+
+This suite targets Home Assistant 2024.6.4, checking the blueprint's declared
+minimum runtime. CI runs it as the separate `blueprint-runtime-tests` job.
+Do not run it in the same Python process as the integration tests: their Home
+Assistant stubs deliberately replace modules used by the real runtime.
 
 Blueprint discovery remains documentation-owned; adding a blueprint does not
 add frontend state or panel configuration. The manifest is a repository and

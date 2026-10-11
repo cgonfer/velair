@@ -1,0 +1,358 @@
+# Velair blueprint version: 1.0.0
+# Released with Velair: 1.9.0-beta.1 (Velair is only required by configured actions)
+# Minimum Home Assistant version: 2024.6.0
+# Velair is only required by configured actions.
+blueprint:
+  name: Velair - Seasonal climate selection
+  description: >-
+    Run winter, mild-weather, or summer actions from an outdoor, average, or
+    forecast maximum temperature sensor after its changed value remains stable.
+    Each new temperature restarts the delay. Invalid readings create an immediate
+    notification. Startup checks diagnostics only; empty actions leave current
+    operation unchanged.
+  domain: automation
+  author: Cristian Gonzalez Fernandez
+  source_url: https://github.com/cgonfer/velair/blob/main/blueprints/automation/velair/seasonal_climate_selection.yaml
+  homeassistant:
+    min_version: 2024.6.0
+  input:
+    temperature:
+      name: Temperature
+      icon: mdi:thermometer
+      input:
+        temperature_sensor:
+          name: Reference temperature
+          description: >-
+            A measured, mean, or forecast maximum temperature sensor declaring
+            °C or °F. Prepare forecast sensors separately in Home Assistant.
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: temperature
+        threshold_unit:
+          name: Temperature unit for thresholds
+          description: Enter both thresholds in this unit. Sensor readings are converted automatically.
+          default: °C
+          selector:
+            select:
+              options:
+                - °C
+                - °F
+        winter_threshold:
+          name: Winter below
+          description: Winter actions run below this value. Equality is mild weather.
+          default: 20
+          selector:
+            number:
+              min: -100
+              max: 150
+              step: 0.1
+              mode: box
+        summer_threshold:
+          name: Summer above
+          description: Summer actions run above this value. Equality is mild weather.
+          default: 27
+          selector:
+            number:
+              min: -100
+              max: 150
+              step: 0.1
+              mode: box
+    behaviors:
+      name: Seasonal behaviors
+      icon: mdi:weather-partly-cloudy
+      input:
+        winter_actions:
+          name: Winter actions
+          description: For example, select your Winter Mode using select.select_option.
+          default: []
+          selector:
+            action: {}
+        mild_actions:
+          name: Mild-weather actions
+          description: >-
+            Select a Mode configured to pause and turn off climates if desired.
+            Leaving this empty preserves current operation; it does not turn off.
+          default: []
+          selector:
+            action: {}
+        summer_actions:
+          name: Summer actions
+          description: For example, select your Summer Mode using select.select_option.
+          default: []
+          selector:
+            action: {}
+    timing:
+      name: Timing and diagnostics
+      icon: mdi:timer-outline
+      collapsed: true
+      input:
+        stability_delay:
+          name: Stable-value delay
+          description: >-
+            Must be positive. Every temperature change restarts this delay,
+            including changes within the same season. Frequent changes can
+            prevent execution indefinitely.
+          default:
+            minutes: 30
+          selector:
+            duration: {}
+        notification_language:
+          name: Language for diagnostic notifications
+          description: >-
+            Home Assistant does not expose its language to blueprints. Choose
+            a Velair-supported language for sensor and configuration warnings.
+          default: en
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: English
+                  value: en
+                - label: Español
+                  value: es
+                - label: Deutsch
+                  value: de
+                - label: Français
+                  value: fr
+                - label: Italiano
+                  value: it
+                - label: Nederlands
+                  value: nl
+                - label: Polski
+                  value: pl
+                - label: Português (Portugal)
+                  value: pt-pt
+                - label: Português (Brasil)
+                  value: pt-br
+                - label: Русский
+                  value: ru
+
+mode: parallel
+max: 20
+max_exceeded: warning
+
+trigger_variables:
+  reference_sensor: !input temperature_sensor
+
+variables:
+  reference_sensor: !input temperature_sensor
+  threshold_unit: !input threshold_unit
+  winter_threshold: !input winter_threshold
+  summer_threshold: !input summer_threshold
+  stability_delay: !input stability_delay
+  notification_language: !input notification_language
+  notification_text: >-
+    {% set translations = {
+      'en': {
+        'sensor_title': 'Velair: temperature unavailable',
+        'sensor_message': 'Automation {automation_name} ({automation_id}) cannot use {sensor_name} ({sensor_id}): value `{value}`, unit `{unit}`. A finite number and a °C or °F unit are required. Seasonal actions are suspended; the current selection is preserved.',
+        'configuration_title': 'Velair: invalid seasonal configuration',
+        'configuration_message': 'Check {automation_name} ({automation_id}): the lower threshold must be less than the upper threshold, the unit must be °C or °F, and the delay must be positive. Seasonal actions will not run until this is corrected.'
+      },
+      'es': {
+        'sensor_title': 'Velair: temperatura no disponible',
+        'sensor_message': 'La automatización {automation_name} ({automation_id}) no puede utilizar {sensor_name} ({sensor_id}): valor `{value}`, unidad `{unit}`. Se requiere un número finito y una unidad °C o °F. Las acciones estacionales están suspendidas; se conserva la selección vigente.',
+        'configuration_title': 'Velair: configuración estacional incorrecta',
+        'configuration_message': 'Revisa {automation_name} ({automation_id}): el umbral inferior debe ser menor que el superior, la unidad debe ser °C o °F y el retraso debe ser positivo. No se ejecutarán acciones estacionales hasta corregirlo.'
+      },
+      'de': {
+        'sensor_title': 'Velair: Temperatur nicht verfügbar',
+        'sensor_message': 'Die Automation {automation_name} ({automation_id}) kann {sensor_name} ({sensor_id}) nicht verwenden: Wert `{value}`, Einheit `{unit}`. Erforderlich sind eine endliche Zahl und die Einheit °C oder °F. Saisonale Aktionen sind ausgesetzt; die aktuelle Auswahl bleibt erhalten.',
+        'configuration_title': 'Velair: ungültige saisonale Konfiguration',
+        'configuration_message': 'Prüfe {automation_name} ({automation_id}): Der untere Schwellenwert muss kleiner als der obere sein, die Einheit muss °C oder °F sein und die Verzögerung muss positiv sein. Saisonale Aktionen werden erst nach der Korrektur ausgeführt.'
+      },
+      'fr': {
+        'sensor_title': 'Velair : température indisponible',
+        'sensor_message': "L’automatisation {automation_name} ({automation_id}) ne peut pas utiliser {sensor_name} ({sensor_id}) : valeur `{value}`, unité `{unit}`. Un nombre fini et une unité °C ou °F sont nécessaires. Les actions saisonnières sont suspendues ; la sélection actuelle est conservée.",
+        'configuration_title': 'Velair : configuration saisonnière incorrecte',
+        'configuration_message': 'Vérifiez {automation_name} ({automation_id}) : le seuil inférieur doit être plus petit que le seuil supérieur, l’unité doit être °C ou °F et le délai doit être positif. Les actions saisonnières ne seront pas exécutées avant correction.'
+      },
+      'it': {
+        'sensor_title': 'Velair: temperatura non disponibile',
+        'sensor_message': 'L’automazione {automation_name} ({automation_id}) non può utilizzare {sensor_name} ({sensor_id}): valore `{value}`, unità `{unit}`. Sono necessari un numero finito e un’unità °C o °F. Le azioni stagionali sono sospese; la selezione attuale viene mantenuta.',
+        'configuration_title': 'Velair: configurazione stagionale non valida',
+        'configuration_message': 'Controlla {automation_name} ({automation_id}): la soglia inferiore deve essere minore di quella superiore, l’unità deve essere °C o °F e il ritardo deve essere positivo. Le azioni stagionali non verranno eseguite fino alla correzione.'
+      },
+      'nl': {
+        'sensor_title': 'Velair: temperatuur niet beschikbaar',
+        'sensor_message': 'Automatisering {automation_name} ({automation_id}) kan {sensor_name} ({sensor_id}) niet gebruiken: waarde `{value}`, eenheid `{unit}`. Een eindig getal en de eenheid °C of °F zijn vereist. Seizoensacties zijn onderbroken; de huidige selectie blijft behouden.',
+        'configuration_title': 'Velair: ongeldige seizoensconfiguratie',
+        'configuration_message': 'Controleer {automation_name} ({automation_id}): de onderste drempel moet lager zijn dan de bovenste, de eenheid moet °C of °F zijn en de vertraging moet positief zijn. Seizoensacties worden pas na de correctie uitgevoerd.'
+      },
+      'pl': {
+        'sensor_title': 'Velair: temperatura niedostępna',
+        'sensor_message': 'Automatyzacja {automation_name} ({automation_id}) nie może użyć {sensor_name} ({sensor_id}): wartość `{value}`, jednostka `{unit}`. Wymagana jest liczba skończona i jednostka °C lub °F. Działania sezonowe są wstrzymane; bieżący wybór zostaje zachowany.',
+        'configuration_title': 'Velair: nieprawidłowa konfiguracja sezonowa',
+        'configuration_message': 'Sprawdź {automation_name} ({automation_id}): dolny próg musi być niższy niż górny, jednostką musi być °C lub °F, a opóźnienie musi być dodatnie. Działania sezonowe nie zostaną wykonane do czasu poprawienia konfiguracji.'
+      },
+      'pt-pt': {
+        'sensor_title': 'Velair: temperatura indisponível',
+        'sensor_message': 'A automatização {automation_name} ({automation_id}) não pode utilizar {sensor_name} ({sensor_id}): valor `{value}`, unidade `{unit}`. É necessário um número finito e uma unidade °C ou °F. As ações sazonais estão suspensas; a seleção atual é mantida.',
+        'configuration_title': 'Velair: configuração sazonal inválida',
+        'configuration_message': 'Verifique {automation_name} ({automation_id}): o limite inferior deve ser menor do que o superior, a unidade deve ser °C ou °F e o atraso deve ser positivo. As ações sazonais não serão executadas até a configuração ser corrigida.'
+      },
+      'pt-br': {
+        'sensor_title': 'Velair: temperatura indisponível',
+        'sensor_message': 'A automação {automation_name} ({automation_id}) não pode usar {sensor_name} ({sensor_id}): valor `{value}`, unidade `{unit}`. São necessários um número finito e uma unidade °C ou °F. As ações sazonais estão suspensas; a seleção atual é mantida.',
+        'configuration_title': 'Velair: configuração sazonal inválida',
+        'configuration_message': 'Verifique {automation_name} ({automation_id}): o limite inferior deve ser menor que o superior, a unidade deve ser °C ou °F e o atraso deve ser positivo. As ações sazonais não serão executadas até a configuração ser corrigida.'
+      },
+      'ru': {
+        'sensor_title': 'Velair: температура недоступна',
+        'sensor_message': 'Автоматизация {automation_name} ({automation_id}) не может использовать {sensor_name} ({sensor_id}): значение `{value}`, единица `{unit}`. Требуются конечное число и единица °C или °F. Сезонные действия приостановлены; текущий выбор сохранён.',
+        'configuration_title': 'Velair: неверная сезонная конфигурация',
+        'configuration_message': 'Проверьте {automation_name} ({automation_id}): нижний порог должен быть меньше верхнего, единица должна быть °C или °F, а задержка — положительной. Сезонные действия не будут выполняться до исправления конфигурации.'
+      }
+    } %}
+    {{ translations.get(notification_language, translations['en']) }}
+  sensor_notification_id: >-
+    velair_seasonal_sensor_{{ this.entity_id | replace('.', '_') | replace('-', '_') }}
+  configuration_notification_id: >-
+    velair_seasonal_configuration_{{ this.entity_id | replace('.', '_') | replace('-', '_') }}
+  sensor_valid: >-
+    {{ is_number(states(reference_sensor)) and
+       state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F'] }}
+  configuration_valid: >-
+    {% set delay = stability_delay if stability_delay is mapping else {} %}
+    {% set seconds = (delay.get('days', 0) | float(0)) * 86400 +
+                     (delay.get('hours', 0) | float(0)) * 3600 +
+                     (delay.get('minutes', 0) | float(0)) * 60 +
+                     (delay.get('seconds', 0) | float(0)) +
+                     (delay.get('milliseconds', 0) | float(0)) / 1000 %}
+    {{ is_number(winter_threshold) and is_number(summer_threshold) and
+       winter_threshold | float < summer_threshold | float and
+       threshold_unit in ['°C', '°F'] and seconds > 0 }}
+
+trigger:
+  - platform: state
+    entity_id: !input temperature_sensor
+    to: null
+    id: temperature_changed
+  - platform: template
+    value_template: >-
+      {{ not (is_number(states(reference_sensor)) and
+              state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F']) }}
+    id: sensor_invalid
+  - platform: template
+    value_template: >-
+      {{ is_number(states(reference_sensor)) and
+         state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F'] }}
+    id: sensor_recovered
+  - platform: homeassistant
+    event: start
+    id: startup
+
+action:
+  # Diagnostics run independently of the stable-value delay and user actions.
+  - choose:
+      - conditions: "{{ not sensor_valid }}"
+        sequence:
+          - service: persistent_notification.create
+            data:
+              notification_id: "{{ sensor_notification_id }}"
+              title: "{{ notification_text.sensor_title }}"
+              message: >-
+                {{ notification_text.sensor_message.format(
+                     automation_name=this.attributes.friendly_name | default(this.entity_id),
+                     automation_id=this.entity_id,
+                     sensor_name=state_attr(reference_sensor, 'friendly_name') or reference_sensor,
+                     sensor_id=reference_sensor,
+                     value=states(reference_sensor),
+                     unit=state_attr(reference_sensor, 'unit_of_measurement')) }}
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ is_number(states(reference_sensor)) and
+                     state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F'] }}
+            then:
+              - service: persistent_notification.dismiss
+                data:
+                  notification_id: "{{ sensor_notification_id }}"
+    default:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ is_number(states(reference_sensor)) and
+                 state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F'] }}
+        then:
+          - service: persistent_notification.dismiss
+            data:
+              notification_id: "{{ sensor_notification_id }}"
+  - choose:
+      - conditions: "{{ not configuration_valid }}"
+        sequence:
+          - service: persistent_notification.create
+            data:
+              notification_id: "{{ configuration_notification_id }}"
+              title: "{{ notification_text.configuration_title }}"
+              message: >-
+                {{ notification_text.configuration_message.format(
+                     automation_name=this.attributes.friendly_name | default(this.entity_id),
+                     automation_id=this.entity_id) }}
+    default:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: "{{ configuration_notification_id }}"
+  - condition: template
+    value_template: >-
+      {{ trigger is defined and trigger.id == 'temperature_changed' and
+         sensor_valid and configuration_valid }}
+  - condition: template
+    value_template: >-
+      {{ trigger.to_state is not none and
+         is_number(states(reference_sensor)) and
+         is_number(trigger.to_state.state) and
+         states(reference_sensor) | float == trigger.to_state.state | float and
+         state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F'] and
+         state_attr(reference_sensor, 'unit_of_measurement') ==
+           trigger.to_state.attributes.get('unit_of_measurement') and
+         (trigger.from_state is none or not is_number(trigger.from_state.state) or
+          trigger.from_state.state | float != trigger.to_state.state | float) }}
+  - variables:
+      pending_temperature: "{{ states(reference_sensor) | float }}"
+      pending_unit: "{{ state_attr(reference_sensor, 'unit_of_measurement') }}"
+  # Native event-driven waiting preserves a real change across formatting-only
+  # updates. The numeric trigger evaluates each event's State snapshot so a
+  # rapid change and return cannot hide an intervening temperature change.
+  - wait_for_trigger:
+      - platform: numeric_state
+        entity_id: !input temperature_sensor
+        above: 0
+        value_template: >-
+          {{ 1 if not is_number(state.state) or
+                  state.attributes.get('unit_of_measurement') != pending_unit or
+                  state.state | float(0) != pending_temperature | float
+             else 0 }}
+      - platform: event
+        event_type: state_changed
+        event_data:
+          entity_id: !input temperature_sensor
+          new_state: null
+    timeout: !input stability_delay
+    continue_on_timeout: true
+  - condition: template
+    value_template: >-
+      {{ wait.trigger is none and is_number(states(reference_sensor)) and
+         state_attr(reference_sensor, 'unit_of_measurement') == pending_unit and
+         states(reference_sensor) | float == pending_temperature | float }}
+  - variables:
+      reference_temperature: >-
+        {% set value = states(reference_sensor) | float %}
+        {% set unit = state_attr(reference_sensor, 'unit_of_measurement') %}
+        {{ (value - 32) * 5 / 9 if unit == '°F' and threshold_unit == '°C'
+           else value * 9 / 5 + 32 if unit == '°C' and threshold_unit == '°F'
+           else value }}
+  - choose:
+      - conditions: "{{ reference_temperature | float < winter_threshold | float }}"
+        sequence:
+          - choose: []
+            default: !input winter_actions
+      - conditions: "{{ reference_temperature | float > summer_threshold | float }}"
+        sequence:
+          - choose: []
+            default: !input summer_actions
+    default:
+      - choose: []
+        default: !input mild_actions

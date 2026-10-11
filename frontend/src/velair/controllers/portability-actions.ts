@@ -1,13 +1,15 @@
 import { PORTABLE_SECTIONS } from "../constants";
+import { directPresetUseCount } from "../domain/preset-usages";
 import {
   portableExportSummaryItems,
   portableImportSummaryItems,
   portableSectionsFromPayload,
+  portableSectionsWithDependencies,
   validatePortablePayload,
   type PortableSummaryItem,
 } from "../domain/portable";
 import type { VelairApiClient } from "../api/client";
-import type { PortableSection, ScheduleResponse, ScheduleTemplate, VelairPortablePayload } from "../types";
+import type { BlockPreset, PortableSection, ScheduleResponse, ScheduleTemplate, VelairPortablePayload } from "../types";
 
 type PortableSummaryViewItem = { label: string; section: PortableSection; title: string; value: string | number };
 
@@ -26,6 +28,7 @@ type PortabilityHost = {
   _templateApplyTargets: Set<string>;
   _api(): VelairApiClient | undefined;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
+  _isScheduleResponseCurrent?(data: ScheduleResponse): boolean;
   _downloadPortablePayload(payload: VelairPortablePayload): void;
   _portableSectionLabel(section: PortableSection): string;
   _portableSummaryItem(item: PortableSummaryItem): PortableSummaryViewItem;
@@ -51,10 +54,13 @@ export function togglePortableSection(
     nextSections.delete(section);
   }
 
+  const withDependencies = portableSectionsWithDependencies(nextSections,
+    target === "export" ? host._data : host._importPayload?.sections);
+  if (withDependencies.size > nextSections.size) host._saveMessage = host._t("portableDependenciesNotice");
   if (target === "export") {
-    host._exportSections = nextSections;
+    host._exportSections = withDependencies;
   } else {
-    host._importSections = nextSections;
+    host._importSections = withDependencies;
   }
 }
 
@@ -95,9 +101,12 @@ export async function exportPortableData(host: PortabilityHost): Promise<void> {
   host._error = undefined;
   host._saveMessage = undefined;
   try {
+    host._exportSections = portableSectionsWithDependencies(host._exportSections, host._data);
     const payload = await api.exportData([...host._exportSections]);
     host._downloadPortablePayload(payload);
-    host._saveMessage = host._t("portableExported");
+    const added = portableSectionsFromPayload(payload).some((section) => !host._exportSections.has(section));
+    host._exportSections = new Set(portableSectionsFromPayload(payload));
+    host._saveMessage = host._t("portableExported") + (added ? ` ${host._t("portableDependenciesNotice")}` : "");
   } catch (error) {
     host._error = error instanceof Error ? error.message : host._t("unableExport");
   } finally {
@@ -111,11 +120,29 @@ export async function importPortableData(host: PortabilityHost): Promise<void> {
     return;
   }
 
+  host._importSections = portableSectionsWithDependencies(host._importSections, host._importPayload.sections);
+  if (host._importSections.has("block_presets")) {
+    const existing = new Map((host._data?.block_presets ?? []).map((preset) => [preset.key, preset]));
+    const incoming = host._importPayload.sections?.block_presets;
+    const replacements = (Array.isArray(incoming) ? incoming as BlockPreset[] : []).filter((preset) => {
+      const current = existing.get(preset.key);
+      return current && JSON.stringify(current) !== JSON.stringify(preset);
+    });
+    if (replacements.length) {
+      const details = replacements.map((preset) => {
+        const uses = directPresetUseCount(host._data?.resource_usages?.presets?.[preset.key] ?? []);
+        return `${existing.get(preset.key)?.name ?? preset.name}: ${uses}`;
+      }).join("\n");
+      if (!window.confirm(`${host._t("presetImportOverwriteConfirm")}\n${details}`)) return;
+    }
+  }
+
   host._portabilityAction = "import";
   host._error = undefined;
   host._saveMessage = undefined;
   try {
     const data = await api.importData(host._importPayload, [...host._importSections]);
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._applyScheduleData(data, { forceDraft: true });
     host._saveMessage = host._t("portableImported");
   } catch (error) {
@@ -140,6 +167,7 @@ export async function resetVelairData(host: PortabilityHost): Promise<void> {
   host._saveMessage = undefined;
   try {
     const data = await api.resetData();
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._selectedTemplateKey = "";
     host._templateApplyOpen = false;
     host._templateApplyTargets = new Set();
@@ -160,6 +188,7 @@ export function portableExportItems(host: PortabilityHost): PortableSummaryViewI
   return portableExportSummaryItems(new Set(PORTABLE_SECTIONS), {
     zones: host._data?.configured_entities.length ?? 0,
     templates: host._scheduleTemplates().length,
+    blockPresets: host._data?.block_presets?.length ?? 0,
     preconditioningLearning: Object.values(host._data?.preconditioning_learning ?? {})
       .filter((learning) => learning.total_samples > 0).length,
     profiles: host._data?.profiles?.length ?? 0,
@@ -186,6 +215,8 @@ export function portableSummaryItem(
 
 export function portableSectionLabel(host: PortabilityHost, section: PortableSection): string {
   switch (section) {
+    case "planned_return": return host._t("plannedReturn");
+    case "block_presets": return host._t("blockPresets");
     case "modes":
       return host._t("portabilityModesSection");
     case "profiles":

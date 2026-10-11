@@ -1,5 +1,7 @@
-import { ACTION_SET_CLIMATE_OPTIONS, WEEKDAYS } from "../constants";
-import { UnsupportedClimateOptionsError } from "../domain/draft-blocks";
+import { backendErrorMessage } from "../domain/backend-errors";
+import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, WEEKDAYS } from "../constants";
+import { createTemplateImpact, normalizeTemplateBlocks, templateImpactAssignments } from "./template-impact";
+import { cancelTemplatePreview, refreshTemplatePreview, templateDraftFingerprint } from "./template-preview";
 import {
   newTemplateKey,
   templateApplyTargetKey,
@@ -10,7 +12,13 @@ import {
 import type { VelairApiClient } from "../api/client";
 import type { DraftScheduleBlock, NormalizedBlocks, ScheduleBlock, ScheduleResponse, ScheduleTemplate } from "../types";
 
-type TemplateActionsHost = {
+export type TemplateActionsHost = {
+  _templatePreviewPending?: boolean;
+  _templatePreviewError?: string;
+  _templateLinkedDaysOpen?: boolean;
+  _draftTemplateLink?: import("../types").TemplateLink;
+  _templateImpact?: import("./template-impact").TemplateImpact;
+  _templateConfigurationRevision?: number;
   readonly renderRoot: Element | ShadowRoot;
   _applyingTemplateTargets: boolean;
   _data?: ScheduleResponse;
@@ -32,7 +40,8 @@ type TemplateActionsHost = {
   _templateNameDraftKey: string;
   _api(): VelairApiClient | undefined;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
-  _applySelectedTemplate(): boolean;
+  _isScheduleResponseCurrent?(data: ScheduleResponse): boolean;
+  _applySelectedTemplate(): Promise<boolean>;
   _clampBlocksForEntity(blocks: ScheduleBlock[], entityId: string): ScheduleBlock[];
   _markDirty(): void;
   _newTemplateKey(): string;
@@ -71,7 +80,7 @@ export function selectTemplate(host: TemplateActionsHost, key: string): void {
   host._saveMessage = undefined;
 }
 
-export function selectScheduleTemplate(host: TemplateActionsHost, key: string): void {
+export async function selectScheduleTemplate(host: TemplateActionsHost, key: string): Promise<void> {
   const previousKey = host._selectedTemplateKey;
   host._selectedTemplateKey = key;
   host._saveMessage = undefined;
@@ -79,15 +88,20 @@ export function selectScheduleTemplate(host: TemplateActionsHost, key: string): 
     return;
   }
 
-  if (!host._applySelectedTemplate()) {
-    host._selectedTemplateKey = previousKey;
+  if (!await host._applySelectedTemplate()) {
+    if (host._selectedTemplateKey === key) host._selectedTemplateKey = previousKey;
     return;
   }
 
-  host._selectedTemplateKey = "";
+  if (host._selectedTemplateKey === key) host._selectedTemplateKey = "";
 }
 
 export function resetTemplateDraft(host: TemplateActionsHost, template?: ScheduleTemplate): void {
+  cancelTemplatePreview(host);
+  host._templateImpact = undefined;
+  host._templatePreviewError = undefined;
+  host._templateLinkedDaysOpen = false;
+  host._templateConfigurationRevision = host._data?.configuration_revision;
   host._templateDraftKey = template?.key ?? "";
   host._templateDraftBlocks = template ? normalizeTemplateDraftBlocks(template.blocks) : [];
   host._templateDirty = false;
@@ -160,6 +174,7 @@ export async function createTemplate(host: TemplateActionsHost): Promise<void> {
   host._saveMessage = undefined;
   try {
     const data = await api.setScheduleTemplate(key, name, []);
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._applyScheduleData(data);
     host._selectedTemplateKey = key;
     host._templateNameDraftKey = key;
@@ -167,7 +182,7 @@ export async function createTemplate(host: TemplateActionsHost): Promise<void> {
     host._resetTemplateDraft(host._scheduleTemplates().find((template: ScheduleTemplate) => template.key === key));
     host._showSuccess(host._t("templateSaved"));
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableSaveTemplate");
+    host._error = backendErrorMessage(error, host._t("unableSaveTemplate"));
   } finally {
     host._templateAction = undefined;
   }
@@ -187,7 +202,7 @@ export async function saveSelectedTemplateFromLibrary(
     host._error = host._t("templateNameRequired");
     return;
   }
-  const normalized = host._normalizeDraftBlocks("template");
+  const normalized = normalizeTemplateBlocks(host, host._templateDraftBlocks);
   if (!normalized.ok) {
     host._error = normalized.error;
     return;
@@ -197,15 +212,28 @@ export async function saveSelectedTemplateFromLibrary(
   host._error = undefined;
   host._saveMessage = undefined;
   try {
-    const data = await api.setScheduleTemplate(template.key, name, normalized.blocks);
+    const impact = await refreshTemplatePreview(host);
+    if (!impact) { host._templateLinkedDaysOpen = true; host._error = host._templatePreviewError; return; }
+    const assignments = templateImpactAssignments(host, impact);
+    if (!assignments || impact.preview.pending?.length || impact.preview.destination_errors?.length) {
+      host._templateLinkedDaysOpen = true;
+      return;
+    }
+    const snapshot = templateDraftFingerprint(host, false);
+    const data = await api.setScheduleTemplate(template.key, name, impact.preview.template.blocks, {
+      expected_revision: impact.preview.configuration_revision, assignments,
+    });
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
+    const unchanged = snapshot === templateDraftFingerprint(host, false);
     host._applyScheduleData(data);
+    if (!unchanged) return;
     host._selectedTemplateKey = template.key;
     host._templateNameDraftKey = template.key;
     host._templateNameDraft = name;
     host._resetTemplateDraft(host._scheduleTemplates().find((item: ScheduleTemplate) => item.key === template.key));
     host._showSuccess(host._t("templateSaved"));
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableSaveTemplate");
+    host._error = backendErrorMessage(error, host._t("unableSaveTemplate"));
   } finally {
     host._templateAction = undefined;
   }
@@ -244,53 +272,38 @@ export async function applyTemplateToTargets(host: TemplateActionsHost, template
     return;
   }
 
-  const normalized = host._normalizeDraftBlocks("template");
-  if (!normalized.ok) {
-    host._error = normalized.error;
-    return;
-  }
-
+  const normalized = normalizeTemplateBlocks(host, host._templateDraftBlocks);
+  if (!normalized.ok) { host._error = normalized.error; return; }
   const targets = templateApplyTargetsFromKeys(host._templateApplyTargets, host._data?.configured_entities ?? []);
-
-  if (!targets.length) {
-    return;
-  }
-
-  for (const target of targets) {
-    const unsupportedModeError = host._unsupportedModeError(normalized.blocks, target.entityId);
-    if (unsupportedModeError) {
-      host._error = unsupportedModeError;
-      return;
-    }
-  }
-
-  const targetBlocks = new Map<string, ScheduleBlock[]>();
-  let checkedEntityId = "";
-  try {
-    for (const target of targets) {
-      checkedEntityId = target.entityId;
-      targetBlocks.set(target.entityId, host._clampBlocksForEntity(normalized.blocks, target.entityId));
-    }
-  } catch (error) {
-    host._error = error instanceof UnsupportedClimateOptionsError
-      ? host._t("climateOptionsUnsupportedAt", { entity: checkedEntityId, start: error.start })
-      : error instanceof Error ? error.message : host._t("unableCopy");
-    return;
-  }
-
+  if (!targets.length) return;
+  const blocks = normalized.blocks.map(({ slot_id: _slot, ...block }) => block);
+  const fingerprint = () => JSON.stringify([host._templateDraftKey, host._templateDraftBlocks, [...host._templateApplyTargets].sort(), host._scheduleTemplates().find((item) => item.key === template.key), host._data?.block_presets]);
+  const snapshot = fingerprint();
+  const acceptedRevisions = new Set([host._data?.configuration_revision]);
+  const isCurrent = () => fingerprint() === snapshot && acceptedRevisions.has(host._data?.configuration_revision);
   host._applyingTemplateTargets = true;
   host._error = undefined;
   host._saveMessage = undefined;
   try {
-    let data;
+    const targetBlocks = new Map<string, ScheduleBlock[]>();
     for (const target of targets) {
-      data = await api.setDailySchedule(
-        target.entityId,
-        target.weekday,
-        targetBlocks.get(target.entityId) ?? [],
-      );
+      const preview = await api.previewDailySchedule(target.entityId, target.weekday, { blocks });
+      if (!isCurrent()) return;
+      if (!Array.isArray(preview.materialized_blocks)) throw new Error(host._t("unableCopy"));
+      targetBlocks.set(templateApplyTargetKey(target.entityId, target.weekday), preview.materialized_blocks);
     }
-
+    let data: ScheduleResponse | undefined;
+    for (const target of targets) {
+      if (!isCurrent()) return;
+      data = await api.setDailySchedule(
+        target.entityId, target.weekday,
+        targetBlocks.get(templateApplyTargetKey(target.entityId, target.weekday))!,
+        ...(host._data?.configuration_revision !== undefined ? [{ expected_revision: data?.configuration_revision ?? host._data.configuration_revision, unlink_template: Boolean(host._data?.zones[target.entityId]?.template_links?.[target.weekday]) }] : []),
+      );
+      if (host._isScheduleResponseCurrent?.(data) === false) return;
+      acceptedRevisions.add(data.configuration_revision);
+    }
+    if (!isCurrent()) return;
     if (data) {
       host._applyScheduleData(data, { forceDraft: true });
     }
@@ -305,45 +318,41 @@ export async function applyTemplateToTargets(host: TemplateActionsHost, template
   }
 }
 
-export function applySelectedTemplate(host: TemplateActionsHost): boolean {
-  const template = host._scheduleTemplates().find((item: ScheduleTemplate) => item.key === host._selectedTemplateKey);
-  if (!template) {
+export async function applySelectedTemplate(host: TemplateActionsHost): Promise<boolean> {
+  const api = host._api();
+  const template = host._scheduleTemplates().find((item) => item.key === host._selectedTemplateKey);
+  if (!api || !template || !host._selectedEntity) return false;
+  if (host._draftBlocks.length && !window.confirm(host._t("confirmTemplate", { template: host._templateLabel(template), weekday: host._weekdayName(host._selectedWeekday) }))) return false;
+  const entity = host._selectedEntity;
+  const day = host._selectedWeekday;
+  const fingerprint = () => JSON.stringify([host._selectedEntity, host._selectedWeekday, host._selectedTemplateKey, host._data?.configuration_revision, host._draftBlocks, host._draftTemplateLink, host._scheduleTemplates().find((item) => item.key === template.key)]);
+  const snapshot = fingerprint();
+  try {
+    const normalized = normalizeTemplateBlocks(host, template.blocks);
+    if (!normalized.ok) { host._error = normalized.error; return false; }
+    const raw = normalized.blocks.map(({ slot_id: _slot, ...block }) => block);
+    const preview = await api.previewDailySchedule(entity, day, { blocks: raw });
+    if (fingerprint() !== snapshot) return false;
+    if (!Array.isArray(preview.materialized_blocks)) throw new Error(host._t("unableCopy"));
+    host._draftBlocks = normalizeTemplateDraftBlocks(preview.materialized_blocks).map(({ slot_id: _slot, ...block }) => block);
+    host._draftTemplateLink = undefined;
+    host._markDirty();
+    host._saveMessage = undefined;
+    return true;
+  } catch (error) {
+    if (fingerprint() === snapshot) host._error = backendErrorMessage(error, host._t("unableCopy"));
     return false;
   }
-
-  if (host._selectedEntity) {
-    const unsupportedModeError = host._unsupportedModeError(template.blocks, host._selectedEntity);
-    if (unsupportedModeError) {
-      host._error = unsupportedModeError;
-      host._saveMessage = undefined;
-      return false;
-    }
-  }
-
-  if (host._draftBlocks.length) {
-    const confirmed = window.confirm(
-      host._t("confirmTemplate", {
-        template: host._templateLabel(template),
-        weekday: host._weekdayName(host._selectedWeekday),
-      }),
-    );
-    if (!confirmed) {
-      return false;
-    }
-  }
-
-  host._draftBlocks = normalizeTemplateDraftBlocks(template.blocks);
-  host._markDirty();
-  host._saveMessage = undefined;
-  return true;
 }
 
-function normalizeTemplateDraftBlocks(blocks: DraftScheduleBlock[]): DraftScheduleBlock[] {
+function normalizeTemplateDraftBlocks(blocks: Array<DraftScheduleBlock | ScheduleBlock>): DraftScheduleBlock[] {
   return blocks.map((block) => {
+    if (block.preset_key) return { start: block.start, slot_id: block.slot_id, preset_key: block.preset_key, action: "" as const, hvac_mode: "" };
     const draft: DraftScheduleBlock = {
-      action: block.action,
+      action: block.action ?? ACTION_SET_TEMPERATURE,
       hvac_mode: block.hvac_mode ?? "",
       start: block.start,
+      ...(block.slot_id ? { slot_id: block.slot_id } : {}),
     };
     if (block.target_temp_low !== undefined || block.target_temp_high !== undefined) {
       draft.target_temp_low = block.target_temp_low;
@@ -388,23 +397,62 @@ export async function saveTemplate(host: TemplateActionsHost, saveAsNew: boolean
     return;
   }
 
-  const normalized = host._normalizeDraftBlocks();
-  if (!normalized.ok) {
-    host._error = normalized.error;
-    return;
-  }
-
   host._templateAction = "save";
   host._error = undefined;
   host._saveMessage = undefined;
   try {
+    const fingerprint = () => JSON.stringify([host._selectedEntity, host._selectedWeekday, host._selectedTemplateKey, host._data?.configuration_revision, host._draftTemplateLink, host._draftBlocks]);
+    const snapshot = fingerprint();
+    const normalized = host._draftTemplateLink?.mode === "full" && host._selectedEntity
+      ? { ok: true as const, blocks: (await api.previewDailySchedule(host._selectedEntity, host._selectedWeekday, { template_link: host._draftTemplateLink })).materialized_blocks }
+      : host._normalizeDraftBlocks();
+    if (fingerprint() !== snapshot) return;
+    if (!normalized.ok) { host._error = normalized.error; return; }
+    if (!Array.isArray(normalized.blocks)) throw new Error(host._t("unableCopy"));
+    const normalizedBlocks = normalized.blocks;
+
     const templateKey = saveAsNew ? host._newTemplateKey() : selectedTemplate?.key ?? host._newTemplateKey();
-    const data = await api.setScheduleTemplate(templateKey, templateName, normalized.blocks);
+    if (!host._selectedEntity) return;
+    const source = normalizedBlocks.map(({ slot_id: _slot, ...block }) => block);
+    let blocks = source;
+    if (!saveAsNew && selectedTemplate) {
+      // A schedule saved over an existing template retains only identities explicitly
+      // carried by its source. New slots are assigned by the backend preview.
+      blocks = blocks.map((block) => ({ ...block, ...(normalizedBlocks.find((sourceBlock) => sourceBlock.start === block.start)?.slot_id ? { slot_id: normalizedBlocks.find((sourceBlock) => sourceBlock.start === block.start)!.slot_id } : {}) }));
+      const preview = await api.previewScheduleTemplateUpdate(templateKey, templateName, blocks, host._data?.configuration_revision);
+
+      const impact = createTemplateImpact(preview, templateName);
+      const assignments = templateImpactAssignments(host, impact);
+      if (!assignments || preview.pending?.length || preview.destination_errors?.length) {
+        host._templateImpact = impact;
+        host._selectedTemplateKey = templateKey;
+        host._templateDraftKey = templateKey;
+        host._templateDraftBlocks = normalizeTemplateDraftBlocks(preview.template.blocks);
+        host._templateNameDraftKey = templateKey;
+        host._templateNameDraft = templateName;
+        host._templateDirty = true;
+        host._templateConfigurationRevision = preview.configuration_revision;
+        host._templateLinkedDaysOpen = true;
+        return;
+      }
+      const data = await api.setScheduleTemplate(templateKey, templateName, preview.template.blocks, {
+        expected_revision: preview.configuration_revision, assignments,
+      });
+      if (host._isScheduleResponseCurrent?.(data) === false) return;
+      host._applyScheduleData(data);
+      host._selectedTemplateKey = templateKey;
+      host._showSuccess(host._t("templateSaved"));
+      return;
+    }
+    const data = host._data?.configuration_revision === undefined
+      ? await api.setScheduleTemplate(templateKey, templateName, blocks)
+      : await api.setScheduleTemplate(templateKey, templateName, blocks, { expected_revision: host._data.configuration_revision });
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._applyScheduleData(data);
     host._selectedTemplateKey = templateKey;
     host._showSuccess(host._t("templateSaved"));
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableSaveTemplate");
+    host._error = backendErrorMessage(error, host._t("unableSaveTemplate"));
   } finally {
     host._templateAction = undefined;
   }
@@ -439,6 +487,7 @@ export async function deleteSelectedTemplate(host: TemplateActionsHost): Promise
   host._saveMessage = undefined;
   try {
     const data = await api.deleteScheduleTemplate(template.key);
+    if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._applyScheduleData(data);
     host._selectedTemplateKey = "";
     host._showSuccess(host._t("templateDeleted"));

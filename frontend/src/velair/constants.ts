@@ -47,12 +47,15 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "sensors",
   "comfort",
   "preconditioning",
+  "planned-return",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 12;
+export const PORTABLE_MODEL_VERSION = 16;
 export const PORTABLE_SECTIONS: PortableSection[] = [
+  "planned_return",
   "zones",
   "templates",
+  "block_presets",
   "settings",
   "preconditioning_learning",
   "profiles",

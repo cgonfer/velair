@@ -1,6 +1,7 @@
 import { html, nothing } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { renderInlineHelp } from "./inline-help";
+import { renderDocumentationHelp } from "./documentation-links";
 import {
   comfortCo2Position,
   DERIVED_COMFORT_METRIC_ORDER,
@@ -78,6 +79,7 @@ export function renderComfortView(
           <strong>${host._t("comfortIntroTitle")}</strong>
           <small>${host._t("comfortIntroDetail")}</small>
         </span>
+        ${renderDocumentationHelp(host, "comfort")}
       </header>
       ${zoneIds.length
         ? zoneIds.map((entityId) => renderComfortZone(host, entityId, viewOptions))

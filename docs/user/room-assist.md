@@ -1,4 +1,9 @@
 # Room Assist
+<!-- velair-docs:start -->
+Translations: [English original](room-assist.md) · [Español](room-assist.es.md) · [Français](room-assist.fr.md) · [Deutsch](room-assist.de.md) · [Italiano](room-assist.it.md) · [Nederlands](room-assist.nl.md) · [Polski](room-assist.pl.md) · [Português (Brasil)](room-assist.pt-br.md) · [Português (Portugal)](room-assist.pt-pt.md) · [Русский](room-assist.ru.md) · [Translation status](../translation-status.md)
+
+---
+<!-- velair-docs:end -->
 
 Room Assist lets Velair use a separate room temperature sensor for one managed climate while still controlling the real `climate.*` entity.
 
@@ -422,6 +427,22 @@ An eligible external change either keeps automatic authority or enters/updates
 Manual adjustment according to the policy saved for that climate. For policies, service examples, Boost/Profile
 interactions, and attribution limits, see
 [External Changes and Manual Adjustment](manual-control.md).
+
+## Planned Return
+
+During [Planned Return](planned-return.md), Room Assist follows each zone's
+temporary arrival target once that zone starts preparing. It does not keep using
+the Away Mode's temperature or switch back to it when an Away schedule block
+changes. Other zones keep following Away until their own preparation starts.
+
+For example, an Away target of 16 degrees becomes an arrival target of 21 degrees
+when that room starts preparing. Room Assist may adjust the physical climate
+setpoint to reach 21 degrees on the room sensor. Manual adjustment and explicit
+pauses suspend its intervention for the affected zone. An explicit Mode/Profile
+selection cancels the episode's advance preparation and keeps that explicit
+selection. The return's **Cancel** control also removes preparation; after
+confirmed departure, it restores the recorded previous Mode and Profiles. See
+the [cancellation examples](planned-return.md#cancelling-a-return-examples).
 
 ## Adaptive Preconditioning
 
