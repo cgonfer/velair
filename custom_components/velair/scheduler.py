@@ -10809,21 +10809,15 @@ class VelairScheduler:
         """Return the next timer action."""
         candidates: list[datetime] = []
 
-        if (
-            self.next_event is not None
-            and not (
-                self.next_event.when <= now
-                and self._is_applied_preconditioning_event(self.next_event)
-            )
-        ):
-            candidates.append(self.next_event.when)
-        if (
-            self.next_event is not None
-            and self.next_event.target_when is not None
-            and self.next_event.when <= now
-            and self._is_applied_preconditioning_event(self.next_event)
-        ):
-            candidates.append(self.next_event.target_when)
+        events = list(self.next_events_by_zone)
+        if self.next_event is not None and self.next_event not in events:
+            events.append(self.next_event)
+        for event in events:
+            if event.when <= now and self._is_applied_preconditioning_event(event):
+                if event.target_when is not None:
+                    candidates.append(event.target_when)
+            else:
+                candidates.append(event.when)
 
         if self._preconditioning_sessions:
             candidates.append(

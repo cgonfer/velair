@@ -10646,6 +10646,61 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             datetime(2026, 5, 19, 20, 0, tzinfo=timezone.utc),
         )
 
+    async def test_applied_preconditioning_window_does_not_skip_other_zones(
+        self,
+    ) -> None:
+        second_entity_id = "climate.second"
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 18},
+        )
+        self.hass.states[second_entity_id] = SimpleNamespace(
+            state="heat",
+            attributes={"current_temperature": 22},
+        )
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "20:00",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 21,
+                "hvac_mode": "heat",
+            }
+        ]
+        self.data["zones"][second_entity_id] = deepcopy(self.data["zones"][self.entity_id])
+        self.data["zones"][second_entity_id]["preconditioning"]["enabled"] = False
+        self.data["zones"][second_entity_id]["schedule"]["tuesday"] = [
+            {
+                "start": "19:30",
+                "action": ACTION_SET_TEMPERATURE,
+                "temperature": 22,
+                "hvac_mode": "heat",
+            }
+        ]
+        early_start = datetime(2026, 5, 19, 19, 0, tzinfo=timezone.utc)
+        original_now = scheduler_module.dt_util.now
+        scheduler_module.dt_util.now = lambda: early_start
+        self.addCleanup(setattr, scheduler_module.dt_util, "now", original_now)
+
+        await self.scheduler._handle_timer(early_start)
+
+        self.assertEqual(
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 21.0, True, "heat")],
+        )
+        self.assertEqual(
+            self.scheduler._calculate_next_action_time(early_start),
+            datetime(2026, 5, 19, 19, 30, tzinfo=timezone.utc),
+        )
+
+        second_block = datetime(2026, 5, 19, 19, 30, tzinfo=timezone.utc)
+        scheduler_module.dt_util.now = lambda: second_block
+        await self.scheduler._handle_timer(second_block)
+
+        self.assertEqual(
+            self.climate.calls[-1],
+            ("set_temperature", second_entity_id, 22.0, True, "heat"),
+        )
+
     async def test_applied_preconditioning_window_is_not_reapplied(
         self,
     ) -> None:
