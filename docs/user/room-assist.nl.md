@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -25,6 +25,8 @@ Dit is nuttig voor thermostatische radiatorkranen, radiatorkranen, wandthermosta
 Alle berekeningen gebruiken de oorspronkelijke Home Assistant-eenheid van het beheerde apparaat. De voorbeelden gebruiken Celsius voor leesbaarheid, maar dezelfde hysteresegrenzen, correctie met teken, beveiliging van het geplande doel, bereikbreedte, stapgrootte en fysieke begrenzing gelden rechtstreeks in Fahrenheit. Een kamerafwijking van `4 °F` geeft bijvoorbeeld een correctie van `4 °F`; dit is geen absolute temperatuur en krijgt geen Celsius-/Fahrenheit-offset.
 
 Room Assist werkt lokaal en gebeurtenisgestuurd. Velair gebruikt geen voortdurende polling en verstuurt sensorgegevens niet buiten Home Assistant.
+
+Bij een blok met **Alleen temperatuur** wordt Room Assist onderbroken zolang het klimaatapparaat uitstaat. Bij het wissen van de vorige correctie schakelt het het apparaat niet in en herstelt het geen eerdere HVAC-modus. Na extern inschakelen kan het ondersteunen met de werkelijke compatibele modus zonder een moduswijziging te vragen. Doeltemperaturen bijwerken terwijl het apparaat uitstaat, blijft afhankelijk van de klimaatintegratie.
 
 <a id="what-it-does"></a>
 ## Wat Room Assist doet

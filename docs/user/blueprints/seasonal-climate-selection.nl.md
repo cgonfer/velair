@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](seasonal-climate-selection.md) · [Español](sea
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -127,6 +127,8 @@ Een sensor die om 09:00 niet beschikbaar wordt, waarschuwt bijvoorbeeld meteen e
 
 <a id="safety-and-precedence"></a>
 ## Veiligheid en voorrang
+
+Een Velair-modus of -profiel selecteren gebruikt het bijbehorende blokbeleid. **Alleen temperatuur** werkt het doel bij zonder een HVAC-moduswijziging te vragen. Gebruik expliciete blokken met **Verwarmen** of **Koelen** wanneer seizoenskeuze de apparatuur moet starten. Het beleid onderdrukt geen rechtstreekse HVAC-acties in de blauwdruk.
 
 Bij een ongeldige sensor maakt de blueprint geen nieuwe seizoenskeuze en schakelt apparaten niet automatisch uit. De eerder gekozen modus en het bijbehorende schema blijven actief. Reageer op de melding als dat gedrag voor jouw huis niet geschikt is.
 

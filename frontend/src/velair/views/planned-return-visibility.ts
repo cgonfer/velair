@@ -1,9 +1,17 @@
 import { html, nothing } from "lit";
+import { repeat } from "lit/directives/repeat.js";
 import type { VelairViewHost } from "../host-types";
 import type { PlannedReturnControl, PlannedReturnStatus } from "../types";
 import type { TranslationKey } from "../translations";
 import { plannedReturnEpisodeActive } from "../domain/planned-return";
-import { plannedReturnPreparationEstimates } from "../domain/planned-return-timeline";
+import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
+import { renderPreparationRoom } from "./planned-return-preparation-status";
+import { plannedReturnTimeline, plannedReturnTimelineLabels } from "../domain/planned-return-timeline";
+import { overviewPreparationPoints } from "../domain/overview-preparation-timeline";
+import "../components/overview-preparation-timeline-element";
+import { languageFromHass } from "../i18n";
+import { renderInlineHelp } from "./inline-help";
+import type { ArrivalPreparationSummary, PreparationState } from "../domain/planned-return-preparation";
 import { plannedReturnPreparationReasons } from "./planned-return-preparation-view";
 
 export function plannedReturnVisible(status?: PlannedReturnStatus | null): boolean {
@@ -30,29 +38,117 @@ export function plannedReturnIntent(host: VelairViewHost, intent?: PlannedReturn
 export function renderPlannedReturnOverview(host: VelairViewHost) {
   const status = host._data?.planned_return_status;
   if (!plannedReturnVisible(status)) return nothing;
-  return html`<button type="button" class="overview-planned-return-summary"
-    @click=${(event: Event) => (event.currentTarget as HTMLElement).dispatchEvent(new CustomEvent("velair-open-planned-return", { bubbles: true, composed: true }))}>
+  const now = host._currentTimelineNow?.().getTime() ?? Date.now();
+  const preparation = currentArrivalPreparation(status, now);
+  const timeline = plannedReturnTimeline(status, now);
+  return html`<section class="overview-planned-return-summary" @click=${(event: Event) => {
+    if (event.composedPath().some(target => target instanceof HTMLElement &&
+      (target.classList.contains("overview-return-count") || target.classList.contains("inline-help-wrapper") || target.classList.contains("inline-help-tooltip")))) return;
+    (event.currentTarget as HTMLElement).dispatchEvent(new CustomEvent("velair-open-planned-return", { bubbles: true, composed: true }));
+  }}>
+    <div class="overview-return-body">
+    <div class="overview-return-identity"><button type="button" class="overview-return-open"
+    >
     <ha-icon icon="mdi:home-clock-outline"></ha-icon>
     <span><strong>${host._t("plannedReturn")} · ${host._t(`plannedReturnState_${status!.state}`)}</strong>
       <small>${plannedReturnOrigin(host, status!.origin)}
-        ${status!.return_at ? html` · ${host._t("plannedReturnArrival")}: ${host._formatDateTime(status!.return_at)}` : nothing}
+        ${!timeline && status!.return_at ? html` · ${host._t("plannedReturnArrival")}: ${host._formatDateTime(status!.return_at)}` : nothing}
         ${status!.absence_confirm_at && status!.state === "confirming_absence" ? html` · ${host._t("plannedReturnCheckingUntil", { time: host._formatDateTime(status!.absence_confirm_at) })}` : nothing}</small>
       ${status!.error || status!.notice ? html`<small>${status!.error || host._t("plannedReturnState_cancelled")}</small>` : nothing}
-    </span><ha-icon icon="mdi:chevron-right"></ha-icon>
-  </button>`;
+    </span>
+    </button>${preparation ? renderOverviewPreparationCounts(host, preparation) : nothing}</div>
+    ${timeline ? renderOverviewReturnTimeline(host, status!, timeline, preparation) : nothing}
+    </div><button type="button" class="overview-return-end" aria-label=${host._t("plannedReturn")}
+      ><ha-icon icon="mdi:chevron-right" aria-hidden="true"></ha-icon></button>
+  </section>`;
+}
+
+function renderOverviewPreparationCounts(host: VelairViewHost, preparation: ArrivalPreparationSummary) {
+  const entries: Array<[PreparationState, string, TranslationKey, TranslationKey]> = [
+    ["waiting", "mdi:clock-outline", "plannedReturnVisibilityCountWaiting", "plannedReturnPreparationState_pending"],
+    ["preparing", "mdi:home-clock-outline", "plannedReturnVisibilityCountPreparing", "plannedReturnVisibilityPreparingHelp"],
+    ["reached", "mdi:check-circle-outline", "plannedReturnVisibilityCountReached", "plannedReturnVisibilityReachedHelp"],
+    ["suspended", "mdi:pause-circle-outline", "plannedReturnVisibilityCountSuspended", "plannedReturnVisibilitySuspendedHelp"],
+    ["arrivalOnly", "mdi:home-import-outline", "plannedReturnVisibilityCountArrivalOnly", "plannedReturnVisibilityArrivalOnlyHelp"],
+    ["unavailable", "mdi:alert-circle-outline", "plannedReturnVisibilityCountUnavailable", "plannedReturnPreparationState_unavailable"],
+  ];
+  return html`<span class="overview-return-counts">${repeat(entries.filter(([state]) => preparation.counts[state] > 0), ([state]) => state, ([state, icon, label, help]) => {
+    const text = host._t(label, { count: preparation.counts[state] });
+    return html`<span class="overview-return-count" data-room-count=${state}>
+      <ha-icon icon=${icon} aria-hidden="true"></ha-icon>
+      <span class="overview-return-count-value" aria-hidden="true">${preparation.counts[state]}</span>
+      <span class="overview-return-count-keyword" aria-hidden="true">${host._t(`plannedReturnVisibilityKeyword_${state}`)}</span>
+      ${renderInlineHelp(`overview-return-${state}`, text, [text, host._t(help)], { appearance: "overlay" })}
+    </span>`;
+  })}</span>`;
+}
+
+function renderOverviewReturnTimeline(host: VelairViewHost, status: PlannedReturnStatus, timeline: NonNullable<ReturnType<typeof plannedReturnTimeline>>, preparation?: ArrivalPreparationSummary) {
+  const hour12 = host.hass?.locale?.time_format === "12" ? true : host.hass?.locale?.time_format === "24" ? false : undefined;
+  const labels = plannedReturnTimelineLabels(timeline.departure, timeline.arrival, host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12);
+  const points = overviewPreparationPoints(preparation, timeline.departure, host._data?.configured_entities ?? []);
+  const names = Object.fromEntries(points.map(point => [point.entityId, String(host.hass?.states?.[point.entityId]?.attributes?.friendly_name ?? point.entityId)]));
+  const estimateLabel = (start: number) => host._t("plannedReturnOverviewPreparationStartEstimate", { time: plannedReturnTimelineLabels(timeline.departure, start,
+    host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12).arrival });
+  const departureText = host._formatDateTime(status.departure_at!);
+  const arrivalText = host._formatDateTime(status.return_at!);
+  const awayMode = plannedReturnModeName(host, status.away_mode_id);
+  const destinationMode = plannedReturnModeName(host, status.destination_mode_id);
+  return html`<div class="overview-return-timeline" role="group" aria-label=${host._t("plannedReturnTimeline")}>
+    <div class="overview-return-endpoints"><span class="overview-return-timeline-help"><ha-icon icon="mdi:home-export-outline" aria-hidden="true"></ha-icon><time datetime=${status.departure_at!} aria-label=${`${host._t("plannedReturnDeparted")}: ${departureText}`}>${labels.departure}</time>
+      ${renderInlineHelp("overview-return-departure", host._t("plannedReturnDeparted"), host._t("plannedReturnOverviewDepartureHelp", { time: departureText }), { appearance: "overlay" })}</span>
+      <span class="overview-return-timeline-help"><time datetime=${status.return_at!} aria-label=${`${host._t("plannedReturnArrival")}: ${arrivalText}`}>${labels.arrival}</time><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon>
+      ${renderInlineHelp("overview-return-arrival", host._t("plannedReturnArrival"), host._t("plannedReturnOverviewArrivalHelp", { time: arrivalText }), { appearance: "overlay" })}</span></div>
+    <velair-overview-preparation-timeline .points=${points} .names=${names} .progress=${timeline.progress} .estimateLabel=${estimateLabel}
+      .startTimeLabel=${(start: number) => plannedReturnTimelineLabels(timeline.departure, start, host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12).arrival}
+      .episodeKey=${`${status.departure_at}|${status.return_at}|${status.destination_mode_id}`}
+      .nowLabel=${`${host._t("plannedReturnTimelineNow")}: ${plannedReturnTimelineLabels(timeline.departure, host._currentTimelineNow?.().getTime() ?? Date.now(), host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12).arrival}`}
+      .moreLabel=${(count: number) => host._t("plannedReturnOverviewMoreClimates", { count })} .collapseLabel=${host._t("plannedReturnOverviewCollapseClimates")} .timelineLabel=${host._t("plannedReturnTimeline")}>
+    <div class="overview-return-modes"><span class="overview-return-timeline-help" role="group" aria-label=${host._t("plannedReturnAway")}><ha-icon icon="mdi:format-list-bulleted" aria-hidden="true"></ha-icon>${awayMode}
+      ${renderInlineHelp("overview-return-away-mode", host._t("plannedReturnAway"), host._t("plannedReturnOverviewAwayModeHelp", { mode: awayMode }), { appearance: "overlay" })}</span><span class="overview-return-timeline-help" role="group" aria-label=${host._t("plannedReturnDestination")}>${destinationMode}<ha-icon icon="mdi:format-list-bulleted" aria-hidden="true"></ha-icon>
+      ${renderInlineHelp("overview-return-destination-mode", host._t("plannedReturnDestination"), host._t("plannedReturnOverviewDestinationModeHelp", { mode: destinationMode }), { appearance: "overlay" })}</span></div>
+    </velair-overview-preparation-timeline>
+  </div>`;
 }
 
 export function renderPlannedReturnZoneSignal(host: VelairViewHost, entityId: string) {
   const intent = host._data?.zone_runtime?.[entityId]?.planned_return;
-  if (intent) return html`<span class="overview-planned-return-signal" title=${plannedReturnIntent(host, intent)}>
-    <ha-icon icon="mdi:home-clock-outline"></ha-icon><span>${host._t("plannedReturn")}</span>
+  const now = host._currentTimelineNow?.().getTime() ?? Date.now();
+  const preparation = currentArrivalPreparation(host._data?.planned_return_status, now);
+  const room = preparationRoom(preparation, entityId);
+  if (!intent && !room) return nothing;
+  const icons: Record<PreparationState, string> = {
+    waiting: "mdi:clock-outline", preparing: "mdi:home-clock-outline", reached: "mdi:check-circle-outline",
+    suspended: "mdi:pause-circle-outline", arrivalOnly: "mdi:home-import-outline", unavailable: "mdi:alert-circle-outline",
+  };
+  const target = room?.source.target;
+  const temperature = target?.temperature != null && Number.isFinite(target.temperature) ? String(target.temperature)
+    : target?.target_temp_low != null && target?.target_temp_high != null && Number.isFinite(target.target_temp_low) && Number.isFinite(target.target_temp_high)
+      ? `${target.target_temp_low}–${target.target_temp_high}` : undefined;
+  const targetText = temperature === undefined ? "" : `${temperature} ${host._data?.temperature_unit ?? "°C"}`;
+  const state = room ? host._t(`plannedReturnVisibilityKeyword_${room.state}`) : "";
+  const stateHelp: Record<PreparationState, TranslationKey> = {
+    waiting: "plannedReturnPreparationState_pending", preparing: "plannedReturnVisibilityPreparingHelp",
+    reached: "plannedReturnVisibilityReachedHelp", suspended: "plannedReturnVisibilitySuspendedHelp",
+    arrivalOnly: "plannedReturnVisibilityArrivalOnlyHelp", unavailable: "plannedReturnPreparationState_unavailable",
+  };
+  const label = [host._t("plannedReturn"), state, targetText].filter(Boolean).join(" · ");
+  const details = [label,
+    intent ? plannedReturnIntent(host, intent) : "",
+    room ? host._t(stateHelp[room.state]) : "",
+    room?.start !== undefined ? host._t("plannedReturnVisibilityEstimatedStart", { time: host._formatDateTime(new Date(room.start).toISOString()) }) : "",
+    temperature !== undefined ? host._t("plannedReturnPreparationTarget", { temperature, unit: host._data?.temperature_unit ?? "°C" }) : "",
+    room && preparation ? host._t("plannedReturnVisibilityArrivalAt", { time: host._formatDateTime(new Date(preparation.arrival).toISOString()) }) : "",
+    room?.source.reason ? host._t(plannedReturnPreparationReasons[room.source.reason] ?? "plannedReturnPreparationReasonUnknown") : "",
+  ].filter(Boolean);
+  return html`<span class=${`overview-zone-return ${intent ? "overview-planned-return-signal" : ""} ${room ? "overview-planned-return-forecast" : ""}`}
+    data-state=${room?.state ?? "active"}>
+    <span class="overview-zone-return-label"><span class="overview-zone-return-accent">
+      <ha-icon icon=${room ? icons[room.state] : "mdi:home-clock-outline"} aria-hidden="true"></ha-icon>
+      <small>${host._t("plannedReturn")}</small>
+    </span>${state || targetText ? html`<strong class="overview-zone-return-value">${[state, targetText].filter(Boolean).join(" · ")}</strong>` : nothing}</span>
+    ${renderInlineHelp(`overview-zone-return-${entityId}`, label, details, { appearance: "overlay" })}
   </span>`;
-  const status = host._data?.planned_return_status;
-  if (!status || !plannedReturnEpisodeActive(status)) return nothing;
-  const estimate = plannedReturnPreparationEstimates(status).find(zone => zone.entity_id === entityId);
-  if (!estimate) return nothing;
-  return html`<span class="overview-planned-return-forecast"><ha-icon icon="mdi:clock-outline"></ha-icon>
-    ${host._t("plannedReturnPreparationPlannedStart", { time: host._formatDateTime(new Date(estimate.start).toISOString()) })}</span>`;
 }
 
 export function renderPlannedReturnDiagnostics(host: VelairViewHost) {

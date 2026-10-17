@@ -1150,6 +1150,7 @@ class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):
                 temperature=20.0,
                 target_temp_low=None,
                 target_temp_high=None,
+                temperature_only=False,
             )
         )
         scheduler._room_sensor_assist_states[entity_id] = (

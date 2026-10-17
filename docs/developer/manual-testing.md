@@ -1,6 +1,266 @@
 # Manual Testing
 
+## Shared Command Button Sizing
+
+1. Compare Active setup's Change summary with ordinary text/icon commands in
+   Schedules, Profiles/Modes, Templates, Settings and Diagnostics, including
+   dialog Save/Cancel and colored success/warning/danger actions. Single-line
+   commands should use the same compact border-box sizing without stretching
+   vertically to match adjacent content.
+2. Check the compact variant, disabled state, keyboard focus and native summary
+   menu Enter/Space/Escape behavior. Confirm no action behavior changed.
+3. Repeat at 320px phone and tablet widths with long labels and icon/text
+   combinations. Labels must remain usable and commands may grow to fit wrapped
+   text. Existing full-width mobile footer layouts should remain intact.
+4. On coarse-pointer devices, check comfortable 44px command targets, including
+   compact variants. Distinct icon-only controls and contextual action layouts
+   retain their own sizing conventions.
+
+## Base Profiles And Zone Exceptions
+
+1. Select a multizone Winter Mode. Apply a Profile to two of its rooms and verify
+   that the other rooms retain the base. Apply another Profile in a later action
+   and verify only shared rooms are replaced.
+2. Submit those overlapping Profiles together: the action must fail without
+   changing any room or cancelling Return home.
+3. Set one room to Default, then return it to base. Verify these are distinct
+   choices and no previous exception reappears.
+4. Clear all exceptions: the original base Mode label returns. Select another
+   Mode or activate a base Profile: all exceptions disappear.
+5. Edit Profile schedules and a selected base Mode, restart HA, and check that
+   persisted exceptions retain their room scopes. Attempt to remove a referenced
+   Profile room before clearing its exception: saving must fail clearly.
+6. Run two room automations concurrently and repeat with heat/cool equipment,
+   an unavailable device, Boost, window Pause and an externally executed zone.
+   Unrelated rooms and external publication attempts must remain unaffected.
+7. Start and cancel Return home from a base with exceptions; cancellation that
+   restores the previous setup must restore all exceptions. Verify external
+   selection cancels the return, including its documented global preparation effect.
+8. At phone, tablet and desktop widths, and in a narrow card on a desktop, check
+   Base/Exceptions attribution. Cover Mode, one Profile, multiple Profiles and
+   Default bases, with and without exceptions and with a fully replaced base.
+   Check inherited base coverage against managed zones: same-Profile and null
+   exceptions reduce it; Default fallback outside a Profile base does not add
+   to its scope. Distinguish an empty scope from a fully overridden one. Check
+   base Profile icons/colors and names in the legend, without a redundant Mode
+   component list. On desktop, Base uses less width than Exceptions.
+   Household distribution starts collapsed and contains both bar and legend.
+   Verify toggle, Escape/focus, stable header coordinates, reduced motion,
+   collapsed accessibility/focus exclusion and no HA mutation requests in all
+   control scopes. Open content refreshes with data; zero managed zones resets
+   expansion. Counts align at the right, while long names wrap independently
+   beside 14px icons and remain legible at mobile widths.
+   The compact 6px distribution bar beneath the base summary must use actual Profile
+   colors/icons and labeled counts. Cover all managed zones, keep same-Profile
+   base/exception origins distinct, and use neutral Default for uncovered zones
+   and explicit Default exceptions. Its total is the managed-zone count and its
+   exception counts match the list, including zones outside the base. Ignore
+   stale unmanaged references. Check empty base scopes with managed zones and
+   zero managed entities (no bar). No duplicate fully-overridden note should
+   appear. Base icon stays aligned to its header even with a long legend;
+   the Exceptions heading has the layers icon. Repeat at narrow mobile widths.
+   Exception groups must include only explicit overrides, with accurate room
+   counts and a separate Default group. Room names stay hidden until a count is
+   selected; expand that group beneath its row, preserving the other rows.
+   Check compact secondary zone names aligned beneath the Profile, one zone per
+   line, no bullet indentation and uniform compact spacing between Profile
+   groups. The count's touch target must not push zone names away from the
+   Profile name; extra panel height must not stretch exception rows apart.
+   Check normal heading-to-content spacing and compact desktop exception rows;
+   coarse-pointer devices retain comfortable touch targets. Closed counts align
+   with their Profile names.
+   Leave the pointer over a count and expand/collapse repeatedly at that same
+   position. Header/count coordinates must stay fixed; only content below
+   should move. Repeat with a long Profile name and with reduced motion.
+   Check chevron/expanded state, gentle animation, reduced-motion behavior,
+   a long list's scroll and collapse with the same count or Escape. Opening
+   another group closes the previous one. Confirm collapsed lists have no
+   keyboard stops or accessible contents and Escape returns focus to the count.
+   Confirm data updates refresh names/counts, and a
+   removed group does not leave stale detail visible. Verify no inspection action
+   sends a mutation request. Check Base and type share a context row above the name,
+   long names wrap, no horizontal overflow appears, and the chooser remains
+   reachable by touch and keyboard. No per-zone editing disclosure is present.
+
+## Temperature-only block ownership
+
+Use a managed heating climate and a managed cooling climate. For off-state
+testing, use an integration known to accept target updates while off, such as
+Better Thermostat. Observe Home Assistant service traces as well as entity state.
+
+1. Create a temperature block and select **Temperature only**. Save and reload.
+   Confirm the selection and target survive; repeat through a Profile, shared
+   preset, full template, hours-only binding, and export/import.
+2. Apply while off. Expect only `climate.set_temperature`, no `turn_on` or
+   `set_hvac_mode`. Turn on externally; change between compatible heat/cool
+   modes; expect the actual mode to remain externally selected.
+3. Under every external-change policy, turn off and on from a Home Assistant
+   card. Expect no Manual adjustment solely for HVAC changes. If the integration
+   hides/restores target attributes with that transition, they must not be
+   interpreted as a separate manual setpoint. Change a finite target separately
+   and verify the configured target-change policy still applies.
+4. Enable Room Assist and advance preparation. Turn off during assistance or
+   preparation. Expect no stale mode restoration, new preparation, or thermal
+   learning while off. Turn on again and verify current authority is resolved.
+5. Use the window blueprint with **Turn off**. Open then close the contacts.
+   Resume must update the temperature without starting the climate. Repeat with
+   two independent pause IDs: removing the first must not resume the schedule.
+   Repeat with an ordinary Keep block and verify its existing restart behavior.
+6. Use occupancy/seasonal actions to select a Profile containing this policy.
+   It must preserve off. A separate direct HVAC action and an explicit-mode
+   destination block must still work normally.
+7. Disconnect/reconnect with a delivery pending, change the active block or
+   Profile before recovery, and confirm recovery uses the current policy.
+   Exercise explicit Boost, expiry, pause/resume, and Home Assistant restart.
+8. Test a target capability hidden while off: Temperature only reports failure
+   without activation, while the legacy Keep and explicit-mode compatibility
+   paths continue to work. Test a native range with advertised range capability
+   separately; never convert scalar and range targets.
+9. On phone/tablet layouts, confirm the mode choice, explanatory text, range
+   controls, preset library, and summary labels remain usable. Verify optional
+   device controls cannot be combined with Temperature only.
+
+An accepted service call is not proof of physical state. Record any integration
+that wakes internally on a target update; Velair cannot guarantee its behavior.
+
+## Day layouts and grouped schedules
+
+### Template library application
+
+1. On a saved template, open Apply to. Check initial Default, Independent copy,
+   Individual days and no selected destinations. Unsaved template edits must be
+   saved before Review. Template selection/navigation protects edited review data.
+2. Select Default or an existing Profile. Try seven individual choices, weekday
+   and weekend groups, and the full week. Destination/layout changes clear
+   selections; changing copy/link mode preserves them and invalidates review.
+3. Review overwrites, layout changes, Profile behavior conversions and mixed
+   unselected groups. Back must not save. Accepting a mixed-group warning must
+   preserve its days. Applying to an inactive Profile must not activate it.
+4. With Times only, choose an explicit base for different configurations. Check
+   exact/nearest preceding/following proposals and preserved preset references.
+   Missing compatible assignments require editing, with template times locked.
+   Every selected group receives one reviewed binding set. No Profile own
+   schedule means manual completion, not silent borrowing from Default/template.
+5. Check Independent copy and Times and settings propagation after later template
+   edits. Change configuration/template while Review is open: stale results must
+   not enable Apply or replace newer input. Reject an incompatible target in a
+   multi-zone request and simulate storage failure; nothing may be partially saved.
+6. Test at 320/375px phone, tablet and desktop widths with long names, light/dark
+   themes and keyboard navigation. Group choices and review editors remain usable
+   without horizontal table scrolling. Test heating, cooling, unavailable/off
+   devices and external schedule limits. Preview has no runtime effects; Apply
+   retains normal Boost/pause priorities and external delivery semantics.
+
+### Schedule editor grouping
+
+1. On a Default zone, select weekdays/weekend, save, reload, and verify the same
+   seven cells as Individual days. Selecting Tuesday selects all five weekdays;
+   selecting Saturday selects both weekend days. All days selects all seven.
+   With Sunday first, Sunday and Saturday are both active at opposite ends.
+   Only physically adjacent active cells connect, with no change in cell positions.
+   At normal and fractional browser zoom, joined cells have flat top/bottom
+   edges without protruding seams. Check weekday/weekend and all-days layouts
+   on mobile and desktop; focus outlines and unsaved dots remain visible.
+2. Assign a different predefined layout to a zone inside a Profile. Save the
+   Profile and verify each zone independently retains its selected layout.
+3. Verify there are exactly three layout choices and no create/manage/delete
+   layout controls. Changing the layout preserves saved blocks and issues no
+   climate actions. On an empty schedule, layout/day navigation has no discard prompt.
+4. In Weekdays / Weekend, start with different Monday and Tuesday configurations.
+   Inspect both, choose Tuesday as the base, and verify that editing remains hidden
+   until Save succeeds. Only the five weekdays should change. Repeat with mixed
+   Saturday/Sunday schedules: save only those two days and retain the weekend
+   selection after success, even when weekdays have different configurations.
+   Repeat with inline presets and hours/full template links.
+   In All days, selection also leaves the block/template/copy editor hidden.
+   Save must apply the explicitly selected alternative without another confirmation.
+   Only after successfully saving the selected group should the common editor open.
+   A failed or revision-conflicted save retains the selection and
+   comparison without exposing the editor. Repeat for Default and Profiles.
+   In a Profile with pending All days and Weekdays / Weekend replacements, Save
+   commits the complete candidate without a redundant replacement confirmation.
+5. Verify grouped timelines show common configured blocks without a representative
+   selector or day-specific carry-over. Individual-day timelines retain weekly
+   continuity. Save as template and verify one daily list is created.
+6. While a draft is dirty, change its saved layout in another browser session.
+   Verify the draft survives and saving requires resolving the conflict. Verify
+   revision conflicts, incompatible modes/ranges and controller day limits never
+   produce partial grouped saves.
+7. Grouped editors omit the day-to-day clone panel, its helper and any shortcut
+   to Individual days, in both Default and Profiles. The regular Day layout
+   selector remains available. Cross-thermostat clone labels identify Monday–Friday,
+   Saturday–Sunday or All days; Profile confirmation identifies the same scope.
+   Copy a grouped schedule to another managed zone. Verify the same weekdays
+   change while its existing layout and other weekdays remain intact. Verify
+   day-to-day cloning remains available in Individual days.
+8. Export/import zones and Profiles with each predefined layout. Import an older
+   file containing custom layouts and verify individual-day presentation without
+   losing blocks, presets or links. Restart HA and verify saved predefined selections.
+9. Check selector, fixed weekday cells, mixed-day inspection and editor at 320px, 440px,
+   tablet and desktop widths, with keyboard navigation and light/dark HA themes.
+   Use seven different schedules and long template names. Open the information icon and
+   verify wrapped summaries and no horizontal overflow. With no selected base,
+   Save must be disabled. Select an alternative by tapping anywhere on its
+   configuration, verify the selected background/border, then select another: only
+   the second stays selected and its blocks become the common draft. Repeat
+   with arrow keys, Space and Enter. Opening schedule information must not change selection.
+   After saving a Weekdays / Weekend base, edit the common schedule, cancel
+   navigation to another group and verify those edits survive. While a save is
+   pending, day/group, zone and layout navigation must not replace its draft.
+   Save is separated from the content and right-aligned. Verify the
+   Overview's compact track height, rounded surfaces and inline target/mode
+   labels in both themes. No permanent block list or expanded disclosure should
+   appear below candidates. Compare equal-width Overview and candidate tracks
+   using identical blocks. Candidate blocks must have no
+   drag/resize handles or independent keyboard tab stops. On touch and keyboard,
+   inspect all times/options/references, close the popup with Escape or outside
+   interaction, and verify that selection and Save state remain unchanged.
+   Verify visible colored weekday chips and a single information icon with no separate
+   check/radio marker. Hovering a selected row must preserve its selected fill.
+   Check narrow blocks, 23:59 starts, unknown references and scalar/range/option-only configurations.
+   After selecting a base, check the Save summary identifies its source day and
+   every destination day, including Sunday-first weekend ordering. Profile
+   summaries must describe the visible selection without implying that unrelated
+   pending Profile edits will be excluded from Save profile.
+   Empty alternatives show No own blocks once, with no zero-block count. Their
+   information explains removal of own blocks and continuing weekly continuity,
+   without implying an off action. Visually matching alternatives with different
+   template scopes or preset references show compact dependency labels, using
+   names when available; full references remain in information. Check wrapping
+   at 320px and preserve single selection and keyboard operation.
+   In All days, also compare five identical weekdays with two empty weekend days: there
+   should be two alternatives, with all member days identified. Equal resolved
+   temperatures with different template/preset references must remain separate.
+   Verify compact read-only previews for heating, cooling, ranges, off and
+   options-only blocks; empty days must not imply a climate-off action.
+
 Use this checklist before publishing a release or after changing scheduler behavior.
+
+## Schedule Save Latency
+
+Enable DEBUG logging for `custom_components.velair.save_timing` temporarily and
+reproduce a slow Default schedule save. Disable it after collecting the sample.
+`Schedule save timing` summaries contain an opaque trace identifier, operation,
+elapsed milliseconds, phase durations and call counts; they exclude schedule
+payloads, entity names, temperatures and exception text.
+
+- Compare `daily`/`grouped` total time with `mutation` and `response`.
+- Inspect `configuration_lock_wait`, `zone_lock_wait`, `validation`, `storage`,
+  `reconcile`, `room_assist`, `climate_apply`, `external_publish`, `reschedule`
+  and `notify` to locate backend work.
+- `future_events` and `next_action` include call counts that expose repeated
+  calculation. Durations are inclusive: phases can overlap and must not be summed.
+- Independent `response` traces also cover subscription responses constructed
+  outside a save request. A returned handler may have sent a validation error;
+  `outcome=returned` is not confirmation that configuration was saved.
+- Repeat a current-intent change and a change that preserves current intent,
+  using heating and cooling. A different weekday can still own the active target
+  through weekly continuity. Compare local and external execution where applicable.
+
+These timings start when the backend handler runs and end after its result is
+queued. Network delivery, earlier event-loop queueing and browser rendering are
+outside that total. If the UI is slow while backend timings are short, inspect
+the browser's WebSocket request/result and subsequent rendering separately.
 
 ## Scheduler Transition Regressions
 
@@ -303,9 +563,9 @@ Header checks:
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v16 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v18 records the
    effective `temperature_unit`.
-2. Import each newly exported portable v16 file back into the same installation
+2. Import each newly exported portable v17 file back into the same installation
    and confirm the frontend accepts it and the selected sections round-trip.
 3. Import a portable v10 file into the opposite unit and confirm selected
    thermal sections convert. Confirm its Comfort derived-metric and outdoor-
@@ -413,9 +673,22 @@ external adjustment.
    unchanged. Repeat and accept each prompt; confirm the stored destination is
    loaded and the discarded draft does not return after a WebSocket update.
 3. In **Profile schedules**, create a Profile with a name, icon, and description.
-   Confirm Profile rows provide create, edit, delete, and direct activation.
-   The activation and delete buttons must remain aligned with the create button
-   above the list.
+   Confirm each row has a right-side vertical action column ordered set as base,
+   apply as exception, and delete. No action wraps below the identity, including
+   on 320px phones and with long names. Check transparent backgrounds, spacing
+   from the right edge, focus, disabled states and comfortable touch targets.
+   Base-only, exception-only, both and unused Profiles have distinct indicators;
+   descriptions remain visible in every state, followed by separate Base and
+   Exception chips only for the roles in use. An unused base action is neutral.
+   Usage chips have subtle role colors and no icons. Click row padding and empty
+   space beside/below the text: each opens the editor, as does keyboard activation
+   of the identity button. Action buttons and their icons perform only their own
+   action, including when disabled; they must not select the Profile for editing.
+   exception-only use must not mark the base action. Fully overridden bases
+   remain marked as base, and partial exception use still marks the layers action.
+   Activating/applying must not change the editing selection; confirming deletion
+   of the edited Profile clears its editor. Check normal library
+   and the Profile schedule selector; Template and Mode rows retain their layout.
 4. Give one zone an alternate heat or cool schedule, pause a second zone, and
    leave a third zone on its default schedule.
 5. Copy template blocks into one profile day, edit the draft, and confirm the
@@ -482,10 +755,10 @@ external adjustment.
     Confirm each mode row shows every mapped Profile icon and exact color, and
     that Default and Manual have short explanatory descriptions.
 17. In both Overview and Modes, confirm the shared **Active setup** card
-    shows the current Mode and its applied Profiles as one relationship. Open
+    shows the base identity and type, plus compact exception counts when present. Open
     its single chooser and confirm Default and custom Modes appear separately
-    from direct Profile activation. Confirm Manual is visible as the current
-    state when applicable but is never offered as a chooser action. A Mode must
+    from direct Profile activation. Confirm Manual remains a native selector
+    state and is never offered as a chooser action. A Mode must
     activate its mapped set, while a direct Profile selection must replace it
     with one Profile and switch the Mode to Manual. Confirm explanatory text
     inside the chooser can be clicked without closing or crashing the browser.
@@ -1140,7 +1413,7 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
     humidity stays visible but has no condition, the effective range is absent,
     the summary is unavailable, and no humidity ventilation opportunity is
     produced. Restore temperature and confirm evaluation returns.
-43. Reload Velair and Home Assistant, export/import portable model v16, and
+43. Reload Velair and Home Assistant, export/import portable model v18, and
     confirm the selected model and both endpoint ranges survive. Import a v10
     payload and confirm it uses the Simple model. In Fahrenheit, confirm endpoint
     temperature labels and exported thermal values use Fahrenheit while the

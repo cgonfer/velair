@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -23,6 +23,8 @@ Mit adaptiver Vorkonditionierung kann Velair vor einem geplanten Block mit dem H
 Ein Zeitplanblock um `07:00` mit `21 °C` bedeutet beispielsweise „um `07:00` möglichst nahe an `21 °C` sein“, nicht „um `07:00` mit der Änderung auf `21 °C` beginnen“.
 
 Die adaptive Vorkonditionierung läuft lokal in Home Assistant. Velair speichert Einstellungen und Lernbeispiele im Home-Assistant-Speicher und sendet weder Temperaturverlauf noch Beobachtungen oder Kalibrierdaten an einen externen Regler. Zonen mit externer Zeitplanausführung verwenden keine adaptive Vorkonditionierung; für sie wird nur der wirksame Wochenzeitplan veröffentlicht.
+
+Ein Block mit **Nur Temperatur** erlaubt keinen HVAC-Moduswechsel. Solange das Klimagerät aus ist, beginnt Velair weder die vorzeitige Vorbereitung noch das Sammeln thermischer Lerndaten für diesen Sollwert. Nach externem Einschalten kann die Vorbereitung anhand des tatsächlichen kompatiblen Modus neu berechnet werden. Solange das Gerät aus bleibt, kann diese Option keinen Komfort zum Blockbeginn versprechen.
 
 <a id="setup"></a>
 ## Einrichtung
@@ -42,6 +44,8 @@ Native `heat_cool`-Bereiche werden unterstützt. Liegt der Raum um mehr als die 
 Beim Aufklappen eines Klimageräts erscheint für jeden unterstützten Modus eine Karte mit der aktuellen Vorhersage. Sie verwendet dieselben Backend-Daten zum nächsten Ereignis wie die Übersicht. Pausen, temporäre Anpassungen, nicht unterstützte Modi und Blöcke, die nicht vorkonditioniert werden können, werden dadurch einheitlich berücksichtigt. Existiert ein passender zukünftiger Block, zeigt die Karte den berechneten Start, die Zielzeit, den Vorlauf, die geplante Temperatur und den Modus. Außerdem zeigt sie, ob Velair das Anfangsmodell oder ähnliche lokale Verlaufsdaten verwendet.
 
 Um eine bestimmte Berechnung zu prüfen, öffne **Berechnungsdetails** in der Vorhersagekarte. Dieser optionale Bereich zeigt die Backend-Werte für die Vorhersage: Anzahl der Beispiele, Schätzung aus abgeschlossenen Beobachtungen, Untergrenze aus Teilbeobachtungen, kombinierte Schätzung, Rundung und endgültiger Vorlauf. Standardmäßig bleibt er ausgeblendet, damit die normale Ansicht übersichtlich bleibt.
+
+Die Vorbereitung einer Geplanten Rückkehr wird getrennt von der Vorbereitung des Wochenzeitplans angezeigt. Bei einer angenommenen zukünftigen Rückkehr zeigt jedes Klimagerät Rückkehrstatus, geschätzten Beginn, Ankunftssollwert und gegebenenfalls den Grund für eine Aussetzung oder Nichtverfügbarkeit. Übersicht, Geplante Rückkehr und Klimakarten verwenden dieselben Rückkehrdaten des Backends; dies ist kein weiteres Wochenereignis. Ein Raum kann weiter dem Abwesenheitsmodus folgen und zugleich eine spätere Rückkehrschätzung anzeigen. **Vorbereitung** beschreibt Velairs Steuerungsabsicht und bestätigt weder den Empfang eines Befehls noch tatsächliches Heizen oder Kühlen. Die Rückkehrzeitleiste zeigt die verstrichene Zeit bis zur gespeicherten Ankunft, keinen thermischen Fortschrittsprozentsatz. Siehe [Raumvorbereitung](planned-return.de.md#room-preparation).
 
 <a id="how-it-starts"></a>
 ## Wie der Start berechnet wird

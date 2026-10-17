@@ -43,11 +43,12 @@ describe("full template saves through public components", () => {
     document.body.append(card); await settle(card);
     Object.assign(card, { _selectedEntity: "climate.room", _selectedWeekday: "monday", _draftTemplateLink: structuredClone(full), _draftConfigurationRevision: 4, _draftBlocks: [{ ...template.blocks[0], action: "set_temperature", hvac_mode: "" }], _dirty: true });
     await settle(card);
+    send.mockClear();
     const save = card.shadowRoot!.querySelectorAll<HTMLButtonElement>(".schedule-save-actions button")[1];
     expect(save).toBeDefined(); expect(save.disabled).toBe(false); save.click(); await settle(card);
     const writes = send.mock.calls.map(([message]) => message).filter((message) => message.type === "velair/set_daily_schedule");
     expect(writes).toEqual([{ type: "velair/set_daily_schedule", entity_id: "climate.room", weekday: "monday", template_link: full, expected_revision: 4 }]);
-    expect(send.mock.calls.some(([message]) => message.type === "velair/preview_daily_schedule" && JSON.stringify(message.template_link) === JSON.stringify(full))).toBe(true);
+    expect(send.mock.calls.some(([message]) => message.type === "velair/preview_daily_schedule")).toBe(false);
   });
 
   it("saves a full Profile reference atomically without destination climate bindings", async () => {
@@ -55,6 +56,7 @@ describe("full template saves through public components", () => {
     const view = new VelairProfilesView();
     Object.assign(view, { hass, data: response, workspace: "profiles", scheduleWorkspace: true, _selectedKey: "winter", _draft: createClimateProfileDraft(response.profiles![0]), _configurationRevision: 4 });
     document.body.append(view); await settle(view);
+    send.mockClear();
     const save = view.shadowRoot!.querySelector<HTMLButtonElement>('.template-detail-actions button[title="Save"]')!;
     expect(save).not.toBeNull(); expect(save.disabled).toBe(false); save.click(); await settle(view);
     const writes = send.mock.calls.map(([message]) => message).filter((message) => message.type === "velair/set_profile");
@@ -63,7 +65,41 @@ describe("full template saves through public components", () => {
     expect(saved.zones["climate.room"].template_links.monday).toEqual(full);
     expect(saved.zones["climate.room"].schedule.monday).toEqual([]);
     expect(writes[0].expected_revision).toBe(4);
-    expect(send.mock.calls.some(([message]) => message.type === "velair/preview_profile")).toBe(true);
+    expect(send.mock.calls.some(([message]) => message.type === "velair/preview_profile")).toBe(false);
+  });
+
+  it.each(["template", "preset"])("retains a %s Profile draft when authoritative validation rejects its save", async (source) => {
+    const response = data(); const { send, hass } = connection(response);
+    if (source === "preset") {
+      const zone = response.profiles![0].zones["climate.room"];
+      if (zone.behavior !== "schedule") throw new Error("Expected schedule");
+      zone.template_links = {};
+      zone.schedule.monday = [{ start: "07:00", preset_key: "comfort" }];
+    }
+    const view = new VelairProfilesView();
+    Object.assign(view, { hass, data: response, workspace: "profiles", scheduleWorkspace: true,
+      _selectedKey: "winter", _draft: createClimateProfileDraft(response.profiles![0]), _configurationRevision: 4 });
+    document.body.append(view); await settle(view);
+    Object.assign(view, { _dirty: true });
+    const before = structuredClone((view as any)._draft);
+    let reject!: (error: Error) => void;
+    send.mockClear();
+    send.mockImplementation((message) => {
+      if (message.type === "velair/set_profile") return new Promise((_resolve, rejectRequest) => { reject = rejectRequest; }) as never;
+      throw new Error(`Unexpected request during save: ${message.type}`);
+    });
+    const pending = (view as unknown as { _save(): Promise<void> })._save();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].type).toBe("velair/set_profile");
+    expect(view.scheduleSavePending).toBe(true);
+    expect((view as any)._dirty).toBe(true);
+    reject(new Error("Referenced resource is no longer available"));
+    await pending; await settle(view);
+    expect(view.scheduleSavePending).toBe(false);
+    expect((view as any)._dirty).toBe(true);
+    expect((view as any)._draft).toEqual(before);
+    expect((view as any)._configurationRevision).toBe(4);
+    expect((view as any)._error).toContain("Referenced resource is no longer available");
   });
 
   it("shows backend template targets and saves its preset reference after renaming", async () => {

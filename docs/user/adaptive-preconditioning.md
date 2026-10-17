@@ -7,6 +7,12 @@ Translations: [English original](adaptive-preconditioning.md) · [Español](adap
 
 Adaptive Preconditioning lets Velair start heating or cooling before a scheduled block so the room is closer to the target temperature when the block begins.
 
+A **Temperature only** block does not authorize an HVAC mode change. While its
+climate is off, Velair does not start advance preparation or collect thermal
+learning samples for that target. Turning it on externally allows preparation
+to be recalculated using the actual compatible mode. This option cannot
+promise comfort by the block time while the equipment remains off.
+
 For example, a schedule block at `07:00` with `21 °C` means "be close to `21 °C` at `07:00`", not "start changing to `21 °C` at `07:00`".
 
 Adaptive Preconditioning runs locally inside Home Assistant. Velair stores its
@@ -40,6 +46,17 @@ deadbands keep the normal scheduled time. Velair always sends both range limits;
 it never collapses a range into one temperature.
 
 When a climate is expanded, each supported mode shows a live prediction card. It uses the same backend next-event data as the Overview tab, so pauses, boosts, unsupported modes, and blocks that cannot be preconditioned are handled consistently. When a matching future block exists, the card shows the calculated start time, the target time, the lead time, the scheduled temperature and mode, and whether Velair is using the initial model or similar local history.
+
+Planned Return preparation is identified separately from weekly schedule
+anticipation. For an accepted future return, the climate's preparation information
+shows its return state, estimated start, arrival target and any suspension or
+availability reason. Overview, Planned Return and climate cards use the same
+backend return information; it is not another weekly schedule event. A room may
+still follow Away while showing a future return estimate. **Preparing** describes
+Velair's control intent, not confirmation that a device received a command or is
+physically heating or cooling. The return timeline shows elapsed time toward the
+saved arrival, not a percentage of thermal progress. See
+[Room Preparation](planned-return.md#room-preparation) for the state meanings.
 
 If you want to verify a specific calculation, open **Calculation details** in the live prediction card. This optional section shows the backend values used for that prediction, including sample counts, the estimate from completed observations, the partial lower bound, the combined estimate, rounding, and the final lead. It is hidden by default so the normal view stays simple.
 

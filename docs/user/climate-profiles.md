@@ -12,9 +12,10 @@ automations decide when a profile changes, while Velair stores, applies, and
 shows the resulting climate behavior.
 
 A **Profile** defines one alternative climate routine for its configured zones.
-A **Mode** activates one or more non-overlapping Profiles together as a single
-household state. Activate a Profile directly when only that routine is needed;
-use a Mode when several areas should change together.
+A **Mode** selects one or more non-overlapping Profiles as the household's
+**base**. You can then apply Profiles as **zone exceptions**, including only
+part of a multizone Profile, without changing other rooms. Establish a base
+when the whole setup should change; apply exceptions for independent routines.
 
 Examples include Home, Away, Vacation, Summer, Guest, or Sleep. Profiles also
 support installations whose heating and cooling schedules use different block
@@ -49,8 +50,23 @@ editor with either the color picker or an editable `#RRGGBB` value. Invalid
 values are highlighted and cannot be saved. The color is included in portable
 exports. The built-in Default selection keeps
 its fixed color.
+
+Each Profile row keeps its actions in a separate right-hand column: set as
+base, apply as a zone exception, then delete. Actions remain beside the name
+at narrow widths instead of wrapping below it. The buttons have transparent
+backgrounds and space from the edge; active states use their icon and color.
+The description stays visible, with compact **Base** and **Exception** chips
+underneath for its current uses. Unused Profiles have no usage chips, and the
+base action stays neutral until the Profile belongs to the base. A Profile used only
+as an exception highlights its layers action, not its base action. A fully
+overridden base still retains its base identity. These states describe saved
+selection, not whether a thermostat is currently running. Selecting the row
+opens its editor; activation and exception actions do not change the editing
+selection. Confirming deletion of the edited Profile clears that editor.
+
 For each managed climate, choose one behavior:
 
+- **Does not participate**: this Profile does not claim the zone.
 - **Default schedule**: keep using that zone's regular weekly schedule.
 - **Profile schedule**: use a complete weekly schedule stored in the Profile.
 - **Pause** with **Leave thermostat unchanged**: stop scheduled changes and
@@ -58,8 +74,42 @@ For each managed climate, choose one behavior:
 - **Pause** with **Turn climate off**: stop scheduled changes and turn the
   climate off.
 
-Zones that are not configured in a profile continue using their default
-schedules. Templates can still be copied as independent blocks, or a Default
+Each zone with **Profile schedule** also stores its own **Day layout**. Select
+individual days, weekdays/weekend, or all days
+before choosing a day. The seven cells keep the same positions; the layout
+selects one day, weekdays/weekend, or the complete week together. Editing the
+selected group updates those days in the Profile
+draft; **Save profile** persists the complete Profile together. When days differ,
+inspect them and explicitly choose a base before replacing their configurations.
+Other days remain unchanged. The layout is remembered alongside the draft
+schedule when temporarily switching a zone's behavior. Selected contiguous
+cells connect visually and the timeline shows the common blocks. Differences
+appear as compact visual alternatives: identical day configurations are grouped,
+with Overview's compact read-only timeline bars and target/mode labels.
+There is no permanent block list underneath; the information icon opens all
+times and settings on hover, keyboard focus or tap without selecting the base.
+Click or tap an alternative to
+select a single base, identified by its background and border. Alternatives
+stay visible so you can change the base before saving. In **All days** and
+**Weekdays / Weekend**, select the schedule and use **Save profile** before the
+common block editor becomes available, without an additional replacement
+confirmation. The selected group contains seven days, five weekdays or two
+weekend days; other days retain their schedules. A failed save preserves
+the selected alternative. Changes to the shared blocks can then be saved with
+the Profile as usual. Arrow keys, Space and Enter support keyboard selection. A
+mixed group needs a selected base before **Save profile** is available. See
+the summaries beside Save for each chosen source, zone and destination days.
+Save profile also includes other pending Profile changes. Visually
+matching alternatives identify differing template or preset dependencies with
+compact labels. Empty alternatives show **No own blocks**; their information
+explains that applying them removes own blocks; an empty day is not an off command.
+See
+[Day layouts and editing several days](usage.md#create-a-daily-schedule)
+for grouped editing, mixed days, and portability.
+
+Default schedule explicitly claims the zone, including for overlap validation.
+A zone that does not participate inherits the base, or Default when no base
+Profile includes it. Templates can still be copied as independent blocks, or a Default
 or Profile weekday can link only its hours to a template and keep its own
 climate settings, or follow the complete template with all controls read-only.
 Templates and independent blocks can reference shared Velair presets. See
@@ -84,11 +134,16 @@ controller limits and publication semantics.
 
 From an edited Profile schedule day, **Save as template** stores only a
 reusable template through the backend and leaves the unsaved Profile draft
-unchanged. To reuse the day in other managed climates, select them in the
-**Clone day to / Other thermostats** panel and choose **Clone**. The confirmation
+unchanged. To reuse the selection in other managed climates, select them in the
+**Other thermostats** clone panel and choose **Clone**. Its label follows the
+selected layout: one day, Monday–Friday, Saturday–Sunday, or All days. The confirmation
 summarizes the selected climates and identifies any Default or Pause zones that
-will change to **Profile schedule**. Cloning replaces only the matching weekday,
-preserves all other remembered days, and remains part of the Profile draft.
+will change to **Profile schedule** and lists the selected days. Cloning replaces
+only those matching weekdays, preserves all other remembered days and the target's
+day layout, and remains part of the Profile draft. Day-to-day cloning is available
+only with **Individual days**. Grouped editors omit that panel and the shortcut
+to change layouts; use the regular **Day layout** selector instead. Default and
+Profile editors use the same selected-group scope for copies to other thermostats.
 Velair validates target type, HVAC mode, temperature limits, and temperature
 step for every selected climate before changing the draft. It removes optional
 controls unsupported by each destination climate. If an option-only block has
@@ -110,10 +165,10 @@ selector shows friendly names, while the active editor also shows the entity
 ID. Profile metadata and schedules are still saved together as one atomic
 Profile; changing the selected thermostat does not save a partial draft.
 
-Several profiles can be active together when a Mode coordinates them. Their
-configured zones must not overlap: each managed climate always has at most one
-profile controlling its effective behavior. Zones not owned by any active
-profile continue using their default schedule.
+Several Profiles can form a base when a Mode coordinates them. Their
+configured zones must not overlap. Exceptions may replace individual zones from that base:
+each managed climate still has exactly one effective routine. There is no merging
+of schedule blocks and no priority stack of previous exceptions.
 
 ## Worked Example: An Away Mode
 
@@ -176,10 +231,12 @@ its visible option.
 
 Use the play button on a Profile row in **Schedules > Profile schedules** for
 direct activation, or use the shared **Active setup** card in Overview or at
-the top of **Modes**. It
-shows the current Mode and the Profiles that it applies as one
-relationship. Select **Change** to choose a Mode or use the separate
-**Activate a Profile manually** group. A direct Profile choice replaces the
+the top of **Modes**. It separates the **Base** from **Exceptions**, identifying
+whether the base comes from a Mode, one Profile, several Profiles or Default.
+Select **Change** to choose a Mode or use the separate **Profiles** group.
+Selecting a Profile row establishes that Profile as the complete base; the
+compact layers icon beside it applies only its configured zones as exceptions.
+A direct Profile choice replaces the
 active set with that Profile and changes the Mode to **Manual**, while
 **Default** means that no alternate Profile is active. Profiles can also be
 activated directly from its Profile row, from Active setup, or with the
@@ -271,10 +328,11 @@ limited to 255 characters, unique without regard to letter case, and cannot use
 either built-in name or Home Assistant's reserved `unknown` and `unavailable`
 states.
 
-The Modes tab shows the active Mode and applied Climate Profiles together in
-one **Active setup** card. Its single grouped chooser lists Default and custom
-Modes first, with direct Profile activation separately. Manual remains visible
-as a state but cannot be selected from this chooser. Selecting a Mode activates
+The Modes tab shows the selected base and its zone exceptions together in
+one **Active setup** card. Its grouped chooser lists Default and custom
+Modes first, with Profile base and exception actions separately. Manual remains
+a native Home Assistant select state, rather than the panel's base name.
+Selecting a Mode activates
 all its mapped Profiles, while selecting a Profile directly replaces the active
 set with that single Profile and changes the Mode to **Manual**. Mode rows show
 the mapped Profiles' icons and colors, so Modes and Profiles remain
@@ -302,6 +360,148 @@ and changes the selector to **Manual**. Deleting a profile also removes the
 Modes mapped to it and removes only that profile from the active set; Velair
 returns to **Default** when the set becomes empty.
 
+## A Base With Independent Zone Exceptions
+
+A Profile can include several rooms. Applying it as an exception replaces the
+routine only in its explicitly configured rooms; it does not change other rooms
+or rewrite the Profile. Each room uses one complete weekly routine, never a
+mixture of blocks from multiple Profiles.
+
+For example, a **Winter** base covers the office, living room and bedroom.
+**Remote work** includes the office and living room; **Guests** includes the
+living room and guest room:
+
+| Change | Office | Living room | Bedroom | Guest room |
+| --- | --- | --- | --- | --- |
+| Select Winter base | Winter | Winter | Winter | Default |
+| Apply Remote work | Remote work | Remote work | Winter | Default |
+| Apply Guests later | Remote work | Guests | Winter | Guests |
+| Restore living room to base | Remote work | Winter | Winter | Guests |
+
+Restoring the living room to its base does not revive Remote work. Exceptions
+have no history stack. Explicitly choosing Default is different: it uses the
+zone's regular schedule even when the base includes another routine for it.
+
+Use **Apply as exception** in Active setup, or an automation:
+
+```yaml
+action: velair.apply_profiles
+data:
+  profile_ids: [remote_work]
+```
+
+One request may apply several Profiles only when they include different zones.
+For example, `[remote_work, guests]` is rejected completely because both include
+the living room. Applying Guests in a later request intentionally replaces that
+room's exception and preserves the office.
+
+To apply just one room from a multizone Profile:
+
+```yaml
+action: velair.set_zone_profile
+data:
+  entity_id: climate.office
+  profile_id: remote_work
+```
+
+The Profile must explicitly include that managed room. Use `profile_id: null`
+to impose Default. To remove an exception and inherit the current base:
+
+```yaml
+action: velair.clear_profile_overrides
+data:
+  entity_id: [climate.office, climate.living_room]
+```
+
+To replace the whole base and remove every exception without creating a Mode:
+
+```yaml
+action: velair.activate_profiles
+data:
+  profile_ids: [winter_office, winter_bedrooms]
+```
+
+Base Profiles must not overlap. An empty activation list selects Default;
+empty application or clear lists do nothing. New actions require their fields:
+an omitted value never means "all rooms" or "Default".
+
+Active setup shows **Base** and its type together above the base name, using
+two compact levels on phones and narrow dashboard cards. Long names wrap when
+needed. A coverage line shows how many of the base's included managed zones
+still inherit it. Exceptions, including explicit Default or the same Profile,
+are excluded from this count. Zones outside a Profile base use Default and are
+not counted as part of that base. A Default base includes every managed zone.
+This describes selection ownership, not whether devices are currently running.
+An empty base scope is distinguished from one fully replaced by exceptions.
+Below the base's own coverage summary, **Household distribution** is a disclosure
+closed initially. Its label states the household total, independently of the
+base's included-zone count. Select it to reveal the 6px bar and its entire
+legend; select it again or press Escape to collapse them. The header stays
+fixed while content expands downwards, with a short transition that respects
+reduced-motion preferences. The bar represents every managed zone using the
+Profiles' colors.
+Exception segments include zones outside the base, so their counts match the
+Exceptions list. Zones outside the base with no exception have a separate
+neutral Default segment. A compact legend uses 14px Profile icons, names and
+origin, with counts in a separate right-aligned column. Explicit Default
+exceptions also use a neutral color. Base,
+exception and fallback references remain distinct even when colors coincide.
+The base's own coverage count stays separate and appears once. An empty Profile
+base can still have a household bar with Default zones; no managed zones means
+no bar. These figures describe selection ownership, not physical device state.
+Participating base Profiles are identified in the expanded legend; Mode bases
+do not repeat a separate component list above it.
+On desktop, the base occupies less width than the exceptions. Its icon stays
+aligned with the top of its name and type. The Exceptions heading uses the
+layers icon to identify the same concept as Profile exception actions.
+**Exceptions** lists each Profile and a button with
+its zone count; explicit Default exceptions have their own group. Room names
+stay hidden until requested. Select anywhere on an exception row to expand that group's
+rooms beneath its row without replacing the other exceptions. Select it again
+or press Escape to collapse it; opening another group closes the previous one.
+Expansion uses a short transition and respects reduced-motion preferences.
+The selected row and its count stay in place; room details grow downwards and
+push subsequent rows down, so the same button can be used to collapse them.
+Long room lists scroll inside the expanded area instead of filling the overview.
+An unmodified base shows **No exceptions**. The base remains visible even when
+every room is currently overridden. Active setup does not include a separate
+per-zone editing workspace; use the documented zone actions for targeted changes.
+The native Mode select shows Manual while
+exceptions exist. Clearing all exceptions restores the original Mode label if
+it still exists. Selecting a custom Mode or Default, activating a single Profile,
+or activating a complete list explicitly replaces the base and clears exceptions.
+The native Manual option only releases the base Mode association and keeps the
+base and exceptions.
+
+Editing a base Mode preserves its exceptions. Renaming or editing a Profile
+keeps references live: changed schedules affect the rooms using them. Adding a
+room to a Profile does not expand an exception previously applied to other rooms.
+Remove an exception before editing its Profile to remove the referenced room.
+Deleting a Profile, or importing definitions that remove it, removes its
+exceptions and returns those rooms to the remaining base or Default.
+
+Home Assistant still decides the combination of season, presence and personal
+routine. A seasonal Mode is a complete selection, not an extra layer above
+room exceptions. Recalculate the relevant room selections after changing season.
+Different room actions compose safely; competing actions for the same room are
+accepted in order. A complete base selection can replace all of them.
+
+All explicit selection actions cancel a pending Return home, including a repeated
+selection. Empty apply/clear lists do not. Return home cancellation can affect
+preparation elsewhere in the house. It is saved separately from the subsequent
+selection: if the latter save fails, the previous selection can remain with
+Return home already cancelled. Invalid requests never cancel it.
+
+Selection changes are persisted together, but devices may apply them at different
+times or report individual failures. Existing pauses and delivery restrictions
+remain in control. A change only to selection attribution does not cancel Boost
+or send duplicate climate actions when the effective routine is unchanged.
+Externally executed rooms publish their effective week with the provider's
+existing restrictions. Profiles do not remove shared equipment constraints.
+
+The complete base and exception intent survives restart. Portable exports contain
+definitions, not this active intent; import never activates new Profiles.
+
 ## Seasonal selection
 
 The [seasonal climate selection blueprint](blueprints/seasonal-climate-selection.md)
@@ -313,6 +513,10 @@ presence rules: another stable reading can replace a manually selected Away Mode
 
 ## Interactions
 
+- **Temperature only** blocks retain their policy in Profiles, reusable presets,
+  templates, and linked template bindings. Activating a Profile or Mode with such
+  a block updates its target without requesting an HVAC mode change. It does
+  not turn an off climate on; the integration must accept targets while off.
 - Global and per-zone pauses take priority over a profile change.
 - Boosts in affected zones are cancelled when a profile is activated.
 - Adaptive Preconditioning recalculates against the effective profile schedule.

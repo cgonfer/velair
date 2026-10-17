@@ -173,7 +173,7 @@
     },
     "cancel_planned_return": {
       "name": "Cancelar regreso previsto",
-      "description": "Cancela un regreso pendiente o activo, o cierra el aviso de un regreso inactivo. Conserva el modo actual e impide el regreso autom\u00e1tico durante esta ausencia. Despu\u00e9s puedes planificar un nuevo regreso expl\u00edcitamente."
+      "description": "Cancela un regreso pendiente o activo, o cierra el aviso de un regreso inactivo. Conserva el modo actual e impide el regreso automático durante esta ausencia. Después puedes planificar un nuevo regreso explícitamente."
     },
     "update_block_preset": {
       "name": "Actualizar preset de Velair",
@@ -226,6 +226,10 @@
         "clear_fields": {
           "name": "Retirar ajustes",
           "description": "Solo para update. Retira ajustes sin restablecerlos en el dispositivo. El resultado debe ser válido."
+        },
+        "temperature_only": {
+          "name": "Solo temperatura",
+          "description": "Actualiza las temperaturas objetivo sin solicitar un cambio de modo HVAC ni el encendido. Requiere una acción de temperatura sin opciones del dispositivo. Usa clear_fields o replace para eliminar un modo HVAC u opciones existentes."
         }
       },
       "sections": {
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Revisión de configuración",
           "description": "Comprobación opcional de concurrencia. Omítela para clonar el origen guardado más reciente bajo el bloqueo de configuración."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Activar perfil de climatización",
+      "description": "Establece un perfil de climatización guardado como base completa y elimina todas las excepciones por zona. Las zonas que no cubre usan sus horarios predeterminados. Deja vacío el ID del perfil para devolver todas las zonas a Predeterminado.",
+      "fields": {
+        "profile_id": {
+          "name": "ID del perfil",
+          "description": "Clave estable del perfil que se activará. Vacío elimina el conjunto activo y selecciona Predeterminado."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Desactivar perfil de climatización",
+      "description": "Devuelve todas las zonas a Predeterminado eliminando los perfiles base y todas las excepciones por zona."
+    },
+    "activate_profiles": {
+      "name": "Activar perfiles de climatización como base",
+      "description": "Reemplaza la base completa por perfiles sin zonas compartidas y elimina todas las excepciones por zona. Una lista vacía selecciona Predeterminado. La selección de perfiles no garantiza el envío físico simultáneo.",
+      "fields": {
+        "profile_ids": {
+          "name": "IDs de perfiles",
+          "description": "Lista ordenada de IDs estables de perfiles. Los perfiles no deben incluir una misma zona."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Aplicar perfiles de climatización como excepciones",
+      "description": "Reemplaza las excepciones solo en las zonas incluidas explícitamente en estos perfiles. Las demás zonas mantienen su selección. Si los perfiles de esta solicitud comparten zonas, se rechaza toda la acción; una lista vacía no hace nada. Cancela un Regreso a casa pendiente.",
+      "fields": {
+        "profile_ids": {
+          "name": "IDs de perfiles",
+          "description": "Lista de IDs estables de los perfiles cuyas zonas explícitas deben usar estos perfiles como excepciones."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Establecer excepción de perfil de una zona",
+      "description": "Aplica solo una zona de un perfil guardado y mantiene la selección de las demás zonas. El perfil debe incluir esta zona. Usa null de YAML para Predeterminado; usa Borrar excepciones de perfil para heredar la base. Cancela un Regreso a casa pendiente.",
+      "fields": {
+        "profile_id": {
+          "name": "ID del perfil",
+          "description": "ID estable del perfil, o null de YAML para usar explícitamente el horario predeterminado de la zona."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Borrar excepciones de perfil",
+      "description": "Restaura la base actual para las zonas seleccionadas explícitamente. No restaura excepciones anteriores. Una lista vacía no hace nada. Cancela un Regreso a casa pendiente cuando se solicitan zonas.",
+      "fields": {
+        "entity_id": {
+          "name": "Entidades de climatización",
+          "description": "Una entidad de climatización gestionada o una lista. Todos los destinos deben ser válidos antes de eliminar cualquier excepción."
         }
       }
     }

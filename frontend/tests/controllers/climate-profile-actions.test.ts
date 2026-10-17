@@ -39,3 +39,21 @@ describe("climate profile API contract", () => {
     });
   });
 });
+
+
+it("sends explicit base, partial exception, Default and restore commands", async () => {
+  const sendMessagePromise = vi.fn().mockResolvedValue({});
+  const api = new VelairApiClient({ connection: { sendMessagePromise } } as unknown as HomeAssistant);
+  await api.activateProfiles(["winter", "bedrooms"]);
+  await api.applyProfiles(["work", "visitors"]);
+  await api.setZoneProfile("climate.office", "work");
+  await api.setZoneProfile("climate.office", null);
+  await api.clearProfileOverrides(["climate.office", "climate.living"]);
+  expect(sendMessagePromise.mock.calls.map(([message]) => message)).toEqual([
+    { type: "velair/activate_profiles", profile_ids: ["winter", "bedrooms"] },
+    { type: "velair/apply_profiles", profile_ids: ["work", "visitors"] },
+    { type: "velair/set_zone_profile", entity_id: "climate.office", profile_id: "work" },
+    { type: "velair/set_zone_profile", entity_id: "climate.office", profile_id: null },
+    { type: "velair/clear_profile_overrides", entity_id: ["climate.office", "climate.living"] },
+  ]);
+});

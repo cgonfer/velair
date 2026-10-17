@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -144,7 +144,7 @@ triggers:
 <a id="profile-changed"></a>
 ## Profile geändert
 
-`profile_changed` wird nach Speichern eines anderen Klimaprofilsatzes oder der Standardzeitpläne gesendet. Direkte Auswahl desselben aktiven Satzes kann die native Modusentität zu Manuell bewegen, sendet aber kein `profile_changed`, weil wirksame Profile gleich bleiben.
+`profile_changed` wird nach Speichern eines anderen Basis-Klimaprofilsatzes oder der Standard-Basiszeitpläne gesendet. Direkte Auswahl desselben aktiven Satzes kann die native Modusentität zu Manuell bewegen, sendet aber kein `profile_changed`, weil wirksame Profile gleich bleiben.
 
 ```yaml
 domain: velair
@@ -156,7 +156,7 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` nennt die Herkunft der wirksamen Auswahl. Öffentliche Werte sind `panel`, `service` und `select`; interne Lebenszyklusaktionen können genauere Werte wie `profile_deleted` oder `mode_updated` veröffentlichen. Geordnete ID-Listen beschreiben vollständigen neuen und vorherigen aktiven Satz. Leere `profile_ids` bedeutet Standard.
+`source` nennt die Herkunft der wirksamen Auswahl. Öffentliche Werte sind `panel`, `service` und `select`; interne Lebenszyklusaktionen können genauere Werte wie `profile_deleted` oder `mode_updated` veröffentlichen. Die geordneten ID-Listen beschreiben den neuen und vorherigen Basissatz. Eine leere Liste `profile_ids` bedeutet eine Standardbasis; Zonenausnahmen können weiterhin bestehen. Dieses Kompatibilitätsereignis meldet keine reinen Ausnahmeänderungen. Verwende `selection_changed` für die vollständige Auswahl und wirksame Raumzuordnung.
 
 Diese Automation reagiert beispielsweise, wenn Profil-ID `away` Teil des aktiven Satzes wird:
 
@@ -176,7 +176,34 @@ actions:
       message: Away profile is active
 ```
 
-Für Rückkehr zu Standardzeitplänen prüfe mit einer Template-Bedingung `trigger.event.data.profile_ids == []`.
+Für die Rückkehr der Basis zu Standardzeitplänen prüfe `trigger.event.data.profile_ids == []`. Prüfe die vollständige Auswahl, um eine Standardbasis mit Ausnahmen von Standard in jedem Raum zu unterscheiden.
+
+<a id="profile-selection-changed"></a>
+## Profilauswahl geändert
+
+<code>selection_changed</code> meldet nach der Speicherung Änderungen der Basis, ihrer Moduszuordnung oder der Zonenausnahmen. Es verwendet dieselbe <code>velair_event</code>-Hülle:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Eine fehlende Ausnahme erbt die Basis; ein vorhandener null-Wert verwendet ausdrücklich Standard. Die wirksame Zuordnung beschreibt jeden Raum, einschließlich teilweise angewendeter Profile. Sie bestätigt keine erfolgreiche physische Übertragung. Unveränderte Auswahl erzeugt kein doppeltes Ereignis. Die Bearbeitung referenzierter Zeitpläne kann das Klimaverhalten ohne Änderung der Auswahl-IDs ändern; Zeitplanänderungen behalten ihre normalen API-Aktualisierungsbenachrichtigungen.
 
 <a id="scheduler-mode-changed"></a>
 ## Zeitplanermodus geändert

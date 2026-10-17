@@ -13,6 +13,40 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
+## Day layouts and grouped Default saves
+
+Default zones and Profile schedule zones include `day_layout_key`, one of
+`individual`, `weekdays_weekend` or `all`. These are the only supported layouts;
+there are no layout-library management commands. Legacy schedules default to
+`individual`. Loading or importing earlier custom references resets their
+presentation to `individual` without modifying schedule content.
+
+All new writes require `expected_revision` and return the updated schedule
+response:
+
+- `velair/set_schedule_days`: `entity_id`, optional `weekdays`, optional
+  `day_layout_key`, and either `blocks` or `template_link` for day replacement.
+  Replacing existing linked days with blocks requires `unlink_template: true`.
+  Omit day content and weekdays for a layout-only save.
+
+A grouped save validates the full candidate week and commits once. Revision,
+device, reference or validation failures leave every selected day unchanged.
+Existing `velair/set_daily_schedule` callers remain compatible. Profiles retain
+their complete-Profile save and include layout references in schedule zones.
+Layout-only updates persist and publish metadata without climate actions or
+runtime rescheduling. Layouts never alter scheduler recurrence semantics.
+
+For example, assigning the integrated weekdays/weekend division alone:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/set_schedule_days",
+  entity_id: "climate.kitchen",
+  day_layout_key: "weekdays_weekend",
+  expected_revision: 12,
+});
+```
+
 ## Planned Return Services
 
 Home Assistant actions `velair.start_planned_return` and
@@ -310,10 +344,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 12,
+    "portable_model": 18,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.1"
+    "integration": "1.9.0-beta.2"
   }
 }
 ```
@@ -653,6 +687,23 @@ await hass.connection.sendMessagePromise({
 
 If `action` is omitted, the backend treats the block as `set_temperature` for compatibility with older schedules.
 
+A temperature block may include `temperature_only: true`. It retains target
+ownership but does not authorize an HVAC mode change or implicit turn-on.
+The field must be boolean and is valid only for `set_temperature`; `true`
+cannot coexist with `hvac_mode` or any optional device controls. Omission and
+`false` retain existing behavior. The target remains either a single temperature
+or a native low/high range. Off-state delivery requires the corresponding
+advertised target capability and never starts a mode to obtain that capability.
+Schedule events expose the flag, and presets, full templates, hours-only
+bindings, Profiles, and portable data preserve it. Portable model v18 prevents
+older importers from silently discarding this control policy. Existing older
+exports remain importable through their normal migrations. External providers
+must advertise `supports_temperature_only`; omission means false.
+
+For example, an inline temperature-only block is
+`{ start: "08:00", action: "set_temperature", temperature: 19, temperature_only: true }`.
+`Temperature only` is an editor label, never an HVAC mode string passed to HA.
+
 Temperature blocks contain either `temperature`, or the complete
 `target_temp_low` and `target_temp_high` pair. The two representations are
 mutually exclusive. Blocks may also include optional climate settings:
@@ -791,6 +842,60 @@ settings. A
 `set_climate_options` template block contains one or more optional climate
 settings and no temperature target or `hvac_mode`; applying it fails for a
 climate that supports none of them.
+
+### Preview and apply a saved template
+
+The template library uses `velair/preview_template_application` followed by
+`velair/apply_template_application`. Both accept the same application request:
+
+```ts
+const application = {
+  template_key: "workday",
+  source: "default", // or "profile", with profile_key
+  mode: "hours", // "copy", "hours", or "full"
+  day_layout_key: "weekdays_weekend",
+  groups: [{
+    entity_id: "climate.living_room",
+    weekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    base_weekday: "monday",
+    // Optional explicit bindings for hours-only review, keyed by template slot ID.
+    // bindings: { morning: { preset_key: "comfort" } }
+  }],
+  expected_revision: data.configuration_revision,
+};
+const preview = await hass.connection.sendMessagePromise({
+  type: "velair/preview_template_application", ...application,
+});
+// Complete required bases/bindings and review warnings before applying.
+const updated = await hass.connection.sendMessagePromise({
+  type: "velair/apply_template_application", ...application,
+});
+```
+
+`source` identifies one Default or Profile context per request; `profile_key`
+identifies an existing Profile for `source: "profile"`. Each group identifies a
+managed entity and one complete group of the requested built-in layout.
+Duplicate or overlapping destinations, incomplete groups, invalid references
+and stale revisions are rejected. Only selected entities adopt that layout.
+
+Preview returns `configuration_revision`, `can_apply`, `groups`, `warnings`
+and `errors`, without writing configuration or dispatching climate actions.
+Each group reports its previous layout/behavior and replaced days, raw
+configuration alternatives, whether an explicit base is required, hours-only
+proposals and their `exact`/`previous`/`next`/`manual` origins, pending slot
+assignments and compatibility errors. The backend owns base equality, donor
+selection, adaptation and full-week validation. Explicit bindings are validated
+without silently substituting another donor.
+
+Apply rebuilds and validates the candidate under the existing configuration
+mutation lock and commits the complete selection once. It returns the standard
+schedule response. Invalid assignments or destinations and failed storage do
+not leave a partially applied selection. Profile metadata, unrelated zones and
+days, active selection and resource definitions remain unchanged. Converting a
+Profile zone without its own schedule starts an empty week, not inherited
+Default data. Preview warnings identify conversions and mixed unselected groups;
+the caller must show them before Apply. No new HA service or portable format is
+introduced. Existing daily-save APIs remain compatible.
 
 ### External-change Policy
 
@@ -1084,6 +1189,64 @@ Custom selections use the stable mode `key`. The built-in selections are
 `panel` as their profile-change source; changes made through the native select
 entity continue to report `select`.
 
+### Base And Zone Exception Selection
+
+`profile_selection` in every schedule response is the authoritative selection:
+
+```json
+{
+  "base_profile_ids": ["winter"],
+  "base_mode_id": "winter-mode",
+  "zone_profile_overrides": {
+    "climate.office": "remote_work",
+    "climate.guest_room": null
+  }
+}
+```
+
+An absent override inherits the base. A present `null` forces Default; a Profile
+ID applies only that Profile's entry for that entity. Overrides are retained
+even when they currently equal the base. There is no previous-layer stack.
+
+The response additionally provides `effective_zone_profiles` (managed entity to
+effective Profile ID or null) and descriptive `effective_profile_ids`. The latter
+is not an activatable list: effective Profiles may overlap in their full
+definitions while applying to disjoint zone subsets. Legacy `active_profile_ids`
+continues to describe only the base. `active_mode_id` is null while any exception
+exists, while `profile_selection.base_mode_id` preserves its identity.
+
+The following WebSocket commands return the updated full schedule response;
+equivalent HA actions use the same fields without `type`:
+
+```ts
+{ type: "velair/activate_profiles", profile_ids: ["winter_office", "winter_bedrooms"] }
+{ type: "velair/apply_profiles", profile_ids: ["remote_work"] }
+{ type: "velair/set_zone_profile", entity_id: "climate.office", profile_id: "remote_work" }
+{ type: "velair/set_zone_profile", entity_id: "climate.office", profile_id: null }
+{ type: "velair/clear_profile_overrides", entity_id: ["climate.office"] }
+```
+
+Activation replaces the base and clears exceptions, with an empty list selecting
+Default. Applying Profiles writes exceptions only for their explicit zone scopes;
+overlaps within a request reject the entire request, including explicit Default
+entries. Successive requests may replace shared zones. Zone selection accepts a
+fragment of a multizone Profile. Clear accepts an explicit entity or list and
+restores inheritance; empty apply/clear lists do nothing. All fields are required,
+IDs must be text, and duplicates or unmanaged targets are rejected.
+
+Explicit custom Mode/Default selections clear exceptions. Manual detaches the
+base Mode without clearing selection. Editing the selected base Mode preserves
+exceptions. Deleting a Profile prunes its base and exception references; editing
+away a zone referenced by an exception is rejected until that exception is cleared.
+Import never activates new Profile IDs and prunes references removed by import.
+
+`selection_changed` on the existing `velair_event` bus describes complete
+selection changes; `profile_changed` retains its base-list semantics. See the
+[event guide](../user/automation-events.md#profile-selection-changed).
+External selection still cancels Return home before saving selection; the two
+saves are not one transaction. Return home snapshots now retain the full base
+and exception selection, migrating legacy snapshots to empty exceptions.
+
 ## Reset Zone Preconditioning Settings
 
 ```ts
@@ -1121,7 +1284,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 16,
+  "model_version": 18,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}

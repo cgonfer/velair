@@ -6,7 +6,7 @@ import {
   PORTABLE_SECTIONS,
   WEEKDAYS,
 } from "../constants";
-import { unmatchedPreconditioningLearningEntities } from "../domain/portable";
+import { portableImportRemovedProfileOverrides, unmatchedPreconditioningLearningEntities } from "../domain/portable";
 import { entityTemperatureStep } from "../domain/climate";
 import type { VelairViewHost } from "../host-types";
 import { renderInlineHelp } from "./inline-help";
@@ -448,6 +448,11 @@ export function renderPortabilitySettings(host: SettingsViewHost) {
                 </div>
               `
             : nothing}
+          ${portableImportRemovedProfileOverrides(host._data, host._importPayload, host._importSections).length
+            ? html`<div class="portable-warning" role="alert"><ha-icon icon="mdi:layers-remove"></ha-icon><span>
+                ${host._t("profileImportOverridesWarning")}
+                ${portableImportRemovedProfileOverrides(host._data, host._importPayload, host._importSections).join(", ")}
+              </span></div>` : nothing}
           ${legacyTemperatureUnit
             ? html`
                 <div class="portable-warning" role="status">

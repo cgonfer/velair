@@ -62,6 +62,19 @@ The compatibility rules are:
 
 This policy is the public maintenance contract for Velair blueprints.
 
+## Temperature-only schedule compatibility
+
+Blueprints do not reinterpret schedule blocks or store `temperature_only`.
+The window blueprint still adds/removes its owned pause reason through
+`velair.pause_zone` and `velair.resume_zone`. Resume applies current schedule
+authority: a temperature-only block must not restore a captured on mode, even
+when this blueprint caused the off state. Existing Keep blocks retain implicit
+restart. Cover both paths and simultaneous pause reasons in scheduler tests.
+Occupancy and seasonal blueprints execute user-selected actions unchanged;
+Mode/Profile selection respects the destination block policy, while direct
+climate service actions remain explicit. No YAML inputs, versions, URLs, or
+snapshots change for this integration feature.
+
 User documentation uses one stable catalog and one detail page per blueprint:
 
 ```text

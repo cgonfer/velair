@@ -27,6 +27,7 @@ export function draftBlocksFromScheduleBlocks(blocks: ScheduleBlock[], unit?: st
       action: block.action ?? ACTION_SET_TEMPERATURE,
       start: block.start,
       hvac_mode: block.hvac_mode ?? "",
+      ...(block.temperature_only ? { temperature_only: true } : {}),
       ...(block.slot_id ? { slot_id: block.slot_id } : {}),
     };
     if (block.target_temp_low != null || block.target_temp_high != null) {
@@ -92,6 +93,11 @@ export function updateDraftBlock(
       return block;
     }
 
+    if (field === "hvac_mode" && value === "temperature_only") {
+      return { ...block, action: ACTION_SET_TEMPERATURE, hvac_mode: "", temperature_only: true,
+        fan_mode: undefined, preset_mode: undefined, swing_mode: undefined,
+        swing_horizontal_mode: undefined, humidity: undefined };
+    }
     if (field === "hvac_mode") {
       const currentAction = block.action || ACTION_SET_TEMPERATURE;
       return {
@@ -102,17 +108,19 @@ export function updateDraftBlock(
             ? ACTION_SET_HVAC_MODE
             : ACTION_SET_TEMPERATURE,
         hvac_mode: value === "off" ? "" : value,
+        temperature_only: undefined,
       };
     }
 
     if (field === "action") {
       if (value === ACTION_SET_CLIMATE_OPTIONS) {
-        return { ...block, action: value, hvac_mode: "" };
+        return { ...block, action: value, hvac_mode: "", temperature_only: undefined };
       }
       if (value === ACTION_SET_HVAC_MODE) {
         return {
           ...block,
           action: ACTION_SET_HVAC_MODE,
+          temperature_only: undefined,
           fan_mode: undefined,
           humidity: undefined,
           preset_mode: undefined,
@@ -123,6 +131,7 @@ export function updateDraftBlock(
       return {
         ...block,
         action: value,
+        ...(value !== ACTION_SET_TEMPERATURE ? { temperature_only: undefined } : {}),
       };
     }
 
@@ -205,6 +214,9 @@ export function normalizeDraftBlocks(
       continue;
     }
     const action = block.action || ACTION_SET_TEMPERATURE;
+    if (block.temperature_only && (action !== ACTION_SET_TEMPERATURE || block.hvac_mode || draftBlockHasClimateOptions(block))) {
+      return { ok: false, error: options.invalidTemperatureError(start, "Temperature only cannot include an HVAC mode or device options") };
+    }
     if (action === ACTION_TURN_OFF) {
       blocks.push({ start, action: ACTION_TURN_OFF });
       seen.add(start);
@@ -239,6 +251,7 @@ export function normalizeDraftBlocks(
 
     const normalizedBlock: ScheduleBlock = {
       action: action === ACTION_SET_CLIMATE_OPTIONS ? action : ACTION_SET_TEMPERATURE,
+      ...(block.temperature_only ? { temperature_only: true } : {}),
       start,
     };
     if (action === ACTION_SET_CLIMATE_OPTIONS) {

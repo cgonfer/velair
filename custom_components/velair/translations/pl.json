@@ -163,17 +163,17 @@
       "fields": {
         "return_date": {
           "name": "Return date",
-          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+          "description": "Data przybycia w strefie czasowej Home Assistant. Łącznie data i godzina muszą wskazywać przyszłość."
         },
         "return_time": {
           "name": "Return time",
-          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+          "description": "Godzina przybycia wybranego dnia w strefie czasowej Home Assistant. W YAML użyj HH:MM; opcjonalne sekundy muszą wynosić 00. Nieistniejące godziny przy zmianie czasu są odrzucane."
         }
       }
     },
     "cancel_planned_return": {
-      "name": "Anuluj zaplanowany powr\u00f3t",
-      "description": "Anuluje oczekuj\u0105cy lub aktywny powr\u00f3t albo zamyka powiadomienie o nieaktywnym powrocie. Zachowuje bie\u017c\u0105cy tryb i zatrzymuje automatyczny powr\u00f3t podczas tej nieobecno\u015bci. Nast\u0119pnie mo\u017cesz jawnie zaplanowa\u0107 nowy powr\u00f3t."
+      "name": "Anuluj zaplanowany powrót",
+      "description": "Anuluje oczekujący lub aktywny powrót albo zamyka powiadomienie o nieaktywnym powrocie. Zachowuje bieżący tryb i zatrzymuje automatyczny powrót podczas tej nieobecności. Następnie możesz jawnie zaplanować nowy powrót."
     },
     "update_block_preset": {
       "name": "Aktualizuj preset Velair",
@@ -226,6 +226,10 @@
         "clear_fields": {
           "name": "Usuń ustawienia",
           "description": "Tylko dla update. Usuwa ustawienia bez resetowania urządzenia. Wynik musi pozostać prawidłowy."
+        },
+        "temperature_only": {
+          "name": "Tylko temperatura",
+          "description": "Aktualizuje temperatury docelowe bez żądania zmiany trybu HVAC ani włączenia. Wymaga akcji temperatury bez opcji urządzenia. Użyj clear_fields lub replace, aby usunąć istniejący tryb HVAC lub opcje."
         }
       },
       "sections": {
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Wersja konfiguracji",
           "description": "Opcjonalna kontrola równoczesnych zmian. Pomiń, aby sklonować ostatnio zapisane źródło pod blokadą konfiguracji."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Aktywuj profil klimatyczny",
+      "description": "Ustawia zapisany profil klimatyczny jako kompletną bazę i usuwa wszystkie wyjątki stref. Strefy spoza profilu używają harmonogramów domyślnych. Pusty identyfikator profilu przywraca ustawienia domyślne we wszystkich strefach.",
+      "fields": {
+        "profile_id": {
+          "name": "Identyfikator profilu",
+          "description": "Stały klucz aktywowanego profilu. Pusta wartość usuwa aktywny zestaw i wybiera ustawienia domyślne."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Dezaktywuj profil klimatyczny",
+      "description": "Przywraca ustawienia domyślne we wszystkich strefach, usuwając profile bazowe i wszystkie wyjątki stref."
+    },
+    "activate_profiles": {
+      "name": "Aktywuj profile klimatyczne jako bazę",
+      "description": "Zastępuje całą bazę profilami bez nakładających się stref i usuwa wszystkie wyjątki stref. Pusta lista wybiera ustawienia domyślne. Wybór profili nie gwarantuje jednoczesnego fizycznego dostarczenia poleceń.",
+      "fields": {
+        "profile_ids": {
+          "name": "Identyfikatory profili",
+          "description": "Uporządkowana lista stałych identyfikatorów profili. Profile nie mogą obejmować tej samej strefy."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Zastosuj profile klimatyczne jako wyjątki",
+      "description": "Zastępuje wyjątki tylko w strefach jawnie objętych tymi profilami. Inne strefy zachowują wybór. Nakładające się profile w żądaniu powodują odrzucenie całej akcji; pusta lista nic nie zmienia. Anuluje oczekujący powrót do domu.",
+      "fields": {
+        "profile_ids": {
+          "name": "Identyfikatory profili",
+          "description": "Lista stałych identyfikatorów profili, których jawnie skonfigurowane strefy mają używać tych profili jako wyjątków."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Ustaw wyjątek profilu strefy",
+      "description": "Stosuje tylko jedną strefę z zapisanego profilu, zachowując wybór wszystkich innych stref. Profil musi obejmować tę strefę. Użyj YAML null dla ustawień domyślnych; usuń wyjątki profili, aby dziedziczyć bazę. Anuluje oczekujący powrót do domu.",
+      "fields": {
+        "profile_id": {
+          "name": "Identyfikator profilu",
+          "description": "Stały identyfikator profilu lub YAML null, aby jawnie użyć harmonogramu domyślnego strefy."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Usuń wyjątki profili",
+      "description": "Przywraca bieżącą bazę dla jawnie wybranych stref. Poprzednie wyjątki nie są przywracane. Pusta lista nic nie zmienia. Anuluje oczekujący powrót do domu, gdy żądanie obejmuje strefy.",
+      "fields": {
+        "entity_id": {
+          "name": "Encje klimatyczne",
+          "description": "Jedna zarządzana encja klimatyczna lub lista. Wszystkie cele muszą być prawidłowe, zanim zostanie usunięty jakikolwiek wyjątek."
         }
       }
     }

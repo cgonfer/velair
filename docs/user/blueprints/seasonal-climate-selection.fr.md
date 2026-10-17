@@ -8,8 +8,8 @@ Traductions: [Original en anglais](seasonal-climate-selection.md) · [Español](
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -127,6 +127,8 @@ Par exemple, un capteur devenant indisponible à 09:00 avertit immédiatement, p
 
 <a id="safety-and-precedence"></a>
 ## Sécurité et priorités
+
+Sélectionner un Mode ou un Profil Velair applique les politiques de ses blocs. **Température uniquement** met à jour la cible sans demander de changement de mode HVAC ; utilisez des blocs **Chauffage** ou **Refroidissement** explicites si la sélection d’une saison doit démarrer l’équipement. Cette politique ne supprime pas les actions HVAC directes configurées dans le blueprint.
 
 Tant que le capteur est invalide, le blueprint ne fait pas de nouvelle sélection saisonnière ; il n’éteint pas automatiquement les appareils. Le Mode précédemment sélectionné et sa programmation restent en place. Réagissez à la notification si ce comportement ne convient pas à votre logement.
 

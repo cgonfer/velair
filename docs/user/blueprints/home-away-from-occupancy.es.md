@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](home-away-from-occupancy.md) · [Español](h
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -92,6 +92,8 @@ Al iniciar, las comprobaciones de ocupación, casa vacía y disponibilidad se ej
 <a id="safety-and-precedence"></a>
 
 ## Seguridad y prioridades
+
+Las acciones de Modos y Perfiles utilizan la política de bloques del horario seleccionado. Un bloque **Solo temperatura** actualiza su objetivo sin solicitar un cambio de modo HVAC, por lo que seleccionar En casa no necesariamente enciende un equipo apagado. Elige un bloque explícito **Calor** o **Frío** cuando En casa deba iniciar la climatización. Las acciones directas de climatización configuradas en este blueprint siguen siendo acciones explícitas de Home Assistant; la política del bloque no las suprime.
 
 El blueprint solo ejecuta las acciones que configures. Se mantienen las prioridades existentes de Modos, Perfiles, Refuerzo y pausas de Velair. Una entidad de ocupación en `unknown` o `unavailable` no activa ni En casa ni Ausente; el aviso identifica la entidad y explica que las acciones siguen suspendidas hasta que indique un estado admitido de casa ocupada o vacía.
 

@@ -8,6 +8,8 @@ import { climateProfileInput, createClimateProfileDraft, withProfileZoneBehavior
 import { renderCopyTargets, renderZoneTargets } from "../../src/velair/views/schedule-view";
 import type { ClimateProfileDraft } from "../../src/velair/domain/climate-profiles";
 import type { ScheduleResponse, TemplateLink } from "../../src/velair/types";
+import { WEEKDAYS } from "../../src/velair/constants";
+import { selectedDayGroup } from "../../src/velair/domain/day-layouts";
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
 const hours: TemplateLink = { mode: "hours", template_key: "work", bindings: { a: { preset_key: "comfort" } } };
@@ -25,8 +27,15 @@ const config = (link?: TemplateLink): ScheduleResponse => ({
   } }],
 } as unknown as ScheduleResponse);
 
-async function profileFixture(link?: TemplateLink) {
+async function profileFixture(link?: TemplateLink, layout = "individual", weekday = "monday") {
   const data = config(link);
+  if (layout !== "individual") {
+    const source = data.profiles![0].zones["climate.source"];
+    if (source.behavior !== "schedule") throw Error("Expected source schedule");
+    source.day_layout_key = layout;
+    source.schedule = Object.fromEntries(WEEKDAYS.map(day => [day, link ? [] : structuredClone(own)]));
+    source.template_links = link ? Object.fromEntries(WEEKDAYS.map(day => [day, structuredClone(link)])) : {};
+  }
   const send = vi.fn(async (message: any) => message.type === "velair/set_profile" ? data : {
     configuration_revision: 4, profile: message.profile, resolved_schedules: {}, blocks: [{ start: "08:00", action: "set_temperature", temperature: 21, hvac_mode: "heat" }],
   });
@@ -39,12 +48,44 @@ async function profileFixture(link?: TemplateLink) {
   view.shadowRoot!.querySelector<HTMLButtonElement>(".profile-zone-toggle")!.click(); await view.updateComplete;
   const monday = [...view.shadowRoot!.querySelectorAll<HTMLButtonElement>(".day-tab")].find((button) => button.getAttribute("aria-label")?.startsWith("Monday"))!;
   monday.click(); await view.updateComplete;
+  if (weekday !== "monday") {
+    view.shadowRoot!.querySelector<HTMLButtonElement>(`[data-weekday="${weekday}"]`)!.click(); await view.updateComplete;
+  }
   return { view, send, data, internal: view as unknown as { _draft: ClimateProfileDraft; _busy?: string; _dirty: boolean } };
 }
 
 function check(input: HTMLInputElement) { input.checked = true; input.dispatchEvent(new Event("change")); }
 
 describe("public day clone controls preserve references", () => {
+  it.each([
+    ["weekdays_weekend", "tuesday", "Monday–Friday"],
+    ["weekdays_weekend", "sunday", "Saturday–Sunday"],
+    ["all", "wednesday", "All days"],
+  ])("clones only the selected %s / %s group across Profile climates", async (layout, weekday, label) => {
+    for (const link of [undefined, hours, full]) {
+      const { view, internal } = await profileFixture(link, layout, weekday);
+      const before = climateProfileInput(internal._draft).zones["climate.target"];
+      if (before.behavior !== "schedule") throw Error("Expected target schedule");
+      expect(view.shadowRoot!.querySelector(".profile-day-copy")).toBeNull();
+      expect([...view.shadowRoot!.querySelectorAll("button")].some(button => button.textContent?.trim() === "Individual days")).toBe(false);
+      expect(view.shadowRoot!.querySelector(".profile-climate-copy .label")?.textContent).toBe(`Clone ${label} to`);
+      check(view.shadowRoot!.querySelector<HTMLInputElement>(".profile-climate-copy input")!); await view.updateComplete;
+      view.shadowRoot!.querySelector<HTMLButtonElement>(".profile-climate-copy .command-button")!.click(); await view.updateComplete;
+      expect(view.shadowRoot!.querySelector(".profile-climate-clone-dialog")?.textContent).toContain(`selected days (${label})`);
+      expect(view.shadowRoot!.querySelector(".profile-climate-clone-dialog")?.textContent).toContain("only the selected weekdays");
+      view.shadowRoot!.querySelectorAll<HTMLButtonElement>(".profile-climate-clone-dialog .profile-dialog-actions button")[1].click();
+      await vi.waitFor(() => expect(view.shadowRoot!.querySelector(".profile-climate-clone-dialog")).toBeNull());
+      const target = climateProfileInput(internal._draft).zones["climate.target"];
+      if (target.behavior !== "schedule") throw Error("Expected target schedule");
+      const days = selectedDayGroup(layout, weekday);
+      for (const day of WEEKDAYS) {
+        expect(target.schedule[day]).toEqual(days.includes(day) ? link ? [] : own : before.schedule[day]);
+        expect(target.template_links?.[day]).toEqual(days.includes(day) ? link : before.template_links?.[day]);
+      }
+      expect(target.day_layout_key).toBe(before.day_layout_key);
+      view.remove();
+    }
+  });
   it.each([hours, full])("clones $mode Profile links to days and saves references rather than resolved blocks", async (link) => {
     const { view, send, internal } = await profileFixture(link);
     check(view.shadowRoot!.querySelector<HTMLInputElement>(".profile-day-copy input")!); await view.updateComplete;

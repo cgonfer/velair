@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { PROFILE_DESCRIPTION_MAX_LENGTH, WEEKDAYS } from "../../src/velair/constants";
 import {
   activeClimateProfileZoneEffect,
+  effectiveZoneProfileId,
   climateProfileInput,
   climateProfileAccentColor,
   climateProfileValidationError,
   cloneProfileScheduleDay,
+  cloneProfileDayToDays,
   cloneProfileDayToClimates,
   createClimateProfileDraft,
   effectiveClimateSchedule,
@@ -16,7 +18,7 @@ import {
 } from "../../src/velair/domain/climate-profiles";
 
 describe("climate profiles domain", () => {
-  it("omits default-schedule zones and sends a complete week for scheduled zones", () => {
+  it("preserves explicit Default and sends a complete week for scheduled zones", () => {
     let draft = createClimateProfileDraft();
     draft = { ...draft, name: "Away" };
     draft = withProfileZoneBehavior(draft, "climate.office", "normal");
@@ -24,7 +26,7 @@ describe("climate profiles domain", () => {
 
     const input = climateProfileInput(draft);
 
-    expect(input.zones["climate.office"]).toBeUndefined();
+    expect(input.zones["climate.office"]).toEqual({ behavior: "normal" });
     expect(Object.keys(input.zones["climate.bedroom"].behavior === "schedule"
       ? input.zones["climate.bedroom"].schedule
       : {})).toEqual(WEEKDAYS);
@@ -96,14 +98,16 @@ describe("climate profiles domain", () => {
     draft = withProfileZoneBehavior(draft, "climate.office", "schedule");
     expect(draft.zones["climate.office"]).toEqual({
       behavior: "schedule",
+      day_layout_key: "individual",
       schedule: expected,
     });
 
     draft = withProfileZoneBehavior(draft, "climate.office", "normal");
-    expect(climateProfileInput({ ...draft, name: "Seasonal" }).zones).toEqual({});
+    expect(climateProfileInput({ ...draft, name: "Seasonal" }).zones).toEqual({ "climate.office": { behavior: "normal" } });
     draft = withProfileZoneBehavior(draft, "climate.office", "schedule");
     expect(draft.zones["climate.office"]).toEqual({
       behavior: "schedule",
+      day_layout_key: "individual",
       schedule: expected,
     });
     expect(climateProfileInput({ ...draft, name: "Seasonal" })).not.toHaveProperty(
@@ -220,7 +224,7 @@ describe("climate profiles domain", () => {
     expect(cloned.rememberedSchedules["climate.default"].tuesday).toEqual(defaultResult.schedule.tuesday);
     cloned.rememberedSchedules["climate.default"].monday[0].fan_mode = "quiet";
     expect(defaultResult.schedule.monday[0].fan_mode).toBe("auto");
-    expect(draft.zones["climate.default"]).toBeUndefined();
+    expect(draft.zones["climate.default"]).toEqual({ behavior: "normal" });
   });
 
   it("keeps a range target exclusive when converting a profile draft", () => {
@@ -334,5 +338,73 @@ describe("climate profiles domain", () => {
     expect(activeClimateProfileZoneEffect(data, "climate.normal")).toBeUndefined();
     expect(activeClimateProfileZoneEffect(data, "climate.profiled")?.profile.name).toBe("Away");
     expect(activeClimateProfileZoneEffect(data, "climate.paused")?.profile.name).toBe("Sleep");
+  });
+});
+
+
+describe("profile day layouts", () => {
+  it("persists independent layouts and remembers them across behavior transitions", () => {
+    let draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "schedule");
+    draft = withProfileZoneBehavior(draft, "climate.kitchen", "schedule");
+    draft.name = "Working";
+    const office = draft.zones["climate.office"];
+    if (office.behavior !== "schedule") throw new Error("Expected schedule");
+    office.day_layout_key = "weekdays_weekend";
+    draft = withProfileZoneBehavior(draft, "climate.office", "pause");
+    draft = withProfileZoneBehavior(draft, "climate.office", "normal");
+    draft = withProfileZoneBehavior(draft, "climate.office", "schedule");
+    const input = climateProfileInput(draft);
+    expect(input.zones["climate.office"]).toMatchObject({ day_layout_key: "weekdays_weekend" });
+    expect(input.zones["climate.kitchen"]).toMatchObject({ day_layout_key: "individual" });
+    const duplicate = createClimateProfileDraft({ ...input, key: "working" });
+    expect(climateProfileInput(duplicate).zones["climate.office"]).toMatchObject({ day_layout_key: "weekdays_weekend" });
+  });
+
+  it("applies a linked group without changing unrelated days or target layout", () => {
+    let draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "schedule");
+    draft = withProfileZoneBehavior(draft, "climate.kitchen", "schedule");
+    const office = draft.zones["climate.office"];
+    const kitchen = draft.zones["climate.kitchen"];
+    if (office.behavior !== "schedule" || kitchen.behavior !== "schedule") throw new Error("Expected schedule");
+    office.day_layout_key = "weekdays_weekend";
+    kitchen.day_layout_key = "all";
+    office.template_links = { monday: { mode: "hours", template_key: "work", bindings: { morning: { preset_key: "cool" } } } };
+    office.schedule.sunday = [{ start: "12:00", action: "set_temperature", temperature: "25", hvac_mode: "cool" }];
+    const grouped = cloneProfileDayToDays(draft, "climate.office", "monday", ["monday", "tuesday", "wednesday"]);
+    const zone = grouped.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected schedule");
+    expect(zone.template_links?.tuesday).toEqual(office.template_links.monday);
+    expect(zone.schedule.sunday).toEqual(office.schedule.sunday);
+    expect(office.template_links.tuesday).toBeUndefined();
+    const copied = cloneProfileDayToClimates(grouped, "climate.office", "tuesday", ["climate.kitchen"]);
+    expect(copied.zones["climate.kitchen"]).toMatchObject({ day_layout_key: "all", template_links: { tuesday: office.template_links.monday } });
+  });
+});
+
+
+describe("base and zone profile exceptions", () => {
+  it("distinguishes omitted participation from explicit Default through editing", () => {
+    let draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "normal");
+    draft.name = "Working";
+    const persisted = climateProfileInput(draft);
+    expect(climateProfileInput(createClimateProfileDraft({ ...persisted, key: "working" })).zones)
+      .toEqual({ "climate.office": { behavior: "normal" } });
+    draft = withProfileZoneBehavior(draft, "climate.office", "unconfigured");
+    expect(climateProfileInput(draft).zones).toEqual({});
+  });
+
+  it("resolves each zone independently and does not fall through explicit Default", () => {
+    const base = { key: "winter", name: "Winter", zones: { "climate.office": { behavior: "pause", action: "turn_off" }, "climate.bedroom": { behavior: "pause", action: "none" } } };
+    const exception = { key: "work", name: "Work", zones: { "climate.office": { behavior: "schedule", schedule: { monday: [] } }, "climate.bedroom": { behavior: "normal" } } };
+    const response = { profiles: [base, exception], global: { active_profile_ids: ["winter"] },
+      profile_selection: { base_profile_ids: ["winter"], base_mode_id: null, zone_profile_overrides: { "climate.office": "work", "climate.bedroom": null } },
+      zones: { "climate.bedroom": { schedule: { monday: [{ start: "09:00", action: "turn_off" }] } } },
+    } as unknown as import("../../src/velair/types").ScheduleResponse;
+    expect(effectiveZoneProfileId(response, "climate.office")).toBe("work");
+    expect(activeClimateProfileZoneEffect(response, "climate.office")?.profile.key).toBe("work");
+    expect(effectiveZoneProfileId(response, "climate.bedroom")).toBeNull();
+    expect(effectiveClimateSchedule(response, "climate.bedroom")).toBe(response.zones["climate.bedroom"].schedule);
+    delete response.profile_selection!.zone_profile_overrides["climate.office"];
+    expect(activeClimateProfileZoneEffect(response, "climate.office")?.profile.key).toBe("winter");
   });
 });

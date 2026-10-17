@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -104,6 +104,15 @@ Unterstützte Werte für `view`:
 - `preconditioning`: Konfiguration der adaptiven Vorkonditionierung und Status des lokalen Lernens.
 - `planned-return`: kompakte Bedienelemente für eine einmalige Rückkehr, Anzahl der konfigurierten Anwesenheitsquellen und ein Zeitverlauf ab bestätigter Abreise. Ohne gespeicherte Anwesenheitsquellen aktiviert **Plan return** sofort die Abwesenheitskonfiguration; die automatische Wochenroutine benötigt weiterhin Quellen.
 - `diagnostics`: Laufzeitzustand, begrenzter Verlauf, Filter und Export von Fehlerberichten.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+### Kartenerkennung und Fehlerbehebung bei Ressourcen
+
+Verwende nur die von der Integration bereitgestellte Modulressource <code>/velair_frontend/velair-card.js</code>. Entferne doppelte Velair-Ressourcen einschließlich einer älteren <code>/local/velair-card.js</code> und lade den Browser neu. Bereits registrierte benutzerdefinierte Browserelemente können nicht ersetzt werden. Wird eine ältere Ressource zuerst geladen, kann dieser Browser eine veraltete Kartenimplementierung verwenden.
+
+Die Kartenauswahl des Dashboards erkennt Velair über Frontend-Metadaten. Ein manuell hinzugefügtes <code>type: custom:velair-card</code> in YAML verwendet dagegen das registrierte benutzerdefinierte Element. Dies sind getrennte Prüfungen. Erwähne bei einem Problembericht ausdrücklich, wenn die Karte über YAML funktioniert, aber in der Auswahl fehlt.
+
+Wenn sich Desktop und Mobilgerät unterscheiden, prüfe im betroffenen Browser die Entwicklerkonsole auf JavaScript-Fehler und im Netzwerk-Reiter die Ressourcenanfrage. Nenne Home-Assistant- und Velair-Version, Browser, genaue Ressourcen-URL und relevante Fehlermeldungen. Entferne private Angaben vor dem Teilen von Protokollen. Erfolgreiches Laden in einem anderen Browser belegt nicht die Ursache des Fehlers im betroffenen Browser.
 
 <a id="updating"></a>
 ## Aktualisieren

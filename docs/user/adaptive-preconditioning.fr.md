@@ -1,5 +1,6 @@
 <a id="adaptive-preconditioning"></a>
 # Préconditionnement adaptatif
+
 <!-- velair-docs:start -->
 Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](adaptive-preconditioning.es.md) · [Français](adaptive-preconditioning.fr.md) · [Deutsch](adaptive-preconditioning.de.md) · [Italiano](adaptive-preconditioning.it.md) · [Nederlands](adaptive-preconditioning.nl.md) · [Polski](adaptive-preconditioning.pl.md) · [Português (Brasil)](adaptive-preconditioning.pt-br.md) · [Português (Portugal)](adaptive-preconditioning.pt-pt.md) · [Русский](adaptive-preconditioning.ru.md) · [État des traductions](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](ad
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -19,6 +20,8 @@ Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](ad
 <!-- velair-docs:end -->
 
 Le préconditionnement adaptatif permet à Velair de démarrer le chauffage ou le refroidissement avant un bloc programmé, afin que la pièce soit plus proche de la température cible lorsque le bloc commence.
+
+Un bloc **Température uniquement** n’autorise pas de changement de mode HVAC. Tant que l’équipement est éteint, Velair ne lance ni préparation anticipée ni collecte d’échantillons thermiques pour cette cible. Une mise en marche externe permet de recalculer la préparation selon le mode réel compatible. Cette option ne peut pas promettre le confort à l’heure du bloc tant que l’équipement reste éteint.
 
 Par exemple, un bloc programmé à `07:00` avec `21 °C` signifie « être proche de `21 °C` à `07:00` », et non « commencer à passer à `21 °C` à `07:00` ».
 
@@ -40,6 +43,8 @@ Le préconditionnement se configure par appareil. L’apprentissage du chauffage
 Les plages natives `heat_cool` sont prises en charge. Si la pièce est plus froide que la limite basse et que l’écart dépasse l’écart minimal de température, Velair calcule sa prévision à partir de cette limite et applique la plage complète en avance pour chauffer. Si la pièce est plus chaude que la limite haute et que l’écart dépasse ce seuil, il utilise la limite haute et applique la plage complète en avance pour refroidir. Les mesures dans la plage ou dans les bandes mortes autour de ses limites conservent l’horaire normal. Velair envoie toujours les deux limites ; il ne réduit jamais une plage à une seule température.
 
 Lorsque l’appareil est développé, chaque mode pris en charge affiche une carte de prévision en direct. Elle utilise les mêmes données backend du prochain événement que Vue d’ensemble ; les pauses, forçages, modes non pris en charge et blocs ne pouvant pas démarrer en avance sont donc traités de façon cohérente. Lorsqu’un futur bloc correspondant existe, la carte affiche l’heure de début calculée, l’heure cible, l’avance, la température et le mode programmés, ainsi que le choix du modèle initial ou d’un historique local similaire.
+
+La préparation du Retour prévu est distincte de l’anticipation de l’horaire hebdomadaire. Pour un futur retour accepté, les informations de l’équipement indiquent son état de retour, le début estimé, la cible d’arrivée et tout motif de suspension ou d’indisponibilité. Vue d’ensemble, Retour prévu et les cartes climatiques utilisent les mêmes informations backend ; il ne s’agit pas d’un autre événement hebdomadaire. Une pièce peut encore suivre Absence tout en affichant une estimation future. **Préparation** décrit l’intention de contrôle de Velair, sans confirmer la réception d’une commande ni un chauffage ou refroidissement physique. La chronologie mesure le temps écoulé vers l’arrivée enregistrée, pas un pourcentage de progression thermique. Consultez [Préparation des pièces](planned-return.fr.md#room-preparation) pour les états.
 
 Pour vérifier un calcul précis, ouvrez **Détails du calcul** dans la carte de prévision en direct. Cette section facultative présente les valeurs backend utilisées : nombres d’échantillons, estimation issue des observations complètes, borne inférieure issue des observations partielles, estimation combinée, arrondi et avance finale. Elle est masquée par défaut pour garder la vue normale simple.
 
@@ -65,7 +70,6 @@ delta = current temperature - target temperature
 Si l’écart est inférieur à l’écart minimal de température, Velair conserve l’horaire normal du bloc et ne démarre pas en avance.
 
 <a id="schedule-boundaries-and-other-climates"></a>
-
 ## Limites du programme et autres équipements
 
 Un démarrage anticipé hebdomadaire ne doit pas atteindre ni franchir le bloc effectif immédiatement précédent du programme du même équipement, y compris un bloc `Off`. Si la fenêtre calculée atteint ou franchit cette limite, Velair conserve l’heure normale de confort. Par exemple, avec `Off` à `19:00` et `heat` à `20:00`, un démarrage calculé à `18:00` est supprimé : `Off` s’applique à `19:00` et le chauffage commence à `20:00`. Un bloc `Off` à `22:00` la veille n’empêche pas un démarrage à `05:35` pour `07:00` sans bloc intermédiaire. Cette règle s’applique aussi au refroidissement et aux plages natives `heat_cool` ; elle ne modifie pas les prévisions d’arrivée de Retour prévu.

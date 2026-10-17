@@ -1,5 +1,6 @@
 <a id="installation"></a>
 # Installazione
+
 <!-- velair-docs:start -->
 Traduzioni: [Originale in inglese](installation.md) · [Español](installation.es.md) · [Français](installation.fr.md) · [Deutsch](installation.de.md) · [Italiano](installation.it.md) · [Nederlands](installation.nl.md) · [Polski](installation.pl.md) · [Português (Brasil)](installation.pt-br.md) · [Português (Portugal)](installation.pt-pt.md) · [Русский](installation.ru.md) · [Stato delle traduzioni](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traduzioni: [Originale in inglese](installation.md) · [Español](installation.e
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -104,6 +105,15 @@ Valori supportati per `view`:
 - `preconditioning`: configurazione del precondizionamento adattivo e stato dell’apprendimento locale.
 - `planned-return`: controlli compatti per il rientro occasionale, conteggio delle fonti di presenza configurate e cronologia della partenza confermata. Senza fonti di presenza salvate, Plan return applica subito Assenza; la routine settimanale automatica richiede comunque delle fonti.
 - `diagnostics`: stato del funzionamento, cronologia limitata, filtri ed esportazione delle segnalazioni.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+### Individuazione delle schede e risoluzione dei problemi delle risorse
+
+Usa solo la risorsa modulo `/velair_frontend/velair-card.js` servita dall’integrazione. Rimuovi le risorse Velair duplicate, inclusa una vecchia `/local/velair-card.js`, quindi ricarica il browser. Gli elementi personalizzati del browser non possono essere sostituiti dopo la registrazione: una vecchia risorsa caricata per prima può lasciare il browser con un’implementazione obsoleta.
+
+Il selettore di schede della dashboard individua Velair tramite i metadati frontend. Aggiungere manualmente `type: custom:velair-card` in YAML usa l’elemento personalizzato registrato; sono verifiche distinte. Se la scheda funziona in YAML ma non compare nel selettore, indica questa distinzione nella segnalazione.
+
+Se l’individuazione differisce tra desktop e mobile, cerca errori JavaScript nella console per sviluppatori del browser interessato e la richiesta della risorsa nella scheda Rete. Includi versioni di Home Assistant e Velair, browser interessato, URL esatto della risorsa ed eventuali errori pertinenti. Rimuovi i dettagli privati prima di condividere i log. Il caricamento riuscito in un altro browser non dimostra la causa dell’errore nel browser interessato.
 
 <a id="updating"></a>
 ## Aggiornamento

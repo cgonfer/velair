@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -25,6 +25,8 @@ Przydaje się to w przypadku głowic termostatycznych, zaworów grzejnikowych, t
 Obliczenia korzystają z natywnej jednostki zarządzanej encji w Home Assistant. Poniższe przykłady podano w stopniach Celsjusza, ale granice histerezy, korekta ze znakiem, ochrona temperatury z harmonogramu, szerokość zakresu, krok temperatury i ograniczenia urządzenia działają tak samo w stopniach Fahrenheita. Różnica `4 °F` oznacza korektę o `4 °F`; nie jest traktowana jako temperatura bezwzględna ani przeliczana z dodaniem przesunięcia między skalami.
 
 Room Assist działa lokalnie i reaguje na zdarzenia. Velair nie odpytuje czujników w sposób ciągły ani nie wysyła ich danych poza Home Assistant.
+
+W bloku **Tylko temperatura** Room Assist jest wstrzymany, gdy termostat jest wyłączony. Nie włącza urządzenia ani nie przywraca wcześniejszego trybu HVAC podczas usuwania poprzedniej korekty. Po zewnętrznym włączeniu może wspomagać pracę w rzeczywistym zgodnym trybie bez żądania jego zmiany. Aktualizacja temperatury docelowej przy wyłączonym urządzeniu nadal zależy od integracji.
 
 <a id="what-it-does"></a>
 ## Jak działa

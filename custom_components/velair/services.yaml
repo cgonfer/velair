@@ -34,6 +34,11 @@ update_block_preset:
       name: Mode and additional settings
       collapsed: true
       fields:
+        temperature_only:
+          name: Temperature only
+          description: Update targets without requesting an HVAC mode change or turn-on. Requires a temperature action without device options. Use clear_fields or replace to remove an existing HVAC mode or options.
+          selector:
+            boolean:
         hvac_mode:
           name: HVAC mode
           description: Omit to preserve the mode. For an Off-only action, use replace with action turn_off.
@@ -101,7 +106,7 @@ update_block_preset:
           selector:
             select:
               multiple: true
-              options: [temperature, target_temp_low, target_temp_high, hvac_mode, fan_mode, preset_mode, swing_mode, swing_horizontal_mode, humidity]
+              options: [temperature, target_temp_low, target_temp_high, temperature_only, hvac_mode, fan_mode, preset_mode, swing_mode, swing_horizontal_mode, humidity]
 
 set_temperature:
   name: Set temperature
@@ -243,7 +248,7 @@ apply_schedule:
 
 activate_profile:
   name: Activate climate profile
-  description: Replace the active set with one saved climate profile. Zones not covered by it return to their default schedules. Leave the profile ID empty to return every zone to default schedules.
+  description: Set one saved climate profile as the complete base and clear all zone exceptions. Zones not covered by it use their default schedules. Leave the profile ID empty to return every zone to Default.
   fields:
     profile_id:
       name: Profile ID
@@ -255,7 +260,61 @@ activate_profile:
 
 deactivate_profile:
   name: Deactivate climate profile
-  description: Return to default schedules by deactivating all climate profiles.
+  description: Return every zone to Default by clearing the base profiles and all zone exceptions.
+
+activate_profiles:
+  name: Activate climate profiles as base
+  description: Replace the complete base with non-overlapping profiles and clear all zone exceptions. An empty list selects Default. Profile selection does not guarantee simultaneous physical delivery.
+  fields:
+    profile_ids:
+      name: Profile IDs
+      description: Ordered list of stable Profile IDs. Profiles must not include the same zone.
+      required: true
+      example: [winter_office, winter_bedrooms]
+      selector:
+        object:
+
+apply_profiles:
+  name: Apply climate profiles as exceptions
+  description: Replace exceptions only in the zones explicitly included by these profiles. Other zones keep their selection. Overlapping profiles in this request reject the whole action; an empty list does nothing. Cancels a pending Return home.
+  fields:
+    profile_ids:
+      name: Profile IDs
+      description: List of stable Profile IDs whose explicit zones should use these profiles as exceptions.
+      required: true
+      example: [office_remote, guest_rooms]
+      selector:
+        object:
+
+set_zone_profile:
+  name: Set zone profile exception
+  description: Apply only one zone from a saved profile, preserving every other zone selection. The profile must include this zone. Use YAML null for Default; use Clear profile exceptions to inherit the base. Cancels a pending Return home.
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: climate
+    profile_id:
+      name: Profile ID
+      description: Stable Profile ID, or YAML null to explicitly use the zone's Default schedule.
+      required: true
+      example: office_remote
+      selector:
+        object:
+
+clear_profile_overrides:
+  name: Clear profile exceptions
+  description: Restore the current base for the explicitly selected zones. Previous exceptions are not restored. An empty list does nothing. Cancels a pending Return home when zones are requested.
+  fields:
+    entity_id:
+      name: Climate entities
+      description: One managed climate entity or a list. All targets must be valid before any exception is removed.
+      required: true
+      selector:
+        entity:
+          domain: climate
+          multiple: true
 
 boost:
   name: Boost
@@ -480,7 +539,7 @@ set_daily_schedule:
             - sunday
     blocks:
       required: false
-      description: Provide exactly one of blocks or template_link. Blocks use start and preset_key for a linked Velair preset, or inline settings. Temperature blocks need start and temperature. Mode-only blocks need action set_hvac_mode and a non-off hvac_mode. Turn-off blocks need start and action turn_off.
+      description: Provide exactly one of blocks or template_link. Blocks use start and preset_key for a linked Velair preset, or inline settings. Temperature blocks need a target; temperature_only true preserves HVAC mode including off and cannot include mode or device options. Mode-only blocks need action set_hvac_mode and a non-off hvac_mode. Turn-off blocks need start and action turn_off.
       example:
         - start: "06:00"
           action: set_temperature

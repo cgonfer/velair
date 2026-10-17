@@ -1,4 +1,6 @@
 import { renderPlannedReturn } from "./planned-return-view";
+import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
+import { renderPreparationRoom } from "./planned-return-preparation-status";
 import { html, nothing } from "lit";
 import { VELAIR_LOADING_ICON_URL } from "../constants";
 import type { VelairViewHost } from "../host-types";
@@ -223,7 +225,7 @@ function renderThermostatControls(
             @click=${() => host._closeClimateCardPlannedReturn()}>
             <ha-icon icon="mdi:close" aria-hidden="true"></ha-icon>
           </button>` : nothing}
-          ${renderPlannedReturn(host, false, true, true)}
+          ${renderPlannedReturn(host, false, true, true, entityId)}
         </div>`
       : boostPaneOpen
       ? renderBoostForm(host, entityId)
@@ -904,14 +906,20 @@ function renderFeatures(host: VelairViewHost, entityId: string) {
   const showAssistGraph = showAssist && assistDisplay !== "text" && roomAssist?.configured && Boolean(roomAssist.start)
     && hasRoomAssistScheduledTarget(roomAssist);
   const preconditioningEvent = showPreconditioning ? nextActualPreconditioningEvent(host, entityId) : undefined;
-  if (!showAssistPanel && !preconditioningEvent) {
+  const now = host._currentTimelineNow().getTime();
+  const preparation = showPreconditioning ? currentArrivalPreparation(host._data?.planned_return_status, now) : undefined;
+  const returnRoom = preparationRoom(preparation, entityId);
+  if (!showAssistPanel && !preconditioningEvent && !returnRoom) {
     return nothing;
   }
   return html`<section class="climate-card-features">
     ${roomAssist && showAssistPanel
       ? renderRoomAssistPanel(host, entityId, roomAssist, showAssistSummary, Boolean(showAssistGraph))
       : nothing}
-    ${preconditioningEvent ? renderPreconditioningPanel(host, preconditioningEvent, preconditioningDisplay) : nothing}
+    ${returnRoom && preparation ? html`<section class="climate-card-feature-panel climate-card-return-preparation">
+      ${renderPreparationRoom(returnRoom, host._t.bind(host), host._formatDateTime.bind(host), { temperatureUnit: host._data?.temperature_unit, arrival: preparation.arrival, now })}
+    </section>` : nothing}
+    ${preconditioningEvent ? renderPreconditioningPanel(host, preconditioningEvent, preconditioningDisplay, Boolean(returnRoom)) : nothing}
   </section>`;
 }
 
@@ -960,11 +968,12 @@ function renderPreconditioningPanel(
   host: VelairViewHost,
   event: ScheduleEvent,
   display: "both" | "chart" | "text",
+  alongsideReturn = false,
 ) {
   const showDescription = display !== "chart";
   const showGraph = display !== "text";
   const collapsed = showGraph && host._climateCardPreconditioningCollapsed;
-  const title = host._t("preconditioning");
+  const title = host._t(alongsideReturn ? "plannedReturnPreparationWeeklyTitle" : "preconditioning");
   const targetWhen = event.target_when as string;
   const summaryTitle = `${host._t("preconditioningStarts")} ${host._formatDateTime(event.when)} · ${host._t("preconditioningTargetBy")} ${host._formatDateTime(targetWhen)} · ${host._formatEventAction(event)} · ${host._formatEventMode(event)}`;
   const active = new Date(event.when).getTime() <= host._currentTimelineNow().getTime();
@@ -1412,8 +1421,10 @@ function boostInput(host: VelairViewHost, field: "target" | "low" | "high", valu
 function renderExternalOwner(host: VelairViewHost, entityId: string, provider?: string, external?: { available: boolean; publication: { state: "publishing" | "published" | "failed" } | null }) {
   const publication = external?.publication?.state;
   const attributes = host.hass?.states?.[entityId]?.attributes;
-  const next = host._data?.next_events.find((event) => event.entity_id === entityId)
-    ?? (host._data?.next_event?.entity_id === entityId ? host._data.next_event : undefined);
+  const next = host._data?.next_effective_events !== undefined
+    ? host._data.next_effective_events.find(row => row.entity_id === entityId)?.event ?? undefined
+    : host._data?.next_events.find((event) => event.entity_id === entityId)
+      ?? (host._data?.next_event?.entity_id === entityId ? host._data.next_event : undefined);
   const providerState = external?.available === false
     ? "externalProviderUnavailable"
     : publication

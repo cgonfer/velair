@@ -164,3 +164,14 @@ describe("operation status view", () => {
     expect(cancelled.textContent).toContain("The operation was cancelled");
   });
 });
+
+
+it.each([
+  ["running", "Running"], ["completed", "Completed"],
+  ["completed_with_errors", "Partial"], ["failed", "Failed"],
+] as const)("uses a selection message for %s even with a Default base", (state, suffix) => {
+  const container = renderStatus({ ...runningOperation, kind: "profile_selection", target_id: null, state });
+  const title = container.querySelector(".operation-status-copy strong")?.textContent;
+  expect(title).toBe(`operationSelection${suffix}`);
+  expect(title).not.toContain("Default");
+});

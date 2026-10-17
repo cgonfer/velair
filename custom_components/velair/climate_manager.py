@@ -1272,6 +1272,7 @@ class ClimateManager:
         *,
         blocking: bool = True,
         ensure_on: bool = False,
+        temperature_only: bool = False,
         fan_mode: str | None = None,
         hvac_mode: str | None = None,
         humidity: float | None = None,
@@ -1280,12 +1281,17 @@ class ClimateManager:
         swing_horizontal_mode: str | None = None,
     ) -> None:
         """Set the target temperature for a climate entity."""
+        if temperature_only:
+            if any(value is not None for value in (fan_mode, humidity, preset_mode, swing_mode, swing_horizontal_mode)):
+                raise ValueError("Temperature-only targets cannot apply climate options")
+            ensure_on, hvac_mode = False, None
         temperature = self.normalize_target_temperature(entity_id, temperature)
         self.validate_temperature_target(
             entity_id,
             range_target=False,
             hvac_mode=hvac_mode,
             ensure_on=ensure_on,
+            temperature_only=temperature_only,
         )
         target: dict[str, Any] = {ATTR_TEMPERATURE: temperature}
         state = self._hass.states.get(entity_id)
@@ -1318,6 +1324,7 @@ class ClimateManager:
         *,
         blocking: bool = True,
         ensure_on: bool = False,
+        temperature_only: bool = False,
         fan_mode: str | None = None,
         hvac_mode: str | None = None,
         humidity: float | None = None,
@@ -1326,6 +1333,10 @@ class ClimateManager:
         swing_horizontal_mode: str | None = None,
     ) -> None:
         """Set a native lower and upper target temperature range."""
+        if temperature_only:
+            if any(value is not None for value in (fan_mode, humidity, preset_mode, swing_mode, swing_horizontal_mode)):
+                raise ValueError("Temperature-only targets cannot apply climate options")
+            ensure_on, hvac_mode = False, None
         low = self.normalize_target_temperature(entity_id, target_temp_low)
         high = self.normalize_target_temperature(entity_id, target_temp_high)
         if low > high:
@@ -1335,6 +1346,7 @@ class ClimateManager:
             range_target=True,
             hvac_mode=hvac_mode,
             ensure_on=ensure_on,
+            temperature_only=temperature_only,
         )
         target = {
             ATTR_TARGET_TEMP_LOW: low,
@@ -1561,11 +1573,12 @@ class ClimateManager:
         snapshot: dict[str, Any],
     ) -> None:
         """Restore a climate entity from a stored state snapshot."""
-        hvac_mode = snapshot.get(ATTR_HVAC_MODE)
+        temperature_only = snapshot.get("temperature_only", False) is True
+        hvac_mode = None if temperature_only else snapshot.get(ATTR_HVAC_MODE)
         temperature = snapshot.get(ATTR_TEMPERATURE)
         target_temp_low = snapshot.get(ATTR_TARGET_TEMP_LOW)
         target_temp_high = snapshot.get(ATTR_TARGET_TEMP_HIGH)
-        climate_options = self._climate_options_from_snapshot(snapshot)
+        climate_options = {} if temperature_only else self._climate_options_from_snapshot(snapshot)
 
         if hvac_mode == HVAC_MODE_OFF:
             await self.async_turn_off(entity_id)
@@ -1576,6 +1589,7 @@ class ClimateManager:
                 entity_id,
                 float(temperature),
                 ensure_on=hvac_mode is not None,
+                **({"temperature_only": True} if temperature_only else {}),
                 hvac_mode=hvac_mode,
                 **climate_options,
             )
@@ -1587,6 +1601,7 @@ class ClimateManager:
                 float(target_temp_low),
                 float(target_temp_high),
                 ensure_on=hvac_mode is not None,
+                **({"temperature_only": True} if temperature_only else {}),
                 hvac_mode=hvac_mode,
                 **climate_options,
             )
@@ -1741,8 +1756,21 @@ class ClimateManager:
         range_target: bool,
         hvac_mode: str | None,
         ensure_on: bool,
+        temperature_only: bool = False,
     ) -> None:
         """Validate one target kind and effective mode without changing state."""
+        if temperature_only and (ensure_on or hvac_mode is not None):
+            raise ValueError("Temperature-only targets cannot change HVAC mode")
+        if temperature_only:
+            state = self._hass.states.get(entity_id)
+            attributes = state.attributes if state is not None else {}
+            required = FEATURE_TARGET_TEMPERATURE_RANGE if range_target else FEATURE_TARGET_TEMPERATURE
+            advertised = (bool(self._target_features(entity_id) & required)
+                          if "supported_features" in attributes else
+                          all(key in attributes for key in
+                              ((ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH) if range_target else (ATTR_TEMPERATURE,))))
+            if not advertised:
+                raise ValueError(f"{entity_id} does not advertise a temperature-only target capability")
         if hvac_mode is not None and hvac_mode not in self.supported_hvac_modes(entity_id):
             raise ValueError(f"{entity_id} does not support HVAC mode {hvac_mode}")
         effective_mode = self.effective_hvac_mode(
@@ -1768,7 +1796,9 @@ class ClimateManager:
                 f"{target_kind} target"
             )
         if range_target:
-            if effective_mode not in RANGE_HVAC_MODES:
+            off_range = (temperature_only and effective_mode == HVAC_MODE_OFF
+                         and any(mode in RANGE_HVAC_MODES for mode in self.supported_hvac_modes(entity_id)))
+            if effective_mode not in RANGE_HVAC_MODES and not off_range:
                 raise ValueError(
                     f"{entity_id} cannot apply a temperature range while in "
                     f"{effective_mode or 'unknown'} mode"

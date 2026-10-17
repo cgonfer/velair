@@ -8,8 +8,8 @@ Traduções: [Original em inglês](automation-events.md) · [Español](automatio
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -144,7 +144,7 @@ triggers:
 <a id="profile-changed"></a>
 ## Perfis alterados
 
-`profile_changed` é emitido quando um conjunto diferente de Perfis climáticos ou programações Predefinição é persistido. Selecionar diretamente o mesmo conjunto ativo pode mudar a entidade nativa Modo para Manual, mas não emite `profile_changed`, pois os Perfis efetivos não mudaram.
+`profile_changed` é emitido depois que um conjunto de base diferente de Perfis climáticos, ou programações de base Predefinição, é persistido. Selecionar diretamente o mesmo conjunto ativo pode mudar a entidade nativa de Modo para Manual, mas não emite `profile_changed`, pois os perfis efetivos não mudaram.
 
 ```yaml
 domain: velair
@@ -156,7 +156,9 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` identifica a origem da seleção efetiva. Os valores públicos são `panel`, `service` e `select`; operações internas do ciclo de vida podem publicar um valor mais específico, como `profile_deleted` ou `mode_updated`. As listas ordenadas de IDs descrevem os conjuntos ativos completos, novo e anterior. Uma lista `profile_ids` vazia representa Predefinição.
+`source` identifica a origem da seleção efetiva. Os valores públicos são `panel`, `service` e `select`; operações internas do ciclo de vida podem publicar um valor mais específico, como `profile_deleted` ou `mode_updated`.
+
+As listas ordenadas de IDs descrevem os conjuntos de base novo e anterior. Uma lista `profile_ids` vazia representa uma base Predefinição; exceções por zona ainda podem existir. Este evento de compatibilidade não informa mudanças apenas de exceções. Use `selection_changed` para a seleção completa e a atribuição efetiva dos ambientes.
 
 Por exemplo, esta automação reage quando o Perfil com ID `away` passa a fazer parte do conjunto ativo:
 
@@ -176,7 +178,34 @@ actions:
       message: Away profile is active
 ```
 
-Para reagir quando o Velair voltar às programações Predefinição, use uma condição de template que verifique `trigger.event.data.profile_ids == []`.
+Para reagir quando a base volta às programações Predefinição, use uma condição de modelo que verifique `trigger.event.data.profile_ids == []`. Confira a seleção completa para distinguir uma base Predefinição com exceções de Predefinição em todos os ambientes.
+
+<a id="profile-selection-changed"></a>
+## Seleção de Perfis alterada
+
+`selection_changed` informa mudanças na base, na sua associação ao Modo ou nas exceções por zona após a persistência. Usa o mesmo envelope `velair_event`:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Uma exceção ausente herda a base; uma entrada presente com null usa Predefinição explicitamente. A atribuição efetiva descreve cada ambiente, incluindo Perfis aplicados parcialmente. Não comprova o envio físico bem-sucedido ao dispositivo. Uma seleção inalterada não emite evento duplicado. Editar programações referenciadas pode mudar a climatização sem alterar IDs de seleção; as atualizações de programação mantêm suas notificações normais de API.
 
 <a id="scheduler-mode-changed"></a>
 ## Modo do agendador alterado

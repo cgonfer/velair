@@ -1044,7 +1044,7 @@ describe("overview next events", () => {
     expect(cssText).not.toMatch(/\.overview-zone-signal\.hvac-action/);
     expect(cssText).toMatch(/\.manual-control-segmented\s*\{[^}]*grid-template-columns:\s*repeat\(2, max-content\)[^}]*max-width:\s*100%[^}]*width:\s*fit-content/);
     expect(cssText).toMatch(/\.manual-control-segmented\s*\{[^}]*border:[^}]*color-mix[^}]*overflow:\s*hidden/);
-    expect(cssText).toMatch(/\.manual-control-segmented button\s*\{[^}]*background:\s*transparent[^}]*border-radius:\s*0[^}]*line-height:\s*1[^}]*min-height:\s*30px[^}]*white-space:\s*nowrap/);
+    expect(cssText).toMatch(/\.manual-control-segmented button\s*\{[^}]*background:\s*transparent[^}]*border-radius:\s*0[^}]*line-height:\s*1[^}]*min-height:\s*26px[^}]*white-space:\s*nowrap/);
     expect(cssText).toMatch(/\.manual-control-segmented button\s*\{[^}]*display:\s*inline-flex[^}]*gap:\s*4px/);
     expect(cssText).toMatch(/\.manual-control-segmented button ha-icon\s*\{[^}]*--mdc-icon-size:\s*13px[^}]*color:\s*currentColor/);
     const segmentRule = cssText.match(/\.manual-control-segmented button\s*\{[^}]*\}/)?.[0] ?? "";
@@ -1812,5 +1812,16 @@ describe("overview timeline", () => {
     expect(data?.classList).toContain("info");
     expect(data?.querySelector("ha-icon")?.getAttribute("icon"))
       .toBe("mdi:information-outline");
+    expect(data?.querySelector(".overview-zone-signal-accent small")?.textContent).toBe("overviewZoneDataLabel");
+    expect(data?.querySelector(".overview-zone-signal-value")?.textContent).toBe("comfortDataUnverified");
+    expect(data?.getAttribute("title")).toBeNull();
+    const navigate = vi.fn(); container.addEventListener("click", navigate);
+    const helper = data?.querySelector<HTMLButtonElement>("button")!;
+    helper.click();
+    expect(helper.getAttribute("aria-expanded")).toBe("true");
+    expect(data?.querySelector(".inline-help-tooltip")?.textContent).toBe("overviewZoneDataUnverifiedHelp");
+    expect(en.overviewZoneDataUnverifiedHelp).toContain("when the device measured them");
+    expect(es.overviewZoneDataUnverifiedHelp).toContain("cuándo las midió el dispositivo");
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

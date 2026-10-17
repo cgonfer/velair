@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -19,6 +19,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 <!-- velair-docs:end -->
 
 O Room Assist permite que o Velair use um sensor separado de temperatura ambiente para um dispositivo gerido, continuando a controlar a entidade real `climate.*`.
+
+Com um bloco **Apenas temperatura**, o Room Assist fica suspenso enquanto o equipamento está desligado. Ele não liga o equipamento nem restaura um modo HVAC anterior ao remover sua correção anterior. Após uma ativação externa, pode auxiliar utilizando o modo compatível real sem solicitar mudança de modo. Atualizar a temperatura-alvo programada enquanto desligado continua dependendo da integração de climatização.
 
 Esta função é útil para válvulas termostáticas, válvulas de radiadores, termóstatos de parede e aparelhos de ar condicionado cuja leitura integrada não representa a temperatura real da divisão. Por exemplo, uma válvula instalada junto ao radiador pode informar `22 °C` enquanto o sensor ambiente ainda informa `20.5 °C`.
 

@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](automation-events.md) · [Español](automation-e
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -144,7 +144,7 @@ triggers:
 <a id="profile-changed"></a>
 ## Profiel gewijzigd
 
-`profile_changed` wordt gepubliceerd nadat een andere combinatie van klimaatprofielen of de standaardplanningen is opgeslagen. Dezelfde actieve combinatie opnieuw rechtstreeks selecteren kan de oorspronkelijke modusentiteit op Handmatig zetten, maar veroorzaakt geen `profile_changed`, omdat de effectieve profielen niet zijn veranderd.
+`profile_changed` wordt gepubliceerd nadat een andere basiscombinatie van klimaatprofielen of de Standaard-basisschema’s is opgeslagen. Dezelfde actieve combinatie opnieuw rechtstreeks selecteren kan de oorspronkelijke modusentiteit op Handmatig zetten, maar veroorzaakt geen `profile_changed`, omdat de effectieve profielen niet zijn veranderd.
 
 ```yaml
 domain: velair
@@ -156,7 +156,7 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` geeft aan waar de effectieve selectie vandaan komt. Publieke waarden zijn `panel`, `service` en `select`; interne levenscyclusacties kunnen een specifiekere waarde publiceren, zoals `profile_deleted` of `mode_updated`. De geordende lijsten met ID's beschrijven de volledige nieuwe en vorige actieve combinatie. Een lege lijst `profile_ids` staat voor de standaardplanningen.
+`source` geeft aan waar de effectieve selectie vandaan komt. Publieke waarden zijn `panel`, `service` en `select`; interne levenscyclusacties kunnen een specifiekere waarde publiceren, zoals `profile_deleted` of `mode_updated`. De geordende ID-lijsten beschrijven de nieuwe en vorige basiscombinatie. Een lege lijst `profile_ids` staat voor een Standaard-basis; zone-uitzonderingen kunnen nog bestaan. Deze compatibiliteitsgebeurtenis meldt geen wijzigingen die uitsluitend uitzonderingen betreffen. Gebruik `selection_changed` voor de volledige selectie en effectieve kamertoewijzing.
 
 Deze automatisering reageert bijvoorbeeld wanneer het profiel met ID `away` deel gaat uitmaken van de actieve combinatie:
 
@@ -176,7 +176,34 @@ actions:
       message: Away profile is active
 ```
 
-Gebruik om op de terugkeer naar standaardplanningen te reageren een templatevoorwaarde met `trigger.event.data.profile_ids == []`.
+Controleer `trigger.event.data.profile_ids == []` voor een basis die terugkeert naar Standaard. Controleer de volledige selectie om een Standaard-basis met uitzonderingen te onderscheiden van Standaard in elke kamer.
+
+<a id="profile-selection-changed"></a>
+## Profielselectie gewijzigd
+
+<code>selection_changed</code> meldt na het opslaan wijzigingen aan de basis, de modusverbinding of zone-uitzonderingen. Het gebruikt dezelfde <code>velair_event</code>-envelop:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Een ontbrekende uitzondering erft de basis; een aanwezige null-waarde gebruikt expliciet Standaard. De effectieve toewijzing beschrijft elke kamer, ook bij gedeeltelijk toegepaste profielen. Het is geen ontvangstbevestiging van geslaagde fysieke opdrachtuitvoering. Een ongewijzigde selectie veroorzaakt geen dubbele gebeurtenis. Gekoppelde schema’s bewerken kan klimaatgedrag wijzigen zonder selectie-ID’s te wijzigen; schemawijzigingen behouden hun normale API-bijwerkmeldingen.
 
 <a id="scheduler-mode-changed"></a>
 ## Planningsmodus gewijzigd

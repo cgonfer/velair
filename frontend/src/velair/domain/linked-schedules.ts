@@ -39,6 +39,7 @@ export function linkDraftDay(template: StoredScheduleTemplate, current: DraftSch
       ...(action === ACTION_SET_CLIMATE_OPTIONS ? {} : draftBlockUsesRange(block)
         ? { target_temp_low: block.target_temp_low ?? "", target_temp_high: block.target_temp_high ?? "" }
         : { temperature: block.temperature ?? "" }),
+      ...(block.temperature_only ? { temperature_only: true } : {}),
       ...(action !== ACTION_SET_CLIMATE_OPTIONS && block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
       ...(block.fan_mode ? { fan_mode: block.fan_mode } : {}),
       ...(block.preset_mode ? { preset_mode: block.preset_mode } : {}),

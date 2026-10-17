@@ -114,6 +114,9 @@ function operationTitle(
         ? "Partial"
         : "Failed";
 
+  if (operation.kind === "profile_selection") {
+    return host._t(`operationSelection${suffix}` as TranslationKey);
+  }
   if (!operation.target_id || operation.target_id === "default") {
     return host._t(`operationDefault${suffix}` as TranslationKey);
   }

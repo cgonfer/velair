@@ -252,7 +252,7 @@ export function formatEventActionForHost(host: ClimateDisplayHost, event: Schedu
 export function formatEventModeForHost(host: ClimateDisplayHost, event: ScheduleEvent): string {
   return formatEventMode(
     event,
-    { keepMode: host._t("keepMode") },
+    { keepMode: host._t("keepMode"), temperatureOnly: host._t("temperatureOnly") },
     (mode) => host._modeLabel(mode),
   );
 }

@@ -3,7 +3,7 @@ Climate automation that adapts to your life.
 
 [Explore Velair on the project website](https://cgonfer.github.io/velair/)
 
-[![Version](https://img.shields.io/badge/version-1.9.0--beta.1-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
+[![Version](https://img.shields.io/badge/version-1.9.0--beta.2-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -27,8 +27,9 @@ Set up your normal week once. When plans change, switch to another Mode, boost o
 
 ## Features
 
-- A weekly schedule editor for each climate, with reusable templates and Profiles.
-- Schedule blocks that can set a temperature or range, change only the HVAC mode, send supported options such as a preset without a temperature, or turn the climate off.
+- A weekly schedule editor for each climate, with reusable templates and Profiles, individual days, weekdays/weekend, or all days together.
+- A household Base with room Exceptions, so selected rooms can follow another Profile or Default without creating a Mode for every combination.
+- Schedule blocks that can set a temperature or range, preserve an externally controlled HVAC mode with Temperature only, change only the HVAC mode, send supported options such as a preset without a temperature, or turn the climate off.
 - Manual adjustment when you want to take direct control of a climate.
 - Optional Adaptive Preconditioning and Room Assist for earlier starts and separate room-temperature sensors.
 - Optional [Planned Return](docs/user/planned-return.md): confirm whole-home absence and prepare for weekly or one-off arrivals, with current control context in Overview and Diagnostics.

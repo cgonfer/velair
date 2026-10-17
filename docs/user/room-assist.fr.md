@@ -1,5 +1,6 @@
 <a id="room-assist"></a>
 # Room Assist
+
 <!-- velair-docs:start -->
 Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.md) · [Français](room-assist.fr.md) · [Deutsch](room-assist.de.md) · [Italiano](room-assist.it.md) · [Nederlands](room-assist.nl.md) · [Polski](room-assist.pl.md) · [Português (Brasil)](room-assist.pt-br.md) · [Português (Portugal)](room-assist.pt-pt.md) · [Русский](room-assist.ru.md) · [État des traductions](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -19,6 +20,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 <!-- velair-docs:end -->
 
 Room Assist permet à Velair d’utiliser un capteur de température ambiante distinct pour un appareil géré, tout en contrôlant l’entité réelle `climate.*`.
+
+Avec un bloc **Température uniquement**, Room Assist est suspendu lorsque l’équipement est éteint. Il ne l’allume pas et ne rétablit pas un ancien mode HVAC en effaçant sa correction précédente. Après une mise en marche externe, il peut assister avec le mode réel compatible sans demander de changement de mode. La mise à jour de la cible programmée à l’arrêt dépend toujours de l’intégration climatique.
 
 C’est utile pour les têtes thermostatiques, vannes de radiateur, thermostats muraux ou climatiseurs dont la mesure intégrée ne représente pas la température réelle de la pièce. Par exemple, une tête montée près d’un radiateur peut signaler `22 °C` alors que le capteur ambiant indique encore `20.5 °C`.
 

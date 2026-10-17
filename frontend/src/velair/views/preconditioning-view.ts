@@ -5,6 +5,8 @@ import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
 import { renderInlineHelp } from "./inline-help";
 import { renderDocumentationHelp } from "./documentation-links";
+import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
+import { renderPreparationRoom } from "./planned-return-preparation-status";
 import type {
   PreconditioningDiagnostics,
   PreconditioningDirectionLearning,
@@ -160,6 +162,7 @@ function renderPreconditioningZone(
       ${exists && expanded
         ? html`
             <div id=${contentId} class="preconditioning-zone-content">
+              ${renderReturnPreparation(host, entityId)}
               ${renderAdaptivePreconditioningFields(host, entityId, preconditioning)}
               ${preconditioning.enabled
                 ? renderPreconditioningLearning(host, entityId, learning)
@@ -169,6 +172,15 @@ function renderPreconditioningZone(
         : nothing}
     </section>
   `;
+}
+
+function renderReturnPreparation(host: PreconditioningViewHost, entityId: string) {
+  const now = host._currentTimelineNow?.().getTime() ?? Date.now();
+  const preparation = currentArrivalPreparation(host._data?.planned_return_status, now);
+  const room = preparationRoom(preparation, entityId);
+  return room && preparation
+    ? renderPreparationRoom(room, host._t.bind(host), host._formatDateTime.bind(host), { temperatureUnit: host._data?.temperature_unit, arrival: preparation.arrival, now })
+    : nothing;
 }
 
 function renderAdaptivePreconditioningFields(

@@ -1,5 +1,6 @@
 <a id="automation-events"></a>
 # Événements d’automatisation
+
 <!-- velair-docs:start -->
 Traductions: [Original en anglais](automation-events.md) · [Español](automation-events.es.md) · [Français](automation-events.fr.md) · [Deutsch](automation-events.de.md) · [Italiano](automation-events.it.md) · [Nederlands](automation-events.nl.md) · [Polski](automation-events.pl.md) · [Português (Brasil)](automation-events.pt-br.md) · [Português (Portugal)](automation-events.pt-pt.md) · [Русский](automation-events.ru.md) · [État des traductions](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traductions: [Original en anglais](automation-events.md) · [Español](automatio
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -144,7 +145,7 @@ triggers:
 <a id="profile-changed"></a>
 ## Profils modifiés
 
-`profile_changed` est émis après l’enregistrement d’un ensemble différent de profils climatiques ou des programmations Par défaut. Sélectionner directement le même ensemble actif peut faire passer l’entité native de mode à Manuel, sans émettre `profile_changed`, puisque les profils effectifs n’ont pas changé.
+`profile_changed` est émis après l’enregistrement d’une base différente de profils climatiques ou de programmations de base Par défaut. Sélectionner directement le même ensemble actif peut passer l’entité Mode native à Manuel, mais n’émet pas `profile_changed` puisque les profils effectifs n’ont pas changé.
 
 ```yaml
 domain: velair
@@ -156,7 +157,7 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` identifie l’origine de la sélection effective. Les valeurs publiques sont `panel`, `service` et `select` ; les opérations internes du cycle de fonctionnement peuvent publier une valeur plus précise comme `profile_deleted` ou `mode_updated`. Les listes ordonnées d’identifiants décrivent les ensembles actifs complets nouveau et précédent. Une liste `profile_ids` vide représente Par défaut.
+`source` identifie l’origine de la sélection effective. Les valeurs publiques sont `panel`, `service` et `select` ; les opérations internes peuvent publier une valeur plus précise comme `profile_deleted` ou `mode_updated`. Les listes ordonnées d’ID décrivent les nouvelles et anciennes bases. Une liste `profile_ids` vide représente une base Par défaut ; des exceptions de zone peuvent subsister. Cet événement de compatibilité ne signale pas les changements limités aux exceptions. Utilisez `selection_changed` pour la sélection complète et l’attribution effective des pièces.
 
 Cette automatisation réagit, par exemple, lorsque le profil d’identifiant `away` entre dans l’ensemble actif :
 
@@ -176,7 +177,34 @@ actions:
       message: Away profile is active
 ```
 
-Pour réagir au retour aux programmations Par défaut, utilisez une condition de modèle vérifiant `trigger.event.data.profile_ids == []`.
+Pour réagir lorsque la base revient aux programmations Par défaut, utilisez une condition de modèle vérifiant `trigger.event.data.profile_ids == []`. Vérifiez la sélection complète pour distinguer une base Par défaut avec exceptions de Par défaut dans toutes les pièces.
+
+<a id="profile-selection-changed"></a>
+## Sélection des Profils modifiée
+
+`selection_changed` signale les changements de base, d’association au Mode ou d’exceptions de zone après enregistrement. Il utilise la même enveloppe `velair_event` :
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Une exception absente hérite de la base ; une valeur null présente utilise explicitement Par défaut. L’attribution effective décrit chaque pièce, y compris les Profils appliqués partiellement. Elle ne confirme pas la transmission physique réussie à l’appareil. Une sélection inchangée n’émet pas de doublon. Modifier les horaires référencés peut changer le comportement sans changer les ID de sélection ; les mises à jour d’horaires gardent leurs notifications API normales.
 
 <a id="scheduler-mode-changed"></a>
 ## Mode du planificateur modifié

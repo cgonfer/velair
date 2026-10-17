@@ -21,6 +21,7 @@ class ExternalScheduleCapabilities:
     can_publish: bool = True
     can_import: bool = False
     supports_profile_schedules: bool = True
+    supports_temperature_only: bool = False
     supported_actions: tuple[str, ...] = ("set_temperature",)
     supported_hvac_modes: tuple[str, ...] = ("heat",)
     supported_target_types: tuple[str, ...] = ("scalar",)

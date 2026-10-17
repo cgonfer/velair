@@ -1,3 +1,4 @@
+import { selectedDayGroup, schedulesEqual } from "../domain/day-layouts";
 import { backendErrorMessage } from "../domain/backend-errors";
 import {
   clampBlocksToTemperatureLimits,
@@ -22,6 +23,11 @@ import type {
 } from "../types";
 
 type ScheduleActionsHost = {
+  _draftSavedDayLayoutKey?: string;
+  _draftDayLayoutKey?: string;
+  _layoutOnlyDirty?: boolean;
+  _dayLayoutConflict?: boolean;
+  _groupBaseChosen?: boolean;
   _draftTemplateLink?: import("../types").TemplateLink;
   _draftConfigurationRevision?: number;
   hass?: HomeAssistant;
@@ -63,7 +69,30 @@ export function asScheduleActionsHost(host: unknown): ScheduleActionsHost {
   return host as ScheduleActionsHost;
 }
 
+function confirmGroupedSave(host: ScheduleActionsHost): boolean {
+  if (host._dayLayoutConflict) { host._error = host._t("dayLayoutConflict"); return false; }
+  const days = selectedDayGroup(host._draftDayLayoutKey, host._selectedWeekday);
+  const zone = host._data?.zones[host._selectedEntity ?? ""];
+  const mixed = Boolean(zone && !schedulesEqual(zone, days));
+  return !mixed || Boolean(host._groupBaseChosen);
+}
+
 async function saveDraftDay(host: ScheduleActionsHost, api: VelairApiClient, blocks: ScheduleBlock[]): Promise<ScheduleResponse> {
+  if (host._draftDayLayoutKey !== undefined && host._data?.configuration_revision !== undefined
+    && (host._layoutOnlyDirty || selectedDayGroup(host._draftDayLayoutKey, host._selectedWeekday).length > 1
+      || host._draftDayLayoutKey !== (host._data.zones[host._selectedEntity!]?.day_layout_key ?? "individual"))) {
+    const days = selectedDayGroup(host._draftDayLayoutKey, host._selectedWeekday);
+    return api.setScheduleDays(host._selectedEntity!, {
+      expected_revision: host._draftConfigurationRevision ?? host._data.configuration_revision,
+      day_layout_key: host._draftDayLayoutKey,
+      ...(!host._layoutOnlyDirty ? { weekdays: days,
+        ...(host._draftTemplateLink ? { template_link: bindingsFromBlocks(host._draftTemplateLink, blocks) } : {
+          blocks: blocks.map(({ slot_id: _slot, ...block }) => block),
+          unlink_template: days.some((day) => Boolean(host._data?.zones[host._selectedEntity!]?.template_links?.[day])),
+        }),
+      } : {}),
+    });
+  }
   if (host._data?.configuration_revision === undefined && !host._draftTemplateLink) return api.setDailySchedule(host._selectedEntity!, host._selectedWeekday, blocks);
   return api.setDailySchedule(host._selectedEntity!, host._selectedWeekday, blocks.map(({ slot_id: _slot, ...block }) => block), {
     expected_revision: host._draftConfigurationRevision,
@@ -77,7 +106,8 @@ export async function saveSelectedDay(host: ScheduleActionsHost): Promise<void> 
     return;
   }
 
-  const normalized = host._draftTemplateLink?.mode === "full" ? { ok: true as const, blocks: [] } : host._normalizeDraftBlocks();
+  if (!confirmGroupedSave(host)) return;
+  const normalized = host._layoutOnlyDirty || host._draftTemplateLink?.mode === "full" ? { ok: true as const, blocks: [] } : host._normalizeDraftBlocks();
   if (!normalized.ok) {
     host._error = normalized.error;
     return;
@@ -92,14 +122,9 @@ export async function saveSelectedDay(host: ScheduleActionsHost): Promise<void> 
   host._error = undefined;
   host._saveMessage = undefined;
   try {
-    const input = host._draftTemplateLink ? { template_link: bindingsFromBlocks(host._draftTemplateLink, normalized.blocks) } : { blocks: normalized.blocks };
-    const dependent = Boolean(host._draftTemplateLink || normalized.blocks.some((block) => block.preset_key));
-    if (dependent) await api.previewDailySchedule(host._selectedEntity, host._selectedWeekday, input);
-    const options = {
-      expected_revision: host._draftConfigurationRevision,
-      ...(host._draftTemplateLink ? { template_link: bindingsFromBlocks(host._draftTemplateLink, normalized.blocks) } : { unlink_template: Boolean(host._data?.zones[host._selectedEntity]?.template_links?.[host._selectedWeekday]) }),
-    };
-    const data = host._data?.configuration_revision === undefined && !dependent ? await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks) : await api.setDailySchedule(host._selectedEntity, host._selectedWeekday, normalized.blocks, options);
+    // The atomic mutation validates references and capabilities against its revision.
+    // Save does not consume preview data, so avoid an extra round trip per day.
+    const data = await saveDraftDay(host, api, normalized.blocks);
     if (host._isScheduleResponseCurrent?.(data) === false) return;
     host._dirty = false;
     host._dirtyEntityId = undefined;
@@ -129,6 +154,7 @@ export async function copySelectedDay(host: ScheduleActionsHost): Promise<void> 
     return;
   }
 
+  if (host._dirty && !confirmGroupedSave(host)) return;
   const targetWeekdays = [...host._copyTargets];
   const sourceEntity = host._selectedEntity;
   const sourceDay = host._selectedWeekday;
@@ -178,6 +204,7 @@ export async function applySelectedDayToZones(host: ScheduleActionsHost): Promis
     host._error = normalized.error;
     return;
   }
+  if (host._dirty && !confirmGroupedSave(host)) return;
   const targetEntities = [...host._zoneTargets];
   const sourceEntity = host._selectedEntity;
   const sourceDay = host._selectedWeekday;
@@ -197,7 +224,7 @@ export async function applySelectedDayToZones(host: ScheduleActionsHost): Promis
       host._draftConfigurationRevision = revision;
     }
     if (context() !== originalContext) return;
-    const data = await api.copyDaySchedule(sourceEntity, sourceDay, [sourceDay], {
+    const data = await api.copyDaySchedule(sourceEntity, sourceDay, selectedDayGroup(host._draftDayLayoutKey, sourceDay), {
       target_entity_ids: targetEntities,
       ...(revision !== undefined ? { expected_revision: revision } : {}),
     });
@@ -249,6 +276,11 @@ export function unsupportedModeError(
   blocks: Array<ScheduleBlock | DraftScheduleBlock>,
   entityId: string,
 ): string | undefined {
+  const execution = host._data?.zones?.[entityId]?.execution;
+  if (execution?.type === "external" && blocks.some((block) => block.temperature_only)) {
+    const capabilities = host._data?.external_execution?.systems.find((system) => system.provider === execution.provider)?.capabilities;
+    if (!capabilities?.supports_temperature_only) return host._t("profileExternalUnsupportedBlock", { climate: host._friendlyEntityName(entityId) });
+  }
   const state = host.hass?.states?.[entityId];
   const unsupportedRangeMode = blocks.find((block) =>
     block.action === ACTION_SET_TEMPERATURE

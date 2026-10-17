@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](linked-schedules.md) · [Español](linked-schedu
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -51,6 +51,23 @@ Het paneel toont eerst de configuratiekeuze, daarna apparaatopties en tot slot �
 
 <a id="linked-templates"></a>
 ## Gekoppelde sjablonen
+
+<a id="apply-a-template-to-schedules"></a>
+### Een sjabloon op schema’s toepassen
+
+Open **Toepassen op…** bij een opgeslagen dagsjabloon. Het paneel volgt **Selecteren → Controleren → Toepassen**. Sla openstaande sjabloonbewerkingen eerst op; toepassen slaat het gedeelde sjabloon nooit stilzwijgend op en gebruikt geen niet-opgeslagen versie.
+
+Kies **Standaard** of een bestaand profiel en vervolgens **Onafhankelijke kopie**, **Alleen tijden** of **Tijden en instellingen**. Een onafhankelijke kopie heeft geen sjabloonkoppeling; verwijzingen naar Velair-presets blijven actief. Tijdkoppelingen behouden onafhankelijke klimaatinstellingen. Volledige koppelingen volgen tijden én instellingen van het sjabloon.
+
+Kies een gedeelde **Dagindeling** en markeer de gewenste groepen per thermostaat. Afzonderlijke dagen biedt zeven keuzes, Weekdagen / Weekend twee groepen en Alle dagen de hele week. De indeling wijzigen wist de selectie. De bestemming of toepassingsmethode wijzigen behoudt de groepen maar vereist een nieuwe controle. Selecteer een dagkop om die kolom voor alle zichtbare thermostaten te selecteren; selecteer opnieuw om een volledig geselecteerde kolom te wissen. Op telefoons schuift de tabel horizontaal terwijl thermostaatnamen zichtbaar blijven.
+
+Alleen thermostaten met geselecteerde groepen krijgen de gekozen indeling. Niet-geselecteerde dagen behouden hun blokken en koppelingen. Als de nieuwe indeling niet-geselecteerde dagen met verschillende configuraties groepeert, waarschuwt de controle dat ze **Verschillende schema’s** behouden. Accepteren maakt die dagen niet gelijk.
+
+Kies voor **Alleen tijden** een basis als een bestemmingsgroep verschillende opgeslagen configuraties heeft. Die keuze is tijdelijk tot Toepassen. Velair stelt klimaatinstellingen voor vanuit die basis: eerst de exacte tijd, dan eerdere tijden van dichtstbij naar verst weg en daarna latere tijden. Presets blijven verwijzingen. De controle toont de herkomst van elk voorstel en laat instellingen bewerken terwijl sjabloontijden vaststaan. Ontbrekende compatibele instellingen moet je aanvullen; sjablooninstellingen worden niet stilzwijgend als terugval gebruikt. Alle geselecteerde dagen van de groep ontvangen dezelfde gecontroleerde instellingen. Een profielzone zonder eigen schema vereist handmatige instellingen en leent geen Standaard-instellingen.
+
+De controle vermeldt vervangen dagen en koppelingen, indelingswijzigingen, compatibiliteitsproblemen en profielzones die naar **Profielplanning** veranderen. Terug keert zonder opslaan terug naar de selectie. Toepassen valideert en bewaart de volledige selectie één keer; een ongeldige bestemming of revisieconflict past andere zones niet gedeeltelijk toe. Bij een opslagfout blijft de vorige configuratie behouden. Controleer opnieuw wanneer bron of configuratie verandert. Sluiten met nog niet opgeslagen controlebewerkingen gebruikt de gebruikelijke bescherming tegen verwerpen.
+
+Toepassen op een profiel slaat de geselecteerde schema’s direct op; het activeert geen profiel of modus en wijzigt geen basis- of uitzonderingsselectie. Een al effectief schema wijzigen kan de klimaatregeling beïnvloeden. Externe publicatie en fysieke apparaatreacties behouden hun normale uitvoeringsgrenzen; een samenhangend opgeslagen configuratie is geen gelijktijdige fysieke reactie.
 
 Sjabloonkoppelingen zijn alleen-lezen en gegroepeerd per thermostaat, daarna Standaard of profiel, met gekoppelde weekdagen bij elkaar. **Gekoppelde dagen** telt één dag ongeacht het aantal sjabloonblokken. De lijst toont dit op een eigen laatste regel onder het blokaantal. Onafhankelijke kopieën tellen niet mee en staan niet in de lijst. Ontkoppel alle dagen vóór verwijderen van een sjabloon; de uitgeschakelde verwijderknop legt dit uit.
 

@@ -38,6 +38,29 @@ function host(linked = false): VelairViewHost {
 }
 
 describe("linked Hours controls", () => {
+  it.each(["schedule", "template"] as const)("keeps a complete, passive off target cell in %s editors", (source) => {
+    const container = document.createElement("div");
+    const state = host();
+    state._updateDraftBlock = vi.fn();
+    const off = { start: "09:00", action: "turn_off", hvac_mode: "off", temperature: 21 };
+    render(renderEditableBlock(state, off, 0, source), container);
+    const cell = container.querySelector(".target-action-field")!;
+    const input = cell.querySelector("input")!;
+    expect(input.disabled).toBe(true);
+    expect(input.value).toBe("blockOffNoTarget");
+    expect(cell.querySelector("label")?.htmlFor).toBe(input.id);
+    expect(cell.querySelector(".target-action-indicator ha-icon")?.getAttribute("icon")).toBe("mdi:power");
+    expect(cell.querySelector("button, [tabindex]")).toBeNull();
+    cell.querySelector<HTMLElement>(".target-action-indicator")!.click();
+    expect(state._updateDraftBlock).not.toHaveBeenCalled();
+    for (const mode of ["heat", "cool"]) {
+      render(renderEditableBlock(state, { ...off, action: "set_temperature", hvac_mode: mode }, 0, source), container);
+      expect(container.querySelector(".target-action-indicator")).toBeNull();
+      expect(container.querySelector<HTMLInputElement>('.target-action-field input')?.value).toBe("21");
+      expect(container.querySelector('.target-action-toggle ha-icon')?.getAttribute("icon")).toBe("mdi:thermometer");
+    }
+  });
+
   it("uses stable, distinct locked-time help IDs per editor, source, day and slot", async () => {
     const container = document.createElement("div");
     const state = host(true);
@@ -88,7 +111,7 @@ describe("linked Hours controls", () => {
     expect(container.textContent).not.toContain("editTemplate");
     select.value = "workday";
     select.dispatchEvent(new Event("change"));
-    expect(state._setDayTemplateLink).toHaveBeenCalledWith("workday");
+    expect(state._setDayTemplateLink).not.toHaveBeenCalled();
     select.value = "";
     select.dispatchEvent(new Event("change"));
     (container.querySelector(".hours-source-actions button") as HTMLButtonElement).click();
@@ -247,7 +270,7 @@ describe("linked Hours controls", () => {
     state._data = { ...state._data, block_presets: [{ key: "comfort", name: "Comfort", config: { action } }] } as ScheduleResponse;
     state._effectivePresetBlock = () => ({ start: "07:00", action, ...(action === "set_hvac_mode" ? { hvac_mode: "cool" } : action === "set_climate_options" ? { fan_mode: "quiet" } : {}) });
     render(renderEditableBlock(state, { start: "07:00", preset_key: "comfort", action: "", hvac_mode: "" }, 0), container);
-    expect(container.querySelector<HTMLInputElement>(".single-temperature-field input")!.value).toBe("");
+    expect(container.querySelector<HTMLInputElement>(".single-temperature-field input")!.value).toBe(action === "turn_off" ? "blockOffNoTarget" : "");
     const mode = container.querySelector<HTMLSelectElement>(".editable-block > label select")!;
     expect(mode.value).toBe(action === "turn_off" ? "off" : action === "set_hvac_mode" ? "cool" : "");
     expect(mode.disabled).toBe(true);

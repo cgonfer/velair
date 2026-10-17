@@ -161,8 +161,8 @@ triggers:
 
 ## Profile Changed
 
-`profile_changed` is emitted after a different set of climate profiles, or
-Default schedules, has been persisted. Directly selecting the same active set
+`profile_changed` is emitted after a different base set of climate profiles, or
+Default base schedules, has been persisted. Directly selecting the same active set
 can move the native Mode entity to Manual, but emits no `profile_changed` event
 because the effective profiles did not change.
 
@@ -179,8 +179,10 @@ source: select
 `source` identifies where the effective selection originated. Public values are
 `panel`, `service`, and `select`; internal lifecycle operations may publish a
 more specific value such as `profile_deleted` or `mode_updated`.
-The ordered ID lists describe the complete new and previous active sets. An
-empty `profile_ids` list represents Default.
+The ordered ID lists describe the new and previous base sets. An empty
+`profile_ids` list represents a Default base; zone exceptions may still exist.
+This compatibility event does not report changes only to exceptions. Use
+`selection_changed` for the complete selection and effective room ownership.
 
 For example, this automation reacts when the Profile with ID `away` becomes
 part of the active set:
@@ -201,8 +203,41 @@ actions:
       message: Away profile is active
 ```
 
-To react when Velair returns to Default schedules, use a template condition that
-checks `trigger.event.data.profile_ids == []`.
+To react when the base returns to Default schedules, use a template condition
+that checks `trigger.event.data.profile_ids == []`. Check the complete selection
+to distinguish a Default base with exceptions from Default in every room.
+
+## Profile Selection Changed
+
+`selection_changed` reports changes to the base, its Mode association, or zone
+exceptions after persistence. It uses the same `velair_event` envelope:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+An absent override inherits the base; a present null explicitly uses Default.
+Effective ownership describes each room, including Profiles applied partially.
+It is not a receipt of successful physical device delivery. An unchanged
+selection does not emit a duplicate event. Editing referenced schedules can
+change climate behavior without changing selection IDs; schedule updates retain
+their normal API update notifications.
 
 ## Scheduler Mode Changed
 

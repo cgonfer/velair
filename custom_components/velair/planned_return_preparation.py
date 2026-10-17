@@ -17,7 +17,7 @@ def preparation_status(runtime, now, arrival, mode_id, plans):
     result = {"context": context, "return_at": arrival.isoformat() if arrival else None,
               "mode_id": mode_id, "zones": []}
     events = {event.entity_id: event for event in plans}
-    latched = (runtime.episode or {}).get("preparing_entities", [])
+    latched = [entity for entity in (runtime.episode or {}).get("preparing_entities", []) if runtime.is_preparing(entity)]
     for entity, zone in owner._data["zones"].items():
         profile_id, effect = owner._profile_effect_from_profiles(profiles or [], entity)
         source = "paused" if effect["behavior"] == "pause" else (
@@ -41,7 +41,7 @@ def preparation_status(runtime, now, arrival, mode_id, plans):
             if target is None or target.action != "set_temperature":
                 _unavailable(row, "missing_target")
             else:
-                block = {"start": target.start, "action": target.action,
+                block = {"start": target.start, "action": target.action, "temperature_only": target.temperature_only,
                          **temperature_target_from_mapping({key: value for key, value in asdict(target).items() if value is not None})}
                 if target.hvac_mode:
                     block["hvac_mode"] = target.hvac_mode
@@ -80,10 +80,13 @@ def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
     if not config["enabled"]:
         row["reason"] = "preconditioning_disabled"
         return
+    if block.get("temperature_only") and owner._current_hvac_mode(entity) == "off":
+        row.update(preparation="arrival_only", reason="unsupported_mode")
+        return
     temperature = owner._current_temperature(entity)
     mode_getter = getattr(owner._climate_manager, "effective_hvac_mode", None)
     is_range = "target_temp_low" in block
-    mode = (mode_getter(entity, block.get("hvac_mode"), ensure_on=True, range_target=is_range)
+    mode = (mode_getter(entity, block.get("hvac_mode"), ensure_on=not block.get("temperature_only", False), range_target=is_range)
             if callable(mode_getter) else block.get("hvac_mode") or owner._current_hvac_mode(entity))
     supported = mode == "heat_cool" if is_range else mode in ("heat", "cool", "auto", "heat_cool")
     reached = False

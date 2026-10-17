@@ -30,6 +30,7 @@ class LinkedScheduleAcceptanceTest(unittest.IsolatedAsyncioTestCase):
         zone["template_links"] = {"tuesday": self.link("usual")}
         self.data["profiles"] = [self.profile("winter"), self.profile("summer")]
         self.data["global_"]["active_profile_ids"] = []
+        self.data["global_"]["base_profile_ids"] = []
         hass = FakeHass()
         hass.states["climate.salon"] = SimpleNamespace(state="heat", attributes={"current_temperature": 20})
         self.climate = FakeClimateManager()

@@ -175,6 +175,7 @@ export type ScheduleBlock = {
   temperature?: number;
   target_temp_low?: number;
   target_temp_high?: number;
+  temperature_only?: boolean;
   hvac_mode?: string;
   humidity?: number;
   preset_mode?: string;
@@ -184,7 +185,7 @@ export type ScheduleBlock = {
 
 export type ClimateProfileZone =
   | { behavior: "normal" }
-  | { behavior: "schedule"; schedule: Record<string, ScheduleBlock[]>; template_links?: Record<string, TemplateLink> }
+  | { behavior: "schedule"; day_layout_key?: string; schedule: Record<string, ScheduleBlock[]>; template_links?: Record<string, TemplateLink> }
   | { behavior: "pause"; action: "none" | "turn_off" };
 
 export type ClimateProfile = {
@@ -226,6 +227,7 @@ export type DraftScheduleBlock = {
   temperature?: number | string;
   target_temp_low?: number | string;
   target_temp_high?: number | string;
+  temperature_only?: boolean;
   hvac_mode: string;
   humidity?: number | string;
   preset_mode?: string;
@@ -550,6 +552,7 @@ export type RoomSensorAssistStatus = {
   hysteresis_target?: number | null;
   deadband_low?: number | null;
   deadband_high?: number | null;
+  temperature_only?: boolean;
   hvac_mode?: string | null;
   weekday?: string | null;
   start?: string | null;
@@ -558,6 +561,7 @@ export type RoomSensorAssistStatus = {
 };
 
 export type ScheduleZone = {
+  day_layout_key?: string;
   template_links?: Record<string, TemplateLink>;
   enabled: boolean;
   schedule: Record<string, ScheduleBlock[]>;
@@ -585,6 +589,7 @@ export type ExternalExecutionInfo = {
       can_publish: boolean;
       can_import: boolean;
       supports_profile_schedules: boolean;
+      supports_temperature_only?: boolean;
       supported_actions: string[];
       supported_hvac_modes: string[];
       supported_target_types: string[];
@@ -639,6 +644,7 @@ export type ZoneRuntimeStatus = {
   target_temp_low?: number | null;
   target_temp_high?: number | null;
   applied_temperature?: number | null;
+  temperature_only?: boolean;
   hvac_mode?: string | null;
   active_from?: string | null;
   target_when?: string | null;
@@ -693,6 +699,7 @@ export type ScheduleEvent = {
   temperature?: number | null;
   target_temp_low?: number | null;
   target_temp_high?: number | null;
+  temperature_only?: boolean;
   hvac_mode?: string | null;
   humidity?: number | null;
   preset_mode?: string | null;
@@ -702,6 +709,19 @@ export type ScheduleEvent = {
   start: string;
   target_when?: string | null;
   preconditioning_diagnostics?: PreconditioningDiagnostics | null;
+};
+
+export type EffectiveNextEvent = {
+  entity_id: string;
+  source: "weekly_schedule" | "planned_return";
+  phase: "scheduled" | "preparation" | "arrival" | "suspended";
+  when: string | null;
+  event: ScheduleEvent | null;
+  weekly_event: ScheduleEvent | null;
+  mode_id?: string | null;
+  reason?: string | null;
+  blocked_until?: string | null;
+  return_at?: string | null;
 };
 
 export type PanelSettings = {
@@ -714,7 +734,7 @@ export type PanelSettings = {
 
 export type OperationStatus = {
   id: string;
-  kind: "mode_change" | "profile_activation";
+  kind: "mode_change" | "profile_activation" | "profile_selection";
   state: "running" | "completed" | "completed_with_errors" | "failed";
   target_id?: string | null;
   completed: number;
@@ -877,6 +897,7 @@ export type ScheduleResponse = {
   operational_status: string;
   next_event: ScheduleEvent | null;
   next_events: ScheduleEvent[];
+  next_effective_events?: EffectiveNextEvent[];
   active_overrides: Record<string, Record<string, unknown>>;
   room_sensor_assist?: Record<string, RoomSensorAssistStatus>;
   comfort?: Record<string, ComfortAssessment>;
@@ -887,6 +908,9 @@ export type ScheduleResponse = {
   profiles?: ClimateProfile[];
   modes?: VelairMode[];
   active_mode_id?: string | null;
+  profile_selection?: { base_profile_ids: string[]; base_mode_id: string | null; zone_profile_overrides: Record<string, string | null> };
+  effective_zone_profiles?: Record<string, string | null>;
+  effective_profile_ids?: string[];
   versions?: {
     export_format?: string;
     integration?: string;
@@ -938,3 +962,23 @@ export type NormalizedBlocks =
     };
 
 export type BlockDraftSource = "schedule" | "template";
+
+
+export type TemplateApplicationGroup = { entity_id: string; weekdays: string[]; base_weekday?: string; bindings?: Record<string, BlockConfiguration> };
+export type TemplateApplicationRequest = {
+  template_key: string; source: "default" | "profile"; profile_key?: string;
+  day_layout_key: string; mode: "copy" | "hours" | "full";
+  groups: TemplateApplicationGroup[]; expected_revision?: number;
+};
+export type TemplateApplicationIssue = { code: string; message: string; entity_id?: string; weekdays?: string[] };
+export type TemplateApplicationPreview = {
+  configuration_revision: number; can_apply: boolean;
+  groups: Array<TemplateApplicationGroup & {
+    requires_base: boolean; alternatives: Array<{ weekday: string; weekdays: string[]; blocks: ScheduleBlock[] }>;
+    proposals: Array<{ slot_id: string; start: string; binding?: BlockConfiguration; origin?: string; donor_start?: string; effective_config?: BlockConfiguration }>;
+    pending: Array<{ slot_id: string; message: string }>; errors: TemplateApplicationIssue[];
+    layout_before?: string; behavior_before?: string;
+    replacements: Array<{ weekday: string; mode?: string; template_key?: string }>;
+  }>;
+  warnings: TemplateApplicationIssue[]; errors: TemplateApplicationIssue[];
+};

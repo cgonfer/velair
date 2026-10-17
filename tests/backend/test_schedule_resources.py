@@ -75,6 +75,7 @@ class ResourceRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_active_preset_edit_uses_old_snapshot_and_reapplies(self):
         self.data["global_"]["active_profile_ids"] = ["winter"]
+        self.data["global_"]["base_profile_ids"] = ["winter"]
         await self.scheduler.async_set_block_preset("Winter", {"temperature": 22, "hvac_mode": "heat"}, "winter", expected_revision=0)
         self.assertIn(("set_temperature", "climate.salon", 22, True, "heat"), self.climate.calls)
 
@@ -98,6 +99,7 @@ class ResourceRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_hidden_default_edit_does_not_override_profile(self):
         self.data["global_"]["active_profile_ids"] = ["summer"]
+        self.data["global_"]["base_profile_ids"] = ["summer"]
         await self.scheduler.async_set_block_preset("Usual", {"temperature": 22, "hvac_mode": "heat"}, "usual", expected_revision=0)
         self.assertEqual(self.climate.calls, [])
 

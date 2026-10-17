@@ -1,3 +1,4 @@
+import { resolveDayLayout } from "./day-layouts";
 import { WEEKDAYS } from "../constants";
 import {
   ACTION_SET_CLIMATE_OPTIONS,
@@ -19,13 +20,14 @@ import type {
 
 export type ClimateProfileDraftZone =
   | { behavior: "normal" }
-  | { behavior: "schedule"; schedule: Record<string, DraftScheduleBlock[]>; template_links?: Record<string, TemplateLink> }
+  | { behavior: "schedule"; schedule: Record<string, DraftScheduleBlock[]>; day_layout_key?: string; template_links?: Record<string, TemplateLink> }
   | { behavior: "pause"; action: "none" | "turn_off" };
 
 export type ClimateProfileDraft = Omit<ClimateProfile, "key" | "zones"> & {
   key?: string;
   zones: Record<string, ClimateProfileDraftZone>;
   rememberedSchedules: Record<string, Record<string, DraftScheduleBlock[]>>;
+  rememberedDayLayouts?: Record<string, string>;
   rememberedTemplateLinks?: Record<string, Record<string, TemplateLink>>;
 };
 
@@ -48,6 +50,7 @@ export function createClimateProfileDraft(profile?: ClimateProfile): ClimateProf
     zone.behavior === "schedule"
       ? {
           behavior: "schedule",
+          ...(zone.day_layout_key ? { day_layout_key: resolveDayLayout(zone.day_layout_key).layout.key } : {}),
           template_links: structuredClone(zone.template_links ?? {}),
           schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
             weekday,
@@ -77,18 +80,30 @@ export function activeClimateProfiles(data?: ScheduleResponse): ClimateProfile[]
   const profilesById = new Map(
     (data?.profiles ?? []).map((profile) => [profile.key, profile]),
   );
-  return (data?.global?.active_profile_ids ?? [])
+  const effectiveIds = data?.profile_selection
+    ? [...new Set((data.profiles ?? []).flatMap((profile) => Object.keys(profile.zones))
+      .map((entityId) => effectiveZoneProfileId(data, entityId)).filter((id): id is string => id !== null))]
+    : data?.global?.active_profile_ids ?? [];
+  return (data?.effective_profile_ids ?? effectiveIds)
     .map((profileId) => profilesById.get(profileId))
     .filter((profile): profile is ClimateProfile => Boolean(profile));
+}
+
+/** Resolve ownership separately from behavior: explicit Default still claims a zone. */
+export function effectiveZoneProfileId(data: ScheduleResponse | undefined, entityId: string): string | null {
+  if (data?.effective_zone_profiles && entityId in data.effective_zone_profiles) return data.effective_zone_profiles[entityId];
+  const selection = data?.profile_selection;
+  if (selection && entityId in selection.zone_profile_overrides) return selection.zone_profile_overrides[entityId];
+  const baseIds = selection?.base_profile_ids ?? data?.global?.active_profile_ids ?? [];
+  return data?.profiles?.find((profile) => baseIds.includes(profile.key) && entityId in profile.zones)?.key ?? null;
 }
 
 export function activeClimateProfileZoneEffect(
   data: ScheduleResponse | undefined,
   entityId: string,
 ): { profile: ClimateProfile; zone: Exclude<ClimateProfileZone, { behavior: "normal" }> } | undefined {
-  const profile = activeClimateProfiles(data).find(
-    (activeProfile) => entityId in activeProfile.zones,
-  );
+  const profileId = effectiveZoneProfileId(data, entityId);
+  const profile = data?.profiles?.find((candidate) => candidate.key === profileId);
   const zone = profile?.zones[entityId];
   if (!profile || !zone || zone.behavior === "normal") {
     return undefined;
@@ -132,29 +147,34 @@ export function climateProfileAccentColor(key?: string, color?: string): string 
   return PROFILE_ACCENT_COLORS[Math.abs(hash) % PROFILE_ACCENT_COLORS.length];
 }
 
-export function profileZoneBehavior(zone?: ClimateProfileDraftZone): ClimateProfileDraftZone["behavior"] {
-  return zone?.behavior ?? "normal";
+export function profileZoneBehavior(zone?: ClimateProfileDraftZone): ClimateProfileDraftZone["behavior"] | "unconfigured" {
+  return zone?.behavior ?? "unconfigured";
 }
 
 export function withProfileZoneBehavior(
   draft: ClimateProfileDraft,
   entityId: string,
-  behavior: ClimateProfileDraftZone["behavior"],
+  behavior: ClimateProfileDraftZone["behavior"] | "unconfigured",
 ): ClimateProfileDraft {
   const zones = { ...draft.zones };
   const rememberedSchedules = { ...draft.rememberedSchedules };
   const rememberedTemplateLinks = structuredClone(draft.rememberedTemplateLinks ?? {});
+  const rememberedDayLayouts = { ...draft.rememberedDayLayouts };
   const existing = zones[entityId];
   if (existing?.behavior === "schedule") {
     rememberedSchedules[entityId] = cloneProfileSchedule(existing.schedule);
+    rememberedDayLayouts[entityId] = existing.day_layout_key ?? "individual";
     rememberedTemplateLinks[entityId] = structuredClone(existing.template_links ?? {});
   }
-  if (behavior === "normal") {
+  if (behavior === "unconfigured") {
     delete zones[entityId];
+  } else if (behavior === "normal") {
+    zones[entityId] = { behavior: "normal" };
   } else if (behavior === "schedule") {
     const links = existing?.behavior === "schedule" ? existing.template_links : rememberedTemplateLinks[entityId];
     zones[entityId] = {
       behavior,
+      day_layout_key: existing?.behavior === "schedule" ? existing.day_layout_key ?? "individual" : rememberedDayLayouts[entityId] ?? "individual",
       ...(links && Object.keys(links).length ? { template_links: structuredClone(links) } : {}),
       schedule: cloneProfileSchedule(
         existing?.behavior === "schedule"
@@ -165,7 +185,7 @@ export function withProfileZoneBehavior(
   } else {
     zones[entityId] = { behavior, action: "none" };
   }
-  return { ...draft, zones, rememberedSchedules, rememberedTemplateLinks };
+  return { ...draft, zones, rememberedSchedules, rememberedTemplateLinks, rememberedDayLayouts };
 }
 
 export function cloneProfileSchedule(
@@ -215,7 +235,7 @@ export function cloneProfileDayToClimates(
     if (sourceLink) links[weekday] = structuredClone(sourceLink);
     else delete links[weekday];
     schedule[weekday] = sourceLink ? [] : structuredClone(sourceZone.schedule[weekday] ?? []);
-    zones[entityId] = { behavior: "schedule", schedule, template_links: links };
+    zones[entityId] = { behavior: "schedule", schedule, template_links: links, day_layout_key: existing?.behavior === "schedule" ? existing.day_layout_key : draft.rememberedDayLayouts?.[entityId] };
     rememberedSchedules[entityId] = cloneProfileSchedule(schedule);
     rememberedTemplateLinks[entityId] = structuredClone(links);
   }
@@ -315,10 +335,10 @@ export function climateProfileValidationError(draft: ClimateProfileDraft): strin
 export function climateProfileInput(draft: ClimateProfileDraft): ClimateProfileInput {
   const zones = Object.fromEntries(
     Object.entries(draft.zones)
-      .filter(([, zone]) => zone.behavior !== "normal")
       .map(([entityId, zone]) => [entityId, zone.behavior === "schedule"
         ? {
             behavior: "schedule",
+            ...(zone.day_layout_key ? { day_layout_key: resolveDayLayout(zone.day_layout_key).layout.key } : {}),
             template_links: structuredClone(zone.template_links ?? {}),
             schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
               weekday,
@@ -358,6 +378,7 @@ export function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock
           target_temp_high: Number(block.target_temp_high),
         }
       : { temperature: Number(block.temperature) }),
+    ...(block.temperature_only ? { temperature_only: true } : {}),
     ...(block.action !== ACTION_SET_CLIMATE_OPTIONS && block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
     ...(block.fan_mode ? { fan_mode: block.fan_mode } : {}),
     ...(block.preset_mode ? { preset_mode: block.preset_mode } : {}),

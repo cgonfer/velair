@@ -126,6 +126,8 @@ def translate_weekly_schedule(
             switchpoints.append(_switchpoint("00:00", last_temperature, temperature_unit))
         for block in blocks:
             start = str(block.get("start", ""))
+            if block.get("temperature_only") is True:
+                raise ValueError("External schedules do not support temperature-only blocks")
             try:
                 hour, minute = (int(part) for part in start.split(":"))
             except (TypeError, ValueError) as err:

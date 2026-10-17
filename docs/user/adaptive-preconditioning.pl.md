@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](adaptive-preconditioning.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -23,6 +23,8 @@ Adaptacyjne przygotowanie temperatury pozwala Velair rozpocząć ogrzewanie lub 
 Na przykład blok o `07:00` z temperaturą `21 °C` oznacza „zbliżyć się do `21 °C` na `07:00`”, a nie „zacząć zmieniać temperaturę na `21 °C` o `07:00`”.
 
 Funkcja działa lokalnie w Home Assistant. Velair zapisuje ustawienia i próbki uczenia w jego pamięci i nigdy nie wysyła historii temperatur, obserwacji ani danych kalibracji do zewnętrznego sterownika. Strefy przekazane do zewnętrznego wykonywania harmonogramów nie korzystają z adaptacyjnego przygotowania; publikowany jest tylko ich efektywny harmonogram tygodniowy.
+
+Blok **Tylko temperatura** nie zezwala na zmianę trybu HVAC. Gdy termostat jest wyłączony, Velair nie rozpoczyna wcześniejszego przygotowania ani nie zbiera próbek uczenia dla tego celu. Zewnętrzne włączenie pozwala przeliczyć przygotowanie dla rzeczywistego zgodnego trybu. Ta opcja nie może zapewnić komfortu na godzinę bloku, dopóki urządzenie pozostaje wyłączone.
 
 <a id="setup"></a>
 ## Konfiguracja
@@ -42,6 +44,8 @@ Obsługiwane są natywne zakresy `heat_cool`. Jeśli temperatura pomieszczenia j
 Po rozwinięciu encji każdy obsługiwany tryb pokazuje kartę bieżącej prognozy. Korzysta ona z tych samych danych backendu o następnym zdarzeniu co Przegląd, dzięki czemu pauzy, wzmocnienia, nieobsługiwane tryby i bloki nienadające się do przygotowania są traktowane spójnie. Jeśli istnieje pasujący przyszły blok, karta pokazuje obliczony czas rozpoczęcia, czas docelowy, wyprzedzenie, zaplanowaną temperaturę i tryb oraz informację, czy Velair używa modelu początkowego, czy podobnej lokalnej historii.
 
 Aby sprawdzić konkretną kalkulację, otwórz **Szczegóły obliczeń** w karcie prognozy. Opcjonalna sekcja pokazuje wartości backendu użyte do prognozy: liczby próbek, oszacowanie z zakończonych obserwacji, dolne ograniczenie z częściowych obserwacji, łączny szacunek, zaokrąglenie i końcowe wyprzedzenie. Jest domyślnie ukryta, aby zwykły widok pozostał prosty.
+
+Przygotowanie na zaplanowany powrót jest oddzielone od wyprzedzenia harmonogramu tygodniowego. Dla przyjętego przyszłego powrotu informacje termostatu pokazują stan powrotu, szacowany początek, cel na przybycie i powód wstrzymania lub niedostępności. Przegląd, Planowany powrót i karty termostatów korzystają z tych samych danych backendu; nie jest to kolejne zdarzenie harmonogramu tygodniowego. Pomieszczenie może nadal realizować tryb nieobecności, pokazując oszacowanie przyszłego powrotu. **Przygotowanie** opisuje zamiar sterowania Velair, a nie potwierdzenie odbioru polecenia przez urządzenie ani fizycznego grzania lub chłodzenia. Oś powrotu pokazuje upływ czasu do zapisanego przybycia, a nie procent postępu temperaturowego. Znaczenie stanów opisuje [przygotowanie pomieszczeń](planned-return.pl.md#room-preparation).
 
 <a id="how-it-starts"></a>
 ## Jak rozpoczyna się przygotowanie

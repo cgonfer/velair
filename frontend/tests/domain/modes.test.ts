@@ -55,3 +55,11 @@ describe("modes", () => {
     expect(activeProfileOrigin({ ...base, global: { mode: "running", active_profile_ids: [] } })).toBe("default");
   });
 });
+
+
+it("shows Manual for explicit Default exceptions even when the base is Default", () => {
+  const data = { global: { active_profile_ids: [] }, profile_selection: {
+    base_profile_ids: [], base_mode_id: null, zone_profile_overrides: { "climate.office": null },
+  } } as unknown as ScheduleResponse;
+  expect(activeProfileOrigin(data)).toBe("manual");
+});

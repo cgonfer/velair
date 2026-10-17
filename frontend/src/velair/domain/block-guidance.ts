@@ -20,7 +20,7 @@ export function keepTargetMismatch(
   dayBlocks: DraftScheduleBlock[],
   state?: HassState,
 ): KeepTargetMismatch | undefined {
-  if ((block.action || ACTION_SET_TEMPERATURE) !== ACTION_SET_TEMPERATURE || block.hvac_mode) {
+  if ((block.action || ACTION_SET_TEMPERATURE) !== ACTION_SET_TEMPERATURE || block.hvac_mode || block.temperature_only) {
     return undefined;
   }
 

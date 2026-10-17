@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](manual-control.md) · [Español](manual-control.
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -178,6 +178,8 @@ Velair verwijdert alleen de gereserveerde handmatige reden en bepaalt de huidige
 Het oude blok van bij het begin wordt niet hersteld. Dit is belangrijk als profiel, modus, schema, pauze of kloktijd ondertussen veranderde.
 
 Een onafhankelijke pauze houdt de zone gepauzeerd; effectief `turn_off` blijft leidend. Handmatig hervatten is dus niet hetzelfde als alle zonepauzeredenen hervatten.
+
+**Alleen temperatuur** is een aparte blokkeuze. Tijdens dat blok blijft een externe HVAC-moduswijziging onder externe controle en veroorzaakt deze op zichzelf geen Handmatige aanpassing. Externe doeltemperatuurwijzigingen volgen nog steeds je ingestelde beleid. Een pauze of Handmatige aanpassing stopt nog steeds de schemaopdrachten; hervatten past het huidige blok toe zonder een uitgeschakeld klimaatapparaat in te schakelen. Dit geldt ook wanneer een raamautomatisering de zone hervat. Een expliciete Tijdelijke aanpassing of een later blok met een expliciete HVAC-modus kan het nog wel inschakelen.
 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 ### Vanuit `off` hervatten bij Huidige modus behouden

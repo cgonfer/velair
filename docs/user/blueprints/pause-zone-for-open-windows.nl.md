@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](pause-zone-for-open-windows.md) · [Español](pa
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -88,6 +88,8 @@ Automatiseringsruns kunnen overlappen, zodat `opened_due` niet wordt geblokkeerd
 
 <a id="safety-and-precedence"></a>
 ## Veiligheid en voorrang
+
+Als het actieve blok **Alleen temperatuur** gebruikt, past hervatten na het sluiten van de ramen de doeltemperatuur opnieuw toe zonder een HVAC-moduswijziging te vragen. Als de blauwdruk het klimaatapparaat uitschakelde, blijft het uit. Gebruik indien nodig een expliciete modus in een later blok of schakel handmatig in. **Huidige modus behouden** behoudt het bestaande herstartgedrag. Dit is het beleid van het actieve blok, geen nieuwe blauwdrukinvoer; opnieuw importeren is niet nodig.
 
 De blueprint maakt elke pauze met de ingestelde **Pause ID**. Standaard is dit `velair_window_guard`; Velair bewaart deze verantwoordelijkheid afzonderlijk voor elke geselecteerde thermostaat.
 

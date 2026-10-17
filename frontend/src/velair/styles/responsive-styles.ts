@@ -61,36 +61,36 @@ export const responsiveStyles = css`
       position: sticky;
     }
 
-    .next .event {
+    .next:not(.effective-next) .event {
       grid-template-columns: minmax(110px, 150px) max-content;
       min-width: max-content;
     }
 
-    .next .event-details,
-    .next .event-details.preconditioned {
+    .next:not(.effective-next) .event-details,
+    .next:not(.effective-next) .event-details.preconditioned {
       grid-template-columns: 18ch 8ch 12ch;
     }
 
-    .next .event-list.has-preconditioning .event-details,
-    .next .event-list.has-preconditioning .event-details.preconditioned {
+    .next:not(.effective-next) .event-list.has-preconditioning .event-details,
+    .next:not(.effective-next) .event-list.has-preconditioning .event-details.preconditioned {
       grid-template-columns: 40ch 8ch 12ch;
     }
 
-    .next .event-time {
+    .next:not(.effective-next) .event-time {
       justify-content: flex-start;
     }
 
-    .next .event-list.has-preconditioning .event-time-flow {
+    .next:not(.effective-next) .event-list.has-preconditioning .event-time-flow {
       display: grid;
       grid-template-columns: 16px 17ch 16px 17ch;
       justify-content: start;
     }
 
-    .next .event-list.has-preconditioning .event-time-single .target-time {
+    .next:not(.effective-next) .event-list.has-preconditioning .event-time-single .target-time {
       grid-column: 4;
     }
 
-    .next .event-identity {
+    .next:not(.effective-next) .event-identity {
       align-items: center;
       align-self: stretch;
       background: var(--secondary-background-color);
@@ -204,7 +204,7 @@ export const responsiveStyles = css`
       grid-template-columns: minmax(0, 1fr) 30px;
     }
 
-    .editable-block .target-action-field input[type="number"] {
+    .editable-block .target-action-field input {
       appearance: textfield;
       font-size: 12px;
       padding-inline: 3px;
@@ -415,7 +415,7 @@ export const responsiveStyles = css`
       grid-template-columns: minmax(0, 1fr) 30px;
     }
 
-    .editable-block .target-action-field input[type="number"] {
+    .editable-block .target-action-field input {
       appearance: textfield;
       font-size: 12px;
       padding-inline: 3px;

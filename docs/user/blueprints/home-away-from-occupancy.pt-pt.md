@@ -8,8 +8,8 @@ Traduções: [Original em inglês](home-away-from-occupancy.md) · [Español](ho
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -85,6 +85,8 @@ Na arranque, as verificações de presença, ausência e disponibilidade executa
 
 <a id="safety-and-precedence"></a>
 ## Segurança e prioridades
+
+As ações de Modo e Perfil usam a política dos blocos da programação selecionada. Um bloco **Apenas temperatura** atualiza a temperatura-alvo sem solicitar mudança de modo HVAC; portanto, selecionar Em casa não liga necessariamente um equipamento desligado. Escolha um bloco explícito **Aquecimento** ou **Arrefecimento** quando Em casa deve iniciar a climatização. Quaisquer ações diretas de climatização configuradas neste blueprint continuam sendo ações explícitas do Home Assistant; a política do bloco não as suprime.
 
 O blueprint executa apenas as ações configuradas. As prioridades existentes de Modo, Perfil, Reforço e pausa do Velair continuam a aplicar-se. Uma entidade de ocupação `unknown` ou `unavailable` não ativa Em casa nem Ausente; o aviso identifica a entidade e explica que as ações ficam suspensas até que ela introduza um estado compatível de presença ou ausência.
 

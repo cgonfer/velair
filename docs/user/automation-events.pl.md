@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](automation-events.md) · [Españo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -144,7 +144,7 @@ triggers:
 <a id="profile-changed"></a>
 ## Zmiana Profilu
 
-`profile_changed` pojawia się po trwałym zapisaniu innego zestawu Profili lub harmonogramów Default. Bezpośredni wybór już aktywnego zestawu może przełączyć natywną encję Trybu na Manual, ale nie emituje `profile_changed`, ponieważ efektywne Profile się nie zmieniły.
+`profile_changed` pojawia się po trwałym zapisaniu innego bazowego zestawu Profili lub bazowych harmonogramów domyślnych. Bezpośredni wybór już aktywnego zestawu może przełączyć natywną encję Trybu na Manual, ale nie emituje `profile_changed`, ponieważ efektywne Profile się nie zmieniły.
 
 ```yaml
 domain: velair
@@ -156,7 +156,7 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` wskazuje źródło efektywnego wyboru. Publiczne wartości to `panel`, `service` i `select`; wewnętrzne operacje mogą podać dokładniejszą wartość, jak `profile_deleted` lub `mode_updated`. Uporządkowane listy ID opisują pełny nowy i poprzedni zestaw. Pusta lista `profile_ids` oznacza Default.
+`source` wskazuje źródło efektywnego wyboru. Publiczne wartości to `panel`, `service` i `select`; wewnętrzne operacje mogą podać dokładniejszą wartość, jak `profile_deleted` lub `mode_updated`. Uporządkowane listy ID opisują nowy i poprzedni zestaw bazowy. Pusta lista `profile_ids` oznacza bazę domyślną; wyjątki stref mogą nadal istnieć. To zdarzenie zgodności nie zgłasza zmian dotyczących tylko wyjątków. Użyj `selection_changed`, aby uzyskać pełny wybór i obowiązujące przypisania pomieszczeń.
 
 Poniższa automatyzacja reaguje, gdy Profil o ID `away` dołącza do aktywnego zestawu:
 
@@ -176,7 +176,34 @@ actions:
       message: Away profile is active
 ```
 
-Aby reagować na powrót do Default, użyj warunku szablonu `trigger.event.data.profile_ids == []`.
+Aby reagować na powrót bazy do harmonogramów domyślnych, użyj warunku `trigger.event.data.profile_ids == []`. Sprawdź pełny wybór, aby odróżnić bazę domyślną z wyjątkami od ustawień domyślnych we wszystkich pomieszczeniach.
+
+<a id="profile-selection-changed"></a>
+## Zmiana wyboru Profili
+
+`selection_changed` zgłasza po zapisaniu zmiany bazy, jej powiązania z Trybem lub wyjątków stref. Używa tej samej otoczki `velair_event`:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Brak wyjątku oznacza dziedziczenie bazy; jawne null wybiera ustawienia domyślne. Obowiązujące przypisania opisują każde pomieszczenie, także Profile zastosowane częściowo. Nie jest to potwierdzenie fizycznego dostarczenia poleceń urządzeniu. Niezmieniony wybór nie emituje duplikatu zdarzenia. Edycja przywoływanych harmonogramów może zmienić działanie bez zmiany identyfikatorów wyboru; aktualizacje harmonogramów zachowują zwykłe powiadomienia API.
 
 <a id="scheduler-mode-changed"></a>
 ## Zmiana trybu harmonogramu

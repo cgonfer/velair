@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { OverviewPreparationTimeline } from "../../src/velair/components/overview-preparation-timeline-element";
 import { PlannedReturnElement } from "../../src/velair/components/planned-return-element";
 import { es } from "../../src/velair/translations/es";
 import { en } from "../../src/velair/translations/en";
@@ -19,6 +20,10 @@ async function closeEditor(element: PlannedReturnElement) {
   element.shadowRoot!.querySelector<HTMLButtonElement>(".arrival-editor-close")?.click(); await element.updateComplete;
 }
 afterEach(() => { document.body.replaceChildren(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+function timelineElement(root: ShadowRoot) {
+  return root.querySelector<OverviewPreparationTimeline>("velair-overview-preparation-timeline")!;
+}
+function timelineProgress(root: ShadowRoot) { return String(Math.round(timelineElement(root).progress * 100)); }
 describe("compact return card", () => {
   it("omits only the embedded action title icon, preserving standalone and panel headings", async () => {
     const element = await setup(true, false);
@@ -148,76 +153,83 @@ describe("compact return card", () => {
     root.querySelector<HTMLButtonElement>(".arrival-edit-trigger")!.click(); await element.updateComplete;
     expect(root.querySelector(".arrival-editor")).not.toBeNull();
   });
-  it("renders backend advisory preparation separately from Now and saved arrival", async () => {
+  it("keeps backend preparation points tied to saved arrival while editing", async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-10T09:00:00Z"));
     const element = await setup(true, false); const original = data();
     element.data = { ...original, planned_return_status: { ...original.planned_return_status!, preparation: { context: "arrival", mode_id: "home", return_at: original.planned_return_status!.return_at, zones: [{ entity_id: "climate.a", profile_id: null, schedule_source: "default", preparation: "adaptive", state: "pending", reason: null, start_at: "2026-10-10T08:30:00Z" }] } } }; await element.updateComplete;
-    const root = element.shadowRoot!;
-    expect(root.querySelector<HTMLElement>(".preparation-marker")!.style.left).toBe("25%");
-    expect(root.querySelector(".preparation-estimate")?.textContent).toContain("08:30");
-    expect(root.querySelector("#return-preparation-help-trigger,.return-timeline-now-row")).toBeNull();
-    expect(root.querySelector(".return-timeline-now-label")).toBeNull();
-    expect(root.querySelector(".return-timeline-marker")?.getAttribute("title")).toBe(en.plannedReturnTimelineNow);
-    expect(root.querySelector(".return-timeline-marker")?.closest("[role=progressbar]")).toBeNull();
+    const root = element.shadowRoot!; const timeline = timelineElement(root);
+    expect(timeline.points).toEqual([expect.objectContaining({ entityId: "climate.a", progress: 0.25 })]);
+    expect(timeline.estimateLabel(timeline.points[0].start)).toContain("08:30");
+    expect(timeline.nowLabel).toContain(en.plannedReturnTimelineNow);
+    expect(root.querySelector(".preparation-marker,.preparation-estimate,.return-timeline-marker,#return-preparation-help-trigger")).toBeNull();
     expect(root.querySelectorAll(".arrival-edit-trigger")).toHaveLength(1);
     root.querySelector<HTMLButtonElement>(".arrival-edit-trigger")!.click(); await element.updateComplete;
     const input = root.querySelector<HTMLInputElement>("#episode-return-time")!; input.value = "12:00"; input.dispatchEvent(new Event("input")); await element.updateComplete;
-    expect(root.querySelector<HTMLElement>(".preparation-marker")!.style.left).toBe("25%");
+    expect(timelineElement(root).points).toEqual([expect.objectContaining({ entityId: "climate.a", progress: 0.25 })]);
+    expect(timelineElement(root).progress).toBe(0.5);
     element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, preparation: { ...element.data!.planned_return_status!.preparation!, return_at: "2026-10-10T12:00:00Z" } } }; await element.updateComplete;
-    expect(root.querySelector(".preparation-marker,.preparation-estimate")).toBeNull();
+    expect(timelineElement(root).points).toEqual([]);
   });
-  it.each([false, true])("discloses eligible saved room estimates independently and resets on arrival changes, compact=%s", async (compact) => {
-    const element = await setup(compact, false); const original = data();
+  it("expands eligible climate legend independently and resets it on saved arrival changes", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-10T09:00:00Z"));
+    const element = await setup(true, false); const original = data();
     const zone = { entity_id: "climate.a", profile_id: null, schedule_source: "default" as const, preparation: "adaptive" as const, state: "pending" as const, reason: null, start_at: "2026-10-10T08:30:00Z" };
     const preview = { context: "arrival" as const, mode_id: "home", return_at: original.planned_return_status!.return_at, zones: [{ ...zone, entity_id: "climate.later", start_at: "2026-10-10T09:00:00Z" }, zone, { ...zone, entity_id: "climate.paused", state: "suspended" as const }] };
     element.hass = { ...element.hass!, locale: { ...element.hass!.locale, time_format: "24" }, states: { ...element.hass!.states, "climate.a": { state: "heat", attributes: { friendly_name: "Living room", icon: "mdi:sofa" } } as never } };
     element.data = { ...original, planned_return_status: { ...original.planned_return_status!, preparation: preview } }; await element.updateComplete;
-    const root = element.shadowRoot!; const toggle = root.querySelector<HTMLButtonElement>(".preparation-estimate-toggle")!;
-    const list = root.querySelector<HTMLElement>("#preparation-estimate-rooms")!;
-    expect(toggle.getAttribute("aria-expanded")).toBe("false"); expect(toggle.getAttribute("aria-controls")).toBe(list.id); expect(list.hidden).toBe(true);
-    expect(Array.from(list.querySelectorAll("li")).map((row) => row.getAttribute("data-entity-id"))).toEqual(["climate.a", "climate.later"]);
-    expect(list.querySelector(".preparation-estimate-room")?.textContent).toContain("Living room");
-    expect(list.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:sofa"); expect(list.querySelector("time")?.textContent).toBe("08:30");
-    toggle.click(); await element.updateComplete; expect(list.hidden).toBe(false); expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(root.querySelector(".preparation-toggle")?.getAttribute("aria-expanded") ?? "false").toBe("false");
-    element.data = { ...element.data! }; await element.updateComplete; expect(list.hidden).toBe(false);
+    const root = element.shadowRoot!; const timeline = timelineElement(root); await timeline.updateComplete;
+    expect(timeline.points.map(point => point.entityId)).toEqual(["climate.a", "climate.later"]);
+    expect(timeline.names["climate.a"]).toBe("Living room");
+    const toggle = timeline.shadowRoot!.querySelector<HTMLButtonElement>("button.more")!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-controls")).toBe("overview-preparation-legend");
+    expect(toggle.textContent).toContain("+");
+    toggle.click(); await timeline.updateComplete;
+    expect(timeline.shadowRoot!.querySelectorAll(".legend .entry")).toHaveLength(2);
+    expect(timeline.shadowRoot!.querySelector(".legend")?.classList.contains("expanded")).toBe(true);
+    expect(timeline.shadowRoot!.querySelector(".legend .entry")?.textContent).toContain("Living room");
+    element.data = { ...element.data! }; await element.updateComplete; await timeline.updateComplete;
+    expect(timeline.expanded).toBe(true);
     const return_at = "2026-10-10T11:00:00Z";
-    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, return_at, preparation: { ...preview, return_at } } }; await element.updateComplete;
-    expect(list.hidden).toBe(true);
-    root.querySelector<HTMLButtonElement>(".preparation-estimate-toggle")!.click(); await element.updateComplete;
-    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, preparation: { ...preview, return_at, zones: [{ ...zone, state: "reached" }] } } }; await element.updateComplete;
-    expect(root.querySelector(".preparation-estimate")).toBeNull(); expect(root.querySelector("#return-preparation-help-trigger")).not.toBeNull();
+    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, return_at, preparation: { ...preview, return_at } } }; await element.updateComplete; await timeline.updateComplete; await timeline.updateComplete;
+    expect(timeline.expanded).toBe(false);
+    timeline.shadowRoot!.querySelector<HTMLButtonElement>("button.more")!.click(); await timeline.updateComplete;
+    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, preparation: { ...preview, return_at, zones: [{ ...zone, state: "reached" }] } } }; await element.updateComplete; await timeline.updateComplete; await timeline.updateComplete;
+    expect(timeline.points).toEqual([]); expect(timeline.expanded).toBe(false);
+    expect(timeline.shadowRoot!.querySelector(".legend")).toBeNull();
     expect(element.hass!.connection.sendMessagePromise).not.toHaveBeenCalled();
   });
-  it.each([false, true])("hides preparation information while editing and restores its same-episode disclosure on Back, compact=%s", async (compact) => {
-    const element = await setup(compact, false); const original = data();
+  it("preserves the saved legend during editing and hides fallback help until Back", async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-10T09:00:00Z"));
+    const element = await setup(true, false); const original = data();
     const zone = { entity_id: "climate.a", profile_id: null, schedule_source: "default" as const, preparation: "adaptive" as const, state: "pending" as const, reason: null, start_at: "2026-10-10T08:30:00Z" };
-    element.data = { ...original, planned_return_status: { ...original.planned_return_status!, preparation: { context: "arrival", mode_id: "home", return_at: original.planned_return_status!.return_at, zones: [zone] } } }; await element.updateComplete;
-    const root = element.shadowRoot!; root.querySelector<HTMLButtonElement>(".preparation-estimate-toggle")!.click(); await element.updateComplete;
+    element.data = { ...original, planned_return_status: { ...original.planned_return_status!, preparation: { context: "arrival", mode_id: "home", return_at: original.planned_return_status!.return_at, zones: [zone, { ...zone, entity_id: "climate.b", start_at: "2026-10-10T09:30:00Z" }] } } }; await element.updateComplete;
+    const root = element.shadowRoot!; const timeline = timelineElement(root); await timeline.updateComplete;
+    timeline.shadowRoot!.querySelector<HTMLButtonElement>("button.more")!.click(); await timeline.updateComplete;
+    const savedPoints = [...timeline.points];
     root.querySelector<HTMLButtonElement>(".arrival-edit-trigger")!.click(); await element.updateComplete;
-    expect(root.querySelector(".preparation-estimate,.return-timeline-now-row,#return-preparation-help-trigger,.cancel-return")).toBeNull();
-    expect(root.querySelector(".preparation-marker")).not.toBeNull();
+    expect(root.querySelector("#return-preparation-help-trigger,.cancel-return,.preparation-estimate")).toBeNull();
+    expect(timelineElement(root).points).toEqual(savedPoints); expect(timeline.expanded).toBe(true);
     root.querySelector<HTMLButtonElement>(".arrival-editor-close")!.click(); await element.updateComplete;
-    expect(root.querySelector(".preparation-estimate-toggle")?.getAttribute("aria-expanded")).toBe("true");
-    expect(root.querySelector(".cancel-return")).not.toBeNull();
+    expect(timeline.expanded).toBe(true); expect(root.querySelector(".cancel-return")).not.toBeNull();
     element.data = { ...original }; await element.updateComplete;
     const help = root.querySelector<HTMLButtonElement>("#return-preparation-help-trigger")!;
     help.dispatchEvent(new FocusEvent("focus")); expect(help.getAttribute("aria-expanded")).toBe("true");
     root.querySelector<HTMLButtonElement>(".arrival-edit-trigger")!.click(); await element.updateComplete;
     expect(help.getAttribute("aria-expanded")).toBe("false");
-    expect(root.querySelector("#return-preparation-help-trigger,.return-timeline-now-row")).toBeNull();
+    expect(root.querySelector("#return-preparation-help-trigger")).toBeNull();
     root.querySelector<HTMLButtonElement>(".arrival-editor-close")!.click(); await element.updateComplete;
     expect(root.querySelector("#return-preparation-help-trigger")).not.toBeNull();
     expect(element.hass!.connection.sendMessagePromise).not.toHaveBeenCalled();
   });
   it.each([false, true])("keeps arrival labels outside the value-only edit target and cancellation in the header, compact=%s", async (compact) => {
     const element = await setup(compact, false); const root = element.shadowRoot!;
-    const endpoint = root.querySelector(".return-timeline-endpoints > div:last-child")!;
+    const endpoint = root.querySelector(".panel-return-times > span:last-child")!;
     const trigger = endpoint.querySelector<HTMLButtonElement>(".arrival-edit-trigger")!;
     expect(endpoint.querySelector(".endpoint-label")).toBeNull();
     expect(root.querySelector(".arrival-icon")?.getAttribute("aria-label")).toBe(en.plannedReturnArrival);
     expect(trigger.textContent).not.toContain(en.plannedReturnArrival);
-    expect(trigger.firstElementChild?.getAttribute("icon")).toBe("mdi:pencil-outline");
+    expect(trigger.querySelector("ha-icon")).toBeNull(); expect(trigger.classList.contains("panel-arrival-input")).toBe(true);
     expect(trigger.lastElementChild?.classList.contains("arrival-trigger-value")).toBe(true);
     expect(trigger.getAttribute("aria-label")).toContain(en.plannedReturnEditArrival);
     expect(trigger.getAttribute("aria-label")).toContain("2026");
@@ -240,8 +252,11 @@ describe("compact return card", () => {
     for (const state of ["armed", "confirming_absence", "away", "preparing", "error"] as const) {
       element.data = { ...data(), planned_return_status: { ...data().planned_return_status!, state, episode_active: true } }; await element.updateComplete;
       const chip = element.shadowRoot!.querySelector(state === "confirming_absence" ? ".absence-confirmation" : ".return-title-copy .return-context-status")!;
-      expect(chip.getAttribute("title")).toBe(dictionary[`plannedReturnStateHelp_${state}`]);
-      expect(chip.getAttribute("title")!.length).toBeGreaterThan(15);
+      if (state === "confirming_absence") expect(chip.getAttribute("title")).toBe(dictionary[`plannedReturnStateHelp_${state}`]);
+      else {
+        expect(chip.getAttribute("title")).toBeNull();
+        expect(chip.querySelector(".inline-help-tooltip")?.textContent).toBe(dictionary[`plannedReturnStateHelp_${state}`]);
+      }
     }
   });
   it("shows snapshot modes and authoritative saved times while an arrival draft changes", async () => {
@@ -252,13 +267,13 @@ describe("compact return card", () => {
     expect(root.querySelectorAll("[data-runtime-count]")).toHaveLength(3);
     expect(root.querySelector(".return-timeline")?.textContent).toContain("Away snapshot");
     expect(root.querySelector(".return-timeline")?.textContent).toContain("Return snapshot");
-    expect(root.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("50");
+    expect(timelineProgress(root)).toBe("50");
     const input = root.querySelector<HTMLInputElement>("#episode-return-time")!;
     input.value = "12:00"; input.dispatchEvent(new Event("input")); await element.updateComplete;
     expect(root.querySelector(".return-timeline")?.textContent).toContain("10:00");
-    expect(root.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("50");
+    expect(timelineProgress(root)).toBe("50");
     element.data = { ...data(), planned_return_status: { ...data().planned_return_status!, return_at: "2026-10-10T12:00:00Z" } }; await element.updateComplete;
-    expect(root.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("25");
+    expect(timelineProgress(root)).toBe("25");
   });
   it("keeps separate card drafts and clocks independent while sharing accepted episode data", async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-10T09:00:00Z"));
@@ -269,8 +284,8 @@ describe("compact return card", () => {
     const shared = { ...data(), planned_return_status: { ...data().planned_return_status!, state: "preparing" as const } };
     first.data = shared; second.data = shared; await first.updateComplete; await second.updateComplete;
     expect(input.value).toBe("12:00");
-    expect(first.shadowRoot!.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("50");
-    expect(second.shadowRoot!.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("50");
+    expect(timelineProgress(first.shadowRoot!)).toBe("50");
+    expect(timelineProgress(second.shadowRoot!)).toBe("50");
     first.remove(); expect(vi.getTimerCount()).toBe(1);
     second.remove(); expect(vi.getTimerCount()).toBe(0);
   });
@@ -279,10 +294,10 @@ describe("compact return card", () => {
     const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     const element = await setup(compact); expect(vi.getTimerCount()).toBe(1);
     vi.advanceTimersByTime(60_000); await element.updateComplete;
-    expect(element.shadowRoot!.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("51");
+    expect(timelineProgress(element.shadowRoot!)).toBe("51");
     visibility.mockReturnValue("hidden"); document.dispatchEvent(new Event("visibilitychange")); expect(vi.getTimerCount()).toBe(0);
     vi.setSystemTime(new Date("2026-10-10T09:30:00Z")); visibility.mockReturnValue("visible"); document.dispatchEvent(new Event("visibilitychange")); await element.updateComplete;
-    expect(element.shadowRoot!.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("75");
+    expect(timelineProgress(element.shadowRoot!)).toBe("75");
     expect(element.hass!.connection.sendMessagePromise).not.toHaveBeenCalled();
     element.remove(); expect(vi.getTimerCount()).toBe(0);
     document.body.append(element); await element.updateComplete; expect(vi.getTimerCount()).toBe(1);
@@ -295,7 +310,7 @@ describe("compact return card", () => {
     for (const value of ["11:00", "12:00", "13:00"]) {
       vi.advanceTimersByTime(20_000); input.value = value; input.dispatchEvent(new Event("input")); await element.updateComplete;
     }
-    expect(element.shadowRoot!.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow")).toBe("51");
+    expect(timelineProgress(element.shadowRoot!)).toBe("51");
     expect(vi.getTimerCount()).toBe(1);
   });
   it.each([false, true])("discards a local arrival edit and clears its navigation guard, compact=%s", async (compact) => {
@@ -323,7 +338,7 @@ describe("compact return card", () => {
     expect(root.querySelector<HTMLInputElement>("#episode-return-time")!.value).toBe("10:00");
     expect(root.querySelector<HTMLButtonElement>(".change-arrival")!.disabled).toBe(true);
     expect(element.hass!.connection.sendMessagePromise).not.toHaveBeenCalled();
-    expect(root.querySelector<HTMLElement>(".return-timeline-elapsed")!.style.width).toBe("50%");
+    expect(timelineProgress(root)).toBe("50");
   });
   it("Back discards a failed adjustment and restores the latest saved arrival after a push", async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-10T09:00:00Z"));
@@ -461,23 +476,24 @@ describe("compact return card", () => {
     expect(root.querySelector(".cancel-return,.return-context-status,.episode-buttons")).toBeNull();
     expect(root.querySelector(".manual-departure")).not.toBeNull();
   });
-  it.each([false, true])("integrates semantic endpoint icons into the rail with saved times below and mode chips beneath saved times, compact=%s", async (compact) => {
+  it.each([false, true])("places semantic saved endpoints above the shared track with mode labels slotted below, compact=%s", async (compact) => {
     const element = await setup(compact, false); const root = element.shadowRoot!;
     const graph = root.querySelector(".return-timeline")!;
-    const rail = graph.querySelector(".return-timeline-rail")!;
+    const rail = graph.querySelector(".panel-return-times")!;
     for (const [selector, label, icon] of [[".departure-icon", en.plannedReturnDeparted, "mdi:home-export-outline"], [".arrival-icon", en.plannedReturnArrival, "mdi:home-import-outline"]]) {
       const endpoint = rail.querySelector(selector)!;
-      expect(endpoint.getAttribute("role")).toBe("img");
-      expect(endpoint.getAttribute("title")).toBe(label); expect(endpoint.getAttribute("aria-label")).toBe(label);
+      expect(endpoint.getAttribute("role")).toBe(selector === ".arrival-icon" ? "group" : "img");
+      expect(endpoint.getAttribute("aria-label")).toBe(label);
       expect(endpoint.querySelector("ha-icon")?.getAttribute("icon")).toBe(icon);
       expect(endpoint.closest("[role=progressbar]")).toBeNull();
     }
-    const times = graph.querySelector(".return-timeline-endpoints")!;
+    const times = graph.querySelector("velair-overview-preparation-timeline")!;
     expect(rail.compareDocumentPosition(times) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(times.querySelectorAll(".return-time-value,.arrival-edit-trigger")).toHaveLength(2);
+    expect(rail.querySelectorAll(".return-time-value,.arrival-edit-trigger")).toHaveLength(2);
     expect(times.querySelector(".endpoint-label")).toBeNull();
     expect(graph.querySelectorAll(".return-mode-chip")).toHaveLength(2);
-    for (const column of times.children) expect(column.firstElementChild!.compareDocumentPosition(column.querySelector(".return-mode-chip")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(times.querySelector(".panel-return-modes")).not.toBeNull();
+    expect(graph.querySelector(".return-timeline-rail,.return-timeline-endpoints,.return-timeline-marker")).toBeNull();
     expect(graph.querySelector(".departure-mode")?.getAttribute("aria-label")).toContain("Away snapshot");
     expect(graph.querySelector(".arrival-mode ha-icon")?.getAttribute("icon")).toBe("mdi:format-list-bulleted");
     expect(root.querySelector(".cancel-return-surface")?.textContent).toContain(en.cancel);
@@ -548,9 +564,10 @@ describe("compact return card", () => {
     expect(root.querySelector(".return-context-status")?.parentElement).toBe(root.querySelector(".return-title-line .status-copy")?.parentElement);
     expect(trigger.closest(".return-timeline")).toBeNull();
     expect(root.querySelector(".return-timeline-now-label")).toBeNull();
-    expect(root.querySelector(".return-timeline-marker")?.getAttribute("title")).toBe(en.plannedReturnTimelineNow);
-    expect(root.querySelector(".return-timeline-marker")?.closest("[role=progressbar]")).toBeNull();
-    expect(root.querySelector(".return-timeline-marker")?.children).toHaveLength(0);
+    const timeline = timelineElement(root); await timeline.updateComplete;
+    expect(timeline.nowLabel).toContain(en.plannedReturnTimelineNow);
+    expect(timeline.shadowRoot!.querySelector(".now .inline-help")).not.toBeNull();
+    expect(root.querySelector(".return-timeline-marker")).toBeNull();
     expect(root.querySelector(".return-timeline-now-row")).toBeNull();
     expect(root.querySelector(".return-title-line .status-copy")!.compareDocumentPosition(trigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     trigger.dispatchEvent(new FocusEvent("focus")); expect(trigger.getAttribute("aria-expanded")).toBe("true");

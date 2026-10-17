@@ -82,6 +82,7 @@ export function scheduleEventFromBlock(
     target_temp_low: block.target_temp_low ?? null,
     target_temp_high: block.target_temp_high ?? null,
     hvac_mode: block.hvac_mode ?? null,
+    ...(block.temperature_only ? { temperature_only: true } : {}),
     weekday,
     start: block.start,
   };

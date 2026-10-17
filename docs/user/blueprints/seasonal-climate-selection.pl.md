@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](seasonal-climate-selection.md) ·
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -127,6 +127,8 @@ Na przykład czujnik niedostępny o 09:00 ostrzega natychmiast, nie o 09:30. Pow
 
 <a id="safety-and-precedence"></a>
 ## Bezpieczeństwo i pierwszeństwo
+
+Wybór Trybu lub Profilu Velair używa polityk jego bloków. **Tylko temperatura** aktualizuje cel bez żądania zmiany trybu HVAC; użyj jawnych bloków **Ogrzewanie** lub **Chłodzenie**, jeśli wybór sezonu ma uruchomić urządzenie. Polityka nie blokuje bezpośrednich akcji HVAC skonfigurowanych w blueprincie.
 
 Przy nieprawidłowym czujniku blueprint nie wybiera nowego sezonu i nie wyłącza urządzeń automatycznie. Poprzednio wybrany Tryb i harmonogram pozostają aktywne. Zareaguj na powiadomienie, jeśli takie zachowanie nie odpowiada Twojemu domowi.
 

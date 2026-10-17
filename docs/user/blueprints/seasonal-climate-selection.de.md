@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -127,6 +127,8 @@ Wird ein Sensor beispielsweise um 09:00 nicht verfügbar, erfolgt die Warnung so
 
 <a id="safety-and-precedence"></a>
 ## Sicherheit und Vorrang
+
+Die Auswahl eines Velair-Modus oder -Profils verwendet dessen Blockrichtlinien. **Nur Temperatur** aktualisiert den Sollwert ohne Anforderung eines HVAC-Moduswechsels. Verwende explizite Blöcke mit **Heizen** oder **Kühlen**, wenn die Saisonauswahl das Gerät starten soll. Die Richtlinie unterdrückt keine direkten HVAC-Aktionen im Blueprint.
 
 Solange der Sensor ungültig ist, trifft der Blueprint keine neue saisonale Auswahl. Er schaltet Geräte nicht automatisch aus. Der zuvor gewählte Modus und sein Zeitplan bleiben bestehen. Reagiere auf die Benachrichtigung, wenn dieses Verhalten für dein Zuhause ungeeignet ist.
 

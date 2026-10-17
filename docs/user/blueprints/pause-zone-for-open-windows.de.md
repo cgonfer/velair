@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -88,6 +88,8 @@ Automationsläufe können sich überlappen. Ein `opened_due`-Ereignis wird desha
 
 <a id="safety-and-precedence"></a>
 ## Sicherheit und Vorrang
+
+Verwendet der aktive Block **Nur Temperatur**, wird beim Fortsetzen nach dem Schließen der Fenster sein Sollwert ohne HVAC-Moduswechsel erneut angewendet. Hat der Blueprint das Klimagerät ausgeschaltet, bleibt es aus. Verwende bei Bedarf einen späteren Block mit explizitem Modus oder schalte es manuell ein. **Aktuellen Modus beibehalten** behält sein bisheriges Neustartverhalten. Dies ist die Richtlinie des aktiven Blocks, kein neues Blueprint-Feld; ein erneuter Import ist nicht erforderlich.
 
 Der Blueprint erstellt jede Pause mit der konfigurierten **Pause ID**. Der Standard ist `velair_window_guard`; Velair speichert diese Zuständigkeit unabhängig für jedes ausgewählte Thermostat.
 

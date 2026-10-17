@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](pause-zone-for-open-windows.md) · [Español]
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -88,6 +88,8 @@ Le esecuzioni dell’automazione possono sovrapporsi, quindi un evento `opened_d
 
 <a id="safety-and-precedence"></a>
 ## Sicurezza e priorità
+
+Quando il blocco attivo usa **Solo temperatura**, la ripresa dopo la chiusura delle finestre riapplica l’obiettivo senza richiedere cambi di modalità HVAC. Se il blueprint ha spento il dispositivo, resta spento; usa una modalità esplicita in un blocco successivo o accendilo manualmente quando necessario. **Mantieni modalità attuale** conserva il comportamento di riavvio esistente. Questa è la politica del blocco attivo, non un nuovo parametro del blueprint, e non richiede di importarlo nuovamente.
 
 Il blueprint crea ogni pausa con il **Pause ID** configurato. Il valore predefinito è `velair_window_guard`; Velair conserva separatamente questa attribuzione per ogni termostato selezionato.
 

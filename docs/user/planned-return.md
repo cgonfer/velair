@@ -1,9 +1,19 @@
 # Planned Return
+
 <!-- velair-docs:start -->
 Translations: [English original](planned-return.md) · [Español](planned-return.es.md) · [Français](planned-return.fr.md) · [Deutsch](planned-return.de.md) · [Italiano](planned-return.it.md) · [Nederlands](planned-return.nl.md) · [Polski](planned-return.pl.md) · [Português (Brasil)](planned-return.pt-br.md) · [Português (Portugal)](planned-return.pt-pt.md) · [Русский](planned-return.ru.md) · [Translation status](../translation-status.md)
 
 ---
 <!-- velair-docs:end -->
+
+The previous setup recorded by Return home includes the base Mode/Profile
+selection and all per-zone Profile exceptions. Confirmed departure selects the
+Away base and clears exceptions; a completed arrival selects the destination
+base. Cancelling a confirmed episode through Return home's Cancel action restores
+the complete recorded selection, including its exceptions, when its references
+remain valid. An external Profile/Mode selection instead cancels the pending
+return and applies the requested selection. It does not restore the previous
+setup. See [base and zone exceptions](climate-profiles.md#a-base-with-independent-zone-exceptions).
 
 Planned Return prepares the home for a regular or one-off arrival time after
 the selected occupancy signals confirm that the whole home is empty, or after
@@ -16,6 +26,25 @@ at least one occupancy source.
 
 ## Setup
 
+**Away and return** contains shared settings for one-off returns and the weekly
+routine. Absence detection takes effect for a started one-off return or when
+the saved weekly routine is enabled. These fields do not define a separate
+always-running Home/Away automation. The confirmation time measures continuous
+detected absence, not elapsed time since saving the configuration. The Away
+Mode is applied after departure is confirmed; eligible rooms may prepare before
+the destination Mode is applied at arrival.
+
+Without occupancy sources, starting a one-off return applies the Away Mode
+immediately and does not use the confirmation delay. The settings show this
+exception beside the delay when no sources are selected.
+
+Destination **Temperature only** blocks retain external control of the HVAC
+mode. Planned Return does not turn an off climate on to prepare such a block;
+that room cannot be promised ready on arrival while it remains off. Use an
+explicit **Heat** or **Cool** destination block when return preparation should
+start the equipment. Selecting the destination at arrival still respects the
+block's policy.
+
 1. Create the desired Away and Home Modes, or use Default as the destination.
    Away Profiles can turn climates off or use lower-demand weekly schedules.
 2. Open **Preconditioning**, choose **Planned Return** in the subsection selector,
@@ -23,15 +52,22 @@ at least one occupancy source.
    Home Assistant home zone (`zone.home`). Include signals for anyone who can
    remain in the home, including guests. Home Assistant remains responsible for
    tracking people and locations; complex rules can still be combined in a helper.
-3. In the absence section, choose how long the home must remain empty and which
-   Away Mode to activate. The default is ten minutes; the compact delay control
-   accepts minutes or hours. Arrival is acknowledged immediately.
-4. In the arrival section, enter the usual time for each applicable weekday,
-   then select the destination Mode. Days without a time have no automatic
-   return. Velair uses the destination's schedule at arrival to prepare each zone.
+3. In **Away and return**, choose how long the home must remain empty, which
+   Away Mode to activate and which destination Mode to use when you return.
+   The default delay is ten minutes; the compact control accepts minutes or
+   hours. Arrival is acknowledged immediately. The destination Mode's help
+   explains adaptive preparation and operation at arrival without a valid estimate.
+4. In **Arrival times**, enter the usual time for each applicable weekday.
+   Weekly arrivals apply to the day the home becomes empty. Days without a time
+   use Away after absence confirmation and restore the destination when occupancy
+   is detected, without advance preparation. Velair uses the destination's schedule
+   at arrival to prepare each zone.
 5. Enable Adaptive Preconditioning for zones that should start early. Existing
    settings and local heating/cooling learning are reused.
-6. Use the switch in the status bar to enable the routine, then Save. The switch
+6. Enable **Weekly routine** with its switch in the status bar, then Save.
+   This activates automatic absence confirmation, Away Mode selection and the
+   weekly **Arrival times**. Entering arrival times alone does not enable the
+   routine. One-off returns can still be started with the switch off. The switch
    edits the draft; Cancel restores the saved setting. Stop any Home/Away automation that selects Modes
    for this same household; two controllers would compete.
 
@@ -55,8 +91,11 @@ the current episode's arrival controls together. Runtime actions use the saved
 configuration, so save or cancel pending configuration changes before announcing
 a new departure.
 
-The form follows departure and arrival in order: occupancy sources, absence delay
-and Away Mode, then weekly arrival times and the destination Mode. Presence sources
+The form groups occupancy sources, absence delay, Away Mode and destination Mode
+in **Away and return**. On wide containers, the delay and both Modes share a row.
+On tablets, the delay sits above the two Modes; on mobile, all three controls stack
+in that order. Each control keeps its help beside it. **Arrival times** contains
+only the weekday time fields, their explanation and the Home Assistant time zone. Presence sources
 use the block editor's circular green Add action when a source is selected.
 Disabled Add and Remove keep their transparent appearance; enabled actions have
 hover and focus feedback.
@@ -84,9 +123,14 @@ necessarily mean nobody is home.
 ## Room Preparation
 
 Expand **Room preparation** beneath the routine flow to see every managed climate.
-The list starts collapsed, with counts for adaptive preparation, arrival-only
-operation and no preparation. Expanding it does not change settings or send
-climate commands. The same overview applies to weekly and one-off returns.
+The list starts collapsed. Without an accepted future return, its counts describe
+saved capability: advance preparation, arrival-only operation and no preparation.
+For an accepted return, the shared summary counts rooms waiting to prepare,
+preparing, at target, suspended, unavailable or set to act at arrival only.
+It shows the saved arrival and the earliest eligible estimated start when available;
+individual rooms may start at different times. Expanding the list does not change
+settings or send climate commands. The same overview applies to weekly and one-off
+returns.
 
 Each row identifies the room, its destination schedule source and preparation
 status. A climate absent from the destination Mode's Profiles still uses its
@@ -186,9 +230,9 @@ absence before an episode exists; missing deadline data does not invent a time.
 Before departure is confirmed, an arrival icon and **Expected arrival** label identify the saved
 return, with an accessible label and tooltip. This row aligns with the title
 and state text. Its saved date/time is a compact clickable chip, without a
-pencil or underline. The confirmed timeline uses the same icon; only the underlined
-saved date/time and the pencil
-on its left form the edit button. Select that value to open the inline date/time
+pencil or underline. The confirmed timeline uses the same icon; its saved
+arrival date/time is a darker field-like edit surface, with the same typography
+as the departure date. Select that value to open the inline date/time
 editor. Its action row has a blue **Back** button with a left arrow on the
 left and green **Change arrival** on the right. Back discards unsaved arrival edits and closes the editor without changing the return.
 On a wide sidebar panel, the arrival editor stays compact and aligns with the
@@ -198,7 +242,7 @@ and hides the inputs. It clears the arrival warning and navigation guard;
 independent unsaved routine configuration remains protected. Reopening starts
 from the saved arrival. During a confirmed absence the timeline's
 arrival endpoint is that same edit button, so there is no duplicated arrival.
-Cancel appears below the graphic and preparation caption on the left only while
+Cancel appears below the episode content on the left only while
 the arrival editor is closed. While editing, Cancel is hidden and **Change arrival**
 is on the right and **Back** is on the left, discarding the arrival edit locally. Changing the input
 does not change the planned return until **Change arrival** succeeds. Successful
@@ -216,7 +260,6 @@ The phase stays attached to the title. Cancel stays left below the data when
 not editing; Change arrival is right-aligned below the open editor. Both the
 sidebar and card preserve this grouping on mobile. Plan return remains right-aligned on the fresh planning form.
 Successful actions update the episode without an additional saved message.
-
 ### Home Assistant Actions
 
 Automations, scripts, and dashboards can announce a departure using
@@ -465,8 +508,60 @@ and [Manual adjustment](manual-control.md) for the underlying controls.
 
 Overview displays a compact household summary during a weekly or one-off episode
 or when an incidence needs attention. It identifies the origin and state, and
-shows the confirmation deadline or expected arrival where applicable. Select the
-summary to open this feature's full detail in Preconditioning.
+shows the confirmation deadline or expected arrival where applicable. For an
+accepted return, compact icon counters provide preparation counts with help on
+hover, keyboard focus or tap. A confirmed departure adds a read-only timeline
+with departure and arrival times, the Modes selected for those endpoints and
+estimated preparation points for each eligible climate, with a matching color
+and name in the legend below. Each legend entry also shows its estimated
+preparation start beside the name on the same line, using Home Assistant's time zone and time
+format; starts on a later date include the date. Preparation dots match the legend's 8px circles;
+a neutral vertical tick identifies the current time. The legend stays on one
+line by default: long names are shortened visually, and the "+N climates" button
+expands the remaining rooms into additional rows inside the summary. Select
+"Show less" to restore the single-row legend. Each room retains its color and
+full-name/estimated-start helper, available by hover, focus or tap. Expanding
+and collapsing the legend does not navigate or change the planned return.
+Only adaptive preparation with a valid start
+estimate is plotted; arrival-only, suspended, already-at-target and unavailable
+rooms are excluded. Overlapping points share a circle divided into equal colored
+sectors, one per climate. Hover, focus or tap a point or legend entry to see each
+room's estimated start time. These are current estimates, not a history of actual
+device activity. The timeline sits beside the summary when
+space permits and moves below it in narrower containers. It measures elapsed
+absence time, not thermal progress. Select the summary outside its helpers to open this
+feature's full detail in Preconditioning; the helpers do not navigate or
+change the return.
+
+**Next events during an active return**
+
+Overview and dashboard next-event cards show the next projected control change
+for each climate, with its source identified as the weekly schedule or Planned
+Return. A weekly action before the preparation start remains eligible. Once
+return preparation owns a climate, its next transition is arrival rather than
+an unrelated Away schedule block, even when the room has reached its target.
+Climates without return intervention retain their weekly events.
+
+Preparation starts are estimates based on current measurements. Arrival may
+change temperature, HVAC options, switch off, or activate a paused Profile;
+it is not necessarily a temperature command. Boost, manual control and pauses
+keep their existing priority. Suspended rows explain the blocker and show a
+known expiry only when all active blockers have one; the expiry does not promise
+that preparation will start then. Rows use the same compact layout for weekly
+and return events: climate name, short source label, times, action and HVAC mode.
+The information helper at the end of each row provides the full phase, arrival
+Mode, suspension reason/known expiry and current weekly event reference when
+return takes priority. Open it by hover, keyboard focus or tap. No state subtitle
+is added below the climate name. Column widths are shared across all rows and
+fit the widest displayed value, avoiding fixed empty space in time, action and
+HVAC columns. Narrow lists retain single-row events with
+horizontal scrolling and a sticky climate-name column; event data does not
+move to an additional row.
+
+These predictions do not confirm device delivery and do not change execution.
+The existing next-event sensors and dedicated weekly anticipation views retain
+their weekly meaning. Install matching integration and frontend updates to see
+the effective forecasts; an older backend continues to provide weekly events.
 
 A violet signal on a climate identifies current Planned Return authority. The
 existing operating state remains visible: this signal explains the origin rather
@@ -477,6 +572,17 @@ effective Away Profiles, or Default when explicitly selected as the Away Mode;
 it does not cover an unmapped climate merely retaining its Default schedule.
 Preparation can legitimately use the destination's Default fallback when the
 backend selects that climate's arrival target.
+
+Overview zones show one compact return indicator alongside their existing
+Profile and comfort indicators: the room's preparation state and arrival
+temperature or range, when available. The helper covers the full indicator and
+opens by hover, keyboard focus or tap. It explains the state, estimated start,
+arrival time, suspension or availability reason and current return control
+attribution, without adding a multi-line preparation panel to the zone.
+A room still following Away can therefore show its future preparation without
+claiming it already controls the room. Missing estimates are not invented;
+completed, cancelled and skipped returns do not retain an active preparation
+preview. Climate cards retain their existing detailed preparation presentation.
 
 Diagnostics shows current household state, per-climate control origin and
 preparation status, including why preparation is suspended or unavailable. The
@@ -490,8 +596,20 @@ Mode and Profile identifiers. Control intent and delivery success remain separat
 
 The optional Lovelace card shows the compact One-off return controls. Its
 header includes occupied, empty and unknown source counts and the saved absence
-confirmation delay; the weekly summary, source list and room preparation detail
-remain in the sidebar. Configure the household in the sidebar first.
+confirmation delay. An accepted return shows compact preparation-state badges;
+their hover, keyboard and touch helpers retain the room counts, arrival timing
+and earliest eligible estimated start. The household timeline uses the panel's
+graphic: matching date typography, a dark editable arrival field, a neutral Now
+tick and individual eligible climate preparation points. Its legend initially
+occupies one line, expands inside the card with +N and collapses with Show less.
+Mode labels remain below the rail. Each climate's name and estimated start
+remain accessible through point and legend helpers. Contextual helpers also
+explain the departure time, arrival icon, current phase, presence counters and
+confirmation delay using hover, keyboard focus or tap. Presence help lists the
+matching configured source names. The arrival field remains an edit button;
+its information helper is on the adjacent arrival icon. Weekly
+configuration, the source list and the full room preparation list remain in the
+sidebar. Configure the household in the sidebar first.
 
 ```yaml
 type: custom:velair-card
@@ -520,7 +638,22 @@ action editor, choose whether to show its name, or place it in More. The editor
 groups Boost, Pause and One-off return first, even when they are disabled.
 It opens these same compact controls in the lower control pane, with a plain
 heading matching Boost and Pause. All three forms use the existing compact 38-pixel field height.
-An active departure shows its existing timeline and arrival editor. The pane's X closes
+An active departure uses the refined timeline from the Planned Return tab:
+matching departure/arrival typography, a darker editable arrival surface, a
+neutral Now tick and a preparation point only for the card's selected climate.
+The pane omits preparation-state badges and shows the selected climate's name
+and estimated preparation start in the legend. If that climate has no
+valid current advance-preparation estimate, the timeline is replaced by a brief
+explanation: arrival-only control, target reached, suspension and its reason,
+unavailable preparation or a missing estimate. Another climate's estimate never
+substitutes for the selected room. The saved arrival remains editable and
+cancellation remains available even without a timeline. Presence indicators
+remain in its header. This action controls the household return, including
+other managed climates; it is not limited to the climate shown by the card.
+Repeated countdown paragraphs and the first-start disclosure are omitted.
+The dedicated household Planned Return card shows the same graphic for all
+eligible managed climates and retains its household state badges and legend.
+The pane's X closes
 the controls without cancelling the departure. Closing with unsaved arrival
 changes asks whether to discard them; closing is blocked while an action runs.
 This action always controls the household, regardless of the selected climate.
@@ -530,7 +663,7 @@ Assistant's card picker include it enabled; YAML configurations must opt in with
 
 During **Away** and **Preparing for arrival**, the card shows the confirmed
 departure and the saved arrival with the episode's Away and Return Mode names.
-A current-time point, identified by its **Now** tooltip, advances according to elapsed UTC time, including across clock
+A current-time indicator, identified by its **Now** helper, advances according to elapsed UTC time, including across clock
 changes, and stays within the bar. Endpoints include dates when their Home
 Assistant calendar dates differ. Unsaved arrival edits do not change this bar.
 Pending and terminal states, or episodes without a confirmed departure timestamp,
@@ -538,32 +671,37 @@ keep a static status without a timeline. Both the sidebar and card update their 
 per minute only while visible and active, and immediately after becoming visible;
 this display refresh never requests backend data.
 
-Departure and arrival icons flank the rail, with native tooltips and accessible
-labels. Saved departure/arrival times sit closely below their endpoint icons; only the
-arrival value is editable. Plain Mode labels below the saved times identify the
-Away and Return setups with a generic Mode icon. Long names and cross-day dates wrap
-inside the panel. Each endpoint groups its own time and Mode label, with the label close beneath
-its time. Date/time edit fields share the compact sizing of the other action forms; no close button
-appears beside the saved time. The preparation position is a small rail tick, with its clock and explanatory
-caption below the times. The elapsed part of the rail, endpoint ticks and Now marker show time passing,
-not thermal progress. When no valid first-room estimate is available, a small
-information button beside the One-off return title explains the current saved-arrival preview: all affected
-rooms may be suspended, already at target, excluded, or set to act at arrival
-only. Hover or focus it on desktop, or tap it on mobile. Missing or mixed
-information stays inconclusive and does not imply that advance preparation is
-disabled. Escape or an outside interaction closes the help.
+In the Planned Return tab, the timeline omits preparation counters and the
+multi-line countdown summary, since room states are already explained above. Saved
+departure and editable arrival times sit above the rail. Both dates use the same
+typography. The arrival date
+appears in a darker field-like surface that opens the editor when pressed,
+without a pencil icon or link underline. Away and destination
+Mode labels sit below it. A neutral vertical tick shows Now at the end of the
+elapsed segment. Eligible climates have small colored preparation points and
+a matching legend showing each name and estimated preparation start, with
+their own estimated-start helpers. Overlapping points
+share a segmented circle. The legend expands inside the panel on request and
+can be collapsed again. Suspended, reached, arrival-only and unavailable climates
+remain represented in the Room preparation details above rather than receiving
+invented timeline points. The household card retains its preparation-state badges.
+The detailed Room preparation section remains available above; the timeline
+does not repeat the first estimated start in an additional disclosure panel.
+Changing the saved arrival or destination resets the legend expansion and
+discards stale estimates. Editing an arrival draft does not alter the saved
+projection. The existing cancellation and arrival-edit controls are retained.
 
-When the backend has a valid adaptive estimate for the saved arrival, the timeline
-adds an **Estimated preparation** clock marker and time. It identifies the earliest
-eligible room estimate; other rooms may start later. The softly tinted caption is a disclosure, collapsed by default. Select it
-to see each eligible room and its estimated start, ordered by time. The list
-uses Home Assistant room names, icons and local time, including dates when
-needed. Suspended, reached and arrival-only rooms are excluded. Opening the
-list makes no backend request; ordinary live updates preserve its state, while
-a changed saved arrival or episode closes it. While editing the arrival, the
-callout and fallback information control are hidden; the rail keeps its saved
-estimate. Back restores the same episode’s disclosure state. Hover the header for the
-explanation. This is a planning estimate, not evidence that a device has started
-or a measure of thermal progress. Suspended, reached, unavailable and arrival-only
-rooms do not provide this marker. Its position stays within the departure/arrival
-bar while the label retains the actual estimate, including an earlier date.
+Dashboard controls use this same graphic. The household card retains state
+badges because it does not include the tab's full preparation section. It keeps
+all current eligible climate points, while the embedded climate-card action
+shows only its selected room, with its name and estimated start in the legend.
+Date/time edit fields retain
+their compact sizing and existing Back/Change controls. Opening the arrival
+editor leaves the accepted timeline unchanged; Back restores the saved arrival.
+Accepting a different arrival or destination resets household legend expansion
+and discards stale estimates. Suspended, reached, unavailable and arrival-only
+rooms do not receive preparation points. A point outside the departure boundary
+is positioned at the edge while its helper retains the actual estimate.
+Elapsed progress measures time toward arrival, not thermal progress. When a
+household estimate is unavailable, its preparation helpers explain the known
+state without implying that preparation is disabled.

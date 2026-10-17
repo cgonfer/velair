@@ -87,7 +87,7 @@ describe("portable preconditioning learning", () => {
     expect(validatePortablePayload(rangePayload)).toEqual({ ok: true, sections: ["zones"] });
   });
 
-  it("accepts older v11 and v13 zone data and rejects future v17 data", () => {
+  it("accepts older v11 and v13 zone data and rejects future v19 data", () => {
     const current: VelairPortablePayload = {
       ...payload,
       model_version: 11,
@@ -119,12 +119,12 @@ describe("portable preconditioning learning", () => {
     };
     const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(16);
+    expect(PORTABLE_MODEL_VERSION).toBe(18);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
     expect(roundTrip.sections.zones).toEqual(current.sections.zones);
     expect(validatePortablePayload({ ...roundTrip, model_version: 13 })).toEqual({ ok: true, sections: ["zones"] });
     expect(validatePortablePayload({ ...roundTrip, model_version: 14 })).toEqual({ ok: true, sections: ["zones"] });
-    expect(validatePortablePayload({ ...roundTrip, model_version: 17 })).toEqual({
+    expect(validatePortablePayload({ ...roundTrip, model_version: 19 })).toEqual({
       ok: false,
       errorKey: "invalidImportFile",
     });
@@ -152,5 +152,21 @@ describe("portable preconditioning learning", () => {
       ok: true,
       sections: ["preconditioning_learning"],
     });
+  });
+});
+
+
+describe("profile exception import impact", () => {
+  it("only reports removed Profile references or removed zone membership", async () => {
+    const { portableImportRemovedProfileOverrides } = await import("../../src/velair/domain/portable");
+    const data = { profile_selection: { base_profile_ids: [], base_mode_id: null, zone_profile_overrides: {
+      "climate.office": "work", "climate.bedroom": "away", "climate.living": "work", "climate.default": null,
+    } } } as unknown as import("../../src/velair/types").ScheduleResponse;
+    const payload = { sections: { profiles: [{ key: "work", name: "Changed", zones: { "climate.office": { behavior: "normal" } } }] } };
+    expect(portableImportRemovedProfileOverrides(data, payload, new Set(["profiles"])))
+      .toEqual(["climate.bedroom", "climate.living"]);
+    expect(portableImportRemovedProfileOverrides(data, payload, new Set(["settings"]))).toEqual([]);
+    expect(portableImportRemovedProfileOverrides(data, { sections: { profiles: [] } }, new Set(["profiles"])))
+      .toEqual(["climate.office", "climate.bedroom", "climate.living"]);
   });
 });

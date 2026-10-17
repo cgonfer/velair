@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](seasonal-climate-selection.md) · [Español](
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -127,6 +127,8 @@ Per esempio, un sensore che diventa non disponibile alle 09:00 avvisa subito, no
 
 <a id="safety-and-precedence"></a>
 ## Sicurezza e priorità
+
+Selezionare una Modalità o un Profilo Velair usa le politiche dei suoi blocchi. **Solo temperatura** aggiorna l’obiettivo senza richiedere cambi di modalità HVAC; usa blocchi espliciti **Riscaldamento** o **Raffrescamento** se la selezione di una stagione deve avviare il dispositivo. La politica non sopprime le azioni HVAC dirette configurate nel blueprint.
 
 Mentre il sensore non è valido, il blueprint non effettua nuove selezioni stagionali; non spegne automaticamente i dispositivi. La modalità precedentemente selezionata e la sua programmazione restano in vigore. Intervieni in risposta alla notifica se quel comportamento non è adatto alla tua casa.
 

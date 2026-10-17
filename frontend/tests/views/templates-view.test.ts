@@ -31,6 +31,25 @@ function host(options: { templates?: Array<{ key: string; name: string; blocks: 
 }
 
 describe("templates view", () => {
+  it("offers Temperature only in the global template editor even when the selected climate uses an unsupported external provider", () => {
+    const container = document.createElement("div");
+    const block = { start: "08:00", action: "set_temperature", temperature: 20, hvac_mode: "" };
+    const state = host({ templates: [{ key: "daily", name: "Daily", blocks: [block] }] });
+    Object.assign(state, {
+      _selectedTemplateKey: "daily", _selectedEntity: "climate.external", _templateDraftBlocks: [block],
+      _supportsTemperatureOnly: false,
+      _data: { zones: { "climate.external": { execution: { type: "external", provider: "test" } } }, external_execution: { systems: [{ provider: "test", capabilities: { supports_temperature_only: false } }] } },
+      _currentTimelineNow: () => new Date(), _timelineBlocks: () => [],
+      _temperatureError: () => undefined, _temperatureLimits: () => [7, 35], _temperatureStep: () => undefined,
+      _temperatureUnit: () => "C", _hvacModeOptions: () => ["heat", "off"], _fanModeOptions: () => [],
+      _presetModeOptions: () => [], _swingModeOptions: () => [], _swingHorizontalModeOptions: () => [], _humidityLimits: () => undefined,
+      _modeLabel: (value: string) => value, _formatTemperature: (value: number) => `${value} C`,
+    });
+    render(renderTemplatesView(state), container);
+    const option = container.querySelector<HTMLOptionElement>('.template-editor option[value="temperature_only"]');
+    expect(option).not.toBeNull();
+    expect(option!.disabled).toBe(false);
+  });
   it("gives each template assignment destination unique time IDs without an unlink help overlay", () => {
     const container = document.createElement("div");
     const state = host({ templates: [{ key: "daily", name: "Daily", blocks: [] }] });
@@ -185,6 +204,7 @@ describe("templates view", () => {
   it("preserves deleting an unused template", () => {
     const container = document.createElement("div");
     const state = host({ templates: [{ key: "unused", name: "Unused", blocks: [] }] });
+    state._selectTemplate = vi.fn((key: string) => { state._selectedTemplateKey = key; });
     render(renderTemplatesView(state), container);
     const trash = container.querySelector(".template-item-delete") as HTMLButtonElement;
     expect(trash.disabled).toBe(false);

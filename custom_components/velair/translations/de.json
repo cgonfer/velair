@@ -158,22 +158,22 @@
   },
   "services": {
     "start_planned_return": {
-      "name": "I'm leaving",
+      "name": "Ich gehe",
       "description": "Plant eine einmalige Rückkehr für ein zukünftiges Datum und eine Uhrzeit mit gespeicherten Modi und automatischer Planung. Mit konfigurierten Belegungsquellen wird Abwesenheit vor dem Abwesenheitsmodus bestätigt; ohne Quellen wird er sofort aktiviert. Funktioniert ohne Wochenroutine und aktualisiert eine aktive Abwesenheit.",
       "fields": {
         "return_date": {
-          "name": "Return date",
-          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+          "name": "Rückkehrdatum",
+          "description": "Ankunftsdatum in der Home-Assistant-Zeitzone. Datum und Uhrzeit müssen zusammen in der Zukunft liegen."
         },
         "return_time": {
-          "name": "Return time",
-          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+          "name": "Rückkehrzeit",
+          "description": "Ankunftszeit am gewählten Datum in der Home-Assistant-Zeitzone. Verwende HH:MM in YAML; optionale Sekunden müssen 00 sein. Bei Zeitumstellung nicht existierende Uhrzeiten werden abgelehnt."
         }
       }
     },
     "cancel_planned_return": {
-      "name": "Geplante R\u00fcckkehr abbrechen",
-      "description": "Bricht eine ausstehende oder aktive R\u00fcckkehr ab oder schlie\u00dft einen Hinweis zu einer inaktiven R\u00fcckkehr. Der aktuelle Modus bleibt unver\u00e4ndert und die automatische R\u00fcckkehr wird f\u00fcr diese Abwesenheit gestoppt. Danach kannst du ausdr\u00fccklich eine neue R\u00fcckkehr planen."
+      "name": "Geplante Rückkehr abbrechen",
+      "description": "Bricht eine ausstehende oder aktive Rückkehr ab oder schließt einen Hinweis zu einer inaktiven Rückkehr. Der aktuelle Modus bleibt unverändert und die automatische Rückkehr wird für diese Abwesenheit gestoppt. Danach kannst du ausdrücklich eine neue Rückkehr planen."
     },
     "update_block_preset": {
       "name": "Velair-Preset aktualisieren",
@@ -226,6 +226,10 @@
         "clear_fields": {
           "name": "Einstellungen entfernen",
           "description": "Nur für update. Einstellungen entfernen, ohne das Gerät zurückzusetzen. Das Ergebnis muss gültig bleiben."
+        },
+        "temperature_only": {
+          "name": "Nur Temperatur",
+          "description": "Aktualisiert Sollwerte, ohne einen HVAC-Moduswechsel oder das Einschalten anzufordern. Erfordert eine Temperaturaktion ohne Geräteoptionen. Verwende clear_fields oder replace, um einen vorhandenen HVAC-Modus oder Optionen zu entfernen."
         }
       },
       "sections": {
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Konfigurationsrevision",
           "description": "Optionale Prüfung auf gleichzeitige Änderungen. Leer lassen, um die zuletzt gespeicherte Quelle unter der Konfigurationssperre zu klonen."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Klimaprofil aktivieren",
+      "description": "Legt ein gespeichertes Klimaprofil als vollständige Basis fest und löscht alle Zonenausnahmen. Nicht abgedeckte Zonen verwenden ihre Standardzeitpläne. Lasse die Profil-ID leer, um alle Zonen auf Standard zurückzusetzen.",
+      "fields": {
+        "profile_id": {
+          "name": "Profil-ID",
+          "description": "Stabiler Schlüssel des zu aktivierenden Profils. Leer löscht die aktive Auswahl und wählt Standard."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Klimaprofil deaktivieren",
+      "description": "Setzt alle Zonen auf Standard zurück, indem Basisprofile und alle Zonenausnahmen gelöscht werden."
+    },
+    "activate_profiles": {
+      "name": "Klimaprofile als Basis aktivieren",
+      "description": "Ersetzt die vollständige Basis durch nicht überlappende Profile und löscht alle Zonenausnahmen. Eine leere Liste wählt Standard. Die Profilauswahl garantiert keine gleichzeitige physische Übertragung.",
+      "fields": {
+        "profile_ids": {
+          "name": "Profil-IDs",
+          "description": "Geordnete Liste stabiler Profil-IDs. Profile dürfen nicht dieselbe Zone umfassen."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Klimaprofile als Ausnahmen anwenden",
+      "description": "Ersetzt Ausnahmen nur in den ausdrücklich von diesen Profilen umfassten Zonen. Andere Zonen behalten ihre Auswahl. Überlappende Profile in dieser Anfrage führen zur vollständigen Ablehnung; eine leere Liste bewirkt nichts. Bricht eine ausstehende Rückkehr nach Hause ab.",
+      "fields": {
+        "profile_ids": {
+          "name": "Profil-IDs",
+          "description": "Liste stabiler Profil-IDs, deren ausdrücklich konfigurierte Zonen diese Profile als Ausnahmen verwenden sollen."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Profilausnahme einer Zone festlegen",
+      "description": "Wendet nur eine Zone aus einem gespeicherten Profil an und erhält die Auswahl aller anderen Zonen. Das Profil muss diese Zone umfassen. Verwende YAML null für Standard; verwende Profilausnahmen löschen, um die Basis zu erben. Bricht eine ausstehende Rückkehr nach Hause ab.",
+      "fields": {
+        "profile_id": {
+          "name": "Profil-ID",
+          "description": "Stabile Profil-ID oder YAML null, um ausdrücklich den Standardzeitplan der Zone zu verwenden."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Profilausnahmen löschen",
+      "description": "Stellt die aktuelle Basis für die ausdrücklich ausgewählten Zonen wieder her. Frühere Ausnahmen werden nicht wiederhergestellt. Eine leere Liste bewirkt nichts. Bricht eine ausstehende Rückkehr nach Hause ab, wenn Zonen angefordert werden.",
+      "fields": {
+        "entity_id": {
+          "name": "Klimaentitäten",
+          "description": "Eine verwaltete Klimaentität oder eine Liste. Alle Ziele müssen gültig sein, bevor eine Ausnahme entfernt wird."
         }
       }
     }

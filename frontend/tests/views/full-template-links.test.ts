@@ -41,6 +41,35 @@ function harness(source: "default" | "profile") {
 }
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
 describe.each(["default", "profile"] as const)("full template links in %s", (source) => {
+  it.each([false, true])("keeps reselecting an own schedule unchanged (empty: %s)", async (empty) => {
+    const h = harness(source);
+    const blocks = empty ? [] : [{ start: "09:00", action: "turn_off", hvac_mode: "" }];
+    if (source === "default") {
+      h.state._draftTemplateLink = undefined;
+      h.state._draftBlocks = blocks;
+    } else {
+      const zone = h.state._draft.zones["climate.room"];
+      zone.template_links = {};
+      zone.schedule.monday = blocks;
+    }
+    h.state._dirty = false;
+    const before = structuredClone(h.blocks());
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const host = h.host();
+    const restore = vi.spyOn(host, "_restoreOwnDaySchedule");
+    const container = document.createElement("div");
+    render(renderLinkedHoursControl(host), container);
+    const select = container.querySelector<HTMLSelectElement>(".hours-source-field select")!;
+    select.value = "";
+    select.dispatchEvent(new Event("change"));
+    await Promise.resolve();
+    expect(restore).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(h.state._dirty).toBe(false);
+    expect(h.blocks()).toEqual(before);
+    expect(h.send).not.toHaveBeenCalled();
+  });
+
   it("confirms replacing settings, cancels intact and materializes raw preset references on returning to hours", async () => {
     const h = harness(source); const before = structuredClone(h.link());
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);

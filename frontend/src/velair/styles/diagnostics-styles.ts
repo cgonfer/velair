@@ -94,7 +94,7 @@ export const diagnosticsStyles = css`
   .diagnostics-history-policy header { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
   .diagnostics-section-heading { align-items: start; display: grid; gap: 8px; grid-template-columns: 36px minmax(0, 1fr); }
   .diagnostics-section-heading > ha-icon { --mdc-icon-size: 20px; color: var(--primary-color); justify-self: center; margin-top: 1px; }
-  .diagnostics-history-policy .diagnostics-clear-history { background: transparent; border-color: var(--divider-color); color: var(--primary-text-color); flex: 0 0 auto; min-height: 36px; padding: 0 10px; width: auto; }
+  .diagnostics-history-policy .diagnostics-clear-history { background: transparent; border-color: var(--divider-color); color: var(--primary-text-color); flex: 0 0 auto; width: auto; }
   .diagnostics-history-policy .diagnostics-clear-history ha-icon { --mdc-icon-size: 18px; color: var(--secondary-text-color); }
   .diagnostics-category-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 12px; }
   .diagnostics-category-grid label { align-items: center; background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; cursor: pointer; display: grid; gap: 10px; grid-template-columns: 20px minmax(0, 1fr); min-height: 64px; padding: 12px; }
@@ -105,7 +105,7 @@ export const diagnosticsStyles = css`
   .diagnostics-history > header > div { min-width: 0; }
   .diagnostics-history h3 { font-size: 14px; font-weight: 600; margin: 0; }
   .diagnostics-history header p { color: var(--secondary-text-color); font-size: 12px; margin: 3px 0 0; }
-  .diagnostics-clear-filters { background: transparent; border-color: var(--divider-color); color: var(--primary-text-color); flex: 0 0 auto; min-height: 36px; padding: 0 10px; width: auto; }
+  .diagnostics-clear-filters { background: transparent; border-color: var(--divider-color); color: var(--primary-text-color); flex: 0 0 auto; width: auto; }
   .diagnostics-clear-filters ha-icon { --mdc-icon-size: 18px; color: var(--secondary-text-color); }
   .diagnostics-clear-filters.success ha-icon { color: currentColor; }
   .diagnostics-history-filters { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(150px, 1fr)); margin-top: 12px; }
@@ -122,7 +122,7 @@ export const diagnosticsStyles = css`
   .diagnostics-source-popover label { align-items: center; cursor: pointer; display: grid; gap: 8px; grid-template-columns: 20px minmax(0, 1fr); min-height: 36px; padding: 0 6px; }
   .diagnostics-source-popover label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .diagnostics-source-popover input { min-height: auto; padding: 0; width: auto; }
-  .diagnostics-source-done { justify-self: end; min-height: 36px; width: auto; }
+  .diagnostics-source-done { justify-self: end; width: auto; }
   .diagnostics-filter-error { color: var(--error-color, #c62828); font-size: 12px; margin: 8px 0 0; }
   .diagnostics-history-results { color: var(--secondary-text-color); font-size: 12px; margin: 10px 0 0; }
   .diagnostics-history-table { min-width: 0; }
@@ -166,12 +166,11 @@ export const diagnosticsStyles = css`
     .diagnostics-history-policy header { align-items: start; }
     .diagnostics-history-policy .diagnostics-clear-history { height: 40px; min-height: 40px; padding: 0; width: 40px; }
     .diagnostics-history-policy .diagnostics-clear-history span { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
-    .diagnostics-clear-filters { min-height: 40px; }
     .diagnostics-history-filters { grid-template-columns: minmax(0, 1fr); }
     .diagnostics-source-trigger { min-height: 44px; }
     .diagnostics-source-popover { box-shadow: none; min-width: 0; position: static; width: 100%; }
     .diagnostics-source-popover label { min-height: 44px; }
-    .diagnostics-source-done { min-height: 44px; width: 100%; }
+    .diagnostics-source-done { width: 100%; }
     .diagnostics-history li { gap: 6px; grid-template-columns: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
     .diagnostics-history li time,
     .diagnostics-history-climate,
@@ -180,5 +179,8 @@ export const diagnosticsStyles = css`
     .diagnostics-rows > div, .diagnostics-sensors li { display: block; }
     .diagnostics-rows dd, .diagnostics-sensor-detail { margin-top: 3px; }
     .diagnostics-sensor-detail { display: flex; }
+  }
+  @media (max-width: 600px) and (any-pointer: coarse) {
+    .diagnostics-history-policy .diagnostics-clear-history { height: 44px; min-height: 44px; width: 44px; }
   }
 `;

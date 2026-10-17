@@ -1,3 +1,5 @@
+import { activeSetupSummary } from "../domain/active-setup";
+import { timelinePresentation } from "../views/schedule-view";
 import { timelineCarryOverFromWeeklySchedule } from "../domain/timeline";
 import { backendErrorMessage } from "../domain/backend-errors";
 import { PresetPreviewCache, presetPreviewKey } from "../domain/preset-preview";
@@ -10,7 +12,6 @@ import { renderDocumentationHelp } from "../views/documentation-links";
 import { VelairApiClient } from "../api/client";
 import { activateClimateProfile, deleteClimateProfile, saveClimateProfile } from "../controllers/climate-profile-actions";
 import {
-  activeClimateProfiles,
   climateProfileAccentColor,
   climateProfileInput,
   climateProfileValidationError,
@@ -97,15 +98,20 @@ import {
   renderAddBlockButton,
   renderDraftListHeader,
   renderEditableBlock,
+  presetConfigurationSummary,
   renderTimeline,
   renderLinkedHoursControl,
 } from "../views/schedule-view";
+import { dayGroups, dayGroupLabel, schedulesEqual, resolveDayLayout, dayConfigurationFingerprint, configurationFingerprint } from "../domain/day-layouts";
+import { cloneThermostatsLabel, renderDayLayoutControls, renderScheduleDayTabs, renderDayScheduleConflict, renderGroupSaveSummary } from "../views/day-layout-controls";
 import { renderWeeklyScheduleEditor } from "../views/weekly-schedule-editor";
 import { renderContextualNoticeStack } from "../views/notice-view";
 import { renderCloneDayPresets, renderExternalSwitchpointUsage } from "../views/schedule-editor-controls";
 
 export class VelairProfilesView extends LitElement {
+  public get scheduleSavePending(): boolean { return this._busy === "save"; }
   public focusUsage(usage: import("../types").ResourceUsage): void {
+    if (this.scheduleSavePending) return;
     const profile = this.data?.profiles?.find((item) => item.key === usage.profile_key);
     if (!profile) return;
     this._selectProfile(profile);
@@ -129,6 +135,8 @@ export class VelairProfilesView extends LitElement {
   @property({ type: String }) public workspace: "both" | "profiles" | "modes" = "both";
   @property({ type: Boolean, attribute: "schedule-workspace" }) public scheduleWorkspace = false;
 
+  @state() private _distributionExpanded = false;
+  @state() private _exceptionDetail: string | null | undefined;
   @state() private _selectedKey = "";
   @state() private _draft: ClimateProfileDraft = createClimateProfileDraft();
   @state() private _selectedDays: Record<string, string> = {};
@@ -137,6 +145,7 @@ export class VelairProfilesView extends LitElement {
   @state() private _busy?: "activate" | "save" | "delete" | "mode-save" | "mode-delete" | "mode-activate" | "template-save" | "materialize" | "clone";
   @state() private _dirty = false;
   private _configurationRevision?: number;
+  private _groupCandidates = new Map<string, { draft: ClimateProfileDraft; selectedDay?: string; baseline?: string }>();
   private readonly _presetPreviews = new PresetPreviewCache();
 
   private _effectiveWeekday(entityId: string): string {
@@ -144,15 +153,16 @@ export class VelairProfilesView extends LitElement {
     return this._selectedDays[entityId] ?? (weekdays.includes(this.initialWeekday) ? this.initialWeekday : weekdays[0]);
   }
 
-  private _presetPreviewKey(entityId: string, weekday: string, block: DraftScheduleBlock, index: number): string {
-    return presetPreviewKey([this._selectedKey, this._selectedEntity, entityId, weekday, index, this.data?.configuration_revision, this.data?.temperature_unit], block);
+  private _presetPreviewKey(entityId: string, weekday: string, block: DraftScheduleBlock, index: number, draft = this._draft): string {
+    const zone = draft.zones[entityId];
+    return presetPreviewKey([this._selectedKey, this._selectedEntity, entityId, weekday, index, this.data?.configuration_revision, this.data?.temperature_unit, zone?.behavior === "schedule" ? zone.template_links?.[weekday] : undefined, zone?.behavior === "schedule" && zone.template_links?.[weekday]?.mode === "full" ? configurationFingerprint(climateProfileInput(draft).zones) : undefined], block);
   }
 
-  private _effectivePresetBlock(entityId: string, weekday: string, block: DraftScheduleBlock, index: number): ScheduleBlock | undefined {
-    const cached = this._presetPreviews.get(this._presetPreviewKey(entityId, weekday, block, index))?.block;
+  private _effectivePresetBlock(entityId: string, weekday: string, block: DraftScheduleBlock, index: number, draft = this._draft): ScheduleBlock | undefined {
+    const cached = this._presetPreviews.get(this._presetPreviewKey(entityId, weekday, block, index, draft))?.block;
     if (cached) return { ...cached, start: block.start };
     const resolved = block.preset_key ? resolvedResourceBlock(this.data, { source: "profile", profile_key: this._selectedKey, entity_id: entityId, weekday, start: block.start, slot_id: block.slot_id }, block.preset_key)?.block : undefined;
-    if (resolved) this._presetPreviews.remember(this._presetPreviewKey(entityId, weekday, block, index), resolved);
+    if (resolved) this._presetPreviews.remember(this._presetPreviewKey(entityId, weekday, block, index, draft), resolved);
     return resolved ? { ...resolved, start: block.start } : undefined;
   }
 
@@ -160,33 +170,43 @@ export class VelairProfilesView extends LitElement {
     const visible = Object.entries(this._draft.zones).filter(([entityId, zone]) => zone.behavior === "schedule" && (entityId === this._selectedEntity || (!this.scheduleWorkspace && this._expandedZones.has(entityId))));
     const contexts = visible.flatMap(([entityId]) => {
       const selectedDay = this._effectiveWeekday(entityId);
-      const week = Object.fromEntries(WEEKDAYS.map((day) => [day, this._blocks(entityId, day)]));
-      const carry = timelineCarryOverFromWeeklySchedule(week, selectedDay);
-      const blocks = week[selectedDay].map((block, index) => ({ entityId, weekday: selectedDay, selectedDay, block, index }));
-      const carryZone = this._draft.zones[entityId];
+      const candidate = this._groupCandidates.get(this._candidateKey(entityId, selectedDay));
+      const previewDraft = candidate?.draft ?? this._draft;
+      const week = Object.fromEntries(WEEKDAYS.map((day) => [day, this._blocks(entityId, day, previewDraft)]));
+      const comparisonZone = climateProfileInput(previewDraft).zones[entityId];
+      const selectedGroup = this._groupDays(entityId, selectedDay);
+      const mixed = Boolean(candidate) || (comparisonZone?.behavior === "schedule" && !schedulesEqual(comparisonZone, selectedGroup));
+      const previewDays = mixed ? selectedGroup : [selectedDay];
+      const blocks = previewDays.flatMap((day) => week[day].map((block, index) => ({ entityId, weekday: day, selectedDay, block, index, previewDraft })));
+      if (candidate?.selectedDay) blocks.push(...this._blocks(entityId, selectedDay).map((block, index) => ({ entityId, weekday: selectedDay, selectedDay, block, index, previewDraft: this._draft })));
+      const carry = !mixed ? timelineCarryOverFromWeeklySchedule(week, selectedDay) : undefined;
+      const carryZone = previewDraft.zones[entityId];
       if (carry && (carry.block.preset_key || (carryZone?.behavior === "schedule" && carryZone.template_links?.[carry.sourceWeekday]?.mode === "full"))) {
         const index = week[carry.sourceWeekday].findIndex((block) => block.start === carry.block.start);
-        blocks.push({ entityId, weekday: carry.sourceWeekday, selectedDay, block: carry.block, index });
+        blocks.push({ entityId, weekday: carry.sourceWeekday, selectedDay, block: carry.block, index, previewDraft });
       }
       return blocks;
     });
-    this._presetPreviews.retain(new Set(contexts.map(({ entityId, weekday, block, index }) => this._presetPreviewKey(entityId, weekday, block, index))));
-    for (const { entityId, weekday, selectedDay, block, index } of contexts) {
-      const zone = this._draft.zones[entityId];
+    this._presetPreviews.retain(new Set(contexts.map(({ entityId, weekday, block, index, previewDraft }) => this._presetPreviewKey(entityId, weekday, block, index, previewDraft))));
+    const profilePreviews = new Map<ClimateProfileDraft, ReturnType<VelairApiClient["previewProfile"]>>();
+    for (const { entityId, weekday, selectedDay, block, index, previewDraft } of contexts) {
+      const zone = previewDraft.zones[entityId];
       const full = zone?.behavior === "schedule" && zone.template_links?.[weekday]?.mode === "full";
-      if ((!block.preset_key && !full) || this._effectivePresetBlock(entityId, weekday, block, index)) continue;
-      const key = this._presetPreviewKey(entityId, weekday, block, index);
+      if ((!block.preset_key && !full) || this._effectivePresetBlock(entityId, weekday, block, index, previewDraft)) continue;
+      const key = this._presetPreviewKey(entityId, weekday, block, index, previewDraft);
       const start = block.start;
       this._presetPreviews.request(key, async () => {
         if (!this.hass) throw new Error(this._t("unableLoad"));
         if (full) {
-          const response = await new VelairApiClient(this.hass).previewProfile(climateProfileInput(this._draft));
+          let preview = profilePreviews.get(previewDraft);
+          if (!preview) { preview = new VelairApiClient(this.hass).previewProfile(climateProfileInput(previewDraft)); profilePreviews.set(previewDraft, preview); }
+          const response = await preview;
           if (response.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
           return response.resolved_schedules[entityId]?.[weekday]?.find((item) => item.start === start);
         }
         const response = await new VelairApiClient(this.hass).previewDailySchedule(entityId, weekday, { blocks: [{ start, preset_key: block.preset_key }] });
         return response.blocks.find((item) => item.start === start);
-      }, () => this._effectiveWeekday(entityId) === selectedDay && key === this._presetPreviewKey(entityId, weekday, this._blocks(entityId, weekday)[index] ?? {} as DraftScheduleBlock, index),
+      }, () => (this._effectiveWeekday(entityId) === selectedDay || this._groupDays(entityId).includes(weekday)) && key === this._presetPreviewKey(entityId, weekday, this._blocks(entityId, weekday, previewDraft)[index] ?? {} as DraftScheduleBlock, index, previewDraft),
       () => this.requestUpdate(), () => undefined);
     }
   }
@@ -243,6 +263,10 @@ export class VelairProfilesView extends LitElement {
 
   protected willUpdate(changed: Map<string, unknown>): void {
     if (changed.has("data")) {
+      if (!activeSetupSummary(this.data).coverageSegments.length) this._distributionExpanded = false;
+      if (this._exceptionDetail !== undefined && !activeSetupSummary(this.data).exceptionGroups.some((group) => group.profileId === this._exceptionDetail)) {
+        this._exceptionDetail = undefined;
+      }
       if (this._modeEditorOpen && this._selectedModeKey) {
         const selectedMode = this.data?.modes?.find((mode) => mode.key === this._selectedModeKey);
         if (!selectedMode) {
@@ -262,6 +286,7 @@ export class VelairProfilesView extends LitElement {
         this._error = this._t("profileRemovedElsewhere");
       } else if (!this._dirty) {
         if (selected) {
+          this._groupCandidates.clear();
           this._draft = createClimateProfileDraft(selected);
         } else if (this._selectedKey) {
           this._clearSelection();
@@ -361,6 +386,8 @@ export class VelairProfilesView extends LitElement {
     const dialog = this._climateCloneDialog;
     if (!dialog) return nothing;
     const sourceName = this.hass?.states?.[dialog.entityId]?.attributes?.friendly_name ?? dialog.entityId;
+    const days = this._groupDays(dialog.entityId, dialog.weekday);
+    const grouped = days.length > 1;
     const targetNames = [...dialog.targets].map(
       (entityId) => this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
     );
@@ -370,13 +397,14 @@ export class VelairProfilesView extends LitElement {
     return html`
       <div class="profile-dialog-backdrop" @click=${(event: Event) => { if (event.target === event.currentTarget) this._closeClimateCloneDialog(); }}>
         <section class="profile-dialog profile-climate-clone-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-climate-clone-title" @keydown=${(event: KeyboardEvent) => this._handleDialogKeydown(event, this._closeClimateCloneDialog)}>
-          <h3 id="profile-climate-clone-title">${this._t("profileCloneDayClimatesTitle")}</h3>
-          <p>${this._t("profileCloneDayClimatesDescription", { day: weekdayName(languageFromHass(this.hass), dialog.weekday), source: sourceName })}</p>
+          <h3 id="profile-climate-clone-title">${this._t(grouped ? "profileCloneDaysClimatesTitle" : "profileCloneDayClimatesTitle")}</h3>
+          <p>${grouped ? this._t("profileCloneDaysClimatesDescription", { days: dayGroupLabel(days, day => weekdayName(languageFromHass(this.hass), day), this._t("allDays")), source: sourceName })
+            : this._t("profileCloneDayClimatesDescription", { day: weekdayName(languageFromHass(this.hass), dialog.weekday), source: sourceName })}</p>
           <p class="profile-dialog-target-summary">
             <strong>${this._t("profileCloneDayClimatesTargets")}:</strong>
             <span>${targetNames.join(", ")}</span>
           </p>
-          <p class="profile-dialog-warning">${this._t("profileCloneDayClimatesOverwrite")}</p>
+          <p class="profile-dialog-warning">${this._t(grouped ? "profileCloneDaysClimatesOverwrite" : "profileCloneDayClimatesOverwrite")}</p>
           ${changed.length ? html`<p class="profile-dialog-warning">${this._t("profileCloneDayClimatesBehaviorChange", { targets: changed.map((id) => this.hass?.states?.[id]?.attributes?.friendly_name ?? id).join(", ") })}</p>` : nothing}
           ${dialog.error ? html`<div class="notice error profile-dialog-error" role="alert">${dialog.error}</div>` : nothing}
           <div class="profile-dialog-actions">
@@ -509,87 +537,73 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _renderListItem(profile: ClimateProfile) {
-    const active = this.data?.global.active_profile_ids?.includes(profile.key) ?? false;
-    const selectedByMode = active && Boolean(this.data?.active_mode_id);
-    const activationDisabled = (active && !selectedByMode)
-      || Boolean(this._busy)
-      || this._operationRunning()
-      || this._dirty;
+    const summary = activeSetupSummary(this.data);
+    const baseSelected = summary.baseProfileIds.includes(profile.key);
+    const exceptionSelected = summary.exceptionGroups.some((group) => group.profileId === profile.key);
+    const activationDisabled = Boolean(this._busy) || this._operationRunning() || this._dirty || this._modeDirty
+      || this.activeSetupControls === "modes";
     return html`
-      <div
-        class=${[
-          "template-item",
-          profile.key === this._selectedKey ? "active" : "",
-          this.workspace === "profiles" ? "profile-definition-item" : "",
-        ].filter(Boolean).join(" ")}
+      <div class=${["template-item", profile.key === this._selectedKey ? "active" : "",
+        this.workspace === "profiles" ? "profile-definition-item" : ""].filter(Boolean).join(" ")}
         style=${`--profile-item-accent: ${climateProfileAccentColor(profile.key, profile.color)}`}
-      >
-        <button
-          class="template-item-main profile-item-main"
-          type="button"
-          aria-pressed=${String(profile.key === this._selectedKey)}
-          @click=${() => this._selectProfile(profile)}
-        >
+        @click=${(event: Event) => {
+          if (!event.composedPath().some((target) => target instanceof HTMLButtonElement)) this._selectProfile(profile);
+        }}>
+        <button class="template-item-main profile-item-main" type="button"
+          aria-pressed=${String(profile.key === this._selectedKey)} @click=${() => this._selectProfile(profile)}>
           <ha-icon icon=${profile.icon || "mdi:account-outline"}></ha-icon>
-          <span class="profile-item-copy">
-            <strong>${profile.name}</strong>
-            <code class="profile-item-id">${profile.key}</code>
-            <span>${active ? this._t("profileActive") : profile.description || this._t("profileNoDescription")}</span>
+          <span class="profile-item-copy"><strong>${profile.name}</strong><code class="profile-item-id">${profile.key}</code>
+            <span class="profile-item-description">${profile.description || this._t("profileNoDescription")}</span>
+            ${baseSelected || exceptionSelected ? html`<span class="profile-item-usage">
+              ${baseSelected ? html`<span class="profile-item-chip profile-item-chip-base">${this._t("profileSelectedAsBase")}</span>` : nothing}
+              ${exceptionSelected ? html`<span class="profile-item-chip profile-item-chip-exception">${this._t("profileSelectedAsException")}</span>` : nothing}
+            </span>` : nothing}
           </span>
         </button>
-        <button
-          class=${active ? "icon-button success profile-item-activate active" : "icon-button success profile-item-activate"}
-          type="button"
-          aria-pressed=${String(active)}
-          ?disabled=${activationDisabled}
-          @click=${(event: Event) => {
-            event.stopPropagation();
-            void this._activate(profile.key);
-          }}
-          title=${active && !selectedByMode ? this._t("profileActive") : this._t("profileActivate")}
-        >
-          <ha-icon icon=${active ? "mdi:check-circle" : "mdi:play-circle-outline"}></ha-icon>
-        </button>
-        <button
-          class="icon-button danger template-item-delete"
-          type="button"
-          ?disabled=${this._busy === "delete"}
-          @click=${(event: Event) => {
-            event.stopPropagation();
-            void this._deleteProfile(profile);
-          }}
-          title=${this._t("profileDelete")}
-        >
-          <ha-icon icon="mdi:trash-can"></ha-icon>
-        </button>
+        <div class="profile-item-actions">
+          <button class=${`icon-button profile-item-activate${baseSelected ? " active" : ""}`} type="button"
+            aria-pressed=${String(baseSelected)} ?disabled=${activationDisabled}
+            title=${`${this._t("profileActivate")}: ${profile.name}`} aria-label=${`${this._t("profileActivate")}: ${profile.name}`}
+            @click=${(event: Event) => { event.stopPropagation(); void this._activate(profile.key); }}>
+            <ha-icon icon=${baseSelected ? "mdi:check-circle" : "mdi:play-circle-outline"}></ha-icon>
+          </button>
+          <button class=${`icon-button profile-item-apply${exceptionSelected ? " active" : ""}`} type="button"
+            aria-pressed=${String(exceptionSelected)} ?disabled=${activationDisabled}
+            title=${`${this._t("profileApplyException")}: ${profile.name}`} aria-label=${`${this._t("profileApplyException")}: ${profile.name}`}
+            @click=${(event: Event) => { event.stopPropagation(); void this._changeOverrides((api) => api.applyProfiles([profile.key])); }}>
+            <ha-icon icon="mdi:layers-plus"></ha-icon>
+          </button>
+          <button class="icon-button danger template-item-delete profile-item-delete" type="button"
+            ?disabled=${Boolean(this._busy) || this._operationRunning()}
+            title=${`${this._t("profileDelete")}: ${profile.name}`} aria-label=${`${this._t("profileDelete")}: ${profile.name}`}
+            @click=${(event: Event) => { event.stopPropagation(); void this._deleteProfile(profile); }}>
+            <ha-icon icon="mdi:trash-can"></ha-icon>
+          </button>
+        </div>
       </div>
     `;
   }
 
   private _renderActiveSelector() {
-    const activeProfiles = activeClimateProfiles(this.data);
-    const activeProfileIds = this.data?.global.active_profile_ids ?? [];
+    const summary = activeSetupSummary(this.data);
+    const activeProfileIds = summary.baseProfileIds;
     const profiles = this.data?.profiles ?? [];
     const modes = this.data?.modes ?? [];
+    const overrideIds = summary.overrideIds;
     const origin = activeProfileOrigin(this.data);
-    const modeLabel = origin === "default"
-      ? this._t("modeDefault")
-      : origin === "manual"
-        ? this._t("modeManual")
-        : origin.name;
     const modeValue = origin === "default" ? "default" : origin === "manual" ? "manual" : `custom:${origin.key}`;
-    const mappedProfiles = typeof origin === "string"
-      ? []
-      : origin.profile_ids
-        .map((profileId) => profiles.find((profile) => profile.key === profileId))
-        .filter((profile): profile is ClimateProfile => Boolean(profile));
-    const modeDetail = origin === "default"
-      ? this._t("modeDefaultDescription")
-      : origin === "manual"
-        ? this._t("modeManualDescription")
-        : this._t("modeCustomDescription", {
-          profile: mappedProfiles.map((profile) => profile.name).join(", "),
-        });
+    const baseName = summary.mode?.name ?? (summary.baseKind === "default"
+      ? this._t("modeDefault") : summary.baseProfiles.map((profile) => profile.name).join(", "));
+    const coverageSegments = summary.coverageSegments.map((segment) => ({ ...segment,
+      color: segment.profileId === null ? "var(--secondary-text-color)" : climateProfileAccentColor(segment.profileId, segment.profile?.color),
+      label: this._t(segment.origin === "base" ? "activeSetupBaseSegment" : segment.origin === "exception" ? "activeSetupExceptionSegment" : "activeSetupFallbackSegment", {
+        profile: segment.profile?.name ?? segment.profileId ?? this._t("modeDefault"), count: segment.count,
+      }),
+    })).map((segment) => ({ ...segment, fullLabel: `${segment.label}: ${this._t(segment.count === 1 ? "activeSetupExceptionZone" : "activeSetupExceptionZones", { count: segment.count })}` }));
+    const distributionLabel = this._t(summary.distributionTotal === 1 ? "activeSetupDistributionOne" : "activeSetupDistribution", { count: summary.distributionTotal });
+    const baseType = this._t(summary.baseKind === "mode" ? "modeLabel"
+      : summary.baseKind === "profile" ? "activeSetupProfileType"
+        : summary.baseKind === "profiles" ? "profiles" : "profileBehaviorDefault");
     const disabled = Boolean(this._busy)
       || this._operationRunning()
       || this._dirty
@@ -627,7 +641,7 @@ export class VelairProfilesView extends LitElement {
               ${showModes ? html`<section class="active-setup-option-group" aria-labelledby="active-setup-modes-heading">
                 <div class="active-setup-group-heading">
                   <strong id="active-setup-modes-heading">${this._t("modesTitle")}</strong>
-                  <small>${this._t("activeSetupModesHelp")}</small>
+                  <small>${this._t("activeSetupBaseModesHelp")}</small>
                 </div>
                 ${this._renderActiveModeOption(
                   "default",
@@ -657,8 +671,8 @@ export class VelairProfilesView extends LitElement {
               </section>` : nothing}
               ${showProfiles ? html`<section class="active-setup-option-group" aria-labelledby="active-setup-profiles-heading">
                 <div class="active-setup-group-heading">
-                  <strong id="active-setup-profiles-heading">${this._t("activeSetupManualProfile")}</strong>
-                  <small>${this._t("activeSetupManualProfileHelp")}</small>
+                  <strong id="active-setup-profiles-heading">${this._t("profiles")}</strong>
+                  <small>${this._t("activeSetupProfileChoicesHelp")}</small>
                 </div>
                 ${showModes ? nothing : this._renderActiveModeOption(
                   "default",
@@ -672,7 +686,7 @@ export class VelairProfilesView extends LitElement {
                 ${profiles.length
                   ? profiles.map((profile) => this._renderActiveProfileOption(
                     profile,
-                    modeValue === "manual" && activeProfileIds.length === 1 && activeProfileIds[0] === profile.key,
+                    modeValue === "manual" && !overrideIds.length && activeProfileIds.length === 1 && activeProfileIds[0] === profile.key,
                     disabled,
                   ))
                   : html`<span class="empty active-setup-empty">${this._t("profileNoneCreated")}</span>`}
@@ -682,35 +696,106 @@ export class VelairProfilesView extends LitElement {
         </div>
         <div class="active-setup-summary">
           <div class="active-setup-mode">
-            <span class="active-setup-summary-icon neutral"><ha-icon icon="mdi:format-list-bulleted"></ha-icon></span>
-            <span class="active-setup-summary-copy">
-              <small>${this._t("modeLabel")}</small>
-              <strong>${modeLabel}</strong>
-              <span title=${modeDetail}>${modeDetail}</span>
-            </span>
+            <span class="active-setup-summary-icon neutral"
+              style=${summary.baseKind === "profile" ? `--profile-accent: ${climateProfileAccentColor(summary.baseProfiles[0]?.key, summary.baseProfiles[0]?.color)}` : nothing}><ha-icon icon=${summary.baseKind === "default" ? "mdi:calendar-clock-outline" : summary.baseKind === "profile" ? summary.baseProfiles[0]?.icon || "mdi:account-outline" : "mdi:format-list-bulleted"}></ha-icon></span>
+            <div class="active-setup-summary-copy">
+              <span class="active-setup-base-meta"><small>${this._t("profileBase")}</small><span>${baseType}</span></span>
+              <strong>${baseName}</strong>
+
+              <span class="active-setup-base-coverage">${summary.baseCoverage.total === 0
+                ? this._t("activeSetupBaseNoZones")
+                : this._t(summary.baseCoverage.total === 1 ? "activeSetupBaseCoverageOne" : "activeSetupBaseCoverage", summary.baseCoverage)}</span>
+              ${coverageSegments.length ? html`<div class="base-coverage-visual" @keydown=${(event: KeyboardEvent) => {
+                if (event.key === "Escape" && this._distributionExpanded) {
+                  event.preventDefault(); event.stopPropagation(); this._closeDistribution();
+                }
+              }}>
+                <button class="distribution-toggle" type="button" aria-expanded=${String(this._distributionExpanded)}
+                  aria-controls="household-distribution-content" @click=${() => { this._distributionExpanded = !this._distributionExpanded; }}>
+                  <span>${distributionLabel}</span><ha-icon icon="mdi:chevron-down" aria-hidden="true"></ha-icon>
+                </button>
+                <div id="household-distribution-content" class=${this._distributionExpanded ? "distribution-panel expanded" : "distribution-panel"}
+                  aria-hidden=${String(!this._distributionExpanded)} ?inert=${!this._distributionExpanded}>
+                  <div><div class="distribution-panel-inner">
+                    <div class="base-coverage-bar" role="img" aria-label=${`${distributionLabel}: ${coverageSegments.map((segment) => segment.fullLabel).join("; ")}`}>
+                      ${coverageSegments.map((segment) => html`<span class="base-coverage-segment" aria-hidden="true"
+                        title=${segment.fullLabel} style=${`flex: ${segment.count} 0 0; background: ${segment.color}`}></span>`)}
+                    </div>
+                    <div class="base-coverage-legend">
+                      ${coverageSegments.map((segment) => html`<span class="base-coverage-legend-item" title=${segment.fullLabel}>
+                        <ha-icon icon=${segment.profile?.icon || (segment.profileId === null ? "mdi:calendar-clock-outline" : "mdi:account-outline")}
+                          aria-hidden="true" style=${`color: ${segment.color}`}></ha-icon>
+                        <span class="distribution-legend-name">${segment.label}</span><span class="distribution-legend-count">${segment.count}</span>
+                      </span>`)}
+                    </div>
+                  </div></div>
+                </div>
+              </div>` : nothing}
+
+            </div>
           </div>
-          <div class="active-setup-profiles">
-            <span class="active-setup-summary-label">${this._t("activeSetupAppliedProfiles")}</span>
-            ${activeProfiles.length
-              ? html`
-                <span class="active-setup-profile-list">
-                  ${activeProfiles.map((profile) => html`
-                    <span
-                      class="active-setup-profile"
-                      style=${`--profile-accent: ${climateProfileAccentColor(profile.key, profile.color)}`}
-                      title=${profile.description || profile.name}
-                    >
-                      <ha-icon icon=${profile.icon || "mdi:account-outline"}></ha-icon>
-                      <span>${profile.name}</span>
-                    </span>
-                  `)}
-                </span>
-              `
-              : html`<span class="active-setup-no-profiles">${this._t("activeSetupNoProfiles")}</span>`}
+          <div class="active-setup-profiles active-setup-exceptions">
+            <span class="active-setup-summary-label"><ha-icon icon="mdi:layers-outline" aria-hidden="true"></ha-icon><span>${this._t("activeSetupExceptions")}</span></span>
+            <div class="active-setup-exception-content" @keydown=${(event: KeyboardEvent) => {
+              if (event.key === "Escape" && this._exceptionDetail !== undefined) {
+                event.preventDefault(); event.stopPropagation(); this._closeExceptionDetail();
+              }
+            }}>
+            ${summary.exceptionGroups.length ? html`<div class="active-setup-exception-list">
+              ${summary.exceptionGroups.map((group, index) => {
+                const expanded = this._exceptionDetail === group.profileId;
+                const contentId = `exception-zones-${index}`;
+                return html`<div class="active-setup-exception-group"
+                  style=${group.profileId !== null ? `--profile-accent: ${climateProfileAccentColor(group.profileId, group.profile?.color)}` : nothing}>
+                  <button type="button" class="exception-zone-count" data-exception-group=${group.profileId ?? ""}
+                    aria-expanded=${String(expanded)} aria-controls=${contentId}
+                    aria-label=${this._t("activeSetupViewExceptionZones", { count: this._t(group.entityIds.length === 1 ? "activeSetupExceptionZone" : "activeSetupExceptionZones", { count: group.entityIds.length }), profile: group.profile?.name ?? group.profileId ?? this._t("modeDefault"), identity: group.profileId === null ? this._t("modeDefault") : `${this._t("activeSetupProfileType")} ${group.profileId}` })}
+                    @click=${() => this._openExceptionDetail(group.profileId)}>
+                    <ha-icon icon=${group.profile?.icon || (group.profileId === null ? "mdi:calendar-clock-outline" : "mdi:account-outline")} aria-hidden="true"></ha-icon>
+                    <strong>${group.profile?.name ?? group.profileId ?? this._t("modeDefault")}</strong>
+                    <span class="exception-zone-summary"><span>${this._t(group.entityIds.length === 1 ? "activeSetupExceptionZone" : "activeSetupExceptionZones", { count: group.entityIds.length })}</span><ha-icon class="exception-count-chevron" icon="mdi:chevron-down" aria-hidden="true"></ha-icon></span>
+                  </button>
+                  <div id=${contentId} class=${expanded ? "exception-group-zones expanded" : "exception-group-zones"}
+                    aria-hidden=${String(!expanded)} ?inert=${!expanded}>
+                    <div><ul class="exception-detail-zones" tabindex=${expanded ? "0" : "-1"}
+                      aria-label=${this._t("activeSetupExceptionZones", { count: group.entityIds.length })}>
+                      ${group.entityIds.map((id) => html`<li>${this.hass?.states?.[id]?.attributes?.friendly_name ?? id}</li>`)}
+                    </ul></div>
+                  </div>
+                </div>`;
+              })}
+            </div>` : html`<div class="active-setup-no-profiles"><strong>${this._t("activeSetupNoExceptions")}</strong><span>${this._t("activeSetupInheritBase")}</span></div>`}
+            </div>
           </div>
         </div>
+
       </section>
     `;
+  }
+
+  private _closeDistribution(): void {
+    this._distributionExpanded = false;
+    void this.updateComplete.then(() => this.shadowRoot?.querySelector<HTMLButtonElement>(".distribution-toggle")?.focus());
+  }
+
+  private _openExceptionDetail(profileId: string | null): void {
+    this._exceptionDetail = this._exceptionDetail === profileId ? undefined : profileId;
+  }
+
+  private _closeExceptionDetail(): void {
+    const profileId = this._exceptionDetail;
+    this._exceptionDetail = undefined;
+    void this.updateComplete.then(() => [...(this.shadowRoot?.querySelectorAll<HTMLButtonElement>(".exception-zone-count") ?? [])]
+      .find((button) => button.dataset.exceptionGroup === (profileId ?? ""))?.focus());
+  }
+
+  private async _changeOverrides(operation: (api: VelairApiClient) => Promise<ScheduleResponse>): Promise<void> {
+    if (!this.hass || this._busy || this._operationRunning() || this._dirty || this._modeDirty || this.activeSetupControls === "modes") return;
+    this._busy = "activate";
+    this._clearNotices();
+    try { this._emitData(await operation(new VelairApiClient(this.hass))); }
+    catch (error) { this._error = this._errorMessage(error, "profileUnableActivate"); }
+    finally { this._busy = undefined; }
   }
 
   private _renderActiveModeOption(
@@ -755,22 +840,32 @@ export class VelairProfilesView extends LitElement {
 
   private _renderActiveProfileOption(profile: ClimateProfile, current: boolean, disabled: boolean) {
     return html`
-      <button
-        class=${current ? "active-setup-option profile current" : "active-setup-option profile"}
-        style=${`--profile-accent: ${climateProfileAccentColor(profile.key, profile.color)}`}
-        type="button"
-        data-profile-id=${profile.key}
-        aria-current=${current ? "true" : nothing}
-        ?disabled=${disabled}
-        @click=${() => void this._chooseActiveProfile(profile.key)}
-      >
-        <ha-icon class="active-setup-option-icon" icon=${profile.icon || "mdi:account-outline"}></ha-icon>
-        <span class="active-setup-option-copy">
-          <strong>${profile.name}</strong>
-          <small>${profile.description || this._t("profileNoDescription")}</small>
-        </span>
-        ${current ? html`<ha-icon class="active-setup-current" icon="mdi:check"></ha-icon>` : nothing}
-      </button>
+      <div class="active-setup-profile-choice">
+        <button
+          class=${current ? "active-setup-option profile current" : "active-setup-option profile"}
+          style=${`--profile-accent: ${climateProfileAccentColor(profile.key, profile.color)}`}
+          type="button"
+          data-profile-id=${profile.key}
+          title=${`${this._t("profileActivate")}: ${profile.name}`}
+          aria-label=${`${this._t("profileActivate")}: ${profile.name}`}
+          aria-current=${current ? "true" : nothing}
+          ?disabled=${disabled}
+          @click=${() => void this._chooseActiveProfile(profile.key)}
+        >
+          <ha-icon class="active-setup-option-icon" icon=${profile.icon || "mdi:account-outline"}></ha-icon>
+          <span class="active-setup-option-copy">
+            <strong>${profile.name}</strong>
+            <small>${profile.description || this._t("profileNoDescription")}</small>
+          </span>
+          ${current ? html`<ha-icon class="active-setup-current" icon="mdi:check"></ha-icon>` : nothing}
+        </button>
+        <button class="active-setup-apply-exception" type="button" ?disabled=${disabled}
+          title=${`${this._t("profileApplyException")}: ${profile.name}`}
+          aria-label=${`${this._t("profileApplyException")}: ${profile.name}`}
+          @click=${() => void this._changeOverrides((api) => api.applyProfiles([profile.key]))}>
+          <ha-icon icon="mdi:layers-plus" aria-hidden="true"></ha-icon>
+        </button>
+      </div>
     `;
   }
 
@@ -850,8 +945,9 @@ export class VelairProfilesView extends LitElement {
       ? this._t("modeDefaultDescription")
       : this._t("modeManualDescription");
     const tooltipId = `mode-${mode}-help`;
+    const selected = !this._modeEditorOpen && activeProfileOrigin(this.data) === mode;
     return html`
-      <div class="template-item mode-item built-in">
+      <div class=${`template-item mode-item built-in${selected ? " active" : ""}`} aria-current=${String(selected)}>
         <div class="template-item-main mode-item-main">
           <ha-icon icon=${mode === "default" ? "mdi:calendar-clock-outline" : "mdi:gesture-tap"}></ha-icon>
           <span><strong>${label}</strong></span>
@@ -989,11 +1085,12 @@ export class VelairProfilesView extends LitElement {
               ${this._dirty ? html`<span class="pill warning">${this._t("unsaved")}</span>` : nothing}
             </div>
           </div>
-          <div class="template-detail-actions">
+          <div class="template-detail-actions profile-group-save-actions">
+            ${this._renderGroupSaveSummaries()}
             <button
               class="icon-button primary"
               type="button"
-              ?disabled=${Boolean(this._busy) || !this._draft.name.trim() || !iconValid || !colorValid || !descriptionValid || hasScheduleValidationError}
+              ?disabled=${Boolean(this._busy) || !this._draft.name.trim() || !iconValid || !colorValid || !descriptionValid || hasScheduleValidationError || this._hasUnchosenGroup()}
               @click=${() => void this._save()}
               title=${this._t("save")}
             >
@@ -1077,10 +1174,11 @@ export class VelairProfilesView extends LitElement {
         </div>
         ${this.scheduleWorkspace ? html`
           <div class="profile-workspace-save">
+            ${this._renderGroupSaveSummaries(true)}
             <button
               class="command-button primary"
               type="button"
-              ?disabled=${Boolean(this._busy) || !this._dirty || !this._draft.name.trim() || !iconValid || !colorValid || !descriptionValid || hasScheduleValidationError}
+              ?disabled=${Boolean(this._busy) || !this._dirty || !this._draft.name.trim() || !iconValid || !colorValid || !descriptionValid || hasScheduleValidationError || this._hasUnchosenGroup()}
               @click=${() => void this._save()}
             >
               <ha-icon icon="mdi:content-save"></ha-icon>
@@ -1116,7 +1214,8 @@ export class VelairProfilesView extends LitElement {
               class=${["zone", "profile-workspace-zone-option", id === entityId ? "active" : "", zoneError ? "error" : "", dirty ? "dirty" : ""].filter(Boolean).join(" ")}
               aria-invalid=${String(Boolean(zoneError))}
               title=${zoneError ?? `${climateName}: ${label}${dirty ? ` (${this._t("unsaved")})` : ""}`}
-              @click=${() => { this._selectedEntity = id; }}
+              ?disabled=${this.scheduleSavePending}
+              @click=${() => this._selectEntity(id)}
             >
               <span class="profile-workspace-zone-copy">
                 <strong>${climateName}</strong>
@@ -1138,7 +1237,8 @@ export class VelairProfilesView extends LitElement {
           <label class="profile-zone-actions">
             <span>${this._t("profileZoneBehavior")}</span>
             <span class="select-wrap">
-              <select .value=${behavior} @change=${(event: Event) => this._setZoneBehavior(entityId, (event.currentTarget as HTMLSelectElement).value as ClimateProfileDraftZone["behavior"])}>
+              <select .value=${behavior} @change=${(event: Event) => this._setZoneBehavior(entityId, (event.currentTarget as HTMLSelectElement).value as ClimateProfileDraftZone["behavior"] | "unconfigured")}>
+                <option value="unconfigured">${this._t("profileBehaviorUnconfigured")}</option>
                 <option value="normal">${this._t("profileBehaviorDefault")}</option>
                 <option value="schedule">${this._t("profileBehaviorSchedule")}</option>
                 ${this._isExternalEntity(entityId) ? nothing : html`
@@ -1164,7 +1264,7 @@ export class VelairProfilesView extends LitElement {
           ` : zone?.behavior === "schedule"
             ? this._renderSchedule(entityId, zone)
             : this._isExternalEntity(entityId) ? nothing
-              : html`<div class="library-concept-note compact"><ha-icon icon="mdi:calendar-arrow-right"></ha-icon><span><small>${this._t("profileDefaultScheduleHelp")}</small></span></div>`}
+              : html`<div class="library-concept-note compact"><ha-icon icon="mdi:calendar-arrow-right"></ha-icon><span><small>${this._t(behavior === "unconfigured" ? "profileUnconfiguredHelp" : "profileDefaultScheduleHelp")}</small></span></div>`}
         </div>
       </article>
     `;
@@ -1212,7 +1312,8 @@ export class VelairProfilesView extends LitElement {
           <label class="profile-zone-actions" @click=${(event: Event) => event.stopPropagation()}>
             <span>${this._t("profileZoneBehavior")}</span>
             <span class="select-wrap">
-              <select .value=${behavior} @change=${(event: Event) => this._setZoneBehavior(entityId, (event.currentTarget as HTMLSelectElement).value as ClimateProfileDraftZone["behavior"])}>
+              <select .value=${behavior} @change=${(event: Event) => this._setZoneBehavior(entityId, (event.currentTarget as HTMLSelectElement).value as ClimateProfileDraftZone["behavior"] | "unconfigured")}>
+                <option value="unconfigured">${this._t("profileBehaviorUnconfigured")}</option>
                 <option value="normal">${this._t("profileBehaviorDefault")}</option>
                 <option value="schedule">${this._t("profileBehaviorSchedule")}</option>
                 ${this._isExternalEntity(entityId) ? nothing : html`
@@ -1243,10 +1344,95 @@ export class VelairProfilesView extends LitElement {
     `;
   }
 
+  private _renderGroupSaveSummaries(scrollable = false) {
+    const selected = [...this._groupCandidates.entries()].filter(([, candidate]) => candidate.selectedDay);
+    return selected.length ? html`<div class="group-save-summaries"><div class="group-save-summary-list" tabindex=${scrollable ? "0" : nothing} role=${scrollable ? "region" : nothing} aria-label=${scrollable ? this._t("dayGroupPendingApplications") : nothing}>${selected.map(([key, candidate]) => {
+      const boundary = key.lastIndexOf(":");
+      const entityId = key.slice(0, boundary);
+      return renderGroupSaveSummary({ _t: this._t.bind(this), _weekdayName: day => weekdayName(languageFromHass(this.hass), day) }, {
+        sourceDay: candidate.selectedDay!, days: key.slice(boundary + 1).split(","), zoneName: this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
+      });
+    })}</div><small>${this._t("profileGroupSaveHint")}</small></div>` : nothing;
+  }
+
+  private _groupDays(entityId: string, weekday = this._effectiveWeekday(entityId)): string[] {
+    const zone = this._draft.zones[entityId];
+    return dayGroups(zone?.behavior === "schedule" ? zone.day_layout_key : undefined)
+      .find((days) => days.includes(weekday)) ?? [weekday];
+  }
+
+  private _propagateGroup(entityId: string, weekday: string): void {
+    this._draft = cloneProfileDayToDays(this._draft, entityId, weekday, this._groupDays(entityId, weekday));
+  }
+
+  private _candidateKey(entityId: string, weekday = this._effectiveWeekday(entityId)): string { return `${entityId}:${this._groupDays(entityId, weekday).join(",")}`; }
+  private _chooseGroupBase(entityId: string, weekday: string): boolean {
+    if (this._busy || this._materializingTemplate) return false;
+    const days = this._groupDays(entityId, weekday);
+    const key = this._candidateKey(entityId, weekday);
+    const candidate = this._groupCandidates.get(key);
+    const current = climateProfileInput(this._draft).zones[entityId];
+    if (candidate?.selectedDay && current.behavior === "schedule" && days.some((day) => dayConfigurationFingerprint(current, day) !== candidate.baseline) && !window.confirm(this._t("discardChanges"))) return false;
+    const source = candidate?.draft.zones[entityId];
+    const zone = this._draft.zones[entityId];
+    if (source?.behavior === "schedule" && zone?.behavior === "schedule") {
+      const links = { ...zone.template_links }; const link = source.template_links?.[weekday];
+      if (link) links[weekday] = structuredClone(link); else delete links[weekday];
+      this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: structuredClone(source.schedule[weekday] ?? []) }, template_links: links } } };
+    }
+    this._selectDay(entityId, weekday);
+    this._propagateGroup(entityId, weekday);
+    if (candidate) { candidate.selectedDay = weekday; const applied = climateProfileInput(this._draft).zones[entityId]; candidate.baseline = applied.behavior === "schedule" ? dayConfigurationFingerprint(applied, weekday) : undefined; }
+    this._setDirty(true);
+    return true;
+  }
+  private _pendingGroupEqualization(entityId: string): boolean {
+    const zone = this._draft.zones[entityId];
+    const persisted = this._persistedProfileInput()?.zones[entityId];
+    const days = this._groupDays(entityId);
+    return this._dirty && zone?.behavior === "schedule" && days.length > 1
+      && persisted?.behavior === "schedule" && !schedulesEqual(persisted, days);
+  }
+  private _hasUnchosenGroup(): boolean {
+    const input = climateProfileInput(this._draft);
+    return Object.entries(this._draft.zones).some(([entityId, zone]) => {
+      const visible = entityId === this._selectedEntity || (!this.scheduleWorkspace && this._expandedZones.has(entityId));
+      if (!visible || zone.behavior !== "schedule") return false;
+      const candidate = this._groupCandidates.get(this._candidateKey(entityId));
+      if (candidate) return !candidate.selectedDay;
+      const current = input.zones[entityId];
+      return this._pendingGroupEqualization(entityId) || (current.behavior === "schedule" && !schedulesEqual(current, this._groupDays(entityId)));
+    });
+  }
+  private _clearCandidateState(entityId: string): void {
+    for (const key of this._groupCandidates.keys()) if (key.startsWith(`${entityId}:`)) this._groupCandidates.delete(key);
+  }
+  private _setDayLayout(entityId: string, key: string): boolean | void {
+    if (this.scheduleSavePending) return false;
+    const zone = this._draft.zones[entityId];
+    if (zone?.behavior !== "schedule" || this._materializingTemplate) return;
+    for (const candidateKey of this._groupCandidates.keys()) if (candidateKey.startsWith(`${entityId}:`)) this._groupCandidates.delete(candidateKey);
+    this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, day_layout_key: resolveDayLayout(key).layout.key } } };
+    this._setDirty(true);
+  }
+
   private _renderSchedule(entityId: string, zone: Extract<ClimateProfileDraftZone, { behavior: "schedule" }>) {
     const weekdays = orderedWeekdays(this.data?.settings?.first_weekday ?? WEEKDAYS[0]);
     const weekday = this._effectiveWeekday(entityId);
     const blocks = this._blocks(entityId, weekday);
+    const selectedGroup = this._groupDays(entityId, weekday);
+    const currentZone = climateProfileInput(this._draft).zones[entityId];
+    const key = this._candidateKey(entityId, weekday);
+    let candidate = this._groupCandidates.get(key);
+    if (!candidate && currentZone.behavior === "schedule" && (!schedulesEqual(currentZone, selectedGroup) || this._pendingGroupEqualization(entityId))) {
+      candidate = { draft: structuredClone(this._draft) }; this._groupCandidates.set(key, candidate);
+    }
+    const candidateDraft = candidate?.draft ?? this._draft;
+    const candidateZone = candidateDraft.zones[entityId];
+    const comparisonZone = climateProfileInput(candidateDraft).zones[entityId];
+    const mixed = Boolean(candidate);
+    const ready = !mixed;
+    const grouped = resolveDayLayout(zone.day_layout_key).layout.key !== "individual";
     const externalCapabilities = this._externalCapabilities(entityId);
     const cloneWeekdayTargets = new Set(
       [...(this._cloneWeekdayTargets[entityId] ?? [])].filter((day) => day !== weekday),
@@ -1260,25 +1446,42 @@ export class VelairProfilesView extends LitElement {
     );
     const blockHost = this._blockEditorHost(entityId, weekday);
     const currentInput = climateProfileInput(this._draft);
+    const candidateInput = climateProfileInput(candidateDraft);
     const persistedInput = this._persistedProfileInput();
-    const dayTabs = html`<div class="day-tabs">
-          ${weekdays.map((day) => {
-            const dirty = this._profileDayDirty(entityId, day, currentInput, persistedInput);
-            const dayLabel = weekdayName(languageFromHass(this.hass), day);
-            return html`
-            <button
-              type="button"
-              class=${["day-tab", day === weekday ? "active" : "", dirty ? "dirty" : ""].filter(Boolean).join(" ")}
-              aria-pressed=${String(day === weekday)}
-              aria-label=${`${dayLabel}${dirty ? `, ${this._t("unsaved")}` : ""}`}
-              @click=${() => this._selectDay(entityId, day)}
-            >
-              <span>${dayLabel.slice(0, 3)}</span>
-              <strong>${this._blocks(entityId, day).length}</strong>
-            </button>
-          `;})}
-        </div>`;
-    const timeline = renderTimeline(blockHost, entityId, "template", {
+    const dayTabs = html`
+      ${renderDayLayoutControls({ _t: this._t.bind(this) }, { key: resolveDayLayout(zone.day_layout_key).layout.key, disabled: this.scheduleSavePending, onChange: (key) => this._setDayLayout(entityId, key) })}
+      ${resolveDayLayout(zone.day_layout_key).invalid ? html`<div class="notice error">${this._t("dayLayoutInvalid")}</div>` : nothing}
+      ${renderScheduleDayTabs({ _t: this._t.bind(this), _weekdayName: (day) => weekdayName(languageFromHass(this.hass), day), _shortWeekdayName: (day) => shortWeekdayName(languageFromHass(this.hass), day) }, {
+        layoutKey: zone.day_layout_key, disabled: this.scheduleSavePending, selectedDay: weekday, orderedWeekdays: weekdays,
+        onSelect: (day) => this._selectDay(entityId, day), blockCount: (day) => this._blocks(entityId, day).length,
+        isDirty: (day) => this._profileDayDirty(entityId, day, currentInput, persistedInput),
+      })}
+      ${mixed ? renderDayScheduleConflict({ _t: this._t.bind(this), _weekdayName: (day) => weekdayName(languageFromHass(this.hass), day), _shortWeekdayName: (day) => shortWeekdayName(languageFromHass(this.hass), day) }, {
+        days: weekdays.filter((day) => selectedGroup.includes(day)),
+        selectedDay: candidate?.selectedDay,
+        disabled: Boolean(this._busy) || this._materializingTemplate,
+        fingerprint: (day) => comparisonZone.behavior === "schedule" ? dayConfigurationFingerprint(comparisonZone, day) : day,
+        blockCount: (day) => this._blocks(entityId, day, candidateDraft).length,
+        emptyMessage: (day) => { const link = candidateZone.behavior === "schedule" ? candidateZone.template_links?.[day] : undefined; return link && !this.data?.templates?.some((template) => template.key === link.template_key) ? this._t("linkedConfigurationUnavailable") : undefined; },
+        linkLabel: (day) => { const link = (candidateZone.behavior === "schedule" ? candidateZone.template_links?.[day] : undefined); return link ? `${this._t("templates")}: ${this.data?.templates?.find((item) => item.key === link.template_key)?.name ?? link.template_key} · ${this._t(link.mode === "full" ? "templateLinkFull" : "templateLinkHours")}` : undefined; },
+        blocks: (day) => {
+          const savedResolved = !this._profileDayDirty(entityId, day, candidateInput, persistedInput)
+            ? this.data?.resolved_profile_schedules?.[this._selectedKey]?.[entityId]?.[day] : undefined;
+          const full = (candidateZone.behavior === "schedule" ? candidateZone.template_links?.[day] : undefined)?.mode === "full";
+          return this._blocks(entityId, day, candidateDraft).map((block, index) => {
+            const effective = block.preset_key || full
+              ? this._effectivePresetBlock(entityId, day, block, index, candidateDraft) ?? savedResolved?.find((item) => item.start === block.start)
+              : profileDraftBlockInput(block);
+            const graphic = effective ? { ...timelinePresentation(blockHost, effective, entityId, "template", day, index, false, true, { link: candidateZone.behavior === "schedule" ? candidateZone.template_links?.[day] : undefined }), presetKey: block.preset_key, templateKey: candidateZone.behavior === "schedule" ? candidateZone.template_links?.[day]?.template_key : undefined } : undefined;
+            const presetLabel = block.preset_key ? this.data?.block_presets?.find(item => item.key === block.preset_key)?.name ?? block.preset_key : undefined;
+            return { start: block.start, block: effective, graphic, details: graphic?.details, presetLabel, time: blockHost._formatScheduleTime(block.start), description: effective
+              ? presetConfigurationSummary(effective, blockHost) : this._t(this._presetPreviews.get(this._presetPreviewKey(entityId, day, block, index, candidateDraft))?.status === "unavailable" ? "linkedConfigurationUnavailable" : "linkedConfigurationLoading") };
+          });
+        },
+        onChoose: (day) => this._chooseGroupBase(entityId, day),
+      }) : nothing}
+    `;
+    const timeline = renderTimeline(blockHost, entityId, "template", grouped ? undefined : {
           // Include linked days when displaying continuity across midnight.
           // This assembles editable hours/references; execution remains backend-owned.
           schedule: Object.fromEntries(WEEKDAYS.map((day) => [day, this._blocks(entityId, day)])),
@@ -1328,7 +1531,7 @@ export class VelairProfilesView extends LitElement {
               `
             : renderAddBlockButton(blockHost, "template")}
         </div>`;
-    const copyPanels = html`<div class="copy-panel profile-day-copy">
+    const copyPanels = html`${grouped ? nothing : html`<div class="copy-panel profile-day-copy">
           <div class="copy-header">
             <div>
               <span class="label">${this._t("cloneDayToDays")}</span>
@@ -1369,12 +1572,12 @@ export class VelairProfilesView extends LitElement {
               <span>${this._t("cloneAction")}</span>
             </button>
           </div>
-        </div>
+        </div>`}
         ${otherClimates.length ? html`
           <div class="copy-panel profile-climate-copy">
             <div class="copy-header">
               <div>
-                <span class="label">${this._t("cloneDayToThermostats")}</span>
+                <span class="label">${cloneThermostatsLabel({ _t: this._t.bind(this), _weekdayName: day => weekdayName(languageFromHass(this.hass), day) }, zone.day_layout_key, weekday)}</span>
                 <strong>${this._t("otherThermostats")}</strong>
               </div>
             </div>
@@ -1414,7 +1617,7 @@ export class VelairProfilesView extends LitElement {
         ` : nothing}`;
     return html`
       <div class="profile-week">
-        ${renderWeeklyScheduleEditor({
+        ${!ready ? dayTabs : renderWeeklyScheduleEditor({
           dayTabs,
           timeline,
           configureHeading: this._t("scheduleStepConfigure"),
@@ -1478,6 +1681,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _selectProfile(profile: ClimateProfile): void {
+    if (this.scheduleSavePending) return;
     if (this._materializingTemplate) return;
     if (this._dirty && !window.confirm(this._t("profileDiscardChanges"))) {
       return;
@@ -1497,8 +1701,9 @@ export class VelairProfilesView extends LitElement {
     this._setDirty(true);
   }
 
-  private _setZoneBehavior(entityId: string, behavior: ClimateProfileDraftZone["behavior"]): void {
+  private _setZoneBehavior(entityId: string, behavior: ClimateProfileDraftZone["behavior"] | "unconfigured"): void {
     if (this._isExternalEntity(entityId) && behavior === "pause") return;
+    this._clearCandidateState(entityId);
     this._draft = withProfileZoneBehavior(this._draft, entityId, behavior);
     this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: new Set() };
     this._cloneClimateTargets = { ...this._cloneClimateTargets, [entityId]: new Set() };
@@ -1510,7 +1715,12 @@ export class VelairProfilesView extends LitElement {
     this._setDirty(true);
   }
 
+  private _selectEntity(entityId: string): void {
+    if (!this.scheduleSavePending) this._selectedEntity = entityId;
+  }
+
   private _selectDay(entityId: string, weekday: string): void {
+    if (this.scheduleSavePending) return;
     if (this._materializingTemplate) return;
     this._selectedDays = { ...this._selectedDays, [entityId]: weekday };
     const targets = new Set(this._cloneWeekdayTargets[entityId] ?? []);
@@ -1556,6 +1766,7 @@ export class VelairProfilesView extends LitElement {
       const preview = await new VelairApiClient(this.hass).previewProfile(climateProfileInput(candidate));
       if (context() !== originalContext) return;
       if (preview.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
+      this._clearCandidateState(entityId);
       this._draft = candidate;
       this._cloneWeekdayTargets = { ...this._cloneWeekdayTargets, [entityId]: new Set() };
       this._setDirty(true);
@@ -1567,14 +1778,15 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _toggleZone(entityId: string): void {
+    if (this.scheduleSavePending) return;
     const expanded = new Set(this._expandedZones);
     if (expanded.has(entityId)) expanded.delete(entityId);
     else expanded.add(entityId);
     this._expandedZones = expanded;
   }
 
-  private _blocks(entityId: string, weekday: string): DraftScheduleBlock[] {
-    const zone = this._draft.zones[entityId];
+  private _blocks(entityId: string, weekday: string, draft = this._draft): DraftScheduleBlock[] {
+    const zone = draft.zones[entityId];
     if (zone?.behavior === "schedule" && zone.template_links?.[weekday]) return linkedDraftBlocks(zone.template_links[weekday], this.data?.templates ?? [], this.data?.temperature_unit);
     return zone?.behavior === "schedule" ? [...(zone.schedule[weekday] ?? [])] : [];
   }
@@ -1584,9 +1796,11 @@ export class VelairProfilesView extends LitElement {
     const zone = this._draft.zones[entityId];
     if (zone?.behavior === "schedule" && zone.template_links?.[weekday]?.template_key === key) return true;
     const template = availableScheduleTemplates(this.data?.templates).find((item) => item.key === key);
-    if (zone?.behavior !== "schedule" || !template || !window.confirm(this._t("hoursReplaceConfirmation", { name: template.name ?? template.key }))) return false;
+    if (zone?.behavior !== "schedule" || !template || (this._blocks(entityId, weekday).length > 0
+      && !window.confirm(this._t("hoursReplaceConfirmation", { name: template.name ?? template.key })))) return false;
     const link = zone.template_links?.[weekday]?.mode === "full" ? { mode: "full" as const, template_key: key } : linkDraftDay(template, this._blocks(entityId, weekday));
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: [] }, template_links: { ...zone.template_links, [weekday]: link } } } };
+    this._propagateGroup(entityId, weekday);
     this._setDirty(true);
     return true;
   }
@@ -1630,6 +1844,7 @@ export class VelairProfilesView extends LitElement {
     if (!blocks) return false;
     const next = mode === "full" ? { mode, template_key: link.template_key } : linkDraftDay(template, blocks);
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, template_links: { ...zone.template_links, [weekday]: next } } } };
+    this._propagateGroup(entityId, weekday);
     this._setDirty(true);
     return true;
   }
@@ -1637,7 +1852,8 @@ export class VelairProfilesView extends LitElement {
   private async _restoreOwnHours(entityId: string, weekday: string): Promise<boolean> {
     if (this._materializingTemplate) return false;
     const zone = this._draft.zones[entityId];
-    if (zone?.behavior !== "schedule" || !window.confirm(this._t("hoursRestoreConfirmation"))) return false;
+    if (zone?.behavior !== "schedule" || (this._blocks(entityId, weekday).length > 0
+      && !window.confirm(this._t("hoursRestoreConfirmation")))) return false;
     const saved = this._persistedProfileInput()?.zones[entityId];
     const savedLink = saved?.behavior === "schedule" ? saved.template_links?.[weekday] : undefined;
     const blocks = savedLink?.mode === "full" ? await this._materializeFullDay(entityId, weekday, savedLink, true) : savedLink
@@ -1647,6 +1863,7 @@ export class VelairProfilesView extends LitElement {
     const links = { ...zone.template_links };
     delete links[weekday];
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks.map(({ slot_id: _slot, ...block }) => block) }, template_links: links } } };
+    this._propagateGroup(entityId, weekday);
     this._setDirty(true);
     return true;
   }
@@ -1661,6 +1878,7 @@ export class VelairProfilesView extends LitElement {
     const links = { ...zone.template_links };
     delete links[weekday];
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks }, template_links: links } } };
+    this._propagateGroup(entityId, weekday);
     this._setDirty(true);
   }
 
@@ -1687,16 +1905,20 @@ export class VelairProfilesView extends LitElement {
     if (this._materializingTemplate) return;
     const zone = this._draft.zones[entityId];
     if (zone?.behavior !== "schedule") return;
+    const inputZone = climateProfileInput(this._draft).zones[entityId];
+    if (inputZone.behavior === "schedule" && !schedulesEqual(inputZone, this._groupDays(entityId, weekday))) return;
     const link = zone.template_links?.[weekday];
     if (link?.mode === "full") return;
     if (link) {
       const template = availableScheduleTemplates(this.data?.templates).find((item) => item.key === link.template_key);
       if (!template) return;
       this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, template_links: { ...zone.template_links, [weekday]: linkDraftDay(template, blocks) } } } };
+      this._propagateGroup(entityId, weekday);
       this._setDirty(true);
       return;
     }
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks } } } };
+    this._propagateGroup(entityId, weekday);
     this._setDirty(true);
   }
 
@@ -1768,6 +1990,7 @@ export class VelairProfilesView extends LitElement {
     const links = { ...zone.template_links };
     delete links[weekday];
     this._draft = { ...this._draft, zones: { ...this._draft.zones, [entityId]: { ...zone, schedule: { ...zone.schedule, [weekday]: blocks }, template_links: links } } };
+    this._propagateGroup(entityId, weekday);
     this._setDirty(true);
     select.value = "";
   }
@@ -1830,13 +2053,14 @@ export class VelairProfilesView extends LitElement {
     if (!this.hass?.connection || this._busy) return;
     const context = () => JSON.stringify([this._selectedKey, this._selectedEntity, this._selectedDays, this._draft, this.data?.configuration_revision]);
     const originalContext = context();
-    const candidate = cloneProfileDayToClimates(this._draft, dialog.entityId, dialog.weekday, dialog.targets);
+    const candidate = this._groupDays(dialog.entityId, dialog.weekday).reduce((draft, day) => cloneProfileDayToClimates(draft, dialog.entityId, day, dialog.targets), this._draft);
     const current = () => this._climateCloneDialog === dialog && context() === originalContext;
     this._busy = "clone";
     try {
       const preview = await new VelairApiClient(this.hass).previewProfile(climateProfileInput(candidate));
       if (!current()) return;
       if (preview.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
+      for (const target of dialog.targets) this._clearCandidateState(target);
       this._draft = candidate;
       this._cloneClimateTargets = { ...this._cloneClimateTargets, [dialog.entityId]: new Set() };
       this._closeClimateCloneDialog();
@@ -1950,6 +2174,7 @@ export class VelairProfilesView extends LitElement {
     const host: Record<string, unknown> = {
       _materializingTemplate: this._materializingTemplate,
       _allowBlockPresets: true,
+      _supportsTemperatureOnly: !external || external.supports_temperature_only === true,
       _timelineTemplateLinkForDay: (day: string) => { const zone = this._draft.zones[entityId]; return zone?.behavior === "schedule" ? zone.template_links?.[day] : undefined; },
       _effectivePresetBlockForDay: (block: DraftScheduleBlock, _index: number, day: string) => {
         const index = this._blocks(entityId, day).findIndex((item) => block.slot_id ? item.slot_id === block.slot_id : item.start === block.start);
@@ -2248,6 +2473,7 @@ export class VelairProfilesView extends LitElement {
               minutes: external.time_step_minutes,
             });
           }
+          if (block.temperature_only && !external.supports_temperature_only) return this._t("profileExternalUnsupportedBlock", { climate });
           if (!external.supported_actions.includes(block.action ?? "set_temperature")) {
             return this._t("profileExternalUnsupportedBlock", { climate });
           }
@@ -2401,6 +2627,7 @@ export class VelairProfilesView extends LitElement {
     this._clearNotices();
     try {
       this._emitData(await api.selectVelairMode(selection));
+      if (selection.kind === "default" && !this._modeDirty) this._clearModeSelection();
     } catch (error) {
       const operationStatus = this.data?.operation_status;
       const globallyReportedFailure = operationStatus?.state === "failed"
@@ -2414,13 +2641,14 @@ export class VelairProfilesView extends LitElement {
   }
 
   private async _save(): Promise<void> {
+    if (this._hasUnchosenGroup()) return;
     const api = this.hass ? new VelairApiClient(this.hass) : undefined;
     if (!api || this._busy) return;
     this._busy = "save";
     this._clearNotices();
     try {
       const input = climateProfileInput(this._draft);
-      if (Object.values(input.zones).some((zone) => zone.behavior === "schedule" && (Object.keys(zone.template_links ?? {}).length || Object.values(zone.schedule).some((blocks) => blocks.some((block) => block.preset_key))))) await api.previewProfile(input);
+      // The mutation validates the complete Profile atomically, including references.
       const data = await api.setClimateProfile(input, this._configurationRevision ?? this.data?.configuration_revision);
       this._emitData(data);
       const saved = data.profiles?.find((profile) => profile.key === (this._draft.key ?? data.profile_id))
@@ -2428,7 +2656,6 @@ export class VelairProfilesView extends LitElement {
       if (saved) {
         this._selectedKey = saved.key;
         this._draft = createClimateProfileDraft(saved);
-        this._selectedDays = {};
         this._cloneWeekdayTargets = {};
         this._cloneClimateTargets = {};
       }
@@ -2450,7 +2677,9 @@ export class VelairProfilesView extends LitElement {
   private async _deleteProfile(profile: ClimateProfile): Promise<void> {
     const api = this.hass ? new VelairApiClient(this.hass) : undefined;
     if (!api || this._busy) return;
-    const active = this.data?.global.active_profile_ids?.includes(profile.key) ?? false;
+    const selection = this.data?.profile_selection;
+    const active = (selection?.base_profile_ids ?? this.data?.global.active_profile_ids ?? []).includes(profile.key)
+      || Object.values(selection?.zone_profile_overrides ?? {}).includes(profile.key);
     if (!window.confirm(this._t(active ? "profileConfirmDeleteActive" : "profileConfirmDelete", { profile: profile.name }))) return;
     this._busy = "delete";
     this._clearNotices();
@@ -2487,7 +2716,7 @@ export class VelairProfilesView extends LitElement {
         : this._t("profilePauseKeep");
       return `${this._t("profileBehaviorPause")}: ${action}`;
     }
-    return this._t("profileBehaviorDefault");
+    return this._t(behavior === "unconfigured" ? "profileBehaviorUnconfigured" : "profileBehaviorDefault");
   }
 
   private _profileZoneDirty(
@@ -2495,8 +2724,8 @@ export class VelairProfilesView extends LitElement {
     currentInput = climateProfileInput(this._draft),
     persistedInput = this._persistedProfileInput(),
   ): boolean {
-    const current = currentInput.zones[entityId] ?? { behavior: "normal" };
-    const baseline = persistedInput?.zones[entityId] ?? { behavior: "normal" };
+    const current = currentInput.zones[entityId];
+    const baseline = persistedInput?.zones[entityId];
     return this._canonicalJson(current) !== this._canonicalJson(baseline);
   }
 
@@ -2547,6 +2776,7 @@ export class VelairProfilesView extends LitElement {
     }));
   }
   private _setDirty(dirty: boolean): void {
+    if (!dirty) this._groupCandidates.clear();
     this._refreshPresetPreviews();
     if (dirty && !this._dirty) this._configurationRevision = this.data?.configuration_revision;
     const nextDirty = dirty && this._profileDraftChanged();

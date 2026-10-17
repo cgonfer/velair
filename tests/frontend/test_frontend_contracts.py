@@ -621,7 +621,7 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('from "./velair/views/panel"', source)
         self.assertIn("export type ScheduleResponse", types_source)
         self.assertIn(
-            "export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, linkedHoursStyles, resourceUsageStyles, documentationStyles, css`",
+            "export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnosticsStyles, inlineHelpStyles, loadingStyles, noticeStyles, operationStatusStyles, overviewStyles, portabilityStyles, preconditioningStyles, sensorsStyles, settingsStyles, templateStyles, timelineStyles, linkedHoursStyles, resourceUsageStyles, documentationStyles, plannedReturnPreparationStatusStyles, css`",
             styles_source,
         )
         self.assertIn("`, responsiveStyles];", styles_source)
@@ -1023,10 +1023,10 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("margin-top: 14px", overview_styles_source)
         self.assertIn("grid-template-columns: minmax(110px, 150px) max-content", responsive_styles_source)
         self.assertIn("grid-template-columns: 18ch 8ch 12ch", responsive_styles_source)
-        self.assertIn(".next .event-list.has-preconditioning .event-details", responsive_styles_source)
+        self.assertIn(".next:not(.effective-next) .event-list.has-preconditioning .event-details", responsive_styles_source)
         self.assertIn("grid-template-columns: 40ch 8ch 12ch", responsive_styles_source)
         self.assertIn("grid-template-columns: 16px 17ch 16px 17ch", responsive_styles_source)
-        self.assertIn(".next .event-list.has-preconditioning .event-time-single .target-time", responsive_styles_source)
+        self.assertIn(".next:not(.effective-next) .event-list.has-preconditioning .event-time-single .target-time", responsive_styles_source)
         self.assertIn("grid-column: 4", responsive_styles_source)
         self.assertIn("justify-content: flex-start", responsive_styles_source)
         self.assertIn("grid-template-columns: 42ch 8ch 12ch", overview_styles_source)
@@ -1120,8 +1120,6 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("schedule-editor-heading", source)
         self.assertIn("schedule-editor-badges", source)
         self.assertIn("renderTemplatePanel(host)", source)
-        self.assertIn("renderDayTab(host, weekday", source)
-        self.assertIn("host._weekdayName(weekday).slice", source)
         self.assertIn("timelineBlocksFromDrafts(host._blocksForSource(source))", source)
         self.assertIn("sortDraftBlocksByStart(host._blocksForSource(source))", source)
         self.assertIn("minuteFromTimelinePosition(clientX, rect.left, rect.width)", source)
@@ -1290,13 +1288,15 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("template-name-field", source)
         self.assertIn("template-detail-actions", source)
         self.assertIn("template-editor", source)
-        self.assertIn("template-apply-panel", source)
-        self.assertIn("template-apply-grid", source)
-        self.assertIn(".template-apply-scroll-wrap {\n  min-width: 0;\n  overflow: auto;\n  padding-bottom: 8px;", template_styles_source)
+        application_source = (ROOT / "frontend/src/velair/views/template-application-view.ts").read_text(encoding="utf-8")
+        self.assertIn("template-apply-panel", application_source)
+        self.assertIn("template-application-targets", application_source)
+        self.assertIn("renderTemplateApplication as renderTemplateApplyPanel", source)
+        self.assertIn(".template-application-choices", template_styles_source)
         self.assertIn(".template-apply-panel .copy-header .command-button", responsive_styles_source)
         self.assertIn("mdi:check-circle-outline", source)
         self.assertNotIn("template-apply-scroll-wrap::before", source)
-        self.assertIn("export function renderTemplateApplyPanel", source)
+        self.assertIn("export function renderTemplateApplication", application_source)
         self.assertIn("private async _applyTemplateToTargets", source)
         self.assertIn("private _toggleTemplateApplyTarget", source)
         # Template block/timeline rendering and reference-independent validation
@@ -1316,7 +1316,8 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("export function uniqueTemplateName", templates_domain_source)
         self.assertIn("export function newTemplateKey", templates_domain_source)
         self.assertIn("toggleTemplateApplyTarget(host._templateApplyTargets", source)
-        self.assertIn("templateApplyTargetsFromKeys(host._templateApplyTargets", source)
+        # Batch selection, preview, and atomic application are exercised by
+        # the real-card Vitest flow rather than the removed per-day write loop.
         self.assertIn("export function templateApplyTargetKey", templates_domain_source)
         self.assertIn("export function templateApplyTargetsFromKeys", templates_domain_source)
         self.assertIn('"createTemplate": "Create template"', en_source)

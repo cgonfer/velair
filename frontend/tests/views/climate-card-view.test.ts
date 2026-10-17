@@ -41,6 +41,38 @@ function host(external = false): VelairViewHost {
 }
 
 describe("climate card view", () => {
+  it("shows the selected room's return preparation without inventing a weekly event", () => {
+    const value = host();
+    const arrival = new Date(value._currentTimelineNow().getTime() + 120 * 60_000).toISOString();
+    const start = new Date(value._currentTimelineNow().getTime() + 60 * 60_000).toISOString();
+    value._data!.planned_return_status = { state: "away", episode_active: true, occupancy: "away", sources: [], can_start: false, return_at: arrival,
+      preparation: { context: "arrival", return_at: arrival, mode_id: "return", zones: [
+        { entity_id: "climate.office", schedule_source: "default", profile_id: null, preparation: "adaptive", state: "pending", reason: null, start_at: start, target: { action: "set_temperature", temperature: 20, hvac_mode: "heat" } },
+        { entity_id: "climate.other", schedule_source: "default", profile_id: null, preparation: "adaptive", state: "preparing", reason: null, start_at: start, target: { action: "set_temperature", temperature: 25 } },
+      ] },
+    } as never;
+    const element = document.createElement("div");
+    render(renderClimateCard(value, "climate.office"), element);
+    expect(element.querySelector('.climate-card-return-preparation [data-state="waiting"]')).not.toBeNull();
+    expect(element.querySelector('.climate-card-return-preparation [data-state="preparing"]')).toBeNull();
+    expect(element.textContent).toContain(start);
+    expect(element.querySelector(".climate-card-preconditioning-preview")).toBeNull();
+    value._config.climate_show_preconditioning = false;
+    render(renderClimateCard(value, "climate.office"), element);
+    expect(element.querySelector(".climate-card-return-preparation")).toBeNull();
+    value._config.climate_show_preconditioning = true;
+    value._data!.next_events = [{ entity_id: "climate.office", when: start, target_when: arrival, temperature: 21, hvac_mode: "heat" }] as never;
+    // Effective next actions do not replace the dedicated weekly preview.
+    value._data!.next_effective_events = [];
+    render(renderClimateCard(value, "climate.office"), element);
+    expect(element.querySelector(".climate-card-return-preparation")).not.toBeNull();
+    expect(element.textContent).toContain("plannedReturnPreparationWeeklyTitle");
+    expect(element.querySelector(".climate-card-preconditioning-preview")).not.toBeNull();
+    value._data!.planned_return_status!.episode_active = false;
+    render(renderClimateCard(value, "climate.office"), element);
+    expect(element.querySelector(".climate-card-return-preparation")).toBeNull();
+    expect(element.querySelector(".climate-card-preconditioning-preview")).not.toBeNull();
+  });
   it.each([false, true])("opens household return independently of selected climate and supports direct/More close, overflow=%s", (overflow) => {
     const value = host(true) as VelairViewHost & Record<string, any>;
     value._config.climate_actions = [{ type: "planned-return", placement: overflow ? "more" : "auto", hide_name: true }];
@@ -59,6 +91,7 @@ describe("climate card view", () => {
     const child = container.querySelector("velair-planned-return") as HTMLElement & Record<string, any>;
     expect(child).not.toBeNull(); expect(child.settings).toBe(false); expect(child.compact).toBe(true); expect(child.embedded).toBe(true);
     expect(child.embedded).toBe(true); expect(child.data).toBe(value._data);
+    expect(child.entityId).toBe("climate.office");
     expect(container.querySelector(".climate-card-control-surface")).toBeNull();
     expect(container.querySelector(".climate-card-return-close") !== null).toBe(overflow);
     child.dispatchEvent(new CustomEvent("planned-return-busy", { detail: true }));

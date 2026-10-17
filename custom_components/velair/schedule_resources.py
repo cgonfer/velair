@@ -20,6 +20,7 @@ class ConfigurationResourceError(ValueError):
 
 
 PRESET_CONFIG_FIELDS = frozenset({
+    "temperature_only",
     "temperature", "target_temp_low", "target_temp_high", "hvac_mode",
     "fan_mode", "preset_mode", "swing_mode", "swing_horizontal_mode", "humidity",
 })
@@ -43,7 +44,10 @@ def validate_preset_update_request(operation, fields, clear_fields=()) -> None:
     for field, value in fields.items():
         if value is None or isinstance(value, str) and not value.strip():
             raise ValueError(f"{field} cannot be empty; use clear_fields to remove a setting")
-        if field in numeric:
+        if field == "temperature_only":
+            if not isinstance(value, bool):
+                raise ValueError("temperature_only must be a boolean")
+        elif field in numeric:
             try:
                 valid = not isinstance(value, bool) and isfinite(float(value))
             except (TypeError, ValueError):
@@ -79,7 +83,7 @@ def normalize_config(config: dict) -> dict:
     """Validate an action without accepting schedule or reference metadata."""
     if not isinstance(config, dict) or set(config) & {"start", "slot_id", "preset_key"}:
         raise ConfigurationResourceError("incompatible_configuration", "Invalid preset configuration")
-    allowed = {"action", "temperature", "target_temp_low", "target_temp_high", "hvac_mode", "fan_mode", "preset_mode", "swing_mode", "swing_horizontal_mode", "humidity"}
+    allowed = {"action", *PRESET_CONFIG_FIELDS}
     if set(config) - allowed:
         raise ValueError("Unsupported preset configuration fields")
     if config.get("action") == "turn_off" and set(config) != {"action"}:

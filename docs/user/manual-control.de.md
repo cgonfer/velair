@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -178,6 +178,8 @@ Velair entfernt nur den reservierten manuellen Anpassungsgrund und ermittelt die
 Velair stellt nicht den Block vom Beginn der manuellen Anpassung wieder her. Das ist wichtig, wenn sich inzwischen Profil, Modus, Zeitplan, Pause oder Uhrzeit geändert haben.
 
 Besteht eine unabhängige Zonenpause weiterhin, bleibt die Zone pausiert. Ist ihre wirksame Aktion `turn_off`, behält Ausschalten Vorrang. Das Fortsetzen nach manueller Anpassung ist deshalb nicht dasselbe wie das Entfernen aller Zonenpausengründe.
+
+**Nur Temperatur** ist eine separate Blockauswahl. Während dieses Blocks bleibt ein externer HVAC-Moduswechsel unter externer Kontrolle und erzeugt allein keine Manuelle Anpassung. Externe Solltemperaturänderungen folgen weiterhin deiner konfigurierten Richtlinie. Eine Pause oder Manuelle Anpassung stoppt weiterhin die Zeitplanübertragung; beim Fortsetzen wird der aktuelle Block angewendet, ohne ein ausgeschaltetes Klimagerät einzuschalten. Das gilt auch, wenn eine Fensterautomation die Zone fortsetzt. Eine ausdrückliche temporäre Anpassung oder ein späterer Block mit explizitem HVAC-Modus kann es weiterhin einschalten.
 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 ### Aus `off` fortsetzen bei „Aktuellen Modus beibehalten“

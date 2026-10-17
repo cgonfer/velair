@@ -1,5 +1,6 @@
 <a id="automation-events"></a>
 # Eventi per le automazioni
+
 <!-- velair-docs:start -->
 Traduzioni: [Originale in inglese](automation-events.md) · [Español](automation-events.es.md) · [Français](automation-events.fr.md) · [Deutsch](automation-events.de.md) · [Italiano](automation-events.it.md) · [Nederlands](automation-events.nl.md) · [Polski](automation-events.pl.md) · [Português (Brasil)](automation-events.pt-br.md) · [Português (Portugal)](automation-events.pt-pt.md) · [Русский](automation-events.ru.md) · [Stato delle traduzioni](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traduzioni: [Originale in inglese](automation-events.md) · [Español](automatio
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -144,7 +145,7 @@ triggers:
 <a id="profile-changed"></a>
 ## Cambio dei profili
 
-`profile_changed` viene emesso dopo il salvataggio persistente di un insieme diverso di profili climatici o delle programmazioni Default. Selezionare direttamente lo stesso insieme attivo può spostare l’entità nativa della modalità su Manual, ma non emette `profile_changed` perché i profili effettivi non sono cambiati.
+`profile_changed` viene emesso dopo il salvataggio di un diverso insieme di profili climatici di base o di orari di base Predefiniti. Selezionare direttamente lo stesso insieme attivo può portare l’entità Modalità nativa su Manuale, ma non emette `profile_changed` perché i profili effettivi non sono cambiati.
 
 ```yaml
 domain: velair
@@ -156,7 +157,7 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` identifica l’origine della selezione effettiva. I valori pubblici sono `panel`, `service` e `select`; le operazioni interne del ciclo di vita possono pubblicare valori più specifici come `profile_deleted` o `mode_updated`. Gli elenchi ordinati degli ID descrivono gli interi insiemi attuale e precedente. Un elenco `profile_ids` vuoto rappresenta Default.
+`source` identifica l’origine della selezione effettiva. I valori pubblici sono `panel`, `service` e `select`; le operazioni interne possono pubblicare valori più specifici come `profile_deleted` o `mode_updated`. Gli elenchi ordinati degli ID descrivono la nuova base e quella precedente. Un elenco `profile_ids` vuoto rappresenta una base Predefinita; possono ancora esistere eccezioni di zona. Questo evento di compatibilità non segnala cambiamenti limitati alle eccezioni. Usa `selection_changed` per la selezione completa e l’attribuzione effettiva delle stanze.
 
 Per esempio, questa automazione reagisce quando il profilo con ID `away` entra nell’insieme attivo:
 
@@ -176,7 +177,34 @@ actions:
       message: Away profile is active
 ```
 
-Per reagire al ritorno alle programmazioni Default, usa una condizione template che controlli `trigger.event.data.profile_ids == []`.
+Per reagire quando la base torna agli orari Predefiniti, usa una condizione modello che verifichi `trigger.event.data.profile_ids == []`. Controlla la selezione completa per distinguere una base Predefinita con eccezioni da Predefinito in ogni stanza.
+
+<a id="profile-selection-changed"></a>
+## Selezione dei Profili modificata
+
+`selection_changed` segnala modifiche alla base, alla sua associazione alla Modalità o alle eccezioni di zona dopo il salvataggio. Usa la stessa struttura `velair_event`:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Un’eccezione assente eredita la base; un valore null presente usa esplicitamente Predefinito. L’attribuzione effettiva descrive ogni stanza, compresi i Profili applicati parzialmente. Non conferma la consegna fisica riuscita al dispositivo. Una selezione invariata non emette duplicati. Modificare gli orari referenziati può cambiare il comportamento senza cambiare gli ID di selezione; gli aggiornamenti degli orari mantengono le normali notifiche API.
 
 <a id="scheduler-mode-changed"></a>
 ## Cambio della modalità del pianificatore

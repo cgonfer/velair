@@ -8,8 +8,8 @@ Traduções: [Original em inglês](manual-control.md) · [Español](manual-contr
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -181,6 +181,8 @@ Se uma pausa independente continuar, a zona permanece pausada. Se a sua ação e
 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 ### Retomar de `off` com Manter o modo atual
+
+**Apenas temperatura** é uma opção de bloco separada. Durante esse bloco, uma mudança externa de modo HVAC permanece sob controlo externo e não cria um Ajuste manual por si só. Mudanças externas da temperatura-alvo continuam seguindo a política configurada. Uma pausa ou um Ajuste manual ainda interrompe o envio da programação; retomar aplica o bloco atual sem ligar um equipamento desligado. Isso também vale quando uma automação de janelas retoma a zona. Um Reforço explícito ou um bloco posterior com modo HVAC explícito ainda pode ligá-lo.
 
 **Manter o modo atual** significa que o bloco não fornece modo HVAC. Para um bloco com alvo de temperatura, aplica-se a regra normal de envio ao retomar:
 
