@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](home-away-from-occupancy.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -85,6 +85,8 @@ Przy uruchomieniu sprawdzanie obecności, pustego domu i dostępności działa w
 
 <a id="safety-and-precedence"></a>
 ## Bezpieczeństwo i pierwszeństwo
+
+Akcje Trybów i Profili używają polityki bloku wybranego harmonogramu. **Tylko temperatura** aktualizuje cel bez żądania zmiany trybu HVAC, dlatego wybór Home nie musi włączyć wyłączonego urządzenia. Użyj jawnego bloku **Ogrzewanie** lub **Chłodzenie**, jeśli Home ma rozpocząć pracę. Bezpośrednie akcje klimatyczne skonfigurowane w blueprincie pozostają jawnymi akcjami Home Assistant; polityka bloku ich nie blokuje.
 
 Blueprint wykonuje tylko skonfigurowane działania. Nadal obowiązuje pierwszeństwo Trybów, Profili, Wzmocnienia i Pauzy Velair. Encja obecności w stanie `unknown` lub `unavailable` nie aktywuje ani obecności, ani nieobecności; ostrzeżenie wskazuje encję i wyjaśnia wstrzymanie działań do powrotu obsługiwanego stanu zajętego lub pustego domu.
 

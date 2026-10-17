@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](adaptive-preconditioning.md) · [Español](adapt
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -23,6 +23,8 @@ Met adaptieve voorconditionering kan Velair vóór het begin van een schemablok 
 Een schemablok om `07:00` met `21 °C` betekent bijvoorbeeld: «zorg dat het om `07:00` ongeveer `21 °C` is», niet «begin om `07:00` met het aanpassen naar `21 °C`».
 
 Adaptieve voorconditionering draait lokaal in Home Assistant. Velair bewaart instellingen en leerwaarnemingen in de Home Assistant-opslag en stuurt geen temperatuurgeschiedenis, waarnemingen of kalibratiegegevens naar een externe regelaar. Zones die externe schema-uitvoering gebruiken, maken geen gebruik van adaptieve voorconditionering; alleen hun effectieve weekschema wordt gepubliceerd.
+
+Een blok met **Alleen temperatuur** staat geen HVAC-moduswijziging toe. Zolang het klimaatapparaat uitstaat, start Velair geen voorbereiding vooraf en verzamelt het geen thermische leermetingen voor dat doel. Na extern inschakelen kan de voorbereiding opnieuw worden berekend met de werkelijke compatibele modus. Deze optie kan geen comfort op de begintijd van het blok beloven zolang het apparaat uitstaat.
 
 <a id="setup"></a>
 ## Instellen
@@ -42,6 +44,8 @@ Oorspronkelijke `heat_cool`-bereiken worden ondersteund. Als de kamertemperatuur
 Wanneer je een klimaatapparaat uitvouwt, krijgt elke ondersteunde modus een kaart met een actuele voorspelling. Deze gebruikt dezelfde backendgegevens voor de volgende gebeurtenis als het tabblad Overzicht. Pauzes, tijdelijke aanpassingen, niet-ondersteunde modi en blokken zonder mogelijkheid voor voorconditionering worden daardoor op dezelfde manier afgehandeld. Als er een passend toekomstig blok bestaat, toont de kaart de berekende starttijd, de doeltijd, de voorbereidingstijd, de geplande temperatuur en modus en of Velair het beginmodel of vergelijkbare lokale geschiedenis gebruikt.
 
 Open **Berekeningsdetails** op de voorspellingskaart als je een bepaalde berekening wilt controleren. Dit optionele onderdeel toont de backendwaarden voor die voorspelling, zoals aantallen waarnemingen, de schatting uit voltooide waarnemingen, de ondergrens uit gedeeltelijke waarnemingen, de gecombineerde schatting, de afronding en de uiteindelijke voorbereidingstijd. Het is standaard verborgen om de normale weergave overzichtelijk te houden.
+
+Voorbereiding voor Geplande terugkeer wordt apart onderscheiden van vooruitlopen op het weekschema. Voor een geaccepteerde toekomstige terugkeer tonen de gegevens per klimaatapparaat de terugkeerstatus, geschatte start, aankomstdoel en eventuele reden voor onderbreking of onbeschikbaarheid. Overzicht, Geplande terugkeer en klimaatkaarten gebruiken dezelfde terugkeergegevens van de backend; het is geen extra weekgebeurtenis. Een kamer kan nog de afwezigheidsmodus volgen terwijl een toekomstige terugkeerschatting zichtbaar is. **Voorbereiden** beschrijft de aansturingsintentie van Velair, geen bevestiging van ontvangst of fysiek verwarmen of koelen. De tijdlijn toont verstreken tijd richting de opgeslagen aankomst, geen percentage thermische voortgang. Zie [Kamervoorbereiding](planned-return.nl.md#room-preparation).
 
 <a id="how-it-starts"></a>
 ## Hoe het startmoment wordt bepaald

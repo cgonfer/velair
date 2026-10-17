@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](installation.md) · [Español](installation.es.m
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -104,6 +104,15 @@ Ondersteunde waarden voor `view`:
 - `preconditioning`: instellingen voor adaptieve voorconditionering en status van het lokale leerproces.
 - `planned-return`: compacte bediening voor een eenmalige terugkeer, aantallen ingestelde bezettingsbronnen en een tijdlijn van het bevestigde vertrek. Zonder opgeslagen bezettingsbronnen activeert **Plan return** de afwezigheidsmodus onmiddellijk; de automatische wekelijkse routine vereist wel bronnen.
 - `diagnostics`: runtimegezondheid, begrensde geschiedenis, filters en export van probleemrapporten.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+### Kaartdetectie en problemen met bronnen oplossen
+
+Gebruik alleen de door de integratie aangeboden modulebron <code>/velair_frontend/velair-card.js</code>. Verwijder dubbele Velair-bronnen, waaronder een oudere <code>/local/velair-card.js</code>, en herlaad de browser. Aangepaste browserelementen kunnen na registratie niet worden vervangen. Een oudere bron die als eerste laadt, kan daardoor een verouderde kaartimplementatie actief houden.
+
+De kaartkiezer van het dashboard ontdekt Velair via frontendmetadata. Handmatig <code>type: custom:velair-card</code> toevoegen in YAML gebruikt het geregistreerde aangepaste element; dit zijn afzonderlijke controles. Vermeld bij een probleemmelding of de kaart via YAML werkt maar niet in de kiezer verschijnt.
+
+Bij verschillen tussen desktop en mobiel controleer je de ontwikkelaarsconsole van de getroffen browser op JavaScript-fouten en het tabblad Netwerk op de bronaanvraag. Vermeld Home Assistant- en Velair-versies, de browser, exacte bron-URL en relevante fouttekst. Verwijder privégegevens voordat je logboeken deelt. Succesvol laden in een andere browser bewijst niet wat de storing in de getroffen browser veroorzaakt.
 
 <a id="updating"></a>
 ## Bijwerken

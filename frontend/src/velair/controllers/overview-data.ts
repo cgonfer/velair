@@ -2,7 +2,7 @@ import { modeClassName } from "../domain/climate";
 import { effectiveClimateSchedule } from "../domain/climate-profiles";
 import { isActiveBoostOverride, isActivePauseOverride } from "../domain/overrides";
 import { dateMs, nextEventForZone, weekdayForDate } from "../domain/schedule-events";
-import type { HomeAssistant, ScheduleEvent, ScheduleResponse, ScheduleZone } from "../types";
+import type { EffectiveNextEvent, HomeAssistant, ScheduleEvent, ScheduleResponse, ScheduleZone } from "../types";
 
 type OverviewDataHost = {
   readonly hass?: HomeAssistant;
@@ -137,6 +137,12 @@ export function overviewNextEvents(host: OverviewDataHost): ScheduleEvent[] {
       new Date(first.when).getTime() - new Date(second.when).getTime());
 
   return calculatedEvents.length ? calculatedEvents : host._data.next_events;
+}
+
+/** A present backend projection, including an empty list, is authoritative. */
+export function overviewEffectiveNextEvents(host: OverviewDataHost): EffectiveNextEvent[] {
+  if (host._data?.next_effective_events !== undefined) return host._data.next_effective_events;
+  return overviewNextEvents(host).map(event => ({ entity_id: event.entity_id, source: "weekly_schedule", phase: "scheduled", when: event.when, event, weekly_event: event }));
 }
 
 export function nextEventForEntity(

@@ -1,5 +1,6 @@
 <a id="block-presets-and-linked-templates"></a>
 # Préréglages de blocs et modèles liés
+
 <!-- velair-docs:start -->
 Traductions: [Original en anglais](linked-schedules.md) · [Español](linked-schedules.es.md) · [Français](linked-schedules.fr.md) · [Deutsch](linked-schedules.de.md) · [Italiano](linked-schedules.it.md) · [Nederlands](linked-schedules.nl.md) · [Polski](linked-schedules.pl.md) · [Português (Brasil)](linked-schedules.pt-br.md) · [Português (Portugal)](linked-schedules.pt-pt.md) · [Русский](linked-schedules.ru.md) · [État des traductions](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traductions: [Original en anglais](linked-schedules.md) · [Español](linked-sch
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -49,6 +50,23 @@ Le panneau montre d’abord le sélecteur de configuration, puis les options d�
 
 <a id="linked-templates"></a>
 ## Modèles liés
+
+<a id="apply-a-template-to-schedules"></a>
+### Appliquer un modèle à des horaires
+
+Ouvrez **Appliquer à…** sur un modèle journalier enregistré. Le panneau suit **Sélectionner → Vérifier → Appliquer**. Enregistrez d’abord les modifications du modèle ; l’application n’enregistre jamais silencieusement le modèle partagé et n’utilise pas une version non enregistrée.
+
+Choisissez **Par défaut** ou un Profil existant, puis **Copie indépendante**, **Horaires uniquement** ou **Horaires et réglages**. Une copie indépendante n’a pas de lien de modèle ; les références aux préréglages Velair restent actives. Les liens d’horaires uniquement conservent des réglages climatiques indépendants. Les liens complets suivent les horaires et les réglages du modèle.
+
+Choisissez une **Répartition des jours** commune et cochez les groupes voulus pour chaque thermostat. Jours individuels propose sept choix ; Semaine / Week-end, deux groupes ; Tous les jours, la semaine entière. Changer la répartition efface la sélection. Changer la destination ou le type d’application conserve les groupes sélectionnés mais impose une nouvelle vérification. Sélectionnez l’en-tête d’un jour pour cocher cette colonne pour tous les thermostats visibles ; sélectionnez-le à nouveau pour vider une colonne entièrement cochée. Sur téléphone, le tableau défile horizontalement en gardant les noms des thermostats visibles.
+
+Seuls les thermostats avec des groupes sélectionnés adoptent la répartition choisie. Les jours non sélectionnés gardent leurs blocs et liens. Si la nouvelle répartition regroupe des jours non sélectionnés dont les configurations diffèrent, la vérification avertit qu’ils garderont **Horaires différents** ; accepter ne les rend pas identiques.
+
+Pour **Horaires uniquement**, choisissez une base si un groupe de destination a des configurations enregistrées différentes. Ce choix reste temporaire jusqu’à Appliquer. Velair propose les réglages de cette base : heure exacte d’abord, puis heures précédentes de la plus proche à la plus éloignée, puis heures suivantes. Les préréglages restent des références. La vérification identifie l’origine de chaque proposition et permet de modifier les réglages, tandis que les heures du modèle restent fixes. Il faut compléter les réglages compatibles manquants ; ceux du modèle ne servent jamais de recours silencieux. Tous les jours sélectionnés du groupe reçoivent les mêmes réglages vérifiés. Une zone de Profil sans horaire propre exige des réglages manuels au lieu d’emprunter ceux de Par défaut.
+
+La vérification liste les jours et liens remplacés, les changements de répartition, les incompatibilités et les zones de Profil passant à **Planification du Profil**. Revenir à la sélection n’enregistre rien. Appliquer valide et enregistre toute la sélection en une fois ; une destination invalide ou un conflit de révision n’applique pas partiellement les autres zones. Un échec d’enregistrement conserve la configuration précédente. Vérifiez à nouveau après un changement de source ou de configuration. Fermer avec des modifications de vérification en attente utilise la protection normale contre l’abandon.
+
+Appliquer à un Profil enregistre directement ses horaires sélectionnés ; cela n’active pas le Profil, ne sélectionne pas de Mode et ne change pas la base ou les exceptions. Modifier un horaire effectif peut affecter le contrôle climatique. La publication externe et les réponses physiques des appareils gardent leurs limites normales ; une configuration enregistrée cohérente n’est pas une réponse physique simultanée.
 
 Les liens aux modèles sont en lecture seule et regroupés par thermostat, puis par Par défaut ou Profil, avec les jours de semaine liés rassemblés. **Jours liés** compte un jour lié, quel que soit le nombre de blocs du modèle. La liste affiche ces compteurs dans une dernière ligne séparée sous le nombre de blocs de chaque modèle. Les copies indépendantes ne sont pas comptées et n’apparaissent pas dans cette liste. Dissociez tous les jours avant de supprimer un modèle ; le bouton de suppression désactivé explique cette exigence.
 

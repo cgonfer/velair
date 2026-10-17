@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -20,6 +20,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 <!-- velair-docs:end -->
 
 Room Assist permite a Velair utilizar un sensor de temperatura de la habitación independiente del equipo gestionado, manteniendo el control sobre la entidad real `climate.*`.
+
+Con un bloque **Solo temperatura**, Room Assist queda suspendido mientras el equipo está apagado. No lo enciende ni restaura un modo HVAC anterior al retirar su corrección previa. Después de un encendido externo, puede asistir usando el modo compatible real sin solicitar un cambio de modo. Actualizar el objetivo programado mientras está apagado sigue dependiendo de la integración del equipo.
 
 Resulta útil para válvulas termostáticas, válvulas de radiador, termostatos de pared o aires acondicionados cuya lectura integrada no representa la temperatura real de la habitación. Por ejemplo, una válvula junto a un radiador puede indicar `22 °C` mientras el sensor de habitación sigue indicando `20.5 °C`.
 

@@ -5136,13 +5136,15 @@ class VelairSchedulerExternalOwnershipRaceTest(unittest.IsolatedAsyncioTestCase)
             save,
             external_execution=external,
         )
+        changed_week = empty_week_schedule()
+        changed_week["tuesday"] = [{"start": "17:00", "temperature": 23, "hvac_mode": "heat"}]
         await scheduler.async_set_profile({
             "key": "mixed",
             "name": "Mixed",
             "color": "#336699",
             "zones": {
-                self.entity_id: {"behavior": "normal"},
-                external_entity: {"behavior": "normal"},
+                self.entity_id: {"behavior": "schedule", "schedule": deepcopy(changed_week)},
+                external_entity: {"behavior": "schedule", "schedule": deepcopy(changed_week)},
             },
         })
         await scheduler.async_activate_profile("mixed")
@@ -5490,6 +5492,7 @@ class VelairSchedulerExternalOwnershipRaceTest(unittest.IsolatedAsyncioTestCase)
             },
         }]
         self.data["global_"]["active_profile_ids"] = ["same"]
+        self.data["global_"]["base_profile_ids"] = ["same"]
         external = _FakeExternalExecution(self.data, save)
         scheduler = VelairScheduler(
             self.hass, self.data, self.climate, save, external_execution=external
@@ -12130,6 +12133,7 @@ class VelairSchedulerZoneRuntimeStatusTest(unittest.TestCase):
 
         default_runtime = scheduler._zone_runtime_status(self.entity_id)
         self.data["global_"]["active_profile_ids"] = ["away"]
+        self.data["global_"]["base_profile_ids"] = ["away"]
         profile_runtime = scheduler._zone_runtime_status(self.entity_id)
 
         self.assertEqual(21, default_runtime["target_temperature"])
@@ -12155,7 +12159,9 @@ class VelairSchedulerZoneRuntimeStatusTest(unittest.TestCase):
             {"key": "holiday", "name": "Holiday", "profile_ids": ["away"]}
         ]
         self.data["global_"]["active_profile_ids"] = ["away"]
+        self.data["global_"]["base_profile_ids"] = ["away"]
         self.data["global_"]["active_mode_id"] = "holiday"
+        self.data["global_"]["base_mode_id"] = "holiday"
         self.scheduler._get_active_zone_override = Mock(return_value=None)
 
         status = self.scheduler.get_zone_control_status(self.entity_id)
@@ -12202,6 +12208,7 @@ class VelairSchedulerZoneRuntimeStatusTest(unittest.TestCase):
             }
         ]
         self.data["global_"]["active_profile_ids"] = ["away"]
+        self.data["global_"]["base_profile_ids"] = ["away"]
         self.scheduler._get_active_zone_override = Mock(return_value=None)
 
         status = self.scheduler.get_zone_control_status(self.entity_id)

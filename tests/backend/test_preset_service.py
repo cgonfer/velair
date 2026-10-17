@@ -111,6 +111,7 @@ class PresetServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_hidden_default_and_inactive_profile_are_updated_without_orders(self):
         self.data["global_"]["active_profile_ids"] = ["summer"]
+        self.data["global_"]["base_profile_ids"] = ["summer"]
         await self.invoke(temperature=19)
         await self.invoke(preset_key="winter", temperature=22)
         self.assertEqual([day[0]["temperature"] for day in self.resolved()], [19, 22, 25])
@@ -218,6 +219,7 @@ class PresetServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_inactive_destination_incompatibility_reports_its_profile(self):
         self.data["global_"]["active_profile_ids"] = ["summer"]
+        self.data["global_"]["base_profile_ids"] = ["summer"]
         self.climate.hvac_modes["climate.salon"] = ["off", "heat", "cool"]
         before = deepcopy(self.data)
         with self.assertRaisesRegex(RuntimeError, "Profile winter: climate.salon"):

@@ -244,6 +244,14 @@ reason.
 
 ### Resume from `off` when the block says Keep current mode
 
+**Temperature only** is a separate block choice. During that block, an external
+HVAC mode change is left under external control and does not create a Manual
+adjustment by itself. External target-temperature changes still follow your
+configured policy. A pause or Manual adjustment still stops schedule delivery;
+resuming it applies the current block without turning an off climate on. This
+also applies when a window automation resumes the zone. An explicit Boost or a
+later block with an explicit HVAC mode can still turn it on.
+
 **Keep current mode** means the block does not provide an HVAC mode. For a
 block with a temperature target, Velair follows the normal climate delivery
 rule on resume:

@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](linked-schedules.md) · [Español](linked-sc
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -54,6 +54,24 @@ El panel muestra primero el selector de configuración, después las opciones de
 <a id="linked-templates"></a>
 
 ## Plantillas vinculadas
+
+<a id="apply-a-template-to-schedules"></a>
+
+### Aplicar una plantilla a horarios
+
+Abre **Aplicar a…** en una plantilla diaria guardada. El panel sigue **Seleccionar → Revisar → Aplicar**. Guarda primero los cambios pendientes de la plantilla; aplicar nunca guarda la plantilla compartida de forma silenciosa ni aplica una versión sin guardar.
+
+Elige **Predeterminado** o un Perfil existente y después **Copia independiente**, **Solo horarios** u **Horarios y ajustes**. Una copia independiente no tiene enlace a la plantilla; las referencias a presets de Velair siguen activas. Los enlaces de solo horas conservan asignaciones climáticas independientes. Los enlaces completos siguen tanto las horas como los ajustes de la plantilla.
+
+Elige una **Distribución de días** común y marca los grupos necesarios de cada termostato. Días individuales ofrece siete opciones; Entre semana / Fin de semana, dos grupos; Todos los días, toda la semana. Cambiar la distribución limpia la selección. Cambiar el destino o el tipo de aplicación conserva los grupos seleccionados, pero requiere una revisión nueva. Pulsa una cabecera de día para seleccionar esa columna en todos los termostatos visibles; vuelve a pulsarla para limpiar una columna completamente seleccionada. En teléfonos, la tabla se desplaza horizontalmente y los nombres de los termostatos permanecen visibles.
+
+Solo los termostatos con grupos seleccionados adoptan la distribución elegida. Los días no seleccionados conservan sus bloques y enlaces. Si la nueva distribución agrupa días no seleccionados con configuraciones distintas, Revisar avisa de que conservarán **Horarios diferentes**; aceptar no iguala esos días.
+
+Para **Solo horarios**, selecciona una base cuando un grupo de destino tenga configuraciones guardadas diferentes. Esta elección es temporal hasta Aplicar. Velair propone asignaciones climáticas de esa base: primero la hora exacta, después las anteriores de más cercana a más lejana y, por último, las posteriores. Los presets siguen siendo referencias. La revisión identifica el origen de cada propuesta y permite editar los ajustes mientras las horas de la plantilla permanecen fijas. Hay que completar las asignaciones compatibles que falten; los ajustes de la plantilla no se utilizan como alternativa silenciosa. Todos los días seleccionados de ese grupo reciben las mismas asignaciones revisadas. Una zona de Perfil sin horario propio requiere asignaciones manuales en lugar de tomar prestados los ajustes Predeterminados.
+
+Revisar muestra los días y enlaces reemplazados, los cambios de distribución, los problemas de compatibilidad y las zonas de Perfil que pasarán a **Planificación del Perfil**. Volver regresa a la selección sin guardar. Aplicar valida y guarda toda la selección una sola vez; un destino no válido o un conflicto de revisión no aplica parcialmente las demás zonas. Un fallo de guardado conserva la configuración anterior. Revisa de nuevo después de cambiar el origen o la configuración. Cerrar con cambios pendientes de revisión utiliza la protección habitual para descartar cambios.
+
+Aplicar a un Perfil guarda directamente los horarios seleccionados de ese Perfil; no lo activa, no selecciona un Modo ni modifica la selección de base/excepciones. Cambiar un horario ya efectivo puede afectar al control climático. La publicación externa y las respuestas físicas de los dispositivos conservan sus límites habituales de envío; una configuración guardada coherente no es una respuesta física simultánea.
 
 Los vínculos de plantilla son de solo lectura y se agrupan por termostato y después por Predeterminado o Perfil, con los días de la semana vinculados enumerados juntos. **Días vinculados** cuenta un día vinculado, independientemente del número de bloques de la plantilla. La lista muestra estos recuentos de días en una última fila separada debajo del recuento de bloques de cada plantilla. Las copias independientes no se cuentan ni aparecen en esta lista. Desvincula todos los días antes de eliminar una plantilla; el botón de eliminar desactivado explica este requisito.
 

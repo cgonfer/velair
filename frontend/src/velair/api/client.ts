@@ -44,6 +44,14 @@ export class VelairApiClient {
     return this.hass.connection.sendMessagePromise({ type: "velair/arrive_planned_return" });
   }
 
+  public previewTemplateApplication(request: import("../types").TemplateApplicationRequest): Promise<import("../types").TemplateApplicationPreview> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_template_application", ...request });
+  }
+
+  public applyTemplateApplication(request: import("../types").TemplateApplicationRequest): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/apply_template_application", ...request });
+  }
+
   public getSchedule(): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/get_schedule",
@@ -88,6 +96,10 @@ export class VelairApiClient {
     return this.hass.connection.subscribeMessage<ScheduleUpdateMessage>(callback, {
       type: "velair/subscribe_updates",
     });
+  }
+
+  public setScheduleDays(entityId: string, options: { weekdays?: string[]; blocks?: ScheduleBlock[]; template_link?: TemplateLink; unlink_template?: boolean; day_layout_key?: string; expected_revision: number }): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/set_schedule_days", entity_id: entityId, ...options });
   }
 
   public setDailySchedule(entityId: string, weekday: string, blocks: ScheduleBlock[], options: { expected_revision?: number; unlink_template?: boolean; template_link?: TemplateLink } = {}): Promise<ScheduleResponse> {
@@ -181,6 +193,22 @@ export class VelairApiClient {
       type: "velair/activate_profile",
       profile_id: key ?? null,
     });
+  }
+
+  public activateProfiles(profileIds: string[]): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/activate_profiles", profile_ids: profileIds });
+  }
+
+  public applyProfiles(profileIds: string[]): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/apply_profiles", profile_ids: profileIds });
+  }
+
+  public setZoneProfile(entityId: string, profileId: string | null): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/set_zone_profile", entity_id: entityId, profile_id: profileId });
+  }
+
+  public clearProfileOverrides(entityIds: string[]): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/clear_profile_overrides", entity_id: entityIds });
   }
 
   public setVelairMode(mode: VelairModeInput): Promise<ScheduleResponse> {

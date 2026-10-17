@@ -147,9 +147,10 @@ export function formatEventAction(
 
 export function formatEventMode(
   event: ScheduleEvent,
-  labels: { keepMode: string },
+  labels: { keepMode: string; temperatureOnly?: string },
   modeLabel: (mode: string) => string,
 ): string {
+  if (event.temperature_only) return labels.temperatureOnly ?? "Temperature only";
   if (event.hvac_mode) {
     return modeLabel(event.hvac_mode);
   }

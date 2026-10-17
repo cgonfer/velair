@@ -199,6 +199,8 @@ class ExternalExecutionManager:
             ATTR_SWING_HORIZONTAL_MODE,
             ATTR_SWING_MODE,
         }
+        if block.get("temperature_only") is True and not capabilities.supports_temperature_only:
+            raise ValueError("External schedules do not support temperature-only blocks")
         action = block.get("action", ACTION_SET_TEMPERATURE)
         if action not in capabilities.supported_actions:
             raise ValueError(f"External schedules do not support {action} blocks")

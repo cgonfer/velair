@@ -154,7 +154,13 @@ Velair calculates upcoming events in the backend and schedules exact one-shot ca
 
 During a Planned Return episode, Overview shows a compact household summary
 with the weekly or one-off origin, current process and applicable confirmation
-or arrival time. Select it to open Planned Return in Preconditioning; the summary
+or arrival time. It uses the usual theme card background, with a subtle violet
+border and main return icon; other icons keep their surrounding text color.
+An accepted future return adds preparation counts as icons with
+hover, keyboard and touch help. Confirmed departures show a compact read-only
+timeline with departure/arrival times and Modes, beside the summary when space
+permits or below it in narrower containers. Its navigation button opens Planned
+Return in Preconditioning; the summary
 does not duplicate the departure controls. An incidence can remain visible even
 when no departure is currently running.
 
@@ -167,6 +173,12 @@ priority. A climate that simply keeps Default scheduling under a custom Away Mod
 does not acquire an Away signal. The indicator describes control intent, not
 proof that a command was successfully delivered or that the room has reached its
 target.
+
+Return preparation information is separate from that authority indicator: each
+climate can show its waiting, preparing, reached, suspended, unavailable or
+arrival-only state, estimated start, arrival target and relevant reason even
+while it still follows Away. Missing estimates are not replaced with guessed
+times. Inactive returns do not retain a future preparation preview.
 
 When a managed climate does not publish `target_temp_step`, its row in
 **Settings** shows **Temperature step**. Velair uses `1` by default and lets the
@@ -282,7 +294,7 @@ After setup, Velair appears in the Home Assistant sidebar.
 
 The sidebar panel is the recommended interface. The optional Lovelace card is useful when you want to embed specific Velair panels in an existing dashboard.
 
-The Overview next-events list shows the next planned event for each managed climate, including events moved earlier by preconditioning. This list is for user visibility; Velair still schedules the earliest due action internally.
+The Overview next-events list and dashboard next-event cards show the next projected control change for each managed climate, including estimated preparation and arrival transitions during a confirmed Planned Return. All rows share a compact name/source/time/action/HVAC layout, without a state subtitle under the climate name. The trailing information helper explains the phase and, when return takes priority, provides the arrival Mode, suspension details and current weekly reference. Helpers open by hover, keyboard focus or tap. Suspensions explain higher-priority blockers rather than promising a blocked start. Existing next-event sensors and dedicated weekly anticipation views retain their weekly meaning. This forecast is for user visibility; it does not change scheduler execution or confirm device delivery.
 
 Zone overview uses compact responsive cards to answer what Velair and the
 climate device are doing now in each room. When the climate entity reports
@@ -297,8 +309,13 @@ followed by its active Profile and the ordered Room Assist/Comfort/air/data
 signals. At very wide card widths these signals and the compact status summary
 share the card header. In narrow cards, including mobile and compact Lovelace
 layouts, the climate identity and compact status remain aligned side by side,
-while complete Profile/Comfort signals use the full row below instead of
-shrinking or truncating their meaning. The summary uses a consistent icon,
+while Profile/Comfort signals use the full row below. Profile, return, Room
+Assist and Comfort/air/data chips share compact typography and a split
+icon/label-and-value layout. Return uses a subdued purple accent; Comfort
+accents continue to distinguish normal, information, warning and error states.
+Long signal values may be shortened visually to preserve the compact height;
+their full text remains available through hover, keyboard focus or tap help.
+The summary uses a consistent icon,
 balanced text, and restrained activity accent without a fixed heading or
 decorative outer badge. When Room Assist is active or holding, details are
 grouped as
@@ -358,11 +375,12 @@ visible but disabled when the saved configuration or scheduler is unavailable.
 The sidebar uses the same Cancel/Change arrival buttons and fresh planning form.
 Only trailing occupancy/delay indicators are card-specific; the sidebar retains
 the complete weekly, presence and preparation configuration. Both surfaces show a
-compact phase subtitle attached to the title, with a native tooltip explaining
+compact phase subtitle attached to the title, with contextual help explaining
 the phase. During confirmation the process heading supplies that context. Before confirmed departure, an accessible arrival icon and **Expected arrival** label identify the saved
 return, aligned with the title/state text; its saved value is a compact
-clickable chip without pencil or underline. The confirmed graph instead keeps
-its underlined date/time and leading pencil. Either opens the same arrival editor. The blue **Back** button with a left arrow in the editor action row discards the arrival edit and closes it locally, restoring the latest saved
+clickable chip without pencil or underline. The confirmed graph uses a dark
+field-like arrival surface with the same typography as departure, without a
+pencil or underline. Either opens the same arrival editor. The blue **Back** button with a left arrow in the editor action row discards the arrival edit and closes it locally, restoring the latest saved
 arrival. Its warning and navigation guard clear; independent unsaved routine
 configuration remains protected. Reopening starts from the saved value. Success closes
 it, while failed saves and live updates preserve the draft. Departure and arrival
@@ -379,31 +397,29 @@ or the weekly routine switch. Thermostat display filters do not limit this
 household card. Dashboard and sidebar controls update the same backend episode;
 arrival drafts remain local to each open card until submitted.
 
-During a confirmed absence, departure/arrival icons flank the timeline rail.
-Saved times sit directly below the endpoint icons; the arrival value retains its pencil. Back closes the editor from the action row; no close control sits
-beside the time. Plain icon-and-text Mode labels below the saved times identify Away/Return without
-repeating labels. The timeline shows the actual confirmed departure
-and saved return time, with the episode's Away and Return Mode names. The current-time point has a localized **Now** tooltip and
-marks elapsed UTC time between those endpoints, clamped to the bar. Dates appear
-when departure and arrival are on different days in Home Assistant's time zone.
-Editing an arrival does not move the endpoint until the backend accepts it.
-Pending, completed, cancelled, skipped or errored returns have no moving bar.
-The local clock refreshes once per minute while the active card or sidebar is visible;
-it does not poll Home Assistant. The colored elapsed rail represents time, not
-room temperature progress. If no reliable first start is available, a small
-information button beside the One-off return title explains suspended, reached, arrival-only or excluded rooms
-when the current preview agrees; missing or mixed information stays inconclusive.
-Hover or focus the button on desktop, or tap it on mobile; Escape or an outside
-interaction closes the help. A backend estimate can add an Estimated
-preparation clock marker for the earliest eligible room. Its softly blue-tinted
-caption expands to show eligible rooms and estimated start times, ordered
-chronologically. It starts collapsed; each room may start separately. Ordinary
-updates keep the list open, while a changed saved arrival or episode closes it.
-Arrival editing hides the callout and fallback help, preserving the saved rail
-estimate; Back restores the same episode’s disclosure state. This is an advisory estimate, not actual
-HVAC or thermal progress. The weekly summary, source list and room preparation
-detail remain in the sidebar.
+During a confirmed absence, saved departure and editable arrival times sit
+above the timeline; Away and Return Mode labels sit below it. Departure time,
+arrival icon and Mode helpers explain their meaning by hover, keyboard focus
+or tap. The arrival date remains a separate edit button. A neutral vertical
+Now tick marks elapsed UTC time and aligns with the end of the colored rail.
+Dates appear when the endpoints are on different days in Home Assistant's time
+zone. Editing an arrival draft does not move the endpoint until accepted.
+Pending and terminal states, or missing confirmed departure data, have no
+moving timeline. An active error episode with valid departure data retains
+its timeline and cancellation. The local clock refreshes once per minute while
+visible and active; it does not poll Home Assistant.
 
+Eligible adaptive climates have individual colored preparation points and
+matching legends with names and visible estimated start times, plus full-detail helpers. Overlapping points share a segmented
+circle. Suspended, reached, unavailable and arrival-only rooms do not receive
+points. The household card's legend starts on one line; +N expands more rooms
+inside the card and Show less collapses it. Ordinary updates preserve expansion;
+a changed saved arrival, destination or episode resets it. Household preparation
+badges retain counts and arrival/earliest-start details in contextual helpers.
+Presence counters, confirmation delay and the current phase also have keyboard
+and mobile helpers. Weekly configuration, the source list and the full room
+preparation detail remain in the sidebar. Estimated preparation and elapsed
+time do not confirm physical HVAC operation or thermal progress.
 ### Climate status and control card
 
 Use `view: climate` for a compact card dedicated to one Velair-managed
@@ -579,7 +595,16 @@ second line when enabled. Only displays that include the graphic can collapse;
 text-only mode stays visible and has no misleading expansion control.
 
 `climate_preconditioning_display` follows the same `text`, `chart`, or `both`
-model. Its heading keeps the scheduled or active state visible, and its optional
+model. Accepted return preparation is identified separately from weekly schedule
+anticipation, with the room's state, estimated start, arrival target and relevant
+reason. These details describe the saved return and current control intent;
+they do not confirm physical device operation. Embedded One-off return controls
+show only the selected climate's eligible preparation point, without preparation
+badges, and retain its name and estimated start in the legend. If no current point is available, a brief state/reason
+explanation replaces the timeline. The saved arrival remains editable and
+cancellation remains available; these actions still affect the household return.
+Its timeline measures time toward arrival, not thermal progress.
+The preconditioning heading keeps the scheduled or active state visible, and its optional
 second line identifies the target and calculated start. The graphic-only mode
 keeps just that state above the expandable preview. Both graphical sections
 start collapsed unless configured otherwise, and the initial-state option is
@@ -640,13 +665,39 @@ view: active-setup
 active_setup_controls: profiles
 ```
 
-The option defaults to `both`, and every variant still shows the current Mode
-and applied Profiles. The Profiles-only control retains a Default schedules
+The option defaults to `both`, and every variant still shows **Base** and
+**Exceptions**, with the base's actual Mode/Profile/Default identity and
+exception groups showing their room counts. Base and its type share a small
+context row above the name; long names wrap on phones and narrow cards.
+The base also shows how many of its included zones still inherit it; exceptions
+are excluded, as are zones using Default outside a Profile's scope. Default
+bases include all managed zones. This is selection coverage, not device activity.
+The **Household distribution** disclosure beneath the base summary is closed
+initially. Select its label to show the bar and legend together; select again
+or press Escape to collapse, leaving the header in place. The bar covers all
+managed zones, with a label stating their total. Its compact legend uses Profile
+colors, smaller icons and a right-aligned count column. Exception counts match
+the list, including zones outside
+the base. Uncovered zones without exceptions form a neutral Default segment.
+This household total is separate from the base's own coverage denominator.
+No managed zones means no distribution bar.
+Base Profiles are identified in the expanded legend without a separate Mode
+component list. Wider layouts give more space to
+exceptions, while narrow cards retain the stacked summary.
+Select anywhere on an exception row to expand its rooms beneath that row,
+keeping all exceptions visible. Select it again or press Escape to collapse it;
+the selected header and count stay in place as the content grows downwards.
+Opening another group closes the previous one. Room names are not shown
+in the compact summary, and long lists scroll inside the expanded area. This detail is
+read-only in every control variant; Active setup contains no separate per-zone
+editing menu. The Profiles-only control retains a Default schedules
 action. Selecting a Profile directly replaces all previously active Profiles
 and changes the Mode to Manual. Zones no longer covered by the new Profile
 return to their Default schedules instead of keeping the previous Mode's
 configuration. Use a Mode when several non-overlapping Profiles should be
-activated together.
+activated together as a base. The compact layers icon applies a Profile only
+to its configured zones as exceptions and preserves other room selections.
+See [base and zone exceptions](climate-profiles.md#a-base-with-independent-zone-exceptions).
 
 ```yaml
 type: custom:velair-card
@@ -683,7 +734,7 @@ selection is then preserved while you move between thermostats, Default and
 Profile schedules, or refreshed backend data.
 
 1. Select the climate you want to configure.
-2. Select the weekday.
+2. Choose a **Day layout**, then select a day or a group of days.
 3. Use **Own schedule** for independent blocks, or select a template with
    **Times only** or **Times and settings**. For independent blocks, continue below.
 4. Add a block.
@@ -747,6 +798,29 @@ service report any device-specific failure. Native ranges still require
 explicit range support, and Velair never converts a single target into a
 range or a range into a single target.
 
+Choose **Temperature only** in the block's mode selector to update its target
+without asking Velair to turn the climate on or change its HVAC mode. An off
+climate stays off when its integration accepts target updates while off; a
+running climate retains its actual mode. This is a separate choice: existing
+**Keep current mode**, explicit modes, and saved schedules keep their behavior.
+Temperature-only blocks cannot include additional climate options such as a
+preset, because those commands could change the device's operating state.
+
+This choice applies throughout the active block, including manual HVAC mode
+changes, startup, resume, and delivery recovery. Changing only the HVAC mode
+does not start a Manual adjustment; changing the temperature still follows the
+configured external-change policy. Room Assist and advance preparation do not
+operate while that temperature-only climate is off. They may resume after an
+external turn-on, using the current compatible mode. An explicit Boost remains
+a separate request that can turn the climate on.
+
+Support depends on the climate integration. Some integrations hide or reject
+temperature targets while off, or turn on internally when receiving one. Velair
+does not send a mode change or turn-on as a fallback for a temperature-only
+block. A failed update is reported; Velair does not briefly turn the device on
+to set its target. Native ranges require the corresponding range capability.
+External schedule providers must explicitly support this block policy.
+
 The editor keeps selected climate options visible in a compact line. For a
 block with climate options, open its options control to see what it will send:
 the target (if any), how the HVAC mode is handled, and the selected options.
@@ -766,6 +840,74 @@ assume that a device's `auto` mode uses the same lower and upper target model.
 When the selected climate exposes extra controls, the block editor also shows those controls. For example, an AC may expose fan mode, preset mode, swing mode, horizontal swing mode, or humidity. Velair only stores and sends options supported by the selected climate; unsupported options are omitted instead of being sent blindly.
 
 If a block uses `Off`, target fields are not used because the block turns the climate entity off.
+
+**Day layouts and editing several days**
+
+Each climate's Default schedule and each climate schedule inside a Profile
+remembers its own **Day layout**. Choose **Individual days**, **Weekdays / Weekend**,
+or **All days** before selecting a day tab. Existing schedules
+start with Individual days.
+
+All layouts keep the same seven day cells in your configured week order.
+Individual days selects one cell. Weekdays / Weekend selects Monday through
+Friday together, or Saturday and Sunday together, whichever day you click.
+With Sunday first, selecting Saturday also selects Sunday at the opposite end
+of the strip. All days selects every cell regardless of which one you click.
+Adjacent selected cells are visually connected; separated cells keep their
+positions. Clicking a cell in the already selected group preserves your draft.
+
+Selecting a division also preserves the existing blocks. Save the selection
+with the Default schedule, or use **Save profile** for a Profile. Each zone can
+use a different division. Daily templates remain daily block lists.
+
+When the selected days have identical saved configurations, edit their common
+schedule directly. If they differ, **Different schedules** lets you inspect
+the available schedules and explicitly choose a base. Days with identical
+blocks and template links share one alternative, with their day labels visible.
+Each alternative uses Overview's compact timeline bars, with target and mode
+labels inside the colored segments and no permanent block list underneath.
+The information icon opens the complete schedule, including times, settings
+and references, on hover, keyboard focus or tap. Inspecting this information
+does not select the alternative. Click or tap an alternative
+to select it as the base; its background and border identify the single
+selected configuration. Keyboard users can select with the arrow keys, Space
+or Enter. The alternatives remain available so you can choose another base
+before saving. With **All days** or **Weekdays / Weekend**, select an alternative
+and save it for the selected group first: seven days, five weekdays or two
+weekend days. Selecting the alternative and pressing **Save** applies it
+directly, without another replacement confirmation. The common block editor
+opens only after that save succeeds; you can then change the shared schedule.
+A failed save keeps your selection and the comparison available to retry.
+Empty alternatives show **No own blocks** without repeating a zero-block count.
+Their information explains that applying them removes the selected days' own
+blocks; an empty day is not an off command, and weekly continuity can still apply.
+The layout fits mobile widths.
+Choosing a base does not save anything. **Save** is disabled until a base is
+selected and appears below the content, aligned to the right. A summary beside
+Save identifies the chosen source day and the days that will receive its schedule.
+Saving then
+replaces the selected group's days with the chosen configuration, leaving other
+days intact. Identical visible temperatures do not imply identical
+configuration when template links or preset references differ. When alternatives
+look alike because their effective settings match, compact dependency labels
+identify their template and link scope, preset names or independent configuration.
+Complete reference details remain available from the information icon.
+
+Adding, removing or moving blocks, applying a template, changing its link
+scope, and unlinking apply to all selected days when saved. Other days remain
+unchanged. **Save as template** saves one reusable daily list. Copying to other
+climates targets the same selected weekdays and keeps their own day layouts.
+To use day-to-day cloning, return to Individual days.
+
+The grouped timeline shows the common blocks you are editing, without a
+separate day-preview selector or a day-specific inherited segment. Individual
+days still shows continuity from the preceding day. The scheduler's weekly
+continuity remains unchanged, and inherited blocks are never copied into saved
+blocks. Device limits are validated for each affected day before a complete save.
+
+Day layouts survive Home Assistant restarts and portable exports. Older exports
+without a layout import with Individual days. Earlier custom layout references
+also open as Individual days, preserving every day's blocks and template links.
 
 ## Timeline Editing
 

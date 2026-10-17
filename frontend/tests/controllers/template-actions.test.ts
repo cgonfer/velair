@@ -198,44 +198,8 @@ describe("template actions controller", () => {
     ]);
   });
 
-  it("applies templates only to valid checked targets and validates modes first", async () => {
-    const { api, state } = host();
-    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
-    toggleTemplateApplyTargetForHost(state, "climate.unknown", "tuesday", true);
 
-    await applyTemplateToTargets(state, template);
 
-    expect(api.setDailySchedule).toHaveBeenCalledWith("climate.office", "tuesday", [
-      { action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 22, hvac_mode: "heat" },
-    ]);
-    expect(state._templateApplyTargets.size).toBe(0);
-  });
-
-  it("reports unsupported options before applying a template to any target", async () => {
-    const { api, state } = host();
-    state._templateDraftBlocks = [{
-      action: ACTION_SET_CLIMATE_OPTIONS, start: "08:00", preset_mode: "eco",
-    }];
-    api.previewDailySchedule.mockImplementation(async (entityId, _day, input) => {
-      if (entityId === "climate.bedroom") throw new Error('climateOptionsUnsupportedAt:{"entity":"climate.bedroom","start":"08:00"}');
-      return { materialized_blocks: input.blocks };
-    });
-    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
-    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
-    await applyTemplateToTargets(state, template);
-    expect(api.setDailySchedule).not.toHaveBeenCalled();
-    expect(state._error).toBe('climateOptionsUnsupportedAt:{"entity":"climate.bedroom","start":"08:00"}');
-  });
-
-  it("stops template application when a target climate does not support a mode", async () => {
-    const { api, state } = host();
-    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
-
-    await applyTemplateToTargets(state, template);
-
-    expect(api.setDailySchedule).not.toHaveBeenCalled();
-    expect(state._error).toBe("unsupported heat");
-  });
 
   it("copies only backend materialized manual values and retains preset references", async () => {
     const { api, state } = host();
@@ -263,19 +227,6 @@ describe("template actions controller", () => {
     expect(state._markDirty).not.toHaveBeenCalled();
   });
 
-  it("previews each destination before writing and uses its adapted values", async () => {
-    const { api, state } = host();
-    state._templateDraftBlocks = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.3 }];
-    api.previewDailySchedule.mockImplementation(async (entity, _day, input) => ({ materialized_blocks: [{ ...input.blocks[0], temperature: entity === "climate.office" ? 18.5 : 18 }] }));
-    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
-    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
-    await applyTemplateToTargets(state, template);
-    expect(api.previewDailySchedule).toHaveBeenCalledTimes(2);
-    expect(api.setDailySchedule).toHaveBeenNthCalledWith(1, "climate.office", "tuesday", [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.5 }]);
-    expect(api.setDailySchedule).toHaveBeenNthCalledWith(2, "climate.bedroom", "tuesday", [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18 }]);
-    expect(Math.max(...api.previewDailySchedule.mock.invocationCallOrder)).toBeLessThan(Math.min(...api.setDailySchedule.mock.invocationCallOrder));
-    expect(state._templateDraftBlocks[0].temperature).toBe(18.3);
-  });
 
   it("saves a full linked day as a template using materialized manual values and presets", async () => {
     const { api, state } = host();
@@ -291,21 +242,5 @@ describe("template actions controller", () => {
     expect(state._draftBlocks[0].temperature).toBe(18.3);
   });
 
-  it("continues template writes when their own revisions arrive through subscriptions", async () => {
-    const { api, state } = host();
-    Object.assign(state._data, { configuration_revision: 4, zones: { "climate.office": { template_links: {} }, "climate.bedroom": { template_links: {} } } });
-    state._templateDraftBlocks = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, temperature: 18.3 }];
-    let revision = 4;
-    api.setDailySchedule.mockImplementation(async () => {
-      const updated = { ...state._data, configuration_revision: ++revision };
-      Object.assign(state, { _data: updated });
-      return updated as never;
-    });
-    toggleTemplateApplyTargetForHost(state, "climate.office", "tuesday", true);
-    toggleTemplateApplyTargetForHost(state, "climate.bedroom", "tuesday", true);
-    await applyTemplateToTargets(asTemplateActionsHost(state), template);
-    expect(api.setDailySchedule).toHaveBeenCalledTimes(2);
-    expect(api.setDailySchedule.mock.calls.map((call) => call[3])).toEqual([{ expected_revision: 4, unlink_template: false }, { expected_revision: 5, unlink_template: false }]);
-    expect(state._showSuccess).toHaveBeenCalled();
-  });
+
 });

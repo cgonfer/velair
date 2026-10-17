@@ -3,6 +3,73 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { VelairCard } from "../../src/velair/components/velair-card-element";
 import { VelairPanel } from "../../src/velair/views/panel";
+import { registerVelairFrontend } from "../../src/velair/registration";
+
+describe("frontend registration", () => {
+  beforeEach(() => {
+    window.customCards = undefined;
+    window.velairFrontendBuild = undefined;
+    window.velairFrontendVersion = undefined;
+  });
+
+  it("creates picker metadata once across repeated registration", () => {
+    const options = {
+      build: "test-build",
+      version: "test-version",
+      customCard: { type: "velair-card", name: "Velair", description: "Climate automation" },
+      elements: { "velair-registration-repeat-test": class extends HTMLElement {} },
+    };
+
+    registerVelairFrontend(options);
+    const cards = window.customCards;
+    registerVelairFrontend(options);
+
+    expect(customElements.get("velair-registration-repeat-test"))
+      .toBe(options.elements["velair-registration-repeat-test"]);
+    expect(window.customCards).toBe(cards);
+    expect(window.customCards).toEqual([options.customCard]);
+    expect(window.velairFrontendBuild).toBe("test-build");
+    expect(window.velairFrontendVersion).toBe("test-version");
+  });
+
+  it("preserves other picker entries when adding Velair", () => {
+    const otherCard = { type: "another-card", name: "Another card", description: "Existing entry" };
+    const cards = [otherCard];
+    window.customCards = cards;
+    const customCard = { type: "velair-card", name: "Velair", description: "Climate automation" };
+
+    registerVelairFrontend({ build: "new-build", customCard, elements: {} });
+
+    expect(window.customCards).toBe(cards);
+    expect(window.customCards).toEqual([otherCard, customCard]);
+  });
+
+  it("preserves previously registered elements and metadata while registering missing elements", () => {
+    class ExistingCard extends HTMLElement {}
+    class ReplacementCard extends HTMLElement {}
+    class MissingEditor extends HTMLElement {}
+    customElements.define("velair-registration-existing-test", ExistingCard);
+    const existingMetadata = { type: "velair-card", name: "Velair", description: "Existing metadata" };
+    window.customCards = [existingMetadata];
+    window.velairFrontendVersion = "previous-version";
+
+    registerVelairFrontend({
+      build: "current-build",
+      customCard: { type: "velair-card", name: "Velair", description: "New metadata" },
+      elements: {
+        "velair-registration-existing-test": ReplacementCard,
+        "velair-registration-missing-test": MissingEditor,
+      },
+    });
+
+    expect(customElements.get("velair-registration-existing-test")).toBe(ExistingCard);
+    expect(customElements.get("velair-registration-missing-test")).toBe(MissingEditor);
+    expect(window.customCards).toEqual([existingMetadata]);
+    expect(window.customCards?.[0]).toBe(existingMetadata);
+    expect(window.velairFrontendBuild).toBe("current-build");
+    expect(window.velairFrontendVersion).toBeUndefined();
+  });
+});
 
 describe("frontend entrypoint", () => {
   beforeEach(() => {

@@ -2,6 +2,7 @@ import { PORTABLE_SECTIONS } from "../constants";
 import { directPresetUseCount } from "../domain/preset-usages";
 import {
   portableExportSummaryItems,
+  portableImportRemovedProfileOverrides,
   portableImportSummaryItems,
   portableSectionsFromPayload,
   portableSectionsWithDependencies,
@@ -136,6 +137,9 @@ export async function importPortableData(host: PortabilityHost): Promise<void> {
       if (!window.confirm(`${host._t("presetImportOverwriteConfirm")}\n${details}`)) return;
     }
   }
+
+  const removedOverrides = portableImportRemovedProfileOverrides(host._data, host._importPayload, host._importSections);
+  if (removedOverrides.length && !window.confirm(`${host._t("profileImportOverridesWarning")}\n${removedOverrides.join("\n")}`)) return;
 
   host._portabilityAction = "import";
   host._error = undefined;

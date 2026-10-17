@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -85,6 +85,8 @@ Beim Start laufen Prüfungen für Anwesenheit, Abwesenheit und Verfügbarkeit al
 
 <a id="safety-and-precedence"></a>
 ## Sicherheit und Vorrang
+
+Modus- und Profilaktionen verwenden die Blockrichtlinie des ausgewählten Zeitplans. **Nur Temperatur** aktualisiert den Sollwert ohne Anforderung eines HVAC-Moduswechsels. Die Auswahl von Zuhause schaltet ein ausgeschaltetes Klimagerät daher nicht zwingend ein. Wähle explizite Blöcke mit **Heizen** oder **Kühlen**, wenn Zuhause die Klimatisierung starten soll. Direkte Klimaaktionen dieses Blueprints bleiben ausdrückliche Home-Assistant-Aktionen; die Blockrichtlinie unterdrückt sie nicht.
 
 Der Blueprint führt nur deine konfigurierten Aktionen aus. Die bestehenden Vorrangregeln von Velair für Modi, Profile, temporäre Anpassungen und Pausen gelten weiterhin. Eine Anwesenheitsentität mit `unknown` oder `unavailable` aktiviert weder Zuhause noch Abwesend. Die Warnung nennt die Entität und erklärt, dass die Aktionen ausgesetzt bleiben, bis ein unterstützter Anwesenheits- oder Abwesenheitszustand gemeldet wird.
 

@@ -50,7 +50,9 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
         self.runtime.episode['away_mode_id'] = 'default'
         self.data['global_']['active_mode_id'] = None
+        self.data['global_']['base_mode_id'] = None
         self.data['global_']['active_profile_ids'] = []
+        self.data['global_']['base_profile_ids'] = []
         self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['profile_id'], None)
         self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['effect'], 'schedule')
         self.data['zones']['climate.salon']['schedule']['tuesday'][0] = {'start': '00:00', 'action': 'turn_off'}
@@ -65,15 +67,19 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         for active_ids in ([], ['independent_profile'], ['independent_profile', 'away_profile']):
             with self.subTest(active_ids=active_ids):
                 self.data['global_']['active_profile_ids'] = active_ids
+                self.data['global_']['base_profile_ids'] = active_ids
                 self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
         self.data['global_']['active_profile_ids'] = ['away_profile', 'independent_profile']
+        self.data['global_']['base_profile_ids'] = ['away_profile', 'independent_profile']
         self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['profile_id'], 'away_profile')
         self.runtime.episode['away_mode_id'] = 'default'
         self.data['global_']['active_mode_id'] = None
+        self.data['global_']['base_mode_id'] = None
         self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
         # An unrelated active profile does not replace this climate's Default fallback.
         other['zones'] = {}
         self.data['global_']['active_profile_ids'] = ['independent_profile']
+        self.data['global_']['base_profile_ids'] = ['independent_profile']
         self.assertIsNone(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['profile_id'])
 
     async def test_runtime_attribution_uses_due_target_without_extra_prediction(self):
@@ -433,7 +439,9 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             with self.subTest(mode=mode):
                 self.data['planned_return_episode'] = None
                 self.data['global_']['active_profile_ids'] = []
+                self.data['global_']['base_profile_ids'] = []
                 self.data['global_']['active_mode_id'] = None
+                self.data['global_']['base_mode_id'] = None
                 self.runtime.stop()
                 self.data['zones']['climate.salon']['schedule']['tuesday'] = [{'start': '00:00', 'hvac_mode': mode, **goal}]
                 self.data['zones']['climate.salon']['preconditioning']['enabled'] = True
@@ -1096,7 +1104,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             'state': 'armed', 'origin': 'manual', 'started_at': later.isoformat(),
             'return_at': new_arrival.isoformat(), 'away_mode_id': 'default',
             'destination_mode_id': 'away', 'preparing_entities': [],
-            'previous_selection': {'mode_id': 'away', 'profile_ids': ['away_profile']},
+            'previous_selection': {'base_mode_id': 'away', 'base_profile_ids': ['away_profile'], 'zone_profile_overrides': {}},
         })
         self.assertEqual(self.runtime._confirmation, later + timedelta(minutes=10))
         self.assertGreater(self.runtime._generation, old_generation)
@@ -1978,7 +1986,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         if mode:
             await self.scheduler.async_set_velair_mode({'key': 'home_mode', 'name': 'Home', 'profile_ids': ids})
         await self.scheduler._async_activate_profiles_locked(ids, source='planned_return', mode_id='home_mode' if mode else None)
-        return {'mode_id': 'home_mode' if mode else None, 'profile_ids': ids}
+        return {'base_mode_id': 'home_mode' if mode else None, 'base_profile_ids': ids, 'zone_profile_overrides': {}}
 
     async def test_cancel_restores_exact_custom_mode_and_manual_combination(self):
         for mode in (True, False):
@@ -2049,7 +2057,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 else:
                     next(item for item in self.data['modes'] if item['key'] == 'home_mode')['profile_ids'] = ['away_profile']
                 await self.scheduler.async_cancel_planned_return()
-                self.assertEqual(self.scheduler.active_profile_ids, previous['profile_ids'])
+                self.assertEqual(self.scheduler.active_profile_ids, previous['base_profile_ids'])
                 self.assertIsNone(self.scheduler.active_mode_id)
 
     async def test_cancel_missing_previous_profile_and_legacy_remain_cancellable(self):
@@ -2098,7 +2106,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         for selection in ({'mode_id': None, 'profile_ids': []}, {'mode_id': 'home', 'profile_ids': ['a', 'b']}):
             with self.subTest(selection=selection):
                 normalized = normalize_planned_return_episode(raw | {'previous_selection': selection}, self.runtime.config)
-                self.assertEqual(normalized['previous_selection'], selection)
+                self.assertEqual(normalized['previous_selection'], {'base_mode_id': selection['mode_id'], 'base_profile_ids': selection['profile_ids'], 'zone_profile_overrides': {}})
         for selection in ({'profile_ids': []}, {'mode_id': '', 'profile_ids': []}, {'mode_id': ' home ', 'profile_ids': []}, {'mode_id': None, 'profile_ids': ['a', 'a']}, {'mode_id': None, 'profile_ids': [None]}):
             with self.subTest(selection=selection):
                 normalized = normalize_planned_return_episode(raw | {'previous_selection': selection}, self.runtime.config)
@@ -2170,3 +2178,59 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         target = self.scheduler.get_active_target_event('climate.salon')
         self.assertEqual(target.hvac_mode, 'heat_cool')
         self.assertEqual((target.target_temp_low, target.target_temp_high), (18, 24))
+
+    async def test_cancel_restores_previous_selection_with_explicit_default_override(self):
+        await self.select_previous()
+        await self.scheduler.async_set_zone_profile('climate.salon', None, source='planned_return')
+        previous = self.scheduler.profile_selection
+        await self.depart()
+        self.assertEqual(self.runtime.episode['previous_selection'], previous)
+        self.assertEqual(self.scheduler.profile_selection['zone_profile_overrides'], {})
+        await self.scheduler.async_cancel_planned_return()
+        self.assertEqual(self.scheduler.profile_selection, previous)
+        self.assertIsNone(self.scheduler.effective_zone_profiles['climate.salon'])
+
+    async def test_return_default_clears_overrides_even_when_base_is_already_default(self):
+        await self.scheduler.async_activate_profiles([])
+        await self.scheduler.async_set_zone_profile('climate.salon', 'away_profile')
+        self.assertEqual(self.scheduler.active_profile_ids, [])
+        self.assertIsNone(self.scheduler.active_mode_id)
+        await self.runtime._select('default')
+        self.assertEqual(self.scheduler.profile_selection['zone_profile_overrides'], {})
+        self.assertIsNone(self.scheduler.effective_zone_profiles['climate.salon'])
+
+    async def test_zone_selection_second_save_failure_keeps_cancelled_return(self):
+        await self.depart()
+        previous_selection = self.scheduler.profile_selection
+        calls = 0
+        async def save():
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError('selection storage failed')
+        self.save.side_effect = save
+        with self.assertRaises(OSError):
+            await self.scheduler.async_set_zone_profile('climate.salon', None)
+        self.assertEqual(self.scheduler.profile_selection, previous_selection)
+        self.assertNotEqual(self.runtime.episode['state'], 'away')
+
+    async def test_previous_profile_override_and_default_survive_restart_and_restore(self):
+        await self.select_previous(combo=True)
+        self.hass.states['climate.office'] = SimpleNamespace(state='heat', attributes={'current_temperature': 19})
+        work = deepcopy(self.scheduler._profile_by_id('office_profile'))
+        work.update(key='work_profile', name='Work')
+        work['zones']['climate.office']['schedule']['tuesday'][0]['temperature'] = 22
+        await self.scheduler.async_set_profile(work)
+        await self.scheduler.async_set_zone_profile('climate.office', 'work_profile', source='planned_return')
+        await self.scheduler.async_set_zone_profile('climate.salon', None, source='planned_return')
+        previous = self.scheduler.profile_selection
+        await self.depart()
+        normalized = normalize_schedule_data(deepcopy(self.data), ['climate.salon', 'climate.office'])
+        restarted = VelairScheduler(self.hass, normalized, self.climate, self.save)
+        try:
+            self.assertEqual(restarted._planned_return.episode['previous_selection'], previous)
+            await restarted.async_cancel_planned_return()
+            self.assertEqual(restarted.profile_selection, previous)
+            self.assertEqual(restarted.effective_zone_profiles, {'climate.salon': None, 'climate.office': 'work_profile'})
+        finally:
+            await restarted.async_stop()

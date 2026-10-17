@@ -50,6 +50,9 @@ class VelairModeSelect(VelairEntity, SelectEntity):
     def current_option(self) -> str:
         """Derive the selector state from the active profile and mode marker."""
         active_profile_ids = self.scheduler.active_profile_ids
+        selection = getattr(self.scheduler, "profile_selection", {})
+        if selection.get("zone_profile_overrides"):
+            return MANUAL_OPTION
         if not active_profile_ids:
             return DEFAULT_OPTION
         active_mode_id = self.scheduler.active_mode_id

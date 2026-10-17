@@ -124,6 +124,7 @@ class ScheduleBlock(TypedDict):
     target_temp_low: NotRequired[float]
     target_temp_high: NotRequired[float]
     hvac_mode: NotRequired[str]
+    temperature_only: NotRequired[bool]
     fan_mode: NotRequired[str]
     preset_mode: NotRequired[str]
     swing_mode: NotRequired[str]
@@ -366,6 +367,7 @@ class ZoneData(TypedDict):
     enabled: bool
     schedule: dict[str, list[ScheduleBlock]]
     template_links: NotRequired[dict[str, TemplateLinkData]]
+    day_layout_key: NotRequired[str]
     override: NotRequired[ZoneOverride | None]
     pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
@@ -399,6 +401,9 @@ class GlobalData(TypedDict):
     mode: str
     paused_until: NotRequired[str | None]
     paused_started_at: NotRequired[str | None]
+    base_profile_ids: NotRequired[list[str]]
+    base_mode_id: NotRequired[str | None]
+    zone_profile_overrides: NotRequired[dict[str, str | None]]
     active_profile_ids: NotRequired[list[str]]
     active_mode_id: NotRequired[str | None]
 
@@ -409,6 +414,7 @@ class ClimateProfileZoneData(TypedDict):
     behavior: str
     schedule: NotRequired[dict[str, list[ScheduleBlock]]]
     template_links: NotRequired[dict[str, TemplateLinkData]]
+    day_layout_key: NotRequired[str]
     action: NotRequired[str]
 
 
@@ -435,7 +441,7 @@ class OperationStatus(TypedDict):
     """Runtime-only progress for a profile or Mode transition."""
 
     id: str
-    kind: Literal["mode_change", "profile_activation"]
+    kind: Literal["mode_change", "profile_activation", "profile_selection"]
     state: Literal["running", "completed", "completed_with_errors", "failed"]
     target_id: str | None
     completed: int
@@ -581,6 +587,7 @@ class ClimateEvent:
     target_temp_high: float | None = None
     target_when: datetime | None = None
     preconditioning_diagnostics: PreconditioningPredictionDiagnostics | None = None
+    temperature_only: bool = False
 
 
 def empty_week_schedule() -> dict[str, list[ScheduleBlock]]:
@@ -605,6 +612,15 @@ def normalize_schedule_blocks(raw_blocks: list[dict[str, Any]]) -> list[Schedule
             seen_starts.add(start)
             continue
         action = str(block.get("action", ACTION_SET_TEMPERATURE))
+        if "temperature_only" in block:
+            if not isinstance(block["temperature_only"], bool):
+                raise ValueError("temperature_only must be a boolean")
+            if action != ACTION_SET_TEMPERATURE:
+                raise ValueError("temperature_only is only valid for temperature blocks")
+            if block["temperature_only"] and any(
+                field in block for field in ("hvac_mode", *CLIMATE_OPTION_FIELDS)
+            ):
+                raise ValueError("Temperature-only blocks cannot include HVAC mode or climate options")
         normalized_block: ScheduleBlock = {
             "start": start,
             "action": action,
@@ -683,6 +699,8 @@ def normalize_schedule_blocks(raw_blocks: list[dict[str, Any]]) -> list[Schedule
             raise ValueError(f"Invalid schedule action: {action}")
 
         _copy_temperature_target(block, normalized_block, context=f"schedule block: {start}")
+        if block.get("temperature_only") is True:
+            normalized_block["temperature_only"] = True
         hvac_mode = block.get("hvac_mode")
         if isinstance(hvac_mode, str) and hvac_mode:
             normalized_block["hvac_mode"] = hvac_mode
@@ -856,6 +874,8 @@ def normalize_schedule_data(
                 zone_data.get("external_change_policy")
             ),
         }
+        from .day_layouts import normalize_day_layout_key
+        zones[entity_id]["day_layout_key"] = normalize_day_layout_key(zone_data.get("day_layout_key"))
         if "template_links" in zone_data:
             zones[entity_id]["template_links"] = _stored_template_link_modes(zone_data["template_links"])
         target_temp_step_override = normalize_target_temp_step_override(
@@ -960,7 +980,7 @@ def normalize_schedule_data(
 
     profiles = normalize_climate_profiles(data.get("profiles"), climate_entities)
     profile_keys = {profile["key"] for profile in profiles}
-    raw_active_profile_ids = global_data.get("active_profile_ids")
+    raw_active_profile_ids = global_data.get("base_profile_ids", global_data.get("active_profile_ids"))
     if not isinstance(raw_active_profile_ids, list):
         legacy_active_profile_id = global_data.get("active_profile_id")
         raw_active_profile_ids = (
@@ -990,8 +1010,8 @@ def normalize_schedule_data(
     modes = normalize_modes(raw_modes, profile_zones)
     modes_by_key = {mode["key"]: mode for mode in modes}
     active_mode_id = global_data.get(
-        "active_mode_id",
-        global_data.get("active_profile_mode_id"),
+        "base_mode_id",
+        global_data.get("active_mode_id", global_data.get("active_profile_mode_id")),
     )
     selected_mode = (
         modes_by_key.get(active_mode_id)
@@ -1004,6 +1024,10 @@ def normalize_schedule_data(
     ):
         active_mode_id = None
 
+    raw_overrides = global_data.get("zone_profile_overrides", {})
+    overrides = {entity: key for entity, key in raw_overrides.items()
+                 if entity in zones and (key is None or isinstance(key, str) and entity in profile_zones.get(key, set()))} if isinstance(raw_overrides, dict) else {}
+
     planned_return = normalize_planned_return(data.get("planned_return"), modes)
     return {
         "version": 7,
@@ -1015,7 +1039,10 @@ def normalize_schedule_data(
             "paused_until": global_data.get("paused_until"),
             "paused_started_at": global_data.get("paused_started_at"),
             "active_profile_ids": active_profile_ids,
-            "active_mode_id": active_mode_id,
+            "active_mode_id": None if overrides else active_mode_id,
+            "base_profile_ids": list(active_profile_ids),
+            "base_mode_id": active_mode_id,
+            "zone_profile_overrides": overrides,
         },
         "settings": normalize_panel_settings(data.get("settings"), climate_entities),
         "templates": templates,
@@ -1167,13 +1194,15 @@ def normalize_planned_return_episode(raw: Any, config: dict[str, Any]) -> dict[s
         episode["dismissed"] = True
     selection = raw.get("previous_selection")
     if isinstance(selection, dict):
-        mode_id = selection.get("mode_id")
-        profile_ids = selection.get("profile_ids")
-        if ("mode_id" in selection and (mode_id is None or isinstance(mode_id, str) and bool(mode_id.strip()) and mode_id == mode_id.strip())
+        mode_id = selection.get("base_mode_id", selection.get("mode_id"))
+        profile_ids = selection.get("base_profile_ids", selection.get("profile_ids"))
+        overrides = selection.get("zone_profile_overrides", {})
+        if (("mode_id" in selection or "base_mode_id" in selection) and (mode_id is None or isinstance(mode_id, str) and bool(mode_id.strip()) and mode_id == mode_id.strip())
                 and isinstance(profile_ids, list)
                 and all(isinstance(key, str) and bool(key.strip()) and key == key.strip() for key in profile_ids)
                 and len(set(profile_ids)) == len(profile_ids)):
-            episode["previous_selection"] = {"mode_id": mode_id, "profile_ids": list(profile_ids)}
+            if isinstance(overrides, dict) and all(isinstance(entity, str) and entity.startswith("climate.") and (key is None or isinstance(key, str) and bool(key.strip()) and key == key.strip()) for entity, key in overrides.items()):
+                episode["previous_selection"] = {"base_mode_id": mode_id, "base_profile_ids": list(profile_ids), "zone_profile_overrides": deepcopy(overrides)}
     return episode
 
 
@@ -1397,7 +1426,8 @@ def normalize_climate_profiles(
                             schedule[weekday] = normalize_schedule_blocks(valid_blocks)
                         except (ValueError, KeyError, TypeError, AttributeError):
                             schedule[weekday] = deepcopy(blocks) if any(isinstance(block, dict) and "preset_key" in block for block in blocks) else []
-                zones[entity_id] = {"behavior": "schedule", "schedule": schedule}
+                from .day_layouts import normalize_day_layout_key
+                zones[entity_id] = {"behavior": "schedule", "schedule": schedule, "day_layout_key": normalize_day_layout_key(raw_zone.get("day_layout_key"))}
                 if "template_links" in raw_zone:
                     zones[entity_id]["template_links"] = _stored_template_link_modes(raw_zone["template_links"])
 
@@ -1431,7 +1461,7 @@ def validate_climate_profiles(
     seen_keys: set[str] = set()
     prepared: list[dict[str, Any]] = []
     profile_fields = {"key", "name", "icon", "color", "description", "zones"}
-    zone_fields = {"behavior", "action", "schedule", "template_links"}
+    zone_fields = {"behavior", "action", "schedule", "template_links", "day_layout_key"}
     block_fields = {
         "preset_key",
         "start",
@@ -1440,6 +1470,7 @@ def validate_climate_profiles(
         "target_temp_low",
         "target_temp_high",
         "hvac_mode",
+        "temperature_only",
         *CLIMATE_OPTION_FIELDS,
     }
 
@@ -1509,7 +1540,7 @@ def validate_climate_profiles(
                 }
                 continue
 
-            if set(raw_zone) - {"behavior", "schedule", "template_links"} or "schedule" not in raw_zone:
+            if set(raw_zone) - {"behavior", "schedule", "template_links", "day_layout_key"} or "schedule" not in raw_zone:
                 raise ValueError(f"Schedule profile behavior is invalid for {entity_id}")
             raw_schedule = raw_zone.get("schedule")
             if not isinstance(raw_schedule, dict) or set(raw_schedule) != set(WEEKDAYS):
@@ -1618,9 +1649,11 @@ def validate_climate_profiles(
                     raise ValueError(
                         f"Invalid {weekday} schedule for {entity_id}: {err}"
                     ) from err
+            from .day_layouts import validate_day_layout_key
             prepared_zones[entity_id] = {
                 "behavior": "schedule",
                 "schedule": schedule,
+                "day_layout_key": validate_day_layout_key(raw_zone.get("day_layout_key", "individual")),
             }
             if "template_links" in raw_zone:
                 from .schedule_resources import normalize_links

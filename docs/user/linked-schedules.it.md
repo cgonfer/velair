@@ -1,5 +1,6 @@
 <a id="block-presets-and-linked-templates"></a>
 # Preset dei blocchi e modelli collegati
+
 <!-- velair-docs:start -->
 Traduzioni: [Originale in inglese](linked-schedules.md) · [Español](linked-schedules.es.md) · [Français](linked-schedules.fr.md) · [Deutsch](linked-schedules.de.md) · [Italiano](linked-schedules.it.md) · [Nederlands](linked-schedules.nl.md) · [Polski](linked-schedules.pl.md) · [Português (Brasil)](linked-schedules.pt-br.md) · [Português (Portugal)](linked-schedules.pt-pt.md) · [Русский](linked-schedules.ru.md) · [Stato delle traduzioni](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traduzioni: [Originale in inglese](linked-schedules.md) · [Español](linked-sch
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -49,6 +50,23 @@ Il pannello mostra prima il selettore della configurazione, poi le opzioni del d
 
 <a id="linked-templates"></a>
 ## Modelli collegati
+
+<a id="apply-a-template-to-schedules"></a>
+### Applicare un modello agli orari
+
+Apri **Applica a…** su un modello giornaliero salvato. Il pannello segue **Seleziona → Verifica → Applica**. Salva prima le modifiche al modello; l’applicazione non salva mai silenziosamente il modello condiviso né usa una versione non salvata.
+
+Scegli **Predefinito** o un Profilo esistente, poi **Copia indipendente**, **Solo orari** o **Orari e impostazioni**. Una copia indipendente non ha collegamenti al modello; i riferimenti ai preset Velair restano attivi. I collegamenti solo orari conservano assegnazioni climatiche indipendenti. I collegamenti completi seguono sia orari sia impostazioni del modello.
+
+Scegli una **Suddivisione dei giorni** comune e seleziona i gruppi richiesti per ciascun termostato. Giorni singoli offre sette scelte; Feriali / Fine settimana offre due gruppi; Tutti i giorni offre l’intera settimana. Cambiare suddivisione cancella la selezione. Cambiare destinazione o tipo di applicazione conserva i gruppi selezionati ma richiede una nuova verifica. Seleziona l’intestazione di un giorno per selezionare la colonna per tutti i termostati visibili; selezionala di nuovo per svuotare una colonna interamente selezionata. Sui telefoni la tabella scorre orizzontalmente mantenendo visibili i nomi dei termostati.
+
+Solo i termostati con gruppi selezionati adottano la suddivisione scelta. I giorni non selezionati conservano blocchi e collegamenti. Se la nuova suddivisione raggruppa giorni non selezionati con configurazioni diverse, la verifica avverte che manterranno **Orari diversi**; accettare non uniforma quei giorni.
+
+Per **Solo orari**, scegli una base quando un gruppo di destinazione ha configurazioni salvate diverse. La scelta resta temporanea fino ad Applica. Velair propone assegnazioni da quella base: prima l’ora esatta, poi gli orari precedenti dal più vicino al più lontano, infine quelli successivi. I preset restano riferimenti. La verifica identifica l’origine di ogni proposta e permette di modificare le impostazioni mantenendo fissi gli orari del modello. Le assegnazioni compatibili mancanti vanno completate; le impostazioni del modello non vengono usate come ripiego implicito. Tutti i giorni selezionati del gruppo ricevono le stesse assegnazioni verificate. Una zona di Profilo senza un proprio orario richiede assegnazioni manuali anziché prendere quelle Predefinite.
+
+La verifica elenca giorni e collegamenti sostituiti, cambi di suddivisione, incompatibilità e zone del Profilo che passeranno a **Programmazione del profilo**. Tornare alla selezione non salva nulla. Applica valida e salva l’intera selezione una sola volta; una destinazione non valida o un conflitto di revisione non applica parzialmente le altre zone. Un errore di salvataggio conserva la configurazione precedente. Ripeti la verifica dopo modifiche alla fonte o alla configurazione. Chiudere con modifiche alla verifica in sospeso usa la normale protezione contro l’abbandono.
+
+Applicare a un Profilo salva direttamente gli orari selezionati; non attiva il Profilo, non seleziona una Modalità e non cambia base o eccezioni. Modificare un orario già effettivo può influire sul controllo climatico. Pubblicazione esterna e risposte fisiche dei dispositivi mantengono i normali limiti; una configurazione salvata coerente non equivale a una risposta fisica simultanea.
 
 I collegamenti dei modelli sono in sola lettura e raggruppati per termostato, poi per programmazione predefinita o profilo, con i giorni collegati elencati insieme. **Giorni collegati** conta un giorno collegato, indipendentemente dal numero di blocchi del modello. L’elenco mostra questi conteggi in un’ultima riga separata sotto il numero di blocchi di ogni modello. Le copie indipendenti non vengono contate e non compaiono nell’elenco. Scollega tutti i giorni prima di eliminare un modello; il pulsante disabilitato spiega questo requisito.
 

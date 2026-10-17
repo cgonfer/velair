@@ -36,6 +36,14 @@ export type PortableSummaryViewItem = {
 };
 
 export type VelairViewHost = {
+  requestUpdate(): void;
+  _draftSavedDayLayoutKey?: string;
+  _draftDayLayoutKey?: string;
+  _layoutOnlyDirty?: boolean;
+  _dayLayoutConflict?: boolean;
+  _groupBaseChosen?: boolean;
+  _selectDayLayout?(key: string): boolean;
+  _chooseGroupBase?(day: string): boolean | void;
   _preconditioningSource?: "preconditioning" | "planned-return";
   _selectPreconditioningSource?(source: "preconditioning" | "planned-return"): boolean;
   _setPlannedReturnBusy?(busy: boolean): void;
@@ -160,6 +168,8 @@ export type VelairViewHost = {
   _diagnosticsRedactEntityIds: boolean;
   _temperatureMigrationAction?: "°C" | "°F";
   _templateAction?: "save" | "delete";
+  _blockEditorIdPrefix?: string;
+  _templateApplication?: import("./controllers/template-application").TemplateApplicationState;
   _templateApplyOpen: boolean;
   _templateApplyTargets: Set<string>;
   _templateDirty: boolean;
@@ -214,6 +224,7 @@ export type VelairViewHost = {
   _firstWeekday(): string;
   _formatDateTime(value: string): string;
   _formatEventAction(event: ScheduleEvent): string;
+  _supportsTemperatureOnly?: boolean;
   _formatEventMode(event: ScheduleEvent): string;
   _formatRemaining(valueMs: number): string;
   _formatScheduleTime(value: string): string;

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](climate-profiles.md) · [Español](climate-pr
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -20,7 +20,7 @@ Traduções: [Original em inglês](climate-profiles.md) · [Español](climate-pr
 
 Perfis climáticos permitem que o Velair alterne várias zonas entre planos semanais coordenados sem substituir suas programações padrão. O Home Assistant continua decidindo quando mudar um perfil: presença, janelas, estações, seletores, sensores ou outras automações tomam a decisão, enquanto o Velair armazena, aplica e mostra o comportamento de climatização resultante.
 
-Um **Perfil** define uma rotina alternativa de climatização para suas zonas configuradas. Um **Modo** ativa juntos um ou mais Perfis sem sobreposição, como um único estado da casa. Ative diretamente um Perfil quando precisar apenas daquela rotina; use um Modo quando várias áreas devem mudar juntas.
+Um **Perfil** define uma rotina alternativa de climatização para suas zonas configuradas. Um **Modo** seleciona um ou mais Perfis sem sobreposição como **base** da casa. Você pode aplicar Perfis como **exceções por zona**, incluindo apenas parte de um Perfil de várias zonas, sem mudar outros ambientes. Estabeleça uma base para mudar toda a configuração; aplique exceções para rotinas independentes.
 
 Exemplos incluem Em casa, Ausente, Férias, Verão, Visitante e Dormir. Perfis também atendem instalações com horários, temperaturas-alvo e modos HVAC diferentes para aquecimento e resfriamento.
 
@@ -35,22 +35,29 @@ Ativar outro perfil nunca sobrescreve essas programações. Voltar a Padrão apl
 ## Configurar um Perfil
 
 Abra **Programações**, escolha **Programações de perfil** e use o botão de adicionar para criar um Perfil vazio. Selecione-o na lista para editar cor, ícone, nome, descrição e comportamento dos termostatos. A área de edição mostra um termostato por vez para manter o editor completo utilizável em computador, tablet e celular. O nome é editado no cabeçalho, junto ao lápis. Seu ID estável de automação aparece logo abaixo e na lista de perfis, para ser copiado em serviços, scripts e automações sem confundi-lo com o nome de exibição editável.
-Ícones usam chaves Material Design Icons como `mdi:briefcase-outline`; o editor mostra uma prévia com a cor do perfil, um link para o catálogo pesquisável de ícones e avisos para chaves fora do formato `mdi:icon-name`. Descrições têm limite de 500 caracteres, com contagem restante. O Velair atribui uma cor estável a perfis novos e existentes; ela pode ser alterada pelo seletor de cores ou valor editável `#RRGGBB`. Valores inválidos são destacados e não podem ser salvos. A cor é incluída nas exportações portáteis. A seleção integrada Padrão mantém sua cor fixa. Para cada dispositivo gerenciado, escolha um comportamento:
+Ícones usam chaves Material Design Icons como `mdi:briefcase-outline`; o editor mostra uma prévia com a cor do perfil, um link para o catálogo pesquisável de ícones e avisos para chaves fora do formato `mdi:icon-name`. Descrições têm limite de 500 caracteres, com contagem restante. O Velair atribui uma cor estável a perfis novos e existentes; ela pode ser alterada pelo seletor de cores ou valor editável `#RRGGBB`. Valores inválidos são destacados e não podem ser salvos. A cor é incluída nas exportações portáteis. A seleção integrada Padrão mantém sua cor fixa.
 
+Cada linha de Perfil mantém as ações em uma coluna separada à direita: definir como base, aplicar como exceção por zona e excluir. Em larguras estreitas, elas permanecem ao lado do nome, sem passar para baixo. Os botões têm fundo transparente e espaço até a borda; estados ativos usam ícone e cor. A descrição permanece visível, com etiquetas compactas **Base** e **Exceção** abaixo para seus usos atuais. Perfis não usados não mostram essas etiquetas; a ação de base permanece neutra até o Perfil pertencer à base. Um Perfil usado apenas como exceção destaca sua ação de camadas, não a ação de base. Uma base totalmente substituída por exceções mantém sua identidade. Esses estados descrevem a seleção salva, não se um termostato está funcionando. Selecionar a linha abre o editor; ações de ativação e exceção não mudam a seleção de edição. Confirmar a exclusão do Perfil editado limpa o editor.
+
+Para cada equipamento gerenciado, escolha um comportamento:
+
+- **Não participa**: este Perfil não inclui a zona.
 - **Programação padrão**: continuar usando a programação semanal habitual da zona.
 - **Cronograma de perfil**: usar uma programação semanal completa armazenada no Perfil.
 - **Pausa** com **Deixar termostato inalterado**: interromper alterações programadas e manter o dispositivo como está.
 - **Pausa** com **Desligar a climatização**: interromper alterações programadas e desligar o dispositivo.
 
-Zonas não configuradas no perfil continuam usando suas programações padrão. Modelos podem ser copiados como blocos independentes; um dia de Padrão ou Perfil também pode vincular apenas horários a um modelo e manter seus próprios ajustes, ou seguir o modelo completo com todos os controles somente leitura. Modelos e blocos independentes podem fazer referência a predefinições compartilhadas do Velair. Consulte [Predefinições de blocos e modelos vinculados](linked-schedules.pt-br.md) para regras de propagação, desvinculação, compatibilidade e edição compartilhada, e [o exemplo Inverno/Verão](linked-schedule-examples.pt-br.md#2-winter-and-summer-with-one-set-of-times) para configurações diferentes com os mesmos horários. Clonar um dia preserva tipo de vínculo, atribuições apenas de horários e referências a predefinições. Clonar para outro termostato valida o Perfil proposto antes de aplicar o rascunho; outros dias de destino mantêm seus vínculos. Use Desvincular após clonar se o novo dia deve ser independente do modelo.
+Cada zona com **Cronograma de perfil** também armazena sua própria **Organização dos dias**. Selecione Dias individuais, Dias úteis / Fim de semana ou Todos os dias antes de escolher um dia. As sete células mantêm as posições; a organização seleciona um dia, dias úteis/fim de semana ou a semana inteira em conjunto. Editar o grupo selecionado atualiza esses dias no rascunho do Perfil; **Salvar perfil** persiste o Perfil completo. Quando os dias diferem, examine-os e escolha explicitamente uma base antes de substituir suas configurações. Os demais dias permanecem inalterados. A organização é lembrada junto ao rascunho da programação ao mudar temporariamente o comportamento da zona. Células selecionadas contíguas se conectam visualmente e a linha do tempo mostra os blocos comuns. Diferenças aparecem como alternativas visuais compactas: configurações de dias idênticas são agrupadas, com barras de linha do tempo somente de leitura iguais às da Visão geral e rótulos de alvo/modo. Não há uma lista permanente de blocos abaixo; o ícone de informações abre todos os horários e ajustes ao passar o mouse, receber foco ou tocar, sem selecionar a base. Clique ou toque em uma alternativa para selecionar uma única base, identificada por fundo e borda. As alternativas continuam visíveis para permitir mudar a base antes de salvar. Em **Todos os dias** e **Dias úteis / Fim de semana**, selecione a programação e use **Salvar perfil** antes de abrir o editor de blocos comuns, sem confirmação adicional de substituição. O grupo contém sete dias, cinco dias úteis ou dois dias de fim de semana; os outros mantêm suas programações. Uma falha ao salvar preserva a alternativa selecionada. Depois, alterações dos blocos comuns podem ser salvas normalmente com o Perfil. Setas, Espaço e Enter permitem seleção pelo teclado. Um grupo misto precisa de uma base selecionada antes de habilitar **Salvar perfil**. Veja os resumos ao lado de Salvar para cada origem, zona e dias de destino. Salvar perfil também inclui outras alterações pendentes do Perfil. Alternativas visualmente iguais identificam dependências diferentes de modelos ou predefinições com rótulos compactos. Alternativas vazias mostram **Sem blocos próprios**; suas informações explicam que aplicá-las remove blocos próprios; um dia vazio não é um comando de desligamento. Consulte [Organização dos dias e edição de vários dias](usage.pt-br.md#create-a-daily-schedule) para edição agrupada, dias mistos e portabilidade.
+
+Programação padrão inclui explicitamente a zona, inclusive para validar sobreposição. Uma zona que não participa herda a base ou Padrão quando nenhum Perfil de base a inclui. Modelos podem ser copiados como blocos independentes; um dia de Padrão ou Perfil também pode vincular apenas horários a um modelo e manter seus próprios ajustes, ou seguir o modelo completo com todos os controles somente leitura. Modelos e blocos independentes podem fazer referência a predefinições compartilhadas do Velair. Consulte [Predefinições de blocos e modelos vinculados](linked-schedules.pt-br.md) para regras de propagação, desvinculação, compatibilidade e edição compartilhada, e [o exemplo Inverno/Verão](linked-schedule-examples.pt-br.md#2-winter-and-summer-with-one-set-of-times) para configurações diferentes com os mesmos horários. Clonar um dia preserva tipo de vínculo, atribuições apenas de horários e referências a predefinições. Clonar para outro termostato valida o Perfil proposto antes de aplicar o rascunho; outros dias de destino mantêm seus vínculos. Use Desvincular após clonar se o novo dia deve ser independente do modelo.
 
 Para uma zona delegada a um controlador externo, Perfis e Modos selecionam a semana completa efetiva que o Velair publica, em vez de gerar ações diretas `climate.*`. **Programação padrão** publica a semana habitual, e **Cronograma de perfil** publica a semana do Perfil. **Pausa** não está disponível para zonas gerenciadas externamente. O editor aplica as capacidades do controlador como validação adicional; uma falha de publicação não desfaz a seleção salva de Perfil ou Modo nem afeta zonas com execução local. Consulte [Execução externa da programação](external-systems.pt-br.md) para os limites atuais e a semântica de publicação.
 
-Em um dia editado do Perfil, **Salvar como modelo** armazena apenas um modelo reutilizável pelo backend, preservando o rascunho não salvo do Perfil. Para reutilizar o dia em outros dispositivos gerenciados, selecione-os em **Clonar dia para / Outros termostatos** e escolha **Clonar**. A confirmação resume os dispositivos selecionados e identifica zonas Padrão ou Pausa que passarão a **Cronograma de perfil**. Clonar substitui apenas o mesmo dia da semana, preserva todos os demais dias lembrados e continua fazendo parte do rascunho. O Velair valida tipo de alvo, modo HVAC, limites e passo de temperatura em cada dispositivo antes de mudar o rascunho. Remove controles opcionais incompatíveis com cada destino. Se um bloco apenas de opções ficar sem controles compatíveis ou se um alvo ou modo for incompatível, nada do rascunho muda. Dias clonados só são persistidos ao salvar o Perfil.
+Em um dia editado da programação do Perfil, **Salvar como modelo** armazena apenas um modelo reutilizável pelo backend e preserva o rascunho não salvo do Perfil. Para reutilizar a seleção em outros equipamentos gerenciados, selecione-os no painel de clonagem **Outros termostatos** e escolha **Clonar**. O rótulo acompanha a organização selecionada: um dia, segunda–sexta, sábado–domingo ou Todos os dias. A confirmação resume os equipamentos selecionados, identifica zonas Padrão ou Pausa que passarão a **Cronograma de perfil** e lista os dias selecionados. Clonar substitui apenas esses mesmos dias da semana, preserva todos os outros dias lembrados e a organização dos dias do destino, e continua fazendo parte do rascunho do Perfil. A clonagem entre dias só está disponível em **Dias individuais**. Editores agrupados omitem esse painel e o atalho de mudança de organização; use o seletor normal **Organização dos dias**. Editores de Padrão e Perfil usam o mesmo escopo do grupo selecionado para cópias a outros termostatos. O Velair valida tipo de alvo, modo HVAC, limites e passo de temperatura em cada equipamento antes de mudar o rascunho. Remove controles opcionais incompatíveis com cada destino. Se um bloco apenas de opções ficar sem controles compatíveis ou se um alvo ou modo for incompatível, nada do rascunho muda. Dias clonados só são persistidos ao salvar o Perfil.
 
 Cada dia do perfil usa a mesma linha do tempo editável de programações padrão e modelos, incluindo arrastar e redimensionar horários. Blocos têm início, mas não um fim separado: o último continua após a meia-noite e em dias vazios até começar outro bloco. A linha do tempo representa a parte herdada com um segmento distinto e não editável, identificando o dia em que o bloco realmente está configurado. Enquanto o Perfil permanece aberto, mudar temporariamente uma zona de **Cronograma de perfil** para **Programação padrão** ou **Pausa** preserva seu rascunho semanal. Selecionar **Cronograma de perfil** novamente restaura esses blocos não salvos. Salvar com Padrão ou Pausa ainda armazena apenas o comportamento selecionado; o rascunho oculto da programação não é persistido. O seletor mostra nomes amigáveis, e o editor ativo também mostra o ID da entidade. Metadados e programações continuam sendo salvos juntos como um único Perfil atômico; trocar o termostato selecionado não salva um rascunho parcial.
 
-Vários perfis podem ficar ativos juntos quando coordenados por um Modo. Suas zonas configuradas não podem se sobrepor: cada dispositivo gerenciado tem no máximo um perfil controlando seu comportamento efetivo. Zonas sem um perfil ativo responsável continuam usando a programação padrão.
+Vários Perfis podem formar uma base quando coordenados por um Modo. Suas zonas configuradas não podem se sobrepor. Exceções podem substituir zonas individuais dessa base: cada equipamento gerenciado continua com exatamente uma rotina efetiva. Não há mistura de blocos de programação nem pilha de prioridade de exceções anteriores.
 
 <a id="worked-example-an-away-mode"></a>
 ## Exemplo completo: um Modo Ausente
@@ -102,7 +109,7 @@ Substitua a entidade de pessoa e os nomes visíveis de Modos pelos usados em sua
 <a id="activate-a-profile"></a>
 ## Ativar um Perfil
 
-Use o botão de reprodução na linha de um Perfil em **Programações > Programações de perfil** para ativação direta, ou o cartão compartilhado **Configuração ativa** em Visão geral ou no topo de **Modos**. Ele mostra o Modo atual e os Perfis aplicados como uma relação única. Selecione **Mudar** para escolher um Modo, ou use o grupo separado **Ative um perfil manualmente**. Escolher diretamente um Perfil substitui o conjunto ativo por ele e muda o Modo para **Manual**; **Padrão** significa que nenhum Perfil alternativo está ativo. Perfis também podem ser ativados na própria linha, na Configuração ativa ou pela ação `velair.activate_profile`. O Velair aplica o bloco ativo agora, sem aguardar o próximo limite programado. Isso inclui o último bloco de um dia anterior quando nenhum bloco novo começou no dia atual.
+Use o botão de reprodução na linha de um Perfil em **Programações > Programações de perfil** para ativação direta, ou o cartão compartilhado **Configuração ativa** em Visão geral ou no topo de **Modos**. Ele separa **Base** de **Exceções**, identificando se a base vem de um Modo, um Perfil, vários Perfis ou Padrão. Selecione **Mudar** para escolher um Modo ou use o grupo separado **Perfis**. Selecionar a linha de um Perfil estabelece-o como base completa; o ícone compacto de camadas ao lado aplica apenas suas zonas configuradas como exceções. Escolher diretamente um Perfil substitui o conjunto ativo por ele e muda o Modo para **Manual**; **Padrão** significa que nenhum Perfil alternativo está ativo. Perfis também podem ser ativados na própria linha, na Configuração ativa ou pela ação `velair.activate_profile`. O Velair aplica o bloco ativo agora, sem aguardar o próximo limite programado. Isso inclui o último bloco de um dia anterior quando nenhum bloco novo começou no dia atual.
 
 Ativar diretamente nunca adiciona um Perfil ao conjunto existente, mesmo sem sobreposição de zonas. Zonas controladas pelo Modo ou conjunto anterior, mas ausentes do novo Perfil, voltam imediatamente a suas programações Padrão; não mantêm a configuração anterior. Crie um Modo que associe todos os Perfis necessários sem sobreposição para ativá-los juntos.
 
@@ -120,7 +127,7 @@ data:
   profile_id: vacation
 ```
 
-No editor visual de automações do Home Assistant, adicione uma ação e procure **Velair: Activate climate profile**. Essa ação da integração é separada das ações de switch e select mostradas ao filtrar pelo dispositivo Velair. Informe o **ID de automação** do Perfil, mostrado abaixo de seu nome no Velair.
+No editor visual de automações do Home Assistant, adicione uma ação e procure **Velair: Ativar perfil climático**. Essa ação da integração é separada das ações de switch e select mostradas ao filtrar pelo dispositivo Velair. Informe o **ID de automação** do Perfil, mostrado abaixo de seu nome no Velair.
 
 Use o serviço explícito de desativação para voltar às programações padrão:
 
@@ -142,7 +149,7 @@ Dois valores integrados sempre existem e não podem ser renomeados ou excluídos
 
 Crie valores personalizados como Ausente, Férias ou Em casa e associe cada um a um ou mais Perfis climáticos salvos. Em **Modos**, escolha **Novo modo**, informe o nome da opção que o Home Assistant mostrará, selecione Perfis sem sobreposição e salve. Selecionar um valor personalizado ativa todo o conjunto atomicamente. Perfis do mesmo Modo precisam configurar zonas diferentes; o Velair rejeita sobreposições em vez de aplicar uma prioridade implícita. Vários Modos podem fazer referência ao mesmo perfil. Nomes têm espaços nas extremidades removidos, limite de 255 caracteres e precisam ser únicos sem distinguir maiúsculas e minúsculas. Não podem usar nomes integrados nem os estados reservados `unknown` e `unavailable` do Home Assistant.
 
-A aba Modos mostra o Modo ativo e Perfis aplicados juntos em um cartão **Configuração ativa**. Seu seletor agrupado lista primeiro Padrão e Modos personalizados, com ativação direta de Perfis separada. Manual continua visível como estado, mas não pode ser selecionado ali. Selecionar um Modo ativa todos os Perfis associados; selecionar diretamente um Perfil substitui o conjunto por esse único Perfil e muda o Modo para **Manual**. Linhas de Modos mostram ícones e cores dos Perfis associados para distingui-los mesmo com o mesmo nome. As linhas integradas incluem uma explicação breve de quando se aplicam.
+A aba Modos mostra a base selecionada e suas exceções por zona em um cartão **Configuração ativa**. O seletor agrupado lista primeiro Padrão e Modos personalizados, com ações separadas de base e exceção para Perfis. Manual continua sendo um estado da entidade select nativa do Home Assistant, em vez do nome da base no painel. Selecionar um Modo ativa todos os Perfis associados; selecionar diretamente um Perfil substitui o conjunto ativo por esse único Perfil e muda o Modo para **Manual**. As linhas de Modo mostram ícones e cores dos Perfis associados, mantendo Modos e Perfis distintos mesmo quando partilham um nome. As linhas integradas incluem uma breve explicação de quando são aplicadas.
 
 Use a ação padrão de seleção do Home Assistant em automações:
 
@@ -158,6 +165,81 @@ Identificadores de Modo são estáveis quando seus nomes visíveis mudam, portan
 
 Reassociar o Modo selecionado ativa seu novo conjunto de Perfis em uma única mudança atômica. Excluir o Modo selecionado mantém seus Perfis ativos e muda o seletor para **Manual**. Excluir um Perfil também remove os Modos associados a ele e remove apenas esse Perfil do conjunto ativo; o Velair volta a **Padrão** quando o conjunto fica vazio.
 
+<a id="a-base-with-independent-zone-exceptions"></a>
+## Uma base com exceções independentes por zona
+
+Um Perfil pode incluir vários ambientes. Aplicá-lo como exceção substitui a rotina apenas nos ambientes explicitamente configurados; não muda outros ambientes nem reescreve o Perfil. Cada ambiente usa uma rotina semanal completa, nunca uma mistura de blocos de vários Perfis.
+
+Por exemplo, a base **Inverno** inclui escritório, sala e quarto. **Teletrabalho** inclui escritório e sala; **Visitas** inclui sala e quarto de hóspedes:
+
+| Mudança | Escritório | Sala | Quarto | Quarto de hóspedes |
+| --- | --- | --- | --- | --- |
+| Selecionar a base Inverno | Inverno | Inverno | Inverno | Padrão |
+| Aplicar Teletrabalho | Teletrabalho | Teletrabalho | Inverno | Padrão |
+| Aplicar Visitas depois | Teletrabalho | Visitas | Inverno | Visitas |
+| Restaurar a sala à base | Teletrabalho | Inverno | Inverno | Visitas |
+
+Restaurar a sala à base não recupera Teletrabalho. Exceções não têm pilha de histórico. Escolher Padrão explicitamente é diferente: usa a programação habitual da zona mesmo quando a base inclui outra rotina para ela.
+
+Use **Aplicar como exceção** em Configuração ativa ou uma automação:
+
+```yaml
+action: velair.apply_profiles
+data:
+  profile_ids: [remote_work]
+```
+
+Uma solicitação só pode aplicar vários Perfis se incluírem zonas diferentes. Por exemplo, `[remote_work, guests]` é rejeitado por completo porque ambos incluem a sala. Aplicar Visitas em uma solicitação posterior substitui intencionalmente a exceção dessa sala e preserva o escritório.
+
+Para aplicar apenas um ambiente de um Perfil de várias zonas:
+
+```yaml
+action: velair.set_zone_profile
+data:
+  entity_id: climate.office
+  profile_id: remote_work
+```
+
+O Perfil precisa incluir explicitamente esse ambiente gerenciado. Use `profile_id: null` para impor Padrão. Para remover uma exceção e herdar a base atual:
+
+```yaml
+action: velair.clear_profile_overrides
+data:
+  entity_id: [climate.office, climate.living_room]
+```
+
+Para substituir toda a base e remover cada exceção sem criar um Modo:
+
+```yaml
+action: velair.activate_profiles
+data:
+  profile_ids: [winter_office, winter_bedrooms]
+```
+
+Perfis de base não podem se sobrepor. Uma lista vazia de ativação seleciona Padrão; listas vazias de aplicação ou limpeza não fazem nada. As novas ações exigem seus campos: um valor omitido nunca significa "todos os ambientes" nem "Padrão".
+
+Configuração ativa mostra **Base** e seu tipo juntos acima do nome, em dois níveis compactos em celulares e cartões estreitos. Nomes longos quebram a linha quando necessário. Uma linha de cobertura mostra quantas zonas gerenciadas incluídas na base ainda a herdam. Exceções, inclusive Padrão explícito ou o mesmo Perfil, são excluídas dessa contagem. Zonas fora de uma base de Perfil usam Padrão e não são contadas como parte da base. Uma base Padrão inclui todas as zonas gerenciadas. Isso descreve a atribuição da seleção, não se os dispositivos estão funcionando. Uma base sem zonas se distingue de uma totalmente substituída por exceções.
+
+Abaixo do resumo de cobertura da base, **Distribuição da casa** começa recolhida. Seu rótulo informa o total da casa, independentemente da quantidade de zonas incluídas na base. Selecione-o para mostrar a barra de 6px e toda a legenda; selecione novamente ou pressione Escape para recolher. O cabeçalho mantém a posição enquanto o conteúdo se expande para baixo, com uma transição curta que respeita a preferência por movimento reduzido. A barra representa todas as zonas gerenciadas usando as cores dos Perfis.
+
+Segmentos de exceção incluem zonas fora da base; por isso, suas contagens coincidem com a lista de Exceções. Zonas fora da base sem exceção têm um segmento Padrão neutro separado. Uma legenda compacta usa ícones de Perfil de 14px, nomes e origem, com as contagens em uma coluna separada alinhada à direita. Exceções Padrão explícitas também usam cor neutra. Referências de base, exceção e alternativa permanecem distintas mesmo quando as cores coincidem. A própria contagem de cobertura da base fica separada e aparece uma vez. Uma base de Perfil vazia ainda pode ter uma barra da casa com zonas Padrão; sem zonas gerenciadas, não há barra. Esses números descrevem a atribuição da seleção, não o estado físico dos dispositivos.
+
+Os Perfis de base participantes são identificados na legenda expandida; bases de Modo não repetem uma lista separada de componentes acima. No computador, a base ocupa menos largura que as exceções. Seu ícone fica alinhado ao topo do nome e do tipo. O título Exceções usa o ícone de camadas para identificar o mesmo conceito das ações de exceção dos Perfis.
+
+**Exceções** lista cada Perfil e um botão com sua quantidade de zonas; exceções Padrão explícitas têm seu próprio grupo. Os nomes dos ambientes ficam ocultos até serem solicitados. Selecione qualquer ponto de uma linha de exceção para expandir os ambientes do grupo abaixo dela sem substituir as outras exceções. Selecione novamente ou pressione Escape para recolher; abrir outro grupo fecha o anterior. A expansão tem transição curta e respeita a preferência por movimento reduzido. A linha selecionada e a contagem mantêm a posição; detalhes crescem para baixo e empurram as linhas seguintes, permitindo recolher pelo mesmo botão. Listas longas têm rolagem interna em vez de preencher a Visão geral.
+
+Uma base sem alterações mostra **Sem exceções**. Ela permanece visível mesmo quando todos os ambientes foram substituídos. Configuração ativa não tem uma área separada de edição por zona; use as ações de zona documentadas para mudanças específicas. A entidade select nativa de Modo mostra Manual enquanto houver exceções. Remover todas as exceções restaura o rótulo do Modo original se ele ainda existir. Selecionar um Modo personalizado ou Padrão, ativar um único Perfil ou ativar uma lista completa substitui explicitamente a base e remove exceções. A opção nativa Manual apenas libera a associação ao Modo de base, mantendo base e exceções.
+
+Editar um Modo de base preserva suas exceções. Renomear ou editar um Perfil mantém as referências ativas: programações alteradas afetam os ambientes que as usam. Adicionar um ambiente a um Perfil não expande uma exceção aplicada anteriormente a outros ambientes. Remova uma exceção antes de editar seu Perfil para remover o ambiente referenciado. Excluir um Perfil, ou importar definições que o removam, remove suas exceções e devolve esses ambientes à base restante ou a Padrão.
+
+O Home Assistant continua decidindo a combinação de estação, presença e rotina pessoal. Um Modo sazonal é uma seleção completa, não uma camada extra sobre as exceções por ambiente. Recalcule as seleções relevantes após mudar de estação. Ações para ambientes diferentes se combinam com segurança; ações concorrentes para o mesmo ambiente são aceitas em ordem. Uma seleção completa de base pode substituir todas elas.
+
+Todas as ações explícitas de seleção cancelam um Retorno para casa pendente, inclusive uma seleção repetida. Listas vazias de aplicação/limpeza não cancelam. O cancelamento pode afetar a preparação em outras partes da casa. Ele é salvo separadamente da seleção posterior: se esta falhar ao salvar, a seleção anterior pode permanecer com o Retorno para casa já cancelado. Solicitações inválidas nunca o cancelam.
+
+Mudanças de seleção são persistidas juntas, mas os dispositivos podem aplicá-las em momentos diferentes ou informar falhas individuais. Pausas e restrições de envio existentes mantêm o controle. Uma mudança apenas de atribuição da seleção não cancela Reforço nem envia ações duplicadas quando a rotina efetiva permanece igual. Ambientes com execução externa publicam sua semana efetiva com as restrições existentes do provedor. Perfis não eliminam limitações de equipamentos compartilhados.
+
+A intenção completa de base e exceções sobrevive à reinicialização. Exportações portáteis contêm definições, não essa intenção ativa; importar nunca ativa Perfis novos.
+
 <a id="seasonal-selection"></a>
 ## Seleção sazonal
 
@@ -166,6 +248,7 @@ O [blueprint de seleção sazonal da climatização](blueprints/seasonal-climate
 <a id="interactions"></a>
 ## Interações
 
+- Blocos **Somente temperatura** mantêm sua política em Perfis, predefinições reutilizáveis, modelos e vínculos de modelos. Ativar um Perfil ou Modo com esse bloco atualiza a temperatura-alvo sem solicitar mudança de modo HVAC. Não liga um equipamento desligado; a integração precisa aceitar alvos enquanto desligado.
 - Pausas globais e por zona têm prioridade sobre uma mudança de perfil.
 - Reforços nas zonas afetadas são cancelados ao ativar um perfil.
 - O pré-condicionamento adaptativo recalcula para a programação efetiva do perfil.

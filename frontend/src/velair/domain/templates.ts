@@ -19,6 +19,7 @@ export function scheduleTemplatesFromStored(templates: StoredScheduleTemplate[] 
         action: block.action ?? ACTION_SET_TEMPERATURE,
         start: block.start,
         hvac_mode: block.hvac_mode ?? "",
+        ...(block.temperature_only ? { temperature_only: true } : {}),
         ...(block.slot_id ? { slot_id: block.slot_id } : {}),
       };
       if (block.target_temp_low != null || block.target_temp_high != null) {

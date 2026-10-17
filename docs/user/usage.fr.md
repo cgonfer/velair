@@ -1,5 +1,6 @@
 <a id="usage-guide"></a>
 # Guide d’utilisation
+
 <!-- velair-docs:start -->
 Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Français](usage.fr.md) · [Deutsch](usage.de.md) · [Italiano](usage.it.md) · [Nederlands](usage.nl.md) · [Polski](usage.pl.md) · [Português (Brasil)](usage.pt-br.md) · [Português (Portugal)](usage.pt-pt.md) · [Русский](usage.ru.md) · [État des traductions](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -195,11 +196,7 @@ Velair calcule les événements à venir dans le backend et programme des rappel
 ponctuels exacts via Home Assistant. L’interface s’abonne aux mises à jour du
 backend par WebSocket ; aucune interrogation continue n’est donc nécessaire.
 
-Pendant un épisode de Retour prévu, Vue d’ensemble affiche un résumé compact du
-foyer avec l’origine hebdomadaire ou ponctuelle, le processus en cours et l’heure
-de confirmation ou d’arrivée applicable. Sélectionnez-le pour ouvrir Retour
-prévu dans Anticipation ; ce résumé ne duplique pas les commandes de
-départ. Un incident peut rester visible même lorsqu’aucun départ n’est en cours.
+Pendant un épisode de Retour prévu, Vue d’ensemble affiche un résumé compact du foyer : origine hebdomadaire ou ponctuelle, processus actuel et heure de confirmation ou d’arrivée applicable. Il utilise le fond habituel des cartes du thème, une bordure violette discrète et l’icône principale de retour ; les autres icônes gardent la couleur du texte. Un retour futur accepté ajoute des compteurs de préparation avec aide au survol, au clavier et au toucher. Un départ confirmé affiche une chronologie compacte en lecture seule avec heures et Modes de départ/arrivée, à côté du résumé si la place suffit ou dessous dans un conteneur étroit. Le bouton de navigation ouvre Retour prévu dans Anticipation sans dupliquer les commandes de départ. Un incident peut rester visible même sans départ actif.
 
 Chaque appareil concerné affiche un signal violet de Retour prévu lorsque le
 backend indique que le mode Absence ou la préparation à l’arrivée fait
@@ -211,6 +208,8 @@ et l’exécution externe conservent leur priorité. Un appareil qui garde simpl
 la programmation Par défaut sous un Mode Absence personnalisé ne reçoit pas de
 signal Absence. L’indicateur décrit l’intention de contrôle ; il ne prouve ni la
 transmission réussie d’une commande ni l’atteinte de la consigne dans la pièce.
+
+Les informations de préparation du retour sont distinctes de l’indicateur d’autorité : chaque équipement peut afficher son état en attente, en préparation, prêt, suspendu, indisponible ou à l’arrivée uniquement, son début estimé, sa cible d’arrivée et le motif pertinent même s’il suit encore Absence. Les estimations manquantes ne sont pas remplacées par des heures supposées. Les retours inactifs ne conservent pas d’aperçu futur.
 
 Lorsqu’un appareil géré ne publie pas `target_temp_step`, sa ligne dans
 **Paramètres** affiche **Pas de température**. Velair utilise `1` par défaut et
@@ -340,10 +339,7 @@ Après la configuration, Velair apparaît dans la barre latérale de Home Assist
 Le panneau latéral est l’interface recommandée. La carte Lovelace facultative est
 utile pour intégrer certains panneaux Velair dans un tableau de bord existant.
 
-La liste des prochains événements de Vue d’ensemble montre le prochain événement
-prévu pour chaque appareil géré, y compris ceux avancés par le préconditionnement.
-Cette liste est informative pour l’utilisateur ; Velair continue à programmer
-en interne l’action due la plus proche.
+La liste des prochains événements de Vue d’ensemble et les cartes du tableau de bord montrent le prochain changement de contrôle prévu pour chaque équipement, y compris préparation estimée et arrivée pendant un Retour prévu confirmé. Toutes les lignes ont la même disposition compacte nom/source/heure/action/HVAC, sans sous-titre d’état sous le nom. L’aide finale explique la phase et, si le retour est prioritaire, le Mode d’arrivée, la suspension et la référence hebdomadaire actuelle. Elle s’ouvre au survol, au focus clavier ou au toucher. Une suspension explique les conditions prioritaires sans promettre un démarrage bloqué. Les capteurs de prochain événement et les vues d’anticipation hebdomadaire gardent leur sens hebdomadaire. Ces prévisions sont informatives ; elles ne changent ni l’exécution ni la confirmation de transmission.
 
 La vue d’ensemble des zones utilise des cartes adaptatives compactes pour
 montrer ce que font Velair et l’appareil de chauffage ou de climatisation dans chaque pièce. Lorsque
@@ -359,8 +355,7 @@ Profil actif et les signaux ordonnés Room Assist/Confort/air/données. Sur les
 cartes très larges, ces signaux et le résumé compact partagent l’en-tête. Sur les
 cartes étroites, y compris sur mobile et dans les dispositions Lovelace compactes,
 l’identité et l’état compact restent alignés côte à côte, tandis que les signaux
-complets de Profil/Confort occupent la ligne entière en dessous pour ne pas
-réduire ni tronquer leur sens. Le résumé utilise une icône cohérente, un texte
+de Profil/Confort occupent la ligne entière en dessous. Les pastilles Profil, retour, Room Assist et Confort/air/données partagent une typographie compacte et une disposition icône/libellé et valeur. Le retour a une nuance violette discrète ; Confort distingue toujours normal, information, avertissement et erreur. Les valeurs longues peuvent être raccourcies visuellement pour garder une hauteur compacte ; le texte complet reste dans l’aide au survol, au focus clavier ou au toucher. Le résumé utilise une icône cohérente, un texte
 équilibré et une couleur discrète indiquant l’activité, sans titre fixe ni badge extérieur
 décoratif. Lorsque Room Assist est actif ou en maintien, les détails sont
 regroupés en Température (Appareil, puis Capteur), Consigne (Appareil, puis
@@ -402,11 +397,11 @@ toutes les sources indiquent toujours une absence. Aucun compte à rebours en
 direct ni aucune chronologie de départ ne s’affiche avant cette confirmation.
 
 L’éditeur visuel de la carte appelle cette vue **Retour prévu**. Elle affiche
-uniquement les commandes compactes de **One-off return** (retour ponctuel), avec les nombres de
+uniquement les commandes compactes de **Retour ponctuel**, avec les nombres de
 sources occupées, absentes et inconnues en haut à droite de l’en-tête. Le délai
 de confirmation de l’absence enregistré y apparaît uniquement avant une absence
 active confirmée. Sans sources de présence enregistrées, ces indicateurs sont
-omis : **Plan return** confirme explicitement le départ et active Absence
+omis : **Planifier le retour** confirme explicitement le départ et active Absence
 immédiatement, sans attendre. L’arrivée enregistrée continue à contrôler la
 préparation et l’activation de la destination ; Velair ne peut pas détecter une
 arrivée physique sans sources. Les sources configurées inconnues ou
@@ -423,7 +418,7 @@ rétablit Confort et ses Profils d’origine. Consultez les
 y compris les démarrages sans capteur, les changements d’arrivée et les
 sélections explicites de Mode. Une fois le retour terminé ou annulé, la carte
 affiche un nouveau formulaire de date/heure, même si la présence du foyer
-indique toujours que tout le monde est absent. **Plan return** reste
+indique toujours que tout le monde est absent. **Planifier le retour** reste
 visible mais désactivé lorsque la configuration enregistrée ou le planificateur
 est indisponible. Le panneau latéral utilise les mêmes boutons Annuler/Modifier
 l’arrivée et le même nouveau formulaire de planification. Seuls les indicateurs
@@ -434,8 +429,7 @@ au titre, avec une infobulle native expliquant la phase. Pendant la confirmation
 le titre du processus fournit ce contexte. Avant le départ confirmé, une icône
 d’arrivée accessible et le libellé **Arrivée prévue** identifient le retour
 enregistré, alignés avec le titre et l’état ; sa valeur enregistrée est une puce
-compacte cliquable sans crayon ni soulignement. Le graphique confirmé garde
-au contraire sa date/heure soulignée et son crayon initial. Les deux ouvrent le
+compacte cliquable sans crayon ni soulignement. Le graphique confirmé utilise une surface d’arrivée sombre semblable à un champ, de même typographie que le départ, sans crayon ni soulignement. Les deux ouvrent le
 même éditeur d’arrivée. Le bouton bleu **Retour**, avec une flèche gauche dans
 la ligne d’actions de l’éditeur, abandonne la modification d’arrivée et ferme
 l’éditeur localement en restaurant la dernière arrivée enregistrée. Son
@@ -461,39 +455,9 @@ carte du foyer. Les commandes du tableau de bord et du panneau modifient le mêm
 épisode backend ; les brouillons d’arrivée restent locaux à chaque carte ouverte
 jusqu’à leur soumission.
 
-Pendant une absence confirmée, des icônes de départ et d’arrivée encadrent la
-chronologie. Les heures enregistrées sont directement sous les icônes des
-extrémités ; la valeur d’arrivée conserve son crayon. Retour ferme l’éditeur
-depuis la ligne d’actions ; aucun bouton de fermeture ne se trouve à côté de
-l’heure. Des libellés de Mode simples, avec icône et texte sous les heures,
-identifient Absence/Retour sans répéter les étiquettes. La chronologie montre
-le départ effectivement confirmé et le retour enregistré, avec les noms des
-Modes Absence et Retour de l’épisode. Le point de l’heure actuelle possède une
-infobulle localisée **Maintenant** et indique le temps UTC écoulé entre les
-extrémités, limité à la barre. Les dates apparaissent lorsque départ et arrivée
-sont des jours différents dans le fuseau horaire Home Assistant. Modifier
-l’arrivée ne déplace pas l’extrémité tant que le backend ne l’a pas acceptée.
-Les retours en attente, terminés, annulés, ignorés ou en erreur n’ont pas de barre
-mobile. L’horloge locale se rafraîchit une fois par minute lorsque la carte ou le
-panneau actif est visible ; elle n’interroge pas Home Assistant.
-La partie colorée écoulée de la barre représente le temps, pas la progression
-de la température de la pièce. Si aucune estimation fiable de l’heure de début de la première préparation n’est disponible,
-un petit bouton d’information près du titre Retour ponctuel explique les pièces
-suspendues, déjà à la consigne, préparées seulement à l’arrivée ou exclues lorsque
-l’aperçu actuel le confirme ; une information manquante ou hétérogène reste
-indéterminée. Sur ordinateur, survolez le bouton ou donnez-lui le focus ; sur
-mobile, touchez-le. Échap ou une interaction extérieure ferme l’aide. Une
-estimation backend peut ajouter un repère horaire de Préparation estimée pour
-la première pièce admissible. Sa légende légèrement bleutée se développe pour
-afficher les pièces admissibles et leurs débuts estimés dans l’ordre
-chronologique. Elle est initialement repliée ; chaque pièce peut démarrer
-séparément. Les mises à jour ordinaires laissent la liste ouverte, tandis qu’un
-changement d’arrivée enregistrée ou d’épisode la ferme. Modifier l’arrivée
-masque cet encart et l’aide de repli en conservant l’estimation enregistrée de
-la barre ; Retour rétablit l’état ouvert ou replié du même épisode. C’est une
-estimation indicative, pas une progression HVAC ou thermique réelle. Le résumé
-hebdomadaire, la liste des sources et le détail de préparation des pièces
-restent dans le panneau latéral.
+Pendant une absence confirmée, les heures de départ et d’arrivée modifiable sont au-dessus de la chronologie ; les Modes Absence et Retour sont dessous. Les aides du départ, de l’icône d’arrivée et des Modes expliquent leur sens au survol, au focus clavier ou au toucher. La date d’arrivée reste un bouton d’édition séparé. Un trait vertical neutre Maintenant marque le temps UTC écoulé au bout du segment coloré. Les dates apparaissent si les extrémités sont sur des jours différents dans le fuseau Home Assistant. Un brouillon d’arrivée ne déplace pas l’extrémité avant acceptation. Les états en attente et terminaux, ou l’absence de départ confirmé, n’ont pas de chronologie mobile. Une erreur active avec départ valide conserve chronologie et annulation. L’horloge locale s’actualise chaque minute uniquement quand la vue est visible et active, sans interroger Home Assistant.
+
+Les équipements adaptatifs éligibles ont des points colorés et une légende correspondante avec noms et heures de début estimées visibles, plus une aide complète. Les points superposés partagent un cercle segmenté. Les pièces suspendues, prêtes, indisponibles ou à l’arrivée uniquement n’ont pas de point. La légende du foyer commence sur une ligne ; +N développe les autres pièces dans la carte et Afficher moins la replie. Les mises à jour ordinaires conservent l’ouverture ; un changement d’arrivée enregistrée, de destination ou d’épisode la réinitialise. Les pastilles de préparation gardent leurs nombres et détails d’arrivée/premier début dans leurs aides. Les compteurs de présence, le délai et la phase ont aussi des aides clavier et mobiles. La configuration hebdomadaire, les sources et la préparation détaillée restent dans la barre latérale. Préparation estimée et temps écoulé ne confirment ni activité HVAC physique ni progression thermique.
 
 <a id="climate-status-and-control-card"></a>
 ### Carte d’état et de contrôle climatique
@@ -577,7 +541,7 @@ Les cartes créées avant la liste d’actions ordonnée utilisaient
 `climate_custom_actions`. Velair continue à lire ces anciens champs, tandis que
 l’éditeur visuel écrit `climate_actions` lorsque la liste d’actions change.
 
-**One-off return** est une autre action fournie par Velair. Elle propose les
+**Retour ponctuel** est une autre action fournie par Velair. Elle propose les
 mêmes options de visibilité, de nom masqué et de placement automatique/Plus
 que Forçage et Pause. L’éditeur liste d’abord les actions fournies : Forçage,
 Pause, puis Retour ponctuel, y compris celles qui sont masquées. Retour ponctuel
@@ -691,16 +655,7 @@ une seconde ligne lorsqu’elle est activée. Seuls les affichages contenant le
 graphique peuvent être repliés ; le mode texte seul reste visible et ne propose
 pas de commande trompeuse permettant de développer le panneau.
 
-`climate_preconditioning_display` suit le même modèle `text`, `chart` ou `both`.
-Son en-tête garde visible l’état programmé ou actif, et sa seconde ligne
-facultative indique la consigne et le début calculé. Le mode graphique seul
-garde uniquement cet état au-dessus de l’aperçu développable. Les deux
-sections graphiques démarrent repliées sauf configuration contraire, et
-l’option d’état initial apparaît dans l’éditeur uniquement lorsqu’un graphique
-est sélectionné. Le titre de chronologie, le Profil actif et le Mode actif
-gardent chacun leur propre option de visibilité ; les puces de Mode et Profil
-utilisent une hauteur réduite propre à la carte. L’état ouvert ou replié choisi manuellement
-reste local à la session active de la carte.
+`climate_preconditioning_display` suit le même modèle `text`, `chart` ou `both`. La préparation d’un retour accepté est séparée de l’anticipation hebdomadaire, avec état de la pièce, début estimé, cible et motif pertinent. Ces détails décrivent le retour enregistré et l’intention de contrôle, pas l’activité physique. Les commandes intégrées de Retour ponctuel montrent seulement le point éligible de l’équipement sélectionné, sans pastilles de préparation, et conservent son nom et son début estimé dans la légende. Sans point actuel, une brève explication d’état/motif remplace la chronologie. L’arrivée reste modifiable et l’annulation disponible ; ces actions affectent toujours le retour du foyer. La chronologie mesure le temps vers l’arrivée, pas la progression thermique. L’en-tête du préconditionnement garde l’état programmé ou actif visible, avec une seconde ligne facultative pour cible et début calculé. Le mode graphique seul garde cet état au-dessus de l’aperçu développable. Les deux sections graphiques démarrent repliées sauf configuration contraire ; l’option d’état initial apparaît dans l’éditeur visuel uniquement si un graphique est sélectionné. Le titre de chronologie, le Profil et le Mode actifs gardent leurs options de visibilité ; les pastilles Mode/Profil ont une hauteur réduite pour la carte. L’ouverture manuelle reste locale à la session de carte.
 
 Forçage ouvre un formulaire dans la carte pour chaque option prise en charge par
 l’appareil et le service : consigne ou plage, durée, mode HVAC, ventilation,
@@ -766,14 +721,7 @@ view: active-setup
 active_setup_controls: profiles
 ```
 
-L’option vaut `both` par défaut et chaque variante montre toujours le Mode
-actuel et les Profils appliqués. La commande réservée aux Profils garde une
-action Programmations par défaut. Sélectionner directement un Profil remplace
-tous les Profils précédemment actifs et passe le Mode à Manuel. Les zones
-qui ne sont plus couvertes par le nouveau Profil reviennent à leurs
-programmations Par défaut au lieu de conserver la configuration du Mode
-précédent. Utilisez un Mode lorsque plusieurs Profils non chevauchants
-doivent être activés ensemble.
+L’option vaut `both` par défaut et chaque variante montre **Base** et **Exceptions**, avec l’identité réelle Mode/Profil/Par défaut de la base et les groupes d’exceptions avec leur nombre de pièces. Base et son type partagent une petite ligne de contexte au-dessus du nom ; les noms longs se replient sur téléphone et carte étroite. La base indique combien de ses zones incluses en héritent encore ; les exceptions et les zones Par défaut hors du Profil sont exclues. Une base Par défaut inclut toutes les zones gérées. Cela décrit la couverture de sélection, pas l’activité. **Répartition du foyer**, sous la base, est initialement repliée. Sélectionnez son libellé pour révéler barre et légende ; sélectionnez à nouveau ou Échap pour replier en gardant l’en-tête en place. La barre couvre toutes les zones gérées et son libellé en donne le total. La légende utilise les couleurs de Profils, de petites icônes et une colonne de nombres à droite. Les nombres d’exceptions correspondent à la liste, y compris hors base. Les zones non couvertes sans exception forment un segment neutre Par défaut. Ce total du foyer est distinct du dénominateur de couverture de base. Sans zone gérée, aucune barre. Les Profils de base sont identifiés dans la légende développée sans liste de composants du Mode séparée. Les grandes largeurs donnent plus de place aux exceptions ; les cartes étroites gardent le résumé empilé. Cliquez n’importe où sur une ligne d’exception pour développer ses pièces dessous en gardant toutes les exceptions visibles ; cliquez à nouveau ou Échap pour replier. L’en-tête et le nombre restent en place, le contenu grandit vers le bas. Ouvrir un autre groupe ferme le précédent. Les noms de pièces sont absents du résumé compact et les longues listes défilent dans la zone développée. Ce détail est en lecture seule dans toutes les variantes ; Configuration active n’a pas de menu d’édition par zone séparé. Le contrôle réservé aux Profils garde une action de programmations Par défaut. Choisir directement un Profil remplace tous les Profils actifs et passe le Mode à Manuel. Les zones non couvertes reviennent à leurs programmations Par défaut au lieu de garder l’ancien Mode. Utilisez un Mode pour activer plusieurs Profils sans chevauchement comme base. L’icône de couches applique un Profil uniquement à ses zones configurées comme exceptions et conserve les autres sélections. Consultez [base et exceptions de zone](climate-profiles.fr.md#a-base-with-independent-zone-exceptions).
 
 ```yaml
 type: custom:velair-card
@@ -819,7 +767,7 @@ Votre sélection est ensuite conservée lorsque vous passez entre thermostats,
 programmations Par défaut et de Profil, ou données actualisées du backend.
 
 1. Sélectionnez l’appareil à configurer.
-2. Sélectionnez le jour de la semaine.
+2. Choisissez une **Répartition des jours**, puis un jour ou un groupe de jours.
 3. Utilisez **Programme indépendant** pour des blocs indépendants, ou sélectionnez
    un modèle avec **Horaires uniquement** ou **Horaires et réglages**. Pour des
    blocs indépendants, poursuivez ci-dessous.
@@ -892,6 +840,12 @@ Assistant signaler un éventuel échec propre à l’appareil. Les plages native
 exigent toujours une prise en charge explicite des plages et Velair ne convertit
 jamais une consigne unique en plage ni une plage en consigne unique.
 
+Choisissez **Température uniquement** dans le sélecteur de mode du bloc pour mettre à jour sa cible sans demander à Velair d’allumer l’équipement ou de changer son mode HVAC. Un équipement éteint reste éteint si son intégration accepte les cibles à l’arrêt ; un équipement en marche garde son mode réel. Ce choix est distinct : **Conserver le mode actuel**, les modes explicites et les horaires enregistrés gardent leur comportement. Ces blocs ne peuvent pas inclure d’options supplémentaires comme un préréglage, car ces commandes pourraient changer l’état de fonctionnement.
+
+Ce choix s’applique pendant tout le bloc actif : changements manuels de mode HVAC, démarrage, reprise et récupération de transmission. Changer uniquement le mode HVAC ne crée pas de réglage manuel ; changer la température suit toujours la politique externe configurée. Room Assist et la préparation anticipée ne fonctionnent pas tant que cet équipement est éteint. Ils peuvent reprendre après une mise en marche externe avec le mode actuel compatible. Un Forçage explicite reste une demande séparée pouvant allumer l’équipement.
+
+La prise en charge dépend de l’intégration climatique. Certaines masquent ou refusent les cibles à l’arrêt, ou s’allument elles-mêmes à leur réception. Velair ne demande jamais de changement de mode ni de mise en marche de secours pour un bloc Température uniquement. Un échec est signalé ; Velair n’allume pas brièvement l’appareil pour régler la cible. Les plages natives exigent la capacité de plage correspondante. Les fournisseurs d’horaires externes doivent explicitement prendre en charge cette politique.
+
 L’éditeur garde visibles les options choisies dans une ligne compacte. Pour
 un bloc avec options climatiques, ouvrez sa commande d’options pour voir ce
 qu’il enverra : la consigne éventuelle, la gestion du mode HVAC et les options
@@ -924,6 +878,22 @@ qu’envoyées aveuglément.
 Si un bloc utilise `Arrêt`, les champs de consigne ne sont pas utilisés car
 le bloc éteint l’entité climatique.
 
+**Répartition des jours et modification groupée**
+
+La programmation Par défaut de chaque équipement et celle de chaque équipement dans un Profil mémorisent leur **Répartition des jours**. Choisissez **Jours individuels**, **Semaine / Week-end** ou **Tous les jours** avant de sélectionner un onglet de jour. Les programmations existantes commencent avec Jours individuels.
+
+Toutes les répartitions gardent les mêmes sept cellules dans l’ordre de semaine configuré. Jours individuels en sélectionne une. Semaine / Week-end sélectionne lundi à vendredi ensemble, ou samedi et dimanche, quel que soit le jour cliqué. Avec dimanche en premier, sélectionner samedi sélectionne aussi dimanche à l’autre extrémité. Tous les jours sélectionne chaque cellule. Les cellules sélectionnées adjacentes sont reliées ; les séparées restent à leur place. Cliquer une cellule du groupe déjà sélectionné conserve le brouillon.
+
+Choisir une répartition conserve les blocs existants. Enregistrez ce choix avec la programmation Par défaut ou **Enregistrer le profil** pour un Profil. Chaque zone peut avoir une répartition différente. Les modèles journaliers restent des listes de blocs journalières.
+
+Si les jours sélectionnés ont une configuration enregistrée identique, modifiez directement leur horaire commun. Sinon, **Horaires différents** permet d’examiner les horaires et de choisir explicitement une base. Les jours avec blocs et liens identiques partagent une alternative portant leurs jours. Chaque alternative utilise les barres compactes de Vue d’ensemble avec cible et mode dans les segments colorés, sans liste permanente dessous. L’icône d’information ouvre l’horaire complet avec heures, réglages et références au survol, au focus clavier ou au toucher ; consulter cette aide ne sélectionne pas l’alternative. Cliquez ou touchez une alternative pour la choisir comme base ; fond et bordure identifient l’unique configuration choisie. Les flèches, Espace et Entrée permettent la sélection au clavier. Les alternatives restent disponibles pour changer de base avant d’enregistrer. Avec **Tous les jours** ou **Semaine / Week-end**, choisissez et enregistrez d’abord l’alternative pour les sept jours, cinq jours de semaine ou deux jours de week-end. Sélectionner puis **Enregistrer** applique directement sans autre confirmation. L’éditeur commun s’ouvre après la réussite ; vous pouvez alors changer l’horaire partagé. Un échec conserve la sélection et la comparaison pour réessayer. Les alternatives vides montrent **Aucun bloc propre** sans répéter un nombre nul ; l’aide explique qu’elles suppriment les blocs propres des jours sélectionnés, qu’un jour vide n’est pas une commande d’arrêt et que la continuité hebdomadaire peut continuer. La disposition convient au mobile. Choisir une base n’enregistre rien. **Enregistrer** est désactivé sans base et placé sous le contenu à droite. Un résumé identifie le jour source et les jours recevant son horaire. L’enregistrement remplace les configurations du groupe et laisse les autres jours intacts. Des températures identiques n’impliquent pas une configuration identique si modèles ou préréglages diffèrent. Des libellés compacts identifient le modèle et la portée du lien, les préréglages ou l’indépendance lorsque les réglages effectifs semblent identiques. Les références complètes restent dans l’aide.
+
+Ajouter, supprimer ou déplacer des blocs, appliquer un modèle, changer la portée du lien et dissocier affecte tous les jours sélectionnés à l’enregistrement. Les autres jours restent inchangés. **Enregistrer comme modèle** sauvegarde une liste journalière réutilisable. Copier vers d’autres équipements vise les mêmes jours de semaine sélectionnés et conserve leur propre répartition. Pour cloner entre jours, revenez à Jours individuels.
+
+La chronologie groupée montre les blocs communs modifiés, sans sélecteur d’aperçu séparé ni segment hérité propre à un jour. Jours individuels montre toujours la continuité du jour précédent. La continuité hebdomadaire du planificateur ne change pas et les blocs hérités ne sont jamais copiés dans les blocs enregistrés. Les limites des appareils sont validées pour chaque jour concerné avant l’enregistrement complet.
+
+Les répartitions survivent aux redémarrages Home Assistant et aux exports portables. Les anciens exports sans répartition importent avec Jours individuels. Les anciennes références de répartitions personnalisées s’ouvrent aussi ainsi, en conservant les blocs et liens de chaque jour.
+
 <a id="timeline-editing"></a>
 ## Modification de la chronologie
 
@@ -943,7 +913,7 @@ ponctuelles préconfigurées, consultez [Retour prévu](planned-return.fr.md).
 Configurez la routine dans la sous-section Retour prévu d’Anticipation
 et utilisez son état en direct pour les états individuels des sources et les
 changements ponctuels d’arrivée sans modifier la semaine enregistrée.
-**Plan return** peut attendre un départ confirmé avec une heure
+**Planifier le retour** peut attendre un départ confirmé avec une heure
 ponctuelle même lorsque la routine hebdomadaire automatique est désactivée.
 Sans sources de présence enregistrées, le démarrage explicite applique au
 contraire Absence immédiatement ; la préparation normale et l’arrivée

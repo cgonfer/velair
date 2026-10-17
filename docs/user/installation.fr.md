@@ -1,5 +1,6 @@
 <a id="installation"></a>
 # Installation
+
 <!-- velair-docs:start -->
 Traductions: [Original en anglais](installation.md) · [Español](installation.es.md) · [Français](installation.fr.md) · [Deutsch](installation.de.md) · [Italiano](installation.it.md) · [Nederlands](installation.nl.md) · [Polski](installation.pl.md) · [Português (Brasil)](installation.pt-br.md) · [Português (Portugal)](installation.pt-pt.md) · [Русский](installation.ru.md) · [État des traductions](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traductions: [Original en anglais](installation.md) · [Español](installation.e
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -111,6 +112,15 @@ Valeurs `view` prises en charge :
 - `preconditioning` : configuration du préconditionnement adaptatif et état de l’apprentissage local.
 - `planned-return` : commandes compactes de retour ponctuel, compteurs des sources d’occupation configurées et chronologie du départ confirmé. Sans sources d’occupation enregistrées, Plan return applique immédiatement le mode absence ; la routine hebdomadaire automatique nécessite toujours des sources.
 - `diagnostics` : état du fonctionnement, historique limité, filtres et export de rapports de problème.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+### Découverte des cartes et dépannage des ressources
+
+Utilisez uniquement la ressource module `/velair_frontend/velair-card.js` fournie par l’intégration. Supprimez les ressources Velair en double, y compris une ancienne `/local/velair-card.js`, puis rechargez le navigateur. Les éléments personnalisés du navigateur ne peuvent pas être remplacés après leur enregistrement : une ancienne ressource chargée en premier peut laisser ce navigateur utiliser une implémentation obsolète.
+
+Le sélecteur de cartes du tableau de bord découvre Velair via les métadonnées frontend. Ajouter manuellement `type: custom:velair-card` en YAML utilise l’élément personnalisé enregistré ; ce sont deux vérifications distinctes. Si la carte fonctionne en YAML mais n’apparaît pas dans le sélecteur, précisez cette distinction dans le signalement.
+
+Si la découverte diffère entre ordinateur et mobile, recherchez les erreurs JavaScript dans la console de développement du navigateur concerné et la requête de ressource dans son onglet Réseau. Indiquez les versions de Home Assistant et Velair, le navigateur concerné, l’URL exacte de ressource et les erreurs pertinentes. Retirez les informations privées avant de partager les journaux. Un chargement réussi dans un autre navigateur n’établit pas la cause de l’échec dans le navigateur concerné.
 
 <a id="updating"></a>
 ## Mise à jour

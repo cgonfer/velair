@@ -47,6 +47,7 @@ function harness(source: "default" | "profile", linked = false, fresh = false) {
       unlink: () => internal._unlinkDayTemplate(), link: () => internal._draftTemplateLink,
       blocks: () => internal._draftBlocks, otherDay: () => internal._data.zones["climate.office"].schedule.tuesday,
       setIncomplete: () => { internal._draftBlocks = structuredClone(incomplete); },
+      setEmpty: () => { internal._draftBlocks = []; },
       setName: (_name: string) => undefined, name: () => "",
       original: response, normalizer: internal._normalizeDraftBlocks,
     };
@@ -71,6 +72,7 @@ function harness(source: "default" | "profile", linked = false, fresh = false) {
     restore: () => internal._restoreOwnHours("climate.office", "monday"), unlink: () => internal._unlinkHours("climate.office", "monday"),
     link: () => zone().template_links?.monday, blocks: () => internal._blocks("climate.office", "monday"),
     otherDay: () => zone().schedule.tuesday, setIncomplete: () => { zone().schedule.monday = structuredClone(incomplete); },
+    setEmpty: () => { zone().schedule.monday = []; },
     setName: (name: string) => { internal._draft.name = name; }, name: () => internal._draft.name,
     original: response, normalizer: vi.fn(),
   };
@@ -79,6 +81,30 @@ function harness(source: "default" | "profile", linked = false, fresh = false) {
 afterEach(() => vi.restoreAllMocks());
 
 describe.each(["default", "profile"] as const)("%s Hours source confirmations", (source) => {
+  it("links a template without a replacement warning when the timeline has no blocks", () => {
+    const state = harness(source);
+    state.setEmpty();
+    const other = structuredClone(state.otherDay());
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    expect(state.select("workday")).toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(state.link()?.template_key).toBe("workday");
+    expect(state.blocks()).toHaveLength(2);
+    expect(state.otherDay()).toEqual(other);
+  });
+
+  it("restores own scheduling without a replacement warning when the timeline has no blocks", async () => {
+    const state = harness(source);
+    state.setEmpty();
+    const other = structuredClone(state.otherDay());
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    expect(await state.restore()).toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(state.link()).toBeUndefined();
+    expect(state.blocks()).toMatchObject([{ start: "09:00", temperature: 19 }]);
+    expect(state.otherDay()).toEqual(other);
+  });
+
   it("can link an invalid draft, retaining exact-hour assignments and leaving other slots incomplete", async () => {
     const state = harness(source);
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);

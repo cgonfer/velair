@@ -1,6 +1,9 @@
 import { css } from "lit";
 
 export const baseStyles = css`
+  .day-layout-controls { display: grid; gap: 12px; margin: 12px 0; }
+  .day-layout-controls label { display: grid; gap: 6px; }
+
   :host {
     display: block;
     max-width: 100%;
@@ -125,21 +128,24 @@ export const baseStyles = css`
   }
 
   .command-button {
+    box-sizing: border-box;
+    align-self: center;
+    font: inherit;
+    line-height: 1.25;
     background: var(--primary-color);
     border-color: var(--primary-color);
     color: var(--text-primary-color);
     flex: 0 1 auto;
     gap: 8px;
     min-width: 0;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 38px;
+    padding: 6px 12px;
   }
 
   .command-button span {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .editor-actions {
@@ -204,6 +210,11 @@ export const baseStyles = css`
 
   .command-button.compact {
     min-height: 34px;
-    padding: 6px 10px;
+    padding: 4px 10px;
+  }
+
+  @media (any-pointer: coarse) {
+    .command-button,
+    .command-button.compact { min-height: 44px; }
   }
 `;

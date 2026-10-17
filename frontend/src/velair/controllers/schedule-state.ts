@@ -1,7 +1,8 @@
+import { configurationFingerprint, resolveDayLayout } from "../domain/day-layouts";
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
 import { draftBlocksFromScheduleBlocks } from "../domain/draft-blocks";
-import { linkedDraftBlocks } from "../domain/linked-schedules";
+import { bindingsFromBlocks, linkedDraftBlocks } from "../domain/linked-schedules";
 import type {
   BlockDraftSource,
   DraftScheduleBlock,
@@ -11,6 +12,14 @@ import type {
 } from "../types";
 
 type ScheduleStateHost = {
+  _saving?: boolean;
+  _draftSavedDayLayoutKey?: string;
+  _draftDayLayoutKey?: string;
+  _layoutOnlyDirty?: boolean;
+  _dayLayoutConflict?: boolean;
+  _groupBaseChosen?: boolean;
+  _draftContentBaseline?: string;
+  _normalizeDraftBlocks?(): import("../types").NormalizedBlocks;
   _draftTemplateLink?: import("../types").TemplateLink;
   _draftConfigurationRevision?: number;
   _config: VelairCardConfig;
@@ -102,6 +111,10 @@ export function applyScheduleData(
   options: { forceDraft?: boolean } = {},
 ): void {
   const isInitialDataLoad = !host._data;
+  if (host._dirty) {
+    const savedKey = data.zones[host._selectedEntity ?? ""]?.day_layout_key;
+    host._dayLayoutConflict = (savedKey ?? "individual") !== (host._draftSavedDayLayoutKey ?? "individual");
+  }
   host._data = data;
   if (!host._hasExternalConfig) {
     host._config = {
@@ -137,8 +150,22 @@ export function applyScheduleData(
   }
 }
 
+export function draftContentFingerprint(host: ScheduleStateHost): string {
+  if (host._draftTemplateLink?.mode === "full") return configurationFingerprint(host._draftTemplateLink);
+  const normalized = host._normalizeDraftBlocks?.();
+  if (normalized?.ok) return configurationFingerprint(host._draftTemplateLink
+    ? bindingsFromBlocks(host._draftTemplateLink, normalized.blocks)
+    : normalized.blocks.map(({ slot_id: _slot, ...block }) => block));
+  return configurationFingerprint({ blocks: host._draftBlocks, link: host._draftTemplateLink });
+}
+
 export function resetDraftBlocks(host: ScheduleStateHost): void {
   const zone = host._selectedEntity ? host._data?.zones[host._selectedEntity] : undefined;
+  host._draftDayLayoutKey = resolveDayLayout(zone?.day_layout_key).layout.key;
+  host._draftSavedDayLayoutKey = zone?.day_layout_key ?? "individual";
+  host._dayLayoutConflict = false;
+  host._layoutOnlyDirty = false;
+  host._groupBaseChosen = false;
   const blocks = zone?.schedule?.[host._selectedWeekday] ?? [];
   host._draftTemplateLink = structuredClone(zone?.template_links?.[host._selectedWeekday]);
   host._draftConfigurationRevision = host._data?.configuration_revision;
@@ -146,11 +173,13 @@ export function resetDraftBlocks(host: ScheduleStateHost): void {
     blocks,
     host._temperatureUnit(host._selectedEntity),
   );
+  host._draftContentBaseline = draftContentFingerprint(host);
   host._dirty = false;
   host._dirtyEntityId = undefined;
 }
 
 export function selectEntity(host: ScheduleStateHost, entityId: string): boolean {
+  if (host._saving) return false;
   if (entityId === host._selectedEntity) return true;
   if (host._dirty && !host._confirmDiscardChanges()) return false;
   host._selectedEntity = entityId;
@@ -162,17 +191,24 @@ export function selectEntity(host: ScheduleStateHost, entityId: string): boolean
 }
 
 export function selectWeekday(host: ScheduleStateHost, weekday: string): boolean {
+  if (host._saving) return false;
   if (!WEEKDAYS.includes(weekday)) {
     return false;
   }
   if (weekday === host._selectedWeekday) return true;
-  if (host._dirty && !host._confirmDiscardChanges()) return false;
-
+  if (host._dirty && !host._layoutOnlyDirty && !host._confirmDiscardChanges()) return false;
+  const pendingLayout = host._dirty && host._layoutOnlyDirty ? {
+    _draftDayLayoutKey: host._draftDayLayoutKey,
+    _draftSavedDayLayoutKey: host._draftSavedDayLayoutKey,
+    _draftConfigurationRevision: host._draftConfigurationRevision,
+    _dayLayoutConflict: host._dayLayoutConflict,
+  } : undefined;
   host._selectedWeekday = weekday;
   host._saveMessage = undefined;
   host._copyTargets = new Set();
   host._zoneTargets = new Set();
   host._resetDraftBlocks();
+  if (pendingLayout) { Object.assign(host, pendingLayout); host._markDirty(); host._layoutOnlyDirty = true; }
   return true;
 }
 

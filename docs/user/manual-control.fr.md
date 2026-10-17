@@ -8,8 +8,8 @@ Traductions: [Original en anglais](manual-control.md) · [Español](manual-contr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -183,6 +183,8 @@ Une pause indépendante existante maintient la zone en pause. Si son action effe
 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 ### Reprendre depuis `off` quand le bloc conserve le mode actuel
+
+**Température uniquement** est un choix distinct pour le bloc. Pendant ce bloc, un changement externe du mode HVAC reste sous contrôle externe et ne crée pas à lui seul de réglage manuel. Les changements externes de température cible suivent toujours votre politique configurée. Une pause ou un réglage manuel arrête toujours la transmission de l’horaire ; la reprise applique le bloc actuel sans allumer un équipement éteint. Cela s’applique aussi lorsqu’une automatisation de fenêtre reprend la zone. Un Forçage explicite ou un bloc ultérieur avec mode HVAC explicite peut toujours l’allumer.
 
 **Conserver le mode actuel** signifie que le bloc ne fournit pas de mode HVAC. Pour un bloc avec température cible, la règle normale de transmission s’applique à la reprise :
 

@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](manual-control.md) · [Español](manual-cont
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -193,6 +193,8 @@ Si sigue existiendo una pausa independiente de zona, la zona permanece pausada. 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 
 ### Reanudar desde `off` cuando el bloque indica Mantener modo actual
+
+**Solo temperatura** es una opción de bloque independiente. Durante ese bloque, un cambio externo del modo HVAC queda bajo control externo y no genera por sí solo un Ajuste manual. Los cambios externos de temperatura objetivo siguen la política configurada. Una pausa o un Ajuste manual siguen deteniendo el envío del horario; al reanudar se aplica el bloque actual sin encender un equipo apagado. Esto también se aplica cuando una automatización de ventanas reanuda la zona. Un Boost explícito o un bloque posterior con un modo HVAC explícito sí pueden encenderlo.
 
 **Mantener modo actual** significa que el bloque no proporciona un modo HVAC. Para un bloque con temperatura objetivo, Velair sigue la regla habitual de entrega al reanudar:
 

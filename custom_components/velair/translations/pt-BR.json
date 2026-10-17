@@ -158,22 +158,22 @@
   },
   "services": {
     "start_planned_return": {
-      "name": "I'm leaving",
+      "name": "Estou saindo",
       "description": "Planeja um retorno pontual para uma data e hora futuras com os modos salvos e a programação automática. Com fontes de ocupação configuradas, espera a ausência confirmada antes de ativar o modo de ausência; sem fontes, ativa-o imediatamente. Funciona sem a rotina semanal e atualiza uma ausência ativa.",
       "fields": {
         "return_date": {
-          "name": "Return date",
-          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+          "name": "Data de retorno",
+          "description": "Data de chegada no fuso horário do Home Assistant. A data e a hora juntas devem estar no futuro."
         },
         "return_time": {
-          "name": "Return time",
-          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+          "name": "Horário de retorno",
+          "description": "Hora de chegada na data selecionada no fuso horário do Home Assistant. Use HH:MM em YAML; os segundos opcionais devem ser 00. Horários inexistentes por mudança de horário de verão são rejeitados."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Cancelar retorno planejado",
-      "description": "Cancela um retorno pendente ou ativo, ou fecha o aviso de um retorno inativo. Mant\u00e9m o modo atual e interrompe o retorno autom\u00e1tico durante esta aus\u00eancia. Depois, voc\u00ea pode planejar um novo retorno explicitamente."
+      "description": "Cancela um retorno pendente ou ativo, ou fecha o aviso de um retorno inativo. Mantém o modo atual e interrompe o retorno automático durante esta ausência. Depois, você pode planejar um novo retorno explicitamente."
     },
     "update_block_preset": {
       "name": "Atualizar preset Velair",
@@ -226,6 +226,10 @@
         "clear_fields": {
           "name": "Remover configurações",
           "description": "Somente para update. Remove configurações sem redefinir o dispositivo. O resultado deve continuar válido."
+        },
+        "temperature_only": {
+          "name": "Somente temperatura",
+          "description": "Atualiza temperaturas-alvo sem solicitar uma mudança de modo HVAC nem ligar o equipamento. Requer uma ação de temperatura sem opções do dispositivo. Use clear_fields ou replace para remover um modo HVAC ou opções existentes."
         }
       },
       "sections": {
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Revisão da configuração",
           "description": "Verificação opcional de alterações simultâneas. Omita para clonar a origem salva mais recente sob o bloqueio da configuração."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Ativar perfil climático",
+      "description": "Define um perfil climático salvo como base completa e remove todas as exceções por zona. As zonas não incluídas usam suas programações padrão. Deixe o ID do perfil vazio para retornar todas as zonas a Padrão.",
+      "fields": {
+        "profile_id": {
+          "name": "ID do perfil",
+          "description": "Chave estável do perfil a ativar. Um valor vazio limpa o conjunto ativo e seleciona Padrão."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Desativar perfil climático",
+      "description": "Retorna todas as zonas a Padrão, removendo os perfis de base e todas as exceções por zona."
+    },
+    "activate_profiles": {
+      "name": "Ativar perfis climáticos como base",
+      "description": "Substitui a base completa por perfis sem sobreposição e remove todas as exceções por zona. Uma lista vazia seleciona Padrão. A seleção de perfis não garante o envio físico simultâneo.",
+      "fields": {
+        "profile_ids": {
+          "name": "IDs dos perfis",
+          "description": "Lista ordenada de IDs estáveis de Perfis. Os perfis não podem incluir a mesma zona."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Aplicar perfis climáticos como exceções",
+      "description": "Substitui as exceções apenas nas zonas explicitamente incluídas por estes perfis. As outras zonas mantêm sua seleção. Perfis sobrepostos nesta solicitação rejeitam toda a ação; uma lista vazia não faz nada. Cancela um Retorno para casa pendente.",
+      "fields": {
+        "profile_ids": {
+          "name": "IDs dos perfis",
+          "description": "Lista de IDs estáveis de Perfis cujas zonas explícitas devem usar estes perfis como exceções."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Definir exceção de perfil da zona",
+      "description": "Aplica apenas uma zona de um perfil salvo, preservando a seleção de todas as outras zonas. O perfil deve incluir esta zona. Use null do YAML para Padrão; use Limpar exceções de perfil para herdar a base. Cancela um Retorno para casa pendente.",
+      "fields": {
+        "profile_id": {
+          "name": "ID do perfil",
+          "description": "ID estável do Perfil, ou null do YAML para usar explicitamente a programação Padrão da zona."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Limpar exceções de perfil",
+      "description": "Restaura a base atual nas zonas explicitamente selecionadas. As exceções anteriores não são restauradas. Uma lista vazia não faz nada. Cancela um Retorno para casa pendente quando há zonas solicitadas.",
+      "fields": {
+        "entity_id": {
+          "name": "Entidades de climatização",
+          "description": "Uma entidade de climatização gerenciada ou uma lista. Todos os destinos devem ser válidos antes que qualquer exceção seja removida."
         }
       }
     }

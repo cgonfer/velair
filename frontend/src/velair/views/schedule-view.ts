@@ -1,3 +1,7 @@
+import { renderTimelineGraphic, timelineGraphicClasses } from "./timeline-block-graphic";
+import { linkedDraftBlocks, linkedDayBlocks } from "../domain/linked-schedules";
+import { selectedDayGroup, schedulesEqual, resolveDayLayout, dayConfigurationFingerprint } from "../domain/day-layouts";
+import { cloneThermostatsLabel, renderDayLayoutControls, renderScheduleDayTabs, renderDayScheduleConflict, renderGroupSaveSummary } from "./day-layout-controls";
 import { availableScheduleTemplates } from "../domain/templates";
 import { renderInlineHelp } from "./inline-help";
 import { renderDocumentationHelp } from "./documentation-links";
@@ -18,7 +22,7 @@ import {
   type TimelineCarryOverBlock,
 } from "../domain/timeline";
 import type { VelairViewHost } from "../host-types";
-import type { BlockDraftSource, DraftScheduleBlock, ScheduleBlock, ScheduleTemplate, ScheduleZone } from "../types";
+import type { BlockDraftSource, DraftScheduleBlock, ScheduleBlock, ScheduleTemplate, ScheduleZone, TemplateLink } from "../types";
 import "../components/profiles-view-element";
 import { renderWeeklyScheduleEditor } from "./weekly-schedule-editor";
 import { renderCloneDayPresets, renderExternalSwitchpointUsage } from "./schedule-editor-controls";
@@ -32,6 +36,7 @@ export function presetConfigurationSummary(config: import("../types").BlockConfi
   if (!host) return Object.entries(config).filter(([key, value]) => value !== undefined && !["start", "slot_id", "preset_key"].includes(key)).map(([key, value]) => `${key}: ${value}`).join(" · ");
   const items: string[] = [];
   if (config.action === "turn_off") return host._t("off");
+  if (config.temperature_only) items.push(host._t("temperatureOnly"));
   if (config.hvac_mode) items.push(host._modeLabel(config.hvac_mode));
   if (config.temperature !== undefined) items.push(host._formatTemperature(config.temperature));
   if (config.target_temp_low !== undefined && config.target_temp_high !== undefined) items.push(`${host._formatTemperature(config.target_temp_low)} – ${host._formatTemperature(config.target_temp_high)}`);
@@ -60,6 +65,7 @@ export function renderLinkedHoursControl(host: ScheduleViewHost) {
               const select = event.currentTarget as HTMLSelectElement;
               const previous = link?.template_key ?? "";
               const key = host._inputValue(event);
+              if (key === previous) return;
               const changed = await (key ? host._setDayTemplateLink?.(key) : host._restoreOwnDaySchedule?.());
               if (changed === false) select.value = previous;
             }}
@@ -91,7 +97,7 @@ export function renderLinkedHoursControl(host: ScheduleViewHost) {
 function scheduleHelpId(host: ScheduleViewHost, suffix: string): string {
   const editor = host.renderRoot ?? host;
   if (!editorHelpIds.has(editor)) editorHelpIds.set(editor, ++nextEditorHelpId);
-  return ["velair-hours", editorHelpIds.get(editor), host._resourceProfileKey === undefined ? "default" : "profile", host._resourceProfileKey ?? "", host._selectedEntity ?? "reference", host._selectedWeekday ?? "daily", suffix].map((part) => encodeURIComponent(String(part))).join("-");
+  return ["velair-hours", ...(host._blockEditorIdPrefix ? [host._blockEditorIdPrefix] : []), editorHelpIds.get(editor), host._resourceProfileKey === undefined ? "default" : "profile", host._resourceProfileKey ?? "", host._selectedEntity ?? "reference", host._selectedWeekday ?? "daily", suffix].map((part) => encodeURIComponent(String(part))).join("-");
 }
 
 export function renderSchedulesView(
@@ -175,6 +181,7 @@ export function renderZones(host: ScheduleViewHost, zoneIds: string[], selectedE
             ]
               .filter(Boolean)
               .join(" ")}
+            ?disabled=${host._saving}
             @click=${() => host._selectEntity(entityId)}
           >
             ${host._friendlyEntityName(entityId)}
@@ -202,6 +209,30 @@ export function renderScheduleZonePicker(host: ScheduleViewHost, zoneIds: string
 }
 
 export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, zone: ScheduleZone) {
+  const layoutKey = host._draftDayLayoutKey ?? zone.day_layout_key ?? "individual";
+  const days = selectedDayGroup(layoutKey, host._selectedWeekday);
+  const mixed = !schedulesEqual(zone, days);
+  const grouped = resolveDayLayout(layoutKey).layout.key !== "individual";
+  const dayTabs = renderScheduleDayTabs({ _t: host._t.bind(host), _weekdayName: (day) => host._weekdayName?.(day) ?? day, _shortWeekdayName: (day) => host._shortWeekdayName?.(day) ?? day.slice(0, 3) }, {
+    layoutKey, disabled: host._saving, selectedDay: host._selectedWeekday, orderedWeekdays: host._orderedWeekdays(),
+    onSelect: (day) => host._selectWeekday(day),
+    blockCount: (day) => (host._data?.resolved_default_schedules?.[entityId]?.[day] ?? zone.schedule[day] ?? []).length,
+  });
+  const conflictBlocks = (day: string) => {
+    const link = zone.template_links?.[day];
+    const resolved = host._data?.resolved_default_schedules?.[entityId]?.[day];
+    const rawBlocks = link ? linkedDayBlocks(link, host._data?.templates ?? []) : zone.schedule[day] ?? [];
+    const blocks = resolved ?? (link ? linkedDraftBlocks(link, host._data?.templates ?? [], host._data?.temperature_unit) : zone.schedule[day] ?? []);
+    return blocks.map((block, index) => {
+      const presetKey = block.preset_key ?? rawBlocks.find(item => block.slot_id ? item.slot_id === block.slot_id : item.start === block.start)?.preset_key;
+      const referenced = Boolean(presetKey || link?.mode === "full");
+      const effective = resolved || !referenced ? Object.fromEntries(Object.entries(block).map(([key, value]) => [key, ["temperature", "target_temp_low", "target_temp_high", "humidity"].includes(key) && typeof value === "string" ? Number(value) : value])) as ScheduleBlock : undefined;
+      const graphic = effective ? { ...timelinePresentation(host, effective, entityId, "schedule", day, index, false, true, { link }), presetKey, templateKey: link?.template_key } : undefined;
+      const presetLabel = presetKey ? availableBlockPresets(host._data).find(item => item.key === presetKey)?.name ?? presetKey : undefined;
+      return { start: block.start, block: effective, graphic, details: graphic?.details, presetLabel, time: host._formatScheduleTime(block.start), description: effective
+        ? presetConfigurationSummary(effective, host) : host._t(presetKey ? "sharedPresetUnavailable" : "linkedConfigurationUnavailable") };
+    });
+  };
   const hasValidationError = host._hasDraftValidationError("schedule");
   const externallyManaged = zone.execution?.type === "external";
   const externalCapabilities = externallyManaged
@@ -232,11 +263,25 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
           <span>${host._t("externalActionsInactive")}</span>
         </div>`
         : renderBoostStatus(host, entityId, zone)}
-      ${renderWeeklyScheduleEditor({
-        dayTabs: html`<div class="day-tabs">
-          ${host._orderedWeekdays().map((weekday: string) => renderDayTab(host, weekday, host._data?.resolved_default_schedules?.[entityId]?.[weekday] ?? zone.schedule[weekday] ?? []))}
-        </div>`,
-        timeline: renderTimeline(host, entityId, "schedule", {
+      ${renderDayLayoutControls(host, { key: layoutKey, disabled: host._saving, onChange: (key) => host._selectDayLayout?.(key) })}
+      ${resolveDayLayout(layoutKey).invalid ? html`<p class="notice warning">${host._t("dayLayoutInvalid")}</p>` : nothing}
+      ${host._dayLayoutConflict ? html`<p class="notice error">${host._t("dayLayoutConflict")}</p>` : nothing}
+      ${mixed ? html`${dayTabs}
+        ${renderDayScheduleConflict(host, {
+          days: host._orderedWeekdays().filter((day) => days.includes(day)),
+          selectedDay: host._groupBaseChosen ? host._selectedWeekday : undefined,
+          disabled: host._saving || host._materializingTemplate,
+          fingerprint: (day) => dayConfigurationFingerprint(zone, day),
+          blockCount: (day) => conflictBlocks(day).length,
+          emptyMessage: (day) => zone.template_links?.[day] && !host._data?.resolved_default_schedules?.[entityId]?.[day] ? host._t("linkedConfigurationUnavailable") : undefined,
+          linkLabel: (day) => { const link = zone.template_links?.[day]; return link ? `${host._t("templates")}: ${host._data?.templates?.find((item) => item.key === link.template_key)?.name ?? link.template_key} · ${host._t(link.mode === "full" ? "templateLinkFull" : "templateLinkHours")}` : undefined; },
+          blocks: conflictBlocks,
+          onChoose: (day) => host._chooseGroupBase?.(day),
+        })}
+      ` : nothing}
+      ${!mixed ? renderWeeklyScheduleEditor({
+        dayTabs: mixed ? html`` : dayTabs,
+        timeline: renderTimeline(host, entityId, "schedule", grouped ? undefined : {
           schedule: host._data?.resolved_default_schedules?.[entityId] ?? zone.schedule,
           weekday: host._selectedWeekday,
           resolved: Boolean(host._data?.resolved_default_schedules?.[entityId]),
@@ -278,22 +323,16 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
             <ha-icon icon="mdi:content-save-plus"></ha-icon>
             <span>${host._t("saveTemplate")}</span>
           </button>
-          <button
-            class="command-button primary"
-            type="button"
-            ?disabled=${host._saving || host._materializingTemplate || !host._dirty || hasValidationError}
-            @click=${host._saveSelectedDay}
-          >
-            <ha-icon icon="mdi:content-save"></ha-icon>
-            <span>${host._t(host._saving ? "saving" : "save")}</span>
-          </button>
+
         </div>`,
         copyPanels: html`
-          <div class="schedule-copy-helper">${host._t("scheduleCopyHint")}</div>
-          ${renderCopyTargets(host)}
+          ${layoutKey === "individual" ? html`<div class="schedule-copy-helper">${host._t("scheduleCopyHint")}</div>${renderCopyTargets(host)}` : nothing}
           ${renderZoneTargets(host)}
         `,
-      })}
+      }) : nothing}
+      <div class="schedule-save-actions schedule-save-footer">${mixed && host._groupBaseChosen ? renderGroupSaveSummary(host, { sourceDay: host._selectedWeekday, days }) : nothing}<button class="command-button primary" type="button"
+        ?disabled=${host._saving || host._materializingTemplate || !host._dirty || (mixed && !host._groupBaseChosen) || (hasValidationError && !host._layoutOnlyDirty)}
+        @click=${host._saveSelectedDay}><ha-icon icon="mdi:content-save"></ha-icon><span>${host._t(host._saving ? "saving" : "save")}</span></button></div>
     </section>
   `;
 }
@@ -327,19 +366,6 @@ export function renderBoostStatus(host: ScheduleViewHost, entityId: string, zone
         </span>
       </div>
     </div>
-  `;
-}
-
-export function renderDayTab(host: ScheduleViewHost, weekday: string, blocks: ScheduleBlock[]) {
-  return html`
-    <button
-      type="button"
-      class=${weekday === host._selectedWeekday ? "day-tab active" : "day-tab"}
-      @click=${() => host._selectWeekday(weekday)}
-    >
-      <span>${host._weekdayName(weekday).slice(0, 3)}</span>
-      <strong>${blocks.length}</strong>
-    </button>
   `;
 }
 
@@ -393,7 +419,7 @@ export function renderTimeline(
   `;
 }
 
-function timelinePresentation(
+export function timelinePresentation(
   host: ScheduleViewHost,
   reference: ScheduleBlock | DraftScheduleBlock,
   entityId: string | undefined,
@@ -402,6 +428,7 @@ function timelinePresentation(
   index: number,
   carryOver = false,
   resolved = false,
+  templateContext?: { link?: TemplateLink },
 ) {
   const scheduleContext = source === "schedule" || host._resourceProfileKey !== undefined;
   const profile = host._data?.profiles?.find((item) => item.key === host._resourceProfileKey);
@@ -415,7 +442,7 @@ function timelinePresentation(
     : undefined;
   const presetKey = reference.preset_key ?? (resolved ? metadata?.preset_key : undefined);
   const rawZone = origin === "default" ? host._data?.zones?.[entityId ?? ""] : profileZone;
-  const link = !scheduleContext ? undefined : !carryOver ? host._draftTemplateLink : host._timelineTemplateLinkForDay
+  const link = !scheduleContext ? undefined : !carryOver ? templateContext ? templateContext.link : host._draftTemplateLink : host._timelineTemplateLinkForDay
     ? host._timelineTemplateLinkForDay(weekday)
     : rawZone && "template_links" in rawZone ? rawZone.template_links?.[weekday] : undefined;
   const templateKey = link?.template_key ?? (scheduleContext && carryOver && resolved && !host._timelineTemplateLinkForDay && !rawZone ? metadata?.template_key : undefined);
@@ -438,7 +465,7 @@ function timelinePresentation(
     : off ? host._t("off") : modeOnly ? host._t("deviceControlled") : optionsOnly ? host._t("climateOptionsOnly")
       : draftBlockUsesRange(block) && hasRange ? formatRange(host, Number(block.target_temp_low), Number(block.target_temp_high), entityId)
         : hasScalar ? host._formatTemperature(Number(block.temperature), entityId) : host._t("invalidTemperatureRange");
-  const mode = !effective || off || optionsOnly ? "" : block.hvac_mode ? (host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode) : host._t("keep");
+  const mode = !effective || off || optionsOnly ? "" : block.temperature_only ? host._t("temperatureOnly") : block.hvac_mode ? (host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode) : host._t("keep");
   const options = effective ? climateOptionSummaryItems(host, block) : [];
   const presetName = presetKey ? availableBlockPresets(host._data).find((item) => item.key === presetKey)?.name ?? host._t("missingPreset") : undefined;
   const templateName = templateKey ? availableScheduleTemplates(host._data?.templates).find((item) => item.key === templateKey)?.name ?? templateKey : undefined;
@@ -492,9 +519,7 @@ function renderPresentedTimelineBlock(
   continuation?: string,
 ) {
   const details = [continuation, ...presentation.details].filter(Boolean).join("\n");
-  const classes = ["timeline-block", editable ? "" : "timeline-carry-over",
-    presentation.off ? "off" : "", `mode-${timelineModeClass(presentation.block)}`,
-    width < 12 ? "compact" : "", width < 2.5 ? "tiny" : ""].filter(Boolean).join(" ");
+  const classes = `${timelineGraphicClasses(presentation.block as ScheduleBlock, width)}${editable ? "" : " timeline-carry-over"}`;
   const resize = (edge: "start" | "end") => html`
     <div class=${`timeline-resize-handle ${edge === "start" ? "left" : "right"}`}
       title=${host._t(edge === "start" ? "resizeStart" : "resizeEnd")} draggable="false"
@@ -509,16 +534,7 @@ function renderPresentedTimelineBlock(
         if (editable) host._handleTimelineDragStart(editable.block.index, editable.source, event);
       }} @dragend=${host._handleTimelineDragEnd}>
       ${editable ? resize("start") : nothing}
-      <strong class="timeline-primary-line">
-        ${presentation.templateKey ? html`<ha-icon icon="mdi:content-copy" aria-hidden="true"></ha-icon>` : nothing}
-        <span>${host._formatScheduleTime(start)}</span>
-      </strong>
-      <span class="timeline-primary-line timeline-target">
-        ${presentation.presetKey ? html`<ha-icon icon="mdi:link-variant" aria-hidden="true"></ha-icon>` : nothing}
-        <span>${presentation.label}</span>
-      </span>
-      ${presentation.mode || presentation.options.length
-        ? html`<small>${[presentation.mode, ...presentation.options.map((item) => item.short)].filter(Boolean).join(" • ")}</small>` : nothing}
+      ${renderTimelineGraphic(host._formatScheduleTime(start), presentation)}
       ${editable?.block.nextIndex !== undefined ? resize("end") : nothing}
     </div>
   `;
@@ -636,7 +652,12 @@ export function renderEditableBlock(
   const isTurnOff = action === ACTION_TURN_OFF;
   const isModeOnly = action === ACTION_SET_HVAC_MODE;
   const isOptionsOnly = action === ACTION_SET_CLIMATE_OPTIONS;
-  const selectedMode = isTurnOff ? "off" : block.hvac_mode ?? "";
+  const zoneExecution = host._selectedEntity ? host._data?.zones?.[host._selectedEntity]?.execution : undefined;
+  const externalCapabilities = zoneExecution?.type === "external"
+    ? host._data?.external_execution?.systems.find((system) => system.provider === zoneExecution.provider)?.capabilities
+    : undefined;
+  const supportsTemperatureOnly = host._supportsTemperatureOnly ?? (zoneExecution?.type !== "external" || externalCapabilities?.supports_temperature_only === true);
+  const selectedMode = isTurnOff ? "off" : block.temperature_only ? "temperature_only" : block.hvac_mode ?? "";
   const temperatureError = readonly ? undefined : host._temperatureError(block, source);
   const usesRange = draftBlockUsesRange(block);
   const [minTemperature, maxTemperature] = host._temperatureLimits(source);
@@ -644,7 +665,7 @@ export function renderEditableBlock(
   const inputMinTemperature = firstTemperatureStepAtOrAbove(minTemperature, temperatureStep);
   const temperatureUnit = host._temperatureUnit?.(source === "schedule" ? host._selectedEntity : undefined) ?? "°C";
   const modeOptions = host._hvacModeOptions(source);
-  const displayedModeOptions = selectedMode && !modeOptions.includes(selectedMode)
+  const displayedModeOptions = selectedMode && selectedMode !== "temperature_only" && !modeOptions.includes(selectedMode)
     ? [...modeOptions, selectedMode]
     : modeOptions;
   const fanModeOptions = host._fanModeOptions(source);
@@ -652,7 +673,7 @@ export function renderEditableBlock(
   const swingModeOptions = host._swingModeOptions(source);
   const swingHorizontalModeOptions = host._swingHorizontalModeOptions(source);
   const humidityLimits = host._humidityLimits(source);
-  const hasSupportedClimateOptions = (action === ACTION_SET_TEMPERATURE || isOptionsOnly) && (
+  const hasSupportedClimateOptions = !block.temperature_only && (action === ACTION_SET_TEMPERATURE || isOptionsOnly) && (
     fanModeOptions.length > 0 ||
     presetModeOptions.length > 0 ||
     swingModeOptions.length > 0 ||
@@ -662,7 +683,7 @@ export function renderEditableBlock(
   const optionItems = climateOptionSummaryItems(host, block);
   const hasSelectedClimateOptions = optionItems.length > 0;
   const hasDeviceOptions = (!isPreset || Boolean(effective)) && (hasSupportedClimateOptions || hasSelectedClimateOptions);
-  const hasClimateOptions = hasDeviceOptions || allowPresets || isPreset;
+  const hasClimateOptions = hasDeviceOptions || allowPresets || isPreset || block.temperature_only === true;
   const optionError = isOptionsOnly && !isPreset
     ? String(block.humidity ?? "").trim() && !Number.isFinite(Number(block.humidity))
       ? host._t("climateOptionsHumidityInvalidAt", { start: block.start })
@@ -711,6 +732,7 @@ export function renderEditableBlock(
                 @input=${(event: Event) => host._updateDraftBlock(index, "hvac_mode", host._inputValue(event), source)}
               >
                 <option value="" .selected=${selectedMode === ""}>${host._t(presetStatus === "loading" ? "presetSettingsLoading" : presetStatus === "unavailable" ? "sharedPresetUnavailable" : "keep")}</option>
+                ${!isModeOnly && (supportsTemperatureOnly || block.temperature_only) ? html`<option value="temperature_only" ?disabled=${!supportsTemperatureOnly} .selected=${selectedMode === "temperature_only"}>${host._t("temperatureOnly")}</option>` : nothing}
                 ${displayedModeOptions.map((mode: string) => html`
                   <option value=${mode} .selected=${mode === selectedMode}>${host._modeLabel(mode)}</option>
                 `)}
@@ -719,7 +741,15 @@ export function renderEditableBlock(
           )}
         </span>
       </label>
-      ${usesRange
+      ${isTurnOff
+        ? html`
+            <div class="single-temperature-field target-action-field">
+              <label class="label" for=${`${host._blockEditorIdPrefix ?? "velair"}-${source}-${index}-off-target`}>${host._t("temp")} (${temperatureUnit})</label>
+              <input id=${`${host._blockEditorIdPrefix ?? "velair"}-${source}-${index}-off-target`} type="text" disabled .value=${host._t("blockOffNoTarget")} />
+              <span class="target-action-indicator" aria-hidden="true"><ha-icon icon="mdi:power"></ha-icon></span>
+            </div>
+          `
+        : usesRange
         ? renderRangeTargetInputs(
             host,
             block,
@@ -898,7 +928,7 @@ function renderBlockCommandPreview(
     <div class="block-command-preview" aria-live="polite">
       <strong>${host._t("blockSendHelp")}</strong>
       <span>${target ? host._t("blockSendsTarget", { target }) : temperatureError ?? host._t("invalidTemperatureRange")}</span>
-      <span>${block.hvac_mode
+      <span>${block.temperature_only ? host._t("temperatureOnlyHelp") : block.hvac_mode
         ? `${host._t("mode")}: ${(host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode)}`
         : host._t("blockKeepModeSummary")}</span>
       ${!isRange && target ? html`<span>${host._t("blockSingleNoRange")}</span>` : nothing}
@@ -944,7 +974,7 @@ function renderTargetInput(
   hasSelectedOptions = false,
   readonly = false,
 ) {
-  const inputId = `velair-${source}-${index}-${field}`;
+  const inputId = `${host._blockEditorIdPrefix ?? "velair"}-${source}-${index}-${field}`;
   return html`
     <div class=${field === "temperature" ? "single-temperature-field target-action-field" : "range-temperature-field"}>
       <label class="label" for=${inputId}>${host._t(labelKey)} (${unit})</label>
@@ -1330,7 +1360,7 @@ export function renderZoneTargets(host: ScheduleViewHost) {
     <div class="copy-panel">
       <div class="copy-header">
         <div>
-          <span class="label">${host._t("cloneDayToThermostats")}</span>
+          <span class="label">${cloneThermostatsLabel(host, host._draftDayLayoutKey, host._selectedWeekday)}</span>
           <strong>${host._t("otherThermostats")}</strong>
         </div>
       </div>

@@ -36,6 +36,58 @@ async function closeEditor(element: PlannedReturnElement) {
 }
 afterEach(() => { document.body.replaceChildren(); vi.useRealTimers(); });
 describe("planned return UI", () => {
+  it("groups occupancy, delay and both modes separately from weekly arrivals", async () => {
+    const { element, root } = await setup();
+    const presence = root.querySelector(".presence-settings")!;
+    const weekly = root.querySelector(".weekly-settings")!;
+    expect(presence.querySelector(".section-label")?.textContent).toBe(en.plannedReturnAwayAndReturn);
+    expect(weekly.querySelector(".section-label")?.textContent).toBe(en.plannedReturnArrivalTimes);
+    expect(presence.querySelector(".section-heading p")?.textContent).toBe(en.plannedReturnAwayAndReturnHelp);
+    expect(presence.querySelector(".occupancy-description")?.textContent).toBe(en.plannedReturnPresenceDescription);
+    const rule = presence.querySelector(".absence-rule")!;
+    expect(Array.from(rule.querySelectorAll("input,select"), (control) => control.id || control.getAttribute("data-field")))
+      .toEqual(["absence-delay", "delay_unit", "away_mode_id", "destination_mode_id"]);
+    for (const field of ["away_mode_id", "destination_mode_id"]) {
+      expect(root.querySelectorAll(`select[data-field="${field}"]`)).toHaveLength(1);
+    }
+    expect(rule.querySelector(".away-mode .help")?.textContent).toBe(en.plannedReturnAwayModeHelp);
+    expect(rule.querySelector(".return-mode .help")?.textContent).toBe(en.plannedReturnReturnModeHelp);
+    expect(rule.querySelector(".absence-delay-help")?.textContent).toBe(en.plannedReturnAbsenceDelayHelp);
+    expect(weekly.querySelectorAll("input[type=time]")).toHaveLength(7);
+    expect(weekly.querySelector("select,.return-mode,.weekly-label,#absence-delay")).toBeNull();
+    expect(weekly.querySelector(".section-heading p")?.textContent).toBe(en.plannedReturnWeeklyDescription);
+    expect(weekly.querySelector(".timezone-help")).not.toBeNull();
+    root.querySelector<HTMLButtonElement>(".remove-source")!.click();
+    await element.updateComplete;
+    expect(rule.querySelector(".absence-delay-help")?.textContent).toBe(en.plannedReturnSensorlessSettingsHelp);
+  });
+  it("saves and cancels both relocated modes with the delay, and locks controls during save", async () => {
+    const { element, root, send } = await setup();
+    const away = root.querySelector<HTMLSelectElement>('[data-field="away_mode_id"]')!;
+    const destination = root.querySelector<HTMLSelectElement>('[data-field="destination_mode_id"]')!;
+    await input(element, away, "mode-123", "change");
+    await input(element, destination, "mode-123", "change");
+    await input(element, root.querySelector("#absence-delay")!, "25");
+    root.querySelector<HTMLButtonElement>(".footer-actions button")!.click(); await element.updateComplete;
+    expect(away.value).toBe(initial().planned_return!.away_mode_id);
+    expect(destination.value).toBe(initial().planned_return!.destination_mode_id);
+    expect(root.querySelector<HTMLInputElement>("#absence-delay")!.value).toBe("10");
+    await input(element, away, "mode-123", "change");
+    await input(element, destination, "mode-123", "change");
+    await input(element, root.querySelector("#absence-delay")!, "25");
+    let complete!: (value: ScheduleResponse) => void;
+    send.mockImplementationOnce(() => new Promise<ScheduleResponse>((resolve) => { complete = resolve; }));
+    root.querySelector("form")!.dispatchEvent(new Event("submit", { cancelable: true }));
+    await element.updateComplete;
+    expect(send.mock.calls[0][0]).toMatchObject({ type: "velair/update_planned_return", planned_return: {
+      away_mode_id: "mode-123", destination_mode_id: "mode-123", absence_delay_minutes: 25,
+    } });
+    for (const control of root.querySelectorAll<HTMLInputElement | HTMLSelectElement>(".absence-rule input,.absence-rule select")) {
+      expect(control.disabled).toBe(true);
+    }
+    complete(initial());
+    await vi.waitFor(() => expect(away.disabled).toBe(false));
+  });
   it("shows a pending arrival only once with visible labeled icon actions and no repeated origin", async () => {
     const { element, root } = await setup();
     element.data = { ...initial(), planned_return_status: { ...initial().planned_return_status!, state: "armed", origin: "manual" } }; await element.updateComplete;
@@ -279,6 +331,8 @@ describe("planned return UI", () => {
     const { element, root, send } = await setup();
     const toggle = root.querySelector<HTMLElement & { checked: boolean }>("ha-switch.routine-toggle")!;
     expect(toggle.getAttribute("aria-label")).toBe(en.plannedReturnEnabled);
+    expect(toggle.getAttribute("aria-describedby")).toBe("weekly-routine-help");
+    expect(root.querySelector(".routine-status #weekly-routine-help")?.textContent).toBe(en.plannedReturnRoutineScopeHelp);
     expect(toggle.checked).toBe(false);
     toggle.checked = true; toggle.dispatchEvent(new Event("change")); await element.updateComplete;
     expect(root.querySelector(".routine-status")?.classList.contains("is-enabled")).toBe(true);
@@ -486,7 +540,7 @@ describe("planned return UI", () => {
     expect(root.querySelectorAll("input[type=checkbox]")).toHaveLength(0);
     expect(root.querySelectorAll(".status-bar .routine-toggle")).toHaveLength(1);
     expect(root.querySelector("select[data-field=away_mode_id]")?.closest(".presence-settings")).not.toBeNull();
-    expect(root.querySelector("select[data-field=destination_mode_id]")?.closest(".weekly-settings")).not.toBeNull();
+    expect(root.querySelector("select[data-field=destination_mode_id]")?.closest(".presence-settings")).not.toBeNull();
     expect(root.querySelector(".setup-settings")).toBeNull();
   });
   it("changes delay units without marking configuration dirty or rounding saved minutes", async () => {

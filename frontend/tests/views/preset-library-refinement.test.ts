@@ -26,6 +26,47 @@ async function libraryFixture() {
 }
 
 describe("global preset library editor", () => {
+  it("saves and reopens Temperature only without carrying device options or HVAC mode", async () => {
+    const { library, card, sendMessagePromise } = await libraryFixture();
+    const mode = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1];
+    mode.value = "temperature_only"; mode.dispatchEvent(new Event("change")); await library.updateComplete;
+    expect(library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1].value).toBe("temperature_only");
+    expect(library.shadowRoot!.querySelector('[list="preset-fan_mode"]')).toBeNull();
+    expect(library.shadowRoot!.textContent).toContain("Updates the target without requesting an HVAC mode change");
+    const config = { action: "set_temperature", temperature: 25, temperature_only: true };
+    const saved = { ...library.data!, block_presets: [{ key: "summer", name: "Summer", config }], configuration_revision: 9 };
+    vi.spyOn(card, "_applyScheduleData").mockImplementation((data) => { library.data = data; });
+    sendMessagePromise.mockResolvedValueOnce(saved);
+    library.shadowRoot!.querySelector<HTMLButtonElement>('.template-detail-actions button')!.click();
+    await vi.waitFor(() => expect(library.shadowRoot!.querySelector('.preset-editor')).toBeNull());
+    expect(sendMessagePromise).toHaveBeenCalledWith(expect.objectContaining({ type: "velair/set_block_preset", config }));
+    library.editPreset("summer"); await library.updateComplete;
+    expect(library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1].value).toBe("temperature_only");
+    expect(library.shadowRoot!.querySelector<HTMLButtonElement>('.template-detail-actions button')!.disabled).toBe(true);
+    const kind = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[2];
+    kind.value = "range"; kind.dispatchEvent(new Event("change")); await library.updateComplete;
+    expect(library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1].value).toBe("temperature_only");
+    expect(library.shadowRoot!.querySelectorAll('input[inputmode="decimal"]')).toHaveLength(2);
+  });
+  it.each(["turn_off", "set_climate_options", "set_hvac_mode"])("clears Temperature only when changing the preset action to %s", async (actionValue) => {
+    const { library, sendMessagePromise } = await libraryFixture();
+    const mode = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1];
+    mode.value = "temperature_only"; mode.dispatchEvent(new Event("change")); await library.updateComplete;
+    const action = library.shadowRoot!.querySelector<HTMLSelectElement>('.editable-block select')!;
+    action.value = actionValue; action.dispatchEvent(new Event("change")); await library.updateComplete;
+    if (actionValue === "set_hvac_mode") {
+      const modeOnly = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1];
+      expect(modeOnly.querySelector('option[value="temperature_only"]')).toBeNull();
+      modeOnly.value = "cool"; modeOnly.dispatchEvent(new Event("change")); await library.updateComplete;
+    } else if (actionValue === "set_climate_options") {
+      const fan = library.shadowRoot!.querySelector<HTMLInputElement>('[list="preset-fan_mode"]')!;
+      fan.value = "auto"; fan.dispatchEvent(new Event("input")); await library.updateComplete;
+    }
+    library.shadowRoot!.querySelector<HTMLButtonElement>('.template-detail-actions button')!.click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledWith(expect.objectContaining({ type: "velair/set_block_preset", config: expect.objectContaining({ action: actionValue }) })));
+    const config = sendMessagePromise.mock.calls[0][0].config;
+    expect(config).not.toHaveProperty("temperature_only");
+  });
   it.each(["21.5", "21,5"])("saves decimal target %s as a number while retaining the input", async (value) => {
     const { library, sendMessagePromise } = await libraryFixture();
     const target = library.shadowRoot!.querySelector<HTMLInputElement>('.editable-block input[inputmode="decimal"]')!;
@@ -175,14 +216,14 @@ describe("global preset library editor", () => {
     const { library, sendMessagePromise } = await libraryFixture();
     const sections = [...library.shadowRoot!.querySelectorAll<HTMLDetailsElement>(".preset-section")];
     expect(sections).toHaveLength(3);
-    expect(sections.map((section) => section.querySelector("summary > ha-icon")?.getAttribute("icon"))).toEqual(["mdi:tune-variant", "mdi:link-variant", "mdi:check-decagram-outline"]);
+    expect(sections.map((section) => section.querySelector("summary > ha-icon")?.getAttribute("icon"))).toEqual(["mdi:link-variant", "mdi:tune-variant", "mdi:check-decagram-outline"]);
     expect(sections.every((section) => section.querySelector("summary > .preset-section-chevron")?.getAttribute("icon") === "mdi:chevron-down")).toBe(true);
-    sections[1].querySelector<HTMLElement>("summary")!.click(); expect(sections[1].open).toBe(true);
+    sections[0].querySelector<HTMLElement>("summary")!.click(); expect(sections[0].open).toBe(true);
     const internal = library as unknown as { _reference: string; _previewReference(): Promise<void> };
     internal._reference = "climate.cool"; await library.updateComplete;
     sendMessagePromise.mockResolvedValueOnce({ blocks: [{ start: "00:00", action: "set_temperature", temperature: 25 }] });
     await internal._previewReference(); await library.updateComplete;
-    expect(sections[0].open).toBe(false); expect(sections[1].open).toBe(true); expect(sections[2].open).toBe(false);
+    expect(sections[0].open).toBe(true); expect(sections[1].open).toBe(false); expect(sections[2].open).toBe(false);
     expect(sections.some((section) => section.querySelector("summary button"))).toBe(false);
   });
   it("uses standard comboboxes, dedicated action labels and a save icon next to the name", async () => {

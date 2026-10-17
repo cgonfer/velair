@@ -43,6 +43,10 @@ from .const import (
     MODE_PAUSED,
     SERVICE_APPLY_SCHEDULE,
     SERVICE_ACTIVATE_PROFILE,
+    SERVICE_ACTIVATE_PROFILES,
+    SERVICE_APPLY_PROFILES,
+    SERVICE_SET_ZONE_PROFILE,
+    SERVICE_CLEAR_PROFILE_OVERRIDES,
     SERVICE_DEACTIVATE_PROFILE,
     SERVICE_BOOST,
     SERVICE_CANCEL_BOOST,
@@ -69,6 +73,9 @@ from .const import (
 )
 from .models import WEEKDAYS, normalize_schedule_blocks, validate_pause_id
 from .schedule_resources import ConfigurationResourceError, PRESET_CONFIG_FIELDS, validate_preset_update_request
+from .selection_requests import (
+    clear_overrides_request, profile_set_request, zone_profile_request,
+)
 
 
 def _validate_block_preset_update(data):
@@ -294,6 +301,15 @@ ACTIVATE_PROFILE_SCHEMA = vol.Schema(
     }
 )
 
+PROFILE_SET_SCHEMA = vol.All(vol.Schema({vol.Required("profile_ids"): object}), profile_set_request)
+SET_ZONE_PROFILE_SCHEMA = vol.All(vol.Schema({
+    vol.Required(ATTR_ENTITY_ID): object,
+    vol.Required(ATTR_PROFILE_ID): object,
+}), zone_profile_request)
+CLEAR_PROFILE_OVERRIDES_SCHEMA = vol.All(vol.Schema({
+    vol.Required(ATTR_ENTITY_ID): object,
+}), clear_overrides_request)
+
 EXTERNAL_CHANGE_POLICY_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
@@ -452,6 +468,32 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         scheduler = _get_scheduler(hass)
         try:
             await scheduler.async_deactivate_profile(source="service")
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_activate_profiles(call: ServiceCall) -> None:
+        try:
+            await _get_scheduler(hass).async_activate_profiles(call.data["profile_ids"], source="service")
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_apply_profiles(call: ServiceCall) -> None:
+        try:
+            await _get_scheduler(hass).async_apply_profiles(call.data["profile_ids"], source="service")
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_set_zone_profile(call: ServiceCall) -> None:
+        try:
+            await _get_scheduler(hass).async_set_zone_profile(
+                call.data[ATTR_ENTITY_ID], call.data[ATTR_PROFILE_ID], source="service"
+            )
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
+    async def async_clear_profile_overrides(call: ServiceCall) -> None:
+        try:
+            await _get_scheduler(hass).async_clear_profile_overrides(call.data[ATTR_ENTITY_ID], source="service")
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
 
@@ -666,6 +708,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_DEACTIVATE_PROFILE,
         async_deactivate_profile,
     )
+    for service, handler, schema in (
+        (SERVICE_ACTIVATE_PROFILES, async_activate_profiles, PROFILE_SET_SCHEMA),
+        (SERVICE_APPLY_PROFILES, async_apply_profiles, PROFILE_SET_SCHEMA),
+        (SERVICE_SET_ZONE_PROFILE, async_set_zone_profile, SET_ZONE_PROFILE_SCHEMA),
+        (SERVICE_CLEAR_PROFILE_OVERRIDES, async_clear_profile_overrides, CLEAR_PROFILE_OVERRIDES_SCHEMA),
+    ):
+        hass.services.async_register(DOMAIN, service, handler, schema=schema)
     hass.services.async_register(
         DOMAIN,
         SERVICE_BOOST,
@@ -770,6 +819,10 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_APPLY_SCHEDULE,
         SERVICE_ACTIVATE_PROFILE,
         SERVICE_DEACTIVATE_PROFILE,
+        SERVICE_ACTIVATE_PROFILES,
+        SERVICE_APPLY_PROFILES,
+        SERVICE_SET_ZONE_PROFILE,
+        SERVICE_CLEAR_PROFILE_OVERRIDES,
         SERVICE_BOOST,
         SERVICE_CANCEL_BOOST,
         SERVICE_PAUSE,

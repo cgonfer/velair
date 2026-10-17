@@ -1,9 +1,11 @@
+import { resolveDayLayout, selectedDayGroup, schedulesEqual } from "../domain/day-layouts";
 import type { PanelSubsection } from "../domain/panel-routes";
 import { isScheduleResponseCurrent, rawScheduleHass, type PanelScheduleSession } from "../controllers/panel-schedule-session";
 import { acquireLovelaceScheduleSession } from "../controllers/lovelace-schedule-sessions";
 import { normalizeTemplateBlocks } from "../controllers/template-impact";
 import { cancelTemplatePreview, queueTemplatePreview, refreshTemplatePreview } from "../controllers/template-preview";
 import { LitElement, type PropertyValues } from "lit";
+import { dismissInlineHelpWithin, dismissDisconnectedInlineHelp } from "../views/inline-help";
 import { property, state } from "lit/decorators.js";
 import { draftBlocksFromScheduleBlocks } from "../domain/draft-blocks";
 import { PresetPreviewCache, presetPreviewKey } from "../domain/preset-preview";
@@ -106,7 +108,6 @@ import { NoticeTransitions } from "../controllers/notice-transitions";
 import {
   addBlock,
   asDraftActionsHost,
-  markDirty,
   removeBlock,
   setDraftBlockStart,
   toggleCopyTarget,
@@ -173,6 +174,7 @@ import {
 import {
   applyScheduleData,
   asScheduleStateHost,
+  draftContentFingerprint,
   blocksForSource,
   loadSchedule,
   markBlocksDirty,
@@ -417,7 +419,7 @@ export class VelairCard extends LitElement {
   @state() private _plannedReturnDirty = false;
   @state() private _plannedReturnBusy = false;
   private _setPlannedReturnBusy(busy: boolean): void { this._plannedReturnBusy = busy; }
-  public canNavigatePanel(): boolean { return !this._plannedReturnBusy; }
+  public canNavigatePanel(): boolean { return !this._plannedReturnBusy && !this._applyingTemplateTargets; }
   private _setPlannedReturnDirty(dirty: boolean): void { this._plannedReturnDirty = dirty; }
   private _selectPreconditioningSource(source: "preconditioning" | "planned-return"): boolean {
     if (source === this._preconditioningSource) return true;
@@ -449,7 +451,11 @@ export class VelairCard extends LitElement {
       this._selectScheduleSource(source);
       return this._scheduleSource === source;
     }
-    if (this._effectiveView() === "templates") this._selectTemplateLibrarySource(subsection === "presets" ? "presets" : "templates");
+    if (this._effectiveView() === "templates") {
+      const source = subsection === "presets" ? "presets" : "templates";
+      this._selectTemplateLibrarySource(source);
+      return this._templateLibrarySource === source;
+    }
     return true;
   }
 
@@ -459,6 +465,10 @@ export class VelairCard extends LitElement {
 
   private _selectTemplateLibrarySource(source: "templates" | "presets"): void {
     if (source === this._templateLibrarySource) return;
+    if (this._applyingTemplateTargets) return;
+    if (this._templateApplication?.dirty && !this._confirmDiscardChanges()) return;
+    this._templateApplication = undefined;
+    this._templateApplyOpen = false;
     this._templateLibrarySource = source;
     this._notifySubsection(source);
   }
@@ -477,6 +487,39 @@ export class VelairCard extends LitElement {
     queueTemplatePreview(asTemplateActionsHost(this));
   }
   private _draftConfigurationRevision?: number;
+  private _draftSavedDayLayoutKey?: string;
+  private _layoutOnlyDirty = false;
+  @state() private _draftDayLayoutKey = "individual";
+  @state() private _dayLayoutConflict = false;
+  @state() private _groupBaseChosen = false;
+  private _draftContentBaseline?: string;
+  private _selectDayLayout(key: string): boolean {
+    if (this._saving) return false;
+    if (key === this._draftDayLayoutKey) return true;
+    if (this._dirty && !this._layoutOnlyDirty && !this._confirmDiscardChanges()) return false;
+    this._resetDraftBlocks();
+    this._draftDayLayoutKey = resolveDayLayout(key).layout.key;
+    this._groupBaseChosen = false;
+    this._markDirty();
+    return true;
+  }
+  private _chooseGroupBase(day: string): boolean {
+    if (this._saving || this._materializingTemplate) return false;
+    if (this._dayLayoutConflict) { this._error = this._t("dayLayoutConflict"); return false; }
+    if (this._groupBaseChosen && draftContentFingerprint(asScheduleStateHost(this)) !== this._draftContentBaseline && !this._confirmDiscardChanges()) return false;
+    const layout = this._draftDayLayoutKey;
+    const revision = this._draftConfigurationRevision;
+    const savedLayout = this._draftSavedDayLayoutKey;
+    this._selectedWeekday = day;
+    this._resetDraftBlocks();
+    this._draftDayLayoutKey = layout;
+    this._draftConfigurationRevision = revision;
+    this._draftSavedDayLayoutKey = savedLayout;
+    this._groupBaseChosen = true;
+    this._markDirty();
+    return true;
+  }
+
   private readonly _presetPreviews = new PresetPreviewCache();
 
   private _presetPreviewKey(block: DraftScheduleBlock, index: number, source: BlockDraftSource): string {
@@ -593,7 +636,8 @@ export class VelairCard extends LitElement {
     if (this._materializingTemplate) return false;
     if (key === this._draftTemplateLink?.template_key) return true;
     const template = availableScheduleTemplates(this._data?.templates).find((item) => item.key === key);
-    if (!template || !window.confirm(this._t("hoursReplaceConfirmation", { name: template.name ?? template.key }))) return false;
+    if (!template || (this._draftBlocks.length > 0
+      && !window.confirm(this._t("hoursReplaceConfirmation", { name: template.name ?? template.key })))) return false;
     this._draftTemplateLink = this._draftTemplateLink?.mode === "full"
       ? { mode: "full", template_key: key } : linkDraftDay(template, this._draftBlocks);
     this._draftBlocks = linkedDraftBlocks(this._draftTemplateLink, this._data?.templates ?? [], this._data?.temperature_unit);
@@ -645,7 +689,7 @@ export class VelairCard extends LitElement {
 
   private async _restoreOwnDaySchedule(): Promise<boolean> {
     if (this._materializingTemplate) return false;
-    if (!window.confirm(this._t("hoursRestoreConfirmation"))) return false;
+    if (this._draftBlocks.length > 0 && !window.confirm(this._t("hoursRestoreConfirmation"))) return false;
     const zone = this._selectedEntity ? this._data?.zones[this._selectedEntity] : undefined;
     const savedLink = zone?.template_links?.[this._selectedWeekday];
     const blocks = savedLink?.mode === "full" ? await this._materializeFullDay(savedLink) : savedLink
@@ -679,6 +723,7 @@ export class VelairCard extends LitElement {
   @state() private _templateDraftBlocks: DraftScheduleBlock[] = [];
   @state() private _templateDraftKey = "";
   @state() private _templateDirty = false;
+  @state() private _templateApplication?: import("../controllers/template-application").TemplateApplicationState;
   @state() private _templateApplyOpen = false;
   @state() private _templateApplyTargets = new Set<string>();
   @state() private _applyingTemplateTargets = false;
@@ -840,6 +885,7 @@ export class VelairCard extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    dismissInlineHelpWithin(this);
     this._detachPanelSchedule?.();
     this._detachPanelSchedule = undefined;
     this._releaseLovelaceSchedule();
@@ -915,6 +961,7 @@ export class VelairCard extends LitElement {
   }
 
   protected updated(changedProperties: Map<string, unknown>): void {
+    dismissDisconnectedInlineHelp();
     this._refreshPresetPreviews();
     if (changedProperties.has("presetKey")) this._presetKeyApplied = false;
     if (changedProperties.has("resourceUsage")) this._resourceUsageApplied = false;
@@ -955,12 +1002,12 @@ export class VelairCard extends LitElement {
     }
     this._syncDiagnosticsLogResizeObserver();
     this._syncClimateCardActionsResizeObserver();
-    if (changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty")) {
+    if (changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty") || changedProperties.has("_templateApplication")) {
       this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
         bubbles: true,
         composed: true,
         detail: {
-          dirty: this._plannedReturnDirty || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
+          dirty: this._plannedReturnDirty || Boolean(this._templateApplication?.dirty) || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
           scope: this._scheduleSource === "profile" ? "profile" : "default-schedule",
         },
       }));
@@ -1078,7 +1125,7 @@ export class VelairCard extends LitElement {
       return false;
     }
     const view = this._effectiveView();
-    return view === "overview" || view.startsWith("overview-") || view === "climate" || view === "schedules" || view === "templates";
+    return view === "overview" || view.startsWith("overview-") || view === "climate" || view === "schedules" || view === "templates" || view === "preconditioning";
   }
 
   private _syncTimelineNowTick(): void {
@@ -1509,6 +1556,7 @@ export class VelairCard extends LitElement {
   }
 
   private _selectEntity(entityId: string): void {
+    if (this._saving) return;
     if (entityId !== this._selectedEntity && this._climateCardPlannedReturnOpen && !this._closeClimateCardPlannedReturn()) return;
     if (this._materializingTemplate) return;
     selectEntity(asScheduleStateHost(this), entityId);
@@ -1525,6 +1573,7 @@ export class VelairCard extends LitElement {
   }
 
   private _selectScheduleSource(source: "default" | "profile"): void {
+    if (this._saving || this.renderRoot?.querySelector<import("./profiles-view-element").VelairProfilesView>("velair-profiles-view")?.scheduleSavePending) return;
     if (source === this._scheduleSource || this._hasExternalConfig) return;
     const dirty = this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty;
     if (dirty && !window.confirm(this._t(
@@ -1627,7 +1676,15 @@ export class VelairCard extends LitElement {
   }
 
   private _markDirty(): void {
-    markDirty(asDraftActionsHost(this));
+    const contentChanged = this._draftContentBaseline === undefined
+      || draftContentFingerprint(asScheduleStateHost(this)) !== this._draftContentBaseline;
+    const layoutChanged = this._draftDayLayoutKey !== (this._draftSavedDayLayoutKey ?? "individual");
+    const zone = this._data?.zones[this._selectedEntity ?? ""];
+    const replacingDays = Boolean(this._groupBaseChosen && zone && !schedulesEqual(zone,
+      selectedDayGroup(this._draftDayLayoutKey, this._selectedWeekday)));
+    this._layoutOnlyDirty = layoutChanged && !contentChanged && !replacingDays;
+    this._dirty = contentChanged || layoutChanged || replacingDays;
+    this._dirtyEntityId = this._dirty ? this._selectedEntity : undefined;
   }
 
   private _handleTimelineDragStart(index: number, source: BlockDraftSource, event: DragEvent): void {

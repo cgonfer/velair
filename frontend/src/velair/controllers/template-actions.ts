@@ -1,3 +1,4 @@
+import { commitApplication, newTemplateApplication } from "./template-application";
 import { backendErrorMessage } from "../domain/backend-errors";
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, WEEKDAYS } from "../constants";
 import { createTemplateImpact, normalizeTemplateBlocks, templateImpactAssignments } from "./template-impact";
@@ -5,7 +6,6 @@ import { cancelTemplatePreview, refreshTemplatePreview, templateDraftFingerprint
 import {
   newTemplateKey,
   templateApplyTargetKey,
-  templateApplyTargetsFromKeys,
   toggleTemplateApplyTarget,
   uniqueTemplateName,
 } from "../domain/templates";
@@ -13,6 +13,7 @@ import type { VelairApiClient } from "../api/client";
 import type { DraftScheduleBlock, NormalizedBlocks, ScheduleBlock, ScheduleResponse, ScheduleTemplate } from "../types";
 
 export type TemplateActionsHost = {
+  _templateApplication?: import("./template-application").TemplateApplicationState;
   _templatePreviewPending?: boolean;
   _templatePreviewError?: string;
   _templateLinkedDaysOpen?: boolean;
@@ -63,6 +64,9 @@ export function asTemplateActionsHost(host: unknown): TemplateActionsHost {
 }
 
 export function selectTemplate(host: TemplateActionsHost, key: string): void {
+  if (host._applyingTemplateTargets) return;
+  if (key !== host._selectedTemplateKey && host._templateApplication?.dirty && !window.confirm(host._t("discardUnsavedChanges"))) return;
+  if (key !== host._selectedTemplateKey) host._templateApplication = undefined;
   host._selectedTemplateKey = key;
   const template = host._scheduleTemplates().find((item: ScheduleTemplate) => item.key === key);
   if (host._templateDraftKey !== key) {
@@ -97,6 +101,7 @@ export async function selectScheduleTemplate(host: TemplateActionsHost, key: str
 }
 
 export function resetTemplateDraft(host: TemplateActionsHost, template?: ScheduleTemplate): void {
+  if (host._templateDraftKey !== template?.key) host._templateApplication = undefined;
   cancelTemplatePreview(host);
   host._templateImpact = undefined;
   host._templatePreviewError = undefined;
@@ -161,8 +166,11 @@ export function updateTemplateNameDraft(host: TemplateActionsHost, key: string, 
 }
 
 export async function createTemplate(host: TemplateActionsHost): Promise<void> {
+  if (!host._api() || host._templateAction || host._applyingTemplateTargets) return;
+  if (host._templateApplication?.dirty && !window.confirm(host._t("discardUnsavedChanges"))) return;
+  host._templateApplication = undefined;
   const api = host._api();
-  if (!api || host._templateAction) {
+  if (!api || host._templateAction || host._applyingTemplateTargets) {
     return;
   }
 
@@ -193,7 +201,7 @@ export async function saveSelectedTemplateFromLibrary(
   template: ScheduleTemplate,
 ): Promise<void> {
   const api = host._api();
-  if (!api || host._templateAction) {
+  if (!api || host._templateAction || host._applyingTemplateTargets) {
     return;
   }
 
@@ -244,7 +252,11 @@ export function uniqueTemplateNameForHost(host: TemplateActionsHost, baseName: s
 }
 
 export function toggleTemplateApplyPanel(host: TemplateActionsHost): void {
+  if (host._applyingTemplateTargets) return;
+  if (host._templateApplyOpen && host._templateApplication?.dirty && !window.confirm(host._t("discardUnsavedChanges"))) return;
   host._templateApplyOpen = !host._templateApplyOpen;
+  host._templateApplication = newTemplateApplication();
+  host._templateApplyTargets = new Set();
   host._saveMessage = undefined;
 }
 
@@ -266,56 +278,8 @@ export function toggleTemplateApplyTargetForHost(
   host._saveMessage = undefined;
 }
 
-export async function applyTemplateToTargets(host: TemplateActionsHost, template: ScheduleTemplate): Promise<void> {
-  const api = host._api();
-  if (!api || host._applyingTemplateTargets || host._templateApplyTargets.size === 0) {
-    return;
-  }
-
-  const normalized = normalizeTemplateBlocks(host, host._templateDraftBlocks);
-  if (!normalized.ok) { host._error = normalized.error; return; }
-  const targets = templateApplyTargetsFromKeys(host._templateApplyTargets, host._data?.configured_entities ?? []);
-  if (!targets.length) return;
-  const blocks = normalized.blocks.map(({ slot_id: _slot, ...block }) => block);
-  const fingerprint = () => JSON.stringify([host._templateDraftKey, host._templateDraftBlocks, [...host._templateApplyTargets].sort(), host._scheduleTemplates().find((item) => item.key === template.key), host._data?.block_presets]);
-  const snapshot = fingerprint();
-  const acceptedRevisions = new Set([host._data?.configuration_revision]);
-  const isCurrent = () => fingerprint() === snapshot && acceptedRevisions.has(host._data?.configuration_revision);
-  host._applyingTemplateTargets = true;
-  host._error = undefined;
-  host._saveMessage = undefined;
-  try {
-    const targetBlocks = new Map<string, ScheduleBlock[]>();
-    for (const target of targets) {
-      const preview = await api.previewDailySchedule(target.entityId, target.weekday, { blocks });
-      if (!isCurrent()) return;
-      if (!Array.isArray(preview.materialized_blocks)) throw new Error(host._t("unableCopy"));
-      targetBlocks.set(templateApplyTargetKey(target.entityId, target.weekday), preview.materialized_blocks);
-    }
-    let data: ScheduleResponse | undefined;
-    for (const target of targets) {
-      if (!isCurrent()) return;
-      data = await api.setDailySchedule(
-        target.entityId, target.weekday,
-        targetBlocks.get(templateApplyTargetKey(target.entityId, target.weekday))!,
-        ...(host._data?.configuration_revision !== undefined ? [{ expected_revision: data?.configuration_revision ?? host._data.configuration_revision, unlink_template: Boolean(host._data?.zones[target.entityId]?.template_links?.[target.weekday]) }] : []),
-      );
-      if (host._isScheduleResponseCurrent?.(data) === false) return;
-      acceptedRevisions.add(data.configuration_revision);
-    }
-    if (!isCurrent()) return;
-    if (data) {
-      host._applyScheduleData(data, { forceDraft: true });
-    }
-    host._selectedTemplateKey = template.key;
-    host._templateApplyTargets = new Set();
-    host._templateApplyOpen = false;
-    host._showSuccess(host._t("appliedTemplateTargets", { count: targets.length }));
-  } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableCopy");
-  } finally {
-    host._applyingTemplateTargets = false;
-  }
+export async function applyTemplateToTargets(host: TemplateActionsHost, _template: ScheduleTemplate): Promise<void> {
+  await commitApplication(host);
 }
 
 export async function applySelectedTemplate(host: TemplateActionsHost): Promise<boolean> {
@@ -351,6 +315,7 @@ function normalizeTemplateDraftBlocks(blocks: Array<DraftScheduleBlock | Schedul
     const draft: DraftScheduleBlock = {
       action: block.action ?? ACTION_SET_TEMPERATURE,
       hvac_mode: block.hvac_mode ?? "",
+      ...(block.temperature_only ? { temperature_only: true } : {}),
       start: block.start,
       ...(block.slot_id ? { slot_id: block.slot_id } : {}),
     };
@@ -381,7 +346,7 @@ function normalizeTemplateDraftBlocks(blocks: Array<DraftScheduleBlock | Schedul
 
 export async function saveTemplate(host: TemplateActionsHost, saveAsNew: boolean): Promise<void> {
   const api = host._api();
-  if (!api || host._templateAction) {
+  if (!api || host._templateAction || host._applyingTemplateTargets) {
     return;
   }
 
@@ -463,8 +428,11 @@ export function createTemplateKey(): string {
 }
 
 export async function deleteSelectedTemplate(host: TemplateActionsHost): Promise<void> {
+  if (!host._api() || host._templateAction || host._applyingTemplateTargets) return;
+  if (host._templateApplication?.dirty && !window.confirm(host._t("discardUnsavedChanges"))) return;
+  host._templateApplication = undefined;
   const api = host._api();
-  if (!api || host._templateAction) {
+  if (!api || host._templateAction || host._applyingTemplateTargets) {
     return;
   }
 

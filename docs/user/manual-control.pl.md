@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](manual-control.md) · [Español](
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -151,6 +151,8 @@ Jeśli pozostaje niezależna pauza strefy, strefa nadal jest wstrzymana. Przy ef
 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 ### Wznowienie z `off` przy zachowaniu bieżącego trybu
+
+**Tylko temperatura** jest oddzielnym wyborem bloku. Podczas takiego bloku zewnętrzna zmiana trybu HVAC pozostaje pod kontrolą zewnętrzną i sama nie rozpoczyna sterowania ręcznego. Zmiana temperatury docelowej nadal podlega skonfigurowanej polityce. Pauza i sterowanie ręczne nadal zatrzymują wysyłanie harmonogramu; wznowienie stosuje bieżący blok bez włączania wyłączonego urządzenia. Dotyczy to również wznowienia przez automatykę okien. Jawne Wzmocnienie lub późniejszy blok z określonym trybem HVAC nadal mogą je włączyć.
 
 **Zachowaj bieżący tryb** oznacza, że blok nie określa trybu HVAC. Dla bloku temperatury obowiązują zwykłe zasady:
 

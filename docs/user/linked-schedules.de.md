@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -49,6 +49,23 @@ Das Panel zeigt zuerst die Konfigurationsauswahl, danach Geräteoptionen und am 
 
 <a id="linked-templates"></a>
 ## Verknüpfte Vorlagen
+
+<a id="apply-a-template-to-schedules"></a>
+### Eine Vorlage auf Zeitpläne anwenden
+
+Öffne **Anwenden auf…** bei einer gespeicherten Tagesvorlage. Das Panel führt durch **Auswählen → Prüfen → Anwenden**. Speichere ausstehende Vorlagenänderungen zuerst; beim Anwenden wird weder stillschweigend die gemeinsame Vorlage gespeichert noch eine ungespeicherte Version verwendet.
+
+Wähle **Standard** oder ein vorhandenes Profil und dann **Unabhängige Kopie**, **Nur Zeiten** oder **Zeiten und Einstellungen**. Eine unabhängige Kopie hat keine Vorlagenverknüpfung; Velair-Preset-Verweise bleiben wirksam. Reine Zeitverknüpfungen behalten unabhängige Klimazuordnungen. Vollständige Verknüpfungen folgen Zeiten und Einstellungen der Vorlage.
+
+Wähle eine gemeinsame **Tagesaufteilung** und markiere die erforderlichen Gruppen je Thermostat: Einzelne Tage bietet sieben Optionen, Wochentage / Wochenende zwei Gruppen und Alle Tage die gesamte Woche. Beim Wechsel der Aufteilung wird die Auswahl gelöscht. Ein Wechsel des Ziels oder Anwendungstyps behält die Gruppen bei, erfordert aber eine neue Prüfung. Wähle einen Tageskopf, um die ganze Spalte für alle sichtbaren Thermostate auszuwählen; eine vollständig gewählte Spalte wird beim erneuten Wählen geleert. Auf Mobilgeräten scrollt die Tabelle horizontal, während die Thermostatnamen sichtbar bleiben.
+
+Nur Thermostate mit ausgewählten Gruppen übernehmen die Aufteilung. Nicht gewählte Tage behalten Blöcke und Verknüpfungen. Fasst die neue Aufteilung nicht gewählte Tage mit unterschiedlichen Konfigurationen zusammen, warnt die Prüfung, dass **Unterschiedliche Zeitpläne** erhalten bleiben. Die Annahme gleicht sie nicht an.
+
+Wähle bei **Nur Zeiten** eine Grundlage, wenn eine Zielgruppe unterschiedliche gespeicherte Konfigurationen hat. Diese Auswahl bleibt bis zum Anwenden temporär. Velair schlägt Klimazuordnungen aus dieser Grundlage vor: zuerst die genaue Uhrzeit, dann vorherige Zeiten von der nächsten zur entferntesten und schließlich spätere Zeiten. Presets bleiben Verweise. Die Prüfung kennzeichnet die Herkunft jedes Vorschlags und erlaubt Einstellungsänderungen bei festen Vorlagenzeiten. Fehlende kompatible Zuordnungen müssen ergänzt werden; Vorlageneinstellungen werden nicht stillschweigend als Ersatz verwendet. Alle gewählten Tage der Gruppe erhalten dieselben geprüften Zuordnungen. Eine Profilzone ohne eigenen Zeitplan benötigt manuelle Zuordnungen und übernimmt keine Standardeinstellungen.
+
+Die Prüfung nennt ersetzte Tage und Verknüpfungen, Aufteilungsänderungen, Kompatibilitätsprobleme und Profilzonen, die zu **Profilzeitplan** wechseln. Zurück führt ohne Speichern zur Auswahl. Anwenden prüft und speichert die gesamte Auswahl einmalig; ein ungültiges Ziel oder Versionskonflikt wendet andere Zonen nicht teilweise an. Bei einem Speicherfehler bleibt die vorherige Konfiguration erhalten. Prüfe nach Änderungen der Quelle oder Konfiguration erneut. Beim Schließen mit ungespeicherten Prüfungsänderungen gilt der normale Verwerfschutz.
+
+Das Anwenden auf ein Profil speichert dessen gewählte Zeitpläne direkt. Es aktiviert weder das Profil noch einen Modus und ändert nicht die Basis-/Ausnahmeselektion. Änderungen an bereits wirksamen Zeitplänen können die Klimasteuerung beeinflussen. Für externe Veröffentlichung und physische Gerätereaktionen gelten weiterhin die normalen Übertragungsgrenzen; konsistent gespeicherte Konfiguration ist keine gleichzeitige physische Reaktion.
 
 Vorlagenverknüpfungen sind schreibgeschützt und erst nach Thermostat, dann nach Standard oder Profil gruppiert; verknüpfte Wochentage werden gemeinsam aufgeführt. **Verknüpfte Tage** zählt einen verknüpften Tag unabhängig von der Blockanzahl der Vorlage. Die Liste zeigt diese Tagesanzahl in einer separaten letzten Zeile unter der Blockanzahl jeder Vorlage. Unabhängige Kopien werden nicht gezählt und erscheinen nicht in der Liste. Löse vor dem Löschen einer Vorlage alle Tagesverknüpfungen; die deaktivierte Löschschaltfläche erklärt diese Voraussetzung.
 

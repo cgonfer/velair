@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](linked-schedules.md) · [Español
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -49,6 +49,23 @@ Najpierw wybiera się źródło konfiguracji, następnie opcje urządzenia, a na
 
 <a id="linked-templates"></a>
 ## Powiązane szablony
+
+<a id="apply-a-template-to-schedules"></a>
+### Zastosowanie szablonu do harmonogramów
+
+Otwórz **Zastosuj do…** przy zapisanym szablonie dziennym. Panel prowadzi przez **Wybór → Sprawdzenie → Zastosowanie**. Najpierw zapisz oczekujące zmiany szablonu; zastosowanie nie zapisuje go niejawnie ani nie używa niezapisanej wersji.
+
+Wybierz ustawienia domyślne lub istniejący Profil, a następnie **Niezależna kopia**, **Tylko godziny** lub **Godziny i ustawienia**. Kopia nie ma powiązania z szablonem; odwołania do presetów Velair pozostają aktywne. Powiązania samych godzin zachowują niezależne ustawienia klimatyczne. Pełne powiązania śledzą godziny i ustawienia szablonu.
+
+Wybierz wspólny **Układ dni** i zaznacz grupy dla każdego termostatu. **Poszczególne dni** daje siedem opcji, **Dni robocze / Weekend** dwie grupy, a **Wszystkie dni** cały tydzień. Zmiana układu czyści wybór. Zmiana miejsca docelowego lub sposobu zastosowania zachowuje zaznaczenia, ale wymaga ponownego sprawdzenia. Nagłówek dnia zaznacza całą kolumnę widocznych termostatów; ponowne naciśnięcie odznacza pełną kolumnę. Na telefonie tabela przewija się poziomo, a nazwy termostatów pozostają widoczne.
+
+Tylko termostaty z wybranymi grupami przyjmują nowy układ. Inne dni zachowują bloki i powiązania. Gdy nowy układ grupuje niewybrane dni o różnych konfiguracjach, sprawdzenie ostrzega, że pozostaną **Różne harmonogramy**; akceptacja ich nie ujednolica.
+
+Dla **Tylko godziny** wybierz podstawę, jeśli grupa docelowa ma różne zapisane konfiguracje. Wybór pozostaje tymczasowy do zastosowania. Velair proponuje ustawienia z tej podstawy: najpierw dokładna godzina, potem wcześniejsze godziny od najbliższej, następnie późniejsze. Presety pozostają odwołaniami. Sprawdzenie wskazuje źródło każdej propozycji i umożliwia zmianę ustawień przy stałych godzinach szablonu. Uzupełnij brakujące zgodne przypisania; ustawienia szablonu nie są niejawnym rozwiązaniem zastępczym. Wszystkie wybrane dni grupy otrzymają te same sprawdzone ustawienia. Strefa Profilu bez własnego harmonogramu wymaga ręcznych przypisań zamiast zapożyczania ustawień domyślnych.
+
+Sprawdzenie podsumowuje zastępowane dni i powiązania, zmiany układu, problemy zgodności i strefy Profilu przechodzące na harmonogram Profilu. **Wróć do wyboru** nie zapisuje zmian. Zastosowanie waliduje i zapisuje cały wybór jednokrotnie; nieprawidłowy cel lub konflikt rewizji nie powoduje częściowego zastosowania w innych strefach. Błąd zapisu zachowuje poprzednią konfigurację. Po zmianie źródła lub konfiguracji sprawdź ponownie. Zamknięcie z oczekującymi zmianami sprawdzenia używa zwykłej ochrony przed ich utratą.
+
+Zastosowanie do Profilu zapisuje wybrane harmonogramy bezpośrednio; nie aktywuje Profilu, nie wybiera Trybu ani nie zmienia wyboru bazy i wyjątków. Zmiana obowiązującego harmonogramu może wpłynąć na sterowanie. Publikacja zewnętrzna i reakcje urządzeń podlegają zwykłym ograniczeniom dostarczania; spójny zapis nie gwarantuje jednoczesnej fizycznej reakcji.
 
 Lista powiązań jest tylko do odczytu i grupuje je według termostatu, Default lub Profilu oraz dni. Licznik powiązanych dni liczy każdy dzień raz, niezależnie od liczby bloków, i zajmuje ostatni wiersz pod liczbą bloków. Niezależne kopie nie są liczone ani pokazywane jako powiązania. Przed usunięciem szablonu usuń wszystkie powiązania; niedostępny przycisk wyjaśnia ten warunek.
 

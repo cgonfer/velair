@@ -233,3 +233,16 @@ describe("schedule state controller", () => {
     expect(state._selectedEntity).toBe("climate.bedroom");
   });
 });
+
+
+describe("selected draft layout conflicts", () => {
+  it("preserves a pending draft when another session changes its saved layout", () => {
+    const state = host();
+    Object.assign(state, { _selectedEntity: "climate.office", _dirty: true, _draftSavedDayLayoutKey: "individual", _draftDayLayoutKey: "all" });
+    const data = scheduleResponse(); data.zones["climate.office"].day_layout_key = "weekdays_weekend";
+    applyScheduleData(state as never, data);
+    expect((state as any)._dayLayoutConflict).toBe(true);
+    expect((state as any)._draftDayLayoutKey).toBe("all");
+    expect(state._dirty).toBe(true);
+  });
+});

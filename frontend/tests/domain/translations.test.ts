@@ -67,6 +67,21 @@ function occurrenceCount(value: string, term: string): number {
 }
 
 describe("supported translations", () => {
+  it("preserves nested groups used by dictionary labels", () => {
+    const groups = Object.entries(en).filter(([, value]) => typeof value === "object")
+      .map(([key]) => key);
+
+    for (const [language, dictionary] of Object.entries(completeTranslations)) {
+      for (const group of groups) {
+        expect(dictionary, `${language}.${group}`).toHaveProperty(group);
+        expect(typeof dictionary[group as keyof typeof dictionary], `${language}.${group}`)
+          .toBe("object");
+        expect(Object.keys(dictionary).some(key => key.startsWith(`${group}.`)),
+          `${language}.${group} must remain nested`).toBe(false);
+      }
+    }
+  });
+
   it("validates every included key while allowing deferred translations", () => {
     const sourceEntries = new Map(translationEntries(en));
 

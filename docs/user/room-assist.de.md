@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.2 |
+| Letzte Synchronisierung | 2026-10-17 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -25,6 +25,8 @@ Das ist für Heizkörperthermostate, Heizkörperventile, Wandthermostate oder Kl
 Alle Berechnungen verwenden die native Home-Assistant-Einheit des verwalteten Klimageräts. Die folgenden Beispiele verwenden der Lesbarkeit halber Celsius. Dieselben Hysteresegrenzen, vorzeichenbehafteten Korrekturen, Schutzregeln für das Zeitplanziel, Bereichsbreiten, Temperaturschritte und physischen Grenzen gelten direkt auch in Fahrenheit. Eine Temperaturabweichung im Raum von `4 °F` ergibt etwa eine Korrektur von `4 °F`; sie wird nicht als absolute Temperatur behandelt und erhält keinen Celsius-/Fahrenheit-Offset.
 
 Room Assist arbeitet lokal und ereignisgesteuert. Velair fragt nicht kontinuierlich ab und sendet keine Sensordaten außerhalb von Home Assistant.
+
+Bei einem Block mit **Nur Temperatur** wird Room Assist ausgesetzt, solange das Klimagerät aus ist. Beim Entfernen seiner bisherigen Korrektur schaltet es das Gerät nicht ein und stellt keinen früheren HVAC-Modus wieder her. Nach externem Einschalten kann es anhand des tatsächlichen kompatiblen Modus helfen, ohne einen Moduswechsel anzufordern. Ob der geplante Sollwert im ausgeschalteten Zustand aktualisiert werden kann, hängt weiterhin von der Klimaintegration ab.
 
 <a id="what-it-does"></a>
 ## Was die Funktion bewirkt

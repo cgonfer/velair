@@ -1022,13 +1022,21 @@ class SensorTranslationTest(unittest.TestCase):
 
         source_entries = flatten(translations["en"])
         for language, translation in translations.items():
-            with self.subTest(language=language, contract="complete"):
+            # Development catalogues may omit new canonical strings and fall
+            # back to English. Release coverage is checked by translations:check;
+            # the entity-specific contracts above remain required here.
+            with self.subTest(language=language, contract="present_entries"):
                 entries = flatten(translation)
-                self.assertEqual(set(entries), set(source_entries))
-                for key, source_value in source_entries.items():
-                    self.assertTrue(entries[key])
+                self.assertEqual(
+                    set(flatten(translation["entity"])),
+                    set(flatten(translations["en"]["entity"])),
+                )
+                self.assertLessEqual(set(entries), set(source_entries))
+                for key, value in entries.items():
+                    source_value = source_entries[key]
+                    self.assertTrue(value)
                     self.assertEqual(
-                        sorted(re.findall(r"\{([^}]+)\}", entries[key])),
+                        sorted(re.findall(r"\{([^}]+)\}", value)),
                         sorted(re.findall(r"\{([^}]+)\}", source_value)),
                         f"Placeholder mismatch in {language}.{key}",
                     )

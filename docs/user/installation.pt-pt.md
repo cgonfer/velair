@@ -8,8 +8,8 @@ Traduções: [Original em inglês](installation.md) · [Español](installation.e
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -102,11 +102,21 @@ Valores de `view` suportados:
 - `sensors`: configuração e estado em tempo real do Room Assist.
 - `comfort`: configuração e estado do conforto ambiental.
 - `preconditioning`: configuração do pré-condicionamento adaptativo e estado da aprendizagem local.
-- `planned-return`: controlos compactos de regresso pontual, contagem das fontes de ocupação configuradas e linha temporal de saída confirmada. Sem fontes de ocupação guardadas, **Plan return** aplica imediatamente a configuração de ausência; a rotina semanal automática continua a exigir fontes.
+- `planned-return`: controlos compactos de regresso pontual, contagem das fontes de ocupação configuradas e linha temporal de saída confirmada. Sem fontes de ocupação guardadas, **Planear regresso** aplica imediatamente a configuração de ausência; a rotina semanal automática continua a exigir fontes.
 - `diagnostics`: estado de funcionamento, histórico limitado, filtros e exportação de relatórios de problemas.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+### Descoberta de cartões e solução de problemas do recurso
+
+Use apenas o recurso de módulo servido pela integração, `/velair_frontend/velair-card.js`. Remova recursos duplicados do Velair, incluindo um antigo `/local/velair-card.js`, e recarregue o navegador. Os elementos personalizados do navegador não podem ser substituídos após o registro; portanto, um recurso antigo carregado primeiro pode manter uma implementação obsoleta do cartão nesse navegador.
+
+O seletor de cartões do dashboard descobre o Velair pelos metadados do frontend. Adicionar `type: custom:velair-card` manualmente em YAML usa o elemento personalizado registado; são verificações separadas. Se o cartão funcionar por YAML, mas não aparecer no seletor, informe essa diferença ao relatar o problema.
+
+Se a descoberta diferir entre computador e telemóvel, verifique erros JavaScript no console de desenvolvimento do navegador afetado e a solicitação do recurso na aba Network. Inclua as versões do Home Assistant e do Velair, o navegador afetado, a URL exata do recurso e o texto relevante de erros. Remova informações privadas antes de compartilhar logs. O carregamento bem-sucedido em outro navegador não determina a causa da falha no navegador afetado.
 
 <a id="updating"></a>
 ## Atualização
+
 
 Depois de atualizar o Velair:
 

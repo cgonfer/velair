@@ -163,17 +163,17 @@
       "fields": {
         "return_date": {
           "name": "Return date",
-          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+          "description": "Date d’arrivée dans le fuseau Home Assistant. La date et l’heure combinées doivent être futures."
         },
         "return_time": {
           "name": "Return time",
-          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+          "description": "Heure d’arrivée à la date sélectionnée dans le fuseau Home Assistant. Utilisez HH:MM en YAML ; les secondes facultatives doivent être 00. Les heures inexistantes lors du passage à l’heure d’été sont refusées."
         }
       }
     },
     "cancel_planned_return": {
-      "name": "Annuler le retour pr\u00e9vu",
-      "description": "Annule un retour en attente ou actif, ou ferme l\u2019avis d\u2019un retour inactif. Conserve le mode actuel et arr\u00eate le retour automatique pour cette absence. Vous pouvez ensuite planifier explicitement un nouveau retour."
+      "name": "Annuler le retour prévu",
+      "description": "Annule un retour en attente ou actif, ou ferme l’avis d’un retour inactif. Conserve le mode actuel et arrête le retour automatique pour cette absence. Vous pouvez ensuite planifier explicitement un nouveau retour."
     },
     "update_block_preset": {
       "name": "Mettre à jour le preset Velair",
@@ -226,6 +226,10 @@
         "clear_fields": {
           "name": "Supprimer des réglages",
           "description": "Uniquement pour update. Retirer des réglages sans réinitialiser l’appareil. Le résultat doit rester valide."
+        },
+        "temperature_only": {
+          "name": "Température uniquement",
+          "description": "Mettre à jour les cibles sans demander de changement de mode HVAC ni de mise en marche. Nécessite une action de température sans options d’appareil. Utilisez clear_fields ou replace pour retirer un mode HVAC ou des options existants."
         }
       },
       "sections": {
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Révision de configuration",
           "description": "Vérification facultative des modifications simultanées. Omettre pour cloner la dernière source enregistrée sous le verrou de configuration."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Activer un profil climatique",
+      "description": "Définir un profil climatique enregistré comme base complète et effacer toutes les exceptions de zone. Les zones non couvertes utilisent leurs horaires par défaut. Laissez l’ID du profil vide pour rétablir Par défaut dans toutes les zones.",
+      "fields": {
+        "profile_id": {
+          "name": "ID du profil",
+          "description": "Clé stable du profil à activer. Une valeur vide efface l’ensemble actif et sélectionne Par défaut."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Désactiver le profil climatique",
+      "description": "Rétablir Par défaut dans toutes les zones en effaçant les profils de base et toutes les exceptions de zone."
+    },
+    "activate_profiles": {
+      "name": "Activer des profils climatiques comme base",
+      "description": "Remplacer la base complète par des profils sans chevauchement et effacer toutes les exceptions de zone. Une liste vide sélectionne Par défaut. La sélection des profils ne garantit pas une transmission physique simultanée.",
+      "fields": {
+        "profile_ids": {
+          "name": "ID des profils",
+          "description": "Liste ordonnée d’ID stables de Profils. Les profils ne doivent pas inclure la même zone."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Appliquer des profils climatiques comme exceptions",
+      "description": "Remplacer les exceptions uniquement dans les zones explicitement incluses dans ces profils. Les autres zones conservent leur sélection. Un chevauchement dans cette demande rejette toute l’action ; une liste vide ne fait rien. Annule un Retour prévu en attente.",
+      "fields": {
+        "profile_ids": {
+          "name": "ID des profils",
+          "description": "Liste d’ID stables des Profils dont les zones explicites doivent utiliser ces profils comme exceptions."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Définir une exception de profil pour une zone",
+      "description": "Appliquer une seule zone d’un profil enregistré, en conservant toutes les autres sélections. Le profil doit inclure cette zone. Utilisez null en YAML pour Par défaut ; utilisez Effacer les exceptions de profil pour hériter de la base. Annule un Retour prévu en attente.",
+      "fields": {
+        "profile_id": {
+          "name": "ID du profil",
+          "description": "ID stable du Profil, ou null en YAML pour utiliser explicitement l’horaire Par défaut de la zone."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Effacer les exceptions de profil",
+      "description": "Rétablir la base actuelle pour les zones explicitement sélectionnées. Les anciennes exceptions ne sont pas rétablies. Une liste vide ne fait rien. Annule un Retour prévu en attente si des zones sont demandées.",
+      "fields": {
+        "entity_id": {
+          "name": "Entités climatiques",
+          "description": "Une entité climatique gérée ou une liste. Toutes les cibles doivent être valides avant de supprimer la moindre exception."
         }
       }
     }

@@ -1,5 +1,6 @@
 <a id="adaptive-preconditioning"></a>
 # Precondizionamento adattivo
+
 <!-- velair-docs:start -->
 Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](adaptive-preconditioning.es.md) · [Français](adaptive-preconditioning.fr.md) · [Deutsch](adaptive-preconditioning.de.md) · [Italiano](adaptive-preconditioning.it.md) · [Nederlands](adaptive-preconditioning.nl.md) · [Polski](adaptive-preconditioning.pl.md) · [Português (Brasil)](adaptive-preconditioning.pt-br.md) · [Português (Portugal)](adaptive-preconditioning.pt-pt.md) · [Русский](adaptive-preconditioning.ru.md) · [Stato delle traduzioni](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](ad
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -19,6 +20,8 @@ Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](ad
 <!-- velair-docs:end -->
 
 Il precondizionamento adattivo permette a Velair di avviare il riscaldamento o il raffrescamento prima di un blocco programmato, così la stanza è più vicina alla temperatura obiettivo quando il blocco inizia.
+
+Un blocco **Solo temperatura** non autorizza un cambio di modalità HVAC. Finché il dispositivo è spento, Velair non avvia la preparazione anticipata né raccoglie campioni di apprendimento termico per quell’obiettivo. Un’accensione esterna consente di ricalcolare la preparazione usando la modalità reale compatibile. Questa opzione non può promettere comfort all’ora del blocco mentre il dispositivo resta spento.
 
 Per esempio, un blocco alle `07:00` con `21 °C` significa «essere vicini a `21 °C` alle `07:00`», non «iniziare a passare a `21 °C` alle `07:00`».
 
@@ -40,6 +43,8 @@ Il precondizionamento viene configurato per ciascun dispositivo climatico. L’a
 Sono supportati gli intervalli nativi `heat_cool`. Se la stanza è sotto l’obiettivo inferiore di più del delta minimo di temperatura, Velair calcola la previsione dal limite inferiore e avvia anticipatamente l’intero intervallo per riscaldare. Se la stanza è sopra l’obiettivo superiore di più di quel delta, calcola la previsione dal limite superiore e avvia anticipatamente l’intero intervallo per raffrescare. Le letture all’interno dell’intervallo o delle fasce di tolleranza dei limiti mantengono il normale orario programmato. Velair invia sempre entrambi i limiti; non riduce mai un intervallo a una sola temperatura.
 
 Quando espandi un dispositivo climatico, ogni modalità supportata mostra una scheda di previsione in tempo reale. Usa gli stessi dati backend del prossimo evento della panoramica, gestendo in modo coerente pause, incrementi, modalità non supportate e blocchi che non possono essere precondizionati. Quando esiste un blocco futuro corrispondente, la scheda mostra l’orario di avvio calcolato, l’orario obiettivo, l’anticipo, temperatura e modalità programmate e se Velair usa il modello iniziale o una cronologia locale simile.
+
+La preparazione del Ritorno programmato è distinta dall’anticipo dell’orario settimanale. Per un ritorno futuro accettato, le informazioni del dispositivo mostrano stato del ritorno, inizio stimato, obiettivo di arrivo ed eventuali motivi di sospensione o indisponibilità. Panoramica, Ritorno programmato e schede climatiche usano gli stessi dati backend; non è un altro evento settimanale. Una stanza può ancora seguire Assenza pur mostrando una stima futura. **Preparazione** descrive l’intento di controllo di Velair, senza confermare la ricezione di un comando né il riscaldamento o raffrescamento fisico. La sequenza temporale misura il tempo trascorso verso l’arrivo salvato, non una percentuale di progresso termico. Consulta [Preparazione delle stanze](planned-return.it.md#room-preparation) per gli stati.
 
 Per verificare un calcolo specifico, apri **Dettagli del calcolo** nella scheda della previsione in tempo reale. Questa sezione facoltativa mostra i valori backend usati per la previsione, compresi numero di campioni, stima dalle osservazioni completate, limite inferiore delle osservazioni parziali, stima combinata, arrotondamento e anticipo finale. È nascosta per impostazione predefinita per mantenere semplice la vista normale.
 
@@ -65,12 +70,11 @@ delta = current temperature - target temperature
 Se la differenza è inferiore al delta minimo di temperatura, Velair mantiene l’orario normale del blocco e non anticipa l’avvio.
 
 <a id="schedule-boundaries-and-other-climates"></a>
-
 ## Limiti del programma e altri climatizzatori
 
 Un avvio anticipato settimanale non può raggiungere né oltrepassare il blocco effettivo immediatamente precedente del programma dello stesso climatizzatore, incluso un blocco `Off`. Se la finestra calcolata raggiunge o supera quel limite, Velair mantiene il normale orario di comfort. Per esempio, con `Off` alle `19:00` e `heat` alle `20:00`, un avvio calcolato alle `18:00` viene escluso: `Off` si applica alle `19:00` e il riscaldamento inizia alle `20:00`. Un blocco `Off` alle `22:00` della sera precedente non impedisce un avvio alle `05:35` per le `07:00` senza blocchi intermedi. La regola vale anche per il raffrescamento e gli intervalli nativi `heat_cool`; non modifica le previsioni di arrivo del rientro pianificato.
 
-Un climatizzatore già in precondizionamento non ritarda i blocchi o gli avvii anticipati degli altri climatizzatori. Se l’elaborazione di un’azione supera un’altra transizione, Velair determina l’obiettivo attualmente autorizzato del climatizzatore interessato invece di ripetere comandi obsoleti. Pause, Boost, regolazione manuale, zone disabilitate ed esecuzione esterna del programma continuano a determinare se un obiettivo può essere inviato. Questo recupero si applica mentre il pianificatore è in funzione; il comportamento configurato di applicazione all’avvio resta invariato.
+Un climatizzatore già in precondizionamento non ritarda i blocchi o gli avvii anticipati degli altri climatizzatori. Se l’elaborazione di un’azione supera un’altra transizione, Velair determina l’obiettivo attualmente autorizzato del climatizzatore interessato invece di ripetere comandi obsoleti. Pause, Incremento, regolazione manuale, zone disabilitate ed esecuzione esterna del programma continuano a determinare se un obiettivo può essere inviato. Questo recupero si applica mentre il pianificatore è in funzione; il comportamento configurato di applicazione all’avvio resta invariato.
 
 <a id="initial-model-example"></a>
 ## Esempio con il modello iniziale

@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](home-away-from-occupancy.md) · [Español](ho
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -85,6 +85,8 @@ All’avvio, le verifiche di presenza, assenza e disponibilità vengono eseguite
 
 <a id="safety-and-precedence"></a>
 ## Sicurezza e priorità
+
+Le azioni di Modalità e Profilo seguono la politica del blocco selezionato. Un blocco **Solo temperatura** aggiorna l’obiettivo senza richiedere un cambio di modalità HVAC; selezionare Presenza non accende quindi necessariamente un dispositivo spento. Scegli un blocco esplicito **Riscaldamento** o **Raffrescamento** se Presenza deve avviare il dispositivo. Le azioni climatiche dirette configurate in questo blueprint restano azioni Home Assistant esplicite; la politica del blocco non le sopprime.
 
 Il blueprint esegue solo le azioni configurate. Le priorità esistenti di modalità, profili, incrementi e pause di Velair restano valide. Un’entità di presenza `unknown` o `unavailable` non attiva né Presenza né Assenza; l’avviso identifica l’entità e spiega che le azioni restano sospese finché non segnala uno stato supportato di presenza o assenza.
 

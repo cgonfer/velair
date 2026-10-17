@@ -1,23 +1,28 @@
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
-import { plannedReturnDelay, plannedReturnTimeline, plannedReturnTimelineLabels, plannedReturnPreparationMarker, plannedReturnPreparationEstimates, plannedReturnPreparationSummary } from "../domain/planned-return-timeline";
+import { plannedReturnDelay, plannedReturnTimeline, plannedReturnTimelineLabels, plannedReturnPreparationSummary } from "../domain/planned-return-timeline";
 import { languageFromHass } from "../i18n";
 import { settingsStyles } from "../styles/settings-styles";
-import { renderInlineHelp } from "../views/inline-help";
+import { renderInlineHelp, dismissInlineHelpWithin, dismissDisconnectedInlineHelp } from "../views/inline-help";
 import { inlineHelpStyles } from "../styles/inline-help-styles";
 import { baseStyles } from "../styles/base-styles";
 import { orderedWeekdays } from "../domain/settings";
 import { VelairApiClient } from "../api/client";
 import { backendErrorMessage } from "../domain/backend-errors";
 import { plannedReturnDraft, plannedReturnEpisodeActive, returnWallTime, returnWallTimeToIso } from "../domain/planned-return";
-import { plannedReturnPreparationStyles, renderPlannedReturnPreparation } from "../views/planned-return-preparation-view";
+import { plannedReturnPreparationStyles, renderPlannedReturnPreparation, plannedReturnPreparationReasons } from "../views/planned-return-preparation-view";
+import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
+import { renderPreparationBadges, plannedReturnPreparationStatusStyles } from "../views/planned-return-preparation-status";
+import { overviewPreparationPoints } from "../domain/overview-preparation-timeline";
+import "./overview-preparation-timeline-element";
 import type { HomeAssistant, PlannedReturnConfig, PlannedReturnStatus, ScheduleResponse } from "../types";
 import type { TranslationKey } from "../translations";
 
 export class PlannedReturnElement extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
   @property({ attribute: false }) public data?: ScheduleResponse;
+  @property({ attribute: false }) public entityId?: string;
   @property({ attribute: false }) public t: (key: TranslationKey, values?: Record<string, string | number>) => string = (key) => key;
   @property({ attribute: false }) public weekdayName: (day: string) => string = (day) => day;
   @property({ type: Boolean }) public settings = false;
@@ -31,7 +36,8 @@ export class PlannedReturnElement extends LitElement {
   };
   private syncTimelineClock(): void {
     if (!this.isConnected || this.ownerDocument.visibilityState === "hidden"
-      || !plannedReturnTimeline(this.data?.planned_return_status)) {
+      || (!plannedReturnTimeline(this.data?.planned_return_status)
+        && !currentArrivalPreparation(this.data?.planned_return_status, this.timelineNow))) {
       if (this.timelineTimer !== undefined) clearTimeout(this.timelineTimer);
       this.timelineTimer = undefined;
       return;
@@ -52,8 +58,6 @@ export class PlannedReturnElement extends LitElement {
   @state() private sourcesExpanded = false;
   @state() private runtimeSourcesExpanded = false;
   @state() private preparationExpanded = false;
-  @state() private preparationEstimatesExpanded = false;
-  private preparationEstimatesEpisode = "";
   @state() private manualTime = "";
   @state() private manualDate = "";
   @state() private arrivalDirty = false;
@@ -75,7 +79,7 @@ export class PlannedReturnElement extends LitElement {
     this.syncTimelineClock();
   }
   public disconnectedCallback(): void {
-    this.dismissPreparationHelp();
+    dismissInlineHelpWithin(this);
     window.removeEventListener("beforeunload", this.warnBeforeUnload);
     this.ownerDocument.removeEventListener("visibilitychange", this.timelineVisibility);
     if (this.timelineTimer !== undefined) clearTimeout(this.timelineTimer);
@@ -83,7 +87,7 @@ export class PlannedReturnElement extends LitElement {
     super.disconnectedCallback();
   }
 
-  public static styles = [baseStyles, settingsStyles, plannedReturnPreparationStyles, inlineHelpStyles, css`
+  public static styles = [baseStyles, settingsStyles, plannedReturnPreparationStyles, plannedReturnPreparationStatusStyles, inlineHelpStyles, css`
     :host { container-type: inline-size; display: block; min-width: 0; color: var(--primary-text-color); }
     section { padding: 20px; border: 1px solid var(--divider-color); border-radius: 12px; background: var(--card-background-color); margin-block: 12px; }
     h3 { margin: 0 0 12px; font-size: 1.05rem; }
@@ -112,6 +116,7 @@ export class PlannedReturnElement extends LitElement {
     .routine-header, .quick-return-heading { display: flex; align-items: center; gap: 12px; }
     .routine-header > ha-icon, .quick-return-heading > ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); flex: 0 0 auto; }
     .routine-header .status-copy, .quick-return-heading .status-copy { font-weight: 600; }
+    .routine-status .routine-toggle-help { margin: 10px 0 0; }
     .routine-status.is-enabled .routine-header > ha-icon { color: var(--success-color, #2e7d32); }
     .routine-flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 20px; }
     .routine-step { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; overflow-wrap: anywhere; }
@@ -141,7 +146,6 @@ export class PlannedReturnElement extends LitElement {
     .absence-confirmation-deadline { color: var(--primary-text-color); font-weight: 600; line-height: 22px; }
     .absence-confirmation .help { grid-column: 2 / -1; margin: 0; line-height: 20px; }
     .episode-layout { display: grid; gap: 14px; min-width: 0; }
-    .episode-layout:has(> .return-timeline > .preparation-estimate) { row-gap: 6px; }
     .arrival-editor { min-width: 0; }
     @container (min-width: 641px) {
       .panel-episode .arrival-editor,
@@ -242,14 +246,26 @@ export class PlannedReturnElement extends LitElement {
     button.icon-button.success.add-source:not(:disabled) { background: var(--success-color, #2e7d32); border-color: var(--success-color, #2e7d32); border-radius: 999px; color: var(--text-primary-color, #fff); }
     button.icon-button.success.add-source:not(:disabled) ha-icon { --mdc-icon-size: 18px; }
     button.icon-button.success.add-source:hover:not(:disabled), button.icon-button.success.add-source:focus-visible:not(:disabled) { background: color-mix(in srgb, var(--success-color, #2e7d32) 85%, #000); }
-    .absence-rule { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin-top: 20px; }
-    .delay-field { display: flex; flex-direction: column; gap: 6px; flex: 0 1 230px; min-width: 0; }
+    .absence-rule { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 20px; align-items: start; }
+    .delay-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .delay-controls { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 8px; }
     .delay-controls .select-wrap select { padding-left: 12px; }
-    .absence-rule > label:last-child { flex: 1 1 240px; min-width: 0; }
-    .return-mode { margin-top: 20px; }
-    .return-mode > label { max-width: 520px; }
-    .weekly-label { display: block; margin-top: 20px; }
+    .absence-rule > .mode-field { min-width: 0; }
+    .absence-rule .help { margin-bottom: 0; }
+    @container (min-width: 541px) {
+      .absence-rule { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 6px; }
+      .absence-rule > .delay-field, .absence-rule > .mode-field {
+        display: grid; grid-row: span 3; grid-template-rows: subgrid; gap: 6px;
+      }
+      .absence-rule > .mode-field > label { display: grid; grid-row: span 2; grid-template-rows: subgrid; gap: 6px; }
+      .absence-rule .help { margin-top: 0; }
+      .delay-field { grid-column: 1 / -1; }
+      .delay-controls { width: 230px; max-width: 100%; }
+    }
+    @container (min-width: 900px) {
+      .absence-rule { grid-template-columns: 230px repeat(2, minmax(0, 1fr)); }
+      .delay-field { grid-column: auto; }
+    }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: end; }
     button { cursor: pointer; } button:disabled { cursor: default; opacity: .5; }
     .primary { background: var(--primary-color); color: var(--text-primary-color, white); }
@@ -275,23 +291,24 @@ export class PlannedReturnElement extends LitElement {
     .compact-return-indicators ha-icon { --mdc-icon-size: 18px; }
     .compact-return-delay { display: inline-flex; align-items: center; gap: 4px; color: var(--secondary-text-color); font-size: 13px; white-space: nowrap; }
     .return-timeline { margin: 0; min-width: 0; }
+    .panel-return-timeline .panel-return-times, .panel-return-modes { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-width: 0; }
+    .panel-return-times > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+    .panel-return-times ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; color: var(--secondary-text-color); flex: 0 0 auto; }
+    .panel-return-times .return-time-value, .panel-return-times button.arrival-edit-trigger { font-family: inherit; font-size: 14px; font-weight: 600; line-height: 22px; overflow-wrap: anywhere; }
+    .panel-return-times .panel-arrival-input .arrival-trigger-value { box-sizing: border-box; display: inline-flex; align-items: center; min-height: 32px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: color-mix(in srgb, var(--secondary-background-color) 80%, #000); text-decoration: none; }
+    .panel-arrival-input:focus-visible .arrival-trigger-value { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+    .panel-return-times > span:last-child { justify-content: flex-end; text-align: end; }
+    .return-endpoint-help, .compact-return-indicators > span, .return-context-status { position: relative; cursor: help; }
+    .panel-return-times .arrival-icon.return-endpoint-help { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
+    .return-endpoint-help .inline-help-tooltip:not(.visible), .compact-return-indicators .inline-help-tooltip:not(.visible), .return-context-status .inline-help-tooltip:not(.visible) { display: none; }
+    .panel-return-modes { font-size: 12px; color: var(--secondary-text-color); }
+    .panel-return-modes .return-mode-chip { position: relative; min-width: 0; max-width: 50%; cursor: help; }
+    .panel-return-modes .inline-help-tooltip:not(.visible) { display: none; }
     .return-mode-chip { display: inline-flex; align-items: center; gap: 6px; justify-self: start; min-width: 0; max-width: 100%; padding: 0; border: 0; font-size: 12px; line-height: 18px; color: var(--secondary-text-color); background: transparent; }
     .return-mode-chip.arrival-mode { justify-self: end; }
     .return-mode-chip span { overflow-wrap: anywhere; }
     .return-mode-chip ha-icon { --mdc-icon-size: 16px; }
-    .return-timeline-rail { display: grid; grid-template-columns: 18px minmax(0, 1fr) 18px; gap: 12px; align-items: center; margin-top: 16px; }
-    .return-timeline-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--secondary-text-color); }
-    .return-timeline-icon ha-icon { --mdc-icon-size: 18px; }
-    .return-timeline-line { position: relative; min-width: 0; }
-    .return-timeline-endpoints { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 2px; }
-    .return-timeline-endpoints > div { display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-width: 0; }
-    .return-timeline-endpoints > div:last-child { text-align: end; align-items: flex-end; }
     .return-time-value { display: flex; align-items: center; min-height: 44px; font-size: 16px; font-weight: 600; line-height: 22px; overflow-wrap: anywhere; }
-    .return-timeline-track { height: 4px; border-radius: 4px; background: var(--divider-color); position: relative; }
-    .return-timeline-track::before, .return-timeline-track::after { content: ""; position: absolute; top: -3px; width: 2px; height: 10px; background: var(--secondary-text-color); opacity: .5; }
-    .return-timeline-track::before { left: 0; } .return-timeline-track::after { right: 0; }
-    .return-timeline-elapsed { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--primary-color) 45%, var(--divider-color)), var(--primary-color)); }
-    .return-timeline-marker { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 16%, transparent); position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: var(--primary-color); transform: translate(-50%, -50%); }
     @container (max-width: 420px) { .compact-return-indicators { justify-content: flex-end; gap: 8px; }  }
     .return-context-status { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; color: var(--secondary-text-color); font-size: 12px; line-height: 18px; }
     .return-context-status ha-icon { --mdc-icon-size: 14px; }
@@ -314,23 +331,9 @@ export class PlannedReturnElement extends LitElement {
     .arrival-edit-trigger ha-icon { --mdc-icon-size: 16px; color: var(--primary-color); flex: 0 0 auto; }
     .arrival-edit-trigger:hover:not(:disabled), .arrival-edit-trigger:focus-visible { color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 6%, transparent); }
     .quick-return-panel button.arrival-edit-trigger:disabled { background: transparent; border: 0; }
-    .preparation-marker { position: absolute; top: -3px; width: 3px; height: 10px; transform: translateX(-50%); background: var(--primary-color); border-radius: 2px; }
-    .return-timeline-endpoints .arrival-value-controls { align-items: center; }
-    .return-timeline-endpoints .arrival-edit-trigger { align-items: center; padding-block: 0; }
     .preparation-info { display: inline-flex; align-items: center; flex: 0 0 auto; }
     .preparation-info button.inline-help { width: 44px; height: 44px; min-height: 44px; padding: 0; justify-content: flex-start; border: 0; background: transparent; color: var(--secondary-text-color); }
     .preparation-info button.inline-help:hover, .preparation-info button.inline-help:focus-visible { background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
-    .preparation-estimate { margin: 12px 0 0; border-radius: 8px; background: color-mix(in srgb, var(--primary-color) 8%, transparent); color: var(--primary-text-color); }
-    .preparation-estimate button.preparation-estimate-toggle { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 44px; padding: 9px 12px; border: 0; background: transparent; text-align: start; color: inherit; font-size: 12px; line-height: 18px; }
-    .preparation-estimate-toggle > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-    .preparation-estimate-toggle ha-icon { --mdc-icon-size: 16px; flex: 0 0 auto; color: var(--primary-color); }
-    .preparation-estimate-toggle:hover, .preparation-estimate-toggle:focus-visible { background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
-    .preparation-estimate-rooms { list-style: none; margin: 0; padding: 4px 12px; border-top: 1px solid var(--divider-color); }
-    .preparation-estimate-rooms li { display: flex; align-items: center; gap: 12px; padding: 8px 0; margin: 0; }
-    .preparation-estimate-room { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; font-size: 13px; }
-    .preparation-estimate-room ha-icon { --mdc-icon-size: 18px; flex: 0 0 auto; color: var(--secondary-text-color); }
-    .preparation-estimate-room span { overflow-wrap: anywhere; }
-    .preparation-estimate-rooms time { max-width: 50%; text-align: end; font-size: 12px; line-height: 18px; color: var(--secondary-text-color); }
     button.episode-action.cancel-return { min-height: 44px; padding: 0; border: 0; background: transparent; }
     .cancel-return-surface { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 4px 10px; box-sizing: border-box; border-radius: 8px; background: color-mix(in srgb, var(--error-color, #c62828) 70%, #000); color: #fff; font-size: 13px; line-height: 20px; }
     button.episode-action.cancel-return:hover:not(:disabled), button.episode-action.cancel-return:focus-visible:not(:disabled) { background: transparent; }
@@ -350,11 +353,6 @@ export class PlannedReturnElement extends LitElement {
   protected willUpdate(changed: PropertyValues<this>): void {
     if (changed.has("data")) {
       this.dismissPreparationHelp();
-      const status = this.data?.planned_return_status;
-      const episode = status && plannedReturnTimeline(status) && plannedReturnPreparationEstimates(status).length
-        ? `${Date.parse(status.departure_at!)}|${Date.parse(status.return_at!)}|${status.origin}|${status.away_mode_id}|${status.destination_mode_id}` : "";
-      if (episode !== this.preparationEstimatesEpisode) this.preparationEstimatesExpanded = false;
-      this.preparationEstimatesEpisode = episode;
     }
     if (changed.has("data") || changed.has("hass") || changed.has("compact")) this.timelineNow = Date.now();
     if (!this.manualDate) this.manualDate = this.today;
@@ -376,6 +374,7 @@ export class PlannedReturnElement extends LitElement {
     }
   }
   protected updated(changed: PropertyValues): void {
+    dismissDisconnectedInlineHelp();
     this.syncTimelineClock();
     if (changed.has("busy")) this.dispatchEvent(new CustomEvent("planned-return-busy", { bubbles: true, composed: true, detail: this.busy }));
     if (changed.has("dirty") || changed.has("arrivalDirty")) this.dispatchEvent(new CustomEvent("velair-dirty-changed", { bubbles: true, composed: true, detail: { dirty: this.dirty || this.arrivalDirty, scope: "planned-return" } }));
@@ -456,20 +455,22 @@ export class PlannedReturnElement extends LitElement {
       <fieldset ?disabled=${this.busy}>
         <p class="help">${this.t("plannedReturnConflictHelp")}</p>
         <section class="settings-zone-order presence-settings">
-          <div class="section-heading"><ha-icon class="settings-startup-icon" icon="mdi:home-account"></ha-icon><div><span class="section-label">${this.t("plannedReturnPresence")}</span><p>${this.t("plannedReturnPresenceDescription")}</p></div></div>
+          <div class="section-heading"><ha-icon class="settings-startup-icon" icon="mdi:home-account"></ha-icon><div><span class="section-label">${this.t("plannedReturnAwayAndReturn")}</span><p>${this.t("plannedReturnAwayAndReturnHelp")}</p></div></div>
+          <p class="help occupancy-description">${this.t("plannedReturnPresenceDescription")}</p>
           <div class="occupancy-fields">
             <div><div class="source-add"><label><span class="field-label">${this.t("plannedReturnOccupancy")}</span><span class="select-wrap"><ha-icon icon="mdi:home-account"></ha-icon><select data-field="occupancy_entity_ids" .value=${this.sourceToAdd} ?disabled=${this.busy} aria-invalid=${invalid ? "true" : "false"} @change=${(e: Event) => { this.sourceToAdd = (e.target as HTMLSelectElement).value; }}><option value="">${this.t("none")}</option>${candidates.filter((id) => !sources.includes(id)).map((id) => html`<option value=${id}>${this.hass?.states?.[id]?.attributes?.friendly_name ? `${this.hass.states[id].attributes!.friendly_name} (${id})` : id}</option>`)}</select></span></label><button class="icon-button success add-source" type="button" title=${this.t("plannedReturnAddSource")} aria-label=${this.t("plannedReturnAddSource")} ?disabled=${this.busy || !this.sourceToAdd} @click=${() => { this.patch({ occupancy_entity_ids: [...sources, this.sourceToAdd] }); this.sourceToAdd = ""; }}><ha-icon icon="mdi:plus"></ha-icon></button></div>
             <div class="configured-source-panel">${this.renderSourceSummary()}<ul id="configured-occupancy-sources" class="source-list configured-sources" ?hidden=${!this.sourcesExpanded}>${sources.map((id) => html`<li data-source=${id}><ha-icon icon=${this.hass?.states?.[id]?.attributes?.icon ?? "mdi:home-account"}></ha-icon><span class="source-copy">${this.hass?.states?.[id]?.attributes?.friendly_name ?? id}<small>${id}</small></span><button class="icon-button danger remove-source" type="button" ?disabled=${this.busy} title=${this.t("plannedReturnRemoveSource", { entity: id })} aria-label=${this.t("plannedReturnRemoveSource", { entity: id })} @click=${() => this.patch({ occupancy_entity_ids: sources.filter((source) => source !== id) })}><ha-icon icon="mdi:trash-can"></ha-icon></button></li>`)}</ul></div></div>
           </div>
           ${invalid ? html`<p class="error" role="alert">${this.t("plannedReturnSensorInvalid")}</p>` : nothing}
-          <div class="absence-rule"><div class="delay-field"><label class="field-label" for="absence-delay">${this.t("plannedReturnEmptyFor")}</label><div class="delay-controls"><input id="absence-delay" type="number" min="0" max=${this.delayUnit === "hours" ? "24" : "1440"} step=${this.delayUnit === "hours" ? "any" : "1"} required ?disabled=${this.busy} aria-invalid=${this.delayValid ? "false" : "true"} .value=${live(this.delayValue)} @input=${(e: Event) => this.editDelay(e)} @blur=${() => { if (!this.busy && this.delayValid) this.syncDelayValue(); }}><span class="select-wrap"><select class="delay-unit" data-field="delay_unit" aria-label=${this.t("plannedReturnDelayUnit")} .value=${this.delayUnit} ?disabled=${this.busy} @change=${(e: Event) => { if (this.busy) return; this.delayUnit = (e.target as HTMLSelectElement).value as "minutes" | "hours"; this.syncDelayValue(); }}><option value="minutes">${this.t("plannedReturnMinutes")}</option><option value="hours">${this.t("plannedReturnHours")}</option></select></span></div></div>${this.modeSelect("away_mode_id", "plannedReturnActivateAway")}</div>${this.delayUnit === "hours" && this.delayValid ? html`<p class="help effective-delay">${this.t("plannedReturnEffectiveDelay", { minutes: this.draft.absence_delay_minutes })}</p>` : nothing}
+          <div class="absence-rule"><div class="delay-field"><label class="field-label" for="absence-delay">${this.t("plannedReturnEmptyFor")}</label><div class="delay-controls"><input id="absence-delay" type="number" min="0" max=${this.delayUnit === "hours" ? "24" : "1440"} step=${this.delayUnit === "hours" ? "any" : "1"} required ?disabled=${this.busy} aria-invalid=${this.delayValid ? "false" : "true"} .value=${live(this.delayValue)} @input=${(e: Event) => this.editDelay(e)} @blur=${() => { if (!this.busy && this.delayValid) this.syncDelayValue(); }}><span class="select-wrap"><select class="delay-unit" data-field="delay_unit" aria-label=${this.t("plannedReturnDelayUnit")} .value=${this.delayUnit} ?disabled=${this.busy} @change=${(e: Event) => { if (this.busy) return; this.delayUnit = (e.target as HTMLSelectElement).value as "minutes" | "hours"; this.syncDelayValue(); }}><option value="minutes">${this.t("plannedReturnMinutes")}</option><option value="hours">${this.t("plannedReturnHours")}</option></select></span></div>${this.delayUnit === "hours" && this.delayValid ? html`<p class="help effective-delay">${this.t("plannedReturnEffectiveDelay", { minutes: this.draft.absence_delay_minutes })}</p>` : nothing}<p class="help absence-delay-help">${this.t(sources.length ? "plannedReturnAbsenceDelayHelp" : "plannedReturnSensorlessSettingsHelp")}</p></div>
+            <div class="mode-field away-mode">${this.modeSelect("away_mode_id", "plannedReturnActivateAway")}<p class="help">${this.t("plannedReturnAwayModeHelp")}</p></div>
+            <div class="mode-field return-mode">${this.modeSelect("destination_mode_id", "plannedReturnActivateDestination")}<p class="help">${this.t("plannedReturnReturnModeHelp")}</p></div>
+          </div>
         </section>
         <section class="settings-zone-order weekly-settings">
-          <div class="section-heading"><ha-icon class="settings-startup-icon" icon="mdi:home-clock-outline"></ha-icon><div><span class="section-label">${this.t("plannedReturnPrepareArrival")}</span><p>${this.t("plannedReturnWeeklyDescription")}</p></div></div>
-          <span class="field-label weekly-label">${this.t("plannedReturnWeekly")}</span>
+          <div class="section-heading"><ha-icon class="settings-startup-icon" icon="mdi:home-clock-outline"></ha-icon><div><span class="section-label">${this.t("plannedReturnArrivalTimes")}</span><p>${this.t("plannedReturnWeeklyDescription")}</p></div></div>
           <div class="days">${orderedWeekdays(this.data?.settings?.first_weekday ?? "monday").map((day) => html`<div class="day" data-weekday=${day}><label>${this.weekdayName(day)}<input type="time" ?disabled=${this.busy} .value=${this.draft.weekly[day] ?? ""} @input=${(e: Event) => this.patch({ weekly: { ...this.draft.weekly, [day]: (e.target as HTMLInputElement).value || null } })}></label></div>`)}</div>
           <p class="help timezone-help">${this.t("plannedReturnTimezone", { zone: this.timeZone })}</p>
-          <div class="return-mode">${this.modeSelect("destination_mode_id", "plannedReturnActivateDestination")}<p class="help">${this.t("plannedReturnArrivalPreparation")}</p></div>
         </section>
         <div class="actions footer-actions"><button type="button" ?disabled=${this.busy || !this.dirty} @click=${() => { this.draft = plannedReturnDraft(this.data?.planned_return); this.syncDelayValue(); this.dirty = false; this.error = undefined; }}>${this.t("cancel")}</button><button class="primary" type="submit" ?disabled=${this.busy || invalid || !this.delayValid || !this.dirty}>${this.t("save")}</button></div>
       </fieldset></form></section>`;
@@ -505,7 +506,8 @@ export class PlannedReturnElement extends LitElement {
   private renderRoutine() {
     const config = this.settings ? this.draft : plannedReturnDraft(this.data?.planned_return);
     return html`<div class=${`status-item routine-status ${config.enabled ? "is-enabled" : ""}`}>
-      <div class="routine-header" role="group" aria-label=${`${this.t("plannedReturnAutomaticOrigin")}: ${this.t(config.enabled ? "plannedReturnRoutineEnabled" : "plannedReturnRoutineDisabled")}`}><ha-icon icon=${config.enabled ? "mdi:calendar-check-outline" : "mdi:calendar-blank-outline"}></ha-icon><div class="status-copy">${this.t("plannedReturnAutomaticOrigin")}</div>${this.settings ? html`<ha-switch class="routine-toggle" .checked=${config.enabled} ?disabled=${this.busy} aria-label=${this.t("plannedReturnEnabled")} @change=${(e: Event) => { const toggle = e.target as HTMLInputElement; if (this.busy) { toggle.checked = this.draft.enabled; return; } this.patch({ enabled: Boolean(toggle.checked) }); }}></ha-switch>` : nothing}</div>
+      <div class="routine-header" role="group" aria-label=${`${this.t("plannedReturnAutomaticOrigin")}: ${this.t(config.enabled ? "plannedReturnRoutineEnabled" : "plannedReturnRoutineDisabled")}`}><ha-icon icon=${config.enabled ? "mdi:calendar-check-outline" : "mdi:calendar-blank-outline"}></ha-icon><div class="status-copy">${this.t("plannedReturnAutomaticOrigin")}</div>${this.settings ? html`<ha-switch class="routine-toggle" .checked=${config.enabled} ?disabled=${this.busy} aria-label=${this.t("plannedReturnEnabled")} aria-describedby="weekly-routine-help" @change=${(e: Event) => { const toggle = e.target as HTMLInputElement; if (this.busy) { toggle.checked = this.draft.enabled; return; } this.patch({ enabled: Boolean(toggle.checked) }); }}></ha-switch>` : nothing}</div>
+      ${this.settings ? html`<p class="help routine-toggle-help" id="weekly-routine-help">${this.t("plannedReturnRoutineScopeHelp")}</p>` : nothing}
       <div class="routine-flow">
         <div class="routine-step away-step"><ha-icon icon="mdi:home-export-outline"></ha-icon><small>${this.t("plannedReturnAway")}</small><strong>${this.routineMode(config.away_mode_id)}</strong><span class="flow-delay" title=${this.t("plannedReturnConfirmationSummary", { minutes: config.absence_delay_minutes })}><ha-icon icon="mdi:timer-outline"></ha-icon>${this.t("plannedReturnDelaySummary", { minutes: config.absence_delay_minutes })}</span></div>
         <ha-icon class="flow-arrow" icon="mdi:arrow-right"></ha-icon>
@@ -572,8 +574,8 @@ export class PlannedReturnElement extends LitElement {
     await this.updateComplete;
     this.focusArrivalControl();
   }
-  private renderArrivalTrigger(status: PlannedReturnStatus, label?: string, pending = false) {
-    return html`<div class="arrival-value-controls"><button type="button" class=${`arrival-edit-trigger${pending ? " pending-arrival-chip" : ""}`} ?disabled=${this.busy || !status.can_start} aria-label=${`${this.t("plannedReturnEditArrival")}: ${status.return_at ? this.displayTime(status.return_at) : this.t("plannedReturnNoTime")}`} aria-expanded=${String(this.arrivalEditorOpen)} aria-controls="episode-arrival-editor" @click=${() => this.openArrivalEditor()}>${pending ? nothing : html`<ha-icon icon="mdi:pencil-outline" aria-hidden="true"></ha-icon>`}<span class=${`arrival-trigger-value${pending ? " pending-arrival-surface" : ""}`}>${label ?? (status.return_at ? this.displayTime(status.return_at) : this.t("plannedReturnNoTime"))}</span></button></div>`;
+  private renderArrivalTrigger(status: PlannedReturnStatus, label?: string, pending = false, panel = false) {
+    return html`<div class="arrival-value-controls"><button type="button" class=${`arrival-edit-trigger${pending ? " pending-arrival-chip" : ""}${panel ? " panel-arrival-input" : ""}`} ?disabled=${this.busy || !status.can_start} aria-label=${`${this.t("plannedReturnEditArrival")}: ${status.return_at ? this.displayTime(status.return_at) : this.t("plannedReturnNoTime")}`} aria-expanded=${String(this.arrivalEditorOpen)} aria-controls="episode-arrival-editor" @click=${() => this.openArrivalEditor()}>${pending || panel ? nothing : html`<ha-icon icon="mdi:pencil-outline" aria-hidden="true"></ha-icon>`}<span class=${`arrival-trigger-value${pending ? " pending-arrival-surface" : ""}`}>${label ?? (status.return_at ? this.displayTime(status.return_at) : this.t("plannedReturnNoTime"))}</span></button></div>`;
   }
   private renderEpisodeCancel(status: PlannedReturnStatus) {
     if (this.arrivalEditorOpen || !plannedReturnEpisodeActive(status) || !(status.can_cancel ?? !status.dismissed)) return nothing;
@@ -585,11 +587,25 @@ export class PlannedReturnElement extends LitElement {
   }
   private renderEpisode(status: PlannedReturnStatus) {
     const timeline = plannedReturnTimeline(status, this.timelineNow);
+    const showTimeline = timeline && (!this.embedded || this.preparationPoints(status, timeline).length > 0);
     return html`<div class=${`episode-layout${this.compact ? "" : " panel-episode"}`}>
-      ${timeline ? this.renderTimeline(status) : html`<div class="saved-return-arrival"><span class="arrival-context"><span class="arrival-icon" role="img" title=${this.t("plannedReturnArrival")} aria-label=${this.t("plannedReturnArrival")}><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon></span><span class="arrival-label">${this.t("plannedReturnArrival")}</span></span>${this.renderArrivalTrigger(status, undefined, true)}</div>`}
+      ${showTimeline ? this.renderTimeline(status) : html`${this.embedded && timeline ? this.renderClimatePreparationMessage(status) : nothing}<div class="saved-return-arrival"><span class="arrival-context"><span class="arrival-icon" role="img" title=${this.t("plannedReturnArrival")} aria-label=${this.t("plannedReturnArrival")}><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon></span><span class="arrival-label">${this.t("plannedReturnArrival")}</span></span>${this.renderArrivalTrigger(status, undefined, true)}</div>`}
       ${this.arrivalEditorOpen ? html`<div id="episode-arrival-editor" class="arrival-editor"><div class="arrival-fields"><label for="episode-return-date">${this.t("plannedReturnDate")}<input id="episode-return-date" type="date" min=${this.today} ?disabled=${this.busy || !status.can_start} .value=${this.arrival.slice(0, 10)} @input=${(e: Event) => this.editArrival(e, "date")}></label><label for="episode-return-time">${this.t("plannedReturnTime")}<input id="episode-return-time" type="time" ?disabled=${this.busy || !status.can_start} .value=${this.arrival.slice(11)} @input=${(e: Event) => this.editArrival(e, "time")}></label></div></div>` : nothing}
       ${this.arrivalEditorOpen ? this.renderEpisodeActions(status) : (status.can_cancel ?? !status.dismissed) ? html`<div class="return-cancel-footer">${this.renderEpisodeCancel(status)}</div>` : nothing}
     </div>`;
+  }
+  private preparationPoints(status: PlannedReturnStatus, timeline: NonNullable<ReturnType<typeof plannedReturnTimeline>>) {
+    return overviewPreparationPoints(currentArrivalPreparation(status, this.timelineNow), timeline.departure, this.data?.configured_entities ?? [])
+      .filter(point => !this.embedded || point.entityId === this.entityId);
+  }
+  private renderClimatePreparationMessage(status: PlannedReturnStatus) {
+    const room = this.entityId ? preparationRoom(currentArrivalPreparation(status, this.timelineNow), this.entityId) : undefined;
+    const key: TranslationKey = room?.state === "reached" ? "plannedReturnVisibilityReachedHelp"
+      : room?.state === "arrivalOnly" ? "plannedReturnVisibilityArrivalOnlyHelp"
+      : room?.source.reason ? plannedReturnPreparationReasons[room.source.reason] ?? "plannedReturnPreparationReasonUnknown"
+      : room?.state === "suspended" ? "plannedReturnVisibilitySuspendedHelp"
+      : "plannedReturnClimateNoEstimate";
+    return html`<p class="help climate-return-message" role="status">${this.t(key)}</p>`;
   }
   private renderCompactIndicators(status: PlannedReturnStatus) {
     if (!this.hasSavedOccupancySources(status)) return nothing;
@@ -598,36 +614,37 @@ export class PlannedReturnElement extends LitElement {
     const minutes = this.data?.planned_return?.absence_delay_minutes ?? 10;
     const confirmed = plannedReturnEpisodeActive(status) && (["away", "preparing"].includes(status.state) || status.state === "error" && Boolean(status.departure_at));
     return html`<div class="compact-return-indicators">
-      ${(["home", "away", "unknown"] as const).map((state) => state === "unknown" && !counts.unknown ? nothing : html`<span class=${`source-count ${state}`} data-runtime-count=${state} role="img" title=${this.t(state === "home" ? "plannedReturnSourceHomeCount" : state === "away" ? "plannedReturnSourceAwayCount" : "plannedReturnSourceUnknownCount", { count: counts[state] })} aria-label=${this.t(state === "home" ? "plannedReturnSourceHomeCount" : state === "away" ? "plannedReturnSourceAwayCount" : "plannedReturnSourceUnknownCount", { count: counts[state] })}><ha-icon aria-hidden="true" icon=${state === "home" ? "mdi:home-account" : state === "away" ? "mdi:home-outline" : "mdi:home-question-outline"}></ha-icon><span aria-hidden="true">${counts[state]}</span></span>`)}
-      ${!confirmed ? html`<span class="compact-return-delay" role="img" title=${this.t("plannedReturnConfirmationSummary", { minutes })} aria-label=${this.t("plannedReturnConfirmationSummary", { minutes })}><ha-icon aria-hidden="true" icon="mdi:timer-outline"></ha-icon><span aria-hidden="true">${plannedReturnDelay(minutes)}</span></span>` : nothing}
+      ${(["home", "away", "unknown"] as const).map(state => {
+        if (state === "unknown" && !counts.unknown) return nothing;
+        const label = this.t(state === "home" ? "plannedReturnSourceHomeCount" : state === "away" ? "plannedReturnSourceAwayCount" : "plannedReturnSourceUnknownCount", { count: counts[state] });
+        const names = (status.sources ?? []).filter(source => source.state === state).map(source => String(this.hass?.states?.[source.entity_id]?.attributes?.friendly_name ?? source.entity_id));
+        return html`<span class=${`source-count ${state}`} data-runtime-count=${state} role="group" aria-label=${label}><ha-icon aria-hidden="true" icon=${state === "home" ? "mdi:home-account" : state === "away" ? "mdi:home-outline" : "mdi:home-question-outline"}></ha-icon><span aria-hidden="true">${counts[state]}</span>${renderInlineHelp(`compact-return-source-${state}`, label, [label, ...names], { appearance: "overlay" })}</span>`;
+      })}
+      ${!confirmed ? html`<span class="compact-return-delay" role="group" aria-label=${this.t("plannedReturnConfirmationSummary", { minutes })}><ha-icon aria-hidden="true" icon="mdi:timer-outline"></ha-icon><span aria-hidden="true">${plannedReturnDelay(minutes)}</span>${renderInlineHelp("compact-return-delay", this.t("plannedReturnConfirmationSummary", { minutes }), this.t("plannedReturnConfirmationSummary", { minutes }), { appearance: "overlay" })}</span>` : nothing}
     </div>`;
   }
   private renderTimeline(status: PlannedReturnStatus) {
     const timeline = plannedReturnTimeline(status, this.timelineNow);
-    if (!timeline) return nothing;
-    const labels = plannedReturnTimelineLabels(timeline.departure, timeline.arrival, this.timeZone,
-      languageFromHass(this.hass), this.displayHour12);
-    const preparationMarker = plannedReturnPreparationMarker(status, timeline.departure, timeline.arrival);
-    const estimates = plannedReturnPreparationEstimates(status);
-    const preparationTime = preparationMarker ? (labels.differentDates ? this.displayTime(new Date(preparationMarker.start).toISOString()) : plannedReturnTimelineLabels(timeline.departure, preparationMarker.start, this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival) : "";
+    return timeline ? this.renderPanelTimeline(status, timeline) : nothing;
+  }
+  private renderPanelTimeline(status: PlannedReturnStatus, timeline: NonNullable<ReturnType<typeof plannedReturnTimeline>>) {
+    const labels = plannedReturnTimelineLabels(timeline.departure, timeline.arrival, this.timeZone, languageFromHass(this.hass), this.displayHour12);
+    const points = this.preparationPoints(status, timeline);
+    const names = Object.fromEntries(points.map(point => [point.entityId, String(this.hass?.states?.[point.entityId]?.attributes?.friendly_name ?? point.entityId)]));
     const departureMode = status.away_mode_id ? this.routineMode(status.away_mode_id) : undefined;
     const arrivalMode = status.destination_mode_id ? this.routineMode(status.destination_mode_id) : undefined;
-    return html`<div class="return-timeline" role="group" aria-label=${this.t("plannedReturnTimeline")}>
-
-      <div class="return-timeline-rail">
-        <span class="return-timeline-icon departure-icon" role="img" title=${this.t("plannedReturnDeparted")} aria-label=${this.t("plannedReturnDeparted")}><ha-icon icon="mdi:home-export-outline" aria-hidden="true"></ha-icon></span>
-        <div class="return-timeline-line"><div class="return-timeline-track" role="progressbar" aria-label=${this.t("plannedReturnTimeline")} aria-valuemin="0" aria-valuemax="100" aria-valuenow=${Math.round(timeline.progress * 100)} aria-valuetext=${this.t("plannedReturnTimelineValue", { time: this.displayTime(new Date(this.timelineNow).toISOString()), percent: Math.round(timeline.progress * 100) })}>
-          <span class="return-timeline-elapsed" aria-hidden="true" style=${`width: ${timeline.progress * 100}%`}></span>
-        </div><span class="return-timeline-marker" role="img" title=${this.t("plannedReturnTimelineNow")} aria-label=${`${this.t("plannedReturnTimelineNow")}: ${this.displayTime(new Date(this.timelineNow).toISOString())}`} style=${`left: ${timeline.progress * 100}%`}></span>${preparationMarker ? html`<span class="preparation-marker" style=${`left: ${preparationMarker.progress * 100}%`} role="img" title=${this.t("plannedReturnPreparationEstimate", { time: this.displayTime(new Date(preparationMarker.start).toISOString()) })} aria-label=${this.t("plannedReturnPreparationEstimate", { time: this.displayTime(new Date(preparationMarker.start).toISOString()) })}></span>` : nothing}</div>
-        <span class="return-timeline-icon arrival-icon" role="img" title=${this.t("plannedReturnArrival")} aria-label=${this.t("plannedReturnArrival")}><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon></span>
-      </div>
-      <div class="return-timeline-endpoints"><div class="return-endpoint-data departure-data"><strong class="return-time-value" aria-label=${`${this.t("plannedReturnDeparted")}: ${this.displayTime(status.departure_at!)}`}><span>${labels.departure}</span></strong>${departureMode ? html`<span class="return-mode-chip departure-mode" role="img" title=${`${this.t("plannedReturnAway")}: ${departureMode}`} aria-label=${`${this.t("plannedReturnAway")}: ${departureMode}`}><ha-icon icon="mdi:format-list-bulleted" aria-hidden="true"></ha-icon><span>${departureMode}</span></span>` : nothing}</div><div class="return-endpoint-data arrival-data">${this.renderArrivalTrigger(status, labels.arrival)}${arrivalMode ? html`<span class="return-mode-chip arrival-mode" role="img" title=${`${this.t("plannedReturnDestination")}: ${arrivalMode}`} aria-label=${`${this.t("plannedReturnDestination")}: ${arrivalMode}`}><ha-icon icon="mdi:format-list-bulleted" aria-hidden="true"></ha-icon><span>${arrivalMode}</span></span>` : nothing}</div></div>
-
-      ${preparationMarker && !this.arrivalEditorOpen ? html`<div class="preparation-estimate"><button type="button" class="preparation-estimate-toggle" title=${this.t("plannedReturnPreparationEstimateHelp")} aria-expanded=${String(this.preparationEstimatesExpanded)} aria-controls="preparation-estimate-rooms" @click=${() => { this.preparationEstimatesExpanded = !this.preparationEstimatesExpanded; }}><ha-icon icon="mdi:clock-fast" aria-hidden="true"></ha-icon><span>${this.t("plannedReturnPreparationEstimate", { time: preparationTime })}</span><ha-icon icon=${this.preparationEstimatesExpanded ? "mdi:chevron-up" : "mdi:chevron-down"} aria-hidden="true"></ha-icon></button><ul id="preparation-estimate-rooms" class="preparation-estimate-rooms" ?hidden=${!this.preparationEstimatesExpanded}>${estimates.map((estimate) => {
-        const entity = this.hass?.states?.[estimate.entity_id];
-        const time = plannedReturnTimelineLabels(timeline.departure, estimate.start, this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival;
-        return html`<li data-entity-id=${estimate.entity_id}><span class="preparation-estimate-room"><ha-icon icon=${entity?.attributes?.icon ?? "mdi:thermostat"} aria-hidden="true"></ha-icon><span>${entity?.attributes?.friendly_name ?? estimate.entity_id}</span></span><time datetime=${new Date(estimate.start).toISOString()} title=${this.displayTime(new Date(estimate.start).toISOString())}>${time}</time></li>`;
-      })}</ul></div>` : nothing}
+    return html`<div class="return-timeline panel-return-timeline" role="group" aria-label=${this.t("plannedReturnTimeline")}>
+      <div class="panel-return-times"><span class="return-endpoint-help"><span class="departure-icon" role="img" aria-label=${this.t("plannedReturnDeparted")}><ha-icon icon="mdi:home-export-outline" aria-hidden="true"></ha-icon></span><strong class="return-time-value" aria-label=${`${this.t("plannedReturnDeparted")}: ${this.displayTime(status.departure_at!)}`}>${labels.departure}</strong>${renderInlineHelp("panel-return-departure", this.t("plannedReturnDeparted"), this.t("plannedReturnOverviewDepartureHelp", { time: this.displayTime(status.departure_at!) }), { appearance: "overlay" })}</span>
+        <span>${this.renderArrivalTrigger(status, labels.arrival, false, true)}<span class="arrival-icon return-endpoint-help" role="group" aria-label=${this.t("plannedReturnArrival")}><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon>${renderInlineHelp("panel-return-arrival", this.t("plannedReturnArrival"), this.t("plannedReturnOverviewArrivalHelp", { time: this.displayTime(status.return_at!) }), { appearance: "overlay" })}</span></span></div>
+      <velair-overview-preparation-timeline .points=${points} .names=${names} .progress=${timeline.progress}
+        .episodeKey=${`${status.departure_at}|${status.return_at}|${status.destination_mode_id}`}
+        .estimateLabel=${(start: number) => this.t("plannedReturnOverviewPreparationStartEstimate", { time: plannedReturnTimelineLabels(timeline.departure, start, this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival })}
+        .startTimeLabel=${(start: number) => plannedReturnTimelineLabels(timeline.departure, start, this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival}
+        .nowLabel=${`${this.t("plannedReturnTimelineNow")}: ${this.displayTime(new Date(this.timelineNow).toISOString())}`}
+        .moreLabel=${(count: number) => this.t("plannedReturnOverviewMoreClimates", { count })} .collapseLabel=${this.t("plannedReturnOverviewCollapseClimates")} .timelineLabel=${this.t("plannedReturnTimeline")}>
+        <div class="panel-return-modes">${departureMode ? html`<span class="return-mode-chip departure-mode" role="group" aria-label=${`${this.t("plannedReturnAway")}: ${departureMode}`}><ha-icon icon="mdi:format-list-bulleted" aria-hidden="true"></ha-icon><span>${departureMode}</span>${renderInlineHelp("panel-return-away-mode", this.t("plannedReturnAway"), this.t("plannedReturnOverviewAwayModeHelp", { mode: departureMode }), { appearance: "overlay" })}</span>` : html`<span></span>`}
+          ${arrivalMode ? html`<span class="return-mode-chip arrival-mode" role="group" aria-label=${`${this.t("plannedReturnDestination")}: ${arrivalMode}`}><ha-icon icon="mdi:format-list-bulleted" aria-hidden="true"></ha-icon><span>${arrivalMode}</span>${renderInlineHelp("panel-return-destination-mode", this.t("plannedReturnDestination"), this.t("plannedReturnOverviewDestinationModeHelp", { mode: arrivalMode }), { appearance: "overlay" })}</span>` : nothing}</div>
+      </velair-overview-preparation-timeline>
     </div>`;
   }
   private renderAbsenceConfirmation(status: PlannedReturnStatus) {
@@ -638,20 +655,24 @@ export class PlannedReturnElement extends LitElement {
     return html`<div class="absence-confirmation" role="status" title=${this.t("plannedReturnStateHelp_confirming_absence")}><ha-icon icon="mdi:timer-sand" aria-hidden="true"></ha-icon><div class="absence-confirmation-summary"><span class="absence-confirmation-heading">${this.t("plannedReturnCheckingEmpty")}${label ? html` <time class="absence-confirmation-deadline" datetime=${deadline!}>${this.t("plannedReturnCheckingUntil", { time: label }).replace(/^./u, (letter) => letter.toLocaleLowerCase())}</time>` : nothing}</span></div><p class="help">${this.t("plannedReturnCheckingHelp")}</p></div>`;
   }
   private renderPreparationHelp(status: PlannedReturnStatus) {
+    if (this.embedded) return nothing;
+    if (currentArrivalPreparation(status, this.timelineNow)?.zones.length) return nothing;
     const timeline = plannedReturnTimeline(status, this.timelineNow);
-    if (this.arrivalEditorOpen || !timeline || plannedReturnPreparationMarker(status, timeline.departure, timeline.arrival)) return nothing;
+    if (this.arrivalEditorOpen || !timeline) return nothing;
     const summary = plannedReturnPreparationSummary(status);
     const summaryKey: TranslationKey = summary === "unknown" ? "plannedReturnPreparationNoEstimate" : summary === "none" || summary === "arrival_only" ? `plannedReturnPreparationCategory_${summary}` : `plannedReturnPreparationState_${summary}`;
     return html`<span class="preparation-info">${renderInlineHelp("return-preparation-help", this.t("plannedReturnRoomPreparation"), [this.t(summaryKey), this.t(summary === "unknown" ? "plannedReturnPreparationNoEstimateHelp" : "plannedReturnPreparationConfigurationHelp")])}</span>`;
   }
   private renderQuickReturn(status: PlannedReturnStatus) {
     const active = plannedReturnEpisodeActive(status);
+    const preparation = currentArrivalPreparation(status, this.timelineNow);
     const pending = status.state === "armed" || status.state === "confirming_absence";
     const phaseIcon = status.state === "error" ? "mdi:alert-circle-outline" : pending ? "mdi:exit-run" : status.state === "preparing" ? "mdi:home-clock-outline" : "mdi:clock-outline";
     const validArrival = Boolean(returnWallTimeToIso(`${this.manualDate}T${this.manualTime}`, this.timeZone, Date.now()));
     return html`<div class="quick-return-panel">
-      <div class="quick-return-heading"><div class="return-title-group">${this.embedded ? nothing : html`<ha-icon icon="mdi:home-clock-outline" aria-hidden="true"></ha-icon>`}<div class="return-title-copy"><div class="return-title-line"><div class="status-copy">${this.t("plannedReturnControls")}</div>${this.renderPreparationHelp(status)}${active && status.state !== "confirming_absence" ? html`<span class=${`return-context-status state-${status.state}`} role="status" title=${this.t(`plannedReturnStateHelp_${status.state}` as TranslationKey)}><ha-icon icon=${phaseIcon} aria-hidden="true"></ha-icon><span>${this.t(`plannedReturnState_${status.state}` as TranslationKey)}</span></span>` : nothing}</div></div></div>${this.compact ? html`<div class="return-header-details">${this.renderCompactIndicators(status)}</div>` : nothing}</div>
+      <div class="quick-return-heading"><div class="return-title-group">${this.embedded ? nothing : html`<ha-icon icon="mdi:home-clock-outline" aria-hidden="true"></ha-icon>`}<div class="return-title-copy"><div class="return-title-line"><div class="status-copy">${this.t("plannedReturnControls")}</div>${this.renderPreparationHelp(status)}${active && status.state !== "confirming_absence" ? html`<span class=${`return-context-status state-${status.state}`} role="status"><ha-icon icon=${phaseIcon} aria-hidden="true"></ha-icon><span>${this.t(`plannedReturnState_${status.state}` as TranslationKey)}</span>${renderInlineHelp("return-current-phase", this.t(`plannedReturnState_${status.state}` as TranslationKey), this.t(`plannedReturnStateHelp_${status.state}` as TranslationKey), { appearance: "overlay" })}</span>` : nothing}</div></div></div>${this.compact ? html`<div class="return-header-details">${this.renderCompactIndicators(status)}</div>` : nothing}</div>
       ${this.renderAbsenceConfirmation(status)}
+      ${preparation && this.compact && !this.embedded ? renderPreparationBadges(preparation, this.t, (value) => this.displayTime(value), this.timelineNow) : nothing}
       ${active ? this.renderEpisode(status) : html`<div class="actions manual-departure"><div class="arrival-fields">
         <label for="manual-return-date">${this.t("plannedReturnDate")}<input id="manual-return-date" type="date" min=${this.today} .value=${this.manualDate} ?disabled=${this.busy} @input=${(e: Event) => { this.manualDate = (e.target as HTMLInputElement).value; }}></label>
         <label for="manual-return-time">${this.t("plannedReturnTime")}<input id="manual-return-time" type="time" .value=${this.manualTime} ?disabled=${this.busy} @input=${(e: Event) => { this.manualTime = (e.target as HTMLInputElement).value; }}></label>

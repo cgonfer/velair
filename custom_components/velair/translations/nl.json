@@ -158,16 +158,16 @@
   },
   "services": {
     "start_planned_return": {
-      "name": "I'm leaving",
+      "name": "Ik vertrek",
       "description": "Plan een eenmalige terugkeer voor een toekomstige datum en tijd met opgeslagen modi en automatische planning. Met ingestelde aanwezigheidsbronnen wordt afwezigheid bevestigd voordat de afwezigheidsmodus start; zonder bronnen start deze direct. Werkt zonder wekelijkse routine en wijzigt een actieve afwezigheid.",
       "fields": {
         "return_date": {
-          "name": "Return date",
-          "description": "Arrival date in Home Assistant's time zone. The date and time together must be in the future."
+          "name": "Terugkeerdatum",
+          "description": "Aankomstdatum in de Home Assistant-tijdzone. Datum en tijd moeten samen in de toekomst liggen."
         },
         "return_time": {
-          "name": "Return time",
-          "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+          "name": "Terugkeertijd",
+          "description": "Aankomsttijd op de gekozen datum in de Home Assistant-tijdzone. Gebruik HH:MM in YAML; optionele seconden moeten 00 zijn. Niet-bestaande tijden bij zomer-/wintertijdwissel worden geweigerd."
         }
       }
     },
@@ -226,6 +226,10 @@
         "clear_fields": {
           "name": "Instellingen verwijderen",
           "description": "Alleen voor update. Verwijder instellingen zonder het apparaat te resetten. Het resultaat moet geldig blijven."
+        },
+        "temperature_only": {
+          "name": "Alleen temperatuur",
+          "description": "Werkt doelen bij zonder een HVAC-moduswijziging of inschakeling te vragen. Vereist een temperatuuractie zonder apparaatopties. Gebruik clear_fields of replace om een bestaande HVAC-modus of opties te verwijderen."
         }
       },
       "sections": {
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Configuratierevisie",
           "description": "Optionele controle op gelijktijdige wijzigingen. Laat leeg om de laatst opgeslagen bron onder de configuratievergrendeling te klonen."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Klimaatprofiel activeren",
+      "description": "Stelt één opgeslagen klimaatprofiel in als volledige basis en wist alle zone-uitzonderingen. Niet opgenomen zones gebruiken hun standaardschema. Laat de profiel-ID leeg om alle zones terug te zetten naar Standaard.",
+      "fields": {
+        "profile_id": {
+          "name": "Profiel-ID",
+          "description": "Stabiele sleutel van het te activeren profiel. Leeg wist de actieve selectie en kiest Standaard."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Klimaatprofiel deactiveren",
+      "description": "Zet alle zones terug naar Standaard door de basisprofielen en alle zone-uitzonderingen te wissen."
+    },
+    "activate_profiles": {
+      "name": "Klimaatprofielen als basis activeren",
+      "description": "Vervangt de volledige basis door niet-overlappende profielen en wist alle zone-uitzonderingen. Een lege lijst kiest Standaard. Profielselectie garandeert geen gelijktijdige fysieke opdrachtuitvoering.",
+      "fields": {
+        "profile_ids": {
+          "name": "Profiel-ID’s",
+          "description": "Geordende lijst met stabiele profiel-ID’s. Profielen mogen niet dezelfde zone bevatten."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Klimaatprofielen als uitzonderingen toepassen",
+      "description": "Vervangt uitzonderingen alleen in de zones die expliciet in deze profielen zijn opgenomen. Andere zones behouden hun selectie. Overlappende profielen in dit verzoek wijzen de hele actie af; een lege lijst doet niets. Annuleert een geplande terugkeer naar huis.",
+      "fields": {
+        "profile_ids": {
+          "name": "Profiel-ID’s",
+          "description": "Lijst met stabiele profiel-ID’s waarvan de expliciete zones deze profielen als uitzonderingen moeten gebruiken."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Profieluitzondering voor een zone instellen",
+      "description": "Past slechts één zone uit een opgeslagen profiel toe en behoudt de selectie van alle andere zones. Het profiel moet deze zone bevatten. Gebruik YAML null voor Standaard; gebruik Profieluitzonderingen wissen om de basis te erven. Annuleert een geplande terugkeer naar huis.",
+      "fields": {
+        "profile_id": {
+          "name": "Profiel-ID",
+          "description": "Stabiele profiel-ID, of YAML null om expliciet het standaardschema van de zone te gebruiken."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Profieluitzonderingen wissen",
+      "description": "Herstelt de huidige basis voor de expliciet geselecteerde zones. Eerdere uitzonderingen worden niet hersteld. Een lege lijst doet niets. Annuleert een geplande terugkeer naar huis wanneer zones zijn opgegeven.",
+      "fields": {
+        "entity_id": {
+          "name": "Klimaatentiteiten",
+          "description": "Eén beheerde klimaatentiteit of een lijst. Alle doelen moeten geldig zijn voordat een uitzondering wordt verwijderd."
         }
       }
     }

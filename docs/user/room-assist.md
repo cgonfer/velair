@@ -7,6 +7,12 @@ Translations: [English original](room-assist.md) · [Español](room-assist.es.md
 
 Room Assist lets Velair use a separate room temperature sensor for one managed climate while still controlling the real `climate.*` entity.
 
+With a **Temperature only** block, Room Assist is suspended while the climate
+is off. It does not turn the climate on or restore an earlier HVAC mode when
+clearing its previous correction. After an external turn-on, it can assist
+using the actual compatible mode without requesting a mode change. Updating
+the scheduled target while off still depends on the climate integration.
+
 This is useful for TRVs, radiator valves, wall thermostats, or AC units whose built-in temperature reading does not represent the real room temperature. For example, a TRV mounted next to a radiator may report `22 °C` while the room sensor still reports `20.5 °C`.
 
 All calculations use the managed climate entity's native Home Assistant unit. The examples below use Celsius for readability, but the same hysteresis limits, signed correction, scheduled-target protection, range width, target step, and physical-limit handling apply directly in Fahrenheit. For example, a `4 °F` room error is a `4 °F` correction; it is not treated as an absolute temperature or given the Celsius-to-Fahrenheit offset.

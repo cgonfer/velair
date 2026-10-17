@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](manual-control.md) · [Español](manual-contr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -181,6 +181,8 @@ Se esiste ancora una pausa indipendente, la zona resta in pausa. Se la sua azion
 
 <a id="resume-from-off-when-the-block-says-keep-current-mode"></a>
 ### Ripresa da `off` quando il blocco mantiene la modalità attuale
+
+**Solo temperatura** è una scelta distinta per il blocco. Durante questo blocco, un cambio esterno di modalità HVAC resta sotto controllo esterno e da solo non crea una regolazione manuale. Le modifiche esterne della temperatura obiettivo seguono ancora la politica configurata. Una pausa o una regolazione manuale interrompe comunque l’invio dell’orario; la ripresa applica il blocco attuale senza accendere un dispositivo spento. Questo vale anche quando un’automazione per le finestre riprende la zona. Un Incremento esplicito o un blocco successivo con modalità HVAC esplicita può comunque accenderlo.
 
 **Mantieni la modalità corrente** significa che il blocco non fornisce una modalità HVAC. Per un blocco con temperatura obiettivo, alla ripresa Velair segue la normale regola di invio:
 

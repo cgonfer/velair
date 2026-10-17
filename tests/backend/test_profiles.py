@@ -962,6 +962,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         scheduler, data, manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(behavior="pause", action="turn_off"))
         data["global_"]["active_profile_ids"] = ["away"]
+        data["global_"]["base_profile_ids"] = ["away"]
         manager.calls.clear()
 
         await scheduler.async_start(apply_current_schedule=True)
@@ -978,6 +979,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         schedule["tuesday"] = []
         await scheduler.async_set_profile(profile)
         data["global_"]["active_profile_ids"] = ["away"]
+        data["global_"]["base_profile_ids"] = ["away"]
         manager.calls.clear()
 
         await scheduler.async_start(apply_current_schedule=False)
@@ -996,6 +998,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         schedule["tuesday"] = []
         await scheduler.async_set_profile(profile)
         data["global_"]["active_profile_ids"] = ["away"]
+        data["global_"]["base_profile_ids"] = ["away"]
         manager.calls.clear()
 
         await scheduler.async_start(apply_current_schedule=True)
@@ -1159,7 +1162,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(manager.calls, [])
 
-    async def test_changing_profile_owner_clears_boost_with_identical_behavior(self) -> None:
+    async def test_changing_profile_owner_preserves_boost_with_identical_behavior(self) -> None:
         scheduler, data, _manager, _saves = self._scheduler()
         await scheduler.async_set_profile(_profile(key="away", temperature=18))
         await scheduler.async_set_profile(_profile(key="summer", temperature=18))
@@ -1173,7 +1176,7 @@ class ProfileSchedulerTest(unittest.IsolatedAsyncioTestCase):
         await scheduler.async_activate_profile("summer")
 
         self.assertEqual(data["global_"]["active_profile_ids"], ["summer"])
-        self.assertIsNone(data["zones"]["climate.salon"]["override"])
+        self.assertEqual(data["zones"]["climate.salon"]["override"]["temperature"], 23)
 
     async def test_zone_pause_outranks_profile_activation(self) -> None:
         scheduler, data, manager, _saves = self._scheduler()

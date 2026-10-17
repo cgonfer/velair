@@ -2,7 +2,19 @@
 
 Velair ships a Home Assistant sidebar panel and an optional Lovelace card. Both are built from the same TypeScript/Lit bundle and consume the same backend WebSocket API.
 
+## Shared Command Button Sizing
+
+Text command buttons share sizing through `base-styles.ts`, including native
+buttons and summary-based actions such as Active setup's Change menu. Use
+border-box sizing so padding and borders are included in the minimum height:
+38px normally and 34px for the compact variant, with 44px targets on devices
+with coarse pointers. Inherited typography and an explicit line height keep
+icon/text alignment consistent. Heights remain content-driven so long labels
+can grow instead of clipping. Context-specific width and color treatments
+remain local; avoid extra minimum heights on individual command actions.
+
 ## Runtime Elements
+
 
 - `velair-sidebar-panel`: sidebar panel element registered by Home Assistant.
 - `velair-panel-card`: internal card element used only by the sidebar panel.
@@ -203,6 +215,16 @@ view: overview-status
 
 Cards can use an optional `entities` list to show only selected Velair-managed climates in that dashboard card. This is local Lovelace configuration only; it does not persist through Velair storage and does not change scheduler behavior. Per-climate views, lists, copy targets, template apply targets, next events, boosts, timelines, settings rows, and preconditioning rows use the filtered list. Global views such as `overview-status` and `active-setup` do not use an entity filter.
 
+Template Apply to uses temporary selection/review state for one Default or
+Profile context, one copy/link mode and a built-in layout. Only the backend
+preview chooses compatible donor proposals and validates the complete candidate.
+Review editors reuse block controls with fixed template times. Base selection
+and assignment edits do not persist until the atomic application command.
+Source, configuration revision or selection changes invalidate previews;
+out-of-order requests cannot replace newer review input. Dirty review data
+participates in the existing navigation/discard protection. The frontend never
+implements template application with sequential daily or Profile saves.
+
 The independent `active-setup` card accepts a local `active_setup_controls`
 presentation option:
 
@@ -214,10 +236,77 @@ active_setup_controls: both
 
 Valid values are `modes`, `profiles`, and `both`; omission and invalid values
 fall back to `both`. This setting filters only the available Active setup
-actions. The current Mode and active Profile summary always remain visible, and
+actions. The shared **Base** and **Exceptions** summary always remains visible, and
 no value is persisted through Velair storage. Profiles-only cards retain a
 Default action because direct Profile activation replaces the complete active
-set; composing several non-overlapping Profiles remains a Mode responsibility.
+set. Each Profile choice also offers a compact layers action that applies its
+configured rooms as exceptions without replacing the base.
+
+Profile library rows use two columns: editable identity and a dedicated vertical
+action rail, ordered base activation, exception application, then deletion.
+Transparent icon buttons retain an inset from the row edge and never wrap into
+the identity column. Base and exception indicators derive independently from
+structured base IDs and managed zone overrides, with legacy base-ID fallback.
+Same-Profile base/exception references highlight both actions; fully overridden
+bases retain their base indicator. The effective Profile union must not drive
+the base button. Editing selection is separate from usage state and actions
+must not select another editor. Deleting the edited Profile still clears its
+editor after confirmation. Keep the row-specific layout scoped to Profiles.
+
+The overview contains no per-zone editing disclosure. Exception count buttons
+toggle a read-only region beneath the selected group, preserving all exception
+rows. A chevron and `aria-expanded` expose the disclosure state. A short CSS
+transition respects reduced-motion preferences. Only one group opens at a time;
+the same button or Escape closes it, with Escape restoring trigger focus.
+Collapsed regions are excluded from keyboard and accessibility navigation;
+removing the selected group through a backend update closes its stale detail.
+Long detail lists scroll within a bounded area. These inspection controls are
+available in every scope and never call a mutation API. The mutation handler
+continues to reject Profile exception actions in Mode-only scope.
+
+The `activeSetupSummary` domain helper derives the persisted base identity and
+groups explicit `zone_profile_overrides` by Profile ID or null. It does not infer
+the base from the native select's Manual state or group the union of effective
+Profile IDs as exceptions. Explicit Default and explicit Profile-normal behavior
+retain separate provenance. Mode, Profile, multiple Profiles and Default bases
+remain identifiable even when their rooms are fully replaced. The renderer
+shares existing icons, accents and theme variables. The base label, name and
+type use two compact levels: Base and type above the wrapping name.
+Base coverage intersects the union of base Profile zone keys with the unique
+managed entities; Default bases include all managed entities. Explicit Default
+entries within a base Profile participate in its scope. Any own override key,
+including null or the same Profile, excludes that zone from inherited coverage.
+Fallback Default outside a Profile base never increases its coverage. Empty
+scope and fully overridden scope have distinct presentation. Base Profiles are
+identified in the distribution legend; remove the redundant Mode component list.
+Distribution segments partition all unique managed entities by base, exception
+or fallback Default origin and Profile identity. They retain separate origins
+even for the same Profile. The distribution total is the managed-zone count,
+not the base coverage denominator. Exception segments and the Exceptions list
+use that same managed scope, ignoring stale unmanaged references. Segment counts
+sum to the household total and omit zero counts. Reuse Profile accents and icons,
+neutral Default and a text legend so color is not the only identifier. Render
+the 6px bar and entire legend inside a disclosure within the base summary,
+below its own coverage count, closed initially. Its stable button shows the
+household total and a chevron; `aria-expanded`, `aria-controls`, hidden/inert
+collapsed content and Escape/focus restoration mirror exception inspection.
+Expansion grows downwards, with reduced-motion-aware transition. This local
+presentation state is not persisted and never invokes a mutation API. Live data
+updates refresh open content; removing all segments resets it to closed.
+The legend uses 14px icons, 12px text and separate right-aligned counts; names
+wrap within their own column. Rounded ends and thin separators remain.
+The global scope is unchanged by this placement. An empty base still has a
+bar when managed entities exist; zero managed entities render no bar. Keep one
+base coverage summary and no duplicate masked note. Align the base icon to the
+top of its header and use a layers icon on the Exceptions heading.
+Desktop uses one third of the summary for Base and two thirds for Exceptions;
+the Exceptions heading uses the standard compact content spacing. Exception
+counts use dense desktop rows and larger touch targets on coarse-pointer devices.
+The header grid placement does not depend on expansion state. Details expand
+below the fixed header, leaving the triggering button's coordinates unchanged
+and pushing later groups down.
+Media and container queries keep the
+summary, chooser and detail controls accessible in narrow cards.
 
 ```yaml
 type: custom:velair-card
@@ -286,6 +375,7 @@ not change backend Comfort listeners, thresholds, events, or generated sensors.
 
 Supported Lovelace `view` values:
 
+- `climate`
 - `overview-status`
 - `overview-boosts`
 - `overview-events`
@@ -296,6 +386,7 @@ Supported Lovelace `view` values:
 - `sensors`
 - `comfort`
 - `preconditioning`
+- `planned-return`
 
 Do not keep an old `/local/velair-card.js` resource active while testing an installed or HACS-style build. Browser custom elements cannot be redefined in place, so a second resource URL can still register obsolete elements before Velair's canonical module loads.
 

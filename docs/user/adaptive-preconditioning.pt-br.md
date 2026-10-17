@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -19,6 +19,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 <!-- velair-docs:end -->
 
 O pré-condicionamento adaptativo permite que o Velair inicie o aquecimento ou resfriamento antes de um bloco programado, para que o cômodo esteja mais próximo da temperatura-alvo quando o bloco começar.
+
+Um bloco **Somente temperatura** não autoriza mudança de modo HVAC. Enquanto o equipamento está desligado, o Velair não inicia preparação antecipada nem coleta amostras de aprendizado térmico para esse alvo. Ligá-lo externamente permite recalcular a preparação usando o modo compatível real. Essa opção não pode prometer conforto no horário do bloco enquanto o equipamento permanecer desligado.
 
 Por exemplo, um bloco às `07:00` com `21 °C` significa «estar próximo de `21 °C` às `07:00`», e não «começar a ajustar para `21 °C` às `07:00`».
 
@@ -40,6 +42,8 @@ O pré-condicionamento é configurado por dispositivo. O aprendizado de aquecime
 As faixas nativas de `heat_cool` são compatíveis. Se a temperatura do cômodo estiver abaixo do limite inferior por uma diferença maior que o delta mínimo de temperatura, o Velair calcula a previsão a partir desse limite e inicia antecipadamente a faixa completa para aquecer. Se estiver acima do limite superior por uma diferença maior que esse delta, calcula a previsão a partir do limite superior e inicia a faixa completa para resfriar. Leituras dentro da faixa ou das zonas de tolerância dos limites mantêm o horário normal. O Velair sempre envia os dois limites; nunca reduz uma faixa a uma única temperatura.
 
 Ao expandir um dispositivo, cada modo compatível mostra um cartão de previsão em tempo real. Ele usa os mesmos dados de próximos eventos do backend que a aba Visão geral, mantendo o tratamento consistente de pausas, reforços, modos incompatíveis e blocos que não permitem pré-condicionamento. Quando existe um bloco futuro correspondente, o cartão mostra o início calculado, o horário-alvo, a antecedência, a temperatura e o modo programados e se o Velair está usando o modelo inicial ou um histórico local semelhante.
+
+A preparação do Retorno planejado é identificada separadamente da antecipação semanal. Para um retorno futuro aceito, as informações do equipamento mostram seu estado de retorno, início estimado, temperatura-alvo de chegada e motivos de suspensão ou indisponibilidade. Visão geral, Retorno planejado e cartões de climatização usam as mesmas informações de retorno do backend; não é outro evento semanal. Um ambiente ainda pode seguir Ausente enquanto mostra uma estimativa futura de retorno. **Preparando** descreve a intenção de controle do Velair, não a confirmação de que um dispositivo recebeu um comando ou está fisicamente aquecendo ou resfriando. A linha do tempo do retorno mostra o tempo decorrido até a chegada salva, não uma porcentagem de progresso térmico. Consulte [Preparação dos ambientes](planned-return.pt-br.md#room-preparation) para os estados.
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa seção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por padrão para manter a visão habitual simples.
 

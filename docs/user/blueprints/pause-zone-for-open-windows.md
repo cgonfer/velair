@@ -73,6 +73,13 @@ Automation runs may overlap, so an `opened_due` event is not blocked while the s
 
 ## Safety and precedence
 
+When the active block uses **Temperature only**, resuming after the windows
+close reapplies its target without requesting an HVAC mode change. If the
+blueprint turned the climate off, it remains off; use an explicit mode in a
+later block or turn it on manually when required. **Keep current mode** retains
+its existing restart behavior. This is the active block's policy, not a new
+blueprint input, and does not require re-importing the blueprint.
+
 The blueprint creates each pause with the configured **Pause ID**. Its default is `velair_window_guard`; Velair persists that ownership independently for every selected thermostat.
 
 - It does not replace a manual pause or a pause owned by another automation.

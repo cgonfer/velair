@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](home-away-from-occupancy.md) · [Español](home-
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.2 |
+| Laatst gesynchroniseerd | 2026-10-17 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -85,6 +85,8 @@ Bij opstarten lopen bezet-, leeg- en beschikbaarheidscontroles als interne paral
 
 <a id="safety-and-precedence"></a>
 ## Veiligheid en voorrang
+
+Modus- en profielacties gebruiken het blokbeleid van het geselecteerde schema. **Alleen temperatuur** werkt de doeltemperatuur bij zonder een HVAC-moduswijziging te vragen. Thuis selecteren schakelt een uitgeschakeld klimaatapparaat dus niet noodzakelijk in. Kies expliciete blokken met **Verwarmen** of **Koelen** wanneer Thuis de klimaatregeling moet starten. Rechtstreekse klimaatacties in deze blauwdruk blijven expliciete Home Assistant-acties; het blokbeleid onderdrukt ze niet.
 
 De blueprint voert uitsluitend de ingestelde acties uit. Bestaande Velair-voorrang voor modi, profielen, tijdelijke aanpassingen en pauzes blijft gelden. Een bezettingsentiteit met `unknown` of `unavailable` activeert noch thuis noch afwezig. De waarschuwing noemt de entiteit en legt uit dat acties onderbroken blijven totdat een ondersteunde bezette of lege status wordt gemeld.
 

@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](adaptive-preconditioning.md) · [Español](a
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -20,6 +20,8 @@ Traducciones: [Original en inglés](adaptive-preconditioning.md) · [Español](a
 <!-- velair-docs:end -->
 
 El Preacondicionamiento adaptativo permite a Velair iniciar la calefacción o la refrigeración antes de un bloque programado para que la habitación esté más cerca de la temperatura objetivo cuando comience el bloque.
+
+Un bloque **Solo temperatura** no autoriza cambios de modo HVAC. Mientras su equipo esté apagado, Velair no inicia la preparación anticipada ni recoge muestras de aprendizaje térmico para ese objetivo. Al encenderlo externamente, la preparación puede recalcularse usando el modo compatible real. Esta opción no puede garantizar el confort a la hora del bloque mientras el equipo siga apagado.
 
 Por ejemplo, un bloque a las `07:00` con `21 °C` significa «estar cerca de `21 °C` a las `07:00`», no «empezar a cambiar a `21 °C` a las `07:00`».
 
@@ -42,6 +44,8 @@ El preacondicionamiento se configura por equipo. El aprendizaje de calefacción 
 Se admiten intervalos nativos `heat_cool`. Si la habitación está por debajo del objetivo inferior en más de la Diferencia mínima de temperatura, Velair calcula la predicción desde ese límite y aplica anticipadamente el intervalo completo para calentar. Si está por encima del objetivo superior en más de esa diferencia, calcula desde el límite superior y aplica anticipadamente el intervalo completo para refrigerar. Las lecturas dentro del intervalo o de las bandas muertas de sus límites mantienen la hora programada habitual. Velair siempre envía ambos límites; nunca reduce un intervalo a una sola temperatura.
 
 Al expandir un equipo, cada modo compatible muestra una tarjeta de predicción actual. Utiliza los mismos datos del backend sobre el próximo evento que la pestaña Resumen, de modo que las pausas, refuerzos, modos incompatibles y bloques que no pueden adelantarse se tratan de forma coherente. Cuando existe un bloque futuro adecuado, la tarjeta muestra el inicio calculado, la hora objetivo, el adelanto, la temperatura y el modo programados, y si Velair utiliza el modelo inicial o un historial local de casos similares.
+
+La preparación de Regreso a casa se identifica por separado de la anticipación del horario semanal. Para un regreso futuro aceptado, la información de preparación del equipo muestra su estado de regreso, el inicio estimado, el objetivo de llegada y cualquier motivo de suspensión o falta de disponibilidad. Overview, Regreso a casa y las cards de climatización usan la misma información de regreso del backend; no es otro evento del horario semanal. Una estancia puede seguir el modo de ausencia mientras muestra una estimación para el regreso. **Preparando** describe la intención de control de Velair, no confirma que el dispositivo haya recibido una orden ni que esté calentando o refrigerando físicamente. La línea temporal del regreso muestra el tiempo transcurrido hacia la llegada guardada, no un porcentaje de progreso térmico. Consulta [Preparación de estancias](planned-return.es.md#room-preparation) para conocer el significado de los estados.
 
 Para comprobar un cálculo concreto, abre **Detalles del cálculo** en la tarjeta de predicción. Esta sección opcional muestra los valores del backend utilizados: recuentos de muestras, estimación de observaciones completas, límite inferior de observaciones parciales, estimación combinada, redondeo y adelanto final. Está oculta por defecto para mantener sencilla la vista habitual.
 

@@ -81,6 +81,8 @@ from .models import (
     validate_planned_return,
 )
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
+from .selection_requests import climate_entity_id, climate_entity_ids, profile_id, profile_ids
+from .save_timing import measure_save_phase, trace_save_operation, trace_schedule_save
 from .temperature import (
     CELSIUS,
     FAHRENHEIT,
@@ -94,7 +96,7 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 16
+EXPORT_MODEL_VERSION = 18
 EXPORT_SECTIONS = (
     "zones",
     "templates",
@@ -155,6 +157,7 @@ INLINE_SCHEDULE_BLOCK_SCHEMA = vol.Schema(
         vol.Optional(ATTR_TARGET_TEMP_LOW): vol.Coerce(float),
         vol.Optional(ATTR_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(ATTR_HVAC_MODE): vol.In(HVAC_MODE_OPTIONS),
+        vol.Optional("temperature_only"): bool,
         vol.Optional(ATTR_FAN_MODE): cv.string,
         vol.Optional(ATTR_PRESET_MODE): cv.string,
         vol.Optional(ATTR_SWING_MODE): cv.string,
@@ -338,6 +341,7 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update_diagnostics_history)
     websocket_api.async_register_command(hass, ws_clear_diagnostics_history)
     websocket_api.async_register_command(hass, ws_resolve_temperature_migration)
+    websocket_api.async_register_command(hass, ws_set_schedule_days)
     websocket_api.async_register_command(hass, ws_set_daily_schedule)
     websocket_api.async_register_command(hass, ws_copy_day_schedule)
     websocket_api.async_register_command(hass, ws_clear_schedule)
@@ -346,11 +350,17 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_block_preset)
     websocket_api.async_register_command(hass, ws_delete_block_preset)
     websocket_api.async_register_command(hass, ws_preview_schedule_template_update)
+    websocket_api.async_register_command(hass, ws_preview_template_application)
+    websocket_api.async_register_command(hass, ws_apply_template_application)
     websocket_api.async_register_command(hass, ws_preview_profile)
     websocket_api.async_register_command(hass, ws_preview_daily_schedule)
     websocket_api.async_register_command(hass, ws_set_profile)
     websocket_api.async_register_command(hass, ws_delete_profile)
     websocket_api.async_register_command(hass, ws_activate_profile)
+    websocket_api.async_register_command(hass, ws_activate_profiles)
+    websocket_api.async_register_command(hass, ws_apply_profiles)
+    websocket_api.async_register_command(hass, ws_set_zone_profile)
+    websocket_api.async_register_command(hass, ws_clear_profile_overrides)
     websocket_api.async_register_command(hass, ws_set_mode)
     websocket_api.async_register_command(hass, ws_delete_mode)
     websocket_api.async_register_command(hass, ws_select_mode)
@@ -608,6 +618,36 @@ def ws_subscribe_updates(
     _send_update()
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/set_schedule_days",
+    vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+    vol.Optional("weekdays", default=[]): [vol.In(WEEKDAYS)],
+    vol.Optional(ATTR_BLOCKS): vol.All(cv.ensure_list, [SCHEDULE_BLOCK_SCHEMA]),
+    vol.Optional("template_link"): dict,
+    vol.Optional("unlink_template", default=False): bool,
+    vol.Optional("day_layout_key"): str,
+    vol.Required("expected_revision"): vol.All(int, vol.Range(min=0)),
+})
+@websocket_api.async_response
+@trace_schedule_save("grouped")
+async def ws_set_schedule_days(hass, connection, msg):
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        with measure_save_phase("mutation"):
+            await runtime["scheduler"].async_set_schedule_days(
+                msg[ATTR_ENTITY_ID], msg.get("weekdays", []), msg.get(ATTR_BLOCKS),
+                **{key: msg[key] for key in ("template_link", "unlink_template", "day_layout_key", "expected_revision") if key in msg})
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err, "invalid_schedule")
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/set_daily_schedule",
@@ -620,6 +660,7 @@ def ws_subscribe_updates(
     }
 )
 @websocket_api.async_response
+@trace_schedule_save("daily")
 async def ws_set_daily_schedule(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
@@ -638,12 +679,13 @@ async def ws_set_daily_schedule(
         _daily_schedule_choice(msg)
         blocks = normalize_schedule_blocks(msg[ATTR_BLOCKS]) if ATTR_BLOCKS in msg else None
         options = {key: msg[key] for key in ("template_link", "unlink_template", "expected_revision") if key in msg}
-        await scheduler.async_set_daily_schedule(
-            msg[ATTR_ENTITY_ID],
-            msg[ATTR_WEEKDAY],
-            blocks,
-            **options,
-        )
+        with measure_save_phase("mutation"):
+            await scheduler.async_set_daily_schedule(
+                msg[ATTR_ENTITY_ID],
+                msg[ATTR_WEEKDAY],
+                blocks,
+                **options,
+            )
     except ValueError as err:
         _send_configuration_error(connection, msg, err, "invalid_schedule")
         return
@@ -858,6 +900,63 @@ async def ws_activate_profile(
         connection.send_error(msg["id"], "invalid_profile", str(err))
         return
     connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+async def _profile_selection_mutation(hass, connection, msg, method, *args):
+    """Apply selection actions through the same backend path as HA services."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        if _reject_temperature_migration_mutation(runtime, connection, msg):
+            return
+        await getattr(runtime["scheduler"], method)(*args, source="panel")
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_profile", str(err))
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/activate_profiles",
+    vol.Required("profile_ids"): profile_ids,
+})
+@websocket_api.async_response
+async def ws_activate_profiles(hass, connection, msg):
+    """Replace the complete base and clear its exceptions."""
+    await _profile_selection_mutation(hass, connection, msg, "async_activate_profiles", msg["profile_ids"])
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/apply_profiles",
+    vol.Required("profile_ids"): profile_ids,
+})
+@websocket_api.async_response
+async def ws_apply_profiles(hass, connection, msg):
+    """Apply whole Profile scopes as per-zone exceptions."""
+    await _profile_selection_mutation(hass, connection, msg, "async_apply_profiles", msg["profile_ids"])
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/set_zone_profile",
+    vol.Required(ATTR_ENTITY_ID): climate_entity_id,
+    vol.Required(ATTR_PROFILE_ID): vol.Any(None, profile_id),
+})
+@websocket_api.async_response
+async def ws_set_zone_profile(hass, connection, msg):
+    """Assign one zone to a Profile fragment or explicitly to Default."""
+    await _profile_selection_mutation(hass, connection, msg, "async_set_zone_profile", msg[ATTR_ENTITY_ID], msg[ATTR_PROFILE_ID])
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/clear_profile_overrides",
+    vol.Required(ATTR_ENTITY_ID): climate_entity_ids,
+})
+@websocket_api.async_response
+async def ws_clear_profile_overrides(hass, connection, msg):
+    """Restore the base for an explicit set of zones."""
+    await _profile_selection_mutation(hass, connection, msg, "async_clear_profile_overrides", msg[ATTR_ENTITY_ID])
 
 
 @websocket_api.websocket_command(
@@ -1833,6 +1932,46 @@ async def ws_preview_schedule_template_update(hass, connection, msg) -> None:
     await _configuration_preview(hass, connection, msg, "preview_schedule_template_update", msg["name"], msg["blocks"], msg.get("key"), **{key: msg[key] for key in ("assignments", "expected_revision") if key in msg})
 
 
+TEMPLATE_APPLICATION_WS_FIELDS = {
+    vol.Required("template_key"): str,
+    vol.Required("source"): vol.In(("default", "profile")),
+    vol.Optional("profile_key"): str,
+    vol.Required("day_layout_key"): vol.In(("individual", "weekdays_weekend", "all")),
+    vol.Required("mode"): vol.In(("copy", "hours", "full")),
+    vol.Required("groups"): [dict],
+    vol.Required("expected_revision"): vol.All(int, vol.Range(min=0)),
+}
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/preview_template_application",
+    **TEMPLATE_APPLICATION_WS_FIELDS,
+})
+@websocket_api.async_response
+async def ws_preview_template_application(hass, connection, msg):
+    await _configuration_preview(hass, connection, msg, "preview_template_application", **{key: value for key, value in msg.items() if key not in ("id", "type")})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/apply_template_application",
+    **TEMPLATE_APPLICATION_WS_FIELDS,
+})
+@websocket_api.async_response
+async def ws_apply_template_application(hass, connection, msg):
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        await runtime["scheduler"].async_apply_template_application(**{key: value for key, value in msg.items() if key not in ("id", "type")})
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
 @websocket_api.websocket_command({
     vol.Required("type"): f"{DOMAIN}/preview_profile",
     vol.Required("profile"): dict,
@@ -1874,6 +2013,7 @@ async def _configuration_preview(hass, connection, msg, method, *args, **kwargs)
     connection.send_result(msg["id"], result)
 
 
+@trace_save_operation("response")
 def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     """Build the schedule API response."""
     scheduler = runtime["scheduler"]
@@ -1906,6 +2046,13 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         "planned_return_status": getattr(scheduler, "get_planned_return_status", lambda: {"state": "disabled", "occupancy": "unknown", "return_at": None, "absence_confirm_at": None, "zones": [], "error": None, "origin": None, "sources": [], "can_start": False})(),
         "profiles": stored_data.get("profiles", []),
         "active_profile_ids": stored_data["global"].get("active_profile_ids", []),
+        "profile_selection": deepcopy(getattr(scheduler, "profile_selection", {
+            "base_profile_ids": stored_data["global"].get("active_profile_ids", []),
+            "base_mode_id": stored_data["global"].get("active_mode_id"),
+            "zone_profile_overrides": {},
+        })),
+        "effective_zone_profiles": deepcopy(getattr(scheduler, "effective_zone_profiles", {})),
+        "effective_profile_ids": list(getattr(scheduler, "effective_profile_ids", [])),
         "modes": stored_data.get("modes", []),
         "active_mode_id": stored_data["global"].get(
             "active_mode_id"
@@ -1922,6 +2069,10 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         "next_events": [
             _serialize_event(event)
             for event in _schedule_response_next_events(scheduler)
+        ],
+        "next_effective_events": [
+            _serialize_effective_event(row)
+            for row in getattr(scheduler, "get_next_effective_events", lambda: [])()
         ],
         "active_overrides": scheduler.get_active_overrides(),
         "room_sensor_assist": (
@@ -1987,6 +2138,25 @@ def _with_dependency_sections(sections: list[str], payload: dict[str, Any]) -> l
     return selected
 
 
+def _normalize_portable_day_layouts(data):
+    """Ignore retired libraries and repair their references during portability."""
+    from .day_layouts import normalize_day_layout_key
+    data.pop("day_layouts", None)
+    zones = data.get("zones", {})
+    if isinstance(zones, dict):
+        for zone in zones.values():
+            if isinstance(zone, dict):
+                zone["day_layout_key"] = normalize_day_layout_key(zone.get("day_layout_key"))
+    profiles = data.get("profiles", [])
+    if isinstance(profiles, list):
+        for profile in profiles:
+            if not isinstance(profile, dict) or not isinstance(profile.get("zones"), dict):
+                continue
+            for zone in profile["zones"].values():
+                if isinstance(zone, dict) and zone.get("behavior") == "schedule":
+                    zone["day_layout_key"] = normalize_day_layout_key(zone.get("day_layout_key"))
+
+
 def _build_export_payload(
     runtime: dict[str, Any],
     sections: list[str],
@@ -2000,6 +2170,8 @@ def _build_export_payload(
         if callable(raw_data)
         else serialize_schedule_data(storage.data)
     )
+    stored_data = deepcopy(stored_data)
+    _normalize_portable_day_layouts(stored_data)
     sections = _with_dependency_sections(sections, stored_data)
     exported_sections: dict[str, Any] = {}
     if "block_presets" in sections:
@@ -2046,6 +2218,7 @@ def _build_import_data(
 ) -> dict[str, Any]:
     """Validate a portable import payload and return normalized scheduler data."""
     payload_sections = deepcopy(_validate_import_payload(payload))
+    _normalize_portable_day_layouts(payload_sections)
     if payload["model_version"] < 14:
         raw_zones = payload_sections.get("zones", {})
         legacy_zones = list(raw_zones.values()) if isinstance(raw_zones, dict) else []
@@ -2192,6 +2365,8 @@ def _build_import_data(
     validate_planned_return(candidate.get("planned_return", {}), candidate.get("modes", []))
     from .schedule_resources import validate_reference_graph
     validate_reference_graph(candidate)
+    from .day_layouts import validate_day_layout_references
+    validate_day_layout_references(candidate)
     validator = getattr(runtime.get("scheduler"), "_validate_configuration_resources", None)
     if callable(validator):
         validator(candidate)
@@ -2314,6 +2489,7 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
             "enabled": bool(zone.get("enabled", True)),
             "schedule": deepcopy(zone.get("schedule", {})),
             "template_links": deepcopy(zone.get("template_links", {})),
+            "day_layout_key": zone.get("day_layout_key", "individual"),
             "preconditioning": deepcopy(zone.get("preconditioning", {})),
             "comfort": deepcopy(zone.get("comfort", {})),
             "external_change_policy": deepcopy(
@@ -2821,6 +2997,18 @@ def _validate_portable_blocks(raw_blocks: Any, *, context: str) -> None:
         raise ValueError(f"Invalid block in {context}")
 
 
+def _serialize_effective_event(row: dict) -> dict[str, Any]:
+    """Serialize the additive, informational next-control contract."""
+    return {
+        **row,
+        "event": _serialize_event(row.get("event")),
+        "weekly_event": _serialize_event(row.get("weekly_event")),
+        **{key: value.isoformat() if value is not None else None
+           for key in ("when", "blocked_until", "return_at")
+           for value in (row.get(key),)},
+    }
+
+
 def _serialize_event(event: ClimateEvent | None) -> dict[str, Any] | None:
     """Serialize a scheduler event for the API."""
     if event is None:
@@ -2839,6 +3027,8 @@ def _serialize_event(event: ClimateEvent | None) -> dict[str, Any] | None:
         ),
     }
     target_temp_low = getattr(event, "target_temp_low", None)
+    if getattr(event, "temperature_only", False):
+        payload["temperature_only"] = True
     target_temp_high = getattr(event, "target_temp_high", None)
     if target_temp_low is not None and target_temp_high is not None:
         payload[ATTR_TARGET_TEMP_LOW] = target_temp_low

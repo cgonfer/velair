@@ -95,6 +95,26 @@ Supported `view` values:
 - `planned-return`: compact one-off return controls, configured occupancy counts and a confirmed-departure timeline. Without saved occupancy sources, Plan return applies Away immediately; the automatic weekly routine still requires sources.
 - `diagnostics`: runtime health, bounded history, filters, and issue-report export.
 
+### Card discovery and resource troubleshooting
+
+Use only the integration-served `/velair_frontend/velair-card.js` module resource.
+Remove duplicate Velair resources, including an older `/local/velair-card.js`,
+then reload the browser. Browser custom elements cannot be replaced after they
+have registered, so an older resource loaded first can leave that browser using
+an obsolete card implementation.
+
+The dashboard card picker discovers Velair through frontend metadata. Adding
+`type: custom:velair-card` manually in YAML uses the registered custom element;
+these are separate checks. If the card works through YAML but does not appear in
+the picker, record that distinction when reporting the problem.
+
+If discovery differs between desktop and mobile, check the affected browser's
+developer console for JavaScript errors and its Network tab for the resource
+request. Include the Home Assistant and Velair versions, affected browser, exact
+resource URL and any relevant error text in the report. Remove private details
+before sharing logs. Successful loading in another browser does not establish
+the cause of a failure in the affected browser.
+
 ## Updating
 
 After updating Velair:

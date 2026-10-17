@@ -1723,7 +1723,9 @@ class PreconditioningLearningResponseTest(unittest.TestCase):
             {"key": "away-mode", "name": "Away", "profile_ids": ["away"]}
         ]
         data["global_"]["active_profile_ids"] = ["away"]
+        data["global_"]["base_profile_ids"] = ["away"]
         data["global_"]["active_mode_id"] = "away-mode"
+        data["global_"]["base_mode_id"] = "away-mode"
         runtime = {
             "entry": SimpleNamespace(
                 data={},

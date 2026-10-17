@@ -93,6 +93,54 @@ the summary shows that state rather than guessing its commands.
 
 ## Linked templates
 
+### Apply a template to schedules
+
+Open **Apply to…** on a saved daily template. The panel follows **Select →
+Review → Apply**. Save pending template edits first; applying never silently
+saves the shared template or applies an unsaved version.
+
+Choose **Default** or one existing Profile, then **Independent copy**, **Times
+only**, or **Times and settings**. An independent copy has no template link;
+Velair preset references remain live. Times-only links retain independent
+climate assignments. Complete links follow both the template's times and settings.
+
+Choose a common **Day layout** and mark the required groups for each thermostat.
+Individual days offers seven choices; Weekdays / Weekend offers two groups;
+All days offers the entire week. Changing the layout clears the selection.
+Changing the destination or application mode keeps selected groups but requires
+a new review. Select a day header to select that column for every visible
+thermostat; select it again to clear a fully selected column. On phones, the
+table scrolls horizontally while thermostat names stay visible.
+
+Only thermostats with selected groups adopt the chosen layout. Unselected days
+keep their blocks and links. If the new layout groups unselected days with
+different configurations, Review warns that they will retain **Different
+schedules**; accepting does not equalize those days.
+
+For **Times only**, select a base when a destination group has different saved
+configurations. This choice is temporary until Apply. Velair proposes climate
+assignments from that base: exact time first, then preceding times from nearest
+to farthest, then following times. Presets stay references. The review identifies
+each proposal's origin and lets you edit settings while template times remain
+fixed. Missing compatible assignments must be completed; template settings are
+not used as a silent fallback. All selected days in that group receive the same
+reviewed assignments. A Profile zone without its own schedule requires manual
+assignments rather than borrowing Default settings.
+
+Review lists replaced days and links, layout changes, compatibility problems,
+and any Profile zones that will change to **Profile schedule**. Back returns to
+selection without saving. Apply validates and saves the entire selection once;
+an invalid destination or revision conflict does not partially apply other zones.
+An unsuccessful storage save preserves the prior configuration. Re-review after
+the source or configuration changes. Closing with pending review edits uses the
+normal discard protection.
+
+Applying to a Profile saves that Profile's selected schedules directly; it does
+not activate the Profile, select a Mode, or alter base/exception selection.
+Changes to an already effective schedule can affect climate control. External
+publication and physical device responses retain their normal delivery limits;
+a coherent saved configuration is not a simultaneous physical response.
+
 Template links are read-only and grouped by thermostat, then by Default or
 Profile, with the linked weekdays listed together. **Linked days** counts one
 linked day, regardless of how many blocks the template contains. The list shows

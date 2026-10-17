@@ -31,6 +31,27 @@ function cancelHover(button?: HTMLElement): void {
   if (!activeHelp) detachGlobalListeners();
 }
 
+/** Release only helpers owned by a retiring surface, including nested shadow roots. */
+export function dismissInlineHelpWithin(owner: Node): void {
+  const owns = (button: HTMLElement): boolean => {
+    let node: Node | undefined = button;
+    while (node) {
+      if (node === owner || owner.contains(node)) return true;
+      const root = node.getRootNode();
+      node = root instanceof ShadowRoot ? root.host : undefined;
+    }
+    return false;
+  };
+  if (pendingHover && owns(pendingHover.button)) cancelHover(pendingHover.button);
+  if (activeHelp && owns(activeHelp.button)) hideTooltip(activeHelp.tooltip);
+}
+
+/** A conditional render can remove an anchor without disconnecting its owner. */
+export function dismissDisconnectedInlineHelp(): void {
+  if (pendingHover && !pendingHover.button.isConnected) cancelHover(pendingHover.button);
+  if (activeHelp && (!activeHelp.button.isConnected || !activeHelp.tooltip.isConnected)) hideTooltip(activeHelp.tooltip);
+}
+
 function scheduleHover(event: PointerEvent): void {
   const button = event.currentTarget as HTMLElement;
   if (event.pointerType === "touch" || (event.buttons ?? 0) || gestureAnchors.has(button)) return;

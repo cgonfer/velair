@@ -1,5 +1,6 @@
 <a id="room-assist"></a>
 # Room Assist
+
 <!-- velair-docs:start -->
 Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.md) · [Français](room-assist.fr.md) · [Deutsch](room-assist.de.md) · [Italiano](room-assist.it.md) · [Nederlands](room-assist.nl.md) · [Polski](room-assist.pl.md) · [Português (Brasil)](room-assist.pt-br.md) · [Português (Portugal)](room-assist.pt-pt.md) · [Русский](room-assist.ru.md) · [Stato delle traduzioni](../translation-status.md)
 
@@ -8,8 +9,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.2 |
+| Ultima sincronizzazione | 2026-10-17 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -19,6 +20,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 <!-- velair-docs:end -->
 
 Room Assist permette a Velair di usare un sensore separato di temperatura ambiente per un dispositivo gestito, continuando a controllare la vera entità `climate.*`.
+
+Con un blocco **Solo temperatura**, Room Assist è sospeso mentre il dispositivo è spento. Non lo accende né ripristina una modalità HVAC precedente quando rimuove la correzione precedente. Dopo un’accensione esterna può assistere usando la modalità reale compatibile senza richiedere cambi di modalità. L’aggiornamento dell’obiettivo programmato da spento dipende comunque dall’integrazione climatica.
 
 È utile per valvole termostatiche, valvole dei radiatori, termostati a parete o climatizzatori la cui lettura integrata non rappresenta la temperatura reale della stanza. Per esempio, una valvola accanto al radiatore può segnalare `22 °C` mentre il sensore ambiente segnala ancora `20.5 °C`.
 

@@ -1,3 +1,4 @@
+import { renderOverviewTimelineGraphic, overviewTimelineGraphicClasses } from "./timeline-block-graphic";
 import { html, nothing } from "lit";
 import { ACTION_TURN_OFF } from "../constants";
 import {
@@ -9,7 +10,7 @@ import {
   climateHvacAction,
   climateMode,
   currentTemperature,
-  overviewNextEvents,
+  overviewEffectiveNextEvents,
   pauseDetailText,
   todayWeekday,
   type ClimateHvacAction,
@@ -40,8 +41,10 @@ import {
 } from "../domain/room-assist";
 import { renderInlineHelp } from "./inline-help";
 import { renderPlannedReturnOverview, renderPlannedReturnZoneSignal } from "./planned-return-visibility";
+import { plannedReturnModeName } from "./planned-return-visibility";
+import { plannedReturnPreparationReasons } from "./planned-return-preparation-view";
 import type { VelairViewHost } from "../host-types";
-import type { ComfortAssessment, ExternalExecutionInfo, RoomSensorAssistStatus, ScheduleBlock, ScheduleEvent, ScheduleZone, ZoneRuntimeStatus } from "../types";
+import type { ComfortAssessment, EffectiveNextEvent, ExternalExecutionInfo, RoomSensorAssistStatus, ScheduleBlock, ScheduleEvent, ScheduleZone, ZoneRuntimeStatus } from "../types";
 
 type OverviewViewHost = VelairViewHost;
 type OverviewSchedulerState = "running" | "paused" | "stopped";
@@ -99,7 +102,7 @@ export function renderSchedulerSummary(host: OverviewViewHost) {
         <div class="summary-status-header">
           <div>
             <span class="label">${host._t("nextEvents")}</span>
-            <strong>${host._data.next_events.length}</strong>
+            <strong>${overviewEffectiveNextEvents(asOverviewDataHost(host)).length}</strong>
           </div>
           <button
             class="summary-icon-button"
@@ -328,8 +331,8 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
               externalExecution,
             )
             : nothing}
-          ${externallyManaged ? nothing : renderRoomAssistSignal(host, assist)}
-          ${externallyManaged ? nothing : renderOverviewComfortSignals(host, comfort)}
+          ${externallyManaged ? nothing : renderRoomAssistSignal(host, assist, entityId)}
+          ${externallyManaged ? nothing : renderOverviewComfortSignals(host, comfort, entityId)}
         </div>
       </div>
       ${assistIsActive || hasStandardDetails ? html`<div class="overview-zone-details">
@@ -627,7 +630,7 @@ function formatSignedAssistDelta(host: OverviewViewHost, entityId: string, value
   return value > 0 ? `+${formatted}` : value < 0 ? `-${formatted}` : formatted;
 }
 
-function renderRoomAssistSignal(host: OverviewViewHost, assist?: RoomSensorAssistStatus) {
+function renderRoomAssistSignal(host: OverviewViewHost, assist: RoomSensorAssistStatus | undefined, entityId: string) {
   if (!assist || !["assisting", "holding"].includes(assist.status)) return nothing;
   const value = host._t(
     assist.scheduled_target_guard
@@ -640,7 +643,7 @@ function renderRoomAssistSignal(host: OverviewViewHost, assist?: RoomSensorAssis
         ? "overviewZoneRoomAssistHolding"
         : "overviewZoneRoomAssistActive",
   );
-  return renderOverviewSignal("room-assist", "mdi:thermometer-auto", host._t("roomSensorAssistBadge"), value);
+  return renderOverviewSignal(entityId, "room-assist", "mdi:thermometer-auto", host._t("roomSensorAssistBadge"), value);
 }
 
 const hvacActionPresentation: Record<ClimateHvacAction, { icon: string; styleAction?: string }> = {
@@ -662,7 +665,7 @@ function renderOverviewMetric(label: string, value: number, host: OverviewViewHo
   return html`<span class="overview-zone-metric"><small>${label}</small><strong>${host._formatTemperature(value, entityId)}</strong></span>`;
 }
 
-function renderOverviewComfortSignals(host: OverviewViewHost, comfort?: ComfortAssessment) {
+function renderOverviewComfortSignals(host: OverviewViewHost, comfort: ComfortAssessment | undefined, entityId: string) {
   if (!comfort?.enabled) return nothing;
   const qualityIssue = comfort.data_quality !== "complete" && comfort.condition !== "no_readings";
   const conditionKeys: Record<string, string> = {
@@ -687,24 +690,26 @@ function renderOverviewComfortSignals(host: OverviewViewHost, comfort?: ComfortA
     ? "error"
     : comfort.air_quality === "elevated" || comfort.air_quality === "unavailable" ? "warning" : "normal";
   return html`
-    ${renderOverviewSignal("comfort-environment", "mdi:home-thermometer-outline", host._t("overviewZoneComfortLabel"), host._t((conditionKeys[comfort.condition] ?? "comfortConditionNoReadings") as never), environmentSeverity)}
+    ${renderOverviewSignal(entityId, "comfort-environment", "mdi:home-thermometer-outline", host._t("overviewZoneComfortLabel"), host._t((conditionKeys[comfort.condition] ?? "comfortConditionNoReadings") as never), environmentSeverity)}
     ${comfort.air_quality !== "not_monitored"
-      ? renderOverviewSignal("comfort-air", "mdi:molecule-co2", host._t("overviewZoneAirLabel"), host._t(airKeys[comfort.air_quality] as never), airSeverity)
+      ? renderOverviewSignal(entityId, "comfort-air", "mdi:molecule-co2", host._t("overviewZoneAirLabel"), host._t(airKeys[comfort.air_quality] as never), airSeverity)
       : nothing}
     ${qualityIssue
       ? renderOverviewSignal(
+        entityId,
         "comfort-data",
         comfort.data_quality === "unverified" ? "mdi:information-outline" : "mdi:alert-circle-outline",
         host._t("overviewZoneDataLabel"),
         host._t(comfort.data_quality === "unverified" ? "comfortDataUnverified" : "overviewZoneSensorIssue"),
         comfort.data_quality === "unverified" ? "info" : "warning",
+        comfort.data_quality === "unverified" ? host._t("overviewZoneDataUnverifiedHelp") : undefined,
       )
       : nothing}
   `;
 }
 
-function renderOverviewSignal(category: string, icon: string, label: string, value: string, severity = "normal") {
-  return html`<span class=${`overview-zone-signal ${category} ${severity}`} aria-label=${`${label}: ${value}`} title=${`${label}: ${value}`}><ha-icon icon=${icon}></ha-icon><span><small>${label}:</small><strong>${value}</strong></span></span>`;
+function renderOverviewSignal(entityId: string, category: string, icon: string, label: string, value: string, severity = "normal", help?: string) {
+  return html`<span class=${`overview-zone-signal ${category} ${severity}`} aria-label=${`${label}: ${value}`}><span class="overview-zone-signal-accent"><ha-icon icon=${icon}></ha-icon><small>${label}</small></span><strong class="overview-zone-signal-value">${value}</strong>${renderInlineHelp(`overview-signal-${entityId}-${category}`, `${label}: ${value}`, help ?? `${label}: ${value}`, { appearance: "overlay" })}</span>`;
 }
 
 function renderOverviewZoneRow(host: OverviewViewHost, entityId: string, zone?: ScheduleZone) {
@@ -922,7 +927,7 @@ function eventModeLabel(host: OverviewViewHost, event: ScheduleEvent): string {
   if (event.action === ACTION_TURN_OFF || event.hvac_mode === "off") {
     return host._t("off");
   }
-  return event.hvac_mode ? host._modeLabel(event.hvac_mode) : host._t("keepMode");
+  return event.temperature_only ? host._t("temperatureOnly") : event.hvac_mode ? host._modeLabel(event.hvac_mode) : host._t("keepMode");
 }
 
 export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[]) {
@@ -1101,13 +1106,7 @@ export function renderOverviewTimelineBlock(
   const detail = overviewTimelineBlockDetail(host, entityId, timelineBlock.block);
   const label = overviewTimelineBlockLabel(host, entityId, timelineBlock.block);
   const modeLabel = overviewTimelineBlockModeLabel(host, entityId, timelineBlock.block);
-  const blockClass = [
-    "overview-timeline-block",
-    `mode-${timelineModeClass(timelineBlock.block)}`,
-    timelineBlock.startMinute <= 0 ? "overview-timeline-start-edge" : "",
-    timelineBlock.width < 12 ? "compact" : "",
-    timelineBlock.width < 6 ? "tiny" : "",
-  ].filter(Boolean).join(" ");
+  const blockClass = overviewTimelineGraphicClasses(timelineBlock.block, timelineBlock.left, timelineBlock.width);
 
   return html`
     <button
@@ -1119,10 +1118,7 @@ export function renderOverviewTimelineBlock(
       @click=${(event: Event) =>
         host._showOverviewTimelineDetail(entityId, detail, timelineBlock.left + timelineBlock.width / 2, event)}
     >
-      <span class="overview-timeline-block-main">
-        <span>${label}</span>
-        ${modeLabel ? html`<small>${modeLabel}</small>` : nothing}
-      </span>
+      ${renderOverviewTimelineGraphic(label, modeLabel)}
     </button>
   `;
 }
@@ -1224,6 +1220,7 @@ function overviewTimelineEvent(entityId: string, block: ScheduleBlock): Schedule
     action: block.action,
     entity_id: entityId,
     hvac_mode: block.hvac_mode ?? null,
+    ...(block.temperature_only ? { temperature_only: true } : {}),
     fan_mode: block.fan_mode ?? null,
     preset_mode: block.preset_mode ?? null,
     swing_mode: block.swing_mode ?? null,
@@ -1315,36 +1312,43 @@ function overviewTimelineDetailPlacementClass(anchorPercent: number): string {
 }
 
 export function renderNextEvents(host: OverviewViewHost, zoneIds?: string[]) {
-  const visibleEntities = zoneIds ? new Set(zoneIds) : undefined;
-  const nextEvents = overviewNextEvents(asOverviewDataHost(host)).filter(
-    (event: ScheduleEvent) => !visibleEntities || visibleEntities.has(event.entity_id),
-  );
-  const hasPreconditionedEvent = nextEvents.some(
-    (event) => event.target_when && event.target_when !== event.when,
-  );
-  if (!nextEvents.length) {
-    return html`
-      <section class="next">
-        ${renderOverviewEmptyState(
-          host._t("nextEvent"),
-          "mdi:calendar-clock",
-          host._t("noUpcomingEvent"),
-        )}
-      </section>
-    `;
-  }
+  const visible = zoneIds ? new Set(zoneIds) : undefined;
+  const rows = overviewEffectiveNextEvents(asOverviewDataHost(host)).filter(row => !visible || visible.has(row.entity_id));
+  const hasPreconditioning = rows.some(row => (row.phase === "preparation" && row.return_at) || (row.event?.target_when && row.event.target_when !== row.event.when));
+  return html`<section class="next effective-next">
+    ${rows.length ? html`${renderOverviewSectionHeading(host._t(rows.length === 1 ? "nextEvent" : "nextEvents"), "mdi:calendar-clock")}
+      <div class=${`effective-event-list event-list${hasPreconditioning ? " has-preconditioning" : ""}`}><div class="effective-event-grid">${rows.map(row => renderEffectiveEvent(host, row))}</div></div>`
+      : renderOverviewEmptyState(host._t("nextEvent"), "mdi:calendar-clock", host._t("noUpcomingEvent"))}
+  </section>`;
+}
 
-  return html`
-    <section class="next">
-      ${renderOverviewSectionHeading(
-        host._t(nextEvents.length === 1 ? "nextEvent" : "nextEvents"),
-        "mdi:calendar-clock",
-      )}
-      <div class=${`event-list ${hasPreconditionedEvent ? "has-preconditioning" : ""}`}>
-        ${nextEvents.map((event: ScheduleEvent) => renderEvent(host, event))}
-      </div>
-    </section>
-  `;
+function renderEffectiveEvent(host: OverviewViewHost, row: EffectiveNextEvent) {
+  const labels = { scheduled: "nextEffectiveWeekly", preparation: "nextEffectivePreparation", arrival: "nextEffectiveArrival", suspended: "nextEffectiveSuspended" } as const;
+  const mode = plannedReturnModeName(host, row.mode_id);
+  const event = row.event && row.when ? { ...row.event, when: row.when,
+    target_when: row.phase === "preparation" ? row.return_at ?? row.event.target_when : row.phase === "arrival" ? null : row.event.target_when } : row.event;
+  const name = host._friendlyEntityName(row.entity_id);
+  const describeEvent = (value: ScheduleEvent) => [host._formatDateTime(value.when),
+    value.target_when && value.target_when !== value.when ? host._t("plannedReturnArrival") + ": " + host._formatDateTime(value.target_when) : "",
+    host._formatEventAction(value), host._formatEventMode(value)].filter(Boolean).join(" · ");
+  const help = [host._t(labels[row.phase]),
+    event && row.phase !== "suspended" ? describeEvent(event) : row.when ? host._formatDateTime(row.when) : "",
+    row.source === "planned_return" && mode ? host._t("nextEffectiveMode", { mode }) : "",
+    row.reason ? host._t(plannedReturnPreparationReasons[row.reason] ?? "plannedReturnPreparationReasonUnknown") : "",
+    row.blocked_until ? host._t("nextEffectiveBlockedUntil", { time: host._formatDateTime(row.blocked_until) }) : "",
+    row.phase === "suspended" && row.blocked_until ? host._t("nextEffectiveExpiryHelp") : "",
+    row.source === "planned_return" && row.weekly_event ? `${host._t("nextEffectiveWeeklyReference")}: ${describeEvent(row.weekly_event)}` : "",
+  ].filter(Boolean);
+  return html`<div class="effective-event event" data-source=${row.source} data-phase=${row.phase} data-entity-id=${row.entity_id}>
+    <div class="effective-event-identity event-identity"><strong class="overview-climate-name">${name}</strong></div>
+    <span class="effective-event-origin">${host._t(row.source === "planned_return" ? "nextEffectiveCompactReturn" : "nextEffectiveCompactSchedule")}</span>
+    <div class="effective-event-body">
+      ${row.phase === "suspended" ? html`<div class="event-details"><span class="event-time">${host._t("nextEffectiveCompactSuspended")}</span><strong class="event-target">—</strong><span class="event-mode">—</span></div>`
+        : event ? renderEventDetails(host, event)
+          : html`<div class="event-details"><span class="event-time">${row.when ? host._formatDateTime(row.when) : "—"}</span><strong class="event-target">${host._t("nextEffectiveCompactApplyMode")}</strong><span class="event-mode">—</span></div>`}
+    </div>
+    <span class="effective-event-help">${renderInlineHelp(`next-event-${row.entity_id}`, host._t("nextEffectiveDetails", { name }), help)}</span>
+  </div>`;
 }
 
 function renderOverviewSectionHeading(label: string, icon: string) {

@@ -127,6 +127,7 @@ class DayCloningTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_hidden_default_clone_does_not_override_active_profile(self):
         self.data["global_"]["active_profile_ids"] = ["summer"]
+        self.data["global_"]["base_profile_ids"] = ["summer"]
         await self.clone(days=("monday",))
         self.assertEqual(self.climate.calls, [])
         self.assertEqual(self.data["profiles"][0]["zones"]["climate.salon"]["template_links"]["tuesday"]["bindings"]["morning"], {"preset_key": "winter"})

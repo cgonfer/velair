@@ -59,6 +59,7 @@ export function modeValidationError(
 }
 
 export function activeProfileOrigin(data?: ScheduleResponse): "default" | "manual" | VelairMode {
+  if (Object.keys(data?.profile_selection?.zone_profile_overrides ?? {}).length) return "manual";
   if (!(data?.global.active_profile_ids?.length)) return "default";
   return data.modes?.find((mode) => mode.key === data.active_mode_id) ?? "manual";
 }

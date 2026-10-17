@@ -16,6 +16,10 @@ Use these terms consistently when translating Velair user documentation. Keep Ho
 | cooling | refrigeración | refroidissement |
 | climate profile | perfil climático | profil climatique |
 | Mode | Modo | Mode |
+| Base | Base | Base |
+| Exceptions | Excepciones | Exceptions |
+| Day layout | Distribución de días | Répartition des jours |
+| Temperature only | Solo temperatura | Température uniquement |
 | climate preset | preset climático | préréglage climatique |
 | linked template | plantilla vinculada | modèle lié |
 | times only | solo horarios | horaires uniquement |
@@ -66,6 +70,10 @@ Literal control names follow the interface even when a locale still displays an 
 | cooling | Kühlen / Kühlung |
 | climate profile | Klimaprofil |
 | Mode | Modus |
+| Base | Basis |
+| Exceptions | Ausnahmen |
+| Day layout | Tagesaufteilung |
+| Temperature only | Nur Temperatur |
 | climate preset | Klima-Preset |
 | linked template | verknüpfte Vorlage |
 | times only | Nur Zeiten |
@@ -114,6 +122,10 @@ The environmental-condition sensor is named **Raumklima** in the integration. **
 | cooling | raffrescamento |
 | climate profile | profilo climatico |
 | Mode | Modalità |
+| Base | Base |
+| Exceptions | Eccezioni |
+| Day layout | Suddivisione dei giorni |
+| Temperature only | Solo temperatura |
 | climate preset | preset climatico |
 | linked template | modello collegato |
 | times only | Solo orari |
@@ -123,7 +135,7 @@ The environmental-condition sensor is named **Raumklima** in the integration. **
 | Manual adjustment | Regolazione manuale |
 | Adaptive Preconditioning | Precondizionamento adattivo |
 | Planned Return | Rientro pianificato |
-| One-off return | rientro occasionale |
+| One-off return | Ritorno singolo |
 | household occupancy | presenza nell’abitazione |
 | confirmed departure | partenza confermata |
 | away setup | configurazione assenza |
@@ -162,6 +174,10 @@ The Planned Return selector uses **Ritorno programmato**, while history uses **R
 | cooling | koelen / koeling |
 | climate profile | klimaatprofiel |
 | Mode | Modus |
+| Base | Basis |
+| Exceptions | Uitzonderingen |
+| Day layout | Dagindeling |
+| Temperature only | Alleen temperatuur |
 | climate preset | klimaatpreset |
 | linked template | gekoppeld sjabloon |
 | times only | Alleen tijden |
@@ -171,7 +187,7 @@ The Planned Return selector uses **Ritorno programmato**, while history uses **R
 | Manual adjustment | Handmatige aanpassing |
 | Adaptive Preconditioning | adaptieve voorconditionering |
 | Planned Return | Geplande terugkeer |
-| One-off return | eenmalige terugkeer (the corresponding routine heading remains `One-off return` in the maintained panel; narrative Dutch and the climate-card action may use the Dutch form) |
+| One-off return | Eenmalige terugkeer |
 | household occupancy | aanwezigheid in het huishouden / bezetting van het huis |
 | confirmed departure | bevestigd vertrek |
 | away setup | afwezigheidsconfiguratie |
@@ -184,7 +200,7 @@ The Planned Return selector uses **Ritorno programmato**, while history uses **R
 | dew point | dauwpunt |
 | freshness | actualiteit van gegevens |
 | stale reading | verouderde meting |
-| Diagnostics | diagnose / diagnostiek (the maintained tab label remains `Diagnostics`) |
+| Diagnostics | Diagnostiek |
 | bounded history | begrensde geschiedenis |
 | delivery evidence | gegevens over opdrachtuitvoering / bewijs van opdrachtacceptatie |
 | troubleshooting | problemen oplossen |
@@ -210,6 +226,10 @@ The delivery sensor is named **Leveringsdiagnose van {zone}**. The general Boost
 | cooling | chłodzenie |
 | climate profile | Profil klimatyczny |
 | Mode | Tryb |
+| Base | Baza |
+| Exceptions | Wyjątki |
+| Day layout | Układ dni |
+| Temperature only | Tylko temperatura |
 | climate preset | Preset klimatyczny |
 | linked template | powiązany szablon |
 | times only | Tylko godziny |
@@ -258,6 +278,10 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | cooling | resfriamento |
 | climate profile | Perfil climático |
 | Mode | Modo |
+| Base | Base |
+| Exceptions | Exceções |
+| Day layout | Organização dos dias |
+| Temperature only | Somente temperatura |
 | climate preset | predefinição climática |
 | linked template | modelo vinculado |
 | times only | Somente horários |
@@ -267,7 +291,7 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | Manual adjustment | Ajuste manual |
 | Adaptive Preconditioning | Pré-condicionamento adaptativo |
 | Planned Return | Retorno planejado |
-| One-off return | retorno pontual (« One-off return » na interface) |
+| One-off return | Retorno pontual |
 | household occupancy | presença na casa / ocupação da casa |
 | confirmed departure | saída confirmada |
 | away setup | configuração de ausência |
@@ -276,8 +300,8 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | Environmental Comfort | Conforto ambiental |
 | Environmental condition | Condição ambiental |
 | relative humidity | umidade relativa |
-| absolute humidity | umidade absoluta (« Absolute humidity » na interface) |
-| dew point | ponto de orvalho (« Dew point » na interface) |
+| absolute humidity | umidade absoluta |
+| dew point | ponto de orvalho |
 | freshness | atualização das leituras |
 | stale reading | leitura desatualizada |
 | Diagnostics | Diagnóstico |
@@ -304,6 +328,10 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | cooling | arrefecimento |
 | climate profile | Perfil climático |
 | Mode | Modo |
+| Base | Base |
+| Exceptions | Exceções |
+| Day layout | Organização dos dias |
+| Temperature only | Apenas temperatura |
 | climate preset | predefinição climática |
 | linked template | modelo associado / modelo ligado |
 | times only | Apenas horários |
@@ -352,6 +380,10 @@ Some existing interface labels use other Portuguese variants: **Cronograma de pe
 | cooling | охлаждение |
 | climate profile | климатический профиль |
 | Mode | Режим |
+| Base | База |
+| Exceptions | Исключения |
+| Day layout | Группировка дней |
+| Temperature only | Только температура |
 | climate preset | климатический пресет |
 | linked template | связанный шаблон |
 | times only | Только время |
@@ -361,11 +393,11 @@ Some existing interface labels use other Portuguese variants: **Cronograma de pe
 | Manual adjustment | Ручная настройка |
 | Adaptive Preconditioning | адаптивная предварительная подготовка («Предварительный прогрев» / «Адаптивное время достижения комфорта» в панели) |
 | Planned Return | Запланированное возвращение |
-| One-off return | разовое возвращение («One-off return» в панели) |
+| One-off return | Разовое возвращение |
 | household occupancy | присутствие в доме |
 | confirmed departure | подтверждённый уход |
-| away setup | настройки отсутствия («Away setup» в панели) |
-| return setup | настройки возвращения («Return setup» в панели) |
+| away setup | Настройка отсутствия |
+| return setup | Настройка возвращения |
 | Room Assist | Room Assist |
 | Environmental Comfort | Комфорт окружающей среды |
 | Environmental condition | Состояние окружающей среды |

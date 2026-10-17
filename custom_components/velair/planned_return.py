@@ -58,6 +58,7 @@ class PlannedReturnRuntime:
         self._lock = asyncio.Lock()
         self.error = None
         self._applied = {}
+        self._temperature_only_suspensions = set()
         self._persistence_depth = 0
         self._reported_confirmation = None
         self._last_error = None
@@ -131,6 +132,7 @@ class PlannedReturnRuntime:
 
     @callback
     def stop(self, *, preserve_confirmation=False):
+        self._temperature_only_suspensions.clear()
         self._generation += 1
         self._timer_generation += 1
         if self._listener:
@@ -150,7 +152,9 @@ class PlannedReturnRuntime:
         mode = next((item for item in self.scheduler.get_modes() if item["key"] == mode_id), None)
         if mode is None:
             raise ValueError(f"Unknown return mode: {mode_id}")
-        profiles = [self.scheduler._profile_by_id(key) for key in mode["profile_ids"]]
+        # Validation canonicalizes schedules. Read projections must not silently
+        # normalize persisted profiles while describing a return.
+        profiles = [deepcopy(self.scheduler._profile_by_id(key)) for key in mode["profile_ids"]]
         if any(item is None for item in profiles):
             raise ValueError("Return mode references a missing profile")
         for item in profiles:
@@ -184,27 +188,73 @@ class PlannedReturnRuntime:
             target = owner._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
             if target is None or target.action != "set_temperature":
                 continue
-            block = {"start": target.start, "action": target.action, **temperature_target_from_mapping({key: value for key, value in asdict(target).items() if value is not None})}
+            block = {"start": target.start, "action": target.action, "temperature_only": target.temperature_only, **temperature_target_from_mapping({key: value for key, value in asdict(target).items() if value is not None})}
             if target.hvac_mode:
                 block["hvac_mode"] = target.hvac_mode
+            if target.temperature_only and owner._current_hvac_mode(entity) == "off":
+                continue
             start, diagnostics = owner._preconditioned_event_details(entity, zone, block, arrival)
             if start >= arrival:
-                if entity not in episode.get("preparing_entities", []):
+                if entity not in episode.get("preparing_entities", []) or entity in self._temperature_only_suspensions:
                     continue
                 start = parse_instant(episode["started_at"]) or now
             events.append(replace(target, when=start, target_when=arrival, preconditioning_diagnostics=diagnostics))
         return events
 
+    @callback
+    def mark_temperature_only_suspended(self, entity):
+        """Relinquish preparation immediately; the runtime tick owns persistence."""
+        episode = self.episode
+        if not episode or episode.get("state") != "away":
+            return False
+        arrival = parse_instant(episode.get("return_at"))
+        if arrival is None:
+            return False
+        try:
+            profiles = self.profiles(episode["destination_mode_id"])
+        except ValueError:
+            return False
+        schedule = self.scheduler._effective_schedule_from_profiles(profiles, entity)
+        target = self.scheduler._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
+        if target is None or not target.temperature_only:
+            return False
+        if entity not in episode.get("preparing_entities", []) and entity not in self._applied:
+            return False
+        self._temperature_only_suspensions.add(entity)
+        self._applied.pop(entity, None)
+        self.scheduler._invalidate_climate_delivery(entity)
+        self.scheduler._discard_preconditioning_session(entity)
+        self.scheduler._clear_applied_preconditioning_targets_for_entity(entity)
+        return True
+
+    async def async_suspend_temperature_only(self, entity):
+        """Persist a suspension while the runtime/profile locks are held."""
+        episode = self.episode
+        if not episode or episode.get("state") != "away":
+            self._temperature_only_suspensions.discard(entity)
+            return False
+        if entity not in self._temperature_only_suspensions:
+            if not self.mark_temperature_only_suspended(entity):
+                return False
+        updated = deepcopy(episode)
+        updated["preparing_entities"] = [item for item in episode.get("preparing_entities", []) if item != entity]
+        await self._persist_episode(updated)
+        self._temperature_only_suspensions.discard(entity)
+        return True
+
     @staticmethod
     def _intent(event):
-        return (event.target_when, event.temperature, event.target_temp_low, event.target_temp_high, event.hvac_mode, event.weekday, event.start)
+        return (event.target_when, event.temperature, event.target_temp_low, event.target_temp_high, event.hvac_mode, event.weekday, event.start, event.temperature_only)
+
+    def is_preparing(self, entity):
+        return entity not in self._temperature_only_suspensions and entity in (self.episode or {}).get("preparing_entities", [])
 
     def target(self, entity, now=None):
         now = now or dt_util.now()
         owner = self.scheduler
         if entity not in owner._data["zones"] or owner._is_zone_override_active(entity, now):
             return None
-        return next((event for event in self.plans(now) if event.entity_id == entity and (event.when <= now or entity in (self.episode or {}).get("preparing_entities", []))), None)
+        return next((event for event in self.plans(now) if event.entity_id == entity and (event.when <= now or self.is_preparing(entity))), None)
 
     def zone_context(self, entity, now, *, planned_target=None, effective_event=None, blocked=False):
         """Describe the winning return intent, never a forecast or delivery receipt."""
@@ -318,7 +368,31 @@ class PlannedReturnRuntime:
         if self.occupancy() == "away" and eligible_departure and self._confirmation is None:
             self._confirmation = dt_util.as_utc(now) + timedelta(minutes=self.config["absence_delay_minutes"])
         self._report_confirmation()
+        # Restart may restore a preparation latch while the device is OFF.
+        # Remember the observed suspension synchronously so a rapid ON cannot
+        # revive that old latch before its durable cleanup task runs.
+        episode = self.episode or {}
+        arrival = parse_instant(episode.get("return_at"))
+        if episode.get("state") != "away" or arrival is None or arrival <= now:
+            self._temperature_only_suspensions.clear()
+        else:
+            self._temperature_only_suspensions.intersection_update(episode.get("preparing_entities", []))
+        if episode.get("state") == "away" and arrival is not None and arrival > now:
+            try:
+                profiles = self.profiles(episode["destination_mode_id"])
+            except ValueError:
+                profiles = None
+            if profiles is not None:
+                for entity in episode.get("preparing_entities", []):
+                    if owner._current_hvac_mode(entity) != "off":
+                        continue
+                    schedule = owner._effective_schedule_from_profiles(profiles, entity)
+                    target = owner._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
+                    if target is not None and target.temperature_only:
+                        self.mark_temperature_only_suspended(entity)
         times = [self._confirmation] if self._confirmation else []
+        if self._temperature_only_suspensions:
+            times.append(now)
         if self.episode and self.episode["state"] in ("armed", "away"):
             arrival = parse_instant(self.episode.get("return_at"))
             if arrival:
@@ -398,7 +472,7 @@ class PlannedReturnRuntime:
                         self._emit("fulfilled")
 
             try:
-                if ids == owner.active_profile_ids and mode_marker == owner.active_mode_id:
+                if ids == owner.active_profile_ids and mode_marker == owner.active_mode_id and not owner.profile_selection["zone_profile_overrides"]:
                     await owner._async_save_data()
                     persisted()
                 else:
@@ -456,6 +530,9 @@ class PlannedReturnRuntime:
                     if arrival and now >= arrival:
                         await self._fulfill()
                     else:
+                        for entity in tuple(self._temperature_only_suspensions):
+                            await self.async_suspend_temperature_only(entity)
+                            self._temperature_only_suspensions.discard(entity)
                         for event in self.plans(now):
                             if event.when > now or self._applied.get(event.entity_id) == self._intent(event) or self.scheduler._is_zone_override_active(event.entity_id, now):
                                 continue
@@ -656,28 +733,33 @@ class PlannedReturnRuntime:
 
     def _selection_snapshot(self):
         """Retain the exact selection, independently of future Mode edits."""
-        return {"mode_id": self.scheduler.active_mode_id,
-                "profile_ids": list(self.scheduler.active_profile_ids)}
+        return self.scheduler.profile_selection
 
     def _restorable_selection(self, episode):
         selection = episode.get("previous_selection")
         if episode["state"] != "away" or selection is None:
             return None
         owner = self.scheduler
+        selection = {"profile_ids": selection.get("base_profile_ids", selection.get("profile_ids", [])),
+                     "mode_id": selection.get("base_mode_id", selection.get("mode_id")),
+                     "zone_profile_overrides": deepcopy(selection.get("zone_profile_overrides", {}))}
+        owner._validate_zone_profile_overrides(selection["zone_profile_overrides"])
         claimed = set()
         for key in selection["profile_ids"]:
             profile = owner._profile_by_id(key)
             if profile is None:
                 raise ValueError("The previous profile selection can no longer be restored")
-            owner._validate_profile(deepcopy(profile))
             if claimed.intersection(profile["zones"]):
                 raise ValueError("The previous profile selection now contains conflicting climates")
             claimed.update(profile["zones"])
+        for profile in owner._selection_profiles(selection["profile_ids"], selection["zone_profile_overrides"]):
+            owner._validate_profile(profile)
         mode_id = selection["mode_id"]
         mode = next((item for item in owner._data.get("modes", []) if item["key"] == mode_id), None)
         if mode_id is not None and (mode is None or mode["profile_ids"] != selection["profile_ids"]):
             mode_id = None
-        return {"mode_id": mode_id, "profile_ids": selection["profile_ids"]}
+        return {"mode_id": mode_id, "profile_ids": selection["profile_ids"],
+                "zone_profile_overrides": selection["zone_profile_overrides"]}
 
     async def cancel_pending(self):
         """Withdraw return authority and restore the selection before departure."""
@@ -728,14 +810,15 @@ class PlannedReturnRuntime:
         self._cancel_previous_episode = episode
         owner._data["planned_return_episode"] = updated
         try:
-            if selection is None or (selection["profile_ids"] == owner.active_profile_ids and selection["mode_id"] == owner.active_mode_id):
+            if selection is None or (selection["profile_ids"] == owner.active_profile_ids and selection["mode_id"] == owner.profile_selection["base_mode_id"] and selection["zone_profile_overrides"] == owner.profile_selection["zone_profile_overrides"]):
                 await owner._async_save_data()
                 persisted()
             else:
                 await owner._async_activate_profiles_locked(
                     selection["profile_ids"], mode_id=selection["mode_id"],
                     source="planned_return", rollback_data=previous,
-                    on_persisted=persisted)
+                    on_persisted=persisted,
+                    zone_profile_overrides=selection["zone_profile_overrides"])
         except BaseException:
             if not committed:
                 self._persistence_depth -= 1

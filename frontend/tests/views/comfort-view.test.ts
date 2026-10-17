@@ -1621,7 +1621,7 @@ describe("comfort view", () => {
         "It compares indoor and outdoor moisture without being distorted by their different temperatures.",
       ]);
     expect(de.comfortOutdoorAdjustedHumidityComparisonHelp)
-      .toBe(en.comfortOutdoorAdjustedHumidityComparisonHelp);
+      .not.toBe(en.comfortOutdoorAdjustedHumidityComparisonHelp);
     expect(translationTemplate).toHaveProperty("comfortOutdoorAdjustedHumidityComparisonHelp");
   });
 

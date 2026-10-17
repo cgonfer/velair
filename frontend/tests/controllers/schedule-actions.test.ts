@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE } from "../../src/velair/constants";
@@ -8,8 +9,10 @@ const response = { configured_entities: [], zones: {}, settings: { first_weekday
 
 function host(normalizedBlocks: ScheduleBlock[] = [{ action: ACTION_SET_TEMPERATURE, start: "08:00", temperature: 21, hvac_mode: "heat" }]) {
   const api = {
+    previewDailySchedule: vi.fn(() => new Promise<never>(() => {})),
     copyDaySchedule: vi.fn().mockResolvedValue(response),
     setDailySchedule: vi.fn().mockResolvedValue(response),
+    setScheduleDays: vi.fn().mockResolvedValue(response),
   };
   const state = {
     _applyingZones: false,
@@ -56,6 +59,103 @@ function host(normalizedBlocks: ScheduleBlock[] = [{ action: ACTION_SET_TEMPERAT
 }
 
 describe("schedule actions controller", () => {
+  it.each([
+    ["individual", "tuesday", ["tuesday"]],
+    ["weekdays_weekend", "wednesday", ["monday", "tuesday", "wednesday", "thursday", "friday"]],
+    ["weekdays_weekend", "sunday", ["saturday", "sunday"]],
+    ["all", "saturday", ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]],
+  ])("copies exactly the selected %s / %s days to other thermostats", async (layout, day, expected) => {
+    const { state, api } = host();
+    Object.assign(state, { _dirty: false, _draftDayLayoutKey: layout, _selectedWeekday: day,
+      _zoneTargets: new Set(["climate.bedroom"]), _draftConfigurationRevision: 4 });
+    await applySelectedDayToZones(state);
+    expect(api.copyDaySchedule).toHaveBeenCalledWith("climate.office", day, expected,
+      { target_entity_ids: ["climate.bedroom"], expected_revision: 4 });
+  });
+  it.each(["individual", "weekdays_weekend", "all"])("saves %s linked or preset days with one atomic request and no preflight", async (layout) => {
+    for (const link of [undefined, { mode: "full", template_key: "work" }, {
+      mode: "hours", template_key: "work", bindings: { morning: { preset_key: "comfort" } },
+    }]) {
+      const blocks = [{ start: "08:00", slot_id: "morning", preset_key: "comfort" }];
+      const { state, api } = host(blocks);
+      Object.assign(state, {
+        _draftDayLayoutKey: layout, _draftConfigurationRevision: 4, _draftTemplateLink: link,
+        _data: { ...response, configuration_revision: 4, zones: { "climate.office": { schedule: {} } } },
+      });
+      const pending = saveSelectedDay(state);
+      expect(api.previewDailySchedule).not.toHaveBeenCalled();
+      expect(api.setDailySchedule.mock.calls.length + api.setScheduleDays.mock.calls.length).toBe(1);
+      await pending;
+      expect(state._error).toBeUndefined();
+      expect(state._dirty).toBe(false);
+    }
+  });
+
+  it("keeps a linked draft busy until the mutation replies and preserves it on rejection", async () => {
+    const { state, api } = host();
+    const link = { mode: "full", template_key: "work" };
+    Object.assign(state, { _draftTemplateLink: link, _draftConfigurationRevision: 4,
+      _data: { ...response, configuration_revision: 4 } });
+    let reject!: (error: Error) => void;
+    api.setDailySchedule.mockReturnValue(new Promise((_resolve, rejectRequest) => { reject = rejectRequest; }));
+    const pending = saveSelectedDay(state);
+    expect(api.setDailySchedule).toHaveBeenCalledTimes(1);
+    expect(api.previewDailySchedule).not.toHaveBeenCalled();
+    expect(state._saving).toBe(true);
+    expect(state._dirty).toBe(true);
+    expect(state._shownSuccess).toEqual([]);
+    reject(new Error("Configuration changed; reload before saving"));
+    await pending;
+    expect(state._error).toContain("Configuration changed");
+    expect(state._saving).toBe(false);
+    expect(state._dirty).toBe(true);
+    expect((state as any)._draftTemplateLink).toEqual(link);
+    expect((state as any)._draftConfigurationRevision).toBe(4);
+    expect(state._applyScheduleData).not.toHaveBeenCalled();
+    expect(state._shownSuccess).toEqual([]);
+  });
+
+  function grouped() {
+    const { state, api } = host();
+    Object.assign(state, { _draftDayLayoutKey: "weekdays_weekend", _draftConfigurationRevision: 4,
+      _data: { ...response, configuration_revision: 4, zones: { "climate.office": { schedule: { monday: [{ start: "08:00", temperature: 20 }], tuesday: [] } } } },
+      _groupBaseChosen: true });
+    return { state, api };
+  }
+  it("saves an explicitly selected base to its complete group atomically", async () => {
+    const { state, api } = grouped();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await saveSelectedDay(state as never);
+    expect(api.setScheduleDays).toHaveBeenCalledWith("climate.office", expect.objectContaining({ weekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"], day_layout_key: "weekdays_weekend", expected_revision: 4 }));
+    expect(api.setDailySchedule).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+  it.each(["save", "copy"])("an unchosen grouped %s preserves the draft and sends no request", async (action) => {
+    const { state, api } = grouped();
+    state._zoneTargets = new Set(["climate.bedroom"]);
+    Object.assign(state, { _groupBaseChosen: false });
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    await (action === "save" ? saveSelectedDay(state as never) : applySelectedDayToZones(state as never));
+    expect(api.setScheduleDays).not.toHaveBeenCalled();
+    expect(api.copyDaySchedule).not.toHaveBeenCalled();
+    expect(state._dirty).toBe(true);
+    vi.restoreAllMocks();
+  });
+  it("blocks layout-only for mixed days until a base is chosen", async () => {
+    const { state, api } = grouped();
+    Object.assign(state, { _layoutOnlyDirty: true, _groupBaseChosen: false });
+    state._normalizeDraftBlocks = vi.fn(() => { throw new Error("Layout does not edit blocks"); });
+    await saveSelectedDay(state as never);
+    expect(api.setScheduleDays).not.toHaveBeenCalled();
+  });
+  it("blocks unresolved external layout changes before grouped copying", async () => {
+    const { state, api } = grouped();
+    Object.assign(state, { _dayLayoutConflict: true }); state._zoneTargets = new Set(["climate.bedroom"]);
+    await applySelectedDayToZones(state as never);
+    expect(api.setScheduleDays).not.toHaveBeenCalled(); expect(api.copyDaySchedule).not.toHaveBeenCalled();
+    expect(state._error).toBe("dayLayoutConflict");
+  });
+
   it("preserves a newer day draft when navigation occurs during source save", async () => {
     const { state, api } = host();
     state._copyTargets = new Set(["tuesday"]);

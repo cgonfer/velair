@@ -1,3 +1,4 @@
+import { renderTemplateApplication as renderTemplateApplyPanel } from "./template-application-view";
 import { html, nothing } from "lit";
 import { renderDocumentationHelp } from "./documentation-links";
 import { keyed } from "lit/directives/keyed.js";
@@ -42,6 +43,7 @@ function renderDailyTemplatesView(host: TemplatesViewHost, selectedEntity?: stri
   const templateEditorHost = Object.create(host) as VelairViewHost;
   templateEditorHost._unboundedTemperatureTargets = true;
   templateEditorHost._allowBlockPresets = true;
+  templateEditorHost._supportsTemperatureOnly = true;
   templateEditorHost._effectivePresetBlock = (block, index, source) => host._effectivePresetBlock?.(block, index, source);
   templateEditorHost._presetSettingsStatus = (block, index, source) => host._presetSettingsStatus?.(block, index, source);
   // Validation is adapted locally; configuration edits must retain the component owner.
@@ -129,7 +131,7 @@ function renderDailyTemplatesView(host: TemplatesViewHost, selectedEntity?: stri
                       event.stopPropagation();
                       if (host._data?.resource_usages?.templates?.[template.key]?.length) return;
                       host._selectTemplate(template.key);
-                      void host._deleteSelectedTemplate();
+                      if (host._selectedTemplateKey === template.key) void host._deleteSelectedTemplate();
                     }}
                     title=${host._data?.resource_usages?.templates?.[template.key]?.length ? host._t("templateDeleteInUse") : host._t("deleteTemplate")}
                     aria-label=${host._t("deleteTemplate")}
@@ -186,8 +188,8 @@ function renderDailyTemplatesView(host: TemplatesViewHost, selectedEntity?: stri
                     </button>
                   </div>
                 </div>
-                ${renderTemplateApplyPanel(host, selectedTemplate)}
                 ${renderTemplateUsages(host, selectedTemplate.key)}
+                ${renderTemplateApplyPanel(host, selectedTemplate)}
                 <fieldset class="editor template-editor" ?disabled=${host._templateAction === "save"}>
                   ${renderTimeline(host, selectedEntity, "template")}
                   <div class="draft-list template-block-list">
@@ -380,66 +382,4 @@ function renderDestinationAssignments(host: TemplatesViewHost, impact: NonNullab
     </section>`;
 }
 
-export function renderTemplateApplyPanel(host: TemplatesViewHost, template: ScheduleTemplate) {
-  if (!host._templateApplyOpen) {
-    return nothing;
-  }
-
-  const entities = host._visibleZoneIds(host._data?.configured_entities ?? []);
-  const weekdays = host._orderedWeekdays();
-  const hasValidationError = host._hasDraftValidationError("template");
-  const hasTargets = host._templateApplyTargets.size > 0;
-
-  return html`
-    <div class="template-apply-panel">
-      <div class="copy-header">
-        <div>
-          <span class="label">${host._t("applyTemplateTo", { template: host._templateLabel(template) })}</span>
-        </div>
-        <button
-          class="command-button success"
-          type="button"
-          ?disabled=${host._applyingTemplateTargets || !hasTargets || hasValidationError}
-          @click=${() => host._applyTemplateToTargets(template)}
-        >
-          <ha-icon icon="mdi:check-circle-outline"></ha-icon>
-          <span>${host._t(host._applyingTemplateTargets ? "applying" : "apply")}</span>
-        </button>
-      </div>
-      ${entities.length
-        ? html`
-            <div class="template-apply-scroll-wrap">
-              <div class="template-apply-grid">
-                <div class="template-apply-cell template-apply-zone header">${host._t("thermostat")}</div>
-                ${weekdays.map((weekday: string) => html`
-                  <div class="template-apply-cell header day">${host._shortWeekdayName(weekday)}</div>
-                `)}
-                ${entities.map((entityId: string) => html`
-                  <div class="template-apply-cell template-apply-zone" title=${host._friendlyEntityName(entityId)}>
-                    ${host._friendlyEntityName(entityId)}
-                  </div>
-                  ${weekdays.map((weekday: string) => {
-                    const targetKey = host._templateApplyTargetKey(entityId, weekday);
-                    return html`
-                      <label class="template-apply-cell template-apply-day" title=${host._weekdayName(weekday)}>
-                        <input
-                          type="checkbox"
-                          .checked=${host._templateApplyTargets.has(targetKey)}
-                          @change=${(event: Event) =>
-                            host._toggleTemplateApplyTarget(
-                              entityId,
-                              weekday,
-                              (event.currentTarget as HTMLInputElement).checked,
-                            )}
-                        />
-                      </label>
-                    `;
-                  })}
-                `)}
-              </div>
-            </div>
-          `
-        : html`<span class="empty">${host._t("noManagedEntities")}</span>`}
-    </div>
-  `;
-}
+export { renderTemplateApplyPanel };

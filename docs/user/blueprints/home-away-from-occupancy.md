@@ -69,6 +69,13 @@ On startup, occupied, empty, and availability checks run as internal parallel br
 
 ## Safety and precedence
 
+Mode and Profile actions use the selected schedule's block policy. A
+**Temperature only** block updates its target without requesting an HVAC mode
+change, so selecting Home does not necessarily turn an off climate on. Choose
+an explicit **Heat** or **Cool** block when Home should start conditioning.
+Any direct climate actions configured in this blueprint remain explicit Home
+Assistant actions; the block policy does not suppress them.
+
 The blueprint only runs the actions you configure. Velair's existing Mode, Profile, Boost, and pause precedence continues to apply. An `unknown` or `unavailable` occupancy entity activates neither Home nor Away; the warning identifies the entity and explains that actions remain suspended until it reports a supported occupied or empty state.
 
 ## Limitations

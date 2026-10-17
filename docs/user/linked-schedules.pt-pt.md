@@ -8,8 +8,8 @@ Traduções: [Original em inglês](linked-schedules.md) · [Español](linked-sch
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.2 |
+| Última sincronização | 2026-10-17 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -49,6 +49,23 @@ O painel mostra primeiro o seletor de configuração, depois opções do disposi
 
 <a id="linked-templates"></a>
 ## Modelos ligados
+
+<a id="apply-a-template-to-schedules"></a>
+### Aplicar um modelo a programações
+
+Abra **Aplicar a…** num modelo diário guardado. O painel segue **Selecionar → Revisar → Aplicar**. Guarde primeiro as edições pendentes do modelo; aplicar nunca guardada silenciosamente o modelo partilhado nem aplica uma versão não guardada.
+
+Escolha **Predefinição** ou um Perfil existente e depois **Cópia independente**, **Apenas horários** ou **Horários e definições**. Uma cópia independente não tem associação com o modelo; referências a predefinições do Velair continuam ativas. Vínculos apenas de horários mantêm atribuições de climatização independentes. Vínculos completos seguem os horários e as definições do modelo.
+
+Escolha uma **Organização dos dias** comum e marque os grupos necessários de cada termóstato. Dias individuais oferece sete opções; Dias úteis / Fim de semana oferece dois grupos; Todos os dias oferece a semana inteira. Mudar a organização limpa a seleção. Mudar o destino ou a forma de aplicação mantém os grupos selecionados, mas exige nova revisão. Selecione o cabeçalho de um dia para selecionar essa coluna em todos os termóstatos visíveis; selecione novamente para limpar uma coluna totalmente selecionada. Em telemóveis, a tabela tem rolagem horizontal enquanto os nomes dos termóstatos permanecem visíveis.
+
+Apenas termóstatos com grupos selecionados adotam a organização escolhida. Dias não selecionados mantêm blocos e associações. Se a nova organização agrupar dias não selecionados com definições diferentes, Revisar avisa que eles manterão **Programações diferentes**; aceitar não iguala esses dias.
+
+Para **Apenas horários**, selecione uma base quando um grupo de destino tiver definições guardadas diferentes. Essa escolha é temporária até Aplicar. O Velair propõe atribuições de climatização dessa base: primeiro o horário exato, depois os horários anteriores do mais próximo ao mais distante e então os seguintes. Predefinições continuam sendo referências. A revisão identifica a origem de cada proposta e permite editar definições enquanto os horários do modelo permanecem fixos. Atribuições compatíveis ausentes precisam ser preenchidas; as definições do modelo não são usadas como alternativa silenciosa. Todos os dias selecionados nesse grupo recebem as mesmas atribuições revisadas. Uma zona de Perfil sem programação própria exige atribuições manuais em vez de usar definições de Predefinição.
+
+Revisar lista dias e associações substituídos, mudanças de organização, problemas de compatibilidade e zonas de Perfil que passarão a **Cronograma de perfil**. Voltar retorna à seleção sem guardadar. Aplicar valida e guardada toda a seleção uma vez; um destino inválido ou conflito de revisão não aplica parcialmente as outras zonas. Uma falha ao guardadar no armazenamento preserva a configuração anterior. Revise novamente após mudanças na origem ou configuração. Fechar com edições de revisão pendentes usa a proteção normal contra descarte.
+
+Aplicar a um Perfil guardada diretamente suas programações selecionadas; não ativa o Perfil, não seleciona um Modo nem altera a seleção de base/exceções. Alterar uma programação já efetiva pode afetar a climatização. A publicação externa e as respostas físicas dos dispositivos mantêm seus limites normais de envio; uma configuração guardada coerente não representa uma resposta física simultânea.
 
 As ligações dos modelos são apenas para leitura e agrupadas por termóstato e depois por Predefinição ou Perfil, com os dias da semana ligados listados juntos. **Dias associados** conta cada dia uma vez, independentemente da quantidade de blocos. Essas contagens aparecem em uma última linha separada abaixo da contagem de blocos de cada modelo. Cópias independentes não são contadas nem aparecem na lista. Desvincule todos os dias antes de eliminar um modelo; o botão desativado explica essa exigência.
 

@@ -195,6 +195,10 @@
           "name": "Upper target temperature",
           "description": "Send both range limits. A range replaces the single target."
         },
+        "temperature_only": {
+          "name": "Temperature only",
+          "description": "Update targets without requesting an HVAC mode change or turn-on. Requires a temperature action without device options. Use clear_fields or replace to remove an existing HVAC mode or options."
+        },
         "hvac_mode": {
           "name": "HVAC mode",
           "description": "Omit to preserve the mode. For an Off-only action, use replace with action turn_off."
@@ -263,6 +267,60 @@
         "expected_revision": {
           "name": "Configuration revision",
           "description": "Optional optimistic concurrency check. Omit to clone the latest saved source under the configuration lock."
+        }
+      }
+    },
+    "activate_profile": {
+      "name": "Activate climate profile",
+      "description": "Set one saved climate profile as the complete base and clear all zone exceptions. Zones not covered by it use their default schedules. Leave the profile ID empty to return every zone to Default.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "Stable key of the profile to activate. Empty clears the active set and selects Default."
+        }
+      }
+    },
+    "deactivate_profile": {
+      "name": "Deactivate climate profile",
+      "description": "Return every zone to Default by clearing the base profiles and all zone exceptions."
+    },
+    "activate_profiles": {
+      "name": "Activate climate profiles as base",
+      "description": "Replace the complete base with non-overlapping profiles and clear all zone exceptions. An empty list selects Default. Profile selection does not guarantee simultaneous physical delivery.",
+      "fields": {
+        "profile_ids": {
+          "name": "Profile IDs",
+          "description": "Ordered list of stable Profile IDs. Profiles must not include the same zone."
+        }
+      }
+    },
+    "apply_profiles": {
+      "name": "Apply climate profiles as exceptions",
+      "description": "Replace exceptions only in the zones explicitly included by these profiles. Other zones keep their selection. Overlapping profiles in this request reject the whole action; an empty list does nothing. Cancels a pending Return home.",
+      "fields": {
+        "profile_ids": {
+          "name": "Profile IDs",
+          "description": "List of stable Profile IDs whose explicit zones should use these profiles as exceptions."
+        }
+      }
+    },
+    "set_zone_profile": {
+      "name": "Set zone profile exception",
+      "description": "Apply only one zone from a saved profile, preserving every other zone selection. The profile must include this zone. Use YAML null for Default; use Clear profile exceptions to inherit the base. Cancels a pending Return home.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "Stable Profile ID, or YAML null to explicitly use the zone's Default schedule."
+        }
+      }
+    },
+    "clear_profile_overrides": {
+      "name": "Clear profile exceptions",
+      "description": "Restore the current base for the explicitly selected zones. Previous exceptions are not restored. An empty list does nothing. Cancels a pending Return home when zones are requested.",
+      "fields": {
+        "entity_id": {
+          "name": "Climate entities",
+          "description": "One managed climate entity or a list. All targets must be valid before any exception is removed."
         }
       }
     }

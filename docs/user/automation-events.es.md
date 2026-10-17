@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](automation-events.md) · [Español](automati
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -148,7 +148,7 @@ triggers:
 
 ## Cambio de Perfil
 
-`profile_changed` se emite después de guardar un conjunto distinto de perfiles climáticos o los horarios Predeterminados. Seleccionar directamente el mismo conjunto activo puede cambiar la entidad nativa Modo a Manual, pero no emite `profile_changed` porque no cambiaron los perfiles efectivos.
+`profile_changed` se emite después de guardar un conjunto base distinto de perfiles climáticos o los horarios base Predeterminados. Seleccionar directamente el mismo conjunto activo puede cambiar la entidad nativa de Modo a Manual, pero no emite `profile_changed` porque los perfiles efectivos no han cambiado.
 
 ```yaml
 domain: velair
@@ -160,7 +160,7 @@ previous_profile_ids: []
 source: select
 ```
 
-`source` identifica el origen de la selección efectiva. Los valores públicos son `panel`, `service` y `select`; las operaciones internas del ciclo de vida pueden publicar un valor más concreto, como `profile_deleted` o `mode_updated`. Las listas ordenadas de identificadores describen los conjuntos activos completos nuevo y anterior. Una lista `profile_ids` vacía representa Predeterminado.
+`source` identifica el origen de la selección efectiva. Los valores públicos son `panel`, `service` y `select`; las operaciones internas del ciclo de vida pueden publicar un valor más específico, como `profile_deleted` o `mode_updated`. Las listas ordenadas de IDs describen los conjuntos base nuevo y anterior. Una lista `profile_ids` vacía representa una base Predeterminada; aún pueden existir excepciones por zona. Este evento de compatibilidad no informa de cambios que afecten solo a excepciones. Utiliza `selection_changed` para obtener la selección completa y el perfil efectivo de cada estancia.
 
 Por ejemplo, esta automatización reacciona cuando el Perfil con identificador `away` pasa a formar parte del conjunto activo:
 
@@ -180,7 +180,35 @@ actions:
       message: Away profile is active
 ```
 
-Para reaccionar cuando Velair vuelve a los horarios Predeterminados, utiliza una condición de plantilla que compruebe `trigger.event.data.profile_ids == []`.
+Para reaccionar cuando la base vuelve a los horarios Predeterminados, utiliza una condición de plantilla que compruebe `trigger.event.data.profile_ids == []`. Comprueba la selección completa para distinguir una base Predeterminada con excepciones de Predeterminado en todas las estancias.
+
+<a id="profile-selection-changed"></a>
+
+## Cambio de selección de perfiles
+
+`selection_changed` informa de cambios en la base, su asociación con un Modo o las excepciones por zona después de guardarlos. Utiliza el mismo envoltorio `velair_event`:
+
+```yaml
+domain: velair
+event: selection_changed
+selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides:
+    climate.office: remote_work
+    climate.guest_room: null
+previous_selection:
+  base_profile_ids: [winter]
+  base_mode_id: winter-mode
+  zone_profile_overrides: {}
+effective_zone_profiles:
+  climate.office: remote_work
+  climate.living_room: winter
+  climate.guest_room: null
+source: service
+```
+
+Una excepción ausente hereda la base; un valor null presente utiliza explícitamente Predeterminado. El perfil efectivo describe cada estancia, incluidos los Perfiles aplicados parcialmente. No es una confirmación de envío físico satisfactorio al dispositivo. Una selección sin cambios no emite un evento duplicado. Editar los horarios referenciados puede cambiar el comportamiento climático sin cambiar los IDs de selección; las actualizaciones de horarios conservan sus notificaciones habituales de actualización de la API.
 
 <a id="scheduler-mode-changed"></a>
 

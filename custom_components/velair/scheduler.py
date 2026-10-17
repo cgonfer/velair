@@ -26,6 +26,7 @@ from homeassistant.util import dt as dt_util
 from .climate_delivery import ClimateDeliveryCoordinator, CurrentGuard, Delivery
 from .planned_return import PlannedReturnRuntime
 from .climate_manager import ClimateManager
+from .save_timing import measure_save_phase, timed_save_lock
 from .const import (
     ACTION_SET_CLIMATE_OPTIONS,
     ACTION_SET_HVAC_MODE,
@@ -245,6 +246,7 @@ class _PreconditioningSession:
     outdoor_temp_start: float | None
     target_temp_low: float | None = None
     target_temp_high: float | None = None
+    temperature_only: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +274,7 @@ class _RoomSensorAssistState:
     start: str | None
     target_temp_low: float | None = None
     target_temp_high: float | None = None
+    temperature_only: bool = False
     applied_target_temp_low: float | None = None
     applied_target_temp_high: float | None = None
     range_shift: float | None = None
@@ -395,6 +398,10 @@ class VelairScheduler:
         self.next_events: list[ClimateEvent] = []
         self.next_events_by_zone: list[ClimateEvent] = []
         self._next_event_by_entity: dict[str, ClimateEvent] = {}
+        self._effective_weekly_snapshot: list[ClimateEvent] = []
+        self._next_effective_event_cache: list[dict] | None = None
+        self._next_effective_event_cache_at: datetime | None = None
+        self._next_effective_event_cache_until: datetime | None = None
         self._temperature_migration_blocked = False
         self._stopped = False
         self._profile_mutation_lock = _ReentrantAsyncLock()
@@ -550,6 +557,31 @@ class VelairScheduler:
     def get_planned_return_status(self) -> dict:
         """Return backend-owned routine and absence progress."""
         return self._planned_return.status()
+
+    def get_next_effective_events(self) -> list[dict]:
+        """Expose a read-only projection without changing schedule execution."""
+        from .effective_events import project_next_effective_events
+
+        now = dt_util.as_utc(dt_util.now())
+        if (self._next_effective_event_cache is None
+                or self._next_effective_event_cache_at is None
+                or now < self._next_effective_event_cache_at
+                or (self._next_effective_event_cache_until is not None
+                    and now >= self._next_effective_event_cache_until)):
+            rows = project_next_effective_events(self, now, weekly_events=self._effective_weekly_snapshot)
+            deadlines = []
+            for row in rows:
+                for field in ("when", "return_at", "blocked_until"):
+                    value = row.get(field)
+                    if value is not None and dt_util.as_utc(value) > now:
+                        deadlines.append(dt_util.as_utc(value))
+                event = row.get("event")
+                if event is not None and event.target_when is not None and dt_util.as_utc(event.target_when) > now:
+                    deadlines.append(dt_util.as_utc(event.target_when))
+            self._next_effective_event_cache = rows
+            self._next_effective_event_cache_at = now
+            self._next_effective_event_cache_until = min(deadlines, default=None)
+        return deepcopy(self._next_effective_event_cache)
 
     async def async_update_planned_return(self, config: dict) -> dict:
         async with self._profile_mutation_lock:
@@ -922,12 +954,12 @@ class VelairScheduler:
     @property
     def active_profile_ids(self) -> list[str]:
         """Return the stable keys of all active profiles."""
-        return list(self._data["global_"].get("active_profile_ids", []))
+        return list(self._data["global_"].get("base_profile_ids", self._data["global_"].get("active_profile_ids", [])))
 
     @property
     def active_mode_id(self) -> str | None:
         """Return the selected custom mode key, if any."""
-        return self._data["global_"].get("active_mode_id")
+        return None if self._data["global_"].get("zone_profile_overrides") else self._data["global_"].get("base_mode_id", self._data["global_"].get("active_mode_id"))
 
     def get_profiles(self) -> list[ClimateProfileData]:
         """Return a detached profile list for API consumers."""
@@ -945,30 +977,58 @@ class VelairScheduler:
             None,
         )
 
+    @staticmethod
+    def _selection_from_data(data) -> dict:
+        state = data["global_"]
+        return {"base_profile_ids": list(state.get("base_profile_ids", state.get("active_profile_ids", []))),
+                "base_mode_id": state.get("base_mode_id", state.get("active_mode_id")),
+                "zone_profile_overrides": deepcopy(state.get("zone_profile_overrides", {}))}
+
+    @property
+    def profile_selection(self) -> dict:
+        """Return the persisted base and explicit zone substitutions."""
+        return self._selection_from_data(self._data)
+
+    @property
+    def effective_zone_profiles(self) -> dict[str, str | None]:
+        return {entity: (profile["key"] if (profile := self._active_profile_for_zone(entity)) else None)
+                for entity in self._data["zones"]}
+
+    @property
+    def effective_profile_ids(self) -> list[str]:
+        return list(dict.fromkeys(key for key in self.effective_zone_profiles.values() if key is not None))
+
+    def _selection_profiles(self, ids=None, overrides=None, *, data=None) -> list[ClimateProfileData]:
+        """Materialize disjoint, zone-scoped profiles for execution, never a union."""
+        snapshot = self._data if data is None else data
+        state = snapshot["global_"]
+        ids = state.get("base_profile_ids", state.get("active_profile_ids", [])) if ids is None else ids
+        overrides = state.get("zone_profile_overrides", {}) if overrides is None else overrides
+        profiles = {item["key"]: item for item in snapshot.get("profiles", [])}
+        resolved = {}
+        for entity in snapshot["zones"]:
+            key = overrides[entity] if entity in overrides else next(
+                (key for key in ids if key in profiles and entity in profiles[key]["zones"]), None)
+            if key is not None and key in profiles and entity in profiles[key]["zones"]:
+                if key not in resolved:
+                    resolved[key] = {**{field: deepcopy(value) for field, value in profiles[key].items() if field != "zones"}, "zones": {}}
+                resolved[key]["zones"][entity] = deepcopy(profiles[key]["zones"][entity])
+        return list(resolved.values())
+
     def _active_profiles(self) -> list[ClimateProfileData]:
-        """Return active profiles in their persisted activation order."""
-        profiles_by_id = {
-            profile["key"]: profile
-            for profile in self._data.get("profiles", [])
-        }
-        return [
-            profiles_by_id[profile_id]
-            for profile_id in self.active_profile_ids
-            if profile_id in profiles_by_id
-        ]
+        """Return the effective selection with each profile restricted to owned zones."""
+        return self._selection_profiles()
 
     def _active_profile_for_zone(
         self, entity_id: str
     ) -> ClimateProfileData | None:
-        """Resolve the single active profile that explicitly owns a zone."""
-        return next(
-            (
-                profile
-                for profile in self._active_profiles()
-                if entity_id in profile["zones"]
-            ),
-            None,
-        )
+        """Resolve one zone without materializing unrelated weekly schedules."""
+        overrides = self._data["global_"].get("zone_profile_overrides", {})
+        if entity_id in overrides:
+            profile = self._profile_by_id(overrides[entity_id])
+            return profile if profile is not None and entity_id in profile["zones"] else None
+        return next((profile for key in self.active_profile_ids
+                     if (profile := self._profile_by_id(key)) is not None and entity_id in profile["zones"]), None)
 
     def _profile_zone_behavior(
         self,
@@ -1050,6 +1110,7 @@ class VelairScheduler:
         next_profiles: list[ClimateProfileData],
         *,
         include_unpublished: bool = False,
+        publication_scope: set[str] | None = None,
     ) -> set[str]:
         """Return the minimal external set required by one profile mutation."""
         targets = self._external_profile_schedule_changes(
@@ -1062,7 +1123,8 @@ class VelairScheduler:
             targets.update(
                 entity_id
                 for entity_id in self._data["zones"]
-                if self._is_external_execution(entity_id)
+                if (publication_scope is None or entity_id in publication_scope)
+                and self._is_external_execution(entity_id)
                 and needs_publication(entity_id)
             )
         return targets
@@ -2476,6 +2538,9 @@ class VelairScheduler:
         zone = self._data["zones"][entity_id]
         # Options-only blocks are point-in-time commands. They own neither
         # target nor HVAC mode, including device-derived changes after a preset.
+        suspended_return = False
+        if "hvac_mode" in changed_fields and self._current_hvac_mode(entity_id) == "off":
+            suspended_return = self._planned_return.mark_temperature_only_suspended(entity_id)
         active_event = self._resolve_authoritative_delivery_event(entity_id)
         if (
             active_event is not None
@@ -2512,6 +2577,28 @@ class VelairScheduler:
             EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED,
             event_data,
         )
+        if suspended_return or (active_event is not None and active_event.temperature_only):
+            # HVAC remains externally owned. Disappearing targets during a power
+            # transition describe capabilities, rather than a manual setpoint.
+            owned_fields = [field for field in changed_fields if field != "hvac_mode"
+                            and not ("hvac_mode" in changed_fields and
+                                     (_finite_float_or_none(current.get(field)) is None or
+                                      _finite_float_or_none(previous.get(field)) is None))]
+            if "hvac_mode" in changed_fields:
+                self._discard_preconditioning_session(entity_id)
+            if "hvac_mode" in changed_fields and self._current_hvac_mode(entity_id) == "off":
+                await self._async_clear_room_sensor_assist(
+                    entity_id, restore=False, reason="temperature_only_off"
+                )
+            if not owned_fields:
+                if self._current_hvac_mode(entity_id) != "off":
+                    await self._async_refresh_room_sensor_assist_from_current_event(entity_id)
+                self.async_schedule_next_event()
+                return
+            changed_fields = owned_fields
+            if suspended_return and session_policy["action"] == EXTERNAL_CHANGE_KEEP_AUTOMATIC:
+                self.async_schedule_next_event()
+                return
         if (
             existing_manual is None
             and session_policy["action"] == EXTERNAL_CHANGE_KEEP_AUTOMATIC
@@ -2558,6 +2645,10 @@ class VelairScheduler:
             external_snapshot = {
                 field: value for field, value in current.items() if value is not None
             }
+        if active_event is not None and active_event.temperature_only:
+            external_snapshot = {key: value for key, value in external_snapshot.items()
+                                 if key in ("temperature", "target_temp_low", "target_temp_high") and value is not None}
+            external_snapshot["temperature_only"] = True
         await self._async_enter_manual_adjustment_locked(
             entity_id,
             policy=session_policy,
@@ -2818,9 +2909,12 @@ class VelairScheduler:
                     raise ValueError(f"HVAC mode {block['hvac_mode']} is not supported by {entity_id}")
         return self._snap_blocks_for_entity(entity_id, blocks)
 
+    @measure_save_phase("validation")
     def _validate_configuration_resources(self, data):
         from .schedule_resources import validate_reference_graph
         validate_reference_graph(data)
+        from .day_layouts import validate_day_layout_references
+        validate_day_layout_references(data)
         names = set()
         keys = set()
         if not isinstance(data.get("block_presets", []), list):
@@ -2871,13 +2965,52 @@ class VelairScheduler:
     async def _async_commit_configuration_owned(self, candidate, expected_revision=None, *, commit_state):
         if expected_revision is not None and expected_revision != self._data.get("configuration_revision", 0):
             raise ConfigurationResourceError("revision_conflict", "Configuration changed; reload before saving")
+        from .day_layouts import validate_day_layout_references
+        def execution_configuration(data):
+            # Resource commits own only these fields. Settings, return routines
+            # and portable replacement have separate mutation paths; runtime
+            # overrides can change after the candidate snapshot is captured.
+            comparable = {
+                "zones": {entity: {field: deepcopy(zone[field]) for field in ("schedule", "template_links") if field in zone} for entity, zone in data["zones"].items()},
+                "profiles": deepcopy(data.get("profiles", [])),
+                "templates": deepcopy(data.get("templates", [])),
+                "block_presets": deepcopy(data.get("block_presets", [])),
+            }
+            for _destination, zone in destinations(comparable):
+                zone.pop("day_layout_key", None)
+            return comparable
+        if execution_configuration(candidate) == execution_configuration(self._data):
+            validate_day_layout_references(candidate)
+            previous = deepcopy(self._data)
+            for entity, zone in self._data["zones"].items():
+                zone["day_layout_key"] = candidate["zones"][entity].get("day_layout_key", "individual")
+            self._data["profiles"] = deepcopy(candidate.get("profiles", []))
+            self._data["configuration_revision"] = self._data.get("configuration_revision", 0) + 1
+            try:
+                with measure_save_phase("storage"):
+                    await self._async_save_data()
+                commit_state["persisted"] = True
+            except (asyncio.CancelledError, Exception):
+                for field in ("profiles", "configuration_revision"):
+                    if field in previous:
+                        self._data[field] = previous[field]
+                    else:
+                        self._data.pop(field, None)
+                for entity, zone in self._data["zones"].items():
+                    if "day_layout_key" in previous["zones"][entity]:
+                        zone["day_layout_key"] = previous["zones"][entity]["day_layout_key"]
+                    else:
+                        zone.pop("day_layout_key", None)
+                raise
+            self._async_write_state()
+            return
         self._validate_configuration_resources(candidate)
         previous = deepcopy(self._data)
         before = {entity: self._effective_schedule(entity, zone) for entity, zone in self._data["zones"].items()}
         def effective(data, entity):
             source = data["zones"][entity]
-            for profile in data.get("profiles", []):
-                if profile["key"] not in data["global_"].get("active_profile_ids", []) or entity not in profile["zones"]:
+            for profile in self._selection_profiles(data=data):
+                if entity not in profile["zones"]:
                     continue
                 behavior = profile["zones"][entity]
                 if behavior["behavior"] == "pause":
@@ -2902,11 +3035,11 @@ class VelairScheduler:
         lock_targets = set(affected)
         lock_targets.update(key[2] for key in old_requested.keys() | new_requested.keys()
                             if old_requested.get(key) != new_requested.get(key))
-        async with self._profile_zone_mutation_scope(lock_targets):
+        async with timed_save_lock(self._profile_zone_mutation_scope(lock_targets), "zone_lock_wait"):
             self._validate_configuration_resources(candidate)
             events = {entity: self.get_active_target_event(entity) for entity in affected}
             # Keep runtime zone dictionaries live across an awaited storage save.
-            configuration_fields = ("schedule", "template_links")
+            configuration_fields = ("schedule", "template_links", "day_layout_key")
             library_fields = ("block_presets", "templates", "profiles", "configuration_revision")
             for entity, zone in self._data["zones"].items():
                 for field in configuration_fields:
@@ -2920,7 +3053,8 @@ class VelairScheduler:
             for entity in affected:
                 self._invalidate_changed_schedule_delivery(entity, events[entity])
             try:
-                await self._async_save_data()
+                with measure_save_phase("storage"):
+                    await self._async_save_data()
                 commit_state["persisted"] = True
             except (asyncio.CancelledError, Exception):
                 for entity, zone in self._data["zones"].items():
@@ -2943,13 +3077,16 @@ class VelairScheduler:
                 after = self._effective_schedule(entity, zone)
                 if before[entity] == after:
                     continue
-                await self._async_finalize_schedule_mutation(entity, events[entity], now, reason="schedule_changed")
+                with measure_save_phase("reconcile"):
+                    await self._async_finalize_schedule_mutation(entity, events[entity], now, reason="schedule_changed")
                 if self._is_external_execution(entity) and self._external_execution is not None and after is not None:
                     try:
-                        await self._external_execution.async_schedule_saved(entity, deepcopy(after))
+                        with measure_save_phase("external_publish"):
+                            await self._external_execution.async_schedule_saved(entity, deepcopy(after))
                     except Exception:
                         _LOGGER.exception("Failed to publish updated schedule for %s", entity)
-        self.async_schedule_next_event()
+        if lock_targets:
+            self.async_schedule_next_event()
         self._async_write_state()
 
     async def async_set_block_preset(self, name, config, key=None, *, expected_revision=None):
@@ -3071,6 +3208,22 @@ class VelairScheduler:
     def preview_schedule_template_update(self, name, blocks, key=None, *, assignments=None, expected_revision=None):
         return self._schedule_template_update_candidate(name, blocks, key, assignments=assignments, expected_revision=expected_revision)[1]
 
+    def preview_template_application(self, **request):
+        from .template_application import build_template_application
+        return build_template_application(self, request)[1]
+
+    async def async_apply_template_application(self, **request):
+        from .template_application import build_template_application
+        async with self._profile_mutation_lock:
+            if self._temperature_migration_blocked:
+                raise ValueError("Resolve the temperature-data migration before applying a template")
+            candidate, preview = build_template_application(self, request)
+            if not preview["can_apply"]:
+                error = ConfigurationResourceError("incomplete_application", "Review all groups before applying the template")
+                error.details = preview
+                raise error
+            await self._async_commit_configuration(candidate, request["expected_revision"])
+
     def preview_daily_schedule(self, entity_id, weekday, blocks=None, *, template_link=None):
         self.ensure_managed_entity(entity_id)
         if weekday not in WEEKDAYS or (blocks is None) == (template_link is None):
@@ -3102,6 +3255,11 @@ class VelairScheduler:
 
     def get_configuration_resources(self):
         diagnostics = []
+        from .day_layouts import validate_day_layout_references
+        try:
+            validate_day_layout_references(self._data)
+        except (ValueError, TypeError, KeyError) as err:
+            diagnostics.append({"source": "day_layout", "code": getattr(err, "code", "incompatible_configuration"), "message": str(err)})
         metadata = {"default": {}, "profiles": {}}
         resolved_templates = {}
         for template in self._data.get("templates", []):
@@ -3141,24 +3299,37 @@ class VelairScheduler:
             return None
 
     async def async_set_daily_schedule(self, entity_id, weekday, blocks=None, *, template_link=None, unlink_template=False, expected_revision=None):
-        """Atomically save a Default day, including explicit reference changes."""
+        return await self.async_set_schedule_days(entity_id, [weekday], blocks, template_link=template_link, unlink_template=unlink_template, expected_revision=expected_revision, _legacy=True)
+
+    async def async_set_schedule_days(self, entity_id, weekdays=None, blocks=None, *, template_link=None, unlink_template=False, day_layout_key=None, expected_revision=None, _legacy=False):
+        """Commit selected days and presentation together, without partial saves."""
         self.ensure_managed_entity(entity_id)
-        if weekday not in WEEKDAYS or (blocks is None) == (template_link is None):
-            raise ValueError("Provide blocks or template_link for one valid weekday")
-        async with self._profile_mutation_lock:
+        days = weekdays if weekdays is not None else []
+        if not isinstance(days, (list, tuple)) or any(day not in WEEKDAYS for day in days) or len(set(days)) != len(days):
+            raise ValueError("Provide unique valid weekdays")
+        if days and (blocks is None) == (template_link is None):
+            raise ValueError("Provide blocks or template_link")
+        if not days and (day_layout_key is None or blocks is not None or template_link is not None):
+            raise ValueError("Provide days or a day layout change")
+        async with timed_save_lock(self._profile_mutation_lock, "configuration_lock_wait"):
+            if not _legacy and expected_revision is None:
+                raise ConfigurationResourceError("revision_conflict", "Grouped edits require a configuration revision")
             candidate = deepcopy(self._data)
             zone = candidate["zones"][entity_id]
-            links = zone.setdefault("template_links", {})
-            if (template_link is not None or weekday in links or any("preset_key" in block for block in blocks or [])) and expected_revision is None:
+            links = zone.setdefault("template_links", {}) if days else zone.get("template_links", {})
+            if (template_link is not None or any(day in links for day in days) or any("preset_key" in block for block in blocks or [])) and expected_revision is None:
                 raise ConfigurationResourceError("revision_conflict", "Linked day edits require a configuration revision")
-            if template_link is not None:
-                links.update(normalize_links({weekday: template_link}))
-                zone["schedule"][weekday] = []
-            else:
-                if weekday in links and not unlink_template:
-                    raise ConfigurationResourceError("unlink_required", "Explicitly unlink template hours first")
-                links.pop(weekday, None)
-                zone["schedule"][weekday] = normalize_schedule_blocks(blocks)
+            for day in days:
+                if template_link is not None:
+                    links.update(normalize_links({day: template_link}))
+                    zone["schedule"][day] = []
+                else:
+                    if day in links and not unlink_template:
+                        raise ConfigurationResourceError("unlink_required", "Explicitly unlink template hours first")
+                    links.pop(day, None)
+                    zone["schedule"][day] = normalize_schedule_blocks(blocks)
+            if day_layout_key is not None:
+                zone["day_layout_key"] = day_layout_key
             await self._async_commit_configuration(candidate, expected_revision)
 
     async def async_copy_day_schedule(self, entity_id, source_weekday, target_weekdays, *, target_entity_ids=None, expected_revision=None):
@@ -3708,25 +3879,40 @@ class VelairScheduler:
             previous_data = deepcopy(self._data)
             if (
                 existing is not None
-                and self.active_mode_id == key
+                and self.profile_selection["base_mode_id"] == key
                 and existing["profile_ids"] != next_mode["profile_ids"]
             ):
                 previous_profiles = deepcopy(self._active_profiles())
-                next_profiles = [
-                    deepcopy(self._profile_by_id(profile_id))
-                    for profile_id in next_mode["profile_ids"]
-                ]
+                next_profiles = self._selection_profiles(next_mode["profile_ids"], self.profile_selection["zone_profile_overrides"])
+                for profile in next_profiles:
+                    self._validate_profile(profile)
+                self._validate_external_profile_targets(next_profiles, self._external_profile_publication_targets(
+                    previous_profiles, next_profiles, include_unpublished=True))
                 transition_targets = self._profile_transition_zone_changes(
                     previous_profiles, next_profiles
                 )
+                mode_persisted = False
+
+                @callback
+                def persisted():
+                    nonlocal mode_persisted
+                    mode_persisted = True
+
                 async with self._profile_zone_mutation_scope(transition_targets):
                     self._data["modes"] = validated
-                    await self._async_activate_profiles_locked(
-                        next_mode["profile_ids"],
-                        source="mode_updated",
-                        mode_id=key,
-                        rollback_data=previous_data,
-                    )
+                    try:
+                        await self._async_activate_profiles_locked(
+                            next_mode["profile_ids"],
+                            source="mode_updated",
+                            mode_id=key,
+                            rollback_data=previous_data,
+                            zone_profile_overrides=self.profile_selection["zone_profile_overrides"],
+                            on_persisted=persisted,
+                        )
+                    except (asyncio.CancelledError, Exception):
+                        if not mode_persisted:
+                            self._restore_profile_mutation_data(previous_data)
+                        raise
                 return key
             self._data["modes"] = validated
             await self._async_save_profile_mutation(previous_data)
@@ -3745,10 +3931,12 @@ class VelairScheduler:
                 raise ValueError(f"Unknown mode: {key}")
             previous_data = deepcopy(self._data)
             self._data["modes"] = next_modes
-            if self.active_mode_id == key:
+            if self.profile_selection["base_mode_id"] == key:
                 self._data["global_"]["active_mode_id"] = None
+                self._data["global_"]["base_mode_id"] = None
             await self._async_save_profile_mutation(previous_data)
             self._async_write_state()
+            self._async_fire_selection_changed(self._selection_from_data(previous_data), "mode_deleted")
 
     async def async_select_velair_mode(
         self, key: str, *, source: str = "select"
@@ -3777,12 +3965,13 @@ class VelairScheduler:
         """Select Manual by clearing only the custom mode marker."""
         async with self._profile_mutation_lock:
             await self._planned_return.cancel()
-            if self.active_mode_id is None:
+            if self.profile_selection["base_mode_id"] is None:
                 return
             self._begin_operation("mode_change", "manual", 0)
             previous_data = deepcopy(self._data)
             try:
                 self._data["global_"]["active_mode_id"] = None
+                self._data["global_"]["base_mode_id"] = None
                 await self._async_save_profile_mutation(previous_data)
             except asyncio.CancelledError:
                 self._finish_operation(failed=True, error_code="cancelled")
@@ -3795,6 +3984,7 @@ class VelairScheduler:
                 )
                 raise
             self._finish_operation()
+            self._async_fire_selection_changed(self._selection_from_data(previous_data), "manual")
 
     async def async_set_profile(self, profile: dict, *, expected_revision=None) -> str:
         """Serialize creation and replacement of climate profiles."""
@@ -3829,6 +4019,27 @@ class VelairScheduler:
             list(self._data["zones"]),
         )[0]
         next_profile["key"] = key
+        if existing is not None:
+            old_execution, new_execution = validate_climate_profiles([deepcopy(existing)], list(self._data["zones"]))[0], deepcopy(next_profile)
+            for profile in (old_execution, new_execution):
+                for zone in profile["zones"].values():
+                    zone.pop("day_layout_key", None)
+            if old_execution == new_execution:
+                if all(zone.get("day_layout_key", "individual") == existing["zones"][entity].get("day_layout_key", "individual") for entity, zone in next_profile["zones"].items()):
+                    return key
+                layout_profile = deepcopy(existing)
+                for entity, zone in next_profile["zones"].items():
+                    if zone["behavior"] == "schedule":
+                        layout_profile["zones"][entity]["day_layout_key"] = zone.get("day_layout_key", "individual")
+                next_profile = layout_profile
+                candidate = deepcopy(self._data)
+                candidate["profiles"] = [next_profile if item["key"] == key else deepcopy(item) for item in profiles]
+                await self._async_commit_configuration(candidate, self._data.get("configuration_revision", 0))
+                return key
+        referenced = {entity for entity, profile_id in self.profile_selection["zone_profile_overrides"].items()
+                      if profile_id == key and entity not in next_profile["zones"]}
+        if referenced:
+            raise ValueError("Clear Profile overrides before removing zones: " + ", ".join(sorted(referenced)))
         self._validate_profile(next_profile)
         if existing == next_profile:
             return key
@@ -3859,15 +4070,14 @@ class VelairScheduler:
         self._validate_configuration_resources(candidate)
         previous_data = deepcopy(self._data)
         cancelled = False
-        if key in self.active_profile_ids:
-            next_active = deepcopy([
-                next(item for item in candidate_profiles if item["key"] == profile_id)
-                for profile_id in self.active_profile_ids
-            ])
+        if key in self.active_profile_ids or key in self.profile_selection["zone_profile_overrides"].values():
+            next_active = self._selection_profiles(data=candidate)
             transition_targets = self._profile_transition_zone_changes(
                 old_active, next_active
             )
+            self._validate_external_profile_targets(next_active, {entity for entity in transition_targets if self._is_external_execution(entity)})
             async with self._profile_zone_mutation_scope(transition_targets):
+                self._validate_external_profile_targets(next_active, {entity for entity in transition_targets if self._is_external_execution(entity)})
                 self._validate_configuration_resources(candidate)
                 self._data["configuration_revision"] = previous_data.get("configuration_revision", 0) + 1
                 external_targets = {
@@ -3909,7 +4119,7 @@ class VelairScheduler:
         old_profile = next((profile for profile in profiles if profile["key"] == key), None)
         if old_profile is None:
             raise ValueError(f"Unknown climate profile: {key}")
-        was_active = key in self.active_profile_ids
+        was_active = key in self.active_profile_ids or key in self.profile_selection["zone_profile_overrides"].values()
         routine = self._data.get("planned_return", {})
         referenced_modes = {routine.get("away_mode_id"), routine.get("destination_mode_id")}
         if any(mode["key"] in referenced_modes and key in mode["profile_ids"] for mode in self.get_modes()):
@@ -3917,7 +4127,6 @@ class VelairScheduler:
         previous_profile_ids = self.active_profile_ids
         previous_active_profiles = deepcopy(self._active_profiles())
         previous_data = deepcopy(self._data)
-        self._data["configuration_revision"] = self._data.get("configuration_revision", 0) + 1
         next_profiles_data = [profile for profile in profiles if profile["key"] != key]
         removed_mode_keys = {
             mode["key"]
@@ -3929,9 +4138,9 @@ class VelairScheduler:
             for mode in self._data.get("modes", [])
             if key not in mode["profile_ids"]
         ]
-        next_active_mode_id = (
-            None if self.active_mode_id in removed_mode_keys else self.active_mode_id
-        )
+        base_mode_id = self.profile_selection["base_mode_id"]
+        next_active_mode_id = None if base_mode_id in removed_mode_keys else base_mode_id
+        next_overrides = {entity: profile_id for entity, profile_id in self.profile_selection["zone_profile_overrides"].items() if profile_id != key}
         next_active_ids = previous_profile_ids
         if was_active:
             next_active_ids = [
@@ -3941,13 +4150,16 @@ class VelairScheduler:
             ]
         if was_active:
             cancelled = False
-            next_active = deepcopy([
-                next(item for item in next_profiles_data if item["key"] == profile_id)
-                for profile_id in next_active_ids
-            ])
+            candidate = deepcopy(self._data)
+            candidate["profiles"] = next_profiles_data
+            next_active = self._selection_profiles(next_active_ids, next_overrides, data=candidate)
             transition_targets = self._profile_transition_zone_changes(
                 previous_active_profiles, next_active
             )
+            for profile in next_active:
+                self._validate_profile(profile)
+            self._validate_external_profile_targets(next_active, {
+                entity for entity in transition_targets if self._is_external_execution(entity)})
             async with self._profile_zone_mutation_scope(transition_targets):
                 external_targets = {
                     entity_id
@@ -3958,10 +4170,15 @@ class VelairScheduler:
                     )
                     != self._effective_schedule_from_profiles(next_active, entity_id)
                 }
+                self._validate_external_profile_targets(next_active, external_targets)
+                self._data["configuration_revision"] = previous_data.get("configuration_revision", 0) + 1
                 self._data["profiles"] = next_profiles_data
                 self._data["modes"] = next_modes
-                self._data["global_"]["active_mode_id"] = next_active_mode_id
+                self._data["global_"]["active_mode_id"] = None if next_overrides else next_active_mode_id
+                self._data["global_"]["base_mode_id"] = next_active_mode_id
+                self._data["global_"]["zone_profile_overrides"] = next_overrides
                 self._data["global_"]["active_profile_ids"] = next_active_ids
+                self._data["global_"]["base_profile_ids"] = list(next_active_ids)
                 cancelled = await self._async_apply_profile_transition(
                     previous_active_profiles,
                     next_active,
@@ -3971,19 +4188,115 @@ class VelairScheduler:
                     external_targets=external_targets,
                     zone_transitions_locked=True,
                 )
-            self._async_fire_profile_changed(
-                self.active_profile_ids,
-                previous_profile_ids=previous_profile_ids,
-                source="profile_deleted",
-            )
+            if self.active_profile_ids != previous_profile_ids:
+                self._async_fire_profile_changed(
+                    self.active_profile_ids,
+                    previous_profile_ids=previous_profile_ids,
+                    source="profile_deleted",
+                )
             if cancelled:
+                self._async_fire_selection_changed(self._selection_from_data(previous_data), "profile_deleted")
                 raise asyncio.CancelledError
         else:
+            self._data["configuration_revision"] = previous_data.get("configuration_revision", 0) + 1
             self._data["profiles"] = next_profiles_data
             self._data["modes"] = next_modes
-            self._data["global_"]["active_mode_id"] = next_active_mode_id
+            self._data["global_"]["active_mode_id"] = None if next_overrides else next_active_mode_id
+            self._data["global_"]["base_mode_id"] = next_active_mode_id
             await self._async_save_profile_mutation(previous_data)
             self._async_write_state()
+        self._async_fire_selection_changed(self._selection_from_data(previous_data), "profile_deleted")
+
+    def _validate_selection_ids(self, profile_ids) -> list[str]:
+        if not isinstance(profile_ids, list) or any(not isinstance(key, str) or not key.strip() or key != key.strip() for key in profile_ids):
+            raise ValueError("Profile IDs must be a list of non-empty identifiers")
+        if len(set(profile_ids)) != len(profile_ids):
+            raise ValueError("Profile IDs must be unique")
+        claimed = set()
+        for key in profile_ids:
+            profile = self._profile_by_id(key)
+            if profile is None:
+                raise ValueError(f"Unknown climate profile: {key}")
+            overlap = claimed.intersection(profile["zones"])
+            if overlap:
+                raise ValueError("Profiles cannot configure the same zone: " + ", ".join(sorted(overlap)))
+            claimed.update(profile["zones"])
+        return profile_ids
+
+    def _validate_zone_profile_overrides(self, overrides: dict[str, str | None]) -> None:
+        for entity, key in overrides.items():
+            if entity not in self._data["zones"]:
+                raise ValueError(f"Unmanaged climate entity: {entity}")
+            if key is not None:
+                profile = self._profile_by_id(key)
+                if profile is None or entity not in profile["zones"]:
+                    raise ValueError(f"Profile {key} does not configure {entity}")
+                self._validate_profile({**deepcopy(profile), "zones": {entity: deepcopy(profile["zones"][entity])}})
+
+    async def async_activate_profiles(self, profile_ids: list[str], *, source: str = "service") -> None:
+        """Replace the complete base selection and remove every exception."""
+        async with self._profile_mutation_lock:
+            self._validate_selection_ids(profile_ids)
+            await self._async_activate_profiles_locked(profile_ids, source=source, operation_kind="profile_selection")
+
+    async def async_apply_profiles(self, profile_ids: list[str], *, source: str = "service") -> None:
+        """Apply each Profile only to its explicitly configured zones."""
+        async with self._profile_mutation_lock:
+            self._validate_selection_ids(profile_ids)
+            if not profile_ids:
+                return
+            selection = self.profile_selection
+            overrides = selection["zone_profile_overrides"]
+            for key in profile_ids:
+                for entity in self._profile_by_id(key)["zones"]:
+                    overrides[entity] = key
+            await self._async_activate_profiles_locked(
+                selection["base_profile_ids"], source=source, mode_id=selection["base_mode_id"],
+                operation_kind="profile_selection", zone_profile_overrides=overrides,
+                publication_scope={entity for key in profile_ids for entity in self._profile_by_id(key)["zones"]},
+            )
+
+    async def async_set_zone_profile(self, entity_id: str, profile_id: str | None, *, source: str = "service") -> None:
+        """Substitute one zone with a Profile slice or explicit Default."""
+        async with self._profile_mutation_lock:
+            if not isinstance(entity_id, str) or not isinstance(profile_id, (str, type(None))) or profile_id == "":
+                raise ValueError("A managed entity and Profile identifier or null are required")
+            selection = self.profile_selection
+            overrides = selection["zone_profile_overrides"]
+            overrides[entity_id] = profile_id
+            self._validate_zone_profile_overrides(overrides)
+            await self._async_activate_profiles_locked(
+                selection["base_profile_ids"], source=source, mode_id=selection["base_mode_id"],
+                operation_kind="profile_selection", zone_profile_overrides=overrides,
+                publication_scope={entity_id},
+            )
+
+    async def async_clear_profile_overrides(self, entity_ids: str | list[str], *, source: str = "service") -> None:
+        """Restore the current base for the explicitly requested zones."""
+        async with self._profile_mutation_lock:
+            entities = [entity_ids] if isinstance(entity_ids, str) else entity_ids
+            if not isinstance(entities, list) or any(not isinstance(entity, str) or entity not in self._data["zones"] for entity in entities):
+                raise ValueError("A managed climate entity or list is required")
+            if len(set(entities)) != len(entities):
+                raise ValueError("Climate entities must be unique")
+            if not entities:
+                return
+            selection = self.profile_selection
+            overrides = selection["zone_profile_overrides"]
+            for entity in entities:
+                overrides.pop(entity, None)
+            await self._async_activate_profiles_locked(
+                selection["base_profile_ids"], source=source, mode_id=selection["base_mode_id"],
+                operation_kind="profile_selection", zone_profile_overrides=overrides,
+                publication_scope=set(entities),
+            )
+
+    def _async_fire_selection_changed(self, previous_selection, source):
+        if previous_selection == self.profile_selection:
+            return
+        self._async_fire_event("selection_changed", {
+            "selection": self.profile_selection, "previous_selection": previous_selection,
+            "effective_zone_profiles": self.effective_zone_profiles, "source": source})
 
     async def async_activate_profile(
         self, profile_id: str | None, *, source: str = "service"
@@ -4022,9 +4335,12 @@ class VelairScheduler:
         source: str,
         mode_id: str | None = None,
         rollback_data: SchedulerData | None = None,
-        operation_kind: Literal["mode_change", "profile_activation"] | None = None,
+        operation_kind: Literal["mode_change", "profile_activation", "profile_selection"] | None = None,
         operation_target_id: str | None = None,
         on_persisted: Callable[[], None] | None = None,
+        zone_profile_overrides: dict[str, str | None] | None = None,
+        include_unpublished: bool = True,
+        publication_scope: set[str] | None = None,
     ) -> None:
         """Activate a conflict-free profile set atomically; empty selects Default."""
         normalized_ids = [
@@ -4040,7 +4356,6 @@ class VelairScheduler:
             profile = self._profile_by_id(profile_id)
             if profile is None:
                 raise ValueError(f"Unknown climate profile: {profile_id}")
-            self._validate_profile(profile)
             duplicate_zones = claimed_zones.intersection(profile["zones"])
             if duplicate_zones:
                 raise ValueError(
@@ -4049,6 +4364,12 @@ class VelairScheduler:
                 )
             claimed_zones.update(profile["zones"])
             next_profiles.append(profile)
+        overrides = {} if zone_profile_overrides is None else deepcopy(zone_profile_overrides)
+        self._validate_zone_profile_overrides(overrides)
+        next_profiles = self._selection_profiles(normalized_ids, overrides)
+        for profile in next_profiles:
+            self._validate_profile(profile)
+        previous_selection = self.profile_selection
         previous_ids = self.active_profile_ids
         previous_profiles = deepcopy(self._active_profiles())
         previous_data = (
@@ -4057,25 +4378,29 @@ class VelairScheduler:
         explicit_publication_targets = self._external_profile_publication_targets(
             previous_profiles,
             next_profiles,
-            include_unpublished=True,
+            include_unpublished=include_unpublished,
+            publication_scope=publication_scope,
         )
         transition_targets = self._profile_transition_zone_changes(
             previous_profiles, next_profiles
         )
         lock_targets = transition_targets | explicit_publication_targets
-        if source != "planned_return":
-            await self._planned_return.cancel()
+        self._validate_external_profile_targets(next_profiles, explicit_publication_targets)
         selection_unchanged = (
-            normalized_ids == previous_ids and mode_id == self.active_mode_id
+            normalized_ids == previous_ids and mode_id == previous_selection["base_mode_id"]
+            and overrides == previous_selection["zone_profile_overrides"]
         )
         if selection_unchanged and not explicit_publication_targets:
+            if source != "planned_return":
+                await self._planned_return.cancel()
             return
-        affected_candidates = {
-            entity_id
-            for entity_id in self._data["zones"]
-            if self._profile_effect_from_profiles(previous_profiles, entity_id)
-            != self._profile_effect_from_profiles(next_profiles, entity_id)
-        }
+        transition_now = dt_util.now()
+        affected_candidates = set()
+        for entity_id in self._data["zones"]:
+            before = self._profile_transition_effect(previous_profiles, entity_id, transition_now)
+            after = self._profile_transition_effect(next_profiles, entity_id, transition_now)
+            if before[1:3] != after[1:3] or _event_control_intent(before[3]) != _event_control_intent(after[3]):
+                affected_candidates.add(entity_id)
         affected = {
             entity_id
             for entity_id in affected_candidates
@@ -4090,6 +4415,15 @@ class VelairScheduler:
             )
         self._begin_operation(operation_kind, operation_target_id, len(affected))
         cancelled = False
+        selection_persisted = False
+
+        @callback
+        def persisted():
+            nonlocal selection_persisted
+            selection_persisted = True
+            if on_persisted is not None:
+                on_persisted()
+
         try:
             async with self._profile_zone_mutation_scope(lock_targets):
                 # Revalidate ownership after waiting for a handoff lock. A zone
@@ -4097,8 +4431,12 @@ class VelairScheduler:
                 external_targets = self._external_profile_publication_targets(
                     previous_profiles,
                     next_profiles,
-                    include_unpublished=True,
+                    include_unpublished=include_unpublished,
+                    publication_scope=publication_scope,
                 )
+                self._validate_external_profile_targets(next_profiles, external_targets)
+                if source != "planned_return":
+                    await self._planned_return.cancel()
                 affected = {
                     entity_id
                     for entity_id in affected_candidates
@@ -4117,7 +4455,10 @@ class VelairScheduler:
                     for entity_id in affected:
                         self._invalidate_climate_delivery(entity_id)
                     self._data["global_"]["active_profile_ids"] = normalized_ids
-                    self._data["global_"]["active_mode_id"] = mode_id
+                    self._data["global_"]["base_profile_ids"] = list(normalized_ids)
+                    self._data["global_"]["base_mode_id"] = mode_id
+                    self._data["global_"]["zone_profile_overrides"] = overrides
+                    self._data["global_"]["active_mode_id"] = None if overrides else mode_id
                     cancelled = await self._async_apply_profile_transition(
                         previous_profiles,
                         deepcopy(next_profiles),
@@ -4132,9 +4473,11 @@ class VelairScheduler:
                         external_targets=external_targets,
                         zone_transitions_locked=True,
                         preserve_overrides=source == "planned_return",
-                        on_persisted=on_persisted,
+                        on_persisted=persisted,
                     )
         except asyncio.CancelledError:
+            if not selection_persisted:
+                self._restore_profile_mutation_data(previous_data)
             for entity_id in affected:
                 await self._async_restore_delivery_after_failed_mutation(
                     entity_id
@@ -4142,6 +4485,8 @@ class VelairScheduler:
             self._finish_operation(failed=True, error_code="cancelled")
             raise
         except Exception as err:
+            if not selection_persisted:
+                self._restore_profile_mutation_data(previous_data)
             for entity_id in affected:
                 await self._async_restore_delivery_after_failed_mutation(
                     entity_id
@@ -4153,6 +4498,8 @@ class VelairScheduler:
             )
             raise
         self._finish_operation()
+        if not selection_unchanged:
+            self._async_fire_selection_changed(previous_selection, source)
         if normalized_ids == previous_ids:
             if cancelled:
                 raise asyncio.CancelledError
@@ -4164,6 +4511,16 @@ class VelairScheduler:
         )
         if cancelled:
             raise asyncio.CancelledError
+
+    def _validate_external_profile_targets(self, profiles, entities):
+        """Reject unsupported effective weeks before changing selection or return authority."""
+        if self._external_execution is None:
+            return
+        for entity in entities:
+            schedule = self._effective_schedule_from_profiles(profiles, entity)
+            if schedule is None:
+                raise ValueError(f"Pause profile behavior is unavailable for external zone {entity}")
+            self._external_execution.ensure_schedule_supported(entity, schedule)
 
     def _validate_profile(self, profile: ClimateProfileData, *, data=None) -> None:
         """Validate and snap every entity-bound schedule in a profile."""
@@ -4258,67 +4615,79 @@ class VelairScheduler:
         on_persisted: Callable[[], None] | None = None,
     ) -> bool:
         """Reset affected runtime state and immediately enact effective behavior."""
-        now = dt_util.now()
-        affected: set[str] = set()
-        metadata_only: set[str] = set()
-        for entity_id in self._data["zones"]:
-            previous_effect = self._profile_transition_effect(
-                previous_profiles, entity_id, now, data=rollback_data
-            )
-            next_effect = self._profile_transition_effect(
-                next_profiles, entity_id, now
-            )
-            previous_owner, previous_kind, previous_pause, previous_event = (
-                previous_effect
-            )
-            next_owner, next_kind, next_pause, next_event = next_effect
-            behavior_changed = (
-                previous_owner != next_owner
-                or previous_kind != next_kind
-                or previous_pause != next_pause
-            )
-            if behavior_changed or _event_control_intent(
-                previous_event
-            ) != _event_control_intent(next_event):
-                affected.add(entity_id)
-            elif (
-                previous_event is not None
-                and next_event is not None
-                and (previous_event.weekday, previous_event.start)
-                != (next_event.weekday, next_event.start)
-            ):
-                metadata_only.add(entity_id)
-
-        external_affected = (
-            {entity for entity in self._data["zones"] if self._is_external_execution(entity) and self._effective_schedule_from_profiles(previous_profiles, entity, data=rollback_data) != self._effective_schedule_from_profiles(next_profiles, entity)}
-            if external_targets is None
-            else set(external_targets)
-        )
-        if self._external_execution is not None:
-            for entity_id in external_affected:
-                schedule = self._effective_schedule_from_profiles(
-                    next_profiles, entity_id
+        try:
+            now = dt_util.now()
+            affected: set[str] = set()
+            metadata_only: set[str] = set()
+            for entity_id in self._data["zones"]:
+                previous_effect = self._profile_transition_effect(
+                    previous_profiles, entity_id, now, data=rollback_data
                 )
-                if schedule is None:
-                    raise ValueError(
-                        f"Pause profile behavior is unavailable for external zone {entity_id}"
+                next_effect = self._profile_transition_effect(
+                    next_profiles, entity_id, now
+                )
+                previous_owner, previous_kind, previous_pause, previous_event = (
+                    previous_effect
+                )
+                next_owner, next_kind, next_pause, next_event = next_effect
+                behavior_changed = (
+                    previous_kind != next_kind
+                    or previous_pause != next_pause
+                )
+                if behavior_changed or _event_control_intent(
+                    previous_event
+                ) != _event_control_intent(next_event):
+                    affected.add(entity_id)
+                elif (
+                    previous_event is not None
+                    and next_event is not None
+                    and (previous_event.weekday, previous_event.start)
+                    != (next_event.weekday, next_event.start)
+                ):
+                    metadata_only.add(entity_id)
+
+            schedule_changed = {
+                entity for entity in self._data["zones"]
+                if not self._is_external_execution(entity)
+                and not (preserve_overrides and self._is_zone_override_active(entity, now))
+                and self._effective_schedule_from_profiles(previous_profiles, entity, data=rollback_data)
+                != self._effective_schedule_from_profiles(next_profiles, entity)
+            }
+            external_affected = (
+                {entity for entity in self._data["zones"] if self._is_external_execution(entity) and self._effective_schedule_from_profiles(previous_profiles, entity, data=rollback_data) != self._effective_schedule_from_profiles(next_profiles, entity)}
+                if external_targets is None
+                else set(external_targets)
+            )
+            if self._external_execution is not None:
+                for entity_id in external_affected:
+                    schedule = self._effective_schedule_from_profiles(
+                        next_profiles, entity_id
                     )
-                self._external_execution.ensure_schedule_supported(
-                    entity_id, schedule
-                )
+                    if schedule is None:
+                        raise ValueError(
+                            f"Pause profile behavior is unavailable for external zone {entity_id}"
+                        )
+                    self._external_execution.ensure_schedule_supported(
+                        entity_id, schedule
+                    )
 
-        # Profile and Mode metadata remains global, while physical transition
-        # work is strictly limited to zones owned by Velair.
-        affected = {
-            entity_id for entity_id in affected
-            if not self._is_external_execution(entity_id)
-            and not (preserve_overrides and self._is_zone_override_active(entity_id, now))
-        }
-        metadata_only = {
-            entity_id for entity_id in metadata_only
-            if not self._is_external_execution(entity_id)
-            and not (preserve_overrides and self._is_zone_override_active(entity_id, now))
-        }
+            # Profile and Mode metadata remains global, while physical transition
+            # work is strictly limited to zones owned by Velair.
+            affected = {
+                entity_id for entity_id in affected
+                if not self._is_external_execution(entity_id)
+                and not (preserve_overrides and self._is_zone_override_active(entity_id, now))
+            }
+            metadata_only = {
+                entity_id for entity_id in metadata_only
+                if not self._is_external_execution(entity_id)
+                and not (preserve_overrides and self._is_zone_override_active(entity_id, now))
+            }
+
+        except (asyncio.CancelledError, Exception):
+            if rollback_data is not None:
+                self._restore_profile_mutation_data(rollback_data)
+            raise
 
         cancelled_boosts: list[tuple[str, ZoneOverride]] = []
         try:
@@ -4347,6 +4716,7 @@ class VelairScheduler:
             now=now,
             affected=affected,
             metadata_only=metadata_only,
+            schedule_changed=schedule_changed,
             cancelled_boosts=cancelled_boosts,
             external_affected=(external_affected if publish_external else set()),
             source=source,
@@ -4364,6 +4734,7 @@ class VelairScheduler:
         now: datetime,
         affected: set[str],
         metadata_only: set[str],
+        schedule_changed: set[str],
         cancelled_boosts: list[tuple[str, ZoneOverride]],
         external_affected: set[str],
         source: str,
@@ -4372,9 +4743,12 @@ class VelairScheduler:
     ) -> None:
         """Finish runtime work after the profile selection is durably saved."""
         async def complete_local() -> None:
-            for entity_id in affected:
+            for entity_id in affected | schedule_changed:
                 self._discard_preconditioning_session(entity_id)
                 self._clear_applied_preconditioning_targets_for_entity(entity_id)
+                if entity_id not in affected and not self._is_zone_override_active(entity_id, now):
+                    self._invalidate_climate_delivery(entity_id)
+                    await self._async_restore_delivery_after_failed_mutation(entity_id)
             for entity_id, override in cancelled_boosts:
                 self._async_fire_boost_ended(
                     entity_id, override, reason="profile_changed",
@@ -4452,7 +4826,7 @@ class VelairScheduler:
         if zone_transitions_locked:
             await complete_local()
         else:
-            async with self._profile_zone_mutation_scope(affected):
+            async with self._profile_zone_mutation_scope(affected | schedule_changed):
                 await complete_local()
 
         await self._async_publish_profile_external_targets(external_affected)
@@ -4497,7 +4871,7 @@ class VelairScheduler:
                 self._data.pop(key, None)
         current_global = self._data.setdefault("global_", {})
         previous_global = previous_data.get("global_", {})
-        for key in ("active_profile_ids", "active_mode_id"):
+        for key in ("active_profile_ids", "active_mode_id", "base_profile_ids", "base_mode_id", "zone_profile_overrides"):
             if key in previous_global:
                 current_global[key] = deepcopy(previous_global[key])
             else:
@@ -4531,11 +4905,12 @@ class VelairScheduler:
                 preview_by_id = {
                     profile["key"]: profile for profile in preview_profiles
                 }
-                preview_active = [
-                    preview_by_id[profile_id]
-                    for profile_id in self.active_profile_ids
-                    if profile_id in preview_by_id
-                ]
+                preview_data = deepcopy(self._data)
+                preview_data["profiles"] = preview_profiles
+                preview_overrides = {entity: key for entity, key in self.profile_selection["zone_profile_overrides"].items()
+                    if key is None or key in preview_by_id and entity in preview_by_id[key]["zones"]}
+                preview_active = self._selection_profiles(
+                    [key for key in self.active_profile_ids if key in preview_by_id], preview_overrides, data=preview_data)
                 profile_transition_targets = self._profile_transition_zone_changes(
                     deepcopy(self._active_profiles()), preview_active
                 )
@@ -4594,8 +4969,8 @@ class VelairScheduler:
             for entity, zone in self._data["zones"].items():
                 old = self._effective_schedule(entity, zone)
                 next_source = resource_candidate["zones"][entity]
-                for profile in resource_candidate.get("profiles", []):
-                    if profile["key"] in self.active_profile_ids and entity in profile["zones"]:
+                for profile in self._selection_profiles(data=resource_candidate):
+                    if entity in profile["zones"]:
                         behavior = profile["zones"][entity]
                         if behavior["behavior"] == "schedule":
                             next_source = behavior
@@ -4778,12 +5153,19 @@ class VelairScheduler:
             ]
         if modes is not None:
             self._data["modes"] = modes
+        if profiles is not None:
+            state = self._data["global_"]
+            state["base_profile_ids"] = list(state.get("active_profile_ids", []))
+            profile_zones = {item["key"]: item["zones"] for item in profiles}
+            state["zone_profile_overrides"] = {
+                entity: key for entity, key in state.get("zone_profile_overrides", {}).items()
+                if entity in self._data["zones"] and (key is None or entity in profile_zones.get(key, {}))}
         if profiles is not None or modes is not None:
             selected_mode = next(
                 (
                     mode
                     for mode in self._data.get("modes", [])
-                    if mode["key"] == self.active_mode_id
+                    if mode["key"] == self.profile_selection["base_mode_id"]
                 ),
                 None,
             )
@@ -4791,7 +5173,8 @@ class VelairScheduler:
                 selected_mode is None
                 or selected_mode["profile_ids"] != self.active_profile_ids
             ):
-                self._data["global_"]["active_mode_id"] = None
+                self._data["global_"]["base_mode_id"] = None
+            self._data["global_"]["active_mode_id"] = None if self._data["global_"].get("zone_profile_overrides") else self._data["global_"].get("base_mode_id")
         if profiles is not None:
             next_active_profiles = deepcopy(self._active_profiles())
             cancelled = False
@@ -4808,6 +5191,7 @@ class VelairScheduler:
             except (asyncio.CancelledError, Exception):
                 await rollback_portable_mutation()
                 raise
+            self._async_fire_selection_changed(self._selection_from_data(previous_data), "portable_import")
             if previous_profile_ids != self.active_profile_ids:
                 self._async_fire_profile_changed(
                     self.active_profile_ids,
@@ -4828,6 +5212,7 @@ class VelairScheduler:
                 raise
             await publish_imported_external_schedules()
             self._async_write_state()
+            self._async_fire_selection_changed(self._selection_from_data(previous_data), "portable_import")
             return
 
         try:
@@ -4893,11 +5278,12 @@ class VelairScheduler:
             self._invalidate_climate_delivery(entity_id)
             self._discard_preconditioning_session(entity_id)
             self._clear_applied_preconditioning_targets_for_entity(entity_id)
-            await self._async_clear_room_sensor_assist(
-                entity_id,
-                restore=event is None,
-                reason=reason,
-            )
+            with measure_save_phase("room_assist"):
+                await self._async_clear_room_sensor_assist(
+                    entity_id,
+                    restore=event is None,
+                    reason=reason,
+                )
         elif (
             source_changed
             and self.mode == MODE_AUTO
@@ -4905,7 +5291,8 @@ class VelairScheduler:
         ):
             # The physical target is unchanged, but Room Assist must follow the
             # new authoritative source block without restoring or resending it.
-            await self._async_refresh_room_sensor_assist_from_current_event(entity_id)
+            with measure_save_phase("room_assist"):
+                await self._async_refresh_room_sensor_assist_from_current_event(entity_id)
 
         self.async_schedule_next_event()
 
@@ -4913,10 +5300,11 @@ class VelairScheduler:
             return
 
         try:
-            await self.async_apply_current_schedule(
-                entity_id,
-                source="schedule_saved",
-            )
+            with measure_save_phase("climate_apply"):
+                await self.async_apply_current_schedule(
+                    entity_id,
+                    source="schedule_saved",
+                )
         except Exception:
             _LOGGER.exception(
                 "Failed to apply current schedule after saving a schedule for %s",
@@ -4956,6 +5344,7 @@ class VelairScheduler:
         if resolve_restored() is not None:
             self._climate_delivery.register_current(entity_id, resolve_restored)
 
+    @measure_save_phase("reschedule")
     def async_schedule_next_event(self) -> None:
         """Schedule the next scheduler action."""
         self._clear_timer()
@@ -4968,6 +5357,7 @@ class VelairScheduler:
             self._clear_room_sensor_assist_timer()
             self._clear_comfort_listener()
             self.next_events_by_zone = []
+            self._effective_weekly_snapshot = []
             self._next_event_by_entity = {}
             self.next_events = []
             self.next_event = None
@@ -4980,7 +5370,9 @@ class VelairScheduler:
         self._refresh_preconditioning_replan_listener()
 
         if self.mode == MODE_AUTO:
-            zone_events = self.calculate_next_events_by_zone(now)
+            future_events = self._iter_future_events(now)
+            self._effective_weekly_snapshot = future_events
+            zone_events = self.calculate_next_events_by_zone(now, future_events=future_events)
             self.next_events_by_zone = zone_events
             self._next_event_by_entity = {
                 event.entity_id: event
@@ -4996,6 +5388,7 @@ class VelairScheduler:
             self._async_update_preconditioning_plans(zone_events)
         else:
             self.next_events_by_zone = []
+            self._effective_weekly_snapshot = []
             self._next_event_by_entity = {}
             self.next_events = []
             self.next_event = None
@@ -5042,10 +5435,10 @@ class VelairScheduler:
         next_time = min(event.when for event in candidates)
         return [event for event in candidates if event.when == next_time]
 
-    def calculate_next_events_by_zone(self, now: datetime) -> list[ClimateEvent]:
+    def calculate_next_events_by_zone(self, now: datetime, *, future_events: list[ClimateEvent] | None = None) -> list[ClimateEvent]:
         """Return the next schedule event for each zone."""
         events_by_entity: dict[str, ClimateEvent] = {}
-        for event in self._iter_future_events(now):
+        for event in self._iter_future_events(now) if future_events is None else future_events:
             if event.when <= now and not _is_due_preconditioning_event(event, now):
                 continue
 
@@ -5231,6 +5624,7 @@ class VelairScheduler:
                             "action": event.action,
                             **_event_target_mapping(event),
                             "hvac_mode": event.hvac_mode,
+                            **({"temperature_only": True} if event.temperature_only else {}),
                             **_climate_options_from_event(event),
                             "weekday": event.weekday,
                             "start": event.start,
@@ -5376,14 +5770,17 @@ class VelairScheduler:
             )
         )
 
+    @measure_save_phase("future_events")
     def _iter_future_events(
         self,
         now: datetime,
         *,
         clear_applied: bool = True,
+        entity_id_filter: str | None = None,
     ) -> list[ClimateEvent]:
         """Return upcoming events in the next seven days."""
         events: list[ClimateEvent] = []
+        schedules: dict[str, dict | None] = {}
         today = now.date()
         if clear_applied:
             self._clear_applied_preconditioning_targets(now)
@@ -5393,6 +5790,8 @@ class VelairScheduler:
             weekday = WEEKDAYS[event_date.weekday()]
 
             for entity_id, zone in self._data["zones"].items():
+                if entity_id_filter is not None and entity_id != entity_id_filter:
+                    continue
                 if not zone["enabled"]:
                     continue
                 if self._is_external_execution(entity_id):
@@ -5400,7 +5799,11 @@ class VelairScheduler:
                 if self._is_zone_override_active(entity_id, now):
                     continue
 
-                schedule = self._effective_schedule(entity_id, zone)
+                # A scan is synchronous: resolve each effective week once while
+                # retaining date/entity/block order and fresh data on the next call.
+                if entity_id not in schedules:
+                    schedules[entity_id] = self._effective_schedule(entity_id, zone)
+                schedule = schedules[entity_id]
                 if schedule is None:
                     continue
 
@@ -5448,6 +5851,7 @@ class VelairScheduler:
                             start=block["start"],
                             action=block.get("action", ACTION_SET_TEMPERATURE),
                             hvac_mode=block.get("hvac_mode"),
+                            temperature_only=block.get("temperature_only", False),
                             **_event_climate_options(block),
                             target_when=target_when_for_event,
                             preconditioning_diagnostics=(
@@ -5558,6 +5962,7 @@ class VelairScheduler:
                     start=block["start"],
                     action=block.get("action", ACTION_SET_TEMPERATURE),
                     hvac_mode=block.get("hvac_mode"),
+                    temperature_only=block.get("temperature_only", False),
                     **_event_climate_options(block),
                 )
                 candidate_start = (
@@ -5631,11 +6036,11 @@ class VelairScheduler:
         if planned_target is not None and (
             planned_target.weekday, planned_target.start, planned_target.target_when,
             planned_target.temperature, planned_target.target_temp_low,
-            planned_target.target_temp_high, planned_target.hvac_mode,
+            planned_target.target_temp_high, planned_target.hvac_mode, planned_target.temperature_only,
         ) == (
             session.weekday, session.start, session.target_when,
             session.target_temperature if session.target_kind == "scalar" else None,
-            session.target_temp_low, session.target_temp_high, session.hvac_mode,
+            session.target_temp_low, session.target_temp_high, session.hvac_mode, session.temperature_only,
         ):
             # Arrival preparation belongs to the destination intent, rather
             # than to transitions in the currently selected Away week.
@@ -5796,7 +6201,10 @@ class VelairScheduler:
             return None
 
         target_range = _event_temperature_range(block)
-        requested_mode = hvac_mode or block.get("hvac_mode")
+        temperature_only = block.get("temperature_only", False)
+        if temperature_only and self._current_hvac_mode(entity_id) == "off":
+            return None
+        requested_mode = None if temperature_only else hvac_mode or block.get("hvac_mode")
         effective_mode_getter = getattr(
             self._climate_manager, "effective_hvac_mode", None
         )
@@ -5804,7 +6212,7 @@ class VelairScheduler:
             effective_mode_getter(
                 entity_id,
                 requested_mode,
-                ensure_on=True,
+                ensure_on=not temperature_only,
                 range_target=bool(target_range),
             )
             if callable(effective_mode_getter)
@@ -6226,19 +6634,21 @@ class VelairScheduler:
         if event.temperature is None and not is_range:
             raise ValueError(f"Missing temperature target for {event.entity_id} schedule event")
 
-        target_mode = hvac_mode or event.hvac_mode
+        target_mode = None if event.temperature_only else hvac_mode or event.hvac_mode
         if is_range:
             self._climate_manager.validate_temperature_target(
                 event.entity_id,
                 range_target=True,
                 hvac_mode=target_mode,
-                ensure_on=True,
+                ensure_on=not event.temperature_only,
+                **({"temperature_only": True} if event.temperature_only else {}),
             )
             await self._climate_manager.async_set_temperature_range(
                 event.entity_id,
                 event.target_temp_low,
                 event.target_temp_high,
-                ensure_on=True,
+                ensure_on=not event.temperature_only,
+                **({"temperature_only": True} if event.temperature_only else {}),
                 fan_mode=event.fan_mode,
                 hvac_mode=target_mode,
                 humidity=event.humidity,
@@ -6250,7 +6660,8 @@ class VelairScheduler:
             await self._climate_manager.async_set_temperature(
                 event.entity_id,
                 event.temperature,
-                ensure_on=True,
+                ensure_on=not event.temperature_only,
+                **({"temperature_only": True} if event.temperature_only else {}),
                 fan_mode=event.fan_mode,
                 hvac_mode=target_mode,
                 humidity=event.humidity,
@@ -6360,7 +6771,7 @@ class VelairScheduler:
         is_range = (
             event.target_temp_low is not None and event.target_temp_high is not None
         )
-        target_mode = hvac_mode or event.hvac_mode
+        target_mode = None if event.temperature_only else hvac_mode or event.hvac_mode
         if is_range:
             await self._async_log_climate_temperature(
                 event.entity_id,
@@ -6400,6 +6811,9 @@ class VelairScheduler:
         """Start a runtime learning session for one preconditioning event."""
         if event.target_when is None:
             return
+        if event.temperature_only and self._current_hvac_mode(event.entity_id) == "off":
+            self._discard_preconditioning_session(event.entity_id)
+            return
         config = normalize_preconditioning_data(
             self._data["zones"][event.entity_id].get("preconditioning")
         )
@@ -6413,6 +6827,7 @@ class VelairScheduler:
         block: ScheduleBlock = {
             "start": event.start,
             "action": event.action,
+            "temperature_only": event.temperature_only,
             **_event_target_mapping(event),
         }
         if event.hvac_mode is not None:
@@ -6446,6 +6861,7 @@ class VelairScheduler:
             start_temperature=start_temperature,
             hvac_mode=hvac_mode or event.hvac_mode,
             startup_minutes=startup_minutes,
+            temperature_only=event.temperature_only,
             outdoor_temp_start=self._outdoor_temperature(
                 event.entity_id,
                 config,
@@ -6663,6 +7079,9 @@ class VelairScheduler:
     ) -> None:
         """Close a learning session when its target has been reached."""
         session = self._preconditioning_sessions.get(entity_id)
+        if session is not None and session.temperature_only and self._current_hvac_mode(entity_id) == "off":
+            self._discard_preconditioning_session(entity_id)
+            return
         if session is None:
             return
         zone = self._data["zones"].get(entity_id)
@@ -6720,6 +7139,11 @@ class VelairScheduler:
         quality: str,
     ) -> None:
         """Persist one useful local learning observation and close the session."""
+        if session.temperature_only:
+            mode = self._current_hvac_mode(session.entity_id)
+            if mode == "off" or (mode == "heat" and session.direction == "cool") or (mode == "cool" and session.direction == "heat"):
+                self._discard_preconditioning_session(session.entity_id)
+                return
         zone = self._data["zones"].get(session.entity_id)
         if zone is None or not normalize_preconditioning_data(
             zone.get("preconditioning")
@@ -6905,7 +7329,8 @@ class VelairScheduler:
                     target_low,
                     target_high,
                     ensure_on=False,
-                    hvac_mode=state.hvac_mode,
+                    **({"temperature_only": True} if self._temperature_only_assist_restore(state) else {}),
+                    hvac_mode=None if self._temperature_only_assist_restore(state) else state.hvac_mode,
                     **climate_options,
                 ),
             )
@@ -6920,7 +7345,8 @@ class VelairScheduler:
                     state.entity_id,
                     target,
                     ensure_on=False,
-                    hvac_mode=state.hvac_mode,
+                    **({"temperature_only": True} if self._temperature_only_assist_restore(state) else {}),
+                    hvac_mode=None if self._temperature_only_assist_restore(state) else state.hvac_mode,
                     **climate_options,
                 ),
             )
@@ -6944,7 +7370,7 @@ class VelairScheduler:
             assist_delta=0.0,
             applied_offset=None if target_low is not None else 0.0,
             direction=state.direction,
-            hvac_mode=state.hvac_mode,
+            hvac_mode=None if self._temperature_only_assist_restore(state) else state.hvac_mode,
             reason=reason,
         )
 
@@ -7107,6 +7533,7 @@ class VelairScheduler:
                     start=session.start,
                     action=ACTION_SET_TEMPERATURE,
                     hvac_mode=session.hvac_mode,
+                    temperature_only=session.temperature_only,
                     **self._room_sensor_assist_scheduled_target_options(
                         entity_id,
                         session.weekday,
@@ -7199,6 +7626,7 @@ class VelairScheduler:
                 start=start,
                 action=ACTION_SET_TEMPERATURE,
                 hvac_mode=hvac_mode,
+                temperature_only=self._scheduled_temperature_only(entity_id, weekday, start),
                 **self._room_sensor_assist_scheduled_target_options(
                     entity_id,
                     weekday,
@@ -7208,6 +7636,12 @@ class VelairScheduler:
             )
 
         return None
+
+    def _scheduled_temperature_only(self, entity_id: str, weekday: str, start: str) -> bool:
+        zone = self._data["zones"].get(entity_id)
+        schedule = self._effective_schedule(entity_id, zone) if zone else None
+        return any(block.get("start") == start and block.get("temperature_only", False)
+                   for block in (schedule or {}).get(weekday, []))
 
     def _room_sensor_assist_scheduled_target_options(
         self,
@@ -7236,7 +7670,8 @@ class VelairScheduler:
         if self.mode != MODE_AUTO or self._is_zone_override_active(entity_id, now):
             return None
 
-        for event in self.calculate_next_events_by_zone(now):
+        future_events = self._iter_future_events(now, entity_id_filter=entity_id)
+        for event in self.calculate_next_events_by_zone(now, future_events=future_events):
             if event.entity_id != entity_id:
                 continue
             if _is_due_preconditioning_event(event, now):
@@ -7306,6 +7741,8 @@ class VelairScheduler:
     ) -> bool:
         """Return whether a runtime assist state belongs to a target event."""
         if state is None or target_event is None:
+            return False
+        if state.temperature_only != target_event.temperature_only:
             return False
         if state.weekday != target_event.weekday or state.start != target_event.start:
             return False
@@ -7810,6 +8247,16 @@ class VelairScheduler:
         """Return the current invalidation generation for one climate."""
         return self._room_sensor_assist_generations.get(entity_id, 0)
 
+    def _temperature_only_assist_restore(self, state: _RoomSensorAssistState) -> bool:
+        """Never replay a captured mode after mode ownership was relinquished."""
+        current = self._current_schedule_event(state.entity_id, dt_util.now())
+        return state.temperature_only or (current is not None and current.temperature_only)
+
+    def _temperature_only_target(self, entity_id: str) -> bool:
+        """Resolve mode ownership at the serialized delivery boundary."""
+        event = self._resolve_authoritative_delivery_event(entity_id)
+        return event is not None and event.temperature_only
+
     def _room_sensor_assist_request_is_authoritative(
         self,
         entity_id: str,
@@ -7922,6 +8369,14 @@ class VelairScheduler:
         force_apply: bool = False,
     ) -> None:
         """Apply a dynamic target while holding the entity Room Assist lock."""
+        temperature_only = self._temperature_only_target(entity_id)
+        if temperature_only and self._current_hvac_mode(entity_id) == "off":
+            await self._async_clear_room_sensor_assist_locked(
+                entity_id, restore=False, reason="temperature_only_off"
+            )
+            return
+        if temperature_only:
+            hvac_mode = None
         zone = self._data["zones"].get(entity_id)
         if zone is None or not zone["enabled"]:
             _LOGGER.debug("Room Sensor Assist skipped for %s: zone unavailable", entity_id)
@@ -8079,6 +8534,7 @@ class VelairScheduler:
             applied_offset=applied_offset,
             direction=direction,
             hvac_mode=hvac_mode,
+            temperature_only=self._temperature_only_target(entity_id),
             room_temperature_entity_id=room_entity_id,
             weekday=weekday,
             start=start,
@@ -8118,6 +8574,7 @@ class VelairScheduler:
                 ),
                 direction=direction,
                 hvac_mode=hvac_mode,
+                temperature_only=self._temperature_only_target(entity_id),
                 room_temperature_entity_id=room_entity_id,
                 weekday=weekday,
                 start=start,
@@ -8158,7 +8615,8 @@ class VelairScheduler:
             lambda: self._climate_manager.async_set_temperature(
                 entity_id,
                 desired_temperature,
-                ensure_on=True,
+                ensure_on=not self._temperature_only_target(entity_id),
+                **({"temperature_only": True} if self._temperature_only_target(entity_id) else {}),
                 **(
                     self._room_sensor_assist_scheduled_target_options(
                         entity_id,
@@ -8168,7 +8626,7 @@ class VelairScheduler:
                     if weekday is not None and start is not None
                     else {}
                 ),
-                hvac_mode=hvac_mode,
+                hvac_mode=None if self._temperature_only_target(entity_id) else hvac_mode,
             ),
         )
         if generation != self._room_sensor_assist_generation(entity_id):
@@ -8269,6 +8727,7 @@ class VelairScheduler:
             applied_offset=None,
             direction=direction,
             hvac_mode=hvac_mode,
+            temperature_only=self._temperature_only_target(entity_id),
             room_temperature_entity_id=room_entity_id,
             weekday=weekday,
             start=start,
@@ -8315,8 +8774,9 @@ class VelairScheduler:
                 entity_id,
                 applied_low,
                 applied_high,
-                ensure_on=True,
-                hvac_mode=hvac_mode,
+                ensure_on=not self._temperature_only_target(entity_id),
+                **({"temperature_only": True} if self._temperature_only_target(entity_id) else {}),
+                hvac_mode=None if self._temperature_only_target(entity_id) else hvac_mode,
                 **climate_options,
             ),
         )
@@ -8394,6 +8854,8 @@ class VelairScheduler:
         hvac_mode: str | None,
     ) -> str | None:
         """Return the mode a scalar Room Assist operation would use."""
+        if self._temperature_only_target(entity_id):
+            return self._current_hvac_mode(entity_id)
         effective_mode_getter = getattr(
             self._climate_manager,
             "effective_hvac_mode",
@@ -9155,7 +9617,8 @@ class VelairScheduler:
                                     state.target_temp_low,
                                     state.target_temp_high,
                                     ensure_on=False,
-                                    hvac_mode=state.hvac_mode,
+                                    **({"temperature_only": True} if self._temperature_only_assist_restore(state) else {}),
+                                    hvac_mode=None if self._temperature_only_assist_restore(state) else state.hvac_mode,
                                     **climate_options,
                                 ),
                             )
@@ -9166,7 +9629,8 @@ class VelairScheduler:
                                     assisted_entity_id,
                                     state.target_temperature,
                                     ensure_on=False,
-                                    hvac_mode=state.hvac_mode,
+                                    **({"temperature_only": True} if self._temperature_only_assist_restore(state) else {}),
+                                    hvac_mode=None if self._temperature_only_assist_restore(state) else state.hvac_mode,
                                     **climate_options,
                                 ),
                             )
@@ -9198,7 +9662,7 @@ class VelairScheduler:
                             None if state.target_temp_low is not None else 0.0
                         ),
                         direction=state.direction,
-                        hvac_mode=state.hvac_mode,
+                        hvac_mode=None if self._temperature_only_assist_restore(state) else state.hvac_mode,
                         reason=reason,
                     )
                 finally:
@@ -10684,13 +11148,15 @@ class VelairScheduler:
             self._unsub_timer()
             self._unsub_timer = None
 
+    @measure_save_phase("notify")
     def _async_write_state(self) -> None:
         """Notify entities that scheduler state changed."""
+        self._next_effective_event_cache = None
         async_dispatcher_send(self._hass, SIGNAL_SCHEDULER_UPDATED)
 
     def _begin_operation(
         self,
-        kind: Literal["mode_change", "profile_activation"],
+        kind: Literal["mode_change", "profile_activation", "profile_selection"],
         target_id: str | None,
         total: int,
     ) -> None:
@@ -11025,6 +11491,8 @@ class VelairScheduler:
             "start": event.start,
             "source": source,
         }
+        if event.temperature_only:
+            data["temperature_only"] = True
         if event.target_when is not None:
             data["target_when"] = event.target_when.isoformat()
 
@@ -11242,6 +11710,7 @@ class VelairScheduler:
             "current_temperature": diagnostics["current_temperature"],
             "temperature_delta": diagnostics["delta_temperature"],
             "hvac_mode": event.hvac_mode,
+            **({"temperature_only": True} if event.temperature_only else {}),
             **_climate_options_from_event(event),
             "model_source": diagnostics["source"],
             "complete_sample_count": diagnostics["complete_sample_count"],
@@ -11470,6 +11939,7 @@ class VelairScheduler:
         unit = unit_getter(entity_id) if unit_getter else "°C"
         return f"{target_temp_low:g}–{target_temp_high:g} {unit}"
 
+    @measure_save_phase("next_action")
     def _calculate_next_action_time(self, now: datetime) -> datetime | None:
         """Return the next timer action."""
         candidates: list[datetime] = []
@@ -11792,6 +12262,7 @@ def _event_control_intent(event: ClimateEvent | None) -> tuple[object, ...] | No
         event.target_temp_low,
         event.target_temp_high,
         event.hvac_mode,
+        event.temperature_only,
         event.fan_mode,
         event.preset_mode,
         event.swing_mode,
@@ -11889,6 +12360,8 @@ def _block_without_climate_options(block: ScheduleBlock) -> ScheduleBlock:
             clean_block["hvac_mode"] = block["hvac_mode"]
     elif action == ACTION_SET_TEMPERATURE:
         clean_block.update(temperature_target_from_mapping(block))
+        if block.get("temperature_only"):
+            clean_block["temperature_only"] = True
         if block.get("hvac_mode"):
             clean_block["hvac_mode"] = block["hvac_mode"]
     return clean_block
@@ -12079,7 +12552,7 @@ def _comfort_state_freshness(state, stale_after_minutes: int) -> str:
 
 def _event_has_explicit_target(event: ClimateEvent) -> bool:
     """Return whether a current event should replace an expired boost."""
-    return event.action == ACTION_TURN_OFF or event.hvac_mode is not None
+    return event.temperature_only or event.action == ACTION_TURN_OFF or event.hvac_mode is not None
 
 
 def _is_due_preconditioning_event(event: ClimateEvent, now: datetime) -> bool:

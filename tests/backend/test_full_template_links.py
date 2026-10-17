@@ -93,7 +93,7 @@ class FullTemplateLinksTest(unittest.IsolatedAsyncioTestCase):
         self.full()
         runtime = library.LibrarySchemaTest().portable_runtime(self.data)
         payload = api._build_export_payload(runtime, ["zones"])
-        self.assertEqual(payload["model_version"], 16)
+        self.assertEqual(payload["model_version"], 18)
         self.assertEqual(set(payload["sections"]), {"zones", "templates", "block_presets"})
         imported = api._build_import_data(runtime, payload, ["zones"])
         self.assertEqual(imported["zones"]["climate.salon"]["template_links"]["tuesday"], {"mode": "full", "template_key": "workday"})

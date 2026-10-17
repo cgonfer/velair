@@ -105,6 +105,11 @@ For example, a sensor becoming unavailable at 09:00 warns immediately, not at 09
 
 ## Safety and precedence
 
+Selecting a Velair Mode or Profile uses its block policies. **Temperature
+only** updates the target without requesting an HVAC mode change; use explicit
+**Heat** or **Cool** blocks when selecting a season should start the equipment.
+The policy does not suppress direct HVAC actions configured in the blueprint.
+
 While the sensor is invalid, the blueprint makes no new seasonal selection; it does not turn off devices automatically. The previously selected Mode and its schedule remain in place. Respond to the notification if that behavior is unsuitable for your home.
 
 Configured actions use normal Home Assistant semantics and traces. An action error does not roll back earlier actions. The blueprint cannot generically verify that an arbitrary action selected the intended routine or reached a physical device.

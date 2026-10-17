@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](installation.md) · [Español](in
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -104,6 +104,15 @@ Obsługiwane wartości `view`:
 - `preconditioning`: konfiguracja adaptacyjnego przygotowania temperatury i stan lokalnego uczenia.
 - `planned-return`: kompaktowe sterowanie jednorazowym powrotem, liczby skonfigurowanych źródeł obecności i oś czasu potwierdzonego wyjścia. Bez zapisanych źródeł obecności zaplanowanie powrotu od razu stosuje tryb nieobecności; automatyczna cotygodniowa rutyna nadal wymaga źródeł.
 - `diagnostics`: stan działania, ograniczona historia, filtry i eksport raportu zgłoszenia.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+### Wykrywanie karty i rozwiązywanie problemów z zasobem
+
+Używaj wyłącznie zasobu modułowego integracji `/velair_frontend/velair-card.js`. Usuń zduplikowane zasoby Velair, także starszy `/local/velair-card.js`, i przeładuj przeglądarkę. Zarejestrowanego elementu niestandardowego nie można zastąpić; starszy zasób wczytany jako pierwszy może pozostawić przeglądarkę z nieaktualną kartą.
+
+Selektor kart pulpitu wykrywa Velair przez metadane frontendu. Ręczne dodanie `type: custom:velair-card` w YAML korzysta z zarejestrowanego elementu. Są to oddzielne sprawdzenia: jeśli YAML działa, ale karty nie ma w selektorze, zaznacz tę różnicę w zgłoszeniu.
+
+Jeżeli wykrywanie różni się na komputerze i telefonie, sprawdź błędy JavaScript w konsoli deweloperskiej i żądanie zasobu na karcie Network przeglądarki, której dotyczy problem. Podaj wersje Home Assistant i Velair, przeglądarkę, dokładny URL zasobu oraz istotny tekst błędu. Usuń prywatne dane przed udostępnieniem logów. Poprawne wczytanie w innej przeglądarce nie ustala przyczyny problemu w tej dotkniętej błędem.
 
 <a id="updating"></a>
 ## Aktualizacja

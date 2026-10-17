@@ -91,3 +91,17 @@ describe("settings portability", () => {
     )).toBe(true);
   });
 });
+
+
+it("previews removed zone exceptions before importing replacement Profiles", () => {
+  const viewHost = host();
+  viewHost._data.profile_selection = { base_profile_ids: [], base_mode_id: null,
+    zone_profile_overrides: { "climate.office": "work" } };
+  viewHost._importPayload = { temperature_unit: "°C", sections: { profiles: [] } };
+  viewHost._importSections = new Set(["profiles"]);
+  const container = document.createElement("div");
+  render(renderPortabilitySettings(viewHost), container);
+  const warning = [...container.querySelectorAll(".portable-warning")]
+    .find((element) => element.textContent?.includes("profileImportOverridesWarning"));
+  expect(warning?.textContent).toContain("climate.office");
+});

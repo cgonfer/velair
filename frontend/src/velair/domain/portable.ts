@@ -1,5 +1,5 @@
 import { PORTABLE_FORMAT, PORTABLE_MODEL_VERSION, PORTABLE_SECTIONS } from "../constants";
-import type { PortableSection, VelairPortablePayload } from "../types";
+import type { PortableSection, ScheduleResponse, VelairPortablePayload } from "../types";
 
 export type PortableValidationResult =
   | {
@@ -173,4 +173,22 @@ export function unmatchedPreconditioningLearningEntities(
 
   const configured = new Set(configuredEntities);
   return Object.keys(learning).filter((entityId) => !configured.has(entityId));
+}
+
+
+/** Preview reference removal only; validation and effective schedules remain backend-owned. */
+export function portableImportRemovedProfileOverrides(
+  data: ScheduleResponse | undefined,
+  payload: VelairPortablePayload | undefined,
+  sections: Set<PortableSection>,
+): string[] {
+  if (!sections.has("profiles") || !Array.isArray(payload?.sections?.profiles)) return [];
+  const incoming = new Map(payload.sections.profiles
+    .filter((profile): profile is { key: string; zones: Record<string, unknown> } => Boolean(profile)
+      && typeof profile === "object" && typeof profile.key === "string"
+      && Boolean(profile.zones) && typeof profile.zones === "object")
+    .map((profile) => [profile.key, profile.zones]));
+  return Object.entries(data?.profile_selection?.zone_profile_overrides ?? {})
+    .filter(([entityId, profileId]) => profileId !== null && !(entityId in (incoming.get(profileId) ?? {})))
+    .map(([entityId]) => entityId);
 }

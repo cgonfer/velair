@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](pause-zone-for-open-windows.md) �
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.2 |
+| Ostatnia synchronizacja | 2026-10-17 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -88,6 +88,8 @@ Wykonania automatyzacji mogą się nakładać, więc zdarzenie `opened_due` nie 
 
 <a id="safety-and-precedence"></a>
 ## Bezpieczeństwo i pierwszeństwo
+
+Gdy aktywny blok używa **Tylko temperatura**, wznowienie po zamknięciu okien ponownie stosuje cel bez żądania zmiany trybu HVAC. Jeśli blueprint wyłączył termostat, pozostaje on wyłączony; w razie potrzeby użyj określonego trybu w późniejszym bloku lub włącz go ręcznie. **Zachowaj bieżący tryb** zachowuje dotychczasowe zachowanie przy ponownym uruchomieniu. To polityka aktywnego bloku, a nie nowe pole blueprintu; ponowny import nie jest wymagany.
 
 Blueprint tworzy każdą pauzę ze skonfigurowanym **Pause ID**. Domyślnie to `velair_window_guard`; Velair zapisuje właściciela niezależnie dla każdego wybranego termostatu.
 

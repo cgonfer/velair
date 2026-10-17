@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](installation.md) · [Español](installation.
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.2 |
+| Última sincronización | 2026-10-17 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -107,6 +107,16 @@ Valores de `view` admitidos:
 - `preconditioning`: configuración del preacondicionamiento adaptativo y estado del aprendizaje local.
 - `planned-return`: controles compactos de regreso puntual, recuentos de las fuentes de ocupación configuradas y una línea temporal de salida confirmada. Sin fuentes de ocupación guardadas, Programar regreso aplica Ausente inmediatamente; la rutina semanal automática sigue necesitando fuentes.
 - `diagnostics`: estado de ejecución, historial limitado, filtros y exportación de informes de problemas.
+
+<a id="card-discovery-and-resource-troubleshooting"></a>
+
+### Detección de la card y diagnóstico de recursos
+
+Utiliza solo el recurso de módulo `/velair_frontend/velair-card.js` servido por la integración. Elimina los recursos duplicados de Velair, incluido cualquier `/local/velair-card.js` antiguo, y después recarga el navegador. Los elementos personalizados del navegador no se pueden sustituir una vez registrados, por lo que un recurso antiguo cargado primero puede dejar ese navegador usando una implementación obsoleta de la card.
+
+El selector de cards del dashboard descubre Velair mediante metadatos del frontend. Añadir manualmente `type: custom:velair-card` en YAML utiliza el elemento personalizado registrado; son comprobaciones distintas. Si la card funciona mediante YAML pero no aparece en el selector, indica esa diferencia al comunicar el problema.
+
+Si la detección difiere entre ordenador y móvil, comprueba los errores de JavaScript en la consola de desarrollo del navegador afectado y la solicitud del recurso en la pestaña Red. Incluye las versiones de Home Assistant y Velair, el navegador afectado, la URL exacta del recurso y los mensajes de error pertinentes. Elimina los detalles privados antes de compartir registros. Que cargue correctamente en otro navegador no determina la causa del fallo en el navegador afectado.
 
 <a id="updating"></a>
 

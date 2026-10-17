@@ -8,8 +8,8 @@ Traductions: [Original en anglais](home-away-from-occupancy.md) · [Español](ho
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.2 |
+| Dernière synchronisation | 2026-10-17 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -85,6 +85,8 @@ Au démarrage, les vérifications d’occupation, d’absence et de disponibilit
 
 <a id="safety-and-precedence"></a>
 ## Sécurité et priorités
+
+Les actions de Mode et de Profil suivent la politique du bloc sélectionné. Un bloc **Température uniquement** met à jour sa cible sans demander de changement de mode HVAC ; sélectionner Présence n’allume donc pas forcément un équipement éteint. Choisissez un bloc **Chauffage** ou **Refroidissement** explicite si Présence doit démarrer l’équipement. Les actions climatiques directes configurées dans ce blueprint restent des actions Home Assistant explicites ; la politique du bloc ne les supprime pas.
 
 Le blueprint exécute uniquement les actions que vous configurez. Les priorités existantes de Velair pour les Modes, Profils, Forçages et pauses continuent de s’appliquer. Une entité d’occupation `unknown` ou `unavailable` n’active ni Présence ni Absence ; l’avertissement identifie l’entité et explique que les actions restent suspendues jusqu’à ce qu’elle signale un état d’occupation ou d’absence pris en charge.
 
