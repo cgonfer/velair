@@ -1,6 +1,9 @@
 import { css } from "lit";
+import { plannedReturnDepartureStatusStyles } from "../views/planned-return-departure-status";
 
 export const overviewStyles = css`
+${plannedReturnDepartureStatusStyles}
+.overview-return-identity > .return-departure-confirmation { margin-inline-start: 34px; }
 .overview-planned-return-summary { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: minmax(0,1fr) 24px; column-gap: 12px; align-items: center; text-align: start; min-height: 44px; padding: 12px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--purple-color, #9c6ade) 35%, var(--divider-color)); border-radius: 10px; color: var(--primary-text-color); background: var(--secondary-background-color); }
 .overview-return-body { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; min-width: 0; }
 .overview-planned-return-summary { container-type: inline-size; }
@@ -30,6 +33,7 @@ export const overviewStyles = css`
   .overview-return-identity { display: flex; flex-wrap: wrap; justify-content: start; gap: 4px 24px; padding-inline-start: 34px; }
   .overview-return-open { flex: 0 1 auto; margin-inline-start: -34px; }
   .overview-return-counts { margin-inline-start: 0; }
+  .overview-return-identity > .return-departure-confirmation { flex-basis: 100%; margin-inline-start: 0; }
 }
 @container (min-width: 820px) {
   .overview-return-identity { flex-basis: 380px; grid-template-columns: minmax(0,1fr); gap: 2px; align-self: flex-start; }
@@ -1201,6 +1205,21 @@ export const overviewStyles = css`
 .next.effective-next .event-target { justify-self: end; min-width: 0; white-space: nowrap; }
 .next.effective-next .event-mode { justify-self: end; max-width: 100%; }
 .effective-event-help { display: flex; justify-content: end; }
+.next.effective-next .effective-event-help { grid-column: 6; grid-row: 1; }
+.next.effective-next .effective-event .preconditioning-dependency {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  position: sticky;
+  left: 0;
+  max-width: min(100%, calc(100cqw - 32px));
+  margin: 0 0 6px;
+}
+.next.effective-next .preconditioning-dependency > span {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
 .next.effective-next .inline-help-tooltip:not(.visible) { display: none; }
 @container next-events (max-width: 800px) {
   .effective-event-grid { grid-template-columns: minmax(150px,1fr) repeat(4,max-content) 32px; }

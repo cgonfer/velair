@@ -4,6 +4,7 @@ import type { ArrivalPreparationSummary, ArrivalPreparationZone, PreparationStat
 import type { TranslationKey } from "../translations";
 import { plannedReturnPreparationReasons } from "./planned-return-preparation-view";
 import { renderInlineHelp } from "./inline-help";
+import { renderPreconditioningDependency } from "./preconditioning-dependency";
 
 
 
@@ -80,6 +81,7 @@ export function renderPreparationRoom(zone: ArrivalPreparationZone | undefined, 
     ${zone.start !== undefined ? html`<span class="return-preparation-detail">${t("plannedReturnVisibilityEstimatedStart", { time: formatTime(new Date(zone.start).toISOString()) })}</span>` : nothing}
     ${temperature !== undefined ? html`<span class="return-preparation-detail">${t("plannedReturnPreparationTarget", { temperature, unit: options.temperatureUnit ?? "°C" })}</span>` : nothing}
     <span class="return-preparation-detail">${t("plannedReturnVisibilityArrivalAt", { time: formatTime(new Date(options.arrival).toISOString()) })}</span>
-    ${zone.source.reason ? html`<span class="return-preparation-detail">${t(plannedReturnPreparationReasons[zone.source.reason] ?? "plannedReturnPreparationReasonUnknown")}</span>` : nothing}
+    ${zone.source.reason && zone.source.reason !== zone.source.preconditioning_dependency?.reason ? html`<span class="return-preparation-detail">${t(plannedReturnPreparationReasons[zone.source.reason] ?? "plannedReturnPreparationReasonUnknown")}</span>` : nothing}
+    ${renderPreconditioningDependency(zone.source.preconditioning_dependency, t, formatTime)}
   </span>`;
 }

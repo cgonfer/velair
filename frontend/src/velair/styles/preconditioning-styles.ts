@@ -1,6 +1,12 @@
 import { css } from "lit";
 
 export const preconditioningStyles = css`
+.preconditioning-learning-activity { display: flex; align-items: flex-start; gap: 0 12px; flex-wrap: wrap; min-width: 0; }
+.preconditioning-learning-activity > span { flex: 1 1 240px; min-width: 0; padding-block: 12px; line-height: 20px; overflow-wrap: anywhere; color: var(--secondary-text-color); font-size: 13px; }
+.learning-diagnostics-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 1 auto; box-sizing: border-box; min-height: 44px; min-width: 44px; border: 0; padding: 12px 8px; margin-inline-start: auto; background: transparent; color: var(--primary-color); cursor: pointer; font: inherit; line-height: 20px; max-width: 100%; }
+.learning-diagnostics-link > ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; display: inline-flex; align-items: center; flex-shrink: 0; }
+.learning-diagnostics-link > span { min-width: 0; overflow-wrap: anywhere; }
+
 .preconditioning-view {
   display: grid;
   gap: 12px;
@@ -227,6 +233,63 @@ export const preconditioningStyles = css`
   border-top: 0;
 }
 
+.preconditioning-master-row { grid-template-columns: minmax(0, 1fr); }
+.preconditioning-master-section {
+  display: block;
+  grid-column: 1 / -1;
+}
+.preconditioning-master-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  background: var(--secondary-background-color);
+  border-radius: 5px 5px 0 0;
+}
+.preconditioning-master-summary::-webkit-details-marker { display: none; }
+.preconditioning-master-summary::marker { content: ""; }
+.preconditioning-master-summary > span { min-width: 0; overflow-wrap: anywhere; }
+.preconditioning-master-heading { display: flex; align-items: center; gap: 4px; flex: 1; }
+.preconditioning-master-label { min-width: 0; overflow-wrap: anywhere; }
+.preconditioning-master-heading > .documentation-help { flex-shrink: 0; }
+.preconditioning-master-current-value { max-width: 50%; color: var(--secondary-text-color); font-weight: 400; text-align: end; }
+.preconditioning-master-section[open] .preconditioning-master-current-value { display: none; }
+.preconditioning-master-summary ha-icon { --mdc-icon-size: 20px; flex-shrink: 0; transition: transform 120ms ease; }
+.preconditioning-master-section[open] > summary { border-bottom: 1px solid var(--divider-color); }
+.preconditioning-master-section[open] > summary > .preconditioning-master-chevron { transform: rotate(180deg); }
+.preconditioning-master-row .select-wrap { grid-column: 1 / -1; min-width: 0; margin-top: 0; }
+.preconditioning-master-row .select-wrap select { min-height: 44px; padding: 10px 36px 10px 12px; }
+@media (prefers-reduced-motion: reduce) { .preconditioning-master-summary ha-icon { transition: none; } }
+.preconditioning-master-guidance {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  margin: 12px 0 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color));
+  color: var(--primary-text-color);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.preconditioning-master-guidance ha-icon { --mdc-icon-size: 20px; color: var(--primary-color); }
+.preconditioning-master-guidance p { margin: 4px 0 0; }
+.preconditioning-master-row select { grid-column: 1 / -1; min-height: 44px; }
+.preconditioning-master-help { color: var(--secondary-text-color); font-size: 12px; line-height: 1.5; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.preconditioning-dependency { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 8px 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; color: var(--secondary-text-color); }
+.preconditioning-dependency dl { display: grid; gap: 8px; margin: 0; }
+.preconditioning-dependency dl > div { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.preconditioning-dependency dt { flex: 1 1 130px; }
+.preconditioning-dependency dd { flex: 1 1 130px; margin: 0; color: var(--primary-text-color); }
+
 .preconditioning-config-row > .label {
   color: var(--secondary-text-color);
   font-size: 12px;
@@ -369,6 +432,7 @@ export const preconditioningStyles = css`
   gap: 8px;
   justify-content: space-between;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .preconditioning-prediction-heading > span:first-child {
@@ -376,6 +440,18 @@ export const preconditioningStyles = css`
   font-size: 12px;
   font-weight: 600;
 }
+
+.preconditioning-live-help {
+  align-items: center;
+  display: inline-flex;
+  position: relative;
+  min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
+  margin-inline-start: auto;
+}
+
+.preconditioning-live-help .inline-help-overlay { border-radius: 999px; }
 
 .preconditioning-live-label {
   align-items: center;
@@ -386,9 +462,11 @@ export const preconditioningStyles = css`
   display: inline-flex;
   font-size: 12px;
   font-weight: 600;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
-  padding: 3px 8px;
+  padding: 5px 10px;
+  line-height: 16px;
+  box-sizing: border-box;
   white-space: nowrap;
 }
 
@@ -398,8 +476,14 @@ export const preconditioningStyles = css`
   text-overflow: ellipsis;
 }
 
-.preconditioning-live-label .inline-help {
+.preconditioning-live-label > ha-icon {
   color: var(--secondary-text-color);
+  --mdc-icon-size: 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .preconditioning-block-preview {

@@ -20,6 +20,7 @@ const TOPIC_COPY: Record<DocumentationTopic, { title: TranslationKey; summary: T
   blockPresets: { title: "blockPresets", summary: "presetLibraryHelp" },
   profiles: { title: "profilesAndModes", summary: "profilesPanelIntro" },
   preconditioning: { title: "preconditioningIntroTitle", summary: "preconditioningIntroDetail" },
+  preconditioningMaster: { title: "preconditioningMaster", summary: "preconditioningMasterHelp" },
   plannedReturn: { title: "plannedReturn", summary: "plannedReturnPreparationHelp" },
   roomAssist: { title: "roomSensorIntroTitle", summary: "roomSensorIntroDetail" },
   comfort: { title: "comfortIntroTitle", summary: "comfortIntroDetail" },

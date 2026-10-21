@@ -154,7 +154,7 @@ export type VelairPanelRoute = {
   prefix?: string;
 };
 
-export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "diagnostics" | "settings";
+export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "planned-return" | "diagnostics" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
   | "active-setup"
@@ -273,6 +273,7 @@ export type TemplateUpdatePreview = {
 };
 
 export type PreconditioningSettings = {
+  master_entity_id?: string | null;
   enabled: boolean;
   max_lead_minutes: number;
   minimum_delta_temperature: number;
@@ -493,7 +494,31 @@ export type ComfortInsight = {
   metrics: string[];
 };
 
+export type PreconditioningLearningActivity = {
+  state: "observing" | "waiting" | "unavailable" | "disabled";
+  reason?: string;
+  at?: string;
+};
+
+export type PreconditioningLearningTransition = {
+  at: string;
+  status: "started" | "skipped" | "interrupted" | "complete" | "partial" | "invalid";
+  reason?: string;
+  initial_temp?: number;
+  target_temp?: number;
+  delta_t?: number;
+  minimum_delta_temperature?: number;
+  minutes_observed?: number;
+  max_lead_minutes?: number;
+  startup_minutes?: number;
+  observed_temp?: number;
+  scheduled_time?: string;
+  start_time?: string;
+};
+
 export type PreconditioningDirectionLearning = {
+  activity?: PreconditioningLearningActivity;
+  last_transition?: PreconditioningLearningTransition;
   status: "learning" | "ready" | "unsupported";
   sample_count: number;
   total_samples: number;
@@ -691,7 +716,23 @@ export type PreconditioningDiagnostics = {
   initial_model_lead_minutes?: number | null;
 };
 
+export type PreconditioningDependency = {
+  master_entity_id: string;
+  independent_start?: string | null;
+  master_start?: string | null;
+  effective_start?: string | null;
+  independent_lead_minutes?: number;
+  effective_lead_minutes?: number;
+  master_target_when?: string | null;
+  master_occurrence_id?: string | null;
+  master_start_accepted?: boolean;
+  reason?: string;
+  reason_detail?: string;
+  result?: string;
+};
+
 export type ScheduleEvent = {
+  preconditioning_dependency?: PreconditioningDependency | null;
   entity_id: string;
   when: string;
   action?: string;
@@ -765,6 +806,13 @@ export type DiagnosticHistoryItem = {
   data: Record<string, unknown>;
 };
 export type UnitDiagnostics = {
+  preconditioning_dependency?: PreconditioningDependency | null;
+  command_settling?: {
+    active?: boolean;
+    fields?: string[];
+    window_seconds?: number;
+    mismatches: Record<string, { expected?: unknown; observed?: unknown }>;
+  };
   status: "ok" | "warning" | "error";
   issues: DiagnosticIssue[];
   state: string;
@@ -810,6 +858,7 @@ export type PlannedReturnConfig = {
   weekly: Record<string, string | null>;
 };
 export type PlannedReturnPreparationZone = {
+  preconditioning_dependency?: PreconditioningDependency | null;
   entity_id: string;
   profile_id: string | null;
   schedule_source: "profile" | "default" | "paused";
@@ -838,6 +887,7 @@ export type PlannedReturnStatus = {
   notice?: string | null;
   return_at: string | null;
   absence_confirm_at: string | null;
+  awaiting_departure_confirmation?: boolean;
   departure_at?: string | null;
   away_mode_id?: string | null;
   destination_mode_id?: string | null;

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](diagnostics.md) · [Español](diagnostics.es.
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.3 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -38,6 +38,22 @@ O Diagnóstico também inclui `comfort_zone`: a geometria configurada simples, g
 
 A avaliação em tempo real inclui `range_summary` atual. Entradas retidas de `comfort_assessment_changed` também mantêm `previous_range_summary` e os indicadores `range_summary_changed` e `range_status_changed`, permitindo que um relatório baixado mostre se o evento representou uma transição da faixa configurada ou outra mudança no Conforto. Esses campos contêm apenas códigos semânticos estáveis, não o contexto bruto de eventos do Home Assistant.
 
+<a id="learning-evidence"></a>
+## Evidências de aprendizado
+
+A seção existente da função Pré-condicionamento separa as atividades de aquecimento e resfriamento. Mostra se há uma observação em andamento ou se o Velair está aguardando uma transição adequada, além da última transição de aprendizado mantida, quando disponível. Os detalhes expansíveis contêm apenas evidências relevantes à decisão, como temperaturas inicial e alvo, delta mínimo de temperatura, duração observada e início máximo configurado.
+
+O histórico de Pré-condicionamento inclui inícios de observação, interrupções, resultados e transições reais que não puderam iniciar uma observação. Os resultados distinguem observações completas, parciais e inválidas. Observações inválidas podem identificar uma diferença de temperatura pequena demais, duração curta demais ou duração acima do máximo configurado. Observações antigas salvas podem manter o motivo genérico de fora dos limites. O Velair não atribui retroativamente uma causa mais precisa a elas.
+
+Cálculos repetidos de previsões futuras não criam registros de aprendizado. A última transição segue as mesmas configurações de retenção e o limite global do histórico da linha do tempo. Desabilitar o histórico de Pré-condicionamento ou limpar o histórico remove essas evidências históricas; não interrompe o aprendizado nem apaga amostras salvas. Após reinício, a atividade operacional e o histórico anteriores não são restaurados. Sem evidências, o Diagnóstico não inventa motivos para contadores inalterados nem deduz se a caldeira estava funcionando.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Evidências de dependência do pré-condicionamento
+
+Para um cômodo com **Mestre do pré-condicionamento** configurado, consulte os detalhes da dependência junto às informações existentes de preparação. Eles distinguem a estimativa independente do cômodo, a transição selecionada e o início do mestre, o início efetivo ou o motivo que impede a preparação. Um comando aceito pelo Home Assistant é uma evidência da ação do Velair, não uma medição do relé da caldeira. A observação de aprendizado continua descrevendo a própria temperatura e o tempo decorrido do cômodo dependente.
+
+Quando há evidências, a explicação distingue a disponibilidade no Home Assistant de programação ou Pré-condicionamento desabilitados, Perfil pausado, substituição ativa, mestre inelegível ou transição ausente. A mesma explicação aparece nos cartões e no Diagnóstico. Um equipamento indisponível ainda pode ter uma previsão calculada se outro sensor configurado fornecer sua temperatura ambiente; essa previsão não confirma que o dispositivo possa receber comandos ou fornecer aquecimento ou resfriamento.
+
 <a id="runtime-history-and-privacy"></a>
 ## Histórico de execução e privacidade
 
@@ -57,7 +73,7 @@ A visão local do Diagnóstico usa os nomes amigáveis dos dispositivos ao filtr
 
 O Diagnóstico não oferece controles do agendador, novas tentativas, reversão ou climatização. As Configurações continuam reunindo ações de configuração e manutenção; detalhes de capacidade e integridade dos dispositivos ficam no Diagnóstico.
 
-Cada dispositivo gerenciado também informa evidências de estabilização dos comandos, apenas durante a execução. Enquanto um comando recente do Velair se estabiliza, o Diagnóstico lista os campos de controle afetados em sua visão do estado atual. Se o dispositivo não tiver convergido até o prazo limitado, a próxima leitura atualizada marca a unidade com um aviso `command_settling_mismatch`. O bloco `command_settling` do relatório baixado inclui valores esperados e observados. Isso serve como evidência para a solução de problemas: o Diagnóstico não repete o comando, altera a climatização nem cria um Ajuste manual. A evidência é removida por um comando mais recente para o campo ou por uma reinicialização.
+Cada equipamento gerenciado também informa evidências de estabilização de comandos que existem apenas durante a execução. Enquanto um comando recente do Velair estabiliza, o Diagnóstico lista os campos de controle afetados no retrato operacional. Se o equipamento não convergir até o prazo limitado, o próximo retrato atualizado sinaliza `command_settling_mismatch`. Expanda esse aviso no painel de Diagnóstico do equipamento selecionado para comparar o valor esperado de cada campo afetado com o informado pelo termostato. As temperaturas incluem a unidade do equipamento, os modos HVAC usam os rótulos habituais e valores ausentes são identificados explicitamente. A comparação usa o registro, não a programação atual nem uma nova leitura. O relatório baixado também mantém o bloco `command_settling`. Isso é uma evidência para investigar problemas: o Diagnóstico não repete o comando, não altera o equipamento nem cria um Ajuste manual. A evidência é apagada por um comando mais recente para o mesmo campo ou por reinício.
 
 <a id="automating-diagnostic-health"></a>
 ## Automatizar o estado do diagnóstico

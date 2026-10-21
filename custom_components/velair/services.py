@@ -124,6 +124,13 @@ def _validate_resume_zone_data(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _validate_pause_zone_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Keep fixed-duration and next-block pause expiry mutually exclusive."""
+    if data.get("until_next_block") and ATTR_DURATION_MINUTES in data:
+        raise vol.Invalid("until_next_block and duration_minutes cannot be used together")
+    return data
+
+
 def _validate_temperature_target_data(data: dict[str, Any]) -> dict[str, Any]:
     """Require exactly one scalar or complete range target."""
     has_temperature = ATTR_TEMPERATURE in data
@@ -236,15 +243,19 @@ PAUSE_SCHEMA = vol.Schema(
     }
 )
 
-PAUSE_ZONE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Optional(ATTR_DURATION_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
-        vol.Optional(ATTR_ACTION, default=ZONE_PAUSE_ACTION_NONE): vol.In(
-            ZONE_PAUSE_ACTION_OPTIONS
-        ),
-        vol.Optional(ATTR_PAUSE_ID): vol.All(cv.string, _validate_pause_id),
-    }
+PAUSE_ZONE_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+            vol.Optional(ATTR_DURATION_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional(ATTR_ACTION, default=ZONE_PAUSE_ACTION_NONE): vol.In(
+                ZONE_PAUSE_ACTION_OPTIONS
+            ),
+            vol.Optional(ATTR_PAUSE_ID): vol.All(cv.string, _validate_pause_id),
+            vol.Optional("until_next_block"): cv.boolean,
+        }
+    ),
+    _validate_pause_zone_data,
 )
 
 RESUME_ZONE_SCHEMA = vol.All(
@@ -337,6 +348,12 @@ def _validate_return_time(value: str) -> str:
     return value[:5]
 
 
+def _validate_apply_away_now(value: Any) -> bool:
+    if not isinstance(value, bool):
+        raise vol.Invalid("apply_away_now must be a boolean")
+    return value
+
+
 def _validate_start_return_data(data: dict[str, Any]) -> dict[str, Any]:
     value = data.get("return_date")
     try:
@@ -345,11 +362,15 @@ def _validate_start_return_data(data: dict[str, Any]) -> dict[str, Any]:
         return_date = date.fromisoformat(value)
     except ValueError as err:
         raise vol.Invalid("return_date must be a valid YYYY-MM-DD date") from err
-    return {"return_date": return_date.isoformat(), "return_time": _validate_return_time(data.get("return_time"))}
+    result = {"return_date": return_date.isoformat(), "return_time": _validate_return_time(data.get("return_time"))}
+    if "apply_away_now" in data:
+        result["apply_away_now"] = _validate_apply_away_now(data["apply_away_now"])
+    return result
 
 
 START_PLANNED_RETURN_SCHEMA = vol.All(
-    vol.Schema({vol.Required("return_date"): cv.string, vol.Required("return_time"): cv.string}, extra=vol.PREVENT_EXTRA),
+    vol.Schema({vol.Required("return_date"): cv.string, vol.Required("return_time"): cv.string,
+                vol.Optional("apply_away_now"): _validate_apply_away_now}, extra=vol.PREVENT_EXTRA),
     _validate_start_return_data,
 )
 CANCEL_PLANNED_RETURN_SCHEMA = vol.Schema({}, extra=vol.PREVENT_EXTRA)
@@ -377,7 +398,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if arrival is None:
             raise HomeAssistantError("Return date and time must be valid and in the future in the Home Assistant time zone")
         try:
-            await scheduler.async_start_planned_return(dt_util.as_utc(arrival).isoformat())
+            options = {"apply_away_now": call.data["apply_away_now"]} if "apply_away_now" in call.data else {}
+            await scheduler.async_start_planned_return(dt_util.as_utc(arrival).isoformat(), **options)
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
 
@@ -557,11 +579,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             else None
         )
         try:
+            expiry_kwargs = {}
+            if "until_next_block" in call.data:
+                expiry_kwargs["until_next_block"] = call.data["until_next_block"]
             await scheduler.async_pause_zone(
                 entity_id,
                 until=paused_until,
                 action=call.data[ATTR_ACTION],
                 pause_id=call.data.get(ATTR_PAUSE_ID),
+                **expiry_kwargs,
             )
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err

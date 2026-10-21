@@ -75,7 +75,13 @@ class PlannedReturnRuntime:
         return self._cancel_previous_episode or self.scheduler._data.get("planned_return_episode")
 
     def suppress_departure_delivery(self):
-        return bool(self.episode and self.episode["state"] == "away" and self.occupancy() == "home")
+        return bool(self.episode and self.episode["state"] == "away" and self.occupancy() == "home"
+                    and not self.awaiting_departure_confirmation())
+
+    def awaiting_departure_confirmation(self):
+        """Manual Away is active, but presence must not yet count as a return."""
+        episode = self.episode or {}
+        return episode.get("state") in ("away", "skipped") and episode.get("awaiting_departure_confirmation") is True
 
     def operational(self):
         owner = self.scheduler
@@ -170,7 +176,7 @@ class PlannedReturnRuntime:
                 if any(effect != effects[0] for effect in effects[1:]):
                     raise ValueError(f"Planned return requires local execution for {entity}")
 
-    def plans(self, now):
+    def plans(self, now, *, include_nominal=False):
         episode = self.episode
         arrival = parse_instant((episode or {}).get("return_at"))
         if not self.available() or not episode or episode["state"] != "away" or arrival is None or arrival <= now:
@@ -196,10 +202,13 @@ class PlannedReturnRuntime:
             start, diagnostics = owner._preconditioned_event_details(entity, zone, block, arrival)
             if start >= arrival:
                 if entity not in episode.get("preparing_entities", []) or entity in self._temperature_only_suspensions:
+                    if any(item.get("preconditioning", {}).get("master_entity_id") for item in owner._data["zones"].values()):
+                        events.append(replace(target, when=arrival, target_when=None))
                     continue
                 start = parse_instant(episode["started_at"]) or now
             events.append(replace(target, when=start, target_when=arrival, preconditioning_diagnostics=diagnostics))
-        return events
+        resolved = owner._resolve_preconditioning_dependencies(events, now, episode=owner._dependency_episode())
+        return [event for event in resolved if event.target_when is not None or include_nominal and event.preconditioning_dependency]
 
     @callback
     def mark_temperature_only_suspended(self, entity):
@@ -254,7 +263,7 @@ class PlannedReturnRuntime:
         owner = self.scheduler
         if entity not in owner._data["zones"] or owner._is_zone_override_active(entity, now):
             return None
-        return next((event for event in self.plans(now) if event.entity_id == entity and (event.when <= now or self.is_preparing(entity))), None)
+        return next((event for event in self.plans(now) if event.entity_id == entity and (event.when <= now or self.is_preparing(entity)) and self.scheduler._dependency_delivery_allowed(event)), None)
 
     def zone_context(self, entity, now, *, planned_target=None, effective_event=None, blocked=False):
         """Describe the winning return intent, never a forecast or delivery receipt."""
@@ -307,15 +316,15 @@ class PlannedReturnRuntime:
         self._reported_confirmation = self._confirmation
         if self._confirmation is not None:
             self._emit("confirmation_started", absence_confirm_at=self._confirmation.isoformat())
-        elif previous is not None and (self.episode or {}).get("state") != "away":
+        elif previous is not None and ((self.episode or {}).get("state") != "away" or self.awaiting_departure_confirmation()):
             self._emit("confirmation_reset", reason="absence_not_confirmed")
 
     def status(self):
         now = dt_util.now()
         episode = self.episode
-        plans = self.plans(now)
+        plans = self.plans(now, include_nominal=True)
         state = (episode or {}).get("state", "idle" if self.config.get("enabled") else "disabled")
-        if self._confirmation is not None:
+        if self._confirmation is not None and not self.awaiting_departure_confirmation():
             state = "confirming_absence"
         elif state == "away" and any(self.target(event.entity_id, now) for event in plans):
             state = "preparing"
@@ -329,7 +338,7 @@ class PlannedReturnRuntime:
         terminal = (episode or {}).get("state") in ("cancelled", "fulfilled", "skipped")
         dismissed = terminal and (episode or {}).get("dismissed") is True
         episode_active = (episode or {}).get("state") in ("armed", "away")
-        return {"state": state, "occupancy": self.occupancy(), "sources": self.sources(), "origin": (episode or {}).get("origin"), "can_start": self.can_start(), "dismissed": dismissed, "can_dismiss": terminal and not dismissed, "episode_active": episode_active, "can_cancel": episode is not None and not dismissed, "notice": getattr(self, "notice", None), "return_at": (episode or {}).get("return_at"), "departure_at": (episode or {}).get("departure_at"), "away_mode_id": (episode or {}).get("away_mode_id"), "destination_mode_id": (episode or {}).get("destination_mode_id"), "absence_confirm_at": self._confirmation.isoformat() if self._confirmation else None, "preparation": preparation, "zones": [{"entity_id": event.entity_id, "start_at": event.when.isoformat(), "target_when": event.target_when.isoformat(), **temperature_target_from_mapping({key: value for key, value in asdict(event).items() if value is not None}), "preparing": self.target(event.entity_id, now) is not None} for event in plans], "error": self.error}
+        return {"awaiting_departure_confirmation": self.awaiting_departure_confirmation(), "state": state, "occupancy": self.occupancy(), "sources": self.sources(), "origin": (episode or {}).get("origin"), "can_start": self.can_start(), "dismissed": dismissed, "can_dismiss": terminal and not dismissed, "episode_active": episode_active, "can_cancel": episode is not None and not dismissed, "notice": getattr(self, "notice", None), "return_at": (episode or {}).get("return_at"), "departure_at": (episode or {}).get("departure_at"), "away_mode_id": (episode or {}).get("away_mode_id"), "destination_mode_id": (episode or {}).get("destination_mode_id"), "absence_confirm_at": self._confirmation.isoformat() if self._confirmation else None, "preparation": preparation, "zones": [{"entity_id": event.entity_id, "start_at": event.when.isoformat(), "target_when": (event.target_when or event.when).isoformat(), "preconditioning_dependency": event.preconditioning_dependency, **temperature_target_from_mapping({key: value for key, value in asdict(event).items() if value is not None}), "preparing": self.target(event.entity_id, now) is not None} for event in plans], "error": self.error}
 
     @callback
     def refresh(self):
@@ -362,7 +371,7 @@ class PlannedReturnRuntime:
         now = dt_util.now()
         if self.error:
             return
-        eligible_departure = bool(self.source_ids()) and ((self.episode or {}).get("state") == "armed" or (self.episode is None and self.config.get("enabled")))
+        eligible_departure = bool(self.source_ids()) and (self.awaiting_departure_confirmation() or (self.episode or {}).get("state") == "armed" or (self.episode is None and self.config.get("enabled")))
         if not eligible_departure or self.occupancy() != "away":
             self._confirmation = None
         if self.occupancy() == "away" and eligible_departure and self._confirmation is None:
@@ -397,8 +406,8 @@ class PlannedReturnRuntime:
             arrival = parse_instant(self.episode.get("return_at"))
             if arrival:
                 times.append(arrival)
-            times.extend(event.when for event in self.plans(now) if self._applied.get(event.entity_id) != self._intent(event) and not owner._is_zone_override_active(event.entity_id, now))
-        if self.occupancy() == "home" and self.episode is not None and self.episode["state"] != "armed":
+            times.extend(event.when for event in self.plans(now) if self._applied.get(event.entity_id) != self._intent(event) and not owner._is_zone_override_active(event.entity_id, now) and (event.when > now or owner._dependency_delivery_allowed(event)))
+        if self.occupancy() == "home" and self.episode is not None and self.episode["state"] != "armed" and not self.awaiting_departure_confirmation():
             times.append(now)
         if times:
             when = max(now, min(times))
@@ -444,7 +453,8 @@ class PlannedReturnRuntime:
             if episode is not None and episode["state"] == "fulfilled" and (not current_episode or current_episode["state"] not in ("away", "skipped")):
                 return
             sensorless_manual = episode is not None and episode.get("origin") == "manual" and not self.source_ids()
-            if episode is not None and episode["state"] == "away" and not sensorless_manual and self.occupancy() != "away":
+            immediate_manual = episode is not None and episode.get("origin") == "manual" and episode.get("awaiting_departure_confirmation") is True
+            if episode is not None and episode["state"] == "away" and not (sensorless_manual or immediate_manual) and self.occupancy() != "away":
                 return
             if not self.available(episode):
                 return
@@ -500,11 +510,17 @@ class PlannedReturnRuntime:
                     await self._persist_episode(None)
                     self._emit("cancelled", episode=episode, reason="absence_not_confirmed_before_arrival")
                     self._confirmation = None
-                elif presence == "home":
+                elif presence == "home" and not self.awaiting_departure_confirmation():
                     if episode and episode.get("dismissed") is True:
                         await self._persist_episode(None)
                     elif episode is None or episode["state"] != "armed":
                         await self.arrive()
+                elif self.awaiting_departure_confirmation() and presence == "away" and self._confirmation and now >= self._confirmation:
+                    updated = deepcopy(episode)
+                    updated.pop("awaiting_departure_confirmation", None)
+                    await self._persist_episode(updated)
+                    self._confirmation = None
+                    self._emit("absence_confirmed")
                 elif self.source_ids() and presence == "away" and self._confirmation and now >= self._confirmation and (episode is None or episode["state"] == "armed"):
                     self.validate_sources()
                     self.validate_transition()
@@ -536,13 +552,30 @@ class PlannedReturnRuntime:
                         for event in self.plans(now):
                             if event.when > now or self._applied.get(event.entity_id) == self._intent(event) or self.scheduler._is_zone_override_active(event.entity_id, now):
                                 continue
-                            updated = deepcopy(self.episode)
-                            if event.entity_id not in updated["preparing_entities"]:
+                            if not self.scheduler._dependency_delivery_allowed(event):
+                                continue
+                            linked = bool(event.preconditioning_dependency) or any(zone.get("preconditioning", {}).get("master_entity_id") == event.entity_id for zone in self.scheduler._data["zones"].values())
+                            if not linked and event.entity_id not in self.episode["preparing_entities"]:
+                                # Preserve the existing independent preparation
+                                # transaction and its storage failure behavior.
+                                updated = deepcopy(self.episode)
                                 updated["preparing_entities"].append(event.entity_id)
                                 await self._persist_episode(updated)
                                 self._emit("preparation_started", entity_id=event.entity_id)
-                            await self.scheduler._async_apply_event(event, source="planned_return", applied_at=now)
-                            self._applied[event.entity_id] = self._intent(event)
+                            episode_key = self.scheduler._dependency_episode()
+
+                            async def accepted(is_current, *, applied_event=event, expected_episode=episode_key):
+                                if not is_current() or expected_episode != self.scheduler._dependency_episode():
+                                    return
+                                # Recovery uses the same commit callback. Latch
+                                # before yielding so an anchor wake cannot repeat
+                                # the accepted master while storage is pending.
+                                self._applied[applied_event.entity_id] = self._intent(applied_event)
+                                self.scheduler._hass.async_create_task(self._persist_accepted_preparation(applied_event, expected_episode))
+
+                            await self.scheduler._async_apply_event(event, source="planned_return", applied_at=now, on_success=accepted)
+                            if self._applied.get(event.entity_id) == self._intent(event):
+                                await self._persist_preparation_locked(event, episode_key)
                 self.error = None
                 self._last_error = None
             except Exception as err:
@@ -562,6 +595,30 @@ class PlannedReturnRuntime:
                 self.refresh()
                 self.scheduler._async_write_state()
 
+    async def _persist_accepted_preparation(self, event, expected_episode):
+        """Persist accepted preparation under runtime ownership, outside delivery."""
+        async with self._lock, self.scheduler._profile_mutation_lock:
+            try:
+                await self._persist_preparation_locked(event, expected_episode)
+            except Exception as err:
+                self.error = str(err)
+                self._last_error = (type(err).__name__, str(err))
+                self.refresh()
+
+    async def _persist_preparation_locked(self, event, expected_episode):
+        if expected_episode != self.scheduler._dependency_episode() or self._applied.get(event.entity_id) != self._intent(event):
+            return
+        updated = deepcopy(self.episode)
+        if event.entity_id in updated["preparing_entities"]:
+            return
+        updated["preparing_entities"].append(event.entity_id)
+        try:
+            await self._persist_episode(updated)
+        except Exception:
+            _LOGGER.warning("Accepted return preparation could not be persisted for %s", event.entity_id, exc_info=True)
+            raise
+        self._emit("preparation_started", entity_id=event.entity_id)
+
     async def _fulfill(self):
         episode = self.episode
         if not episode or episode["state"] not in ("away", "skipped"):
@@ -569,6 +626,7 @@ class PlannedReturnRuntime:
         # Latch before selection so profile transition resolves destination normally.
         updated = deepcopy(episode)
         updated["state"] = "fulfilled"
+        updated.pop("awaiting_departure_confirmation", None)
         owner = self.scheduler
         destination = self.profiles(episode["destination_mode_id"])
         unchanged = {entity for entity in episode.get("preparing_entities", []) if owner._profile_effect_from_profiles(owner._active_profiles(), entity) == owner._profile_effect_from_profiles(destination, entity)}
@@ -606,6 +664,8 @@ class PlannedReturnRuntime:
             self._entities = ()
             updated = deepcopy(episode)
             updated["state"] = "skipped" if skipped else "cancelled"
+            if not skipped:
+                updated.pop("awaiting_departure_confirmation", None)
             updated["preparing_entities"] = []
             await self._persist_episode(updated)
             self._emit("skipped" if skipped else "cancelled", previous_state=episode["state"])
@@ -660,7 +720,9 @@ class PlannedReturnRuntime:
             raise ValueError("Return date and time must be in the future with a timezone")
         return arrival
 
-    async def start(self, return_at):
+    async def start(self, return_at, *, apply_away_now=False):
+        if not isinstance(apply_away_now, bool):
+            raise ValueError("apply_away_now must be a boolean")
         arrival = self.validate_return_at(return_at)
         if not self.operational():
             raise ValueError("Enable Automatic scheduling before planning a return")
@@ -668,7 +730,7 @@ class PlannedReturnRuntime:
         if not sensorless:
             self.validate_sources()
         self.validate_transition()
-        if self.episode and self.episode["state"] in ("armed", "away"):
+        if self.episode and (self.episode["state"] == "away" or self.episode["state"] == "armed" and not apply_away_now):
             await self.adjust(arrival.isoformat())
             self.error = None
             self._last_error = None
@@ -687,8 +749,11 @@ class PlannedReturnRuntime:
             "previous_selection": self._selection_snapshot(),
         }
         updated.update(origin="manual", return_at=arrival.isoformat())
-        if sensorless:
-            updated.update(state="away", departure_at=updated["started_at"])
+        immediate = sensorless or apply_away_now
+        if immediate:
+            updated.update(state="away", departure_at=dt_util.now().isoformat())
+            if not sensorless:
+                updated["awaiting_departure_confirmation"] = True
 
         @callback
         def accept_start():
@@ -708,13 +773,13 @@ class PlannedReturnRuntime:
             self._emit("registered")
 
         try:
-            if sensorless:
+            if immediate:
                 await self._select(updated["away_mode_id"], episode=updated, on_persisted=accept_start)
             else:
                 await self._persist_episode(updated)
                 accept_start()
         except BaseException:
-            if restarting or sensorless:
+            if restarting or immediate:
                 # A source event may have seen the tentative armed state while
                 # storage was awaited. Reconcile timers with the restored latch.
                 self.refresh()
@@ -774,6 +839,7 @@ class PlannedReturnRuntime:
         updated = deepcopy(episode)
         if active:
             updated["state"] = "cancelled"
+            updated.pop("awaiting_departure_confirmation", None)
             updated["preparing_entities"] = []
         updated["dismissed"] = True
         owner = self.scheduler

@@ -83,10 +83,6 @@ function resetPosition(tooltip: HTMLElement): void {
     "right",
     "top",
     "width",
-    "--inline-help-mobile-bottom",
-    "--inline-help-mobile-height",
-    "--inline-help-mobile-left",
-    "--inline-help-mobile-width",
   ]) {
     tooltip.style.removeProperty(property);
   }
@@ -143,12 +139,18 @@ function viewportBounds() {
 function positionTooltip(button: HTMLElement, tooltip: HTMLElement): void {
   resetPosition(tooltip);
   const viewport = viewportBounds();
-  if (window.matchMedia?.("(max-width: 480px)").matches && tooltip.dataset.openCause !== "hover") {
-    tooltip.style.setProperty("--inline-help-mobile-bottom", `${Math.max(0, window.innerHeight - viewport.bottom)}px`);
-    tooltip.style.setProperty("--inline-help-mobile-height", `${viewport.height}px`);
-    tooltip.style.setProperty("--inline-help-mobile-left", `${viewport.left}px`);
-    tooltip.style.setProperty("--inline-help-mobile-width", `${viewport.width}px`);
-    return;
+  const mobile = window.matchMedia?.("(max-width: 480px)").matches;
+  if (mobile) {
+    const styles = getComputedStyle(tooltip);
+    const safeInset = (edge: string) => Math.max(VIEWPORT_MARGIN,
+      Number.parseFloat(styles.getPropertyValue(`--inline-help-safe-${edge}`)) || 0);
+    // The shared placement code already reserves 12 px on each edge.
+    viewport.left += safeInset("left") - VIEWPORT_MARGIN;
+    viewport.right -= safeInset("right") - VIEWPORT_MARGIN;
+    viewport.top += safeInset("top") - VIEWPORT_MARGIN;
+    viewport.bottom -= safeInset("bottom") - VIEWPORT_MARGIN;
+    viewport.width = Math.max(0, viewport.right - viewport.left);
+    viewport.height = Math.max(0, viewport.bottom - viewport.top);
   }
   const triggerRect = button.getBoundingClientRect();
   const availableWidth = Math.max(0, viewport.width - (VIEWPORT_MARGIN * 2));
@@ -177,7 +179,7 @@ function positionTooltip(button: HTMLElement, tooltip: HTMLElement): void {
       ? above
       : Math.min(Math.max(below, viewport.top + VIEWPORT_MARGIN), maxTop);
   tooltip.style.left = `${left}px`;
-  tooltip.style.top = `${top}px`;
+  tooltip.style.top = `${mobile ? Math.min(Math.max(top, viewport.top + VIEWPORT_MARGIN), maxTop) : top}px`;
 }
 
 function repositionActive(): void {

@@ -17,7 +17,8 @@ setup. See [base and zone exceptions](climate-profiles.md#a-base-with-independen
 
 Planned Return prepares the home for a regular or one-off arrival time after
 the selected occupancy signals confirm that the whole home is empty, or after
-an explicit one-off start when no occupancy sources are configured. Configure it in Velair;
+an explicit one-off start without occupancy sources or with **Apply Away mode now**
+selected. Configure it in Velair;
 no additional blueprint or daily action is required for a stable weekly routine.
 The automatic routine is disabled by default and runs locally in Home Assistant.
 One-off returns need saved Away/Return Modes and operational Automatic scheduling;
@@ -31,7 +32,7 @@ routine. Absence detection takes effect for a started one-off return or when
 the saved weekly routine is enabled. These fields do not define a separate
 always-running Home/Away automation. The confirmation time measures continuous
 detected absence, not elapsed time since saving the configuration. The Away
-Mode is applied after departure is confirmed; eligible rooms may prepare before
+Mode is normally applied after departure is confirmed; eligible rooms may prepare before
 the destination Mode is applied at arrival.
 
 Without occupancy sources, starting a one-off return applies the Away Mode
@@ -47,7 +48,7 @@ block's policy.
 
 1. Create the desired Away and Home Modes, or use Default as the destination.
    Away Profiles can turn climates off or use lower-demand weekly schedules.
-2. Open **Preconditioning**, choose **Planned Return** in the subsection selector,
+2. Open the **Planned return** tab,
    and add occupancy signals for monitored or weekly departures. Use binary sensors, input booleans, groups or the
    Home Assistant home zone (`zone.home`). Include signals for anyone who can
    remain in the home, including guests. Home Assistant remains responsible for
@@ -85,7 +86,7 @@ Away Mode, absence confirmation delay, adaptive preparation and destination Mode
 as a simple flow; the switch edits the routine's enabled setting. The delay is
 the time the home must stay empty, not an estimate of preparation time.
 The occupancy section shows the combined result and source counts; expand it to
-review each signal. Unknown signals prevent a new absence and are distinguished
+review each signal. Unknown signals prevent automatic departure confirmation and are distinguished
 from confirmed presence. The quick return section keeps the one-off departure and
 the current episode's arrival controls together. Runtime actions use the saved
 configuration, so save or cancel pending configuration changes before announcing
@@ -114,7 +115,9 @@ Recognized occupied states are `on` and `home`; empty states are `off` and
 `not_home`. For the home zone, zero persons means empty and a positive count
 means occupied. Any occupied signal makes the home occupied; only all signals
 reporting absence make it empty. If no signal reports presence and one is unknown
-or unavailable, occupancy is unknown: new absences cannot start. An accepted
+or unavailable, occupancy is unknown: automatic absences cannot start. An explicit
+**Apply Away mode now** request can still activate Away, but cannot confirm
+departure while occupancy is unknown. An accepted
 return remains scheduled. The panel shows the combined result and each source.
 
 Select signals that represent occupancy: a motion sensor being off does not
@@ -146,7 +149,7 @@ resolves each destination target at that arrival time and shows pending,
 preparing, target reached, suspended or unavailable status with the relevant
 reason. Missing temperature data or a valid estimate prevents advance preparation;
 Boost, Manual adjustment and explicit pauses retain their normal priority.
-An unconfirmed departure cannot be shown as preparing.
+Without **Apply Away mode now**, an unconfirmed departure cannot be shown as preparing.
 **Preparing** describes Velair's active preparation intent, not confirmation that
 the device received a command or is physically running. **Target reached** is a
 current measured temperature within the preparation tolerance and can already be
@@ -159,6 +162,16 @@ showing obsolete preparation times. Diagnostics continue to use the backend's
 saved settings until Save succeeds, without an additional preparation reminder.
 This comprehensive list replaces the older episode-only zone list.
 
+### Preconditioning dependencies
+
+A room's **Preconditioning master** also applies to Planned Return. Its
+preparation waits until both its own estimated start and the selected master's
+preparation start permit it. Both plans belong to the same return episode and
+use its destination configuration; an unrelated weekly preparation does not
+release an arrival-dependent room. If the master has no eligible preparation,
+the dependent waits for its normal arrival target. See
+[Preconditioning Master](adaptive-preconditioning.md#preconditioning-master).
+
 ## One-Off Return
 
 In **One-off return**, choose a future arrival date and time and choose **Plan return**.
@@ -166,19 +179,60 @@ Date and time sit together. On mobile, **Plan return** sits on the next row,
 aligned with the time field's right edge; larger layouts keep the action beside
 the fields. The explanation is below the controls.
 You can do this before leaving or when already away. Velair
-uses the saved Mode and presence settings. With configured occupancy sources,
+uses the saved Mode and presence settings. By default, with configured occupancy sources,
 it keeps the request pending and applies Away only after every source reports
 absence for the confirmation delay, protecting people who remain at home.
 With no saved occupancy sources, pressing **Plan return** is your explicit
 departure confirmation: Away starts immediately, with no absence delay. Velair
 does not infer an empty home or detect your physical return in this case; it
 prepares rooms normally and activates the destination at the saved arrival.
-A configured unknown/unavailable source still waits; a missing entity cannot
+A configured unknown/unavailable source still waits by default; a missing entity cannot
 be treated as an empty source list.
+
+With saved occupancy sources, **Apply Away mode now** is an optional checkbox
+for each one-off return. It starts unchecked and is not a saved routine setting.
+Selecting it applies the configured Away Mode immediately, even while you are
+still home. Preparation and the timed destination change are active immediately.
+Automatic return from presence is held until all sources continuously report
+absence for the configured confirmation delay. Presence or an unknown reading
+resets that wait; after confirmation, presence activates the destination immediately.
+
+For example, with a ten-minute delay and an 18:00 return:
+
+| Time | Observation | Result |
+| --- | --- | --- |
+| 08:00 | Plan return with Apply Away mode now checked, while still home. | Away applies; timed return and preparation are active. |
+| 08:10 | Every source reports absence. | Start ten-minute confirmation. |
+| 08:15 | Presence after a short trip outside. | Reset confirmation; keep Away. |
+| 08:30 | Every source reports absence again. | Start a fresh ten minutes. |
+| 08:40 | All sources stayed empty. | Enable automatic presence return without reapplying Away. |
+| 17:00 | Presence is detected. | Select the destination immediately. |
+
+The sidebar return card, Lovelace return card and Overview summary keep Away or
+Preparing as the main state. A separate compact line shows **Waiting to confirm
+departure**, or **Confirming departure** with the confirmation deadline. Presence
+or unknown readings during that wait restore the waiting message. Actual
+occupancy remains visible independently, including presence while Away is active.
+All three surfaces keep this line concise and put the confirmation rules in its
+contextual help, without repeating the main preparation state or its icon.
+Opening help in
+Overview does not navigate away. After confirmation, the waiting line disappears
+and help explains that presence can now trigger the return: in the main phase
+help for the return card, or timeline-start help in Overview. Endpoint help
+explains what each endpoint means instead of repeating its visible time.
+
+The timeline starts when Away is applied; its help distinguishes that application
+time from monitored physical departure. Its endpoint labels, room preparation
+markers and saved arrival remain unchanged. If absence is never confirmed, the scheduled
+preparation and 18:00 destination change still happen. **Cancel** remains
+available before confirmation, as does the explicit arrival API command.
+A zero-minute delay still requires an
+observed empty home. Without sources, the checkbox is omitted and the existing
+immediate-start behavior is unchanged.
 
 The one-off date and time override the weekly time for this absence only. It also works
 with the automatic routine disabled. You can change or cancel the pending notice;
-if departure is not confirmed before its arrival time, it expires without changing
+if a normal pending departure is not confirmed before its arrival time, it expires without changing
 Modes. If all sources already indicate absence and there is no active episode,
 planning the return starts the configured confirmation delay immediately; no
 new sensor change is required. If an absence is already active, change the
@@ -205,7 +259,9 @@ and scheduler state. An active return can still be cancelled in that situation.
 After confirmed departure, use **Cancel** to stop the return and restore the
 recorded previous Mode and Profiles, or **Change arrival** to update its date
 and time. During absence confirmation, cancelling leaves the active selection
-unchanged because the Away Mode has not been applied. Disabling the automatic routine or editing weekly times
+unchanged because the Away Mode has not been applied. For an immediate manual
+Away, Cancel restores the previous selection even while monitored departure is
+still being confirmed. Disabling the automatic routine or editing weekly times
 does not cancel a manual return. Changing its presence sources or Modes invalidates
 the previous notice. Explicit Mode/Profile selections cancel pending and active
 returns. A stopped scheduler does not execute the return.
@@ -281,7 +337,8 @@ preparation, and override behavior as **Plan return**. It works while the weekly
 routine is disabled and updates the arrival date and time if an absence is already
 active, without applying Away again. Saved Modes and Automatic scheduling must be operational. Sources are optional
 for one-off returns: an empty saved source list applies Away immediately;
-configured sources retain the normal confirmation rules. An arrival in the past or at the current instant
+configured sources retain the normal confirmation rules unless `apply_away_now: true`
+is supplied. An arrival in the past or at the current instant
 is rejected without replacing the previous return.
 An expired or nonexistent daylight-saving time is rejected; during a repeated
 hour Velair chooses the earliest occurrence that is still in the future.
@@ -297,7 +354,9 @@ The same cancel action also closes an inactive episode notice. It stops
 preparation and the timed return, retaining the automatic cancellation latch.
 After confirmed departure, it restores the Mode and exact Profile selection
 saved before the episode started. During absence confirmation, it leaves the
-current selection unchanged. A fresh explicit **Plan return** can replace that
+current selection unchanged for a normal pending departure. For an immediate manual
+Away, it restores the saved selection even before monitored departure confirmation.
+A fresh explicit **Plan return** can replace that
 inactive episode. Both the sidebar and card use this same cancellation action.
 
 ## Cancelling a Return: Examples
@@ -395,7 +454,8 @@ If Home requests 17 degrees before 18:00 and 21 degrees afterward, a return at
 schedule is not edited or populated with temporary blocks.
 
 At the expected time, Velair selects the destination and continues its ordinary
-schedule. An early occupied report selects the destination immediately. A late
+schedule. An early occupied report selects the destination immediately once
+monitored departure has been confirmed. A late
 arrival does not switch the home back to Away. Pauses, Boost, Manual adjustment,
 disabled zones, and a stopped scheduler keep their existing delivery gates.
 Preparation supports heating, cooling, and native temperature ranges. It aims
@@ -439,13 +499,15 @@ the whole household return. See [Room Assist](room-assist.md) and
 
 ## Exceptions And Restarts
 
-The Planned Return subsection shows the accepted return, each zone's preparation,
-and the saved routine together. Open it directly with
-`/velair/preconditioning/planned-return`; `/velair/preconditioning/preconditioning`
-opens Adaptive Preconditioning, which is the tab's default subsection. Adjusting the
+The Planned return tab shows the accepted return, each zone's preparation,
+and the saved routine together, with its own introduction and contextual help.
+Open it directly with `/velair/planned-return`; `/velair/preconditioning`
+opens the separate Preconditioning tab. The former subsection URLs still open
+their corresponding tabs. Adjusting the
 arrival time changes only this absence, not the saved week. **Cancel** removes
-preparation and the automatic destination change. Before absence is confirmed,
-it leaves the active selection unchanged; after confirmation, it restores the
+preparation and the automatic destination change. Before normal absence is confirmed,
+it leaves the active selection unchanged; after confirmation or an immediate manual
+Away, it restores the
 Mode and Profiles recorded before this episode started.
 
 An explicit Mode or Profile selection cancels the episode's automatic return.
@@ -462,8 +524,10 @@ contracts are documented in the [developer API](../developer/api.md).
 The `velair.cancel_planned_return` action cancels a pending or active confirmed
 return, or closes an inactive episode notice. Cancellation stops preparation and
 the timed return and prevents automatic restart for this absence. For a
-confirmed departure it restores the saved previous Mode/Profile selection; for
-a pending confirmation or terminal notice it does not change the selection. A fresh explicit **Plan return** can still start a new episode.
+confirmed departure or an immediate manual Away it restores the saved previous
+Mode/Profile selection, even before monitored departure confirmation. A normal
+pending confirmation or terminal notice does not change the selection. A fresh
+explicit **Plan return** can still start a new episode.
 
 ### Restoration limits
 
@@ -484,7 +548,10 @@ because Velair cannot infer their previous one.
 On restart, pending one-off notices and confirmed absences are recovered instead of starting again. An
 unconfirmed absence starts its confirmation delay again. A sensor that reports
 occupied reconciles the previous absence even when the arrival happened while
-Home Assistant was offline.
+Home Assistant was offline. An immediate manual Away retains its pending presence
+return gate on restart: an unfinished confirmation starts the full delay again,
+and initial presence cannot count as a return. A completed confirmation stays
+completed. The scheduled arrival remains authoritative in either case.
 
 ## Limits And Backups
 
@@ -530,7 +597,7 @@ room's estimated start time. These are current estimates, not a history of actua
 device activity. The timeline sits beside the summary when
 space permits and moves below it in narrower containers. It measures elapsed
 absence time, not thermal progress. Select the summary outside its helpers to open this
-feature's full detail in Preconditioning; the helpers do not navigate or
+feature's full detail in the Planned return tab; the helpers do not navigate or
 change the return.
 
 **Next events during an active return**
@@ -620,7 +687,8 @@ Select **Planned return** in the visual card editor. The card operates on the
 same persisted episode as the sidebar and other cards. It supports future
 return dates and times. Active episodes offer **Cancel** and **Change arrival**;
 Cancel stops the accepted return and restores the recorded previous Mode/Profile
-selection after confirmed departure; during confirmation it leaves selection
+selection after confirmed departure or an immediate manual Away, even before
+monitored departure confirmation. A normal pending confirmation leaves selection
 unchanged. After
 completion, cancellation or any other inactive episode, the card shows a fresh
 planning form without waiting for household occupancy to change. Invalid saved
@@ -661,12 +729,14 @@ Existing card configurations keep it hidden. New cards created from Home
 Assistant's card picker include it enabled; YAML configurations must opt in with
 `type: planned-return` in `climate_actions`.
 
-During **Away** and **Preparing for arrival**, the card shows the confirmed
-departure and the saved arrival with the episode's Away and Return Mode names.
+During **Away** and **Preparing for arrival**, the card shows the Away
+application time and the saved arrival with the episode's Away and Return Mode
+names. With immediate manual Away, this application can precede confirmed physical
+departure.
 A current-time indicator, identified by its **Now** helper, advances according to elapsed UTC time, including across clock
 changes, and stays within the bar. Endpoints include dates when their Home
 Assistant calendar dates differ. Unsaved arrival edits do not change this bar.
-Pending and terminal states, or episodes without a confirmed departure timestamp,
+Normal pending departures and terminal states, or episodes without an Away application timestamp,
 keep a static status without a timeline. Both the sidebar and card update their local clocks once
 per minute only while visible and active, and immediately after becoming visible;
 this display refresh never requests backend data.

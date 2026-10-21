@@ -616,7 +616,7 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 18,
+  "model_version": 19,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
@@ -630,6 +630,12 @@ The current export format is:
   }
 }
 ```
+
+Model 19 includes the optional per-zone Preconditioning master relationship.
+Older files normalize missing relationships to Independent. Accepted master
+execution anchors are local runtime continuity data: they are stored through
+Home Assistant storage but excluded from portable exports. Learning sessions
+are not restored after restart.
 
 Portable profile data contains profile and Mode definitions but never
 the active profile or selected mode intent, so importing a backup cannot

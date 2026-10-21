@@ -11176,7 +11176,7 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
             == EVENT_TYPE_PRECONDITIONING_OBSERVATION_RECORDED
         )
         self.assertEqual(recorded["quality"], "invalid")
-        self.assertEqual(recorded["invalid_reason"], "out_of_bounds")
+        self.assertEqual(recorded["invalid_reason"], "duration_too_short")
         self.assertEqual(recorded["stored_sample_count"], 1)
 
     async def test_preconditioning_session_stores_local_outdoor_temperature(

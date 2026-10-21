@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](adaptive-preconditioning.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.3 |
+| Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -29,7 +29,7 @@ Blok **Tylko temperatura** nie zezwala na zmianę trybu HVAC. Gdy termostat jest
 <a id="setup"></a>
 ## Konfiguracja
 
-Karta przygotowania temperatury udostępnia dwa narzędzia w wyborze podsekcji. Domyślnie otwiera adaptacyjne przygotowanie; wybierz Planowany powrót, aby skonfigurować obecność i cotygodniowe powroty oraz zarządzać bieżącą nieobecnością. Bezpośrednie ścieżki panelu to `/velair/preconditioning/preconditioning` i `/velair/preconditioning/planned-return`. Zobacz [Planowany powrót](planned-return.pl.md).
+Karta **Przygotowanie wstępne** zawiera adaptacyjne ustawienia i uczenie dla każdego urządzenia. **Planowany powrót** ma osobną kartę dla obecności, tygodniowych przyjazdów i bieżącej nieobecności. Obie karty mają wprowadzenie i pomoc kontekstową. Bezpośrednie ścieżki to `/velair/preconditioning` i `/velair/planned-return`. Zapisane odnośniki do wcześniejszych podsekcji nadal otwierają odpowiednią kartę. Zobacz [Planowany powrót](planned-return.pl.md).
 
 1. Otwórz kartę przygotowania temperatury.
 2. Rozwiń encję, którą chcesz skonfigurować.
@@ -46,6 +46,41 @@ Po rozwinięciu encji każdy obsługiwany tryb pokazuje kartę bieżącej progno
 Aby sprawdzić konkretną kalkulację, otwórz **Szczegóły obliczeń** w karcie prognozy. Opcjonalna sekcja pokazuje wartości backendu użyte do prognozy: liczby próbek, oszacowanie z zakończonych obserwacji, dolne ograniczenie z częściowych obserwacji, łączny szacunek, zaokrąglenie i końcowe wyprzedzenie. Jest domyślnie ukryta, aby zwykły widok pozostał prosty.
 
 Przygotowanie na zaplanowany powrót jest oddzielone od wyprzedzenia harmonogramu tygodniowego. Dla przyjętego przyszłego powrotu informacje termostatu pokazują stan powrotu, szacowany początek, cel na przybycie i powód wstrzymania lub niedostępności. Przegląd, Planowany powrót i karty termostatów korzystają z tych samych danych backendu; nie jest to kolejne zdarzenie harmonogramu tygodniowego. Pomieszczenie może nadal realizować tryb nieobecności, pokazując oszacowanie przyszłego powrotu. **Przygotowanie** opisuje zamiar sterowania Velair, a nie potwierdzenie odbioru polecenia przez urządzenie ani fizycznego grzania lub chłodzenia. Oś powrotu pokazuje upływ czasu do zapisanego przybycia, a nie procent postępu temperaturowego. Znaczenie stanów opisuje [przygotowanie pomieszczeń](planned-return.pl.md#room-preparation).
+
+<a id="preconditioning-master"></a>
+## Nadrzędny termostat przygotowania
+
+Pozostaw **Nadrzędny termostat przygotowania** na **Niezależnie**, aby zachować dotychczasowe działanie. Aby wcześniejsze przygotowanie urządzenia zależało od innego, wybierz to zarządzane urządzenie w ustawieniach zależnej strefy. Wybierz ponownie **Niezależnie**, aby usunąć powiązanie. Ustawienie dotyczy efektywnego harmonogramu strefy, także Profili, wyjątków stref i Planowanego powrotu; nie zastępuje temperatur ani bloków.
+
+Jeden termostat nadrzędny może obsługiwać wiele zależnych stref. Strefa nie może zależeć od siebie. Łańcuchy i cykle nie są obsługiwane: strefa zależna nie może jednocześnie być nadrzędna.
+
+Velair wybiera blok termostatu nadrzędnego, którego godzina docelowa jest najbliższa godzinie docelowej bloku zależnego. Przy równej odległości wybiera wcześniejszy blok. Godziny docelowe nie muszą być takie same. Strefa zależna rozpoczyna w późniejszym z terminów: własnym przewidywanym początku lub początku przygotowania tego bloku termostatu nadrzędnego:
+
+| Własny początek strefy | Początek nadrzędnego | Cel strefy | Efektywny początek |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Bez wcześniejszego przygotowania | 18:45 | Zwykły blok o 18:45 |
+| 17:40 | 19:00 | 18:45 | Zwykły blok o 18:45 |
+
+Jeśli wybrany blok nadrzędny nie może przygotować się wcześniej, Velair nie zastępuje go innym. Przygotowanie ogrzewania nie może zwolnić przygotowania chłodzenia i odwrotnie. Nadal obowiązują pauzy, nadpisania, kontrole dostępności i limity maksymalnego wyprzedzenia. Niedostępny lub wyłączony termostat nadrzędny pozostaje skonfigurowany; zależna strefa nie staje się automatycznie niezależna.
+
+**Minimalny start (min)** nadal wyklucza zbyt krótkie niezależne prognozy. Czekanie na nadrzędny, podobnie jak późne dostarczenie polecenia, może pozostawić krótsze rzeczywiste okno. Uczenie wykorzystuje pozostały czas, nie wymyśla wcześniejszego początku ani nie przesuwa zaplanowanego celu.
+
+Wyświetlany początek jest prognozą. Przy wykonaniu odpowiadające polecenie przygotowania nadrzędnego musi zostać przyjęte, zanim zależna strefa będzie mogła rozpocząć. Nie potwierdza to stanu przekaźnika kotła, przepływu wody ani rzeczywistego ogrzewania/chłodzenia. Velair nie podnosi temperatury nadrzędnego, aby zgłaszać zapotrzebowanie na ciepło dla innych stref. Zwykły blok nadal rozpoczyna się o własnej godzinie.
+
+Uczenie rozpoczyna się, gdy zależna strefa rzeczywiście zaczyna ograniczone przygotowanie, z użyciem temperatury w tej chwili i czasu pozostałego do jej bloku. Wcześniejsze osiągnięcie celu oraz częściowe i nieprawidłowe obserwacje zachowują dotychczasowe reguły. Późniejsze zakończenie przygotowania nadrzędnego nie zatrzymuje przygotowania już trwającego w zależnej strefie. Łączenie i rozłączanie nie usuwa zapisanych próbek.
+
+Otwórz **Szczegóły obliczeń**, aby sprawdzić niezależny szacunek, wybrany termostat nadrzędny i efektywny początek. Diagnostyka podaje powód zależności obok informacji o przygotowaniu i uczeniu. Zapisane odwołania do rozpoczętych poleceń zapewniają ciągłość działania po restarcie; przerwana obserwacja uczenia nie jest wznawiana, a te techniczne odwołania nie trafiają do przenośnych eksportów.
+
+<a id="understanding-learning-activity"></a>
+## Jak rozumieć aktywność uczenia
+
+Każdy obsługiwany kierunek może pokazać krótkie wyjaśnienie przy dotychczasowych informacjach o uczeniu: Velair obserwuje zmianę, czeka na odpowiednią zmianę albo nie może obserwować z określonego powodu. Opisuje to uczenie, a nie potwierdzenie fizycznego ogrzewania lub chłodzenia. Poprzednia zmiana ma wyraźną datę i godzinę i nie jest przedstawiana jako bieżąca aktywność.
+
+Działanie **Diagnostyka** obok wyjaśnienia otwiera to urządzenie i jego historię Przygotowania wstępnego bez filtra dat ukrywającego wcześniejsze wpisy. Dotychczasowa sekcja funkcji pokazuje bieżącą aktywność i ostatnią zachowaną zmianę uczenia. Rozwiń szczegóły, aby sprawdzić dostępne temperatury, ustawione progi i czasy użyte w decyzji. Zobacz [Dane uczenia](diagnostics.pl.md#learning-evidence).
+
+Niezmienna liczba próbek nie dowodzi awarii. Zmiana może nie dawać użytecznej różnicy temperatur, obserwacja może nadal trwać, a wynik może być częściowy lub nieprawidłowy. Wyjaśnienia korzystają tylko z zapisanych danych; nie wnioskują o pracy kotła ani wspólnym zasilaniu ciepłem. Stan uczenia i prognoza następnego bloku pozostają oddzielne: strefa z niewielką historią może mimo to nie potrzebować wcześniejszego startu dla danego celu.
 
 <a id="how-it-starts"></a>
 ## Jak rozpoczyna się przygotowanie

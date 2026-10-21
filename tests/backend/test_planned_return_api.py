@@ -12,6 +12,22 @@ from custom_components.velair.models import (
 
 
 class PlannedReturnModelTest(unittest.TestCase):
+    def test_immediate_away_gate_roundtrips_and_rejects_invalid_authority(self):
+        config = self.config() | {'enabled': False}
+        episode = {'state': 'away', 'origin': 'manual', 'started_at': helpers.NOW.isoformat(),
+                   'departure_at': helpers.NOW.isoformat(), 'return_at': '2026-05-22T18:00:00+00:00',
+                   'away_mode_id': 'default', 'destination_mode_id': 'default',
+                   'preparing_entities': [], 'awaiting_departure_confirmation': True}
+        for state in ('away', 'skipped'):
+            expected = episode | {'state': state}
+            data = normalize_schedule_data({'planned_return': config, 'planned_return_episode': expected}, [])
+            self.assertEqual(normalize_schedule_data(serialize_schedule_data(data), [])['planned_return_episode'], expected)
+        for changes in ({'awaiting_departure_confirmation': 'true'}, {'awaiting_departure_confirmation': 1},
+                        {'origin': 'automatic'}, {'state': 'armed'}, {'state': 'fulfilled'}):
+            with self.subTest(changes=changes):
+                self.assertIsNone(normalize_schedule_data({'planned_return': config,
+                    'planned_return_episode': episode | changes}, [])['planned_return_episode'])
+
     def config(self):
         return default_planned_return() | {"enabled": True, "occupancy_entity_ids": ["binary_sensor.home"]}
 
@@ -175,6 +191,20 @@ class PlannedReturnModelTest(unittest.TestCase):
 
 
 class PlannedReturnApiTest(unittest.IsolatedAsyncioTestCase):
+    async def test_explicit_immediate_away_option_reaches_scheduler(self):
+        for flag in (False, True):
+            with self.subTest(flag=flag):
+                scheduler = SimpleNamespace(async_start_planned_return=AsyncMock())
+                runtime = {'scheduler': scheduler, 'storage': SimpleNamespace(
+                    temperature_migration_required=False,
+                    data={'planned_return': default_planned_return(), 'modes': []})}
+                connection = SimpleNamespace(user=SimpleNamespace(is_admin=True), send_error=Mock(), send_result=Mock())
+                arrival = '2026-10-06T18:00:00+02:00'
+                with patch.object(api, '_get_runtime', return_value=runtime), patch.object(api, '_build_schedule_response', return_value={}):
+                    await api.ws_start_planned_return(SimpleNamespace(states={}), connection,
+                        {'id': 1, 'return_at': arrival, 'apply_away_now': flag})
+                scheduler.async_start_planned_return.assert_awaited_once_with(arrival, apply_away_now=flag)
+
     async def test_existing_cancel_command_dismisses_cancelled_with_no_sources_and_stopped_scheduler(self):
         episode = {"state": "cancelled", "origin": "manual", "started_at": helpers.NOW.isoformat(),
                    "return_at": None, "away_mode_id": "default", "destination_mode_id": "default", "preparing_entities": []}

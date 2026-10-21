@@ -3,6 +3,7 @@ import { render } from "lit";
 import { describe, expect, it } from "vitest";
 import { currentArrivalPreparation } from "../../src/velair/domain/planned-return-preparation";
 import { renderPreparationRoom, renderPreparationStatus } from "../../src/velair/views/planned-return-preparation-status";
+import { renderPlannedReturnPreparation } from "../../src/velair/views/planned-return-preparation-view";
 import { en } from "../../src/velair/translations/en";
 import type { TranslationKey } from "../../src/velair/translations";
 import type { PlannedReturnPreparationZone, PlannedReturnStatus } from "../../src/velair/types";
@@ -15,6 +16,22 @@ const t = (key: TranslationKey, params?: Record<string, string | number>) => Obj
 const displayTime = (iso: string) => iso.slice(11, 16);
 const container = (template: unknown) => { const root = document.createElement("div"); render(template, root); return root; };
 describe("shared preparation visibility renderers", () => {
+  it("replaces the coarse dependency reason once in return cards", () => {
+    const summary = currentArrivalPreparation(status([room({ reason: "master_no_preconditioning", preconditioning_dependency: {
+      master_entity_id: "climate.master", reason: "master_no_preconditioning", reason_detail: "master_preconditioning_disabled", result: "blocked",
+    } })]), now)!;
+    const element = container(renderPreparationRoom(summary.zones[0], t, displayTime, { arrival: summary.arrival }));
+    expect(element.textContent).toContain(en.preconditioningMasterPreconditioningDisabled);
+    expect(element.textContent).not.toContain(en.preconditioningDependencyNoStart);
+    expect(element.querySelectorAll(".preconditioning-dependency")).toHaveLength(1);
+    expect(element.textContent).not.toContain(en.plannedReturnPreparationReasonUnknown);
+    const expanded = container(renderPlannedReturnPreparation({ preparation: status([summary.zones[0].source]).preparation!,
+      t, expanded: true, toggle: () => {}, displayTime }));
+    expect(expanded.textContent).toContain(en.preconditioningMasterPreconditioningDisabled);
+    expect(expanded.textContent).not.toContain(en.preconditioningDependencyNoStart);
+    expect(expanded.textContent).not.toContain(en.plannedReturnPreparationReasonUnknown);
+    expect(expanded.querySelectorAll(".preconditioning-dependency")).toHaveLength(1);
+  });
   it("identifies return preparation and qualifies preparing as control intent", () => {
     const summary = currentArrivalPreparation(status([room({ state: "preparing" })]), now)!;
     const global = container(renderPreparationStatus(summary, t, displayTime, now));

@@ -23,11 +23,12 @@ Adaptive Preconditioning; only their effective weekly schedule is published.
 
 ## Setup
 
-The Preconditioning tab offers two tools in its subsection selector. Adaptive
-Preconditioning opens by default; choose Planned Return to configure occupancy
-and weekly arrivals and manage the current absence. Their direct panel paths are
-`/velair/preconditioning/preconditioning` and
-`/velair/preconditioning/planned-return`. See [Planned Return](planned-return.md).
+The Preconditioning tab contains per-climate adaptive settings and learning.
+Planned return has its own tab for occupancy, weekly arrivals and the current
+absence. Both tabs include an introduction and contextual help. Their direct
+panel paths are `/velair/preconditioning` and `/velair/planned-return`.
+Previously saved subsection links still open the corresponding tab.
+See [Planned Return](planned-return.md).
 
 1. Open the Preconditioning tab.
 2. Expand the climate you want to configure.
@@ -59,6 +60,81 @@ saved arrival, not a percentage of thermal progress. See
 [Room Preparation](planned-return.md#room-preparation) for the state meanings.
 
 If you want to verify a specific calculation, open **Calculation details** in the live prediction card. This optional section shows the backend values used for that prediction, including sample counts, the estimate from completed observations, the partial lower bound, the combined estimate, rounding, and the final lead. It is hidden by default so the normal view stays simple.
+
+## Preconditioning Master
+
+Leave **Preconditioning master** set to **Independent** for the existing behavior.
+To make one climate's early preparation depend on another, select that managed
+climate in the dependent room's settings. Select **Independent** again to unlink
+them. This setting applies to the room's effective schedule, including Profiles,
+zone exceptions and Planned Return. It does not replace its temperatures or blocks.
+
+A master can serve several dependent rooms. A room cannot depend on itself, and
+chains or cycles are not supported: a dependent cannot also be a master.
+
+Velair selects the master's block whose target time is closest to the dependent
+block's target time. A tie uses the earlier block. The target times need not be
+equal. The dependent starts at the later of its own predicted start and that
+master block's preparation start:
+
+| Room's own start | Master's start | Room's target | Effective start |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | No early preparation | 18:45 | Normal block at 18:45 |
+| 17:40 | 19:00 | 18:45 | Normal block at 18:45 |
+
+If that selected master block cannot prepare early, Velair does not substitute
+another block. A heating preparation cannot release a cooling preparation, or
+vice versa. Existing pauses, overrides, availability checks and maximum lead
+limits still apply. An unavailable or disabled master remains configured; it
+does not silently turn the dependent into an independent room.
+
+**Minimum start (min)** still excludes short independent predictions.
+Waiting for the master, like a late command delivery, can leave a shorter actual
+window. Learning uses that remaining window rather than inventing an earlier
+start or moving the scheduled target.
+
+The displayed start is a forecast. At execution, the master's corresponding
+preparation command must be accepted before a dependent can begin. This is not
+confirmation of a boiler relay, water flow or actual heating/cooling. Velair does
+not raise the master's temperature to request heat on behalf of other rooms.
+The normal scheduled block still runs at its own time.
+
+Learning starts when the dependent actually begins its constrained preparation,
+using its temperature then and the time remaining until its own block. Reaching
+the target early, partial observations and invalid samples keep their existing
+rules. The master's later completion does not stop preparation already underway
+in the dependent. Linking or unlinking does not erase saved learning samples.
+
+Open **Calculation details** for the independent estimate, selected master and
+effective start. Diagnostics provides the dependency reason alongside the room's
+existing preparation and learning evidence. Saved command-start references allow
+runtime continuity across a restart; an interrupted learning observation is not
+resumed, and these technical references are excluded from portable exports.
+
+## Understanding Learning Activity
+
+Each supported direction can show a short explanation beside its existing
+learning information: Velair is observing a transition, waiting for a suitable
+transition, or cannot observe for a known reason. This describes learning, not
+confirmation that equipment is physically heating or cooling. A previous
+transition is explicitly dated and is not presented as current activity.
+
+Use the accompanying **Diagnostics** action to open that climate and its
+Preconditioning history, without a date filter hiding earlier entries. The
+existing function section shows current activity and the latest retained
+learning transition. Expand its details to inspect the temperatures, configured
+thresholds and durations available for that decision. See
+[Learning evidence](diagnostics.md#learning-evidence).
+
+An unchanged sample count does not establish a fault. A transition may not
+provide a usable temperature difference, an observation may still be running,
+or its result may be partial or invalid. Explanations use only evidence Velair
+has recorded; they do not infer boiler operation or a shared heat supply.
+Learning status and the prediction for the next block remain separate: a room
+can have little learned history and still need no early start for a particular
+target.
 
 ## How It Starts
 

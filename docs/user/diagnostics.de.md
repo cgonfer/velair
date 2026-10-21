@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.3 |
+| Letzte Synchronisierung | 2026-10-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -38,6 +38,22 @@ Bei aktiviertem Außenvergleich enthält derselbe Komfortbericht außerdem die a
 
 Die aktuelle Bewertung enthält `range_summary`. Gespeicherte Einträge von `comfort_assessment_changed` behalten außerdem `previous_range_summary` sowie die Kennzeichen `range_summary_changed` und `range_status_changed`. Ein heruntergeladener Bericht kann dadurch zeigen, ob das Ereignis einen Übergang im konfigurierten Bereich oder eine andere Komfortänderung darstellte. Diese Felder enthalten nur stabile semantische Codes, keinen unverarbeiteten Home-Assistant-Ereigniskontext.
 
+<a id="learning-evidence"></a>
+## Lernnachweise
+
+Der bestehende Funktionsabschnitt zur Vorkonditionierung trennt Heiz- und Kühlaktivität. Er zeigt, ob eine Beobachtung läuft oder Velair auf einen geeigneten Übergang wartet, sowie den letzten aufbewahrten Lernübergang, sofern vorhanden. Aufklappbare Details enthalten nur für diese Entscheidung relevante Nachweise, etwa Anfangs- und Solltemperatur, Mindesttemperaturdifferenz, beobachtete Dauer und den konfigurierten maximalen Vorlauf.
+
+Der Vorkonditionierungsverlauf enthält Beobachtungsstarts, Unterbrechungen, Ergebnisse und tatsächliche Übergänge, bei denen keine Beobachtung starten konnte. Die Ergebnisse unterscheiden vollständige, teilweise und ungültige Beobachtungen. Ungültige Beobachtungen können eine zu kleine Temperaturdifferenz, eine zu kurze Dauer oder eine Dauer über dem eingestellten Maximum ausweisen. Ältere gespeicherte Beobachtungen können den allgemeineren Grund „außerhalb der Grenzen“ behalten. Velair weist ihnen nachträglich keine genauere Ursache zu.
+
+Wiederholte Berechnungen zukünftiger Prognosen erzeugen keine Lerneinträge. Der letzte Übergang unterliegt denselben Aufbewahrungseinstellungen und derselben globalen Verlaufsgrenze wie die Zeitleiste. Das Deaktivieren des Vorkonditionierungsverlaufs oder Leeren des Verlaufs entfernt diese historischen Nachweise; es beendet weder das Lernen noch löscht es gespeicherte Lernbeispiele. Nach einem Neustart werden frühere Laufzeitaktivität und Verlauf nicht wiederhergestellt. Ohne Nachweise erfindet Diagnose keinen Grund für unveränderte Zähler und leitet keinen Kesselbetrieb ab.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Nachweise zur Vorkonditionierungsabhängigkeit
+
+Prüfe bei einem Raum mit konfiguriertem **Vorkonditionierungs-Master** die Abhängigkeitsdetails neben den vorhandenen Vorbereitungsinformationen. Sie unterscheiden die unabhängige Raumschätzung, gewählten Übergang und Start des Masters sowie den wirksamen Start oder den Grund, aus dem die Vorbereitung nicht beginnen kann. Ein von Home Assistant angenommener Befehl belegt Velairs Aktion, misst aber nicht das Kesselrelais. Die Lernbeobachtung beschreibt weiterhin Temperatur und verstrichene Zeit des abhängigen Raums selbst.
+
+Wenn Nachweise vorliegen, unterscheidet die Erklärung die Verfügbarkeit in Home Assistant von deaktivierter Zeitplanung oder Vorkonditionierung, pausiertem Profil, aktiver Übersteuerung, ungeeignetem Master oder fehlendem Übergang. Karten und Diagnose zeigen dieselbe Erklärung. Ein nicht verfügbares Klimagerät kann dennoch eine berechnete Prognose haben, wenn ein anderer konfigurierter Sensor seine Raumtemperatur liefert; diese Prognose bestätigt weder Befehlsannahme noch die Verfügbarkeit von Heizen oder Kühlen.
+
 <a id="runtime-history-and-privacy"></a>
 ## Laufzeitverlauf und Datenschutz
 
@@ -57,7 +73,7 @@ Die lokale Diagnoseansicht verwendet beim Filtern die Anzeigenamen der Klimager�
 
 Die Diagnose bietet keine Bedienelemente für Zeitplaner, Wiederholungen, Rücknahmen oder Klimageräte. Konfiguration und Wartungsaktionen bleiben in den Einstellungen; Gerätefähigkeiten und Zustandsdetails gehören nun zur Diagnose.
 
-Jedes verwaltete Klimagerät meldet außerdem ausschließlich zur Laufzeit verfügbare Informationen zur Stabilisierung von Befehlen. Während sich ein neuer Velair-Befehl stabilisiert, führt die Diagnose die betroffenen Steuerungsfelder in ihrer Momentaufnahme auf. Hat sich das Klimagerät bis zum begrenzten Ablaufzeitpunkt nicht angeglichen, kennzeichnet die nächste aktuelle Momentaufnahme das Gerät mit der Warnung `command_settling_mismatch`. Der Block `command_settling` im heruntergeladenen Bericht enthält erwartete und beobachtete Werte. Das sind Informationen zur Fehlerbehebung: Die Diagnose wiederholt keinen Befehl, verändert kein Klimagerät und erstellt keine manuelle Anpassung. Ein neuerer Befehl für dieses Feld oder ein Neustart löscht diese Informationen.
+Jedes verwaltete Klimagerät meldet außerdem ausschließlich zur Laufzeit verfügbare Informationen zur Stabilisierung von Befehlen. Während sich ein neuer Velair-Befehl stabilisiert, führt die Diagnose die betroffenen Steuerungsfelder in ihrer Momentaufnahme auf. Hat sich das Klimagerät bis zum begrenzten Ablaufzeitpunkt nicht angeglichen, kennzeichnet die nächste aktuelle Momentaufnahme das Gerät mit der Warnung `command_settling_mismatch`. Klappe diese Warnung im Diagnosepanel des gewählten Klimageräts auf, um den erwarteten Wert jedes betroffenen Feldes mit dem vom Thermostat gemeldeten Wert zu vergleichen. Temperaturen enthalten die Geräteeinheit, HVAC-Modi verwenden ihre üblichen Bezeichnungen und fehlende Werte werden ausdrücklich gekennzeichnet. Verwendet wird der aufgezeichnete Vergleich, nicht der aktuelle Zeitplan oder ein neuer Messwert. Der heruntergeladene Bericht enthält weiterhin den Block `command_settling`. Das sind Informationen zur Fehlerbehebung: Die Diagnose wiederholt keinen Befehl, verändert kein Klimagerät und erstellt keine manuelle Anpassung. Ein neuerer Befehl für dieses Feld oder ein Neustart löscht diese Informationen.
 
 <a id="automating-diagnostic-health"></a>
 ## Diagnosezustand in Automationen verwenden

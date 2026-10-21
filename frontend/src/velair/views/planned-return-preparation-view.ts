@@ -1,6 +1,7 @@
 import { css, html, nothing } from "lit";
 import type { HomeAssistant, PlannedReturnPreparation, ScheduleResponse } from "../types";
 import type { TranslationKey } from "../translations";
+import { renderPreconditioningDependency } from "./preconditioning-dependency";
 
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string;
 export const plannedReturnPreparationReasons: Record<string, TranslationKey> = {
@@ -91,7 +92,8 @@ export function renderPlannedReturnPreparation(options: {
           <ha-icon icon=${hass?.states?.[zone.entity_id]?.attributes?.icon ?? "mdi:thermostat"}></ha-icon>
           <div class="preparation-room-name"><strong>${hass?.states?.[zone.entity_id]?.attributes?.friendly_name ?? zone.entity_id}</strong><small>${t("plannedReturnPreparationSchedule", { schedule })}</small></div>
           <div class="preparation-room-status"><span><ha-icon icon=${stateIcon}></ha-icon>${t(labelKey)}</span>
-            ${zone.reason ? html`<span class="preparation-reason">${t(plannedReturnPreparationReasons[zone.reason] ?? "plannedReturnPreparationReasonUnknown")}</span>` : nothing}
+            ${zone.reason && zone.reason !== zone.preconditioning_dependency?.reason ? html`<span class="preparation-reason">${t(plannedReturnPreparationReasons[zone.reason] ?? "plannedReturnPreparationReasonUnknown")}</span>` : nothing}
+            ${renderPreconditioningDependency(zone.preconditioning_dependency, t, displayTime, zone.preconditioning_dependency ? hass?.states?.[zone.preconditioning_dependency.master_entity_id]?.attributes?.friendly_name : undefined)}
             ${arrival && zone.start_at ? html`<span class="preparation-detail">${t("plannedReturnPreparationPlannedStart", { time: displayTime(zone.start_at) })}</span>` : nothing}
             ${arrival && temperature !== null ? html`<span class="preparation-detail">${t("plannedReturnPreparationTarget", { temperature, unit: data?.temperature_unit ?? "" })}</span>` : nothing}
           </div>

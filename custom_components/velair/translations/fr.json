@@ -159,7 +159,7 @@
   "services": {
     "start_planned_return": {
       "name": "I'm leaving",
-      "description": "Planifie un retour ponctuel à une date et une heure futures avec les modes enregistrés et la programmation automatique. Avec des sources de présence configurées, attend une absence confirmée avant le mode Absence ; sans sources, active ce mode immédiatement. Fonctionne sans routine hebdomadaire et modifie une absence active.",
+      "description": "Planifie un retour ponctuel à une date et une heure futures avec les Modes enregistrés et la programmation automatique. Avec des sources d’occupation configurées, attend la confirmation de l’absence sauf si Appliquer le mode Absence maintenant est activé ; sans source, active Absence immédiatement. Fonctionne lorsque la routine hebdomadaire est désactivée et actualise une absence active.",
       "fields": {
         "return_date": {
           "name": "Return date",
@@ -168,12 +168,16 @@
         "return_time": {
           "name": "Return time",
           "description": "Heure d’arrivée à la date sélectionnée dans le fuseau Home Assistant. Utilisez HH:MM en YAML ; les secondes facultatives doivent être 00. Les heures inexistantes lors du passage à l’heure d’été sont refusées."
+        },
+        "apply_away_now": {
+          "name": "Appliquer le mode Absence maintenant",
+          "description": "Applique immédiatement le mode Absence configuré. Avec des sources d’occupation, le retour automatique par présence n’est activé qu’après une absence continue pendant le délai de confirmation configuré. La préparation et l’arrivée programmées restent actives."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Annuler le retour prévu",
-      "description": "Annule un retour en attente ou actif, ou ferme l’avis d’un retour inactif. Conserve le mode actuel et arrête le retour automatique pour cette absence. Vous pouvez ensuite planifier explicitement un nouveau retour."
+      "description": "Annule un retour prévu ou ferme un avis de retour inactif. Après application d’Absence, y compris une application manuelle immédiate avant confirmation du départ surveillé, restaure le Mode et les Profils sélectionnés avant le début de l’épisode. Un départ normal en attente ne change pas la sélection. Arrête le retour automatique pour cette absence. Vous pouvez ensuite planifier explicitement un nouveau retour."
     },
     "update_block_preset": {
       "name": "Mettre à jour le preset Velair",
@@ -321,6 +325,16 @@
         "entity_id": {
           "name": "Entités climatiques",
           "description": "Une entité climatique gérée ou une liste. Toutes les cibles doivent être valides avant de supprimer la moindre exception."
+        }
+      }
+    },
+    "pause_zone": {
+      "name": "Mettre la zone en pause",
+      "description": "Ajoute ou met à jour un motif qui suspend l’exécution automatique de la programmation d’une entité climatique gérée. L’équipement peut éventuellement être éteint tant qu’un motif reste actif.",
+      "fields": {
+        "until_next_block": {
+          "name": "Jusqu’au prochain bloc",
+          "description": "Termine cette pause au début du prochain bloc programmé. L’échéance est fixée à la demande et ne suit pas les modifications ultérieures de la programmation. Ne peut pas être combiné avec duration_minutes. Échoue si aucun bloc futur n’existe ; les autres motifs de pause restent actifs."
         }
       }
     }

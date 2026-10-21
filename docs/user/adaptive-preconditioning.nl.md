@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](adaptive-preconditioning.md) · [Español](adapt
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.0-beta.3 |
+| Laatst gesynchroniseerd | 2026-10-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -29,7 +29,7 @@ Een blok met **Alleen temperatuur** staat geen HVAC-moduswijziging toe. Zolang h
 <a id="setup"></a>
 ## Instellen
 
-Het tabblad Voorconditionering biedt twee onderdelen in de onderdeelkiezer. Adaptieve voorconditionering wordt standaard geopend; kies Geplande terugkeer om bezetting en wekelijkse aankomsten in te stellen en de huidige afwezigheid te beheren. De directe paneelpaden zijn `/velair/preconditioning/preconditioning` en `/velair/preconditioning/planned-return`. Zie [Geplande terugkeer](planned-return.nl.md).
+Het tabblad **Voorconditionering** bevat adaptieve instellingen en leergegevens per thermostaat. **Geplande terugkeer** heeft een eigen tabblad voor bezetting, wekelijkse aankomsten en de huidige afwezigheid. Beide tabbladen hebben een inleiding en contextuele hulp. De directe paden zijn `/velair/preconditioning` en `/velair/planned-return`. Eerder opgeslagen koppelingen naar onderdelen openen nog steeds het bijbehorende tabblad. Zie [Geplande terugkeer](planned-return.nl.md).
 
 1. Open het tabblad Voorconditionering.
 2. Vouw het gewenste klimaatapparaat uit.
@@ -46,6 +46,41 @@ Wanneer je een klimaatapparaat uitvouwt, krijgt elke ondersteunde modus een kaar
 Open **Berekeningsdetails** op de voorspellingskaart als je een bepaalde berekening wilt controleren. Dit optionele onderdeel toont de backendwaarden voor die voorspelling, zoals aantallen waarnemingen, de schatting uit voltooide waarnemingen, de ondergrens uit gedeeltelijke waarnemingen, de gecombineerde schatting, de afronding en de uiteindelijke voorbereidingstijd. Het is standaard verborgen om de normale weergave overzichtelijk te houden.
 
 Voorbereiding voor Geplande terugkeer wordt apart onderscheiden van vooruitlopen op het weekschema. Voor een geaccepteerde toekomstige terugkeer tonen de gegevens per klimaatapparaat de terugkeerstatus, geschatte start, aankomstdoel en eventuele reden voor onderbreking of onbeschikbaarheid. Overzicht, Geplande terugkeer en klimaatkaarten gebruiken dezelfde terugkeergegevens van de backend; het is geen extra weekgebeurtenis. Een kamer kan nog de afwezigheidsmodus volgen terwijl een toekomstige terugkeerschatting zichtbaar is. **Voorbereiden** beschrijft de aansturingsintentie van Velair, geen bevestiging van ontvangst of fysiek verwarmen of koelen. De tijdlijn toont verstreken tijd richting de opgeslagen aankomst, geen percentage thermische voortgang. Zie [Kamervoorbereiding](planned-return.nl.md#room-preparation).
+
+<a id="preconditioning-master"></a>
+## Master voor voorconditionering
+
+Laat **Master voor voorconditionering** op **Onafhankelijk** staan voor het bestaande gedrag. Wil je de vroege voorbereiding van een thermostaat afhankelijk maken van een andere, kies dan die beheerde thermostaat bij de afhankelijke kamer. Kies opnieuw **Onafhankelijk** om de koppeling te verwijderen. Dit geldt voor het effectieve schema van de kamer, inclusief profielen, zone-uitzonderingen en Geplande terugkeer. Temperaturen en blokken worden niet vervangen.
+
+Een master kan meerdere afhankelijke kamers hebben. Een kamer kan niet van zichzelf afhangen. Ketens en cirkels zijn niet toegestaan: een afhankelijke kamer kan niet ook master zijn.
+
+Velair kiest het masterblok waarvan de doeltijd het dichtst bij de doeltijd van het afhankelijke blok ligt. Bij gelijke afstand geldt het eerdere blok. De doeltijden hoeven niet gelijk te zijn. De afhankelijke kamer begint op het laatste van de eigen voorspelde start en de voorbereidingsstart van dat masterblok:
+
+| Eigen start kamer | Start master | Doeltijd kamer | Effectieve start |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Geen vroege voorbereiding | 18:45 | Normaal blok om 18:45 |
+| 17:40 | 19:00 | 18:45 | Normaal blok om 18:45 |
+
+Kan dat gekozen masterblok niet vroeg voorbereiden, dan kiest Velair geen vervangend blok. Voorbereiding voor verwarming kan geen voorbereiding voor koeling vrijgeven, of andersom. Bestaande pauzes, tijdelijke aanpassingen, beschikbaarheidscontroles en maximale voorbereidingstijden blijven gelden. Een onbeschikbare of uitgeschakelde master blijft ingesteld; de afhankelijke kamer wordt niet stilzwijgend onafhankelijk.
+
+**Minimale voorsprong (min)** sluit nog steeds korte onafhankelijke voorspellingen uit. Wachten op de master kan, net als late opdrachtlevering, een korter werkelijk tijdvenster overlaten. Leren gebruikt dat resterende venster zonder een eerdere start te verzinnen of de geplande doeltijd te verschuiven.
+
+De getoonde start is een voorspelling. Bij uitvoering moet de bijbehorende voorbereidingsopdracht van de master zijn geaccepteerd voordat een afhankelijke kamer mag starten. Dit bevestigt geen ketelrelais, waterstroming of werkelijk verwarmen/koelen. Velair verhoogt de temperatuur van de master niet om warmte voor andere kamers aan te vragen. Het normale schemablok blijft op zijn eigen tijd ingaan.
+
+Leren begint wanneer de afhankelijke kamer werkelijk met de begrensde voorbereiding begint, met de temperatuur op dat moment en de resterende tijd tot het eigen blok. De bestaande regels voor vroeg bereiken, gedeeltelijke en ongeldige waarnemingen blijven gelden. Later afronden door de master stopt geen voorbereiding die al loopt in de afhankelijke kamer. Koppelen of ontkoppelen wist geen opgeslagen leerwaarnemingen.
+
+Open **Berekeningsdetails** voor de onafhankelijke schatting, gekozen master en effectieve start. Diagnostiek toont de afhankelijkheidsreden naast de bestaande voorbereidings- en leergegevens. Opgeslagen verwijzingen naar opdrachtstarts bieden continuïteit na een herstart; een onderbroken leerobservatie wordt niet hervat en deze technische verwijzingen worden niet in draagbare exports opgenomen.
+
+<a id="understanding-learning-activity"></a>
+## Leeractiviteit begrijpen
+
+Elke ondersteunde richting kan een korte verklaring naast de bestaande leergegevens tonen: Velair observeert een overgang, wacht op een geschikte overgang of kan om een bekende reden niet observeren. Dit beschrijft leren en bevestigt niet dat apparatuur fysiek verwarmt of koelt. Een eerdere overgang krijgt expliciet een datum en tijd en wordt niet als huidige activiteit getoond.
+
+Open met de bijbehorende actie **Diagnostiek** die thermostaat en zijn geschiedenis voor Voorconditionering, zonder een datumfilter dat oudere vermeldingen verbergt. Het bestaande functieonderdeel toont de huidige activiteit en de laatst bewaarde leerovergang. Vouw de details uit om de beschikbare temperaturen, ingestelde drempels en tijdsduren voor de beslissing te bekijken. Zie [Leergegevens](diagnostics.nl.md#learning-evidence).
+
+Een gelijkblijvend aantal waarnemingen bewijst geen storing. Een overgang kan onvoldoende bruikbaar temperatuurverschil bieden, een observatie kan nog lopen of het resultaat kan gedeeltelijk of ongeldig zijn. Verklaringen gebruiken alleen vastgelegde informatie en leiden daaruit geen ketelwerking of gedeelde warmtelevering af. Leerstatus en de voorspelling voor het volgende blok blijven apart: een kamer met weinig leerhistorie kan voor een bepaald doel toch geen vroege start nodig hebben.
 
 <a id="how-it-starts"></a>
 ## Hoe het startmoment wordt bepaald

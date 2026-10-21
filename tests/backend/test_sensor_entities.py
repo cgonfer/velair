@@ -810,6 +810,19 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
+    def test_blocked_preconditioning_keeps_master_context_without_timestamp(self) -> None:
+        dependency = {"master_entity_id": "climate.master", "reason": "master_no_preconditioning"}
+        event = helpers.models_module.ClimateEvent(
+            entity_id="climate.bedroom", when=datetime(2026, 7, 9, 22, tzinfo=timezone.utc),
+            temperature=24, weekday="thursday", start="22:00",
+            preconditioning_dependency=dependency,
+        )
+        entry = self._entry(SimpleNamespace(get_next_event_for_zone=lambda entity_id: event), ["climate.bedroom"])
+        sensor = sensor_module.ZonePreconditioningStartSensor(entry, "climate.bedroom")
+        self.assertIsNone(sensor.native_value)
+        self.assertEqual(sensor.extra_state_attributes, {"preconditioning_dependency": dependency})
+        self.assertEqual(sensor_module._serialize_event(event)["preconditioning_dependency"], dependency)
+
     def test_room_assist_omits_duplicated_source_readings(self) -> None:
         scheduler = SimpleNamespace(
             get_room_sensor_assist_status=lambda entity_id: {

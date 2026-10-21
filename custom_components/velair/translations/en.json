@@ -157,9 +157,19 @@
     }
   },
   "services": {
+    "pause_zone": {
+      "name": "Pause zone",
+      "description": "Add or update a reason that pauses automatic schedule execution for one managed climate entity. The climate can optionally be turned off while any reason remains.",
+      "fields": {
+        "until_next_block": {
+          "name": "Until next block",
+          "description": "End this pause at the next scheduled block start. Expiry is fixed when requested and does not follow later schedule edits. Cannot be combined with duration_minutes. Fails if no future block exists; other pause reasons remain active."
+        }
+      }
+    },
     "start_planned_return": {
       "name": "I'm leaving",
-      "description": "Plan a one-off return for a future date and time using saved Modes and Automatic scheduling. With configured occupancy sources, waits for confirmed absence before activating Away; without sources, activates Away immediately. Works with the weekly routine disabled and updates an active absence.",
+      "description": "Plan a one-off return for a future date and time using saved Modes and Automatic scheduling. With configured occupancy sources, waits for confirmed absence unless Apply Away mode now is enabled; without sources, activates Away immediately. Works with the weekly routine disabled and updates an active absence.",
       "fields": {
         "return_date": {
           "name": "Return date",
@@ -168,12 +178,16 @@
         "return_time": {
           "name": "Return time",
           "description": "Arrival time on the selected date in Home Assistant's time zone. Use HH:MM in YAML; optional seconds must be 00. Nonexistent daylight saving times are rejected."
+        },
+        "apply_away_now": {
+          "name": "Apply Away mode now",
+          "description": "Apply the configured Away mode immediately. With occupancy sources, automatic presence return is enabled only after continuous absence for the configured confirmation delay. Scheduled preparation and arrival remain active."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Cancel planned return",
-      "description": "Cancels a planned return or closes an inactive return notice. After confirmed departure, restores the Mode and Profiles selected before the episode started; during absence confirmation, leaves selection unchanged. Stops automatic return for this absence. You can explicitly plan a new return afterward."
+      "description": "Cancels a planned return or closes an inactive return notice. After Away was applied, including immediate manual Away before monitored departure confirmation, restores the Mode and Profiles selected before the episode started. A normal pending departure leaves selection unchanged. Stops automatic return for this absence. You can explicitly plan a new return afterward."
     },
     "update_block_preset": {
       "name": "Update Velair preset",

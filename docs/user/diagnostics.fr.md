@@ -8,8 +8,8 @@ Traductions: [Original en anglais](diagnostics.md) · [Español](diagnostics.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.3 |
+| Dernière synchronisation | 2026-10-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -72,6 +72,22 @@ indicateurs `range_summary_changed` et `range_status_changed`, afin qu’un rapp
 puisse montrer si l’événement correspondait à une transition de plage configurée ou à un autre
 changement de confort. Ces champs ne contiennent que des codes sémantiques stables, pas le
 contexte brut des événements Home Assistant.
+
+<a id="learning-evidence"></a>
+## Preuves d’apprentissage
+
+La section existante de la fonction Anticipation sépare l’activité de chauffage et de refroidissement. Elle indique si une observation est en cours ou si Velair attend une transition adaptée, et présente la dernière transition d’apprentissage conservée lorsqu’elle existe. Ses détails dépliables contiennent uniquement les preuves utiles à cette décision, comme les températures initiale et cible, l’écart minimal de température, la durée observée et le démarrage maximal configuré.
+
+L’historique d’Anticipation comprend les débuts, interruptions et résultats d’observation ainsi que les transitions réelles n’ayant pas permis d’en démarrer une. Les résultats distinguent les observations complètes, partielles et invalides. Les observations invalides peuvent préciser un écart de température insuffisant, une durée trop courte ou une durée dépassant le maximum configuré. D’anciennes observations enregistrées peuvent conserver le motif moins précis de dépassement des limites. Velair ne leur attribue pas rétroactivement une cause plus précise.
+
+Les calculs répétés de prévisions futures ne créent pas d’entrées d’apprentissage. La dernière transition suit les mêmes réglages de conservation et la même limite globale d’historique que la chronologie. Désactiver l’historique d’Anticipation ou vider l’historique supprime ces preuves historiques ; cela n’arrête pas l’apprentissage et n’efface pas les échantillons enregistrés. Après un redémarrage, l’activité d’exécution précédente et l’historique ne sont pas restaurés. Sans preuve disponible, Diagnostic n’invente pas de motif pour des compteurs inchangés et ne déduit pas si une chaudière fonctionnait.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Preuves de dépendance du préconditionnement
+
+Pour une pièce avec un **Maître de préconditionnement** configuré, consultez les détails de dépendance près des informations de préparation existantes. Ils distinguent l’estimation indépendante de la pièce, la transition et le début sélectionnés du maître, et le début effectif ou le motif empêchant la préparation. Une commande acceptée par Home Assistant prouve l’action de Velair, sans mesurer le relais de la chaudière. L’observation d’apprentissage décrit toujours la température et le temps écoulé propres à la pièce dépendante.
+
+Lorsque des preuves sont disponibles, l’explication distingue la disponibilité dans Home Assistant d’une programmation ou d’un préconditionnement désactivés, d’un Profil en pause, d’une dérogation active, d’un maître non éligible ou d’une transition manquante. La même explication apparaît dans les cartes et Diagnostic. Un équipement indisponible peut encore avoir une prévision calculée si un autre capteur configuré fournit sa température ambiante ; cette prévision ne confirme pas que l’appareil puisse recevoir une commande ou fournir du chauffage ou du refroidissement.
 
 <a id="runtime-history-and-privacy"></a>
 ## Historique d’exécution et confidentialité
@@ -139,8 +155,7 @@ Chaque appareil géré fournit également des informations sur la stabilisation 
 l’exécution. Pendant qu’une commande Velair récente se stabilise, le diagnostic liste les champs de
 contrôle concernés dans son instantané d’exécution. Si l’appareil n’a pas atteint l’état attendu avant l’échéance prévue,
 le prochain instantané à jour marque l’appareil avec l’avertissement `command_settling_mismatch`.
-Le bloc `command_settling` du rapport téléchargé comprend les valeurs attendues et observées.
-Ces informations servent au dépannage : le diagnostic ne réessaie pas la commande, ne modifie pas
+Développez cet avertissement dans le panneau Diagnostic de l’équipement sélectionné pour comparer la valeur attendue de chaque champ concerné à celle signalée par le thermostat. Les températures incluent l’unité de l’équipement, les modes HVAC utilisent leurs libellés habituels et les valeurs manquantes sont explicitement identifiées. Cette vue utilise la comparaison enregistrée, pas la programmation actuelle ni un nouveau relevé. Le rapport téléchargé conserve également le bloc `command_settling`. Ces informations servent au dépannage : le diagnostic ne réessaie pas la commande, ne modifie pas
 l’appareil et ne crée pas de réglage manuel. Elles sont effacées par une commande plus récente
 pour ce champ ou par un redémarrage.
 

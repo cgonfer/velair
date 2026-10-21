@@ -356,11 +356,29 @@ export class VelairCard extends LitElement {
   }
 
   @property({ type: String }) public view: VelairCardView = "overview-status";
+  @property({ attribute: false }) public learningDiagnosticEntity?: string;
   @property({ attribute: false }) public resourceUsage?: import("../types").ResourceUsage;
   @property({ attribute: false }) public subsection?: PanelSubsection;
   @property({ attribute: false }) public presetKey?: string;
   private _presetKeyApplied = false;
   private _resourceUsageApplied = false;
+  private _learningDiagnosticEntityApplied?: string;
+
+  private _openLearningDiagnostics(entityId: string): void {
+    this.dispatchEvent(new CustomEvent("velair-open-learning-diagnostics", {
+      bubbles: true, composed: true, detail: entityId,
+    }));
+  }
+
+  private _applyLearningDiagnosticEntity(): void {
+    if (this._effectiveView() !== "diagnostics" || !this.learningDiagnosticEntity
+      || this._learningDiagnosticEntityApplied === this.learningDiagnosticEntity) return;
+    this._learningDiagnosticEntityApplied = this.learningDiagnosticEntity;
+    this._selectedDiagnosticEntity = this.learningDiagnosticEntity;
+    this._diagnosticsHistoryFilters = {
+      sources: new Set([this.learningDiagnosticEntity]), category: "preconditioning", from: "", to: "",
+    };
+  }
 
   private async _openResourceUsage(usage: import("../types").ResourceUsage): Promise<void> {
     if (this._effectiveView() !== "schedules") {
@@ -414,22 +432,12 @@ export class VelairCard extends LitElement {
   @state() private _saveMessage?: string;
   @state() private _selectedEntity?: string;
   @state() private _scheduleSource: "default" | "profile" = "default";
-  @state() private _preconditioningSource: "preconditioning" | "planned-return" = "preconditioning";
   @state() private _climateCardPlannedReturnOpen = false;
   @state() private _plannedReturnDirty = false;
   @state() private _plannedReturnBusy = false;
   private _setPlannedReturnBusy(busy: boolean): void { this._plannedReturnBusy = busy; }
   public canNavigatePanel(): boolean { return !this._plannedReturnBusy && !this._applyingTemplateTargets; }
   private _setPlannedReturnDirty(dirty: boolean): void { this._plannedReturnDirty = dirty; }
-  private _selectPreconditioningSource(source: "preconditioning" | "planned-return"): boolean {
-    if (source === this._preconditioningSource) return true;
-    if (this._plannedReturnBusy) return false;
-    if (this._plannedReturnDirty && !window.confirm(this._t("discardUnsavedChanges"))) return false;
-    this._plannedReturnDirty = false;
-    this._preconditioningSource = source;
-    this._notifySubsection(source);
-    return true;
-  }
   @state() private _profileScheduleDirty = false;
   @state() private _presetLibraryDirty = false;
   @state() private _presetLibraryDraft?: import("../types").PresetLibraryDraft;
@@ -445,7 +453,6 @@ export class VelairCard extends LitElement {
   private _templateConfigurationRevision?: number;
   @state() private _templateLibrarySource: "templates" | "presets" = "templates";
   public selectPanelSubsection(subsection?: PanelSubsection): boolean {
-    if (this._effectiveView() === "preconditioning") return this._selectPreconditioningSource(subsection === "planned-return" ? "planned-return" : "preconditioning");
     if (this._effectiveView() === "schedules") {
       const source = subsection === "profiles" ? "profile" : "default";
       this._selectScheduleSource(source);
@@ -964,6 +971,7 @@ export class VelairCard extends LitElement {
     dismissDisconnectedInlineHelp();
     this._refreshPresetPreviews();
     if (changedProperties.has("presetKey")) this._presetKeyApplied = false;
+    this._applyLearningDiagnosticEntity();
     if (changedProperties.has("resourceUsage")) this._resourceUsageApplied = false;
     if (this.presetKey && this._data && !this._presetKeyApplied) { this._presetKeyApplied = true; void this._editPreset(this.presetKey); }
     if (this.resourceUsage && this._data && !this._resourceUsageApplied) { this._resourceUsageApplied = true; void this._openResourceUsage(this.resourceUsage); }

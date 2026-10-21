@@ -158,22 +158,26 @@
   },
   "services": {
     "start_planned_return": {
-      "name": "I'm leaving",
-      "description": "Zaplanuj jednorazowy powrót na przyszłą datę i godzinę, używając zapisanych trybów i automatycznego harmonogramu. Przy skonfigurowanych źródłach obecności tryb nieobecności wymaga jej potwierdzenia; bez źródeł uruchamia się natychmiast. Działa bez rutyny tygodniowej i aktualizuje aktywną nieobecność.",
+      "name": "Wychodzę",
+      "description": "Zaplanuj jednorazowy powrót na przyszłą datę i godzinę z zapisanymi Trybami i automatycznym harmonogramem. Przy skonfigurowanych źródłach obecności czeka na potwierdzenie nieobecności, chyba że włączono Zastosuj tryb Nieobecność teraz; bez źródeł stosuje Nieobecność od razu. Działa przy wyłączonej rutynie tygodniowej i aktualizuje aktywną nieobecność.",
       "fields": {
         "return_date": {
-          "name": "Return date",
+          "name": "Data powrotu",
           "description": "Data przybycia w strefie czasowej Home Assistant. Łącznie data i godzina muszą wskazywać przyszłość."
         },
         "return_time": {
-          "name": "Return time",
+          "name": "Godzina powrotu",
           "description": "Godzina przybycia wybranego dnia w strefie czasowej Home Assistant. W YAML użyj HH:MM; opcjonalne sekundy muszą wynosić 00. Nieistniejące godziny przy zmianie czasu są odrzucane."
+        },
+        "apply_away_now": {
+          "name": "Zastosuj tryb Nieobecność teraz",
+          "description": "Natychmiast zastosuj skonfigurowany tryb Nieobecność. Przy źródłach obecności automatyczny powrót na podstawie obecności włącza się dopiero po ciągłej nieobecności przez ustawiony czas potwierdzenia. Zaplanowane przygotowanie i przybycie pozostają aktywne."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Anuluj zaplanowany powrót",
-      "description": "Anuluje oczekujący lub aktywny powrót albo zamyka powiadomienie o nieaktywnym powrocie. Zachowuje bieżący tryb i zatrzymuje automatyczny powrót podczas tej nieobecności. Następnie możesz jawnie zaplanować nowy powrót."
+      "description": "Anuluje zaplanowany powrót lub zamyka nieaktywną informację o powrocie. Po zastosowaniu Nieobecności, także ręcznym natychmiastowym przed potwierdzeniem monitorowanego wyjścia, przywraca Tryb i Profile wybrane przed epizodem. Zwykłe oczekujące wyjście nie zmienia wyboru. Zatrzymuje automatyczny powrót dla tej nieobecności. Potem możesz jawnie zaplanować nowy powrót."
     },
     "update_block_preset": {
       "name": "Aktualizuj preset Velair",
@@ -321,6 +325,16 @@
         "entity_id": {
           "name": "Encje klimatyczne",
           "description": "Jedna zarządzana encja klimatyczna lub lista. Wszystkie cele muszą być prawidłowe, zanim zostanie usunięty jakikolwiek wyjątek."
+        }
+      }
+    },
+    "pause_zone": {
+      "name": "Wstrzymaj strefę",
+      "description": "Dodaj lub zmień powód wstrzymania automatycznego wykonywania harmonogramu jednej zarządzanej encji klimatycznej. Urządzenie można opcjonalnie wyłączyć, dopóki pozostaje dowolny powód.",
+      "fields": {
+        "until_next_block": {
+          "name": "Do następnego bloku",
+          "description": "Zakończ tę pauzę na początku następnego bloku harmonogramu. Termin jest ustalany przy wywołaniu i nie zmienia się po późniejszych edycjach harmonogramu. Nie można łączyć z duration_minutes. Wywołanie nie powiedzie się bez przyszłego bloku; inne powody pauzy pozostaną aktywne."
         }
       }
     }

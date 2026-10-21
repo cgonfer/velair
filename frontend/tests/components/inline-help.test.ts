@@ -145,7 +145,7 @@ describe("inline help", () => {
     expect(tooltip.style.top).toBe("140px");
   });
 
-  it("keeps narrow-screen hover adjacent at fractional coordinates and uses the mobile band on tap", () => {
+  it("keeps narrow-screen hover and tap adjacent at fractional coordinates", () => {
     vi.useFakeTimers();
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     const { button, tooltip } = setup();
@@ -163,8 +163,8 @@ describe("inline help", () => {
     expect(tooltip.classList).not.toContain("visible");
     button.click();
     expect(tooltip.dataset.openCause).toBe("click");
-    expect(tooltip.style.top).toBe("");
-    expect(tooltip.style.getPropertyValue("--inline-help-mobile-width")).not.toBe("");
+    expect(tooltip.style.top).toBe("100.6px");
+    expect(tooltip.style.getPropertyValue("--inline-help-mobile-width")).toBe("");
   });
 
   it("reuses the help engine over a disabled input without an icon or input interaction", () => {
@@ -264,16 +264,16 @@ describe("inline help", () => {
     expect(tooltip.classList).not.toContain("visible");
   });
 
-  it("uses pointer events and a viewport-safe fixed mobile band", () => {
+  it("uses pointer events and viewport-safe mobile insets without a bottom band", () => {
     const css = inlineHelpStyles.cssText;
     expect(css).toMatch(/\.inline-help-tooltip\.visible\s*\{[^}]*pointer-events:\s*auto/);
     expect(css).toMatch(/\.inline-help-tooltip\s*\{[^}]*max-height:\s*calc\(100dvh - 24px\)[^}]*position:\s*fixed/);
-    expect(css).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip:not\(\[data-open-cause="hover"\]\),[\s\S]*\.inline-help-tooltip\.constrained:not\(\[data-open-cause="hover"\]\)\s*\{[^}]*bottom:\s*calc\(var\(--inline-help-mobile-bottom, 0px\) \+ max\(12px, env\(safe-area-inset-bottom\)\)\)/);
-    expect(css).toContain("var(--inline-help-mobile-width, 100dvw)");
-    expect(css).toContain("env(safe-area-inset-left)");
+    expect(css).toContain("env(safe-area-inset-left, 0px)");
+    expect(css).not.toContain("--inline-help-mobile-bottom");
+    expect(css).not.toContain("top: auto");
   });
 
-  it("supports accessible constrained multi-block content without changing the mobile band", () => {
+  it("supports accessible constrained multi-block content with its existing reading width", () => {
     const container = document.createElement("div");
     render(renderInlineHelp(
       "adjusted-humidity-help",
@@ -293,9 +293,45 @@ describe("inline help", () => {
     expect(inlineHelpStyles.cssText).toMatch(
       /\.inline-help-tooltip\.constrained\s*\{[^}]*max-width:\s*min\(236px, calc\(100dvw - 24px\)\);[^}]*width:\s*min\(236px, calc\(100dvw - 24px\)\);/,
     );
-    expect(inlineHelpStyles.cssText).toMatch(
-      /@media \(max-width: 480px\)[\s\S]*\.inline-help-tooltip:not\(\[data-open-cause="hover"\]\),[\s\S]*\.inline-help-tooltip\.constrained:not\(\[data-open-cause="hover"\]\)\s*\{[^}]*width:\s*calc\(/,
-    );
+
+  });
+
+  it.each([true, false])("clamps to a changing visual viewport with mobile=%s", (mobile) => {
+    vi.stubGlobal("matchMedia", () => ({ matches: mobile }));
+    const viewport = Object.assign(new EventTarget(), { offsetLeft: 20, offsetTop: 100, width: 250, height: 200 });
+    vi.stubGlobal("visualViewport", viewport);
+    const { button, tooltip } = setup();
+    const trigger = vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
+      left: 260, right: 280, top: 260, bottom: 280, width: 20, height: 20,
+    } as DOMRect);
+    vi.spyOn(tooltip, "getBoundingClientRect").mockReturnValue({ width: 120, height: 60 } as DOMRect);
+    button.click();
+    expect(tooltip.style.left).toBe("138px");
+    expect(tooltip.style.top).toBe("200px");
+    viewport.height = 100;
+    viewport.dispatchEvent(new Event("resize"));
+    expect(tooltip.style.top).toBe(mobile ? "128px" : "200px");
+    trigger.mockReturnValue({ left: 0, top: 70, bottom: 90 } as DOMRect);
+    viewport.dispatchEvent(new Event("scroll"));
+    expect(tooltip.style.left).toBe("32px");
+    if (mobile) expect(tooltip.style.top).toBe("112px");
+    else expect(tooltip.style.top).toBe("90px"); // Preserve the existing desktop calculation.
+  });
+
+  it("reserves mobile safe areas and clamps a tall explanation to the available height", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const { button, tooltip } = setup();
+    tooltip.style.setProperty("--inline-help-safe-top", "44px");
+    tooltip.style.setProperty("--inline-help-safe-bottom", "34px");
+    tooltip.style.setProperty("--inline-help-safe-left", "30px");
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 200 });
+    vi.spyOn(button, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, bottom: 20 } as DOMRect);
+    vi.spyOn(tooltip, "getBoundingClientRect").mockReturnValue({ width: 120, height: 122 } as DOMRect);
+    button.click();
+    expect(tooltip.style.maxHeight).toBe("122px");
+    expect(tooltip.style.left).toBe("30px");
+    expect(tooltip.style.top).toBe("44px");
   });
 
   it("uses one real 32px button without an overlapping pseudo hit area", () => {

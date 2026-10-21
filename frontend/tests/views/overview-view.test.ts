@@ -1279,6 +1279,17 @@ describe("overview next events", () => {
     expect(container.querySelector(".event-target")?.textContent).toBe("21 °C");
     expect(container.querySelector(".event-mode")?.textContent).toBe("heat");
   });
+  it("shows the concrete reason once on a nominal overview event", () => {
+    const event: ScheduleEvent = { entity_id: "climate.office", hvac_mode: "cool", start: "08:00", temperature: 21,
+      weekday: "monday", when: "2026-06-22T08:00:00+02:00", preconditioning_dependency: {
+        master_entity_id: "climate.master", reason: "master_missing", reason_detail: "master_state_unknown", result: "blocked",
+      } };
+    const container = document.createElement("div");
+    render(renderEventDetails(host(), event), container);
+    expect(container.textContent).toContain("preconditioningMasterStateUnknown");
+    expect(container.textContent).not.toContain("preconditioningDependencyMissing");
+    expect(container.querySelectorAll(".preconditioning-dependency")).toHaveLength(1);
+  });
 
   it("keeps the compact single time for a normal next event", () => {
     const container = document.createElement("div");

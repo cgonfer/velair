@@ -76,6 +76,54 @@ function host(snapshot = diagnostics()): VelairViewHost {
 }
 
 describe("diagnostics view", () => {
+  it("keeps a configured master visible without an upcoming prediction or learning data", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].configuration.preconditioning = { enabled: false, master_entity_id: "climate.missing" };
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    expect(container.querySelector(".preconditioning-dependency")).not.toBeNull();
+    expect(container.querySelectorAll(".preconditioning-dependency dt")).toHaveLength(0);
+  });
+  it("replaces the generic mismatch warning with its recorded comparison without duplicating it", () => {
+    const snapshot = diagnostics();
+    const affected = snapshot.units["climate.warning"];
+    affected.issues = [{ severity: "warning", code: "command_settling_mismatch" }];
+    affected.command_settling = { mismatches: { temperature: { expected: 21, observed: 19 } } };
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    expect(container.querySelectorAll(".diagnostics-command-mismatch")).toHaveLength(1);
+    expect(container.querySelector(".diagnostics-detail-panel .diagnostics-issue")).toBeNull();
+    expect(container.querySelector(".diagnostics-command-mismatch")?.textContent).toContain("21");
+    delete affected.command_settling;
+    render(renderDiagnosticsView(current), container);
+    expect(container.querySelector(".diagnostics-command-mismatch")).toBeNull();
+    expect(container.querySelector(".diagnostics-detail-panel .diagnostics-issue")?.textContent).toContain("diagnosticsMismatchTitle");
+  });
+
+  it("adds learning activity and dated decision evidence to the existing function section", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.healthy"].preconditioning_learning = {
+      heat: { observation_count: 0, activity: { state: "waiting" }, last_transition: {
+        at: "2026-10-19T08:00:00Z", status: "skipped", reason: "delta_too_small", delta_t: 0.1,
+      } },
+    };
+    snapshot.history = [{ at: "2026-10-19T08:00:00Z", entity_id: "climate.healthy", category: "preconditioning", severity: "info", kind: "preconditioning_observation_skipped", data: { event: "preconditioning_observation_skipped", direction: "heat", status: "skipped", reason: "delta_too_small" } }];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.healthy";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    expect(container.querySelector(".diagnostics-function .diagnostics-learning-direction")).not.toBeNull();
+    expect(container.querySelector(".diagnostics-learning-current")?.textContent).toContain("learningActivityWaiting");
+    expect(container.querySelector(".diagnostics-learning-last")?.textContent).toContain("learningLastTransition");
+    expect(container.querySelector("details.diagnostics-learning-evidence")?.textContent).toContain("0.1");
+    expect(container.querySelector(".diagnostics-history")?.textContent).toContain("learningTransitionSkipped");
+    expect(container.querySelector(".diagnostics-history")?.textContent).toContain("learningReasonDeltaTooSmall");
+  });
+
   it("renders localized Planned Return transitions and their actual mode fields", () => {
     const snapshot = diagnostics();
     snapshot.history = ["registered", "confirmation_started", "confirmation_reset", "departed", "arrival_changed", "preparation_started", "fulfilled", "cancelled", "skipped", "error"].map(transition => ({
@@ -444,6 +492,19 @@ describe("diagnostics view", () => {
     expect(configuredRows).toHaveLength(2);
     expect(container.querySelector(".diagnostics-function-grid")?.textContent)
       .toContain("diagnosticsOff");
+  });
+  it("shows detailed master evidence once without its coarse fallback", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].configuration.preconditioning = { enabled: true };
+    snapshot.units["climate.warning"].preconditioning_dependency = { master_entity_id: "climate.master",
+      reason: "master_no_preconditioning", reason_detail: "master_preconditioning_disabled", result: "blocked" };
+    const viewHost = host(snapshot);
+    viewHost._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(viewHost), container);
+    expect(container.textContent).toContain("preconditioningMasterPreconditioningDisabled");
+    expect(container.textContent).not.toContain("preconditioningDependencyNoStart");
+    expect(container.querySelectorAll(".preconditioning-dependency")).toHaveLength(1);
   });
 
   it("filters the runtime log ephemerally and distinguishes no matches", () => {

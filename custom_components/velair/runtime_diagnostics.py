@@ -100,6 +100,22 @@ _FEATURE_EVENT_FIELDS: dict[str, tuple[str, ...]] = {
         "target_temperature",
     ),
     "preconditioning": (
+        "status",
+        "quality",
+        "created_at",
+        "initial_temp",
+        "target_temp",
+        "observed_temp",
+        "delta_t",
+        "minimum_delta_temperature",
+        "minutes_to_reach",
+        "minutes_observed",
+        "startup_minutes",
+        "max_lead_minutes",
+        "scheduled_time",
+        "start_time",
+        "invalid_reason",
+        "reached",
         "direction",
         "event",
         "boundary_temperature",
@@ -120,6 +136,17 @@ _FEATURE_EVENT_FIELDS: dict[str, tuple[str, ...]] = {
         "target_temperature",
         "target_when",
         "temperature_delta",
+        "master_entity_id",
+        "master_occurrence_id",
+        "master_target_when",
+        "master_start",
+        "master_start_accepted",
+        "independent_start",
+        "independent_lead_minutes",
+        "effective_start",
+        "effective_lead_minutes",
+        "result",
+        "preconditioning_dependency",
     ),
     "comfort": (
         "air_quality",
@@ -397,6 +424,17 @@ class RuntimeDiagnosticsManager:
             for key in safe_fields
             if key in data and key != "changed_fields"
         }
+        if "preconditioning_dependency" in safe_data:
+            dependency = safe_data["preconditioning_dependency"]
+            safe_data["preconditioning_dependency"] = {
+                key: value for key, value in dependency.items()
+                if key in (
+                    "master_entity_id", "master_occurrence_id", "master_target_when",
+                    "master_start", "master_start_accepted", "independent_start",
+                    "independent_lead_minutes", "effective_start", "effective_lead_minutes",
+                    "reason", "reason_detail", "result",
+                ) and (value is None or isinstance(value, (str, int, float, bool)))
+            } if isinstance(dependency, dict) else None
         if event_name in _MANUAL_CONTROL_EVENTS:
             changed_fields = _sanitized_changed_fields(data.get("changed_fields"))
             if changed_fields:
@@ -1105,11 +1143,51 @@ class RuntimeDiagnosticsManager:
             "pauses": deepcopy(zone.get("pauses", [])),
             "room_assist": deepcopy(room_assist),
             "comfort": deepcopy(comfort),
-            "preconditioning_learning": _learning_summary(
-                data.get("preconditioning_learning", {}).get(entity_id)
-            ),
+            "preconditioning_learning": self._learning_summary(entity_id, data, scheduler),
+            "preconditioning_dependency": deepcopy(getattr(
+                scheduler.get_next_event_for_zone(entity_id),
+                "preconditioning_dependency", None,
+            )) if callable(getattr(scheduler, "get_next_event_for_zone", None)) else None,
             "sensors": sensors,
         }
+
+    def _learning_summary(self, entity_id: str, data: dict[str, Any], scheduler) -> dict[str, Any] | None:
+        """Join current activity with evidence still retained by history policy."""
+        summary = _learning_summary(data.get("preconditioning_learning", {}).get(entity_id)) or {
+            "heat": {"observation_count": 0}, "cool": {"observation_count": 0},
+        }
+        activity = getattr(scheduler, "preconditioning_learning_activity", None)
+        for direction in ("heat", "cool"):
+            current_activity = None
+            if callable(activity):
+                current_activity = activity(entity_id, direction)
+                if current_activity is not None:
+                    summary[direction]["activity"] = current_activity
+            transition = self.learning_transition(entity_id, direction)
+            if transition is not None:
+                summary[direction]["last_transition"] = transition
+            if callable(activity) and current_activity is None and not (
+                summary[direction].get("observation_count") or summary[direction].get("last_transition")
+            ):
+                summary.pop(direction)
+        enabled = data.get("zones", {}).get(entity_id, {}).get("preconditioning", {}).get("enabled", False)
+        if not enabled and not any(item.get("observation_count") or item.get("last_transition") for item in summary.values()):
+            return None
+        return summary
+
+    @callback
+    def learning_transition(self, entity_id: str, direction: str) -> dict[str, Any] | None:
+        """Project the latest learning decision from retained history only."""
+        for item in reversed(self._history):
+            evidence = item["data"]
+            if (item.get("entity_id") == entity_id
+                and item.get("category") == "preconditioning"
+                and evidence.get("direction") == direction
+                and evidence.get("status") in ("started", "skipped", "interrupted", "complete", "partial", "invalid")):
+                transition = deepcopy(evidence)
+                transition["at"] = evidence.get("created_at") or item["at"]
+                return transition
+        return None
 
 
 def _now_iso() -> str:

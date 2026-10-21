@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](ad
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.2 |
-| Ultima sincronizzazione | 2026-10-17 |
+| Versione di riferimento | 1.9.0-beta.3 |
+| Ultima sincronizzazione | 2026-10-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -30,7 +30,7 @@ Il precondizionamento adattivo viene eseguito localmente in Home Assistant. Vela
 <a id="setup"></a>
 ## Configurazione
 
-La scheda di precondizionamento offre due strumenti nel selettore delle sottosezioni. Il precondizionamento adattivo si apre per impostazione predefinita; scegli il rientro pianificato per configurare presenza e arrivi settimanali e gestire l’assenza attuale. I percorsi diretti del pannello sono `/velair/preconditioning/preconditioning` e `/velair/preconditioning/planned-return`. Consulta [Rientro pianificato](planned-return.it.md).
+La scheda **Precondizionamento** contiene le impostazioni adattive e l’apprendimento per ogni dispositivo. **Ritorno programmato** ha una scheda dedicata a presenza, arrivi settimanali e assenza attuale. Entrambe includono un’introduzione e aiuti contestuali. I percorsi diretti sono `/velair/preconditioning` e `/velair/planned-return`. I collegamenti alle precedenti sottosezioni continuano ad aprire la scheda corrispondente. Consulta [Rientro pianificato](planned-return.it.md).
 
 1. Apri la scheda di precondizionamento.
 2. Espandi il dispositivo climatico da configurare.
@@ -47,6 +47,41 @@ Quando espandi un dispositivo climatico, ogni modalità supportata mostra una sc
 La preparazione del Ritorno programmato è distinta dall’anticipo dell’orario settimanale. Per un ritorno futuro accettato, le informazioni del dispositivo mostrano stato del ritorno, inizio stimato, obiettivo di arrivo ed eventuali motivi di sospensione o indisponibilità. Panoramica, Ritorno programmato e schede climatiche usano gli stessi dati backend; non è un altro evento settimanale. Una stanza può ancora seguire Assenza pur mostrando una stima futura. **Preparazione** descrive l’intento di controllo di Velair, senza confermare la ricezione di un comando né il riscaldamento o raffrescamento fisico. La sequenza temporale misura il tempo trascorso verso l’arrivo salvato, non una percentuale di progresso termico. Consulta [Preparazione delle stanze](planned-return.it.md#room-preparation) per gli stati.
 
 Per verificare un calcolo specifico, apri **Dettagli del calcolo** nella scheda della previsione in tempo reale. Questa sezione facoltativa mostra i valori backend usati per la previsione, compresi numero di campioni, stima dalle osservazioni completate, limite inferiore delle osservazioni parziali, stima combinata, arrotondamento e anticipo finale. È nascosta per impostazione predefinita per mantenere semplice la vista normale.
+
+<a id="preconditioning-master"></a>
+## Master del precondizionamento
+
+Lascia **Master del precondizionamento** su **Indipendente** per mantenere il comportamento esistente. Per far dipendere la preparazione anticipata di un dispositivo da un altro, seleziona quel dispositivo gestito nelle impostazioni della stanza dipendente. Seleziona di nuovo **Indipendente** per scollegarli. L’impostazione si applica alla programmazione effettiva della stanza, inclusi Profili, eccezioni di zona e Ritorno programmato; non sostituisce temperature o blocchi.
+
+Un master può servire più stanze dipendenti. Una stanza non può dipendere da sé stessa. Catene e cicli non sono supportati: un dipendente non può essere anche un master.
+
+Velair sceglie il blocco del master con l’orario obiettivo più vicino a quello del blocco dipendente. A parità di distanza sceglie il precedente. Gli orari obiettivo possono essere diversi. Il dipendente inizia al più tardo fra il proprio avvio previsto e l’avvio della preparazione di quel blocco del master:
+
+| Avvio autonomo della stanza | Avvio del master | Obiettivo della stanza | Avvio effettivo |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Nessuna preparazione anticipata | 18:45 | Blocco normale alle 18:45 |
+| 17:40 | 19:00 | 18:45 | Blocco normale alle 18:45 |
+
+Se il blocco selezionato del master non può prepararsi in anticipo, Velair non lo sostituisce con un altro. Una preparazione di riscaldamento non può sbloccarne una di raffrescamento, né viceversa. Pause, modifiche temporanee, verifiche di disponibilità e limiti massimi di anticipo restano validi. Un master non disponibile o disabilitato resta configurato; la stanza dipendente non diventa automaticamente indipendente.
+
+**Inizio minimo (min)** continua a escludere previsioni autonome troppo brevi. L’attesa del master, come l’invio tardivo di un comando, può ridurre la finestra reale. L’apprendimento usa il tempo rimasto, senza inventare un avvio precedente o spostare l’obiettivo programmato.
+
+L’avvio mostrato è una previsione. Durante l’esecuzione, il comando di preparazione corrispondente del master deve essere accettato prima che il dipendente possa iniziare. Questo non conferma lo stato del relè della caldaia, il flusso d’acqua o il riscaldamento/raffrescamento effettivo. Velair non alza la temperatura del master per richiedere calore per altre stanze. Il blocco normale continua ad applicarsi al proprio orario.
+
+L’apprendimento inizia quando il dipendente avvia realmente la preparazione vincolata, usando la temperatura in quel momento e il tempo fino al proprio blocco. Raggiungimento anticipato, osservazioni parziali e campioni non validi mantengono le regole esistenti. Il successivo completamento del master non ferma una preparazione già in corso nel dipendente. Collegare o scollegare non cancella i campioni salvati.
+
+Apri **Dettagli del calcolo** per vedere stima autonoma, master selezionato e avvio effettivo. Diagnostica mostra il motivo della dipendenza accanto alle informazioni esistenti di preparazione e apprendimento. I riferimenti salvati agli avvii dei comandi permettono continuità operativa dopo un riavvio; un’osservazione di apprendimento interrotta non riprende e questi riferimenti tecnici sono esclusi dalle esportazioni portabili.
+
+<a id="understanding-learning-activity"></a>
+## Comprendere l’attività di apprendimento
+
+Ogni direzione supportata può mostrare una breve spiegazione accanto ai dati di apprendimento: Velair sta osservando una transizione, ne attende una adatta oppure non può osservarla per un motivo noto. Descrive l’apprendimento, senza confermare che il dispositivo stia fisicamente riscaldando o raffrescando. Una transizione passata riporta esplicitamente data e ora e non è presentata come attività attuale.
+
+Usa l’azione **Diagnostica** accanto alla spiegazione per aprire quel dispositivo e la sua cronologia di Precondizionamento, senza filtri di data che nascondano voci precedenti. La sezione delle funzioni esistente mostra l’attività attuale e l’ultima transizione conservata. Espandi i dettagli per esaminare temperature, soglie configurate e durate disponibili per quella decisione. Consulta [Informazioni sull’apprendimento](diagnostics.it.md#learning-evidence).
+
+Un numero di campioni invariato non dimostra un guasto. Una transizione può non fornire una differenza di temperatura utilizzabile, un’osservazione può essere ancora in corso oppure il risultato può essere parziale o non valido. Le spiegazioni usano solo informazioni registrate da Velair; non deducono il funzionamento della caldaia o la disponibilità di calore condiviso. Stato dell’apprendimento e previsione del prossimo blocco restano distinti: una stanza può avere poca cronologia e non richiedere comunque un anticipo per un obiettivo specifico.
 
 <a id="how-it-starts"></a>
 ## Come viene avviato

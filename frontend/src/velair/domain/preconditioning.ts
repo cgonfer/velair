@@ -1,4 +1,4 @@
-import type { HomeAssistant, PreconditioningSettings } from "../types";
+import type { HomeAssistant, PreconditioningSettings, ScheduleResponse } from "../types";
 import {
   defaultMinimumDelta,
   defaultMinutesPerDegree,
@@ -58,6 +58,7 @@ export function preconditioningSettings(
   temperatureUnit?: string,
 ): PreconditioningSettings {
   return {
+    master_entity_id: value?.master_entity_id ?? null,
     enabled: Boolean(value?.enabled),
     max_lead_minutes: Number(value?.max_lead_minutes ?? 1440),
     minimum_delta_temperature: Number(value?.minimum_delta_temperature ?? defaultMinimumDelta(temperatureUnit)),
@@ -83,6 +84,14 @@ export function preconditioningSettings(
       value?.room_sensor_assist_debounce_seconds ?? 20,
     ),
   };
+}
+
+/** Offer only local, managed roots; the backend validates the complete graph. */
+export function preconditioningMasterCandidates(data: ScheduleResponse | undefined, entityId: string): string[] {
+  if (!data || Object.values(data.zones).some(zone => zone.preconditioning?.master_entity_id === entityId)) return [];
+  return data.configured_entities.filter(candidate => candidate !== entityId
+    && data.zones[candidate] && !data.zones[candidate].execution
+    && !data.zones[candidate].preconditioning?.master_entity_id);
 }
 
 function numericStateLabel(value: string | undefined, unit: string) {

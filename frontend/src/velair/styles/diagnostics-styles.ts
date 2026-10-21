@@ -1,6 +1,21 @@
 import { css } from "lit";
 
 export const diagnosticsStyles = css`
+.diagnostics-command-mismatch { min-width: 0; }
+.diagnostics-command-mismatch summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; overflow-wrap: anywhere; }
+.diagnostics-command-mismatch summary::before { content: "\u25b8"; flex-shrink: 0; }
+.diagnostics-command-mismatch[open] summary::before { content: "\u25be"; }
+.diagnostics-command-mismatch summary ha-icon { color: var(--warning-color, #f9a825); flex-shrink: 0; }
+.diagnostics-command-mismatch-content { display: grid; gap: 12px; padding: 0 8px 8px; }
+.diagnostics-command-mismatch-content > p { color: var(--secondary-text-color); line-height: 1.4; margin: 0; }
+.diagnostics-command-mismatch-field { min-width: 0; overflow-wrap: anywhere; }
+.diagnostics-command-mismatch-field > strong { display: block; margin-bottom: 6px; }
+.diagnostics-learning-direction { min-width: 0; overflow-wrap: anywhere; border-top: 1px solid var(--divider-color); margin-top: 12px; padding-top: 8px; }
+.diagnostics-learning-direction h5 { font-size: 13px; margin: 4px 0; }
+.diagnostics-learning-direction p { margin: 8px 0; color: var(--secondary-text-color); }
+.diagnostics-learning-last { display: grid; gap: 4px; }
+.diagnostics-learning-evidence summary { min-height: 44px; box-sizing: border-box; padding: 12px 0; cursor: pointer; color: var(--primary-color); }
+
   .diagnostics-planned-return { padding: 12px; border: 1px solid var(--divider-color); border-radius: 10px; background: var(--card-background-color); }
   .diagnostics-planned-return h4 ha-icon, .diagnostics-planned-return-unit h4 ha-icon { color: var(--purple-color, #9c6ade); }
   .diagnostics-planned-return-unit > p { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--secondary-text-color); }

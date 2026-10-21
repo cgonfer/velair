@@ -18,6 +18,7 @@ export class VelairPanel extends LitElement {
   @property({ attribute: false }) public route?: VelairPanelRoute;
   @state() private _activeView: VelairPanelView = "overview";
   @state() private _activeViewDirty = false;
+  @state() private _pendingLearningDiagnosticEntity?: string;
   @state() private _pendingResourceUsage?: import("../types").ResourceUsage;
   @state() private _pendingPresetKey?: string;
   private _usesScopedDirtyEvents = false;
@@ -108,6 +109,7 @@ export class VelairPanel extends LitElement {
       if (this._activeViewDirty && !window.confirm(this._t("discardUnsavedChanges"))) return false;
       this._activeViewDirty = false;
       this._usesScopedDirtyEvents = false;
+      this._pendingLearningDiagnosticEntity = undefined;
       this._pendingResourceUsage = undefined;
       this._pendingPresetKey = undefined;
     } else if (destination.subsection !== this._activeSubsection) {
@@ -143,7 +145,7 @@ export class VelairPanel extends LitElement {
                   ?active=${view === this._activeView}
                   @click=${(event: Event) => this._handleTabClick(view, event)}
                 >
-                  ${this._t(view === "modes" ? "modesTitle" : view)}
+                  ${this._t(view === "modes" ? "modesTitle" : view === "planned-return" ? "plannedReturn" : view)}
                 </ha-tab-group-tab>
               `,
             )}
@@ -170,6 +172,8 @@ export class VelairPanel extends LitElement {
           this._activeSubsection = destination.subsection;
           this._writeLocation(destination);
         }}
+        .learningDiagnosticEntity=${this._pendingLearningDiagnosticEntity}
+        @velair-open-learning-diagnostics=${(event: CustomEvent<string>) => { if (this._selectView("diagnostics")) this._pendingLearningDiagnosticEntity = event.detail; }}
         .resourceUsage=${this._pendingResourceUsage}
         .presetKey=${this._pendingPresetKey}
         view=${this._activeView}
@@ -178,7 +182,7 @@ export class VelairPanel extends LitElement {
           this._activeViewDirty = Boolean(event.detail?.dirty);
         }}
         @velair-open-resource-usage=${(event: CustomEvent<import("../types").ResourceUsage>) => { if (this._selectView("schedules", undefined, event.detail.source === "default" ? "default" : "profiles")) this._pendingResourceUsage = event.detail; }}
-        @velair-open-planned-return=${() => this._selectView("preconditioning", undefined, "planned-return")}
+        @velair-open-planned-return=${() => this._selectView("planned-return")}
         @velair-open-preset=${(event: CustomEvent<string>) => { if (this._selectView("templates", undefined, "presets")) this._pendingPresetKey = event.detail; }}
         @profile-dirty-changed=${(event: CustomEvent<boolean>) => {
           // Compatibility for an already-rendered 1.5/early-1.6 Profile view.

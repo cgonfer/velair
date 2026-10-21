@@ -70,6 +70,15 @@ For explicit starts, occupancy sources are optional. With an empty saved
 applies Away immediately, bypassing only absence detection and its delay.
 Configured unknown/unavailable sources still arm a request; missing configured
 entities are rejected. Weekly automatic departures still require sources.
+Start also accepts optional boolean `apply_away_now` (default `false`) in the
+service and WebSocket command. When true, Away and scheduled preparation activate
+immediately. With sources, the episode persists `awaiting_departure_confirmation`
+until every source stays empty for `absence_delay_minutes`; home or unknown
+resets the timer. Only then can presence trigger automatic arrival. The timer
+restarts after reload while pending; a completed confirmation stays completed.
+The scheduled arrival and explicit arrive/cancel actions remain active while
+pending. Repeated starts of an active absence only adjust the arrival and retain
+the gate; an armed request with the option true is promoted atomically.
 Start and adjust WebSocket commands accept an aware ISO `return_at` instant,
 which must be strictly in the future and is persisted in UTC. One-off returns
 can span multiple days; weekly times remain same-day. Destination schedules are
@@ -95,9 +104,14 @@ data: {}
 The response also includes backend-owned `planned_return` configuration and a
 derived `planned_return_status` with `state`, `occupancy`, `sources`, `origin`,
 `can_start`, `episode_active`, `can_cancel`, `return_at`, `departure_at`, `away_mode_id`, `destination_mode_id`,
-`absence_confirm_at`, per-zone preparation entries, and an optional `error`.
+`absence_confirm_at`, `awaiting_departure_confirmation`, per-zone preparation entries, and an optional `error`.
 `departure_at` is the timezone-aware instant when monitored absence or an
-explicit sensorless departure was confirmed and the Away transition was saved. It is null while waiting for departure and for
+explicit manual departure applied Away and saved the transition. For immediate
+manual Away with sources, this is the application time; the separate
+`awaiting_departure_confirmation` flag remains true until monitored absence is
+confirmed. The public state stays `away` or `preparing` while that flag is true,
+and `absence_confirm_at` supplies the pending presence-return deadline when
+running. It is null while waiting for normal departure and for
 older episodes without this metadata. It survives arrival adjustments, restarts,
 and retained terminal episodes. The mode identifiers come from the episode,
 including `default`, and are null when there is no episode. These fields support
@@ -347,7 +361,7 @@ its absence when using an older backend.
     "portable_model": 18,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.2"
+    "integration": "1.9.0-beta.3"
   }
 }
 ```
@@ -404,6 +418,20 @@ Scalar events retain `target_kind: "scalar"` and `target_boundary:
 "temperature"`.
 
 `preconditioning_learning` is local runtime/storage status used by the panel. It can be included explicitly in portable exports and is never sent outside Home Assistant by Velair. Direction statuses are `learning`, `ready`, or `unsupported` when the climate does not report a compatible HVAC mode. A direction is `ready` when it has at least 5 complete local samples; before that, Adaptive predictions use the initial event-specific model.
+
+Each direction can additionally expose optional runtime `activity` with
+`state` (`observing`, `waiting`, `unavailable`, or `disabled`), an optional
+semantic `reason`, and an optional ISO timestamp `at`. This is observational
+context, not a new learning criterion or evidence of physical heat supply.
+Clients receiving older payloads omit this context rather than deriving it from
+sample counts. Activity is never included as authoritative persisted learning
+configuration.
+
+The same direction summary can include optional `last_transition`, projected
+from retained diagnostic history using the shape described below. This lets
+the learning view explain a dated skipped transition without loading the full
+Diagnostics snapshot. It disappears when the relevant history is cleared,
+disabled or evicted; it is not part of portable learning observations.
 
 The actual lead is calculated per future event from the current temperature delta and the selected local model source (`initial_model` or `history`).
 
@@ -572,6 +600,24 @@ category preferences default to enabled while retaining previous choices.
 Exports remove `away_mode_id`, `destination_mode_id` and related operational
 Mode/Profile identifiers even when raw entity IDs are requested.
 
+Per-climate `preconditioning_learning.heat` and `.cool` diagnostics retain their
+observation counts and can expose current `activity` and `last_transition`.
+The latter is derived only from retained Preconditioning history and contains
+`at`, `status` (`started`, `skipped`, `interrupted`, `complete`, `partial`, or
+`invalid`), a semantic `reason`, and available numeric/timestamp evidence.
+Clearing history or disabling its category removes `last_transition` without
+changing saved learning observations or current activity. Restart restores
+neither diagnostic history nor an active learning session.
+
+Learning transitions are recorded from actual processing, never from queries
+or recalculations of future predictions. The existing
+`preconditioning_observation_recorded` event supplies the final result;
+additional activity events describe starts, skips and interruptions. Invalid
+observations distinguish `delta_too_small`, `duration_too_short` and
+`duration_too_long`; legacy `out_of_bounds` remains readable. The safe diagnostic
+payload includes the result and the evidence used to explain it, and follows
+the existing category retention and export privacy rules.
+
 ### Export Diagnostics
 
 ```ts
@@ -660,6 +706,9 @@ const unsubscribe = await hass.connection.subscribeMessage(
 ```
 
 The integration sends an event whenever scheduler state changes. The event contains the full schedule response under `schedule`.
+Changes to retained learning evidence also refresh this response, including
+clearing history or disabling its category from another client. Unrelated
+diagnostic updates do not trigger a full schedule refresh.
 
 ## Set Daily Schedule
 
@@ -987,6 +1036,7 @@ await hass.connection.sendMessagePromise({
   entity_id: "climate.living_room",
   preconditioning: {
     enabled: true,
+    master_entity_id: "climate.hall",
     max_lead_minutes: 1440,
     minimum_delta_temperature: 0.3,
     min_start_minutes: 10,
@@ -1000,6 +1050,44 @@ await hass.connection.sendMessagePromise({
 ```
 
 When preconditioning moves the apply time earlier than the visible schedule block time, serialized events keep `when` as the apply time and include `target_when` as the comfort target time. These events also include `preconditioning_diagnostics`, a runtime-only calculation breakdown with selected sample counts, complete estimate, partial floor, combined estimate, rounded estimate, final lead, model source, and limit flags. The frontend uses this object for optional calculation details instead of recalculating the prediction.
+
+`master_entity_id` is optional; `null` unlinks a room. The resulting managed
+climate graph is validated atomically. Self-reference, unmanaged or externally
+executed sources, cycles and chains are rejected. A disabled source can remain
+configured. Portable model 19 includes these relations; older models normalize
+to Independent. Partial imports validate the resulting imported-plus-local graph
+before persisting it.
+
+Linked events can additionally contain `preconditioning_dependency`, including
+nominal events whose early preparation is blocked. Its fields are
+`master_entity_id`, `independent_start`, `independent_lead_minutes`,
+`master_start`, `master_target_when`, `master_occurrence_id`,
+`master_start_accepted`, `effective_start`, `effective_lead_minutes`, `reason`
+and `result`. Dates are ISO timestamps; absent source evidence is null.
+An optional `reason_detail` refines the explanation without changing `reason`,
+`result` or execution times. Known values are `master_not_managed`,
+`master_ineligible`, `master_entity_missing`, `master_unavailable`,
+`master_state_unknown`, `master_scheduling_disabled`,
+`master_preconditioning_disabled`, `master_profile_paused`,
+`master_override_active` and `master_no_transition`. Consumers should display
+one explanation, preferring a recognized detail and otherwise using `reason`.
+Missing or unknown details remain compatible with older responses and clients.
+`result` distinguishes `constrained` preparation from `blocked` anticipation.
+Consumers use backend `when` for execution and must not synthesize early events
+from this metadata. `target_when` retains its existing early-preparation meaning.
+
+The selected source is the closest nominal master occurrence, with ties resolved
+to the earlier one; an ineligible selected source is not replaced. Heating and
+cooling directions must agree. Runtime delivery also requires accepted source
+execution, distinct from a planned start or physical equipment confirmation.
+The same optional metadata is exposed through existing event, preparation,
+sensor and Diagnostics projections. Older consumers may ignore it; clients must
+accept older responses without it.
+
+`preconditioning_accepted_anchors` is bounded HA-storage runtime continuity
+evidence, not portable configuration or thermal history. It is excluded from
+portable exports and revalidated against effective configuration and return
+episode context on reload. Learning sessions themselves are not restored.
 
 Preconditioning is adaptive. The scheduler predicts a lead for each concrete future event, using an initial model while learning and switching to similar local history after enough complete samples exist.
 
@@ -1284,7 +1372,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 18,
+  "model_version": 19,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1389,7 +1477,8 @@ await hass.connection.sendMessagePromise({
 });
 await hass.connection.sendMessagePromise({
   type: "velair/start_planned_return",
-  return_at: "2026-10-07T19:25:00+02:00"
+  return_at: "2026-10-07T19:25:00+02:00",
+  apply_away_now: true // Optional; omit to keep normal absence confirmation.
 });
 await hass.connection.sendMessagePromise({ type: "velair/cancel_planned_return" });
 await hass.connection.sendMessagePromise({

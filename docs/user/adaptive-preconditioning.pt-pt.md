@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.3 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -20,7 +20,7 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 O pré-condicionamento adaptativo permite que o Velair inicie o aquecimento ou arrefecimento antes de um bloco programado, para que a divisão esteja mais próxima da temperatura-alvo quando o bloco começar.
 
-Um bloco **Apenas temperatura** não autoriza mudança de modo HVAC. Enquanto o equipamento está desligado, o Velair não inicia preparação antecipada nem coleta amostras de aprendizagem térmico para esse alvo. Ligá-lo externamente permite recalcular a preparação utilizando o modo compatível real. Essa opção não pode prometer conforto no horário do bloco enquanto o equipamento permanecer desligado.
+Um bloco **Apenas temperatura** não autoriza mudança de modo HVAC. Enquanto o equipamento está desligado, o Velair não inicia preparação antecipada nem coleta amostras de aprendizagem térmica para esse alvo. Ligá-lo externamente permite recalcular a preparação utilizando o modo compatível real. Essa opção não pode prometer conforto no horário do bloco enquanto o equipamento permanecer desligado.
 
 Por exemplo, um bloco às `07:00` com `21 °C` significa «estar próximo de `21 °C` às `07:00`», e não «começar a ajustar para `21 °C` às `07:00`».
 
@@ -29,7 +29,7 @@ O pré-condicionamento adaptativo funciona localmente no Home Assistant. O Velai
 <a id="setup"></a>
 ## Configuração
 
-O separador Pré-condicionamento oferece duas ferramentas no seletor de subsecções. O pré-condicionamento adaptativo abre por predefinição; escolha Regresso planeado para configurar a ocupação e as chegadas semanais e gerir a ausência atual. Os caminhos diretos no painel são `/velair/preconditioning/preconditioning` e `/velair/preconditioning/planned-return`. Consulte [Regresso planeado](planned-return.pt-pt.md).
+O separador Pré-condicionamento contém definições adaptativas e aprendizagem por equipamento. Regresso planeado tem o seu próprio separador para ocupação, chegadas semanais e ausência atual. Ambas incluem uma introdução e ajuda contextual. Os caminhos diretos são `/velair/preconditioning` e `/velair/planned-return`. Ligações antigas de subseções continuam abrindo o separador correspondente. Consulta [Regresso planeado](planned-return.pt-pt.md).
 
 1. Abra o separador Pré-condicionamento.
 2. Expanda o dispositivo de climatização que deseja configurar.
@@ -43,9 +43,44 @@ Os intervalos nativos de `heat_cool` são compatíveis. Se a temperatura da divi
 
 Ao expandir um dispositivo, cada modo compatível mostra um cartão de previsão em tempo real. Este utiliza os mesmos dados de próximos eventos do backend que o separador Visão geral, mantendo o tratamento consistente de pausas, reforços, modos incompatíveis e blocos que não permitem pré-condicionamento. Quando existe um bloco futuro correspondente, o cartão mostra o início calculado, o horário-alvo, a antecedência, a temperatura e o modo programados e se o Velair está a utilizar o modelo inicial ou um histórico local semelhante.
 
-A preparação do Regresso planeado é identificada separadamente da antecipação semanal. Para um regresso futuro aceite, as informações do equipamento mostram seu estado de regresso, início estimado, temperatura-alvo de chegada e motivos de suspensão ou indisponibilidade. Visão geral, Regresso planeado e cartões de climatização usam as mesmas informações de regresso do backend; não é outro evento semanal. Um ambiente ainda pode seguir Ausente enquanto mostra uma estimativa futura de regresso. **A preparar** descreve a intenção de controlo do Velair, não a confirmação de que um dispositivo recebeu um comando ou está fisicamente aquecendo ou resfriando. A linha do tempo do regresso mostra o tempo decorrido até a chegada guardada, não uma porcentagem de progresso térmico. Consulte [Preparação dos ambientes](planned-return.pt-pt.md#room-preparation) para os estados.
+A preparação do Regresso planeado é identificada separadamente da antecipação semanal. Para um regresso futuro aceite, as informações do equipamento mostram seu estado de regresso, início estimado, temperatura-alvo de chegada e motivos de suspensão ou indisponibilidade. Visão geral, Regresso planeado e cartões de climatização usam as mesmas informações de regresso do backend; não é outro evento semanal. Um ambiente ainda pode seguir Ausente enquanto mostra uma estimativa futura de regresso. **A preparar** descreve a intenção de controlo do Velair, não a confirmação de que um dispositivo recebeu um comando ou está fisicamente aquecendo ou arrefecendo. A linha do tempo do regresso mostra o tempo decorrido até a chegada guardada, não uma porcentagem de progresso térmico. Consulte [Preparação dos ambientes](planned-return.pt-pt.md#room-preparation) para os estados.
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa secção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por predefinição para manter a visão habitual simples.
+
+<a id="preconditioning-master"></a>
+## Mestre do pré-condicionamento
+
+Mantém **Mestre do pré-condicionamento** em **Independente** para conservar o comportamento existente. Para fazer a preparação antecipada de um equipamento depender de outro, seleciona esse equipamento gerido nas definições da divisão dependente. Seleciona **Independente** novamente para desfazer o vínculo. Isso se aplica à programação efetiva da divisão, incluindo Perfis, exceções por zona e Regresso planeado. Não substitui as suas temperaturas nem os seus blocos.
+
+Um mestre pode atender várias divisões dependentes. Uma divisão não pode depender de si mesma, e cadeias ou ciclos não são permitidos: um dependente não pode também ser mestre.
+
+O Velair escolhe o bloco do mestre cujo horário-alvo está mais próximo do horário-alvo do bloco dependente. Em caso de empate, usa o bloco anterior. Os horários-alvo não precisam ser iguais. O dependente começa no mais tardio entre seu próprio início previsto e o início de preparação desse bloco do mestre:
+
+| Início próprio da divisão | Início do mestre | Alvo da divisão | Início efetivo |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Sem preparação antecipada | 18:45 | Bloco normal às 18:45 |
+| 17:40 | 19:00 | 18:45 | Bloco normal às 18:45 |
+
+Se o bloco selecionado do mestre não puder se preparar antecipadamente, o Velair não o substitui por outro bloco. Uma preparação de aquecimento não libera uma de arrefecimento, nem o contrário. Pausas, substituições, verificações de disponibilidade e limites máximos de antecedência continuam valendo. Um mestre indisponível ou desativado continua configurado; o dependente não se torna independente silenciosamente.
+
+**Início mínimo (min)** continua a excluir previsões independentes curtas. A espera pelo mestre, assim como um comando entregue com atraso, pode deixar uma janela real menor. A aprendizagem usa essa janela restante, sem inventar um início anterior nem mover o alvo programado.
+
+O início exibido é uma previsão. Na execução, o comando de preparação correspondente do mestre precisa ser aceito antes que um dependente possa começar. Isso não confirma o relé da caldeira, o fluxo de água nem o aquecimento/arrefecimento real. O Velair não aumenta a temperatura do mestre para pedir calor em nome de outras divisões. O bloco normal programado continua sendo executado no seu próprio horário.
+
+A aprendizagem começa quando o dependente inicia efetivamente sua preparação limitada, utilizando a temperatura nesse momento e o tempo restante até ao seu próprio bloco. Atingir o alvo antecipadamente, observações parciais e amostras inválidas mantêm suas regras existentes. O término posterior do mestre não interrompe uma preparação já iniciada no dependente. Vincular ou desvincular não apaga amostras de aprendizagem guardadas.
+
+Abre **Detalhes do cálculo** para ver a estimativa independente, o mestre selecionado e o início efetivo. O Diagnóstico mostra o motivo da dependência junto às evidências de preparação e aprendizagem da divisão. Referências guardadas de início de comandos permitem continuidade operacional após reinício; uma observação de aprendizagem interrompida não é retomada, e essas referências técnicas não entram nas exportações portáteis.
+
+<a id="understanding-learning-activity"></a>
+## Compreender a atividade de aprendizagem
+
+Cada direção compatível pode mostrar uma explicação breve junto às informações de aprendizagem existentes: o Velair está a observar uma transição, a aguardar uma transição adequada ou não pode observar por um motivo conhecido. Isso descreve a aprendizagem, não confirma que o equipamento esteja fisicamente a aquecer ou a arrefecer. Uma transição anterior tem data explícita e não é apresentada como atividade atual.
+
+Usa a ação **Diagnóstico** ao lado da explicação para abrir esse equipamento e seu histórico de Pré-condicionamento, sem um filtro de data a ocultar registos anteriores. A secção de funções existente mostra a atividade atual e a última transição de aprendizagem mantida. Expande os detalhes para inspecionar as temperaturas, os limites configurados e as durações disponíveis para essa decisão. Consulta [Evidências de aprendizagem](diagnostics.pt-pt.md#learning-evidence).
+
+Uma contagem de amostras inalterada não comprova falha. Uma transição pode não fornecer uma diferença de temperatura utilizável, uma observação pode ainda estar em curso ou seu resultado pode ser parcial ou inválido. As explicações usam somente evidências registadas pelo Velair; não deduzem o funcionamento da caldeira nem um fornecimento partilhado de calor. O estado da aprendizagem e a previsão do próximo bloco continuam separados: uma divisão pode ter pouco histórico aprendido e, mesmo assim, não precisar de início antecipado para um alvo específico.
 
 <a id="how-it-starts"></a>
 ## Como o início é determinado

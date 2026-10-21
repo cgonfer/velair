@@ -50,8 +50,8 @@ it("uses the panel graphic for the household card while retaining presence, prep
     help.dispatchEvent(new FocusEvent("focus"));
     expect(help.getAttribute("aria-expanded")).toBe("true");
   }
-  expect(root.querySelector("#panel-return-departure")?.textContent).toContain("Start of this absence:");
-  expect(root.querySelector("#panel-return-arrival")?.textContent).toContain("Expected return:");
+  expect(root.querySelector("#panel-return-departure")?.textContent).toContain("The timeline begins when the Away setup is applied.");
+  expect(root.querySelector("#panel-return-arrival")?.textContent).toContain("The selected return setup becomes active at the planned time.");
   expect(root.querySelector("#compact-return-source-away")?.textContent).toContain("binary_sensor.home");
   expect(root.querySelectorAll(".compact-return-indicators [title],.return-context-status[title]")).toHaveLength(0);
   const helper = root.querySelector<HTMLButtonElement>('[data-room-count="waiting"] button')!;

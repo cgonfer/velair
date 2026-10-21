@@ -13,6 +13,19 @@ from custom_components.velair import services as service_module
 
 
 class PlannedReturnServiceTest(unittest.IsolatedAsyncioTestCase):
+    async def test_optional_immediate_away_boolean_reaches_scheduler(self):
+        handler, schema = self.registry.handlers[(DOMAIN, SERVICE_START_PLANNED_RETURN)]
+        now = datetime(2026, 10, 7, 12, tzinfo=UTC)
+        for flag in (False, True):
+            with self.subTest(flag=flag), patch.object(service_module.dt_util, 'now', return_value=now):
+                self.scheduler.async_start_planned_return.reset_mock()
+                await handler(SimpleNamespace(data=schema({'return_date': '2026-10-07',
+                    'return_time': '19:25', 'apply_away_now': flag})))
+                self.scheduler.async_start_planned_return.assert_awaited_once_with('2026-10-07T19:25:00+00:00', apply_away_now=flag)
+        for invalid in ('true', 1, None):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                schema({'return_date': '2026-10-07', 'return_time': '19:25', 'apply_away_now': invalid})
+
     async def asyncSetUp(self):
         self.scheduler = SimpleNamespace(
             async_start_planned_return=AsyncMock(), async_cancel_planned_return=AsyncMock(),

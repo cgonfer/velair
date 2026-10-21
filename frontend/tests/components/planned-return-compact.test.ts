@@ -4,6 +4,7 @@ import type { OverviewPreparationTimeline } from "../../src/velair/components/ov
 import { PlannedReturnElement } from "../../src/velair/components/planned-return-element";
 import { es } from "../../src/velair/translations/es";
 import { en } from "../../src/velair/translations/en";
+import { translate } from "../../src/velair/i18n";
 import { plannedReturnDraft } from "../../src/velair/domain/planned-return";
 import type { HomeAssistant, ScheduleResponse } from "../../src/velair/types";
 const data = () => ({ planned_return: { ...plannedReturnDraft(), occupancy_entity_ids: ["binary_sensor.home", "zone.home"], absence_delay_minutes: 120 }, modes: [{ key: "away", name: "Away snapshot" }, { key: "home", name: "Return snapshot" }], planned_return_status: {
@@ -31,7 +32,7 @@ describe("compact return card", () => {
     expect(titleIcon()?.getAttribute('icon')).toBe('mdi:home-clock-outline');
     element.embedded = true; await element.updateComplete;
     expect(titleIcon()).toBeNull();
-    expect(element.shadowRoot!.querySelector('.return-context-status ha-icon')).not.toBeNull();
+    expect(element.shadowRoot!.querySelector('.return-context-status ha-icon')).toBeNull();
     element.embedded = false; element.compact = false; await element.updateComplete;
     expect(titleIcon()?.getAttribute('icon')).toBe('mdi:home-clock-outline');
   });
@@ -248,14 +249,18 @@ describe("compact return card", () => {
   });
   it.each(["en", "es"] as const)("explains every active phase with a localized native tooltip in %s", async (language) => {
     const element = await setup(true, false); const dictionary = language === "es" ? es : en;
-    element.t = (key, values) => String(dictionary[key]).replace(/\{(\w+)\}/g, (_, name) => String(values?.[name] ?? `{${name}}`));
+    element.t = (key, values) => translate(language, key, values);
     for (const state of ["armed", "confirming_absence", "away", "preparing", "error"] as const) {
       element.data = { ...data(), planned_return_status: { ...data().planned_return_status!, state, episode_active: true } }; await element.updateComplete;
       const chip = element.shadowRoot!.querySelector(state === "confirming_absence" ? ".absence-confirmation" : ".return-title-copy .return-context-status")!;
       if (state === "confirming_absence") expect(chip.getAttribute("title")).toBe(dictionary[`plannedReturnStateHelp_${state}`]);
       else {
         expect(chip.getAttribute("title")).toBeNull();
-        expect(chip.querySelector(".inline-help-tooltip")?.textContent).toBe(dictionary[`plannedReturnStateHelp_${state}`]);
+        expect(chip.querySelector(".inline-help-tooltip")?.textContent).toContain(
+          state === "away" || state === "preparing" ? dictionary.plannedReturnActiveControlHelp : dictionary[`plannedReturnStateHelp_${state}`]);
+        if (state === "away" || state === "preparing") {
+          expect(chip.querySelector(".inline-help-tooltip")?.textContent).toContain(dictionary.plannedReturnPresenceReturnEnabledHelp);
+        }
       }
     }
   });

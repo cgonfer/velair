@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.2 |
-| Dernière synchronisation | 2026-10-17 |
+| Version de référence | 1.9.0-beta.3 |
+| Dernière synchronisation | 2026-10-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -25,7 +25,7 @@ Ce guide présente Velair du point de vue d’un utilisateur de Home Assistant.
 ## Navigation du panneau et liens directs
 
 Le panneau latéral met à jour son URL lorsque vous changez d’onglet ou passez
-d’une sous-section à l’autre dans Programmes, Modèles et Anticipation.
+d’une sous-section à l’autre dans Programmes et Modèles.
 Actualiser la page ou ouvrir une URL copiée rétablit cette section. Les boutons
 Précédent et Suivant du navigateur suivent également cette navigation.
 
@@ -39,8 +39,8 @@ Précédent et Suivant du navigateur suivent également cette navigation.
 | Modèles : Préréglages climatiques | `/velair/templates/presets` |
 | Capteurs | `/velair/sensors` |
 | Confort | `/velair/comfort` |
-| Anticipation : Anticipation adaptative du confort | `/velair/preconditioning/preconditioning` |
-| Anticipation : Retour prévu | `/velair/preconditioning/planned-return` |
+| Anticipation | `/velair/preconditioning` |
+| Retour prévu | `/velair/planned-return` |
 | Diagnostic | `/velair/diagnostics` |
 | Paramètres | `/velair/settings` |
 
@@ -68,9 +68,7 @@ votre propre adresse Home Assistant suivie du chemin, par exemple
 `https://your-home-assistant.example/velair/schedules/profiles`.
 
 `/velair/schedules` ouvre Par défaut et `/velair/templates` ouvre Modèles.
-`/velair/preconditioning` ouvre Anticipation adaptative du confort. Le sélecteur de
-sous-section permet de passer de la préparation adaptative des programmations au
-Retour prévu. `/velair/overview` ouvre Vue d’ensemble et l’ancien chemin
+`/velair/preconditioning` ouvre Anticipation et `/velair/planned-return` ouvre l’onglet distinct Retour prévu. Les anciens liens de sous-section ouvrent l’onglet correspondant. `/velair/overview` ouvre Vue d’ensemble et l’ancien chemin
 `/velair/profiles` ouvre Modes. Une sous-section inconnue ouvre la sous-section
 par défaut de son onglet ; un onglet inconnu ouvre Vue d’ensemble. Ces chemins
 sont normalisés sans ajouter d’entrée dans l’historique.
@@ -196,7 +194,7 @@ Velair calcule les événements à venir dans le backend et programme des rappel
 ponctuels exacts via Home Assistant. L’interface s’abonne aux mises à jour du
 backend par WebSocket ; aucune interrogation continue n’est donc nécessaire.
 
-Pendant un épisode de Retour prévu, Vue d’ensemble affiche un résumé compact du foyer : origine hebdomadaire ou ponctuelle, processus actuel et heure de confirmation ou d’arrivée applicable. Il utilise le fond habituel des cartes du thème, une bordure violette discrète et l’icône principale de retour ; les autres icônes gardent la couleur du texte. Un retour futur accepté ajoute des compteurs de préparation avec aide au survol, au clavier et au toucher. Un départ confirmé affiche une chronologie compacte en lecture seule avec heures et Modes de départ/arrivée, à côté du résumé si la place suffit ou dessous dans un conteneur étroit. Le bouton de navigation ouvre Retour prévu dans Anticipation sans dupliquer les commandes de départ. Un incident peut rester visible même sans départ actif.
+Pendant un épisode de Retour prévu, Vue d’ensemble affiche un résumé compact du foyer : origine hebdomadaire ou ponctuelle, processus actuel et heure de confirmation ou d’arrivée applicable. Il utilise le fond habituel des cartes du thème, une bordure violette discrète et l’icône principale de retour ; les autres icônes gardent la couleur du texte. Un retour futur accepté ajoute des compteurs de préparation avec aide au survol, au clavier et au toucher. Un départ confirmé affiche une chronologie compacte en lecture seule avec heures et Modes de départ/arrivée, à côté du résumé si la place suffit ou dessous dans un conteneur étroit. Le bouton de navigation ouvre l’onglet Retour prévu ; le résumé ne duplique pas les commandes de départ. Un incident peut rester visible même sans départ actif.
 
 Chaque appareil concerné affiche un signal violet de Retour prévu lorsque le
 backend indique que le mode Absence ou la préparation à l’arrivée fait
@@ -390,11 +388,7 @@ type: custom:velair-card
 view: planned-return
 ```
 
-Pendant la confirmation de l’absence, une ligne de temporisation explique la
-vérification du logement vide et affiche son échéance backend à l’heure locale
-de Home Assistant. Le Mode Absence s’active seulement après confirmation si
-toutes les sources indiquent toujours une absence. Aucun compte à rebours en
-direct ni aucune chronologie de départ ne s’affiche avant cette confirmation.
+Pour un départ normal en attente, une ligne de temporisation explique la vérification du logement vide et affiche son échéance backend à l’heure locale de Home Assistant. Le Mode Absence s’active seulement après confirmation si toutes les sources indiquent toujours une absence. Aucun compte à rebours en direct ni aucune chronologie de départ ne s’affiche avant cette confirmation. Avec **Appliquer le mode Absence maintenant**, Absence et sa chronologie démarrent immédiatement ; la confirmation du départ conditionne séparément le retour automatique par présence tandis que la préparation et l’arrivée programmées restent actives.
 
 L’éditeur visuel de la carte appelle cette vue **Retour prévu**. Elle affiche
 uniquement les commandes compactes de **Retour ponctuel**, avec les nombres de
@@ -405,12 +399,12 @@ omis : **Planifier le retour** confirme explicitement le départ et active Absen
 immédiatement, sans attendre. L’arrivée enregistrée continue à contrôler la
 préparation et l’activation de la destination ; Velair ne peut pas détecter une
 arrivée physique sans sources. Les sources configurées inconnues ou
-indisponibles gardent leur comportement d’attente normal et la routine
+indisponibles gardent leur comportement d’attente normal sauf si **Appliquer le mode Absence maintenant** est sélectionné, et la routine
 hebdomadaire exige des sources. Définissez une date et une heure futures de
 retour avant de partir ou lorsque vous êtes déjà absent. Un épisode actif
 propose uniquement **Annuler** et **Modifier l’arrivée**. Annuler arrête
 l’automatisation de retour et rétablit la sélection précédente de Mode/Profils
-après un départ confirmé ; une confirmation en attente ne change pas la
+après un départ confirmé ou une application manuelle immédiate d’Absence, même avant confirmation du départ surveillé. Une confirmation normale en attente ne change pas la
 sélection. Par exemple, partez de Confort avec un délai de cinq minutes : annuler
 après deux minutes laisse Confort actif ; annuler après l’application d’Absence
 rétablit Confort et ses Profils d’origine. Consultez les
@@ -447,7 +441,7 @@ Les indicateurs de présence de la carte restent en haut à droite de l’en-tê
 l’indicateur de délai disparaît après le départ confirmé.
 
 Configurez les sources de présence, les modes, la confirmation d’absence et la
-routine hebdomadaire dans **Anticipation > Retour prévu** du panneau
+routine hebdomadaire dans l’onglet **Retour prévu** du panneau
 latéral. La carte utilise cette configuration enregistrée du foyer ; elle
 n’expose ni les champs de configuration ni l’interrupteur de routine
 hebdomadaire. Les filtres d’affichage des thermostats ne limitent pas cette
@@ -910,7 +904,7 @@ La chronologie représente visuellement les 24 heures du jour sélectionné.
 
 Pour une absence pilotée par la présence avec des arrivées hebdomadaires ou
 ponctuelles préconfigurées, consultez [Retour prévu](planned-return.fr.md).
-Configurez la routine dans la sous-section Retour prévu d’Anticipation
+Configurez la routine dans l’onglet Retour prévu
 et utilisez son état en direct pour les états individuels des sources et les
 changements ponctuels d’arrivée sans modifier la semaine enregistrée.
 **Planifier le retour** peut attendre un départ confirmé avec une heure
@@ -1057,9 +1051,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v16 conservent les valeurs brutes et
+Les exports actuels du format portable v19 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v16 ; utilisez une version prenant en charge v16 pour les
+les exports v19 ; utilisez une version prenant en charge v19 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1480,15 +1474,14 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Le format 16 conserve les deux types de liaison aux modèles et les références
-de préréglages. Exporter les programmations ou Profils inclut les modèles et
+Les exports actuels du format 19 conservent les deux types de liaison aux modèles, les références de préréglages et les relations de Maître de préconditionnement. Les références d’exécution acceptée du maître restent locales et ne sont pas exportées. Exporter les programmations ou Profils inclut les modèles et
 préréglages requis, affichés comme sections supplémentaires sélectionnées.
 Les imports valident la configuration combinée, y compris les consommateurs
 existants des ressources partagées remplacées. Les préréglages sont fusionnés
 par clé stable : les clés correspondantes sont remplacées et les préréglages
 locaux absents du fichier restent. Les sauvegardes existantes restent
 importables ; les anciennes versions de Velair ne peuvent pas importer
-le format 16. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+le format 19. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin
@@ -1782,9 +1775,18 @@ action: velair.resume
 <a id="velairpause_zone"></a>
 ### `velair.pause_zone`
 
-Met en pause l’exécution automatique pour une entité gérée tandis que le
-reste de Velair continue à fonctionner. Omettez `duration_minutes` pour
-mettre cette zone en pause indéfiniment.
+Met en pause l’exécution automatique pour une entité climatique gérée tandis que le reste de Velair continue à fonctionner. Omettez à la fois `duration_minutes` et `until_next_block` pour mettre cette zone en pause indéfiniment.
+
+Définissez `until_next_block: true` pour terminer cette pause au début du prochain bloc de la programmation effective de la zone. Il s’agit de l’heure nominale du bloc, pas d’un début anticipé d’Anticipation. L’échéance est fixée lors de l’appel du service et survit aux redémarrages ; les modifications ultérieures de la programmation ne la déplacent pas. Cette option ne peut pas être combinée avec `duration_minutes` et l’appel échoue sans modifier la zone si aucun bloc futur n’existe. Les autres motifs de pause maintiennent la zone en pause jusqu’à leur propre fin.
+
+```yaml
+action: velair.pause_zone
+data:
+  entity_id: climate.guest_room
+  pause_id: external_control
+  action: none
+  until_next_block: true
+```
 
 Le champ facultatif `action` peut valoir :
 

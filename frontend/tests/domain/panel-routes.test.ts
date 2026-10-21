@@ -11,9 +11,10 @@ describe("panel destinations", () => {
     ["/velair/overview", "/velair"], ["/velair/profiles", "/velair/modes"],
     ["/velair/schedules", "/velair/schedules/default"], ["/velair/schedules/unknown", "/velair/schedules/default"],
     ["/velair/templates", "/velair/templates/templates"], ["/velair/templates/unknown", "/velair/templates/templates"],
-    ["/velair/preconditioning", "/velair/preconditioning/preconditioning"],
-    ["/velair/preconditioning/unknown", "/velair/preconditioning/preconditioning"],
-    ["/velair/preconditioning/planned-return", "/velair/preconditioning/planned-return"],
+    ["/velair/preconditioning", "/velair/preconditioning"],
+    ["/velair/preconditioning/preconditioning", "/velair/preconditioning"],
+    ["/velair/preconditioning/unknown", "/velair/preconditioning"],
+    ["/velair/preconditioning/planned-return", "/velair/planned-return"],
     ["/velair/unknown", "/velair"], ["/velair/settings/unknown", "/velair/settings"],
     ["/velair/schedules/profiles", "/velair/schedules/profiles"], ["/velair/templates/presets", "/velair/templates/presets"],
   ])("normalizes %s", (input, output) => expect(panelPath(parsePanelPath(input))).toBe(output));

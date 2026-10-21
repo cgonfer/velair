@@ -159,7 +159,7 @@
   "services": {
     "start_planned_return": {
       "name": "Ik vertrek",
-      "description": "Plan een eenmalige terugkeer voor een toekomstige datum en tijd met opgeslagen modi en automatische planning. Met ingestelde aanwezigheidsbronnen wordt afwezigheid bevestigd voordat de afwezigheidsmodus start; zonder bronnen start deze direct. Werkt zonder wekelijkse routine en wijzigt een actieve afwezigheid.",
+      "description": "Plan een eenmalige terugkeer op een toekomstige datum en tijd met de opgeslagen modi en Automatisch plannen. Met ingestelde aanwezigheidsbronnen wordt op bevestigde afwezigheid gewacht, tenzij Afwezig-modus nu toepassen is ingeschakeld; zonder bronnen wordt Afwezig direct toegepast. Werkt met de wekelijkse routine uitgeschakeld en werkt een actieve afwezigheid bij.",
       "fields": {
         "return_date": {
           "name": "Terugkeerdatum",
@@ -168,12 +168,16 @@
         "return_time": {
           "name": "Terugkeertijd",
           "description": "Aankomsttijd op de gekozen datum in de Home Assistant-tijdzone. Gebruik HH:MM in YAML; optionele seconden moeten 00 zijn. Niet-bestaande tijden bij zomer-/wintertijdwissel worden geweigerd."
+        },
+        "apply_away_now": {
+          "name": "Afwezig-modus nu toepassen",
+          "description": "Pas de ingestelde Afwezig-modus direct toe. Met aanwezigheidsbronnen wordt automatische terugkeer door aanwezigheid pas ingeschakeld na ononderbroken afwezigheid gedurende de ingestelde bevestigingstijd. Geplande voorbereiding en aankomst blijven actief."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Geplande terugkeer annuleren",
-      "description": "Annuleert een wachtende of actieve terugkeer, of sluit de melding van een inactieve terugkeer. Laat de huidige modus ongewijzigd en stopt de automatische terugkeer voor deze afwezigheid. Daarna kun je expliciet een nieuwe terugkeer plannen."
+      "description": "Annuleert een geplande terugkeer of sluit een inactieve terugkeermelding. Nadat Afwezig is toegepast, ook bij directe handmatige toepassing vóór bevestiging van het gemonitorde vertrek, worden de modi en profielen van vóór deze periode hersteld. Bij een normaal wachtend vertrek blijft de selectie ongewijzigd. Stopt automatische terugkeer voor deze afwezigheid. Daarna kun je expliciet een nieuwe terugkeer plannen."
     },
     "update_block_preset": {
       "name": "Velair-preset bijwerken",
@@ -321,6 +325,16 @@
         "entity_id": {
           "name": "Klimaatentiteiten",
           "description": "Eén beheerde klimaatentiteit of een lijst. Alle doelen moeten geldig zijn voordat een uitzondering wordt verwijderd."
+        }
+      }
+    },
+    "pause_zone": {
+      "name": "Zone pauzeren",
+      "description": "Voeg een reden toe of werk deze bij om de automatische uitvoering van het schema voor één beheerde thermostaat te pauzeren. De thermostaat kan optioneel worden uitgeschakeld zolang er een reden actief is.",
+      "fields": {
+        "until_next_block": {
+          "name": "Tot volgend blok",
+          "description": "Beëindig deze pauze bij de start van het volgende geplande blok. De eindtijd wordt bij de aanvraag vastgelegd en volgt latere schemawijzigingen niet. Niet te combineren met duration_minutes. Mislukt als er geen toekomstig blok is; andere pauzeredenen blijven actief."
         }
       }
     }

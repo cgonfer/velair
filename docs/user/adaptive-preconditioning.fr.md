@@ -9,8 +9,8 @@ Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](ad
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.2 |
-| Dernière synchronisation | 2026-10-17 |
+| Version de référence | 1.9.0-beta.3 |
+| Dernière synchronisation | 2026-10-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -30,7 +30,7 @@ Le préconditionnement adaptatif fonctionne localement dans Home Assistant. Vela
 <a id="setup"></a>
 ## Configuration
 
-L’onglet **Anticipation** propose deux outils dans son sélecteur de sous-section. **Anticipation adaptative du confort** s’ouvre par défaut ; choisissez **Retour prévu** pour configurer l’occupation et les arrivées hebdomadaires, et gérer l’absence actuelle. Leurs chemins directs dans le panneau sont `/velair/preconditioning/preconditioning` et `/velair/preconditioning/planned-return`. Consultez [Retour prévu](planned-return.fr.md).
+L’onglet **Anticipation** contient les réglages adaptatifs et l’apprentissage par équipement. **Retour prévu** possède son propre onglet pour l’occupation, les arrivées hebdomadaires et l’absence actuelle. Les deux onglets comprennent une introduction et une aide contextuelle. Leurs chemins directs sont `/velair/preconditioning` et `/velair/planned-return`. Les anciens liens de sous-section ouvrent toujours l’onglet correspondant. Consultez [Retour prévu](planned-return.fr.md).
 
 1. Ouvrez l’onglet **Anticipation**.
 2. Développez l’appareil à configurer.
@@ -47,6 +47,41 @@ Lorsque l’appareil est développé, chaque mode pris en charge affiche une car
 La préparation du Retour prévu est distincte de l’anticipation de l’horaire hebdomadaire. Pour un futur retour accepté, les informations de l’équipement indiquent son état de retour, le début estimé, la cible d’arrivée et tout motif de suspension ou d’indisponibilité. Vue d’ensemble, Retour prévu et les cartes climatiques utilisent les mêmes informations backend ; il ne s’agit pas d’un autre événement hebdomadaire. Une pièce peut encore suivre Absence tout en affichant une estimation future. **Préparation** décrit l’intention de contrôle de Velair, sans confirmer la réception d’une commande ni un chauffage ou refroidissement physique. La chronologie mesure le temps écoulé vers l’arrivée enregistrée, pas un pourcentage de progression thermique. Consultez [Préparation des pièces](planned-return.fr.md#room-preparation) pour les états.
 
 Pour vérifier un calcul précis, ouvrez **Détails du calcul** dans la carte de prévision en direct. Cette section facultative présente les valeurs backend utilisées : nombres d’échantillons, estimation issue des observations complètes, borne inférieure issue des observations partielles, estimation combinée, arrondi et avance finale. Elle est masquée par défaut pour garder la vue normale simple.
+
+<a id="preconditioning-master"></a>
+## Maître de préconditionnement
+
+Conservez **Maître de préconditionnement** sur **Indépendant** pour garder le comportement existant. Pour faire dépendre la préparation anticipée d’un équipement d’un autre, sélectionnez cet équipement géré dans les réglages de la pièce dépendante. Sélectionnez à nouveau **Indépendant** pour les dissocier. Ce réglage s’applique à la programmation effective de la pièce, y compris les Profils, les exceptions de zone et Retour prévu. Il ne remplace ni ses températures ni ses blocs.
+
+Un maître peut desservir plusieurs pièces dépendantes. Une pièce ne peut pas dépendre d’elle-même et les chaînes ou cycles ne sont pas pris en charge : un équipement dépendant ne peut pas aussi être maître.
+
+Velair sélectionne le bloc du maître dont l’heure cible est la plus proche de celle du bloc dépendant. En cas d’égalité, il choisit le bloc le plus tôt. Les heures cibles peuvent différer. L’équipement dépendant démarre à la plus tardive de ces deux heures : son propre début prévu et le début de préparation de ce bloc du maître :
+
+| Début propre à la pièce | Début du maître | Cible de la pièce | Début effectif |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Aucune préparation anticipée | 18:45 | Bloc normal à 18:45 |
+| 17:40 | 19:00 | 18:45 | Bloc normal à 18:45 |
+
+Si le bloc sélectionné du maître ne peut pas se préparer en avance, Velair ne lui substitue pas un autre bloc. Une préparation de chauffage ne peut pas autoriser une préparation de refroidissement, ni l’inverse. Les pauses, dérogations, contrôles de disponibilité et limites d’avance maximale existants s’appliquent toujours. Un maître indisponible ou désactivé reste configuré ; l’équipement dépendant ne devient pas silencieusement indépendant.
+
+**Démarrage minimal (min)** exclut toujours les prévisions indépendantes trop courtes. L’attente du maître, comme une transmission tardive de commande, peut laisser une fenêtre réelle plus courte. L’apprentissage utilise cette fenêtre restante sans inventer un début antérieur ni déplacer la cible programmée.
+
+Le début affiché est une prévision. Lors de l’exécution, la commande de préparation correspondante du maître doit être acceptée avant qu’un équipement dépendant puisse démarrer. Cela ne confirme ni le relais de la chaudière, ni le débit d’eau, ni le chauffage ou le refroidissement réels. Velair n’augmente pas la température du maître pour demander de la chaleur au nom d’autres pièces. Le bloc programmé normal s’exécute toujours à son heure.
+
+L’apprentissage commence lorsque l’équipement dépendant démarre réellement sa préparation contrainte, avec sa température à cet instant et le temps restant jusqu’à son propre bloc. Les règles existantes restent valables pour une cible atteinte en avance, les observations partielles et les échantillons invalides. La fin ultérieure de la préparation du maître n’arrête pas celle déjà en cours dans l’équipement dépendant. Associer ou dissocier n’efface pas les échantillons d’apprentissage enregistrés.
+
+Ouvrez **Détails du calcul** pour consulter l’estimation indépendante, le maître sélectionné et le début effectif. Diagnostic présente le motif de dépendance avec les preuves existantes de préparation et d’apprentissage. Les références enregistrées de début de commande permettent la continuité d’exécution après un redémarrage ; une observation d’apprentissage interrompue ne reprend pas et ces références techniques sont exclues des exports portables.
+
+<a id="understanding-learning-activity"></a>
+## Comprendre l’activité d’apprentissage
+
+Chaque direction prise en charge peut afficher une courte explication près des informations d’apprentissage existantes : Velair observe une transition, attend une transition adaptée ou ne peut pas observer pour un motif connu. Cela décrit l’apprentissage et ne confirme pas que l’équipement chauffe ou refroidit physiquement. Une transition passée est explicitement datée et n’est pas présentée comme une activité actuelle.
+
+Utilisez l’action **Diagnostic** associée pour ouvrir cet équipement et son historique d’Anticipation, sans filtre de date masquant les entrées antérieures. La section existante des fonctions indique l’activité actuelle et la dernière transition d’apprentissage conservée. Développez ses détails pour consulter les températures, seuils configurés et durées disponibles pour cette décision. Consultez [Preuves d’apprentissage](diagnostics.fr.md#learning-evidence).
+
+Un nombre d’échantillons inchangé ne prouve pas une panne. Une transition peut ne pas fournir d’écart de température exploitable, une observation peut être encore en cours ou son résultat peut être partiel ou invalide. Les explications utilisent uniquement les preuves enregistrées par Velair ; elles ne déduisent ni le fonctionnement de la chaudière ni une alimentation en chaleur partagée. L’état d’apprentissage et la prévision du prochain bloc restent distincts : une pièce peut avoir peu d’historique appris tout en ne nécessitant aucun démarrage anticipé pour une cible donnée.
 
 <a id="how-it-starts"></a>
 ## Comment le démarrage est déterminé
