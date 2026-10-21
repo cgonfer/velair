@@ -1,4 +1,5 @@
 """Read-only explanation of the saved return destination and its preparation."""
+from copy import deepcopy
 from dataclasses import asdict
 
 from homeassistant.util import dt as dt_util
@@ -77,6 +78,12 @@ def _suspension(owner, entity, now):
 def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
                          now, event, latched, row):
     row["state"] = "pending"
+    dependency = getattr(event, "preconditioning_dependency", None)
+    if dependency is not None:
+        row["preconditioning_dependency"] = deepcopy(dependency)
+        if event.target_when is None:
+            row.update(preparation="arrival_only", reason=dependency.get("reason"))
+            return
     if not config["enabled"]:
         row["reason"] = "preconditioning_disabled"
         return
@@ -101,7 +108,7 @@ def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
         else:
             reached = abs(temperature - block["temperature"]) <= delta
     # Read the predictor's planned time, never the departure fallback of a latched event.
-    if event is not None and event.preconditioning_diagnostics is not None:
+    if event is not None and (event.preconditioning_diagnostics is not None or dependency is not None):
         start = event.when
     else:
         start, _diagnostics = owner._preconditioned_event_details(entity, zone, block, arrival)
@@ -109,7 +116,8 @@ def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
         row["start_at"] = start.isoformat()
     if reached:
         row["state"] = "reached"
-    elif latched or (event is not None and event.when <= now and (runtime.episode or {}).get("state") == "away"):
+    elif latched or (event is not None and event.when <= now and (runtime.episode or {}).get("state") == "away"
+                    and owner._dependency_delivery_allowed(event)):
         row["state"] = "preparing"
     elif start >= arrival:
         row.update(preparation="arrival_only", reason=("missing_temperature" if temperature is None

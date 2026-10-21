@@ -170,7 +170,7 @@ class DayLayoutRuntimeTest(unittest.IsolatedAsyncioTestCase):
     def test_portable_legacy_custom_fallback_preserves_daily_data(self):
         runtime = {"storage": SimpleNamespace(data=normalize_schedule_data(self.data, ["climate.salon"])), "entry": SimpleNamespace(options={}, data={}), "scheduler": self.scheduler}
         payload = api._build_export_payload(runtime, ["zones", "profiles"])
-        self.assertEqual(payload["model_version"], 18)
+        self.assertEqual(payload["model_version"], api.EXPORT_MODEL_VERSION)
         self.assertNotIn("day_layouts", payload["sections"])
         self.assertNotIn("day_layouts", api.EXPORT_SECTIONS)
         legacy = deepcopy(payload)

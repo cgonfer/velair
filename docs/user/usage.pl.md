@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.3 |
+| Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -23,7 +23,7 @@ Ten poradnik opisuje Velair z perspektywy użytkownika Home Assistant.
 <a id="panel-navigation-and-direct-links"></a>
 ## Nawigacja panelu i bezpośrednie odnośniki
 
-Panel boczny zmienia adres przy przełączaniu kart lub podsekcji Harmonogramów, Szablonów i przygotowania temperatury. Odświeżenie albo otwarcie skopiowanego adresu przywraca sekcję. Przyciski Wstecz i Dalej przeglądarki również uwzględniają tę nawigację.
+Panel boczny zmienia adres przy przełączaniu kart lub podsekcji Harmonogramów i Szablonów. Odświeżenie albo otwarcie skopiowanego adresu przywraca sekcję. Przyciski Wstecz i Dalej przeglądarki również uwzględniają tę nawigację.
 
 | Sekcja | Ścieżka |
 | --- | --- |
@@ -35,8 +35,8 @@ Panel boczny zmienia adres przy przełączaniu kart lub podsekcji Harmonogramów
 | Szablony: Presety klimatyczne | `/velair/templates/presets` |
 | Czujniki | `/velair/sensors` |
 | Komfort | `/velair/comfort` |
-| Przygotowanie: adaptacyjne | `/velair/preconditioning/preconditioning` |
-| Przygotowanie: Planowany powrót | `/velair/preconditioning/planned-return` |
+| Przygotowanie wstępne | `/velair/preconditioning` |
+| Planowany powrót | `/velair/planned-return` |
 | Diagnostyka | `/velair/diagnostics` |
 | Ustawienia | `/velair/settings` |
 
@@ -55,7 +55,7 @@ tap_action:
 
 Zmień `navigation_path` na ścieżkę z tabeli. To standardowe [działanie nawigacji pulpitu](https://www.home-assistant.io/dashboards/actions/) Home Assistant. Dla zakładki lub odnośnika z innej aplikacji dodaj ścieżkę do własnego adresu, np. `https://your-home-assistant.example/velair/schedules/profiles`.
 
-`/velair/schedules` otwiera harmonogramy domyślne, `/velair/templates` Szablony, `/velair/preconditioning` adaptacyjne przygotowanie. Wybór podsekcji przełącza przygotowanie harmonogramu i Planowany powrót. `/velair/overview` otwiera Przegląd, starsze `/velair/profiles` Tryby. Nieznana podsekcja otwiera domyślną podsekcję swojej karty, a nieznana karta otwiera Przegląd. Normalizacja tych ścieżek nie dodaje pozycji historii.
+`/velair/schedules` otwiera harmonogram domyślny, a `/velair/templates` Szablony. `/velair/preconditioning` otwiera adaptacyjne przygotowanie, a `/velair/planned-return` osobną kartę Planowany powrót. Dawne odnośniki do podsekcji przygotowania nadal otwierają odpowiednie karty. `/velair/overview` otwiera Przegląd, a dawny adres `/velair/profiles` Tryby. Nieznana podsekcja otwiera domyślną podsekcję swojej karty, a nieznana karta Przegląd. Normalizacja nie dodaje wpisu historii.
 
 Odnośniki nie zachowują wyboru encji, dnia, Profilu, szablonu lub presetu. Odświeżenie nie odzyskuje niezapisanych zmian. Nawigacja odrzucająca szkic korzysta z istniejących potwierdzeń; anulowanie zachowuje sekcję i adres. Opcjonalne karty Lovelace zachowują adresy pulpitu.
 
@@ -102,7 +102,7 @@ Pełny poradnik opisuje granice wykrywania, polityki, powtarzane zmiany, Profile
 
 Velair oblicza przyszłe zdarzenia w backendzie i planuje dokładne jednorazowe wywołania zwrotne przez HA. Interfejs subskrybuje aktualizacje przez WebSocket, bez ciągłego odpytywania.
 
-Podczas epizodu Planowanego powrotu Przegląd pokazuje kompaktowe podsumowanie domu: wskazuje, czy powrót pochodzi z rutyny tygodniowej, czy z jednorazowego zgłoszenia, opisuje bieżący proces i podaje właściwy termin potwierdzenia albo przyjazdu. Wybierz podsumowanie, aby otworzyć Planowany powrót na karcie przygotowania temperatury. Podsumowanie nie powiela kontrolek wyjścia. Problem może pozostać widoczny także wtedy, gdy żadne wyjście nie jest obecnie realizowane.
+Podczas epizodu Planowanego powrotu Przegląd pokazuje kompaktowe podsumowanie domu: wskazuje, czy powrót pochodzi z rutyny tygodniowej, czy z jednorazowego zgłoszenia, opisuje bieżący proces i podaje właściwy termin potwierdzenia albo przyjazdu. Wybierz podsumowanie, aby otworzyć kartę Planowany powrót. Podsumowanie nie powiela kontrolek wyjścia. Problem może pozostać widoczny także wtedy, gdy żadne wyjście nie jest obecnie realizowane.
 
 Objęte zmianą encje pokazują fioletowy wskaźnik Planowanego powrotu, gdy backend zgłasza bieżące sterowanie nieobecnością lub przygotowaniem do przyjazdu. Zwykły stan działania, Profil i informacje Room Assist pozostają widoczne. Przyszłe godziny przygotowania są prognozą, a nie sygnałem aktywnego sterowania. Regulacja ręczna, Wzmocnienie, niezależne Pauzy, zatrzymany harmonogram i wykonywanie zewnętrzne zachowują pierwszeństwo. Encja, która pod niestandardowym Trybem nieobecności po prostu zachowuje harmonogram domyślny, nie otrzymuje wskaźnika nieobecności. Wskaźnik opisuje zamiar sterowania, a nie dowodzi udanego przekazania polecenia czy osiągnięcia temperatury docelowej.
 
@@ -178,17 +178,17 @@ type: custom:velair-card
 view: planned-return
 ```
 
-Podczas potwierdzania nieobecności wiersz zegara wyjaśnia sprawdzanie pustego domu i pokazuje termin ustalony przez backend w lokalnej strefie czasowej Home Assistant. Tryb nieobecności włącza się dopiero po potwierdzeniu, jeśli wszystkie źródła nadal wskazują nieobecność. Przed potwierdzeniem nie ma bieżącego odliczania ani osi czasu wyjścia.
+Przy zwykłym oczekującym wyjściu wiersz zegara wyjaśnia sprawdzanie pustego domu i pokazuje termin backendu w lokalnym czasie Home Assistant. Tryb nieobecności włącza się po potwierdzeniu, jeśli wszystkie źródła nadal wskazują nieobecność. Wcześniej nie ma bieżącego odliczania ani osi wyjścia. Z **Zastosuj tryb Nieobecność teraz** Nieobecność i oś czasu zaczynają się natychmiast; potwierdzenie wyjścia osobno odblokowuje automatyczny powrót na podstawie obecności, a zaplanowane przygotowanie i przybycie pozostają aktywne.
 
-Edytor wizualny nazywa ten widok **Planowany powrót**. Karta pokazuje tylko kompaktowe kontrolki jednorazowego powrotu. W prawym górnym rogu nagłówka podaje liczby źródeł wskazujących obecność, nieobecność lub stan nieznany. Zapisane opóźnienie potwierdzenia nieobecności jest widoczne w tym miejscu tylko przed potwierdzeniem aktywnej nieobecności. Jeśli nie zapisano źródeł obecności, te wskaźniki są pomijane: **Zaplanuj powrót** jawnie potwierdza wyjście i od razu włącza Tryb nieobecności, bez czekania. Zapisany przyjazd nadal wyznacza przygotowanie i aktywację konfiguracji docelowej, ale bez źródeł Velair nie może wykryć fizycznego powrotu. Skonfigurowane źródła o stanie nieznanym lub niedostępnym nadal powodują zwykłe oczekiwanie, a rutyna tygodniowa wymaga źródeł obecności.
+Edytor wizualny nazywa ten widok **Planowany powrót**. Karta pokazuje tylko kompaktowe kontrolki jednorazowego powrotu. W prawym górnym rogu nagłówka podaje liczby źródeł wskazujących obecność, nieobecność lub stan nieznany. Zapisane opóźnienie potwierdzenia nieobecności jest widoczne w tym miejscu tylko przed potwierdzeniem aktywnej nieobecności. Jeśli nie zapisano źródeł obecności, te wskaźniki są pomijane: **Zaplanuj powrót** jawnie potwierdza wyjście i od razu włącza Tryb nieobecności, bez czekania. Zapisany przyjazd nadal wyznacza przygotowanie i aktywację konfiguracji docelowej, ale bez źródeł Velair nie może wykryć fizycznego powrotu. Skonfigurowane źródła o stanie nieznanym lub niedostępnym nadal powodują zwykłe oczekiwanie, chyba że wybrano **Zastosuj tryb Nieobecność teraz**, a rutyna tygodniowa wymaga źródeł obecności.
 
-Ustaw przyszłą datę i godzinę powrotu przed wyjściem albo gdy jesteś już poza domem. Podczas aktywnego epizodu dostępne są tylko anulowanie i zmiana przyjazdu. Anulowanie zatrzymuje automatykę powrotu i po potwierdzonym wyjściu przywraca poprzedni wybór Trybu i Profili. Jeśli potwierdzenie nadal trwa, wybór nie zostaje zmieniony. Przykładowo zacznij od Comfort z pięciominutowym opóźnieniem: anulowanie po dwóch minutach pozostawia Comfort, a anulowanie po zastosowaniu Away przywraca Comfort i jego pierwotne Profile. Zobacz [przykłady anulowania](planned-return.pl.md#cancelling-a-return-examples), w tym rozpoczęcie bez czujników, zmiany przyjazdu i jawny wybór Trybów. Po zakończeniu lub anulowaniu powrotu karta pokazuje nowy formularz daty i godziny, nawet jeśli źródła nadal wskazują nieobecność wszystkich domowników. **Zaplanuj powrót** pozostaje widoczny, ale jest niedostępny, gdy brakuje zapisanej konfiguracji lub dostępnego harmonogramu.
+Ustaw przyszłą datę i godzinę powrotu przed wyjściem albo gdy jesteś już poza domem. Podczas aktywnego epizodu dostępne są tylko anulowanie i zmiana przyjazdu. Anulowanie zatrzymuje automatykę powrotu i po potwierdzonym wyjściu lub natychmiastowej ręcznej Nieobecności przywraca poprzedni wybór Trybu i Profili, nawet przed potwierdzeniem monitorowanego wyjścia. Zwykłe oczekujące potwierdzenie nie zmienia wyboru. Przykładowo zacznij od Comfort z pięciominutowym opóźnieniem: anulowanie po dwóch minutach pozostawia Comfort, a anulowanie po zastosowaniu Away przywraca Comfort i jego pierwotne Profile. Zobacz [przykłady anulowania](planned-return.pl.md#cancelling-a-return-examples), w tym rozpoczęcie bez czujników, zmiany przyjazdu i jawny wybór Trybów. Po zakończeniu lub anulowaniu powrotu karta pokazuje nowy formularz daty i godziny, nawet jeśli źródła nadal wskazują nieobecność wszystkich domowników. **Zaplanuj powrót** pozostaje widoczny, ale jest niedostępny, gdy brakuje zapisanej konfiguracji lub dostępnego harmonogramu.
 
 Panel boczny korzysta z tych samych przycisków anulowania i zmiany przyjazdu oraz nowego formularza planowania. Tylko dodatkowe wskaźniki obecności i opóźnienia w nagłówku są właściwe dla karty; panel zachowuje pełną konfigurację tygodniową, obecności i przygotowania. Oba widoki pokazują przy tytule krótki opis fazy z pomocą kontekstową. Podczas potwierdzania tę rolę pełni nagłówek procesu. Przed potwierdzonym wyjściem dostępna ikona przyjazdu i etykieta **Oczekiwane przybycie** identyfikują zapisany powrót, wyrównane do tytułu i opisu stanu. Zapisana wartość jest kompaktowym klikalnym znacznikiem bez ołówka i podkreślenia. Potwierdzony wykres używa ciemnego pola przyjazdu z typografią wyjścia, bez ołówka i podkreślenia. Obie formy otwierają ten sam edytor przyjazdu.
 
 Niebieski przycisk **Wstecz** ze strzałką w lewo, umieszczony w wierszu działań edytora, lokalnie odrzuca zmianę przyjazdu i zamyka edytor, przywracając ostatni zapisany przyjazd. Usuwa jego ostrzeżenie i ochronę przed nawigacją, ale niezależne niezapisane zmiany rutyny nadal są chronione. Ponowne otwarcie zaczyna od zapisanej wartości. Udany zapis zamyka edytor; nieudany zapis i aktualizacje na żywo zachowują szkic. Wyjście i przyjazd używają tej samej typografii. Anulowanie jest kompaktowym czerwonym przyciskiem z białym tekstem po lewej, pod danymi epizodu, widocznym tylko gdy aktywny powrót można anulować i edytor jest zamknięty. Podczas edycji **Wstecz** zamyka edytor z lewej, a zmiana przyjazdu pozostaje po prawej na kompaktowym zielonym tle. Widoczna powierzchnia obu przycisków ma 32 piksele, a obszar dotykowy — 44 piksele. Wskaźniki obecności karty pozostają w prawym górnym rogu nagłówka; wskaźnik opóźnienia znika po potwierdzonym wyjściu.
 
-Źródła obecności, Tryby, potwierdzenie nieobecności i rutynę tygodniową skonfiguruj w podsekcji Planowanego powrotu na karcie przygotowania temperatury panelu bocznego. Karta używa zapisanej konfiguracji domu; nie udostępnia pól konfiguracji ani przełącznika rutyny tygodniowej. Filtry wyświetlanych termostatów nie ograniczają tej karty obejmującej cały dom. Kontrolki pulpitu i panelu bocznego aktualizują ten sam epizod backendu. Szkic przyjazdu pozostaje lokalny dla każdej otwartej karty do chwili przesłania.
+Źródła obecności, Tryby, potwierdzenie nieobecności i rutynę tygodniową skonfiguruj na karcie **Planowany powrót** panelu bocznego. Karta używa zapisanej konfiguracji domu; nie udostępnia pól konfiguracji ani przełącznika rutyny tygodniowej. Filtry wyświetlanych termostatów nie ograniczają tej karty obejmującej cały dom. Kontrolki pulpitu i panelu bocznego aktualizują ten sam epizod backendu. Szkic przyjazdu pozostaje lokalny dla każdej otwartej karty do chwili przesłania.
 
 Zapisane godziny wyjścia i edytowalnego przybycia są nad osią, a etykiety Trybów nieobecności i celu pod nią. Obie daty mają tę samą typografię; przybycie jest ciemniejszym polem otwierającym edytor, bez ołówka ani podkreślenia. Osobne podpowiedzi wyjścia, ikony przybycia i Trybów otwierają się po najechaniu, fokusie lub dotknięciu. Neutralna pionowa kreska **Teraz** odpowiada końcowi odcinka upływu czasu UTC. Daty pojawiają się, gdy końce przypadają na różne dni w strefie Home Assistant. Szkic przybycia nie przesuwa zapisanej osi przed akceptacją. Oczekujące i końcowe stany oraz brak potwierdzonego wyjścia nie mają ruchomej osi; aktywny błąd z poprawnym wyjściem zachowuje oś i anulowanie. Zegar lokalny odświeża się co minutę tylko przy widocznej aktywnej karcie lub panelu, także po ponownym pokazaniu; nie odpytuje backendu.
 
@@ -387,7 +387,7 @@ Oś wizualizuje 24 godziny wybranego dnia.
 <a id="preconditioning"></a>
 ## Przygotowanie temperatury
 
-Obsługę nieobecności opartą na obecności domowników, z wcześniej skonfigurowanymi przyjazdami tygodniowymi lub jednorazowymi, opisuje [Planowany powrót](planned-return.pl.md). Skonfiguruj rutynę w podsekcji Planowanego powrotu na karcie przygotowania temperatury. Jej bieżący stan pokazuje stany poszczególnych źródeł i pozwala zmieniać jednorazowy przyjazd bez edycji zapisanego tygodnia. **Zaplanuj powrót** może czekać na potwierdzone wyjście z jednorazową godziną nawet wtedy, gdy automatyczna rutyna tygodniowa jest wyłączona. Bez zapisanych źródeł obecności jawne rozpoczęcie od razu stosuje Tryb nieobecności; zwykłe przygotowanie i zapisany przyjazd nadal są realizowane.
+Obsługę nieobecności opartą na obecności domowników, z wcześniej skonfigurowanymi przyjazdami tygodniowymi lub jednorazowymi, opisuje [Planowany powrót](planned-return.pl.md). Skonfiguruj rutynę na karcie **Planowany powrót**. Jej bieżący stan pokazuje stany poszczególnych źródeł i pozwala zmieniać jednorazowy przyjazd bez edycji zapisanego tygodnia. **Zaplanuj powrót** może czekać na potwierdzone wyjście z jednorazową godziną nawet wtedy, gdy automatyczna rutyna tygodniowa jest wyłączona. Bez zapisanych źródeł obecności jawne rozpoczęcie od razu stosuje Tryb nieobecności; zwykłe przygotowanie i zapisany przyjazd nadal są realizowane.
 
 Przygotowanie pozwala wcześniej zastosować temperaturę docelową komfortu dla jednej zarządzanej encji klimatu. Po włączeniu traktuje godzinę bloku jako godzinę, o której ma panować komfort, i adaptacyjnie stosuje blok wcześniej, zachowując pierwotną godzinę komfortu w danych zdarzenia. Jeśli przeliczenie nastąpi już w oknie przygotowania, Velair stosuje blok od razu, o ile nadal potrzebne jest ogrzewanie lub chłodzenie.
 
@@ -428,7 +428,7 @@ Velair zapisuje wartości związane z temperaturą bez przeliczania, w jednostce
 
 Jednorazowa aktualizacja z opublikowanych wersji Velair zapisujących wyłącznie Celsjusza przebiega inaczej. Jeśli Home Assistant już używa Fahrenheita, Velair bez pytania uznaje dawne dane za zapisane w Celsjuszu, pozostawia harmonogram zatrzymany i kieruje do **Zresetuj Velair**. Reset usuwa dawną konfigurację i atomowo tworzy nowe ustawienia domyślne w Fahrenheitach. Po tej aktualizacji kolejne zmiany jednostki Home Assistant korzystają z pełnego jawnego przeliczenia opisanego wyżej, z zachowaniem danych.
 
-Eksporty przenośnego modelu v16 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v16; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
+Eksporty przenośnego modelu v19 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v19; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
 
 Jeśli urządzenie było niedostępne podczas migracji lub importu, Velair sprawdza jego limity i efektywny krok temperatury po odzyskaniu dostępności. Prawidłowy `target_temp_step` ma pierwszeństwo przed ostatnim zgłoszonym i ręcznym zastępczym. Panel ostrzega o niezgodnych celach do edycji przed użyciem. Pełne zasady w [Jednostkach temperatury i migracji](temperature-units.pl.md).
 
@@ -583,7 +583,7 @@ Ustawienia eksportują/importują wersjonowany JSON zawierający:
 - definicje Profili;
 - definicje Trybów.
 
-Model 16 zachowuje oba rodzaje powiązań z szablonem i odwołania do presetów. Eksport harmonogramów lub Profili dołącza wymagane szablony i presety, pokazując je jako dodatkowo wybrane sekcje. Import sprawdza całą połączoną konfigurację, także istniejące miejsca użycia zastępowanych wspólnych zasobów. Presety są łączone po stałym kluczu: zgodne klucze zastępują lokalne definicje, a lokalne presety nieobecne w pliku pozostają. Starsze kopie nadal można importować, ale starsze wersje Velair nie importują plików modelu 16. Zobacz [przykład kopii całej konfiguracji](linked-schedule-examples.pl.md#back-up-the-whole-setup).
+Bieżące eksporty modelu 19 zachowują oba rodzaje powiązań z szablonem, odwołania do presetów i zależności Nadrzędnego termostatu przygotowania. Odwołania do przyjętych uruchomień nadrzędnego pozostają lokalne i nie są eksportowane. Eksport harmonogramów lub Profili dołącza wymagane szablony i presety, pokazując je jako dodatkowo wybrane sekcje. Import sprawdza całą połączoną konfigurację, także istniejące miejsca użycia zastępowanych wspólnych zasobów. Presety są łączone po stałym kluczu: zgodne klucze zastępują lokalne definicje, a lokalne presety nieobecne w pliku pozostają. Starsze kopie nadal można importować, ale starsze wersje Velair nie importują plików modelu 19. Zobacz [przykład kopii całej konfiguracji](linked-schedule-examples.pl.md#back-up-the-whole-setup).
 
 Podczas importu możesz wybrać sekcje do nadpisania. Import zastępuje wybrane dane, więc najpierw wykonaj eksport, jeśli potrzebujesz punktu odzyskania. Definicje Profili i Trybów są przenośne, ale ich aktywny wybór nie jest. Velair zachowuje aktywne identyfikatory Profili, które nadal istnieją, i wraca do harmonogramów domyślnych tylko wtedy, gdy żaden z nich nie pozostał.
 
@@ -789,7 +789,20 @@ action: velair.resume
 <a id="velairpause_zone"></a>
 ### `velair.pause_zone`
 
-Wstrzymuje automatyczne wykonywanie harmonogramu jednej zarządzanej encji klimatu, gdy reszta Velair nadal działa. Pomiń `duration_minutes`, aby wstrzymać strefę bezterminowo. Opcjonalne pole `action` przyjmuje:
+Wstrzymuje automatyczne wykonywanie harmonogramu jednej zarządzanej encji klimatu, gdy reszta Velair nadal działa. Pomiń zarówno `duration_minutes`, jak i `until_next_block`, aby wstrzymać strefę bezterminowo.
+
+Ustaw `until_next_block: true`, aby zakończyć tę pauzę na początku następnego bloku efektywnego harmonogramu strefy. Używa nominalnej godziny bloku, nie wcześniejszego początku adaptacyjnego przygotowania. Termin jest ustalany przy wywołaniu i przetrwa restarty; późniejsza edycja harmonogramu go nie przesuwa. Nie można łączyć z `duration_minutes`. Bez przyszłego bloku wywołanie kończy się błędem bez zmiany strefy. Inne powody pauzy nadal utrzymują strefę wstrzymaną, dopóki również się nie zakończą.
+
+```yaml
+action: velair.pause_zone
+data:
+  entity_id: climate.guest_room
+  pause_id: external_control
+  action: none
+  until_next_block: true
+```
+
+Opcjonalne pole `action` przyjmuje:
 
 - `none`: pozostawia encję klimatu dokładnie w obecnym stanie i tylko zatrzymuje jej automatyczne zmiany przez Velair;
 - `turn_off`: od razu wyłącza urządzenie i utrzymuje Pauzę.

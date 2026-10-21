@@ -49,9 +49,37 @@ async function navigate(panel: VelairPanel, view: string, subsection?: string) {
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); window.history.replaceState(null, "", "/"); });
 
 describe("panel-only shared schedule lifecycle", () => {
+  it("retains return settings when child dirty events trigger rejected tab navigation", async () => {
+    const element = await panel(backend(), "/velair/planned-return");
+    const card = activeCard(element);
+    const controls = card.shadowRoot!.querySelector("velair-planned-return")!;
+    controls.dispatchEvent(new CustomEvent("velair-dirty-changed", { detail: { dirty: true }, bubbles: true, composed: true }));
+    await card.updateComplete; await element.updateComplete;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await navigate(element, "preconditioning");
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(activeCard(element)).toBe(card);
+    expect(card.shadowRoot!.querySelector("velair-planned-return")).toBe(controls);
+    expect(window.location.pathname).toBe("/velair/planned-return");
+    confirm.mockReturnValue(true);
+    await navigate(element, "preconditioning");
+    expect(window.location.pathname).toBe("/velair/preconditioning");
+  });
+  it("blocks tab navigation while the return component reports a backend operation", async () => {
+    const element = await panel(backend(), "/velair/planned-return");
+    const card = activeCard(element);
+    const controls = card.shadowRoot!.querySelector("velair-planned-return")!;
+    controls.dispatchEvent(new CustomEvent("planned-return-busy", { detail: true, bubbles: true, composed: true }));
+    await navigate(element, "preconditioning");
+    expect(activeCard(element)).toBe(card);
+    expect(window.location.pathname).toBe("/velair/planned-return");
+    controls.dispatchEvent(new CustomEvent("planned-return-busy", { detail: false, bubbles: true, composed: true }));
+    await navigate(element, "preconditioning");
+    expect(window.location.pathname).toBe("/velair/preconditioning");
+  });
   it("shares one load and stream across top tabs and renders cached data on the new editor", async () => {
     const mock = backend(); const element = await panel(mock); const first = activeCard(element);
-    for (const view of ["schedules", "modes", "templates", "sensors", "comfort", "preconditioning", "settings", "overview"]) {
+    for (const view of ["schedules", "modes", "templates", "sensors", "comfort", "preconditioning", "planned-return", "settings", "overview"]) {
       await navigate(element, view);
       expect(internals(activeCard(element))._data?.configuration_revision).toBe(1);
       expect(activeCard(element).shadowRoot!.querySelector(".initial-loading")).toBeNull();

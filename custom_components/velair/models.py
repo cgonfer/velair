@@ -183,6 +183,7 @@ class PreconditioningData(TypedDict):
     """Stored preconditioning settings for one climate zone."""
 
     enabled: bool
+    master_entity_id: NotRequired[str | None]
     max_lead_minutes: int
     minimum_delta_temperature: float
     learning_history_size: int
@@ -472,6 +473,7 @@ class SchedulerData(TypedDict):
     modes: list[VelairModeData]
     planned_return: NotRequired[dict[str, Any]]
     planned_return_episode: NotRequired[dict[str, Any] | None]
+    preconditioning_accepted_anchors: NotRequired[dict[str, dict[str, Any]]]
 
 
 DEFAULT_SCHEDULE_TEMPLATES: list[ScheduleTemplateData] = [
@@ -587,6 +589,7 @@ class ClimateEvent:
     target_temp_high: float | None = None
     target_when: datetime | None = None
     preconditioning_diagnostics: PreconditioningPredictionDiagnostics | None = None
+    preconditioning_dependency: dict[str, Any] | None = None
     temperature_only: bool = False
 
 
@@ -1060,6 +1063,9 @@ def normalize_schedule_data(
         "modes": modes,
         "planned_return": planned_return,
         "planned_return_episode": normalize_planned_return_episode(data.get("planned_return_episode"), planned_return),
+        "preconditioning_accepted_anchors": _normalize_preconditioning_anchors(
+            data.get("preconditioning_accepted_anchors"), len(zones)
+        ),
     }
 
 
@@ -1176,7 +1182,15 @@ def normalize_planned_return_episode(raw: Any, config: dict[str, Any]) -> dict[s
     episode = {key: deepcopy(raw.get(key)) for key in (
         "state", "started_at", "return_at", "away_mode_id", "destination_mode_id"
     )} | {"origin": origin, "preparing_entities": list(dict.fromkeys(preparing))}
-    # Departure is recorded after confirmed absence or explicit sensorless Start. Old episodes and
+    if "awaiting_departure_confirmation" in raw:
+        if not isinstance(raw["awaiting_departure_confirmation"], bool):
+            return None
+        if raw["awaiting_departure_confirmation"]:
+            if origin != "manual" or state not in ("away", "skipped") or not config.get("occupancy_entity_ids"):
+                return None
+            episode["awaiting_departure_confirmation"] = True
+    # Departure records the saved Away transition, including an immediate manual Start.
+    # Its presence-return gate separately records pending monitored confirmation. Old episodes and
     # damaged optional display metadata must not invent a confirmed departure.
     departure_at = raw.get("departure_at")
     if isinstance(departure_at, str) and state != "armed":
@@ -1249,6 +1263,7 @@ def serialize_schedule_data(data: SchedulerData) -> dict[str, Any]:
         "modes": data.get("modes", []),
         "planned_return": deepcopy(data.get("planned_return", default_planned_return())),
         "planned_return_episode": deepcopy(data.get("planned_return_episode")),
+        "preconditioning_accepted_anchors": deepcopy(data.get("preconditioning_accepted_anchors", {})),
     }
 
 
@@ -1752,6 +1767,52 @@ def normalize_external_change_policy(raw_data: Any) -> ExternalChangePolicyData:
     }
 
 
+def validate_preconditioning_dependencies(zones: dict[str, Any]) -> None:
+    """Validate the complete, single-level graph before changing configuration.
+
+    Loading deliberately retains dangling references so unavailable or removed
+    masters remain visible rather than silently becoming independent climates.
+    """
+    links: dict[str, str] = {}
+    for entity_id, zone in zones.items():
+        settings = zone.get("preconditioning", {})
+        master = settings.get("master_entity_id") if isinstance(settings, dict) else None
+        if master is None:
+            continue
+        if not isinstance(master, str) or master not in zones:
+            raise ValueError("Preconditioning master must be a managed climate")
+        if master == entity_id:
+            raise ValueError("A climate cannot be its own preconditioning master")
+        if any(
+            isinstance(execution := zones[target].get("execution"), dict)
+            and execution.get("type") == "external"
+            for target in (entity_id, master)
+        ):
+            raise ValueError("Preconditioning dependencies require locally managed climates")
+        links[entity_id] = master
+    if any(master in links for master in links.values()):
+        raise ValueError("Preconditioning dependencies cannot form chains or cycles")
+
+
+def _normalize_preconditioning_anchors(raw: Any, zone_count: int) -> dict[str, dict[str, Any]]:
+    """Keep bounded technical delivery evidence; runtime revalidates its context."""
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for key, value in list(raw.items())[-max(32, zone_count * 16):]:
+        if not isinstance(key, str) or not isinstance(value, dict):
+            continue
+        try:
+            instants = [datetime.fromisoformat(value[field].replace("Z", "+00:00"))
+                        for field in ("accepted_start", "target_when", "expires_at")]
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+        if any(instant.tzinfo is None for instant in instants):
+            continue
+        result[key] = deepcopy(value)
+    return result
+
+
 def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
     """Normalize stored preconditioning settings."""
     data = raw_data if isinstance(raw_data, dict) else {}
@@ -1763,6 +1824,7 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
 
     return {
         "enabled": bool(data.get("enabled", False)),
+        "master_entity_id": _normalize_optional_entity_id(data.get("master_entity_id")),
         "max_lead_minutes": max_lead_minutes,
         "minimum_delta_temperature": _normalize_preconditioning_delta(
             data.get("minimum_delta_temperature")

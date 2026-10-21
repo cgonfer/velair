@@ -158,22 +158,26 @@
   },
   "services": {
     "start_planned_return": {
-      "name": "I'm leaving",
-      "description": "Pianifica un rientro occasionale per una data e ora future con le modalità salvate e la programmazione automatica. Con fonti di presenza configurate, attende la conferma dell’assenza prima di attivare la modalità Assenza; senza fonti, la attiva subito. Funziona senza routine settimanale e aggiorna un’assenza attiva.",
+      "name": "Sto uscendo",
+      "description": "Pianifica un ritorno singolo per una data e ora future con le Modalità salvate e la programmazione automatica. Con fonti di presenza configurate attende la conferma dell’assenza, salvo che sia abilitato Applica subito la modalità Assenza; senza fonti applica Assenza immediatamente. Funziona con la routine settimanale disabilitata e aggiorna un’assenza attiva.",
       "fields": {
         "return_date": {
-          "name": "Return date",
+          "name": "Data di ritorno",
           "description": "Data di arrivo nel fuso Home Assistant. Data e ora insieme devono essere nel futuro."
         },
         "return_time": {
-          "name": "Return time",
+          "name": "Ora di ritorno",
           "description": "Ora di arrivo nella data selezionata nel fuso Home Assistant. Usa HH:MM in YAML; i secondi facoltativi devono essere 00. Gli orari inesistenti al passaggio all’ora legale vengono rifiutati."
+        },
+        "apply_away_now": {
+          "name": "Applica subito la modalità Assenza",
+          "description": "Applica subito la modalità Assenza configurata. Con fonti di presenza, il ritorno automatico tramite presenza si abilita solo dopo un’assenza continua per il tempo di conferma configurato. Preparazione e arrivo programmati restano attivi."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Annulla il ritorno previsto",
-      "description": "Annulla un ritorno in attesa o attivo, oppure chiude l’avviso di un ritorno inattivo. Mantiene la modalità attuale e interrompe il ritorno automatico per questa assenza. Puoi poi pianificare esplicitamente un nuovo ritorno."
+      "description": "Annulla un ritorno pianificato o chiude l’avviso di un ritorno inattivo. Dopo l’applicazione di Assenza, compresa quella manuale immediata prima della conferma della partenza monitorata, ripristina Modalità e Profili selezionati prima dell’episodio. Una normale partenza in attesa lascia la selezione invariata. Ferma il ritorno automatico per questa assenza. Puoi poi pianificare esplicitamente un nuovo ritorno."
     },
     "update_block_preset": {
       "name": "Aggiorna preset Velair",
@@ -321,6 +325,16 @@
         "entity_id": {
           "name": "Entità climatiche",
           "description": "Un’entità climatica gestita o un elenco. Tutte le destinazioni devono essere valide prima di rimuovere qualsiasi eccezione."
+        }
+      }
+    },
+    "pause_zone": {
+      "name": "Pausa zona",
+      "description": "Aggiunge o aggiorna un motivo che sospende la programmazione automatica di un dispositivo climatico gestito. Il dispositivo può essere spento facoltativamente finché rimane almeno un motivo.",
+      "fields": {
+        "until_next_block": {
+          "name": "Fino al prossimo blocco",
+          "description": "Termina questa pausa all’inizio del prossimo blocco programmato. La scadenza viene fissata alla richiesta e non segue successive modifiche alla programmazione. Non può essere combinato con duration_minutes. Fallisce se non esistono blocchi futuri; gli altri motivi di pausa restano attivi."
         }
       }
     }

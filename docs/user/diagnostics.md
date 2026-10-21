@@ -60,6 +60,49 @@ report can show whether the event represented a configured-range transition or
 another Comfort change. These fields contain only stable semantic codes, not
 raw Home Assistant event context.
 
+## Learning Evidence
+
+The existing Preconditioning function section separates heating and cooling
+activity. It shows whether an observation is running or Velair is waiting for
+a suitable transition, and the latest retained learning transition when one is
+available. Its expandable details contain only evidence relevant to that
+decision, such as initial and target temperatures, the minimum temperature
+delta, observed duration and the configured maximum start.
+
+The Preconditioning history includes observation starts, interruptions, results
+and actual transitions that could not start an observation. Result entries
+distinguish complete, partial and invalid observations. Invalid observations can
+identify a temperature gap that was too small, a duration that was too short,
+or a duration exceeding the configured maximum. Older stored observations may
+retain the less specific out-of-bounds reason. Velair does not retroactively
+assign a more precise cause to them.
+
+Repeated calculations of future predictions do not create learning entries.
+The last transition follows the same retention settings and global history
+limit as the timeline. Disabling Preconditioning history or clearing history
+removes that historical evidence; it does not stop learning or erase stored
+learning samples. After a restart, previous runtime activity and history are
+not restored. If no evidence is available, Diagnostics does not invent a reason
+for unchanged counters or infer whether a boiler was running.
+
+### Preconditioning dependency evidence
+
+For a room with a configured **Preconditioning master**, inspect its dependency
+details alongside the existing preparation information. These distinguish the
+room's independent estimate, the master's selected transition and start, and the
+effective start or reason preparation cannot begin. A command accepted by Home
+Assistant is evidence of Velair's action, not a measurement of the boiler relay.
+The learning observation continues to describe the dependent room's own
+temperature and elapsed time.
+
+When evidence is available, the explanation distinguishes Home Assistant
+availability from disabled scheduling or Preconditioning, a paused Profile,
+an active override, an ineligible master, or a missing transition. The same
+explanation appears in cards and Diagnostics. An unavailable climate may still
+have a calculated prediction when another configured sensor supplies its room
+temperature; that prediction does not confirm that the device can receive a
+command or supply heat or cooling.
+
 ## Runtime History And Privacy
 
 Diagnostics keeps at most 100 relevant events in one global timeline.
@@ -127,8 +170,13 @@ Each managed climate also reports runtime-only command-settling evidence. While
 a recent Velair command is stabilizing, Diagnostics lists the affected control
 fields in its runtime snapshot. If the climate has not converged by the bounded
 deadline, the next fresh snapshot marks the unit with a
-`command_settling_mismatch` warning. The downloaded report's
-`command_settling` block includes the expected and observed values. This is
+`command_settling_mismatch` warning. Expand that warning in the selected
+climate's Diagnostics panel to compare each affected field's expected value
+with the value reported by the thermostat. Temperatures include the climate's
+unit, HVAC modes use their normal labels, and missing values are identified
+explicitly. This uses the recorded comparison, not the current schedule or a
+new reading. The downloaded report also retains the `command_settling` block.
+This is
 evidence for troubleshooting: Diagnostics does not retry the command, change
 the climate, or create a Manual adjustment. The evidence is cleared by a newer
 command for that field or by restart.

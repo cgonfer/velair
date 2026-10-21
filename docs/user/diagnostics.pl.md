@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](diagnostics.md) · [Español](dia
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.3 |
+| Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -38,6 +38,22 @@ Przy włączonym porównaniu z warunkami zewnętrznymi raport zawiera też dost�
 
 Bieżąca ocena zawiera aktualne `range_summary`. Zachowane wpisy `comfort_assessment_changed` mają też `previous_range_summary` i flagi `range_summary_changed` oraz `range_status_changed`, aby pobrany raport pokazał, czy zdarzenie dotyczyło przejścia względem skonfigurowanego zakresu, czy innej zmiany Komfortu. Pola zawierają tylko stałe kody znaczeniowe, nie surowy kontekst zdarzeń Home Assistant.
 
+<a id="learning-evidence"></a>
+## Dane uczenia
+
+Dotychczasowa sekcja funkcji Przygotowanie wstępne rozdziela aktywność ogrzewania i chłodzenia. Pokazuje, czy trwa obserwacja, czy Velair czeka na odpowiednią zmianę, oraz ostatnią zachowaną zmianę uczenia, jeśli jest dostępna. Rozwijane szczegóły zawierają tylko dane istotne dla tej decyzji: na przykład temperaturę początkową i docelową, minimalną różnicę temperatur, czas obserwacji i ustawione maksymalne wyprzedzenie.
+
+Historia Przygotowania wstępnego obejmuje rozpoczęcia, przerwania i wyniki obserwacji oraz rzeczywiste zmiany, które nie pozwoliły na rozpoczęcie obserwacji. Wyniki rozróżniają obserwacje pełne, częściowe i nieprawidłowe. Dla nieprawidłowych mogą wskazywać zbyt małą różnicę temperatur, zbyt krótki czas albo czas przekraczający ustawione maksimum. Starsze zapisane obserwacje mogą zachować ogólny powód przekroczenia granic. Velair nie przypisuje im wstecz dokładniejszej przyczyny.
+
+Ponowne obliczanie przyszłych prognoz nie tworzy wpisów uczenia. Ostatnia zmiana podlega tym samym ustawieniom przechowywania i globalnemu limitowi historii co oś czasu. Wyłączenie historii Przygotowania wstępnego lub wyczyszczenie historii usuwa te dane historyczne; nie zatrzymuje uczenia ani nie usuwa zapisanych próbek. Po restarcie poprzednia aktywność wykonania i historia nie są odtwarzane. Bez danych Diagnostyka nie wymyśla przyczyny niezmiennych liczników ani nie wnioskuje o pracy kotła.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Dane o zależności przygotowania
+
+Dla strefy z ustawionym **Nadrzędnym termostatem przygotowania** sprawdź szczegóły zależności obok dotychczasowych informacji o przygotowaniu. Rozróżniają niezależny szacunek strefy, wybraną zmianę i początek nadrzędnego oraz efektywny początek lub powód uniemożliwiający przygotowanie. Polecenie przyjęte przez Home Assistant dowodzi działania Velair, nie jest pomiarem stanu przekaźnika kotła. Obserwacja uczenia nadal opisuje własną temperaturę i czas strefy zależnej.
+
+Gdy są dane, wyjaśnienie rozróżnia dostępność w Home Assistant od wyłączonego harmonogramu lub Przygotowania wstępnego, wstrzymanego Profilu, aktywnego nadpisania, niedozwolonego nadrzędnego lub brakującej zmiany. To samo wyjaśnienie pojawia się na kartach i w Diagnostyce. Niedostępne urządzenie może nadal mieć obliczoną prognozę, jeśli inny skonfigurowany czujnik dostarcza temperaturę pomieszczenia; prognoza nie potwierdza, że urządzenie może przyjąć polecenie ani dostarczyć ogrzewanie lub chłodzenie.
+
 <a id="runtime-history-and-privacy"></a>
 ## Historia działania i prywatność
 
@@ -55,7 +71,7 @@ Lokalna Diagnostyka używa przyjaznych nazw encji przy filtrowaniu, ale panel sz
 
 Diagnostyka nie steruje harmonogramem, próbami, cofaniem zmian ani encjami. Konfiguracja i konserwacja pozostają w Ustawieniach; możliwości i stan urządzeń należą teraz do Diagnostyki.
 
-Każda encja zgłasza też niezapisywane dane o stabilizowaniu poleceń. Gdy niedawne polecenie Velair się stabilizuje, migawka Diagnostyki wymienia objęte pola sterowania. Jeśli encja nie osiągnie zgodności przed ograniczonym terminem, następna świeża migawka oznacza ją ostrzeżeniem `command_settling_mismatch`. Blok `command_settling` pobranego raportu zawiera wartości oczekiwane i zaobserwowane. To dane do rozwiązywania problemów: Diagnostyka nie ponawia poleceń, nie zmienia encji ani nie tworzy regulacji ręcznej. Dane są usuwane przez nowsze polecenie dla danego pola lub restart.
+Każde zarządzane urządzenie zgłasza też niezapisywane dane o stabilizowaniu poleceń. Gdy niedawne polecenie Velair się stabilizuje, migawka Diagnostyki wymienia objęte pola sterowania. Jeśli urządzenie nie osiągnie zgodności przed ograniczonym terminem, następna świeża migawka oznacza je ostrzeżeniem `command_settling_mismatch`. Rozwiń ostrzeżenie w panelu Diagnostyki wybranego urządzenia, aby porównać oczekiwaną wartość każdego pola z wartością zgłoszoną przez termostat. Temperatury zawierają jednostkę urządzenia, tryby HVAC używają zwykłych etykiet, a brakujące wartości są jawnie oznaczone. To zapisane porównanie, nie bieżący harmonogram ani nowy odczyt. Pobrany raport zachowuje też blok `command_settling`. To dane do rozwiązywania problemów: Diagnostyka nie ponawia polecenia, nie zmienia urządzenia ani nie tworzy regulacji ręcznej. Dane są usuwane przez nowsze polecenie dla danego pola lub restart.
 
 <a id="automating-diagnostic-health"></a>
 ## Automatyzowanie kontroli diagnostycznej

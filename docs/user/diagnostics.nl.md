@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](diagnostics.md) · [Español](diagnostics.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.3 |
+| Laatst gesynchroniseerd | 2026-10-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -38,6 +38,22 @@ Als buitenvergelijking is ingeschakeld, bevat hetzelfde Comfort-rapport ook expl
 
 De actuele beoordeling bevat `range_summary`. Bewaarde `comfort_assessment_changed`-gebeurtenissen behouden ook `previous_range_summary` en de vlaggen `range_summary_changed` en `range_status_changed`. Zo kan een gedownload rapport tonen of de gebeurtenis een overgang ten opzichte van het ingestelde bereik of een andere Comfort-wijziging vertegenwoordigde. Deze velden bevatten alleen stabiele betekenisvolle codes, geen onbewerkte Home Assistant-gebeurteniscontext.
 
+<a id="learning-evidence"></a>
+## Leergegevens
+
+Het bestaande functieonderdeel Voorconditionering scheidt verwarmings- en koelactiviteit. Het toont of er een observatie loopt of Velair op een geschikte overgang wacht, en de laatst bewaarde leerovergang indien beschikbaar. De uitvouwbare details bevatten alleen gegevens die voor die beslissing relevant zijn, zoals begin- en doeltemperatuur, het minimale temperatuurverschil, de waargenomen duur en de ingestelde maximale voorsprong.
+
+De geschiedenis voor Voorconditionering bevat starts, onderbrekingen en resultaten van observaties en werkelijke overgangen waarbij geen observatie kon beginnen. Resultaten onderscheiden volledige, gedeeltelijke en ongeldige observaties. Ongeldige observaties kunnen een te klein temperatuurverschil, een te korte duur of een overschrijding van de ingestelde maximumduur aangeven. Oudere opgeslagen observaties kunnen de minder specifieke reden buiten de grenzen behouden. Velair kent daaraan niet achteraf een preciezere oorzaak toe.
+
+Herhaald berekenen van toekomstige voorspellingen maakt geen leervermeldingen aan. De laatste overgang volgt dezelfde bewaarkeuzes en globale geschiedenislimiet als de tijdlijn. De geschiedenis voor Voorconditionering uitschakelen of de geschiedenis wissen verwijdert die historische gegevens; dit stopt het leren niet en wist geen opgeslagen leerwaarnemingen. Na een herstart worden eerdere runtimeactiviteit en geschiedenis niet hersteld. Zonder gegevens verzint Diagnostiek geen reden voor gelijkblijvende tellers en leidt het niet af of een ketel draaide.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Gegevens over afhankelijkheid bij voorconditionering
+
+Bekijk bij een kamer met ingestelde **Master voor voorconditionering** de afhankelijkheidsdetails naast de bestaande voorbereidingsinformatie. Deze onderscheiden de onafhankelijke schatting, de gekozen overgang en start van de master en de effectieve start of de reden waarom voorbereiding niet kan beginnen. Een door Home Assistant geaccepteerde opdracht bewijst een actie van Velair, geen meting van het ketelrelais. De leerobservatie blijft de eigen temperatuur en verstreken tijd van de afhankelijke kamer beschrijven.
+
+Wanneer er gegevens beschikbaar zijn, onderscheidt de verklaring beschikbaarheid in Home Assistant van uitgeschakelde planning of Voorconditionering, een gepauzeerd profiel, een actieve tijdelijke aanpassing, een ongeschikte master of een ontbrekende overgang. Dezelfde verklaring verschijnt in kaarten en Diagnostiek. Een onbeschikbare thermostaat kan nog een berekende voorspelling hebben als een andere ingestelde sensor de kamertemperatuur levert; die voorspelling bevestigt niet dat het apparaat een opdracht kan ontvangen of warmte of koeling kan leveren.
+
 <a id="runtime-history-and-privacy"></a>
 ## Runtimegeschiedenis en privacy
 
@@ -59,7 +75,7 @@ De lokale diagnoseweergave gebruikt de vriendelijke apparaatnamen van Home Assis
 
 Diagnose heeft geen bediening voor de planner, herhaalpogingen, terugdraaien of klimaatapparaten. De instellingen blijven de plaats voor configuratie en onderhoud; details over apparaatmogelijkheden en gezondheid staan nu onder Diagnose.
 
-Elk beheerd klimaatapparaat rapporteert ook runtimegegevens over het stabiliseren na opdrachten. Terwijl een recente Velair-opdracht stabiliseert, vermeldt Diagnose de betrokken besturingsvelden in de actuele momentopname. Als het apparaat de verwachte waarden niet binnen de begrensde termijn heeft bereikt, markeert de volgende nieuwe momentopname het apparaat met een waarschuwing `command_settling_mismatch`. Het blok `command_settling` in het gedownloade rapport bevat de verwachte en waargenomen waarden. Dit dient als bewijs voor probleemoplossing: Diagnose herhaalt de opdracht niet, wijzigt het apparaat niet en maakt geen handmatige aanpassing. Een nieuwere opdracht voor dat veld of een herstart wist deze gegevens.
+Elk beheerd klimaatapparaat rapporteert ook runtimegegevens over het stabiliseren na opdrachten. Terwijl een recente Velair-opdracht stabiliseert, vermeldt Diagnostiek de betrokken besturingsvelden in de actuele momentopname. Bereikt het apparaat de verwachte waarden niet binnen de begrensde termijn, dan markeert de volgende nieuwe momentopname het met `command_settling_mismatch`. Vouw die waarschuwing in het Diagnostiek-paneel van de gekozen thermostaat uit om per veld de verwachte waarde te vergelijken met wat de thermostaat meldde. Temperaturen bevatten de eenheid van het apparaat, HVAC-modi gebruiken hun normale labels en ontbrekende waarden worden expliciet aangegeven. Dit gebruikt de vastgelegde vergelijking, niet het huidige schema of een nieuwe meting. Het gedownloade rapport behoudt ook het blok `command_settling`. Dit dient voor probleemoplossing: Diagnostiek herhaalt de opdracht niet, wijzigt het apparaat niet en maakt geen handmatige aanpassing. Een nieuwere opdracht voor dat veld of een herstart wist deze gegevens.
 
 <a id="automating-diagnostic-health"></a>
 ## Automatiseren op basis van diagnosegezondheid

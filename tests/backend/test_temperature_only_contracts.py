@@ -91,7 +91,7 @@ class TemperatureOnlyContractsTest(unittest.TestCase):
         data = normalize_schedule_data({"profiles": profiles, "zones": {"climate.room": {"schedule": week}}}, ["climate.room"])
         runtime = library.LibrarySchemaTest().portable_runtime(data)
         payload = api._build_export_payload(runtime, ["zones", "profiles"])
-        self.assertEqual(payload["model_version"], 18)
+        self.assertEqual(payload["model_version"], api.EXPORT_MODEL_VERSION)
         imported = api._build_import_data(runtime, payload, ["zones", "profiles"])
         self.assertTrue(imported["zones"]["climate.room"]["schedule"]["monday"][0]["temperature_only"])
         converted = convert_portable_temperature_data(payload["sections"], "°C", "°F", None)

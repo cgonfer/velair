@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.0-beta.3 |
+| Letzte Synchronisierung | 2026-10-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -23,7 +23,7 @@ Dieses Handbuch erklärt Velair aus Sicht eines Home-Assistant-Nutzers.
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation im Panel und direkte Links
 
-Das Seitenleisten-Panel aktualisiert seine URL beim Wechsel zwischen Tabs oder den Unterbereichen von Zeitplänen, Vorlagen und Vorkonditionierung. Beim Neuladen oder Öffnen einer kopierten URL wird der entsprechende Bereich wieder geöffnet. Auch die Vorwärts- und Zurück-Funktionen des Browsers folgen dieser Navigation.
+Das Seitenleisten-Panel aktualisiert seine URL beim Wechsel zwischen Tabs oder den Unterbereichen von Zeitplänen und Vorlagen. Beim Neuladen oder Öffnen einer kopierten URL wird der entsprechende Bereich wieder geöffnet. Auch die Vorwärts- und Zurück-Funktionen des Browsers folgen dieser Navigation.
 
 | Bereich | Pfad |
 | --- | --- |
@@ -35,8 +35,8 @@ Das Seitenleisten-Panel aktualisiert seine URL beim Wechsel zwischen Tabs oder d
 | Vorlagen: Klima-Presets | `/velair/templates/presets` |
 | Sensoren | `/velair/sensors` |
 | Komfort | `/velair/comfort` |
-| Vorkonditionierung: Adaptive Vorkonditionierung | `/velair/preconditioning/preconditioning` |
-| Vorkonditionierung: Geplante Rückkehr | `/velair/preconditioning/planned-return` |
+| Vorkonditionierung | `/velair/preconditioning` |
+| Geplante Rückkehr | `/velair/planned-return` |
 | Diagnose | `/velair/diagnostics` |
 | Einstellungen | `/velair/settings` |
 
@@ -55,7 +55,7 @@ tap_action:
 
 Ersetze `navigation_path` durch einen beliebigen Pfad aus der Tabelle. Dabei wird die normale [Dashboard-Navigationsaktion](https://www.home-assistant.io/dashboards/actions/) von Home Assistant verwendet. Für ein Lesezeichen oder einen Link aus einer anderen Anwendung verwende deine eigene Home-Assistant-Adresse mit dem Pfad, beispielsweise `https://your-home-assistant.example/velair/schedules/profiles`.
 
-`/velair/schedules` öffnet Standard und `/velair/templates` öffnet Vorlagen. `/velair/preconditioning` öffnet die adaptive Vorkonditionierung. Die Unterbereichsauswahl wechselt zwischen adaptiver Zeitplanvorbereitung und geplanter Rückkehr. `/velair/overview` öffnet die Übersicht und der frühere Pfad `/velair/profiles` die Modi. Ein unbekannter Unterbereich öffnet den Standardunterbereich seines Tabs, ein unbekannter Tab die Übersicht. Die Pfade werden ohne zusätzlichen Verlaufseintrag normalisiert.
+`/velair/schedules` öffnet Standard und `/velair/templates` öffnet Vorlagen. `/velair/preconditioning` öffnet Vorkonditionierung und `/velair/planned-return` den eigenen Tab Geplante Rückkehr. Frühere Bereichslinks öffnen den jeweiligen Tab. `/velair/overview` öffnet die Übersicht und der frühere Pfad `/velair/profiles` die Modi. Ein unbekannter Unterbereich öffnet den Standardunterbereich seines Tabs, ein unbekannter Tab die Übersicht. Die Pfade werden ohne zusätzlichen Verlaufseintrag normalisiert.
 
 Links speichern keine Auswahl einer einzelnen Klimaentität, eines Wochentags, Profils, einer Vorlage oder eines Presets. Nicht gespeicherte Änderungen werden nach dem Neuladen nicht wiederhergestellt. Würde die Navigation Änderungen verwerfen, gelten die bestehenden Rückfragen. Bei Abbruch bleiben Bereich und URL erhalten. Optionale Lovelace-Karten behalten ihre Dashboard-URLs.
 
@@ -103,7 +103,7 @@ Die vollständige Anleitung erklärt Erkennungsgrenzen, sämtliche Regeln, wiede
 
 Velair berechnet anstehende Ereignisse im Backend und plant über Home Assistant genaue einmalige Rückrufe. Das Frontend erhält Backend-Aktualisierungen über WebSocket und benötigt daher keine ständigen Abfragen.
 
-Während einer Geplanten Rückkehr zeigt die Übersicht eine kompakte Haushaltszusammenfassung mit wöchentlichem/einmaligem Ursprung, aktuellem Prozess und gegebenenfalls Bestätigungs- oder Ankunftszeit. Sie verwendet den normalen Kartenhintergrund des Themes, einen dezenten violetten Rahmen und das Rückkehr-Hauptsymbol; andere Symbole behalten ihre Textfarbe. Eine angenommene zukünftige Rückkehr ergänzt Vorbereitungszähler mit Hover-, Tastatur- und Touchhilfe. Bestätigte Abreise zeigt eine kompakte schreibgeschützte Zeitleiste mit Zeiten und Modi, bei Platz neben der Zusammenfassung, sonst darunter. Die Navigationsschaltfläche öffnet Geplante Rückkehr in Vorkonditionierung; Abreisesteuerungen werden nicht dupliziert. Ein Problem kann auch ohne laufende Abreise sichtbar bleiben.
+Während einer Geplanten Rückkehr zeigt die Übersicht eine kompakte Haushaltszusammenfassung mit wöchentlichem/einmaligem Ursprung, aktuellem Prozess und gegebenenfalls Bestätigungs- oder Ankunftszeit. Sie verwendet den normalen Kartenhintergrund des Themes, einen dezenten violetten Rahmen und das Rückkehr-Hauptsymbol; andere Symbole behalten ihre Textfarbe. Eine angenommene zukünftige Rückkehr ergänzt Vorbereitungszähler mit Hover-, Tastatur- und Touchhilfe. Bestätigte Abreise zeigt eine kompakte schreibgeschützte Zeitleiste mit Zeiten und Modi, bei Platz neben der Zusammenfassung, sonst darunter. Die Navigationsschaltfläche öffnet den Tab Geplante Rückkehr; die Zusammenfassung dupliziert keine Abreisesteuerungen. Ein Problem kann auch ohne laufende Abreise sichtbar bleiben.
 
 Jede betroffene Klimaentität zeigt ein violettes Signal für geplante Rückkehr, wenn das Backend derzeit die Steuerung durch den Abwesenheitsmodus oder die Ankunftsvorbereitung meldet. Normaler Betriebszustand, Profil und Room-Assist-Informationen bleiben sichtbar. Zukünftige Vorbereitungszeiten sind Vorschauen, kein Signal für aktive Steuerung. Manuelle Steuerung, temporäre Anpassungen, unabhängige Pausen, gestoppte Zeitplanung und externe Ausführung behalten ihren Vorrang. Eine Klimaentität, die unter einem benutzerdefinierten Abwesenheitsmodus einfach ihren Standardzeitplan behält, erhält kein Abwesenheitssignal. Die Anzeige beschreibt die Steuerungsabsicht und bestätigt weder eine erfolgreiche Befehlsübertragung noch das Erreichen des Raum-Sollwerts.
 
@@ -179,16 +179,16 @@ type: custom:velair-card
 view: planned-return
 ```
 
-Während der Abwesenheitsbestätigung erklärt eine Timerzeile die Prüfung, ob das Zuhause leer bleibt, und zeigt deren Backend-Endzeit in der lokalen Home-Assistant-Zeit. Der Abwesenheitsmodus wird erst nach Bestätigung aktiviert, sofern alle Quellen weiterhin Abwesenheit melden. Vor der Bestätigung gibt es weder einen laufenden Countdown noch eine Abwesenheitszeitleiste.
+Bei einer normalen ausstehenden Abreise erklärt eine Timerzeile die Prüfung, ob das Zuhause leer bleibt, und zeigt deren Backend-Endzeit in der lokalen Home-Assistant-Zeit. Der Abwesenheitsmodus wird erst nach Bestätigung aktiviert, sofern alle Quellen weiterhin Abwesenheit melden. Vor der Bestätigung gibt es weder einen laufenden Countdown noch eine Abwesenheitszeitleiste. Mit **Abwesenheitsmodus jetzt anwenden** beginnen Abwesenheit und ihre Zeitleiste sofort; die Abreisebestätigung gibt die automatische Rückkehr durch Anwesenheit separat frei, während geplante Vorbereitung und Ankunft aktiv bleiben.
 
-Der visuelle Karteneditor nennt diese Ansicht **Geplante Rückkehr**. Sie zeigt nur die kompakten Bedienelemente für **Einmalige Rückkehr**, mit der Anzahl anwesender, abwesender und unbekannter Quellen rechts oben. Die gespeicherte Verzögerung zur Abwesenheitsbestätigung erscheint dort nur vor einer bestätigten aktiven Abwesenheit. Ohne gespeicherte Anwesenheitsquellen entfallen diese Anzeigen: **Rückkehr planen** bestätigt die Abwesenheit ausdrücklich und aktiviert den Abwesenheitsmodus sofort, ohne Wartezeit. Die gespeicherte Ankunft steuert weiterhin Vorbereitung und Zielaktivierung; ohne Quellen erkennt Velair keine tatsächliche Heimkehr. Konfigurierte unbekannte oder nicht verfügbare Quellen behalten ihr normales Warteverhalten; die Wochenroutine benötigt Quellen.
-Lege vor dem Verlassen oder während deiner Abwesenheit ein zukünftiges Rückkehrdatum mit Uhrzeit fest. Eine aktive Episode bietet nur **Abbrechen** und **Ankunft ändern**. Abbrechen beendet die Rückkehrautomatik und stellt nach bestätigter Abwesenheit die vorherige Modus-/Profilauswahl wieder her. Eine laufende Bestätigung ändert die Auswahl noch nicht. Beginne etwa im Modus Comfort mit fünf Minuten Verzögerung: Abbruch nach zwei Minuten lässt Comfort aktiv; Abbruch nach Aktivierung von Away stellt Comfort mit seinen ursprünglichen Profilen wieder her. Siehe die [Abbruchbeispiele](planned-return.de.md#cancelling-a-return-examples), einschließlich Starts ohne Sensoren, Ankunftsänderungen und ausdrücklicher Modusauswahl.
+Der visuelle Karteneditor nennt diese Ansicht **Geplante Rückkehr**. Sie zeigt nur die kompakten Bedienelemente für **Einmalige Rückkehr**, mit der Anzahl anwesender, abwesender und unbekannter Quellen rechts oben. Die gespeicherte Verzögerung zur Abwesenheitsbestätigung erscheint dort nur vor einer bestätigten aktiven Abwesenheit. Ohne gespeicherte Anwesenheitsquellen entfallen diese Anzeigen: **Rückkehr planen** bestätigt die Abwesenheit ausdrücklich und aktiviert den Abwesenheitsmodus sofort, ohne Wartezeit. Die gespeicherte Ankunft steuert weiterhin Vorbereitung und Zielaktivierung; ohne Quellen erkennt Velair keine tatsächliche Heimkehr. Konfigurierte unbekannte oder nicht verfügbare Quellen behalten ihr normales Warteverhalten, sofern **Abwesenheitsmodus jetzt anwenden** nicht gewählt ist; die Wochenroutine benötigt Quellen.
+Lege vor dem Verlassen oder während deiner Abwesenheit ein zukünftiges Rückkehrdatum mit Uhrzeit fest. Eine aktive Episode bietet nur **Abbrechen** und **Ankunft ändern**. Abbrechen beendet die Rückkehrautomatik und stellt nach bestätigter Abreise oder sofortiger manueller Abwesenheit die vorherige Modus-/Profilauswahl auch vor bestätigter überwachter Abreise wieder her. Eine normale ausstehende Bestätigung ändert die Auswahl nicht. Beginne etwa im Modus Comfort mit fünf Minuten Verzögerung: Abbruch nach zwei Minuten lässt Comfort aktiv; Abbruch nach Aktivierung von Away stellt Comfort mit seinen ursprünglichen Profilen wieder her. Siehe die [Abbruchbeispiele](planned-return.de.md#cancelling-a-return-examples), einschließlich Starts ohne Sensoren, Ankunftsänderungen und ausdrücklicher Modusauswahl.
 Nach Abschluss oder Abbruch zeigt die Karte ein neues Datums-/Uhrzeitformular, auch wenn die Haushaltsanwesenheit weiterhin vollständige Abwesenheit meldet. **Rückkehr planen** bleibt sichtbar, ist aber deaktiviert, wenn gespeicherte Konfiguration oder Zeitplaner nicht verfügbar sind. Die Seitenleiste verwendet dieselben Schaltflächen zum Abbrechen und Ändern der Ankunft sowie dasselbe neue Formular. Nur die abschließenden Anwesenheits-/Verzögerungsanzeigen sind kartenspezifisch; die Seitenleiste bietet vollständige Wochen-, Anwesenheits- und Vorbereitungseinstellungen.
 Beide Ansichten zeigen einen kompakten Phasenuntertitel am Titel und Kontexthilfe zur Erklärung. Während der Bestätigung liefert die Prozessüberschrift diesen Kontext. Vor bestätigter Abwesenheit kennzeichnen ein zugängliches Ankunftssymbol und **Erwartete Ankunft** die gespeicherte Rückkehr, ausgerichtet mit Titel und Zustand. Der gespeicherte Wert erscheint als kompakter anklickbarer Chip ohne Stift oder Unterstreichung. Die bestätigte Grafik verwendet eine dunkle feldartige Ankunftsfläche mit derselben Typografie wie die Abreise, ohne Stift oder Unterstreichung. Beides öffnet denselben Ankunftseditor.
 Die blaue Schaltfläche **Zurück** mit Linkspfeil in der Aktionszeile verwirft die Ankunftsbearbeitung und schließt sie lokal. Die zuletzt gespeicherte Ankunft wird wiederhergestellt; Warnung und Navigationsschutz für diese Bearbeitung werden aufgehoben. Unabhängige nicht gespeicherte Routineänderungen bleiben geschützt. Erneutes Öffnen beginnt mit dem gespeicherten Wert. Erfolg schließt den Editor, fehlgeschlagenes Speichern und Live-Aktualisierungen erhalten den Entwurf. Abwesenheits- und Ankunftswerte verwenden dieselbe Typografie.
 **Abbrechen** ist eine kompakte rote Schaltfläche mit weißer Schrift unter den Episodendaten links. Sie erscheint nur bei abbrechbarer aktiver Rückkehr und geschlossenem Editor. Beim Bearbeiten schließt **Zurück** links den Editor; **Ankunft ändern** bleibt rechts auf kompakter grüner Fläche. Beide besitzen 32 Pixel große sichtbare Flächen innerhalb 44 Pixel großer Berührungsziele. Die Anwesenheitsanzeigen bleiben rechts oben; die Verzögerungsanzeige verschwindet nach bestätigter Abwesenheit.
 
-Konfiguriere Anwesenheitsquellen, Modi, Abwesenheitsbestätigung und Wochenroutine unter **Vorkonditionierung > Geplante Rückkehr** in der Seitenleiste. Die Karte verwendet diese gespeicherte Haushaltskonfiguration und zeigt weder Konfigurationsfelder noch den Schalter der Wochenroutine. Thermostat-Anzeigefilter begrenzen diese Haushaltskarte nicht. Dashboard und Seitenleiste ändern dieselbe Backend-Episode; Ankunftsentwürfe bleiben bis zum Absenden lokal in der jeweiligen offenen Karte.
+Konfiguriere Anwesenheitsquellen, Modi, Abwesenheitsbestätigung und Wochenroutine unter dem Tab **Geplante Rückkehr** in der Seitenleiste. Die Karte verwendet diese gespeicherte Haushaltskonfiguration und zeigt weder Konfigurationsfelder noch den Schalter der Wochenroutine. Thermostat-Anzeigefilter begrenzen diese Haushaltskarte nicht. Dashboard und Seitenleiste ändern dieselbe Backend-Episode; Ankunftsentwürfe bleiben bis zum Absenden lokal in der jeweiligen offenen Karte.
 
 Während bestätigter Abwesenheit stehen gespeicherte Abreise und bearbeitbare Ankunft über der Zeitleiste; Abwesenheits-/Rückkehrmodus darunter. Hilfen für Abreisezeit, Ankunftssymbol und Modi erklären sie bei Hover, Tastaturfokus oder Tippen. Ankunft bleibt eine separate Bearbeitungsschaltfläche. Ein neutraler senkrechter Jetzt-Strich zeigt verstrichene UTC-Zeit am Ende des farbigen Balkens. Daten erscheinen bei verschiedenen Home-Assistant-Kalendertagen. Ankunftsentwürfe bewegen den Endpunkt erst nach Annahme. Ausstehende/abschließende Zustände oder fehlende bestätigte Abreise haben keine laufende Zeitleiste. Eine aktive Fehlerepisode mit gültiger Abreise behält Zeitleiste und Abbruch. Die lokale Uhr aktualisiert nur sichtbar und aktiv einmal pro Minute ohne Home-Assistant-Polling.
 
@@ -451,7 +451,7 @@ Zeitpläne, Vorlagen, aktuelle und vorherige Übersteuerungssollwerte, Komfortgr
 
 Das einmalige Upgrade früher veröffentlichter, ausschließlich Celsius unterstützender Velair-Daten ist anders. Verwendet Home Assistant bereits Fahrenheit, nimmt Velair für die Altdaten ohne Rückfrage Celsius an, hält den Zeitplaner gestoppt und verweist auf **Velair zurücksetzen**. Dies verwirft die alte Konfiguration und erstellt atomar neue Fahrenheit-Standardwerte. Spätere Home-Assistant-Einheitenwechsel nach diesem Upgrade verwenden die vollständige ausdrückliche Umrechnung oben und erhalten Daten.
 
-Aktuelle Exporte des portablen Modells v16 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v16 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
+Aktuelle Exporte des portablen Modells v19 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v19 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
 
 War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren können.
 
@@ -629,7 +629,7 @@ Die Einstellungen können eine versionierte JSON-Datei exportieren und importier
 - Klimaprofildefinitionen;
 - Modusdefinitionen.
 
-Modell 16 erhält beide Vorlagenverknüpfungstypen und Presetreferenzen. Export von Zeitplänen oder Profilen enthält benötigte Vorlagen und Presets als zusätzlich ausgewählte Bereiche. Importe prüfen die zusammengeführte Konfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden anhand stabiler Schlüssel zusammengeführt: Passende Schlüssel werden ersetzt, nicht in der Datei enthaltene lokale Presets bleiben erhalten. Bestehende Sicherungen bleiben importierbar. Ältere Velair-Versionen können Modell-16-Dateien nicht importieren. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
+Aktuelle Exporte des Modells 19 erhalten beide Vorlagenverknüpfungstypen, Presetreferenzen und Vorkonditionierungs-Master-Verknüpfungen. Referenzen angenommener Master-Ausführungen bleiben lokal und werden nicht exportiert. Export von Zeitplänen oder Profilen enthält benötigte Vorlagen und Presets als zusätzlich ausgewählte Bereiche. Importe prüfen die zusammengeführte Konfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden anhand stabiler Schlüssel zusammengeführt: Passende Schlüssel werden ersetzt, nicht in der Datei enthaltene lokale Presets bleiben erhalten. Bestehende Sicherungen bleiben importierbar. Ältere Velair-Versionen können Modell-19-Dateien nicht importieren. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
 
 Beim Import wählst du die zu überschreibenden Bereiche. Ausgewählte Daten werden ersetzt; exportiere vorher, wenn ein Wiederherstellungspunkt nötig ist. Profil- und Modusdefinitionen sind portabel, ihre aktive Auswahl nicht. Velair behält aktive Profil-IDs, die noch existieren, und kehrt nur dann zu Standardzeitplänen zurück, wenn keine übrig bleiben.
 
@@ -843,7 +843,18 @@ action: velair.resume
 <a id="velairpause_zone"></a>
 ### `velair.pause_zone`
 
-Pausiert die automatische Zeitplanausführung einer verwalteten Klimaentität, während übrige Zonen weiterlaufen. Ohne `duration_minutes` ist die Pause unbefristet.
+Pausiert die automatische Zeitplanausführung einer verwalteten Klimaentität, während das übrige Velair weiterläuft. Lasse sowohl `duration_minutes` als auch `until_next_block` weg, um diese Zone unbefristet zu pausieren.
+
+Setze `until_next_block: true`, damit diese Pause beim nächsten Blockbeginn im wirksamen Zeitplan der Zone endet. Es gilt die nominale Blockzeit, kein früherer Vorkonditionierungsstart. Der Ablaufzeitpunkt wird beim Dienstaufruf festgelegt und bleibt über Neustarts erhalten; spätere Zeitplanänderungen verschieben ihn nicht. Die Option ist nicht mit `duration_minutes` kombinierbar. Existiert kein zukünftiger Block, schlägt der Aufruf ohne Änderung der Zone fehl. Andere Pausengründe halten die Zone weiterhin pausiert, bis auch sie enden.
+
+```yaml
+action: velair.pause_zone
+data:
+  entity_id: climate.guest_room
+  pause_id: external_control
+  action: none
+  until_next_block: true
+```
 
 Das optionale Feld `action` kann sein:
 

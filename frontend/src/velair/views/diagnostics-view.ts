@@ -1,4 +1,7 @@
 import { html, nothing } from "lit";
+import { renderCommandSettlingMismatch } from "./diagnostics-command-settling";
+import { learningReasonLabel, learningTransitionLabel, renderLearningDiagnostics } from "./preconditioning-learning-activity";
+import { renderPreconditioningDependency } from "./preconditioning-dependency";
 import { renderDocumentationHelp } from "./documentation-links";
 import { renderPlannedReturnDiagnostics, renderPlannedReturnUnitDiagnostics, plannedReturnOrigin, plannedReturnModeName } from "./planned-return-visibility";
 import { VelairApiClient } from "../api/client";
@@ -192,7 +195,11 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
         title=${diagnosticStatusDescription(host, unit)}
         aria-label=${diagnosticStatusDescription(host, unit)}></span>
     </header>
-    ${unit.issues.length ? html`<div class="diagnostics-issues">${unit.issues.map((issue) => renderIssue(host, issue))}</div>` : nothing}
+    ${unit.issues.length ? html`<div class="diagnostics-issues">${unit.issues.map((issue) => {
+      const comparison = issue.code === "command_settling_mismatch"
+        ? renderCommandSettlingMismatch(host, entityId, unit.command_settling) : nothing;
+      return comparison === nothing ? renderIssue(host, issue) : comparison;
+    })}</div>` : nothing}
     <div class="diagnostics-groups">
       ${renderPlannedReturnUnitDiagnostics(host, entityId)}
       ${renderGroup(host, "diagnosticsStatusDelivery", "mdi:send-check-outline", statusRows)}
@@ -209,6 +216,8 @@ function featureChip(host: VelairViewHost, label: TranslationKey, icon: string) 
 }
 
 function renderFunctions(host: VelairViewHost, entityId: string, unit: UnitDiagnostics, preconditioning: Record<string, unknown>, comfortConfig: Record<string, unknown>) {
+  const dependency = unit.preconditioning_dependency ?? (typeof preconditioning.master_entity_id === "string"
+    ? { master_entity_id: preconditioning.master_entity_id } : undefined);
   const functions = [
     { title: "diagnosticsRoomAssist" as TranslationKey, icon: "mdi:thermometer-auto",
       visible: Boolean(preconditioning.room_sensor_assist_enabled || unit.room_assist),
@@ -219,7 +228,7 @@ function renderFunctions(host: VelairViewHost, entityId: string, unit: UnitDiagn
         { label: "diagnosticsAppliedTarget" as TranslationKey, value: appliedTargetSummary(host, record(unit.room_assist), entityId) },
       ] },
     { title: "diagnosticsPreconditioning" as TranslationKey, icon: "mdi:clock-fast",
-      visible: Boolean(preconditioning.enabled || unit.preconditioning_learning),
+      visible: Boolean(preconditioning.enabled || unit.preconditioning_learning || dependency),
       rows: [
         { label: "diagnosticsConfigured" as TranslationKey,
           value: preconditioning.enabled === false && unit.preconditioning_learning ? false : undefined },
@@ -239,7 +248,7 @@ function renderFunctions(host: VelairViewHost, entityId: string, unit: UnitDiagn
   if (!functions.length) return nothing;
   return html`<section class="diagnostics-group"><h4><ha-icon icon="mdi:puzzle-outline"></ha-icon><span>${host._t("diagnosticsFunctions")}</span></h4>
     <div class="diagnostics-function-grid">${functions.map((item) => html`<section class="diagnostics-function">
-      <strong><ha-icon icon=${item.icon}></ha-icon><span>${host._t(item.title)}</span></strong>${renderRows(host, item.rows)}</section>`)}</div>
+      <strong><ha-icon icon=${item.icon}></ha-icon><span>${host._t(item.title)}</span></strong>${renderRows(host, item.rows)}${item.title === "diagnosticsPreconditioning" ? html`${renderLearningDiagnostics(host, entityId, unit.preconditioning_learning)}${renderPreconditioningDependency(dependency, host._t.bind(host), host._formatDateTime.bind(host), dependency ? host._friendlyEntityName(dependency.master_entity_id) : undefined, true)}` : nothing}</section>`)}</div>
   </section>`;
 }
 
@@ -324,6 +333,7 @@ function renderIssue(host: VelairViewHost, issue: DiagnosticIssue) {
 
 function issueText(host: VelairViewHost, code: string): string {
   const keys: Record<string, TranslationKey> = {
+    command_settling_mismatch: "diagnosticsMismatchTitle",
     entity_missing: "entityDiagnosticMissing", entity_unavailable: "diagnosticsEntityUnavailable",
     planned_return_error: "plannedReturnEventError",
     entity_unknown: "diagnosticsEntityUnknown", hvac_modes_not_reported: "entityDiagnosticNoModes",
@@ -645,7 +655,8 @@ function historyDescription(host: VelairViewHost, item: DiagnosticHistoryItem): 
         : undefined,
       preconditioningModelLabel(host, data.model_source),
       scheduledTargetSummary(host, data, item.entity_id ?? ""),
-      diagnosticReasonLabel(host, data.reason),
+      learningTransitionLabel(host, data.quality ?? data.status),
+      learningReasonLabel(host, data.reason) ?? diagnosticReasonLabel(host, data.reason),
     ].filter(Boolean).join(" · ");
   }
   if (item.category === "comfort") {
@@ -971,6 +982,9 @@ function diagnosticControlEventLabel(host: VelairViewHost, value: unknown): stri
     comfort_assessment_changed: "diagnosticsEventComfortAssessmentChanged",
     none: "diagnosticsNone",
     preconditioning_observation_recorded: "diagnosticsEventPreconditioningObservationRecorded",
+    preconditioning_observation_started: "learningTransitionStarted",
+    preconditioning_observation_skipped: "learningTransitionSkipped",
+    preconditioning_observation_interrupted: "learningTransitionInterrupted",
     preconditioning_plan_cancelled: "diagnosticsEventPreconditioningPlanCancelled",
     preconditioning_plan_updated: "diagnosticsEventPreconditioningPlanUpdated",
     profile_changed: "diagnosticsEventProfileChanged",

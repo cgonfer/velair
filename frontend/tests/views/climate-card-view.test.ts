@@ -41,6 +41,22 @@ function host(external = false): VelairViewHost {
 }
 
 describe("climate card view", () => {
+  it.each(["heat", "cool"])("shows a blocked nominal %s dependency without an active state or fabricated chart", direction => {
+    const value = host();
+    value._data!.next_events = [{ entity_id: "climate.office", when: "2026-09-07T12:00:00Z", hvac_mode: direction,
+      preconditioning_dependency: { master_entity_id: "climate.master", reason: "master_no_preconditioning", reason_detail: "master_preconditioning_disabled", result: "blocked" } }] as never;
+    const container = document.createElement("div");
+    render(renderClimateCard(value, "climate.office"), container);
+    const panel = container.querySelector(".climate-card-feature-panel.preconditioning")!;
+    expect(panel).not.toBeNull();
+    expect(panel.textContent).toContain("preconditioningMasterPreconditioningDisabled");
+    expect(panel.textContent).not.toContain("preconditioningDependencyNoStart");
+    expect(panel.querySelector(".climate-card-preconditioning-preview, .climate-card-feature-status")).toBeNull();
+    expect(panel.querySelectorAll(".preconditioning-dependency")).toHaveLength(1);
+    value._config.climate_show_preconditioning = false;
+    render(renderClimateCard(value, "climate.office"), container);
+    expect(container.querySelector(".preconditioning-dependency")).toBeNull();
+  });
   it("shows the selected room's return preparation without inventing a weekly event", () => {
     const value = host();
     const arrival = new Date(value._currentTimelineNow().getTime() + 120 * 60_000).toISOString();
@@ -1306,7 +1322,7 @@ describe("climate card view", () => {
     expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
   });
 
-  it("shows only the compact next actual preconditioning window", () => {
+  it.each(["heat", "cool"])("shows each time once in the expanded %s preconditioning window", (direction) => {
     const container = document.createElement("div");
     const cardHost = host() as VelairViewHost & { _data: any };
     cardHost._data.next_events = [{
@@ -1316,13 +1332,18 @@ describe("climate card view", () => {
       weekday: "monday",
       start: "13:00",
       temperature: 21,
-      hvac_mode: "heat",
+      hvac_mode: direction,
     }];
     render(renderClimateCard(cardHost, "climate.office"), container);
     const preview = container.querySelector(".climate-card-preconditioning-preview");
     expect(preview?.textContent).toContain("preconditioningStarts");
     expect(preview?.textContent).toContain("preconditioningTargetBy");
     expect(preview?.textContent).toContain("60");
+    const panel = container.querySelector(".climate-card-feature-panel.preconditioning")!;
+    expect(panel.querySelector(".climate-card-feature-description")).toBeNull();
+    expect(panel.textContent?.match(/preconditioningStarts\b/g)).toHaveLength(1);
+    expect(panel.textContent?.match(/preconditioningTargetBy\b/g)).toHaveLength(1);
+    expect(panel.querySelector(".climate-card-feature-heading")?.hasAttribute("aria-describedby")).toBe(false);
     expect(container.querySelector(".preconditioning-prediction")).toBeNull();
   });
 

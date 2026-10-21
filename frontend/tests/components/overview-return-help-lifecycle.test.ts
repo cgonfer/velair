@@ -82,6 +82,16 @@ const surfaces: Array<[string, VelairCardView, string]> = [
 ];
 
 describe("Overview planned return help lifecycle", () => {
+  it("dismisses departure-confirmation help when the backend confirms departure", async () => {
+    const { card, data, push } = await mount("overview-status");
+    const pending = { ...data, planned_return_status: { ...data.planned_return_status!, awaiting_departure_confirmation: true } };
+    await push(pending);
+    const button = openHelp(card, "#return-departure-confirmation-trigger");
+    await push({ ...pending, planned_return_status: { ...pending.planned_return_status, awaiting_departure_confirmation: false } });
+    expect(card.shadowRoot!.querySelector(".return-departure-confirmation")).toBeNull();
+    expect(button.isConnected).toBe(false);
+    expectDismissed(button);
+  });
   it.each(surfaces)("dismisses %s help when the card is removed", async (_name, view, selector) => {
     const { card } = await mount(view);
     const button = openHelp(card, selector);

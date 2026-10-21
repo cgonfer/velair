@@ -563,9 +563,9 @@ Header checks:
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v18 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v19 records the
    effective `temperature_unit`.
-2. Import each newly exported portable v17 file back into the same installation
+2. Import each newly exported portable v19 file back into the same installation
    and confirm the frontend accepts it and the selected sections round-trip.
 3. Import a portable v10 file into the opposite unit and confirm selected
    thermal sections convert. Confirm its Comfort derived-metric and outdoor-
@@ -1109,11 +1109,27 @@ For Planned Return, additionally confirm:
    (including the current one). Restart and arrive; cancelled intent stays cancelled.
 6. Verify early arrival, late arrival, an unscheduled day, unknown occupancy,
    sensor rebinding, Boost, window/manual pauses and a stopped scheduler.
-7. At phone/tablet widths in English and Spanish, open Preconditioning's Planned
-   Return subsection, save a week, edit and clear individual arrival times, review
-   preparation and use all episode controls. Open each subsection directly by
+7. With configured occupancy and a ten-minute delay, plan a one-off return with
+   Apply Away mode now selected while home. Away and preparation must start
+   immediately. A five-minute exit and presence must reset confirmation without
+   selecting the destination. A later full ten-minute absence enables presence
+   arrival. Unknown readings reset the wait. Verify timed arrival and explicit
+   arrive/cancel before confirmation, and reload both pending and confirmed
+   episodes. Unchecked requests and source-free starts retain their behavior.
+   In Overview, the Lovelace return card and the return tab, verify that Away or
+   Preparing stays primary while departure confirmation has its own compact
+   waiting/deadline line and contextual help. A short exit resets the line; full
+   confirmation removes it. Confirm that reported presence remains visible,
+   Overview help does not navigate, and the timeline help explains Away
+   application time separately from monitored departure. Check tooltip cleanup
+   on confirmation, navigation and card removal, including the embedded action.
+8. At phone/tablet widths in English and Spanish, open the Planned return tab,
+   save a week, edit and clear individual arrival times, review
+   preparation and use all episode controls. Check the introduction and contextual
+   help in both the Preconditioning and Planned return tabs. Open each tab directly by
    URL, refresh and use Back/Forward. Reject a navigation with an unsaved draft
-   and confirm the current subsection, URL and draft remain intact. Settings and
+   and confirm the current tab, URL and draft remain intact. Verify that the old
+   Preconditioning subsection URLs open the corresponding tabs. Settings and
    Overview must not contain the moved Planned Return controls.
    Set First weekday to Sunday, then Wednesday: verify display order and edits
    still address the intended weekdays. Confirm entity and Mode selectors
@@ -1283,6 +1299,74 @@ Heat-only example:
 
 If you only need to verify next-event scheduling, Home Assistant Developer Tools > States can temporarily change the displayed `current_temperature` for a climate state. This is useful for checking whether Velair calculates an early start, but it is not a complete learning test because Velair may still call services on the real climate entity when the event is due.
 
+## Master-dependent Preconditioning
+
+1. Leave two managed climates independent and compare their starts, actions and
+   learning with the existing behavior. Test heating and cooling separately.
+2. Link a dependent to a master, reload, then unlink it. Verify settings persist
+   and saved learning is retained. Reject self-reference, unmanaged sources,
+   cycles and chains through the API as well as the selector.
+3. With a dependent target at 18:45, check own/master starts of 17:40/17:55
+   (effective 17:55) and 18:10/17:55 (effective 18:10). Without master anticipation,
+   or with master start at 19:00, verify no early dependent action and a normal
+   18:45 block. Do not borrow another master's block when the closest is ineligible.
+4. Use different target times and several master blocks. Check closest target
+   selection, including an equal-distance tie resolved to the earlier block.
+   Repeat across midnight and daylight-saving transitions.
+5. Delay or fail the master's delivery. The dependent must wait for accepted
+   execution; unrelated rooms must continue. Test equal-time ordering with the
+   dependent listed first in configuration and retry after a temporary failure.
+6. Let the master reach temperature or pass its own target before the dependent's
+   start. Its accepted occurrence must remain usable. Pause or disable the master
+   before acceptance, replace its schedule/Profile/return episode, or unlink the
+   relationship: stale evidence must not release pending preparation.
+7. After the dependent has started, let the master finish or change. Do not cut
+   the dependent's observation short. Check its actual initial temperature and
+   remaining duration, completed/partial/invalid results, and normal block deadline.
+8. Repeat with Default, Profile base, zone exceptions, native temperature ranges,
+   Temperature only blocks, Room Assist and Planned Return. A Heat master must
+   not release Cool; an arrival must not reuse another episode or weekly action.
+9. Restart between master and dependent starts. Check bounded command-start
+   continuity without restoring an old learning timer. Expired or context-mismatched
+   references must be discarded and excluded from portable export.
+10. Export/import relationships, including older independent models and partial
+    imports against existing local rooms. Reject an invalid resulting graph
+    atomically. Simulate persistence failure and verify configuration rollback.
+11. Compare prediction, Calculation details, Overview, climate card, return card,
+    Diagnostics and existing sensor attributes. Blocked preparation must retain
+    its reason without inventing an early `target_when` or a new HA entity.
+12. At 320, 390, 768, 1024 and 1440 px in light/dark themes, check long room names,
+    wrapped reasons, 44 px controls, keyboard operation and missing optional fields
+    from older payloads. Confirm forecast queries do not append history entries.
+
+## Learning Activity And Diagnostics Smoke Test
+
+1. Use simulated heat and cool climates with preconditioning enabled. Confirm
+   existing labels, sample counts and prediction details remain unchanged, with
+   at most one additional contextual explanation per direction.
+2. Execute an early transition, leave its observation running, then simulate a
+   reached target, an unreached target and an interruption in separate cycles.
+   Confirm the activity changes and Diagnostics records one final result per
+   cycle, without duplicate result events.
+3. Execute a transition with too little temperature difference and one with an
+   unavailable temperature. Confirm the explanation matches the known evidence.
+   Refresh and recalculate future predictions repeatedly; no new learning
+   history entries should appear from those calculations alone.
+4. Open Diagnostics from the learning explanation with unrelated source and date
+   filters previously selected. Confirm the requested climate is selected,
+   category is Preconditioning and both date filters are cleared. Declining a
+   pending-changes navigation confirmation must preserve the current editor.
+5. Expand the latest learning transition evidence. Check temperatures, units,
+   configured thresholds and durations against the simulated cycle. A previous
+   transition must be dated and never described as the current observation.
+6. Disable Preconditioning history, then enable it and clear history. Confirm
+   historical evidence disappears while current activity and stored sample
+   counts remain valid. Restart and confirm old runtime observations/history
+   are absent; older backend payloads must simply omit the new explanation.
+7. At 320, 390, 768, 1024 and 1440 px, check light/dark themes, long text,
+   keyboard access, wrapping and 44 px action targets. No explanation may depend
+   on hover; learning details must remain readable without a wide table.
+
 ## Environmental Comfort Smoke Test
 
 1. Open the Comfort tab.
@@ -1413,7 +1497,7 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
     humidity stays visible but has no condition, the effective range is absent,
     the summary is unavailable, and no humidity ventilation opportunity is
     produced. Restore temperature and confirm evaluation returns.
-43. Reload Velair and Home Assistant, export/import portable model v18, and
+43. Reload Velair and Home Assistant, export/import portable model v19, and
     confirm the selected model and both endpoint ranges survive. Import a v10
     payload and confirm it uses the Simple model. In Fahrenheit, confirm endpoint
     temperature labels and exported thermal values use Fahrenheit while the

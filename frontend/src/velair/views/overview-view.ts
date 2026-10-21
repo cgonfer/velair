@@ -1,4 +1,5 @@
 import { renderOverviewTimelineGraphic, overviewTimelineGraphicClasses } from "./timeline-block-graphic";
+import { renderPreconditioningDependency } from "./preconditioning-dependency";
 import { html, nothing } from "lit";
 import { ACTION_TURN_OFF } from "../constants";
 import {
@@ -1406,6 +1407,7 @@ export function renderEventDetails(host: OverviewViewHost, event: ScheduleEvent)
           `}
       <strong class="event-target">${host._formatEventAction(event)}</strong>
       <span class="event-mode">${host._formatEventMode(event)}</span>
+      ${renderPreconditioningDependency(event.preconditioning_dependency, host._t.bind(host), host._formatDateTime.bind(host), event.preconditioning_dependency ? host._friendlyEntityName(event.preconditioning_dependency.master_entity_id) : undefined)}
     </div>
   `;
 }

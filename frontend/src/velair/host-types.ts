@@ -44,8 +44,6 @@ export type VelairViewHost = {
   _groupBaseChosen?: boolean;
   _selectDayLayout?(key: string): boolean;
   _chooseGroupBase?(day: string): boolean | void;
-  _preconditioningSource?: "preconditioning" | "planned-return";
-  _selectPreconditioningSource?(source: "preconditioning" | "planned-return"): boolean;
   _setPlannedReturnBusy?(busy: boolean): void;
   _setPlannedReturnDirty?(dirty: boolean): void;
   _templatePreviewPending?: boolean;
@@ -185,6 +183,7 @@ export type VelairViewHost = {
   _api(): VelairApiClient | undefined;
   _applySelectedDayToZones(): Promise<void>;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
+  _openLearningDiagnostics(entityId: string): void;
   _applyDiagnosticsSnapshot(diagnostics?: DiagnosticsSnapshot): void;
   _setDiagnosticsSourceFilterOpen(open: boolean, returnFocus?: boolean): void;
   _applyTemplateToTargets(template: ScheduleTemplate): Promise<void>;

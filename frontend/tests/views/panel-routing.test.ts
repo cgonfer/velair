@@ -24,7 +24,23 @@ beforeEach(() => window.history.replaceState(null, "", "/"));
 afterEach(() => { document.body.replaceChildren(); window.history.replaceState(null, "", "/"); vi.restoreAllMocks(); });
 
 describe("panel URL navigation", () => {
-  it.each(["/velair/schedules/profiles", "/velair/templates/presets", "/velair/preconditioning/preconditioning", "/velair/preconditioning/planned-return"])("restores direct entry and refresh at %s", async (path) => {
+  it("guards learning diagnostics navigation and passes the room only after approval", async () => {
+    const panel = await panelAt("/velair/preconditioning");
+    state(panel)._activeViewDirty = true;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const open = () => panel.shadowRoot!.querySelector("velair-panel-card")!.dispatchEvent(
+      new CustomEvent("velair-open-learning-diagnostics", { detail: "climate.bedroom", bubbles: true, composed: true }));
+    open(); await panel.updateComplete;
+    expect(state(panel)._activeView).toBe("preconditioning");
+    expect(window.location.pathname).toBe("/velair/preconditioning");
+    confirm.mockReturnValue(true);
+    open(); await panel.updateComplete;
+    expect(state(panel)._activeView).toBe("diagnostics");
+    expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).learningDiagnosticEntity).toBe("climate.bedroom");
+    expect(window.location.pathname).toBe("/velair/diagnostics");
+  });
+
+  it.each(["/velair/schedules/profiles", "/velair/templates/presets", "/velair/preconditioning", "/velair/planned-return"])("restores direct entry and refresh at %s", async (path) => {
     let panel = await panelAt(path);
     const destination = { view: state(panel)._activeView, subsection: state(panel)._activeSubsection };
     expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).subsection).toBe(destination.subsection);
@@ -98,26 +114,48 @@ describe("panel URL navigation", () => {
     state(panel)._selectView("schedules", undefined, "profiles"); await panel.updateComplete;
     expect(window.location.pathname).toBe("/velair/schedules/default"); expect(push).not.toHaveBeenCalled();
   });
-  it.each([true, false])("guards planned-return history subsection changes through the card exactly once (%s)", async (accept) => {
-    const panel = await panelAt("/velair/preconditioning/preconditioning");
-    const card = panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard;
-    let selected = "preconditioning";
-    card.selectPanelSubsection = vi.fn((subsection) => { if (selected === subsection) return true; if (!window.confirm("discard")) return false; selected = subsection!; return true; });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    state(panel)._selectView("preconditioning", undefined, "planned-return"); await panel.updateComplete;
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(accept); confirm.mockClear();
+  it.each([true, false])("guards planned-return history tab changes exactly once (%s)", async (accept) => {
+    const panel = await panelAt("/velair/preconditioning");
+    state(panel)._selectView("planned-return"); await panel.updateComplete;
+    state(panel)._activeViewDirty = true;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(accept);
     const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-    browserTo("/velair/preconditioning/preconditioning", 0); await panel.updateComplete;
+    browserTo("/velair/preconditioning", 0); await panel.updateComplete;
     expect(confirm).toHaveBeenCalledTimes(1);
-    expect(state(panel)._activeSubsection).toBe(accept ? "preconditioning" : "planned-return");
-    if (!accept) { expect(go).toHaveBeenCalledWith(1); browserTo("/velair/preconditioning/planned-return", 1); await panel.updateComplete; }
-    else { browserTo("/velair/preconditioning/planned-return", 1); await panel.updateComplete; expect(state(panel)._activeSubsection).toBe("planned-return"); }
+    expect(state(panel)._activeView).toBe(accept ? "preconditioning" : "planned-return");
+    if (!accept) { expect(go).toHaveBeenCalledWith(1); browserTo("/velair/planned-return", 1); await panel.updateComplete; }
+    else { browserTo("/velair/planned-return", 1); await panel.updateComplete; expect(state(panel)._activeView).toBe("planned-return"); }
   });
-  it("keeps the current planned-return submenu without a confirmation or history entry", async () => {
-    const panel = await panelAt("/velair/preconditioning/planned-return"); state(panel)._activeViewDirty = true;
+  it("keeps the current planned-return tab without a confirmation or history entry", async () => {
+    const panel = await panelAt("/velair/planned-return"); state(panel)._activeViewDirty = true;
     const confirm = vi.spyOn(window, "confirm"); const push = vi.spyOn(window.history, "pushState");
-    state(panel)._selectView("preconditioning", undefined, "planned-return"); await panel.updateComplete;
+    state(panel)._selectView("planned-return"); await panel.updateComplete;
     expect(confirm).not.toHaveBeenCalled(); expect(push).not.toHaveBeenCalled(); expect(state(panel)._activeViewDirty).toBe(true);
+  });
+  it.each([
+    ["/velair/preconditioning/preconditioning", "preconditioning"],
+    ["/velair/preconditioning/planned-return", "planned-return"],
+  ])("keeps legacy link %s and selects its top-level tab", async (path, view) => {
+    const panel = await panelAt(path);
+    expect(state(panel)._activeView).toBe(view);
+    expect(state(panel)._activeSubsection).toBeUndefined();
+    expect(window.location.pathname).toBe(`/velair/${view}`);
+    expect(panel.shadowRoot!.querySelector(`ha-tab-group-tab[panel="${view}"]`)?.hasAttribute("active")).toBe(true);
+  });
+  it("opens the return tab from the overview shortcut", async () => {
+    const panel = await panelAt("/velair");
+    panel.shadowRoot!.querySelector("velair-panel-card")!.dispatchEvent(new CustomEvent("velair-open-planned-return"));
+    await panel.updateComplete;
+    expect(state(panel)._activeView).toBe("planned-return");
+    expect(window.location.pathname).toBe("/velair/planned-return");
+  });
+  it("blocks leaving the return tab during an operation", async () => {
+    const panel = await panelAt("/velair/planned-return");
+    const card = panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard;
+    card.canNavigatePanel = vi.fn(() => false);
+    state(panel)._selectView("preconditioning"); await panel.updateComplete;
+    expect(state(panel)._activeView).toBe("planned-return");
+    expect(window.location.pathname).toBe("/velair/planned-return");
   });
   it("does not apply resource jumps after a rejected same-tab subsection change", async () => {
     const panel = await panelAt("/velair/schedules/default");

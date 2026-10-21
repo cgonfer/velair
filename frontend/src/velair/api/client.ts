@@ -31,8 +31,8 @@ export class VelairApiClient {
   public adjustPlannedReturn(return_at: string): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise({ type: "velair/adjust_planned_return", return_at });
   }
-  public startPlannedReturn(return_at: string): Promise<ScheduleResponse> {
-    return this.hass.connection.sendMessagePromise({ type: "velair/start_planned_return", return_at });
+  public startPlannedReturn(return_at: string, applyAwayNow = false): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/start_planned_return", return_at, ...(applyAwayNow ? { apply_away_now: true } : {}) });
   }
   public cancelPlannedReturn(): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise({ type: "velair/cancel_planned_return" });

@@ -7,7 +7,8 @@ export type PanelDestination = { view: VelairPanelView; subsection?: PanelSubsec
 export function panelDestination(view: VelairPanelView, subsection?: string): PanelDestination {
   if (view === "schedules") return { view, subsection: subsection === "profiles" ? "profiles" : "default" };
   if (view === "templates") return { view, subsection: subsection === "presets" ? "presets" : "templates" };
-  if (view === "preconditioning") return { view, subsection: subsection === "planned-return" ? "planned-return" : "preconditioning" };
+  // Keep links to the former subsection working after moving it to its own tab.
+  if (view === "preconditioning" && subsection === "planned-return") return { view: "planned-return" };
   return { view };
 }
 

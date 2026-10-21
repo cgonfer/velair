@@ -11,6 +11,7 @@ const TOPIC_PATHS = {
   blockPresets: "docs/user/linked-schedules.md#block-presets",
   profiles: "docs/user/climate-profiles.md",
   preconditioning: "docs/user/adaptive-preconditioning.md",
+  preconditioningMaster: "docs/user/adaptive-preconditioning.md#preconditioning-master",
   plannedReturn: "docs/user/planned-return.md",
   roomAssist: "docs/user/room-assist.md",
   comfort: "docs/user/comfort.md",

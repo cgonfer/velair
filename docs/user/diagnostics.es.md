@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](diagnostics.md) · [Español](diagnostics.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.3 |
+| Última sincronización | 2026-10-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -42,6 +42,22 @@ Diagnóstico también incluye `comfort_zone`: la geometría configurada Simple, 
 
 La evaluación actual incluye `range_summary`. Las entradas conservadas de `comfort_assessment_changed` también guardan `previous_range_summary` y los indicadores `range_summary_changed` y `range_status_changed`, de modo que un informe descargado puede mostrar si el evento representaba una transición del intervalo configurado u otro cambio de Confort. Estos campos contienen solo códigos semánticos estables, no el contexto bruto de los eventos de Home Assistant.
 
+<a id="learning-evidence"></a>
+## Evidencias de aprendizaje
+
+La sección de preacondicionamiento existente separa la actividad de calefacción y refrigeración. Muestra si hay una observación en curso o Velair espera una transición adecuada y, cuando existe, la última transición de aprendizaje conservada. Los detalles desplegables contienen solo evidencias relevantes para esa decisión, como las temperaturas inicial y objetivo, la diferencia mínima de temperatura, la duración observada y la anticipación máxima configurada.
+
+El historial de preacondicionamiento incluye inicios, interrupciones y resultados de observaciones, y transiciones reales que no permitieron iniciar una observación. Los resultados distinguen observaciones completas, parciales y no válidas. Las no válidas pueden identificar una diferencia de temperatura insuficiente, una duración demasiado corta o una duración superior al máximo configurado. Las observaciones antiguas guardadas pueden conservar el motivo menos específico de fuera de límites. Velair no les asigna retroactivamente una causa más precisa.
+
+Los cálculos repetidos de predicciones futuras no generan entradas de aprendizaje. La última transición sigue los mismos ajustes de conservación y límite global del historial que la línea temporal. Desactivar el historial de preacondicionamiento o vaciar el historial elimina esas evidencias históricas; no detiene el aprendizaje ni borra las muestras guardadas. Tras reiniciar, no se restauran la actividad previa de ejecución ni el historial. Si no hay evidencias, Diagnóstico no inventa un motivo para los contadores que no cambian ni deduce si una caldera estaba funcionando.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Evidencias de dependencia de preacondicionamiento
+
+En una habitación con **Maestro de preacondicionamiento** configurado, consulta los detalles de dependencia junto a la información de preparación existente. Distinguen la estimación independiente de la habitación, la transición e inicio seleccionados del maestro y el inicio efectivo o el motivo por el que no puede empezar la preparación. Una orden aceptada por Home Assistant demuestra la acción de Velair, no mide el relé de la caldera. La observación de aprendizaje sigue describiendo la temperatura y el tiempo transcurrido de la propia habitación dependiente.
+
+Cuando hay evidencias, la explicación distingue la disponibilidad en Home Assistant de una programación o un preacondicionamiento desactivados, un perfil pausado, una anulación activa, un maestro no apto o una transición inexistente. La misma explicación aparece en las tarjetas y en Diagnóstico. Un equipo no disponible aún puede tener una predicción calculada si otro sensor configurado aporta su temperatura de estancia; esa predicción no confirma que el dispositivo pueda recibir una orden ni proporcionar calefacción o refrigeración.
+
 <a id="runtime-history-and-privacy"></a>
 
 ## Historial de ejecución y privacidad
@@ -68,7 +84,7 @@ La vista local de Diagnóstico utiliza los nombres descriptivos de los equipos d
 
 Diagnóstico no ofrece controles del programador, reintentos, reversión ni climatización. Ajustes sigue conteniendo las acciones de configuración y mantenimiento; los detalles de capacidades y estado de los equipos ahora pertenecen a Diagnóstico.
 
-Cada equipo gestionado también proporciona datos sobre la estabilización de las órdenes; estos datos solo existen durante la ejecución. Mientras una orden reciente de Velair se estabiliza, Diagnóstico enumera los campos de control afectados en su instantánea. Si el equipo no ha alcanzado el estado esperado dentro del plazo establecido, la siguiente instantánea actualizada marca el equipo con una advertencia `command_settling_mismatch`. El bloque `command_settling` del informe descargado incluye los valores esperados y observados. Es evidencia para resolver problemas: Diagnóstico no reintenta la orden, no cambia el equipo ni crea un ajuste Manual. La evidencia se borra con una orden más reciente para ese campo o al reiniciar.
+Cada equipo gestionado también proporciona datos sobre la estabilización de las órdenes; estos datos solo existen durante la ejecución. Mientras una orden reciente de Velair se estabiliza, Diagnóstico enumera los campos de control afectados en su instantánea. Si el equipo no ha alcanzado el estado esperado dentro del plazo establecido, la siguiente instantánea actualizada marca el equipo con una advertencia `command_settling_mismatch`. Despliega esa advertencia en el panel de Diagnóstico del equipo seleccionado para comparar el valor esperado de cada campo afectado con el valor comunicado por el termostato. Las temperaturas incluyen la unidad del equipo, los modos HVAC usan sus etiquetas habituales y los valores ausentes se identifican explícitamente. Se utiliza la comparación registrada, no el horario actual ni una nueva lectura. El informe descargado también conserva el bloque `command_settling`. Es evidencia para resolver problemas: Diagnóstico no reintenta la orden, no cambia el equipo ni crea un ajuste Manual. La evidencia se borra con una orden más reciente para ese campo o al reiniciar.
 
 <a id="automating-diagnostic-health"></a>
 

@@ -1,8 +1,10 @@
 import { html, nothing } from "lit";
-import { preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
+import { preconditioningMasterCandidates, preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
+import { dependencyReasonDetailKeys, renderPreconditioningDependency } from "./preconditioning-dependency";
 import { minutesPerDegreeBounds, temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
 import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
+import { learningCardActivityLabel } from "./preconditioning-learning-activity";
 import { renderInlineHelp } from "./inline-help";
 import { renderDocumentationHelp } from "./documentation-links";
 import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
@@ -126,6 +128,7 @@ function renderPreconditioningZone(
               ${host._friendlyEntityName(entityId)}
             </strong>
             <span>${entityId}</span>
+            ${!expanded && preconditioning.master_entity_id ? html`<span>${host._t("preconditioningDependencyAssociation", { master: host._friendlyEntityName(preconditioning.master_entity_id) })}</span>` : nothing}
           </span>
         </button>
         <div class="preconditioning-zone-actions" @click=${(event: Event) => event.stopPropagation()}>
@@ -193,6 +196,7 @@ function renderAdaptivePreconditioningFields(
   const temperatureDeltaStep = 0.1;
   return html`
     <div class="preconditioning-config-sections">
+      ${renderMasterSection(host, entityId, preconditioning)}
       ${renderConfigurationSection(
         host,
         "preconditioningTiming",
@@ -369,6 +373,16 @@ function renderPreconditioningDirectionLearning(
           </div>
         </div>
       </div>
+      ${learning.activity && learning.activity.state !== "disabled" && learning.activity.reason !== "learning_suspended"
+        ? html`<div class="preconditioning-learning-activity">
+            <span>${learningCardActivityLabel(host, entityId, direction, learning.activity)}</span>
+            <button type="button" class="learning-diagnostics-link"
+              aria-label=${host._t("learningOpenDiagnostics", { climate: host._friendlyEntityName(entityId) })}
+              @click=${() => host._openLearningDiagnostics(entityId)}>
+              <ha-icon icon="mdi:stethoscope" aria-hidden="true"></ha-icon>
+              <span>${host._t("diagnostics")}</span>
+            </button>
+          </div>` : nothing}
       ${renderPreconditioningPrediction(host, entityId, direction)}
     </div>
   `;
@@ -431,8 +445,8 @@ function renderPreconditioningPrediction(
           <span>${host._formatEventMode(event)}</span>
         </div>
       </div>
-      ${event.preconditioning_diagnostics
-        ? renderPreconditioningCalculationDetails(host, event.preconditioning_diagnostics)
+      ${event.preconditioning_diagnostics || event.preconditioning_dependency
+        ? renderPreconditioningCalculationDetails(host, event.preconditioning_diagnostics, event.preconditioning_dependency)
         : nothing}
     </section>
   `;
@@ -475,16 +489,20 @@ function renderPredictionLiveLabel(
   const help = host._t("preconditioningLivePredictionHelp");
   const key = entityId.replace(/[^a-z0-9_-]/gi, "-");
   return html`
-    <span class="preconditioning-live-label">
-      <span>${host._t("preconditioningLivePrediction")}</span>
-      ${renderInlineHelp(`preconditioning-${key}-${direction}-live-prediction-help`, help, help)}
+    <span class="preconditioning-live-help">
+      <span class="preconditioning-live-label">
+        <span>${host._t("preconditioningLivePrediction")}</span>
+        <ha-icon icon="mdi:information-outline" aria-hidden="true"></ha-icon>
+      </span>
+      ${renderInlineHelp(`preconditioning-${key}-${direction}-live-prediction-help`, help, help, { appearance: "overlay" })}
     </span>
   `;
 }
 
 function renderPreconditioningCalculationDetails(
   host: PreconditioningViewHost,
-  diagnostics: PreconditioningDiagnostics,
+  diagnostics: PreconditioningDiagnostics | null | undefined,
+  dependency?: ScheduleEvent["preconditioning_dependency"],
 ) {
   return html`
     <details class="preconditioning-calculation-details">
@@ -492,6 +510,8 @@ function renderPreconditioningCalculationDetails(
         <ha-icon icon="mdi:calculator-variant-outline"></ha-icon>
         <span>${host._t("preconditioningCalculationDetails")}</span>
       </summary>
+      ${renderPreconditioningDependency(dependency, host._t.bind(host), host._formatDateTime.bind(host), dependency ? host._friendlyEntityName(dependency.master_entity_id) : undefined, true)}
+      ${diagnostics ? html`
       <div class="preconditioning-calculation-grid">
         <div class="preconditioning-calculation-row context">
           ${renderCalculationItem(
@@ -546,8 +566,57 @@ function renderPreconditioningCalculationDetails(
           )}
         </div>
       </div>
+      ` : nothing}
     </details>
   `;
+}
+
+function renderMasterSection(host: PreconditioningViewHost, entityId: string, settings: PreconditioningSettings) {
+  const currentValue = settings.master_entity_id
+    ? host._friendlyEntityName(settings.master_entity_id)
+    : host._t("preconditioningIndependent");
+  return html`<details class="preconditioning-config-section preconditioning-master-section">
+    <summary class="preconditioning-master-summary"><span class="preconditioning-master-heading"><span class="preconditioning-master-label">${host._t("preconditioningMaster")}</span>${renderDocumentationHelp(host, "preconditioningMaster")}</span> <span class="preconditioning-master-current-value">${currentValue}</span><ha-icon class="preconditioning-master-chevron" icon="mdi:chevron-down" aria-hidden="true"></ha-icon></summary>
+    <div class="preconditioning-config-rows">${renderMasterSelector(host, entityId, settings)}</div>
+  </details>`;
+}
+
+function renderMasterSelector(host: PreconditioningViewHost, entityId: string, settings: PreconditioningSettings) {
+  const guidanceId = `preconditioning-master-guidance-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const helpId = `${guidanceId}-help`;
+  const selected = settings.master_entity_id ?? "";
+  const candidates = preconditioningMasterCandidates(host._data, entityId);
+  const valid = !selected || candidates.includes(selected);
+  const source = selected ? host._data?.zones[selected] : undefined;
+  const sourceState = host.hass?.states?.[selected]?.state;
+  let helpKey: TranslationKey = "preconditioningMasterHelp";
+  if (selected) {
+    if (!source) helpKey = "preconditioningMasterNotManaged";
+    else if (!valid) helpKey = "preconditioningMasterIneligible";
+    else if (!host._entityExists(selected)) helpKey = "preconditioningMasterEntityMissing";
+    else if (sourceState === "unavailable") helpKey = "preconditioningMasterUnavailable";
+    else if (sourceState === "unknown") helpKey = "preconditioningMasterStateUnknown";
+    else if (source.enabled === false) helpKey = "preconditioningMasterSchedulingDisabled";
+    else if (!source.preconditioning?.enabled) helpKey = "preconditioningMasterPreconditioningDisabled";
+    else {
+      const dependency = host._data?.next_events.find(event => event.entity_id === entityId
+        && event.preconditioning_dependency?.master_entity_id === selected)?.preconditioning_dependency;
+      helpKey = dependencyReasonDetailKeys[dependency?.reason_detail ?? ""] ?? helpKey;
+    }
+  }
+  return html`<div class="preconditioning-master-guidance" id=${guidanceId}>
+    <ha-icon icon="mdi:information-outline" aria-hidden="true"></ha-icon>
+    <div><strong>${host._t("preconditioningMasterGuidanceTitle")}</strong><p>${host._t("preconditioningMasterGuidance")}</p></div>
+  </div><label class="preconditioning-config-row preconditioning-master-row">
+    <span class="select-wrap preconditioning-master-select">
+    <select aria-label=${host._t("preconditioningMaster")} aria-describedby=${`${guidanceId} ${helpId}`} .value=${selected} ?disabled=${host._settingsSaving}
+      @change=${(event: Event) => host._saveZonePreconditioning(entityId, { master_entity_id: (event.target as HTMLSelectElement).value || null })}>
+      <option value="" ?selected=${!selected}>${host._t("preconditioningIndependent")}</option>
+      ${selected && !valid ? html`<option value=${selected} selected>${selected}</option>` : nothing}
+      ${candidates.map(candidate => html`<option value=${candidate} ?selected=${candidate === selected}>${host._friendlyEntityName(candidate)}</option>`)}
+    </select>
+    </span>
+  </label><p id=${helpId} class="preconditioning-master-help">${host._t(helpKey)}</p>`;
 }
 
 function calculationRoundedMatchesCombined(

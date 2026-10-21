@@ -569,6 +569,7 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
             data["zones"]["climate.salon"]["preconditioning"],
             {
                 "enabled": True,
+                "master_entity_id": None,
                 "max_lead_minutes": 240,
                 "minimum_delta_temperature": 0.5,
                 "learning_history_size": 120,

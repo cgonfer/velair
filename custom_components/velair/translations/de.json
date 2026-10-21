@@ -159,7 +159,7 @@
   "services": {
     "start_planned_return": {
       "name": "Ich gehe",
-      "description": "Plant eine einmalige Rückkehr für ein zukünftiges Datum und eine Uhrzeit mit gespeicherten Modi und automatischer Planung. Mit konfigurierten Belegungsquellen wird Abwesenheit vor dem Abwesenheitsmodus bestätigt; ohne Quellen wird er sofort aktiviert. Funktioniert ohne Wochenroutine und aktualisiert eine aktive Abwesenheit.",
+      "description": "Plant eine einmalige Rückkehr zu einem zukünftigen Datum und Zeitpunkt mit gespeicherten Modi und automatischer Zeitplanung. Mit konfigurierten Anwesenheitsquellen wird auf bestätigte Abwesenheit gewartet, sofern Abwesenheitsmodus jetzt anwenden nicht aktiviert ist; ohne Quellen wird Abwesenheit sofort aktiviert. Funktioniert bei deaktivierter Wochenroutine und aktualisiert eine aktive Abwesenheit.",
       "fields": {
         "return_date": {
           "name": "Rückkehrdatum",
@@ -168,12 +168,16 @@
         "return_time": {
           "name": "Rückkehrzeit",
           "description": "Ankunftszeit am gewählten Datum in der Home-Assistant-Zeitzone. Verwende HH:MM in YAML; optionale Sekunden müssen 00 sein. Bei Zeitumstellung nicht existierende Uhrzeiten werden abgelehnt."
+        },
+        "apply_away_now": {
+          "name": "Abwesenheitsmodus jetzt anwenden",
+          "description": "Wendet den konfigurierten Abwesenheitsmodus sofort an. Mit Anwesenheitsquellen wird die automatische Rückkehr durch Anwesenheit erst nach durchgehender Abwesenheit für die konfigurierte Bestätigungsdauer freigegeben. Geplante Vorbereitung und Ankunft bleiben aktiv."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Geplante Rückkehr abbrechen",
-      "description": "Bricht eine ausstehende oder aktive Rückkehr ab oder schließt einen Hinweis zu einer inaktiven Rückkehr. Der aktuelle Modus bleibt unverändert und die automatische Rückkehr wird für diese Abwesenheit gestoppt. Danach kannst du ausdrücklich eine neue Rückkehr planen."
+      "description": "Bricht eine geplante Rückkehr ab oder schließt eine inaktive Rückkehrmeldung. Nach Anwendung von Abwesenheit, auch bei sofortiger manueller Anwendung vor bestätigter überwachter Abreise, werden Modus und Profile von vor Beginn der Episode wiederhergestellt. Eine normale ausstehende Abreise lässt die Auswahl unverändert. Beendet die automatische Rückkehr für diese Abwesenheit. Danach kann ausdrücklich eine neue Rückkehr geplant werden."
     },
     "update_block_preset": {
       "name": "Velair-Preset aktualisieren",
@@ -321,6 +325,16 @@
         "entity_id": {
           "name": "Klimaentitäten",
           "description": "Eine verwaltete Klimaentität oder eine Liste. Alle Ziele müssen gültig sein, bevor eine Ausnahme entfernt wird."
+        }
+      }
+    },
+    "pause_zone": {
+      "name": "Zone pausieren",
+      "description": "Fügt einen Grund hinzu oder aktualisiert ihn, der die automatische Zeitplanausführung für eine verwaltete Klimaentität pausiert. Das Klimagerät kann optional ausgeschaltet werden, solange ein Grund aktiv bleibt.",
+      "fields": {
+        "until_next_block": {
+          "name": "Bis zum nächsten Block",
+          "description": "Beendet diese Pause beim nächsten geplanten Blockbeginn. Der Ablaufzeitpunkt wird bei der Anfrage festgelegt und folgt späteren Zeitplanänderungen nicht. Nicht mit duration_minutes kombinierbar. Schlägt fehl, wenn kein zukünftiger Block existiert; andere Pausengründe bleiben aktiv."
         }
       }
     }

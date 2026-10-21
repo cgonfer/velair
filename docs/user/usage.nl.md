@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.0-beta.3 |
+| Laatst gesynchroniseerd | 2026-10-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -23,7 +23,7 @@ Deze handleiding legt Velair uit vanuit het perspectief van een Home Assistant-g
 <a id="panel-navigation-and-direct-links"></a>
 ## Paneelnavigatie en rechtstreekse links
 
-Het zijbalkpaneel werkt zijn URL bij wanneer je van tabblad wisselt of een onderdeel van Schema's, Sjablonen of Voorconditionering selecteert. Vernieuwen of een gekopieerde URL openen herstelt dat onderdeel. Ook de browserknoppen Vorige en Volgende volgen deze navigatie.
+Het zijbalkpaneel werkt zijn URL bij wanneer je van tabblad wisselt of een onderdeel van Schema's of Sjablonen selecteert. Vernieuwen of een gekopieerde URL openen herstelt dat onderdeel. Ook de browserknoppen Vorige en Volgende volgen deze navigatie.
 
 | Onderdeel | Pad |
 | --- | --- |
@@ -35,8 +35,8 @@ Het zijbalkpaneel werkt zijn URL bij wanneer je van tabblad wisselt of een onder
 | Sjablonen: klimaatpresets | `/velair/templates/presets` |
 | Sensoren | `/velair/sensors` |
 | Comfort | `/velair/comfort` |
-| Voorconditionering: adaptieve voorconditionering | `/velair/preconditioning/preconditioning` |
-| Voorconditionering: geplande terugkeer | `/velair/preconditioning/planned-return` |
+| Voorconditionering | `/velair/preconditioning` |
+| Geplande terugkeer | `/velair/planned-return` |
 | Diagnostiek | `/velair/diagnostics` |
 | Instellingen | `/velair/settings` |
 
@@ -55,7 +55,7 @@ tap_action:
 
 Vervang `navigation_path` door een pad uit de tabel. Dit gebruikt de standaard [dashboardnavigatieactie](https://www.home-assistant.io/dashboards/actions/) van Home Assistant. Gebruik voor een bladwijzer of link uit een andere toepassing je eigen Home Assistant-adres gevolgd door het pad, bijvoorbeeld `https://your-home-assistant.example/velair/schedules/profiles`.
 
-`/velair/schedules` opent de standaardplanningen, `/velair/templates` de sjablonen en `/velair/preconditioning` adaptieve voorconditionering. De onderdeelkeuze wisselt tussen adaptieve schemavoorbereiding en geplande terugkeer. `/velair/overview` opent Overzicht; het oudere pad `/velair/profiles` opent Modi. Een onbekend onderdeel opent het standaardonderdeel van het tabblad; een onbekend tabblad opent Overzicht. Deze paden worden genormaliseerd zonder extra browsergeschiedenis.
+`/velair/schedules` opent Standaard en `/velair/templates` opent Sjablonen. `/velair/preconditioning` opent adaptieve voorconditionering en `/velair/planned-return` opent het aparte tabblad Geplande terugkeer. Eerdere koppelingen naar onderdelen van Voorconditionering openen nog het bijbehorende tabblad. `/velair/overview` opent Overzicht en het oude pad `/velair/profiles` opent Modi. Een onbekend onderdeel opent het standaardonderdeel van zijn tabblad; een onbekend tabblad opent Overzicht. Deze paden worden zonder extra geschiedenisvermelding genormaliseerd.
 
 Links bewaren geen selectie van een klimaatentiteit, weekdag, profiel, sjabloon of preset. Niet-opgeslagen wijzigingen keren na vernieuwen niet terug. Bestaande bevestigingen voor het weggooien van wijzigingen blijven gelden: annuleren behoudt het huidige onderdeel en de URL. Optionele Lovelace-kaarten behouden hun dashboard-URL.
 
@@ -106,7 +106,7 @@ De volledige handleiding beschrijft detectiegrenzen, alle beleidskeuzes, herhaal
 
 Velair berekent komende gebeurtenissen in de backend en plant nauwkeurige eenmalige callbacks via Home Assistant. De frontend ontvangt backendupdates via WebSocket en heeft geen voortdurende peilingen nodig.
 
-Tijdens Geplande terugkeer toont Overzicht een compacte huishoudsamenvatting met wekelijkse/eenmalige herkomst, huidig proces en zo nodig bevestigings- of aankomsttijd. Ze gebruikt de gewone thema-kaartachtergrond met subtiele paarse rand en hoofdterugkeerpictogram; andere pictogrammen behouden hun tekstkleur. Geaccepteerde toekomstige terugkeer voegt voorbereidingstellers toe met hulp bij aanwijzen, toetsenbord en aanraken. Bevestigd vertrek toont een compacte alleen-lezen tijdlijn met tijden en modi, naast de samenvatting bij voldoende ruimte of eronder. De navigatieknop opent Geplande terugkeer in Voorconditionering; vertrekbediening wordt niet herhaald. Een probleem kan zichtbaar blijven zonder actief vertrek.
+Tijdens Geplande terugkeer toont Overzicht een compacte huishoudsamenvatting met wekelijkse/eenmalige herkomst, huidig proces en zo nodig bevestigings- of aankomsttijd. Ze gebruikt de gewone thema-kaartachtergrond met subtiele paarse rand en hoofdterugkeerpictogram; andere pictogrammen behouden hun tekstkleur. Geaccepteerde toekomstige terugkeer voegt voorbereidingstellers toe met hulp bij aanwijzen, toetsenbord en aanraken. Bevestigd vertrek toont een compacte alleen-lezen tijdlijn met tijden en modi, naast de samenvatting bij voldoende ruimte of eronder. De navigatieknop opent het tabblad Geplande terugkeer; vertrekbediening wordt niet herhaald. Een probleem kan zichtbaar blijven zonder actief vertrek.
 
 Elke betrokken klimaatentiteit krijgt een violet signaal voor geplande terugkeer wanneer de backend aangeeft dat Afwezig of aankomstvoorbereiding de huidige regeling bepaalt. De normale bedrijfstoestand, profiel- en Room Assist-informatie blijven zichtbaar. Toekomstige voorbereidingstijden zijn een vooruitblik, geen teken van actieve regeling. Handmatige regeling, tijdelijke aanpassingen, onafhankelijke pauzes, gestopte planning en externe uitvoering behouden hun prioriteit. Een zone die onder een aangepaste afwezigheidsmodus gewoon haar standaardschema volgt, krijgt geen afwezigheidssignaal. Het signaal beschrijft de bedoelde regeling, niet dat een opdracht succesvol is afgeleverd of de kamer haar doel al heeft bereikt.
 
@@ -180,11 +180,11 @@ type: custom:velair-card
 view: planned-return
 ```
 
-Tijdens het bevestigen van afwezigheid legt een tijdregel de controle op een leeg huis uit en toont de backenddeadline in de lokale Home Assistant-tijd. De afwezigheidsmodus start pas na bevestiging als alle bronnen nog afwezigheid melden. Vóór bevestiging is er geen lopend aftellen of vertrektijdlijn.
+Bij een normaal wachtend vertrek legt een timerregel de leegtecontrole uit en toont de backendtermijn in lokale Home Assistant-tijd. Afwezig wordt pas na bevestiging actief als alle bronnen nog afwezigheid melden. Er is vóór bevestiging geen liveaftelling of vertrektijdlijn. Met **Afwezig-modus nu toepassen** beginnen Afwezig en de tijdlijn meteen; vertrekbevestiging geeft apart automatische terugkeer door aanwezigheid vrij, terwijl geplande voorbereiding en aankomst actief blijven.
 
-De visuele editor noemt deze weergave **Geplande terugkeer**. Ze toont alleen de compacte bediening voor **Eenmalige terugkeer**, met rechtsboven aantallen aanwezige, afwezige en onbekende bronnen. De opgeslagen bevestigingsvertraging staat daar alleen vóór bevestigde actieve afwezigheid. Zonder aanwezigheidsbronnen ontbreken deze signalen: **Terugkeer plannen** bevestigt vertrek expliciet en activeert Afwezig onmiddellijk. De aankomsttijd bepaalt nog steeds voorbereiding en doelmodusactivering, maar zonder bronnen kan Velair fysieke aankomst niet herkennen. Onbekende of onbeschikbare ingestelde bronnen behouden hun normale wachtgedrag; de wekelijkse routine vereist bronnen.
+De visuele editor noemt deze weergave **Geplande terugkeer**. Ze toont alleen de compacte bediening voor **Eenmalige terugkeer**, met rechtsboven aantallen aanwezige, afwezige en onbekende bronnen. De opgeslagen bevestigingsvertraging staat daar alleen vóór bevestigde actieve afwezigheid. Zonder aanwezigheidsbronnen ontbreken deze signalen: **Terugkeer plannen** bevestigt vertrek expliciet en activeert Afwezig onmiddellijk. De aankomsttijd bepaalt nog steeds voorbereiding en doelmodusactivering, maar zonder bronnen kan Velair fysieke aankomst niet herkennen. Onbekende of onbeschikbare ingestelde bronnen behouden hun normale wachtgedrag tenzij **Afwezig-modus nu toepassen** is geselecteerd; de wekelijkse routine vereist bronnen.
 
-Stel vóór vertrek of tijdens afwezigheid een toekomstige datum en tijd in. Een actieve episode biedt alleen **Annuleren** en **Terugkomst wijzigen**. Annuleren stopt de terugkeerautomatisering en herstelt na bevestigd vertrek de vorige modus en profielen; zolang bevestiging loopt verandert de selectie niet. Start bijvoorbeeld vanuit Comfort met vijf minuten vertraging: annuleren na twee minuten laat Comfort actief; annuleren nadat Afwezig is toegepast herstelt Comfort en zijn oorspronkelijke profielen. Zie de [annuleringsvoorbeelden](planned-return.nl.md#cancelling-a-return-examples), ook voor starten zonder sensoren, aankomstwijzigingen en expliciete modusselecties.
+Stel vóór vertrek of tijdens afwezigheid een toekomstige datum en tijd in. Een actieve episode biedt alleen **Annuleren** en **Terugkomst wijzigen**. Annuleren stopt de terugkeerautomatisering en herstelt na bevestigd vertrek of direct handmatig Afwezig de vorige modus en profielen, ook vóór bevestiging van het gemonitorde vertrek; bij een normaal wachtende bevestiging blijft de selectie gelijk. Start bijvoorbeeld vanuit Comfort met vijf minuten vertraging: annuleren na twee minuten laat Comfort actief; annuleren nadat Afwezig is toegepast herstelt Comfort en zijn oorspronkelijke profielen. Zie de [annuleringsvoorbeelden](planned-return.nl.md#cancelling-a-return-examples), ook voor starten zonder sensoren, aankomstwijzigingen en expliciete modusselecties.
 
 Na voltooiing of annulering verschijnt een nieuw datum-/tijdformulier, ook als de aanwezigheidsbronnen iedereen nog afwezig melden. **Terugkeer plannen** blijft zichtbaar maar is uitgeschakeld wanneer configuratie of planner niet beschikbaar is. Het zijbalkpaneel gebruikt dezelfde knoppen en het nieuwe formulier. Alleen de afsluitende aanwezigheids- en vertragingssignalen zijn kaartspecifiek; de zijbalk houdt de volledige wekelijkse, aanwezigheids- en voorbereidingsconfiguratie.
 
@@ -194,7 +194,7 @@ De blauwe knop **Terug** met pijl links in de actierij gooit de aankomstbewerkin
 
 Vertrek en aankomst gebruiken dezelfde typografie. Annuleren is een compacte rode gevulde knop met witte tekst linksonder de episodegegevens, alleen zichtbaar als een actieve terugkeer annuleerbaar is en de editor gesloten is. Tijdens bewerken sluit **Terug** links en blijft **Terugkomst wijzigen** rechts met een compacte groene achtergrond. Beide hebben 32-pixel zichtbare knoppen binnen 44-pixel aanraakvlakken. Aanwezigheidssignalen blijven rechtsboven; vertraging verdwijnt na bevestigd vertrek.
 
-Stel bronnen, modi, afwezigheidsbevestiging en wekelijkse routine in via **Voorconditionering → Geplande terugkeer** in de zijbalk. De kaart gebruikt deze opgeslagen huishoudconfiguratie, zonder configuratievelden of schakelaar voor de wekelijkse routine. Thermostaatfilters beperken deze huishoudkaart niet. Dashboard en zijbalk wijzigen dezelfde backendepisode; aankomstconcepten blijven lokaal per kaart tot verzending.
+Stel bronnen, modi, afwezigheidsbevestiging en wekelijkse routine in op het tabblad **Geplande terugkeer** in de zijbalk. De kaart gebruikt deze opgeslagen huishoudconfiguratie, zonder configuratievelden of schakelaar voor de wekelijkse routine. Thermostaatfilters beperken deze huishoudkaart niet. Dashboard en zijbalk wijzigen dezelfde backendepisode; aankomstconcepten blijven lokaal per kaart tot verzending.
 
 Tijdens bevestigde afwezigheid staan opgeslagen vertrek en bewerkbare aankomst boven de tijdlijn; afwezigheids-/terugkeermodi eronder. Hulp bij vertrektijd, aankomstpictogram en modi verklaart ze via aanwijzen, toetsenbordfocus of tikken. Aankomst blijft een aparte bewerkknop. Een neutrale verticale Nu-streep toont verstreken UTC-tijd aan het einde van de gekleurde balk. Datums verschijnen bij verschillende Home Assistant-kalenderdagen. Aankomstconcepten bewegen het eindpunt pas na acceptatie. Wachtende/eindtoestanden of ontbrekend bevestigd vertrek hebben geen bewegende tijdlijn. Een actieve foutperiode met geldig vertrek behoudt tijdlijn en annuleren. De lokale klok vernieuwt alleen zichtbaar en actief eenmaal per minuut zonder Home Assistant te peilen.
 
@@ -397,7 +397,7 @@ De tijdlijn toont de gekozen dag over 24 uur.
 <a id="preconditioning"></a>
 ## Voorconditionering
 
-Zie [Geplande terugkeer](planned-return.nl.md) voor aanwezigheidsgestuurde afwezigheid met wekelijkse of eenmalige aankomst. Stel de routine in onder Geplande terugkeer binnen Voorconditionering; gebruik actuele status voor bronnen en eenmalige aankomstwijzigingen zonder de week aan te passen. **Terugkeer plannen** kan met een eenmalige tijd op bevestigd vertrek wachten terwijl de wekelijkse routine uitstaat. Zonder opgeslagen bronnen activeert expliciet starten Afwezig meteen; normale voorbereiding en aankomst blijven werken.
+Zie [Geplande terugkeer](planned-return.nl.md) voor aanwezigheidsgestuurde afwezigheid met wekelijkse of eenmalige aankomst. Stel de routine in op het tabblad Geplande terugkeer; gebruik actuele status voor bronnen en eenmalige aankomstwijzigingen zonder de week aan te passen. **Terugkeer plannen** kan met een eenmalige tijd op bevestigd vertrek wachten terwijl de wekelijkse routine uitstaat. Zonder opgeslagen bronnen activeert expliciet starten Afwezig meteen; normale voorbereiding en aankomst blijven werken.
 
 Voorconditionering laat Velair een gepland comfortdoel voor één zone vóór de zichtbare bloktijd starten. Met deze functie ingeschakeld betekent de bloktijd het gewenste comforttijdstip. Velair kan eerder starten met een adaptieve voorspelling en houdt de oorspronkelijke tijd zichtbaar bij komende gebeurtenissen. Herberekent het terwijl het al binnen de voorbereidingsperiode zit, dan wordt het doel onmiddellijk toegepast als verwarmen of koelen nog nodig is.
 
@@ -435,7 +435,7 @@ Thermische waarden worden onbewerkt opgeslagen in de vastgelegde eenheid. Bij ee
 
 De eenmalige upgrade van gepubliceerde gegevens die alleen Celsius ondersteunden is anders. Gebruikt Home Assistant al Fahrenheit, dan neemt Velair zonder vraag aan dat oude gegevens Celsius zijn, houdt planning gestopt en verwijst naar **Velair resetten**. Reset wist de oude configuratie en maakt atomair nieuwe Fahrenheit-standaarden. Latere eenheidswijzigingen gebruiken daarna de volledige expliciete conversie met gegevensbehoud.
 
-Huidige draagbare exports in model v16 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v16 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
+Huidige draagbare exports in model v19 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v19 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
 
 Was een apparaat tijdens migratie of import niet beschikbaar, dan controleert Velair later grenzen en effectieve temperatuurstap. Een actuele geldige `target_temp_step` heeft voorrang op de laatst gemelde stap en handmatige zoneterugval. Het paneel waarschuwt bij onverenigbare opgeslagen doelen, zodat je vóór gebruik kunt corrigeren. Zie [Temperatuureenheden en migratie](temperature-units.nl.md) voor volledige upgrade-, migratie-, back-up- en herstelregels.
 
@@ -566,7 +566,7 @@ De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) wacht standa
 
 Instellingen kan een JSON-bestand met versie exporteren en importeren. Het kan thermostaatschema's, sjablonen, gedeelde blokpresets, paneelinstellingen, leergegevens voor adaptieve voorconditionering, klimaatprofielen en modussen bevatten.
 
-Model 16 behoudt beide sjabloonkoppeltypes en presetverwijzingen. Schema's of profielen exporteren neemt vereiste sjablonen en presets mee, zichtbaar als extra gekozen secties. Import valideert de gecombineerde configuratie, ook bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op vaste sleutel samengevoegd: overeenkomstige sleutels worden vervangen; lokale presets buiten het bestand blijven. Oude back-ups blijven importeerbaar; oude Velair-versies kunnen model 16 niet importeren. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
+Huidige exports in model 19 behouden beide sjabloonkoppeltypes, presetverwijzingen en koppelingen met een Master voor voorconditionering. Geaccepteerde uitvoeringsreferenties van de master blijven lokaal en worden niet geëxporteerd. Schema's of profielen exporteren neemt vereiste sjablonen en presets mee, zichtbaar als extra gekozen secties. Import valideert de gecombineerde configuratie, ook bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op vaste sleutel samengevoegd: overeenkomstige sleutels worden vervangen; lokale presets buiten het bestand blijven. Oude back-ups blijven importeerbaar; oude Velair-versies kunnen model 19 niet importeren. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
 
 Bij import kies je te overschrijven secties. Import vervangt gekozen gegevens; exporteer eerst voor een herstelpunt. Profiel- en modusdefinities zijn overdraagbaar, de actieve selectie niet. Velair behoudt actieve profiel-ID's die nog bestaan en keert pas naar standaard terug als geen meer overblijven.
 
@@ -763,7 +763,20 @@ action: velair.resume
 <a id="velairpause_zone"></a>
 ### `velair.pause_zone`
 
-Pauzeer één beheerde klimaatentiteit terwijl de rest doorgaat. Zonder `duration_minutes` is de pauze onbeperkt. Optioneel `action`:
+Pauzeer de automatische schema-uitvoering voor één beheerde thermostaat terwijl de rest van Velair doorgaat. Laat zowel `duration_minutes` als `until_next_block` weg voor een onbeperkte pauze.
+
+Stel `until_next_block: true` in om deze pauze bij de start van het volgende blok in het effectieve zoneschema te laten eindigen. Dit gebruikt de nominale bloktijd, niet een eerdere start voor adaptieve voorconditionering. De eindtijd wordt bij de aanroep vastgelegd en overleeft herstarts; latere schemawijzigingen verschuiven deze niet. Dit kan niet met `duration_minutes` worden gecombineerd. Zonder toekomstig blok mislukt de aanroep zonder de zone te wijzigen. Andere pauzeredenen houden de zone gepauzeerd totdat ze ook eindigen.
+
+```yaml
+action: velair.pause_zone
+data:
+  entity_id: climate.guest_room
+  pause_id: external_control
+  action: none
+  until_next_block: true
+```
+
+Optioneel `action`:
 
 - `none`: laat het apparaat exact intact en stop alleen automatische Velair-wijzigingen;
 - `turn_off`: schakel onmiddellijk uit en houd gepauzeerd.

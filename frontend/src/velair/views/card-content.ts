@@ -16,7 +16,6 @@ import {
 } from "./overview-view";
 import { renderPreconditioningView } from "./preconditioning-view";
 import { renderPlannedReturn } from "./planned-return-view";
-import { renderPreconditioningWorkspace } from "./preconditioning-workspace";
 import { renderSchedulesView } from "./schedule-view";
 import { renderSensorsView, type RoomSensorViewOptions } from "./sensors-view";
 import { renderSettingsView } from "./settings-view";
@@ -209,11 +208,11 @@ function renderViewContent(
   }
 
   if (view === "planned-return") {
-    return renderPlannedReturn(host, false, true);
+    return host._hasExternalConfig ? renderPlannedReturn(host, false, true) : renderPlannedReturn(host);
   }
 
   if (view === "preconditioning") {
-    return host._hasExternalConfig ? renderPreconditioningView(host, visibleZoneIds) : renderPreconditioningWorkspace(host, visibleZoneIds);
+    return renderPreconditioningView(host, visibleZoneIds);
   }
 
   if (view === "diagnostics") {

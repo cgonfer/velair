@@ -10,7 +10,7 @@ This guide explains Velair from a Home Assistant user's point of view.
 ## Panel navigation and direct links
 
 The sidebar panel updates its URL when you change tabs or switch between the
-Schedules, Templates and Preconditioning subsections. Refreshing or opening a copied URL restores
+Schedules and Templates subsections. Refreshing or opening a copied URL restores
 that section. Browser Back and Forward also follow this navigation.
 
 | Section | Path |
@@ -23,8 +23,8 @@ that section. Browser Back and Forward also follow this navigation.
 | Templates: Climate presets | `/velair/templates/presets` |
 | Sensors | `/velair/sensors` |
 | Comfort | `/velair/comfort` |
-| Preconditioning: Adaptive Preconditioning | `/velair/preconditioning/preconditioning` |
-| Preconditioning: Planned Return | `/velair/preconditioning/planned-return` |
+| Preconditioning | `/velair/preconditioning` |
+| Planned return | `/velair/planned-return` |
 | Diagnostics | `/velair/diagnostics` |
 | Settings | `/velair/settings` |
 
@@ -50,8 +50,9 @@ address followed by the path, for example
 `https://your-home-assistant.example/velair/schedules/profiles`.
 
 `/velair/schedules` opens Default and `/velair/templates` opens Templates.
-`/velair/preconditioning` opens Adaptive Preconditioning. The subsection
-selector switches between adaptive schedule preparation and Planned Return.
+`/velair/preconditioning` opens Adaptive Preconditioning and
+`/velair/planned-return` opens the separate Planned return tab. Former
+Preconditioning subsection links still open the corresponding tab.
 `/velair/overview` opens Overview, and the legacy `/velair/profiles` path opens
 Modes. An unknown subsection opens its tab's default subsection; an unknown tab
 opens Overview. These paths are normalized without adding a history entry.
@@ -159,8 +160,8 @@ border and main return icon; other icons keep their surrounding text color.
 An accepted future return adds preparation counts as icons with
 hover, keyboard and touch help. Confirmed departures show a compact read-only
 timeline with departure/arrival times and Modes, beside the summary when space
-permits or below it in narrower containers. Its navigation button opens Planned
-Return in Preconditioning; the summary
+permits or below it in narrower containers. Its navigation button opens the
+Planned return tab; the summary
 does not duplicate the departure controls. An incidence can remain visible even
 when no departure is currently running.
 
@@ -348,10 +349,12 @@ type: custom:velair-card
 view: planned-return
 ```
 
-While absence is being confirmed, a timer row explains the empty-home check and
+For a normal pending departure, a timer row explains the empty-home check and
 shows its backend deadline in Home Assistant local time. The Away Mode activates
 only after confirmation if all sources still report absence. There is no live
-countdown or departure timeline before confirmation.
+countdown or departure timeline before confirmation. With **Apply Away mode now**,
+Away and its timeline start immediately; departure confirmation separately gates
+automatic return from presence while scheduled preparation and arrival stay active.
 
 The visual card editor calls this view **Planned return**. It shows only the
 compact **One-off return** controls, with occupied, empty and unknown source
@@ -361,11 +364,13 @@ occupancy sources, these indicators are omitted: **Plan return** explicitly
 confirms departure and activates Away immediately, without waiting. The saved
 arrival still controls preparation and destination activation; Velair cannot
 detect physical arrival without sources. Configured unknown/unavailable sources
-keep their normal waiting behavior, and the weekly routine requires sources. Set a future return date and time before leaving or
+keep their normal waiting behavior unless **Apply Away mode now** is selected,
+and the weekly routine requires sources. Set a future return date and time before leaving or
 while already away. An active episode offers only **Cancel** and **Change
 arrival**. Cancel stops the return automation and restores the previous
-Mode/Profile selection after confirmed departure; pending confirmation does not
-change selection. For example, start from Comfort with a five-minute delay:
+Mode/Profile selection after confirmed departure or an immediate manual Away,
+even before monitored departure confirmation. Normal pending confirmation does
+not change selection. For example, start from Comfort with a five-minute delay:
 cancelling after two minutes leaves Comfort active; cancelling after Away is
 applied restores Comfort and its original Profiles. See the
 [cancellation examples](planned-return.md#cancelling-a-return-examples), including
@@ -391,7 +396,7 @@ on the right with a compact green surface. Back and Change arrival have
 32-pixel visible surfaces within 44-pixel touch targets. Card occupancy indicators stay in the header at the top right; the delay indicator disappears after confirmed departure.
 
 Configure occupancy sources, modes, absence confirmation and the weekly
-routine in **Preconditioning > Planned Return** in the sidebar. The card uses
+routine in the **Planned return** tab in the sidebar. The card uses
 that saved household configuration; it does not expose configuration fields
 or the weekly routine switch. Thermostat display filters do not limit this
 household card. Dashboard and sidebar controls update the same backend episode;
@@ -920,8 +925,8 @@ The timeline is a visual 24-hour representation of the selected day.
 ## Preconditioning
 
 For occupancy-driven absence with preconfigured weekly or one-off arrivals, see
-[Planned Return](planned-return.md). Configure the routine in Preconditioning's
-Planned Return subsection and use
+[Planned Return](planned-return.md). Configure the routine in the
+Planned return tab and use
 its live status for individual source states and one-off arrival changes without
 editing the saved week. **Plan return** can wait for confirmed departure with a
 one-off time even when the automatic weekly routine is disabled. With no saved
@@ -993,9 +998,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v16 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v16 exports; use a version that supports
-v16 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v19 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v19 exports; use a version that supports
+v19 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1273,12 +1278,14 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Model 16 preserves both template link types and preset references. Exporting
+Current model 19 exports preserve both template link types, preset references
+and Preconditioning master relationships. Accepted master execution anchors
+remain local and are not exported. Exporting
 schedules or Profiles includes required templates and presets, shown as additional
 selected sections. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 16 files. See
+remain importable; older Velair versions cannot import model 19 files. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 
 When importing, Velair lets you choose which sections to overwrite. Importing
@@ -1514,7 +1521,24 @@ action: velair.resume
 
 ### `velair.pause_zone`
 
-Pause automatic schedule execution for one managed climate entity while the rest of Velair keeps running. Omit `duration_minutes` to pause that zone indefinitely.
+Pause automatic schedule execution for one managed climate entity while the rest of Velair keeps running. Omit both `duration_minutes` and `until_next_block` to pause that zone indefinitely.
+
+Set `until_next_block: true` to end this pause at the next block start in the
+zone's effective schedule. This uses the nominal block time, not an earlier
+Adaptive Preconditioning start. The expiry is fixed when the service is called
+and survives restarts; later schedule edits do not move it.
+It cannot be combined with `duration_minutes`, and the call fails without
+changing the zone if no future block exists. Other pause reasons continue to
+keep the zone paused until they also end.
+
+```yaml
+action: velair.pause_zone
+data:
+  entity_id: climate.guest_room
+  pause_id: external_control
+  action: none
+  until_next_block: true
+```
 
 The optional `action` field can be:
 

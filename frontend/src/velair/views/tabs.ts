@@ -44,6 +44,11 @@ export const PANEL_TABS: PanelTabDefinition[] = [
     view: "preconditioning",
   },
   {
+    icon: "mdi:home-clock-outline",
+    labelKey: "plannedReturn",
+    view: "planned-return",
+  },
+  {
     icon: "mdi:stethoscope",
     labelKey: "diagnostics",
     view: "diagnostics",

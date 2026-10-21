@@ -27,6 +27,8 @@ Use these terms consistently when translating Velair user documentation. Keep Ho
 | Boost | Refuerzo | Forçage |
 | Pause | Pausa | Pause |
 | Manual adjustment | ajuste manual | réglage manuel |
+| Preconditioning master | Maestro de preacondicionamiento | Maître de préconditionnement |
+| Independent | Independiente | Indépendant |
 | Adaptive Preconditioning | Preacondicionamiento adaptativo | préconditionnement adaptatif (« Anticipation » / « Anticipation adaptative du confort » dans le panneau) |
 | Planned Return | Regreso a casa | Retour prévu |
 | One-off return | Regreso puntual | Retour ponctuel |
@@ -81,6 +83,8 @@ Literal control names follow the interface even when a locale still displays an 
 | Boost | Temporäre Anpassung |
 | Pause | Pause |
 | Manual adjustment | Manuelle Anpassung |
+| Preconditioning master | Vorkonditionierungs-Master |
+| Independent | Unabhängig |
 | Adaptive Preconditioning | adaptive Vorkonditionierung |
 | Planned Return | Geplante Rückkehr |
 | One-off return | einmalige Rückkehr |
@@ -133,6 +137,8 @@ The environmental-condition sensor is named **Raumklima** in the integration. **
 | Boost | Incremento |
 | Pause | Pausa |
 | Manual adjustment | Regolazione manuale |
+| Preconditioning master | Master del precondizionamento |
+| Independent | Indipendente |
 | Adaptive Preconditioning | Precondizionamento adattivo |
 | Planned Return | Rientro pianificato |
 | One-off return | Ritorno singolo |
@@ -185,6 +191,8 @@ The Planned Return selector uses **Ritorno programmato**, while history uses **R
 | Boost | Tijdelijke aanpassing |
 | Pause | Pauzeren / pauze |
 | Manual adjustment | Handmatige aanpassing |
+| Preconditioning master | Master voor voorconditionering |
+| Independent | Onafhankelijk |
 | Adaptive Preconditioning | adaptieve voorconditionering |
 | Planned Return | Geplande terugkeer |
 | One-off return | Eenmalige terugkeer |
@@ -237,6 +245,8 @@ The delivery sensor is named **Leveringsdiagnose van {zone}**. The general Boost
 | Boost | Wzmocnienie |
 | Pause | Pauza |
 | Manual adjustment | Regulacja ręczna (etykieta panelu); sterowanie ręczne (opis działania) |
+| Preconditioning master | Nadrzędny termostat przygotowania |
+| Independent | Niezależnie |
 | Adaptive Preconditioning | adaptacyjne przygotowanie temperatury (opis); Przygotowanie wstępne / Adaptacyjny czas komfortu (etykiety panelu) |
 | Planned Return | Planowany powrót |
 | One-off return | jednorazowy powrót |
@@ -289,6 +299,8 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | Boost | Reforço |
 | Pause | Pausa |
 | Manual adjustment | Ajuste manual |
+| Preconditioning master | Mestre do pré-condicionamento |
+| Independent | Independente |
 | Adaptive Preconditioning | Pré-condicionamento adaptativo |
 | Planned Return | Retorno planejado |
 | One-off return | Retorno pontual |
@@ -339,6 +351,8 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | Boost | Reforço |
 | Pause | Pausa |
 | Manual adjustment | Ajuste manual |
+| Preconditioning master | Mestre do pré-condicionamento |
+| Independent | Independente |
 | Adaptive Preconditioning | Pré-condicionamento adaptativo |
 | Planned Return | Regresso planeado |
 | One-off return | regresso pontual |
@@ -391,6 +405,8 @@ Some existing interface labels use other Portuguese variants: **Cronograma de pe
 | Boost | Форсированный режим |
 | Pause | Пауза |
 | Manual adjustment | Ручная настройка |
+| Preconditioning master | Ведущий термостат предварительной подготовки |
+| Independent | Независимо |
 | Adaptive Preconditioning | адаптивная предварительная подготовка («Предварительный прогрев» / «Адаптивное время достижения комфорта» в панели) |
 | Planned Return | Запланированное возвращение |
 | One-off return | Разовое возвращение |

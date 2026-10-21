@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.0-beta.3 |
+| Letzte Synchronisierung | 2026-10-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -29,7 +29,7 @@ Ein Block mit **Nur Temperatur** erlaubt keinen HVAC-Moduswechsel. Solange das K
 <a id="setup"></a>
 ## Einrichtung
 
-Der Tab für die Vorkonditionierung bietet in seiner Bereichsauswahl zwei Werkzeuge. Standardmäßig öffnet sich die adaptive Vorkonditionierung. Wähle „Geplante Rückkehr“, um Anwesenheit und wöchentliche Ankünfte zu konfigurieren und die aktuelle Abwesenheit zu verwalten. Die direkten Panelpfade lauten `/velair/preconditioning/preconditioning` und `/velair/preconditioning/planned-return`. Siehe [Geplante Rückkehr](planned-return.de.md).
+Der Tab für die Vorkonditionierung enthält adaptive Einstellungen und Lerndaten je Klimagerät. Geplante Rückkehr hat einen eigenen Tab für Anwesenheit, wöchentliche Ankünfte und die aktuelle Abwesenheit. Beide Tabs enthalten eine Einführung und kontextbezogene Hilfe. Die direkten Panelpfade sind `/velair/preconditioning` und `/velair/planned-return`. Frühere Bereichslinks öffnen weiterhin den jeweiligen Tab. Siehe [Geplante Rückkehr](planned-return.de.md).
 
 1. Öffne den Tab für die Vorkonditionierung.
 2. Klappe das gewünschte Klimagerät auf.
@@ -46,6 +46,41 @@ Beim Aufklappen eines Klimageräts erscheint für jeden unterstützten Modus ein
 Um eine bestimmte Berechnung zu prüfen, öffne **Berechnungsdetails** in der Vorhersagekarte. Dieser optionale Bereich zeigt die Backend-Werte für die Vorhersage: Anzahl der Beispiele, Schätzung aus abgeschlossenen Beobachtungen, Untergrenze aus Teilbeobachtungen, kombinierte Schätzung, Rundung und endgültiger Vorlauf. Standardmäßig bleibt er ausgeblendet, damit die normale Ansicht übersichtlich bleibt.
 
 Die Vorbereitung einer Geplanten Rückkehr wird getrennt von der Vorbereitung des Wochenzeitplans angezeigt. Bei einer angenommenen zukünftigen Rückkehr zeigt jedes Klimagerät Rückkehrstatus, geschätzten Beginn, Ankunftssollwert und gegebenenfalls den Grund für eine Aussetzung oder Nichtverfügbarkeit. Übersicht, Geplante Rückkehr und Klimakarten verwenden dieselben Rückkehrdaten des Backends; dies ist kein weiteres Wochenereignis. Ein Raum kann weiter dem Abwesenheitsmodus folgen und zugleich eine spätere Rückkehrschätzung anzeigen. **Vorbereitung** beschreibt Velairs Steuerungsabsicht und bestätigt weder den Empfang eines Befehls noch tatsächliches Heizen oder Kühlen. Die Rückkehrzeitleiste zeigt die verstrichene Zeit bis zur gespeicherten Ankunft, keinen thermischen Fortschrittsprozentsatz. Siehe [Raumvorbereitung](planned-return.de.md#room-preparation).
+
+<a id="preconditioning-master"></a>
+## Vorkonditionierungs-Master
+
+Belasse **Vorkonditionierungs-Master** auf **Unabhängig**, um das bisherige Verhalten beizubehalten. Damit die vorzeitige Vorbereitung eines Klimageräts von einem anderen abhängt, wähle dieses verwaltete Klimagerät in den Einstellungen des abhängigen Raums. Wähle erneut **Unabhängig**, um die Verknüpfung zu lösen. Die Einstellung gilt für den wirksamen Zeitplan des Raums einschließlich Profilen, Zonenausnahmen und geplanter Rückkehr. Sie ersetzt weder Temperaturen noch Blöcke.
+
+Ein Master kann mehrere abhängige Räume versorgen. Ein Raum kann nicht von sich selbst abhängen; Ketten und Zyklen werden nicht unterstützt: Ein abhängiges Gerät kann nicht zugleich Master sein.
+
+Velair wählt den Master-Block, dessen Sollzeitpunkt dem des abhängigen Blocks am nächsten liegt. Bei Gleichstand wird der frühere Block gewählt. Die Sollzeitpunkte müssen nicht übereinstimmen. Das abhängige Gerät beginnt zum späteren Zeitpunkt aus eigenem prognostiziertem Start und Vorbereitungsstart dieses Master-Blocks:
+
+| Eigener Start | Master-Start | Sollzeitpunkt des Raums | Wirksamer Start |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Keine vorzeitige Vorbereitung | 18:45 | Normaler Block um 18:45 |
+| 17:40 | 19:00 | 18:45 | Normaler Block um 18:45 |
+
+Kann sich der gewählte Master-Block nicht vorzeitig vorbereiten, ersetzt Velair ihn nicht durch einen anderen Block. Eine Heizvorbereitung kann keine Kühlvorbereitung freigeben und umgekehrt. Bestehende Pausen, Übersteuerungen, Verfügbarkeitsprüfungen und maximale Vorlaufgrenzen gelten weiterhin. Ein nicht verfügbarer oder deaktivierter Master bleibt konfiguriert; das abhängige Gerät wird nicht stillschweigend unabhängig.
+
+**Mindestvorlauf (Min.)** schließt weiterhin kurze unabhängige Prognosen aus. Das Warten auf den Master kann ebenso wie eine verspätete Befehlsübermittlung ein kürzeres tatsächliches Zeitfenster übriglassen. Das Lernen verwendet dieses Restfenster, ohne einen früheren Start zu erfinden oder den geplanten Sollzeitpunkt zu verschieben.
+
+Der angezeigte Start ist eine Prognose. Bei der Ausführung muss der entsprechende Vorbereitungsbefehl des Masters angenommen werden, bevor ein abhängiges Gerät beginnen kann. Das bestätigt weder den Zustand des Kesselrelais noch Wasserdurchfluss oder tatsächliches Heizen/Kühlen. Velair erhöht die Master-Temperatur nicht, um für andere Räume Wärme anzufordern. Der normale geplante Block wird weiterhin zu seiner eigenen Zeit ausgeführt.
+
+Das Lernen beginnt, wenn das abhängige Gerät seine eingeschränkte Vorbereitung tatsächlich startet, mit seiner damaligen Temperatur und der verbleibenden Zeit bis zum eigenen Block. Die bestehenden Regeln für vorzeitig erreichte Sollwerte, teilweise Beobachtungen und ungültige Stichproben gelten weiter. Ein späterer Abschluss des Masters beendet keine bereits laufende Vorbereitung des abhängigen Geräts. Verknüpfen oder Lösen löscht keine gespeicherten Lernbeispiele.
+
+Öffne **Berechnungsdetails** für die unabhängige Schätzung, den gewählten Master und den wirksamen Start. Diagnose zeigt den Abhängigkeitsgrund neben den bestehenden Vorbereitungs- und Lernnachweisen. Gespeicherte Referenzen zum Befehlsstart ermöglichen Ausführungskontinuität nach einem Neustart; eine unterbrochene Lernbeobachtung wird nicht fortgesetzt. Diese technischen Referenzen sind von portablen Exporten ausgeschlossen.
+
+<a id="understanding-learning-activity"></a>
+## Lernaktivität verstehen
+
+Jede unterstützte Richtung kann neben den vorhandenen Lerninformationen eine kurze Erklärung anzeigen: Velair beobachtet einen Übergang, wartet auf einen geeigneten Übergang oder kann aus bekanntem Grund nicht beobachten. Das beschreibt das Lernen und bestätigt kein tatsächliches Heizen oder Kühlen des Geräts. Ein früherer Übergang wird ausdrücklich datiert und nicht als aktuelle Aktivität dargestellt.
+
+Öffne über die zugehörige Aktion **Diagnose** das betreffende Klimagerät und seinen Vorkonditionierungsverlauf, ohne dass ein Datumsfilter ältere Einträge verbirgt. Der bestehende Funktionsabschnitt zeigt die aktuelle Aktivität und den letzten aufbewahrten Lernübergang. Klappe die Details auf, um die für diese Entscheidung verfügbaren Temperaturen, eingestellten Schwellenwerte und Zeitdauern zu prüfen. Siehe [Lernnachweise](diagnostics.de.md#learning-evidence).
+
+Eine unveränderte Stichprobenzahl belegt keinen Defekt. Ein Übergang liefert möglicherweise keine nutzbare Temperaturdifferenz, eine Beobachtung läuft noch oder ihr Ergebnis ist teilweise beziehungsweise ungültig. Erklärungen verwenden nur von Velair aufgezeichnete Nachweise; sie leiten weder Kesselbetrieb noch gemeinsame Wärmeversorgung ab. Lernstatus und Prognose für den nächsten Block bleiben getrennt: Ein Raum kann wenig Lerngeschichte besitzen und für einen bestimmten Sollwert dennoch keinen vorzeitigen Start benötigen.
 
 <a id="how-it-starts"></a>
 ## Wie der Start berechnet wird

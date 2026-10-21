@@ -159,7 +159,7 @@
   "services": {
     "start_planned_return": {
       "name": "Vou sair",
-      "description": "Planeia um regresso pontual para uma data e hora futuras com os modos guardados e a programação automática. Com fontes de ocupação configuradas, espera a ausência confirmada antes de ativar o modo de ausência; sem fontes, ativa-o imediatamente. Funciona sem a rotina semanal e atualiza uma ausência ativa.",
+      "description": "Planeia um regresso pontual numa data e hora futuras com os Modos guardados e a programação Automática. Com fontes de ocupação configuradas, aguarda a ausência confirmada, salvo se Aplicar modo Ausente agora estiver ativado; sem fontes, ativa Ausente imediatamente. Funciona com a rotina semanal desativada e atualiza uma ausência ativa.",
       "fields": {
         "return_date": {
           "name": "Data de regresso",
@@ -168,12 +168,16 @@
         "return_time": {
           "name": "Hora de regresso",
           "description": "Hora de chegada na data selecionada no fuso horário do Home Assistant. Use HH:MM em YAML; os segundos opcionais devem ser 00. Horários inexistentes por mudança de horário de verão são rejeitados."
+        },
+        "apply_away_now": {
+          "name": "Aplicar modo Ausente agora",
+          "description": "Aplica imediatamente o modo Ausente configurado. Com fontes de ocupação, o regresso automático por presença só é ativado após ausência contínua durante o tempo de confirmação configurado. A preparação e a chegada programadas mantêm-se ativas."
         }
       }
     },
     "cancel_planned_return": {
       "name": "Cancelar regresso planeado",
-      "description": "Cancela um regresso pendente ou ativo, ou fecha o aviso de um regresso inativo. Mantém o modo atual e interrompe o regresso automático durante esta ausência. Depois, pode planear um novo regresso explicitamente."
+      "description": "Cancela um regresso planeado ou fecha um aviso de regresso inativo. Depois de aplicar Ausente, incluindo a aplicação manual imediata antes da confirmação da saída monitorizada, restaura o Modo e os Perfis selecionados antes do episódio. Uma saída normal ainda pendente mantém a seleção. Para o regresso automático nesta ausência. Podes planear explicitamente um novo regresso depois."
     },
     "update_block_preset": {
       "name": "Atualizar preset Velair",
@@ -321,6 +325,16 @@
         "entity_id": {
           "name": "Entidades de climatização",
           "description": "Uma entidade de climatização gerenciada ou uma lista. Todos os destinos devem ser válidos antes que qualquer exceção seja removida."
+        }
+      }
+    },
+    "pause_zone": {
+      "name": "Pausar zona",
+      "description": "Adiciona ou atualiza um motivo que pausa a execução automática da programação de uma entidade de climatização gerida. Opcionalmente, o equipamento pode ser desligado enquanto existir algum motivo ativo.",
+      "fields": {
+        "until_next_block": {
+          "name": "Até ao próximo bloco",
+          "description": "Termina esta pausa no início do próximo bloco programado. O fim é fixado no pedido e não acompanha alterações posteriores à programação. Não pode ser combinado com duration_minutes. Falha se não existir bloco futuro; os outros motivos de pausa mantêm-se ativos."
         }
       }
     }

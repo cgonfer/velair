@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](adaptive-preconditioning.md) · [Español](a
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.0-beta.3 |
+| Última sincronización | 2026-10-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -31,7 +31,7 @@ El Preacondicionamiento adaptativo se ejecuta localmente en Home Assistant. Vela
 
 ## Configuración
 
-La pestaña Preparación del confort ofrece dos herramientas en su selector de subsecciones. Anticipación adaptativa se abre por defecto; elige Regreso a casa para configurar la ocupación y las llegadas semanales y gestionar la ausencia actual. Sus rutas directas son `/velair/preconditioning/preconditioning` y `/velair/preconditioning/planned-return`. Consulta [Regreso a casa](planned-return.es.md).
+La pestaña de preacondicionamiento contiene los ajustes adaptativos y el aprendizaje de cada equipo. Regreso a casa tiene su propia pestaña para la ocupación, las llegadas semanales y la ausencia actual. Ambas incluyen una introducción y ayuda contextual. Sus rutas directas son `/velair/preconditioning` y `/velair/planned-return`. Los enlaces antiguos de subsección siguen abriendo la pestaña correspondiente. Consulta [Regreso a casa](planned-return.es.md).
 
 1. Abre la pestaña Preparación del confort.
 2. Expande el equipo que quieras configurar.
@@ -48,6 +48,41 @@ Al expandir un equipo, cada modo compatible muestra una tarjeta de predicción a
 La preparación de Regreso a casa se identifica por separado de la anticipación del horario semanal. Para un regreso futuro aceptado, la información de preparación del equipo muestra su estado de regreso, el inicio estimado, el objetivo de llegada y cualquier motivo de suspensión o falta de disponibilidad. Overview, Regreso a casa y las cards de climatización usan la misma información de regreso del backend; no es otro evento del horario semanal. Una estancia puede seguir el modo de ausencia mientras muestra una estimación para el regreso. **Preparando** describe la intención de control de Velair, no confirma que el dispositivo haya recibido una orden ni que esté calentando o refrigerando físicamente. La línea temporal del regreso muestra el tiempo transcurrido hacia la llegada guardada, no un porcentaje de progreso térmico. Consulta [Preparación de estancias](planned-return.es.md#room-preparation) para conocer el significado de los estados.
 
 Para comprobar un cálculo concreto, abre **Detalles del cálculo** en la tarjeta de predicción. Esta sección opcional muestra los valores del backend utilizados: recuentos de muestras, estimación de observaciones completas, límite inferior de observaciones parciales, estimación combinada, redondeo y adelanto final. Está oculta por defecto para mantener sencilla la vista habitual.
+
+<a id="preconditioning-master"></a>
+## Maestro de preacondicionamiento
+
+Deja **Maestro de preacondicionamiento** en **Independiente** para conservar el comportamiento existente. Para que la preparación anticipada de un equipo dependa de otro, selecciona ese equipo gestionado en los ajustes de la habitación dependiente. Elige de nuevo **Independiente** para desvincularlos. El ajuste se aplica al horario efectivo de la habitación, incluidos los perfiles, las excepciones de zona y Regreso a casa. No sustituye sus temperaturas ni sus bloques.
+
+Un maestro puede servir a varias habitaciones dependientes. Una habitación no puede depender de sí misma, y no se admiten cadenas ni ciclos: un equipo dependiente no puede ser también maestro.
+
+Velair selecciona el bloque del maestro cuya hora objetivo esté más cerca de la hora objetivo del bloque dependiente. En caso de empate, usa el bloque anterior. Las horas objetivo no tienen que coincidir. El equipo dependiente comienza en el momento más tardío entre su inicio previsto propio y el inicio de preparación de ese bloque del maestro:
+
+| Inicio propio | Inicio del maestro | Objetivo de la habitación | Inicio efectivo |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Sin preparación anticipada | 18:45 | Bloque normal a las 18:45 |
+| 17:40 | 19:00 | 18:45 | Bloque normal a las 18:45 |
+
+Si el bloque del maestro seleccionado no puede prepararse con antelación, Velair no lo sustituye por otro. Una preparación de calefacción no habilita una de refrigeración, ni viceversa. Siguen aplicándose las pausas, anulaciones, comprobaciones de disponibilidad y límites de anticipación máxima existentes. Un maestro no disponible o desactivado sigue configurado; el equipo dependiente no pasa silenciosamente a ser independiente.
+
+**Anticipación mínima (min)** sigue excluyendo las predicciones independientes cortas. Esperar al maestro, al igual que una entrega tardía de órdenes, puede dejar una ventana real más corta. El aprendizaje utiliza esa ventana restante sin inventar un inicio anterior ni mover el objetivo programado.
+
+El inicio mostrado es una previsión. Durante la ejecución, la orden de preparación correspondiente del maestro debe ser aceptada antes de que comience un equipo dependiente. Esto no confirma el estado del relé de la caldera, el flujo de agua ni la calefacción o refrigeración reales. Velair no sube la temperatura del maestro para solicitar calor en nombre de otras habitaciones. El bloque programado normal sigue ejecutándose a su propia hora.
+
+El aprendizaje comienza cuando el equipo dependiente inicia realmente su preparación limitada por el maestro, usando su temperatura en ese momento y el tiempo restante hasta su propio bloque. Se mantienen las reglas de llegada anticipada al objetivo, observaciones parciales y muestras no válidas. La finalización posterior del maestro no detiene una preparación ya iniciada en el equipo dependiente. Vincular o desvincular no borra las muestras de aprendizaje guardadas.
+
+Abre **Detalles del cálculo** para consultar la estimación independiente, el maestro seleccionado y el inicio efectivo. Diagnóstico muestra el motivo de la dependencia junto a las evidencias de preparación y aprendizaje existentes. Las referencias guardadas del inicio de órdenes permiten mantener la continuidad de ejecución tras reiniciar; una observación de aprendizaje interrumpida no se reanuda y estas referencias técnicas no se incluyen en las exportaciones portátiles.
+
+<a id="understanding-learning-activity"></a>
+## Entender la actividad de aprendizaje
+
+Cada dirección compatible puede mostrar una explicación breve junto a la información de aprendizaje existente: Velair está observando una transición, espera una transición apta o no puede observar por un motivo conocido. Esto describe el aprendizaje; no confirma que el equipo esté calentando o enfriando físicamente. Las transiciones anteriores muestran explícitamente su fecha y no se presentan como actividad actual.
+
+Usa la acción **Diagnóstico** que la acompaña para abrir ese equipo y su historial de preacondicionamiento, sin un filtro de fecha que oculte entradas anteriores. La sección de funciones existente muestra la actividad actual y la última transición de aprendizaje conservada. Despliega sus detalles para revisar las temperaturas, los umbrales configurados y las duraciones disponibles para esa decisión. Consulta [Evidencias de aprendizaje](diagnostics.es.md#learning-evidence).
+
+Un contador de muestras que no cambia no demuestra una avería. Una transición puede no aportar una diferencia de temperatura útil, una observación puede seguir en curso o su resultado puede ser parcial o no válido. Las explicaciones solo usan evidencias registradas por Velair; no deducen el funcionamiento de la caldera ni la existencia de un suministro de calor compartido. El estado del aprendizaje y la predicción del siguiente bloque son independientes: una habitación puede tener poco historial aprendido y aun así no necesitar anticipación para un objetivo concreto.
 
 <a id="how-it-starts"></a>
 

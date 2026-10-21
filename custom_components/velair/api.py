@@ -68,6 +68,7 @@ from .models import (
     normalize_comfort_data,
     normalize_panel_settings,
     normalize_preconditioning_data,
+    validate_preconditioning_dependencies,
     normalize_preconditioning_learning_data,
     normalize_sensor_entity_id,
     preconditioning_comfort_percentile,
@@ -96,7 +97,7 @@ from .temperature_migration import (
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 18
+EXPORT_MODEL_VERSION = 19
 EXPORT_SECTIONS = (
     "zones",
     "templates",
@@ -193,6 +194,7 @@ def _daily_schedule_choice(data: dict[str, Any]) -> dict[str, Any]:
 PRECONDITIONING_SCHEMA = vol.Schema(
     {
         vol.Optional("enabled"): bool,
+        vol.Optional("master_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("max_lead_minutes"): vol.All(
             vol.Coerce(int),
             vol.Range(min=0, max=1440),
@@ -587,8 +589,26 @@ def ws_subscribe_updates(
         connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
         return
 
+    last_learning_evidence = None
+
+    def learning_evidence(current_runtime):
+        diagnostics = current_runtime.get("diagnostics")
+        transition = getattr(diagnostics, "learning_transition", None)
+        activity = getattr(current_runtime.get("scheduler"), "preconditioning_learning_activity", None)
+        if not callable(transition) and not callable(activity):
+            return None
+        return {
+            (entity_id, direction): {
+                "last_transition": transition(entity_id, direction) if callable(transition) else None,
+                "activity": activity(entity_id, direction) if callable(activity) else None,
+            }
+            for entity_id in current_runtime["storage"].data["zones"]
+            for direction in ("heat", "cool")
+        }
+
     @callback
     def _send_update() -> None:
+        nonlocal last_learning_evidence
         current_runtime = _get_runtime(hass)
         if current_runtime is None:
             connection.send_message(
@@ -599,6 +619,7 @@ def ws_subscribe_updates(
             )
             return
 
+        last_learning_evidence = learning_evidence(current_runtime)
         connection.send_message(
             websocket_api.event_message(
                 msg["id"],
@@ -609,11 +630,23 @@ def ws_subscribe_updates(
             )
         )
 
-    connection.subscriptions[msg["id"]] = async_dispatcher_connect(
-        hass,
-        SIGNAL_SCHEDULER_UPDATED,
-        _send_update,
-    )
+    @callback
+    def _send_learning_update() -> None:
+        current_runtime = _get_runtime(hass)
+        if current_runtime is not None and learning_evidence(current_runtime) != last_learning_evidence:
+            _send_update()
+
+    unsubs = [
+        async_dispatcher_connect(hass, SIGNAL_SCHEDULER_UPDATED, _send_update),
+        async_dispatcher_connect(hass, SIGNAL_DIAGNOSTICS_UPDATED, _send_learning_update),
+    ]
+
+    @callback
+    def unsubscribe() -> None:
+        for unsub in unsubs:
+            unsub()
+
+    connection.subscriptions[msg["id"]] = unsubscribe
     connection.send_result(msg["id"])
     _send_update()
 
@@ -1066,6 +1099,7 @@ async def _planned_return_mutation(
     msg: dict[str, Any],
     method: str,
     *args: Any,
+    **kwargs: Any,
 ) -> None:
     """Authorize and route routine changes through scheduler-owned persistence."""
     if not getattr(getattr(connection, "user", None), "is_admin", False):
@@ -1086,7 +1120,7 @@ async def _planned_return_mutation(
                 sources = config["occupancy_entity_ids"]
                 if any(hass.states.get(entity) is None for entity in sources):
                     raise ValueError("Configured occupancy sources must exist in Home Assistant")
-        await getattr(runtime["scheduler"], method)(*args)
+        await getattr(runtime["scheduler"], method)(*args, **kwargs)
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_planned_return", str(err))
         return
@@ -1096,6 +1130,7 @@ async def _planned_return_mutation(
 @websocket_api.websocket_command({
     vol.Required("type"): f"{DOMAIN}/start_planned_return",
     vol.Required("return_at"): str,
+    vol.Optional("apply_away_now"): bool,
 })
 @websocket_api.async_response
 async def ws_start_planned_return(
@@ -1104,7 +1139,8 @@ async def ws_start_planned_return(
     msg: dict[str, Any],
 ) -> None:
     """Start a one-time return using the persisted occupancy and mode configuration."""
-    await _planned_return_mutation(hass, connection, msg, "async_start_planned_return", msg["return_at"])
+    options = {"apply_away_now": msg["apply_away_now"]} if "apply_away_now" in msg else {}
+    await _planned_return_mutation(hass, connection, msg, "async_start_planned_return", msg["return_at"], **options)
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/cancel_planned_return"})
@@ -2090,6 +2126,8 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
         "preconditioning_learning": _build_preconditioning_learning_response(
             stored_data,
             _runtime_climate_manager(runtime),
+            scheduler,
+            runtime.get("diagnostics"),
         ),
         "templates": stored_data.get("templates", []),
         "versions": {
@@ -2362,6 +2400,7 @@ def _build_import_data(
 
     candidate = deepcopy(storage.data)
     candidate.update({key: value for key, value in import_data.items() if key in EXPORT_SECTIONS})
+    validate_preconditioning_dependencies(candidate["zones"])
     validate_planned_return(candidate.get("planned_return", {}), candidate.get("modes", []))
     from .schedule_resources import validate_reference_graph
     validate_reference_graph(candidate)
@@ -2570,11 +2609,13 @@ def _normalize_import_preconditioning_learning(
 def _build_preconditioning_learning_response(
     stored_data: dict[str, Any],
     climate_manager,
+    scheduler=None,
+    diagnostics=None,
 ) -> dict[str, Any]:
     """Build non-portable local adaptive preconditioning status."""
     zones = stored_data["zones"]
     learning = stored_data.get("preconditioning_learning", {})
-    return {
+    response = {
         entity_id: _build_zone_preconditioning_learning_summary(
             zone,
             learning.get(entity_id, {}),
@@ -2582,6 +2623,19 @@ def _build_preconditioning_learning_response(
         )
         for entity_id, zone in zones.items()
     }
+    activity = getattr(scheduler, "preconditioning_learning_activity", None)
+    transition = getattr(diagnostics, "learning_transition", None)
+    for entity_id, summary in response.items():
+        for direction in ("heat", "cool"):
+            if callable(activity):
+                current_activity = activity(entity_id, direction)
+                if current_activity is not None:
+                    summary[direction]["activity"] = current_activity
+            if callable(transition):
+                last_transition = transition(entity_id, direction)
+                if last_transition is not None:
+                    summary[direction]["last_transition"] = last_transition
+    return response
 
 
 def _runtime_climate_manager(runtime: dict[str, Any]):
@@ -2802,6 +2856,14 @@ def _validate_portable_zone_schedules(
         preconditioning = zone.get("preconditioning")
         if preconditioning is not None and not isinstance(preconditioning, dict):
             raise ValueError(f"Preconditioning for {entity_id} is not valid")
+        if isinstance(preconditioning, dict) and "master_entity_id" in preconditioning:
+            master = preconditioning["master_entity_id"]
+            if master is not None and (
+                not isinstance(master, str)
+                or master != master.strip()
+                or master not in current_zones
+            ):
+                raise ValueError("Preconditioning master must be a managed climate")
         if (
             isinstance(preconditioning, dict)
             and "room_sensor_assist_deadband" in preconditioning
@@ -3045,4 +3107,7 @@ def _serialize_event(event: ClimateEvent | None) -> dict[str, Any] | None:
             payload[attr] = value
     if event.preconditioning_diagnostics is not None:
         payload["preconditioning_diagnostics"] = event.preconditioning_diagnostics
+    dependency = getattr(event, "preconditioning_dependency", None)
+    if dependency is not None:
+        payload["preconditioning_dependency"] = dependency
     return payload

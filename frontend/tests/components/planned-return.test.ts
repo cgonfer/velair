@@ -36,6 +36,99 @@ async function closeEditor(element: PlannedReturnElement) {
 }
 afterEach(() => { document.body.replaceChildren(); vi.useRealTimers(); });
 describe("planned return UI", () => {
+  it.each(["panel", "compact", "embedded"])("offers immediate Away as an unchecked one-off option in %s", async (layout) => {
+    const { element, root, send } = await setup();
+    element.compact = layout !== "panel";
+    element.embedded = layout === "embedded";
+    element.data = { ...initial(), planned_return_status: { ...initial().planned_return_status!, state: "idle", return_at: null, occupancy: "home" } };
+    send.mockResolvedValue(element.data);
+    await element.updateComplete;
+    const checkbox = root.querySelector<HTMLInputElement>("#apply-away-now")!;
+    expect(checkbox.checked).toBe(false);
+    expect(root.querySelector("label[for=apply-away-now]")?.textContent).toBe(en.plannedReturnApplyAwayNow);
+    const startButton = root.querySelector<HTMLButtonElement>(".start-return")!;
+    expect(checkbox.compareDocumentPosition(startButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(root.querySelector("#apply-away-now-help")!.compareDocumentPosition(startButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    root.querySelector<HTMLButtonElement>(".start-return")!.click();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send.mock.calls[0][0]).toEqual({ type: "velair/start_planned_return", return_at: expect.any(String) });
+    await element.updateComplete;
+    checkbox.checked = true; checkbox.dispatchEvent(new Event("change")); await element.updateComplete;
+    expect(root.querySelector(".manual-departure-help")?.textContent).toBe(en.plannedReturnManualAwayScheduleHelp);
+    root.querySelector<HTMLButtonElement>(".start-return")!.click();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send.mock.calls[1][0]).toMatchObject({ type: "velair/start_planned_return", apply_away_now: true });
+    await vi.waitFor(() => expect(root.querySelector<HTMLInputElement>("#apply-away-now")!.checked).toBe(false));
+  });
+  it("preserves immediate Away on failure, locks it during requests and excludes it without saved sources", async () => {
+    const { element, root, send } = await setup();
+    const idle = { ...initial(), planned_return_status: { ...initial().planned_return_status!, state: "idle" as const, return_at: null } };
+    element.data = idle; await element.updateComplete;
+    const checkbox = root.querySelector<HTMLInputElement>("#apply-away-now")!;
+    checkbox.checked = true; checkbox.dispatchEvent(new Event("change")); await element.updateComplete;
+    let fail!: (error: unknown) => void;
+    send.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+    root.querySelector<HTMLButtonElement>(".start-return")!.click(); await element.updateComplete;
+    expect(checkbox.disabled).toBe(true);
+    fail({ message: "Start failed" });
+    await vi.waitFor(() => expect(root.querySelector("[role=alert]")?.textContent).toBe("Start failed"));
+    expect(checkbox.checked).toBe(true); expect(checkbox.disabled).toBe(false);
+    await input(element, root.querySelector("#absence-delay")!, "20");
+    expect(checkbox.disabled).toBe(true);
+    root.querySelector<HTMLButtonElement>(".footer-actions button")!.click(); await element.updateComplete;
+    element.data = { ...idle, planned_return: { ...idle.planned_return!, occupancy_entity_ids: [] }, planned_return_status: { ...idle.planned_return_status!, sources: [] } };
+    send.mockResolvedValue(element.data); await element.updateComplete;
+    expect(root.querySelector("#apply-away-now")).toBeNull();
+    root.querySelector<HTMLButtonElement>(".start-return")!.click();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send.mock.calls[1][0]).not.toHaveProperty("apply_away_now");
+  });
+  it.each(["away", "preparing"] as const)("explains pending manual departure while keeping %s controls active", async (state) => {
+    const { element, root } = await setup();
+    element.data = { ...initial(), planned_return_status: { ...initial().planned_return_status!, state, awaiting_departure_confirmation: true } };
+    await element.updateComplete;
+    expect(root.querySelector(".return-departure-copy")?.textContent).toBe(en.plannedReturnDepartureWaiting);
+    expect(root.querySelector(".return-departure-confirmation .inline-help-tooltip")?.textContent).toContain(en.plannedReturnManualAwayWaitingHelp);
+    expect(root.querySelector(".return-departure-confirmation time")).toBeNull();
+    expect(root.querySelector(".return-context-status")?.textContent).toContain(en[`plannedReturnState_${state}`]);
+    expect(root.querySelector(".return-departure-description")).toBeNull();
+    expect(root.querySelector(".return-context-status > ha-icon")).toBeNull();
+    expect(root.querySelector(".return-departure-icon")).toBeNull();
+    expect(root.querySelector(".change-arrival")).not.toBeNull();
+    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, absence_confirm_at: "2026-10-06T08:10:00Z" } };
+    await element.updateComplete;
+    expect(root.querySelector(".return-departure-copy")?.textContent).toContain(en.plannedReturnDepartureConfirming);
+    expect(root.querySelector(".return-departure-confirmation time")?.getAttribute("datetime")).toBe("2026-10-06T08:10:00Z");
+    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!, awaiting_departure_confirmation: false, absence_confirm_at: null } };
+    await element.updateComplete;
+    expect(root.querySelector(".return-departure-confirmation")).toBeNull();
+  });
+  it.each([
+    ["panel", true, false, false], ["Lovelace", false, true, false], ["embedded", false, true, true],
+  ] as const)("keeps confirmation separate from preparation and real occupancy in %s", async (_name, settings, compact, embedded) => {
+    const { element, root } = await setup();
+    element.settings = settings; element.compact = compact; element.embedded = embedded;
+    element.data = { ...initial(), planned_return_status: { ...initial().planned_return_status!,
+      state: "preparing", occupancy: "home", sources: [{ entity_id: "binary_sensor.household", state: "home" }],
+      departure_at: "2026-10-06T07:00:00Z", awaiting_departure_confirmation: true,
+    } };
+    await element.updateComplete;
+    expect(root.querySelector(".return-context-status")?.textContent).toContain(en.plannedReturnState_preparing);
+    expect(root.querySelector(".return-departure-copy")?.textContent).toBe(en.plannedReturnDepartureWaiting);
+    expect(root.querySelector(".return-departure-description")).toBeNull();
+    expect(root.querySelector('[data-runtime-count="home"]')?.textContent).toContain("1");
+    const help = root.querySelector<HTMLButtonElement>("#return-departure-confirmation-trigger")!;
+    help.click(); expect(help.getAttribute("aria-expanded")).toBe("true");
+    help.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(help.getAttribute("aria-expanded")).toBe("false");
+    element.data = { ...element.data!, planned_return_status: { ...element.data!.planned_return_status!,
+      awaiting_departure_confirmation: false, occupancy: "away", sources: [{ entity_id: "binary_sensor.household", state: "away" }],
+    } };
+    await element.updateComplete;
+    expect(root.querySelector(".return-departure-confirmation")).toBeNull();
+    expect(root.querySelector("#return-current-phase")?.textContent).toContain(en.plannedReturnPresenceReturnEnabledHelp);
+    if (!embedded) expect(root.querySelector("#panel-return-departure")?.textContent).not.toContain(en.plannedReturnPresenceReturnEnabledHelp);
+  });
   it("groups occupancy, delay and both modes separately from weekly arrivals", async () => {
     const { element, root } = await setup();
     const presence = root.querySelector(".presence-settings")!;
@@ -285,12 +378,13 @@ describe("planned return UI", () => {
     const { element, root } = await setup();
     element.data = { ...initial(), planned_return_status: { ...initial().planned_return_status!, state: "disabled", can_start: true } }; await element.updateComplete;
     const row = root.querySelector(".manual-departure")!;
-    expect(Array.from(row.children).map((child) => child.tagName)).toEqual(["DIV", "BUTTON"]);
+    expect(Array.from(row.children).map((child) => child.tagName)).toEqual(["DIV", "DIV", "BUTTON"]);
+    expect(row.children[1].classList.contains("manual-departure-options")).toBe(true);
     expect(row.querySelector("label")?.getAttribute("for")).toBe(row.querySelector("input")?.id);
     expect(row.querySelector("button")?.classList.contains("compact")).toBe(true);
     expect(row.querySelector("button")?.textContent).toBe(en.plannedReturnLeaving);
     expect(row.nextElementSibling?.classList.contains("manual-departure-help")).toBe(true);
-    expect(row.nextElementSibling?.textContent).toBe(en.plannedReturnLeavingHelp);
+    expect(root.querySelector(".manual-departure-help")?.textContent).toBe(en.plannedReturnLeavingHelp);
     expect(root.querySelector(".quick-return-heading")?.textContent).toBe(en.plannedReturnControls);
   });
   it("plans a one-off return while already empty without an active absence episode", async () => {

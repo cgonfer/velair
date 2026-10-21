@@ -14,6 +14,7 @@ import { plannedReturnDraft, plannedReturnEpisodeActive, returnWallTime, returnW
 import { plannedReturnPreparationStyles, renderPlannedReturnPreparation, plannedReturnPreparationReasons } from "../views/planned-return-preparation-view";
 import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
 import { renderPreparationBadges, plannedReturnPreparationStatusStyles } from "../views/planned-return-preparation-status";
+import { plannedReturnDepartureHelp, plannedReturnPhaseHelp, plannedReturnDepartureStatusStyles, renderPlannedReturnDepartureStatus } from "../views/planned-return-departure-status";
 import { overviewPreparationPoints } from "../domain/overview-preparation-timeline";
 import "./overview-preparation-timeline-element";
 import type { HomeAssistant, PlannedReturnConfig, PlannedReturnStatus, ScheduleResponse } from "../types";
@@ -60,6 +61,7 @@ export class PlannedReturnElement extends LitElement {
   @state() private preparationExpanded = false;
   @state() private manualTime = "";
   @state() private manualDate = "";
+  @state() private applyAwayNow = false;
   @state() private arrivalDirty = false;
   @state() private arrivalEditorOpen = false;
   private arrivalBaseline = "";
@@ -87,7 +89,7 @@ export class PlannedReturnElement extends LitElement {
     super.disconnectedCallback();
   }
 
-  public static styles = [baseStyles, settingsStyles, plannedReturnPreparationStyles, plannedReturnPreparationStatusStyles, inlineHelpStyles, css`
+  public static styles = [baseStyles, settingsStyles, plannedReturnPreparationStyles, plannedReturnPreparationStatusStyles, inlineHelpStyles, plannedReturnDepartureStatusStyles, css`
     :host { container-type: inline-size; display: block; min-width: 0; color: var(--primary-text-color); }
     section { padding: 20px; border: 1px solid var(--divider-color); border-radius: 12px; background: var(--card-background-color); margin-block: 12px; }
     h3 { margin: 0 0 12px; font-size: 1.05rem; }
@@ -183,6 +185,9 @@ export class PlannedReturnElement extends LitElement {
     .manual-departure > label { display: block; font-weight: 600; }
     .manual-departure > input { flex: 0 1 auto; }
     .manual-departure .start-return { margin-inline-start: auto; flex: 0 0 auto; min-height: 44px; padding: 8px 12px; font-size: 14px; }
+    .manual-departure-options { flex: 1 1 100%; min-width: 0; }
+    .apply-away-now { flex-direction: row; align-items: center; min-height: 44px; margin-top: 8px; cursor: pointer; }
+    .apply-away-now input { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0 4px 0 0; accent-color: var(--primary-color); }
     @container (max-width: 540px) {
       .manual-departure .arrival-fields { flex-basis: 100%; }
       .manual-departure .start-return { margin-inline-start: auto; }
@@ -311,7 +316,6 @@ export class PlannedReturnElement extends LitElement {
     .return-time-value { display: flex; align-items: center; min-height: 44px; font-size: 16px; font-weight: 600; line-height: 22px; overflow-wrap: anywhere; }
     @container (max-width: 420px) { .compact-return-indicators { justify-content: flex-end; gap: 8px; }  }
     .return-context-status { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; color: var(--secondary-text-color); font-size: 12px; line-height: 18px; }
-    .return-context-status ha-icon { --mdc-icon-size: 14px; }
     .return-context-status.state-preparing { color: color-mix(in srgb, var(--primary-color) 45%, var(--primary-text-color)); }
     .return-context-status.state-error { color: color-mix(in srgb, var(--error-color, #c62828) 45%, var(--primary-text-color)); }
     .saved-return-arrival { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-inline-start: 36px; min-width: 0; color: var(--secondary-text-color); }
@@ -400,7 +404,7 @@ export class PlannedReturnElement extends LitElement {
     try {
       const data = await action(new VelairApiClient(this.hass));
       if (savesConfiguration) this.dirty = false;
-      if (!savesConfiguration) this.arrivalDirty = false;
+      if (!savesConfiguration) { this.arrivalDirty = false; this.applyAwayNow = false; }
       if (closesArrivalEditor) { this.arrivalEditorOpen = false; restoreArrivalFocus = true; }
       this.data = data;
       this.dispatchEvent(new CustomEvent("planned-return-updated", { detail: data, bubbles: true, composed: true }));
@@ -488,7 +492,8 @@ export class PlannedReturnElement extends LitElement {
     if (this.busy || this.dirty || !this.data?.planned_return_status?.can_start) return;
     const iso = returnWallTimeToIso(`${this.manualDate}T${this.manualTime}`, this.timeZone, Date.now());
     if (!iso || Date.parse(iso) <= Date.now()) { this.error = this.t("plannedReturnInvalidTime"); return; }
-    void this.run((api) => api.startPlannedReturn(iso));
+    const applyAwayNow = this.applyAwayNow && this.hasSavedOccupancySources(this.data.planned_return_status);
+    void this.run((api) => api.startPlannedReturn(iso, applyAwayNow));
   }
   private renderNotices() { return this.error ? html`<p class="error" role="alert">${this.error}</p>` : nothing; }
   private hasArrivalControls(status: PlannedReturnStatus): boolean {
@@ -634,8 +639,8 @@ export class PlannedReturnElement extends LitElement {
     const departureMode = status.away_mode_id ? this.routineMode(status.away_mode_id) : undefined;
     const arrivalMode = status.destination_mode_id ? this.routineMode(status.destination_mode_id) : undefined;
     return html`<div class="return-timeline panel-return-timeline" role="group" aria-label=${this.t("plannedReturnTimeline")}>
-      <div class="panel-return-times"><span class="return-endpoint-help"><span class="departure-icon" role="img" aria-label=${this.t("plannedReturnDeparted")}><ha-icon icon="mdi:home-export-outline" aria-hidden="true"></ha-icon></span><strong class="return-time-value" aria-label=${`${this.t("plannedReturnDeparted")}: ${this.displayTime(status.departure_at!)}`}>${labels.departure}</strong>${renderInlineHelp("panel-return-departure", this.t("plannedReturnDeparted"), this.t("plannedReturnOverviewDepartureHelp", { time: this.displayTime(status.departure_at!) }), { appearance: "overlay" })}</span>
-        <span>${this.renderArrivalTrigger(status, labels.arrival, false, true)}<span class="arrival-icon return-endpoint-help" role="group" aria-label=${this.t("plannedReturnArrival")}><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon>${renderInlineHelp("panel-return-arrival", this.t("plannedReturnArrival"), this.t("plannedReturnOverviewArrivalHelp", { time: this.displayTime(status.return_at!) }), { appearance: "overlay" })}</span></span></div>
+      <div class="panel-return-times"><span class="return-endpoint-help"><span class="departure-icon" role="img" aria-label=${this.t("plannedReturnDeparted")}><ha-icon icon="mdi:home-export-outline" aria-hidden="true"></ha-icon></span><strong class="return-time-value" aria-label=${`${this.t("plannedReturnDeparted")}: ${this.displayTime(status.departure_at!)}`}>${labels.departure}</strong>${renderInlineHelp("panel-return-departure", this.t("plannedReturnDeparted"), plannedReturnDepartureHelp(status, this.t), { appearance: "overlay" })}</span>
+        <span>${this.renderArrivalTrigger(status, labels.arrival, false, true)}<span class="arrival-icon return-endpoint-help" role="group" aria-label=${this.t("plannedReturnArrival")}><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon>${renderInlineHelp("panel-return-arrival", this.t("plannedReturnArrival"), this.t("plannedReturnArrivalMeaningHelp"), { appearance: "overlay" })}</span></span></div>
       <velair-overview-preparation-timeline .points=${points} .names=${names} .progress=${timeline.progress}
         .episodeKey=${`${status.departure_at}|${status.return_at}|${status.destination_mode_id}`}
         .estimateLabel=${(start: number) => this.t("plannedReturnOverviewPreparationStartEstimate", { time: plannedReturnTimelineLabels(timeline.departure, start, this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival })}
@@ -648,7 +653,10 @@ export class PlannedReturnElement extends LitElement {
     </div>`;
   }
   private renderAbsenceConfirmation(status: PlannedReturnStatus) {
-    if (status.state !== "confirming_absence") return nothing;
+    const manualDeparture = status.awaiting_departure_confirmation === true;
+    if (manualDeparture) return renderPlannedReturnDepartureStatus(status, this.t,
+      (deadline) => plannedReturnTimelineLabels(Date.now(), Date.parse(deadline), this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival);
+    if (!manualDeparture && status.state !== "confirming_absence") return nothing;
     const deadline = status.absence_confirm_at;
     const instant = deadline && /(?:Z|[+-]\d{2}:\d{2})$/.test(deadline) ? Date.parse(deadline) : NaN;
     const label = Number.isFinite(instant) ? plannedReturnTimelineLabels(Date.now(), instant, this.timeZone, languageFromHass(this.hass), this.displayHour12).arrival : undefined;
@@ -666,17 +674,15 @@ export class PlannedReturnElement extends LitElement {
   private renderQuickReturn(status: PlannedReturnStatus) {
     const active = plannedReturnEpisodeActive(status);
     const preparation = currentArrivalPreparation(status, this.timelineNow);
-    const pending = status.state === "armed" || status.state === "confirming_absence";
-    const phaseIcon = status.state === "error" ? "mdi:alert-circle-outline" : pending ? "mdi:exit-run" : status.state === "preparing" ? "mdi:home-clock-outline" : "mdi:clock-outline";
     const validArrival = Boolean(returnWallTimeToIso(`${this.manualDate}T${this.manualTime}`, this.timeZone, Date.now()));
     return html`<div class="quick-return-panel">
-      <div class="quick-return-heading"><div class="return-title-group">${this.embedded ? nothing : html`<ha-icon icon="mdi:home-clock-outline" aria-hidden="true"></ha-icon>`}<div class="return-title-copy"><div class="return-title-line"><div class="status-copy">${this.t("plannedReturnControls")}</div>${this.renderPreparationHelp(status)}${active && status.state !== "confirming_absence" ? html`<span class=${`return-context-status state-${status.state}`} role="status"><ha-icon icon=${phaseIcon} aria-hidden="true"></ha-icon><span>${this.t(`plannedReturnState_${status.state}` as TranslationKey)}</span>${renderInlineHelp("return-current-phase", this.t(`plannedReturnState_${status.state}` as TranslationKey), this.t(`plannedReturnStateHelp_${status.state}` as TranslationKey), { appearance: "overlay" })}</span>` : nothing}</div></div></div>${this.compact ? html`<div class="return-header-details">${this.renderCompactIndicators(status)}</div>` : nothing}</div>
+      <div class="quick-return-heading"><div class="return-title-group">${this.embedded ? nothing : html`<ha-icon icon="mdi:home-clock-outline" aria-hidden="true"></ha-icon>`}<div class="return-title-copy"><div class="return-title-line"><div class="status-copy">${this.t("plannedReturnControls")}</div>${this.renderPreparationHelp(status)}${active && status.state !== "confirming_absence" ? html`<span class=${`return-context-status state-${status.state}`} role="status"><span>${this.t(`plannedReturnState_${status.state}` as TranslationKey)}</span>${renderInlineHelp("return-current-phase", this.t(`plannedReturnState_${status.state}` as TranslationKey), plannedReturnPhaseHelp(status, this.t), { appearance: "overlay" })}</span>` : nothing}</div></div></div>${this.compact ? html`<div class="return-header-details">${this.renderCompactIndicators(status)}</div>` : nothing}</div>
       ${this.renderAbsenceConfirmation(status)}
       ${preparation && this.compact && !this.embedded ? renderPreparationBadges(preparation, this.t, (value) => this.displayTime(value), this.timelineNow) : nothing}
       ${active ? this.renderEpisode(status) : html`<div class="actions manual-departure"><div class="arrival-fields">
         <label for="manual-return-date">${this.t("plannedReturnDate")}<input id="manual-return-date" type="date" min=${this.today} .value=${this.manualDate} ?disabled=${this.busy} @input=${(e: Event) => { this.manualDate = (e.target as HTMLInputElement).value; }}></label>
         <label for="manual-return-time">${this.t("plannedReturnTime")}<input id="manual-return-time" type="time" .value=${this.manualTime} ?disabled=${this.busy} @input=${(e: Event) => { this.manualTime = (e.target as HTMLInputElement).value; }}></label>
-      </div><button class="start-return primary compact" ?disabled=${this.busy || this.dirty || !status.can_start || !validArrival} @click=${() => this.start()}>${this.t("plannedReturnLeaving")}</button></div><p class="help manual-departure-help">${this.t(this.hasSavedOccupancySources(status) ? "plannedReturnLeavingHelp" : "plannedReturnLeavingWithoutSourcesHelp")}</p>`}
+      </div>${this.hasSavedOccupancySources(status) ? html`<div class="manual-departure-options"><label class="apply-away-now" for="apply-away-now"><input id="apply-away-now" type="checkbox" .checked=${live(this.applyAwayNow)} ?disabled=${this.busy || this.dirty || !status.can_start} aria-describedby="apply-away-now-help" @change=${(e: Event) => { if (!this.busy && !this.dirty && status.can_start) this.applyAwayNow = (e.target as HTMLInputElement).checked; }}><span>${this.t("plannedReturnApplyAwayNow")}</span></label><p id="apply-away-now-help" class="help">${this.t("plannedReturnApplyAwayNowHelp")}</p></div>` : nothing}<button class="start-return primary compact" ?disabled=${this.busy || this.dirty || !status.can_start || !validArrival} @click=${() => this.start()}>${this.t("plannedReturnLeaving")}</button></div><p class="help manual-departure-help">${this.t(this.hasSavedOccupancySources(status) ? this.applyAwayNow ? "plannedReturnManualAwayScheduleHelp" : "plannedReturnLeavingHelp" : "plannedReturnLeavingWithoutSourcesHelp")}</p>`}
       ${this.arrivalDirty && active ? html`<p class="help arrival-unsaved" role="status">${this.t("plannedReturnArrivalUnsaved")}</p>` : nothing}
       ${this.dirty ? html`<p class="help">${this.t("plannedReturnSaveFirst")}</p>` : nothing}
       ${!status.can_start ? html`<p class="help quick-return-unavailable">${this.t("plannedReturnQuickUnavailable")}</p>` : nothing}

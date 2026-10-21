@@ -111,27 +111,11 @@ export const inlineHelpStyles = css`
 @media (max-width: 480px) {
   .inline-help-wrapper { position: static; }
 
-  .inline-help-tooltip:not([data-open-cause="hover"]),
-  .inline-help-tooltip.constrained:not([data-open-cause="hover"]) {
-    bottom: calc(var(--inline-help-mobile-bottom, 0px) + max(12px, env(safe-area-inset-bottom)));
-    left: calc(var(--inline-help-mobile-left, 0px) + max(12px, env(safe-area-inset-left)));
-    max-height: min(
-      180px,
-      calc(
-        var(--inline-help-mobile-height, 100dvh)
-        - max(12px, env(safe-area-inset-top))
-        - max(12px, env(safe-area-inset-bottom))
-      ),
-      calc(100dvh - 24px)
-    );
-    max-width: none;
-    right: auto;
-    top: auto;
-    width: calc(
-      var(--inline-help-mobile-width, 100dvw)
-      - max(12px, env(safe-area-inset-left))
-      - max(12px, env(safe-area-inset-right))
-    );
+  .inline-help-tooltip {
+    --inline-help-safe-top: env(safe-area-inset-top, 0px);
+    --inline-help-safe-right: env(safe-area-inset-right, 0px);
+    --inline-help-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --inline-help-safe-left: env(safe-area-inset-left, 0px);
   }
 }
 `;

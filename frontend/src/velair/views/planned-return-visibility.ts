@@ -13,6 +13,7 @@ import { languageFromHass } from "../i18n";
 import { renderInlineHelp } from "./inline-help";
 import type { ArrivalPreparationSummary, PreparationState } from "../domain/planned-return-preparation";
 import { plannedReturnPreparationReasons } from "./planned-return-preparation-view";
+import { plannedReturnDepartureHelp, renderPlannedReturnDepartureStatus } from "./planned-return-departure-status";
 
 export function plannedReturnVisible(status?: PlannedReturnStatus | null): boolean {
   return Boolean(status && (plannedReturnEpisodeActive(status) || status.error || status.notice || status.state === "error"));
@@ -56,7 +57,10 @@ export function renderPlannedReturnOverview(host: VelairViewHost) {
         ${status!.absence_confirm_at && status!.state === "confirming_absence" ? html` · ${host._t("plannedReturnCheckingUntil", { time: host._formatDateTime(status!.absence_confirm_at) })}` : nothing}</small>
       ${status!.error || status!.notice ? html`<small>${status!.error || host._t("plannedReturnState_cancelled")}</small>` : nothing}
     </span>
-    </button>${preparation ? renderOverviewPreparationCounts(host, preparation) : nothing}</div>
+    </button>${renderPlannedReturnDepartureStatus(status!, (key, values) => host._t(key, values),
+      (deadline) => plannedReturnTimelineLabels(now, Date.parse(deadline), host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass),
+        host.hass?.locale?.time_format === "12" ? true : host.hass?.locale?.time_format === "24" ? false : undefined).arrival)}
+      ${preparation ? renderOverviewPreparationCounts(host, preparation) : nothing}</div>
     ${timeline ? renderOverviewReturnTimeline(host, status!, timeline, preparation) : nothing}
     </div><button type="button" class="overview-return-end" aria-label=${host._t("plannedReturn")}
       ><ha-icon icon="mdi:chevron-right" aria-hidden="true"></ha-icon></button>
@@ -96,9 +100,9 @@ function renderOverviewReturnTimeline(host: VelairViewHost, status: PlannedRetur
   const destinationMode = plannedReturnModeName(host, status.destination_mode_id);
   return html`<div class="overview-return-timeline" role="group" aria-label=${host._t("plannedReturnTimeline")}>
     <div class="overview-return-endpoints"><span class="overview-return-timeline-help"><ha-icon icon="mdi:home-export-outline" aria-hidden="true"></ha-icon><time datetime=${status.departure_at!} aria-label=${`${host._t("plannedReturnDeparted")}: ${departureText}`}>${labels.departure}</time>
-      ${renderInlineHelp("overview-return-departure", host._t("plannedReturnDeparted"), host._t("plannedReturnOverviewDepartureHelp", { time: departureText }), { appearance: "overlay" })}</span>
+      ${renderInlineHelp("overview-return-departure", host._t("plannedReturnDeparted"), plannedReturnDepartureHelp(status, (key, values) => host._t(key, values), true), { appearance: "overlay" })}</span>
       <span class="overview-return-timeline-help"><time datetime=${status.return_at!} aria-label=${`${host._t("plannedReturnArrival")}: ${arrivalText}`}>${labels.arrival}</time><ha-icon icon="mdi:home-import-outline" aria-hidden="true"></ha-icon>
-      ${renderInlineHelp("overview-return-arrival", host._t("plannedReturnArrival"), host._t("plannedReturnOverviewArrivalHelp", { time: arrivalText }), { appearance: "overlay" })}</span></div>
+      ${renderInlineHelp("overview-return-arrival", host._t("plannedReturnArrival"), host._t("plannedReturnArrivalMeaningHelp"), { appearance: "overlay" })}</span></div>
     <velair-overview-preparation-timeline .points=${points} .names=${names} .progress=${timeline.progress} .estimateLabel=${estimateLabel}
       .startTimeLabel=${(start: number) => plannedReturnTimelineLabels(timeline.departure, start, host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12).arrival}
       .episodeKey=${`${status.departure_at}|${status.return_at}|${status.destination_mode_id}`}

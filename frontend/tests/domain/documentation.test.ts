@@ -42,6 +42,15 @@ describe("localized documentation destinations", () => {
     expect(documentationDestination("blockPresets", { language: "es" }, options).href)
       .toMatch(/#block-presets$/);
   });
+  it.each(["es", "fr", "en"])("opens translated master examples with the stable anchor for %s", (language) => {
+    expect(documentationDestination("preconditioningMaster", { language }, {
+      availability: { "docs/user/adaptive-preconditioning.md": { es: "docs/user/adaptive-preconditioning.es.md", fr: "docs/user/adaptive-preconditioning.fr.md" } },
+      releaseVersion: "1.9.0",
+    })).toEqual({
+      href: `https://github.com/cgonfer/velair/blob/v1.9.0/docs/user/adaptive-preconditioning${language === "en" ? "" : `.${language}`}.md#preconditioning-master`,
+      language, translated: language !== "en",
+    });
+  });
   it("localizes the documentation index and uses release references", () => {
     expect(documentationDestination("index", { language: "fr" }, { availability, releaseVersion: "1.9.0-beta.1" }).href)
       .toBe("https://github.com/cgonfer/velair/blob/v1.9.0-beta.1/docs/README.fr.md");
@@ -59,6 +68,7 @@ describe("complete documentation availability used by the build", () => {
     ["blockPresets", "docs/user/linked-schedules.md#block-presets"],
     ["profiles", "docs/user/climate-profiles.md"],
     ["preconditioning", "docs/user/adaptive-preconditioning.md"],
+    ["preconditioningMaster", "docs/user/adaptive-preconditioning.md#preconditioning-master"],
     ["plannedReturn", "docs/user/planned-return.md"],
     ["roomAssist", "docs/user/room-assist.md"],
     ["comfort", "docs/user/comfort.md"],

@@ -247,7 +247,11 @@ class ProfileSelectionTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_set_profile(future)
         event = SimpleNamespace(entity_id="climate.salon", weekday="tuesday", start="20:00", when=NOW, target_when=NOW+timedelta(hours=2))
         self.scheduler._mark_preconditioning_applied(event)
-        self.scheduler._preconditioning_sessions["climate.salon"] = SimpleNamespace()
+        self.scheduler._preconditioning_sessions["climate.salon"] = SimpleNamespace(
+            entity_id="climate.salon", direction="heat", started_at=NOW,
+            target_when=NOW + timedelta(hours=2), start_temperature=18,
+            target_temperature=23,
+        )
         boost = {"type": "boost", "temperature": 24, "previous_state": {}}
         self.data["zones"]["climate.salon"]["override"] = boost
         self.manager.calls.clear()

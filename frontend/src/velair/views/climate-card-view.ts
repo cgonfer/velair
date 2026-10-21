@@ -36,6 +36,7 @@ import {
 } from "../domain/comfort";
 import { renderOverviewTimelineTrack } from "./overview-view";
 import { preconditioningSettings } from "../domain/preconditioning";
+import { renderPreconditioningDependency } from "./preconditioning-dependency";
 import { hasRoomAssistScheduledTarget } from "../domain/room-assist";
 import { climateSupportsRangeTarget, climateSupportsSingleTarget } from "../domain/climate";
 import { renderRoomAssistTemperatureScale } from "./sensors-view";
@@ -906,10 +907,15 @@ function renderFeatures(host: VelairViewHost, entityId: string) {
   const showAssistGraph = showAssist && assistDisplay !== "text" && roomAssist?.configured && Boolean(roomAssist.start)
     && hasRoomAssistScheduledTarget(roomAssist);
   const preconditioningEvent = showPreconditioning ? nextActualPreconditioningEvent(host, entityId) : undefined;
+  const blockedDependency = showPreconditioning && !preconditioningEvent
+    ? host._data?.next_events.find(event => event.entity_id === entityId
+      && event.preconditioning_dependency?.result === "blocked"
+      && Date.parse(event.when) > host._currentTimelineNow().getTime())?.preconditioning_dependency
+    : undefined;
   const now = host._currentTimelineNow().getTime();
   const preparation = showPreconditioning ? currentArrivalPreparation(host._data?.planned_return_status, now) : undefined;
   const returnRoom = preparationRoom(preparation, entityId);
-  if (!showAssistPanel && !preconditioningEvent && !returnRoom) {
+  if (!showAssistPanel && !preconditioningEvent && !returnRoom && !blockedDependency) {
     return nothing;
   }
   return html`<section class="climate-card-features">
@@ -920,6 +926,10 @@ function renderFeatures(host: VelairViewHost, entityId: string) {
       ${renderPreparationRoom(returnRoom, host._t.bind(host), host._formatDateTime.bind(host), { temperatureUnit: host._data?.temperature_unit, arrival: preparation.arrival, now })}
     </section>` : nothing}
     ${preconditioningEvent ? renderPreconditioningPanel(host, preconditioningEvent, preconditioningDisplay, Boolean(returnRoom)) : nothing}
+    ${blockedDependency ? html`<section class="climate-card-feature-panel preconditioning">
+      <div class="climate-card-feature-heading static"><span class="climate-card-feature-title"><ha-icon icon="mdi:clock-fast"></ha-icon><strong>${host._t(returnRoom ? "plannedReturnPreparationWeeklyTitle" : "preconditioning")}</strong></span></div>
+      ${renderPreconditioningDependency(blockedDependency, host._t.bind(host), host._formatDateTime.bind(host), host._friendlyEntityName(blockedDependency.master_entity_id))}
+    </section>` : nothing}
   </section>`;
 }
 
@@ -970,9 +980,9 @@ function renderPreconditioningPanel(
   display: "both" | "chart" | "text",
   alongsideReturn = false,
 ) {
-  const showDescription = display !== "chart";
   const showGraph = display !== "text";
   const collapsed = showGraph && host._climateCardPreconditioningCollapsed;
+  const showDescription = display === "text" || (display === "both" && collapsed);
   const title = host._t(alongsideReturn ? "plannedReturnPreparationWeeklyTitle" : "preconditioning");
   const targetWhen = event.target_when as string;
   const summaryTitle = `${host._t("preconditioningStarts")} ${host._formatDateTime(event.when)} · ${host._t("preconditioningTargetBy")} ${host._formatDateTime(targetWhen)} · ${host._formatEventAction(event)} · ${host._formatEventMode(event)}`;
@@ -1009,6 +1019,7 @@ function renderPreconditioningPanel(
     ${showGraph ? html`<div class="climate-card-feature-body" aria-hidden=${String(collapsed)} ?inert=${collapsed}>
       <div class="climate-card-feature-body-inner">${renderCompactPreconditioning(host, event)}</div>
     </div>` : nothing}
+    ${renderPreconditioningDependency(event.preconditioning_dependency, host._t.bind(host), host._formatDateTime.bind(host), event.preconditioning_dependency ? host._friendlyEntityName(event.preconditioning_dependency.master_entity_id) : undefined)}
   </section>`;
 }
 

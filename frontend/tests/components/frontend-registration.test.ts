@@ -102,7 +102,7 @@ describe("frontend entrypoint", () => {
     expect(panel.shadowRoot?.querySelector(".main-title")?.textContent).toContain("Velair");
     expect(panel.shadowRoot?.querySelector(".version")).toBeNull();
     const tabs = [...(panel.shadowRoot?.querySelectorAll("ha-tab-group-tab") ?? [])];
-    expect(tabs).toHaveLength(9);
+    expect(tabs).toHaveLength(10);
     expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
       "Overview",
       "Schedules",
@@ -111,6 +111,7 @@ describe("frontend entrypoint", () => {
       "Room Assist",
       "Comfort",
       "Preconditioning",
+      "Planned return",
       "Diagnostics",
       "Settings",
     ]);

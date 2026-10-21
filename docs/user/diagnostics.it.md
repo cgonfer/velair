@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](diagnostics.md) · [Español](diagnostics.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.3 |
+| Ultima sincronizzazione | 2026-10-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -36,6 +36,22 @@ Per Comfort, la diagnostica include la fonte salvata di ogni lettura derivata ab
 
 La valutazione in tempo reale include `range_summary` attuale. Le voci conservate di `comfort_assessment_changed` mantengono anche `previous_range_summary` e i flag `range_summary_changed` e `range_status_changed`, così un rapporto scaricato può mostrare se l’evento rappresentava una transizione dell’intervallo configurato o un’altra modifica Comfort. Questi campi contengono solo codici semantici stabili, non il contesto grezzo degli eventi Home Assistant.
 
+<a id="learning-evidence"></a>
+## Informazioni sull’apprendimento
+
+La sezione della funzione Precondizionamento distingue l’attività di riscaldamento e raffrescamento. Mostra se un’osservazione è in corso o Velair attende una transizione adatta e, se disponibile, l’ultima transizione di apprendimento conservata. I dettagli espandibili contengono solo le informazioni pertinenti a quella decisione: per esempio temperature iniziale e obiettivo, delta minimo di temperatura, durata osservata e anticipo massimo configurato.
+
+La cronologia di Precondizionamento include avvii, interruzioni e risultati delle osservazioni, oltre alle transizioni reali che non hanno permesso di avviarne una. I risultati distinguono osservazioni complete, parziali e non valide. Per queste ultime possono indicare una differenza di temperatura troppo piccola, una durata troppo breve o una durata oltre il massimo configurato. Le osservazioni precedenti possono mantenere il motivo generico di superamento dei limiti; Velair non assegna retroattivamente una causa più precisa.
+
+Ricalcolare ripetutamente previsioni future non crea voci di apprendimento. L’ultima transizione segue le stesse impostazioni di conservazione e lo stesso limite globale della cronologia. Disabilitare la cronologia di Precondizionamento o cancellare la cronologia elimina queste informazioni storiche; non ferma l’apprendimento e non cancella i campioni salvati. Dopo un riavvio non vengono ripristinate attività e cronologia di esecuzione precedenti. Senza informazioni disponibili, Diagnostica non inventa motivi per contatori invariati né deduce se la caldaia fosse in funzione.
+
+<a id="preconditioning-dependency-evidence"></a>
+### Informazioni sulla dipendenza del precondizionamento
+
+Per una stanza con **Master del precondizionamento** configurato, esamina i dettagli della dipendenza accanto alle informazioni di preparazione esistenti. Distinguono la stima autonoma, transizione e avvio selezionati del master e l’avvio effettivo o il motivo che impedisce la preparazione. Un comando accettato da Home Assistant dimostra un’azione di Velair, non misura il relè della caldaia. L’osservazione di apprendimento continua a descrivere temperatura e tempo trascorso della stanza dipendente.
+
+Quando sono disponibili informazioni, la spiegazione distingue la disponibilità in Home Assistant da programmazione o Precondizionamento disabilitati, Profilo in pausa, modifica temporanea attiva, master non idoneo o transizione mancante. La stessa spiegazione compare nelle schede e in Diagnostica. Un dispositivo non disponibile può avere ancora una previsione calcolata se un altro sensore configurato fornisce la temperatura ambiente; la previsione non conferma che il dispositivo possa ricevere un comando o fornire riscaldamento o raffrescamento.
+
 <a id="runtime-history-and-privacy"></a>
 ## Cronologia di esecuzione e privacy
 
@@ -53,7 +69,7 @@ La vista locale Diagnostica usa i nomi descrittivi Home Assistant dei dispositiv
 
 La diagnostica non contiene controlli del pianificatore, nuovi tentativi, annullamento delle modifiche o controlli climatici. Le impostazioni continuano a contenere configurazione e manutenzione; i dettagli di capacità e stato dei dispositivi appartengono ora alla diagnostica.
 
-Ogni dispositivo gestito segnala anche informazioni di assestamento dei comandi presenti solo in esecuzione. Mentre un comando Velair recente si stabilizza, la diagnostica elenca i campi di controllo interessati nell’istantanea. Se il dispositivo non converge entro il termine limitato, la successiva istantanea aggiornata lo segnala con un avviso `command_settling_mismatch`. Il blocco `command_settling` del rapporto scaricato include valori attesi e osservati. Sono informazioni per risolvere problemi: la diagnostica non riprova il comando, non cambia il dispositivo e non crea una regolazione manuale. Le informazioni vengono cancellate da un nuovo comando per quel campo o da un riavvio.
+Ogni dispositivo gestito segnala anche informazioni di assestamento dei comandi presenti solo in esecuzione. Mentre un comando Velair recente si stabilizza, Diagnostica elenca i campi di controllo interessati nell’istantanea. Se il dispositivo non converge entro il termine limitato, la successiva istantanea aggiornata lo segnala con un avviso `command_settling_mismatch`. Espandi l’avviso nel pannello Diagnostica del dispositivo selezionato per confrontare il valore atteso di ogni campo con quello riportato dal termostato. Le temperature includono l’unità del dispositivo, le modalità HVAC usano le etichette normali e i valori mancanti sono indicati esplicitamente. Il confronto usa i dati registrati, non la programmazione attuale o una nuova lettura. Il rapporto scaricato conserva anche il blocco `command_settling`. Sono informazioni per risolvere problemi: Diagnostica non riprova il comando, non cambia il dispositivo e non crea una regolazione manuale. Le informazioni vengono cancellate da un nuovo comando per quel campo o da un riavvio.
 
 <a id="automating-diagnostic-health"></a>
 ## Automatizzare il monitoraggio diagnostico

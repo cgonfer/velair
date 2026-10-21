@@ -12,7 +12,8 @@ import type { TranslationKey } from "../../src/velair/translations";
 import { TRANSLATIONS } from "../../src/velair/translations";
 import { renderDocumentationHelp } from "../../src/velair/views/documentation-links";
 import { renderHelpCommunitySettings, renderSettingsView, renderSettingsExternalChangePolicy, renderExternalSystemsSettings } from "../../src/velair/views/settings-view";
-import { renderPreconditioningWorkspace } from "../../src/velair/views/preconditioning-workspace";
+import { renderPreconditioningView } from "../../src/velair/views/preconditioning-view";
+import { renderPlannedReturn } from "../../src/velair/views/planned-return-view";
 import { renderTemplatesView } from "../../src/velair/views/templates-view";
 import { renderSchedulesView } from "../../src/velair/views/schedule-view";
 import { renderSensorsView } from "../../src/velair/views/sensors-view";
@@ -32,10 +33,8 @@ function host(extra: Record<string, unknown> = {}): VelairViewHost {
     _currentTimelineNow: () => new Date(),
     _scheduleTemplates: () => [],
     _selectScheduleSource: vi.fn(),
-    _selectPreconditioningSource: vi.fn(),
     _selectTemplateLibrarySource: vi.fn(),
     _scheduleSource: "default",
-    _preconditioningSource: "preconditioning",
     _templateLibrarySource: "templates",
     _templateDraftBlocks: [],
     ...extra,
@@ -247,13 +246,13 @@ describe("documentation and community access", () => {
     expect(root.querySelector(".settings-help")?.nextElementSibling?.classList.contains("settings-maintenance")).toBe(true);
   });
 
-  it.each(["preconditioning", "planned-return"])("offers help for both preparation choices with %s active", (source) => {
+  it.each(["preconditioning", "planned-return"])("offers the matching guide in the %s tab", (source) => {
     const root = container();
-    render(renderPreconditioningWorkspace(host({ _preconditioningSource: source }), []), root);
+    render(source === "preconditioning" ? renderPreconditioningView(host(), []) : renderPlannedReturn(host()), root);
     expect([...root.querySelectorAll("dialog a")].map((link) => (link as HTMLAnchorElement).href))
-      .toEqual([DOCUMENTATION_LINKS.preconditioning, DOCUMENTATION_LINKS.plannedReturn]);
-    expect(root.querySelectorAll(".schedule-source-option")).toHaveLength(2);
-    expect(root.querySelectorAll(".documentation-help-button")).toHaveLength(2);
+      .toEqual([source === "preconditioning" ? DOCUMENTATION_LINKS.preconditioning : DOCUMENTATION_LINKS.plannedReturn]);
+    expect(root.querySelectorAll(".schedule-source-option")).toHaveLength(0);
+    expect(root.querySelectorAll(".documentation-help-button")).toHaveLength(1);
     expect(root.querySelector("button button")).toBeNull();
   });
 

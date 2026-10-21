@@ -147,6 +147,162 @@ function host(options: {
 }
 
 describe("preconditioning view", () => {
+  it("saves and removes a master using the existing autosave path", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.first"] });
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+    const selector = container.querySelector<HTMLSelectElement>(".preconditioning-master-row select")!;
+    const section = selector.closest(".preconditioning-config-section")!;
+    expect(section.tagName).toBe("DETAILS");
+    expect((section as HTMLDetailsElement).open).toBe(false);
+    expect(section.querySelector(".preconditioning-master-label")?.textContent).toBe("preconditioningMaster");
+    expect(section.querySelector(".preconditioning-master-current-value")?.textContent).toBe("preconditioningIndependent");
+    expect(selector.closest(".select-wrap")).not.toBeNull();
+    expect(section.classList.contains("preconditioning-master-section")).toBe(true);
+    const guidance = section.querySelector(".preconditioning-master-guidance")!;
+    expect(guidance.textContent).toContain("preconditioningMasterGuidanceTitle");
+    expect(guidance.textContent).toContain("preconditioningMasterGuidance");
+    expect(selector.getAttribute("aria-describedby")?.split(" ")).toEqual([
+      guidance.id, section.querySelector(".preconditioning-master-help")!.id,
+    ]);
+    const visibleSection = section.cloneNode(true) as HTMLElement;
+    visibleSection.querySelectorAll("dialog").forEach(dialog => dialog.remove());
+    expect(visibleSection.textContent?.match(/preconditioningMaster\b/g)).toHaveLength(1);
+    expect(guidance.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:information-outline");
+    expect(section.querySelector(".documentation-help-button")?.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(section.querySelectorAll(".documentation-help-button")).toHaveLength(1);
+    expect(section.querySelector("summary .preconditioning-master-heading .documentation-help-button")).not.toBeNull();
+    expect(section.querySelector<HTMLAnchorElement>(".documentation-guide")?.href)
+      .toMatch(/\/adaptive-preconditioning\.md#preconditioning-master$/);
+    expect(selector.getAttribute("aria-label")).toBe("preconditioningMaster");
+    expect(selector.value).toBe("");
+    selector.value = "climate.second";
+    selector.dispatchEvent(new Event("change"));
+    expect(saveZonePreconditioning).toHaveBeenLastCalledWith("climate.first", { master_entity_id: "climate.second" });
+    selector.value = "";
+    selector.dispatchEvent(new Event("change"));
+    expect(saveZonePreconditioning).toHaveBeenLastCalledWith("climate.first", { master_entity_id: null });
+  });
+
+  it("retains an invalid saved master and explains the blocked relation", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    viewHost._data!.zones["climate.second"].preconditioning!.master_entity_id = "climate.missing";
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(container.querySelector<HTMLSelectElement>(".preconditioning-master-row select")!.value).toBe("climate.missing");
+    expect(container.querySelector(".preconditioning-master-current-value")?.textContent).toBe(viewHost._friendlyEntityName("climate.missing"));
+    expect(container.querySelector(".preconditioning-master-help")?.textContent).toBe("preconditioningMasterNotManaged");
+    expect(container.querySelector(".preconditioning-master-guidance")).not.toBeNull();
+    expect(container.querySelector(".preconditioning-zone-heading")!.textContent).not.toContain("preconditioningDependencyAssociation");
+    viewHost._expandedPreconditioningZones.clear();
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(container.querySelector(".preconditioning-zone-heading")!.textContent).toContain("preconditioningDependencyAssociation");
+  });
+
+  it.each([
+    { state: "heat", enabled: true, preconditioning: true, expected: "preconditioningMasterHelp" },
+    { state: "off", enabled: true, preconditioning: true, expected: "preconditioningMasterHelp" },
+    { state: "heat", enabled: true, preconditioning: false, expected: "preconditioningMasterPreconditioningDisabled" },
+    { state: "heat", enabled: false, preconditioning: true, expected: "preconditioningMasterSchedulingDisabled" },
+    { state: "unavailable", enabled: true, preconditioning: true, expected: "preconditioningMasterUnavailable" },
+    { state: "unknown", enabled: true, preconditioning: true, expected: "preconditioningMasterStateUnknown" },
+  ])("explains the actual master condition: $expected ($state)", ({ state, enabled, preconditioning, expected }) => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.first"] });
+    const source = viewHost._data!.zones["climate.second"];
+    source.enabled = enabled;
+    source.preconditioning!.enabled = preconditioning;
+    viewHost._data!.zones["climate.first"].preconditioning!.master_entity_id = "climate.second";
+    viewHost.hass!.states["climate.second"] = { state, attributes: {} };
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+    expect(container.querySelector(".preconditioning-master-help")?.textContent).toBe(expected);
+    expect(container.querySelector<HTMLSelectElement>(".preconditioning-master-row select")!.value).toBe("climate.second");
+  });
+
+  it("distinguishes a missing HA entity from an ineligible saved relation", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.first"] });
+    viewHost._data!.zones["climate.first"].preconditioning!.master_entity_id = "climate.second";
+    viewHost._entityExists = entityId => entityId === "climate.first";
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+    expect(container.querySelector(".preconditioning-master-help")?.textContent).toBe("preconditioningMasterEntityMissing");
+    viewHost._data!.zones["climate.second"].preconditioning!.master_entity_id = "climate.first";
+    render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+    expect(container.querySelector(".preconditioning-master-help")?.textContent).toBe("preconditioningMasterIneligible");
+  });
+
+  it.each(["heat", "cool"] as const)("keeps dependency evidence on nominal blocked %s events", (direction) => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    viewHost._data!.preconditioning_learning = { "climate.second": learningBothDirections() };
+    viewHost._data!.next_events = [{ entity_id: "climate.second", when: "2026-10-19T18:00:00Z", weekday: "mon", start: "18:00", hvac_mode: direction, temperature: 21,
+      preconditioning_dependency: { master_entity_id: "climate.first", independent_start: "2026-10-19T17:00:00Z", reason: "master_no_preconditioning" } }];
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(container.querySelector(".preconditioning-calculation-details")!.textContent).toContain("preconditioningDependencyNoStart");
+    expect(container.textContent).toContain("date:2026-10-19T17:00:00Z");
+  });
+  it("uses matching backend evidence in master setup and ignores evidence for a different saved master", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.first"] });
+    viewHost._data!.zones["climate.first"].preconditioning!.master_entity_id = "climate.second";
+    viewHost._data!.next_events = [{ entity_id: "climate.first", when: "2026-10-19T18:00:00Z", weekday: "mon", start: "18:00", hvac_mode: "heat", temperature: 21,
+      preconditioning_dependency: { master_entity_id: "climate.second", reason: "planned", reason_detail: "master_override_active" } }];
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+    expect(container.querySelector(".preconditioning-master-help")?.textContent).toBe("preconditioningMasterOverrideActive");
+    viewHost._data!.next_events[0].preconditioning_dependency!.master_entity_id = "climate.old";
+    render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+    expect(container.querySelector(".preconditioning-master-help")?.textContent).toBe("preconditioningMasterHelp");
+  });
+  it("shows a dated skipped reason directly from a schedule response without Diagnostics", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const learning = learningBothDirections();
+    learning.heat.activity = { state: "waiting" };
+    learning.heat.last_transition = { at: "2026-10-19T08:00:00Z", status: "skipped", reason: "delta_too_small" };
+    viewHost._data!.preconditioning_learning = { "climate.second": learning };
+    const container = document.createElement("div");
+    expect(viewHost._data!.diagnostics).toBeUndefined();
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    const line = () => container.querySelector(".heat .preconditioning-learning-activity")!.textContent;
+    expect(line()).toContain("learningLastSkippedTransition:date:2026-10-19T08:00:00Z:learningReasonDeltaTooSmall");
+    delete learning.heat.last_transition;
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(line()).toContain("learningActivityWaiting");
+    expect(line()).not.toContain("learningLastSkippedTransition");
+  });
+
+  it("shows one current activity per direction and opens room diagnostics without repeating past results", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const learning = learningBothDirections();
+    learning.heat.activity = { state: "observing", at: "2026-10-19T08:00:00Z" };
+    learning.cool.activity = { state: "unavailable", reason: "temperature_unavailable" };
+    viewHost._data!.preconditioning_learning = { "climate.second": learning };
+    viewHost._openLearningDiagnostics = vi.fn();
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(container.querySelectorAll(".preconditioning-learning-activity")).toHaveLength(2);
+    expect(container.querySelector(".heat .preconditioning-learning-activity")?.textContent).toContain("learningActivityObserving");
+    expect(container.querySelector(".cool .preconditioning-learning-activity")?.textContent).toContain("learningReasonTemperatureUnavailable");
+    expect(container.querySelector(".preconditioning-learning-activity")?.textContent).not.toContain("learningLastTransition");
+    expect(container.querySelectorAll('.learning-diagnostics-link > ha-icon[icon="mdi:stethoscope"][aria-hidden="true"]')).toHaveLength(2);
+    expect(container.querySelectorAll(".learning-diagnostics-link > span")).toHaveLength(2);
+    container.querySelector<HTMLButtonElement>(".learning-diagnostics-link")!.click();
+    expect(viewHost._openLearningDiagnostics).toHaveBeenCalledWith("climate.second");
+  });
+
+  it("omits activity for old backend responses and avoids a repeated disabled state", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const learning = learningBothDirections();
+    viewHost._data!.preconditioning_learning = { "climate.second": learning };
+    const container = document.createElement("div");
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(container.querySelector(".preconditioning-learning-activity")).toBeNull();
+    learning.heat.activity = { state: "disabled" };
+    learning.cool.activity = { state: "waiting" };
+    render(renderPreconditioningView(viewHost, ["climate.second"]), container);
+    expect(container.querySelectorAll(".preconditioning-learning-activity")).toHaveLength(1);
+    expect(container.querySelector(".cool .preconditioning-learning-activity")?.textContent).toContain("learningActivityWaiting");
+  });
+
   it("renders climates in the provided user order", () => {
     const { viewHost } = host();
     const container = document.createElement("div");
@@ -228,9 +384,10 @@ describe("preconditioning view", () => {
     render(renderPreconditioningView(viewHost, ["climate.first"]), container);
 
     expect(
-      [...container.querySelectorAll(".preconditioning-config-section h3")]
+      [...container.querySelectorAll(".preconditioning-config-section h3, .preconditioning-master-label")]
         .map((element) => element.textContent?.trim()),
     ).toEqual([
+      "preconditioningMaster",
       "preconditioningTiming",
       "preconditioningModel",
       "preconditioningHistory",
@@ -238,11 +395,11 @@ describe("preconditioning view", () => {
     ]);
 
     const sections = [...container.querySelectorAll(".preconditioning-config-section")];
-    expect(sections).toHaveLength(4);
+    expect(sections).toHaveLength(5);
     expect(
       sections.every(
         (section) =>
-          section.querySelector(":scope > h3") !== null &&
+          section.querySelector(":scope > h3, :scope > summary") !== null &&
           section.querySelector(":scope > .preconditioning-config-rows") !== null,
       ),
     ).toBe(true);
@@ -304,6 +461,9 @@ describe("preconditioning view", () => {
     expect(ids).toContain("preconditioning-climate-first-cool-live-prediction-help");
     expect(ids).toContain("preconditioning-climate-second-heat-live-prediction-help");
     expect(ids).toContain("preconditioning-climate-second-cool-live-prediction-help");
+    expect(container.querySelectorAll(".preconditioning-live-help .inline-help-overlay")).toHaveLength(4);
+    expect(container.querySelectorAll('.preconditioning-live-label > ha-icon[icon="mdi:information-outline"][aria-hidden="true"]')).toHaveLength(4);
+    expect(container.querySelector(".preconditioning-live-label .inline-help")).toBeNull();
   });
 
   it("persists enable changes for the selected climate", () => {

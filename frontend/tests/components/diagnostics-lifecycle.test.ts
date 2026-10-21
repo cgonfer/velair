@@ -52,6 +52,23 @@ function card(): DiagnosticsInternals {
 }
 
 describe("diagnostics lifecycle", () => {
+  it("applies the learning destination with a single room, preconditioning, and no stale dates", () => {
+    const element = card() as unknown as {
+      view: string; learningDiagnosticEntity?: string; _selectedDiagnosticEntity?: string;
+      _diagnosticsHistoryFilters: { sources: Set<string> | null; category: string; from: string; to: string };
+      _applyLearningDiagnosticEntity(): void;
+    };
+    element.view = "diagnostics";
+    element.learningDiagnosticEntity = "climate.bedroom";
+    element._diagnosticsHistoryFilters = { sources: new Set(["climate.other"]), category: "comfort", from: "2030-01-01T00:00", to: "2030-01-02T00:00" };
+    element._applyLearningDiagnosticEntity();
+    expect(element._selectedDiagnosticEntity).toBe("climate.bedroom");
+    expect(element._diagnosticsHistoryFilters).toEqual({ sources: new Set(["climate.bedroom"]), category: "preconditioning", from: "", to: "" });
+    element._diagnosticsHistoryFilters.category = "all";
+    element._applyLearningDiagnosticEntity();
+    expect(element._diagnosticsHistoryFilters.category).toBe("all");
+  });
+
   it("clears stale diagnostics when the backend reports an unloaded runtime", () => {
     const element = card();
     const current = snapshot("2026-08-18T10:00:00Z");

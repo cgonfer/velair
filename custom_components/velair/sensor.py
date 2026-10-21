@@ -725,7 +725,9 @@ class ZonePreconditioningStartSensor(_ZoneSensor):
         """Return compact prediction context."""
         event = self._preconditioning_event()
         if event is None or event.target_when is None:
-            return None
+            next_event = self.scheduler.get_next_event_for_zone(self._climate_entity_id)
+            dependency = getattr(next_event, "preconditioning_dependency", None)
+            return {"preconditioning_dependency": dependency} if dependency is not None else None
 
         diagnostics = event.preconditioning_diagnostics or {}
         return _compact_attributes(
@@ -744,6 +746,7 @@ class ZonePreconditioningStartSensor(_ZoneSensor):
                 "target_temp_low": event.target_temp_low,
                 "target_temp_high": event.target_temp_high,
                 "hvac_mode": event.hvac_mode,
+                "preconditioning_dependency": getattr(event, "preconditioning_dependency", None),
             }
         )
 
@@ -837,7 +840,7 @@ class ZoneRoomAssistStateSensor(_ZoneSensor):
         return _compact_attributes(attributes)
 
 
-def _serialize_event(event) -> dict[str, str | float | None]:
+def _serialize_event(event) -> dict[str, object]:
     """Serialize a climate event for entity attributes."""
     payload = {
         "entity_id": event.entity_id,
@@ -858,6 +861,9 @@ def _serialize_event(event) -> dict[str, str | float | None]:
     if target_temp_low is not None and target_temp_high is not None:
         payload["target_temp_low"] = target_temp_low
         payload["target_temp_high"] = target_temp_high
+    dependency = getattr(event, "preconditioning_dependency", None)
+    if dependency is not None:
+        payload["preconditioning_dependency"] = dependency
     return payload
 
 

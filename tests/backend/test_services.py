@@ -229,6 +229,41 @@ class ClimateProfileServiceTest(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(ValueError):
                     _validate_pause_id(value)
 
+    async def test_pause_until_next_block_schema_and_forwarding(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_PAUSE_ZONE)]
+        data = {"entity_id": "climate.salon", "pause_id": "external_control",
+                "action": "none", "until_next_block": True}
+        await handler(SimpleNamespace(data=schema(data)))
+        self.scheduler.ensure_managed_entity.assert_called_with("climate.salon")
+        self.scheduler.async_pause_zone.assert_awaited_once_with(
+            "climate.salon", until=None, action="none", pause_id="external_control",
+            until_next_block=True,
+        )
+        with self.assertRaisesRegex(vol.Invalid, "cannot be used together"):
+            schema({**data, "duration_minutes": 30})
+        self.assertFalse(schema({**data, "until_next_block": False,
+                                 "duration_minutes": 30})["until_next_block"])
+
+    async def test_pause_until_next_block_maps_missing_schedule_error(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_PAUSE_ZONE)]
+        self.scheduler.async_pause_zone.side_effect = ValueError("No future schedule block")
+        with self.assertRaisesRegex(HomeAssistantError, "No future schedule block"):
+            await handler(SimpleNamespace(data=schema({
+                "entity_id": "climate.salon", "action": "none", "until_next_block": True,
+            })))
+
+    async def test_pause_until_next_block_rejects_unmanaged_target(self) -> None:
+        await async_setup_services(self.hass)
+        handler, schema = self.services.handlers[(DOMAIN, SERVICE_PAUSE_ZONE)]
+        self.scheduler.ensure_managed_entity.side_effect = ValueError("unmanaged entity")
+        with self.assertRaisesRegex(HomeAssistantError, "unmanaged entity"):
+            await handler(SimpleNamespace(data=schema({
+                "entity_id": "climate.other", "action": "none", "until_next_block": True,
+            })))
+        self.scheduler.async_pause_zone.assert_not_awaited()
+
     async def test_external_policy_service_does_not_inject_default_duration(self) -> None:
         await async_setup_services(self.hass)
         handler, schema = self.services.handlers[

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.3 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -29,7 +29,7 @@ O pré-condicionamento adaptativo funciona localmente no Home Assistant. O Velai
 <a id="setup"></a>
 ## Configuração
 
-A aba Pré-condicionamento oferece duas ferramentas no seletor de subseções. O pré-condicionamento adaptativo abre por padrão; escolha Retorno planejado para configurar a ocupação e as chegadas semanais e gerenciar a ausência atual. Os caminhos diretos no painel são `/velair/preconditioning/preconditioning` e `/velair/preconditioning/planned-return`. Consulte [Retorno planejado](planned-return.pt-br.md).
+A aba Pré-condicionamento contém configurações adaptativas e aprendizado por equipamento. Retorno planejado tem sua própria aba para ocupação, chegadas semanais e ausência atual. Ambas incluem uma introdução e ajuda contextual. Os caminhos diretos são `/velair/preconditioning` e `/velair/planned-return`. Links antigos de subseções continuam abrindo a aba correspondente. Consulte [Retorno planejado](planned-return.pt-br.md).
 
 1. Abra a aba Pré-condicionamento.
 2. Expanda o dispositivo de climatização que deseja configurar.
@@ -46,6 +46,41 @@ Ao expandir um dispositivo, cada modo compatível mostra um cartão de previsão
 A preparação do Retorno planejado é identificada separadamente da antecipação semanal. Para um retorno futuro aceito, as informações do equipamento mostram seu estado de retorno, início estimado, temperatura-alvo de chegada e motivos de suspensão ou indisponibilidade. Visão geral, Retorno planejado e cartões de climatização usam as mesmas informações de retorno do backend; não é outro evento semanal. Um ambiente ainda pode seguir Ausente enquanto mostra uma estimativa futura de retorno. **Preparando** descreve a intenção de controle do Velair, não a confirmação de que um dispositivo recebeu um comando ou está fisicamente aquecendo ou resfriando. A linha do tempo do retorno mostra o tempo decorrido até a chegada salva, não uma porcentagem de progresso térmico. Consulte [Preparação dos ambientes](planned-return.pt-br.md#room-preparation) para os estados.
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa seção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por padrão para manter a visão habitual simples.
+
+<a id="preconditioning-master"></a>
+## Mestre do pré-condicionamento
+
+Mantenha **Mestre do pré-condicionamento** em **Independente** para conservar o comportamento existente. Para fazer a preparação antecipada de um equipamento depender de outro, selecione esse equipamento gerenciado nas configurações do cômodo dependente. Selecione **Independente** novamente para desfazer o vínculo. Isso se aplica à programação efetiva do cômodo, incluindo Perfis, exceções por zona e Retorno planejado. Não substitui suas temperaturas nem seus blocos.
+
+Um mestre pode atender vários cômodos dependentes. Um cômodo não pode depender de si mesmo, e cadeias ou ciclos não são permitidos: um dependente não pode também ser mestre.
+
+O Velair escolhe o bloco do mestre cujo horário-alvo está mais próximo do horário-alvo do bloco dependente. Em caso de empate, usa o bloco anterior. Os horários-alvo não precisam ser iguais. O dependente começa no mais tardio entre seu próprio início previsto e o início de preparação desse bloco do mestre:
+
+| Início próprio do cômodo | Início do mestre | Alvo do cômodo | Início efetivo |
+| --- | --- | --- | --- |
+| 17:40 | 17:55 | 18:45 | 17:55 |
+| 18:10 | 17:55 | 18:45 | 18:10 |
+| 17:40 | Sem preparação antecipada | 18:45 | Bloco normal às 18:45 |
+| 17:40 | 19:00 | 18:45 | Bloco normal às 18:45 |
+
+Se o bloco selecionado do mestre não puder se preparar antecipadamente, o Velair não o substitui por outro bloco. Uma preparação de aquecimento não libera uma de resfriamento, nem o contrário. Pausas, substituições, verificações de disponibilidade e limites máximos de antecedência continuam valendo. Um mestre indisponível ou desabilitado continua configurado; o dependente não se torna independente silenciosamente.
+
+**Início mínimo (min)** continua excluindo previsões independentes curtas. A espera pelo mestre, assim como um comando entregue com atraso, pode deixar uma janela real menor. O aprendizado usa essa janela restante, sem inventar um início anterior nem mover o alvo programado.
+
+O início exibido é uma previsão. Na execução, o comando de preparação correspondente do mestre precisa ser aceito antes que um dependente possa começar. Isso não confirma o relé da caldeira, o fluxo de água nem o aquecimento/resfriamento real. O Velair não aumenta a temperatura do mestre para pedir calor em nome de outros cômodos. O bloco normal programado continua sendo executado no seu próprio horário.
+
+O aprendizado começa quando o dependente inicia efetivamente sua preparação limitada, usando a temperatura naquele momento e o tempo restante até seu próprio bloco. Atingir o alvo antecipadamente, observações parciais e amostras inválidas mantêm suas regras existentes. O término posterior do mestre não interrompe uma preparação já iniciada no dependente. Vincular ou desvincular não apaga amostras de aprendizado salvas.
+
+Abra **Detalhes do cálculo** para ver a estimativa independente, o mestre selecionado e o início efetivo. O Diagnóstico mostra o motivo da dependência junto às evidências de preparação e aprendizado do cômodo. Referências salvas de início de comandos permitem continuidade operacional após reinício; uma observação de aprendizado interrompida não é retomada, e essas referências técnicas não entram nas exportações portáteis.
+
+<a id="understanding-learning-activity"></a>
+## Entendendo a atividade de aprendizado
+
+Cada direção compatível pode mostrar uma explicação breve junto às informações de aprendizado existentes: o Velair está observando uma transição, aguardando uma transição adequada ou não pode observar por um motivo conhecido. Isso descreve o aprendizado, não confirma que o equipamento esteja fisicamente aquecendo ou resfriando. Uma transição anterior tem data explícita e não é apresentada como atividade atual.
+
+Use a ação **Diagnóstico** ao lado da explicação para abrir esse equipamento e seu histórico de Pré-condicionamento, sem um filtro de data ocultando registros anteriores. A seção de funções existente mostra a atividade atual e a última transição de aprendizado mantida. Expanda os detalhes para inspecionar as temperaturas, os limites configurados e as durações disponíveis para essa decisão. Consulte [Evidências de aprendizado](diagnostics.pt-br.md#learning-evidence).
+
+Uma contagem de amostras inalterada não comprova falha. Uma transição pode não fornecer uma diferença de temperatura utilizável, uma observação pode ainda estar em andamento ou seu resultado pode ser parcial ou inválido. As explicações usam somente evidências registradas pelo Velair; não deduzem o funcionamento da caldeira nem um fornecimento compartilhado de calor. O estado do aprendizado e a previsão do próximo bloco continuam separados: um cômodo pode ter pouco histórico aprendido e, mesmo assim, não precisar de início antecipado para um alvo específico.
 
 <a id="how-it-starts"></a>
 ## Como o início é determinado

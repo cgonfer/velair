@@ -72,65 +72,65 @@
       "translations": {
         "es": {
           "path": "docs/user/adaptive-preconditioning.es.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/adaptive-preconditioning.fr.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/adaptive-preconditioning.de.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/adaptive-preconditioning.it.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/adaptive-preconditioning.nl.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/adaptive-preconditioning.pl.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/adaptive-preconditioning.pt-br.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/adaptive-preconditioning.pt-pt.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/adaptive-preconditioning.ru.md",
-          "sourceHash": "8d344eb064993e97985ea37bb80885e3b297117a8ac3f11a3a4b26c58c8362eb",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "398828a6783689615218d5fb40e6f2b8548c431e115b123f313d367a34cafd30",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         }
       }
@@ -407,65 +407,65 @@
       "translations": {
         "es": {
           "path": "docs/user/diagnostics.es.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/diagnostics.fr.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/diagnostics.de.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/diagnostics.it.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/diagnostics.nl.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/diagnostics.pl.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/diagnostics.pt-br.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/diagnostics.pt-pt.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/diagnostics.ru.md",
-          "sourceHash": "09bd5b1ae83382153acf1de3aacf4fad2f246886ecdc6cfe67f77694750aee6c",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "6d106d5d8942e0d94bcba7b310f239094c49753a8399c476381769801681fab1",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         }
       }
@@ -809,65 +809,65 @@
       "translations": {
         "es": {
           "path": "docs/user/planned-return.es.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/planned-return.fr.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/planned-return.de.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/planned-return.it.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/planned-return.nl.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/planned-return.pl.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/planned-return.pt-br.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/planned-return.pt-pt.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/planned-return.ru.md",
-          "sourceHash": "039d4d001a7d18ef4dd6c02a3648ed4c08f69b073325a70ccbaf2cb4a9c5fca8",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "4d3bff481047ac564a40e74e7732e92c4390b15c1483b3c542c291d0f3eb7586",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         }
       }
@@ -1278,65 +1278,65 @@
       "translations": {
         "es": {
           "path": "docs/user/usage.es.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/usage.fr.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/usage.de.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/usage.it.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/usage.nl.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/usage.pl.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/usage.pt-br.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/usage.pt-pt.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/usage.ru.md",
-          "sourceHash": "8b112d79c2ad0491df44139d031722c387ab4cc65268a8149f8655ba599e1a17",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "f6b0ce4fd4b8d045f0ba5ca3567500c952c23cc462f582d62dd3799edfe5838d",
+          "synchronizedAt": "2026-10-21",
+          "referenceVersion": "1.9.0-beta.3",
           "reviewStatus": "automatic"
         }
       }
