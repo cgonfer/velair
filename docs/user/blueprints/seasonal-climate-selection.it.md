@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](seasonal-climate-selection.md) · [Español](
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.2 |
-| Ultima sincronizzazione | 2026-10-17 |
+| Versione di riferimento | 1.9.0-beta.4 |
+| Ultima sincronizzazione | 2026-10-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -18,7 +18,7 @@ Traduzioni: [Originale in inglese](seasonal-climate-selection.md) · [Español](
 ---
 <!-- velair-docs:end -->
 
-Esegui le azioni scelte dopo che un sensore di temperatura cambia e mantiene il nuovo valore per un ritardo configurabile. Seleziona modalità per inverno, clima mite o estate senza duplicare le programmazioni né inserire regole meteorologiche in Velair. Le letture del sensore non valide producono una notifica immediata di Home Assistant.
+Esegui una sola volta le azioni scelte dopo che un sensore di temperatura entra in un nuovo intervallo invernale, di clima mite o estivo e vi rimane per un ritardo configurabile. Seleziona modalità per inverno, clima mite o estate senza duplicare le programmazioni né inserire regole meteorologiche in Velair. Le letture del sensore non valide producono una notifica immediata di Home Assistant.
 
 <p>
   <a href="https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fcgonfer%2Fvelair%2Fmain%2Fblueprints%2Fautomation%2Fvelair%2Fseasonal_climate_selection.yaml"><img src="https://my.home-assistant.io/badges/blueprint_import.svg" alt="Apri Home Assistant e importa il blueprint della selezione climatica stagionale" height="28"></a>
@@ -32,12 +32,12 @@ Esegui le azioni scelte dopo che un sensore di temperatura cambia e mantiene il 
 
 Usa questo blueprint quando Home Assistant espone già il massimo previsto giornaliero, una misura esterna o una temperatura media come un unico sensore numerico di temperatura. Sceglie le azioni da eseguire; Velair continua a gestire programmazioni, preset, precondizionamento e invio ai dispositivi.
 
-Per un sensore aggiornato una volta al giorno, un solo aggiornamento stabile può scegliere la routine della giornata. Per un sensore esterno o medio che cambia spesso, scegli con attenzione il ritardo: ogni nuovo valore riavvia l’attesa. Un sensore aggiornato ogni cinque minuti potrebbe non completare mai un’attesa di 30 minuti.
+Sia un sensore di previsione giornaliera sia un sensore esterno che cambia spesso possono confermare un intervallo stagionale. Le variazioni al suo interno conservano la scadenza originale. Le azioni vengono eseguite una volta per ingresso, quindi gli aggiornamenti successivi nello stesso intervallo non selezionano ripetutamente una modalità.
 
 <a id="requirements"></a>
 ## Requisiti
 
-- Blueprint versione 1.0.0 e Home Assistant 2024.6.0 o successivo.
+- Blueprint versione 1.1.0 e Home Assistant 2024.6.0 o successivo.
 - Un sensore numerico con classe del dispositivo temperatura e unità dichiarata °C o °F.
 - Velair serve solo per azioni che usano le sue entità o i suoi servizi. Script standard e altre azioni Home Assistant funzionano senza Velair.
 - Prepara separatamente il sensore delle previsioni se il fornitore meteorologico espone previsioni invece di un sensore numerico. Questo blueprint non recupera previsioni.
@@ -54,7 +54,7 @@ Le modalità e il selettore nativo della modalità Velair sono disponibili in Ve
 | Winter threshold | I valori sotto questa soglia eseguono le azioni invernali; valore predefinito 20 |
 | Summer threshold | I valori sopra questa soglia eseguono le azioni estive; valore predefinito 27 |
 | Winter / Mild-weather / Summer actions | Sequenze standard di azioni Home Assistant; inizialmente vuote |
-| Stability delay | Quanto a lungo la nuova temperatura numerica deve restare invariata; valore predefinito 30 minuti |
+| Range confirmation delay | Quanto a lungo la temperatura deve restare nel nuovo intervallo stagionale; valore predefinito 30 minuti |
 | Language for diagnostic notifications | Qualsiasi lingua supportata da Velair per gli avvisi persistenti sul sensore e sulla configurazione; inglese per impostazione predefinita |
 
 La soglia invernale deve essere inferiore a quella estiva e il ritardo deve essere positivo. I numeri delle soglie non cambiano automaticamente scegliendo Fahrenheit: inserisci personalmente le soglie Fahrenheit desiderate.
@@ -83,7 +83,7 @@ data:
   option: Invierno
 ```
 
-Con soglie di 20 e 27 °C, un massimo giornaliero che cambia a 18 °C esegue le azioni invernali dopo 30 minuti senza variazioni. Un successivo aggiornamento a 23 °C esegue le azioni per il clima mite; 30 °C esegue quelle estive. Esattamente 20 o 27 °C appartengono al clima mite. Ogni valore modificato può provocare un’esecuzione, compreso 18 → 19 °C all’interno dell’inverno.
+Con soglie di 20 e 27 °C, un massimo giornaliero che entra nell’intervallo invernale a 18 °C esegue le azioni invernali dopo 30 minuti continuamente sotto 20 °C. Un passaggio a 19 °C durante l’attesa conserva la stessa scadenza. Un successivo aggiornamento a 23 °C esegue le azioni per il clima mite; 30 °C esegue quelle estive. Esattamente 20 o 27 °C appartengono al clima mite. Gli aggiornamenti in un intervallo già confermato non ne ripetono le azioni. Uscire da un intervallo e rientrarvi avvia una nuova attesa completa, anche se l’intervallo intermedio è stato troppo breve per eseguire le proprie azioni.
 
 <a id="shared-hours-different-indoor-temperatures"></a>
 ### Orari condivisi, temperature interne diverse
@@ -93,7 +93,7 @@ Collega le programmazioni dei profili Invierno e Verano allo stesso modello gior
 <a id="average-temperature-and-fahrenheit"></a>
 ### Temperatura media e Fahrenheit
 
-Un sensore medio può cambiare più volte all’ora. Con un ritardo di dieci minuti, aggiornamenti alle 10:00 e 10:07 rinviano la decisione alle 10:17, purché non arrivi un nuovo valore. Se continua a cambiare prima che passino dieci minuti, non vengono eseguite azioni stagionali.
+Un sensore medio può cambiare più volte all’ora. Con un ritardo di dieci minuti, entrare nell’intervallo estivo a 28 °C alle 10:00 e passare a 29 °C alle 10:07 esegue comunque le azioni estive alle 10:10. Se la lettura scende a 27 °C alle 10:07, la conferma estiva viene annullata e al suo posto inizia quella del clima mite.
 
 Un sensore Fahrenheit può usare soglie Celsius perché la lettura viene convertita. In alternativa, seleziona °F e inserisci soglie come 68 e 80.6 °F, equivalenti a 20 e 27 °C. Un valore di 77 °F seleziona allora le azioni per il clima mite.
 
@@ -113,17 +113,17 @@ target:
 <a id="how-it-works"></a>
 ## Come funziona
 
-Un trigger di stato rileva una temperatura numerica modificata, poi l’attesa nativa interrompibile di Home Assistant verifica che resti stabile per il ritardo configurato. Una variazione numerica effettiva interrompe la decisione in attesa e avvia una nuova attesa, anche quando torna a un valore precedente: `21 → 22 → 21` avvia un nuovo ritardo all’ultimo 21. Un aggiornamento di solo formato, come da `21` a `21.0`, non avvia un’altra decisione e non interrompe quella già in attesa. Gli aggiornamenti dei soli attributi non avviano azioni stagionali. Prima delle azioni, il blueprint verifica nuovamente la lettura numerica attuale, l’unità, le soglie, il ritardo e la continuità dell’attesa.
+I trigger nativi di Home Assistant classificano ogni lettura dopo la conversione nell’unità delle soglie. Entrare nell’intervallo invernale, di clima mite o estivo avvia il relativo ritardo di conferma. Le letture nello stesso intervallo conservano la scadenza originale; gli aggiornamenti dei soli attributi o del formato non riavviano l’attesa né ripetono le azioni.
 
-Una lettura o un’unità non valida interrompe subito una decisione in attesa, anche se cambia solo l’attributo dell’unità. Ripristinare solo l’unità rimuove la diagnostica ma non seleziona una stagione; serve un altro cambiamento numerico dello stato. Il recupero da uno stato numerico non valido, come `unavailable`, a un numero valido avvia un nuovo ritardo.
+Uscire da un intervallo annulla immediatamente la conferma in attesa. Una breve uscita seguita dal rientro avvia una nuova attesa completa, anche se l’altro intervallo non ha mai avuto il tempo di eseguire le sue azioni. I valori esatti delle soglie appartengono al clima mite. Letture Celsius/Fahrenheit equivalenti restano nello stesso intervallo.
 
-L’avvio di Home Assistant verifica solo la diagnostica. Non sceglie una modalità stagionale. I timer in attesa non sopravvivono a un riavvio o al ricaricamento dell’automazione; in seguito serve un nuovo cambiamento di stato del sensore. Non esiste un trigger periodico o giornaliero né un helper che conservi l’ultima classificazione.
+L’avvio di Home Assistant verifica solo la diagnostica. Non sceglie una modalità stagionale. I timer in attesa non sopravvivono a un riavvio, al ricaricamento dell’automazione o alla disattivazione e riattivazione. L’intervallo presente quando si collegano i trigger è il riferimento iniziale: le variazioni successive al suo interno non lo selezionano. Una transizione di intervallo o il recupero da letture non valide avvia la conferma. Non esiste un trigger periodico o giornaliero né un helper persistente che conservi l’ultima selezione. Se l’entità era assente al collegamento dei trigger, la sua prima comparsa stabilisce l’intervallo iniziale senza selezionarlo.
 
-Se l’entità del sensore selezionato inizialmente manca e compare poi con una lettura valida, quella prima lettura conta come recupero e avvia l’intera attesa di stabilità. Lo stesso vale quando viene ricreato un sensore rimosso. Si tratta di una transizione del sensore dopo l’avvio, non di un’azione stagionale causata dall’evento di avvio stesso.
+La validazione del sensore viene eseguita separatamente dalla conferma stagionale. Un’entità assente, `unknown`, `unavailable`, un valore non finito o non numerico oppure un’unità non supportata crea immediatamente una sola notifica persistente specifica dell’automazione nella lingua selezionata. L’avviso identifica automazione e sensore e spiega che le azioni stagionali sono sospese. Una configurazione non valida usa una notifica separata.
 
-La validazione del sensore viene eseguita separatamente dall’attesa stagionale. Un’entità assente, `unknown`, `unavailable`, un valore non finito o non numerico oppure un’unità non supportata crea immediatamente una sola notifica persistente specifica dell’automazione nella lingua selezionata. L’avviso identifica automazione e sensore e spiega che le azioni stagionali sono sospese. Il recupero rimuove l’avviso del sensore; il recupero a uno stato numerico valido avvia una nuova attesa di stabilità, mentre quello della sola unità aggiorna solo la diagnostica. Una configurazione non valida usa una notifica separata.
+Le letture non valide annullano un’attesa in corso. Il recupero da uno stato non numerico o da un’unità non supportata avvia un nuovo ritardo di conferma completo. Si tratta di un nuovo periodo continuo di letture valide, quindi il recupero può eseguire nuovamente le stesse azioni stagionali. Rimuove anche l’avviso del sensore.
 
-Per esempio, un sensore che diventa non disponibile alle 09:00 avvisa subito, non alle 09:30. Il recupero a 25 °C alle 09:10 permette le azioni per il clima mite alle 09:40 se il valore resta invariato.
+Per esempio, un sensore che diventa non disponibile alle 09:00 avvisa subito. Il recupero a 25 °C alle 09:10 permette le azioni per il clima mite alle 09:40 se la temperatura resta tra le soglie per tutto il periodo, anche se il valore esatto cambia.
 
 <a id="safety-and-precedence"></a>
 ## Sicurezza e priorità
@@ -134,17 +134,18 @@ Mentre il sensore non è valido, il blueprint non effettua nuove selezioni stagi
 
 Le azioni configurate seguono il comportamento e le tracce normali di Home Assistant. Un errore in un’azione non annulla le azioni precedenti. Il blueprint non può verificare genericamente che un’azione arbitraria abbia selezionato la routine prevista o raggiunto un dispositivo fisico.
 
-Una nuova lettura stabile può sostituire una modalità Assenza selezionata manualmente. Coordina le automazioni stagionali e di presenza anziché lasciare che entrambe scelgano modalità in conflitto. Per esempio, uno script domestico può scegliere una modalità Assenza quando non c’è nessuno in casa e selezionare la modalità stagionale di presenza solo quando la presenza lo permette.
+Un intervallo stagionale appena confermato può sostituire una modalità Assenza selezionata manualmente. Coordina le automazioni stagionali e di presenza anziché lasciare che entrambe scelgano modalità in conflitto. Per esempio, uno script domestico può scegliere una modalità Assenza quando non c’è nessuno in casa e selezionare la modalità stagionale di presenza solo quando la presenza lo permette.
 
 Restano validi i comportamenti esistenti di modalità e profili Velair, compresi la priorità delle pause e l’annullamento degli incrementi nelle zone interessate. Il precondizionamento viene ricalcolato dalla programmazione effettiva selezionata dall’azione; non può anticipare una scelta stagionale prima che venga effettuata.
 
 <a id="limitations"></a>
 ## Limiti
 
-- La stabilità riguarda il valore del sensore, non solo la classificazione inverno/clima mite/estate. I sensori che cambiano spesso possono rinviare indefinitamente l’esecuzione.
+- La conferma richiede la permanenza continua in un intervallo stagionale; attraversamenti ripetuti delle soglie possono rinviare indefinitamente le azioni.
 - Nessuna azione stagionale automatica all’avvio, programmazione giornaliera, interrogazione periodica, timer in attesa salvato, condizione aggiuntiva di consenso a 24 °C o spegnimento differito.
+- Eliminare e ricreare il sensore annulla la conferma. La sua ricomparsa stabilisce un riferimento iniziale senza selezionare una stagione; serve una successiva transizione di intervallo. Questo evita un riarmo nativo incoerente di Home Assistant dopo la rimozione di un’entità. Vale anche per un’entità assente al caricamento dell’automazione. Il normale recupero da `unknown`/`unavailable` o da un’unità non valida avvia una nuova conferma.
 - Le notifiche non possono rilevare un sensore che smette silenziosamente di aggiornarsi mantenendo un numero valido. Se necessario, il monitoraggio dell’aggiornamento della fonte deve essere fornito separatamente.
-- Non c’è isteresi: il ritardo di stabilità filtra i cambiamenti. Un nuovo valore stabile nella stessa classificazione esegue comunque il proprio ramo.
+- Non c’è isteresi: il ritardo di conferma filtra le brevi variazioni di intervallo. Le azioni vengono eseguite una volta per ingresso nell’intervallo, anziché una volta per nuova lettura.
 - L’esecuzione parallela è limitata. Sequenze lunghe di azioni utente possono occupare gli slot; mantieni brevi le azioni o delega il lavoro agli script.
 - Una sequenza già iniziata non viene annullata da una lettura successiva. Le verifiche proteggono l’avvio, non ogni azione definita dall’utente.
 - Rinominare l’automazione può lasciare la vecchia notifica diagnostica da rimuovere manualmente. Le opzioni di modalità rinominate o eliminate devono essere aggiornate nelle azioni configurate.
@@ -152,9 +153,9 @@ Restano validi i comportamenti esistenti di modalità e profili Velair, compresi
 <a id="troubleshooting"></a>
 ## Risoluzione dei problemi
 
-- Se non viene eseguito nulla, verifica che il valore sia realmente cambiato e sia rimasto invariato per l’intero ritardo. Avviare o ricaricare Home Assistant non avvia una selezione stagionale.
+- Se non viene eseguito nulla, verifica che il sensore sia entrato in un altro intervallo stagionale o si sia ripreso da un valore o un’unità non validi, restando poi nell’intervallo per tutto il ritardo. Avvio e ricaricamento non avviano la selezione; gli aggiornamenti nello stesso intervallo non la ripetono.
 - Se compare un avviso, controlla il sensore indicato, lo stato numerico e `unit_of_measurement`. Le unità sconosciute non vengono mai dedotte.
-- Se un timer non termina mai, controlla la cronologia del sensore e riduci il ritardo positivo o usa un sensore del massimo giornaliero.
+- Se un timer non termina mai, cerca attraversamenti delle soglie o letture non valide nella cronologia del sensore. Adatta le soglie o il ritardo positivo alla fonte.
 - Se viene eseguito il ramo sbagliato, verifica l’unità selezionata per le soglie ed entrambe le soglie numeriche.
 - Se il clima mite lascia gli apparecchi in funzione, configura una vera modalità di pausa e spegnimento; un elenco di azioni vuoto non è un comando di spegnimento.
 - Se una modalità non viene selezionata, prova manualmente la sua azione e controlla la traccia dell’automazione. Seleziona il nome attuale dell’opzione nell’editor Home Assistant.
@@ -163,6 +164,6 @@ Restano validi i comportamenti esistenti di modalità e profili Velair, compresi
 <a id="updating-and-customizing"></a>
 ## Aggiornamento e personalizzazione
 
-Importa esplicitamente il blueprint; installare o aggiornare Velair tramite HACS non lo installa. Importa nuovamente lo stesso URL in continua evoluzione su `main` per aggiornamenti compatibili. La versione 1 conserva i nomi degli input; i nuovi input compatibili ricevono valori predefiniti. Le modifiche incompatibili usano un nuovo nome file e una nuova versione principale.
+Importa esplicitamente il blueprint; installare o aggiornare Velair tramite HACS non lo installa. Importa nuovamente lo stesso URL in continua evoluzione su `main` per aggiornamenti compatibili. La versione 1.1.0 sostituisce il comportamento temporale della beta iniziale allo stesso URL, con gli stessi nomi degli input e senza un’opzione per mantenere la vecchia temporizzazione. Importa nuovamente e ricarica le automazioni interessate per usare la conferma per intervallo. Gli altri blueprint conservano i rispettivi contratti di compatibilità pubblicati.
 
 Home Assistant gestisce l’automazione risultante. Velair non migra automazioni o `.storage`. Usa **Prendi il controllo** per una logica diversa, sapendo che l’automazione indipendente smetterà di ricevere aggiornamenti del blueprint. Consulta il [catalogo dei blueprint](../blueprints.it.md) per le regole condivise di distribuzione e aggiornamento.

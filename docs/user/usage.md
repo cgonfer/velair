@@ -295,6 +295,18 @@ After setup, Velair appears in the Home Assistant sidebar.
 
 The sidebar panel is the recommended interface. The optional Lovelace card is useful when you want to embed specific Velair panels in an existing dashboard.
 
+In Sections dashboards, Velair cards use automatic height so expanded controls,
+additional zones and wrapped text reserve space above the next card. If an
+existing card still overlaps another card after updating, check its dashboard
+YAML: remove a numeric `grid_options.rows` override or change it to `auto`.
+Saved layout options override the card's defaults:
+
+```yaml
+grid_options:
+  columns: 12
+  rows: auto
+```
+
 The Overview next-events list and dashboard next-event cards show the next projected control change for each managed climate, including estimated preparation and arrival transitions during a confirmed Planned Return. All rows share a compact name/source/time/action/HVAC layout, without a state subtitle under the climate name. The trailing information helper explains the phase and, when return takes priority, provides the arrival Mode, suspension details and current weekly reference. Helpers open by hover, keyboard focus or tap. Suspensions explain higher-priority blockers rather than promising a blocked start. Existing next-event sensors and dedicated weekly anticipation views retain their weekly meaning. This forecast is for user visibility; it does not change scheduler execution or confirm device delivery.
 
 Zone overview uses compact responsive cards to answer what Velair and the
@@ -1244,7 +1256,7 @@ Velair provides optional Home Assistant blueprints through its documentation:
 
 - switch between chosen Home/Away actions from one consolidated occupancy entity;
 - pause one or more managed climates while any selected window or door remains open;
-- select seasonal Modes or other actions after a changed temperature remains stable, with immediate notifications for invalid readings.
+- select seasonal Modes or other actions once after a new seasonal range is confirmed, with immediate notifications for invalid readings.
 
 They use Home Assistant state events and configurable delays, not polling. The
 occupancy blueprint can report when its consolidated group, template sensor, or
@@ -1257,9 +1269,9 @@ the affected contact still blocks resumption. See
 [Automation Blueprints](blueprints.md) for setup, examples, startup behavior,
 and the one-automation-per-zone rule for window contacts.
 
-The [seasonal blueprint](blueprints/seasonal-climate-selection.md) waits 30
-minutes by default after each temperature change; continuously changing readings
-can postpone actions indefinitely. Startup checks diagnostics only. Use its
+The [seasonal blueprint](blueprints/seasonal-climate-selection.md) confirms a new
+seasonal range for 30 minutes by default. Changes within that range keep the original deadline; actions
+run once per range entry. Startup checks diagnostics only. Use its
 normal Home Assistant action editor to select Velair Modes. Configure a real
 pause-and-off Mode if mild weather should stop climatization; empty actions
 leave current operation unchanged.

@@ -28,6 +28,8 @@ export const climateCardStyles = css`
     z-index: 0;
   }
   .climate-card-view > * { position: relative; z-index: 1; }
+  /* Keep the HVAC menu above adjacent sections in both opening directions. */
+  .climate-card-view > .climate-card-thermostat-controls:has(.climate-card-mode-control[open]) { z-index: 2; }
   .climate-card-view.climate-action-heating,
   .climate-card-view.climate-action-preheating { --climate-action-color: var(--warning-color, #e69b35); }
   .climate-card-view.climate-action-cooling { --climate-action-color: var(--primary-color, #4f8fcf); }
@@ -86,7 +88,7 @@ export const climateCardStyles = css`
   .climate-card-manual-segmented[aria-busy="true"] button[aria-disabled="true"] { cursor: wait; opacity: 1; }
   .climate-card-manual-segmented button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -3px; position: relative; z-index: 1; }
   .climate-card-manual-segmented button[aria-pressed="true"]:focus-visible { outline-color: var(--text-primary-color, var(--card-background-color)); }
-  .climate-card-control-reason { color: var(--secondary-text-color); contain: inline-size; display: block; font-size: 10px; grid-column: 1 / -1; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+  .climate-card-control-reason { color: var(--secondary-text-color); contain: inline-size; display: block; font-size: 10px; grid-column: 1 / -1; justify-self: stretch; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
   .climate-card-control-surface { align-items: stretch; background: linear-gradient(145deg, var(--climate-card-elevated-surface), var(--secondary-background-color)); border: 1px solid var(--climate-card-border); border-radius: 11px; box-shadow: var(--climate-card-soft-shadow); display: grid; grid-template-columns: minmax(88px, 1fr) auto 56px; min-width: 0; overflow: visible; }
   .climate-card-thermostat-controls.has-authority.has-actions .climate-card-control-surface,
   .climate-card-thermostat-controls.has-authority.has-actions .climate-card-control-pane { border-radius: 0 0 11px 11px; }

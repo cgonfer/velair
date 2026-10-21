@@ -9,7 +9,7 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.3 |
+| Version de référence | 1.9.0-beta.4 |
 | Dernière synchronisation | 2026-10-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
@@ -336,6 +336,14 @@ Après la configuration, Velair apparaît dans la barre latérale de Home Assist
 
 Le panneau latéral est l’interface recommandée. La carte Lovelace facultative est
 utile pour intégrer certains panneaux Velair dans un tableau de bord existant.
+
+Dans les tableaux de bord de type Sections, les cartes Velair utilisent une hauteur automatique afin que les commandes développées, les zones supplémentaires et le texte sur plusieurs lignes réservent de la place au-dessus de la carte suivante. Si une carte existante chevauche encore une autre carte après la mise à jour, vérifiez son YAML dans le tableau de bord : supprimez toute valeur numérique de `grid_options.rows` ou remplacez-la par `auto`. Les options de disposition enregistrées priment sur les valeurs par défaut de la carte :
+
+```yaml
+grid_options:
+  columns: 12
+  rows: auto
+```
 
 La liste des prochains événements de Vue d’ensemble et les cartes du tableau de bord montrent le prochain changement de contrôle prévu pour chaque équipement, y compris préparation estimée et arrivée pendant un Retour prévu confirmé. Toutes les lignes ont la même disposition compacte nom/source/heure/action/HVAC, sans sous-titre d’état sous le nom. L’aide finale explique la phase et, si le retour est prioritaire, le Mode d’arrivée, la suspension et la référence hebdomadaire actuelle. Elle s’ouvre au survol, au focus clavier ou au toucher. Une suspension explique les conditions prioritaires sans promettre un démarrage bloqué. Les capteurs de prochain événement et les vues d’anticipation hebdomadaire gardent leur sens hebdomadaire. Ces prévisions sont informatives ; elles ne changent ni l’exécution ni la confirmation de transmission.
 
@@ -1435,8 +1443,7 @@ Velair fournit des blueprints Home Assistant facultatifs dans sa documentation :
   de présence consolidée ;
 - mettre un ou plusieurs appareils gérés en pause tant qu’une fenêtre ou porte
   sélectionnée reste ouverte ;
-- choisir des Modes saisonniers ou d’autres actions après stabilisation d’une
-  température modifiée, avec notifications immédiates des relevés invalides.
+- choisir des Modes saisonniers ou d’autres actions une seule fois après confirmation d’une nouvelle plage saisonnière, avec notifications immédiates des relevés invalides.
 
 Ils utilisent les événements d’état Home Assistant et des délais configurables,
 pas une interrogation périodique. Le blueprint de présence peut signaler que
@@ -1451,9 +1458,7 @@ récupération ; le contact concerné bloque toujours la reprise. Consultez
 exemples, le démarrage et la règle d’une automatisation par zone pour les
 contacts de fenêtres.
 
-Le [blueprint saisonnier](blueprints/seasonal-climate-selection.fr.md) attend
-30 minutes par défaut après chaque changement de température ; des relevés
-en changement continu peuvent reporter les actions indéfiniment. Le démarrage
+Le [blueprint saisonnier](blueprints/seasonal-climate-selection.fr.md) confirme une nouvelle plage saisonnière pendant 30 minutes par défaut. Les variations au sein de cette plage conservent l’échéance initiale ; les actions s’exécutent une seule fois par entrée dans la plage. Le démarrage
 vérifie uniquement les diagnostics. Utilisez son éditeur normal d’actions
 Home Assistant pour choisir les Modes Velair. Configurez un vrai Mode de
 pause avec arrêt si un temps doux doit arrêter la climatisation ; des

@@ -205,8 +205,8 @@ Environmental thresholds, hysteresis, forecast interpretation, and when to
 restore a setting belong to Home Assistant automations. The service creates no
 weather rules or polling inside Velair. The
 [seasonal climate selection blueprint](blueprints/seasonal-climate-selection.md)
-can select Modes or run these services after a temperature remains stable for a
-configured delay. Choose Modes when winter and summer should retain separate
+can select Modes or run these services once after a temperature stays in a new
+seasonal range for a configured delay. Choose Modes when winter and summer should retain separate
 preset definitions; updating a preset changes all its consumers.
 
 See [Block presets and linked templates](linked-schedules.md) for shared-resource

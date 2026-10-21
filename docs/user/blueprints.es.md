@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](blueprints.md) · [Español](blueprints.es.m
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.4 |
+| Última sincronización | 2026-10-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -71,11 +71,11 @@ Pausa uno o varios equipos gestionados por Velair mientras alguna ventana o puer
 
 ### Selección estacional de climatización
 
-Ejecuta acciones configurables para invierno, tiempo templado o verano después de que el valor de un sensor de temperatura permanezca estable tras un cambio durante un tiempo positivo, inicialmente 30 minutos. Utiliza el editor estándar de acciones para elegir Modos de Velair u otras acciones de Home Assistant. Las lecturas inválidas generan una notificación inmediata; las comprobaciones al iniciar revisan el diagnóstico sin elegir una estación.
+Ejecuta una sola vez las acciones configurables para invierno, tiempo templado o verano después de que la temperatura permanezca en un nuevo rango estacional durante un tiempo positivo, inicialmente 30 minutos. Los cambios dentro de ese rango conservan el plazo y no repiten las acciones. Utiliza el editor estándar de acciones para elegir Modos de Velair u otras acciones de Home Assistant. Las lecturas inválidas generan una notificación inmediata; las comprobaciones al iniciar revisan el diagnóstico sin elegir una estación.
 
 Las notificaciones de diagnóstico admiten los mismos idiomas que Velair, seleccionados explícitamente en el blueprint.
 
-**Versión:** 1.0.0 · **Requiere:** Home Assistant 2024.6.0+ · **Categoría:** Temperatura / automatización estacional
+**Versión:** 1.1.0 · **Requiere:** Home Assistant 2024.6.0+ · **Categoría:** Temperatura / automatización estacional
 
 <p>
   <a href="blueprints/seasonal-climate-selection.es.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Ver la documentación de Selección estacional de climatización"></a>

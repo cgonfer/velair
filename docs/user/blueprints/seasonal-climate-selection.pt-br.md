@@ -8,8 +8,8 @@ Traduções: [Original em inglês](seasonal-climate-selection.md) · [Español](
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.4 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -18,7 +18,7 @@ Traduções: [Original em inglês](seasonal-climate-selection.md) · [Español](
 ---
 <!-- velair-docs:end -->
 
-Execute as ações escolhidas após uma mudança no sensor de temperatura que mantenha o novo valor durante um atraso configurável. Selecione Modos de inverno, clima ameno ou verão sem duplicar programações ou colocar regras meteorológicas dentro do Velair. Leituras inválidas geram uma notificação imediata do Home Assistant.
+Execute uma única vez as ações escolhidas após um sensor de temperatura entrar em uma nova faixa de inverno, clima ameno ou verão e permanecer nela durante um atraso configurável. Selecione Modos de inverno, clima ameno ou verão sem duplicar programações ou colocar regras meteorológicas dentro do Velair. Leituras inválidas geram uma notificação imediata do Home Assistant.
 
 <p>
   <a href="https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fcgonfer%2Fvelair%2Fmain%2Fblueprints%2Fautomation%2Fvelair%2Fseasonal_climate_selection.yaml"><img src="https://my.home-assistant.io/badges/blueprint_import.svg" alt="Abrir o Home Assistant e importar o blueprint Seleção sazonal da climatização" height="28"></a>
@@ -32,12 +32,12 @@ Execute as ações escolhidas após uma mudança no sensor de temperatura que ma
 
 Use este blueprint quando o Home Assistant já disponibilizar a máxima diária prevista, uma medição externa ou uma temperatura média como um sensor numérico de temperatura. Ele escolhe quais ações executar; o Velair continua responsável por programações, predefinições, Pré-condicionamento e envio aos dispositivos.
 
-Para um sensor atualizado uma vez por dia, uma atualização estável pode escolher a rotina do dia. Para sensores externos ou de média que mudam frequentemente, escolha o atraso com cuidado: cada novo valor reinicia a espera. Um sensor atualizado a cada cinco minutos pode nunca concluir uma espera de 30 minutos.
+Tanto um sensor de previsão diária quanto um sensor externo que muda frequentemente podem confirmar uma faixa sazonal. Mudanças dentro dessa faixa mantêm o prazo original. As ações executam uma vez por entrada, portanto atualizações posteriores na mesma faixa não selecionam um Modo repetidamente.
 
 <a id="requirements"></a>
 ## Requisitos
 
-- Blueprint versão 1.0.0 e Home Assistant 2024.6.0 ou mais recente.
+- Blueprint versão 1.1.0 e Home Assistant 2024.6.0 ou mais recente.
 - Um sensor numérico com classe de dispositivo de temperatura e unidade declarada de °C ou °F.
 - O Velair só é necessário para ações que usam suas entidades ou serviços. Scripts padrão e outras ações do Home Assistant funcionam sem o Velair.
 - Prepare o sensor de previsão separadamente se o provedor de meteorologia disponibilizar previsões em vez de um sensor numérico. Este blueprint não busca previsões.
@@ -54,7 +54,7 @@ Modos e o seletor nativo de Modo do Velair estão disponíveis no Velair 1.6.0 o
 | Winter threshold | Valores abaixo deste limite executam as ações de inverno; padrão 20 |
 | Summer threshold | Valores acima deste limite executam as ações de verão; padrão 27 |
 | Winter / Mild-weather / Summer actions | Sequências padrão de ações do Home Assistant; inicialmente vazias |
-| Stability delay | Por quanto tempo a nova temperatura numérica deve permanecer inalterada; padrão 30 minutos |
+| Range confirmation delay | Por quanto tempo a temperatura deve permanecer na nova faixa sazonal; padrão 30 minutos |
 | Language for diagnostic notifications | Qualquer idioma aceito pelo Velair para avisos persistentes de sensores e configuração; inglês por padrão |
 
 O limite de inverno deve ser menor que o de verão, e o atraso deve ser positivo. Os valores dos limites não mudam automaticamente ao escolher Fahrenheit: informe você mesmo os limites desejados em Fahrenheit.
@@ -83,7 +83,7 @@ data:
   option: Invierno
 ```
 
-Com limites de 20 e 27 °C, uma máxima diária que muda para 18 °C executa ações de inverno após 30 minutos sem alteração. Uma atualização posterior para 23 °C executa ações de clima ameno; 30 °C executa ações de verão. Exatamente 20 ou 27 °C corresponde a clima ameno. Cada valor alterado pode executar, inclusive 18 → 19 °C dentro do inverno.
+Com limites de 20 e 27 °C, uma máxima diária que entra na faixa de inverno a 18 °C executa ações de inverno após 30 minutos continuamente abaixo de 20 °C. Uma mudança para 19 °C durante a espera mantém o mesmo prazo. Uma atualização posterior para 23 °C executa ações de clima ameno; 30 °C executa ações de verão. Exatamente 20 ou 27 °C corresponde a clima ameno. Atualizações em uma faixa já confirmada não repetem suas ações. Sair de uma faixa e retornar inicia uma nova espera completa, mesmo que a faixa intermediária tenha durado pouco demais para executar suas ações.
 
 <a id="shared-hours-different-indoor-temperatures"></a>
 ### Horários compartilhados, temperaturas internas diferentes
@@ -93,7 +93,7 @@ Vincule as programações dos Perfis Invierno e Verano ao mesmo modelo diário u
 <a id="average-temperature-and-fahrenheit"></a>
 ### Temperatura média e Fahrenheit
 
-Um sensor de média pode mudar várias vezes por hora. Com um atraso de dez minutos, atualizações às 10:00 e 10:07 adiam a decisão até 10:17, desde que não chegue um novo valor. Se continuar mudando antes de dez minutos, nenhuma ação sazonal executa.
+Um sensor de média pode mudar várias vezes por hora. Com um atraso de dez minutos, entrar na faixa de verão a 28 °C às 10:00 e mudar para 29 °C às 10:07 ainda executa as ações de verão às 10:10. Se a leitura cair para 27 °C às 10:07, a confirmação de verão é cancelada e a de clima ameno começa em seu lugar.
 
 Um sensor em Fahrenheit pode usar limites em Celsius porque a leitura é convertida. Outra opção é selecionar °F e informar limites como 68 e 80.6 °F, equivalentes a 20 e 27 °C. Um valor de 77 °F seleciona as ações de clima ameno.
 
@@ -113,17 +113,17 @@ Também é possível ativar diretamente um Perfil com `velair.activate_profile` 
 <a id="how-it-works"></a>
 ## Como funciona
 
-Um gatilho de estado detecta uma temperatura numérica alterada; depois, a espera interrompível nativa do Home Assistant verifica se ela permanece estável pelo atraso configurado. Uma mudança numérica real interrompe a decisão pendente e inicia outra espera, inclusive ao voltar a um valor anterior: `21 → 22 → 21` inicia um novo atraso no último 21. Uma atualização apenas de formato, como `21` para `21.0`, não inicia outra decisão nem interrompe uma já em espera. Atualizações apenas de atributos não iniciam ações sazonais. Antes de executar, o blueprint verifica novamente a leitura numérica atual, sua unidade, limites, atraso e continuidade da espera.
+Os gatilhos nativos do Home Assistant classificam cada leitura de temperatura após a conversão para a unidade dos limites. Entrar na faixa de inverno, clima ameno ou verão inicia o atraso de confirmação dessa faixa. Leituras na mesma faixa mantêm o prazo original; atualizações apenas de atributos ou de formato não reiniciam a espera nem repetem ações.
 
-Uma leitura ou unidade inválida interrompe imediatamente uma decisão pendente, mesmo quando só muda o atributo da unidade. Restaurar apenas a unidade remove o diagnóstico, mas não seleciona uma estação; é necessária outra mudança numérica de estado. Recuperar de um estado numérico inválido, como `unavailable`, para um número válido inicia um novo atraso.
+Sair de uma faixa cancela imediatamente sua confirmação pendente. Uma saída breve seguida de retorno inicia uma nova espera completa, mesmo que a outra faixa nunca tenha tido tempo de executar suas ações. Os valores exatos dos limites correspondem a clima ameno. Leituras equivalentes em Celsius/Fahrenheit permanecem na mesma faixa.
 
-A inicialização do Home Assistant verifica apenas o diagnóstico. Não escolhe um Modo sazonal. Temporizadores pendentes não sobrevivem à reinicialização ou ao recarregamento da automação; depois disso, é necessária outra mudança no estado do sensor. Não há gatilho periódico ou diário, nem auxiliar que armazene a última classificação.
+A inicialização do Home Assistant verifica apenas o diagnóstico. Não escolhe um Modo sazonal. Temporizadores pendentes não sobrevivem à reinicialização, ao recarregamento da automação nem à desativação e reativação. A faixa presente quando os gatilhos são conectados é a referência inicial: mudanças posteriores dentro dela não a selecionam. Uma transição de faixa ou a recuperação de leituras inválidas inicia a confirmação. Não há gatilho periódico ou diário, nem auxiliar persistente que armazene a última seleção. Se a entidade estava ausente quando os gatilhos foram conectados, sua primeira aparição estabelece a faixa inicial sem selecioná-la.
 
-Se a entidade selecionada estiver ausente inicialmente e aparecer depois com uma leitura válida, essa primeira leitura conta como recuperação e inicia toda a espera de estabilidade. O mesmo ocorre ao recriar um sensor removido. Trata-se de uma transição do sensor após a inicialização, não de uma ação sazonal causada pelo evento de inicialização em si.
+A validação do sensor ocorre separadamente da confirmação sazonal. Uma entidade ausente, `unknown`, `unavailable`, um valor não finito ou não numérico ou uma unidade incompatível cria imediatamente uma notificação persistente por automação no idioma selecionado. Ela identifica a automação e o sensor e explica que as ações sazonais estão suspensas. Uma configuração inválida usa uma notificação separada.
 
-A validação do sensor ocorre separadamente da espera sazonal. Uma entidade ausente, `unknown`, `unavailable`, um valor não finito ou não numérico ou uma unidade incompatível cria imediatamente uma notificação persistente por automação no idioma selecionado. Ela identifica a automação e o sensor e explica que as ações sazonais estão suspensas. A recuperação remove o aviso do sensor; recuperar para um estado numérico válido inicia outra espera de estabilidade, enquanto recuperar apenas a unidade atualiza somente o diagnóstico. Uma configuração inválida usa uma notificação separada.
+Leituras inválidas cancelam uma espera pendente. A recuperação de um estado não numérico ou de uma unidade incompatível inicia um novo atraso de confirmação completo. É um novo período contínuo de leituras válidas, portanto a recuperação pode executar novamente as mesmas ações sazonais. A recuperação também remove o aviso do sensor.
 
-Por exemplo, um sensor que fica indisponível às 09:00 gera um aviso imediato, não às 09:30. A recuperação para 25 °C às 09:10 permite ações de clima ameno às 09:40 se o valor permanecer inalterado.
+Por exemplo, um sensor que fica indisponível às 09:00 gera um aviso imediato. A recuperação para 25 °C às 09:10 permite ações de clima ameno às 09:40 se a temperatura permanecer entre os limites durante todo esse período, mesmo que o valor exato mude.
 
 <a id="safety-and-precedence"></a>
 ## Segurança e prioridades
@@ -134,17 +134,18 @@ Enquanto o sensor estiver inválido, o blueprint não faz nova seleção sazonal
 
 As ações configuradas usam a semântica e os rastreamentos normais do Home Assistant. Um erro em uma ação não desfaz ações anteriores. O blueprint não consegue verificar genericamente se uma ação arbitrária selecionou a rotina desejada ou chegou a um dispositivo físico.
 
-Uma nova leitura estável pode substituir um Modo Ausente selecionado manualmente. Coordene automações sazonais e de presença para que não escolham Modos concorrentes. Por exemplo, um script da casa pode escolher Ausente quando ninguém está em casa e selecionar o Modo sazonal ocupado somente quando a presença permitir.
+Uma faixa sazonal recém-confirmada pode substituir um Modo Ausente selecionado manualmente. Coordene automações sazonais e de presença para que não escolham Modos concorrentes. Por exemplo, um script da casa pode escolher Ausente quando ninguém está em casa e selecionar o Modo sazonal ocupado somente quando a presença permitir.
 
 O comportamento existente de Modos/Perfis do Velair continua válido, incluindo prioridade de pausa e cancelamento de Reforços nas zonas afetadas. O Pré-condicionamento recalcula a partir da programação efetiva selecionada pela ação; não pode antecipar uma escolha sazonal antes que ela seja feita.
 
 <a id="limitations"></a>
 ## Limitações
 
-- Estabilidade se refere ao valor do sensor, não apenas à classificação inverno/ameno/verão. Sensores que mudam frequentemente podem adiar a execução indefinidamente.
+- A confirmação exige permanência contínua em uma faixa sazonal; cruzar repetidamente os limites pode adiar as ações indefinidamente.
 - Não há ação sazonal automática na inicialização, programação diária, consultas periódicas, temporizador pendente salvo, autorização adicional de 24 °C nem desligamento atrasado.
+- Excluir e recriar o sensor cancela a confirmação. O reaparecimento estabelece uma referência inicial sem selecionar uma estação; é necessária uma transição de faixa posterior. Isso evita um rearme nativo inconsistente do Home Assistant após a remoção da entidade. Também se aplica a uma entidade ausente quando a automação carrega. A recuperação normal de `unknown`/`unavailable` ou de uma unidade inválida inicia uma nova confirmação.
 - As notificações não detectam um sensor que para silenciosamente de atualizar e mantém um número válido. O monitoramento da atualização da fonte deve ser fornecido separadamente, quando necessário.
-- Não há histerese; o atraso de estabilidade filtra mudanças. Um novo valor estável na mesma classificação ainda executa seu ramo.
+- Não há histerese; o atraso de confirmação filtra mudanças breves de faixa. As ações executam uma vez por entrada na faixa, em vez de uma vez por nova leitura.
 - A execução paralela é limitada. Sequências longas de ações podem ocupar vagas; mantenha as ações breves ou transfira o trabalho para scripts.
 - Uma sequência já iniciada não é cancelada por uma leitura posterior. As verificações protegem seu início, não cada ação definida pelo usuário.
 - Renomear a automação pode deixar sua antiga notificação para remoção manual. Opções de Modo renomeadas ou excluídas devem ser atualizadas nas ações configuradas.
@@ -152,9 +153,9 @@ O comportamento existente de Modos/Perfis do Velair continua válido, incluindo 
 <a id="troubleshooting"></a>
 ## Solução de problemas
 
-- Se nada executar, confira se o valor realmente mudou e permaneceu inalterado durante todo o atraso. Iniciar ou recarregar o Home Assistant não inicia uma seleção sazonal.
+- Se nada executar, confira se o sensor entrou em outra faixa sazonal ou se recuperou de um valor ou unidade inválidos e depois permaneceu nessa faixa durante todo o atraso. A inicialização e o recarregamento não iniciam a seleção; atualizações na mesma faixa não a repetem.
 - Se aparecer um aviso, examine o sensor indicado, o estado numérico e `unit_of_measurement`. Unidades desconhecidas nunca são presumidas.
-- Se o temporizador nunca terminar, examine o histórico do sensor e reduza o atraso positivo ou use um sensor de máxima diária.
+- Se o temporizador nunca terminar, procure cruzamentos dos limites ou leituras inválidas no histórico do sensor. Ajuste os limites ou o atraso positivo à sua fonte.
 - Se o ramo errado executar, confira a unidade selecionada e os dois limites numéricos.
 - Se o clima ameno deixar equipamentos funcionando, configure um Modo que realmente pause e desligue; uma lista vazia de ações não é um comando de desligamento.
 - Se um Modo não for selecionado, teste sua ação manualmente e examine o rastreamento. Selecione o nome atual da opção no editor do Home Assistant.
@@ -163,6 +164,6 @@ O comportamento existente de Modos/Perfis do Velair continua válido, incluindo 
 <a id="updating-and-customizing"></a>
 ## Atualização e personalização
 
-Importe o blueprint explicitamente; instalar ou atualizar o Velair pelo HACS não o instala. Importe novamente a mesma URL contínua de `main` para atualizações compatíveis. A versão 1 preserva os nomes dos campos; novos campos compatíveis recebem valores padrão. Mudanças incompatíveis usam outro nome de arquivo e nova versão principal.
+Importe o blueprint explicitamente; instalar ou atualizar o Velair pelo HACS não o instala. Importe novamente a mesma URL contínua de `main` para atualizações compatíveis. A versão 1.1.0 substitui o comportamento de temporização da beta inicial na mesma URL, com os mesmos nomes dos campos e sem opção para manter a temporização antiga. Importe novamente e recarregue as automações afetadas para usar a confirmação por faixa. Os demais blueprints mantêm seus contratos de compatibilidade publicados.
 
 O Home Assistant é responsável pela automação resultante. O Velair não migra automações ou `.storage`. Use **Assumir controle** para uma lógica diferente, sabendo que a automação independente deixa de receber atualizações do blueprint. Consulte o [Catálogo de blueprints](../blueprints.pt-br.md) para as regras compartilhadas de distribuição e atualização.

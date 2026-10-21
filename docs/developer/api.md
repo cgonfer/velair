@@ -358,10 +358,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 18,
+    "portable_model": 19,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.3"
+    "integration": "1.9.0-beta.4"
   }
 }
 ```

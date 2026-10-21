@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](preset-automations.md) · [Español](preset-auto
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.4 |
+| Laatst gesynchroniseerd | 2026-10-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -173,6 +173,6 @@ Er is geen getimed vervalmoment of automatisch herstel. Uit raakt elke opgeslage
 - Externe regelaars ontvangen bijgewerkte volledig uitgewerkte weekplanningen wanneer hun effectieve schema verandert. Een publicatiefout schakelt lokale uitvoering niet in.
 - Onbekende ID's, ongeldige combinaties, ongeschikte toepassingen en een wachtende temperatuureenheidsmigratie geven fouten. Overdrachtsfouten na opslaan draaien de opgeslagen preset niet terug.
 
-Omgevingsdrempels, hysterese, interpretatie van weersvoorspellingen en het moment om een instelling te herstellen horen bij Home Assistant-automatiseringen. De service maakt geen weerregels of polling in Velair aan. De [blueprint voor seizoensgebonden klimaatkeuze](blueprints/seasonal-climate-selection.nl.md) kan modi kiezen of deze services uitvoeren nadat een temperatuur een ingestelde tijd stabiel blijft. Kies modi wanneer winter en zomer afzonderlijke presetdefinities moeten behouden; een preset wijzigen verandert alle toepassingen ervan.
+Omgevingsdrempels, hysterese, interpretatie van weersvoorspellingen en het moment om een instelling te herstellen horen bij Home Assistant-automatiseringen. De service maakt geen weerregels of polling in Velair aan. De [blueprint voor seizoensgebonden klimaatkeuze](blueprints/seasonal-climate-selection.nl.md) kan modi kiezen of deze services eenmaal uitvoeren nadat de temperatuur een ingestelde tijd in een nieuw seizoensbereik blijft. Kies modi wanneer winter en zomer afzonderlijke presetdefinities moeten behouden; een preset wijzigen verandert alle toepassingen ervan.
 
 Zie [Blokpresets en gekoppelde sjablonen](linked-schedules.nl.md) voor de reikwijdte van gedeelde bronnen en [Praktische voorbeelden](linked-schedule-examples.nl.md) voor volledige huishoudconfiguraties.

@@ -49,11 +49,11 @@ Pause one or more Velair-managed climates while any selected window or door rema
 
 ### Seasonal climate selection
 
-Run configurable winter, mild-weather, or summer actions after a changed temperature sensor value remains stable for a positive delay, initially 30 minutes. Use the standard action editor to choose Velair Modes or other Home Assistant actions. Invalid readings generate an immediate notification; startup checks diagnostics without choosing a season.
+Run configurable winter, mild-weather, or summer actions once after the temperature stays in a new seasonal range for a positive delay, initially 30 minutes. Changes within that range preserve the deadline and do not repeat actions. Use the standard action editor to choose Velair Modes or other Home Assistant actions. Invalid readings generate an immediate notification; startup checks diagnostics without choosing a season.
 
 Diagnostic notifications support the same languages as Velair, selected explicitly in the blueprint.
 
-**Version:** 1.0.0 · **Requires:** Home Assistant 2024.6.0+ · **Category:** Temperature / seasonal automation
+**Version:** 1.1.0 · **Requires:** Home Assistant 2024.6.0+ · **Category:** Temperature / seasonal automation
 
 <p>
   <a href="blueprints/seasonal-climate-selection.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="View the Seasonal climate selection documentation"></a>

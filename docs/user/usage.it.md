@@ -9,7 +9,7 @@ Traduzioni: [Originale in inglese](usage.md) · [Español](usage.es.md) · [Fran
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.3 |
+| Versione di riferimento | 1.9.0-beta.4 |
 | Ultima sincronizzazione | 2026-10-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
@@ -146,6 +146,14 @@ Home Assistant sceglie i nomi tradotti delle entità dalla lingua backend alla p
 Dopo la configurazione, Velair compare nella barra laterale di Home Assistant.
 
 Il pannello laterale è l’interfaccia consigliata. La scheda Lovelace facoltativa serve per incorporare pannelli Velair specifici in una dashboard esistente.
+
+Nelle dashboard di tipo Sezioni, le schede Velair usano un’altezza automatica affinché i controlli espansi, le zone aggiuntive e il testo su più righe riservino spazio sopra la scheda successiva. Se dopo l’aggiornamento una scheda esistente continua a sovrapporsi a un’altra, controlla il suo YAML nella dashboard: rimuovi un valore numerico di `grid_options.rows` oppure impostalo su `auto`. Le opzioni di layout salvate prevalgono sui valori predefiniti della scheda:
+
+```yaml
+grid_options:
+  columns: 12
+  rows: auto
+```
 
 L’elenco dei prossimi eventi nella Panoramica e le schede della dashboard mostrano il prossimo cambiamento di controllo previsto per ogni dispositivo, compresi preparazione stimata e arrivo durante un Ritorno programmato confermato. Tutte le righe condividono la disposizione compatta nome/fonte/ora/azione/HVAC, senza sottotitolo di stato sotto il nome. La guida finale spiega fase e, quando il ritorno ha priorità, Modalità di arrivo, sospensione e riferimento settimanale attuale. Si apre al passaggio del mouse, al focus da tastiera o al tocco. Le sospensioni spiegano le condizioni prioritarie senza promettere un avvio bloccato. I sensori dei prossimi eventi e le viste di anticipo settimanale mantengono il significato settimanale. Sono previsioni informative: non cambiano l’esecuzione né confermano l’invio al dispositivo.
 
@@ -578,11 +586,11 @@ Velair fornisce blueprint Home Assistant facoltativi tramite la documentazione:
 
 - passare tra azioni Casa/Assenza scelte usando un’unica entità consolidata di presenza;
 - mettere in pausa uno o più dispositivi gestiti mentre una finestra o una porta selezionata rimane aperta;
-- selezionare Modalità stagionali o altre azioni dopo che una temperatura modificata è rimasta stabile, con notifiche immediate per letture non valide.
+- selezionare Modalità stagionali o altre azioni una sola volta dopo la conferma di un nuovo intervallo stagionale, con notifiche immediate per letture non valide.
 
 Usano eventi di stato Home Assistant e ritardi configurabili, senza interrogazioni periodiche. Il blueprint di presenza può segnalare quando il gruppo consolidato, il sensore template o l’helper resta non disponibile, senza eseguire azioni Casa o Assenza. Quello delle finestre identifica la pausa che crea, affinché la chiusura non rimuova una pausa manuale o di un’altra automazione. Se un contatto resta sconosciuto o non disponibile, Home Assistant mostra una notifica diagnostica ritardata per l’insieme dei termostati e la chiude automaticamente dopo il recupero; il contatto interessato continua comunque a impedire la ripresa. Consulta [Blueprint per automazioni](blueprints.it.md) per configurazione, esempi, comportamento all’avvio e regola di un’automazione per zona per i contatti delle finestre.
 
-Il [blueprint stagionale](blueprints/seasonal-climate-selection.it.md) attende per impostazione predefinita 30 minuti dopo ogni variazione di temperatura; letture che cambiano continuamente possono rimandare le azioni a tempo indeterminato. All’avvio controlla soltanto la diagnostica. Usa il normale editor delle azioni Home Assistant per selezionare le Modalità Velair. Configura una vera Modalità con pausa e spegnimento se il clima mite deve fermare la climatizzazione: le azioni vuote lasciano invariato il funzionamento attuale.
+Il [blueprint stagionale](blueprints/seasonal-climate-selection.it.md) conferma un nuovo intervallo stagionale per 30 minuti per impostazione predefinita. Le variazioni all’interno dell’intervallo mantengono la scadenza originale; le azioni vengono eseguite una sola volta per ogni ingresso nell’intervallo. All’avvio controlla soltanto la diagnostica. Usa il normale editor delle azioni Home Assistant per selezionare le Modalità Velair. Configura una vera Modalità con pausa e spegnimento se il clima mite deve fermare la climatizzazione: le azioni vuote lasciano invariato il funzionamento attuale.
 
 <a id="portability"></a>
 ## Portabilità

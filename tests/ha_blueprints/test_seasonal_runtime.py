@@ -121,6 +121,7 @@ async def runtime(tmp_path):
 
 @pytest.mark.parametrize("value,season", [("19.9", "winter"), ("20", "mild"), ("27", "mild"), ("27.1", "summer")])
 async def test_boundaries_and_no_early_execution(runtime, value, season):
+    await runtime.set("23" if season == "winter" else "10")
     await runtime.load()
     await runtime.set(value)
     assert runtime.actions == []
@@ -136,17 +137,46 @@ async def test_metadata_default_delay_and_startup_diagnostics_only(runtime):
     assert runtime.notices == {}
 
 
-async def test_every_new_value_resets_delay_even_same_class(runtime):
-    await runtime.load()
-    for value in ("21", "22", "23"):
+async def test_same_range_updates_preserve_deadline_and_do_not_repeat(runtime):
+    await runtime.load(stability_delay={"seconds": 0.4})
+    await runtime.set("21")
+    await asyncio.sleep(0.25)
+    await runtime.set("22")
+    await asyncio.sleep(0.2)
+    await runtime.settle()
+    assert runtime.actions == ["mild"]
+    for value in ("23", "24", "27"):
         await runtime.set(value)
-        await asyncio.sleep(DELAY / 2)
-        assert runtime.actions == []
+        await runtime.due()
+    assert runtime.actions == ["mild"]
+
+
+async def test_leaving_and_returning_to_executed_range_runs_again(runtime):
+    await runtime.load()
+    for value in ("21", "30", "23"):
+        await runtime.set(value)
+        await runtime.due()
+    assert runtime.actions == ["mild", "summer", "mild"]
+
+
+async def test_same_range_as_initial_reading_does_not_execute(runtime):
+    await runtime.load()
+    await runtime.set("19")
+    await runtime.due()
+    assert runtime.actions == []
+
+
+async def test_equivalent_unit_update_preserves_pending_range(runtime):
+    await runtime.load(stability_delay={"seconds": 0.4})
+    await runtime.set("21")
+    await asyncio.sleep(0.25)
+    await runtime.set("69.8", "°F")
+    await asyncio.sleep(0.2)
+    await runtime.settle()
+    assert runtime.actions == ["mild"]
+    await runtime.set("71.6", "°F")
     await runtime.due()
     assert runtime.actions == ["mild"]
-    await runtime.set("24")
-    await runtime.due()
-    assert runtime.actions == ["mild", "mild"]
 
 
 async def test_attribute_update_does_not_execute(runtime):
@@ -172,7 +202,7 @@ async def test_format_change_does_not_lose_pending_thermal_change(runtime):
     assert runtime.actions == ["mild"]
 
 
-async def test_invalid_unit_cancels_pending_timer_until_new_value(runtime):
+async def test_invalid_unit_cancels_pending_timer_and_recovery_starts_new_wait(runtime):
     await runtime.load()
     await runtime.set("21")
     await asyncio.sleep(DELAY / 4)
@@ -181,7 +211,7 @@ async def test_invalid_unit_cancels_pending_timer_until_new_value(runtime):
     await runtime.set("21", "°C")
     assert runtime.notices == {}
     await runtime.due()
-    assert runtime.actions == []
+    assert runtime.actions == ["mild"]
     await runtime.set("22")
     await runtime.due()
     assert runtime.actions == ["mild"]
@@ -193,7 +223,7 @@ async def test_rapid_return_to_same_value_restarts_pending_wait(runtime):
     await asyncio.sleep(0.25)
     attributes = {"unit_of_measurement": "°C", "device_class": "temperature"}
     # Queue both real changes without allowing template listeners to settle.
-    runtime.hass.states.async_set(SENSOR, "23", attributes)
+    runtime.hass.states.async_set(SENSOR, "30", attributes)
     runtime.hass.states.async_set(SENSOR, "21", attributes)
     await runtime.settle()
     await asyncio.sleep(0.2)
@@ -237,17 +267,128 @@ async def test_entity_removal_interrupts_pending_selection(runtime):
     await runtime.set("21")
     assert runtime.notices == {}
     await asyncio.sleep(0.2)
-    # Reappearance starts a full new wait, not the original deadline.
+    # Entity reappearance establishes a baseline rather than selecting a range.
+    assert runtime.actions == []
+    await asyncio.sleep(0.25)
+    await runtime.settle()
+    assert runtime.actions == []
+    await runtime.set("30")
+    await asyncio.sleep(0.45)
+    await runtime.settle()
+    assert runtime.actions == ["summer"]
+
+
+@pytest.mark.parametrize("value", ["21", "30"])
+async def test_entity_reappearance_requires_subsequent_range_transition(runtime, value):
+    await runtime.load()
+    await runtime.set("21")
+    await runtime.due()
+    assert runtime.actions == ["mild"]
+    runtime.hass.states.async_remove(SENSOR)
+    await runtime.settle()
+    await runtime.set(value)
+    await runtime.due()
+    assert runtime.actions == ["mild"]
+    await runtime.set(str(float(value) + 0.5))
+    await runtime.due()
+    assert runtime.actions == ["mild"]
+    await runtime.set("19")
+    await runtime.due()
+    assert runtime.actions == ["mild", "winter"]
+
+
+async def test_initial_missing_sensor_requires_subsequent_range_transition(runtime):
+    runtime.hass.states.async_remove(SENSOR)
+    await runtime.settle()
+    await runtime.load(startup=True)
+    assert len(runtime.notices) == 1
+    await runtime.set("21")
+    assert runtime.actions == []
+    assert runtime.notices == {}
+    await runtime.due()
+    assert runtime.actions == []
+    await runtime.set("30")
+    await runtime.due()
+    assert runtime.actions == ["summer"]
+
+
+async def test_reappearance_with_invalid_reading_still_reports_diagnostics(runtime):
+    await runtime.load()
+    runtime.hass.states.async_remove(SENSOR)
+    await runtime.settle()
+    await runtime.set("unavailable")
+    assert len(runtime.notices) == 1
+    await runtime.due()
+    assert runtime.actions == []
+    await runtime.set("21")
+    await runtime.due()
+    assert runtime.actions == ["mild"]
+
+
+async def test_burst_reappearance_and_within_range_updates_do_not_execute(runtime):
+    await runtime.load()
+    runtime.hass.states.async_remove(SENSOR)
+    await runtime.settle()
+    attributes = {"unit_of_measurement": "°C", "device_class": "temperature"}
+    runtime.hass.states.async_set(SENSOR, "21", attributes)
+    runtime.hass.states.async_remove(SENSOR)
+    runtime.hass.states.async_set(SENSOR, "21", attributes)
+    runtime.hass.states.async_set(SENSOR, "23", attributes)
+    await runtime.settle()
+    await runtime.due()
+    assert runtime.actions == []
+    await runtime.set("30")
+    await runtime.due()
+    assert runtime.actions == ["summer"]
+
+
+async def test_reappearance_wait_is_cancelled_by_rapid_range_exit_and_return(runtime):
+    await runtime.load(stability_delay={"seconds": 0.4})
+    runtime.hass.states.async_remove(SENSOR)
+    await runtime.settle()
+    await runtime.set("21")
+    await asyncio.sleep(0.25)
+    attributes = {"unit_of_measurement": "°C", "device_class": "temperature"}
+    runtime.hass.states.async_set(SENSOR, "30", attributes)
+    runtime.hass.states.async_set(SENSOR, "21", attributes)
+    await runtime.settle()
+    await asyncio.sleep(0.2)
     assert runtime.actions == []
     await asyncio.sleep(0.25)
     await runtime.settle()
     assert runtime.actions == ["mild"]
 
 
+async def test_slow_diagnostics_do_not_block_or_delay_seasonal_confirmation(runtime):
+    await runtime.load()
+    release_dismiss = asyncio.Event()
+    dismiss_started = asyncio.Event()
+
+    async def delayed_dismiss(call):
+        dismiss_started.set()
+        await release_dismiss.wait()
+        runtime.notices.pop(call.data["notification_id"], None)
+
+    runtime.hass.services.async_register("persistent_notification", "dismiss", delayed_dismiss)
+    try:
+        await runtime.set("21")
+        await asyncio.wait_for(dismiss_started.wait(), 1)
+        await runtime.due()
+        assert runtime.actions == ["mild"]
+        await runtime.set("30")
+        release_dismiss.set()
+        await runtime.settle()
+        assert runtime.actions == ["mild"]
+        await runtime.due()
+        assert runtime.actions == ["mild", "summer"]
+    finally:
+        release_dismiss.set()
+
+
 async def test_initial_burst_return_to_same_value_runs_once(runtime):
     await runtime.load()
     attributes = {"unit_of_measurement": "°C", "device_class": "temperature"}
-    for value in ("21", "22", "21"):
+    for value in ("21", "10", "21"):
         runtime.hass.states.async_set(SENSOR, value, attributes)
     await runtime.settle()
     await runtime.due()
@@ -369,6 +510,8 @@ async def test_invalid_configuration_has_distinct_notification(runtime, inputs):
 
 @pytest.mark.parametrize("sensor_value,sensor_unit,inputs,expected", [("68", "°F", {}, "mild"), ("80.6", "°F", {}, "mild"), ("86", "°F", {}, "summer"), ("18", "°C", {"threshold_unit": "°F", "winter_threshold": 68, "summer_threshold": 80.6}, "winter")])
 async def test_unit_conversion(runtime, sensor_value, sensor_unit, inputs, expected):
+    if expected == "winter":
+        await runtime.set("23")
     await runtime.load(**inputs)
     await runtime.set(sensor_value, sensor_unit)
     await runtime.due()
@@ -414,4 +557,9 @@ async def test_pending_timer_is_cancelled_on_automation_disable(runtime):
     assert runtime.actions == []
     await runtime.set("31")
     await runtime.due()
-    assert runtime.actions == ["summer"]
+    assert runtime.actions == []
+    await runtime.set("23")
+    await runtime.due()
+    await runtime.set("31")
+    await runtime.due()
+    assert runtime.actions == ["mild", "summer"]

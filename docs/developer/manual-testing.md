@@ -1636,14 +1636,14 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
 ## Seasonal Blueprint Checks
 
 1. Import `seasonal_climate_selection.yaml` into a non-critical Home Assistant instance. Check its three sections on desktop and mobile; choose Modes using the standard action editor without typing Profile IDs.
-2. Use a test temperature sensor and shorten the positive delay. Change it to 18, 23, and 30 °C; verify the corresponding action runs only after stability. Check exactly 20 and 27 °C select mild weather.
-3. Change the value repeatedly before the delay ends, including changes within one season. Verify the last eligible stable change runs once and attribute-only updates do not select a season.
-   Check `21 → 22 → 21` starts a fresh delay, while `21 → 21.0` preserves a pending wait without creating another decision. An invalid unit must interrupt a pending wait; restoring that attribute alone dismisses the warning without selecting a season.
-4. Set the sensor unavailable during a pending wait. Confirm the persistent notification appears immediately in English and Spanish, does not duplicate, and no stale seasonal action runs. Restore a valid reading and verify the fresh stability wait.
+2. Use a test temperature sensor and shorten the positive delay. Enter winter at 18 °C, mild weather at 23 °C, and summer at 30 °C; verify the corresponding action runs only after the entire confirmation delay in that range. Check exactly 20 and 27 °C belong to mild weather.
+3. Change the value repeatedly within a pending range. Verify `21 → 22 → 21` and `21 → 21.0` keep the original deadline and actions run once per range entry. After confirmation, same-range and attribute-only updates must not repeat actions. Leave the range briefly and return; verify a full new delay, even if the intervening range never executed.
+   An invalid unit must cancel confirmation. Restoring a valid unit alone dismisses the warning and starts a full new confirmation; actions may run after that wait, even for the previously selected range.
+4. Set the sensor unavailable during a pending wait. Confirm the persistent notification appears immediately in English and Spanish, does not duplicate, and no stale seasonal action runs. Restore a valid reading and verify a full new confirmation delay, including when startup initially had an invalid reading.
 5. Test a Fahrenheit reading with Celsius thresholds, then configure Fahrenheit thresholds explicitly. Test unsupported or missing units and invalid thresholds/delay.
 6. Restart Home Assistant with valid and invalid readings. Confirm valid startup selects nothing, invalid startup warns, and pending delays are not recovered after restart or automation reload.
 7. Verify an empty mild-weather action list leaves the current routine unchanged. Then configure a real pause-and-off Mode and check it stops the selected zones.
-8. Test a manual Away selection followed by a new stable sensor value; confirm the configured action can replace it, as documented. Inspect normal traces for a failing user action.
+8. Test a manual Away selection followed by a newly confirmed seasonal range; confirm the configured action can replace it, as documented. Updates within the already confirmed range must not replace Away. Inspect normal traces for a failing user action.
 9. Re-import from the stable URL once published. Confirm HACS integration installation alone does not import the blueprint and **Take control** creates an independent automation.
 
 ## Release UI Checks

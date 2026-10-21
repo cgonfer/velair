@@ -8,8 +8,8 @@ Traductions: [Original en anglais](blueprints.md) · [Español](blueprints.es.md
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.4 |
+| Dernière synchronisation | 2026-10-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -66,11 +66,11 @@ Mettez en pause un ou plusieurs appareils gérés par Velair tant qu’une fenê
 <a id="seasonal-climate-selection"></a>
 ### Sélection climatique saisonnière
 
-Exécutez des actions configurables pour l’hiver, le temps doux ou l’été après qu’une valeur modifiée d’un capteur de température est restée stable pendant un délai positif, initialement 30 minutes. Utilisez l’éditeur d’actions standard pour choisir des modes Velair ou d’autres actions Home Assistant. Les mesures invalides génèrent une notification immédiate ; le démarrage vérifie les diagnostics sans choisir de saison.
+Exécutez une seule fois les actions configurables pour l’hiver, le temps doux ou l’été après que la température est restée dans une nouvelle plage saisonnière pendant un délai positif, initialement 30 minutes. Les changements au sein de cette plage conservent l’échéance et ne répètent pas les actions. Utilisez l’éditeur d’actions standard pour choisir des modes Velair ou d’autres actions Home Assistant. Les mesures invalides génèrent une notification immédiate ; le démarrage vérifie les diagnostics sans choisir de saison.
 
 Les notifications de diagnostic prennent en charge les mêmes langues que Velair ; leur langue se sélectionne explicitement dans le blueprint.
 
-**Version :** 1.0.0 · **Nécessite :** Home Assistant 2024.6.0+ · **Catégorie :** Température / automatisation saisonnière
+**Version :** 1.1.0 · **Nécessite :** Home Assistant 2024.6.0+ · **Catégorie :** Température / automatisation saisonnière
 
 <p>
   <a href="blueprints/seasonal-climate-selection.fr.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Consulter la documentation Sélection climatique saisonnière"></a>

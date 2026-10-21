@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](preset-automations.md) · [Español](preset-
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.4 |
+| Última sincronización | 2026-10-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -181,6 +181,6 @@ No hay vencimiento temporizado ni restauración automática. Apagado afecta a to
 - Los controladores externos reciben programaciones semanales completas actualizadas cuando cambian sus horarios efectivos. Un fallo de publicación no habilita la ejecución local.
 - Los identificadores desconocidos, las combinaciones no válidas, los usos incompatibles y una migración pendiente de unidad de temperatura producen errores. Los fallos de envío de órdenes a los dispositivos posteriores al guardado no revierten el preset guardado.
 
-Los umbrales ambientales, la histéresis, la interpretación de previsiones y el momento de restaurar un ajuste corresponden a las automatizaciones de Home Assistant. El servicio no crea reglas meteorológicas ni sondeo periódico dentro de Velair. El [blueprint de selección climática estacional](blueprints/seasonal-climate-selection.es.md) puede seleccionar Modos o ejecutar estos servicios después de que una temperatura permanezca estable durante un retardo configurado. Elige Modos si invierno y verano deben conservar definiciones de presets separadas; actualizar un preset cambia todos sus usos.
+Los umbrales ambientales, la histéresis, la interpretación de previsiones y el momento de restaurar un ajuste corresponden a las automatizaciones de Home Assistant. El servicio no crea reglas meteorológicas ni sondeo periódico dentro de Velair. El [blueprint de selección climática estacional](blueprints/seasonal-climate-selection.es.md) puede seleccionar Modos o ejecutar estos servicios una sola vez después de que la temperatura permanezca en un nuevo rango estacional durante un retardo configurado. Elige Modos si invierno y verano deben conservar definiciones de presets separadas; actualizar un preset cambia todos sus usos.
 
 Consulta [Presets de bloques y plantillas vinculadas](linked-schedules.es.md) para el alcance de los recursos compartidos y [Ejemplos prácticos](linked-schedule-examples.es.md) para configuraciones completas del hogar.
