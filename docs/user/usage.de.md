@@ -8,7 +8,7 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.3 |
+| Referenzversion | 1.9.0-beta.4 |
 | Letzte Synchronisierung | 2026-10-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
@@ -146,6 +146,14 @@ Home Assistant wählt übersetzte Entitätsnamen anhand der Backend-Sprache bei 
 Nach der Einrichtung erscheint Velair in der Home-Assistant-Seitenleiste.
 
 Das Seitenleisten-Panel ist die empfohlene Oberfläche. Die optionale Lovelace-Karte eignet sich zum Einbetten bestimmter Velair-Bereiche in ein vorhandenes Dashboard.
+
+In Dashboards vom Typ Abschnitte verwenden Velair-Karten eine automatische Höhe, damit ausgeklappte Steuerelemente, zusätzliche Zonen und umgebrochener Text Platz oberhalb der nächsten Karte erhalten. Überlappt eine vorhandene Karte nach dem Update weiterhin eine andere, prüfe ihr Dashboard-YAML: Entferne einen numerischen Wert für `grid_options.rows` oder ändere ihn in `auto`. Gespeicherte Layoutoptionen haben Vorrang vor den Standardwerten der Karte:
+
+```yaml
+grid_options:
+  columns: 12
+  rows: auto
+```
 
 Die Liste anstehender Ereignisse in Übersicht und Dashboard-Ereigniskarten zeigt die nächste prognostizierte Steuerungsänderung je Klimagerät, einschließlich geschätzter Vorbereitung und Ankunft bei bestätigter Geplanter Rückkehr. Alle Zeilen verwenden Name/Quelle/Zeit/Aktion/HVAC ohne Zustandsuntertitel unter dem Namen. Die Hilfe am Ende erklärt Phase und bei Rückkehrvorrang Ankunftsmodus, Aussetzungsdetails und aktuelle Wochenreferenz. Sie öffnet bei Hover, Tastaturfokus oder Tippen. Aussetzungen erklären höher priorisierte Blocker statt einen blockierten Start zu versprechen. Vorhandene Ereignissensoren und spezielle Wochenvorbereitungsansichten behalten ihre Wochenbedeutung. Die Prognose dient der Anzeige; sie ändert keine Zeitplanerausführung und bestätigt keine Geräteübertragung.
 
@@ -609,12 +617,12 @@ Velair bietet in seiner Dokumentation optionale Home-Assistant-Blueprints:
 
 - anhand einer zusammengefassten Anwesenheitsentität zwischen gewählten Zuhause-/Abwesenheitsaktionen wechseln;
 - eine oder mehrere verwaltete Klimaentitäten pausieren, solange ein ausgewähltes Fenster oder eine Tür offen ist;
-- nach einer stabilen Temperaturänderung saisonale Modi oder andere Aktionen wählen und ungültige Messwerte sofort melden.
+- saisonale Modi oder andere Aktionen einmal nach Bestätigung eines neuen saisonalen Bereichs wählen und ungültige Messwerte sofort melden.
 
 Sie verwenden Home-Assistant-Zustandsereignisse und konfigurierbare Verzögerungen statt regelmäßiger Abfragen. Der Anwesenheits-Blueprint kann melden, wenn zusammengefasste Gruppe, Templatesensor oder Helfer nicht verfügbar bleibt, ohne Zuhause- oder Abwesenheitsaktionen auszuführen. Der Fenster-Blueprint kennzeichnet seine eigene Pause, damit Fensterschließen keine manuelle oder von einer anderen Automatisierung verwaltete Pause entfernt. Bleibt ein Kontakt unbekannt oder nicht verfügbar, zeigt Home Assistant eine verzögerte Diagnosebenachrichtigung für die Thermostatgruppe und entfernt sie nach Erholung automatisch. Der betroffene Kontakt blockiert das Fortsetzen weiterhin.
 [Automatisierungs-Blueprints](blueprints.de.md) erläutert Einrichtung, Beispiele, Startverhalten und die Regel einer Fensterautomatisierung je Zone.
 
-Der [saisonale Blueprint](blueprints/seasonal-climate-selection.de.md) wartet standardmäßig nach jeder Temperaturänderung 30 Minuten. Ständig wechselnde Messwerte können Aktionen unbefristet hinausschieben. Startprüfungen prüfen nur Diagnosen. Wähle Velair-Modi im normalen Home-Assistant-Aktionseditor. Konfiguriere einen tatsächlichen Pausen-und-Aus-Modus, wenn mildes Wetter die Klimatisierung stoppen soll. Leere Aktionen lassen den aktuellen Betrieb unverändert.
+Der [saisonale Blueprint](blueprints/seasonal-climate-selection.de.md) bestätigt einen neuen saisonalen Bereich standardmäßig über 30 Minuten. Änderungen innerhalb dieses Bereichs behalten die ursprüngliche Frist bei; die Aktionen werden pro Eintritt in den Bereich einmal ausgeführt. Startprüfungen prüfen nur Diagnosen. Wähle Velair-Modi im normalen Home-Assistant-Aktionseditor. Konfiguriere einen tatsächlichen Pausen-und-Aus-Modus, wenn mildes Wetter die Klimatisierung stoppen soll. Leere Aktionen lassen den aktuellen Betrieb unverändert.
 
 <a id="portability"></a>
 ## Portabilität

@@ -1576,10 +1576,12 @@ describe("climate card view", () => {
     expect(climateCardStyles.cssText).toContain("grid-column: 1; grid-row: 1");
     expect(climateCardStyles.cssText).not.toContain(".climate-card-control-bridge");
     expect(climateCardStyles.cssText).toContain(".climate-card-control-toolbar");
+    expect(climateCardStyles.cssText).toContain(".climate-card-view > .climate-card-thermostat-controls:has(.climate-card-mode-control[open]) { z-index: 2; }");
     expect(climateCardStyles.cssText).toContain("button.icon-only:not(.panel-open) { gap: 0; }");
     expect(climateCardStyles.cssText).toContain("var(--velair-planned-return-color, #9575cd)");
     expect(climateCardStyles.cssText).not.toContain(".climate-card-control-pane { border-width: 0; }");
-    expect(climateCardStyles.cssText).toMatch(/\.climate-card-control-reason\s*\{[^}]*contain: inline-size;[^}]*overflow-wrap: anywhere/);
+    // Inline containment must fill the controls track, or paused reasons collapse to vertical text (#48).
+    expect(climateCardStyles.cssText).toMatch(/\.climate-card-control-reason\s*\{[^}]*contain: inline-size;[^}]*justify-self: stretch;[^}]*overflow-wrap: anywhere/);
     expect(climateCardStyles.cssText).toContain("border-radius: 11px 11px 0 0");
     expect(climateCardStyles.cssText).toContain("font-size: 10px");
     expect(climateCardStyles.cssText).toContain("border-radius: 0 11px 11px 0");

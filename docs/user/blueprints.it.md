@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](blueprints.md) · [Español](blueprints.es.md
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.4 |
+| Ultima sincronizzazione | 2026-10-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -66,11 +66,11 @@ Metti in pausa uno o più dispositivi climatici gestiti da Velair finché una de
 <a id="seasonal-climate-selection"></a>
 ### Selezione climatica stagionale
 
-Esegui azioni configurabili per inverno, clima mite o estate dopo che un valore modificato del sensore di temperatura resta stabile per un ritardo positivo, inizialmente 30 minuti. Usa l’editor standard delle azioni per scegliere modalità Velair o altre azioni Home Assistant. Le letture non valide generano una notifica immediata; all’avvio viene verificata la diagnostica senza scegliere una stagione.
+Esegui una sola volta le azioni configurabili per inverno, clima mite o estate dopo che la temperatura resta in un nuovo intervallo stagionale per un ritardo positivo, inizialmente 30 minuti. Le variazioni all’interno di quell’intervallo mantengono la scadenza e non ripetono le azioni. Usa l’editor standard delle azioni per scegliere modalità Velair o altre azioni Home Assistant. Le letture non valide generano una notifica immediata; all’avvio viene verificata la diagnostica senza scegliere una stagione.
 
 Le notifiche diagnostiche supportano le stesse lingue di Velair, scelti esplicitamente nel blueprint.
 
-**Versione:** 1.0.0 · **Richiede:** Home Assistant 2024.6.0+ · **Categoria:** Temperatura / automazione stagionale
+**Versione:** 1.1.0 · **Richiede:** Home Assistant 2024.6.0+ · **Categoria:** Temperatura / automazione stagionale
 
 <p>
   <a href="blueprints/seasonal-climate-selection.it.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Consulta la documentazione della selezione climatica stagionale"></a>

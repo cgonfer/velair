@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](seasonal-climate-selection.md) · [Español]
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.0-beta.4 |
+| Última sincronización | 2026-10-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -19,7 +19,7 @@ Traducciones: [Original en inglés](seasonal-climate-selection.md) · [Español]
 ---
 <!-- velair-docs:end -->
 
-Ejecuta las acciones que elijas después de que un sensor de temperatura cambie y mantenga su nuevo valor durante un retardo configurable. Selecciona Modos de invierno, entretiempo o verano sin duplicar horarios ni introducir reglas meteorológicas en Velair. Las lecturas de sensor no válidas generan una notificación inmediata de Home Assistant.
+Ejecuta una sola vez las acciones que elijas después de que un sensor de temperatura entre en un nuevo rango de invierno, entretiempo o verano y permanezca en él durante un retardo configurable. Selecciona Modos de invierno, entretiempo o verano sin duplicar horarios ni introducir reglas meteorológicas en Velair. Las lecturas de sensor no válidas generan una notificación inmediata de Home Assistant.
 
 <p>
   <a href="https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fcgonfer%2Fvelair%2Fmain%2Fblueprints%2Fautomation%2Fvelair%2Fseasonal_climate_selection.yaml"><img src="https://my.home-assistant.io/badges/blueprint_import.svg" alt="Abrir Home Assistant e importar el blueprint Selección climática estacional" height="28"></a>
@@ -34,13 +34,13 @@ Ejecuta las acciones que elijas después de que un sensor de temperatura cambie 
 
 Utiliza este blueprint si Home Assistant ya ofrece la máxima prevista del día, una medición exterior o una temperatura media como un único sensor numérico de temperatura. El blueprint elige las acciones que se ejecutarán; Velair sigue encargándose de los horarios, presets, Preacondicionamiento y envío de órdenes a los dispositivos.
 
-Para un sensor que se actualiza una vez al día, una actualización estable puede elegir la rutina del día. Para un sensor exterior o de promedio que cambie con frecuencia, elige el retardo con cuidado: cada valor nuevo reinicia la espera. Un sensor actualizado cada cinco minutos puede no completar nunca una espera de 30 minutos.
+Tanto un sensor de previsión diaria como un sensor exterior que cambie con frecuencia pueden confirmar un rango estacional. Los cambios dentro de ese rango conservan el plazo original. Las acciones se ejecutan una vez por entrada, de modo que las actualizaciones posteriores dentro del mismo rango no seleccionan un Modo repetidamente.
 
 <a id="requirements"></a>
 
 ## Requisitos
 
-- Versión 1.0.0 del blueprint y Home Assistant 2024.6.0 o posterior.
+- Versión 1.1.0 del blueprint y Home Assistant 2024.6.0 o posterior.
 - Un sensor numérico con clase de dispositivo de temperatura y unidad declarada de °C o °F.
 - Velair solo es necesario para acciones que utilicen sus entidades o servicios. Los scripts estándar y otras acciones de Home Assistant funcionan sin Velair.
 - Prepara el sensor de previsión por separado si tu proveedor meteorológico ofrece previsiones en lugar de un sensor numérico. Este blueprint no obtiene previsiones.
@@ -58,7 +58,7 @@ Los Modos y el selector nativo de Modo de Velair están disponibles desde Velair
 | Winter threshold | Los valores inferiores ejecutan las acciones de invierno; predeterminado 20 |
 | Summer threshold | Los valores superiores ejecutan las acciones de verano; predeterminado 27 |
 | Winter / Mild-weather / Summer actions | Secuencias de acciones estándar de Home Assistant; inicialmente vacías |
-| Stability delay | Cuánto tiempo debe mantenerse sin cambios la nueva temperatura numérica; predeterminado 30 minutos |
+| Range confirmation delay | Cuánto tiempo debe permanecer la temperatura en su nuevo rango estacional; predeterminado 30 minutos |
 | Language for diagnostic notifications | Cualquier idioma admitido por Velair para los avisos persistentes de sensor y configuración; inglés por defecto |
 
 El umbral de invierno debe ser inferior al de verano y el retardo debe ser positivo. Los valores de los umbrales no cambian automáticamente al elegir Fahrenheit: introduce tú los umbrales deseados en Fahrenheit.
@@ -89,7 +89,7 @@ data:
   option: Invierno
 ```
 
-Con umbrales de 20 y 27 °C, una máxima diaria que cambie a 18 °C ejecuta las acciones de invierno tras 30 minutos sin cambios. Una actualización posterior a 23 °C ejecuta las acciones de entretiempo; 30 °C ejecuta las de verano. Los valores exactos de 20 y 27 °C corresponden a entretiempo. Cada valor cambiado puede ejecutarse, incluido 18 → 19 °C dentro de invierno.
+Con umbrales de 20 y 27 °C, una máxima diaria que entre en invierno a 18 °C ejecuta las acciones de invierno tras 30 minutos continuamente por debajo de 20 °C. Un cambio a 19 °C durante la espera conserva el mismo plazo. Una actualización posterior a 23 °C ejecuta las acciones de entretiempo; 30 °C ejecuta las de verano. Los valores exactos de 20 y 27 °C corresponden a entretiempo. Las actualizaciones dentro de un rango ya confirmado no repiten sus acciones. Salir de un rango y volver a él inicia una espera completa nueva, aunque el rango intermedio haya durado demasiado poco para ejecutar sus acciones.
 
 <a id="shared-hours-different-indoor-temperatures"></a>
 
@@ -101,7 +101,7 @@ Vincula las planificaciones de los Perfiles Invierno y Verano a la misma plantil
 
 ### Temperatura media y Fahrenheit
 
-Un sensor de promedio puede cambiar varias veces por hora. Con un retardo de diez minutos, las actualizaciones a las 10:00 y las 10:07 posponen la decisión hasta las 10:17, siempre que no llegue otro valor. Si sigue cambiando antes de que pasen diez minutos, no se ejecutan acciones estacionales.
+Un sensor de promedio puede cambiar varias veces por hora. Con un retardo de diez minutos, entrar en verano a 28 °C a las 10:00 y cambiar a 29 °C a las 10:07 sigue ejecutando las acciones de verano a las 10:10. Si la lectura baja a 27 °C a las 10:07, se cancela la confirmación de verano y comienza la de entretiempo.
 
 Un sensor en Fahrenheit puede utilizar umbrales Celsius porque la lectura se convierte. También puedes seleccionar °F e introducir umbrales como 68 y 80.6 °F, equivalentes a 20 y 27 °C. Un valor de 77 °F selecciona entonces las acciones de entretiempo.
 
@@ -123,17 +123,17 @@ También es posible activar directamente un Perfil con `velair.activate_profile`
 
 ## Cómo funciona
 
-Un disparador de estado detecta una temperatura numérica distinta y la espera interrumpible nativa de Home Assistant comprueba que permanezca estable durante el retardo configurado. Un cambio numérico real interrumpe la decisión pendiente e inicia otra espera, incluso si vuelve a un valor anterior: `21 → 22 → 21` inicia un nuevo retardo en el 21 final. Un cambio únicamente de formato, como de `21` a `21.0`, no inicia otra decisión ni interrumpe una espera en curso. Las actualizaciones solo de atributos no inician acciones estacionales. Antes de comenzar las acciones, el blueprint vuelve a comprobar la lectura numérica actual, su unidad, los umbrales, el retardo y la continuidad de la espera.
+Los disparadores nativos de Home Assistant clasifican cada lectura de temperatura después de convertirla a la unidad de los umbrales. Entrar en invierno, entretiempo o verano inicia el retardo de confirmación de ese rango. Las lecturas dentro del mismo rango conservan el plazo original; las actualizaciones solo de atributos o de formato no lo reinician ni repiten las acciones.
 
-Una lectura o unidad no válida interrumpe inmediatamente una decisión pendiente, incluso cuando solo cambia el atributo de unidad. Restaurar únicamente la unidad descarta el diagnóstico, pero no selecciona una estación; hace falta otro cambio de estado numérico. Recuperarse de un estado numérico no válido, como `unavailable`, a un número válido inicia un nuevo retardo.
+Salir de un rango cancela inmediatamente su confirmación pendiente. Una salida breve y el regreso inician una espera completa nueva, aunque el otro rango nunca haya tenido tiempo de ejecutar sus acciones. Los valores exactos de los umbrales corresponden a entretiempo. Las lecturas equivalentes en Celsius y Fahrenheit permanecen en el mismo rango.
 
-El inicio de Home Assistant solo comprueba los diagnósticos. No elige un Modo estacional. Los temporizadores pendientes no sobreviven a un reinicio o recarga de la automatización; después se necesita otro cambio de estado del sensor. No hay disparador periódico ni diario, ni un ayudante que guarde la última clasificación.
+El inicio de Home Assistant solo comprueba los diagnósticos. No elige un Modo estacional. Los temporizadores pendientes no sobreviven a un reinicio, recarga de la automatización ni desactivación y reactivación. El rango presente al conectarse los disparadores se toma como referencia inicial: los cambios posteriores dentro de él no lo seleccionan. Una transición de rango o la recuperación de lecturas no válidas inicia la confirmación. No hay disparador periódico ni diario, ni un ayudante persistente que guarde la última selección. Si la entidad no existía al conectarse los disparadores, su primera aparición establece el rango inicial sin seleccionarlo.
 
-Si la entidad del sensor seleccionado no existe inicialmente y aparece después con una lectura válida, esa primera lectura cuenta como recuperación e inicia toda la espera de estabilidad. Lo mismo ocurre cuando se recrea un sensor eliminado. Es una transición del sensor posterior al inicio, no una acción estacional causada por el propio evento de inicio.
+La validación del sensor se ejecuta por separado de la confirmación estacional. Una entidad ausente, `unknown`, `unavailable`, un valor no finito o no numérico, o una unidad no admitida crean inmediatamente una notificación persistente propia de la automatización en el idioma seleccionado. El aviso identifica la automatización y el sensor, y explica que las acciones estacionales están suspendidas. La configuración no válida utiliza una notificación independiente.
 
-La validación del sensor se ejecuta por separado de la espera estacional. Una entidad ausente, `unknown`, `unavailable`, un valor no finito o no numérico, o una unidad no admitida crean inmediatamente una notificación persistente propia de la automatización en el idioma seleccionado. El aviso identifica la automatización y el sensor, y explica que las acciones estacionales están suspendidas. La recuperación descarta el aviso del sensor; recuperarse a un estado numérico válido inicia una nueva espera de estabilidad, mientras que recuperarse solo de la unidad actualiza únicamente el diagnóstico. La configuración no válida utiliza una notificación independiente.
+Las lecturas no válidas cancelan la espera pendiente. Recuperarse de un estado no numérico o de una unidad no admitida inicia un retardo de confirmación completo nuevo. Es un nuevo periodo continuo de lecturas válidas, por lo que la recuperación puede volver a ejecutar las mismas acciones estacionales. La recuperación también descarta el aviso del sensor.
 
-Por ejemplo, si un sensor deja de estar disponible a las 09:00, el aviso aparece inmediatamente, no a las 09:30. Si se recupera a 25 °C a las 09:10, las acciones de entretiempo pueden ejecutarse a las 09:40 si el valor permanece sin cambios.
+Por ejemplo, si un sensor deja de estar disponible a las 09:00, el aviso aparece inmediatamente. Si se recupera a 25 °C a las 09:10, las acciones de entretiempo pueden ejecutarse a las 09:40 si la temperatura permanece entre los umbrales durante todo ese periodo, aunque cambie el valor exacto.
 
 <a id="safety-and-precedence"></a>
 
@@ -145,7 +145,7 @@ Mientras el sensor no sea válido, el blueprint no realiza ninguna nueva selecci
 
 Las acciones configuradas utilizan la semántica y las trazas normales de Home Assistant. Un error de acción no revierte las acciones anteriores. El blueprint no puede verificar de forma genérica que una acción arbitraria haya seleccionado la rutina prevista o llegado a un dispositivo físico.
 
-Una nueva lectura estable puede sustituir un Modo Ausente seleccionado manualmente. Coordina las automatizaciones estacionales y de presencia para evitar que seleccionen Modos en conflicto. Por ejemplo, un script del hogar puede elegir un Modo Ausente cuando no hay nadie en casa y seleccionar el Modo estacional de casa ocupada solo cuando lo permita la presencia.
+Un rango estacional recién confirmado puede sustituir un Modo Ausente seleccionado manualmente. Coordina las automatizaciones estacionales y de presencia para evitar que seleccionen Modos en conflicto. Por ejemplo, un script del hogar puede elegir un Modo Ausente cuando no hay nadie en casa y seleccionar el Modo estacional de casa ocupada solo cuando lo permita la presencia.
 
 Sigue aplicándose el comportamiento existente de Modos y Perfiles de Velair, incluida la prioridad de las pausas y la cancelación de Refuerzos en las zonas afectadas. El Preacondicionamiento vuelve a calcularse a partir del horario efectivo seleccionado por la acción; no puede anticipar una selección estacional antes de que se produzca.
 
@@ -153,10 +153,11 @@ Sigue aplicándose el comportamiento existente de Modos y Perfiles de Velair, in
 
 ## Limitaciones
 
-- La estabilidad se refiere al valor del sensor, no solo a su clasificación como invierno, entretiempo o verano. Los sensores que cambian con frecuencia pueden posponer indefinidamente la ejecución.
+- La confirmación exige permanecer continuamente en un rango estacional; cruzar repetidamente sus límites puede posponer las acciones indefinidamente.
 - No hay acción estacional automática al iniciar, horario diario, sondeo periódico, temporizador pendiente guardado, permiso adicional de 24 °C ni apagado retardado.
+- Eliminar y recrear el sensor cancela la confirmación. Su reaparición establece una referencia inicial sin seleccionar una estación; hace falta una transición de rango posterior. Esto evita un rearme nativo inconsistente de Home Assistant tras eliminar la entidad. También se aplica a una entidad ausente al cargar la automatización. La recuperación normal desde `unknown`/`unavailable` o una unidad no válida inicia una confirmación nueva.
 - Las notificaciones no detectan un sensor que deje de actualizarse silenciosamente mientras conserve un número válido. Si hace falta, la supervisión de la vigencia de los datos de origen debe proporcionarse por separado.
-- No hay histéresis; el retardo de estabilidad filtra los cambios. Un nuevo valor estable de la misma clasificación también ejecuta su rama.
+- No hay histéresis; el retardo de confirmación filtra los cambios breves de rango. Las acciones se ejecutan una vez por entrada al rango, en lugar de una vez por lectura nueva.
 - La ejecución paralela tiene un límite. Las secuencias largas de acciones del usuario pueden ocupar plazas; mantén las acciones breves o delega el trabajo en scripts.
 - Una lectura posterior no cancela una secuencia que ya haya comenzado. Las comprobaciones protegen su inicio, no cada acción definida por el usuario.
 - Renombrar la automatización puede dejar su antigua notificación de diagnóstico pendiente de descarte manual. Las opciones de Modo renombradas o eliminadas deben actualizarse en las acciones configuradas.
@@ -165,9 +166,9 @@ Sigue aplicándose el comportamiento existente de Modos y Perfiles de Velair, in
 
 ## Resolución de problemas
 
-- Si no se ejecuta nada, comprueba que el valor haya cambiado realmente y permanezca sin cambios durante todo el retardo. Iniciar o recargar Home Assistant no inicia una selección estacional.
+- Si no se ejecuta nada, comprueba que el sensor haya entrado en otro rango estacional o se haya recuperado de un valor o unidad no válidos y haya permanecido en ese rango durante todo el retardo. El inicio y la recarga no inician la selección; las actualizaciones dentro del mismo rango no la repiten.
 - Si aparece un aviso, revisa el sensor indicado, su estado numérico y `unit_of_measurement`. Nunca se adivinan unidades desconocidas.
-- Si un temporizador nunca termina, revisa el historial del sensor y reduce el retardo positivo o utiliza un sensor de máxima diaria.
+- Si un temporizador nunca termina, revisa el historial del sensor en busca de cruces de límites o lecturas no válidas. Ajusta los umbrales o el retardo positivo a tu fuente.
 - Si se ejecuta la rama incorrecta, verifica la unidad elegida para los umbrales y ambos umbrales numéricos.
 - Si el entretiempo deja los equipos encendidos, configura un Modo que realmente pause y apague; una lista de acciones vacía no es una orden de apagado.
 - Si no se selecciona un Modo, prueba su acción manualmente y revisa la traza de la automatización. Selecciona el nombre actual de la opción en el editor de Home Assistant.
@@ -177,6 +178,6 @@ Sigue aplicándose el comportamiento existente de Modos y Perfiles de Velair, in
 
 ## Actualización y personalización
 
-Importa el blueprint de forma explícita; instalar o actualizar Velair mediante HACS no lo instala. Vuelve a importar la misma URL de `main`, que se actualiza continuamente, para obtener actualizaciones compatibles. La versión 1 conserva los nombres de las entradas; las entradas nuevas compatibles reciben valores predeterminados. Los cambios incompatibles utilizan un nombre de archivo nuevo y una versión principal nueva.
+Importa el blueprint de forma explícita; instalar o actualizar Velair mediante HACS no lo instala. Vuelve a importar la misma URL de `main`, que se actualiza continuamente, para obtener actualizaciones compatibles. La versión 1.1.0 sustituye el comportamiento temporal de la beta inicial en la misma URL, con los mismos nombres de entradas y sin una opción para mantener el comportamiento anterior. Vuelve a importar y recarga las automatizaciones afectadas para utilizar la confirmación por rango. Los demás blueprints conservan sus contratos de compatibilidad publicados.
 
 Home Assistant es el responsable de la automatización resultante. Velair no migra las automatizaciones ni `.storage`. Utiliza **Tomar el control** para una lógica diferente, teniendo en cuenta que la automatización independiente deja de recibir actualizaciones del blueprint. Consulta el [catálogo de blueprints](../blueprints.es.md) para las reglas comunes de distribución y actualización.

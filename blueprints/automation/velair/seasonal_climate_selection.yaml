@@ -1,13 +1,13 @@
-# Velair blueprint version: 1.0.0
-# Released with Velair: 1.9.0-beta.1 (Velair is only required by configured actions)
+# Velair blueprint version: 1.1.0
+# Released with Velair: 1.9.0-beta.4 (Velair is only required by configured actions)
 # Minimum Home Assistant version: 2024.6.0
 # Velair is only required by configured actions.
 blueprint:
   name: Velair - Seasonal climate selection
   description: >-
     Run winter, mild-weather, or summer actions from an outdoor, average, or
-    forecast maximum temperature sensor after its changed value remains stable.
-    Each new temperature restarts the delay. Invalid readings create an immediate
+    forecast maximum temperature sensor after it stays in a new seasonal range.
+    Changes within the same range keep the delay and do not repeat actions. Invalid readings create an immediate
     notification. Startup checks diagnostics only; empty actions leave current
     operation unchanged.
   domain: automation
@@ -89,11 +89,11 @@ blueprint:
       collapsed: true
       input:
         stability_delay:
-          name: Stable-value delay
+          name: Range confirmation delay
           description: >-
-            Must be positive. Every temperature change restarts this delay,
-            including changes within the same season. Frequent changes can
-            prevent execution indefinitely.
+            Must be positive. The temperature must stay in the same seasonal range
+            for this duration. Changes within that range do not restart the delay.
+            Actions run once per range entry; invalid readings cancel the wait.
           default:
             minutes: 30
           selector:
@@ -135,6 +135,9 @@ max_exceeded: warning
 
 trigger_variables:
   reference_sensor: !input temperature_sensor
+  threshold_unit: !input threshold_unit
+  winter_threshold: !input winter_threshold
+  summer_threshold: !input summer_threshold
 
 variables:
   reference_sensor: !input temperature_sensor
@@ -226,9 +229,67 @@ variables:
        threshold_unit in ['°C', '°F'] and seconds > 0 }}
 
 trigger:
-  - platform: state
+  # Numeric triggers inspect each event snapshot and keep the original deadline
+  # while the reading remains inside this range.
+  - platform: numeric_state
     entity_id: !input temperature_sensor
-    to: null
+    above: 0
+    value_template: >-
+      {% if not is_number(state.state) or
+            state.attributes.get('unit_of_measurement') not in ['°C', '°F'] %}
+        0
+      {% else %}
+        {% set value = state.state | float %}
+        {% set unit = state.attributes.get('unit_of_measurement') %}
+        {% set value = (value - 32) * 5 / 9 if unit == '°F' and threshold_unit == '°C'
+           else value * 9 / 5 + 32 if unit == '°C' and threshold_unit == '°F'
+           else value %}
+        {{ 1 if value < winter_threshold | float else 0 }}
+      {% endif %}
+    for: !input stability_delay
+    id: winter
+  # Numeric triggers inspect each event snapshot and keep the original deadline
+  # while the reading remains inside this range.
+  - platform: numeric_state
+    entity_id: !input temperature_sensor
+    above: 0
+    value_template: >-
+      {% if not is_number(state.state) or
+            state.attributes.get('unit_of_measurement') not in ['°C', '°F'] %}
+        0
+      {% else %}
+        {% set value = state.state | float %}
+        {% set unit = state.attributes.get('unit_of_measurement') %}
+        {% set value = (value - 32) * 5 / 9 if unit == '°F' and threshold_unit == '°C'
+           else value * 9 / 5 + 32 if unit == '°C' and threshold_unit == '°F'
+           else value %}
+        {{ 1 if winter_threshold | float <= value <= summer_threshold | float else 0 }}
+      {% endif %}
+    for: !input stability_delay
+    id: mild
+  # Numeric triggers inspect each event snapshot and keep the original deadline
+  # while the reading remains inside this range.
+  - platform: numeric_state
+    entity_id: !input temperature_sensor
+    above: 0
+    value_template: >-
+      {% if not is_number(state.state) or
+            state.attributes.get('unit_of_measurement') not in ['°C', '°F'] %}
+        0
+      {% else %}
+        {% set value = state.state | float %}
+        {% set unit = state.attributes.get('unit_of_measurement') %}
+        {% set value = (value - 32) * 5 / 9 if unit == '°F' and threshold_unit == '°C'
+           else value * 9 / 5 + 32 if unit == '°C' and threshold_unit == '°F'
+           else value %}
+        {{ 1 if value > summer_threshold | float else 0 }}
+      {% endif %}
+    for: !input stability_delay
+    id: summer
+  - platform: event
+    event_type: state_changed
+    event_data:
+      entity_id: !input temperature_sensor
     id: temperature_changed
   - platform: template
     value_template: >-
@@ -245,7 +306,47 @@ trigger:
     id: startup
 
 action:
-  # Diagnostics run independently of the stable-value delay and user actions.
+  # Dispatch confirmed ranges without awaiting diagnostic services. State-change
+  # and startup runs handle diagnostics independently, including during actions.
+  - choose:
+      - conditions: >-
+          {{ trigger is defined and
+             sensor_valid and configuration_valid and
+             trigger.id in ['winter', 'mild', 'summer'] }}
+        sequence:
+          # A missing entity has no continuous range. Its first appearance only
+          # establishes a baseline; a later range transition can start actions.
+          - condition: template
+            value_template: "{{ trigger.from_state is not none }}"
+          - condition: template
+            value_template: >-
+              {% if not is_number(states(reference_sensor)) or
+                    state_attr(reference_sensor, 'unit_of_measurement') not in ['°C', '°F'] %}
+                false
+              {% else %}
+                {% set value = states(reference_sensor) | float %}
+                {% set unit = state_attr(reference_sensor, 'unit_of_measurement') %}
+                {% set value = (value - 32) * 5 / 9 if unit == '°F' and threshold_unit == '°C'
+                   else value * 9 / 5 + 32 if unit == '°C' and threshold_unit == '°F'
+                   else value %}
+                {% set current_range = 'winter' if value < winter_threshold | float else
+                   'summer' if value > summer_threshold | float else 'mild' %}
+                {{ current_range == trigger.id }}
+              {% endif %}
+          - choose:
+              - conditions: "{{ trigger.id == 'winter' }}"
+                sequence:
+                  - choose: []
+                    default: !input winter_actions
+              - conditions: "{{ trigger.id == 'summer' }}"
+                sequence:
+                  - choose: []
+                    default: !input summer_actions
+            default:
+              - choose: []
+                default: !input mild_actions
+          - stop: Seasonal actions completed
+  # Diagnostics never wait for range confirmation or user actions.
   - choose:
       - conditions: "{{ not sensor_valid }}"
         sequence:
@@ -295,64 +396,3 @@ action:
       - service: persistent_notification.dismiss
         data:
           notification_id: "{{ configuration_notification_id }}"
-  - condition: template
-    value_template: >-
-      {{ trigger is defined and trigger.id == 'temperature_changed' and
-         sensor_valid and configuration_valid }}
-  - condition: template
-    value_template: >-
-      {{ trigger.to_state is not none and
-         is_number(states(reference_sensor)) and
-         is_number(trigger.to_state.state) and
-         states(reference_sensor) | float == trigger.to_state.state | float and
-         state_attr(reference_sensor, 'unit_of_measurement') in ['°C', '°F'] and
-         state_attr(reference_sensor, 'unit_of_measurement') ==
-           trigger.to_state.attributes.get('unit_of_measurement') and
-         (trigger.from_state is none or not is_number(trigger.from_state.state) or
-          trigger.from_state.state | float != trigger.to_state.state | float) }}
-  - variables:
-      pending_temperature: "{{ states(reference_sensor) | float }}"
-      pending_unit: "{{ state_attr(reference_sensor, 'unit_of_measurement') }}"
-  # Native event-driven waiting preserves a real change across formatting-only
-  # updates. The numeric trigger evaluates each event's State snapshot so a
-  # rapid change and return cannot hide an intervening temperature change.
-  - wait_for_trigger:
-      - platform: numeric_state
-        entity_id: !input temperature_sensor
-        above: 0
-        value_template: >-
-          {{ 1 if not is_number(state.state) or
-                  state.attributes.get('unit_of_measurement') != pending_unit or
-                  state.state | float(0) != pending_temperature | float
-             else 0 }}
-      - platform: event
-        event_type: state_changed
-        event_data:
-          entity_id: !input temperature_sensor
-          new_state: null
-    timeout: !input stability_delay
-    continue_on_timeout: true
-  - condition: template
-    value_template: >-
-      {{ wait.trigger is none and is_number(states(reference_sensor)) and
-         state_attr(reference_sensor, 'unit_of_measurement') == pending_unit and
-         states(reference_sensor) | float == pending_temperature | float }}
-  - variables:
-      reference_temperature: >-
-        {% set value = states(reference_sensor) | float %}
-        {% set unit = state_attr(reference_sensor, 'unit_of_measurement') %}
-        {{ (value - 32) * 5 / 9 if unit == '°F' and threshold_unit == '°C'
-           else value * 9 / 5 + 32 if unit == '°C' and threshold_unit == '°F'
-           else value }}
-  - choose:
-      - conditions: "{{ reference_temperature | float < winter_threshold | float }}"
-        sequence:
-          - choose: []
-            default: !input winter_actions
-      - conditions: "{{ reference_temperature | float > summer_threshold | float }}"
-        sequence:
-          - choose: []
-            default: !input summer_actions
-    default:
-      - choose: []
-        default: !input mild_actions

@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.4 |
+| Letzte Synchronisierung | 2026-10-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -66,11 +66,11 @@ Pausiere ein oder mehrere von Velair verwaltete Klimageräte, solange mindestens
 <a id="seasonal-climate-selection"></a>
 ### Saisonale Auswahl der Klimasteuerung
 
-Führe konfigurierbare Aktionen für Winter, mildes Wetter oder Sommer aus, nachdem ein geänderter Temperatursensorwert für eine positive Verzögerungsdauer stabil geblieben ist; anfangs sind das 30 Minuten. Im normalen Aktionseditor wählst du Velair-Modi oder andere Home-Assistant-Aktionen. Ungültige Messwerte erzeugen sofort eine Benachrichtigung; beim Start wird die Diagnose geprüft, ohne eine Saison auszuwählen.
+Führe konfigurierbare Aktionen für Winter, mildes Wetter oder Sommer einmal aus, nachdem die Temperatur für eine positive Verzögerungsdauer in einem neuen saisonalen Bereich geblieben ist; anfangs sind das 30 Minuten. Änderungen innerhalb dieses Bereichs behalten den Ablaufzeitpunkt bei und wiederholen die Aktionen nicht. Im normalen Aktionseditor wählst du Velair-Modi oder andere Home-Assistant-Aktionen. Ungültige Messwerte erzeugen sofort eine Benachrichtigung; beim Start wird die Diagnose geprüft, ohne eine Saison auszuwählen.
 
 Diagnosebenachrichtigungen unterstützen dieselben Sprachen wie Velair. Die Sprache wird im Blueprint ausdrücklich gewählt.
 
-**Version:** 1.0.0 · **Voraussetzung:** Home Assistant 2024.6.0+ · **Kategorie:** Temperatur / saisonale Automation
+**Version:** 1.1.0 · **Voraussetzung:** Home Assistant 2024.6.0+ · **Kategorie:** Temperatur / saisonale Automation
 
 <p>
   <a href="blueprints/seasonal-climate-selection.de.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Dokumentation für die saisonale Auswahl der Klimasteuerung öffnen"></a>

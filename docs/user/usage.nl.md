@@ -8,7 +8,7 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.3 |
+| Referentieversie | 1.9.0-beta.4 |
 | Laatst gesynchroniseerd | 2026-10-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
@@ -147,6 +147,14 @@ Home Assistant kiest vertaalde entiteitsnamen op basis van de backendtaal bij he
 ## Velair openen
 
 Na het instellen verschijnt Velair in de Home Assistant-zijbalk. Het zijbalkpaneel is de aanbevolen interface. Optionele Lovelace-kaarten zijn handig om afzonderlijke Velair-onderdelen in een bestaand dashboard op te nemen.
+
+In dashboards van het type Secties gebruiken Velair-kaarten een automatische hoogte, zodat uitgeklapte bediening, extra zones en tekst over meerdere regels ruimte boven de volgende kaart krijgen. Overlapt een bestaande kaart na het bijwerken nog steeds een andere kaart, controleer dan de dashboard-YAML: verwijder een numerieke waarde voor `grid_options.rows` of wijzig deze in `auto`. Opgeslagen indelingsopties hebben voorrang op de standaardwaarden van de kaart:
+
+```yaml
+grid_options:
+  columns: 12
+  rows: auto
+```
 
 De lijst met komende gebeurtenissen in Overzicht en dashboardkaarten toont de volgende verwachte aansturingswijziging per klimaatapparaat, inclusief geschatte voorbereiding en aankomst bij bevestigde Geplande terugkeer. Alle rijen gebruiken naam/bron/tijd/actie/HVAC zonder statusondertitel onder de naam. De hulp aan het einde verklaart fase en bij terugkeervoorrang aankomstmodus, onderbrekingsdetails en huidige weekreferentie. Ze opent bij aanwijzen, toetsenbordfocus of tikken. Onderbrekingen verklaren blokkeringen met hogere prioriteit in plaats van een geblokkeerde start te beloven. Bestaande gebeurtenissensoren en speciale weekvoorbereidingsweergaven behouden hun weekbetekenis. De voorspelling is voor weergave; ze wijzigt de planneruitvoering niet en bevestigt geen apparaatuitvoering.
 
@@ -555,11 +563,11 @@ Optionele Home Assistant-blueprints uit de documentatie kunnen:
 
 - gekozen thuis-/afwezig-acties uitvoeren via één samengestelde aanwezigheidsentiteit;
 - zones pauzeren zolang een gekozen raam of deur open is;
-- seizoensmodi of andere acties kiezen na stabiel gebleven temperatuurwijziging, met onmiddellijke meldingen bij ongeldige metingen.
+- seizoensmodi of andere acties eenmaal kiezen nadat een nieuw seizoensbereik is bevestigd, met onmiddellijke meldingen bij ongeldige metingen.
 
 Ze gebruiken toestandsgebeurtenissen en instelbare vertraging, geen peilingen. De aanwezigheidsblueprint kan blijvende onbeschikbaarheid van groep, sjabloonsensor of helper melden zonder thuis- of afwezig-acties. De raamblueprint identificeert haar pauze, zodat sluiten geen handmatige of andere automatiseringspauze verwijdert. Bij onbekend of onbeschikbaar contact toont Home Assistant één vertraagde diagnostische melding voor de thermostaatgroep en verwijdert die na herstel; het contact blijft hervatten blokkeren. Zie [Automatiseringsblueprints](blueprints.nl.md) voor inrichting, voorbeelden, opstartgedrag en één-automatisering-per-zone voor raamcontacten.
 
-De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) wacht standaard 30 minuten na iedere temperatuurwijziging. Voortdurend veranderende metingen kunnen acties onbeperkt uitstellen. Opstarten controleert alleen diagnostiek. Kies modi in de normale Home Assistant-actie-editor. Configureer een echte pauze-en-uit-modus als mild weer klimaatregeling moet stoppen; lege acties laten de huidige werking intact.
+De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) bevestigt standaard een nieuw seizoensbereik gedurende 30 minuten. Wijzigingen binnen dat bereik behouden de oorspronkelijke eindtijd; acties worden eenmaal per binnenkomst in het bereik uitgevoerd. Opstarten controleert alleen diagnostiek. Kies modi in de normale Home Assistant-actie-editor. Configureer een echte pauze-en-uit-modus als mild weer klimaatregeling moet stoppen; lege acties laten de huidige werking intact.
 
 <a id="portability"></a>
 ## Overdraagbaarheid

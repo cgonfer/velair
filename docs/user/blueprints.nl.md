@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](blueprints.md) · [Español](blueprints.es.md) �
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.4 |
+| Laatst gesynchroniseerd | 2026-10-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -66,11 +66,11 @@ Pauzeer een of meer door Velair beheerde klimaatapparaten zolang een geselecteer
 <a id="seasonal-climate-selection"></a>
 ### Seizoensgebonden klimaatkeuze
 
-Voer instelbare winter-, zachtweer- of zomeracties uit nadat een gewijzigde temperatuursensorwaarde gedurende een positieve vertraging stabiel is gebleven, standaard 30 minuten. Gebruik de standaard actie-editor om Velair-modi of andere Home Assistant-acties te kiezen. Ongeldige metingen veroorzaken onmiddellijk een melding; bij opstarten wordt de diagnose gecontroleerd zonder een seizoen te kiezen.
+Voer instelbare winter-, zachtweer- of zomeracties eenmaal uit nadat de temperatuur gedurende een positieve vertraging in een nieuw seizoensbereik is gebleven, standaard 30 minuten. Veranderingen binnen dat bereik behouden de eindtijd en herhalen de acties niet. Gebruik de standaard actie-editor om Velair-modi of andere Home Assistant-acties te kiezen. Ongeldige metingen veroorzaken onmiddellijk een melding; bij opstarten wordt de diagnose gecontroleerd zonder een seizoen te kiezen.
 
 Diagnosemeldingen ondersteunen dezelfde talen als Velair, expliciet gekozen in de blueprint.
 
-**Versie:** 1.0.0 · **Vereist:** Home Assistant 2024.6.0+ · **Categorie:** Temperatuur / seizoensautomatisering
+**Versie:** 1.1.0 · **Vereist:** Home Assistant 2024.6.0+ · **Categorie:** Temperatuur / seizoensautomatisering
 
 <p>
   <a href="blueprints/seasonal-climate-selection.nl.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Documentatie van Seizoensgebonden klimaatkeuze bekijken"></a>

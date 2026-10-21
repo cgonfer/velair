@@ -8,7 +8,7 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.3 |
+| Wersja odniesienia | 1.9.0-beta.4 |
 | Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
@@ -145,6 +145,14 @@ HA wybiera tłumaczone nazwy przy pierwszym tworzeniu według języka backendu. 
 Po konfiguracji Velair jest na pasku bocznym Home Assistant.
 
 Panel jest zalecanym interfejsem. Opcjonalna karta Lovelace przydaje się do osadzania konkretnych paneli w istniejącym pulpicie.
+
+W panelach typu Sekcje karty Velair używają automatycznej wysokości, dzięki czemu rozwinięte elementy sterujące, dodatkowe strefy i tekst w kilku wierszach zajmują miejsce nad następną kartą. Jeśli po aktualizacji istniejąca karta nadal nachodzi na inną, sprawdź jej YAML w panelu: usuń liczbową wartość `grid_options.rows` lub zmień ją na `auto`. Zapisane opcje układu mają pierwszeństwo przed domyślnymi ustawieniami karty:
+
+```yaml
+grid_options:
+  columns: 12
+  rows: auto
+```
 
 Lista następnych zdarzeń w Przeglądzie i karty zdarzeń pokazują następną prognozowaną zmianę sterowania każdej strefy, w tym szacowane przygotowanie i przyjazd podczas potwierdzonego powrotu. Wspólny zwarty układ to nazwa/źródło/godziny/akcja/HVAC, bez podtytułu stanu pod nazwą. Końcowa ikona informacji wyjaśnia fazę oraz Tryb przybycia, wstrzymanie i bieżące odniesienie tygodniowe, gdy powrót ma pierwszeństwo. Pomoc działa przez najechanie, fokus lub dotyk. Wstrzymanie wyjaśnia blokady, a nie obiecuje zablokowanego startu. Czujniki następnego zdarzenia i widoki tygodniowego wyprzedzenia zachowują znaczenie tygodniowe. Prognoza nie zmienia wykonania harmonogramu i nie potwierdza dostarczenia polecenia.
 
@@ -564,11 +572,11 @@ Opcjonalne blueprinty:
 
 - obecność/nieobecność z jednej encji;
 - pauza przy otwartych oknach/drzwiach;
-- sezonowe Tryby/inne działania po stabilnej zmianie temperatury, z natychmiastowym zgłaszaniem nieprawidłowych odczytów.
+- sezonowe Tryby lub inne działania wykonywane jednorazowo po potwierdzeniu nowego zakresu sezonowego, z natychmiastowym zgłaszaniem nieprawidłowych odczytów.
 
 Blueprinty korzystają ze zdarzeń i konfigurowalnych opóźnień, bez ciągłego odpytywania. Blueprint obecności zgłasza niedostępność wybranej grupy, encji szablonowej lub pomocnika, nie wykonując wtedy działań obecności ani nieobecności. Blueprint okien używa zidentyfikowanego powodu Pauzy, więc zamknięcie okna nie usuwa Pauzy ręcznej ani należącej do innej automatyzacji. Kontaktron o nieznanym stanie powoduje jedno opóźnione powiadomienie dla całego skonfigurowanego zestawu. Powiadomienie znika po odzyskaniu danych, a dopóki ich brakuje, wznowienie pozostaje zablokowane. [Blueprinty](blueprints.pl.md) opisują konfigurację, start i jedną automatyzację na strefę.
 
-[Blueprint sezonowy](blueprints/seasonal-climate-selection.pl.md) domyślnie czeka na 30 minut stabilności po zmianie odczytu. Ciągłe zmiany temperatury mogą bez końca odkładać wybór sezonu. Przy uruchomieniu sprawdza wyłącznie diagnostykę. Standardowy edytor działań Home Assistant pozwala wybierać Tryby Velair. Jeśli przy łagodnej pogodzie chcesz wyłączyć urządzenia, skonfiguruj odpowiedni Tryb z Pauzą i wyłączeniem, zamiast pozostawiać listę działań pustą.
+[Blueprint sezonowy](blueprints/seasonal-climate-selection.pl.md) domyślnie potwierdza nowy zakres sezonowy przez 30 minut. Zmiany w obrębie tego zakresu zachowują pierwotny termin; działania są wykonywane raz przy każdym wejściu w zakres. Przy uruchomieniu sprawdza wyłącznie diagnostykę. Standardowy edytor działań Home Assistant pozwala wybierać Tryby Velair. Jeśli przy łagodnej pogodzie chcesz wyłączyć urządzenia, skonfiguruj odpowiedni Tryb z Pauzą i wyłączeniem, zamiast pozostawiać listę działań pustą.
 
 <a id="portability"></a>
 ## Przenoszenie konfiguracji

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](preset-automations.md) · [Español](preset-a
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.4 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -173,6 +173,6 @@ Não há expiração temporizada nem restauração automática. Desligar afeta t
 - Controladores externos recebem programações semanais completas atualizadas, com os valores efetivos, quando suas programações efetivas mudam. Uma falha de publicação não habilita a execução local.
 - Identificadores desconhecidos, combinações inválidas, usos incompatíveis e migração pendente da unidade de temperatura produzem erros. Falhas no envio aos dispositivos após persistir não desfazem a predefinição salva.
 
-Limites ambientais, histerese, interpretação da previsão e o momento de restaurar uma configuração pertencem às automações do Home Assistant. O serviço não cria regras meteorológicas nem consultas periódicas no Velair. O [blueprint de seleção sazonal da climatização](blueprints/seasonal-climate-selection.pt-br.md) pode selecionar Modos ou executar esses serviços após uma temperatura permanecer estável por um atraso configurado. Escolha Modos quando inverno e verão devem manter definições separadas de predefinições; atualizar uma predefinição altera todos os seus usos.
+Limites ambientais, histerese, interpretação da previsão e o momento de restaurar uma configuração pertencem às automações do Home Assistant. O serviço não cria regras meteorológicas nem consultas periódicas no Velair. O [blueprint de seleção sazonal da climatização](blueprints/seasonal-climate-selection.pt-br.md) pode selecionar Modos ou executar esses serviços uma única vez depois que a temperatura permanecer em uma nova faixa sazonal por um atraso configurado. Escolha Modos quando inverno e verão devem manter definições separadas de predefinições; atualizar uma predefinição altera todos os seus usos.
 
 Consulte [Predefinições de blocos e modelos vinculados](linked-schedules.pt-br.md) para o alcance dos recursos compartilhados e [Exemplos práticos](linked-schedule-examples.pt-br.md) para configurações domésticas completas.

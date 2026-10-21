@@ -8,8 +8,8 @@ Traduções: [Original em inglês](preset-automations.md) · [Español](preset-a
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.4 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -173,6 +173,6 @@ Não há expiração temporizada nem restauro automático. Desligar afeta todas 
 - Os controladores externos recebem programações semanais completas atualizadas com os valores efetivos quando as respetivas programações efetivas mudam. Uma falha de publicação não ativa a execução local.
 - Identificadores desconhecidos, combinações inválidas, utilizações incompatíveis e uma migração pendente de unidades de temperatura produzem erros. As falhas de envio ao dispositivo após guardar não desfazem a predefinição guardada.
 
-Os limiares ambientais, a histerese, a interpretação da previsão e a decisão de quando restaurar uma definição pertencem às automações do Home Assistant. O serviço não cria regras meteorológicas nem consultas periódicas dentro do Velair. O [blueprint de seleção sazonal da climatização](blueprints/seasonal-climate-selection.pt-pt.md) pode selecionar Modos ou executar estes serviços depois de uma temperatura permanecer estável durante um atraso configurado. Escolha Modos quando inverno e verão devem manter definições de predefinições separadas; atualizar uma predefinição altera todas suas utilizações.
+Os limiares ambientais, a histerese, a interpretação da previsão e a decisão de quando restaurar uma definição pertencem às automações do Home Assistant. O serviço não cria regras meteorológicas nem consultas periódicas dentro do Velair. O [blueprint de seleção sazonal da climatização](blueprints/seasonal-climate-selection.pt-pt.md) pode selecionar Modos ou executar estes serviços uma única vez depois de a temperatura permanecer num novo intervalo sazonal durante um atraso configurado. Escolha Modos quando inverno e verão devem manter definições de predefinições separadas; atualizar uma predefinição altera todas suas utilizações.
 
 Consulte [Predefinições de blocos e modelos ligados](linked-schedules.pt-pt.md) para o âmbito dos funções partilhados e [Exemplos práticos](linked-schedule-examples.pt-pt.md) para configurações completas da casa.

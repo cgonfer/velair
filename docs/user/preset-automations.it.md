@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](preset-automations.md) · [Español](preset-a
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.4 |
+| Ultima sincronizzazione | 2026-10-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -173,6 +173,6 @@ Non esistono una scadenza temporizzata o un ripristino automatico. Off influisce
 - I controller esterni ricevono programmazioni settimanali complete aggiornate quando cambiano le loro programmazioni effettive. Un errore di pubblicazione non abilita l’esecuzione locale.
 - Identificatori sconosciuti, combinazioni non valide, utilizzi incompatibili e una migrazione dell’unità di temperatura in attesa producono errori. Gli errori di invio al dispositivo dopo la persistenza non annullano il preset salvato.
 
-Soglie ambientali, isteresi, interpretazione delle previsioni e momento del ripristino di un’impostazione appartengono alle automazioni Home Assistant. Il servizio non crea regole meteorologiche o interrogazioni periodiche dentro Velair. Il [blueprint di selezione climatica stagionale](blueprints/seasonal-climate-selection.it.md) può selezionare modalità o eseguire questi servizi dopo che una temperatura resta stabile per il ritardo configurato. Scegli le modalità quando inverno ed estate devono mantenere definizioni separate dei preset; aggiornare un preset cambia tutti i suoi utilizzi.
+Soglie ambientali, isteresi, interpretazione delle previsioni e momento del ripristino di un’impostazione appartengono alle automazioni Home Assistant. Il servizio non crea regole meteorologiche o interrogazioni periodiche dentro Velair. Il [blueprint di selezione climatica stagionale](blueprints/seasonal-climate-selection.it.md) può selezionare modalità o eseguire questi servizi una sola volta dopo che la temperatura resta in un nuovo intervallo stagionale per il ritardo configurato. Scegli le modalità quando inverno ed estate devono mantenere definizioni separate dei preset; aggiornare un preset cambia tutti i suoi utilizzi.
 
 Consulta [Preset dei blocchi e modelli collegati](linked-schedules.it.md) per l’ambito delle risorse condivise ed [Esempi pratici](linked-schedule-examples.it.md) per configurazioni domestiche complete.

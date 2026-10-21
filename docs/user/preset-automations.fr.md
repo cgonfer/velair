@@ -8,8 +8,8 @@ Traductions: [Original en anglais](preset-automations.md) · [Español](preset-a
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.4 |
+| Dernière synchronisation | 2026-10-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -173,6 +173,6 @@ Il n’y a ni expiration temporisée ni restauration automatique. L’arrêt aff
 - Les contrôleurs externes reçoivent des programmations hebdomadaires complètes mises à jour lorsque leurs programmations effectives changent. Un échec de publication n’active pas l’exécution locale.
 - Les identifiants inconnus, les combinaisons invalides, les utilisations incompatibles et une migration d’unité de température en attente produisent des erreurs. Les échecs de transmission aux appareils après persistance n’annulent pas le préréglage enregistré.
 
-Les seuils environnementaux, l’hystérésis, l’interprétation des prévisions et le moment de restaurer un réglage relèvent des automatisations Home Assistant. Le service ne crée aucune règle météo ni interrogation périodique dans Velair. Le [blueprint de sélection climatique saisonnière](blueprints/seasonal-climate-selection.fr.md) peut sélectionner des Modes ou exécuter ces services après qu’une température est restée stable pendant le délai configuré. Choisissez les Modes lorsque l’hiver et l’été doivent conserver des définitions de préréglages distinctes ; mettre à jour un préréglage change toutes ses utilisations.
+Les seuils environnementaux, l’hystérésis, l’interprétation des prévisions et le moment de restaurer un réglage relèvent des automatisations Home Assistant. Le service ne crée aucune règle météo ni interrogation périodique dans Velair. Le [blueprint de sélection climatique saisonnière](blueprints/seasonal-climate-selection.fr.md) peut sélectionner des Modes ou exécuter ces services une seule fois après que la température est restée dans une nouvelle plage saisonnière pendant le délai configuré. Choisissez les Modes lorsque l’hiver et l’été doivent conserver des définitions de préréglages distinctes ; mettre à jour un préréglage change toutes ses utilisations.
 
 Consultez [Préréglages de blocs et modèles liés](linked-schedules.fr.md) pour la portée des ressources partagées et les [exemples pratiques](linked-schedule-examples.fr.md) pour des configurations complètes du foyer.

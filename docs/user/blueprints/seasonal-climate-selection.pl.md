@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](seasonal-climate-selection.md) ·
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.4 |
+| Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -18,7 +18,7 @@ Tłumaczenia: [Oryginał w języku angielskim](seasonal-climate-selection.md) ·
 ---
 <!-- velair-docs:end -->
 
-Uruchamiaj wybrane działania po zmianie odczytu czujnika temperatury i utrzymaniu nowej wartości przez konfigurowalne opóźnienie. Wybieraj Tryby zimowe, na łagodną pogodę lub letnie bez powielania harmonogramów i umieszczania reguł pogodowych w Velair. Nieprawidłowe odczyty powodują natychmiastowe powiadomienie Home Assistant.
+Uruchamiaj wybrane działania raz po wejściu czujnika temperatury w nowy zakres zimowy, łagodnej pogody lub letni i pozostaniu w nim przez konfigurowalne opóźnienie. Wybieraj Tryby zimowe, na łagodną pogodę lub letnie bez powielania harmonogramów i umieszczania reguł pogodowych w Velair. Nieprawidłowe odczyty powodują natychmiastowe powiadomienie Home Assistant.
 
 <p>
   <a href="https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fcgonfer%2Fvelair%2Fmain%2Fblueprints%2Fautomation%2Fvelair%2Fseasonal_climate_selection.yaml"><img src="https://my.home-assistant.io/badges/blueprint_import.svg" alt="Otwórz Home Assistant i zaimportuj blueprint sezonowego wyboru ustawień klimatu" height="28"></a>
@@ -32,12 +32,12 @@ Uruchamiaj wybrane działania po zmianie odczytu czujnika temperatury i utrzyman
 
 Użyj blueprintu, gdy Home Assistant udostępnia już dzienne maksimum prognozy, pomiar zewnętrzny lub temperaturę średnią jako jeden liczbowy czujnik temperatury. Wybiera on działania do wykonania; Velair nadal odpowiada za harmonogramy, presety, przygotowanie temperatury i przekazywanie poleceń urządzeniom.
 
-Dla czujnika aktualizowanego raz dziennie jedna stabilna zmiana może wybrać rutynę dnia. Przy często zmieniającym się czujniku zewnętrznym lub średnim dobierz opóźnienie ostrożnie: każda nowa wartość rozpoczyna oczekiwanie od nowa. Czujnik aktualizowany co pięć minut może nigdy nie zakończyć 30-minutowego oczekiwania.
+Zarówno czujnik dziennej prognozy, jak i często zmieniający się czujnik zewnętrzny mogą potwierdzić zakres sezonowy. Zmiany w obrębie zakresu zachowują pierwotny termin. Działania wykonują się raz na wejście, więc późniejsze aktualizacje w tym samym zakresie nie wybierają Trybu wielokrotnie.
 
 <a id="requirements"></a>
 ## Wymagania
 
-- Blueprint 1.0.0 i Home Assistant 2024.6.0 lub nowszy.
+- Blueprint 1.1.0 i Home Assistant 2024.6.0 lub nowszy.
 - Jeden liczbowy czujnik z klasą temperatury i zadeklarowaną jednostką °C lub °F.
 - Velair jest potrzebny tylko dla działań używających jego encji lub usług. Zwykłe skrypty i inne działania Home Assistant działają bez Velair.
 - Jeśli dostawca pogody udostępnia prognozy, nie czujnik liczbowy, przygotuj taki czujnik osobno. Blueprint nie pobiera prognoz.
@@ -54,7 +54,7 @@ Tryby i natywny selektor Trybu Velair są dostępne od Velair 1.6.0. Współdzie
 | Winter threshold | Wartości poniżej progu uruchamiają działania zimowe; domyślnie 20 |
 | Summer threshold | Wartości powyżej progu uruchamiają działania letnie; domyślnie 27 |
 | Winter / Mild-weather / Summer actions | Standardowe sekwencje działań Home Assistant; początkowo puste |
-| Stability delay | Czas nieprzerwanego utrzymania nowej temperatury liczbowej; domyślnie 30 minut |
+| Range confirmation delay | Czas pozostawania temperatury w nowym zakresie sezonowym; domyślnie 30 minut |
 | Language for diagnostic notifications | Dowolny język Velair dla trwałych ostrzeżeń czujnika i konfiguracji; domyślnie angielski |
 
 Próg zimowy musi być niższy od letniego, a opóźnienie dodatnie. Wybór Fahrenheita nie zmienia automatycznie liczb progów: wpisz samodzielnie zamierzone progi w °F.
@@ -83,7 +83,7 @@ data:
   option: Invierno
 ```
 
-Przy progach 20 i 27 °C zmiana dziennego maksimum na 18 °C uruchamia działania zimowe po 30 minutach bez zmiany wartości. Kolejna aktualizacja do 23 °C uruchamia działania dla łagodnej pogody; 30 °C uruchamia letnie. Dokładnie 20 lub 27 °C należy do łagodnej pogody. Każda zmieniona wartość może wywołać działanie, także 18 → 19 °C w obrębie zimy.
+Przy progach 20 i 27 °C dzienne maksimum wchodzące w zakres zimowy przy 18 °C uruchamia działania zimowe po 30 minutach nieprzerwanie poniżej 20 °C. Zmiana na 19 °C w trakcie oczekiwania zachowuje ten sam termin. Kolejna aktualizacja do 23 °C uruchamia działania dla łagodnej pogody; 30 °C uruchamia letnie. Dokładnie 20 lub 27 °C należy do łagodnej pogody. Aktualizacje w już potwierdzonym zakresie nie powtarzają działań. Wyjście z zakresu i powrót rozpoczynają pełne nowe oczekiwanie, nawet jeśli zakres pośredni trwał zbyt krótko, aby wykonać swoje działania.
 
 <a id="shared-hours-different-indoor-temperatures"></a>
 ### Wspólne godziny, różne temperatury w domu
@@ -93,7 +93,7 @@ Powiąż harmonogramy Profili Invierno i Verano z tym samym szablonem dziennym, 
 <a id="average-temperature-and-fahrenheit"></a>
 ### Temperatura średnia i Fahrenheit
 
-Czujnik średniej może zmieniać się kilka razy na godzinę. Przy dziesięciominutowym opóźnieniu aktualizacje o 10:00 i 10:07 przesuwają decyzję na 10:17, jeśli nie pojawi się nowa wartość. Jeśli zmiany nadal następują przed upływem dziesięciu minut, działania sezonowe się nie wykonują.
+Czujnik średniej może zmieniać się kilka razy na godzinę. Przy dziesięciominutowym opóźnieniu wejście w zakres letni przy 28 °C o 10:00 i zmiana na 29 °C o 10:07 nadal uruchamiają działania letnie o 10:10. Jeśli odczyt spadnie do 27 °C o 10:07, potwierdzanie lata zostaje anulowane i zamiast niego zaczyna się potwierdzanie łagodnej pogody.
 
 Czujnik Fahrenheita może korzystać z progów Celsjusza, ponieważ odczyt jest przeliczany. Możesz też wybrać °F i wpisać progi np. 68 i 80.6 °F, równoważne 20 i 27 °C. Wartość 77 °F wybiera wtedy działania dla łagodnej pogody.
 
@@ -113,17 +113,17 @@ Można również aktywować Profil bezpośrednio przez `velair.activate_profile`
 <a id="how-it-works"></a>
 ## Jak działa
 
-Wyzwalacz stanu wykrywa zmianę liczbowej temperatury, a natywne przerywalne oczekiwanie Home Assistant sprawdza jej stabilność przez opóźnienie. Rzeczywista zmiana liczby przerywa oczekującą decyzję i rozpoczyna nowe oczekiwanie, także powrót do wcześniejszej wartości: `21 → 22 → 21` zaczyna świeże opóźnienie przy ostatnim 21. Zmiana samego formatowania, np. `21` na `21.0`, nie rozpoczyna nowej decyzji ani nie przerywa oczekującej. Zmiany samych atrybutów nie rozpoczynają działań sezonowych. Przed wykonaniem blueprint ponownie sprawdza aktualną liczbę, jednostkę, progi, opóźnienie i ciągłość oczekiwania.
+Natywne wyzwalacze Home Assistant klasyfikują każdy odczyt temperatury po przeliczeniu na jednostkę progów. Wejście w zakres zimowy, łagodnej pogody lub letni rozpoczyna jego opóźnienie potwierdzenia. Odczyty w tym samym zakresie zachowują pierwotny termin; zmiany samych atrybutów lub formatowania nie rozpoczynają oczekiwania od nowa ani nie powtarzają działań.
 
-Nieprawidłowy odczyt lub jednostka natychmiast przerywa oczekującą decyzję, nawet gdy zmienił się wyłącznie atrybut jednostki. Przywrócenie samej jednostki usuwa diagnostykę, ale nie wybiera sezonu; potrzebna jest kolejna zmiana liczbowego stanu. Przejście z błędnego stanu, np. `unavailable`, do prawidłowej liczby zaczyna świeże opóźnienie.
+Wyjście z zakresu natychmiast anuluje jego oczekujące potwierdzenie. Krótkie wyjście i powrót rozpoczynają pełne nowe oczekiwanie, nawet jeśli inny zakres nie zdążył wykonać swoich działań. Dokładne wartości progów należą do łagodnej pogody. Równoważne odczyty Celsjusza/Fahrenheita pozostają w tym samym zakresie.
 
-Uruchomienie Home Assistant sprawdza wyłącznie diagnostykę. Nie wybiera sezonowego Trybu. Oczekujące timery nie przetrwają restartu ani przeładowania automatyzacji; później wymagana jest kolejna zmiana stanu czujnika. Nie ma wyzwalacza okresowego ani codziennego ani pomocnika zapisującego ostatnią klasyfikację.
+Uruchomienie Home Assistant sprawdza wyłącznie diagnostykę. Nie wybiera sezonowego Trybu. Oczekujące timery nie przetrwają restartu, przeładowania automatyzacji ani wyłączenia i ponownego włączenia. Zakres obecny podczas dołączania wyzwalaczy jest stanem początkowym: późniejsze zmiany w jego obrębie nie wybierają go. Przejście między zakresami lub odzyskanie prawidłowych odczytów rozpoczyna potwierdzanie. Nie ma wyzwalacza okresowego ani codziennego ani trwałego pomocnika zapisującego ostatni wybór. Jeśli encji brakowało podczas dołączania wyzwalaczy, jej pierwsze pojawienie się ustala zakres początkowy bez jego wybierania.
 
-Jeśli wybranej encji początkowo brak, a później pojawi się z prawidłowym odczytem, pierwszy odczyt liczy się jako odzyskanie danych i uruchamia pełny czas stabilności. Dotyczy to też odtworzonego usuniętego czujnika. To przejście czujnika po uruchomieniu, nie działanie sezonowe spowodowane samym startem.
+Sprawdzanie czujnika działa osobno od potwierdzania sezonu. Brak encji, `unknown`, `unavailable`, wartość nieskończona lub nieliczbowa albo nieobsługiwana jednostka natychmiast tworzy jedno trwałe powiadomienie przypisane do automatyzacji w wybranym języku. Wskazuje ono automatyzację i czujnik oraz wyjaśnia wstrzymanie działań sezonowych. Nieprawidłowa konfiguracja ma osobne powiadomienie.
 
-Sprawdzanie czujnika działa osobno od oczekiwania sezonowego. Brak encji, `unknown`, `unavailable`, wartość nieskończona lub nieliczbowa albo nieobsługiwana jednostka natychmiast tworzy jedno trwałe powiadomienie przypisane do automatyzacji w wybranym języku. Wskazuje ono automatyzację i czujnik oraz wyjaśnia wstrzymanie działań sezonowych. Odzyskanie danych usuwa ostrzeżenie; powrót do prawidłowej liczby rozpoczyna nowy czas stabilności, podczas gdy odzyskanie samej jednostki zmienia tylko diagnostykę. Nieprawidłowa konfiguracja ma osobne powiadomienie.
+Nieprawidłowe odczyty anulują oczekiwanie. Odzyskanie danych po stanie nieliczbowym lub nieobsługiwanej jednostce rozpoczyna pełne nowe opóźnienie potwierdzenia. To nowy nieprzerwany okres prawidłowych odczytów, więc odzyskanie danych może ponownie wykonać te same działania sezonowe. Usuwa też ostrzeżenie czujnika.
 
-Na przykład czujnik niedostępny o 09:00 ostrzega natychmiast, nie o 09:30. Powrót do 25 °C o 09:10 umożliwia działania dla łagodnej pogody o 09:40, jeśli odczyt się nie zmieni.
+Na przykład czujnik niedostępny o 09:00 ostrzega natychmiast. Powrót do 25 °C o 09:10 umożliwia działania dla łagodnej pogody o 09:40, jeśli temperatura przez cały ten okres pozostanie między progami, nawet gdy dokładna wartość się zmienia.
 
 <a id="safety-and-precedence"></a>
 ## Bezpieczeństwo i pierwszeństwo
@@ -134,17 +134,18 @@ Przy nieprawidłowym czujniku blueprint nie wybiera nowego sezonu i nie wyłącz
 
 Skonfigurowane działania korzystają ze zwykłej semantyki i śladów Home Assistant. Błąd działania nie cofa poprzednich działań. Blueprint nie potrafi ogólnie sprawdzić, czy dowolne działanie wybrało zamierzoną rutynę lub dotarło do fizycznego urządzenia.
 
-Stabilny nowy odczyt może zastąpić ręcznie wybrany Tryb nieobecności. Skoordynuj automatyzacje sezonu i obecności, zamiast pozwalać im wybierać konkurujące Tryby. Na przykład skrypt domowy może wybierać nieobecność, gdy nikogo nie ma, a sezonowy Tryb obecności tylko wtedy, gdy pozwala na to obecność.
+Nowo potwierdzony zakres sezonowy może zastąpić ręcznie wybrany Tryb nieobecności. Skoordynuj automatyzacje sezonu i obecności, zamiast pozwalać im wybierać konkurujące Tryby. Na przykład skrypt domowy może wybierać nieobecność, gdy nikogo nie ma, a sezonowy Tryb obecności tylko wtedy, gdy pozwala na to obecność.
 
 Nadal obowiązuje zachowanie Trybów/Profili Velair, w tym pierwszeństwo pauzy i anulowanie Wzmocnienia w objętych strefach. Przygotowanie temperatury przelicza się z efektywnego harmonogramu wybranego działaniem; nie przewidzi wyboru sezonu przed jego dokonaniem.
 
 <a id="limitations"></a>
 ## Ograniczenia
 
-- Stabilność dotyczy wartości czujnika, nie tylko klasyfikacji zima/łagodna pogoda/lato. Częste zmiany mogą odkładać działanie bez końca.
+- Potwierdzenie wymaga nieprzerwanego pozostawania w jednym zakresie sezonowym; wielokrotne przekraczanie granic może odkładać działania bez końca.
 - Brak automatycznego działania sezonowego przy starcie, codziennego harmonogramu, odpytywania, zapisanego oczekującego timera, dodatkowej zgody przy 24 °C i opóźnionego wyłączenia.
+- Usunięcie i ponowne utworzenie czujnika anuluje potwierdzanie. Ponowne pojawienie się ustala stan początkowy bez wybierania sezonu; wymagane jest późniejsze przejście do innego zakresu. Zapobiega to niespójnemu ponownemu uzbrajaniu natywnych wyzwalaczy Home Assistant po usunięciu encji. Dotyczy to również encji nieobecnej podczas ładowania automatyzacji. Normalne odzyskanie danych po `unknown`/`unavailable` lub błędnej jednostce rozpoczyna nowe potwierdzanie.
 - Powiadomienia nie wykryją czujnika, który po cichu przestał się aktualizować, zachowując prawidłową liczbę. Jeśli potrzeba, monitoruj aktualność źródła osobno.
-- Nie ma histerezy; opóźnienie stabilności filtruje zmiany. Nowa stabilna wartość w tej samej klasyfikacji nadal wykonuje swoją gałąź.
+- Nie ma histerezy; opóźnienie potwierdzenia filtruje krótkie zmiany zakresu. Działania wykonują się raz na wejście w zakres, a nie raz na nowy odczyt.
 - Liczba równoległych wykonań jest ograniczona. Długie sekwencje użytkownika mogą zajmować miejsca; skróć działania lub przekaż pracę skryptom.
 - Rozpoczęta sekwencja nie jest anulowana przez późniejszy odczyt. Kontrole zabezpieczają początek, nie każde działanie użytkownika.
 - Zmiana nazwy automatyzacji może pozostawić wcześniejsze powiadomienie do ręcznego usunięcia. Zmienione lub usunięte opcje Trybów wymagają poprawienia działań.
@@ -152,9 +153,9 @@ Nadal obowiązuje zachowanie Trybów/Profili Velair, w tym pierwszeństwo pauzy 
 <a id="troubleshooting"></a>
 ## Rozwiązywanie problemów
 
-- Jeśli nic się nie wykonuje, sprawdź, czy wartość rzeczywiście się zmieniła i pozostała taka przez całe opóźnienie. Uruchomienie lub przeładowanie Home Assistant nie rozpoczyna wyboru sezonu.
+- Jeśli nic się nie wykonuje, sprawdź, czy czujnik wszedł w inny zakres sezonowy lub odzyskał prawidłową wartość albo jednostkę, a następnie pozostał w tym zakresie przez całe opóźnienie. Start i przeładowanie nie rozpoczynają wyboru; aktualizacje w tym samym zakresie go nie powtarzają.
 - Jeśli pojawia się ostrzeżenie, sprawdź wskazany czujnik, liczbowy stan i `unit_of_measurement`. Nieznane jednostki nigdy nie są zgadywane.
-- Jeśli timer nigdy się nie kończy, sprawdź historię czujnika i skróć dodatnie opóźnienie lub użyj czujnika dziennego maksimum.
+- Jeśli timer nigdy się nie kończy, sprawdź historię czujnika pod kątem przekroczeń granic lub nieprawidłowych odczytów. Dostosuj progi lub dodatnie opóźnienie do źródła.
 - Jeśli wykonuje się niewłaściwa gałąź, sprawdź jednostkę progów i oba progi liczbowe.
 - Jeśli przy łagodnej pogodzie urządzenia nadal działają, skonfiguruj rzeczywisty Tryb pauzy i wyłączenia; pusta lista działań nie jest poleceniem wyłączenia.
 - Jeśli Tryb nie zostaje wybrany, przetestuj działanie ręcznie i sprawdź ślad automatyzacji. Wybierz aktualną nazwę opcji z edytora Home Assistant.
@@ -163,6 +164,6 @@ Nadal obowiązuje zachowanie Trybów/Profili Velair, w tym pierwszeństwo pauzy 
 <a id="updating-and-customizing"></a>
 ## Aktualizacja i dostosowanie
 
-Zaimportuj blueprint jawnie; instalacja lub aktualizacja Velair przez HACS go nie instaluje. Zaimportuj ponownie ten sam bieżący adres `main` dla zgodnych aktualizacji. Wersja 1 zachowuje nazwy parametrów; nowe zgodne parametry otrzymują wartości domyślne. Zmiany niezgodne używają nowego pliku i wersji głównej.
+Zaimportuj blueprint jawnie; instalacja lub aktualizacja Velair przez HACS go nie instaluje. Zaimportuj ponownie ten sam bieżący adres `main` dla zgodnych aktualizacji. Wersja 1.1.0 zastępuje sposób odmierzania czasu z początkowej bety pod tym samym adresem, z tymi samymi nazwami parametrów i bez opcji zachowania dawnego zachowania czasowego. Zaimportuj ponownie i przeładuj objęte automatyzacje, aby korzystać z potwierdzania zakresu. Inne blueprinty zachowują opublikowane zasady zgodności.
 
 Home Assistant odpowiada za wynikową automatyzację. Velair nie migruje automatyzacji ani `.storage`. Użyj **Take control** dla innej logiki, pamiętając, że niezależna automatyzacja przestaje otrzymywać aktualizacje blueprintu. Wspólne zasady dystrybucji i aktualizacji opisuje [katalog blueprintów](../blueprints.pl.md).

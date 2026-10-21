@@ -950,8 +950,8 @@ export class VelairCard extends LitElement {
     return {
       columns: 12,
       min_columns: 6,
-      rows: 8,
-      min_rows: 5,
+      // Content grows with zones, notices and expanded controls in Sections dashboards.
+      rows: "auto" as const,
     };
   }
 

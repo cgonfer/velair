@@ -8,8 +8,8 @@ Traduções: [Original em inglês](blueprints.md) · [Español](blueprints.es.md
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.4 |
+| Última sincronização | 2026-10-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -66,11 +66,11 @@ Pause um ou mais dispositivos de climatização gerenciados pelo Velair enquanto
 <a id="seasonal-climate-selection"></a>
 ### Seleção sazonal da climatização
 
-Execute ações configuráveis de inverno, clima ameno ou verão depois que uma mudança na leitura do sensor de temperatura permanecer estável por um atraso positivo, inicialmente de 30 minutos. Use o editor padrão de ações para escolher Modos do Velair ou outras ações do Home Assistant. Leituras inválidas geram uma notificação imediata; na inicialização, o diagnóstico é verificado sem selecionar uma estação.
+Execute uma única vez as ações configuráveis de inverno, clima ameno ou verão depois que a temperatura permanecer em uma nova faixa sazonal por um atraso positivo, inicialmente de 30 minutos. Variações dentro dessa faixa preservam o prazo e não repetem as ações. Use o editor padrão de ações para escolher Modos do Velair ou outras ações do Home Assistant. Leituras inválidas geram uma notificação imediata; na inicialização, o diagnóstico é verificado sem selecionar uma estação.
 
 As notificações de diagnóstico aceitam os mesmos idiomas do Velair, selecionados explicitamente no blueprint.
 
-**Versão:** 1.0.0 · **Requer:** Home Assistant 2024.6.0+ · **Categoria:** Temperatura / automação sazonal
+**Versão:** 1.1.0 · **Requer:** Home Assistant 2024.6.0+ · **Categoria:** Temperatura / automação sazonal
 
 <p>
   <a href="blueprints/seasonal-climate-selection.pt-br.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Consultar a documentação de Seleção sazonal da climatização"></a>

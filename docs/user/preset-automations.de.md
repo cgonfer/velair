@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.4 |
+| Letzte Synchronisierung | 2026-10-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -173,6 +173,6 @@ Es gibt keinen zeitgesteuerten Ablauf und keine automatische Wiederherstellung. 
 - Externe Regler erhalten aktualisierte aufgelöste Wochenpläne, wenn sich ihre wirksamen Zeitpläne ändern. Eine fehlgeschlagene Veröffentlichung aktiviert keine lokale Ausführung.
 - Unbekannte Kennungen, ungültige Kombinationen, inkompatible Verwendungen und eine ausstehende Temperatureinheitenmigration verursachen Fehler. Fehler bei der Geräteübermittlung nach dem Speichern machen das gespeicherte Preset nicht rückgängig.
 
-Umgebungsschwellen, Hysterese, Auswertung von Vorhersagen und der Zeitpunkt einer Wiederherstellung gehören in Home-Assistant-Automationen. Der Dienst erstellt keine Wetterregeln oder regelmäßigen Abfragen in Velair. Der [Blueprint für saisonale Klimasteuerung](blueprints/seasonal-climate-selection.de.md) kann Modi wählen oder diese Dienste ausführen, nachdem eine Temperatur für die konfigurierte Dauer stabil geblieben ist. Wähle Modi, wenn Winter und Sommer separate Preset-Definitionen behalten sollen; das Aktualisieren eines Presets verändert alle seine Verwendungen.
+Umgebungsschwellen, Hysterese, Auswertung von Vorhersagen und der Zeitpunkt einer Wiederherstellung gehören in Home-Assistant-Automationen. Der Dienst erstellt keine Wetterregeln oder regelmäßigen Abfragen in Velair. Der [Blueprint für saisonale Klimasteuerung](blueprints/seasonal-climate-selection.de.md) kann Modi wählen oder diese Dienste einmal ausführen, nachdem die Temperatur für die konfigurierte Dauer in einem neuen saisonalen Bereich geblieben ist. Wähle Modi, wenn Winter und Sommer separate Preset-Definitionen behalten sollen; das Aktualisieren eines Presets verändert alle seine Verwendungen.
 
 Den Geltungsbereich gemeinsamer Ressourcen erklärt [Block-Presets und verknüpfte Vorlagen](linked-schedules.de.md). Vollständige Haushaltskonfigurationen findest du unter [Praktische Beispiele](linked-schedule-examples.de.md).

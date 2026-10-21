@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](preset-automations.md) · [Españ
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.4 |
+| Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -173,6 +173,6 @@ Nie ma czasowego wygaśnięcia ani automatycznego przywracania. Wyłączenie wp�
 - Sterowniki zewnętrzne otrzymują zaktualizowane harmonogramy tygodniowe z gotowymi ustawieniami po zmianie efektywnych harmonogramów. Błąd publikacji nie włącza lokalnego wykonywania.
 - Nieznane identyfikatory, błędne kombinacje, niezgodne użycia i oczekująca migracja jednostki temperatury powodują błędy. Niepowodzenie przekazania poleceń po zapisaniu nie cofa zapisanego presetu.
 
-Progi warunków otoczenia, histereza, interpretacja prognozy i moment przywrócenia ustawienia należą do automatyzacji Home Assistant. Usługa nie tworzy reguł pogodowych ani odpytywania w Velair. [Blueprint sezonowego wyboru ustawień](blueprints/seasonal-climate-selection.pl.md) może wybierać Tryby lub uruchamiać te usługi po utrzymaniu stabilnej temperatury przez skonfigurowany czas. Wybierz Tryby, jeśli zima i lato mają zachować osobne definicje presetów; aktualizacja presetu zmienia wszystkie jego użycia.
+Progi warunków otoczenia, histereza, interpretacja prognozy i moment przywrócenia ustawienia należą do automatyzacji Home Assistant. Usługa nie tworzy reguł pogodowych ani odpytywania w Velair. [Blueprint sezonowego wyboru ustawień](blueprints/seasonal-climate-selection.pl.md) może wybierać Tryby lub uruchamiać te usługi jeden raz, gdy temperatura utrzyma się w nowym zakresie sezonowym przez skonfigurowany czas. Wybierz Tryby, jeśli zima i lato mają zachować osobne definicje presetów; aktualizacja presetu zmienia wszystkie jego użycia.
 
 Zakres wspólnych zasobów opisano w [Presetach bloków i powiązanych szablonach](linked-schedules.pl.md), a pełne konfiguracje domowe w [Praktycznych przykładach](linked-schedule-examples.pl.md).

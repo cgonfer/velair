@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](blueprints.md) · [Español](blue
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.4 |
+| Ostatnia synchronizacja | 2026-10-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -66,11 +66,11 @@ Wstrzymuje co najmniej jedną zarządzaną encję Velair, gdy którekolwiek wybr
 <a id="seasonal-climate-selection"></a>
 ### Sezonowy wybór ustawień klimatu
 
-Uruchamia konfigurowalne działania zimowe, na łagodną pogodę lub letnie po utrzymaniu stabilnej zmienionej wartości czujnika temperatury przez dodatni czas, domyślnie 30 minut. Standardowy edytor działań pozwala wybrać Tryby Velair lub inne działania Home Assistant. Nieprawidłowe odczyty powodują natychmiastowe powiadomienie; przy uruchomieniu sprawdzana jest diagnostyka, bez wybierania sezonu.
+Uruchamia konfigurowalne działania zimowe, na łagodną pogodę lub letnie jeden raz, gdy temperatura utrzyma się w nowym zakresie sezonowym przez dodatni czas, domyślnie 30 minut. Zmiany w obrębie tego zakresu zachowują termin zakończenia oczekiwania i nie powtarzają działań. Standardowy edytor działań pozwala wybrać Tryby Velair lub inne działania Home Assistant. Nieprawidłowe odczyty powodują natychmiastowe powiadomienie; przy uruchomieniu sprawdzana jest diagnostyka, bez wybierania sezonu.
 
 Powiadomienia diagnostyczne obsługują te same języki co Velair. Język wybiera się jawnie w blueprincie.
 
-**Wersja:** 1.0.0 · **Wymagania:** Home Assistant 2024.6.0+ · **Kategoria:** Automatyzacja temperatury / sezonowa
+**Wersja:** 1.1.0 · **Wymagania:** Home Assistant 2024.6.0+ · **Kategoria:** Automatyzacja temperatury / sezonowa
 
 <p>
   <a href="blueprints/seasonal-climate-selection.pl.md"><img src="https://img.shields.io/badge/Documentation-View-24292F?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Otwórz dokumentację sezonowego wyboru ustawień klimatu"></a>
