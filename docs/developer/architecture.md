@@ -616,7 +616,7 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 19,
+  "model_version": 22,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
@@ -630,6 +630,27 @@ The current export format is:
   }
 }
 ```
+
+Model 20 adds the optional per-zone `target_range_modes` policy. An absent field
+retains the default (Heat/Cool when advertised); an explicit empty array selects
+no range modes for a mixed-format climate. Exclusive-format capability limits
+cannot be overridden. Policy resolution and destination validation are backend
+owned, including candidate policies during atomic review. Preview/apply check the
+configuration revision and commit policy plus local destination corrections
+together. This review cannot modify shared Templates or Presets. A corrected
+Template-linked day is detached while unaffected days and Preset references are
+preserved. Incompatible Room Assist corrections are previewed as automatic actions
+and retired without restoring old targets only after a successful policy save;
+their configuration remains available for compatible modes. Delivery serialization
+and the owned commit task keep this transition ordered with in-flight climate work.
+Other temporary blockers must be resolved first. A failed save
+must not replace runtime configuration, consume overrides, or emit success.
+
+Home Assistant provides entity-wide feature flags rather than a per-mode format
+matrix. Derived policy data exposes uncertainty and disappeared configured modes;
+no device probing or continuous polling is introduced. Generic editors aggregate
+only eligible managed climates, while thermal range semantics remain restricted
+to `heat_cool` independently of target delivery format.
 
 Model 19 includes the optional per-zone Preconditioning master relationship.
 Older files normalize missing relationships to Independent. Accepted master
@@ -671,3 +692,35 @@ configurations continue to normalize to the Simple rectangular model.
 
 The complete persistence, conversion, validation, and recovery boundaries are
 documented in [Temperature unit internals](temperature-units.md).
+
+## Shared climate supply
+
+`shared_demand_config.py` validates explicit shared-supply configurations and sparse thermostat
+hysteresis overrides. Backend settings persist configuration and manual suspension;
+`shared_demand.py` owns runtime demand, filtered entity listeners, a single
+coalescing worker and bounded output recovery. Event invalidation targets only
+affected supplies. Each supply has at most one deadline timer; retired outputs retain
+separate bounded cleanup recovery. Measured temperature changes without control
+changes do not broadcast full panel snapshots or write storage.
+
+The scheduler exposes committed Room Assist intent through
+`get_shared_demand_room_assist`, including owned-but-invalid state. Shared supply
+never consumes prospective card phases or mixes a corrected device target with an
+external room reading. Assist commit/clear listener refreshes invalidate demand,
+including commits that need no device service call. Paused or manually controlled
+rooms fall back to native thermostat demand after assisted corrections retire.
+
+Portable model 21 carries disabled-on-import supply configuration and converts
+hysteresis as temperature differences. A local `shared_demand_cleanup` ledger
+retains off requests for retired outputs across restarts and is not portable.
+Shared supplies are independent of Preconditioning master timing dependencies.
+
+Confirmed corrections of external supply activations are reported separately
+from the control worker. An explicit external off-to-on event creates a candidate;
+only a later on-to-off acknowledgment matching one of Velair's correction-command
+contexts can produce a notice. Candidates survive the existing off-delay and
+bounded retries, but known demand, unknown intent or loss of ownership invalidates
+them. One coalescing notification worker performs best-effort persistent-notification
+and logbook calls outside the controller/profile locks. A bounded per-supply/output
+15-minute runtime cooldown applies to both channels, with one stable notification
+identifier per supply. No additional storage writes or polling are introduced.

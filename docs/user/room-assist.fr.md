@@ -9,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.2 |
-| Dernière synchronisation | 2026-10-17 |
+| Version de référence | 1.9.0-beta.5 |
+| Dernière synchronisation | 2026-10-24 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -39,6 +39,8 @@ Pour une consigne unique en `heat` ou `cool` fixe, une bande morte non nulle cr�
 Les consignes uniques `auto` et `heat_cool`, ainsi que les plages natives `heat_cool`, conservent leur comportement neutre ou leurs marges de plage. Velair ne force pas ces modes à alterner entre chauffage et refroidissement actifs selon un cycle d’hystérésis à consigne unique.
 
 L’entité climatique reste l’actionneur. Velair ne crée pas d’entité climatique virtuelle et ne contourne pas le micrologiciel. Si votre thermostat ou votre tête thermostatique permet d’associer directement un capteur externe, cette option native reste généralement le meilleur premier choix.
+
+Les entités n’acceptant que des plages peuvent aussi recevoir des paires programmées en Chauffage, Refroidissement et Auto. Room Assist ne les ajuste pas : l’assistance des plages exige `heat_cool`. L’état actuel explique la limite et Velair envoie la paire nominale sans décalage. Les réglages Room Assist sont conservés pour les cibles compatibles. Passer d’une cible assistée à l’une de ces plages efface l’assistance précédente sans rétablir une ancienne cible corrigée sur la nouvelle paire.
 
 <a id="setup"></a>
 ## Configuration

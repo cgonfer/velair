@@ -74,7 +74,14 @@ delta_t = current_temp - target_temp
 
 If `delta_t <= minimum_delta_temperature`, Velair returns no preconditioning lead and does not start a learning session.
 
-For a native range `[low, high]`, target resolution is exclusive:
+Only `heat_cool` ranges authorize boundary resolution, prediction, sessions,
+or thermal learning. Range-only entities may accept both limits in `heat`,
+`cool`, or `auto`, but report `unsupported_range_mode` for preparation. Weekly
+schedules deliver their nominal pair at the scheduled time; Planned Return
+retains arrival delivery without advance preparation. A prior compatible session
+must not continue after the authoritative intent becomes such a range.
+
+For a native `heat_cool` range `[low, high]`, target resolution is exclusive:
 
 - below `low - minimum_delta_temperature`: `heat`, boundary `low`;
 - above `high + minimum_delta_temperature`: `cool`, boundary `high`;

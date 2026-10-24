@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](manual-control.md) · [Español](
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -45,7 +45,7 @@ Stany mogą współistnieć. Tryb **Ręczny** może wybierać Profil `Sleep`, gd
 
 Velair obserwuje pola sterowania zarządzanych urządzeń:
 
-- `hvac_mode`, reprezentowany przez stan encji, w tym `off`, `heat`, `cool` i `heat_cool`;
+- `hvac_mode`, reprezentowany przez stan encji, w tym `off`, `heat`, `cool`, `auto` i `heat_cool`;
 - `temperature` dla pojedynczej temperatury;
 - `target_temp_low` i `target_temp_high` dla natywnego zakresu.
 
@@ -162,6 +162,8 @@ Jeśli pozostaje niezależna pauza strefy, strefa nadal jest wstrzymana. Przy ef
 Urządzenie tylko grzewcze z `[off, heat]` wznawia blok `21 °C` jako `heat`, `21 °C`. Urządzenie tylko chłodzące z `[off, cool]` wznawia go jako `cool`, `21 °C`. Urządzenie dwukierunkowe może podawać kilka zgodnych trybów. Velair korzysta z ich kolejności, nie zgaduje ogrzewania lub chłodzenia według pory roku, miejsca ani liczbowej temperatury. Ustaw jawny tryb HVAC, jeśli wybór ma być jednoznaczny.
 
 Blok zawierający tylko opcje stosuje wyłącznie wybrane ustawienia. Nie wysyła temperatury ani nie włącza wyłączonego urządzenia.
+
+Dla encji przyjmującej wyłącznie zakresy zgodnymi trybami pracy są zgłaszane `heat`, `cool`, `auto` i `heat_cool`. Zachowanie trybu z Off używa pierwszego z nich w zgłoszonej kolejności. Encje obsługujące oba formaty używają zapisanej [polityki formatu celu według trybu](usage.pl.md#target-format-by-climate-and-mode); przy wznawianiu zgodnego zakresu z Off zachowana jest preferencja `heat_cool`. Tylko temperatura może zapisać obie granice przy wyłączeniu, jeśli zgłoszono obsługę zakresu i zgodny tryb; nigdy nie włącza w tym celu urządzenia.
 
 <a id="complete-real-world-examples"></a>
 ## Pełne przykłady z codziennego użycia
@@ -310,6 +312,8 @@ Policy: until resumed
 ```
 
 Velair wykrywa `target_temp_low` i `target_temp_high`, przechwytuje pełny stan `heat_cool` i zachowuje `19–24 °C` podczas sesji ręcznej. Po wznowieniu stosuje cały zakres aktualnego bloku. Nigdy nie sprowadza go do pojedynczej temperatury.
+
+To samo przechwytywanie i przywracanie pełnej pary dotyczy encji obsługujących tylko zakres w Ogrzewaniu, Chłodzeniu i Auto. Pozostały atrybut `temperature` nie zastępuje dwóch granic. Jeśli obserwowana para jest niepełna lub nieprawidłowa, Velair nie tworzy celu przywracania z tego pojedynczego atrybutu.
 
 <a id="independent-window-pause-while-manual"></a>
 ### Niezależna pauza okna podczas sterowania ręcznego

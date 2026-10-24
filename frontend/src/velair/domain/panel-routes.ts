@@ -15,7 +15,8 @@ export function panelDestination(view: VelairPanelView, subsection?: string): Pa
 export function parsePanelPath(path: string, prefix = "/velair"): PanelDestination {
   const relative = path === prefix ? "" : path.startsWith(`${prefix}/`) ? path.slice(prefix.length) : path;
   const [rawView, subsection] = relative.replace(/^\/+/, "").split("/");
-  const view = rawView === "profiles" ? "modes" : rawView;
+  // Preserve bookmarks from the feature's initial Groups tab.
+  const view = rawView === "profiles" ? "modes" : rawView === "groups" ? "supply-control" : rawView;
   return panelDestination(PANEL_VIEWS.includes(view as VelairPanelView) ? view as VelairPanelView : "overview", subsection);
 }
 

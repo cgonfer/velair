@@ -46,6 +46,13 @@ the complete range early for cooling. Readings inside the range or its boundary
 deadbands keep the normal scheduled time. Velair always sends both range limits;
 it never collapses a range into one temperature.
 
+An entity may require both limits in Heat, Cool or Auto without supporting
+`heat_cool`. Velair can schedule and deliver those targets, but does not start
+them early or collect thermal learning samples for them. The preparation view
+explains that ranges require Heat/Cool for this feature. Their scheduled pair
+remains unchanged, and Planned Return applies it at arrival without advance
+preparation. Enabling preconditioning does not change that limitation.
+
 When a climate is expanded, each supported mode shows a live prediction card. It uses the same backend next-event data as the Overview tab, so pauses, boosts, unsupported modes, and blocks that cannot be preconditioned are handled consistently. When a matching future block exists, the card shows the calculated start time, the target time, the lead time, the scheduled temperature and mode, and whether Velair is using the initial model or similar local history.
 
 Planned Return preparation is identified separately from weekly schedule

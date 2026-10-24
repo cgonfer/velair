@@ -8,8 +8,8 @@ Traductions: [Original en anglais](manual-control.md) · [Español](manual-contr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.2 |
-| Dernière synchronisation | 2026-10-17 |
+| Version de référence | 1.9.0-beta.5 |
+| Dernière synchronisation | 2026-10-24 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -51,7 +51,7 @@ Ces états peuvent coexister. Le mode Velair **Manuel** peut sélectionner le pr
 
 Velair observe ces champs de contrôle des appareils gérés :
 
-- `hvac_mode`, représenté par l’état de l’entité, notamment `off`, `heat`, `cool` et `heat_cool` ;
+- `hvac_mode`, représenté par l’état de l’entité, notamment `off`, `heat`, `cool`, `auto` et `heat_cool` ;
 - `temperature` pour une consigne unique ;
 - `target_temp_low` et `target_temp_high` pour une plage native.
 
@@ -192,6 +192,8 @@ Une pause indépendante existante maintient la zone en pause. Si son action effe
 - appareil `off` : choisir le premier mode compatible déclaré qui n’est pas `off`, puis appliquer la consigne du bloc.
 
 Un appareil de chauffage seul déclarant `[off, heat]` reprend un bloc actif conservant le mode à `21 °C` en `heat`, `21 °C`. Un appareil de refroidissement seul déclarant `[off, cool]` reprend en `cool`, `21 °C`. Un appareil réversible peut déclarer plusieurs modes compatibles ; Velair respecte leur ordre sans déduire chauffage ou refroidissement de la saison, du lieu ou de la valeur cible. Définissez un mode HVAC explicite si ce choix doit être déterministe.
+
+Pour une entité n’acceptant que des plages, les modes de fonctionnement compatibles sont les modes `heat`, `cool`, `auto` et `heat_cool` qu’elle annonce. Conserver depuis Arrêt utilise le premier dans l’ordre annoncé. Les entités prenant en charge les deux formats utilisent leur [politique enregistrée de format par mode](usage.fr.md#target-format-by-climate-and-mode) pour déterminer les modes compatibles, en gardant la préférence pour `heat_cool` lors de la reprise d’une plage compatible depuis Arrêt. Température uniquement peut écrire les deux limites à l’arrêt si la prise en charge des plages et un mode compatible sont annoncés ; cette action n’active jamais l’équipement pour permettre l’écriture.
 
 Un bloc d’options uniquement applique seulement les commandes sélectionnées. Il n’envoie pas de température et n’allume pas un appareil éteint.
 
@@ -346,6 +348,8 @@ Policy: until resumed
 ```
 
 Velair détecte `target_temp_low` et `target_temp_high`, capture l’état `heat_cool` complet et conserve `19–24 °C` pendant le réglage manuel. À la reprise, il applique la plage complète du bloc faisant actuellement autorité, sans la réduire à une consigne unique.
+
+La même capture et restauration de la paire complète s’applique aux entités n’acceptant que des plages en Chauffage, Refroidissement et Auto. Un attribut `temperature` résiduel ne remplace pas leurs deux limites. Si la paire observée est incomplète ou invalide, Velair n’invente pas de cible restaurable à partir de cet attribut scalaire.
 
 <a id="independent-window-pause-while-manual"></a>
 ### Pause indépendante pour une fenêtre pendant le réglage manuel

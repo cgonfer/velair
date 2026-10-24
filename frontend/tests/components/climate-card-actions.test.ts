@@ -393,3 +393,42 @@ describe("climate card actions", () => {
     card.remove();
   });
 });
+
+it("initializes range-only Boost by capabilities and leaves missing limits pending", async () => {
+  if (!customElements.get("velair-climate-card-actions-test")) customElements.define("velair-climate-card-actions-test", VelairCard);
+  const card = document.createElement("velair-climate-card-actions-test") as VelairCard & Record<string, any>;
+  const callService = vi.fn().mockResolvedValue(undefined);
+  card.hass = { callService, states: { "climate.office": { state: "heat", attributes: {
+    supported_features: 394, hvac_modes: ["off", "heat", "cool", "auto"], temperature: 22,
+    current_temperature: 20, min_temp: 16, max_temp: 30, target_temp_step: 0.5,
+  } } } } as never;
+  card["_loadSchedule"] = vi.fn().mockResolvedValue(undefined);
+  card["_openClimateCardBoost"]("climate.office");
+  expect(card["_climateCardBoost"]).toMatchObject({ targetKind: "range" });
+  expect(card["_climateCardBoost"].low).toBeUndefined();
+  expect(card["_climateCardBoost"].high).toBeUndefined();
+  card["_updateClimateCardBoost"]("low", "19.5");
+  card["_updateClimateCardBoost"]("high", "24");
+  card["_updateClimateCardBoostOption"]("hvacMode", "auto");
+  await card["_runClimateCardService"]("boost", "climate.office");
+  expect(callService).toHaveBeenCalledWith("velair", "boost", { entity_id: "climate.office",
+    duration_minutes: 60, target_temp_low: 19.5, target_temp_high: 24, hvac_mode: "auto" });
+});
+
+it("uses configured mixed-mode formats in Boost and native manual adjustment", async () => {
+  if (!customElements.get("velair-climate-card-actions-test")) customElements.define("velair-climate-card-actions-test", VelairCard);
+  const card = document.createElement("velair-climate-card-actions-test") as any;
+  const callService = vi.fn().mockResolvedValue(undefined);
+  const entityId = "climate.office";
+  card.hass = { callService, states: { [entityId]: { state: "heat", attributes: { supported_features: 3, hvac_modes: ["heat", "cool"], temperature: 22, target_temp_low: 19, target_temp_high: 24, min_temp: 16, max_temp: 30, target_temp_step: .5 } } } };
+  card._data = { configured_entities: [entityId], zones: { [entityId]: { enabled: true, target_format_policy: { entity_id: entityId, kind: "mixed", configured_modes: ["heat"], range_modes: ["heat"], formats_by_mode: { heat: "range", cool: "single" }, invalid_modes: [], uncertain: false } } }, zone_runtime: { [entityId]: { state: "scheduled", control_mode: "manual" } } };
+  card._openClimateCardBoost(entityId);
+  card._updateClimateCardBoostOption("hvacMode", "heat"); expect(card._climateCardBoost.targetKind).toBe("range");
+  card._updateClimateCardBoost("low", "20");
+  card._updateClimateCardBoostOption("hvacMode", "cool"); expect(card._climateCardBoost.targetKind).toBe("single");
+  card._updateClimateCardBoost("target", "23");
+  card._updateClimateCardBoostOption("hvacMode", "heat"); expect(card._climateCardBoost.low).toBe(20);
+  card._updateClimateCardBoostOption("hvacMode", "cool"); expect(card._climateCardBoost.target).toBe(23);
+  await card._adjustClimateCardTarget(entityId, "target_temp_low", 1);
+  expect(callService).toHaveBeenCalledWith("climate", "set_temperature", { entity_id: entityId, target_temp_low: 19.5, target_temp_high: 24 });
+});

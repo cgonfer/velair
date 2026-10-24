@@ -65,6 +65,7 @@ DEFAULT_MAX_TEMPERATURE = 35.0
 STATE_UNAVAILABLE = "unavailable"
 STATE_UNKNOWN = "unknown"
 RANGE_HVAC_MODES = {"heat_cool"}
+RANGE_ONLY_HVAC_MODES = {"heat", "cool", "auto", "heat_cool"}
 FEATURE_TARGET_TEMPERATURE = 1
 FEATURE_TARGET_TEMPERATURE_RANGE = 2
 MAX_EXPECTED_ACTIONS_PER_ENTITY = 32
@@ -80,6 +81,7 @@ class ClimateManager:
         self, hass: HomeAssistant, execution_authority: ExecutionAuthority | None = None
     ) -> None:
         """Initialize the climate manager."""
+        self._target_policy_provider = lambda _entity: {}
         self._hass = hass
         self._execution_authority = execution_authority
         self._contexts: dict[str, float] = {}
@@ -1537,10 +1539,24 @@ class ClimateManager:
                 and ATTR_TARGET_TEMP_HIGH in state.attributes
             )
         )
-        if state.state == "heat_cool" and valid_range and supports_range:
+        supports_single = (
+            bool(features & FEATURE_TARGET_TEMPERATURE)
+            if features else ATTR_TEMPERATURE in state.attributes or not supports_range
+        )
+        range_only = supports_range and not supports_single
+        from .target_format_policy import resolve_target_format_policy
+        observed_policy = resolve_target_format_policy(entity_id, state.attributes,
+            self._target_policy_provider(entity_id))
+        pair_mode = (observed_policy["formats_by_mode"].get(state.state) == "range"
+            or supports_range and state.state == "heat_cool"
+            and "target_range_modes" not in self._target_policy_provider(entity_id))
+        if valid_range and supports_range and (
+            pair_mode
+            or range_only and state.state in RANGE_ONLY_HVAC_MODES | {HVAC_MODE_OFF}
+        ):
             snapshot[ATTR_TARGET_TEMP_LOW] = low
             snapshot[ATTR_TARGET_TEMP_HIGH] = high
-        else:
+        elif not range_only and not pair_mode:
             try:
                 temperature = float(state.attributes[ATTR_TEMPERATURE])
             except (KeyError, TypeError, ValueError):
@@ -1551,7 +1567,7 @@ class ClimateManager:
                 and minimum <= temperature <= maximum
             ):
                 snapshot[ATTR_TEMPERATURE] = temperature
-            elif valid_range and supports_range:
+            elif valid_range and supports_range and observed_policy["formats_by_mode"].get(state.state, "unknown") == "unknown":
                 snapshot[ATTR_TARGET_TEMP_LOW] = low
                 snapshot[ATTR_TARGET_TEMP_HIGH] = high
         for attr in CLIMATE_MODE_ATTRIBUTES:
@@ -1680,11 +1696,11 @@ class ClimateManager:
             for mode in supported_modes
             if isinstance(mode, str) and mode != HVAC_MODE_OFF
         ]
-        if range_target and "heat_cool" in non_off_modes:
+        if range_target and not self.requires_range_target(entity_id) and self.supports_range_in_mode(entity_id, "heat_cool") and "heat_cool" in non_off_modes:
             return "heat_cool"
         for mode in non_off_modes:
             if range_target:
-                if mode in RANGE_HVAC_MODES:
+                if self.supports_range_in_mode(entity_id, mode):
                     return mode
                 continue
             if (
@@ -1734,20 +1750,33 @@ class ClimateManager:
         )
         return not self._requires_temperature_range(entity_id, effective_hvac_mode)
 
-    def _requires_temperature_range(
-        self,
-        entity_id: str,
-        effective_hvac_mode: str | None,
-    ) -> bool:
-        """Return whether one target cannot represent the active climate range."""
-        return (
-            effective_hvac_mode in RANGE_HVAC_MODES
-            and self._supports_target_feature(entity_id, range_target=True)
-        )
+    def target_format_policy(self, entity_id: str, zone_config=None) -> dict:
+        """Resolve authoritative format policy, optionally against candidate settings."""
+        from .target_format_policy import resolve_target_format_policy
+        state = self._hass.states.get(entity_id)
+        return resolve_target_format_policy(
+            entity_id, state.attributes if state is not None else {},
+            self._target_policy_provider(entity_id) if zone_config is None else zone_config,
+            available=state is not None and state.state not in ("unknown", "unavailable"))
+
+    def _requires_temperature_range(self, entity_id: str, effective_hvac_mode: str | None, zone_config=None) -> bool:
+        """Return whether configured policy requires a pair in the effective mode."""
+        return self.target_format_policy(entity_id, zone_config)["formats_by_mode"].get(effective_hvac_mode) == "range"
 
     def supports_temperature_range_target(self, entity_id: str) -> bool:
         """Return whether the entity supports a native target range."""
         return self._supports_target_feature(entity_id, range_target=True)
+
+    def requires_range_target(self, entity_id: str) -> bool:
+        """Return whether the entity accepts ranges but no scalar target."""
+        return (
+            self._supports_target_feature(entity_id, range_target=True)
+            and not self._supports_target_feature(entity_id, range_target=False)
+        )
+
+    def supports_range_in_mode(self, entity_id: str, mode: str | None, zone_config=None) -> bool:
+        """Separate transport support from heat_cool thermal-band semantics."""
+        return self.target_format_policy(entity_id, zone_config)["formats_by_mode"].get(mode) == "range"
 
     def validate_temperature_target(
         self,
@@ -1784,6 +1813,7 @@ class ClimateManager:
             and ensure_on
             and self._current_hvac_mode(entity_id) == HVAC_MODE_OFF
             and effective_mode not in RANGE_HVAC_MODES
+            and not self.requires_range_target(entity_id)
         )
         if (
             ensure_on
@@ -1796,22 +1826,25 @@ class ClimateManager:
                 f"{target_kind} target"
             )
         if range_target:
+            self._validate_target_feature(entity_id, range_target=True)
             off_range = (temperature_only and effective_mode == HVAC_MODE_OFF
-                         and any(mode in RANGE_HVAC_MODES for mode in self.supported_hvac_modes(entity_id)))
-            if effective_mode not in RANGE_HVAC_MODES and not off_range:
+                         and any(self.supports_range_in_mode(entity_id, mode) for mode in self.supported_hvac_modes(entity_id)))
+            if not self.supports_range_in_mode(entity_id, effective_mode) and not off_range:
                 raise ValueError(
                     f"{entity_id} cannot apply a temperature range while in "
                     f"{effective_mode or 'unknown'} mode"
                 )
-            self._validate_target_feature(entity_id, range_target=True)
             return
+        if not feature_may_be_hidden_while_off:
+            try:
+                self._validate_target_feature(entity_id, range_target=False)
+            except ValueError as err:
+                raise ValueError(f"{err} in {effective_mode} mode") from err
         if self._requires_temperature_range(entity_id, effective_mode):
             raise ValueError(
                 f"{entity_id} requires separate target_temp_low and "
                 f"target_temp_high values in {effective_mode} mode"
             )
-        if not feature_may_be_hidden_while_off:
-            self._validate_target_feature(entity_id, range_target=False)
 
     def validate_configured_temperature_target(
         self,
@@ -1819,6 +1852,7 @@ class ClimateManager:
         *,
         range_target: bool,
         hvac_mode: str | None,
+        zone_config=None,
     ) -> None:
         """Validate a stored target without depending on transient climate state.
 
@@ -1826,6 +1860,14 @@ class ClimateManager:
         the entity advertises at least one compatible non-off mode; runtime
         delivery validates the actual effective mode again before applying it.
         """
+        from .target_format_policy import resolve_target_format_policy
+        state = self._hass.states.get(entity_id)
+        # Advertised capabilities remain useful while the device is offline.
+        # Runtime policy and delivery still treat that observation as unavailable.
+        policy = resolve_target_format_policy(
+            entity_id, state.attributes if state is not None else {},
+            self._target_policy_provider(entity_id) if zone_config is None else zone_config,
+        )
         supported_modes = self.supported_hvac_modes(entity_id)
         if hvac_mode is not None:
             if hvac_mode not in supported_modes:
@@ -1839,7 +1881,7 @@ class ClimateManager:
             ]
 
         if range_target:
-            if not any(mode in RANGE_HVAC_MODES for mode in candidate_modes):
+            if not any(policy["formats_by_mode"].get(mode) == "range" for mode in candidate_modes):
                 raise ValueError(
                     f"{entity_id} has no compatible non-off mode for a range target"
                 )
@@ -1848,7 +1890,9 @@ class ClimateManager:
 
         if not any(
             mode != HVAC_MODE_OFF
-            and not self._requires_temperature_range(entity_id, mode)
+            and (policy["formats_by_mode"].get(mode) == "single"
+                 or self._current_hvac_mode(entity_id) == HVAC_MODE_OFF
+                 and policy["kind"] == "unknown" and mode not in RANGE_HVAC_MODES)
             for mode in candidate_modes
         ):
             raise ValueError(
@@ -1857,6 +1901,7 @@ class ClimateManager:
             )
         scalar_feature_may_be_hidden_while_off = (
             self._current_hvac_mode(entity_id) == HVAC_MODE_OFF
+            and not self.requires_range_target(entity_id)
             and any(
                 mode != HVAC_MODE_OFF and mode not in RANGE_HVAC_MODES
                 for mode in candidate_modes
@@ -1923,7 +1968,7 @@ class ClimateManager:
         self, entity_id: str, attributes: dict[str, Any]
     ) -> tuple[float, float]:
         """Resolve target limits using attributes from one state observation."""
-        unit = self.temperature_unit(entity_id)
+        unit = self._temperature_unit_from_attributes(attributes)
         default_minimum = absolute_temperature(
             DEFAULT_MIN_TEMPERATURE,
             UnitOfTemperature.CELSIUS,
@@ -1987,6 +2032,12 @@ class ClimateManager:
 
     def temperature_unit(self, entity_id: str) -> str:
         """Return the effective temperature unit for one climate entity."""
+        state = self._hass.states.get(entity_id)
+        attributes = state.attributes if state is not None else {}
+        return self._temperature_unit_from_attributes(attributes)
+
+    def _temperature_unit_from_attributes(self, attributes: dict[str, Any]) -> str:
+        """Resolve units without reading a newer climate observation."""
         configured = getattr(
             getattr(getattr(self._hass, "config", None), "units", None),
             "temperature_unit",
@@ -1994,8 +2045,6 @@ class ClimateManager:
         )
         if configured in (UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT):
             return configured
-        state = self._hass.states.get(entity_id)
-        attributes = state.attributes if state is not None else {}
         unit = attributes.get("unit_of_measurement")
         if unit in (UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT):
             return unit

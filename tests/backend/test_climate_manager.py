@@ -2563,7 +2563,7 @@ class ClimateManagerHvacFallbackTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(services.calls, [])
 
-    async def test_keep_range_off_chooses_heat_cool_before_range(self) -> None:
+    async def test_keep_range_only_off_chooses_first_compatible_mode(self) -> None:
         manager, services = self._manager(
             "off",
             ["off", "heat", "heat_cool"],
@@ -2581,7 +2581,7 @@ class ClimateManagerHvacFallbackTest(unittest.IsolatedAsyncioTestCase):
             [call[1] for call in services.calls],
             ["set_hvac_mode", "set_temperature"],
         )
-        self.assertEqual(services.calls[0][2]["hvac_mode"], "heat_cool")
+        self.assertEqual(services.calls[0][2]["hvac_mode"], "heat")
 
     async def test_range_target_uses_exact_home_assistant_payload(self) -> None:
         manager, services = self._manager(
@@ -2618,7 +2618,7 @@ class ClimateManagerHvacFallbackTest(unittest.IsolatedAsyncioTestCase):
         manager, services = self._manager(
             "off",
             ["off", "cool", "heat_cool", "heat"],
-            extra_attributes={"supported_features": 2},
+            extra_attributes={"supported_features": 3},
         )
 
         await manager.async_set_temperature_range(

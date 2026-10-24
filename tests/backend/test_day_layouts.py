@@ -64,9 +64,10 @@ class DayLayoutRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_metadata_commit_ignores_and_preserves_concurrent_runtime_change(self):
         original = self.scheduler._async_commit_configuration_owned
-        async def mutate_then_commit(candidate, expected_revision=None, *, commit_state):
+        async def mutate_then_commit(candidate, expected_revision=None, *, commit_state, allow_room_assist_stop=False):
+            self.assertFalse(allow_room_assist_stop)
             self.data["zones"]["climate.salon"]["override"] = {"type": "boost", "temperature": 23}
-            await original(candidate, expected_revision, commit_state=commit_state)
+            await original(candidate, expected_revision, commit_state=commit_state, allow_room_assist_stop=allow_room_assist_stop)
         self.scheduler._async_commit_configuration_owned = mutate_then_commit
         self.scheduler.async_schedule_next_event = Mock()
         await self.scheduler.async_set_schedule_days("climate.salon", day_layout_key="all", expected_revision=0)

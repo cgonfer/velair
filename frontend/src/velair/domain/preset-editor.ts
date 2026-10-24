@@ -11,13 +11,6 @@ export function presetOptionSuggestions(hass: HomeAssistant | undefined, entitie
   }))].sort();
 }
 
-export function setPresetTargetType(block: DraftScheduleBlock, range: boolean): DraftScheduleBlock {
-  const { temperature, target_temp_low, target_temp_high, ...config } = block;
-  return range
-    ? { ...config, target_temp_low: target_temp_low ?? temperature ?? "", target_temp_high: target_temp_high ?? temperature ?? "" }
-    : { ...config, temperature: temperature ?? target_temp_low ?? "" };
-}
-
 /** Keep the user's decimal separator while editing; normalize only for validation. */
 export function normalizedPresetTemperatureDraft(block: DraftScheduleBlock): DraftScheduleBlock {
   const normalized = { ...block };

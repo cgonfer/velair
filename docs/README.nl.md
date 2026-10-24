@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](README.md) · [Español](README.es.md) · [Fran�
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -38,6 +38,7 @@ De Velair-documentatie is ingedeeld naar doelgroep en onderwerp.
 - [Adaptieve voorconditionering](user/adaptive-preconditioning.nl.md): begin eerder met geplande comfortdoelen via lokale leergegevens.
 - [Geplande terugkeer](user/planned-return.nl.md): stel afwezigheid op basis van bezetting en wekelijkse of eenmalige aankomsten in, met voorbeelden van annuleren vóór en na bevestigd vertrek.
 - [Room Assist](user/room-assist.nl.md): gebruik een aparte kamertemperatuursensor voor radiatorkranen, thermostaten en airco's.
+- [Toevoerregeling](user/shared-climate-supply.nl.md): regel een gedeelde verwarmings- of koelschakelaar vanuit geschatte kamervraag, met toevoerhysterese en thermostaatuitzonderingen.
 - [Betrouwbare overdracht van klimaatopdrachten](user/resilient-climate-delivery.nl.md): begrijp uitgestelde herhaalpogingen en gedrag bij verbindingsherstel wanneer een apparaat tijdelijk niet beschikbaar is.
 - [Omgevingscomfort](user/comfort.nl.md): begrijp temperatuur, luchtvochtigheid, CO2-luchtkwaliteit en actualiteit van metingen via lokale kamerbeoordelingen.
 - [Temperatuureenheden en migratie](user/temperature-units.nl.md): begrijp Celsius-/Fahrenheit-standaardwaarden, upgrades, migratie, import/export en herstel.

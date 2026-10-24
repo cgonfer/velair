@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](ad
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.3 |
-| Ultima sincronizzazione | 2026-10-21 |
+| Versione di riferimento | 1.9.0-beta.5 |
+| Ultima sincronizzazione | 2026-10-24 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -41,6 +41,8 @@ La scheda **Precondizionamento** contiene le impostazioni adattive e l’apprend
 Il precondizionamento viene configurato per ciascun dispositivo climatico. L’apprendimento di riscaldamento e raffrescamento è separato: i campioni di raffrescamento non sostituiscono quelli di riscaldamento e viceversa.
 
 Sono supportati gli intervalli nativi `heat_cool`. Se la stanza è sotto l’obiettivo inferiore di più del delta minimo di temperatura, Velair calcola la previsione dal limite inferiore e avvia anticipatamente l’intero intervallo per riscaldare. Se la stanza è sopra l’obiettivo superiore di più di quel delta, calcola la previsione dal limite superiore e avvia anticipatamente l’intero intervallo per raffrescare. Le letture all’interno dell’intervallo o delle fasce di tolleranza dei limiti mantengono il normale orario programmato. Velair invia sempre entrambi i limiti; non riduce mai un intervallo a una sola temperatura.
+
+Un’entità può richiedere entrambi i limiti in Caldo, Freddo o Auto senza supportare `heat_cool`. Velair può programmare e inviare questi obiettivi, ma non li anticipa né raccoglie campioni di apprendimento termico per essi. La vista di preparazione spiega che questa funzione richiede Caldo/Freddo per gli intervalli. La coppia programmata resta invariata e Ritorno programmato la applica all’arrivo senza preparazione anticipata. Abilitare il precondizionamento non elimina questa limitazione.
 
 Quando espandi un dispositivo climatico, ogni modalità supportata mostra una scheda di previsione in tempo reale. Usa gli stessi dati backend del prossimo evento della panoramica, gestendo in modo coerente pause, incrementi, modalità non supportate e blocchi che non possono essere precondizionati. Quando esiste un blocco futuro corrispondente, la scheda mostra l’orario di avvio calcolato, l’orario obiettivo, l’anticipo, temperatura e modalità programmate e se Velair usa il modello iniziale o una cronologia locale simile.
 

@@ -1587,3 +1587,15 @@ describe("climate card view", () => {
     expect(climateCardStyles.cssText).toContain("border-radius: 0 11px 11px 0");
   });
 });
+
+it("keeps missing range-only Boost limits empty and requires both fields", () => {
+  const value = host() as any;
+  value.hass.states["climate.office"].attributes.supported_features = 394;
+  value._climateCardBoost = { entityId: "climate.office", durationMinutes: 60, targetKind: "range" };
+  const container = document.createElement("div");
+  render(renderClimateCard(value, "climate.office"), container);
+  const pending = [...container.querySelectorAll<HTMLInputElement>(".climate-card-boost-form input[type=number]")]
+    .filter(input => input.value === "");
+  expect(pending).toHaveLength(2);
+  expect(pending.every(input => input.required && !input.checkValidity())).toBe(true);
+});

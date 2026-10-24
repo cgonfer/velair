@@ -18,6 +18,13 @@ function block(start: string, mode = "", range = false): DraftScheduleBlock {
 }
 
 describe("Keep target mode guidance", () => {
+  it("uses an authoritative policy with a preceding mode even without live state", () => {
+    const first = block("08:00", "heat", true);
+    const later = block("12:00", "", true);
+    const policy = { formats_by_mode: { heat: "range" } } as any;
+    expect(keepTargetMismatch(later, [first, later], undefined, policy)).toBeUndefined();
+    expect(keepTargetMismatch(block("12:00"), [first], undefined, policy)).toEqual({ mode: "heat", source: "schedule", target: "scalar" });
+  });
   it("flags the screenshot scenario using the previous scheduled mode", () => {
     const first = block("00:00", "heat_cool", true);
     const later = block("13:45");

@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.3 |
-| Letzte Synchronisierung | 2026-10-21 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -40,6 +40,8 @@ Der Tab für die Vorkonditionierung enthält adaptive Einstellungen und Lerndate
 Die Vorkonditionierung wird je Klimagerät konfiguriert. Lerndaten für Heizen und Kühlen werden getrennt geführt: Kühlbeispiele ersetzen keine Heizbeispiele und umgekehrt.
 
 Native `heat_cool`-Bereiche werden unterstützt. Liegt der Raum um mehr als die minimale Temperaturdifferenz unter der unteren Zielgrenze, berechnet Velair die Vorhersage anhand dieser Grenze und startet den vollständigen Bereich zum Heizen frühzeitig. Liegt der Raum um mehr als diese Differenz über der oberen Zielgrenze, verwendet Velair die obere Grenze und startet den vollständigen Bereich zum Kühlen frühzeitig. Bei Messwerten innerhalb des Bereichs oder des Totbands an seinen Grenzen bleibt die normale Zeitplanzeit erhalten. Velair sendet immer beide Bereichsgrenzen und reduziert einen Bereich niemals auf eine einzelne Temperatur.
+
+Eine Entität kann auch in Heizen, Kühlen oder Auto beide Grenzen benötigen, ohne `heat_cool` zu unterstützen. Velair kann diese Ziele planen und übertragen, startet sie aber nicht früher und sammelt dafür keine thermischen Lernproben. Die Vorbereitungsansicht erklärt, dass Bereiche für diese Funktion Heizen/Kühlen benötigen. Das geplante Wertepaar bleibt unverändert; Geplante Rückkehr wendet es bei Ankunft ohne frühzeitige Vorbereitung an. Auch aktivierte Vorkonditionierung hebt diese Einschränkung nicht auf.
 
 Beim Aufklappen eines Klimageräts erscheint für jeden unterstützten Modus eine Karte mit der aktuellen Vorhersage. Sie verwendet dieselben Backend-Daten zum nächsten Ereignis wie die Übersicht. Pausen, temporäre Anpassungen, nicht unterstützte Modi und Blöcke, die nicht vorkonditioniert werden können, werden dadurch einheitlich berücksichtigt. Existiert ein passender zukünftiger Block, zeigt die Karte den berechneten Start, die Zielzeit, den Vorlauf, die geplante Temperatur und den Modus. Außerdem zeigt sie, ob Velair das Anfangsmodell oder ähnliche lokale Verlaufsdaten verwendet.
 

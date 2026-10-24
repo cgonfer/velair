@@ -215,5 +215,5 @@ class LearningActivityTest(unittest.IsolatedAsyncioTestCase):
             callbacks[api_module.SIGNAL_DIAGNOSTICS_UPDATED]()
             self.assertEqual(connection.send_message.call_count, 5)
             connection.subscriptions[42]()
-        self.assertCountEqual(removed, [api_module.SIGNAL_SCHEDULER_UPDATED, api_module.SIGNAL_DIAGNOSTICS_UPDATED])
+        self.assertCountEqual(removed, [api_module.SIGNAL_SCHEDULER_UPDATED, api_module.SIGNAL_DIAGNOSTICS_UPDATED, "velair_shared_demand_updated"])
 

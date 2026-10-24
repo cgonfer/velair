@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -38,6 +38,8 @@ Para um alvo único em `heat` ou `cool` fixo, uma zona morta diferente de zero c
 Alvos escalares de `auto` e `heat_cool` e faixas nativas de `heat_cool` mantêm seu comportamento neutro ou de margem da faixa. O Velair não força esses modos a alternar aquecimento e resfriamento ativos em um ciclo escalar de histerese.
 
 A entidade de climatização continua sendo o atuador. O Velair não cria uma entidade virtual nem contorna o firmware. Se o termostato ou válvula aceita vincular diretamente um sensor separado, essa opção nativa costuma continuar sendo a melhor primeira escolha.
+
+Entidades apenas de intervalo também aceitam pares programados em Aquecimento, Resfriamento e Auto. O Room Assist não ajusta esses pares: a assistência a intervalos exige `heat_cool`. O estado em tempo real explica a limitação e o Velair envia o par nominal sem deslocamento. As configurações do Room Assist mantêm-se para alvos compatíveis. Mudar de um alvo assistido para um destes intervalos elimina a assistência anterior sem restaurar um alvo corrigido antigo por cima do novo par.
 
 <a id="setup"></a>
 ## Configuração
@@ -321,7 +323,7 @@ O Room Assist emite:
 
 - `room_sensor_assist_state_changed`: a assistência foi habilitada ou desabilitada.
 - `room_sensor_assist_updated`: o Velair aplicou um alvo temporário assistido.
-- `room_sensor_assist_restored`: o Velair deixou de gerenciar o alvo temporário e restaurou o alvo programado normal quando possível.
+- `room_sensor_assist_restored`: o Velair deixou de gerenciar o alvo temporário e restauraçãou o alvo programado normal quando possível.
 
 Consulte [Eventos de automação](automation-events.pt-br.md#room-sensor-assist-state-changed) para os dados completos e todos os motivos de restauração.
 

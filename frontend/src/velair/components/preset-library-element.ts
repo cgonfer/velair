@@ -1,8 +1,9 @@
+import { changeDraftTargetFormat, carryTargetDraft, targetFormatsForResource } from "../domain/target-format-policy";
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { VelairApiClient } from "../api/client";
 import { draftBlocksFromScheduleBlocks, normalizeDraftBlocks, updateDraftBlock } from "../domain/draft-blocks";
-import { normalizedPresetTemperatureDraft, presetHvacModes, presetOptionSuggestions, presetTemperatureError, setPresetTargetType } from "../domain/preset-editor";
+import { normalizedPresetTemperatureDraft, presetHvacModes, presetOptionSuggestions, presetTemperatureError } from "../domain/preset-editor";
 import { presetLibraryStyles } from "../styles/preset-library-styles";
 import { cardStyles } from "../styles/card-styles";
 import { backendErrorMessage } from "../domain/backend-errors";
@@ -74,6 +75,10 @@ export class VelairPresetLibrary extends LitElement {
     this._key = preset?.key ?? `preset_${crypto.randomUUID()}`;
     this._name = preset?.name ?? "";
     this._block = draftBlocksFromScheduleBlocks([{ start: "00:00", ...(preset?.config ?? { action: "set_temperature", temperature: this.data?.temperature_unit === "°F" ? 68 : 20 }) }], this.data?.temperature_unit)[0];
+    if (!preset) {
+      const choice = targetFormatsForResource(this.data, this.hass?.states);
+      if (choice.formats.length === 1 && !choice.uncertain) this._block = changeDraftTargetFormat(this._block, choice.formats[0]);
+    }
     this._baseline = preset ? this._fingerprint(this._name, this._block) : undefined;
     this._revision = this.data?.configuration_revision;
     this._error = "";
@@ -156,7 +161,12 @@ export class VelairPresetLibrary extends LitElement {
 
   private _update(field: keyof DraftScheduleBlock, value: string): void {
     if (this._busy) return;
-    this._block = updateDraftBlock([this._block!], 0, field, value)[0];
+    const previous = this._block!;
+    let next = carryTargetDraft(previous, updateDraftBlock([previous], 0, field, value)[0]);
+    if (field === "hvac_mode" && next.hvac_mode !== previous.hvac_mode) {
+      next = changeDraftTargetFormat(next, targetFormatsForResource(this.data, this.hass?.states, next.hvac_mode || undefined).preferred);
+    }
+    this._block = next;
   }
 
   private async _copyAutomationId(): Promise<void> {
@@ -213,6 +223,9 @@ export class VelairPresetLibrary extends LitElement {
     const host = this.host!, block = this._block!;
     const temperature = block.action === "set_temperature";
     const range = block.target_temp_low !== undefined || block.target_temp_high !== undefined;
+    const choice = targetFormatsForResource(this.data, this.hass?.states, block.hvac_mode || undefined);
+    const mismatch = !choice.uncertain && !choice.formats.includes(range ? "range" : "single");
+    const canChangeFormat = choice.formats.length > 1 || choice.uncertain || mismatch;
     const options = !block.temperature_only && (temperature || block.action === "set_climate_options");
     const selectedMode = block.temperature_only ? "temperature_only" : block.hvac_mode;
     return html`<fieldset class="preset-config-fields" ?disabled=${this._busy}><div class="editable-block preset-fields">
@@ -222,7 +235,7 @@ export class VelairPresetLibrary extends LitElement {
       ${temperature || block.action === "set_hvac_mode" ? html`<label class="full-width">${host._t("mode")}<span class="select-wrap"><select .value=${selectedMode} @change=${(event: Event) => this._update("hvac_mode", host._inputValue(event))}>
         <option .selected=${!selectedMode} value="">${temperature ? host._t("keepMode") : "-"}</option>${temperature ? html`<option .selected=${block.temperature_only === true} value="temperature_only">${host._t("temperatureOnly")}</option>` : nothing}${presetHvacModes.map((mode) => html`<option .selected=${block.hvac_mode === mode} value=${mode}>${host._modeLabel(mode)}</option>`)}
       </select></span></label>${block.temperature_only ? html`<p class="full-width">${host._t("temperatureOnlyHelp")}</p>` : nothing}` : nothing}
-      ${temperature ? html`<label class="full-width">${host._t("presetTargetType")}<span class="select-wrap"><select .value=${range ? "range" : "scalar"} @change=${(event: Event) => { this._block = setPresetTargetType(block, host._inputValue(event) === "range"); }}><option .selected=${!range} value="scalar">${host._t("presetScalarTarget")}</option><option .selected=${range} value="range">${host._t("presetRangeTarget")}</option></select></span></label>${range ? html`${this._temperatureField("target_temp_low", host._t("minimumShort"))}${this._temperatureField("target_temp_high", host._t("maximumShort"))}` : this._temperatureField("temperature", host._t("target"))}` : nothing}
+      ${temperature ? html`${canChangeFormat ? html`<details class="advanced-climate-options full-width"><summary class="icon-button" aria-label=${host._t("additionalSettings")}><ha-icon icon="mdi:tune-variant"></ha-icon></summary><button type="button" class="command-button compact target-format-action" @click=${() => { this._block = changeDraftTargetFormat(block, range ? "single" : "range"); }}><ha-icon icon=${range ? "mdi:thermometer" : "mdi:thermometer-lines"} aria-hidden="true"></ha-icon><span>${host._t(range ? "useSingleTarget" : "useRangeTarget")}</span></button>${mismatch ? html`<p class="warning">${host._t("targetFormatIncompatible")}</p>` : nothing}</details>` : nothing}${range ? html`${this._temperatureField("target_temp_low", host._t("minimumShort"))}${this._temperatureField("target_temp_high", host._t("maximumShort"))}` : this._temperatureField("temperature", host._t("target"))}` : nothing}
     </div>${options ? html`<details class="resource-section preset-section" ?open=${block.action === "set_climate_options"}>${this._sectionSummary("mdi:tune-variant", host._t("presetOptionalOptions"))}<div class="preset-fields">
       ${([ ["fan_mode", "fan_modes", "fanMode"], ["preset_mode", "preset_modes", "devicePreset"], ["swing_mode", "swing_modes", "swingMode"], ["swing_horizontal_mode", "swing_horizontal_modes", "horizontalSwingMode"] ] as const).map(([field, attribute, label]) => html`<label>${host._t(label)}<input list=${`preset-${field}`} .value=${String(block[field] ?? "")} @input=${(event: Event) => this._update(field, host._inputValue(event))} /><datalist id=${`preset-${field}`}>${presetOptionSuggestions(this.hass, this.data?.configured_entities ?? [], attribute).map((value) => html`<option value=${value}></option>`)}</datalist></label>`)}
       <label>${host._t("targetHumidity")} (%)<input type="number" min="0" max="100" step="any" .value=${String(block.humidity ?? "")} @input=${(event: Event) => this._update("humidity", host._inputValue(event))} /></label>

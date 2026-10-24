@@ -1,3 +1,4 @@
+import { cloneWithTargetDrafts } from "./target-format-policy";
 import { resolveDayLayout } from "./day-layouts";
 import { WEEKDAYS } from "../constants";
 import {
@@ -51,16 +52,16 @@ export function createClimateProfileDraft(profile?: ClimateProfile): ClimateProf
       ? {
           behavior: "schedule",
           ...(zone.day_layout_key ? { day_layout_key: resolveDayLayout(zone.day_layout_key).layout.key } : {}),
-          template_links: structuredClone(zone.template_links ?? {}),
+          template_links: cloneWithTargetDrafts(zone.template_links ?? {}),
           schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
             weekday,
             draftBlocksFromScheduleBlocks(zone.schedule[weekday] ?? []),
           ])),
         }
-      : structuredClone(zone),
+      : cloneWithTargetDrafts(zone),
   ])) as Record<string, ClimateProfileDraftZone>;
   return {
-    ...structuredClone(profile),
+    ...cloneWithTargetDrafts(profile),
     color: profile.color || climateProfileAccentColor(profile.key),
     zones,
     rememberedSchedules: Object.fromEntries(
@@ -158,13 +159,13 @@ export function withProfileZoneBehavior(
 ): ClimateProfileDraft {
   const zones = { ...draft.zones };
   const rememberedSchedules = { ...draft.rememberedSchedules };
-  const rememberedTemplateLinks = structuredClone(draft.rememberedTemplateLinks ?? {});
+  const rememberedTemplateLinks = cloneWithTargetDrafts(draft.rememberedTemplateLinks ?? {});
   const rememberedDayLayouts = { ...draft.rememberedDayLayouts };
   const existing = zones[entityId];
   if (existing?.behavior === "schedule") {
     rememberedSchedules[entityId] = cloneProfileSchedule(existing.schedule);
     rememberedDayLayouts[entityId] = existing.day_layout_key ?? "individual";
-    rememberedTemplateLinks[entityId] = structuredClone(existing.template_links ?? {});
+    rememberedTemplateLinks[entityId] = cloneWithTargetDrafts(existing.template_links ?? {});
   }
   if (behavior === "unconfigured") {
     delete zones[entityId];
@@ -175,7 +176,7 @@ export function withProfileZoneBehavior(
     zones[entityId] = {
       behavior,
       day_layout_key: existing?.behavior === "schedule" ? existing.day_layout_key ?? "individual" : rememberedDayLayouts[entityId] ?? "individual",
-      ...(links && Object.keys(links).length ? { template_links: structuredClone(links) } : {}),
+      ...(links && Object.keys(links).length ? { template_links: cloneWithTargetDrafts(links) } : {}),
       schedule: cloneProfileSchedule(
         existing?.behavior === "schedule"
           ? existing.schedule
@@ -193,7 +194,7 @@ export function cloneProfileSchedule(
 ): Record<string, DraftScheduleBlock[]> {
   return Object.fromEntries(WEEKDAYS.map((weekday) => [
     weekday,
-    structuredClone(schedule?.[weekday] ?? []),
+    cloneWithTargetDrafts(schedule?.[weekday] ?? []),
   ]));
 }
 
@@ -205,7 +206,7 @@ export function cloneProfileScheduleDay(
   const nextSchedule = cloneProfileSchedule(schedule);
   for (const weekday of targetWeekdays) {
     if (weekday !== sourceWeekday && weekday in nextSchedule) {
-      nextSchedule[weekday] = structuredClone(schedule[sourceWeekday] ?? []);
+      nextSchedule[weekday] = cloneWithTargetDrafts(schedule[sourceWeekday] ?? []);
     }
   }
   return nextSchedule;
@@ -221,7 +222,7 @@ export function cloneProfileDayToClimates(
   if (sourceZone?.behavior !== "schedule" || !WEEKDAYS.includes(weekday)) return draft;
   const zones = { ...draft.zones };
   const rememberedSchedules = { ...draft.rememberedSchedules };
-  const rememberedTemplateLinks = structuredClone(draft.rememberedTemplateLinks ?? {});
+  const rememberedTemplateLinks = cloneWithTargetDrafts(draft.rememberedTemplateLinks ?? {});
   for (const entityId of targetEntityIds) {
     if (entityId === sourceEntityId) continue;
     const existing = zones[entityId];
@@ -230,14 +231,14 @@ export function cloneProfileDayToClimates(
         ? existing.schedule
         : rememberedSchedules[entityId],
     );
-    const links = structuredClone(existing?.behavior === "schedule" ? existing.template_links ?? {} : rememberedTemplateLinks[entityId] ?? {});
+    const links = cloneWithTargetDrafts(existing?.behavior === "schedule" ? existing.template_links ?? {} : rememberedTemplateLinks[entityId] ?? {});
     const sourceLink = sourceZone.template_links?.[weekday];
-    if (sourceLink) links[weekday] = structuredClone(sourceLink);
+    if (sourceLink) links[weekday] = cloneWithTargetDrafts(sourceLink);
     else delete links[weekday];
-    schedule[weekday] = sourceLink ? [] : structuredClone(sourceZone.schedule[weekday] ?? []);
+    schedule[weekday] = sourceLink ? [] : cloneWithTargetDrafts(sourceZone.schedule[weekday] ?? []);
     zones[entityId] = { behavior: "schedule", schedule, template_links: links, day_layout_key: existing?.behavior === "schedule" ? existing.day_layout_key : draft.rememberedDayLayouts?.[entityId] };
     rememberedSchedules[entityId] = cloneProfileSchedule(schedule);
-    rememberedTemplateLinks[entityId] = structuredClone(links);
+    rememberedTemplateLinks[entityId] = cloneWithTargetDrafts(links);
   }
   return { ...draft, zones, rememberedSchedules, rememberedTemplateLinks };
 }
@@ -251,17 +252,17 @@ export function cloneProfileDayToDays(
   const zone = draft.zones[entityId];
   if (zone?.behavior !== "schedule" || !WEEKDAYS.includes(sourceWeekday)) return draft;
   const schedule = cloneProfileSchedule(zone.schedule);
-  const links = structuredClone(zone.template_links ?? {});
+  const links = cloneWithTargetDrafts(zone.template_links ?? {});
   const sourceLink = zone.template_links?.[sourceWeekday];
   for (const target of targetWeekdays) {
     if (target === sourceWeekday || !WEEKDAYS.includes(target)) continue;
-    schedule[target] = sourceLink ? [] : structuredClone(zone.schedule[sourceWeekday] ?? []);
-    if (sourceLink) links[target] = structuredClone(sourceLink);
+    schedule[target] = sourceLink ? [] : cloneWithTargetDrafts(zone.schedule[sourceWeekday] ?? []);
+    if (sourceLink) links[target] = cloneWithTargetDrafts(sourceLink);
     else delete links[target];
   }
   return { ...draft, zones: { ...draft.zones, [entityId]: { ...zone, schedule, template_links: links } },
     rememberedSchedules: { ...draft.rememberedSchedules, [entityId]: cloneProfileSchedule(schedule) },
-    rememberedTemplateLinks: { ...draft.rememberedTemplateLinks, [entityId]: structuredClone(links) } };
+    rememberedTemplateLinks: { ...draft.rememberedTemplateLinks, [entityId]: cloneWithTargetDrafts(links) } };
 }
 
 export function nextProfileBlockStart(blocks: Array<Pick<ScheduleBlock, "start">>): string {
@@ -339,7 +340,7 @@ export function climateProfileInput(draft: ClimateProfileDraft): ClimateProfileI
         ? {
             behavior: "schedule",
             ...(zone.day_layout_key ? { day_layout_key: resolveDayLayout(zone.day_layout_key).layout.key } : {}),
-            template_links: structuredClone(zone.template_links ?? {}),
+            template_links: cloneWithTargetDrafts(zone.template_links ?? {}),
             schedule: Object.fromEntries(WEEKDAYS.map((weekday) => [
               weekday,
               (zone.schedule[weekday] ?? []).map(profileDraftBlockInput),

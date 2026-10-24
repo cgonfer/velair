@@ -29,6 +29,11 @@ export const PANEL_TABS: PanelTabDefinition[] = [
     view: "templates",
   },
   {
+    icon: "mdi:heat-pump-outline",
+    labelKey: "supplyControl",
+    view: "supply-control",
+  },
+  {
     icon: "mdi:home-thermometer-outline",
     labelKey: "sensors",
     view: "sensors",

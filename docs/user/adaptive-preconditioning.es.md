@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](adaptive-preconditioning.md) · [Español](a
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.3 |
-| Última sincronización | 2026-10-21 |
+| Versión de referencia | 1.9.0-beta.5 |
+| Última sincronización | 2026-10-24 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -42,6 +42,8 @@ La pestaña de preacondicionamiento contiene los ajustes adaptativos y el aprend
 El preacondicionamiento se configura por equipo. El aprendizaje de calefacción y refrigeración se registra por separado: las muestras de refrigeración no sustituyen a las de calefacción, ni viceversa.
 
 Se admiten intervalos nativos `heat_cool`. Si la habitación está por debajo del objetivo inferior en más de la Diferencia mínima de temperatura, Velair calcula la predicción desde ese límite y aplica anticipadamente el intervalo completo para calentar. Si está por encima del objetivo superior en más de esa diferencia, calcula desde el límite superior y aplica anticipadamente el intervalo completo para refrigerar. Las lecturas dentro del intervalo o de las bandas muertas de sus límites mantienen la hora programada habitual. Velair siempre envía ambos límites; nunca reduce un intervalo a una sola temperatura.
+
+Una entidad puede necesitar ambos límites en Calor, Frío o Auto sin admitir `heat_cool`. Velair puede programar y enviar esos objetivos, pero no los adelanta ni recoge muestras de aprendizaje térmico para ellos. La vista de preparación explica que esta función requiere Calor/Frío para intervalos. El par programado no cambia y Regreso a casa lo aplica a la llegada sin preparación anticipada. Habilitar el preacondicionamiento no elimina esta limitación.
 
 Al expandir un equipo, cada modo compatible muestra una tarjeta de predicción actual. Utiliza los mismos datos del backend sobre el próximo evento que la pestaña Resumen, de modo que las pausas, refuerzos, modos incompatibles y bloques que no pueden adelantarse se tratan de forma coherente. Cuando existe un bloque futuro adecuado, la tarjeta muestra el inicio calculado, la hora objetivo, el adelanto, la temperatura y el modo programados, y si Velair utiliza el modelo inicial o un historial local de casos similares.
 

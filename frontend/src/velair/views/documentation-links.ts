@@ -28,6 +28,7 @@ const TOPIC_COPY: Record<DocumentationTopic, { title: TranslationKey; summary: T
   troubleshooting: { title: "diagnostics", summary: "diagnosticsDescription" },
   manualControl: { title: "externalChangePolicy", summary: "externalChangePolicyDescription" },
   externalSystems: { title: "externalSystems", summary: "externalSystemsDescription" },
+  sharedSupply: { title: "sharedDemandTitle", summary: "sharedDemandDescription" },
 };
 
 function openDocumentationDialog(event: Event) {

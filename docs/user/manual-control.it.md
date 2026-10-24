@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](manual-control.md) · [Español](manual-contr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.2 |
-| Ultima sincronizzazione | 2026-10-17 |
+| Versione di riferimento | 1.9.0-beta.5 |
+| Ultima sincronizzazione | 2026-10-24 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -51,7 +51,7 @@ Questi stati possono coesistere. Per esempio, la modalità Velair **Manuale** pu
 
 Velair osserva questi campi di controllo sui dispositivi gestiti:
 
-- `hvac_mode`, rappresentato dallo stato dell’entità climatica, inclusi `off`, `heat`, `cool` e `heat_cool`;
+- `hvac_mode`, rappresentato dallo stato dell’entità climatica, inclusi `off`, `heat`, `cool`, `auto` e `heat_cool`;
 - `temperature` per un obiettivo singolo;
 - `target_temp_low` e `target_temp_high` per un intervallo nativo.
 
@@ -190,6 +190,8 @@ Se esiste ancora una pausa indipendente, la zona resta in pausa. Se la sua azion
 - se è `off`, sceglie la prima modalità compatibile supportata dichiarata diversa da `off`, poi applica l’obiettivo.
 
 Per un dispositivo solo riscaldamento che dichiara `[off, heat]`, un blocco che mantiene la modalità a `21 °C` riprende come `heat`, `21 °C`. Per uno solo raffrescamento con `[off, cool]`, riprende come `cool`, `21 °C`. Un dispositivo reversibile può dichiarare più modalità compatibili; Velair usa l’ordine dichiarato e non deduce riscaldamento o raffrescamento da stagione, geografia o obiettivo numerico. Imposta una modalità HVAC esplicita nel blocco quando la scelta deve essere deterministica.
+
+Per un’entità che accetta solo intervalli, le modalità operative compatibili sono le modalità `heat`, `cool`, `auto` e `heat_cool` dichiarate. Mantieni da Spento usa la prima nell’ordine dichiarato. Le entità che supportano entrambi i formati usano la [politica salvata del formato per modalità](usage.it.md#target-format-by-climate-and-mode) per determinare le modalità compatibili, mantenendo la preferenza per `heat_cool` quando riprendono un intervallo compatibile da Spento. Solo temperatura può scrivere entrambi i limiti a dispositivo spento se sono dichiarati supporto agli intervalli e una modalità compatibile; non lo attiva mai per permettere la scrittura.
 
 Per un blocco di sole opzioni, la ripresa applica solo i controlli climatici selezionati. Non invia una temperatura né accende un dispositivo spento.
 
@@ -344,6 +346,8 @@ Policy: until resumed
 ```
 
 Velair rileva `target_temp_low` e `target_temp_high`, acquisisce lo stato completo `heat_cool` e conserva `19–24 °C` durante la regolazione manuale. Alla ripresa applica l’intero intervallo del blocco prioritario attuale. Non riduce mai l’intervallo a un obiettivo singolo.
+
+La stessa acquisizione e ripristino della coppia completa si applica alle entità che accettano solo intervalli in Caldo, Freddo e Auto. Un attributo residuo `temperature` non sostituisce i due limiti. Se la coppia osservata è incompleta o non valida, Velair non inventa un obiettivo ripristinabile da quell’attributo scalare.
 
 <a id="independent-window-pause-while-manual"></a>
 ### Pausa indipendente delle finestre durante il controllo manuale

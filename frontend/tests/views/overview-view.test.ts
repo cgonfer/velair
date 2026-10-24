@@ -1836,3 +1836,20 @@ describe("overview timeline", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+it.each([
+  [19, 24, "19–24 °C"],
+  [19, undefined, undefined],
+  [25, 19, undefined],
+  [Number.NaN, 24, undefined],
+])("uses range-only targets without falling back to residual scalar (%s, %s)", (low, high, expected) => {
+  const container = document.createElement("div");
+  const viewHost = { ...host(), _formatTemperature: (value: number) => value + " °C",
+    hass: { states: { "climate.office": { state: "heat", attributes: {
+      supported_features: 394, temperature: 22, target_temp_low: low, target_temp_high: high,
+    } } } }, _data: { zones: { "climate.office": { enabled: true, schedule: {} } } },
+  } as unknown as VelairViewHost;
+  render(renderOverviewZones(viewHost, ["climate.office"]), container);
+  expect((container.querySelector(".overview-zone-details")?.textContent ?? "")).not.toContain("22 °C");
+  if (expected) expect(container.querySelector(".overview-zone-details")?.textContent).toContain(expected);
+});

@@ -12,6 +12,13 @@ It can run on normal scheduled temperature blocks and on blocks that Adaptive Pr
 
 Velair does not create a virtual climate entity, bypass device firmware, or poll temperatures continuously. If a thermostat or TRV supports binding an external sensor directly, that device-native option remains the preferred first choice.
 
+Range delivery compatibility is separate from band interpretation. Only an
+effective `heat_cool` mode authorizes range assistance. A range-only entity in
+`heat`, `cool`, or `auto` receives its nominal pair and reports
+`unsupported_range_mode` rather than entering scalar or band calculations.
+Clear prior runtime assistance when intent changes, without restoring its old
+correction over the new target. Retain the saved assist configuration.
+
 ## Stored Configuration
 
 Room Assist configuration is stored per managed climate together with the climate's preconditioning settings for compatibility with the current storage shape:

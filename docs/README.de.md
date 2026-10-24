@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -38,6 +38,7 @@ Die Velair-Dokumentation ist nach Zielgruppe und Thema gegliedert.
 - [Adaptive Vorkonditionierung](user/adaptive-preconditioning.de.md): geplante Komforttemperaturen dank lokalen Lernens frühzeitig vorbereiten.
 - [Geplante Rückkehr](user/planned-return.de.md): anwesenheitsabhängige Abwesenheit und wöchentliche oder einmalige Ankünfte konfigurieren, mit Beispielen für einen Abbruch vor und nach bestätigtem Verlassen des Zuhauses.
 - [Room Assist](user/room-assist.de.md): einen separaten Raumtemperatursensor für Heizkörperthermostate, Thermostate und Klimaanlagen verwenden.
+- [Versorgungssteuerung](user/shared-climate-supply.de.md): gemeinsame Heiz- oder Kühlschalter anhand des geschätzten Raumbedarfs steuern, mit Versorgungshysterese und Thermostatausnahmen.
 - [Zuverlässige Übermittlung von Klimasteuerbefehlen](user/resilient-climate-delivery.de.md): verzögerte Wiederholungsversuche und das Verhalten bei Wiederverbindung eines vorübergehend nicht verfügbaren Klimageräts verstehen.
 - [Umgebungskomfort](user/comfort.de.md): Temperatur, Luftfeuchtigkeit, CO2-Luftqualität und Aktualität der Messwerte anhand lokaler Raumbewertungen verstehen.
 - [Temperatureinheiten und Migration](user/temperature-units.de.md): Celsius-/Fahrenheit-Standardwerte, Aktualisierungen, Migration, Import/Export und Wiederherstellung verstehen.

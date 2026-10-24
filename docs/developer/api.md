@@ -358,10 +358,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 19,
+    "portable_model": 22,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.4"
+    "integration": "1.9.0-beta.5"
   }
 }
 ```
@@ -1358,6 +1358,88 @@ await hass.connection.sendMessagePromise({
 
 Deletes local adaptive preconditioning observations for one managed climate direction. Valid directions are `heat` and `cool`. Schedule blocks, preconditioning settings, and the other direction's observations are kept.
 
+## Target-format policy review
+
+Each managed zone includes derived `target_format_policy` data:
+
+```ts
+{
+  entity_id: "climate.living_room",
+  kind: "mixed", // single | range | mixed | unknown
+  configured_modes: null, // null = default; [] = explicit no range modes
+  range_modes: ["heat_cool"],
+  formats_by_mode: {heat: "single", heat_cool: "range"},
+  invalid_modes: [],
+  uncertain: false
+}
+```
+
+The persisted optional zone field is `target_range_modes`. The derived policy
+must not be imported or written as configuration. Unknown per-mode formats use
+`"unknown"`; invalid configured modes remain observable rather than being dropped.
+Home Assistant feature masks are entity-wide, not a per-mode compatibility matrix.
+
+Transient device availability does not invalidate saved target configuration.
+Configuration validation uses advertised target capabilities and the saved mode
+mapping when those are known, including while a climate is temporarily unavailable
+or hides its target attributes while off. Missing capabilities remain uncertain.
+The runtime policy still reports unknown formats while unavailable and does not
+authorize device actions from the configuration-only compatibility check.
+
+Preview a candidate without changing saved configuration or operating the device:
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/preview_target_range_policy",
+  entity_id: "climate.living_room",
+  target_range_modes: ["heat", "heat_cool"],
+  expected_revision: currentRevision
+});
+```
+
+The preview includes `affected_destinations`, `temporary_blockers`,
+`automatic_actions` and `can_apply`.
+It validates the candidate mode policy against Default, all Profiles and consumers
+of shared resources. An incompatible Room Assist correction is reported as
+`{ entity_id, type: "stop_room_assist" }` in `automatic_actions`, not as a blocker.
+Preview does not end it. Other incompatible temporary objectives must be resolved
+before application. Preview success does not prove that a physical device uses both values.
+
+Apply uses `velair/apply_target_range_policy` with the same fields and revision.
+Both operations may include a `corrections` object:
+
+```ts
+{
+  destinations: [{
+    source: "default", // default | profile
+    // profile_key: "winter", // required for a Profile destination
+    entity_id: "climate.living_room",
+    schedule: correctedSchedule,
+    template_links: correctedLinks
+  }]
+}
+```
+
+Corrections accept only `destinations` for the climate whose policy is changing.
+The `templates` and `block_presets` correction fields are rejected, including empty
+arrays. Use the normal resource editors to change those resources separately.
+Each corrected destination includes its complete weekly schedule. The editor
+materializes affected blocks locally, preserves unaffected Preset references,
+and removes a Template link only for a corrected day. Policy plus corrections are saved
+atomically. Revision conflicts or failed writes leave the previous configuration
+and unrelated runtime overrides unchanged. No physical capability probe is run.
+On a successful policy save, incompatible Room Assist corrections are ended without
+restoring their former targets. Their saved configuration is retained. The current
+nominal schedule target is delivered through the normal recovery path. Storage
+failure leaves the old correction intact; other temporary blockers still reject
+the save. The automatic-action list is derived runtime information, not configuration.
+The editor first discovers affected blocks with a policy-only preview. Its Save
+action then previews one complete correction request and applies that exact
+request and revision only if the new preview permits it. Apply still revalidates
+inside the backend transaction, including blockers that changed after preview.
+Changing the proposed modes requires a new discovery; retained UI drafts do not
+grant correction ownership over destinations unaffected by the new selection.
+
 ## Export Data
 
 ```ts
@@ -1372,7 +1454,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 19,
+  "model_version": 22,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1577,3 +1659,45 @@ failures are observable. Scheduler-owned intentions may complete later through
 bounded runtime recovery; delayed attempts always resolve current backend state
 instead of replaying the original service payload. Manual temperature actions
 remain one-shot and report an unavailable or rejected call to their caller.
+
+## Shared climate supply
+
+The panel calls this feature **Supply control**, its configured entries **Shared
+supplies**, and their editable names **Supply name**. The persisted collection
+`shared_demand_groups`, WebSocket `groups` array and `group_id` fields retain
+their existing identifiers for compatibility. They describe shared supplies,
+not general-purpose thermostat groups.
+
+Portable model 21 adds `settings.shared_demand_groups`. Each shared supply contains `id`,
+`name`, `enabled`, `switch_entity_id`, `direction` (`heat` or `cool`), `hysteresis`,
+`minimum_off_seconds`, `off_delay_seconds`, `zones` (managed climate IDs mapped to
+an empty object or `{ "hysteresis": 0.5 }`) and `suspended`. Hysteresis values are
+temperature differences. Import always disables and suspends supplies; local
+`settings.shared_demand_cleanup` recovery intent is never exported or imported.
+Both timing fields require whole seconds from 0 to 86,400 on API save and import;
+fractional values are rejected before configuration is mutated. Integral numeric
+values such as `1.0` are accepted.
+
+Portable model 22 adds optional supply `hysteresis_mode` (`at_target`, `symmetric`,
+`custom`) and `hysteresis_stop`. Missing mode retains model 21's at-target behavior;
+missing custom stop defaults to zero. `hysteresis` remains the start offset.
+The effective stop offset is zero for at-target, the effective start offset for
+symmetric, or `hysteresis_stop` for custom. Zone objects can independently override
+`hysteresis` and `hysteresis_stop`, and cannot override the supply mode. Both offsets
+are temperature differences, including dormant custom values preserved across
+mode changes. Heating starts at target minus start and stops at target plus stop;
+cooling reverses the signs. Stop wins at equality when both offsets are zero.
+Room Assist's committed intent takes precedence over all three modes.
+
+`velair/update_shared_demand` accepts a complete `groups` array and optional
+`expected_revision`. `velair/resume_shared_demand` accepts `group_id` and optional
+`expected_revision`. Both require administrator access, reject data-operation or
+temperature-migration blocks, validate backend-owned state and return the schedule
+response. Supply edits preserve an existing suspension; only resume clears it.
+
+The schedule response includes `shared_demand_status` keyed by supply ID, with
+`status`, `output_state`, `demand`, `suspended`, room demand explanations and any
+`pending_until` deadline. `cleanup:<switch>` entries expose pending retired-output
+failures; `_configuration` exposes malformed stored setup. These are estimates
+and accepted service actions, not physical supply measurements. Status updates
+exclude measured-temperature-only notification changes and introduce no polling.

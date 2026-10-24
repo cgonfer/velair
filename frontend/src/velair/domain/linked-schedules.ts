@@ -1,3 +1,4 @@
+import { carryTargetDraft } from "./target-format-policy";
 import { draftBlocksFromScheduleBlocks, draftBlockUsesRange } from "./draft-blocks";
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import { availableScheduleTemplates } from "./templates";
@@ -34,7 +35,7 @@ export function linkDraftDay(template: StoredScheduleTemplate, current: DraftSch
     const humidity = humidityInput && Number.isFinite(Number(humidityInput))
       ? Number(humidityInput) : block.humidity;
     // Keep legitimate incomplete targets without converting empty input to zero.
-    return {
+    return carryTargetDraft(block, {
       ...base, action,
       ...(action === ACTION_SET_CLIMATE_OPTIONS ? {} : draftBlockUsesRange(block)
         ? { target_temp_low: block.target_temp_low ?? "", target_temp_high: block.target_temp_high ?? "" }
@@ -46,7 +47,7 @@ export function linkDraftDay(template: StoredScheduleTemplate, current: DraftSch
       ...(block.swing_mode ? { swing_mode: block.swing_mode } : {}),
       ...(block.swing_horizontal_mode ? { swing_horizontal_mode: block.swing_horizontal_mode } : {}),
       ...(humidityInput ? { humidity } : {}),
-    };
+    } as DraftScheduleBlock);
   });
   return linkDay(template, editable as unknown as ScheduleBlock[]);
 }

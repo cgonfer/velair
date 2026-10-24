@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.4 |
-| Última sincronização | 2026-10-21 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -33,6 +33,7 @@ O painel da barra lateral atualiza sua URL quando você muda de aba ou alterna e
 | Modos | `/velair/modes` |
 | Modelos: Modelos | `/velair/templates/templates` |
 | Modelos: Predefinições climáticas | `/velair/templates/presets` |
+| [Controle do fornecimento](shared-climate-supply.pt-br.md) | `/velair/supply-control` |
 | Sensores | `/velair/sensors` |
 | Conforto | `/velair/comfort` |
 | Pré-condicionamento | `/velair/preconditioning` |
@@ -235,7 +236,7 @@ climate_actions:
 
 A área de controle de climatização combina ações rápidas ordenadas com o seletor Automático/Manual, configurável separadamente, usando o mesmo modelo de controle de Visão geral. A área inferior reúne o modo HVAC, a temperatura-alvo atual quando o termostato está ligado e um atalho para a janela nativa de climatização do Home Assistant. Cada modo HVAC publicado aparece com seu ícone. Alterações diretas ficam somente de leitura enquanto o Velair controla a programação ativa: selecione **Manual** primeiro, espere o ajuste manual ser confirmado e então use os controles de temperatura e modo. Selecione **Automático** para retomar a programação. Reforços, pausas independentes e estados interrompidos ou indisponíveis bloqueiam a edição direta com uma explicação. A pausa interna que representa o próprio ajuste manual não bloqueia esses controles. Zonas com execução externa mantêm o atalho nativo do Home Assistant; uma ação de retorno pontual ativada ainda pode abrir os controles de saída da residência.
 
-São suportadas temperaturas únicas e faixas nativas `heat_cool`. Alterações de faixa enviam os dois limites juntos. O Velair usa `min_temp`, `max_temp` e `hvac_modes` publicados pela entidade de climatização. Ajustes de temperatura usam `target_temp_step` quando publicado. Se o atributo desaparecer, o Velair continua usando o último incremento válido informado, mantendo válidas as temperaturas decimais existentes. Em seguida vem a alternativa manual por zona configurada em Configurações e, por último, `1` quando nenhum incremento foi informado ou configurado. Ele não inventa modos HVAC.
+São suportadas temperaturas únicas e faixas nativas compatíveis, incluindo faixas em Aquecimento, Resfriamento e Auto em entidades que só aceitam dois valores alvo. Alterações de faixa enviam os dois limites juntos. O Velair usa `min_temp`, `max_temp` e `hvac_modes` publicados pela entidade de climatização. Ajustes de temperatura usam `target_temp_step` quando publicado. Se o atributo desaparecer, o Velair continua usando o último incremento válido informado, mantendo válidas as temperaturas decimais existentes. Em seguida vem a alternativa manual por zona configurada em Configurações e, por último, `1` quando nenhum incremento foi informado ou configurado. Ele não inventa modos HVAC.
 
 Cartões criados antes da lista ordenada de ações usavam `climate_show_boost_action`, `climate_show_pause_action` e `climate_custom_actions`. O Velair continua lendo esses campos antigos, enquanto o editor visual grava `climate_actions` quando a lista de ações muda.
 
@@ -347,7 +348,13 @@ O editor mantém as opções de climatização selecionadas visíveis em uma lin
 
 Blocos de temperatura contêm uma temperatura-alvo única ou uma faixa completa com limites inferior e superior. O editor usa os recursos publicados pela entidade de climatização e configura novos blocos `heat_cool` com uma faixa por padrão, quando suportada. Uma faixa aparece, por exemplo, como `20–24 °C`. O Velair nunca inventa uma faixa a partir de uma temperatura única e rejeita temperaturas-alvo incompletas, invertidas ou incompatíveis antes de enviar um comando.
 
-As faixas nativas ficam limitadas a `heat_cool` nesta primeira fase. O Velair não presume que o modo `auto` de um aparelho use o mesmo modelo de limites inferior e superior.
+Entidades que só suportam intervalos usam ambos os limites nos modos anunciados `heat`, `cool`, `auto` ou `heat_cool`. O editor conserva os valores ao alternar entre modos compatíveis, **Manter o modo atual** e **Somente temperatura**. Os limites podem ser iguais. Em entidades com ambos os formatos, o formato segue a política por modo configurada em Configurações. Em entidades apenas de intervalo, Seco e Apenas ventilador continuam a ser blocos só de modo, sem temperatura. Nas entidades mistas, a política determina o formato; a integração pode ainda rejeitar uma operação não suportada.
+
+Em uma entidade apenas de intervalo, Manter inicia um equipamento desligado no primeiro modo compatível anunciado; não contorna um modo em execução incompatível mudando-o. Em entidades mistas, um bloco Manter com intervalo conserva a preferência por `heat_cool` quando desligado. Somente temperatura pode enviar os dois limites com o equipamento desligado quando este anuncia intervalos e um modo de climatização compatível, sem o ligar nem alterar o modo. Uma entidade conhecida como apenas de intervalo não aceita um alvo único, mesmo desligada.
+
+O editor usa **Alvo inferior** e **Alvo superior**: são os dois valores aceitos pela integração. O Velair não presume que Auto tenha a banda automática de aquecimento/resfriamento de `heat_cool`. As mesmas verificações aplicam-se a Perfis, predefinições, Reforço e modelos copiados ou ligados. Modelos e Predefinições usam os formatos dseus destinos possíveis; cada destino real é validado ao aplicar. Se o Reforço não tiver limites atuais utilizáveis, preencha ambos antes de aplicar.
+
+Room Assist e Pré-condicionamento adaptativo só suportam intervalos em `heat_cool`. Para intervalos em Aquecimento, Resfriamento ou Auto, o par nominal é aplicado à hora programada sem correção do Room Assist, início antecipado nem aprendizado térmica. As vistas afetadas explicam a limitação. O Retorno planejado aplica o alvo na chegada, sem preparação antecipada para estes intervalos.
 
 Quando o termostato selecionado expõe controles extras, o editor do bloco também os mostra. Por exemplo, um ar-condicionado pode oferecer ventilação, preset, oscilação, oscilação horizontal ou umidade. O Velair só armazena e envia opções suportadas pelo termostato selecionado; opções não suportadas são omitidas em vez de enviadas sem validação.
 
@@ -370,6 +377,46 @@ Adicionar, remover ou mover blocos, aplicar um modelo, mudar o escopo do víncul
 A linha do tempo agrupada mostra os blocos comuns em edição, sem seletor separado de prévia de dia nem segmento herdado específico de um dia. Dias individuais continua mostrando continuidade do dia anterior. A continuidade semanal do agendador não muda e blocos herdados nunca são copiados para os salvos. Limites do equipamento são validados para cada dia afetado antes de salvar o conjunto completo.
 
 A organização dos dias sobrevive a reinicializações do Home Assistant e exportações portáteis. Exportações antigas sem organização são importadas com Dias individuais. Referências anteriores a organizações personalizadas também abrem como Dias individuais, preservando todos os blocos e vínculos de cada dia.
+
+<a id="target-format-by-climate-and-mode"></a>
+## Formato do alvo por equipamento e modo
+
+O Home Assistant anuncia temperaturas únicas e intervalos, mas não uma tabela de compatibilidade por modo HVAC. Em **Configurações → Equipamentos gerenciados**, cada equipamento com ambos os formatos tem **Modos com dois valores alvo**. O resumo mostra os modos selecionados; abra a lista para selecionar ou desmarcar cada um. Só são oferecidos modos anunciados pelo equipamento, excluindo Desligado. Aquecimento/Resfriamento é selecionado inicialmente quando disponível; os outros não são selecionados automaticamente. A seleção vazia é válida. Equipamentos com um só formato usam-no sem seletor. A ajuda explica os limites; as alterações passam pela revisão de incompatibilidades antes de serem aplicadas.
+
+Esta configuração descreve como enviar alvos, não prova que o equipamento físico aceite ou use os dois valores. A integração pode rejeitar ou ignorar um parâmetro. O Velair comunica incompatibilidades conhecidas antes de salvar e erros de entrega recebidos. Não existe teste automático do dispositivo nem consulta periódica por mudança de modo.
+
+**Predefinição**, cada zona de **Perfis**, **Reforço** e os controlos de climatização usam esta política para mostrar um ou dois campos em um modo explícito. Alternar modos mantém rascunhos temporários separados para cada formato. Regressar a um formato repõe os valores escritos nessa edição; é preciso completar valores em falta. O Velair não inventa intervalos nem converte dois limites num único alvo. Estes rascunhos alternativos não são salvos nem recuperados após atualizar a página.
+
+**Manter o modo atual** e **Somente temperatura** não indicam modo explícito. Se o equipamento puder usar ambos os formatos nos seus modos, escolha o formato em Configurações adicionais do bloco. O modo real volta a ser validado na execução. Somente temperatura não ativa nem muda o modo HVAC.
+
+<a id="formats-in-templates-and-presets"></a>
+### Formatos em Modelos e Predefinições
+
+Em um modo explícito, o Velair considera os equipamentos gerenciados que o anunciam:
+
+- Se todos usam temperatura única, aparece um campo.
+- Se todos usam dois valores alvo, aparecem dois campos.
+- Se existem ambos os formatos, a primeira ação em Configurações adicionais alterna entre **Usar dois valores alvo** e **Usar uma temperatura**. Novos blocos começam com uma temperatura, exceto Aquecimento/Resfriamento, que começa com duas.
+- Sem equipamentos compatíveis ou com capacidades incertas, a escolha mantém-se disponível em vez de se presumir concordância.
+
+Manter e Somente temperatura combinam os modos efetivos possíveis. Aquecimento/Resfriamento também permite alternar quando os destinos usam formatos diferentes. A ação usa o botão de configurações existente em computador e celular, sem acrescentar uma coluna junto das temperaturas. Valores de predefinições ligadas são só de leitura até desvincular.
+
+Modelos e Predefinições existentes preservam os valores salvos quando mudam as configurações dos dispositivos. Um formato agora incompatível é identificado com uma ação explícita de correção; abrir o editor não converte nem remove valores. Atribuir recursos e copiar programações valida o formato de cada destino.
+
+<a id="reviewing-changes-to-the-mode-policy"></a>
+### Revisar alterações à política de modos
+
+Mudar a seleção mostra primeiro as programações afetadas em Predefinição, todos os Perfis e utilizações de Modelos ou Predefinições compartilhados. As correções aplicam-se localmente ao dia e equipamento afetados em Predefinição ou no respectivo Perfil. Insira os alvos em falta; o Velair não escolhe temperaturas substitutas. Se uma correção ativa do Room Assist for incompatível com o novo formato, a revisão explica que salvar a termina automaticamente. As configurações de Room Assist mantêm-se para modos compatíveis. Outros objetivos temporários incompatíveis têm de ser corrigidos ou terminados antes de aplicar.
+
+A revisão agrupa os dias em Predefinição ou no respectivo Perfil. Após **Verificar alterações**, grupos e dias ficam recolhidos para facilitar a leitura das contagens. Abra um dia para editar os blocos; só um editor de dia fica aberto de cada vez. Listas grandes são paginadas. **Próximo item para revisar** leva à próxima correção, mesmo em outra página. Recolher uma seção ou mudar de página mantém os valores introduzidos. Antes da primeira revisão só existe Verificar alterações, além de Cancelar. Depois, **Salvar** substitui Verificar alterações: complete os valores e salve. O Velair valida correções e impedimentos atuais no backend e só salva se essa validação tiver sucesso; você não precisa de uma segunda verificação separada. Erros de validação, ligação ou armazenamento mantêm os valores.
+
+Adicionar ou remover um modo de dois valores durante a edição volta a Verificar alterações e esconde Salvar até rever a nova seleção. Os rascunhos de temperatura mantêm-se, incluindo alternativas únicas/de intervalo quando você volta a um formato anterior. Só se corrigem os blocos afetados pela seleção atual; blocos agora compatíveis mantêm as referências originais.
+
+Não há seletor do âmbito da correção. Corrigir um bloco com Predefinição cria valores locais nesse bloco. Corrigir um dia ligado a Modelo remove a ligação desse dia; os restantes blocos mantêm os valores existentes e referências não afetadas a Predefinições. Outros dias mantêm as ligações. A revisão mostra a consequência antes de salvar. Modelos, Predefinições e outros destinos não mudam: cada dia afetado precisa das suas próprias correções completas. Futuras alterações ao recurso original deixam de atualizar o dia ou blocos desvinculados.
+
+A configuração atual mantém-se até ser possível salvar em conjunto a política e as correções. Uma edição concorrente exige nova revisão. Uma falha de armazenamento mantém a configuração anterior. Se um equipamento deixar de anunciar um modo salvo, o Velair conserva e comunica a configuração em vez de a apagar. O Room Assist só termina depois de salvar com sucesso, sem restaurar o alvo antigo. O Velair aplica então o alvo nominal atual da programação; falhas de entrega usam a recuperação normal. Se salvar falhar, a correção e configuração anteriores mantêm-se.
+
+Selecionar dois valores alvo para Aquecimento, Resfriamento ou Auto não ativa Room Assist nem Pré-condicionamento adaptativo nesses modos. A assistência térmica de intervalos continua limitada a Aquecimento/Resfriamento; o Retorno planejado aplica o alvo nominal na chegada.
 
 <a id="timeline-editing"></a>
 ## Edição da linha do tempo
@@ -431,7 +478,7 @@ O Velair armazena valores térmicos sem conversão, na unidade registrada com se
 
 A atualização única de dados publicados do Velair que usavam apenas Celsius é diferente. Se o Home Assistant já usa Fahrenheit, o Velair assume que os dados antigos estão em Celsius sem perguntar, mantém o agendador interrompido e direciona o usuário a **Redefinir Velair**. A redefinição descarta a configuração antiga e cria atomicamente novos padrões Fahrenheit. Após essa atualização, mudanças futuras de unidade no Home Assistant usam a conversão explícita completa descrita acima e preservam os dados.
 
-Exportações atuais do modelo portátil v19 preservam os valores sem conversão e declaram sua unidade. Versões anteriores do Velair não conseguem importar exportações v19; use uma versão com suporte a v19 para restaurá-las. Arquivos antigos suportados, incluindo v4, v5, v8 e v9, continuam podendo ser importados. Importações convertem os dados térmicos selecionados quando a unidade do arquivo difere da unidade atual do Home Assistant. Arquivos antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo salvar uma cópia de referência antes da redefinição e importá-la depois.
+Exportações atuais do modelo portátil v22 preservam os valores sem conversão e declaram sua unidade. Versões anteriores do Velair não conseguem importar exportações v22; use uma versão com suporte a v22 para restaurá-las. Arquivos antigos suportados, incluindo v4, v5, v8 e v9, continuam podendo ser importados. Importações convertem os dados térmicos selecionados quando a unidade do arquivo difere da unidade atual do Home Assistant. Arquivos antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo salvar uma cópia de referência antes da redefinição e importá-la depois.
 
 Se um termostato estava indisponível durante a migração ou importação, o Velair verifica seus limites e seu incremento efetivo de temperatura. Um `target_temp_step` válido publicado pelo Home Assistant tem prioridade sobre o último incremento informado e depois sobre a alternativa manual por zona. O painel avisa quando uma temperatura-alvo armazenada já não é compatível, para que seja editada antes de depender dessa programação.
 
@@ -608,7 +655,7 @@ O arquivo pode conter:
 - definições de perfis de climatização;
 - definições de modos.
 
-O modelo atual 19 preserva os dois tipos de vínculo de modelos, as referências de presets e as relações de Mestre do pré-condicionamento. As referências aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como seções adicionais selecionadas. As importações validam a configuração combinada, incluindo consumidores existentes de recursos compartilhados substituídos. Os presets são mesclados pela chave estável: chaves correspondentes são substituídas, enquanto presets locais ausentes do arquivo permanecem. Backups existentes continuam importáveis; versões antigas do Velair não podem importar arquivos do modelo 19. Consulte [o exemplo de backup](linked-schedule-examples.pt-br.md#back-up-the-whole-setup).
+O modelo atual 22 preserva os dois tipos de vínculo de modelos, as referências de presets e as relações de Mestre do pré-condicionamento e as políticas de formato de alvo por equipamento. As referências aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como seções adicionais selecionadas. As importações validam a configuração combinada, incluindo consumidores existentes de recursos compartilhados substituídos. Os presets são mesclados pela chave estável: chaves correspondentes são substituídas, enquanto presets locais ausentes do arquivo permanecem. Backups existentes continuam importáveis; versões antigas do Velair não podem importar arquivos do modelo 22. Consulte [o exemplo de backup](linked-schedule-examples.pt-br.md#back-up-the-whole-setup).
 
 Ao importar, o Velair permite escolher quais seções sobrescrever. A importação substitui os dados selecionados; exporte antes se precisar de um ponto de recuperação. Definições de perfis e modos são portáteis, mas sua seleção ativa não é. O Velair mantém IDs de perfis ativos que ainda existam e volta às programações padrão apenas quando nenhum deles permanece.
 

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { translate } from "../../src/velair/i18n";
 
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
@@ -1495,4 +1496,17 @@ describe("sensors view", () => {
     expect(container.querySelector(".sensor-config-section")).not.toBeNull();
     expect(container.querySelector(".sensor-runtime-section")).toBeNull();
   });
+});
+
+it("shows the localized range thermal limitation in French and hides its temperature scale", () => {
+  const { viewHost } = host({ expandedZoneIds: ["climate.second"], scheduledRange: [19, 24] });
+  const assist = viewHost._data!.room_sensor_assist!["climate.second"];
+  assist.status = "unavailable";
+  assist.reason = "unsupported_range_mode";
+  assist.hvac_mode = "heat";
+  viewHost._t = (key, replacements) => translate("fr", key, replacements);
+  const container = document.createElement("div");
+  render(renderSensorsView(viewHost, ["climate.second"]), container);
+  expect(container.textContent).toContain(translate("fr", "unsupportedRangeThermalMode"));
+  expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
 });

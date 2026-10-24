@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](adaptive-preconditioning.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.3 |
-| Ostatnia synchronizacja | 2026-10-21 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -40,6 +40,8 @@ Karta **Przygotowanie wstępne** zawiera adaptacyjne ustawienia i uczenie dla ka
 Przygotowanie konfiguruje się osobno dla każdej encji. Uczenie ogrzewania i chłodzenia jest rozdzielone: próbki chłodzenia nie zastępują próbek ogrzewania ani odwrotnie.
 
 Obsługiwane są natywne zakresy `heat_cool`. Jeśli temperatura pomieszczenia jest niższa od dolnej granicy o więcej niż minimalna różnica temperatury, Velair prognozuje względem dolnej granicy i wcześniej uruchamia cały zakres dla ogrzewania. Jeśli jest wyższa od górnej granicy o więcej niż tę różnicę, prognozuje względem górnej i wcześniej uruchamia cały zakres dla chłodzenia. Odczyty wewnątrz zakresu lub martwych stref przy jego granicach zachowują zwykły czas bloku. Velair zawsze wysyła obie granice; nigdy nie sprowadza zakresu do jednej temperatury.
+
+Encja może wymagać obu granic w Ogrzewaniu, Chłodzeniu lub Auto bez obsługi `heat_cool`. Velair planuje i wysyła te cele, ale nie uruchamia ich wcześniej ani nie zbiera dla nich termicznych próbek uczenia. Widok przygotowania wyjaśnia, że ta funkcja wymaga dla zakresów Ogrzewania/chłodzenia. Zaplanowana para pozostaje bez zmian, a Planowany powrót stosuje ją przy przyjeździe bez wcześniejszego przygotowania. Włączenie przygotowania nie usuwa tego ograniczenia.
 
 Po rozwinięciu encji każdy obsługiwany tryb pokazuje kartę bieżącej prognozy. Korzysta ona z tych samych danych backendu o następnym zdarzeniu co Przegląd, dzięki czemu pauzy, wzmocnienia, nieobsługiwane tryby i bloki nienadające się do przygotowania są traktowane spójnie. Jeśli istnieje pasujący przyszły blok, karta pokazuje obliczony czas rozpoczęcia, czas docelowy, wyprzedzenie, zaplanowaną temperaturę i tryb oraz informację, czy Velair używa modelu początkowego, czy podobnej lokalnej historii.
 

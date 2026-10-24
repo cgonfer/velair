@@ -8,8 +8,8 @@ Traductions: [Original en anglais](README.md) · [Español](README.es.md) · [Fr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.5 |
+| Dernière synchronisation | 2026-10-24 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -38,6 +38,7 @@ La documentation de Velair est organisée par public et par sujet.
 - [Préconditionnement adaptatif](user/adaptive-preconditioning.fr.md) : anticiper les consignes de confort programmées grâce à l’apprentissage local.
 - [Retour prévu](user/planned-return.fr.md) : configurer l’absence pilotée par l’occupation et les arrivées hebdomadaires ou ponctuelles, avec des exemples d’annulation avant et après confirmation du départ.
 - [Room Assist](user/room-assist.fr.md) : utiliser un capteur de température ambiante distinct pour les têtes thermostatiques, thermostats et climatiseurs.
+- [Contrôle de l’alimentation](user/shared-climate-supply.fr.md) : commandez un interrupteur partagé de chauffage ou de refroidissement selon la demande estimée des pièces, avec hystérésis de l’alimentation et exceptions par thermostat.
 - [Transmission climatique résiliente](user/resilient-climate-delivery.fr.md) : comprendre les tentatives différées et le comportement de reconnexion lorsqu’un appareil de chauffage ou de climatisation est temporairement indisponible.
 - [Confort environnemental](user/comfort.fr.md) : comprendre la température, l’humidité, la qualité de l’air liée au CO2 et la fraîcheur des mesures grâce aux évaluations locales des pièces.
 - [Unités de température et migration](user/temperature-units.fr.md) : comprendre les valeurs par défaut Celsius/Fahrenheit, mises à niveau, migrations, importations/exportations et récupération.

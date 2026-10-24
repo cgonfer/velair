@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.4 |
-| Dernière synchronisation | 2026-10-21 |
+| Version de référence | 1.9.0-beta.5 |
+| Dernière synchronisation | 2026-10-24 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -37,6 +37,7 @@ Précédent et Suivant du navigateur suivent également cette navigation.
 | Modes | `/velair/modes` |
 | Modèles : Modèles | `/velair/templates/templates` |
 | Modèles : Préréglages climatiques | `/velair/templates/presets` |
+| [Contrôle de l’alimentation](shared-climate-supply.fr.md) | `/velair/supply-control` |
 | Capteurs | `/velair/sensors` |
 | Confort | `/velair/comfort` |
 | Anticipation | `/velair/preconditioning` |
@@ -528,7 +529,7 @@ Les zones à exécution externe gardent le raccourci Home Assistant natif ; une
 action Retour ponctuel activée peut toujours ouvrir les commandes de départ du
 foyer.
 
-Les consignes scalaires et les plages natives `heat_cool` sont prises en charge.
+Les consignes scalaires et les plages natives compatibles sont prises en charge, y compris les plages en Chauffage, Refroidissement et Auto sur les entités n’acceptant que deux consignes.
 Les changements de plage envoient ensemble les deux limites. Velair utilise
 `min_temp`, `max_temp` et `hvac_modes` publiés par l’entité climatique. Les
 ajustements de consigne utilisent `target_temp_step` lorsqu’il est publié. Si
@@ -866,9 +867,13 @@ lorsqu’elle est prise en charge. Une plage est affichée, par exemple, comme
 `20–24 °C`. Velair n’invente jamais une plage à partir d’une température et
 refuse les consignes incomplètes, inversées ou incompatibles avant l’envoi.
 
-Les plages natives sont limitées à `heat_cool` dans cette première phase.
-Velair ne suppose pas que le mode `auto` d’un appareil utilise le même modèle
-de limites inférieure et supérieure.
+Les entités n’acceptant que des plages utilisent les deux limites dans leurs modes annoncés `heat`, `cool`, `auto` ou `heat_cool`. L’éditeur conserve ces valeurs lors du passage entre modes compatibles, **Conserver le mode actuel** et **Température uniquement**. Les deux limites peuvent être égales. Pour les équipements à deux formats, le format suit la politique par mode configurée dans Réglages. Pour les entités à plage uniquement, Sec et Ventilation seule restent des blocs de mode sans température. Pour les équipements à deux formats, la politique détermine le format ; l’intégration peut toujours rejeter une opération non prise en charge.
+
+Avec une entité à plage uniquement, Conserver démarre un équipement éteint dans son premier mode compatible annoncé ; il ne contourne pas un mode actif incompatible en le changeant. Pour les entités à deux formats, un bloc Conserver avec plage garde la préférence pour `heat_cool` à l’arrêt. Température uniquement peut envoyer les deux limites à l’arrêt si l’entité annonce les plages et un mode de climatisation compatible, sans l’allumer ni changer son mode. Une entité connue à plage uniquement ne peut pas recevoir une température unique, même à l’arrêt.
+
+L’éditeur de plage utilise **Consigne basse** et **Consigne haute** pour ces entités. Ce sont les deux valeurs acceptées par l’intégration ; Velair ne déduit pas qu’Auto possède la bande automatique de chauffage/refroidissement de `heat_cool`. Les mêmes contrôles s’appliquent aux Profils, préréglages, Forçage et modèles copiés ou liés. Modèles et Préréglages utilisent les formats configurés pour leurs destinations possibles. Velair vérifie chaque destination réelle lors de l’application. Si Forçage ne dispose pas de limites actuelles utilisables, saisissez les deux valeurs avant application.
+
+Room Assist et le préconditionnement adaptatif prennent en charge les plages uniquement en `heat_cool`. Pour une plage en Chauffage, Refroidissement ou Auto, la paire nominale est appliquée à l’heure programmée, sans décalage Room Assist, départ anticipé ni apprentissage thermique. Les vues concernées expliquent cette limite. Retour prévu applique la cible d’arrivée à l’arrivée, sans préparation anticipée pour ces plages.
 
 Lorsque l’appareil sélectionné expose des commandes supplémentaires, l’éditeur
 les affiche également. Par exemple, un climatiseur peut exposer le mode de
@@ -895,6 +900,46 @@ Ajouter, supprimer ou déplacer des blocs, appliquer un modèle, changer la port
 La chronologie groupée montre les blocs communs modifiés, sans sélecteur d’aperçu séparé ni segment hérité propre à un jour. Jours individuels montre toujours la continuité du jour précédent. La continuité hebdomadaire du planificateur ne change pas et les blocs hérités ne sont jamais copiés dans les blocs enregistrés. Les limites des appareils sont validées pour chaque jour concerné avant l’enregistrement complet.
 
 Les répartitions survivent aux redémarrages Home Assistant et aux exports portables. Les anciens exports sans répartition importent avec Jours individuels. Les anciennes références de répartitions personnalisées s’ouvrent aussi ainsi, en conservant les blocs et liens de chaque jour.
+
+<a id="target-format-by-climate-and-mode"></a>
+## Format de température par équipement et mode
+
+Home Assistant signale la prise en charge des températures uniques et des plages, sans fournir de tableau par mode HVAC. Dans **Réglages → Climats gérés**, chaque équipement à deux formats dispose de **Modes avec deux consignes**. Fermé, le menu résume les modes sélectionnés ; ouvrez-le pour cocher ou décocher chaque mode. Seuls les modes annoncés sont proposés, sauf Arrêt. Chauffage/Refroidissement est sélectionné initialement s’il est disponible ; les autres ne le sont pas automatiquement. Une sélection vide est valide. Les équipements à un seul format l’utilisent sans sélecteur. L’aide près du libellé explique les limites. Les modifications passent toujours par la vérification des incompatibilités avant application.
+
+Ce réglage décrit comment Velair envoie les cibles ; il ne prouve pas que l’appareil physique accepte ou utilise les deux valeurs. L’intégration peut rejeter ou ignorer un paramètre. Velair signale les incompatibilités connues avant l’enregistrement et les erreurs de transmission reçues. Il n’effectue aucun test automatique ni essai de changement de mode.
+
+**Par défaut**, chaque zone des **Profils**, **Forçage** et les commandes climatiques utilisent cette politique pour afficher un ou deux champs pour un mode explicite. Changer de mode conserve des brouillons temporaires distincts pour chaque format. Revenir à un format restaure les valeurs saisies pendant cette modification ; les valeurs manquantes doivent être complétées. Velair n’invente pas de plage et ne réduit pas deux limites à une seule cible. Ces brouillons alternatifs ne sont pas enregistrés ni récupérés après actualisation.
+
+**Conserver le mode actuel** et **Température uniquement** ne désignent pas de mode explicite. Si l’équipement utilise les deux formats selon ses modes, choisissez le format dans les Réglages supplémentaires du bloc. Le mode réel est de nouveau validé à l’exécution. Température uniquement n’active pas l’équipement et ne change pas son mode HVAC.
+
+<a id="formats-in-templates-and-presets"></a>
+### Formats dans les Modèles et Préréglages
+
+Pour un mode explicite, Velair considère les équipements gérés qui l’annoncent :
+
+- S’ils utilisent tous une température, l’éditeur affiche un champ.
+- S’ils utilisent tous deux consignes, il affiche deux champs.
+- Si les deux formats existent, la première action des Réglages supplémentaires alterne entre **Utiliser deux consignes** et **Utiliser une température**. Les nouveaux blocs commencent avec une température, sauf Chauffage/Refroidissement qui commence avec deux.
+- Sans équipement compatible ou avec des capacités incertaines, le choix reste disponible au lieu de supposer un accord.
+
+Conserver et Température uniquement regroupent les modes effectifs possibles. Chauffage/Refroidissement autorise aussi le changement lorsque les destinations réelles utilisent des formats différents. L’action utilise le bouton de réglages existant sur ordinateur et mobile ; elle n’ajoute aucune colonne à côté des températures. Les valeurs d’un préréglage lié restent en lecture seule jusqu’à leur dissociation.
+
+Les Modèles et Préréglages existants conservent leurs valeurs enregistrées lorsque les réglages d’appareil changent. Un format devenu incompatible est signalé avec une action explicite de correction ; ouvrir un éditeur ne convertit ni ne supprime les valeurs. L’affectation de ressources et la copie de programmations valident le format pour chaque destination.
+
+<a id="reviewing-changes-to-the-mode-policy"></a>
+### Vérifier les changements de politique par mode
+
+Changer la sélection prévisualise d’abord les programmations Par défaut, tous les Profils et les utilisations de Modèles ou Préréglages partagés concernés. Les corrections s’appliquent localement au jour et à l’équipement dans Par défaut ou son Profil. Saisissez les cibles manquantes ; Velair ne choisit pas de températures de remplacement. Si une correction Room Assist active est incompatible avec le nouveau format, la vérification explique que l’enregistrement la terminera automatiquement. Les réglages Room Assist sont conservés pour les modes compatibles. Les autres objectifs temporaires incompatibles doivent être corrigés ou terminés avant application.
+
+La vérification regroupe les jours concernés sous Par défaut ou leur Profil. Après **Vérifier les modifications**, groupes et jours sont repliés pour faciliter la lecture des nombres. Ouvrez un jour pour modifier ses blocs ; un seul éditeur de jour est développé à la fois. Les grandes listes sont paginées. **Élément suivant à vérifier** mène à la prochaine correction, même sur une autre page. Replier une section ou changer de page conserve les valeurs saisies. Avant la première vérification, seuls **Vérifier les modifications** et Annuler sont proposés. Ensuite, **Enregistrer** remplace Vérifier les modifications. Complétez les valeurs et enregistrez : Velair valide les corrections et blocages actuels auprès du backend, puis enregistre seulement si cette validation réussit. Aucun second contrôle distinct n’est nécessaire. Les erreurs de validation, connexion ou stockage conservent les saisies.
+
+Ajouter ou retirer un mode à deux consignes pendant la modification revient à Vérifier les modifications et masque Enregistrer jusqu’à la vérification de la nouvelle sélection. Les brouillons de température sont conservés, y compris les valeurs alternatives uniques ou de plage lors du retour à un ancien format. Seuls les blocs concernés par la sélection actuelle sont corrigés ; les blocs redevenus compatibles conservent leurs références d’origine.
+
+Il n’y a pas de sélecteur de portée de correction. Corriger un bloc utilisant un Préréglage crée une valeur locale intégrée à ce bloc. Corriger un jour lié à un Modèle supprime le lien de ce jour ; ses autres blocs conservent leurs valeurs et les références de Préréglages non concernées. Les autres jours conservent leurs liens. La vérification explique la dissociation avant l’enregistrement. Modèles, Préréglages et autres destinations ne sont pas modifiés : chaque jour concerné exige ses propres corrections complètes. Les modifications futures de la ressource d’origine ne mettent plus à jour les blocs ou le jour détachés.
+
+La vérification conserve la configuration actuelle jusqu’à pouvoir enregistrer ensemble la politique et les corrections. Une modification concurrente exige une nouvelle vérification. Un échec de stockage laisse la configuration précédente en place. Si un équipement n’annonce plus un mode enregistré, Velair conserve le réglage et le signale sans le supprimer silencieusement. Room Assist est terminé seulement après un enregistrement réussi, sans restaurer son ancienne cible. Velair applique alors la cible nominale programmée actuelle ; un échec de transmission suit la récupération habituelle. Un échec d’enregistrement conserve la correction et la configuration précédentes.
+
+Sélectionner deux consignes pour Chauffage, Refroidissement ou Auto n’active pas Room Assist ni le préconditionnement adaptatif pour ces modes. L’assistance thermique des plages reste limitée à Chauffage/Refroidissement ; Retour prévu applique toujours la cible nominale à l’arrivée.
 
 <a id="timeline-editing"></a>
 ## Modification de la chronologie
@@ -1059,9 +1104,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v19 conservent les valeurs brutes et
+Les exports actuels du format portable v22 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v19 ; utilisez une version prenant en charge v19 pour les
+les exports v22 ; utilisez une version prenant en charge v22 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1479,14 +1524,14 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du format 19 conservent les deux types de liaison aux modèles, les références de préréglages et les relations de Maître de préconditionnement. Les références d’exécution acceptée du maître restent locales et ne sont pas exportées. Exporter les programmations ou Profils inclut les modèles et
+Les exports actuels du format 22 conservent les deux types de liaison aux modèles, les références de préréglages et les relations de Maître de préconditionnement et les politiques de format de température par équipement. Les références d’exécution acceptée du maître restent locales et ne sont pas exportées. Exporter les programmations ou Profils inclut les modèles et
 préréglages requis, affichés comme sections supplémentaires sélectionnées.
 Les imports valident la configuration combinée, y compris les consommateurs
 existants des ressources partagées remplacées. Les préréglages sont fusionnés
 par clé stable : les clés correspondantes sont remplacées et les préréglages
 locaux absents du fichier restent. Les sauvegardes existantes restent
 importables ; les anciennes versions de Velair ne peuvent pas importer
-le format 19. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+le format 22. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin

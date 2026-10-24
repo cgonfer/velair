@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.4 |
-| Letzte Synchronisierung | 2026-10-21 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -33,6 +33,7 @@ Das Seitenleisten-Panel aktualisiert seine URL beim Wechsel zwischen Tabs oder d
 | Modi | `/velair/modes` |
 | Vorlagen: Vorlagen | `/velair/templates/templates` |
 | Vorlagen: Klima-Presets | `/velair/templates/presets` |
+| [Versorgungssteuerung](shared-climate-supply.de.md) | `/velair/supply-control` |
 | Sensoren | `/velair/sensors` |
 | Komfort | `/velair/comfort` |
 | Vorkonditionierung | `/velair/preconditioning` |
@@ -244,7 +245,7 @@ climate_actions:
 Die Klimasteuerungsfläche kombiniert geordnete Schnellaktionen mit einer unabhängig konfigurierbaren Automatisch/Manuell-Auswahl nach demselben Verantwortungsmodell wie die Übersicht. Der untere Bereich bündelt HVAC-Modus, aktuellen Sollwert bei eingeschalteter Klimaentität und den Link zum nativen Home-Assistant-Klimadialog. Jeder veröffentlichte HVAC-Modus erscheint mit Symbol. Direkte Änderungen bleiben schreibgeschützt, solange Velair den aktiven Zeitplan steuert: Wähle zuerst **Manuell**, warte die Bestätigung der manuellen Anpassung ab und verwende anschließend Sollwert- und Modusbedienelemente. **Automatisch** setzt die Zeitplanung fort.
 Temporäre Anpassungen, unabhängige Pausen, gestoppte und nicht verfügbare Zustände verhindern direkte Bearbeitung und zeigen eine Erklärung. Die interne Pause der manuellen Anpassung selbst blockiert diese Bedienelemente nicht. Extern ausgeführte Zonen behalten den nativen Home-Assistant-Link; eine aktivierte einmalige Rückkehraktion kann weiterhin die Haushalts-Abwesenheitsbedienelemente öffnen.
 
-Einzelne Sollwerte und native `heat_cool`-Bereiche werden unterstützt. Bereichsänderungen senden beide Grenzen gemeinsam. Velair verwendet die von der Klimaentität veröffentlichten `min_temp`, `max_temp` und `hvac_modes`. Sollwertänderungen verwenden `target_temp_step`, sofern veröffentlicht. Verschwindet das Attribut, gilt die zuletzt gemeldete gültige Schrittweite weiter, damit vorhandene Dezimalsollwerte gültig bleiben. Danach folgt der manuelle Zonen-Fallback aus den Einstellungen, schließlich `1`, wenn nie eine Schrittweite gemeldet oder konfiguriert wurde. Velair erfindet keine HVAC-Modi.
+Einzelne Sollwerte und kompatible native Bereiche werden unterstützt, einschließlich Heizen, Kühlen und Auto bei Entitäten, die nur zwei Sollwerte akzeptieren. Bereichsänderungen senden beide Grenzen gemeinsam. Velair verwendet die von der Klimaentität veröffentlichten `min_temp`, `max_temp` und `hvac_modes`. Sollwertänderungen verwenden `target_temp_step`, sofern veröffentlicht. Verschwindet das Attribut, gilt die zuletzt gemeldete gültige Schrittweite weiter, damit vorhandene Dezimalsollwerte gültig bleiben. Danach folgt der manuelle Zonen-Fallback aus den Einstellungen, schließlich `1`, wenn nie eine Schrittweite gemeldet oder konfiguriert wurde. Velair erfindet keine HVAC-Modi.
 
 Vor der geordneten Aktionsliste erstellte Karten verwendeten `climate_show_boost_action`, `climate_show_pause_action` und `climate_custom_actions`. Velair liest diese älteren Felder weiterhin. Der visuelle Editor schreibt bei Änderung der Aktionsliste `climate_actions`.
 
@@ -368,7 +369,13 @@ Der Editor warnt ohne Speichersperre, wenn ein früherer Block desselben Tages e
 
 Temperaturblöcke enthalten entweder eine einzelne Solltemperatur oder einen vollständigen unteren und oberen Bereich. Der Editor nutzt die veröffentlichten Fähigkeiten und erstellt neue `heat_cool`-Blöcke bei entsprechender Unterstützung standardmäßig als Bereich. Ein Bereich erscheint beispielsweise als `20–24 °C`. Velair erfindet keinen Bereich aus einer einzelnen Temperatur und weist unvollständige, vertauschte oder inkompatible Sollwerte vor dem Senden ab.
 
-Native Bereiche sind in dieser ersten Phase auf `heat_cool` beschränkt. Velair nimmt nicht an, dass der Gerätemodus `auto` dasselbe Modell mit unterem und oberem Sollwert verwendet.
+Entitäten, die nur Bereiche unterstützen, verwenden beide Grenzen in den gemeldeten Modi `heat`, `cool`, `auto` oder `heat_cool`. Der Editor bewahrt sie beim Wechsel zwischen kompatiblen Modi, **Aktuellen Modus beibehalten** und **Nur Temperatur**. Beide Grenzen dürfen gleich sein. Bei Entitäten mit beiden Formaten gilt die Modusrichtlinie aus den Einstellungen. Reine Bereichsentitäten verwenden Entfeuchten und Nur Lüfter weiterhin ohne Temperatur; bei gemischten Formaten bestimmt die Richtlinie das Format, wobei die Integration nicht unterstützte Vorgänge dennoch ablehnen kann.
+
+Beibehalten startet eine ausgeschaltete reine Bereichsentität im ersten gemeldeten kompatiblen Modus. Ein bereits laufender inkompatibler Modus wird nicht durch einen Wechsel umgangen. Bei beiden Formaten bevorzugt ein Bereichsblock mit Beibehalten aus Aus weiterhin `heat_cool`. Nur Temperatur kann beide Grenzen bei ausgeschaltetem Gerät senden, wenn Bereichsunterstützung und ein kompatibler Klimamodus gemeldet sind, ohne einzuschalten oder den Modus zu ändern. Eine bekannte reine Bereichsentität akzeptiert auch ausgeschaltet kein Einzelziel.
+
+Der Editor verwendet für diese Entitäten untere und obere Zieltemperatur. Das sind die beiden akzeptierten Werte; Velair unterstellt Auto nicht die automatische Heiz-/Kühlbandfunktion von `heat_cool`. Dieselben Prüfungen gelten für Profile, Presets, temporäre Anpassung sowie kopierte oder verknüpfte Vorlagen. Vorlagen und Presets folgen den Formaten ihrer möglichen Ziele; beim Anwenden prüft Velair jedes tatsächliche Ziel. Hat eine temporäre Anpassung keine brauchbaren aktuellen Grenzen, gib beide vor dem Anwenden ein.
+
+Room Assist und adaptive Vorkonditionierung unterstützen Bereiche nur in `heat_cool`. Bereiche in Heizen, Kühlen oder Auto werden nominell zur geplanten Zeit angewendet, ohne Room Assist, Frühstart oder thermisches Lernen. Betroffene Ansichten erklären die Einschränkung. Geplante Rückkehr wendet das Ankunftsziel bei Ankunft ohne frühzeitige Vorbereitung an.
 
 Veröffentlicht die gewählte Klimaentität zusätzliche Bedienelemente, zeigt der Blockeditor diese ebenfalls. Eine Klimaanlage kann etwa Lüfter-, Preset-, Schwenk- und horizontalen Schwenkmodus sowie Luftfeuchtigkeit anbieten. Velair speichert und sendet ausschließlich unterstützte Optionen; nicht unterstützte werden weggelassen und nicht blind gesendet.
 
@@ -393,6 +400,46 @@ Blöcke hinzufügen, entfernen oder verschieben, Vorlage anwenden, Linkumfang ä
 Die Gruppenzeitleiste zeigt gemeinsame bearbeitete Blöcke ohne separate Tagesvorschau oder tagesspezifisches übernommenes Segment. Einzelne Tage zeigt weiterhin Kontinuität vom Vortag. Wochenkontinuität des Zeitplaners bleibt unverändert; übernommene Blöcke werden nie in gespeicherte Blöcke kopiert. Gerätegrenzen werden je betroffenem Tag vor dem vollständigen Speichern validiert.
 
 Aufteilungen überstehen Home-Assistant-Neustarts und portable Exporte. Ältere Exporte ohne Aufteilung und frühere benutzerdefinierte Aufteilungsverweise öffnen als Einzelne Tage und behalten alle Tagesblöcke und Vorlagenlinks.
+
+<a id="target-format-by-climate-and-mode"></a>
+## Sollwertformat je Klimaentität und Modus
+
+Home Assistant meldet die Unterstützung einzelner Temperaturen und Bereiche, aber keine Kompatibilitätstabelle je HVAC-Modus. Unter **Einstellungen → Verwaltete Thermostate** bietet jede Entität mit beiden Formaten **Modi mit zwei Sollwerten**. Die geschlossene Auswahl zeigt gewählte Modi; geöffnet kannst du einzelne Modi auswählen oder abwählen. Angeboten werden nur gemeldete Modi ohne Aus. Heizen/Kühlen ist anfangs gewählt, falls verfügbar; weitere Modi werden nicht automatisch gewählt. Eine leere Auswahl ist gültig. Entitäten mit nur einem Format verwenden es ohne Auswahl. Die Hilfe erläutert die Grenzen. Änderungen durchlaufen vor der Anwendung die Inkompatibilitätsprüfung.
+
+Diese Einstellung bestimmt, wie Velair Ziele sendet; sie beweist nicht, dass das Gerät beide Werte akzeptiert oder nutzt. Die Integration kann Parameter ablehnen oder ignorieren. Velair meldet bekannte Inkompatibilitäten vor dem Speichern und empfangene Übermittlungsfehler. Es gibt weder automatischen Gerätetest noch probeweise Moduswechsel.
+
+**Standard**, Zonen in **Profilen**, **Temporäre Anpassung** und die Klimasteuerung zeigen anhand dieser Richtlinie ein oder zwei Felder für einen expliziten Modus. Moduswechsel halten getrennte temporäre Entwürfe beider Formate vor. Die Rückkehr stellt die während dieser Bearbeitung eingegebenen Werte wieder her; fehlende Werte musst du ergänzen. Velair erfindet keinen Bereich und reduziert kein Paar auf einen Wert. Alternative Entwürfe werden nicht gespeichert und überstehen kein Neuladen.
+
+**Aktuellen Modus beibehalten** und **Nur Temperatur** nennen keinen expliziten Modus. Kann das Gerät je nach Modus beide Formate verwenden, wähle das gewünschte Format in **Weitere Einstellungen** des Blocks. Der tatsächliche Modus wird bei der Ausführung erneut geprüft. Nur Temperatur aktiviert oder ändert den HVAC-Modus nicht.
+
+<a id="formats-in-templates-and-presets"></a>
+### Formate in Vorlagen und Presets
+
+Für einen expliziten Modus berücksichtigt Velair verwaltete Entitäten, die ihn anbieten:
+
+- Verwenden alle eine Temperatur, erscheint ein Feld.
+- Verwenden alle zwei Sollwerte, erscheinen zwei Felder.
+- Bei beiden Formaten wechselt die erste Aktion in **Weitere Einstellungen** zwischen **Zwei Sollwerte verwenden** und **Eine Temperatur verwenden**. Neue Blöcke beginnen mit einer Temperatur, Heizen/Kühlen mit zwei.
+- Ohne kompatible Ziele oder bei unklaren Fähigkeiten bleibt die Wahl offen.
+
+Beibehalten und Nur Temperatur berücksichtigen alle möglichen wirksamen Modi. Heizen/Kühlen erlaubt ebenfalls den Wechsel bei unterschiedlichen Zielformaten. Die Aktion liegt auf Desktop und Mobilgerät in der vorhandenen Einstellungstaste und fügt keine Spalte neben den Temperaturfeldern hinzu. Verknüpfte Preset-Werte bleiben bis zum Lösen schreibgeschützt.
+
+Bestehende Vorlagen und Presets behalten beim Ändern der Geräteeinstellungen ihre Werte. Ein jetzt inkompatibles Format erhält eine ausdrückliche Korrekturaktion; das Öffnen eines Editors konvertiert oder entfernt nichts. Zuweisen und Kopieren prüfen jedes Ziel.
+
+<a id="reviewing-changes-to-the-mode-policy"></a>
+### Änderungen der Modusrichtlinie prüfen
+
+Eine Änderung zeigt zuerst Auswirkungen auf Standardzeitpläne, alle Profile und Verwendungen gemeinsamer Vorlagen und Presets. Korrekturen gelten lokal für den betroffenen Tag und die Entität in Standard oder dem Profil. Fehlende Ziele gibst du selbst ein; Velair wählt keine Ersatztemperaturen. Eine inkompatible aktive Korrektur von Room Assist wird beim Speichern automatisch beendet; die Prüfung erklärt dies. Einstellungen von Room Assist bleiben für kompatible Modi erhalten. Andere inkompatible temporäre Ziele müssen vor Anwendung korrigiert oder beendet werden.
+
+Die Prüfung gruppiert Tage unter Standard oder ihrem Profil. Nach **Änderungen prüfen** sind Gruppen und Tage eingeklappt, damit die Anzahlen übersichtlich bleiben. Öffne einen Tag zur Bearbeitung; nur ein Tageseditor ist gleichzeitig geöffnet. Große Listen haben Seiten. **Nächsten Eintrag prüfen** führt zur nächsten Korrektur, auch auf einer anderen Seite. Einklappen und Seitenwechsel bewahren Eingaben. Vor der ersten Prüfung erscheint neben Abbrechen nur Änderungen prüfen; danach ersetzt **Speichern** diese Aktion. Vervollständige die Felder und speichere: Das Backend prüft aktuelle Korrekturen und Hindernisse und speichert nur bei Erfolg. Eine getrennte zweite Prüfung entfällt. Prüfungs-, Verbindungs- und Speicherfehler bewahren Eingaben.
+
+Hinzufügen oder Entfernen eines Zwei-Sollwert-Modus führt zurück zu Änderungen prüfen und verbirgt Speichern bis zur erneuten Prüfung. Temperaturentwürfe bleiben erhalten, auch alternative Einzel-/Bereichswerte beim Rückwechsel. Nur aktuell betroffene Blöcke werden korrigiert; wieder kompatible behalten ursprüngliche Verweise.
+
+Es gibt keine Auswahl eines Korrekturumfangs. Die Reparatur eines Preset-Blocks erzeugt einen lokalen eingebetteten Wert. Ein vorlagenverknüpfter Tag verliert bei Reparatur seine Tagesverknüpfung; übrige Blöcke bewahren Werte und nicht betroffene Preset-Verweise. Andere Tage behalten ihre Verknüpfungen. Die Prüfung zeigt diese Folgen vor dem Speichern. Vorlagen, Presets und andere Ziele bleiben unverändert, daher braucht jeder betroffene Tag eigene vollständige Korrekturen. Künftige Änderungen am ursprünglichen Baustein erreichen gelöste Blöcke oder Tage nicht mehr.
+
+Die aktuelle Konfiguration bleibt erhalten, bis Richtlinie und Korrekturen gemeinsam gespeichert werden können. Gleichzeitige Änderungen verlangen eine neue Prüfung; Speicherfehler lassen die bisherige Konfiguration bestehen. Nicht mehr gemeldete gespeicherte Modi bleiben erhalten und werden gemeldet, statt stillschweigend gelöscht. Room Assist endet erst nach erfolgreichem Speichern und ohne Wiederherstellen seines alten Ziels. Danach wendet Velair das aktuelle nominelle Zeitplanziel an; Fehler nutzen die normale Wiederherstellung. Ein fehlgeschlagenes Speichern bewahrt bisherige Korrektur und Konfiguration.
+
+Zwei Sollwerte für Heizen, Kühlen oder Auto aktivieren weder Room Assist noch adaptive Vorkonditionierung. Thermische Bereichsunterstützung bleibt auf Heizen/Kühlen begrenzt; Geplante Rückkehr wendet das nominelle Ziel bei Ankunft an.
 
 <a id="timeline-editing"></a>
 ## Zeitleiste bearbeiten
@@ -459,7 +506,7 @@ Zeitpläne, Vorlagen, aktuelle und vorherige Übersteuerungssollwerte, Komfortgr
 
 Das einmalige Upgrade früher veröffentlichter, ausschließlich Celsius unterstützender Velair-Daten ist anders. Verwendet Home Assistant bereits Fahrenheit, nimmt Velair für die Altdaten ohne Rückfrage Celsius an, hält den Zeitplaner gestoppt und verweist auf **Velair zurücksetzen**. Dies verwirft die alte Konfiguration und erstellt atomar neue Fahrenheit-Standardwerte. Spätere Home-Assistant-Einheitenwechsel nach diesem Upgrade verwenden die vollständige ausdrückliche Umrechnung oben und erhalten Daten.
 
-Aktuelle Exporte des portablen Modells v19 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v19 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
+Aktuelle Exporte des portablen Modells v22 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v22 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
 
 War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren können.
 
@@ -637,7 +684,7 @@ Die Einstellungen können eine versionierte JSON-Datei exportieren und importier
 - Klimaprofildefinitionen;
 - Modusdefinitionen.
 
-Aktuelle Exporte des Modells 19 erhalten beide Vorlagenverknüpfungstypen, Presetreferenzen und Vorkonditionierungs-Master-Verknüpfungen. Referenzen angenommener Master-Ausführungen bleiben lokal und werden nicht exportiert. Export von Zeitplänen oder Profilen enthält benötigte Vorlagen und Presets als zusätzlich ausgewählte Bereiche. Importe prüfen die zusammengeführte Konfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden anhand stabiler Schlüssel zusammengeführt: Passende Schlüssel werden ersetzt, nicht in der Datei enthaltene lokale Presets bleiben erhalten. Bestehende Sicherungen bleiben importierbar. Ältere Velair-Versionen können Modell-19-Dateien nicht importieren. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
+Aktuelle Exporte des Modells 22 erhalten beide Vorlagenverknüpfungstypen, Presetreferenzen und Vorkonditionierungs-Master-Verknüpfungen. Referenzen angenommener Master-Ausführungen bleiben lokal und werden nicht exportiert. Export von Zeitplänen oder Profilen enthält benötigte Vorlagen und Presets als zusätzlich ausgewählte Bereiche. Importe prüfen die zusammengeführte Konfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden anhand stabiler Schlüssel zusammengeführt: Passende Schlüssel werden ersetzt, nicht in der Datei enthaltene lokale Presets bleiben erhalten. Bestehende Sicherungen bleiben importierbar. Ältere Velair-Versionen können Modell-22-Dateien nicht importieren. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup). Die aktuellen Exporte bewahren außerdem die Richtlinien für Sollwertformate je Klimaentität.
 
 Beim Import wählst du die zu überschreibenden Bereiche. Ausgewählte Daten werden ersetzt; exportiere vorher, wenn ein Wiederherstellungspunkt nötig ist. Profil- und Modusdefinitionen sind portabel, ihre aktive Auswahl nicht. Velair behält aktive Profil-IDs, die noch existieren, und kehrt nur dann zu Standardzeitplänen zurück, wenn keine übrig bleiben.
 

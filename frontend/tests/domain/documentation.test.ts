@@ -76,6 +76,7 @@ describe("complete documentation availability used by the build", () => {
     ["troubleshooting", "docs/user/troubleshooting.md"],
     ["manualControl", "docs/user/manual-control.md"],
     ["externalSystems", "docs/user/external-systems.md"],
+    ["sharedSupply", "docs/user/shared-climate-supply.md"],
   ];
   it.each([
     ["es-ES", "es"], ["fr-FR", "fr"], ["de-DE", "de"], ["it-IT", "it"],
@@ -86,11 +87,13 @@ describe("complete documentation availability used by the build", () => {
     for (const releaseVersion of ["", "1.8.0"]) {
       for (const [topic, canonical] of topics) {
         const [source, fragment] = canonical.split("#");
-        const path = source.replace(/\.md$/, `.${locale}.md`);
+        // Supply's new guide falls back to English pending release translations.
+        const translated = topic !== "sharedSupply";
+        const path = translated ? source.replace(/\.md$/, `.${locale}.md`) : source;
         const ref = releaseVersion ? `v${releaseVersion}` : "main";
         expect(documentationDestination(topic, { language }, { availability: completeAvailability, releaseVersion })).toEqual({
           href: `https://github.com/cgonfer/velair/blob/${ref}/${path}${fragment ? `#${fragment}` : ""}`,
-          language: locale, translated: true,
+          language: translated ? locale : "en", translated,
         });
       }
     }

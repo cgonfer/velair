@@ -1,4 +1,5 @@
 import { html, nothing } from "lit";
+import "../components/target-range-settings-element";
 import { VELAIR_FRONTEND_BUILD, VELAIR_RELEASE_VERSION } from "../build-info";
 import {
   DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES,
@@ -71,11 +72,10 @@ export function renderSettingsView(host: SettingsViewHost, zoneIds: string[]) {
             <p>${host._t("reorderZones")}</p>
           </div>
         </div>
-        <div class="settings-zone-list">
-          ${zoneIds.length
-            ? zoneIds.map((entityId, index) => renderSettingsZoneOrderRow(host, entityId, index, zoneIds.length))
-            : html`<span class="empty">${host._t("noManagedEntities")}</span>`}
-        </div>
+        <velair-target-range-settings .host=${host} .data=${host._data} .zoneIds=${zoneIds}
+          .renderRow=${(entityId: string, index: number, total: number, control: unknown, review: unknown, busy: boolean) => renderSettingsZoneOrderRow(host, entityId, index, total, { control, review, busy })}>
+        </velair-target-range-settings>
+        ${!zoneIds.length ? html`<span class="empty">${host._t("noManagedEntities")}</span>` : nothing}
       </section>
 
       ${renderHelpCommunitySettings(host)}
@@ -536,43 +536,41 @@ export function renderSettingsZoneOrderRow(
   entityId: string,
   index: number,
   total: number,
+  options: { control?: unknown; review?: unknown; busy?: boolean } = {},
 ) {
+  const disabled = options.busy || host._settingsSaving;
   return html`
     <div
-      class="settings-zone-row"
-      @dragover=${(event: DragEvent) => host._handleSettingsZoneDragOver(event)}
-      @drop=${(event: DragEvent) => host._handleSettingsZoneDrop(entityId, event)}
+      class="settings-zone-row" data-entity-id=${entityId}
+      @dragover=${(event: DragEvent) => { if (!disabled) host._handleSettingsZoneDragOver(event); }}
+      @drop=${(event: DragEvent) => { if (!disabled) host._handleSettingsZoneDrop(entityId, event); }}
       @dragend=${host._handleSettingsZoneDragEnd}
     >
+      <header class="settings-zone-header">
       <button
         class="settings-drag-handle"
         type="button"
         title=${host._t("reorderZones")}
         aria-label=${host._t("reorderZones")}
-        draggable="true"
-        @dragstart=${(event: DragEvent) => host._handleSettingsZoneDragStart(entityId, event)}
+        draggable=${disabled ? "false" : "true"}
+        ?disabled=${disabled}
+        @dragstart=${(event: DragEvent) => { if (!disabled) host._handleSettingsZoneDragStart(entityId, event); }}
         @dragend=${host._handleSettingsZoneDragEnd}
       >
         <ha-icon icon="mdi:drag"></ha-icon>
       </button>
-      <div class="settings-zone-main">
         <div class="settings-zone-identity">
           <div class="settings-zone-title">
             <strong title=${host._friendlyEntityName(entityId)}>${host._friendlyEntityName(entityId)}</strong>
           </div>
           <span>${entityId}</span>
         </div>
-        <div class="settings-zone-configuration">
-          ${renderSettingsExternalChangePolicy(host, entityId)}
-          ${renderSettingsTargetTempStep(host, entityId)}
-        </div>
-      </div>
       <div class="settings-row-actions">
         <button
           class="icon-button"
           type="button"
           title=${host._t("moveUp")}
-          ?disabled=${index === 0}
+          ?disabled=${disabled || index === 0}
           @click=${() => host._moveSettingsZone(entityId, -1)}
         >
           <ha-icon icon="mdi:chevron-up"></ha-icon>
@@ -581,17 +579,24 @@ export function renderSettingsZoneOrderRow(
           class="icon-button"
           type="button"
           title=${host._t("moveDown")}
-          ?disabled=${index === total - 1}
+          ?disabled=${disabled || index === total - 1}
           @click=${() => host._moveSettingsZone(entityId, 1)}
         >
           <ha-icon icon="mdi:chevron-down"></ha-icon>
         </button>
       </div>
+      </header>
+      <div class="settings-zone-configuration">
+        ${renderSettingsExternalChangePolicy(host, entityId, Boolean(disabled))}
+        ${renderSettingsTargetTempStep(host, entityId, Boolean(disabled))}
+        ${options.control ?? nothing}
+      </div>
+      ${options.review ?? nothing}
     </div>
   `;
 }
 
-export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: string) {
+export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: string, disabled = host._settingsSaving) {
   const publishedStep = entityTemperatureStep(host.hass?.states?.[entityId]);
   if (publishedStep !== undefined) return nothing;
   const zone = host._data?.zones?.[entityId];
@@ -623,7 +628,7 @@ export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: s
           required
           aria-labelledby=${labelId}
           .value=${String(configuredStep)}
-          ?disabled=${host._settingsSaving}
+          ?disabled=${disabled}
           @change=${(event: Event) => {
             const input = event.currentTarget as HTMLInputElement;
             const value = Number(input.value);
@@ -640,7 +645,7 @@ export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: s
   `;
 }
 
-export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entityId: string) {
+export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entityId: string, disabled = host._settingsSaving) {
   if (host._data?.zones[entityId]?.execution?.type === "external") {
     return html`<small>${host._t("externalActionsInactive")}</small>`;
   }
@@ -664,16 +669,16 @@ export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entit
           <select
             aria-labelledby=${labelId}
             .value=${policy.action}
-            ?disabled=${host._settingsSaving}
+            ?disabled=${disabled}
             @change=${(event: Event) => host._saveExternalChangePolicy(entityId, {
               ...policy,
               action: (event.target as HTMLSelectElement).value as typeof policy.action,
             })}
           >
-            <option value="keep_automatic">${host._t("externalChangeKeepAutomatic")}</option>
-            <option value="until_next_block">${host._t("externalChangeUntilNextBlock")}</option>
-            <option value="for_duration">${host._t("externalChangeForDuration")}</option>
-            <option value="until_resumed">${host._t("externalChangeUntilResumed")}</option>
+            <option value="keep_automatic" .selected=${policy.action === "keep_automatic"}>${host._t("externalChangeKeepAutomatic")}</option>
+            <option value="until_next_block" .selected=${policy.action === "until_next_block"}>${host._t("externalChangeUntilNextBlock")}</option>
+            <option value="for_duration" .selected=${policy.action === "for_duration"}>${host._t("externalChangeForDuration")}</option>
+            <option value="until_resumed" .selected=${policy.action === "until_resumed"}>${host._t("externalChangeUntilResumed")}</option>
           </select>
         </span>
         ${policy.action === "for_duration" ? html`
@@ -684,7 +689,7 @@ export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entit
               max="10080"
               aria-label=${host._t("durationMinutes")}
               .value=${String(policy.duration_minutes ?? DEFAULT_EXTERNAL_CHANGE_DURATION_MINUTES)}
-              ?disabled=${host._settingsSaving}
+              ?disabled=${disabled}
               @change=${(event: Event) => host._saveExternalChangePolicy(entityId, {
                 ...policy,
                 duration_minutes: Math.max(

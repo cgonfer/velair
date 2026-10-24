@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -38,6 +38,8 @@ Dla pojedynczej temperatury w stałym trybie `heat` lub `cool` niezerowa strefa 
 Pojedyncze temperatury w trybach `auto` i `heat_cool` oraz natywne zakresy `heat_cool` zachowują działanie neutralne lub margines wokół zakresu. Velair nie wymusza w tych trybach naprzemiennego ogrzewania i chłodzenia według cyklu histerezy dla pojedynczej temperatury.
 
 Encja klimatu nadal odpowiada za wykonanie polecenia. Velair nie tworzy wirtualnego termostatu ani nie omija oprogramowania urządzenia. Jeśli termostat lub głowica pozwala bezpośrednio powiązać osobny czujnik pokojowy, zwykle warto najpierw skorzystać z tej możliwości.
+
+Encje obsługujące tylko zakresy mogą otrzymywać zaplanowane pary także w Ogrzewaniu, Chłodzeniu i Auto. Room Assist nie koryguje tych par: wspomaganie zakresu wymaga `heat_cool`. Bieżący stan wyjaśnia ograniczenie, a Velair wysyła nominalną parę bez przesunięcia. Zapisane ustawienia Room Assist pozostają dla zgodnych celów. Zmiana wspomaganego celu na taki zakres usuwa wcześniejsze wspomaganie bez przywracania starego skorygowanego celu na nową parę.
 
 <a id="setup"></a>
 ## Konfiguracja

@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](planned-return.md) · [Español](
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.3 |
-| Ostatnia synchronizacja | 2026-10-21 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -191,7 +191,7 @@ Przykładowo ustaw poniedziałek–piątek 18:15. Gdy dom pozostanie pusty przez
 
 Celem jest blok obowiązujący **w chwili przyjazdu**, z ciągłością tygodniową. Jeśli harmonogram obecności określa 17 stopni przed 18:00 i 21 stopni później, przyjazd 18:15 przygotowuje 21 nawet przy rozpoczęciu przed 18:00. Harmonogram tygodniowy nie jest edytowany ani uzupełniany tymczasowymi blokami.
 
-O oczekiwanej godzinie Velair wybiera cel i kontynuuje zwykły harmonogram. Wcześniejsza obecność wybiera cel od razu, gdy monitorowane wyjście zostało już potwierdzone. Spóźnienie nie przełącza domu z powrotem w nieobecność. Pauzy, Wzmocnienie, regulacja ręczna, wyłączone strefy i zatrzymany harmonogram zachowują ograniczenia przekazywania. Przygotowanie obsługuje ogrzewanie, chłodzenie i natywne zakresy. Zbliża pomieszczenie do celu, ale nie gwarantuje dokładnej temperatury.
+O oczekiwanej godzinie Velair wybiera cel i kontynuuje zwykły harmonogram. Wcześniejsza obecność wybiera cel od razu, gdy monitorowane wyjście zostało już potwierdzone. Spóźnienie nie przełącza domu z powrotem w nieobecność. Pauzy, Wzmocnienie, regulacja ręczna, wyłączone strefy i zatrzymany harmonogram zachowują ograniczenia przekazywania. Przygotowanie obsługuje ogrzewanie, chłodzenie i natywne zakresy `heat_cool`. Encje obsługujące tylko zakres w Ogrzewaniu, Chłodzeniu lub Auto działają wyłącznie przy przyjeździe: Velair stosuje obie granice bez wcześniejszego przygotowania ani termicznego uczenia dla tego celu. Widok przygotowania pomieszczeń wyjaśnia ograniczenie; zapisane ustawienia pozostają dostępne dla zgodnych celów. Zbliża pomieszczenie do celu, ale nie gwarantuje dokładnej temperatury.
 
 <a id="preparation-and-room-assist"></a>
 ### Przygotowanie i Room Assist

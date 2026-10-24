@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.4 |
-| Laatst gesynchroniseerd | 2026-10-21 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -33,6 +33,7 @@ Het zijbalkpaneel werkt zijn URL bij wanneer je van tabblad wisselt of een onder
 | Modi | `/velair/modes` |
 | Sjablonen: sjablonen | `/velair/templates/templates` |
 | Sjablonen: klimaatpresets | `/velair/templates/presets` |
+| [Toevoerregeling](shared-climate-supply.nl.md) | `/velair/supply-control` |
 | Sensoren | `/velair/sensors` |
 | Comfort | `/velair/comfort` |
 | Voorconditionering | `/velair/preconditioning` |
@@ -249,7 +250,7 @@ climate_actions:
 
 De bediening combineert geordende snelle acties met een onafhankelijk instelbare Automatisch/Handmatig-keuze, volgens hetzelfde model als Overzicht. Het onderste vlak groepeert HVAC-modus, huidige doeltemperatuur wanneer het apparaat aanstaat en een snelkoppeling naar het oorspronkelijke Home Assistant-dialoogvenster. Elke aangeboden HVAC-modus heeft een icoon. Rechtstreeks wijzigen blijft alleen-lezen zolang Velair het actieve schema beheert: kies eerst **Handmatig**, wacht tot de handmatige aanpassing is bevestigd en gebruik daarna temperatuur- en modusbediening. **Automatisch** hervat planning. Tijdelijke aanpassingen, onafhankelijke pauzes, stoppen en onbeschikbaarheid blokkeren bewerken met uitleg. De interne pauze voor handmatige aanpassing zelf blokkeert deze bediening niet. Externe zones behouden de Home Assistant-snelkoppeling; een ingeschakelde eenmalige terugkeer kan de huishoudbediening openen.
 
-Eén doeltemperatuur en oorspronkelijke `heat_cool`-bereiken worden ondersteund. Bereikwijzigingen sturen beide grenzen samen. Velair gebruikt gepubliceerde `min_temp`, `max_temp` en `hvac_modes`. Temperatuuraanpassingen volgen gepubliceerde `target_temp_step`; verdwijnt dat attribuut, dan blijft de laatst geldige stap gelden zodat decimalen geldig blijven. Daarna volgt de handmatige zoneterugval uit Instellingen, vervolgens `1` als nooit een stap is gerapporteerd of ingesteld. Velair verzint geen HVAC-modi.
+Eén doeltemperatuur en geschikte oorspronkelijke bereiken worden ondersteund, ook in Verwarmen, Koelen en Auto op entiteiten die alleen twee instelpunten accepteren. Bereikwijzigingen sturen beide grenzen samen. Velair gebruikt gepubliceerde `min_temp`, `max_temp` en `hvac_modes`. Temperatuuraanpassingen volgen gepubliceerde `target_temp_step`; verdwijnt dat attribuut, dan blijft de laatst geldige stap gelden zodat decimalen geldig blijven. Daarna volgt de handmatige zoneterugval uit Instellingen, vervolgens `1` als nooit een stap is gerapporteerd of ingesteld. Velair verzint geen HVAC-modi.
 
 Oudere kaarten gebruikten `climate_show_boost_action`, `climate_show_pause_action` en `climate_custom_actions`. Velair blijft deze lezen; de visuele editor schrijft `climate_actions` wanneer de actielijst verandert.
 
@@ -369,7 +370,13 @@ Sommige integraties publiceren hun ondersteuning voor één doeltemperatuur pas 
 
 De editor houdt gekozen opties zichtbaar in een compacte regel. Open bij zo'n blok de optiebediening om te zien wat wordt verstuurd: doeltemperatuur indien aanwezig, verwerking van HVAC-modus en opties. De uitleg verduidelijkt ook dat één temperatuur niet naar een bereik wordt omgezet. Dit werkt in schema's, profielen en sjablonen. De editor waarschuwt zonder opslaan te blokkeren als een eerder blok van die dag een mogelijk ongeschikte modus kiest. Als geen eerdere expliciete modus of uitschakeling de modus bepaalt, gebruikt de hint de huidige apparaatmodus. Die kan vóór uitvoering veranderen; de waarschuwing is daarom voorwaardelijk.
 
-Temperatuurblokken bevatten één doeltemperatuur of een volledig onder-/bovenbereik. De editor gebruikt gepubliceerde mogelijkheden en maakt nieuwe `heat_cool`-blokken standaard als bereik wanneer ondersteund, bijvoorbeeld `20–24 °C`. Velair verzint geen bereik uit één temperatuur en weigert onvolledige, omgekeerde of onverenigbare doelen vóór verzending. In deze eerste fase zijn oorspronkelijke bereiken beperkt tot `heat_cool`; Velair neemt niet aan dat `auto` hetzelfde model gebruikt.
+Temperatuurblokken bevatten één doeltemperatuur of een volledig onder-/bovenbereik. De editor gebruikt gepubliceerde mogelijkheden en maakt nieuwe `heat_cool`-blokken standaard als bereik wanneer ondersteund, bijvoorbeeld `20–24 °C`. Velair verzint geen bereik uit één temperatuur en weigert onvolledige, omgekeerde of onverenigbare doelen vóór verzending. Entiteiten met alleen bereik gebruiken beide grenzen in gepubliceerde `heat`, `cool`, `auto` en `heat_cool`. De editor bewaart ze bij wisselen tussen geschikte modi, **Huidige modus behouden** en **Alleen temperatuur**. Beide grenzen mogen gelijk zijn. Bij beide formaten volgt het formaat het modusbeleid per apparaat in Instellingen. Bij alleen bereik blijven Drogen en Alleen ventilator modusblokken zonder temperatuur; bij gemengde formaten bepaalt het beleid het formaat, maar de integratie kan een ongeschikte bewerking weigeren.
+
+Behouden start een uitgeschakelde entiteit met alleen bereik in de eerste gepubliceerde geschikte modus. Het omzeilt geen ongeschikte actieve modus door die te wijzigen. Bij beide formaten blijft een bereikblok met Behouden vanuit Uit `heat_cool` verkiezen. Alleen temperatuur mag beide grenzen schrijven terwijl het apparaat uitstaat als bereikondersteuning en een geschikte klimaatmodus zijn gepubliceerd, zonder inschakelen of moduswijziging. Een bekende entiteit met alleen bereik accepteert ook uitgeschakeld geen enkelvoudig doel.
+
+De bereikeditor gebruikt een onder- en bovendoel voor deze entiteiten. Dit zijn de twee geaccepteerde waarden; Velair neemt niet aan dat Auto de automatische verwarmings-/koelband van `heat_cool` heeft. Dezelfde controles gelden voor profielen, presets, tijdelijke aanpassing en gekopieerde of gekoppelde sjablonen. Sjablonen en Presets gebruiken formaten van hun mogelijke bestemmingen; Velair controleert elke echte bestemming bij toepassen. Zonder bruikbare huidige grenzen voor een tijdelijke aanpassing moet je beide waarden invoeren.
+
+Room Assist en adaptieve voorconditionering ondersteunen bereiken alleen in `heat_cool`. Een bereik in Verwarmen, Koelen of Auto wordt op de geplande tijd nominaal toegepast, zonder Room Assist-verschuiving, vroeg starten of thermisch leren. De betrokken weergaven verklaren de beperking. Geplande terugkeer past het aankomstdoel bij aankomst toe zonder vroege voorbereiding.
 
 Als het apparaat extra bediening aanbiedt, toont de editor deze, bijvoorbeeld ventilatorstand, apparaatpreset, oscillatie, horizontale oscillatie of vochtigheid bij airconditioning. Alleen ondersteunde opties worden opgeslagen en verstuurd. Bij **Uit** worden temperatuurvelden niet gebruikt, omdat het blok de klimaatentiteit uitschakelt.
 
@@ -392,6 +399,46 @@ Blokken toevoegen, verwijderen of verplaatsen, een sjabloon toepassen, koppelber
 De groepstijdlijn toont gedeelde bewerkte blokken zonder aparte dagvooruitblik of dagspecifiek overgenomen segment. Afzonderlijke dagen toont nog continuïteit uit de vorige dag. De weekcontinuïteit van de planner verandert niet; overgenomen blokken worden nooit naar opgeslagen blokken gekopieerd. Apparaatgrenzen worden voor elke betrokken dag vóór volledige opslag gevalideerd.
 
 Indelingen overleven Home Assistant-herstarts en overdraagbare exports. Oudere exports zonder indeling en eerdere aangepaste indelingsverwijzingen openen als Afzonderlijke dagen en behouden alle dagblokken en sjabloonkoppelingen.
+
+<a id="target-format-by-climate-and-mode"></a>
+## Doelformaat per klimaatentiteit en modus
+
+Home Assistant meldt ondersteuning voor één temperatuur en bereiken, maar geen compatibiliteitstabel per HVAC-modus. Onder **Instellingen → Beheerde klimaatapparaten** krijgt elke entiteit met beide formaten **Modi met twee instelpunten**. Gesloten toont de keuzelijst geselecteerde modi; open selecteer of wis je afzonderlijke modi. Alleen gepubliceerde modi behalve Uit verschijnen. Verwarmen/koelen is aanvankelijk gekozen indien beschikbaar; andere modi niet automatisch. Een lege keuze is geldig. Apparaten met één formaat gebruiken dat zonder kiezer. De labelhulp verklaart de grenzen. Wijzigingen doorlopen eerst de compatibiliteitscontrole.
+
+Dit bepaalt hoe Velair doelen stuurt en bewijst niet dat het fysieke apparaat beide waarden accepteert of gebruikt. De integratie kan een parameter weigeren of negeren. Velair meldt bekende onverenigbaarheid vóór opslaan en ontvangen afleverfouten. Er is geen automatische apparaattest of proefwisseling van modi.
+
+**Standaard**, zones in **Profielen**, **Tijdelijke aanpassing** en klimaatbediening gebruiken dit beleid voor één of twee velden bij een expliciete modus. Moduswisselingen bewaren afzonderlijke tijdelijke concepten per formaat. Terugkeren herstelt de tijdens deze bewerking ingevoerde waarden; ontbrekende waarden vul je in. Velair verzint geen bereik en maakt van twee grenzen geen enkel doel. Alternatieve concepten worden niet opgeslagen en verdwijnen bij vernieuwen.
+
+**Huidige modus behouden** en **Alleen temperatuur** noemen geen expliciete modus. Kan het apparaat beide formaten over zijn modi gebruiken, kies dan het bedoelde formaat in **Aanvullende instellingen** van het blok. De werkelijke modus wordt bij uitvoering opnieuw gecontroleerd. Alleen temperatuur schakelt de HVAC-modus niet in en wijzigt die niet.
+
+<a id="formats-in-templates-and-presets"></a>
+### Formaten in Sjablonen en Presets
+
+Voor een expliciete modus kijkt Velair naar beheerde apparaten die die aanbieden:
+
+- Gebruiken alle één temperatuur, dan toont de editor één veld.
+- Gebruiken alle twee instelpunten, dan toont hij twee velden.
+- Bij beide formaten wisselt de eerste actie in **Aanvullende instellingen** tussen **Twee instelpunten gebruiken** en **Eén temperatuur gebruiken**. Nieuwe blokken beginnen met één temperatuur, behalve Verwarmen/koelen met twee.
+- Zonder geschikte apparaten of bij onzekere mogelijkheden blijft de keuze open.
+
+Behouden en Alleen temperatuur combineren mogelijke effectieve modi. Ook Verwarmen/koelen laat wisselen toe bij verschillende bestemmingsformaten. De actie gebruikt de bestaande instellingenknop op desktop en mobiel en voegt geen kolom naast temperatuurvelden toe. Gekoppelde presetwaarden blijven alleen-lezen tot ontkoppeling.
+
+Bestaande Sjablonen en Presets bewaren waarden bij gewijzigde apparaatinstellingen. Een onverenigbaar geworden formaat krijgt een uitdrukkelijke correctieactie; een editor openen zet niets om en verwijdert niets. Toewijzen en kopiëren controleren elke bestemming.
+
+<a id="reviewing-changes-to-the-mode-policy"></a>
+### Wijzigingen in het modusbeleid controleren
+
+Een gewijzigde keuze toont eerst gevolgen voor Standaard-schema’s, alle Profielen en gebruik van gedeelde Sjablonen en Presets. Correcties gelden lokaal voor de betrokken dag en entiteit binnen Standaard of het profiel. Vul ontbrekende doelen in; Velair kiest geen vervangende temperaturen. Is een actieve Room Assist-correctie onverenigbaar, dan verklaart de controle dat opslaan die automatisch beëindigt. Instellingen blijven voor geschikte modi behouden. Andere onverenigbare tijdelijke doelen moeten eerst worden aangepast of beëindigd.
+
+De controle groepeert dagen onder Standaard of hun Profiel. Na **Wijzigingen controleren** zijn groepen en dagen ingeklapt zodat aantallen overzichtelijk blijven. Open een dag om blokken te bewerken; slechts één dageditor staat tegelijk open. Grote lijsten hebben pagina’s. **Volgend te controleren item** brengt je naar de volgende correctie, ook op een andere pagina. Inklappen of pagina wisselen bewaart invoer. Voor de eerste controle staat naast Annuleren alleen Wijzigingen controleren; daarna vervangt **Opslaan** die actie. Vul vereiste waarden in en sla op: de backend valideert actuele correcties en blokkades en slaat alleen bij succes op. Een aparte tweede controle is niet nodig. Validatie-, verbindings- en opslagfouten bewaren invoer.
+
+Een modus met twee instelpunten toevoegen of verwijderen keert terug naar Wijzigingen controleren en verbergt Opslaan tot de nieuwe keuze gecontroleerd is. Temperatuurconcepten blijven bewaard, ook alternatieve enkele/bereikwaarden bij terugkeren. Alleen blokken die de huidige keuze raakt worden gecorrigeerd; weer geschikte blokken houden hun oorspronkelijke verwijzingen.
+
+Er is geen keuze voor correctiebereik. Reparatie van een presetblok maakt een lokale ingebedde waarde. Reparatie van een sjabloondag verwijdert de dagkoppeling; overige blokken houden waarden en onaangetaste presetverwijzingen. Andere dagen behouden koppelingen. De controle toont de gevolgen vóór opslaan. Sjablonen, Presets en andere bestemmingen veranderen niet, dus elke betrokken dag vereist eigen volledige correcties. Latere wijzigingen van de oorspronkelijke bron bereiken ontkoppelde blokken of dagen niet.
+
+De configuratie blijft intact totdat beleid en correcties samen kunnen worden opgeslagen. Een gelijktijdige wijziging vereist een nieuwe controle. Opslagfouten laten de oude configuratie staan. Meldt een apparaat een opgeslagen modus niet meer, dan bewaart en meldt Velair die instelling in plaats van stil te wissen. Room Assist eindigt pas na geslaagd opslaan, zonder zijn oude doel te herstellen. Vervolgens past Velair het actuele nominale schemadoel toe; afleverfouten volgen normaal herstel. Een mislukte opslag bewaart de eerdere correctie en configuratie.
+
+Twee instelpunten voor Verwarmen, Koelen of Auto schakelen Room Assist en adaptieve voorconditionering niet in. Thermische bereikondersteuning blijft beperkt tot Verwarmen/koelen; Geplande terugkeer past het nominale doel bij aankomst toe.
 
 <a id="timeline-editing"></a>
 ## De tijdlijn bewerken
@@ -443,7 +490,7 @@ Thermische waarden worden onbewerkt opgeslagen in de vastgelegde eenheid. Bij ee
 
 De eenmalige upgrade van gepubliceerde gegevens die alleen Celsius ondersteunden is anders. Gebruikt Home Assistant al Fahrenheit, dan neemt Velair zonder vraag aan dat oude gegevens Celsius zijn, houdt planning gestopt en verwijst naar **Velair resetten**. Reset wist de oude configuratie en maakt atomair nieuwe Fahrenheit-standaarden. Latere eenheidswijzigingen gebruiken daarna de volledige expliciete conversie met gegevensbehoud.
 
-Huidige draagbare exports in model v19 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v19 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
+Huidige draagbare exports in model v22 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v22 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
 
 Was een apparaat tijdens migratie of import niet beschikbaar, dan controleert Velair later grenzen en effectieve temperatuurstap. Een actuele geldige `target_temp_step` heeft voorrang op de laatst gemelde stap en handmatige zoneterugval. Het paneel waarschuwt bij onverenigbare opgeslagen doelen, zodat je vóór gebruik kunt corrigeren. Zie [Temperatuureenheden en migratie](temperature-units.nl.md) voor volledige upgrade-, migratie-, back-up- en herstelregels.
 
@@ -574,7 +621,7 @@ De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) bevestigt st
 
 Instellingen kan een JSON-bestand met versie exporteren en importeren. Het kan thermostaatschema's, sjablonen, gedeelde blokpresets, paneelinstellingen, leergegevens voor adaptieve voorconditionering, klimaatprofielen en modussen bevatten.
 
-Huidige exports in model 19 behouden beide sjabloonkoppeltypes, presetverwijzingen en koppelingen met een Master voor voorconditionering. Geaccepteerde uitvoeringsreferenties van de master blijven lokaal en worden niet geëxporteerd. Schema's of profielen exporteren neemt vereiste sjablonen en presets mee, zichtbaar als extra gekozen secties. Import valideert de gecombineerde configuratie, ook bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op vaste sleutel samengevoegd: overeenkomstige sleutels worden vervangen; lokale presets buiten het bestand blijven. Oude back-ups blijven importeerbaar; oude Velair-versies kunnen model 19 niet importeren. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
+Huidige exports in model 22 behouden beide sjabloonkoppeltypes, presetverwijzingen en koppelingen met een Master voor voorconditionering. Geaccepteerde uitvoeringsreferenties van de master blijven lokaal en worden niet geëxporteerd. Schema's of profielen exporteren neemt vereiste sjablonen en presets mee, zichtbaar als extra gekozen secties. Import valideert de gecombineerde configuratie, ook bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op vaste sleutel samengevoegd: overeenkomstige sleutels worden vervangen; lokale presets buiten het bestand blijven. Oude back-ups blijven importeerbaar; oude Velair-versies kunnen model 22 niet importeren. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup). Huidige exports bewaren ook het doelformaatbeleid per klimaatentiteit.
 
 Bij import kies je te overschrijven secties. Import vervangt gekozen gegevens; exporteer eerst voor een herstelpunt. Profiel- en modusdefinities zijn overdraagbaar, de actieve selectie niet. Velair behoudt actieve profiel-ID's die nog bestaan en keert pas naar standaard terug als geen meer overblijven.
 

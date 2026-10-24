@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.3 |
-| Última sincronização | 2026-10-21 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -46,6 +46,8 @@ Ao expandir um dispositivo, cada modo compatível mostra um cartão de previsão
 A preparação do Retorno planejado é identificada separadamente da antecipação semanal. Para um retorno futuro aceito, as informações do equipamento mostram seu estado de retorno, início estimado, temperatura-alvo de chegada e motivos de suspensão ou indisponibilidade. Visão geral, Retorno planejado e cartões de climatização usam as mesmas informações de retorno do backend; não é outro evento semanal. Um ambiente ainda pode seguir Ausente enquanto mostra uma estimativa futura de retorno. **Preparando** descreve a intenção de controle do Velair, não a confirmação de que um dispositivo recebeu um comando ou está fisicamente aquecendo ou resfriando. A linha do tempo do retorno mostra o tempo decorrido até a chegada salva, não uma porcentagem de progresso térmico. Consulte [Preparação dos ambientes](planned-return.pt-br.md#room-preparation) para os estados.
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa seção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por padrão para manter a visão habitual simples.
+
+Uma entidade pode exigir ambos os limites em Aquecimento, Resfriamento ou Auto sem suportar `heat_cool`. O Velair programa e entrega esses alvos, mas não antecipa o início nem recolhe amostras de aprendizado térmica para eles. A vista de preparação explica que esta funcionalidade exige Aquecimento/Resfriamento para intervalos. O par programado permanece inalterado e o Retorno planejado aplica-o na chegada, sem preparação antecipada. Ativar o pré-condicionamento não elimina esta limitação.
 
 <a id="preconditioning-master"></a>
 ## Mestre do pré-condicionamento

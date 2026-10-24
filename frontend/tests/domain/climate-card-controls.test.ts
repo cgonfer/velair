@@ -130,7 +130,7 @@ describe("climate card thermostat controls", () => {
       target_temp_step: 0.5,
       supported_features: 2,
     }, "heat");
-    expect(climateCardTarget(climate)).toBeUndefined();
+    expect(climateCardTarget(climate)).toEqual({ kind: "range", low: 18, high: 24 });
     expect(climateCardTargetPayload(climate, "temperature", 1)).toBeUndefined();
   });
 
@@ -160,5 +160,22 @@ describe("climate card thermostat controls", () => {
     expect(climateCardRuntimeBlocksThermostat("manual", { state: "boost" })).toBe(true);
     expect(climateCardRuntimeBlocksThermostat("manual", { state: "stopped" })).toBe(true);
     expect(climateCardRuntimeBlocksThermostat("manual", { state: "scheduled" })).toBe(false);
+  });
+});
+
+
+describe("range-only card controls (#51)", () => {
+  const attributes = { supported_features: 394, temperature: 22, target_temp_low: 19, target_temp_high: 24,
+    min_temp: 16, max_temp: 30, target_temp_step: 0.5 };
+  it.each(["heat", "cool", "auto"])("adjusts both setpoints in %s, without a scalar", (mode) => {
+    expect(climateCardTarget(state(attributes, mode))).toEqual({ kind: "range", low: 19, high: 24 });
+    expect(climateCardTargetPayload(state(attributes, mode), "target_temp_low", 1))
+      .toEqual({ target_temp_low: 19.5, target_temp_high: 24 });
+    expect(climateCardTargetPayload(state({ ...attributes, target_temp_low: 24 }, mode), "target_temp_low", 1)).toBeUndefined();
+    expect(climateCardTarget(state({ ...attributes, target_temp_high: undefined }, mode))).toBeUndefined();
+  });
+  it.each(["dry", "fan_only"])("does not expose target controls in mode-only %s", (mode) => {
+    expect(climateCardTarget(state(attributes, mode))).toBeUndefined();
+    expect(climateCardTargetPayload(state(attributes, mode), "target_temp_low", 1)).toBeUndefined();
   });
 });

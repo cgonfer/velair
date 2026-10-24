@@ -786,6 +786,8 @@ export const profileStyles = css`
     min-width: 0;
   }
 
+  .profile-editor { container-type: inline-size; }
+
   .profile-workspace-zone-picker {
     margin-bottom: 2px;
   }
@@ -1145,7 +1147,6 @@ export const profileStyles = css`
   }
 
   .profile-week {
-    container-type: inline-size;
     grid-template-columns: minmax(0, 1fr);
     background: var(--secondary-background-color);
     border-radius: 8px;

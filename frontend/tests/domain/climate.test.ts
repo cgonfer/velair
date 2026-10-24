@@ -2,14 +2,24 @@ import { describe, expect, it } from "vitest";
 
 import {
   climateTargetCompatibleForConfiguration,
-  climateTargetCompatibleForEnsureOn,
   effectiveClimateHvacModeForEnsureOn,
   climateRequiresRangeTarget,
   climateSupportsRangeTarget,
   entityTemperatureStep,
 } from "../../src/velair/domain/climate";
+import type { TargetFormatPolicy } from "../../src/velair/types";
 
 describe("climate target capabilities", () => {
+  it("resolves Off fallback from the mapped target policy and prefers mixed Heat/Cool", () => {
+    const state = { state: "off", attributes: { supported_features: 3, hvac_modes: ["off", "heat", "cool", "heat_cool"] } } as any;
+    const policy = { kind: "mixed", formats_by_mode: { heat: "range", cool: "single", heat_cool: "single" } } as TargetFormatPolicy;
+    expect(effectiveClimateHvacModeForEnsureOn(state, undefined, "range", policy)).toBe("heat");
+    const both = { ...policy, formats_by_mode: { ...policy.formats_by_mode, heat_cool: "range" as const } };
+    expect(effectiveClimateHvacModeForEnsureOn(state, undefined, "range", both)).toBe("heat_cool");
+    expect(effectiveClimateHvacModeForEnsureOn(state, "heat", "range", both)).toBe("heat");
+    expect(effectiveClimateHvacModeForEnsureOn({ ...state, state: "cool" }, undefined, "range", both)).toBe("cool");
+    expect(effectiveClimateHvacModeForEnsureOn(state, undefined, "range", { ...both, kind: "range" })).toBe("heat");
+  });
   it("converts a published step when the entity still reports the other temperature unit", () => {
     expect(entityTemperatureStep({
       attributes: {
@@ -88,7 +98,7 @@ describe("climate target capabilities", () => {
       state: "off",
       attributes: {
         supported_features: 392,
-        hvac_modes: ["off", "heat", "cool", "heat_cool"],
+        hvac_modes: ["off", "heat_cool", "heat", "cool"],
       },
     } as any;
 
@@ -102,41 +112,12 @@ describe("climate target capabilities", () => {
   it("resolves Keep like ensure_on for on and off climates", () => {
     const off = { state: "off", attributes: { hvac_modes: ["off", "cool", "heat_cool"] } } as any;
     expect(effectiveClimateHvacModeForEnsureOn(off)).toBe("cool");
-    expect(effectiveClimateHvacModeForEnsureOn(off, "", "range")).toBe("heat_cool");
+    expect(effectiveClimateHvacModeForEnsureOn(off, "", "range")).toBeUndefined();
     expect(effectiveClimateHvacModeForEnsureOn({ ...off, state: "heat_cool" })).toBe("heat_cool");
     expect(effectiveClimateHvacModeForEnsureOn(off, "heat")).toBe("heat");
   });
 
-  it.each([
-    ["range explicit heat_cool on mixed", "heat", 3, "heat_cool", "range", true],
-    ["range explicit heat rejected", "heat", 3, "heat", "range", false],
-    ["range explicit cool rejected", "cool", 3, "cool", "range", false],
-    ["range explicit auto rejected", "auto", 3, "auto", "range", false],
-    ["range Keep on heat_cool", "heat_cool", 3, "", "range", true],
-    ["range Keep on heat rejected", "heat", 3, "", "range", false],
-    ["range Keep off first heat_cool", "off", 3, "", "range", true],
-    ["range Keep off first heat", "off", 3, "", "range", true],
-    ["scalar explicit heat on mixed", "heat_cool", 3, "heat", "scalar", true],
-    ["scalar explicit heat_cool rejected", "heat", 3, "heat_cool", "scalar", false],
-    ["scalar Keep on heat_cool rejected", "heat_cool", 3, "", "scalar", false],
-    ["scalar Keep on heat", "heat", 3, "", "scalar", true],
-    ["scalar Keep off first heat_cool skips to heat", "off", 3, "", "scalar", true],
-    ["scalar Keep off first heat", "off", 3, "", "scalar", true],
-    ["range-only rejects scalar", "heat", 2, "heat", "scalar", false],
-    ["range-only accepts range heat_cool", "heat_cool", 2, "heat_cool", "range", true],
-  ] as const)("validates %s", (_label, stateMode, features, requested, target, expected) => {
-    const firstMode = _label.includes("first heat_cool") ? "heat_cool" : "heat";
-    const state = {
-      state: stateMode,
-      attributes: {
-        supported_features: features,
-        hvac_modes: ["off", firstMode, firstMode === "heat" ? "heat_cool" : "heat"],
-      },
-    } as any;
-    expect(climateTargetCompatibleForEnsureOn(state, target, requested)).toBe(expected);
-  });
-
-  it("rejects off targets when no compatible non-off mode exists", () => {
+  it("returns no range fallback when no compatible non-off mode exists", () => {
     const rangeWithoutHeatCool = {
       state: "off",
       attributes: { supported_features: 3, hvac_modes: ["off", "heat", "cool"] },
@@ -145,9 +126,9 @@ describe("climate target capabilities", () => {
       state: "off",
       attributes: { supported_features: 3, hvac_modes: ["off", "heat_cool"] },
     } as any;
-    expect(climateTargetCompatibleForEnsureOn(rangeWithoutHeatCool, "range")).toBe(false);
-    expect(climateTargetCompatibleForEnsureOn(scalarWithoutScalarMode, "scalar")).toBe(false);
-    expect(climateTargetCompatibleForEnsureOn({
+    expect(effectiveClimateHvacModeForEnsureOn(rangeWithoutHeatCool, undefined, "range")).toBeUndefined();
+    expect(climateTargetCompatibleForConfiguration(scalarWithoutScalarMode, "scalar")).toBe(false);
+    expect(climateTargetCompatibleForConfiguration({
       state: "off",
       attributes: { supported_features: 1, hvac_modes: ["off", "heat_cool"] },
     } as any, "range")).toBe(false);
@@ -163,7 +144,6 @@ describe("climate target capabilities", () => {
       },
     } as any;
 
-    expect(climateTargetCompatibleForEnsureOn(state, "scalar")).toBe(true);
     expect(climateTargetCompatibleForConfiguration(state, "scalar", "heat_cool")).toBe(true);
   });
 
@@ -183,5 +163,29 @@ describe("climate target capabilities", () => {
       },
     } as any;
     expect(climateTargetCompatibleForConfiguration(state, target, requested)).toBe(expected);
+  });
+});
+
+
+describe("range-only climate compatibility (#51)", () => {
+  const attributes = { supported_features: 394, hvac_modes: ["off", "dry", "cool", "heat", "auto", "fan_only"],
+    min_temp: 16, max_temp: 30, target_temp_step: 0.5, temperature: 22 };
+  it.each(["heat", "cool", "auto"])("accepts both limits in %s and rejects a scalar", (mode) => {
+    const state = { state: mode, attributes } as any;
+    expect(climateTargetCompatibleForConfiguration(state, "range", mode)).toBe(true);
+    expect(climateTargetCompatibleForConfiguration(state, "scalar", mode)).toBe(false);
+    expect(climateRequiresRangeTarget(state)).toBe(true);
+  });
+  it("selects the first compatible mode from Off and rejects known range-only scalars", () => {
+    const off = { state: "off", attributes } as any;
+    expect(effectiveClimateHvacModeForEnsureOn(off, "", "range")).toBe("cool");
+    expect(climateTargetCompatibleForConfiguration(off, "scalar", "heat")).toBe(false);
+    for (const mode of ["dry", "fan_only", "heat_cool"]) {
+      expect(climateTargetCompatibleForConfiguration(off, "range", mode)).toBe(false);
+    }
+  });
+  it("does not extend the hidden-Off scalar exception to heat_cool", () => {
+    const state = { state: "off", attributes: { supported_features: 392, hvac_modes: ["heat_cool"] } } as any;
+    expect(climateTargetCompatibleForConfiguration(state, "scalar", "heat_cool")).toBe(false);
   });
 });

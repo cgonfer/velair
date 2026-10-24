@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](manual-control.md) · [Español](manual-cont
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.0-beta.5 |
+| Última sincronización | 2026-10-24 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -54,7 +54,7 @@ Estos estados pueden coexistir. Por ejemplo, el Modo **Manual** de Velair puede 
 
 Velair observa estos campos de control en equipos gestionados:
 
-- `hvac_mode`, representado por el estado de la entidad de climatización, incluidos `off`, `heat`, `cool` y `heat_cool`;
+- `hvac_mode`, representado por el estado de la entidad de climatización, incluidos `off`, `heat`, `cool`, `auto` y `heat_cool`;
 - `temperature` para una temperatura objetivo única;
 - `target_temp_low` y `target_temp_high` para un objetivo de intervalo nativo.
 
@@ -202,6 +202,8 @@ Si sigue existiendo una pausa independiente de zona, la zona permanece pausada. 
 - si el equipo está en `off`, elige el primer modo compatible declarado por el equipo que no sea `off` y aplica el objetivo del bloque.
 
 Para un equipo solo de calefacción que declare `[off, heat]`, un bloque activo que mantiene el modo a `21 °C` reanuda como `heat`, `21 °C`. Para uno solo de refrigeración que declare `[off, cool]`, reanuda como `cool`, `21 °C`. Un equipo reversible puede declarar varios modos compatibles; Velair utiliza su orden declarado y no deduce calefacción o refrigeración por la estación, ubicación geográfica ni valor del objetivo. Define un modo HVAC explícito en el bloque si esa elección debe ser determinista.
+
+Para una entidad que solo acepta intervalos, los modos de funcionamiento compatibles son los modos `heat`, `cool`, `auto` y `heat_cool` que declare. Mantener desde Apagado usa el primero en el orden declarado. Las entidades compatibles con ambos formatos usan su [política guardada de formato por modo](usage.es.md#target-format-by-climate-and-mode) para determinar los modos compatibles, conservando la preferencia por `heat_cool` al reanudar un intervalo compatible desde Apagado. Solo temperatura puede escribir ambos límites mientras el equipo está apagado si se declaran compatibilidad con intervalos y un modo compatible; nunca lo activa para poder escribirlos.
 
 Para un bloque de solo opciones, reanudar aplica únicamente los controles seleccionados. No envía una temperatura ni enciende un equipo apagado.
 
@@ -368,6 +370,8 @@ Policy: until resumed
 ```
 
 Velair detecta `target_temp_low` y `target_temp_high`, captura el estado completo `heat_cool` y conserva `19–24 °C` durante el ajuste manual. Al reanudar aplica el intervalo completo del bloque que determina el control actual. Nunca reduce el intervalo a una temperatura objetivo única.
+
+La misma captura y restauración del par completo se aplica a entidades que solo aceptan intervalos en Calor, Frío y Auto. Un atributo residual `temperature` no sustituye a sus dos límites. Si el par observado está incompleto o no es válido, Velair no inventa un objetivo restaurable a partir de ese atributo escalar.
 
 <a id="independent-window-pause-while-manual"></a>
 

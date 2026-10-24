@@ -22,6 +22,19 @@ const temperatureError = (block: DraftScheduleBlock) =>
     temperatureStep: 0.5,
   });
 
+it("changes target format without inventing values and restores both edited drafts", () => {
+  const initial: DraftScheduleBlock[] = [{ start: "08:00", action: ACTION_SET_TEMPERATURE, hvac_mode: "heat", temperature: 21 }];
+  let blocks = updateDraftBlock(initial, 0, "action", "target_range");
+  expect(blocks[0].target_temp_low).toBe(""); expect(blocks[0].target_temp_high).toBe("");
+  blocks = updateDraftBlock(blocks, 0, "target_temp_low", "19");
+  blocks = updateDraftBlock(blocks, 0, "target_temp_high", "24");
+  blocks = updateDraftBlock(blocks, 0, "action", "target_scalar");
+  expect(blocks[0].temperature).toBe(21);
+  blocks = updateDraftBlock(blocks, 0, "action", "target_range");
+  expect(blocks[0]).toMatchObject({ target_temp_low: "19", target_temp_high: "24" });
+  expect(blocks[0].temperature).toBeUndefined();
+});
+
 const normalize = (blocks: DraftScheduleBlock[]) =>
   normalizeDraftBlocks(blocks, {
     duplicateStartError: (start) => `duplicate:${start}`,

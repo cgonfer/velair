@@ -96,18 +96,18 @@ describe("draft actions controller", () => {
     expect(state._draftBlocks[0].temperature).toBeUndefined();
   });
 
-  it("uses the live range as a draft when heat/cool is selected", () => {
+  it("asks for the new range when heat/cool is selected", () => {
     const state = host();
     state.hass.states["climate.office"] = {
-      attributes: { supported_features: 3, target_temp_low: 19, target_temp_high: 24 },
+      attributes: { supported_features: 3, hvac_modes: ["heat", "heat_cool"], target_temp_low: 19, target_temp_high: 24 },
     };
 
     updateDraftBlock(state, 0, "hvac_mode", "heat_cool");
 
     expect(state._draftBlocks[0]).toMatchObject({
       hvac_mode: "heat_cool",
-      target_temp_low: 19,
-      target_temp_high: 24,
+      target_temp_low: "",
+      target_temp_high: "",
     });
     expect(state._draftBlocks[0].temperature).toBeUndefined();
   });
@@ -125,7 +125,7 @@ describe("draft actions controller", () => {
     expect(state._draftBlocks[0].target_temp_low).toBeUndefined();
   });
 
-  it("returns a range draft to one target when a non-range mode is selected", () => {
+  it("preserves range drafts when an incompatible mode is selected", () => {
     const state = host();
     state.hass.states["climate.office"] = {
       attributes: { supported_features: 3, temperature: 22 },
@@ -140,8 +140,54 @@ describe("draft actions controller", () => {
 
     updateDraftBlock(state, 0, "hvac_mode", "dry");
 
-    expect(state._draftBlocks[0]).toMatchObject({ temperature: 22, hvac_mode: "dry" });
-    expect(state._draftBlocks[0].target_temp_low).toBeUndefined();
-    expect(state._draftBlocks[0].target_temp_high).toBeUndefined();
+    expect(state._draftBlocks[0]).toMatchObject({ target_temp_low: 19, target_temp_high: 24, hvac_mode: "dry" });
+    expect(state._draftBlocks[0].temperature).toBeUndefined();
   });
+});
+
+
+it("keeps range-only setpoints in every supported mode and in subsequent blocks", () => {
+  const state = host();
+  state._draftBlocks = [];
+  state.hass.states["climate.office"] = {
+    state: "heat", attributes: { supported_features: 394, hvac_modes: ["off", "heat", "cool", "auto"],
+      target_temp_low: 19.5, target_temp_high: 24 },
+  };
+  addBlock(state);
+  for (const mode of ["heat", "cool", "auto", "", "temperature_only"]) {
+    updateDraftBlock(state, 0, "hvac_mode", mode);
+    expect(state._draftBlocks[0]).toMatchObject({ target_temp_low: 19.5, target_temp_high: 24 });
+    expect(state._draftBlocks[0].temperature).toBeUndefined();
+  }
+  updateDraftBlock(state, 0, "target_temp_low", "20");
+  updateDraftBlock(state, 0, "target_temp_high", "23");
+  addBlock(state);
+  expect(state._draftBlocks.at(-1)).toMatchObject({ target_temp_low: "20", target_temp_high: "23" });
+  state._draftBlocks.push({ action: "turn_off", start: "12:00" });
+  addBlock(state);
+  expect(state._draftBlocks.at(-1)).toMatchObject({ target_temp_low: 19.5, target_temp_high: 24 });
+  expect(state._draftBlocks.at(-1)?.temperature).toBeUndefined();
+});
+
+it("lets templates select a range explicitly and preserves it when changing mode", () => {
+  const state = host();
+  addBlock(state, "template");
+  updateDraftBlock(state, 0, "action", "target_range", "template");
+  updateDraftBlock(state, 0, "target_temp_low", "18.5", "template");
+  updateDraftBlock(state, 0, "target_temp_high", "24", "template");
+  for (const mode of ["heat", "cool", "auto", "", "temperature_only", "dry"]) {
+    updateDraftBlock(state, 0, "hvac_mode", mode, "template");
+    expect(state._templateDraftBlocks[0]).toMatchObject({ target_temp_low: "18.5", target_temp_high: "24" });
+    expect(state._templateDraftBlocks[0].temperature).toBeUndefined();
+  }
+});
+
+it("defaults generic Heat/Cool to a pair when climates use different formats", () => {
+  const state = host() as any;
+  state._data.zones = Object.fromEntries(["office", "bedroom"].map((name, index) => [`climate.${name}`, { target_format_policy: { kind: "mixed", formats_by_mode: { heat_cool: index ? "range" : "single" }, invalid_modes: [], uncertain: false } }]));
+  addBlock(state, "template");
+  updateDraftBlock(state, 0, "hvac_mode", "heat_cool", "template");
+  expect(state._templateDraftBlocks[0]).toMatchObject({ target_temp_low: "", target_temp_high: "" });
+  updateDraftBlock(state, 0, "action", "target_scalar", "template");
+  expect(state._templateDraftBlocks[0].temperature).toBe(21);
 });

@@ -150,7 +150,7 @@ class BetaFeatureDocsTest(unittest.TestCase):
         self.assertIn("`diagnostics`.", usage)
         self.assertNotIn("thermostat diagnostics", readme)
         self.assertIn(
-            "Preconditioning, Diagnostics, and Settings tabs render in that order",
+            "Preconditioning, Planned return, Diagnostics, and Settings tabs render in that order",
             manual_testing,
         )
         self.assertNotIn("Settings diagnostics", manual_testing)

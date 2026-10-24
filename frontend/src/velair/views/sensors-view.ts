@@ -357,12 +357,13 @@ function renderSensorRuntime(
         ${renderSensorStatusPill(host, status)}
       </h3>
       <div class="sensor-status-card">
+        ${status?.reason === "unsupported_range_mode" ? html`<p role="status">${host._t("unsupportedRangeThermalMode")}</p>` : nothing}
         ${hasActiveBlock
           ? renderSensorActiveBlockSummary(host, entityId, status)
           : renderSensorIdleState(host)}
         ${hasActiveBlock ? renderRoomAssistLimitWarning(host, entityId, status) : nothing}
         ${hasActiveBlock ? renderRoomAssistScheduledGuard(host, entityId, status) : nothing}
-        ${hasActiveBlock && scale.markers.length
+        ${hasActiveBlock && status?.reason !== "unsupported_range_mode" && scale.markers.length
           ? renderTemperatureScale(host, entityId, scale, status, deadbandZone, deadband)
           : nothing}
       </div>
@@ -377,7 +378,7 @@ export function renderRoomAssistTemperatureScale(
   status?: RoomSensorAssistStatus,
   settings?: PreconditioningSettings,
 ) {
-  if (!status || !hasRoomAssistScheduledTarget(status) || !status.start) {
+  if (!status || status.reason === "unsupported_range_mode" || !hasRoomAssistScheduledTarget(status) || !status.start) {
     return nothing;
   }
   const deadband = settings?.room_sensor_assist_deadband ?? 0;

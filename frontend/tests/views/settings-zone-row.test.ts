@@ -494,7 +494,7 @@ describe("settings climate row", () => {
       .toContain("select-wrap");
     const sharedCss = cardStyles.map((style) => style.cssText).join("\n");
     expect(sharedCss).toMatch(/\.select-wrap::after\s*\{[^}]*border-width:\s*0 2px 2px 0/);
-    expect(sharedCss).toMatch(/\.select-wrap:has\(select:open\)::after\s*\{[^}]*rotate\(225deg\)/);
+    expect(sharedCss).toMatch(/\.select-wrap:has\(select:open\)::after,\s*\.select-wrap\[open\]::after\s*\{[^}]*rotate\(225deg\)/);
     expect((container.querySelector(".settings-external-policy input") as HTMLInputElement).value)
       .toBe("90");
     expect([...container.querySelectorAll(".settings-external-policy option")].map(
@@ -547,21 +547,18 @@ describe("settings climate row", () => {
     expect(container.querySelector('[role="tooltip"]')).toBeNull();
   });
 
-  it("aligns the temperature-step control without changing the external policy layout", () => {
+  it("groups managed-climate fields and keeps reorder controls in the header on mobile", () => {
+    const container = document.createElement("div");
+    render(renderSettingsZoneOrderRow(host(false), "climate.office", 0, 2), container);
+    expect(container.querySelector(".settings-zone-header > .settings-drag-handle")).not.toBeNull();
+    expect(container.querySelector(".settings-zone-header > .settings-row-actions")).not.toBeNull();
+    expect(container.querySelector(".settings-zone-row > .settings-zone-configuration")).not.toBeNull();
     const cssText = settingsStyles.cssText;
-    expect(cssText).toMatch(/\.settings-external-policy\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/);
-    expect(cssText).toMatch(/\.settings-policy-controls\s*\{[^}]*display:\s*flex[^}]*flex:\s*0 1 auto[^}]*gap:\s*8px/);
-    expect(cssText).toMatch(/\.settings-policy-controls > \.select-wrap\s*\{[^}]*flex:\s*0 1 170px[^}]*height:\s*34px[^}]*margin:\s*0[^}]*width:\s*170px/);
-    expect(cssText).toMatch(/\.settings-target-temp-step > \.settings-policy-heading\s*\{[^}]*flex:\s*0 0 142px/);
-    expect(cssText).toMatch(/\.settings-target-temp-step-control\s*\{[^}]*max-width:\s*100%[^}]*width:\s*170px/);
-    expect(cssText).toMatch(/\.settings-external-policy \.select-wrap select\s*\{[^}]*height:\s*100%[^}]*margin:\s*0[^}]*width:\s*100%/);
-    expect(cssText).toMatch(/\.settings-policy-duration\s*\{[^}]*flex:\s*0 1 105px[^}]*height:\s*34px/);
-    expect(cssText).toMatch(/\.settings-policy-duration input\s*\{[^}]*border-radius:\s*0[^}]*box-shadow:\s*none[^}]*margin:\s*0[^}]*outline:\s*0/);
-    expect(cssText).toMatch(/\.settings-policy-duration:focus-within\s*\{[^}]*border-color:\s*var\(--primary-color\)[^}]*box-shadow:\s*0 0 0 1px var\(--primary-color\)/);
-    expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-external-policy\s*\{[^}]*flex-direction:\s*column/);
-    expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-policy-controls\s*\{[^}]*width:\s*100%/);
-    expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-policy-controls > \.select-wrap\s*\{[^}]*flex:\s*1 1 160px[^}]*max-width:\s*170px/);
-    expect(cssText).toMatch(/@media \(max-width: 480px\)[\s\S]*\.settings-target-temp-step\s*\{[^}]*flex-direction:\s*column/);
+    expect(cssText).toMatch(/\.settings-zone-header\s*\{[^}]*grid-template-columns:\s*36px minmax\(0, 1fr\) auto/);
+    expect(cssText).toMatch(/\.settings-policy-controls > \.select-wrap\s*\{[^}]*flex:\s*1 1 180px[^}]*height:\s*44px/);
+    expect(cssText).toMatch(/\.settings-policy-duration\s*\{[^}]*flex:\s*0 0 105px[^}]*height:\s*44px/);
+    expect(cssText).toMatch(/@media \(max-width: 600px\)[\s\S]*\.settings-zone-configuration\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
+    expect(cssText).not.toContain(".settings-zone-main");
     expect(cssText).not.toContain("external-adjustment-popover");
   });
 });

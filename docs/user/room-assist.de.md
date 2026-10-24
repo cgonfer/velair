@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -38,6 +38,8 @@ Bei einem Einzelziel in festem `heat` oder `cool` erzeugt ein Totband ungleich n
 Einzelziele in `auto` und `heat_cool` sowie native `heat_cool`-Bereiche behalten ihr neutrales Verhalten beziehungsweise die Randbereiche. Velair zwingt diese Modi nicht, innerhalb eines Einzelziel-Hysteresezyklus abwechselnd aktiv zu heizen und zu kühlen.
 
 Die Klimaentität bleibt das Stellglied. Velair erstellt keine virtuelle Klimaentität und umgeht keine Gerätefirmware. Unterstützt dein Thermostat oder Heizkörperventil die direkte Einbindung eines externen Sensors, ist diese native Geräteoption normalerweise weiterhin die beste erste Wahl.
+
+Entitäten, die ausschließlich Bereiche unterstützen, können geplante Wertepaare auch in Heizen, Kühlen und Auto empfangen. Room Assist korrigiert diese Paare nicht: Bereichsunterstützung benötigt `heat_cool`. Der Live-Status erläutert die Einschränkung; Velair sendet das nominelle Paar ohne Verschiebung. Gespeicherte Einstellungen bleiben für kompatible Ziele erhalten. Der Wechsel von einem unterstützten Ziel zu einem solchen Bereich beendet die vorherige Unterstützung, ohne einen alten korrigierten Sollwert über das neue Paar zurückzuschreiben.
 
 <a id="setup"></a>
 ## Einrichtung

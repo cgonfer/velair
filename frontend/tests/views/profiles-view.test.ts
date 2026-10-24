@@ -3178,3 +3178,62 @@ it("uses legacy base membership and keeps actions separate from editor selection
   expect(row().querySelector<HTMLButtonElement>(".profile-item-apply")!.disabled).toBe(true);
   activate.mockRestore(); apply.mockRestore(); element.remove();
 });
+
+it("preserves range-only Profile targets through mode changes and validates Heat, Cool and Auto", async () => {
+  const element = new VelairProfilesView();
+  element.hass = { language: "en", states: { "climate.office": { state: "heat", attributes: {
+    supported_features: 394, hvac_modes: ["off", "heat", "cool", "auto", "dry", "fan_only"],
+    min_temp: 16, max_temp: 30, target_temp_step: 0.5,
+    target_temp_low: 19, target_temp_high: 24, temperature: 22,
+  } } } } as never;
+  const profile = { key: "away", name: "Away", zones: { "climate.office": {
+    behavior: "schedule", enabled: true, schedule: { monday: [] },
+  } } };
+  element.data = { ...data, profiles: [profile] } as unknown as ScheduleResponse;
+  document.body.append(element);
+  await element.updateComplete;
+  await selectFirstProfile(element);
+  const internal = element as any;
+  const save = vi.spyOn(VelairApiClient.prototype, "setClimateProfile").mockImplementation(async (input) =>
+    ({ ...data, profiles: [{ ...input, key: "away" }] }) as unknown as ScheduleResponse);
+  internal._addBlock("climate.office", "monday");
+  for (const mode of ["heat", "cool", "auto"]) {
+    internal._updateBlock("climate.office", "monday", 0, "hvac_mode", mode);
+    const blocks = internal._blocks("climate.office", "monday");
+    expect(blocks[0]).toMatchObject({ target_temp_low: 19, target_temp_high: 24, hvac_mode: mode });
+    expect(blocks[0].temperature).toBeUndefined();
+    expect(internal._cloneCompatibilityError(blocks, "climate.office")).toBeUndefined();
+    await internal._save();
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ zones: {
+      "climate.office": expect.objectContaining({ schedule: expect.objectContaining({
+        monday: [expect.objectContaining({ hvac_mode: mode, target_temp_low: 19, target_temp_high: 24 })],
+      }) }),
+    } }), undefined);
+    expect(internal._blocks("climate.office", "monday")[0])
+      .toMatchObject({ hvac_mode: mode, target_temp_low: 19, target_temp_high: 24 });
+  }
+  internal._updateBlock("climate.office", "monday", 0, "hvac_mode", "off");
+  internal._addBlock("climate.office", "monday");
+  expect(internal._blocks("climate.office", "monday").at(-1))
+    .toMatchObject({ target_temp_low: 19, target_temp_high: 24 });
+  save.mockRestore();
+  element.remove();
+});
+
+it("treats the Profile template editor as a concrete entity and restores alternate format drafts", async () => {
+  const element = new VelairProfilesView();
+  element.hass = { language: "en", states: { "climate.office": { state: "cool", attributes: { supported_features: 3, hvac_modes: ["heat", "cool"], temperature: 21, min_temp: 16, max_temp: 30 } } } } as never;
+  element.data = { ...data, zones: { "climate.office": { target_format_policy: { entity_id: "climate.office", kind: "mixed", configured_modes: ["heat"], range_modes: ["heat"], formats_by_mode: { heat: "range", cool: "single" }, uncertain: false, invalid_modes: [] } } }, profiles: [{ key: "away", name: "Away", zones: { "climate.office": { behavior: "schedule", schedule: { monday: [{ start: "08:00", action: "set_temperature", hvac_mode: "cool", temperature: 21 }] } } } }] } as unknown as ScheduleResponse;
+  document.body.append(element); await element.updateComplete; await selectFirstProfile(element);
+  const internal = element as any;
+  internal._updateBlock("climate.office", "monday", 0, "hvac_mode", "heat");
+  expect(internal._blocks("climate.office", "monday")[0].target_temp_low).toBe("");
+  internal._updateBlock("climate.office", "monday", 0, "target_temp_low", "19");
+  internal._updateBlock("climate.office", "monday", 0, "target_temp_high", "24");
+  internal._updateBlock("climate.office", "monday", 0, "hvac_mode", "cool");
+  expect(internal._blocks("climate.office", "monday")[0].temperature).toBe(21);
+  internal._updateBlock("climate.office", "monday", 0, "hvac_mode", "heat");
+  expect(internal._blocks("climate.office", "monday")[0]).toMatchObject({ target_temp_low: "19", target_temp_high: "24" });
+  expect(internal._cloneCompatibilityError(internal._blocks("climate.office", "monday"), "climate.office")).toBeUndefined();
+  element.remove();
+});

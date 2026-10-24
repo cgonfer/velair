@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.0-beta.5 |
+| Última sincronización | 2026-10-24 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -40,6 +40,8 @@ Para un objetivo único en `heat` o `cool` fijos, una banda muerta distinta de c
 Los objetivos únicos `auto` y `heat_cool` y los intervalos nativos `heat_cool` conservan su comportamiento neutro o de margen del intervalo. Velair no obliga a esos modos a alternar entre calefacción y refrigeración activas mediante un ciclo de histéresis de temperatura única.
 
 La entidad de climatización sigue siendo el actuador. Velair no crea una entidad virtual ni evita el firmware del dispositivo. Si tu termostato o válvula permite vincular directamente un sensor externo, esa opción nativa suele seguir siendo la mejor primera elección.
+
+Las entidades que solo aceptan intervalos también pueden recibir pares programados en Calor, Frío y Auto. Room Assist no ajusta esos pares: la asistencia de intervalos requiere `heat_cool`. El estado actual explica la limitación y Velair envía el par nominal sin desplazarlo. Los ajustes de Room Assist se conservan para objetivos compatibles. Cambiar de un objetivo asistido a uno de estos intervalos elimina la asistencia anterior sin restaurar una antigua consigna corregida sobre el nuevo par.
 
 <a id="setup"></a>
 
