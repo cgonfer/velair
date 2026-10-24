@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20261024140032", r = "1.9.0-beta.5", i = [
+}, n = "20261024150118", r = "1.9.0-beta.5", i = [
 	"monday",
 	"tuesday",
 	"wednesday",
@@ -37020,6 +37020,17 @@ var Au = "https://github.com/cgonfer/velair", ju = {
 		"pt-br": "docs/user/blueprints/seasonal-climate-selection.pt-br.md",
 		"pt-pt": "docs/user/blueprints/seasonal-climate-selection.pt-pt.md",
 		ru: "docs/user/blueprints/seasonal-climate-selection.ru.md"
+	},
+	"docs/user/shared-climate-supply.md": {
+		es: "docs/user/shared-climate-supply.es.md",
+		fr: "docs/user/shared-climate-supply.fr.md",
+		de: "docs/user/shared-climate-supply.de.md",
+		it: "docs/user/shared-climate-supply.it.md",
+		nl: "docs/user/shared-climate-supply.nl.md",
+		pl: "docs/user/shared-climate-supply.pl.md",
+		"pt-br": "docs/user/shared-climate-supply.pt-br.md",
+		"pt-pt": "docs/user/shared-climate-supply.pt-pt.md",
+		ru: "docs/user/shared-climate-supply.ru.md"
 	}
 }, Nu = "1.9.0-beta.5";
 function Pu(e, t, n = {}) {

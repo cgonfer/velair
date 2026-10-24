@@ -36,6 +36,12 @@ describe("localized documentation destinations", () => {
     expect(documentationDestination("diagnostics", { language: "fr" }, options).translated).toBe(true);
     expect(documentationDestination("troubleshooting", { language: "fr" }, options).translated).toBe(false);
   });
+  it("falls back to English when the supply guide is not translated in the supplied catalogue", () => {
+    expect(documentationDestination("sharedSupply", { language: "es" }, options)).toEqual({
+      href: "https://github.com/cgonfer/velair/blob/main/docs/user/shared-climate-supply.md",
+      language: "en", translated: false,
+    });
+  });
   it("retains explicit section anchors in translated guides", () => {
     expect(documentationDestination("linkedSchedules", { language: "es" }, options).href)
       .toBe("https://github.com/cgonfer/velair/blob/main/docs/user/linked-schedules.es.md#linked-templates");
@@ -87,13 +93,11 @@ describe("complete documentation availability used by the build", () => {
     for (const releaseVersion of ["", "1.8.0"]) {
       for (const [topic, canonical] of topics) {
         const [source, fragment] = canonical.split("#");
-        // Supply's new guide falls back to English pending release translations.
-        const translated = topic !== "sharedSupply";
-        const path = translated ? source.replace(/\.md$/, `.${locale}.md`) : source;
+        const path = source.replace(/\.md$/, `.${locale}.md`);
         const ref = releaseVersion ? `v${releaseVersion}` : "main";
         expect(documentationDestination(topic, { language }, { availability: completeAvailability, releaseVersion })).toEqual({
           href: `https://github.com/cgonfer/velair/blob/${ref}/${path}${fragment ? `#${fragment}` : ""}`,
-          language: translated ? locale : "en", translated,
+          language: locale, translated: true,
         });
       }
     }
