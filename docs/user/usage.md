@@ -21,6 +21,7 @@ that section. Browser Back and Forward also follow this navigation.
 | Modes | `/velair/modes` |
 | Templates: Templates | `/velair/templates/templates` |
 | Templates: Climate presets | `/velair/templates/presets` |
+| [Supply control](shared-climate-supply.md) | `/velair/supply-control` |
 | Sensors | `/velair/sensors` |
 | Comfort | `/velair/comfort` |
 | Preconditioning | `/velair/preconditioning` |
@@ -500,7 +501,8 @@ not block these controls.
 Externally executed zones keep the native Home Assistant shortcut; an enabled
 One-off return action can still open the household departure controls.
 
-Scalar targets and native `heat_cool` ranges are supported. Range changes send
+Scalar targets and compatible native ranges are supported, including ranges
+in Heat, Cool and Auto on entities that only accept two setpoints. Range changes send
 both boundaries together. Velair uses `min_temp`, `max_temp`, and `hvac_modes`
 published by the climate entity. Target adjustments use `target_temp_step` when
 published. If that attribute disappears, Velair keeps using the last valid step
@@ -851,8 +853,36 @@ conditional.
 
 Temperature blocks contain either one target temperature or a complete lower and upper target range. The editor uses the capabilities published by the climate entity and defaults new `heat_cool` blocks to a range when supported. A range is shown as, for example, `20–24 °C`. Velair never invents a range from one temperature and rejects incomplete, inverted, or incompatible targets before sending a command.
 
-Native ranges are limited to `heat_cool` in this first phase. Velair does not
-assume that a device's `auto` mode uses the same lower and upper target model.
+Entities that only support ranges use both limits in their advertised `heat`,
+`cool`, `auto`, or `heat_cool` modes. The editor preserves those values when
+switching between compatible modes, **Keep current mode**, and **Temperature
+only**. Both limits may be equal. For entities supporting both target formats,
+the format follows the per-climate mode policy configured in Settings.
+For range-only entities, Dry and Fan only remain mode-only blocks without a
+temperature. For mixed-format entities, the configured policy determines the
+target format; the integration can still reject an unsupported operation.
+
+With a range-only entity, Keep starts an off climate in its first advertised
+compatible mode; it does not skip an incompatible running mode by changing it.
+For entities supporting both formats, a range Keep block retains the preference
+for `heat_cool` when off. Temperature only can send both limits while off when
+the entity advertises range support and a compatible conditioning mode, without
+turning the climate on or changing its mode. A known range-only entity cannot
+accept a single-temperature target, even while off.
+
+The range editor uses **Lower target** and **Upper target** for these entities.
+These are the two values the integration accepts; Velair does not infer that
+Auto has the automatic heating/cooling band behavior of `heat_cool`. The same
+capability checks apply to Profiles, presets, Boost, and copied or linked templates.
+Templates and Presets use the formats configured for their possible destinations.
+Velair checks compatibility against each actual destination when applying them.
+If Boost has no usable current limits, enter both values before applying it.
+
+Room Assist and Adaptive Preconditioning support ranges only in `heat_cool`.
+For a range in Heat, Cool or Auto, the nominal pair still applies at the scheduled
+time, with no Room Assist shift, early start, or thermal learning. The affected
+views explain the limitation. Planned Return applies the arrival target at
+arrival, without advance preparation for those ranges.
 
 When the selected climate exposes extra controls, the block editor also shows those controls. For example, an AC may expose fan mode, preset mode, swing mode, horizontal swing mode, or humidity. Velair only stores and sends options supported by the selected climate; unsupported options are omitted instead of being sent blindly.
 
@@ -925,6 +955,106 @@ blocks. Device limits are validated for each affected day before a complete save
 Day layouts survive Home Assistant restarts and portable exports. Older exports
 without a layout import with Individual days. Earlier custom layout references
 also open as Individual days, preserving every day's blocks and template links.
+
+## Target format by climate and mode
+
+Home Assistant reports support for single temperatures and temperature ranges,
+but does not provide a compatibility table for each HVAC mode. Under **Settings
+→ Managed climates**, each mixed-format climate has a **Modes with two setpoints**
+dropdown. Its closed summary shows the selected modes; open it to select or clear
+individual modes. Only modes advertised
+by that climate are offered, excluding Off. Heat/Cool is selected initially when
+available; other modes are not selected automatically. An empty selection is
+valid. Climates supporting only one format use that format without a selector.
+The help beside the label explains the limits of this setting. Changes still go
+through the incompatibility review before they are applied.
+
+This setting describes how Velair should send targets; it does not prove the
+physical device accepts or uses both values. The integration may reject or ignore
+a parameter. Velair reports known incompatibilities before saving and delivery
+errors when received. There is no automatic device test or mode switching probe.
+
+**Default**, each zone in **Profiles**, **Boost**, and the climate controls use
+this policy to show one or two fields for an explicit mode. Changing modes keeps
+separate temporary drafts for each format. Returning to a format restores the
+values typed during that edit; missing values must be completed. Velair does not
+invent a range or collapse two limits into a single target. These alternative
+drafts are not saved or recovered after a refresh.
+
+**Keep current mode** and **Temperature only** do not name an explicit mode. If
+the climate can use either format across its modes, choose the intended format
+in the block's Additional settings. The actual mode is validated again at
+execution. Temperature only does not activate or change the HVAC mode.
+
+### Formats in Templates and Presets
+
+For an explicit mode, Velair considers managed climates that advertise that mode:
+
+- If all use a single temperature, the editor shows one field.
+- If all use two setpoints, the editor shows two fields.
+- If both formats occur, the first action in Additional settings switches between
+  **Use two setpoints** and **Use one temperature**. New blocks start with one
+  temperature, except Heat/Cool, which starts with two.
+- With no compatible climates or uncertain capabilities, format choice remains
+  available instead of assuming agreement.
+
+Keep and Temperature only combine the possible effective modes. Heat/Cool also
+allows switching when actual destinations use different formats. The action uses
+the existing settings button on desktop and mobile; it adds no column beside the
+temperature fields. Linked preset values remain read-only until unlinked.
+
+Existing Templates and Presets retain their saved values when device settings
+change. A now-incompatible format is identified with an explicit correction action;
+opening an editor does not convert or remove its values. Assigning resources and
+copying schedules validate the format for each destination.
+
+### Reviewing changes to the mode policy
+
+Changing the selection first previews affected Default schedules, all Profiles,
+and uses of shared Templates or Presets. Corrections apply locally to the affected
+day and climate within Default or its Profile. Enter missing targets;
+Velair does not choose replacement temperatures. If an active Room Assist correction
+is incompatible with the new format, the review explains that saving will end it
+automatically. Room Assist settings are kept for compatible modes. Other incompatible
+temporary objectives must be resolved or ended before applying the change.
+
+The review groups affected days under Default or their Profile. After **Check
+changes**, groups and days are collapsed so their counts are easy to scan. Open a day to
+edit its blocks; only one day editor is expanded at a time. Large lists are
+split into pages. **Next item to review** takes you to the next correction,
+even on another page. Closing a section or changing pages preserves the values entered.
+Before the first review, only **Check changes** is offered alongside Cancel.
+After that review, **Save** replaces Check changes. Complete the required values
+and select Save: Velair validates the current corrections and blockers with the
+backend, then saves only if that validation succeeds. You do not need a separate
+second check. Validation, connection or storage errors keep the entered values.
+
+Adding or removing a two-setpoint mode while editing returns to Check changes
+and hides Save until the new selection has been reviewed. Existing temperature
+drafts are retained, including alternate single/range values when returning to a
+previous format. Only blocks affected by the current selection are corrected;
+blocks that are now compatible keep their original references.
+
+There is no correction-scope selector. Repairing a block that uses a Preset creates
+an inline local value for that block. Repairing a day linked to a Template removes
+that day's template link; its remaining blocks keep their existing values and
+unaffected Preset references. Other days keep their links. The review displays
+the unlinking consequence before saving. Templates, Presets and other destinations
+are not changed, so each affected day needs its own completed corrections.
+Future edits to the original resource no longer update the detached blocks or day.
+
+The review keeps the current configuration intact until the policy and corrections
+can be saved together. A concurrent edit requires a fresh review. Failed storage
+leaves the previous configuration in place. If a climate stops advertising a saved
+mode, Velair preserves the setting and reports it rather than silently deleting it.
+Room Assist is ended only after the settings have been saved successfully, without
+restoring its old target. Velair then applies the current nominal scheduled target;
+failed delivery uses normal recovery. A failed settings save leaves the previous
+correction and configuration intact.
+
+Selecting two setpoints for Heat, Cool or Auto does not enable Room Assist or
+Adaptive Preconditioning for them. Range thermal assistance remains limited to
+Heat/Cool; Planned Return still applies the nominal target at arrival.
 
 ## Timeline Editing
 
@@ -1010,9 +1140,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v19 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v19 exports; use a version that supports
-v19 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v22 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v22 exports; use a version that supports
+v22 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1290,14 +1420,14 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Current model 19 exports preserve both template link types, preset references
-and Preconditioning master relationships. Accepted master execution anchors
+Current model 22 exports preserve both template link types, preset references,
+Preconditioning master relationships and per-climate target-format policies. Accepted master execution anchors
 remain local and are not exported. Exporting
 schedules or Profiles includes required templates and presets, shown as additional
 selected sections. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 19 files. See
+remain importable; older Velair versions cannot import model 22 files. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 
 When importing, Velair lets you choose which sections to overwrite. Importing

@@ -416,6 +416,19 @@ export const climateCardStyles = css`
     .climate-card-preconditioning-preview { grid-template-columns: minmax(95px, .85fr) minmax(0, 1.4fr); }
     .overview-timeline-layout.climate-card-timeline-layout { --overview-timeline-name-column: 0px; --overview-timeline-sticky-left: 12px; grid-template-columns: minmax(640px, 1fr); min-width: 640px; }
   }
+  @container climate-card (max-width: 640px) {
+    .climate-card-control-surface:has(.climate-card-mode-control) > .climate-card-range-controls {
+      border-top: 1px solid var(--divider-color);
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .climate-card-control-surface:has(.climate-card-mode-control) > .climate-card-range-controls::before { display: none; }
+    .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-range-controls { grid-template-columns: minmax(0, 1fr); }
+    .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control {
+      border-top: 1px solid var(--divider-color);
+    }
+    .climate-card-control-surface:not(:has(.climate-card-mode-control)) > .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control::before { display: none; }
+  }
   @container climate-card (max-width: 520px) {
     .climate-card-control-toolbar { column-gap: 6px; }
     .climate-card-manual-control { padding: 7px; }
@@ -427,7 +440,6 @@ export const climateCardStyles = css`
     .climate-card-control-surface:not(:has(.climate-card-native-link)) { grid-template-columns: minmax(74px, 1fr) auto; }
     .climate-card-mode-control summary { gap: 5px; padding-inline: 6px; }
     .climate-card-native-link { width: 52px; }
-    .climate-card-range-controls { border-inline-start: 0; border-top: 1px solid var(--divider-color); grid-column: 1 / -1; grid-row: 2; }
     .climate-card-range-controls { grid-template-columns: minmax(0, 1fr); }
     .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control { border-inline-start: 0; border-top: 1px solid var(--divider-color); }
     .climate-card-range-controls::before, .climate-card-range-controls > .climate-card-target-control + .climate-card-target-control::before { display: none; }

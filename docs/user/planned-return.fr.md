@@ -9,8 +9,8 @@ Traductions: [Original en anglais](planned-return.md) · [Español](planned-retu
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.3 |
-| Dernière synchronisation | 2026-10-21 |
+| Version de référence | 1.9.0-beta.5 |
+| Dernière synchronisation | 2026-10-24 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -378,9 +378,7 @@ de blocs temporaires.
 À l’heure prévue, Velair sélectionne la destination et continue sa programmation habituelle.
 Un signal d’occupation précoce sélectionne immédiatement la destination une fois le départ surveillé confirmé. Une arrivée tardive ne
 remet pas le logement en Absence. Pauses, Forçage, Réglage manuel, zones désactivées et planificateur
-arrêté gardent leurs conditions existantes de transmission. La préparation prend en charge le chauffage,
-le refroidissement et plages natives de température. Elle vise à rapprocher la pièce de la consigne ;
-elle ne peut pas garantir une température exacte.
+arrêté gardent leurs conditions existantes de transmission. La préparation prend en charge le chauffage, le refroidissement et les plages natives `heat_cool`. Elle vise à rapprocher la pièce de la cible sans garantir une température exacte. Les entités n’acceptant que des plages en Chauffage, Refroidissement ou Auto agissent uniquement à l’arrivée : Velair applique les deux limites à l’arrivée sans préparation anticipée ni apprentissage thermique pour cette cible. La préparation des pièces explique cette limite ; les réglages enregistrés restent disponibles pour les cibles compatibles.
 
 <a id="preparation-and-room-assist"></a>
 ### Préparation et Room Assist

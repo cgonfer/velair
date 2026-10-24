@@ -8,8 +8,8 @@ Traduções: [Original em inglês](linked-schedules.md) · [Español](linked-sch
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -29,7 +29,9 @@ Uma predefinição de bloco do Velair tem um nome e a mesma configuração de cl
 
 As predefinições pertencem a uma biblioteca partilhada. Cada destino é verificado em relação ao termóstato e, quando aplicável, ao controlador externo da programação. Uma opção omitida não é enviada; omitir uma configuração de ventoinha não redefine a ventoinha do termóstato.
 
-Gira a biblioteca em **Modelos → Predefinições climáticas**. O seletor da biblioteca explica modelos diários e predefinições partilhadas. Utilize o botão de adicionar no cabeçalho da lista para criar uma predefinição. Uma biblioteca vazia mantém a mesma disposição de lista e detalhes. Selecione uma predefinição existente para examiná-la; alterações não guardadas aparecem apenas depois de mudar o nome ou as definições. A verificação opcional de compatibilidade não marca a predefinição como editada. As utilizações aparecem apenas para consulta. O editor não exige um termóstato: escolha aquecimento ou arrefecimento, temperatura única ou intervalo e opções do dispositivo. Uma verificação opcional de termóstato permite visualizar a compatibilidade sem alterar os valores partilhados. Cada uso real é validado pelo backend antes de guardar.
+Gira a biblioteca em **Modelos → Predefinições climáticas**. O seletor da biblioteca explica modelos diários e predefinições partilhadas. Utilize o botão de adicionar no cabeçalho da lista para criar uma predefinição. Uma biblioteca vazia mantém a mesma disposição de lista e detalhes. Selecione uma predefinição existente para examiná-la; alterações não guardadas aparecem apenas depois de mudar o nome ou as definições. A verificação opcional de compatibilidade não marca a predefinição como editada. As utilizações aparecem apenas para consulta. O editor não exige um termóstato: escolha aquecimento ou arrefecimento e opções do dispositivo. Uma verificação opcional de termóstato permite visualizar a compatibilidade sem alterar os valores partilhados. Cada uso real é validado pelo backend antes de guardar.
+
+Os campos de alvo seguem os formatos configurados nos equipamentos geridos que oferecem o modo escolhido. Se ocorrem ambos os formatos, usa a primeira ação em **Configurações adicionais** para alternar entre uma temperatura e dois valores alvo. Se todos os destinos concordam, só esse formato é oferecido; capacidades desconhecidas ou ausência de destinos mantêm a escolha disponível. Aquecimento/Arrefecimento começa com dois valores, mas pode usar um se os destinos o suportarem. Manter e Apenas temperatura consideram todos os modos efetivos possíveis. Consulta as [definições de formato do alvo](usage.pt-pt.md#target-format-by-climate-and-mode).
 
 Guarde a predefinição pelo ícone ao lado do nome. Editar preserva a sua posição na biblioteca, inclusive após recarregar; novas predefinições são adicionadas no fim. Campos de temperatura aceitam ponto ou vírgula decimal, como `21.5` ou `21,5`, inclusive nos dois limites de um intervalo nativo. O editor preserva o que introduz e envia valores numéricos ao visualizar ou guardar. A verificação opcional de compatibilidade mostra as definições efetivas para um termóstato selecionado, com resultado separado de sucesso ou erro. Verificar a compatibilidade não guarda a predefinição nem altera o seu estado de alterações não guardadas.
 

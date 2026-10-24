@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](linked-schedules.md) · [Español](linked-sc
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.0-beta.5 |
+| Última sincronización | 2026-10-24 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -33,7 +33,7 @@ Los presets pertenecen a una biblioteca compartida. Cada destino se comprueba fr
 
 Gestiona la biblioteca compartida en **Plantillas → Presets climáticos**. El selector de bibliotecas explica tanto las plantillas diarias como los presets climáticos compartidos. Utiliza el botón de añadir del encabezado de la lista para crear un preset.
 Una biblioteca vacía conserva la misma disposición de lista y detalle.
-Selecciona un preset existente para consultarlo; los cambios sin guardar solo se muestran después de cambiar su nombre o ajustes climáticos. La comprobación opcional de compatibilidad no marca el preset como editado. Los usos se muestran como información de solo lectura. El editor no requiere un termostato: elige ajustes de calefacción o refrigeración, un objetivo único o intervalo y ajustes opcionales del dispositivo. Una comprobación opcional con un termostato ofrece una vista previa de compatibilidad sin cambiar los valores compartidos. El backend valida todos los usos reales antes de guardar.
+Selecciona un preset existente para consultarlo; los cambios sin guardar solo se muestran después de cambiar su nombre o ajustes climáticos. La comprobación opcional de compatibilidad no marca el preset como editado. Los usos se muestran como información de solo lectura. El editor no requiere un termostato: elige ajustes de calefacción o refrigeración y opciones del dispositivo. Los campos de temperatura siguen los formatos configurados en los equipos gestionados que ofrecen ese modo. Si existen ambos formatos, la primera acción de **Ajustes adicionales** alterna entre una temperatura y dos consignas. Si todos los destinos coinciden, solo se ofrece ese formato; capacidades desconocidas o ningún destino mantienen disponible la elección. Calor/Frío propone dos consignas, pero permite una si los destinos la admiten. Mantener y Solo temperatura consideran todos los modos efectivos posibles. Consulta los [ajustes de formato de temperatura](usage.es.md#target-format-by-climate-and-mode). Una comprobación opcional con un termostato ofrece una vista previa de compatibilidad sin cambiar los valores compartidos. El backend valida todos los usos reales antes de guardar.
 
 Guarda un preset con el icono situado junto a su nombre. Editarlo conserva su posición en la biblioteca, incluso después de recargar; los presets nuevos se añaden al final. Los campos de temperatura aceptan punto o coma decimal (por ejemplo, `21.5` o `21,5`), incluidos ambos límites de un intervalo nativo. El editor conserva lo que escribes mientras introduces datos y envía valores numéricos al previsualizar o guardar. La comprobación opcional de compatibilidad muestra los ajustes efectivos de un termostato seleccionado, con un resultado independiente de éxito o error. Comprobar la compatibilidad no guarda el preset ni cambia su estado de cambios sin guardar.
 

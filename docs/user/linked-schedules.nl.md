@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](linked-schedules.md) · [Español](linked-schedu
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -31,7 +31,7 @@ Presets horen bij een gedeelde bibliotheek. Elke bestemming wordt gecontroleerd 
 
 Beheer de bibliotheek onder **Sjablonen → Klimaatpresets**. De bibliotheekkiezer legt dagsjablonen en gedeelde klimaatpresets uit. Maak een preset met de toevoegknop bij de lijstkop. Een lege bibliotheek behoudt dezelfde lijst-/detailindeling. Selecteer een bestaande preset om die te bekijken; niet-opgeslagen wijzigingen verschijnen pas na wijziging van naam of klimaatinstellingen. De optionele compatibiliteitscontrole markeert de preset niet als bewerkt. Gebruik wordt als alleen-lezeninformatie getoond.
 
-De editor vereist geen thermostaat: kies verwarming of koeling, één doel of bereik en optionele apparaatinstellingen. Een optionele thermostaatcontrole toont compatibiliteit zonder gedeelde waarden te wijzigen. De backend controleert elke daadwerkelijke toepassing vóór opslaan.
+De editor vereist geen thermostaat: kies verwarming of koeling en optionele apparaatinstellingen. Doelvelden volgen de formaten die zijn ingesteld voor beheerde klimaatentiteiten met de gekozen modus. Als beide formaten voorkomen, wisselt de eerste actie in **Aanvullende instellingen** tussen **Eén temperatuur gebruiken** en **Twee instelpunten gebruiken**. Bij overeenstemming is alleen dat formaat beschikbaar; onbekende mogelijkheden of geen bestemmingen laten de keuze open. Verwarmen/koelen begint met twee instelpunten, maar kan er één gebruiken als bestemmingen dat ondersteunen. Huidige modus behouden en Alleen temperatuur nemen alle mogelijke effectieve modi mee. Zie [doelformaatinstellingen](usage.nl.md#target-format-by-climate-and-mode). Een optionele thermostaatcontrole toont compatibiliteit zonder gedeelde waarden te wijzigen. De backend controleert elke daadwerkelijke toepassing vóór opslaan.
 
 Sla een preset op met het pictogram naast de naam. Bewerken behoudt de bibliotheekpositie, ook na herladen; nieuwe presets komen achteraan. Temperatuurvelden accepteren punt of komma, bijvoorbeeld `21.5` of `21,5`, ook voor beide bereikgrenzen. De editor behoudt je invoer tijdens typen en verstuurt getallen bij voorvertonen of opslaan. De compatibiliteitscontrole toont effectieve instellingen voor de gekozen thermostaat met een afzonderlijk succes- of foutresultaat. Controleren slaat niet op en verandert de niet-opgeslagen status niet.
 

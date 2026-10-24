@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](README.md) · [Español](README.es.md) · [Fr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.5 |
+| Ultima sincronizzazione | 2026-10-24 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -38,6 +38,7 @@ La documentazione di Velair è organizzata per destinatari e argomento.
 - [Precondizionamento adattivo](user/adaptive-preconditioning.it.md): anticipare gli obiettivi di comfort programmati grazie all’apprendimento locale.
 - [Rientro pianificato](user/planned-return.it.md): configurare l’assenza in base alla presenza e rientri settimanali o occasionali, con esempi di annullamento prima e dopo la partenza confermata.
 - [Room Assist](user/room-assist.it.md): usare un sensore di temperatura ambiente separato per valvole termostatiche, termostati e climatizzatori.
+- [Controllo alimentazione](user/shared-climate-supply.it.md): controllare un interruttore condiviso di riscaldamento o raffrescamento secondo la richiesta stimata delle stanze, con isteresi dell’alimentazione ed eccezioni per termostato.
 - [Invio affidabile dei comandi climatici](user/resilient-climate-delivery.it.md): comprendere i tentativi differiti e il comportamento alla riconnessione quando un dispositivo climatico non è temporaneamente disponibile.
 - [Comfort ambientale](user/comfort.it.md): comprendere temperatura, umidità, qualità dell’aria legata alla CO2 e aggiornamento delle letture attraverso valutazioni locali delle stanze.
 - [Unità di temperatura e migrazione](user/temperature-units.it.md): comprendere valori predefiniti Celsius/Fahrenheit, aggiornamenti, migrazione, importazione/esportazione e ripristino.

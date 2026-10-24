@@ -45,7 +45,7 @@ keeps its external setting until Manual adjustment ends.
 Velair observes these control fields on managed climates:
 
 - `hvac_mode`, represented by the climate entity state, including `off`, `heat`,
-  `cool`, and `heat_cool`;
+  `cool`, `auto`, and `heat_cool`;
 - `temperature` for a scalar target;
 - `target_temp_low` and `target_temp_high` for a native range target.
 
@@ -268,6 +268,15 @@ several compatible modes; Velair uses their advertised order and does not infer
 heating or cooling from season, geography, or the numeric target. Set an
 explicit HVAC mode in the block when that choice must be deterministic.
 
+For an entity that only accepts ranges, the compatible running modes are its
+advertised `heat`, `cool`, `auto`, and `heat_cool` modes. Keep from Off uses the
+first of those modes in advertised order. Entities supporting both temperature
+formats use their saved [target-format mode policy](usage.md#target-format-by-climate-and-mode)
+to determine compatible modes, retaining the preference for `heat_cool` when
+resuming a compatible range from Off.
+Temperature only can write both limits while off if range support and a compatible
+mode are advertised; it never activates the climate to make that write possible.
+
 For an option-only block, resuming applies only its selected climate controls.
 It does not send a temperature or turn on a climate that is off.
 
@@ -437,6 +446,11 @@ Velair detects `target_temp_low` and `target_temp_high`, captures the complete
 `heat_cool` state, and preserves `19–24 °C` during Manual adjustment. On resume
 it applies the complete range from the current authoritative block. It never
 collapses the range into a scalar target.
+
+The same complete-pair capture and restoration applies to range-only entities
+in Heat, Cool and Auto. A residual `temperature` attribute does not replace their
+two limits. If the observed pair is incomplete or invalid, Velair does not invent
+a restorable target from that scalar attribute.
 
 ### Independent window pause while manual
 

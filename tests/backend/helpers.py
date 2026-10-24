@@ -418,6 +418,8 @@ class FakeClimateManager:
             return current_mode
         modes = [mode for mode in self.supported_hvac_modes(entity_id) if mode != "off"]
         if range_target:
+            if self.requires_range_target(entity_id):
+                return next((mode for mode in modes if self.supports_range_in_mode(entity_id, mode)), None)
             return "heat_cool" if "heat_cool" in modes else None
         for mode in modes:
             if mode != "heat_cool" or self.supports_single_temperature_target(
@@ -443,6 +445,12 @@ class FakeClimateManager:
     def supports_temperature_range_target(self, entity_id: str) -> bool:
         return self.temperature_range_support.get(entity_id, False)
 
+    def requires_range_target(self, entity_id: str) -> bool:
+        return self.supports_temperature_range_target(entity_id) and not self.supports_single_temperature_target(entity_id, None)
+
+    def supports_range_in_mode(self, entity_id: str, mode: str | None) -> bool:
+        return mode in ({"heat", "cool", "auto", "heat_cool"} if self.requires_range_target(entity_id) else {"heat_cool"})
+
     def validate_temperature_target(
         self,
         entity_id: str,
@@ -454,7 +462,7 @@ class FakeClimateManager:
         if range_target:
             if not self.supports_temperature_range_target(entity_id):
                 raise ValueError(f"{entity_id} does not support a temperature range target")
-            if hvac_mode is not None and hvac_mode != "heat_cool":
+            if hvac_mode is not None and not self.supports_range_in_mode(entity_id, hvac_mode):
                 raise ValueError(
                     f"{entity_id} cannot apply a temperature range while in {hvac_mode} mode"
                 )
@@ -484,7 +492,7 @@ class FakeClimateManager:
         if range_target:
             if not self.supports_temperature_range_target(entity_id):
                 raise ValueError(f"{entity_id} does not support a temperature range target")
-            if "heat_cool" not in candidates:
+            if not any(self.supports_range_in_mode(entity_id, mode) for mode in candidates):
                 raise ValueError(f"{entity_id} has no compatible range target mode")
             return
         compatible = any(

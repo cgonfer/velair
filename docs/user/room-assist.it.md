@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.2 |
-| Ultima sincronizzazione | 2026-10-17 |
+| Versione di riferimento | 1.9.0-beta.5 |
+| Ultima sincronizzazione | 2026-10-24 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -39,6 +39,8 @@ Per un obiettivo singolo in `heat` o `cool` fisso, una fascia di tolleranza dive
 Gli obiettivi singoli `auto` e `heat_cool` e gli intervalli nativi `heat_cool` mantengono il comportamento neutro o di margine dell’intervallo. Velair non forza queste modalità ad alternare attivamente riscaldamento e raffrescamento attraverso un ciclo di isteresi a obiettivo singolo.
 
 L’entità climatica resta l’attuatore. Velair non crea un’entità climatica virtuale e non aggira il firmware. Se termostato o valvola permettono il collegamento diretto di un sensore ambiente separato, questa opzione nativa del dispositivo resta normalmente la scelta preferibile.
+
+Le entità che accettano solo intervalli possono anche ricevere coppie programmate in Caldo, Freddo e Auto. Room Assist non modifica queste coppie: l’assistenza agli intervalli richiede `heat_cool`. Lo stato attuale spiega il limite e Velair invia la coppia nominale senza spostamento. Le impostazioni Room Assist restano disponibili per obiettivi compatibili. Passare da un obiettivo assistito a uno di questi intervalli cancella l’assistenza precedente senza ripristinare un vecchio obiettivo corretto sopra la nuova coppia.
 
 <a id="setup"></a>
 ## Configurazione

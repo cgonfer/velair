@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](README.md) · [Español](README.es.md) · [F
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.5 |
+| Última sincronización | 2026-10-24 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -40,6 +40,7 @@ La documentación de Velair se agrupa por destinatarios y temas.
 - [Preacondicionamiento adaptativo](user/adaptive-preconditioning.es.md): adelanta el inicio de los objetivos de confort programados con aprendizaje local.
 - [Regreso a casa](user/planned-return.es.md): configura ausencias según la ocupación y llegadas semanales o puntuales, con ejemplos de cancelación antes y después de confirmar la salida.
 - [Room Assist](user/room-assist.es.md): utiliza un sensor de temperatura ambiente independiente para válvulas termostáticas, termostatos y equipos de aire acondicionado.
+- [Control de suministro](user/shared-climate-supply.es.md): controla un interruptor compartido de calefacción o refrigeración según la demanda estimada de las habitaciones, con histéresis del suministro y excepciones por termostato.
 - [Entrega resiliente de órdenes de climatización](user/resilient-climate-delivery.es.md): comprende los reintentos diferidos y la reconexión cuando un equipo no está disponible temporalmente.
 - [Confort ambiental](user/comfort.es.md): comprende la temperatura, humedad, calidad del aire por CO2 y vigencia de las lecturas mediante evaluaciones locales de las habitaciones.
 - [Unidades de temperatura y migración](user/temperature-units.es.md): comprende los valores predeterminados en Celsius/Fahrenheit, actualizaciones, migración, importación/exportación y recuperación.

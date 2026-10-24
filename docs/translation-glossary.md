@@ -56,6 +56,50 @@ English remains the canonical source. Synchronization and linguistic review are 
 
 Literal control names follow the interface even when a locale still displays an English label. Narrative wording may use a natural localized term and explain that label. Blueprint form labels remain English unless the blueprint itself provides a translation.
 
+## Supply control terminology
+
+The panel tab is **Supply control**; **Shared climate supply** is the full feature
+name. Its list is **Shared supplies** and each entry is a **supply**. Reserve
+general thermostat groups for other grouping features. The localized labels below
+match the maintained panel controls. Backend identifiers such as
+`shared_demand_groups`, `groups` and `group_id` retain their literal spelling.
+
+| Language | Supply control | Shared climate supply | Shared supplies |
+| --- | --- | --- | --- |
+| Spanish | Control de suministro | Suministro climático compartido | Suministros compartidos |
+| French | Contrôle de l’alimentation | Alimentation climatique partagée | Alimentations partagées |
+| German | Versorgungssteuerung | Gemeinsame Klimaversorgung | Gemeinsame Versorgungen |
+| Italian | Controllo alimentazione | Alimentazione climatica condivisa | Alimentazioni condivise |
+| Dutch | Toevoerregeling | Gedeelde klimaattoevoer | Gedeelde toevoeren |
+| Polish | Sterowanie zasilaniem | Wspólne zasilanie klimatyzacji | Wspólne zasilania |
+| Portuguese (Brazil) | Controle do fornecimento | Fornecimento de climatização compartilhado | Fornecimentos compartilhados |
+| Portuguese (Portugal) | Controlo do fornecimento | Fornecimento de climatização partilhado | Fornecimentos partilhados |
+| Russian | Управление подачей | Общая подача для климатических устройств | Общие источники подачи |
+
+| Language | Supply name | Add supply | Remove supply | Save supplies |
+| --- | --- | --- | --- | --- |
+| Spanish | Nombre del suministro | Añadir suministro | Eliminar suministro | Guardar suministros |
+| French | Nom de l’alimentation | Ajouter une alimentation | Supprimer l’alimentation | Enregistrer les alimentations |
+| German | Versorgungsname | Versorgung hinzufügen | Versorgung entfernen | Versorgungen speichern |
+| Italian | Nome dell’alimentazione | Aggiungi alimentazione | Elimina alimentazione | Salva alimentazioni |
+| Dutch | Toevoernaam | Toevoer toevoegen | Toevoer verwijderen | Toevoeren opslaan |
+| Polish | Nazwa zasilania | Dodaj zasilanie | Usuń zasilanie | Zapisz zasilania |
+| Portuguese (Brazil) | Nome do fornecimento | Adicionar fornecimento | Remover fornecimento | Salvar fornecimentos |
+| Portuguese (Portugal) | Nome do fornecimento | Adicionar fornecimento | Remover fornecimento | Guardar fornecimentos |
+| Russian | Название источника подачи | Добавить источник подачи | Удалить источник подачи | Сохранить источники подачи |
+
+| Language | Use supply hysteresis | Custom hysteresis values |
+| --- | --- | --- |
+| Spanish | Usar histéresis del suministro | Valores de histéresis personalizados |
+| French | Utiliser l’hystérésis de l’alimentation | Valeurs d’hystérésis personnalisées |
+| German | Versorgungshysterese verwenden | Eigene Hysteresewerte |
+| Italian | Usa isteresi dell’alimentazione | Valori di isteresi personalizzati |
+| Dutch | Toevoerhysterese gebruiken | Aangepaste hysteresewaarden |
+| Polish | Użyj histerezy zasilania | Własne wartości histerezy |
+| Portuguese (Brazil) | Usar histerese do fornecimento | Valores de histerese personalizados |
+| Portuguese (Portugal) | Usar histerese do fornecimento | Valores de histerese personalizados |
+| Russian | Использовать гистерезис источника подачи | Свои значения гистерезиса |
+
 ## German
 
 | English | German |

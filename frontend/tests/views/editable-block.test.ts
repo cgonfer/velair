@@ -439,8 +439,8 @@ describe("editable schedule block view", () => {
     render(renderEditableBlock(viewHost, block("cool"), 0, "schedule"), container);
     await Promise.resolve();
 
-    expect(container.querySelector(".climate-options-toggle")).toBeNull();
-    expect(container.querySelector(".advanced-climate-options-placeholder")).not.toBeNull();
+    expect(container.querySelector(".climate-options-toggle")).not.toBeNull();
+    expect(container.querySelector(".target-format-action")).not.toBeNull();
   });
 
   it("limits the optional climate controls popover width on wide screens", async () => {
@@ -527,4 +527,22 @@ describe("editable schedule block view", () => {
     expect(details.style.getPropertyValue("--climate-options-translate-y")).toBe("0");
     expect(details.style.getPropertyValue("--climate-options-width")).toBe("358px");
   });
+});
+
+it("offers explicit target format selection for templates and mixed devices, with neutral range labels", () => {
+  const viewHost = host();
+  const container = document.createElement("div");
+  const range = { action: ACTION_SET_TEMPERATURE, start: "08:00", hvac_mode: "heat",
+    target_temp_low: 19, target_temp_high: 24 };
+  render(renderEditableBlock(viewHost as any, range, 0, "template"), container);
+  const selector = container.querySelector<HTMLButtonElement>(".target-format-action")!;
+  expect(selector.textContent).toContain("useSingleTarget");
+  selector.click();
+  expect(viewHost._updateDraftBlock).toHaveBeenCalledWith(0, "action", "target_scalar", "template");
+  expect([...container.querySelectorAll<HTMLInputElement>(".temperature-range-fields input")].map(input => input.getAttribute("aria-label")))
+    .toEqual(["climateCardLowerTarget (°C)", "climateCardUpperTarget (°C)"]);
+  const mixedHost = { ...viewHost, _selectedEntity: "climate.office",
+    hass: { states: { "climate.office": { state: "heat", attributes: { supported_features: 3 } } } } };
+  render(renderEditableBlock(mixedHost as any, range, 0), container);
+  expect(container.querySelector(".target-format-action")).not.toBeNull();
 });

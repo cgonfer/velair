@@ -8,8 +8,8 @@ Traduções: [Original em inglês](planned-return.md) · [Español](planned-retu
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.3 |
-| Última sincronização | 2026-10-21 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -185,7 +185,9 @@ Por exemplo, configure de segunda a sexta-feira às 18:15. Depois de a casa perm
 
 O alvo é o bloco efetivo **na chegada**, incluindo a continuidade semanal. Se a programação de presença pedir 17 graus antes de 18:00 e 21 graus depois, um regresso às 18:15 prepara 21 graus mesmo que a preparação comece antes de 18:00. A programação semanal não é editada nem preenchida com blocos temporários.
 
-No horário esperado, o Velair seleciona o destino e continua a sua programação normal. Um sinal antecipado de presença seleciona o destino imediatamente depois de a saída monitorizada ter sido confirmada. Uma chegada atrasada não muda a casa de volta para o Modo de ausência. Pausas, Reforço, Ajuste manual, zonas desativadas e um agendador parado mantêm as suas restrições existentes de aplicação. A preparação aceita aquecimento, arrefecimento e intervalos nativos de temperatura. O seu objetivo é aproximar o ambiente do alvo; não pode garantir uma temperatura exata.
+No horário esperado, o Velair seleciona o destino e continua a sua programação normal. Um sinal antecipado de presença seleciona o destino imediatamente depois de a saída monitorizada ter sido confirmada. Uma chegada atrasada não muda a casa de volta para o Modo de ausência. Pausas, Reforço, Ajuste manual, zonas desativadas e um agendador parado mantêm as suas restrições existentes de aplicação. A preparação aceita aquecimento, arrefecimento e intervalos nativos `heat_cool`. O seu objetivo é aproximar o ambiente do alvo; não pode garantir uma temperatura exata.
+
+Uma entidade pode exigir ambos os limites em Aquecimento, Arrefecimento ou Auto sem suportar `heat_cool`. O Velair programa e entrega esses alvos, mas não antecipa o início nem recolhe amostras de aprendizagem térmica para eles. A vista de preparação explica que esta funcionalidade exige Aquecimento/Arrefecimento para intervalos. O par programado permanece inalterado e o Regresso planeado aplica-o na chegada, sem preparação antecipada. Ativar o pré-condicionamento não elimina esta limitação.
 
 <a id="preparation-and-room-assist"></a>
 ### Preparação e Room Assist

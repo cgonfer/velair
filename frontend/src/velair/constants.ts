@@ -29,6 +29,7 @@ export const PANEL_VIEWS: VelairPanelView[] = [
   "schedules",
   "modes",
   "templates",
+  "supply-control",
   "sensors",
   "comfort",
   "preconditioning",
@@ -51,7 +52,7 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "planned-return",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 19;
+export const PORTABLE_MODEL_VERSION = 22;
 export const PORTABLE_SECTIONS: PortableSection[] = [
   "planned_return",
   "zones",

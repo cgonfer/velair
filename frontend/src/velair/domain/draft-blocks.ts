@@ -1,3 +1,4 @@
+import { carryTargetDraft, changeDraftTargetFormat } from "./target-format-policy";
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import type { DraftScheduleBlock, NormalizedBlocks, ScheduleBlock } from "../types";
 import { temperatureMatchesStep } from "./climate";
@@ -51,7 +52,7 @@ export function draftBlocksFromScheduleBlocks(blocks: ScheduleBlock[], unit?: st
     if (block.humidity != null) {
       draft.humidity = block.humidity;
     }
-    return draft;
+    return carryTargetDraft(block as DraftScheduleBlock, draft);
   });
 }
 
@@ -110,6 +111,10 @@ export function updateDraftBlock(
         hvac_mode: value === "off" ? "" : value,
         temperature_only: undefined,
       };
+    }
+
+    if (field === "action" && (value === "target_range" || value === "target_scalar")) {
+      return changeDraftTargetFormat(block, value === "target_range" ? "range" : "single");
     }
 
     if (field === "action") {

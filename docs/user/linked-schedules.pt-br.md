@@ -8,8 +8,8 @@ Traduções: [Original em inglês](linked-schedules.md) · [Español](linked-sch
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -29,7 +29,9 @@ Uma predefinição de bloco do Velair tem um nome e a mesma configuração de cl
 
 As predefinições pertencem a uma biblioteca compartilhada. Cada destino é verificado em relação ao termostato e, quando aplicável, ao controlador externo da programação. Uma opção omitida não é enviada; omitir uma configuração de ventilador não redefine o ventilador do termostato.
 
-Gerencie a biblioteca em **Modelos → Predefinições climáticas**. O seletor da biblioteca explica modelos diários e predefinições compartilhadas. Use o botão de adicionar no cabeçalho da lista para criar uma predefinição. Uma biblioteca vazia mantém o mesmo layout de lista e detalhes. Selecione uma predefinição existente para examiná-la; alterações não salvas aparecem apenas depois de mudar o nome ou as configurações. A verificação opcional de compatibilidade não marca a predefinição como editada. Os usos aparecem apenas para consulta. O editor não exige um termostato: escolha aquecimento ou resfriamento, temperatura única ou faixa e opções do dispositivo. Uma verificação opcional de termostato permite visualizar a compatibilidade sem alterar os valores compartilhados. Cada uso real é validado pelo backend antes de salvar.
+Gerencie a biblioteca em **Modelos → Predefinições climáticas**. O seletor da biblioteca explica modelos diários e predefinições compartilhadas. Use o botão de adicionar no cabeçalho da lista para criar uma predefinição. Uma biblioteca vazia mantém o mesmo layout de lista e detalhes. Selecione uma predefinição existente para examiná-la; alterações não salvas aparecem apenas depois de mudar o nome ou as configurações. A verificação opcional de compatibilidade não marca a predefinição como editada. Os usos aparecem apenas para consulta. O editor não exige um termostato: escolha aquecimento ou resfriamento e opções do dispositivo. Uma verificação opcional de termostato permite visualizar a compatibilidade sem alterar os valores compartilhados. Cada uso real é validado pelo backend antes de salvar.
+
+Os campos de alvo seguem os formatos configurados nos equipamentos gerenciados que oferecem o modo escolhido. Se ocorrem ambos os formatos, use a primeira ação em **Configurações adicionais** para alternar entre uma temperatura e dois valores alvo. Se todos os destinos concordam, só esse formato é oferecido; capacidades desconhecidas ou ausência de destinos mantêm a escolha disponível. Aquecimento/Resfriamento começa com dois valores, mas pode usar um se os destinos o suportarem. Manter e Somente temperatura consideram todos os modos efetivos possíveis. Consulta as [configurações de formato do alvo](usage.pt-br.md#target-format-by-climate-and-mode).
 
 Salve a predefinição pelo ícone ao lado do nome. Editar preserva sua posição na biblioteca, inclusive após recarregar; novas predefinições são adicionadas ao final. Campos de temperatura aceitam ponto ou vírgula decimal, como `21.5` ou `21,5`, inclusive nos dois limites de uma faixa nativa. O editor preserva o que você digita e envia valores numéricos ao visualizar ou salvar. A verificação opcional de compatibilidade mostra as configurações efetivas para um termostato selecionado, com resultado separado de sucesso ou erro. Verificar a compatibilidade não salva a predefinição nem altera seu estado de alterações não salvas.
 

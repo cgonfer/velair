@@ -7,14 +7,14 @@ import {
   updateDraftBlock as updateDraftBlockDomain,
 } from "../domain/draft-blocks";
 import { toggleSetValue } from "../domain/settings";
-import { climateSupportsRangeTarget, climateSupportsSingleTarget } from "../domain/climate";
-import { draftBlockUsesRange } from "../domain/draft-blocks";
+import { changeDraftTargetFormat, editorTargetFormats, initializeDraftTargetFormat, reconcileDraftTargetFormat } from "../domain/target-format-policy";
 import { sortDraftBlocksByStart } from "../domain/timeline";
 import { cloneDayPresetTargets, type CloneDayPreset } from "../domain/schedule-editor";
 import type { BlockDraftSource, DraftScheduleBlock, ScheduleResponse } from "../types";
 
 type DraftActionsHost = {
   _draftTemplateLink?: import("../types").TemplateLink;
+  _targetFormatEntityId?: string;
   readonly hass?: import("../types").HomeAssistant;
   _copyTargets: Set<string>;
   _data?: ScheduleResponse;
@@ -43,16 +43,11 @@ export function addBlock(host: DraftActionsHost, source: BlockDraftSource = "sch
     updated = updated.map((block, index) => index === updated.length - 1
       ? { ...block, slot_id: `slot_${newTemplateKey()}` } : block);
   }
-  const state = source === "schedule" && host._selectedEntity
-    ? host.hass?.states?.[host._selectedEntity]
-    : undefined;
-  if (!blocks.length && climateSupportsRangeTarget(state) && !climateSupportsSingleTarget(state)) {
-    updated = updated.map((block, index) => index === updated.length - 1 ? {
-      ...block,
-      temperature: undefined,
-      target_temp_low: state?.attributes?.target_temp_low ?? "",
-      target_temp_high: state?.attributes?.target_temp_high ?? "",
-    } : block);
+  const added = updated.at(-1);
+  if (added) {
+    const entityId = host._targetFormatEntityId ?? (source === "schedule" ? host._selectedEntity : undefined);
+    const choice = editorTargetFormats(host._data, host.hass?.states, entityId);
+    updated[updated.length - 1] = initializeDraftTargetFormat(added, choice, entityId ? host.hass?.states?.[entityId] : undefined);
   }
   host._setBlocksForSource(source, updated);
   host._markBlocksDirty(source);
@@ -80,32 +75,16 @@ export function updateDraftBlock(
   }
 
   let updated = updateDraftBlockDomain(blocks, index, field, value);
-  if (field === "hvac_mode") {
+  updated = updated.map((block, blockIndex) => {
+    if (blockIndex !== index) return block;
     const previous = blocks[index];
-    const state = source === "schedule" && host._selectedEntity
-      ? host.hass?.states?.[host._selectedEntity]
-      : undefined;
-    const supportsRange = source === "template" || climateSupportsRangeTarget(state);
-    if (value === "heat_cool" && previous.hvac_mode !== "heat_cool" && supportsRange && !draftBlockUsesRange(previous)) {
-      updated = updated.map((block, blockIndex) => blockIndex === index ? {
-        ...block,
-        temperature: undefined,
-        target_temp_low: state?.attributes?.target_temp_low ?? "",
-        target_temp_high: state?.attributes?.target_temp_high ?? "",
-      } : block);
-    } else if (
-      value !== ""
-      && value !== "heat_cool"
-      && draftBlockUsesRange(previous)
-    ) {
-      updated = updated.map((block, blockIndex) => blockIndex === index ? {
-        ...block,
-        target_temp_low: undefined,
-        target_temp_high: undefined,
-        temperature: state?.attributes?.temperature ?? "",
-      } : block);
-    }
-  }
+    if (field !== "hvac_mode") return block;
+    const entityId = host._targetFormatEntityId ?? (source === "schedule" ? host._selectedEntity : undefined);
+    const choice = editorTargetFormats(host._data, host.hass?.states, entityId, block.hvac_mode || undefined);
+    return !entityId && block.hvac_mode === "heat_cool" && block.hvac_mode !== previous.hvac_mode
+      ? changeDraftTargetFormat(block, choice.preferred)
+      : reconcileDraftTargetFormat(previous, block, choice);
+  });
   host._setBlocksForSource(source, updated);
   host._markBlocksDirty(source);
   host._saveMessage = undefined;

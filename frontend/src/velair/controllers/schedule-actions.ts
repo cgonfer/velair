@@ -282,22 +282,10 @@ export function unsupportedModeError(
     if (!capabilities?.supports_temperature_only) return host._t("profileExternalUnsupportedBlock", { climate: host._friendlyEntityName(entityId) });
   }
   const state = host.hass?.states?.[entityId];
-  const unsupportedRangeMode = blocks.find((block) =>
-    block.action === ACTION_SET_TEMPERATURE
-    && (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
-    && block.hvac_mode !== undefined
-    && block.hvac_mode !== "heat_cool");
-  if (unsupportedRangeMode?.hvac_mode) {
-    return host._t("unsupportedModeForClimate", {
-      entity: host._friendlyEntityName(entityId),
-      mode: host._modeLabel(unsupportedRangeMode.hvac_mode),
-      start: unsupportedRangeMode.start,
-    });
-  }
   const unsupportedRange = blocks.find((block) =>
     block.action === ACTION_SET_TEMPERATURE
     && (block.target_temp_low !== undefined || block.target_temp_high !== undefined)
-    && !climateTargetCompatibleForConfiguration(state, "range", block.hvac_mode));
+    && !climateTargetCompatibleForConfiguration(state, "range", block.hvac_mode, host._data?.zones[entityId]?.target_format_policy));
   if (unsupportedRange) {
     return host._t("unsupportedRangeTargetForClimate", {
       entity: host._friendlyEntityName(entityId),
@@ -315,7 +303,7 @@ export function unsupportedModeError(
   const unsupportedScalar = blocks.find((block) =>
     block.action === ACTION_SET_TEMPERATURE
     && block.temperature !== undefined
-    && !climateTargetCompatibleForConfiguration(state, "scalar", block.hvac_mode));
+    && !climateTargetCompatibleForConfiguration(state, "scalar", block.hvac_mode, host._data?.zones[entityId]?.target_format_policy));
   return unsupportedScalar
     ? host._t("unsupportedSingleTargetForClimate", {
       entity: host._friendlyEntityName(entityId),

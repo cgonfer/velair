@@ -11591,6 +11591,100 @@ class VelairSchedulerPreconditioningTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(state.range_shift, -2.5)
 
+    async def test_native_range_room_assist_drives_shared_supplies_through_real_commits(self) -> None:
+        """Exercise scheduler commits, listener invalidation and physical supply commands together."""
+        from uuid import uuid4
+        from custom_components.velair import shared_demand as supply_module
+
+        self.climate.temperature_range_support[self.entity_id] = True
+        self.climate.hvac_modes[self.entity_id] = ["off", "heat_cool"]
+        self.hass.states[self.entity_id] = SimpleNamespace(
+            state="heat_cool", attributes={"current_temperature": 22,
+                                           "target_temp_low": 20, "target_temp_high": 24})
+        sensor = "sensor.salon_temperature"
+        self.data["zones"][self.entity_id]["preconditioning"].update({
+            "room_sensor_assist_enabled": True, "room_temperature_entity_id": sensor,
+            "room_sensor_assist_max_delta": 2,
+        })
+        self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [{
+            "start": "17:00", "action": ACTION_SET_TEMPERATURE,
+            "target_temp_low": 20, "target_temp_high": 24, "hvac_mode": "heat_cool",
+        }]
+        supplies = [dict(id=direction, name=direction, enabled=True,
+                        switch_entity_id=f"switch.{direction}", direction=direction,
+                        hysteresis=9, hysteresis_stop=8, hysteresis_mode="at_target",
+                        minimum_off_seconds=0, off_delay_seconds=0, suspended=False,
+                        zones={self.entity_id: {"hysteresis": 13, "hysteresis_stop": 12}})
+                    for direction in ("heat", "cool")]
+        self.data["settings"]["shared_demand_groups"] = supplies
+        for supply in supplies:
+            self.hass.states[supply["switch_entity_id"]] = SimpleNamespace(
+                state="off", attributes={}, last_changed=NOW)
+        controller = supply_module.SharedDemandController(
+            self.hass, self.data, self._async_save, self.scheduler)
+        self.scheduler.shared_demand_changed = controller.request_refresh
+        commands = []
+
+        async def service(domain, action, data, **kwargs):
+            self.assertEqual(domain, "switch")
+            output = data["entity_id"]
+            old = self.hass.states[output]
+            new = SimpleNamespace(state="on" if action == "turn_on" else "off",
+                                  attributes={}, last_changed=NOW, context=kwargs["context"])
+            self.hass.states[output] = new
+            commands.append((output, action))
+            controller._state_changed(SimpleNamespace(data={
+                "entity_id": output, "old_state": old, "new_state": new}))
+
+        async def settle():
+            for _ in range(10):
+                if controller._task is None:
+                    return
+                await controller._task
+            self.fail("Shared supply worker did not settle")
+
+        with patch.object(supply_module.core, "Context", side_effect=lambda: SimpleNamespace(id=uuid4().hex), create=True), \
+                patch.object(self.hass.services, "async_call", side_effect=service):
+            try:
+                await controller.async_start()
+                await settle()
+                for mode in ("at_target", "symmetric", "custom"):
+                    for supply in supplies:
+                        supply["hysteresis_mode"] = mode
+                    controller.reconfigure()
+                    for room, expected in ((19, "heat"), (22, None), (25, "cool"), (22, None)):
+                        with self.subTest(mode=mode, room=room):
+                            self.hass.states[sensor] = SimpleNamespace(
+                                state=str(room), attributes={"unit_of_measurement": "°C"})
+                            # Use the actual scheduler calculation and commit, not a mocked assist getter.
+                            await self.scheduler._async_refresh_room_sensor_assist_from_current_event(self.entity_id)
+                            await settle()  # Commit refreshes the controller through the real listener hook.
+                            assist = self.scheduler._room_sensor_assist_states[self.entity_id]
+                            self.assertEqual(assist.direction, expected)
+                            self.assertEqual((assist.target_temp_low, assist.target_temp_high), (20, 24))
+                            for direction in ("heat", "cool"):
+                                status = controller.get_statuses()[direction]
+                                self.assertEqual(status["zones"][self.entity_id]["source"], "room_assist")
+                                self.assertIs(status["demand"], direction == expected)
+                                self.assertEqual(self.hass.states[f"switch.{direction}"].state,
+                                                 "on" if direction == expected else "off")
+                    # A change in the device's internal sensor must not restart supply while holding.
+                    before = len(self.climate.calls), len(commands)
+                    self.hass.states[self.entity_id].attributes["current_temperature"] = 16
+                    await self.scheduler._async_refresh_room_sensor_assist_from_current_event(self.entity_id)
+                    await settle()
+                    self.assertEqual((len(self.climate.calls), len(commands)), before)
+                    self.hass.states[self.entity_id].attributes["current_temperature"] = 22
+                self.assertEqual(commands, [("switch.heat", "turn_on"), ("switch.heat", "turn_off"),
+                                            ("switch.cool", "turn_on"), ("switch.cool", "turn_off")] * 3)
+                self.assertEqual(controller._phases, {})
+                self.assertEqual(self.save_count, 0)
+            finally:
+                await controller.async_stop()
+                self.scheduler.shared_demand_changed = None
+                self.scheduler._clear_room_sensor_assist_listener()
+                await self.scheduler._climate_delivery.async_stop()
+
     async def test_room_sensor_assist_range_holding_reports_infeasible_limits(
         self,
     ) -> None:

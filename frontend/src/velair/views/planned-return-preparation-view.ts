@@ -12,6 +12,7 @@ export const plannedReturnPreparationReasons: Record<string, TranslationKey> = {
   missing_target: "plannedReturnPreparationReasonTarget",
   missing_temperature: "plannedReturnPreparationReasonTemperature",
   unsupported_mode: "plannedReturnPreparationReasonMode",
+  unsupported_range_mode: "unsupportedRangeThermalMode",
   no_estimate: "plannedReturnPreparationReasonEstimate",
   scheduler_stopped: "plannedReturnPreparationReasonSchedulerStopped",
   scheduler_not_auto: "plannedReturnPreparationReasonSchedulerNotAuto",
@@ -39,8 +40,9 @@ export const plannedReturnPreparationStyles = css`
   .preparation-rooms[hidden] { display: none; }
   .preparation-room { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; align-items: center; padding: 12px 0; min-height: 44px; }
   .preparation-room + .preparation-room { border-top: 1px solid var(--divider-color); }
-  .preparation-room > ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); display: flex; align-items: center; justify-content: center; width: 36px; align-self: center; }
+  .preparation-room > ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); display: flex; align-items: center; justify-content: center; width: 36px; height: 1.5em; align-self: start; }
   .preparation-room-name, .preparation-room-status { display: flex; flex-direction: column; justify-content: center; gap: 4px; align-self: center; min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
+  .preparation-room-name { align-self: start; }
   .preparation-room-name > strong { font-weight: 600; }
   .preparation-room-name small, .preparation-reason, .preparation-detail { display: block; margin: 0; color: var(--secondary-text-color); font-size: 14px; line-height: 1.5; }
   .preparation-room-status > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
@@ -52,7 +54,6 @@ export const plannedReturnPreparationStyles = css`
     .preparation-toggle > strong { flex: 1; }
     .preparation-counts { flex-basis: 100%; order: 1; }
     .preparation-room { grid-template-columns: 36px minmax(0, 1fr); }
-    .preparation-room > ha-icon { grid-row: 1 / span 2; }
     .preparation-room-status { grid-column: 2; }
   }
 `;

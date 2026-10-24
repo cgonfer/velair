@@ -914,6 +914,7 @@ export class VelairCardEditor extends LitElement {
       "active-setup": "cardViewActiveSetup",
       "schedules": "cardViewSchedules",
       "templates": "templates",
+      "supply-control": "supplyControl",
       "sensors": "cardViewSensors",
       "comfort": "cardViewComfort",
       "preconditioning": "cardViewPreconditioning",

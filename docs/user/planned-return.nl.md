@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](planned-return.md) · [Español](planned-return.
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.3 |
-| Laatst gesynchroniseerd | 2026-10-21 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -203,7 +203,7 @@ Stel bijvoorbeeld maandag tot en met vrijdag op 18:15 in. Nadat het huis geduren
 
 Het doel is het blok dat **bij aankomst** geldt, met inbegrip van wekelijkse continuïteit. Als Thuis vóór 18:00 17 graden vraagt en daarna 21 graden, bereidt een terugkeer om 18:15 21 graden voor, ook wanneer de voorbereiding vóór 18:00 begint. Het weekschema wordt niet gewijzigd en krijgt geen tijdelijke blokken.
 
-Op de verwachte tijd selecteert Velair de bestemming en gaat verder met het gewone schema. Een eerdere bezettingsmelding kiest de bestemming onmiddellijk nadat het gemonitorde vertrek is bevestigd. Late aankomst schakelt het huis niet terug naar Afwezig. Pauzes, tijdelijke aanpassingen, handmatige aanpassingen, uitgeschakelde zones en een gestopte planner behouden hun bestaande voorwaarden voor overdracht. Voorbereiding ondersteunt verwarmen, koelen en oorspronkelijke temperatuurbereiken. Ze probeert de kamer dicht bij het doel te brengen, maar kan geen exacte temperatuur garanderen.
+Op de verwachte tijd selecteert Velair de bestemming en gaat verder met het gewone schema. Een eerdere bezettingsmelding kiest de bestemming onmiddellijk nadat het gemonitorde vertrek is bevestigd. Late aankomst schakelt het huis niet terug naar Afwezig. Pauzes, tijdelijke aanpassingen, handmatige aanpassingen, uitgeschakelde zones en een gestopte planner behouden hun bestaande voorwaarden voor overdracht. Voorbereiding ondersteunt verwarmen, koelen en oorspronkelijke `heat_cool`-bereiken. Entiteiten met alleen bereik in Verwarmen, Koelen of Auto worden uitsluitend bij aankomst toegepast: Velair stuurt beide grenzen zonder vroege voorbereiding of thermisch leren voor dat doel. Kamervoorbereiding verklaart de beperking; opgeslagen voorbereidingsinstellingen blijven beschikbaar voor geschikte doelen. Ze probeert de kamer dicht bij het doel te brengen, maar kan geen exacte temperatuur garanderen.
 
 <a id="preparation-and-room-assist"></a>
 ### Voorbereiding en Room Assist

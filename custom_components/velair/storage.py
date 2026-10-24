@@ -227,6 +227,13 @@ class VelairStorage:
         async with self._migration_lock:
             target_unit = self._home_unit()
             defaults = self.default_runtime_data()
+            # Retain off requests atomically when resetting active supply groups.
+            settings = self.data.get("settings", {}) if self.data else {}
+            cleanup = set(settings.get("shared_demand_cleanup", []))
+            cleanup.update(group["switch_entity_id"] for group in settings.get("shared_demand_groups", [])
+                           if isinstance(group, dict) and group.get("enabled") and group.get("switch_entity_id"))
+            if cleanup:
+                defaults["settings"]["shared_demand_cleanup"] = sorted(cleanup)
             next_revision = self._temperature_revision + 1
             payload = serialize_schedule_data(defaults)
             payload[TEMPERATURE_FORMAT_KEY] = RUNTIME_TEMPERATURE_FORMAT
@@ -755,6 +762,15 @@ def _convert_scheduler_temperatures(
         for key in ("min_temperature", "max_temperature"):
             if isinstance(settings.get(key), (int, float)):
                 settings[key] = round(absolute_temperature(settings[key], source, target), 6)
+        for group in settings.get("shared_demand_groups", []):
+            group["hysteresis"] = round(temperature_delta(group.get("hysteresis", 0.3), source, target), 6)
+            if "hysteresis_stop" in group:
+                group["hysteresis_stop"] = round(temperature_delta(group["hysteresis_stop"], source, target), 6)
+            for override in group.get("zones", {}).values():
+                if "hysteresis" in override:
+                    override["hysteresis"] = round(temperature_delta(override["hysteresis"], source, target), 6)
+                if "hysteresis_stop" in override:
+                    override["hysteresis_stop"] = round(temperature_delta(override["hysteresis_stop"], source, target), 6)
     learning = data.get("preconditioning_learning", {})
     if isinstance(learning, dict):
         for entity_id, directions in learning.items():

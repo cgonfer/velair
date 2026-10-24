@@ -289,7 +289,7 @@ export const settingsStyles = css`
   border-radius: 8px;
   display: grid;
   gap: 8px;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   padding: 10px;
 }
@@ -301,11 +301,10 @@ export const settingsStyles = css`
   color: var(--secondary-text-color);
   cursor: grab;
   display: inline-flex;
-  height: 28px;
+  height: 36px;
   justify-content: center;
-  margin: -2px;
   padding: 0;
-  width: 28px;
+  width: 36px;
 }
 
 .settings-drag-handle:active {
@@ -316,11 +315,11 @@ export const settingsStyles = css`
   --mdc-icon-size: 18px;
 }
 
-.settings-zone-main {
-  align-items: start;
+.settings-zone-header {
+  align-items: center;
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(150px, 0.65fr) minmax(260px, 1.35fr);
+  gap: 8px;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   min-width: 0;
 }
 
@@ -331,10 +330,17 @@ export const settingsStyles = css`
 }
 
 .settings-zone-configuration {
+  align-items: start;
   display: grid;
-  gap: 10px;
+  gap: 12px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   min-width: 0;
 }
+
+.settings-row-actions { align-items: center; display: flex; gap: 2px; }
+.settings-row-actions .icon-button { height: 36px; width: 36px; }
+.settings-zone-row .target-range-review { border-top: 1px solid var(--divider-color); margin-top: 4px; padding-top: 12px; }
+
 
 .settings-zone-title {
   align-items: center;
@@ -343,11 +349,10 @@ export const settingsStyles = css`
   min-width: 0;
 }
 
-.settings-external-policy {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
+.settings-external-policy,
+.settings-target-range-modes {
+  display: grid;
+  gap: 4px;
   min-width: 0;
   position: relative;
 }
@@ -360,22 +365,41 @@ export const settingsStyles = css`
 }
 
 .settings-policy-heading .label { font-size: 12px; }
+.settings-zone-configuration .settings-policy-heading .inline-help-wrapper,
+.settings-zone-configuration .settings-policy-heading .documentation-help {
+  height: 24px;
+  position: relative;
+  width: 32px;
+}
+.settings-zone-configuration .settings-policy-heading .inline-help,
+.settings-zone-configuration .settings-policy-heading .documentation-help-button {
+  height: 32px;
+  position: absolute;
+  top: -4px;
+  width: 32px;
+}
+.settings-zone-configuration .settings-policy-heading .documentation-help-button ha-icon {
+  --mdc-icon-size: 16px;
+  height: 16px;
+  width: 16px;
+}
 
 .settings-policy-controls {
   align-items: center;
   display: flex;
-  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
+  width: 100%;
 }
 
 .settings-policy-controls > .select-wrap {
   box-sizing: border-box;
-  flex: 0 1 170px;
-  height: 34px;
+  flex: 1 1 180px;
+  height: 44px;
   margin: 0;
   min-width: 0;
-  width: 170px;
+  width: 100%;
 }
 
 .settings-external-policy .select-wrap select {
@@ -390,11 +414,11 @@ export const settingsStyles = css`
 .settings-policy-duration {
   align-items: center;
   border: 1px solid var(--divider-color);
-  border-radius: 6px;
+  border-radius: 8px;
   box-sizing: border-box;
   display: flex;
-  flex: 0 1 105px;
-  height: 34px;
+  flex: 0 0 105px;
+  height: 44px;
   min-width: 82px;
   overflow: hidden;
 }
@@ -429,13 +453,13 @@ export const settingsStyles = css`
 .settings-target-temp-step-control {
   align-items: center;
   border: 1px solid var(--divider-color);
-  border-radius: 6px;
+  border-radius: 8px;
   box-sizing: border-box;
   display: flex;
-  height: 34px;
+  height: 44px;
   overflow: hidden;
   max-width: 100%;
-  width: 170px;
+  width: 100%;
 }
 
 .settings-target-temp-step-control input {
@@ -466,17 +490,98 @@ export const settingsStyles = css`
   padding-inline-end: 7px;
 }
 
-.settings-target-temp-step {
+.settings-target-temp-step { display: grid; gap: 4px; min-width: 0; }
+
+.target-range-dropdown.select-wrap { margin: 0; min-width: 0; }
+.target-range-dropdown > .target-range-trigger {
   align-items: center;
+  cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
+  font-size: 12px;
+  height: 44px;
+  list-style: none;
   min-width: 0;
 }
-
-.settings-target-temp-step > .settings-policy-heading {
+.target-range-trigger::-webkit-details-marker { display: none; }
+.target-range-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.target-range-measure { height: 0; overflow: hidden; position: absolute; visibility: hidden; width: 0; }
+.target-range-measure > span { display: inline-block; font: inherit; letter-spacing: inherit; white-space: nowrap; width: max-content; }
+.target-range-trigger[aria-disabled="true"] { cursor: default; opacity: .55; }
+.target-range-trigger:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.target-range-options {
+  background: var(--card-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / .2);
   box-sizing: border-box;
-  flex: 0 0 142px;
+  inset-inline: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 4px;
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 30;
+}
+.target-range-options .checkbox-label { display: flex; gap: 10px; margin: 0; min-height: 44px; padding: 0 8px; }
+.target-range-options .checkbox-label input { accent-color: var(--primary-color); flex: 0 0 auto; margin: 0; width: 18px; }
+.target-range-options .checkbox-label span { min-width: 0; overflow-wrap: anywhere; }
+.target-range-diagnostic { color: var(--warning-color, var(--primary-text-color)); font-size: 12px; overflow-wrap: anywhere; }
+.target-range-diagnostic > span { align-items: center; display: inline-flex; gap: 4px; }
+
+.target-range-review { display: grid; font-family: inherit; font-weight: 400; gap: 12px; min-width: 0; }
+.target-review-heading { align-items: start; display: grid; gap: 4px 8px; grid-template-columns: 22px minmax(0, 1fr) auto; }
+.target-review-heading > ha-icon { --mdc-icon-size: 22px; color: var(--primary-color); }
+.target-review-heading h3 { font-size: 14px; font-weight: 600; line-height: 1.4; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.target-review-heading p { color: var(--secondary-text-color); font-size: 12px; font-weight: 400; grid-column: 2 / -1; line-height: 1.5; margin: 0; }
+.target-review-heading > .pill { font-size: 11px; grid-column: 3; grid-row: 1; justify-self: end; }
+.target-review-counts, .target-review-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.target-review-counts { font-size: 11px; }
+.target-review-counts > strong { color: var(--secondary-text-color); font-weight: 500; }
+.target-review-navigation, .target-review-pagination { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.target-review-next-pending { margin-inline-start: auto; }
+.target-review-navigation > span, .target-review-pagination > span { color: var(--secondary-text-color); font-size: 12px; }
+.target-review-groups, .target-review-days, .target-review-blocks, .target-review-day-editor { display: grid; gap: 8px; min-width: 0; }
+.target-review-group { background: var(--secondary-background-color); border: 1px solid var(--divider-color); border-radius: 8px; padding: 0 10px; }
+.target-review-group > summary, .target-review-day > summary { gap: 8px; }
+.target-review-group > summary > .pill, .target-review-day > summary > .pill { flex: 0 0 auto; font-size: 11px; white-space: normal; }
+.target-review-day > summary > .target-review-ready { background: color-mix(in srgb, var(--success-color, #43a047) 12%, transparent); border: 1px solid color-mix(in srgb, var(--success-color, #43a047) 45%, var(--divider-color)); color: color-mix(in srgb, var(--success-color, #43a047) 40%, var(--primary-text-color)); }
+.target-review-days { margin-bottom: 10px; }
+.target-review-day { border-top: 1px solid var(--divider-color); min-width: 0; }
+.target-review-day-editor { gap: 12px; padding: 4px 0 12px; }
+.target-review-block { background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; display: grid; gap: 8px; min-width: 0; padding: 10px; }
+.target-review-block.invalid { border-color: color-mix(in srgb, var(--warning-color, #f9a825) 55%, var(--divider-color)); }
+.target-review-block > header { align-items: center; display: flex; flex-wrap: wrap; font-size: 12px; gap: 6px; }
+.target-review-block-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); min-width: 0; }
+.target-review-block-fields label { display: grid; gap: 4px; min-width: 0; }
+.target-review-block-fields select, .target-review-block-fields input { font-size: 13px; height: 44px; margin: 0; min-width: 0; }
+.target-review-block-fields .label { font-size: 11px; }
+.target-review-block-fields .select-wrap { margin: 0; }
+.target-review-block-fields input[aria-invalid="true"] { border-color: var(--error-color); }
+.target-review-block .target-format-action { justify-self: start; }
+.target-review-guidance { align-items: start; color: var(--secondary-text-color); display: flex; font-size: 12px; gap: 6px; line-height: 1.5; margin: 0; }
+.target-review-guidance > ha-icon { --mdc-icon-size: 18px; color: var(--primary-color); flex: 0 0 18px; }
+.target-review-guidance.warning > ha-icon { color: var(--warning-color); }
+.target-review-guidance.error > ha-icon { color: var(--error-color); }
+.target-review-other-climates p, .target-review-other-climates ul { color: var(--secondary-text-color); font-size: 12px; font-weight: 400; line-height: 1.5; }
+.target-review-other-climates ul { margin: 0 0 8px; padding-inline-start: 18px; }
+.target-review-actions { border-top: 1px solid var(--divider-color); padding-top: 12px; }
+.target-review-actions .command-button { flex: 1 1 150px; white-space: normal; }
+.target-review-actions .command-button.secondary { background: var(--secondary-background-color); border-color: var(--divider-color); color: var(--primary-text-color); }
+
+@media (max-width: 600px) {
+  .target-review-heading { grid-template-columns: 20px minmax(0, 1fr) auto; }
+  .target-review-block-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .target-review-block-fields > label:first-child { grid-column: 1 / -1; }
+  .target-review-group > summary > .pill, .target-review-day > summary > .pill { max-width: 100px; text-align: center; }
+  .target-review-pagination .command-button { flex: 1 1 100px; }
+  .target-review-pagination > span { order: -1; width: 100%; }
+}
+
+@media (max-width: 600px) {
+  .settings-zone-configuration { grid-template-columns: minmax(0, 1fr); }
+  .settings-zone-header { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px; }
+  .settings-drag-handle { height: 44px; width: 44px; }
+  .settings-row-actions .icon-button { height: 44px; width: 44px; }
 }
 
 .settings-zone-identity strong,
@@ -600,18 +705,7 @@ export const settingsStyles = css`
   --timeline-border: color-mix(in srgb, var(--disabled-text-color) 42%, var(--divider-color));
 }
 
-.settings-row-actions {
-  display: inline-flex;
-  gap: 4px;
-}
-
-.settings-row-actions .icon-button {
-  height: 34px;
-  width: 34px;
-}
-
 @media (max-width: 720px) {
-  .settings-zone-main { grid-template-columns: minmax(0, 1fr); }
   .external-system-zone { align-items: stretch; grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -622,18 +716,8 @@ export const settingsStyles = css`
 @media (pointer: coarse) {
   .settings-policy-controls > .select-wrap,
   .settings-policy-duration,
-  .settings-target-temp-step-control { height: 40px; }
+  .settings-target-temp-step-control { height: 44px; }
 }
 
-@media (max-width: 480px) {
-  .settings-zone-row { grid-template-columns: 24px minmax(0, 1fr); }
-  .settings-row-actions { grid-column: 2; justify-self: end; }
-  .settings-external-policy { align-items: stretch; flex-direction: column; gap: 4px; }
-  .settings-policy-controls { width: 100%; }
-  .settings-policy-controls > .select-wrap { flex: 1 1 160px; height: 40px; max-width: 170px; width: auto; }
-  .settings-policy-duration { flex: 0 1 105px; height: 40px; }
-  .settings-target-temp-step { align-items: stretch; flex-direction: column; gap: 4px; }
-  .settings-target-temp-step > .settings-policy-heading { flex-basis: auto; }
-  .settings-target-temp-step-control { height: 40px; width: 170px; }
-}
+
 `;

@@ -34,6 +34,7 @@ from .runtime_diagnostics import RuntimeDiagnosticsManager
 from .scheduler import VelairScheduler
 from .services import async_setup_services, async_unload_services
 from .storage import VelairStorage
+from .shared_demand import SharedDemandController
 from .temperature_migration import (
     async_dismiss_temperature_migration_notification,
     async_notify_temperature_migration,
@@ -55,6 +56,7 @@ class VelairData:
     storage: VelairStorage
     climate_change_monitor: ClimateChangeMonitor
     external_execution: ExternalExecutionManager
+    shared_demand: SharedDemandController
 
 
 type VelairConfigEntry = ConfigEntry[VelairData]
@@ -101,6 +103,8 @@ async def async_setup_entry(
     climate_change_monitor = ClimateChangeMonitor(
         hass, climate_entities, climate_manager, scheduler, execution_authority
     )
+    shared_demand = SharedDemandController(hass, data, storage.async_save, scheduler)
+    scheduler.shared_demand_changed = shared_demand.request_refresh
 
     entry.runtime_data = VelairData(
         climate_delivery=climate_delivery,
@@ -110,6 +114,7 @@ async def async_setup_entry(
         storage=storage,
         climate_change_monitor=climate_change_monitor,
         external_execution=external_execution,
+        shared_demand=shared_demand,
     )
 
     hass.data.setdefault(DOMAIN, {})
@@ -124,6 +129,7 @@ async def async_setup_entry(
         "storage": storage,
         "climate_change_monitor": climate_change_monitor,
         "external_execution": external_execution,
+        "shared_demand": shared_demand,
     }
     hass.data[DOMAIN][entry.entry_id] = runtime
 
@@ -195,6 +201,7 @@ async def async_setup_entry(
 
     climate_change_monitor.async_start()
     entry.async_on_unload(climate_change_monitor.async_stop)
+    await shared_demand.async_start()
 
     diagnostics.async_finish_startup()
     cleanup_entity_registry(hass, entry, climate_entities)
@@ -216,6 +223,12 @@ async def async_unload_entry(
         return False
 
     try:
+        try:
+            shared_demand = getattr(entry.runtime_data, "shared_demand", None)
+            if shared_demand is not None:
+                await shared_demand.async_stop()
+        except Exception:
+            _LOGGER.exception("Failed to stop shared climate supply cleanly")
         try:
             await entry.runtime_data.scheduler.async_stop()
         except Exception:  # Keep unload recoverable after best-effort RA restore.

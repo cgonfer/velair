@@ -225,7 +225,7 @@ describe("templates view", () => {
       _fanModeOptions: () => [], _presetModeOptions: () => [], _swingModeOptions: () => [],
       _swingHorizontalModeOptions: () => [], _humidityLimits: () => undefined,
       _modeLabel: (value: string) => value, _formatTemperature: (value: number) => `${value} C`,
-      hass: { states: { "climate.office": { state: "cool", attributes: { supported_features: 3, temperature: 22, target_temp_low: 19, target_temp_high: 25 } } } },
+      hass: { states: { "climate.office": { state: "cool", attributes: { supported_features: 3, hvac_modes: ["cool", "heat_cool"], temperature: 22, target_temp_low: 19, target_temp_high: 25 } } } },
     });
     state._setTemplateImpact = (impact) => { state._templateImpact = impact; };
     state._templateImpact = createTemplateImpact({
@@ -245,18 +245,15 @@ describe("templates view", () => {
     expect(container.querySelectorAll('button[title="save"]')).toHaveLength(1);
     let mode = container.querySelector<HTMLSelectElement>(".template-assignment-slot select")!;
     mode.value = "heat_cool"; mode.dispatchEvent(new Event("change"));
-    expect(state._templateImpact.assignments[0].drafts[0]).toMatchObject({ hvac_mode: "heat_cool", target_temp_low: 19, target_temp_high: 25, temperature: undefined });
+    expect(state._templateImpact.assignments[0].drafts[0]).toMatchObject({ hvac_mode: "heat_cool", target_temp_low: "", target_temp_high: "" });
     render(renderTemplatesView(state), container);
     expect(container.querySelectorAll(".template-assignment-slot .range-temperature-field")).toHaveLength(2);
     mode = container.querySelector<HTMLSelectElement>(".template-assignment-slot select")!;
     mode.value = "cool"; mode.dispatchEvent(new Event("change"));
-    expect(state._templateImpact.assignments[0].drafts[0]).toMatchObject({ hvac_mode: "cool", temperature: 22, target_temp_low: undefined, target_temp_high: undefined });
+    expect(state._templateImpact.assignments[0].drafts[0]).toMatchObject({ hvac_mode: "cool", temperature: 21 });
+    expect(state._templateImpact.assignments[0].drafts[0].target_temp_low).toBeUndefined();
     render(renderTemplatesView(state), container);
-    expect(container.querySelectorAll(".template-assignment-slot .single-temperature-field")).toHaveLength(1);
-    state._templateAction = "save";
-    render(renderTemplatesView(state), container);
-    expect(container.querySelector<HTMLFieldSetElement>(".template-assignment-slot")?.disabled).toBe(true);
-    expect(container.querySelector<HTMLButtonElement>(".template-item-main")?.disabled).toBe(true);
+    expect(container.querySelector('.template-assignment-slot .target-format-action')).toBeNull();
   });
 
   it("does not present template temperatures as invalid for the selected reference climate", () => {

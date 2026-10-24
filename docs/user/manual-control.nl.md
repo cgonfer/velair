@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](manual-control.md) · [Español](manual-control.
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -51,7 +51,7 @@ Deze statussen kunnen samen bestaan. Modus **Handmatig** kan bijvoorbeeld profie
 
 Velair volgt deze besturingsvelden:
 
-- `hvac_mode`, vertegenwoordigd door entiteitsstatus zoals `off`, `heat`, `cool` en `heat_cool`;
+- `hvac_mode`, vertegenwoordigd door entiteitsstatus zoals `off`, `heat`, `cool`, `auto` en `heat_cool`;
 - `temperature` voor één doel;
 - `target_temp_low` en `target_temp_high` voor een oorspronkelijk bereik.
 
@@ -192,6 +192,8 @@ Een onafhankelijke pauze houdt de zone gepauzeerd; effectief `turn_off` blijft l
 Een alleen-verwarmapparaat met `[off, heat]` en Keep-doel `21 °C` hervat als `heat`, `21 °C`; een alleen-koelapparaat met `[off, cool]` als `cool`, `21 °C`. Een omkeerbaar apparaat kan meerdere geschikte modi melden. Velair gebruikt die volgorde en leidt geen seizoen, geografie of richting uit het getal af. Geef een expliciete blokmodus op als de keuze vast moet staan.
 
 Bij een blok met alleen opties worden alleen gekozen bedieningsopties toegepast: geen temperatuur en geen inschakeling vanuit uit.
+
+Voor een entiteit die alleen bereiken accepteert, zijn de gepubliceerde modi `heat`, `cool`, `auto` en `heat_cool` geschikte actieve modi. Behouden vanuit Uit gebruikt de eerste daarvan in gepubliceerde volgorde. Entiteiten met beide formaten gebruiken hun opgeslagen [modusbeleid voor doelformaat](usage.nl.md#target-format-by-climate-and-mode); bij hervatten van een geschikt bereik vanuit Uit blijft `heat_cool` de voorkeur houden. Alleen temperatuur mag beide grenzen schrijven terwijl het apparaat uitstaat als bereikondersteuning en een geschikte modus zijn gepubliceerd; het schakelt het apparaat daarvoor nooit in.
 
 <a id="complete-real-world-examples"></a>
 ## Volledige praktijkvoorbeelden
@@ -342,6 +344,8 @@ Policy: until resumed
 ```
 
 Velair herkent `target_temp_low` en `target_temp_high`, legt de volledige `heat_cool`-status vast en behoudt `19–24 °C` tijdens handmatige aanpassing. Hervatten past het volledige actuele bereik toe. Het wordt nooit één doeltemperatuur.
+
+Dezelfde vastlegging en hetzelfde herstel van het volledige paar gelden voor entiteiten met alleen bereik in Verwarmen, Koelen en Auto. Een achtergebleven attribuut `temperature` vervangt de twee grenzen niet. Is het waargenomen paar onvolledig of ongeldig, dan verzint Velair geen hersteldoel uit dat enkele attribuut.
 
 <a id="independent-window-pause-while-manual"></a>
 ### Onafhankelijke raampauze tijdens handmatige besturing

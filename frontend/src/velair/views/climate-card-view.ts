@@ -1,3 +1,4 @@
+import { targetFormatsForEntity } from "../domain/target-format-policy";
 import { renderPlannedReturn } from "./planned-return-view";
 import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
 import { renderPreparationRoom } from "./planned-return-preparation-status";
@@ -38,7 +39,6 @@ import { renderOverviewTimelineTrack } from "./overview-view";
 import { preconditioningSettings } from "../domain/preconditioning";
 import { renderPreconditioningDependency } from "./preconditioning-dependency";
 import { hasRoomAssistScheduledTarget } from "../domain/room-assist";
-import { climateSupportsRangeTarget, climateSupportsSingleTarget } from "../domain/climate";
 import { renderRoomAssistTemperatureScale } from "./sensors-view";
 import { validClimateCardActionColor, validClimateCardActionIcon } from "../domain/climate-card-menu";
 import {
@@ -156,7 +156,7 @@ function renderThermostatControls(
   const showNative = host._config.climate_show_native_climate_link !== false;
   const showControlMode = host._config.climate_show_control_mode !== false;
   const state = host.hass?.states?.[entityId];
-  const target = showTarget && state?.state !== "off" ? climateCardTarget(state) : undefined;
+  const target = showTarget && state?.state !== "off" ? climateCardTarget(state, host._data?.zones[entityId]?.target_format_policy) : undefined;
   const modes = showMode ? climateCardPublishedHvacModes(state) : [];
   const showAuthority = owner !== "external" && showControlMode;
   const showControlSurface = Boolean(target || modes.length || showNative);
@@ -321,8 +321,8 @@ function renderTargetControl(
   targetTempStep?: number,
 ) {
   const state = host.hass?.states?.[entityId];
-  const decrease = editable && Boolean(climateCardTargetPayload(state, field, -1, temperatureUnit, targetTempStep));
-  const increase = editable && Boolean(climateCardTargetPayload(state, field, 1, temperatureUnit, targetTempStep));
+  const decrease = editable && Boolean(climateCardTargetPayload(state, field, -1, temperatureUnit, targetTempStep, host._data?.zones[entityId]?.target_format_policy));
+  const increase = editable && Boolean(climateCardTargetPayload(state, field, 1, temperatureUnit, targetTempStep, host._data?.zones[entityId]?.target_format_policy));
   return html`<div class="climate-card-target-control" ?data-pending=${pending} aria-busy=${String(pending)}>
     <div class="climate-card-target-stepper">
       <button type="button" aria-label=${host._t("climateCardDecreaseTarget")} aria-disabled=${String(!decrease || pending)} ?disabled=${!decrease}
@@ -940,6 +940,7 @@ function renderRoomAssistPanel(
   showSummary: boolean,
   showGraph: boolean,
 ) {
+  showGraph = showGraph && assist.reason !== "unsupported_range_mode";
   const collapsed = showGraph && host._climateCardRoomAssistCollapsed;
   const summary = roomAssistSummary(host, entityId, assist);
   const title = host._t("roomSensorAssistBadge");
@@ -1054,6 +1055,7 @@ function renderCompactPreconditioning(host: VelairViewHost, event: ScheduleEvent
 }
 
 function roomAssistSummary(host: VelairViewHost, entityId: string, assist: RoomSensorAssistStatus): string {
+  if (assist.reason === "unsupported_range_mode") return host._t("unsupportedRangeThermalMode");
   const scheduled = roomAssistTemperature(host, entityId, assist.target_temperature, assist.target_temp_low, assist.target_temp_high);
   const applied = roomAssistTemperature(
     host,
@@ -1363,14 +1365,13 @@ function renderBoostForm(host: VelairViewHost, entityId: string) {
   const [minimum, maximum] = host._entityTemperatureLimits(entityId);
   const step = host._entityTemperatureStep(entityId) ?? 0.5;
   const climateState = host.hass?.states?.[entityId];
-  const supportsSingle = climateSupportsSingleTarget(climateState);
-  const supportsRange = climateSupportsRangeTarget(climateState);
+  const formatChoice = targetFormatsForEntity(host._data, entityId, climateState, boost.hvacMode);
   return html`<form class="climate-card-boost-form climate-card-control-pane" @submit=${(event: SubmitEvent) => { event.preventDefault(); void host._runClimateCardService("boost", entityId); }}>
     <strong>${host._t("climateCardConfigureBoost")}</strong>
     <div>
-      ${supportsSingle && supportsRange ? html`<label><span>${host._t("boostTarget")}</span><select .value=${boost.targetKind} @change=${(event: Event) => host._updateClimateCardBoostOption("targetKind", (event.currentTarget as HTMLSelectElement).value)}><option value="single">${host._t("externalCapability_target_scalar")}</option><option value="range">${host._t("externalCapability_target_range")}</option></select></label>` : nothing}
+      ${formatChoice.formats.length > 1 || formatChoice.uncertain ? html`<label><span>${host._t("boostTarget")}</span><select .value=${boost.targetKind} @change=${(event: Event) => host._updateClimateCardBoostOption("targetKind", (event.currentTarget as HTMLSelectElement).value)}><option value="single">${host._t("externalCapability_target_scalar")}</option><option value="range">${host._t("externalCapability_target_range")}</option></select></label>` : nothing}
       ${boost.targetKind === "range"
-        ? html`${boostInput(host, "low", boost.low, minimum, maximum, step)}${boostInput(host, "high", boost.high, minimum, maximum, step)}`
+        ? html`${boostInput(host, "low", boost.low, minimum, Math.min(maximum, boost.high ?? maximum), step)}${boostInput(host, "high", boost.high, Math.max(minimum, boost.low ?? minimum), maximum, step)}`
         : boostInput(host, "target", boost.target, minimum, maximum, step)}
       <label><span>${host._t("durationMinutes")}</span><input type="number" min="1" max="10080" step="1" required .value=${String(boost.durationMinutes)} @input=${(event: Event) => host._updateClimateCardBoost("durationMinutes", (event.currentTarget as HTMLInputElement).value)}></label>
       ${boostSelect(host, "hvacMode", "mode", host._climateSupportedModes(entityId).filter((mode) => mode !== "off"), boost.hvacMode)}

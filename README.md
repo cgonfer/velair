@@ -3,7 +3,7 @@ Climate automation that adapts to your life.
 
 [Explore Velair on the project website](https://cgonfer.github.io/velair/)
 
-[![Version](https://img.shields.io/badge/version-1.9.0--beta.4-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
+[![Version](https://img.shields.io/badge/version-1.9.0--beta.5-blue?style=for-the-badge)](https://github.com/cgonfer/velair/releases)
 [![Last commit](https://img.shields.io/github/last-commit/cgonfer/velair?style=for-the-badge)](https://github.com/cgonfer/velair/commits/main/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Community%20Forum-blue?logo=home-assistant&style=for-the-badge)](https://community.home-assistant.io/t/velair-local-first-climate-scheduling-for-home-assistant-climates/1015394)
 [![HACS](https://img.shields.io/badge/HACS-default-41BDF5?style=for-the-badge)](https://www.hacs.xyz/docs/use/repositories/dashboard/)
@@ -32,6 +32,7 @@ Set up your normal week once. When plans change, switch to another Mode, boost o
 - Schedule blocks that can set a temperature or range, preserve an externally controlled HVAC mode with Temperature only, change only the HVAC mode, send supported options such as a preset without a temperature, or turn the climate off.
 - Manual adjustment when you want to take direct control of a climate.
 - Optional Adaptive Preconditioning and Room Assist for earlier starts and separate room-temperature sensors.
+- Optional [Supply control](docs/user/shared-climate-supply.md): control a shared heating or cooling switch using estimated room demand, with supply-wide hysteresis and per-thermostat overrides.
 - Optional [Planned Return](docs/user/planned-return.md): confirm whole-home absence and prepare for weekly or one-off arrivals, with current control context in Overview and Diagnostics.
 - Environmental Comfort and air-quality readings, with optional outdoor comparisons and ventilation guidance. These are observations; Velair does not open windows or adjust the climate based on them.
 - See what Velair is doing in Overview, investigate problems in Diagnostics, or add a card for one climate to your dashboard.

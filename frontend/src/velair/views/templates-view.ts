@@ -312,6 +312,7 @@ function renderDestinationAssignments(host: TemplatesViewHost, impact: NonNullab
   editorHost._linkedHours = true;
   editorHost._draftTemplateLink = undefined;
   editorHost._selectedEntity = item.destination.entity_id;
+  editorHost._targetFormatEntityId = item.destination.entity_id;
   editorHost._selectedWeekday = item.destination.weekday;
   editorHost._resourceProfileKey = item.destination.source === "profile" ? item.destination.profile_key : undefined;
   editorHost._unlinkDayTemplate = undefined;

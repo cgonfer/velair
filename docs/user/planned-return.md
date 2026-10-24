@@ -458,8 +458,12 @@ schedule. An early occupied report selects the destination immediately once
 monitored departure has been confirmed. A late
 arrival does not switch the home back to Away. Pauses, Boost, Manual adjustment,
 disabled zones, and a stopped scheduler keep their existing delivery gates.
-Preparation supports heating, cooling, and native temperature ranges. It aims
-to bring the room close to the target; it cannot guarantee an exact temperature.
+Preparation supports heating, cooling, and native `heat_cool` temperature ranges.
+It aims to bring the room close to the target; it cannot guarantee an exact
+temperature. Range-only entities using Heat, Cool or Auto act at arrival only:
+Velair applies both limits at arrival without advance preparation or thermal
+learning for that target. Room preparation explains this limitation; saved
+preparation settings remain available for compatible targets.
 
 ### Preparation And Room Assist
 

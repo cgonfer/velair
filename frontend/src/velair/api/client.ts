@@ -22,6 +22,14 @@ import type {
 export class VelairApiClient {
   public constructor(private readonly hass: HomeAssistant) {}
 
+  public previewTargetRangePolicy(request: import("../types").TargetRangePolicyRequest): Promise<import("../types").TargetRangePolicyPreview> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_target_range_policy", ...request });
+  }
+
+  public applyTargetRangePolicy(request: import("../types").TargetRangePolicyRequest): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/apply_target_range_policy", ...request });
+  }
+
   public updatePlannedReturn(planned_return: PlannedReturnConfig): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise({ type: "velair/update_planned_return", planned_return });
   }

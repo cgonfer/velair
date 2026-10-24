@@ -19,6 +19,7 @@ import { renderPlannedReturn } from "./planned-return-view";
 import { renderSchedulesView } from "./schedule-view";
 import { renderSensorsView, type RoomSensorViewOptions } from "./sensors-view";
 import { renderSettingsView } from "./settings-view";
+import { renderSupplyControlView } from "./supply-control-view";
 import { renderDiagnosticsView } from "./diagnostics-view";
 import { renderTemplatesView } from "./templates-view";
 import "../components/profiles-view-element";
@@ -197,6 +198,10 @@ function renderViewContent(
 
   if (view === "templates") {
     return renderTemplatesView(host, selectedEntity);
+  }
+
+  if (view === "supply-control") {
+    return renderSupplyControlView(host);
   }
 
   if (view === "sensors") {

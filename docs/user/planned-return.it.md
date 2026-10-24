@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](planned-return.md) · [Español](planned-retu
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.3 |
-| Ultima sincronizzazione | 2026-10-21 |
+| Versione di riferimento | 1.9.0-beta.5 |
+| Ultima sincronizzazione | 2026-10-24 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -192,7 +192,7 @@ Per esempio, configura dal lunedì al venerdì alle 18:15. Dopo che la casa è r
 
 L’obiettivo è il blocco effettivo **all’arrivo**, inclusa la continuità settimanale. Se Casa richiede 17 gradi prima delle 18:00 e 21 dopo, un rientro alle 18:15 prepara 21 gradi anche se la preparazione inizia prima delle 18:00. La settimana non viene modificata né riempita di blocchi temporanei.
 
-All’orario previsto Velair seleziona la destinazione e prosegue la normale programmazione. Una presenza rilevata in anticipo seleziona subito la destinazione dopo che la partenza monitorata è stata confermata; un arrivo in ritardo non riporta la casa ad Assenza. Pause, Incremento, regolazione manuale, zone disabilitate e pianificatore fermo mantengono i vincoli di invio esistenti. La preparazione supporta riscaldamento, raffrescamento e intervalli nativi. Mira ad avvicinare la stanza all’obiettivo, senza garantire una temperatura esatta.
+All’orario previsto Velair seleziona la destinazione e prosegue la normale programmazione. Una presenza rilevata in anticipo seleziona subito la destinazione dopo che la partenza monitorata è stata confermata; un arrivo in ritardo non riporta la casa ad Assenza. Pause, Incremento, regolazione manuale, zone disabilitate e pianificatore fermo mantengono i vincoli di invio esistenti. La preparazione supporta riscaldamento, raffrescamento e intervalli nativi `heat_cool`. Mira ad avvicinare la stanza all’obiettivo, senza garantire una temperatura esatta. Le entità che accettano solo intervalli in Caldo, Freddo o Auto agiscono soltanto all’arrivo: Velair applica entrambi i limiti all’arrivo senza preparazione anticipata né apprendimento termico per quell’obiettivo. La preparazione delle stanze spiega il limite; le impostazioni salvate restano disponibili per obiettivi compatibili.
 
 <a id="preparation-and-room-assist"></a>
 ### Preparazione e Room Assist

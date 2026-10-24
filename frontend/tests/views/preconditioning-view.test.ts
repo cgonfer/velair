@@ -970,3 +970,36 @@ describe("preconditioning view", () => {
     expect(prediction?.textContent).not.toContain("preconditioningModelInitial");
   });
 });
+
+it("explains that range-only Heat, Cool and Auto targets cannot prepare early", () => {
+  const { viewHost } = host();
+  viewHost._data!.next_events = [{ entity_id: "climate.first", hvac_mode: "auto",
+    action: "set_temperature", target_temp_low: 19, target_temp_high: 24, when: "2026-10-22T18:00:00Z" }] as ScheduleEvent[];
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+  expect(container.textContent).toContain("unsupportedRangeThermalMode");
+});
+
+it.each([
+  { rangeModes: ["heat"], requested: undefined, stateMode: "off", thermal: false },
+  { rangeModes: ["heat_cool"], requested: undefined, stateMode: "off", thermal: true },
+  { rangeModes: ["heat", "heat_cool"], requested: undefined, stateMode: "off", thermal: true },
+  { rangeModes: ["heat", "heat_cool"], requested: "heat", stateMode: "off", thermal: false },
+  { rangeModes: ["heat", "heat_cool"], requested: "heat_cool", stateMode: "off", thermal: true },
+  { rangeModes: ["heat", "heat_cool"], requested: undefined, stateMode: "heat", thermal: false },
+])("renders range preparation according to the effective mapped mode: %j", ({ rangeModes, requested, stateMode, thermal }) => {
+  const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+  const entityId = "climate.second";
+  viewHost.hass!.states[entityId] = { state: stateMode, attributes: { supported_features: 3, hvac_modes: ["off", "heat", "cool", "heat_cool"] } } as any;
+  viewHost._data!.zones[entityId].target_format_policy = {
+    entity_id: entityId, kind: "mixed", configured_modes: rangeModes, range_modes: rangeModes,
+    formats_by_mode: Object.fromEntries(["heat", "cool", "heat_cool"].map((mode) => [mode, rangeModes.includes(mode) ? "range" : "single"])),
+    invalid_modes: [], uncertain: false,
+  };
+  viewHost._data!.preconditioning_learning = { [entityId]: learningBothDirections() };
+  viewHost._data!.next_events = [{ entity_id: entityId, when: "2026-10-22T18:00:00Z", action: "set_temperature", target_temp_low: 19, target_temp_high: 24, hvac_mode: requested, preconditioning_diagnostics: diagnostics("heat", 19) }] as ScheduleEvent[];
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, [entityId]), container);
+  expect(container.textContent!.includes("unsupportedRangeThermalMode")).toBe(!thermal);
+  expect(Boolean(container.querySelector(".preconditioning-range-boundary"))).toBe(thermal);
+});

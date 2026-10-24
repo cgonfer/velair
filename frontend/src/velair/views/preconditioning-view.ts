@@ -1,3 +1,4 @@
+import { effectiveClimateHvacModeForEnsureOn } from "../domain/climate";
 import { html, nothing } from "lit";
 import { preconditioningMasterCandidates, preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
 import { dependencyReasonDetailKeys, renderPreconditioningDependency } from "./preconditioning-dependency";
@@ -41,6 +42,10 @@ export function renderPreconditioningView(
 ) {
   return html`
     <section class="preconditioning-view">
+      ${zoneIds.some((entityId) => (host._data?.next_events ?? []).some((event) =>
+        event.entity_id === entityId && hasTemperatureRange(event)
+        && effectiveClimateHvacModeForEnsureOn(host.hass?.states?.[entityId], event.hvac_mode ?? undefined, "range", host._data?.zones?.[entityId]?.target_format_policy) !== "heat_cool"))
+        ? html`<p role="status">${host._t("unsupportedRangeThermalMode")}</p>` : nothing}
       ${showIntro ? html`<header class="preconditioning-intro">
         <ha-icon icon="mdi:clock-fast"></ha-icon>
         <span>
@@ -413,6 +418,10 @@ function renderPreconditioningPrediction(
     `;
   }
 
+  const unsupportedRange = hasTemperatureRange(event) && effectiveClimateHvacModeForEnsureOn(
+    host.hass?.states?.[entityId], event.hvac_mode ?? undefined, "range",
+    host._data?.zones?.[entityId]?.target_format_policy,
+  ) !== "heat_cool";
   const targetWhen = event.target_when && event.target_when !== event.when
     ? event.target_when
     : event.when;
@@ -445,6 +454,7 @@ function renderPreconditioningPrediction(
           <span>${host._formatEventMode(event)}</span>
         </div>
       </div>
+      ${unsupportedRange ? html`<p role="status">${host._t("unsupportedRangeThermalMode")}</p>` : nothing}
       ${event.preconditioning_diagnostics || event.preconditioning_dependency
         ? renderPreconditioningCalculationDetails(host, event.preconditioning_diagnostics, event.preconditioning_dependency)
         : nothing}
@@ -457,7 +467,10 @@ function renderPredictionRangeBoundary(
   event: ScheduleEvent,
   direction: "heat" | "cool",
 ) {
-  if (!hasTemperatureRange(event)) {
+  if (!hasTemperatureRange(event) || effectiveClimateHvacModeForEnsureOn(
+    host.hass?.states?.[event.entity_id], event.hvac_mode ?? undefined, "range",
+    host._data?.zones?.[event.entity_id]?.target_format_policy,
+  ) !== "heat_cool") {
     return nothing;
   }
   const diagnosticBoundary = event.preconditioning_diagnostics?.boundary_temperature;

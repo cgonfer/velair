@@ -1,7 +1,7 @@
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
 import { minutesFromTime } from "../schedule-time";
-import type { DraftScheduleBlock, HassState } from "../types";
-import { climateRequiresRangeTarget } from "./climate";
+import type { DraftScheduleBlock, HassState, TargetFormatPolicy } from "../types";
+import { climateRequiresRangeTarget, climateRangeModeCompatible, climateSupportsSingleTarget } from "./climate";
 import { draftBlockUsesRange } from "./draft-blocks";
 
 export type KeepTargetMismatch = {
@@ -19,6 +19,7 @@ export function keepTargetMismatch(
   block: DraftScheduleBlock,
   dayBlocks: DraftScheduleBlock[],
   state?: HassState,
+  policy?: TargetFormatPolicy,
 ): KeepTargetMismatch | undefined {
   if ((block.action || ACTION_SET_TEMPERATURE) !== ACTION_SET_TEMPERATURE || block.hvac_mode || block.temperature_only) {
     return undefined;
@@ -55,10 +56,13 @@ export function keepTargetMismatch(
   }
 
   const target = draftBlockUsesRange(block) ? "range" : "scalar";
-  const incompatible = target === "range"
-    ? mode !== "heat_cool"
+  const expectedFormat = policy?.formats_by_mode[mode];
+  const incompatible = policy
+    ? expectedFormat === (target === "range" ? "single" : "range")
+    : target === "range"
+    ? state ? !climateRangeModeCompatible(state, mode, policy) : mode !== "heat_cool"
     : state
-      ? climateRequiresRangeTarget(state, mode)
+      ? !climateSupportsSingleTarget(state) || climateRequiresRangeTarget(state, mode, policy)
       : mode === "heat_cool" && earlier.some(({ candidate }) =>
         (candidate.action || ACTION_SET_TEMPERATURE) === ACTION_SET_TEMPERATURE
         && draftBlockUsesRange(candidate));

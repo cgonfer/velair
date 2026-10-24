@@ -58,6 +58,8 @@ export type VelairViewHost = {
   _editPreset?(key: string): void;
   _setPresetLibraryDirty?(dirty: boolean, draft?: import("./types").PresetLibraryDraft): void;
   _presetLibraryDraft?: import("./types").PresetLibraryDraft;
+  _sharedSupplyLibraryDraft?: import("./components/shared-demand-settings-element").SharedSupplyLibraryDraft;
+  _setSharedSupplyLibraryState?(dirty: boolean, draft?: import("./components/shared-demand-settings-element").SharedSupplyLibraryDraft, busy?: boolean): void;
   _resourceProfileKey?: string;
   _openResourceUsage?(usage: import("./types").ResourceUsage): void;
   _draftTemplateLink?: import("./types").TemplateLink;
@@ -167,6 +169,7 @@ export type VelairViewHost = {
   _temperatureMigrationAction?: "°C" | "°F";
   _templateAction?: "save" | "delete";
   _blockEditorIdPrefix?: string;
+  _targetFormatEntityId?: string;
   _templateApplication?: import("./controllers/template-application").TemplateApplicationState;
   _templateApplyOpen: boolean;
   _templateApplyTargets: Set<string>;

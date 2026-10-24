@@ -33,8 +33,14 @@ An empty library keeps the same list and detail layout.
 Select an existing preset to inspect it; unsaved changes are shown only after you change
 its name or climate settings. The optional compatibility check does not mark
 the preset as edited. Uses are displayed as read-only information. The editor does
-not require a thermostat: choose heating or cooling settings, a single target
-or range, and optional device settings. An optional thermostat check previews
+not require a thermostat: choose heating or cooling settings and optional device
+settings. Target fields follow the formats configured for managed climates that
+offer the selected mode. When both formats occur, use the first action in
+**Additional settings** to switch between one temperature and two setpoints.
+If all destinations agree, only that format is offered; unknown capabilities or
+no destinations leave the choice available. Heat/Cool defaults to two setpoints,
+but can use one if destinations support that format. Keep and Temperature only
+consider all possible effective modes. See [target-format settings](usage.md#target-format-by-climate-and-mode). An optional thermostat check previews
 compatibility without changing the shared values. Every actual use is validated
 by the backend before saving.
 

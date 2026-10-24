@@ -49,6 +49,46 @@ async function navigate(panel: VelairPanel, view: string, subsection?: string) {
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); window.history.replaceState(null, "", "/"); });
 
 describe("panel-only shared schedule lifecycle", () => {
+  it("mounts shared supplies in Supply control and retains drafts when leaving is rejected", async () => {
+    const element = await panel(backend(), "/velair/supply-control");
+    const card = activeCard(element);
+    const supplies = card.shadowRoot!.querySelector("velair-shared-demand-settings")!;
+    await flush();
+    expect(supplies).not.toBeNull();
+    supplies.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="add"]')!.click();
+    await flush(); await card.updateComplete; await element.updateComplete;
+    expect(supplies.shadowRoot!.querySelectorAll('[data-select-supply]')).toHaveLength(1);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await navigate(element, "settings");
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(activeCard(element)).toBe(card);
+    expect(card.shadowRoot!.querySelector("velair-shared-demand-settings")).toBe(supplies);
+    expect(window.location.pathname).toBe("/velair/supply-control");
+    confirm.mockReturnValue(true);
+    await navigate(element, "settings");
+    expect(activeCard(element).shadowRoot!.querySelector("velair-shared-demand-settings")).toBeNull();
+    await navigate(element, "supply-control");
+    expect(activeCard(element).shadowRoot!.querySelector("velair-shared-demand-settings")).not.toBeNull();
+    expect(activeCard(element).shadowRoot!.querySelector("velair-shared-demand-settings")!.shadowRoot!.querySelectorAll("[data-select-supply]")).toHaveLength(0);
+  });
+
+  it("blocks supply navigation during save or resume without asking to discard", async () => {
+    const element = await panel(backend(), "/velair/supply-control");
+    const card = activeCard(element);
+    const supplies = card.shadowRoot!.querySelector("velair-shared-demand-settings")!;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    supplies.dispatchEvent(new CustomEvent("velair-dirty-changed", { detail: { dirty: false, busy: true }, bubbles: true, composed: true }));
+    await card.updateComplete;
+    await navigate(element, "templates");
+    expect(activeCard(element)).toBe(card);
+    expect(window.location.pathname).toBe("/velair/supply-control");
+    expect(confirm).not.toHaveBeenCalled();
+    supplies.dispatchEvent(new CustomEvent("velair-dirty-changed", { detail: { dirty: false, busy: false }, bubbles: true, composed: true }));
+    await card.updateComplete;
+    await navigate(element, "templates");
+    expect(window.location.pathname).toBe("/velair/templates/templates");
+  });
+
   it("retains return settings when child dirty events trigger rejected tab navigation", async () => {
     const element = await panel(backend(), "/velair/planned-return");
     const card = activeCard(element);
@@ -79,7 +119,7 @@ describe("panel-only shared schedule lifecycle", () => {
   });
   it("shares one load and stream across top tabs and renders cached data on the new editor", async () => {
     const mock = backend(); const element = await panel(mock); const first = activeCard(element);
-    for (const view of ["schedules", "modes", "templates", "sensors", "comfort", "preconditioning", "planned-return", "settings", "overview"]) {
+    for (const view of ["schedules", "modes", "templates", "supply-control", "sensors", "comfort", "preconditioning", "planned-return", "settings", "overview"]) {
       await navigate(element, view);
       expect(internals(activeCard(element))._data?.configuration_revision).toBe(1);
       expect(activeCard(element).shadowRoot!.querySelector(".initial-loading")).toBeNull();

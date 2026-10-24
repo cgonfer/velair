@@ -1,3 +1,4 @@
+import { targetFormatsForEntity } from "../domain/target-format-policy";
 import { resolveDayLayout, selectedDayGroup, schedulesEqual } from "../domain/day-layouts";
 import type { PanelSubsection } from "../domain/panel-routes";
 import { isScheduleResponseCurrent, rawScheduleHass, type PanelScheduleSession } from "../controllers/panel-schedule-session";
@@ -436,11 +437,19 @@ export class VelairCard extends LitElement {
   @state() private _plannedReturnDirty = false;
   @state() private _plannedReturnBusy = false;
   private _setPlannedReturnBusy(busy: boolean): void { this._plannedReturnBusy = busy; }
-  public canNavigatePanel(): boolean { return !this._plannedReturnBusy && !this._applyingTemplateTargets; }
+  public canNavigatePanel(): boolean { return !this._plannedReturnBusy && !this._applyingTemplateTargets && !this._sharedDemandBusy; }
   private _setPlannedReturnDirty(dirty: boolean): void { this._plannedReturnDirty = dirty; }
   @state() private _profileScheduleDirty = false;
   @state() private _presetLibraryDirty = false;
   @state() private _presetLibraryDraft?: import("../types").PresetLibraryDraft;
+  @state() private _sharedDemandDirty = false;
+  @state() private _sharedDemandBusy = false;
+  @state() private _sharedSupplyLibraryDraft?: import("./shared-demand-settings-element").SharedSupplyLibraryDraft;
+  private _setSharedSupplyLibraryState(dirty: boolean, draft?: import("./shared-demand-settings-element").SharedSupplyLibraryDraft, busy = false): void {
+    this._sharedDemandDirty = dirty;
+    this._sharedSupplyLibraryDraft = draft;
+    this._sharedDemandBusy = busy;
+  }
   private _setPresetLibraryDirty(dirty: boolean, draft?: import("../types").PresetLibraryDraft): void { this._presetLibraryDirty = dirty; this._presetLibraryDraft = draft; }
   @state() private _selectedWeekday = "monday";
   @state() private _draftBlocks: DraftScheduleBlock[] = [];
@@ -1010,12 +1019,12 @@ export class VelairCard extends LitElement {
     }
     this._syncDiagnosticsLogResizeObserver();
     this._syncClimateCardActionsResizeObserver();
-    if (changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty") || changedProperties.has("_templateApplication")) {
+    if (changedProperties.has("_sharedDemandDirty") || changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty") || changedProperties.has("_templateApplication")) {
       this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
         bubbles: true,
         composed: true,
         detail: {
-          dirty: this._plannedReturnDirty || Boolean(this._templateApplication?.dirty) || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
+          dirty: this._sharedDemandDirty || this._plannedReturnDirty || Boolean(this._templateApplication?.dirty) || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
           scope: this._scheduleSource === "profile" ? "profile" : "default-schedule",
         },
       }));
@@ -1994,7 +2003,8 @@ export class VelairCard extends LitElement {
       return;
     }
     this._climateCardPause = undefined;
-    const attributes = this.hass?.states?.[entityId]?.attributes;
+    const state = this.hass?.states?.[entityId];
+    const attributes = state?.attributes;
     const runtime = this._data?.zone_runtime?.[entityId];
     const low = attributes?.target_temp_low ?? runtime?.target_temp_low;
     const high = attributes?.target_temp_high ?? runtime?.target_temp_high;
@@ -2002,10 +2012,10 @@ export class VelairCard extends LitElement {
     this._climateCardBoost = {
       entityId,
       durationMinutes: 60,
-      targetKind: typeof low === "number" && typeof high === "number" ? "range" : "single",
+      targetKind: targetFormatsForEntity(this._data, entityId, state, state?.state === "off" ? undefined : state?.state).preferred,
       target,
-      low: typeof low === "number" ? low : typeof target === "number" ? target - 1 : undefined,
-      high: typeof high === "number" ? high : typeof target === "number" ? target + 1 : undefined,
+      low: typeof low === "number" && Number.isFinite(low) ? low : undefined,
+      high: typeof high === "number" && Number.isFinite(high) ? high : undefined,
     };
   }
 
@@ -2238,7 +2248,7 @@ export class VelairCard extends LitElement {
     const numeric = Number(value);
     this._climateCardBoost = {
       ...this._climateCardBoost,
-      [field]: Number.isFinite(numeric) ? numeric : undefined,
+      [field]: value.trim() && Number.isFinite(numeric) ? numeric : undefined,
     };
   }
 
@@ -2248,6 +2258,11 @@ export class VelairCard extends LitElement {
   ): void {
     if (!this._climateCardBoost) return;
     this._climateCardBoost = { ...this._climateCardBoost, [field]: value || undefined } as typeof this._climateCardBoost;
+    if (field === "hvacMode") {
+      const boost = this._climateCardBoost!;
+      const choice = targetFormatsForEntity(this._data, boost.entityId, this.hass?.states?.[boost.entityId], value || undefined);
+      if (choice.formats.length === 1 && !choice.uncertain) this._climateCardBoost = { ...boost, targetKind: choice.formats[0] };
+    }
   }
 
   private _updateClimateCardPause(
@@ -2275,7 +2290,7 @@ export class VelairCard extends LitElement {
         const data: Record<string, unknown> = {
           entity_id: entityId,
           duration_minutes: boost.durationMinutes,
-          ...(boost.targetKind === "range" && typeof boost.low === "number" && typeof boost.high === "number"
+          ...(boost.targetKind === "range"
             ? { target_temp_low: boost.low, target_temp_high: boost.high }
             : { temperature: boost.target }),
         };
@@ -2368,6 +2383,7 @@ export class VelairCard extends LitElement {
       direction,
       this._temperatureUnit(entityId),
       this._entityTemperatureStep(entityId),
+      this._data?.zones[entityId]?.target_format_policy,
     );
     if (!payload) return;
     this._climateCardThermostatAction = "temperature";

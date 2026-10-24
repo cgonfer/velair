@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](linked-schedules.md) · [Español](linked-sch
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.2 |
-| Ultima sincronizzazione | 2026-10-17 |
+| Versione di riferimento | 1.9.0-beta.5 |
+| Ultima sincronizzazione | 2026-10-24 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -30,7 +30,7 @@ Un preset del blocco Velair ha un nome e la stessa configurazione climatica di u
 
 I preset appartengono a una libreria condivisa. Ogni destinazione viene verificata rispetto al termostato e, quando applicabile, al controller esterno della programmazione. Un’opzione omessa non viene inviata; omettere la ventilazione non ripristina la ventilazione del termostato.
 
-Gestisci la libreria condivisa in **Modelli → Preset climatici**. Il selettore della libreria spiega sia i modelli giornalieri sia i preset climatici condivisi. Usa il pulsante di aggiunta nell’intestazione dell’elenco per creare un preset. Una libreria vuota mantiene lo stesso layout di elenco e dettagli. Seleziona un preset esistente per esaminarlo; le modifiche non salvate compaiono solo dopo averne cambiato nome o impostazioni climatiche. La verifica facoltativa della compatibilità non lo contrassegna come modificato. Gli utilizzi sono informazioni in sola lettura. L’editor non richiede un termostato: scegli impostazioni di riscaldamento o raffrescamento, un obiettivo singolo o un intervallo e impostazioni facoltative del dispositivo. Una verifica facoltativa con un termostato anticipa la compatibilità senza cambiare i valori condivisi. Ogni utilizzo effettivo viene verificato dal backend prima del salvataggio.
+Gestisci la libreria condivisa in **Modelli → Preset climatici**. Il selettore della libreria spiega sia i modelli giornalieri sia i preset climatici condivisi. Usa il pulsante di aggiunta nell’intestazione dell’elenco per creare un preset. Una libreria vuota mantiene lo stesso layout di elenco e dettagli. Seleziona un preset esistente per esaminarlo; le modifiche non salvate compaiono solo dopo averne cambiato nome o impostazioni climatiche. La verifica facoltativa della compatibilità non lo contrassegna come modificato. Gli utilizzi sono informazioni in sola lettura. L’editor non richiede un termostato: scegli impostazioni di riscaldamento o raffrescamento e opzioni del dispositivo. I campi di temperatura seguono i formati configurati per i climatizzatori gestiti che offrono la modalità scelta. Se compaiono entrambi i formati, la prima azione in **Impostazioni aggiuntive** alterna tra una temperatura e due setpoint. Se tutte le destinazioni concordano viene proposto solo quel formato; capacità sconosciute o nessuna destinazione lasciano disponibile la scelta. Caldo/Freddo propone due setpoint, ma consente uno se le destinazioni lo supportano. Mantieni e Solo temperatura considerano tutte le modalità effettive possibili. Consulta le [impostazioni del formato di temperatura](usage.it.md#target-format-by-climate-and-mode). Una verifica facoltativa con un termostato anticipa la compatibilità senza cambiare i valori condivisi. Ogni utilizzo effettivo viene verificato dal backend prima del salvataggio.
 
 Salva un preset con l’icona accanto al nome. La modifica ne conserva la posizione nella libreria, anche dopo il ricaricamento; i nuovi preset vengono aggiunti in fondo. I campi di temperatura accettano punto o virgola decimale (per esempio `21.5` o `21,5`), compresi entrambi i limiti di un intervallo nativo. L’editor conserva ciò che scrivi e invia valori numerici all’anteprima o al salvataggio. La verifica facoltativa della compatibilità mostra le impostazioni effettive per un termostato selezionato, con un risultato separato di successo o errore. Verificare la compatibilità non salva il preset né cambia lo stato delle modifiche non salvate.
 

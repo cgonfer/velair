@@ -262,6 +262,41 @@ queued. Network delivery, earlier event-loop queueing and browser rendering are
 outside that total. If the UI is slow while backend timings are short, inspect
 the browser's WebSocket request/result and subsequent rendering separately.
 
+## Range-only Climate Compatibility (Issue #51)
+
+Use a synthetic entity with `supported_features: 394`, modes
+`[off, heat, cool, auto, dry, fan_only]`, limits 16–30 and step 0.5. Do not
+commit household diagnostics or private screenshots.
+
+1. In Default schedules and Profiles, create the first and subsequent blocks.
+   Keep two limits while switching between Heat, Cool, Auto, Keep and Temperature
+   only. Save and reload; test equal and distinct limits, inversion, missing
+   values, bounds and invalid steps. Repeat in a template and shared preset,
+   checking that an incompatible destination is rejected.
+2. Inspect actual service calls in Heat, Cool and Auto: each temperature payload
+   contains the complete pair and no `temperature`. Keep preserves a compatible
+   running mode, rejects Dry/Fan only, and starts Off in the first advertised
+   compatible conditioning mode. Temperature only sends both values while Off
+   without an HVAC mode call. Scalar targets on this entity are rejected.
+3. Test Overview, the optional card and Boost on mobile and tablet. Both limits
+   must remain visible; changing either sends the complete ordered pair. Missing
+   current limits leave Boost incomplete instead of inventing values. Repeat
+   in French to check fallback for pending canonical strings.
+4. Start and cancel/expire Boost; pause and resume; enter and resume Manual
+   adjustment; reload and recover an unavailable entity. Inspect restored pairs,
+   including an entity exposing a residual scalar `temperature`. An incomplete
+   observed pair must not become a scalar restoration.
+5. Enable Room Assist and Adaptive Preconditioning, then switch from an assisted
+   `heat_cool` target to a range in Heat, Cool or Auto. Check the explicit
+   limitation, nominal pair delivery and absence of stale restored corrections,
+   band shifts, early starts and thermal learning. Planned Return delivers the
+   pair at arrival only. Keep saved advanced settings.
+6. Repeat with scalar-only and mixed-capability entities: preserve existing
+   default Heat/Cool range behavior and scalar Heat, Cool and Auto behavior before
+   any policy override. On real
+   equipment, confirm each accepted mode and both setpoints physically, including
+   Boost restoration; Home Assistant state alone does not prove delivery.
+
 ## Scheduler Transition Regressions
 
 Use explicit HVAC modes and inspect actual climate service calls as well as the
@@ -563,9 +598,9 @@ Header checks:
 
 ## Portable Temperature Data
 
-1. Export in Celsius and Fahrenheit and confirm portable model v19 records the
+1. Export in Celsius and Fahrenheit and confirm portable model v20 records the
    effective `temperature_unit`.
-2. Import each newly exported portable v19 file back into the same installation
+2. Import each newly exported portable v20 file back into the same installation
    and confirm the frontend accepts it and the selected sections round-trip.
 3. Import a portable v10 file into the opposite unit and confirm selected
    thermal sections convert. Confirm its Comfort derived-metric and outdoor-
@@ -1497,7 +1532,7 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
     humidity stays visible but has no condition, the effective range is absent,
     the summary is unavailable, and no humidity ventilation opportunity is
     produced. Restore temperature and confirm evaluation returns.
-43. Reload Velair and Home Assistant, export/import portable model v19, and
+43. Reload Velair and Home Assistant, export/import portable model v20, and
     confirm the selected model and both endpoint ranges survive. Import a v10
     payload and confirm it uses the Simple model. In Fahrenheit, confirm endpoint
     temperature labels and exported thermal values use Fahrenheit while the
@@ -1530,8 +1565,8 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
    small local Velair icon with a static **Loading...** label appears inline,
    without a floating notice or animation. Existing content must remain visible
    during later refreshes.
-3. Confirm the Overview, Schedules, Modes, Templates, Room Assist, Comfort,
-   Preconditioning, Diagnostics, and Settings tabs render in that order.
+3. Confirm the Overview, Schedules, Modes, Templates, Supply control, Room Assist, Comfort,
+   Preconditioning, Planned return, Diagnostics, and Settings tabs render in that order.
    Confirm existing links and Lovelace `view` values still open the same named
    views.
 4. Confirm Preconditioning lists climates in the order configured in Settings and contains no general Settings sections.
@@ -1934,3 +1969,172 @@ breathing room. The help reserves its own column and keeps a 44 px target;
 wrapped title and phase text must not overlap it at 360 px with long EN/ES text
 and source counts. Verify keyboard/tap help and viewport popup placement remain
 unchanged, with no transformed ancestor.
+
+## Per-climate target-format policy
+
+1. Check scalar-only, range-only, mixed, and unknown-capability climates. Mixed
+   settings initially select only advertised Heat/Cool; explicit empty selections
+   survive reload, restart and portable model 20 round-trips. Older imports retain
+   backward-compatible defaults. Only reported non-off modes are offered.
+2. Add Heat as a range mode. Preview affected Default, every Profile and direct
+   or inherited Template/Preset uses. Repair a shared resource, then repeat with
+   a destination-local correction and verify the link loss is explicit.
+3. Keep an incompatible Boost or temporary objective active; verify it blocks
+   applying the policy until explicitly resolved. Revision conflicts and failed
+   writes leave policy, schedules and unrelated overrides unchanged.
+4. In Default, Profiles and Boost, change formats and return. Draft values should
+   return without deriving a range or scalar. Missing values require entry. Keep
+   and Temperature only offer a choice only when possible formats differ; runtime
+   validation follows the actual mode and Temperature only never activates HVAC.
+5. In Templates and Presets test unanimous single, unanimous range, mixed, unknown
+   and empty destination sets. Exclude climates not offering the selected mode.
+   Heat/Cool defaults to range but permits single when destinations differ. Test
+   existing incompatible resources without silent conversion on opening.
+6. At 320, 390, 768 and 1440 pixels, verify the first Additional settings action
+   changes format where appropriate, fields remain legible and no column is added.
+7. Remove a configured mode from reported capabilities; verify its saved setting
+   remains diagnosed. Add two-setpoint Heat/Cool/Auto objectives and check that
+   non-Heat/Cool ranges never start Room Assist or thermal preparation/learning.
+8. Confirm device acceptance physically when possible; successful service delivery
+   alone is not a compatibility test. No automated physical probe should run.
+
+## Shared climate supply
+
+While demand is retained inside the band, rename a heating/cooling supply and
+edit dormant stop values: no extra output command or phase reset should occur.
+Rename during switch-off delay and verify the original deadline. Disable a
+supply, change the physical switch on/off, then re-enable before minimum-off
+expires: use its newest off transition. Gate storage during resume or unit
+migration, switch off manually, then release the write; suspension must win and
+survive restart. Revert all frontend edits and check Resume/live updates recover.
+Unload the integration while the suspension write is pending and verify the
+final write preserves suspension for the next load, without recurring retries.
+Burst 1,000 native temperature events without changing demand: one coalesced
+worker, no additional service calls, writes or panel broadcasts, and no timers
+without a pending control deadline. Verify oversized invalid numeric readings
+produce unknown demand rather than keeping an earlier request indefinitely.
+
+Confirm the tab is **Supply control**, the list is **Shared supplies**, and the
+controls use **Supply name**, **Add supply**, **Remove supply** and **Save supplies**.
+Thermostat inheritance uses **Use supply hysteresis**.
+
+Compare Supply control with Templates, Presets and Modes at 320/390/768/1024/1440 px in
+both themes. Check shared empty/add states, field-label and selector typography,
+long disclosure titles, keyboard focus, 44 px touch actions and invalid-select
+borders. Confirm the list/detail spacing and accepted header/control layouts,
+including long supply, switch and thermostat names. Review advanced warnings for
+both heating and cooling, and retain the save/error controls when deleting the
+final supply instead of showing the pristine empty prompt.
+
+Attempt to save with a missing name/output, duplicate output, no selected rooms
+and an unmanaged room in a different supply. The header beside Save must show the
+specific supply, field and cause; select the affected supply, reveal its section
+and focus the correction. Check inline errors clear after correction. Repeat
+with structured backend failures, stale revisions, resume failure and failed
+deletion of the final supply: retain drafts and the original backend message,
+show it by Save, and do not invent a field association. Check keyboard access
+and header visibility after scrolling before an asynchronous failure returns.
+
+Verify the live hysteresis diagram for heating and cooling in each mode. Change
+start/stop distances and temperature units; markers, inequalities and demand
+regions must agree with the example target and the threshold table in the guide.
+Confirm temperature callouts connect to their markers and hysteresis brackets
+reach the target. Start/stop labels must stay separate at zero and highly
+asymmetric distances without shrinking the text on mobile.
+Check zero distances, invalid partial input and large finite offsets. The middle
+region retains previous demand, and the diagram must not claim a live room
+temperature or account for Room Assist/timing. Check legibility at 320 px in both
+themes and the accessible textual equivalent.
+
+Check numeric validation before saving: enter negative, fractional, empty and
+over-86,400 timing values, then correct them to 0 and 86,400. Errors should appear
+beside the field and prevent saving, including after selecting another supply.
+Check negative and non-finite hysteresis, partial numeric input, and empty
+thermostat exceptions (inheritance). Switch away from Custom with an invalid stop
+value and verify the message explains how to return and correct it. Repeat at
+320 px and with keyboard focus; error text must remain readable.
+
+1. Open Supply control and create disabled heating and cooling supplies with several managed rooms.
+   Save, reload, enable explicitly, and verify inherited and custom hysteresis.
+   Walk both thresholds and check target/mode changes reset retained demand.
+2. Verify supply OR demand, unavailable rooms, invalid temperatures, native ranges,
+   missing switches and independent supplies. No remaining valid demand requests
+   off; a failed command is visible without repeated calls on sensor traffic.
+3. With Room Assist, exercise both fixed-direction phases, zero deadband, native
+   range holding, missing external sensor and a commit requiring no new climate
+   write. Confirm no second hysteresis and no corrected-target fallback. Pause
+   scheduling, adjust the thermostat manually and verify native demand resumes
+   after the assisted correction is retired.
+4. Exercise minimum-off and cancellable off-delay deadlines. Turn supply off
+   manually while a command is pending, restart, and verify explicit resume is
+   required. Disable/remove/reassign a supply with its switch unavailable; restore
+   availability and check cleanup survives restart. Unload requests off.
+   With known zero demand, turn an enabled switch on externally. Verify Velair
+   still applies its off-delay and that a matching reported off transition creates
+   one persistent notification and one Activity entry naming the supply, action,
+   heating/cooling reason and Supply control link. Repeat activations and sensor
+   bursts within 15 minutes: neither channel should repeat. A second supply is
+   independent; a new correction after the cooldown replaces the existing notice.
+   Service acceptance alone, mismatched/missing contexts, startup on states,
+   unknown demand, ordinary demand-driven off, and disabled/suspended supplies must
+   not produce correction notices. Check synchronous and delayed acknowledgment,
+   retry acknowledgments, returned demand during off-delay, Room Assist intent,
+   output reassignment, removal and unload. Make each reporting service fail or
+   block independently: control of other supplies must remain responsive, and a
+   notification failure must not prevent the Activity attempt.
+5. Check failed writes, stale edits, temperature migration blocks, Fahrenheit
+   difference conversion and portable model v22. Imports remain disabled/suspended.
+6. At 320/390/768/1024 px and both HA themes, check supply forms, overrides,
+   long room names, errors, resume and cleanup messages. Check keyboard access.
+   Emit sensor bursts and confirm bounded tasks/timers, no sample persistence and
+   no panel broadcasts for unchanged demand. Confirm physical output behavior on
+   the actual installation; command acceptance alone cannot verify it.
+7. Exercise Stop at target, Symmetric and Custom for heating and cooling, including
+   equality and zero offsets. Override start and stop independently per thermostat;
+   change modes and verify dormant custom values survive save/reload and conversion.
+   Confirm supply mode applies to every associated thermostat and Room Assist's
+   committed intent ignores every shared hysteresis mode. With a range thermostat
+   in opposing supplies, inspect possible overlap from large stop offsets.
+8. Open help from the feature heading and follow its guide link. Existing supplies
+   start compact; expand each section, edit, save, leave with confirmed discard and reload. Check the
+   header's enable control and selected switch remain accessible at 320 px.
+9. Enter `/velair/supply-control` directly and reload. Open the legacy
+   `/velair/groups` bookmark and verify it resolves to Supply control. Confirm the Supply control tab is selected,
+   Settings no longer contains the supply editor, and the list/detail layout follows
+   Templates. Select two supplies with pending changes; edits remain when returning.
+   Create/delete a selected supply and leave with confirmed discard, checking recovery on return.
+   Reject leaving with unsaved changes and confirm the same editor stays mounted.
+   During save/resume, tab navigation must remain blocked. No room-group creation
+   or changes to scheduling ownership are introduced by this tab.
+10. Compare the Supply control introduction with Modes: shared icon/title/description/help
+    layout and typography. Trash actions appear only in list rows, with the same
+    appearance as Templates. Delete an unselected supply without changing the
+    selected editor; delete the selected supply and verify adjacent selection.
+    Check add/empty states, list focus, long names and theme colors at 320 px.
+11. Verify list entries explicitly identify purpose, thermostat count and switch.
+    In the header, distinguish observed switch state/estimated demand from the
+    unsaved enable toggle; saved control status appears only in the list. Disabled/suspended supplies must not
+    present the backend's unevaluated false demand as measured absence of demand.
+    Open purpose, ownership/state and timing information on keyboard focus and tap;
+    confirm popups fit the viewport and close when changing supplies or leaving.
+    Repeat with unavailable switches, pending edits, command errors and long names.
+12. Check the supply list uses two compact information columns when its own width
+    permits: purpose/switch identity together, thermostat count/control together.
+    Narrow lists stack these information columns without overflow or moving the delete action.
+13. Compare save actions with Templates/Presets: icon in the detail header, no
+    footer or separate Discard button. Confirm the supply selector and its
+    observed state stay linked: the selector uses the full field width and the
+    state appears directly below as compact helper text. Check unavailable state
+    and the info button beside the field label in both themes and narrow details.
+    Enabled/Disabled appears only in the list; waiting, suspension, errors and
+    estimated demand remain visible when applicable. Delete the last supply and
+    save the empty list through its header action; reload to confirm persistence.
+14. Edit name, supply switch and purpose directly in the summary. Each control
+    appears once, with no separate Supply settings section or repeated read-only
+    name/purpose/switch. Verify selection, draft preservation, help and save/reload;
+    switching the supply output must not show the old output's observed status.
+15. Select a thermostat and check that Thermostat hysteresis explicitly identifies
+    the supply/custom choice. On wide rows, the checkbox/name aligns with the
+    inheritance selector, independently of custom-field height. Narrow rows stack
+    controls aligned to the thermostat text. Verify long names, custom start/stop
+    values, the read-only effective limits and both touch/keyboard interaction.

@@ -119,13 +119,13 @@ describe("portable preconditioning learning", () => {
     };
     const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(19);
+    expect(PORTABLE_MODEL_VERSION).toBe(22);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
     expect(roundTrip.sections.zones).toEqual(current.sections.zones);
     expect(validatePortablePayload({ ...roundTrip, model_version: 13 })).toEqual({ ok: true, sections: ["zones"] });
     expect(validatePortablePayload({ ...roundTrip, model_version: 14 })).toEqual({ ok: true, sections: ["zones"] });
     expect(validatePortablePayload({ ...roundTrip, model_version: 19 })).toEqual({ ok: true, sections: ["zones"] });
-    expect(validatePortablePayload({ ...roundTrip, model_version: 20 })).toEqual({
+    expect(validatePortablePayload({ ...roundTrip, model_version: PORTABLE_MODEL_VERSION + 1 })).toEqual({
       ok: false,
       errorKey: "invalidImportFile",
     });

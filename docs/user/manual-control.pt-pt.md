@@ -8,8 +8,8 @@ Traduções: [Original em inglês](manual-control.md) · [Español](manual-contr
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -51,7 +51,7 @@ Esses estados podem coexistir. Por exemplo, o Modo **Manual** pode selecionar o 
 
 O Velair observa estes campos de controlo nos dispositivos geridos:
 
-- `hvac_mode`, representado pelo estado da entidade, incluindo `off`, `heat`, `cool` e `heat_cool`;
+- `hvac_mode`, representado pelo estado da entidade, incluindo `off`, `heat`, `cool`, `auto` e `heat_cool`;
 - `temperature` para alvo escalar;
 - `target_temp_low` e `target_temp_high` para intervalo nativo.
 
@@ -190,6 +190,8 @@ Se uma pausa independente continuar, a zona permanece pausada. Se a sua ação e
 - se `off`, escolher o primeiro modo compatível anunciado que não seja `off` e aplicar o alvo.
 
 Um dispositivo apenas de aquecimento com `[off, heat]` retoma um bloco de `21 °C` como `heat`, `21 °C`; um apenas de arrefecimento com `[off, cool]` retoma como `cool`, `21 °C`. Um reversível pode anunciar vários modos compatíveis; o Velair usa a ordem anunciada, sem deduzir pela estação, região ou alvo numérico. Defina modo explícito quando a escolha precisa de ser determinística.
+
+Numa entidade que só aceita intervalos, os modos compatíveis anunciados são `heat`, `cool`, `auto` e `heat_cool`. Manter a partir de Desligado usa o primeiro deles pela ordem anunciada. Entidades com ambos os formatos usam a [política de formato por modo](usage.pt-pt.md#target-format-by-climate-and-mode) guardada para determinar modos compatíveis, mantendo a preferência por `heat_cool` ao retomar um intervalo compatível a partir de Desligado. Apenas temperatura pode escrever os dois limites com o equipamento desligado se este anunciar intervalos e um modo compatível; nunca o ativa para permitir essa escrita.
 
 Para um bloco apenas de opções, retomar aplica só os controlos selecionados. Não envia temperatura nem liga um dispositivo desligado.
 
@@ -344,6 +346,8 @@ Policy: until resumed
 ```
 
 Deteta `target_temp_low` e `target_temp_high`, captura todo o estado `heat_cool` e preserva `19–24 °C` durante o ajuste. Ao retomar, aplica todo o intervalo do bloco atual com autoridade. Nunca o reduz a um alvo escalar.
+
+A mesma captura e reposição do par completo aplica-se a entidades apenas de intervalo em Aquecimento, Arrefecimento e Auto. Um atributo residual `temperature` não substitui os dois limites. Se o par observado estiver incompleto ou inválido, o Velair não inventa um alvo recuperável a partir desse atributo único.
 
 <a id="independent-window-pause-while-manual"></a>
 ### Pausa independente de janela durante controlo manual

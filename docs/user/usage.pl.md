@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.4 |
-| Ostatnia synchronizacja | 2026-10-21 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -33,6 +33,7 @@ Panel boczny zmienia adres przy przełączaniu kart lub podsekcji Harmonogramów
 | Tryby | `/velair/modes` |
 | Szablony: Szablony | `/velair/templates/templates` |
 | Szablony: Presety klimatyczne | `/velair/templates/presets` |
+| [Sterowanie zasilaniem](shared-climate-supply.pl.md) | `/velair/supply-control` |
 | Czujniki | `/velair/sensors` |
 | Komfort | `/velair/comfort` |
 | Przygotowanie wstępne | `/velair/preconditioning` |
@@ -245,7 +246,7 @@ climate_actions:
 
 Obszar sterowania łączy uporządkowane szybkie działania z niezależnie konfigurowanym wyborem sterowania automatycznego lub ręcznego, korzystając z tego samego modelu odpowiedzialności co Przegląd. Dolny panel grupuje tryb HVAC, bieżącą temperaturę docelową włączonego urządzenia i skrót do natywnego okna sterowania Home Assistant. Każdy zgłaszany tryb HVAC ma swoją ikonę. Gdy Velair steruje aktywnym harmonogramem, bezpośrednie kontrolki są tylko do odczytu: najpierw wybierz sterowanie ręczne, poczekaj na potwierdzenie Regulacji ręcznej, a następnie używaj kontrolek temperatury i trybu. Wybór sterowania automatycznego wznawia harmonogram. Wzmocnienie, niezależne Pauzy, zatrzymanie i niedostępność blokują bezpośrednią edycję z wyjaśnieniem. Wewnętrzna Pauza reprezentująca samą Regulację ręczną nie blokuje tych kontrolek. Strefy wykonywane zewnętrznie zachowują skrót do natywnego okna Home Assistant; włączone działanie jednorazowego powrotu nadal może otworzyć kontrolki wyjścia całego domu.
 
-Obsługiwane są pojedyncze temperatury docelowe i natywne zakresy `heat_cool`. Zmiana zakresu wysyła obie granice razem. Velair używa zgłaszanych przez encję `min_temp`, `max_temp` i `hvac_modes`. Zmiany temperatury korzystają z `target_temp_step`, jeśli jest publikowany. Po zniknięciu tego atrybutu Velair nadal korzysta z ostatniego prawidłowego zgłoszonego kroku, aby zachować poprawność istniejących temperatur dziesiętnych. Następna w kolejności jest ręczna wartość zastępcza strefy z Ustawień, a na końcu `1`, jeśli żadnego kroku nigdy nie zgłoszono ani nie skonfigurowano. Velair nie wymyśla trybów HVAC.
+Obsługiwane są pojedyncze temperatury i zgodne natywne zakresy, także w Ogrzewaniu, Chłodzeniu i Auto dla encji przyjmujących tylko dwie nastawy. Zmiana zakresu wysyła obie granice razem. Velair używa zgłaszanych przez encję `min_temp`, `max_temp` i `hvac_modes`. Zmiany temperatury korzystają z `target_temp_step`, jeśli jest publikowany. Po zniknięciu tego atrybutu Velair nadal korzysta z ostatniego prawidłowego zgłoszonego kroku, aby zachować poprawność istniejących temperatur dziesiętnych. Następna w kolejności jest ręczna wartość zastępcza strefy z Ustawień, a na końcu `1`, jeśli żadnego kroku nigdy nie zgłoszono ani nie skonfigurowano. Velair nie wymyśla trybów HVAC.
 
 Starsze karty używały `climate_show_boost_action`, `climate_show_pause_action`, `climate_custom_actions`. Velair nadal je odczytuje, a edytor zapisuje `climate_actions` po zmianie listy.
 
@@ -359,7 +360,13 @@ Wybrane opcje pojawiają się w kompaktowym wierszu pod blokiem. Przycisk inform
 
 Blok temperatury może mieć pojedynczą temperaturę docelową albo pełny zakres dolnej i górnej granicy. Nowe bloki `heat_cool` domyślnie korzystają z zakresu, jeśli urządzenie go obsługuje. Panel pokazuje obie granice, np. `20–24 °C`. Velair nie tworzy zakresu za użytkownika i odrzuca niepełne, odwrócone lub niezgodne cele przed wysłaniem polecenia.
 
-Natywne zakresy w pierwszym etapie ograniczają się do `heat_cool`; Velair nie zakłada tego modelu dla `auto` urządzenia.
+Encje obsługujące tylko zakresy używają obu granic w zgłaszanych trybach `heat`, `cool`, `auto` i `heat_cool`. Edytor zachowuje te wartości podczas zmiany zgodnych trybów, **Zachowaj bieżący tryb** i **Tylko temperatura**. Granice mogą być równe. Przy obsłudze obu formatów obowiązuje polityka trybu dla encji z Ustawień. Dla encji zakresowych Osuszanie i Tylko wentylator pozostają blokami trybu bez temperatury; przy obu formatach polityka wyznacza format, lecz integracja nadal może odrzucić nieobsługiwaną operację.
+
+Zachowanie trybu uruchamia wyłączoną encję zakresową w pierwszym zgłaszanym zgodnym trybie. Nie omija niezgodnego działającego trybu przez jego zmianę. Przy obu formatach zakres z Zachowaj nadal preferuje `heat_cool` przy starcie z Off. Tylko temperatura może wysłać obie granice przy wyłączeniu, jeśli encja zgłasza obsługę zakresu i zgodny tryb klimatyzacji, bez włączenia ani zmiany trybu. Znana encja wyłącznie zakresowa nie przyjmuje pojedynczej temperatury także przy wyłączeniu.
+
+Edytor zakresu pokazuje dolny i górny cel. To wartości przyjmowane przez integrację; Velair nie zakłada, że Auto ma automatyczny pas ogrzewania/chłodzenia jak `heat_cool`. Te same kontrole dotyczą Profili, presetów, Wzmocnienia i kopiowanych lub powiązanych szablonów. Szablony i Presety używają formatów możliwych miejsc docelowych; przy stosowaniu sprawdzane jest każde rzeczywiste miejsce. Gdy Wzmocnienie nie ma użytecznych bieżących granic, podaj obie przed zastosowaniem.
+
+Room Assist i adaptacyjne przygotowanie temperatury obsługują zakresy tylko w `heat_cool`. Zakres w Ogrzewaniu, Chłodzeniu lub Auto jest stosowany nominalnie o zaplanowanej godzinie, bez korekty Room Assist, wcześniejszego startu ani termicznego uczenia. Widoki wyjaśniają ograniczenie. Planowany powrót stosuje cel przy przyjeździe bez wcześniejszego przygotowania.
 
 Edytor pokazuje dodatkowe obsługiwane kontrolki, np. wentylator, preset, oscylację/poziomą i wilgotność AC. Tylko obsługiwane są zapisywane i wysyłane; reszta pomijana.
 
@@ -382,6 +389,46 @@ Dla wszystkich dni lub dni roboczych/weekendu najpierw wybierz i zapisz podstaw�
 Wybór podstawy nic nie zapisuje. Zapis jest niedostępny bez niej i znajduje się pod treścią po prawej. Podsumowanie podaje źródłowy dzień i odbiorców. Zapis zastępuje tylko dni grupy; inne pozostają bez zmian. Te same widoczne temperatury nie oznaczają tej samej konfiguracji: kompaktowe etykiety wskazują szablon, zakres powiązania, preset lub niezależny harmonogram, a pełne odwołania są w pomocy.
 
 Dodanie, usunięcie i przesunięcie bloków, zastosowanie szablonu, zmiana rodzaju i usunięcie powiązania obejmują całą wybraną grupę po zapisaniu. Zapis jako szablon tworzy jedną listę dzienną. Kopia do innych termostatów obejmuje te same dni tygodnia, zachowując układ celów. Klonowanie między dniami wymaga **Poszczególne dni**. Wspólna oś pokazuje edytowane bloki bez osobnego wyboru podglądu dnia ani odziedziczonego segmentu. Indywidualne dni nadal pokazują ciągłość poprzedniego dnia. Ciągłość tygodniowa nie zmienia się, a odziedziczone bloki nie są kopiowane do zapisu. Limity urządzeń sprawdzane są dla wszystkich dni przed pełnym zapisem. Układy przetrwają restart i eksport; starszy import bez układu lub wcześniejsze własne odwołania otwierają dni indywidualne, zachowując wszystkie bloki i powiązania.
+
+<a id="target-format-by-climate-and-mode"></a>
+## Format celu według encji i trybu
+
+Home Assistant zgłasza obsługę pojedynczych temperatur i zakresów, ale nie tabelę zgodności każdego trybu HVAC. W **Ustawienia → Zarządzane encje klimatu** każda encja z oboma formatami ma listę **Tryby z dwiema nastawami**. Zamknięta pokazuje wybrane tryby, a otwarta pozwala je zaznaczać i usuwać. Dostępne są tylko zgłaszane tryby poza Off. Ogrzewanie/chłodzenie jest początkowo wybrane, jeśli dostępne; inne tryby nie są wybierane automatycznie. Pusty wybór jest poprawny. Encje z jednym formatem używają go bez selektora. Pomoc przy etykiecie wyjaśnia ograniczenia. Zmiany przed zastosowaniem przechodzą sprawdzenie niezgodności.
+
+To ustawienie opisuje wysyłanie celów przez Velair, a nie potwierdza przyjmowania i używania obu wartości przez urządzenie. Integracja może odrzucić lub zignorować parametr. Velair zgłasza znane niezgodności przed zapisem i otrzymane błędy dostarczenia. Nie ma automatycznego testu urządzenia ani próbnego przełączania trybów.
+
+**Domyślny**, strefy w **Profilach**, **Wzmocnienie** i sterowanie klimatem używają tej polityki do pokazania jednego lub dwóch pól jawnego trybu. Zmiana trybów zachowuje oddzielne tymczasowe wersje robocze każdego formatu. Powrót przywraca wartości wpisane podczas tej edycji; brakujące trzeba uzupełnić. Velair nie tworzy zakresu ani nie sprowadza pary do jednej temperatury. Alternatywne szkice nie są zapisywane i znikają po odświeżeniu.
+
+**Zachowaj bieżący tryb** i **Tylko temperatura** nie podają jawnego trybu. Jeśli encja używa obu formatów w różnych trybach, wybierz zamierzony format w **Dodatkowych ustawieniach** bloku. Rzeczywisty tryb jest ponownie sprawdzany przy wykonaniu. Tylko temperatura nie włącza ani nie zmienia trybu HVAC.
+
+<a id="formats-in-templates-and-presets"></a>
+### Formaty w Szablonach i Presetach
+
+Dla jawnego trybu Velair uwzględnia zarządzane encje, które go oferują:
+
+- Gdy wszystkie używają jednej temperatury, edytor pokazuje jedno pole.
+- Gdy wszystkie używają dwóch nastaw, pokazuje dwa pola.
+- Przy obu formatach pierwsza akcja w **Dodatkowych ustawieniach** przełącza **Użyj dwóch nastaw** i **Użyj jednej temperatury**. Nowe bloki zaczynają od jednej temperatury, poza Ogrzewaniem/chłodzeniem z dwiema.
+- Bez zgodnych encji lub przy niepewnych możliwościach wybór pozostaje dostępny.
+
+Zachowaj i Tylko temperatura łączą możliwe tryby efektywne. Ogrzewanie/chłodzenie także pozwala przełączać, gdy rzeczywiste miejsca docelowe mają różne formaty. Akcja używa istniejącego przycisku ustawień na komputerze i telefonie, bez dodatkowej kolumny obok temperatur. Powiązane wartości presetów są tylko do odczytu do czasu odłączenia.
+
+Istniejące Szablony i Presety zachowują wartości po zmianach ustawień urządzeń. Niezgodny format jest oznaczony jawną akcją poprawy; otwarcie edytora nie przekształca ani nie usuwa wartości. Przypisywanie i kopiowanie sprawdza każde miejsce docelowe.
+
+<a id="reviewing-changes-to-the-mode-policy"></a>
+### Sprawdzanie zmian polityki trybów
+
+Zmiana wyboru najpierw pokazuje wpływ na harmonogramy domyślne, wszystkie Profile i użycia wspólnych Szablonów i Presetów. Poprawki dotyczą lokalnie dnia i encji w harmonogramie domyślnym lub Profilu. Brakujące cele wpisuje użytkownik; Velair nie wybiera zastępczych temperatur. Jeśli aktywna korekta Room Assist jest niezgodna, przegląd wyjaśnia, że zapis zakończy ją automatycznie. Ustawienia pozostają dla zgodnych trybów. Inne niezgodne cele tymczasowe trzeba wcześniej poprawić lub zakończyć.
+
+Przegląd grupuje dni pod harmonogramem domyślnym lub Profilem. Po **Sprawdź zmiany** grupy i dni są zwinięte, aby liczby były czytelne. Otwórz dzień do edycji; tylko jeden edytor dnia jest rozwinięty naraz. Duże listy mają strony. **Następny element do sprawdzenia** prowadzi do kolejnej poprawki, także na innej stronie. Zwijanie i zmiana strony zachowują wpisy. Przed pierwszym sprawdzeniem obok Anuluj jest tylko Sprawdź zmiany; później zastępuje je **Zapisz**. Uzupełnij pola i zapisz: backend sprawdza aktualne poprawki i blokady i zapisuje tylko po powodzeniu. Nie trzeba oddzielnego drugiego sprawdzenia. Błędy walidacji, połączenia i zapisu zachowują wpisy.
+
+Dodanie lub usunięcie trybu z dwiema nastawami przywraca Sprawdź zmiany i ukrywa Zapisz do ponownego przeglądu. Szkice temperatur pozostają, także alternatywne wartości pojedyncze i zakresowe przy powrocie do formatu. Poprawiane są tylko bloki objęte bieżącym wyborem; znów zgodne zachowują oryginalne odwołania.
+
+Nie ma selektora zasięgu poprawek. Naprawa bloku z Presetem tworzy lokalną wartość w bloku. Naprawa dnia powiązanego z Szablonem usuwa powiązanie tego dnia; pozostałe bloki zachowują wartości i nieobjęte presety. Inne dni zachowują powiązania. Przegląd pokazuje te konsekwencje przed zapisem. Szablony, Presety i inne miejsca docelowe nie zmieniają się, więc każdy dzień wymaga własnych pełnych poprawek. Przyszłe zmiany pierwotnego zasobu nie aktualizują odłączonych bloków ani dni.
+
+Bieżąca konfiguracja pozostaje bez zmian, dopóki polityka i poprawki nie mogą zostać zapisane razem. Równoczesna edycja wymaga nowego przeglądu; błąd zapisu zachowuje wcześniejszą konfigurację. Gdy encja przestaje zgłaszać zapisany tryb, Velair zachowuje go i zgłasza zamiast usuwać bez informacji. Room Assist kończy się dopiero po udanym zapisie, bez przywracania starego celu. Następnie Velair stosuje bieżący nominalny cel harmonogramu, a błędy dostarczenia używają zwykłego odzyskiwania. Nieudany zapis zachowuje poprzednią korektę i konfigurację.
+
+Wybranie dwóch nastaw dla Ogrzewania, Chłodzenia lub Auto nie włącza Room Assist ani adaptacyjnego przygotowania. Termiczne wspomaganie zakresów pozostaje ograniczone do Ogrzewania/chłodzenia; Planowany powrót stosuje nominalny cel przy przyjeździe.
 
 <a id="timeline-editing"></a>
 ## Edycja osi czasu
@@ -436,7 +483,7 @@ Velair zapisuje wartości związane z temperaturą bez przeliczania, w jednostce
 
 Jednorazowa aktualizacja z opublikowanych wersji Velair zapisujących wyłącznie Celsjusza przebiega inaczej. Jeśli Home Assistant już używa Fahrenheita, Velair bez pytania uznaje dawne dane za zapisane w Celsjuszu, pozostawia harmonogram zatrzymany i kieruje do **Zresetuj Velair**. Reset usuwa dawną konfigurację i atomowo tworzy nowe ustawienia domyślne w Fahrenheitach. Po tej aktualizacji kolejne zmiany jednostki Home Assistant korzystają z pełnego jawnego przeliczenia opisanego wyżej, z zachowaniem danych.
 
-Eksporty przenośnego modelu v19 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v19; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
+Eksporty przenośnego modelu v22 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v22; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
 
 Jeśli urządzenie było niedostępne podczas migracji lub importu, Velair sprawdza jego limity i efektywny krok temperatury po odzyskaniu dostępności. Prawidłowy `target_temp_step` ma pierwszeństwo przed ostatnim zgłoszonym i ręcznym zastępczym. Panel ostrzega o niezgodnych celach do edycji przed użyciem. Pełne zasady w [Jednostkach temperatury i migracji](temperature-units.pl.md).
 
@@ -591,7 +638,7 @@ Ustawienia eksportują/importują wersjonowany JSON zawierający:
 - definicje Profili;
 - definicje Trybów.
 
-Bieżące eksporty modelu 19 zachowują oba rodzaje powiązań z szablonem, odwołania do presetów i zależności Nadrzędnego termostatu przygotowania. Odwołania do przyjętych uruchomień nadrzędnego pozostają lokalne i nie są eksportowane. Eksport harmonogramów lub Profili dołącza wymagane szablony i presety, pokazując je jako dodatkowo wybrane sekcje. Import sprawdza całą połączoną konfigurację, także istniejące miejsca użycia zastępowanych wspólnych zasobów. Presety są łączone po stałym kluczu: zgodne klucze zastępują lokalne definicje, a lokalne presety nieobecne w pliku pozostają. Starsze kopie nadal można importować, ale starsze wersje Velair nie importują plików modelu 19. Zobacz [przykład kopii całej konfiguracji](linked-schedule-examples.pl.md#back-up-the-whole-setup).
+Bieżące eksporty modelu 22 zachowują oba rodzaje powiązań z szablonem, odwołania do presetów i zależności Nadrzędnego termostatu przygotowania. Odwołania do przyjętych uruchomień nadrzędnego pozostają lokalne i nie są eksportowane. Eksport harmonogramów lub Profili dołącza wymagane szablony i presety, pokazując je jako dodatkowo wybrane sekcje. Import sprawdza całą połączoną konfigurację, także istniejące miejsca użycia zastępowanych wspólnych zasobów. Presety są łączone po stałym kluczu: zgodne klucze zastępują lokalne definicje, a lokalne presety nieobecne w pliku pozostają. Starsze kopie nadal można importować, ale starsze wersje Velair nie importują plików modelu 22. Zobacz [przykład kopii całej konfiguracji](linked-schedule-examples.pl.md#back-up-the-whole-setup). Bieżące eksporty zachowują również polityki formatu celu dla poszczególnych encji klimatu.
 
 Podczas importu możesz wybrać sekcje do nadpisania. Import zastępuje wybrane dane, więc najpierw wykonaj eksport, jeśli potrzebujesz punktu odzyskania. Definicje Profili i Trybów są przenośne, ale ich aktywny wybór nie jest. Velair zachowuje aktywne identyfikatory Profili, które nadal istnieją, i wraca do harmonogramów domyślnych tylko wtedy, gdy żaden z nich nie pozostał.
 

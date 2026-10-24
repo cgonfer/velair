@@ -1142,7 +1142,8 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       width: 7px;
     }
 
-    .select-wrap:has(select:open)::after {
+    .select-wrap:has(select:open)::after,
+    .select-wrap[open]::after {
       transform: translateY(-28%) rotate(225deg);
     }
 
@@ -1258,6 +1259,23 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       z-index: 1001;
     }
 
+    .command-button.target-format-action {
+      background: var(--secondary-background-color);
+      border-color: var(--divider-color);
+      color: var(--primary-text-color);
+      justify-self: start;
+      max-width: 100%;
+      text-align: start;
+    }
+
+    .advanced-climate-options-fields > .target-format-action {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 600px) {
+      .command-button.target-format-action { min-height: 44px; }
+    }
+
     .advanced-climate-options-fields > .full-template-settings {
       grid-column: 1 / -1;
       margin: 0;
@@ -1362,7 +1380,8 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
     }
 
     input,
-    select {
+    select,
+    .select-wrap > summary {
       background: var(--card-background-color);
       border: 1px solid var(--divider-color);
       border-radius: 8px;
@@ -1373,6 +1392,11 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       margin-top: 4px;
       padding: 6px 8px;
       width: 100%;
+    }
+
+    .select-wrap > summary {
+      margin-top: 0;
+      padding-right: 24px;
     }
 
     input:disabled,

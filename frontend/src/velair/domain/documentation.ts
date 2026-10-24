@@ -19,6 +19,7 @@ const TOPIC_PATHS = {
   troubleshooting: "docs/user/troubleshooting.md",
   manualControl: "docs/user/manual-control.md",
   externalSystems: "docs/user/external-systems.md",
+  sharedSupply: "docs/user/shared-climate-supply.md",
 } as const;
 
 export type DocumentationTopic = keyof typeof TOPIC_PATHS;

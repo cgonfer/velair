@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -29,7 +29,7 @@ Ein Velair-Block-Preset hat einen Namen und dieselbe Klimakonfiguration wie ein 
 
 Presets gehören zu einer gemeinsamen Bibliothek. Jedes Ziel wird anhand seines Thermostats und gegebenenfalls seines externen Zeitplanreglers geprüft. Eine weggelassene Option wird nicht gesendet; das Weglassen einer Lüftereinstellung setzt den Thermostatlüfter nicht zurück.
 
-Verwalte die Bibliothek unter **Vorlagen → Klima-Presets**. Die Bibliotheksauswahl erklärt Tagesvorlagen und gemeinsame Klimapresets. Erstelle ein Preset mit der Hinzufügen-Schaltfläche in der Listenüberschrift. Eine leere Bibliothek behält dieselbe Listen- und Detailstruktur. Wähle ein vorhandenes Preset, um es anzusehen. Ungespeicherte Änderungen werden erst angezeigt, nachdem du Name oder Klimaeinstellungen geändert hast. Die optionale Kompatibilitätsprüfung markiert das Preset nicht als bearbeitet. Verwendungen erscheinen als schreibgeschützte Information. Der Editor verlangt kein Thermostat: Wähle Heiz- oder Kühleinstellungen, Einzeltemperatur oder Bereich sowie optionale Geräteeinstellungen. Eine optionale Thermostatprüfung zeigt die Kompatibilität, ohne gemeinsame Werte zu verändern. Jede tatsächliche Verwendung wird vor dem Speichern vom Backend geprüft.
+Verwalte die Bibliothek unter **Vorlagen → Klima-Presets**. Die Bibliotheksauswahl erklärt Tagesvorlagen und gemeinsame Klimapresets. Erstelle ein Preset mit der Hinzufügen-Schaltfläche in der Listenüberschrift. Eine leere Bibliothek behält dieselbe Listen- und Detailstruktur. Wähle ein vorhandenes Preset, um es anzusehen. Ungespeicherte Änderungen werden erst angezeigt, nachdem du Name oder Klimaeinstellungen geändert hast. Die optionale Kompatibilitätsprüfung markiert das Preset nicht als bearbeitet. Verwendungen erscheinen als schreibgeschützte Information. Der Editor verlangt kein Thermostat: Wähle Heiz- oder Kühleinstellungen sowie optionale Geräteeinstellungen. Die Sollwertfelder folgen den für verwaltete Klimaentitäten mit dem gewählten Modus konfigurierten Formaten. Bei beiden vorkommenden Formaten wechselt die erste Aktion unter **Weitere Einstellungen** zwischen **Eine Temperatur verwenden** und **Zwei Sollwerte verwenden**. Stimmen alle Ziele überein, wird nur dieses Format angeboten; bei unbekannten Fähigkeiten oder ohne Ziele bleibt die Wahl offen. Heizen/Kühlen beginnt mit zwei Sollwerten, erlaubt aber einen, wenn Ziele das unterstützen. Aktuellen Modus beibehalten und Nur Temperatur berücksichtigen alle möglichen wirksamen Modi. Siehe [Sollwertformat](usage.de.md#target-format-by-climate-and-mode). Eine optionale Thermostatprüfung zeigt die Kompatibilität, ohne gemeinsame Werte zu verändern. Jede tatsächliche Verwendung wird vor dem Speichern vom Backend geprüft.
 
 Speichere ein Preset mit dem Symbol neben seinem Namen. Bearbeiten behält seine Bibliotheksposition bei, auch nach Neuladen; neue Presets werden angehängt. Temperaturfelder akzeptieren Dezimalpunkt oder Komma, etwa `21.5` oder `21,5`, auch für beide Grenzen eines nativen Bereichs. Der Editor bewahrt die Eingabe beim Tippen und sendet numerische Werte für Vorschau und Speichern. Die optionale Kompatibilitätsprüfung zeigt wirksame Einstellungen für ein gewähltes Thermostat mit separatem Erfolgs- oder Fehlerergebnis. Sie speichert das Preset nicht und verändert seinen ungespeicherten Status nicht.
 
@@ -39,7 +39,7 @@ Die Liste zeigt neben jeder Verwendungsanzahl ein Verknüpfungssymbol. Bewege de
 
 Wähle in einem Zeitplanblock ein Preset, um einen dynamischen Verweis darauf zu behalten. Bearbeiten des Presets aktualisiert jeden Verweis. Der Block kann nicht zusätzlich lokale Klimaeinstellungen enthalten. Das Lösen der Preset-Verknüpfung behält dessen wirksame Konfiguration als manuelle Einstellungen bei und beendet zukünftige Preset-Aktualisierungen für diesen Block.
 
-Öffne **Zusätzliche Einstellungen** eines Blocks und wähle ein **Velair-Preset**. Dies ist getrennt vom **Geräte-Preset**, der nativen Thermostatoption `preset_mode`. Der Block behält seine normalen Spalten für Zeit, Modus, Ziel, Einstellungen und Löschen. Verknüpfte Klimaeinstellungen erscheinen in den üblichen Bedienelementen und sind schreibgeschützt. Die Zeit bleibt bearbeitbar, sofern nicht auch die Tageszeiten verknüpft sind.
+Öffne **Weitere Einstellungen** eines Blocks und wähle ein **Velair-Preset**. Dies ist getrennt vom **Geräte-Preset**, der nativen Thermostatoption `preset_mode`. Der Block behält seine normalen Spalten für Zeit, Modus, Ziel, Einstellungen und Löschen. Verknüpfte Klimaeinstellungen erscheinen in den üblichen Bedienelementen und sind schreibgeschützt. Die Zeit bleibt bearbeitbar, sofern nicht auch die Tageszeiten verknüpft sind.
 
 Eine Zeile unter dem Block nennt das verknüpfte Preset und seine zusätzlichen Einstellungen. Die Einstellungsanzahl zählt eins für die Velair-Preset-Verknüpfung plus jede konfigurierte Geräteoption, ohne Zeit, HVAC-Modus und Temperaturziel. Werte und Kompatibilitätsanpassungen kommen vom Backend. Laufende oder fehlgeschlagene Vorschauen ersetzen den gespeicherten Verweis nicht durch manuelle Einstellungen. Beim Verschieben der Startzeit bleiben die aufgelösten Preset-Einstellungen sichtbar; eine Zeitänderung benötigt keine weitere Preset-Vorschau.
 

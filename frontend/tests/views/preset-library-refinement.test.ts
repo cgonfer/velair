@@ -1,8 +1,9 @@
+import { changeDraftTargetFormat } from "../../src/velair/domain/target-format-policy";
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VelairPresetLibrary } from "../../src/velair/components/preset-library-element";
 import { VelairCard } from "../../src/velair/components/velair-card-element";
-import { presetHvacModes, presetOptionSuggestions, presetTemperatureError, setPresetTargetType } from "../../src/velair/domain/preset-editor";
+import { presetHvacModes, presetOptionSuggestions, presetTemperatureError } from "../../src/velair/domain/preset-editor";
 import type { VelairViewHost } from "../../src/velair/host-types";
 import type { ScheduleResponse } from "../../src/velair/types";
 
@@ -26,6 +27,15 @@ async function libraryFixture() {
 }
 
 describe("global preset library editor", () => {
+  it("creates a new Preset with a pair when all climates require ranges", async () => {
+    const { library } = await libraryFixture();
+    (library as any)._cancel();
+    library.data = { ...library.data!, zones: Object.fromEntries(["climate.heat", "climate.cool"].map((entityId) => [entityId, { target_format_policy: { entity_id: entityId, kind: "range", range_modes: ["heat", "cool"], configured_modes: null, formats_by_mode: { heat: "range", cool: "range" }, invalid_modes: [], uncertain: false } }])) } as ScheduleResponse;
+    (library as any)._edit(); await library.updateComplete;
+    expect(library.shadowRoot!.querySelectorAll('.editable-block input[inputmode="decimal"]')).toHaveLength(2);
+    expect(library.shadowRoot!.querySelector('.target-format-action')).toBeNull();
+    expect((library as any)._block.target_temp_low).toBe("");
+  });
   it("saves and reopens Temperature only without carrying device options or HVAC mode", async () => {
     const { library, card, sendMessagePromise } = await libraryFixture();
     const mode = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1];
@@ -43,8 +53,7 @@ describe("global preset library editor", () => {
     library.editPreset("summer"); await library.updateComplete;
     expect(library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1].value).toBe("temperature_only");
     expect(library.shadowRoot!.querySelector<HTMLButtonElement>('.template-detail-actions button')!.disabled).toBe(true);
-    const kind = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[2];
-    kind.value = "range"; kind.dispatchEvent(new Event("change")); await library.updateComplete;
+    library.shadowRoot!.querySelector<HTMLButtonElement>(".advanced-climate-options button")!.click(); await library.updateComplete;
     expect(library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.editable-block select')[1].value).toBe("temperature_only");
     expect(library.shadowRoot!.querySelectorAll('input[inputmode="decimal"]')).toHaveLength(2);
   });
@@ -79,8 +88,7 @@ describe("global preset library editor", () => {
   });
   it("previews and saves a native range with mixed decimal separators", async () => {
     const { library, sendMessagePromise } = await libraryFixture();
-    const kind = library.shadowRoot!.querySelectorAll<HTMLSelectElement>('.preset-fields select')[2];
-    kind.value = "range"; kind.dispatchEvent(new Event("change")); await library.updateComplete;
+    library.shadowRoot!.querySelector<HTMLButtonElement>(".advanced-climate-options button")!.click(); await library.updateComplete;
     const targets = library.shadowRoot!.querySelectorAll<HTMLInputElement>('.editable-block input[inputmode="decimal"]');
     targets[0].value = "19,5"; targets[0].dispatchEvent(new Event("input")); await library.updateComplete;
     targets[1].value = "24.5"; targets[1].dispatchEvent(new Event("input")); await library.updateComplete;
@@ -397,11 +405,11 @@ describe("global preset library editor", () => {
   it("offers cooling and ranges independently of the selected heating-only climate", async () => {
     const { library, sendMessagePromise } = await libraryFixture();
     const selects = [...library.shadowRoot!.querySelectorAll<HTMLSelectElement>(".preset-fields select")];
-    expect(selects.map((select) => select.value)).toEqual(["set_temperature", "cool", "scalar"]);
+    expect(selects.map((select) => select.value)).toEqual(["set_temperature", "cool"]);
     expect(selects[1].querySelector('option[value="cool"]')).not.toBeNull();
     expect(library.shadowRoot!.querySelector('input[type="time"]')).toBeNull();
-    selects[2].value = "range"; selects[2].dispatchEvent(new Event("change")); await library.updateComplete;
-    expect(library.shadowRoot!.querySelectorAll<HTMLSelectElement>(".preset-fields select")[2].value).toBe("range");
+    library.shadowRoot!.querySelector<HTMLButtonElement>(".advanced-climate-options button")!.click(); await library.updateComplete;
+    expect(library.shadowRoot!.querySelector(".advanced-climate-options button")!.textContent).toContain("Use one temperature");
     const targets = [...library.shadowRoot!.querySelectorAll<HTMLInputElement>('.editable-block input[inputmode="decimal"]')];
     expect(targets).toHaveLength(2);
     targets[0].value = "25"; targets[0].dispatchEvent(new Event("input"));
@@ -432,7 +440,7 @@ describe("global preset library editor", () => {
     library.editPreset("options"); await library.updateComplete;
     expect(library.shadowRoot!.querySelector<HTMLSelectElement>(".preset-fields select")!.value).toBe("set_climate_options");
     internal._cancel(); library.editPreset("range"); await library.updateComplete;
-    expect([...library.shadowRoot!.querySelectorAll<HTMLSelectElement>(".preset-fields select")].map((select) => select.value)).toEqual(["set_temperature", "heat_cool", "range"]);
+    expect([...library.shadowRoot!.querySelectorAll<HTMLSelectElement>(".preset-fields select")].map((select) => select.value)).toEqual(["set_temperature", "heat_cool"]);
   });
 
   it("retains custom option values and combines suggestions from all climates", async () => {
@@ -469,11 +477,13 @@ describe("global preset library editor", () => {
   });
 
   it("switches scalar and range targets exclusively and rejects incomplete ranges", () => {
-    const range = setPresetTargetType({ start: "00:00", action: "set_temperature", hvac_mode: "cool", temperature: 25 }, true);
+    const range = changeDraftTargetFormat({ start: "00:00", action: "set_temperature", hvac_mode: "cool", temperature: 25 }, "range");
     expect(range.temperature).toBeUndefined();
-    expect(presetTemperatureError(range, "Invalid")).toBeUndefined();
+    expect(presetTemperatureError(range, "Invalid")).toBe("Invalid");
+    expect(range.target_temp_low).toBe("");
+    expect(range.target_temp_high).toBe("");
     expect(presetTemperatureError({ ...range, target_temp_high: "" }, "Invalid")).toBe("Invalid");
-    const scalar = setPresetTargetType(range, false);
+    const scalar = changeDraftTargetFormat(range, "single");
     expect(scalar.temperature).toBe(25); expect(scalar.target_temp_low).toBeUndefined(); expect(scalar.target_temp_high).toBeUndefined();
   });
 });

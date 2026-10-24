@@ -24,6 +24,7 @@ Velair documentation is grouped by audience and topic.
 - [Adaptive Preconditioning](user/adaptive-preconditioning.md): start scheduled comfort targets early with local learning.
 - [Planned Return](user/planned-return.md): configure occupancy-driven absence and weekly or one-off arrivals, with examples of cancellation before and after confirmed departure.
 - [Room Assist](user/room-assist.md): use a separate room temperature sensor for TRVs, thermostats, and AC units.
+- [Supply control](user/shared-climate-supply.md): control a shared heating or cooling switch from estimated room demand, with supply-wide hysteresis and thermostat overrides.
 - [Resilient climate delivery](user/resilient-climate-delivery.md): understand deferred retries and reconnection behavior when a climate is temporarily unavailable.
 - [Environmental Comfort](user/comfort.md): understand temperature, humidity, CO2 air quality, and reading freshness through local room assessments.
 - [Temperature Units and Migration](user/temperature-units.md): understand Celsius/Fahrenheit defaults, upgrades, migration, import/export, and recovery.

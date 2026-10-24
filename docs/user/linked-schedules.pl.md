@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](linked-schedules.md) · [Español
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -29,7 +29,7 @@ Preset bloku Velair ma nazwę i taką samą konfigurację klimatyczną jak blok 
 
 Biblioteka jest wspólna dla całej konfiguracji. Każde miejsce użycia jest sprawdzane względem możliwości termostatu i sterownika zewnętrznego. Pominięta opcja nie jest wysyłana; pominięcie wentylatora nie resetuje jego ustawienia.
 
-Presetami zarządzasz w **Szablony → Presety klimatyczne**. Selektor biblioteki wyjaśnia różnicę między presetami i szablonami. Przycisk dodawania znajduje się przy nagłówku listy; pusta lista zachowuje ten sam układ. Wybranie istniejącego presetu jedynie otwiera podgląd. Szkic edycji powstaje po zmianie nazwy lub ustawień, a nie po sprawdzeniu zgodności. Lista użyć jest tylko do odczytu. Edytor nie wymaga wybranego termostatu i pozwala określić ogrzewanie, chłodzenie, temperaturę, zakres oraz opcje. Opcjonalny termostat służy do podglądu zgodności bez zmiany wartości. Backend przed zapisem sprawdza każde użycie.
+Presetami zarządzasz w **Szablony → Presety klimatyczne**. Selektor biblioteki wyjaśnia różnicę między presetami i szablonami. Przycisk dodawania znajduje się przy nagłówku listy; pusta lista zachowuje ten sam układ. Wybranie istniejącego presetu jedynie otwiera podgląd. Szkic edycji powstaje po zmianie nazwy lub ustawień, a nie po sprawdzeniu zgodności. Lista użyć jest tylko do odczytu. Edytor nie wymaga wybranego termostatu i pozwala określić ogrzewanie, chłodzenie oraz opcje urządzenia. Pola celu odpowiadają formatom skonfigurowanym dla zarządzanych encji oferujących wybrany tryb. Gdy występują oba formaty, pierwsza akcja w **Dodatkowych ustawieniach** przełącza **Użyj jednej temperatury** i **Użyj dwóch nastaw**. Jeśli wszystkie miejsca docelowe są zgodne, oferowany jest tylko ten format; nieznane możliwości lub brak miejsc docelowych pozostawiają wybór. Ogrzewanie/chłodzenie domyślnie ma dwie nastawy, ale może mieć jedną, gdy urządzenia ją obsługują. Zachowaj bieżący tryb i Tylko temperatura uwzględniają wszystkie możliwe tryby efektywne. Zobacz [ustawienia formatu celu](usage.pl.md#target-format-by-climate-and-mode). Opcjonalny termostat służy do podglądu zgodności bez zmiany wartości. Backend przed zapisem sprawdza każde użycie.
 
 Zapisz preset ikoną obok nazwy. Edycja zachowuje jego miejsce na liście także po przeładowaniu; nowe presety trafiają na koniec. Pola temperatur, również granice zakresu, przyjmują kropkę lub przecinek, np. `21.5` lub `21,5`. Podczas pisania zachowują wpisany tekst, a do podglądu i zapisu wysyłają liczby. Sprawdzenie zgodności pokazuje efektywne ustawienia wybranego termostatu oraz osobny wynik powodzenia lub błędu, bez zapisywania ani oznaczania konfiguracji jako zmienionej.
 

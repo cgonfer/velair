@@ -24,6 +24,12 @@ beforeEach(() => window.history.replaceState(null, "", "/"));
 afterEach(() => { document.body.replaceChildren(); window.history.replaceState(null, "", "/"); vi.restoreAllMocks(); });
 
 describe("panel URL navigation", () => {
+  it("replaces the legacy Groups bookmark with Supply control without losing HA state", async () => {
+    const panel = await panelAt("/velair/groups");
+    expect(state(panel)._activeView).toBe("supply-control");
+    expect(window.location.pathname).toBe("/velair/supply-control");
+    expect(window.history.state).toMatchObject({ root: true, dialog: "ha-state" });
+  });
   it("guards learning diagnostics navigation and passes the room only after approval", async () => {
     const panel = await panelAt("/velair/preconditioning");
     state(panel)._activeViewDirty = true;
@@ -40,7 +46,7 @@ describe("panel URL navigation", () => {
     expect(window.location.pathname).toBe("/velair/diagnostics");
   });
 
-  it.each(["/velair/schedules/profiles", "/velair/templates/presets", "/velair/preconditioning", "/velair/planned-return"])("restores direct entry and refresh at %s", async (path) => {
+  it.each(["/velair/schedules/profiles", "/velair/templates/presets", "/velair/supply-control", "/velair/preconditioning", "/velair/planned-return"])("restores direct entry and refresh at %s", async (path) => {
     let panel = await panelAt(path);
     const destination = { view: state(panel)._activeView, subsection: state(panel)._activeSubsection };
     expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).subsection).toBe(destination.subsection);

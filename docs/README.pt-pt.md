@@ -8,8 +8,8 @@ Traduções: [Original em inglês](README.md) · [Español](README.es.md) · [Fr
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -38,6 +38,7 @@ A documentação do Velair está organizada por público e tema.
 - [Pré-condicionamento adaptativo](user/adaptive-preconditioning.pt-pt.md): antecipar as temperaturas de conforto programadas com aprendizagem local.
 - [Regresso planeado](user/planned-return.pt-pt.md): configurar ausências com base na ocupação e chegadas semanais ou pontuais, com exemplos de cancelamento antes e depois da confirmação de saída.
 - [Room Assist](user/room-assist.pt-pt.md): utilizar um sensor de temperatura separado na divisão para válvulas termostáticas, termóstatos e aparelhos de ar condicionado.
+- [Controlo do fornecimento](user/shared-climate-supply.pt-pt.md): controlar um interruptor partilhado de aquecimento ou arrefecimento pela procura estimada das divisões, com histerese do fornecimento e exceções por termóstato.
 - [Envio resiliente de comandos de climatização](user/resilient-climate-delivery.pt-pt.md): compreender as novas tentativas adiadas e o comportamento de restabelecimento da ligação quando um equipamento fica temporariamente indisponível.
 - [Conforto ambiental](user/comfort.pt-pt.md): compreender a temperatura, a humidade, a qualidade do ar por CO2 e a atualidade das leituras através de avaliações locais das divisões.
 - [Unidades de temperatura e migração](user/temperature-units.pt-pt.md): compreender os valores predefinidos em Celsius/Fahrenheit, atualizações, migração, importação/exportação e recuperação.

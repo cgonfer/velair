@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -51,7 +51,7 @@ Diese Zustände können gleichzeitig bestehen. Beispielsweise kann der Velair-Mo
 
 Velair beobachtet folgende Steuerungsfelder verwalteter Klimageräte:
 
-- `hvac_mode`, dargestellt durch den Entitätszustand, einschließlich `off`, `heat`, `cool` und `heat_cool`;
+- `hvac_mode`, dargestellt durch den Entitätszustand, einschließlich `off`, `heat`, `cool`, `auto` und `heat_cool`;
 - `temperature` für ein Einzelziel;
 - `target_temp_low` und `target_temp_high` für ein natives Bereichsziel.
 
@@ -192,6 +192,8 @@ Besteht eine unabhängige Zonenpause weiterhin, bleibt die Zone pausiert. Ist ih
 Ein reines Heizgerät mit `[off, heat]` setzt einen Keep-Modusblock mit `21 °C` als `heat`, `21 °C` fort. Ein reines Kühlgerät mit `[off, cool]` setzt als `cool`, `21 °C` fort. Ein umschaltbares Gerät kann mehrere kompatible Modi anbieten; Velair verwendet deren gemeldete Reihenfolge und leitet Heizen oder Kühlen nicht aus Jahreszeit, Standort oder Zahlenziel ab. Gib einen ausdrücklichen Blockmodus vor, wenn die Auswahl eindeutig sein muss.
 
 Bei einem reinen Optionsblock werden nur gewählte Klimaoptionen angewendet. Er sendet keine Temperatur und schaltet ein ausgeschaltetes Gerät nicht ein.
+
+Bei Entitäten, die nur Bereiche akzeptieren, sind die gemeldeten Modi `heat`, `cool`, `auto` und `heat_cool` kompatible Betriebsmodi. Beibehalten aus Aus verwendet den ersten dieser Modi in der gemeldeten Reihenfolge. Entitäten mit beiden Formaten verwenden ihre gespeicherte [Modusrichtlinie für Sollwertformate](usage.de.md#target-format-by-climate-and-mode); beim Fortsetzen eines kompatiblen Bereichs aus Aus bleibt `heat_cool` bevorzugt. Nur Temperatur darf beide Grenzen bei ausgeschaltetem Gerät schreiben, wenn Bereichsunterstützung und ein kompatibler Modus gemeldet sind; es schaltet das Gerät dafür niemals ein.
 
 <a id="complete-real-world-examples"></a>
 ## Vollständige Praxisbeispiele
@@ -342,6 +344,8 @@ Policy: until resumed
 ```
 
 Velair erkennt `target_temp_low` und `target_temp_high`, erfasst den vollständigen `heat_cool`-Zustand und behält während der manuellen Anpassung `19–24 °C`. Beim Fortsetzen wird der vollständige Bereich des aktuellen maßgeblichen Blocks angewendet. Der Bereich wird niemals auf ein Einzelziel reduziert.
+
+Dieselbe Erfassung und Wiederherstellung des vollständigen Paars gilt für reine Bereichsentitäten in Heizen, Kühlen und Auto. Ein verbliebenes Attribut `temperature` ersetzt ihre beiden Grenzen nicht. Ist das beobachtete Paar unvollständig oder ungültig, erfindet Velair aus diesem Einzelattribut kein wiederherstellbares Ziel.
 
 <a id="independent-window-pause-while-manual"></a>
 ### Unabhängige Fensterpause während manueller Steuerung

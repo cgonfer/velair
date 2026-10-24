@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from contextlib import nullcontext
 from datetime import UTC, datetime
 import json
+import logging
 import math
 from pathlib import Path
 from typing import Any
@@ -96,8 +98,9 @@ from .temperature_migration import (
 )
 
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
+_LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 19
+EXPORT_MODEL_VERSION = 22
 EXPORT_SECTIONS = (
     "zones",
     "templates",
@@ -336,6 +339,8 @@ def async_setup_api(hass: HomeAssistant) -> None:
     if hass.data.get(API_REGISTERED):
         return
 
+    websocket_api.async_register_command(hass, ws_preview_target_range_policy)
+    websocket_api.async_register_command(hass, ws_apply_target_range_policy)
     websocket_api.async_register_command(hass, ws_get_schedule)
     websocket_api.async_register_command(hass, ws_get_diagnostics)
     websocket_api.async_register_command(hass, ws_export_diagnostics)
@@ -373,6 +378,8 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_skip_planned_return)
     websocket_api.async_register_command(hass, ws_arrive_planned_return)
     websocket_api.async_register_command(hass, ws_update_settings)
+    websocket_api.async_register_command(hass, ws_update_shared_demand)
+    websocket_api.async_register_command(hass, ws_resume_shared_demand)
     websocket_api.async_register_command(hass, ws_set_zone_execution)
     websocket_api.async_register_command(hass, ws_update_external_change_policy)
     websocket_api.async_register_command(hass, ws_update_zone_target_temp_step)
@@ -639,6 +646,7 @@ def ws_subscribe_updates(
     unsubs = [
         async_dispatcher_connect(hass, SIGNAL_SCHEDULER_UPDATED, _send_update),
         async_dispatcher_connect(hass, SIGNAL_DIAGNOSTICS_UPDATED, _send_learning_update),
+        async_dispatcher_connect(hass, "velair_shared_demand_updated", _send_update),
     ]
 
     @callback
@@ -1204,6 +1212,73 @@ async def ws_arrive_planned_return(
     await _planned_return_mutation(hass, connection, msg, "async_arrive_planned_return")
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/update_shared_demand",
+    vol.Required("groups"): list,
+    vol.Optional("expected_revision"): int,
+})
+@websocket_api.async_response
+async def ws_update_shared_demand(hass, connection, msg) -> None:
+    """Validate and persist explicitly selected shared supply switches."""
+    await _shared_demand_mutation(hass, connection, msg, resume=False)
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/resume_shared_demand",
+    vol.Required("group_id"): str,
+    vol.Optional("expected_revision"): int,
+})
+@websocket_api.async_response
+async def ws_resume_shared_demand(hass, connection, msg) -> None:
+    """Explicitly resume a group suspended by a manual off command."""
+    await _shared_demand_mutation(hass, connection, msg, resume=True)
+
+
+async def _shared_demand_mutation(hass, connection, msg, *, resume: bool) -> None:
+    runtime = _get_runtime(hass)
+    if runtime is None or runtime.get("shared_demand") is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    if connection.user is None or not connection.user.is_admin:
+        connection.send_error(msg["id"], "unauthorized", "Administrator access is required")
+        return
+    scheduler = runtime["scheduler"]
+    try:
+        async with scheduler._profile_mutation_lock:
+            if _reject_temperature_migration_mutation(runtime, connection, msg):
+                return
+            revision = runtime["storage"].data.get("configuration_revision", 0)
+            if msg.get("expected_revision", revision) != revision:
+                raise ValueError("Configuration changed; reload settings before saving")
+            if resume:
+                await runtime["shared_demand"].async_resume(msg["group_id"])
+            else:
+                from .shared_demand_config import normalize_groups
+                from homeassistant.helpers import entity_registry as er
+
+                groups = normalize_groups(msg["groups"], list(runtime["storage"].data["zones"]))
+                registry = er.async_get(hass)
+                previous_outputs = {group["switch_entity_id"] for group in runtime["storage"].data["settings"].get("shared_demand_groups", [])}
+                for group in groups:
+                    entity = group["switch_entity_id"]
+                    registered = registry.async_get(entity)
+                    if registered is not None and registered.platform == DOMAIN:
+                        raise ValueError("Velair control switches cannot be shared supply outputs")
+                    if entity not in previous_outputs and hass.states.get(entity) is None:
+                        raise ValueError("Select an existing supply switch")
+                await runtime["shared_demand"].async_update_groups(groups)
+    except (ValueError, TypeError) as err:
+        connection.send_error(msg["id"], "invalid_shared_demand", str(err))
+        return
+    except Exception:
+        _LOGGER.exception("Failed to %s shared supply settings", "resume" if resume else "save")
+        connection.send_error(msg["id"], "shared_demand_save_failed", "Unable to save shared supply settings. See Home Assistant logs for details.")
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/update_settings",
@@ -1447,11 +1522,12 @@ async def ws_resolve_temperature_migration(
     target_unit = getattr(storage, "home_assistant_temperature_unit", CELSIUS)
     persisted = False
     try:
-        applied = await storage.async_resolve_temperature_migration(
-            source_unit,
-            migration_id=msg["migration_id"],
-            expected_revision=msg["expected_revision"],
-        )
+        async with getattr(scheduler, "_profile_mutation_lock", nullcontext()):
+            applied = await storage.async_resolve_temperature_migration(
+                source_unit,
+                migration_id=msg["migration_id"],
+                expected_revision=msg["expected_revision"],
+            )
     except ValueError as err:
         runtime["operation_active"] = None
         scheduler.set_temperature_migration_blocked(
@@ -1736,7 +1812,8 @@ async def ws_reset_data(
     source_unit = getattr(storage, "effective_temperature_unit", CELSIUS)
     persisted = False
     try:
-        await storage.async_reset_to_defaults()
+        async with getattr(scheduler, "_profile_mutation_lock", nullcontext()):
+            await storage.async_reset_to_defaults()
         persisted = True
         hass.config_entries.async_update_entry(entry, options=next_options)
         await scheduler.async_prepare_data_reset()
@@ -2034,6 +2111,39 @@ async def ws_preview_daily_schedule(hass, connection, msg) -> None:
     await _configuration_preview(hass, connection, msg, "preview_daily_schedule", msg["entity_id"], msg["weekday"], msg.get("blocks"), template_link=msg.get("template_link"))
 
 
+TARGET_RANGE_POLICY_FIELDS = {
+    vol.Required("entity_id"): cv.entity_id,
+    vol.Required("target_range_modes"): [vol.In([mode for mode in HVAC_MODE_OPTIONS if mode != "off"])],
+    vol.Required("expected_revision"): vol.All(int, vol.Range(min=0)),
+    vol.Optional("corrections"): dict,
+}
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/preview_target_range_policy", **TARGET_RANGE_POLICY_FIELDS})
+@websocket_api.async_response
+async def ws_preview_target_range_policy(hass, connection, msg):
+    await _configuration_preview(hass, connection, msg, "preview_target_range_policy",
+        **{key: value for key, value in msg.items() if key not in ("id", "type")})
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/apply_target_range_policy", **TARGET_RANGE_POLICY_FIELDS})
+@websocket_api.async_response
+async def ws_apply_target_range_policy(hass, connection, msg):
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        await runtime["scheduler"].async_apply_target_range_policy(
+            **{key: value for key, value in msg.items() if key not in ("id", "type")})
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
 async def _configuration_preview(hass, connection, msg, method, *args, **kwargs) -> None:
     runtime = _get_runtime(hass)
     if runtime is None:
@@ -2094,7 +2204,9 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
             "active_mode_id"
         ),
         "settings": settings,
-        "zones": stored_data["zones"],
+        "shared_demand_status": runtime["shared_demand"].get_statuses() if runtime.get("shared_demand") else {},
+        "zones": {entity: {**zone, "target_format_policy": scheduler.get_target_format_policy(entity)}
+                  for entity, zone in stored_data["zones"].items()} if hasattr(scheduler, "get_target_format_policy") else stored_data["zones"],
         "external_execution": (
             runtime["external_execution"].describe()
             if runtime.get("external_execution") is not None
@@ -2226,6 +2338,7 @@ def _build_export_payload(
                 should_apply_active_schedule_on_startup(entry)
             ),
         }
+        exported_sections["settings"].pop("shared_demand_cleanup", None)
     if "preconditioning_learning" in sections:
         exported_sections["preconditioning_learning"] = (
             _export_preconditioning_learning(stored_data)
@@ -2337,6 +2450,17 @@ def _build_import_data(
         raw_settings = payload_sections["settings"]
         if not isinstance(raw_settings, dict):
             raise ValueError("Settings section is not valid")
+        from .shared_demand_config import normalize_groups
+
+        # Importing configuration must not energize a physical supply.
+        groups = normalize_groups(raw_settings.get("shared_demand_groups", []), list(current_zones))
+        for group in groups:
+            group["enabled"] = False
+            group["suspended"] = True
+        raw_settings["shared_demand_groups"] = groups
+        raw_settings.pop("shared_demand_cleanup", None)
+        # Local retirement intent is merged at the locked scheduler commit,
+        # never from an unlocked preview of a concurrent staged save.
         import_data["settings"] = normalize_panel_settings(
             raw_settings,
             list(current_zones),
@@ -2529,6 +2653,7 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
             "schedule": deepcopy(zone.get("schedule", {})),
             "template_links": deepcopy(zone.get("template_links", {})),
             "day_layout_key": zone.get("day_layout_key", "individual"),
+            **({"target_range_modes": list(zone["target_range_modes"])} if "target_range_modes" in zone else {}),
             "preconditioning": deepcopy(zone.get("preconditioning", {})),
             "comfort": deepcopy(zone.get("comfort", {})),
             "external_change_policy": deepcopy(

@@ -154,7 +154,7 @@ export type VelairPanelRoute = {
   prefix?: string;
 };
 
-export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "sensors" | "comfort" | "preconditioning" | "planned-return" | "diagnostics" | "settings";
+export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "supply-control" | "sensors" | "comfort" | "preconditioning" | "planned-return" | "diagnostics" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
   | "active-setup"
@@ -547,7 +547,7 @@ export type RoomSensorAssistStatus = {
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;
-  reason?: "missing_target_step" | "unsupported_temperature_range" | null;
+  reason?: "missing_target_step" | "unsupported_temperature_range" | "unsupported_range_mode" | null;
   room_temperature_entity_id?: string | null;
   target_temperature?: number | null;
   target_temp_low?: number | null;
@@ -586,6 +586,8 @@ export type RoomSensorAssistStatus = {
 };
 
 export type ScheduleZone = {
+  target_range_modes?: string[];
+  target_format_policy?: TargetFormatPolicy;
   day_layout_key?: string;
   template_links?: Record<string, TemplateLink>;
   enabled: boolean;
@@ -603,6 +605,44 @@ export type ScheduleZone = {
   target_temp_step_override?: number;
   last_reported_target_temp_step?: number;
   execution?: { type: "external"; provider: string };
+};
+
+export type TargetFormat = "single" | "range";
+export type TargetFormatPolicy = {
+  entity_id: string;
+  kind: "single" | "range" | "mixed" | "unknown";
+  configured_modes: string[] | null;
+  range_modes: string[];
+  formats_by_mode: Record<string, TargetFormat | "unknown">;
+  invalid_modes: string[];
+  uncertain: boolean;
+};
+export type TargetRangePolicyDestination = {
+  source: "default" | "profile";
+  profile_key?: string;
+  entity_id: string;
+  weekday?: string;
+  message?: string;
+  errors?: Array<{ weekday: string; block_index: number; block: ScheduleBlock; expected_formats: string[]; message: string }>;
+  schedule?: Record<string, ScheduleBlock[]>;
+  template_links?: Record<string, TemplateLink>;
+};
+export type TargetRangePolicyCorrections = {
+  destinations?: Array<Pick<TargetRangePolicyDestination, "source" | "profile_key" | "entity_id" | "schedule" | "template_links">>;
+};
+export type TargetRangePolicyRequest = {
+  entity_id: string;
+  target_range_modes: string[];
+  expected_revision: number;
+  corrections?: TargetRangePolicyCorrections;
+};
+export type TargetRangePolicyPreview = {
+  configuration_revision: number;
+  policy: TargetFormatPolicy;
+  affected_destinations: TargetRangePolicyDestination[];
+  temporary_blockers: Array<{ entity_id: string; type: string }>;
+  automatic_actions?: Array<{ entity_id: string; type: "stop_room_assist" }>;
+  can_apply: boolean;
 };
 
 export type ExternalExecutionInfo = {
@@ -765,12 +805,38 @@ export type EffectiveNextEvent = {
   return_at?: string | null;
 };
 
+export type SharedSupply = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  switch_entity_id: string;
+  direction: "heat" | "cool";
+  hysteresis: number;
+  hysteresis_mode?: "at_target" | "symmetric" | "custom";
+  hysteresis_stop?: number;
+  minimum_off_seconds: number;
+  off_delay_seconds: number;
+  zones: Record<string, { hysteresis?: number; hysteresis_stop?: number }>;
+  suspended: boolean;
+};
+
+export type SharedDemandStatus = {
+  status: string;
+  enabled?: boolean;
+  suspended?: boolean;
+  demand?: boolean;
+  output_state?: string;
+  zones?: Record<string, { demand?: boolean | null; source?: string; reason?: string }>;
+  [key: string]: unknown;
+};
+
 export type PanelSettings = {
   first_weekday: string;
   zone_order: string[];
   min_temperature?: number;
   max_temperature?: number;
   apply_active_schedule_on_startup?: boolean;
+  shared_demand_groups?: SharedSupply[];
 };
 
 export type OperationStatus = {
@@ -942,6 +1008,7 @@ export type ScheduleResponse = {
     paused_until?: string | null;
   };
   settings: PanelSettings;
+  shared_demand_status?: Record<string, SharedDemandStatus>;
   zones: Record<string, ScheduleZone>;
   external_execution?: ExternalExecutionInfo;
   operational_status: string;

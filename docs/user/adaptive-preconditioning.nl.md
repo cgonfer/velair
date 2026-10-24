@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](adaptive-preconditioning.md) · [Español](adapt
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.3 |
-| Laatst gesynchroniseerd | 2026-10-21 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -40,6 +40,8 @@ Het tabblad **Voorconditionering** bevat adaptieve instellingen en leergegevens 
 Voorconditionering wordt per klimaatapparaat ingesteld. Verwarmen en koelen hebben afzonderlijke leergegevens: koelwaarnemingen vervangen geen verwarmingswaarnemingen en andersom.
 
 Oorspronkelijke `heat_cool`-bereiken worden ondersteund. Als de kamertemperatuur meer dan het minimale temperatuurverschil onder de ondergrens ligt, berekent Velair de voorspelling vanaf die ondergrens en past het volledige bereik eerder toe om te verwarmen. Als de kamer meer dan dat verschil boven de bovengrens ligt, gebeurt hetzelfde vanaf de bovengrens voor koeling. Bij metingen binnen het bereik of binnen de dode band aan de grenzen blijft de normale schematijd gelden. Velair verstuurt altijd beide grenzen en maakt van een bereik nooit één temperatuur.
+
+Een entiteit kan beide grenzen vereisen in Verwarmen, Koelen of Auto zonder `heat_cool` te ondersteunen. Velair kan die doelen plannen en leveren, maar start ze niet vroeg en verzamelt er geen thermische leermonsters voor. De voorbereidingsweergave legt uit dat bereiken voor deze functie Verwarmen/koelen vereisen. Het geplande paar blijft ongewijzigd; Geplande terugkeer past het bij aankomst toe zonder vroege voorbereiding. Voorconditionering inschakelen verandert deze beperking niet.
 
 Wanneer je een klimaatapparaat uitvouwt, krijgt elke ondersteunde modus een kaart met een actuele voorspelling. Deze gebruikt dezelfde backendgegevens voor de volgende gebeurtenis als het tabblad Overzicht. Pauzes, tijdelijke aanpassingen, niet-ondersteunde modi en blokken zonder mogelijkheid voor voorconditionering worden daardoor op dezelfde manier afgehandeld. Als er een passend toekomstig blok bestaat, toont de kaart de berekende starttijd, de doeltijd, de voorbereidingstijd, de geplande temperatuur en modus en of Velair het beginmodel of vergelijkbare lokale geschiedenis gebruikt.
 

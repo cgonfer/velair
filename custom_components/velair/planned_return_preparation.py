@@ -96,6 +96,9 @@ def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
     mode = (mode_getter(entity, block.get("hvac_mode"), ensure_on=not block.get("temperature_only", False), range_target=is_range)
             if callable(mode_getter) else block.get("hvac_mode") or owner._current_hvac_mode(entity))
     supported = mode == "heat_cool" if is_range else mode in ("heat", "cool", "auto", "heat_cool")
+    if is_range and not supported:
+        row.update(preparation="arrival_only", reason="unsupported_range_mode")
+        return
     reached = False
     if temperature is not None and supported:
         delta = config["minimum_delta_temperature"]

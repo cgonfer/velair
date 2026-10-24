@@ -1,6 +1,6 @@
 import { HVAC_MODES } from "../constants";
 import { convertTemperatureDelta } from "./temperature-units";
-import type { HassState } from "../types";
+import type { HassState, TargetFormatPolicy } from "../types";
 
 export type ClimateCapabilityKey =
   | "currentTemperature"
@@ -148,88 +148,94 @@ export function climateSupportsRangeTarget(state?: HassState): boolean {
     && Number.isFinite(attributes.target_temp_high);
 }
 
-export function climateRequiresRangeTarget(
-  state?: HassState,
-  requestedMode?: string,
-): boolean {
-  const effectiveMode = requestedMode || state?.state;
-  return effectiveMode === "heat_cool" && climateSupportsRangeTarget(state);
+/** Whether the entity accepts only a pair of setpoints, regardless of HVAC mode. */
+export function climateIsRangeOnly(state?: HassState): boolean {
+  return climateSupportsRangeTarget(state) && !climateSupportsSingleTarget(state);
+}
+
+export function climateRangeModeCompatible(state: HassState | undefined, mode?: string, policy?: TargetFormatPolicy): boolean {
+  if (policy && mode) return policy.formats_by_mode[mode] === "range";
+  return climateSupportsRangeTarget(state) && Boolean(mode)
+    && (mode === "heat_cool" || (climateIsRangeOnly(state) && ["heat", "cool", "auto"].includes(mode!)));
+}
+
+export function climateRequiresRangeTarget(state?: HassState, requestedMode?: string, policy?: TargetFormatPolicy): boolean {
+  if (policy) return policy.formats_by_mode[requestedMode || state?.state || ""] === "range";
+  return climateSupportsRangeTarget(state)
+    && (climateIsRangeOnly(state) || (requestedMode || state?.state) === "heat_cool");
 }
 
 export function effectiveClimateHvacModeForEnsureOn(
   state?: HassState,
   requestedMode?: string,
   target: "scalar" | "range" = "scalar",
+  policy?: TargetFormatPolicy,
 ): string | undefined {
   if (requestedMode) return requestedMode;
   if (!state) return undefined;
   if (state.state !== "off") return state.state;
-  const nonOffModes = climateSupportedModes(state).filter((mode) => mode !== "off");
-  if (target === "range") {
-    return nonOffModes.find((mode) => mode === "heat_cool");
+  const modes = climateSupportedModes(state).filter((mode) => mode !== "off");
+  if (policy) {
+    const format = target === "scalar" ? "single" : "range";
+    if (target === "range" && policy.kind === "mixed" && modes.includes("heat_cool")
+      && policy.formats_by_mode.heat_cool === "range") return "heat_cool";
+    return modes.find((mode) => policy.formats_by_mode[mode] === format)
+      ?? (target === "scalar" ? modes[0] : undefined);
   }
-  return nonOffModes.find((mode) => (
-    !climateRequiresRangeTarget(state, mode)
-    && (mode !== "heat_cool" || climateSupportsSingleTarget(state))
-  ));
+  if (target === "range" && !climateIsRangeOnly(state) && modes.includes("heat_cool")
+    && climateRangeModeCompatible(state, "heat_cool")) return "heat_cool";
+  return modes.find((mode) => target === "range"
+    ? climateRangeModeCompatible(state, mode)
+    : !climateRequiresRangeTarget(state, mode)
+      && (mode !== "heat_cool" || climateSupportsSingleTarget(state)));
 }
 
-export function climateTargetCompatibleForEnsureOn(
-  state: HassState | undefined,
-  target: "scalar" | "range",
-  requestedMode?: string,
-): boolean {
-  const effectiveMode = effectiveClimateHvacModeForEnsureOn(state, requestedMode, target);
-  if (state?.state === "off") {
-    return target === "range"
-      ? climateSupportsRangeTarget(state) && effectiveMode === "heat_cool"
-      : Boolean(
-        effectiveMode
-        && !climateRequiresRangeTarget(state, effectiveMode)
-        && (effectiveMode !== "heat_cool" || climateSupportsSingleTarget(state))
-      );
-  }
-  if (target === "range") {
-    return climateSupportsRangeTarget(state) && effectiveMode === "heat_cool";
-  }
-  return climateSupportsSingleTarget(state)
-    && Boolean(
-      effectiveMode
-      && effectiveMode !== "off"
-      && !climateRequiresRangeTarget(state, effectiveMode)
-    );
+/** Configuration is independent of the transient live mode; delivery validates it again. */
+export function configurationTargetFormatPolicy(state: HassState | undefined, policy: TargetFormatPolicy): TargetFormatPolicy {
+  if (policy.kind !== "unknown" || !state) return policy;
+  const attributes = state.attributes ?? {};
+  const features = Number(attributes.supported_features ?? 0);
+  const single = features ? (features & 1) !== 0 : "temperature" in attributes;
+  const range = features ? (features & 2) !== 0 : "target_temp_low" in attributes && "target_temp_high" in attributes;
+  const modes = climateSupportedModes(state).filter((mode) => mode !== "off");
+  const kind = single && range ? "mixed" : single ? "single" : range ? "range" : "unknown";
+  const selected = policy.configured_modes ?? (modes.includes("heat_cool") ? ["heat_cool"] : []);
+  const formats: TargetFormatPolicy["formats_by_mode"] = Object.fromEntries(modes.map((mode) => [mode,
+    kind === "mixed" ? selected.includes(mode) ? "range" : "single"
+      : kind === "range" ? ["heat", "cool", "auto", "heat_cool"].includes(mode) ? "range" : "unknown"
+        : kind === "single" ? "single" : "unknown",
+  ]));
+  const invalidModes = selected.filter((mode) => !modes.includes(mode));
+  return { ...policy, kind, formats_by_mode: formats, range_modes: modes.filter((mode) => formats[mode] === "range"),
+    invalid_modes: invalidModes, uncertain: kind === "unknown" || !modes.length || !!invalidModes.length };
 }
 
-/**
- * Return whether a target can be stored for a climate independently of its
- * transient active mode. Keep may later preserve the current mode, so a
- * persisted block is valid when the entity advertises at least one compatible
- * non-off mode. Runtime delivery still validates the actual effective mode.
- */
 export function climateTargetCompatibleForConfiguration(
   state: HassState | undefined,
   target: "scalar" | "range",
   requestedMode?: string,
+  policy?: TargetFormatPolicy,
 ): boolean {
-  const supportsTarget = target === "range"
-    ? climateSupportsRangeTarget(state)
-    : climateSupportsSingleTarget(state);
-  if ((target === "range" || state?.state !== "off") && !supportsTarget) return false;
-
-  const compatibleMode = (mode: string): boolean => target === "range"
-    ? mode === "heat_cool"
-    : mode !== "off"
-      && !climateRequiresRangeTarget(state, mode)
-      && (
-        state?.state !== "off"
-        || supportsTarget
-        || mode !== "heat_cool"
-      );
-  const supportedModes = climateSupportedModes(state);
-  if (requestedMode) {
-    return supportedModes.includes(requestedMode) && compatibleMode(requestedMode);
+  if (policy) {
+    policy = configurationTargetFormatPolicy(state, policy);
+    // Some integrations expose their scalar feature only after being turned on.
+    if (policy.kind === "unknown" && state?.state === "off" && target === "scalar") {
+      const modes = climateSupportedModes(state);
+      return requestedMode ? modes.includes(requestedMode) && !["off", "heat_cool"].includes(requestedMode)
+        : modes.some((mode) => !["off", "heat_cool"].includes(mode));
+    }
+    const format = target === "scalar" ? "single" : "range";
+    return requestedMode ? policy.formats_by_mode[requestedMode] === format
+      : Object.values(policy.formats_by_mode).includes(format);
   }
-  return supportedModes.some((mode) => mode !== "off" && compatibleMode(mode));
+  const modes = climateSupportedModes(state);
+  const compatible = (mode: string): boolean => target === "range"
+    ? climateRangeModeCompatible(state, mode)
+    : mode !== "off" && !climateRequiresRangeTarget(state, mode)
+      && (climateSupportsSingleTarget(state) || (state?.state === "off" && mode !== "heat_cool"));
+  return requestedMode
+    ? modes.includes(requestedMode) && compatible(requestedMode)
+    : modes.some(compatible);
 }
 
 export function climateFanModeOptions(state?: HassState): string[] {

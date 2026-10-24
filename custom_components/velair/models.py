@@ -374,6 +374,7 @@ class ZoneData(TypedDict):
     preconditioning: PreconditioningData
     comfort: ComfortData
     external_change_policy: ExternalChangePolicyData
+    target_range_modes: NotRequired[list[str]]
     target_temp_step_override: NotRequired[float]
     last_reported_target_temp_step: NotRequired[float]
     execution: NotRequired[ZoneExecutionData]
@@ -394,6 +395,8 @@ class PanelSettingsData(TypedDict):
     zone_order: list[str]
     min_temperature: float
     max_temperature: float
+    shared_demand_groups: NotRequired[list[dict[str, Any]]]
+    shared_demand_cleanup: NotRequired[list[str]]
 
 
 class GlobalData(TypedDict):
@@ -881,6 +884,9 @@ def normalize_schedule_data(
         zones[entity_id]["day_layout_key"] = normalize_day_layout_key(zone_data.get("day_layout_key"))
         if "template_links" in zone_data:
             zones[entity_id]["template_links"] = _stored_template_link_modes(zone_data["template_links"])
+        if "target_range_modes" in zone_data:
+            from .target_format_policy import validate_range_modes
+            zones[entity_id]["target_range_modes"] = validate_range_modes(zone_data["target_range_modes"])
         target_temp_step_override = normalize_target_temp_step_override(
             zone_data.get("target_temp_step_override")
         )
@@ -1747,6 +1753,10 @@ def normalize_panel_settings(
         "zone_order": zone_order,
         "min_temperature": min_temperature,
         "max_temperature": max_temperature,
+        **({"shared_demand_groups": deepcopy(settings["shared_demand_groups"])}
+           if "shared_demand_groups" in settings else {}),
+        **({"shared_demand_cleanup": deepcopy(settings["shared_demand_cleanup"])}
+           if "shared_demand_cleanup" in settings else {}),
     }
 
 

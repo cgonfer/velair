@@ -333,6 +333,7 @@ function renderIssue(host: VelairViewHost, issue: DiagnosticIssue) {
 
 function issueText(host: VelairViewHost, code: string): string {
   const keys: Record<string, TranslationKey> = {
+    invalid_target_range_modes: "targetRangeInvalidModes",
     command_settling_mismatch: "diagnosticsMismatchTitle",
     entity_missing: "entityDiagnosticMissing", entity_unavailable: "diagnosticsEntityUnavailable",
     planned_return_error: "plannedReturnEventError",
@@ -964,6 +965,7 @@ function diagnosticReasonLabel(host: VelairViewHost, value: unknown): string | u
     temperature_migration: "diagnosticsReasonTemperatureMigration",
     turn_off: "diagnosticsOverrideTurnOff",
     unsupported_mode: "diagnosticsReasonUnsupportedMode",
+    unsupported_range_mode: "unsupportedRangeThermalMode",
     unsupported_temperature_range: "diagnosticsReasonUnsupportedTemperatureRange",
     zone_paused: "diagnosticsEventZonePaused",
     zone_unavailable: "diagnosticsReasonZoneUnavailable",

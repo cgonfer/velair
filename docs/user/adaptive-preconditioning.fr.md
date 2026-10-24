@@ -9,8 +9,8 @@ Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](ad
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.3 |
-| Dernière synchronisation | 2026-10-21 |
+| Version de référence | 1.9.0-beta.5 |
+| Dernière synchronisation | 2026-10-24 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -41,6 +41,8 @@ L’onglet **Anticipation** contient les réglages adaptatifs et l’apprentissa
 Le préconditionnement se configure par appareil. L’apprentissage du chauffage et du refroidissement est suivi séparément : les échantillons de refroidissement ne remplacent pas ceux du chauffage, et inversement.
 
 Les plages natives `heat_cool` sont prises en charge. Si la pièce est plus froide que la limite basse et que l’écart dépasse l’écart minimal de température, Velair calcule sa prévision à partir de cette limite et applique la plage complète en avance pour chauffer. Si la pièce est plus chaude que la limite haute et que l’écart dépasse ce seuil, il utilise la limite haute et applique la plage complète en avance pour refroidir. Les mesures dans la plage ou dans les bandes mortes autour de ses limites conservent l’horaire normal. Velair envoie toujours les deux limites ; il ne réduit jamais une plage à une seule température.
+
+Une entité peut exiger les deux limites en Chauffage, Refroidissement ou Auto sans prendre en charge `heat_cool`. Velair peut programmer et transmettre ces cibles, mais ne les anticipe pas et ne recueille aucun échantillon d’apprentissage thermique pour elles. La vue de préparation explique que cette fonction exige Chauffage/Refroidissement pour les plages. La paire programmée reste inchangée et Retour prévu l’applique à l’arrivée sans préparation anticipée. Activer le préconditionnement ne supprime pas cette limite.
 
 Lorsque l’appareil est développé, chaque mode pris en charge affiche une carte de prévision en direct. Elle utilise les mêmes données backend du prochain événement que Vue d’ensemble ; les pauses, forçages, modes non pris en charge et blocs ne pouvant pas démarrer en avance sont donc traités de façon cohérente. Lorsqu’un futur bloc correspondant existe, la carte affiche l’heure de début calculée, l’heure cible, l’avance, la température et le mode programmés, ainsi que le choix du modèle initial ou d’un historique local similaire.
 

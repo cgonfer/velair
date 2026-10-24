@@ -1,3 +1,4 @@
+import { editorTargetFormats, initializeDraftTargetFormat, reconcileDraftTargetFormat } from "../domain/target-format-policy";
 import { activeSetupSummary } from "../domain/active-setup";
 import { timelinePresentation } from "../views/schedule-view";
 import { timelineCarryOverFromWeeklySchedule } from "../domain/timeline";
@@ -34,8 +35,6 @@ import {
   climatePresetModeOptions,
   climateTargetCompatibleForConfiguration,
   climateSupportedModes,
-  climateSupportsRangeTarget,
-  climateSupportsSingleTarget,
   climateSwingHorizontalModeOptions,
   climateSwingModeOptions,
   entityTemperatureLimits,
@@ -1522,7 +1521,7 @@ export class VelairProfilesView extends LitElement {
                 ${renderDraftListHeader(blockHost, "template")}
                 ${blocks.map((block, index) => keyed(
                   editableBlockRowKey("template", `${this._selectedKey}:${entityId}`, weekday, index),
-                  renderEditableBlock(blockHost, block, index, "template", external ? undefined : {
+                  renderEditableBlock(blockHost, block, index, "template", this._isExternalEntity(entityId) ? undefined : {
                     entityId,
                     dayBlocks: blocks,
                   }),
@@ -1925,15 +1924,8 @@ export class VelairProfilesView extends LitElement {
   private _addBlock(entityId: string, weekday: string): void {
     const blocks = this._blocks(entityId, weekday);
     let updated = addDraftBlock(blocks, nextProfileBlockStart(blocks), this.data?.temperature_unit);
-    const state = this.hass?.states?.[entityId];
-    if (!blocks.length && climateSupportsRangeTarget(state) && !climateSupportsSingleTarget(state)) {
-      updated = updated.map((block, index) => index === updated.length - 1 ? {
-        ...block,
-        temperature: undefined,
-        target_temp_low: state?.attributes?.target_temp_low ?? "",
-        target_temp_high: state?.attributes?.target_temp_high ?? "",
-      } : block);
-    }
+    const choice = editorTargetFormats(this.data, this.hass?.states, entityId);
+    if (updated.at(-1)) updated[updated.length - 1] = initializeDraftTargetFormat(updated.at(-1)!, choice, this.hass?.states?.[entityId]);
     this._setBlocks(
       entityId,
       weekday,
@@ -1949,29 +1941,11 @@ export class VelairProfilesView extends LitElement {
     const blocks = this._blocks(entityId, weekday);
     const previous = blocks[index];
     let updated = updateDraftBlock(blocks, index, field, value);
-    if (previous && field === "hvac_mode") {
-      const state = this.hass?.states?.[entityId];
-      if (value === "heat_cool" && previous.hvac_mode !== "heat_cool"
-        && climateSupportsRangeTarget(state) && !draftBlockUsesRange(previous)) {
-        updated = updated.map((block, blockIndex) => blockIndex === index ? {
-          ...block,
-          temperature: undefined,
-          target_temp_low: state?.attributes?.target_temp_low ?? "",
-          target_temp_high: state?.attributes?.target_temp_high ?? "",
-        } : block);
-      } else if (
-        value !== ""
-        && value !== "heat_cool"
-        && draftBlockUsesRange(previous)
-      ) {
-        updated = updated.map((block, blockIndex) => blockIndex === index ? {
-          ...block,
-          target_temp_low: undefined,
-          target_temp_high: undefined,
-          temperature: state?.attributes?.temperature ?? "",
-        } : block);
-      }
-    }
+    if (previous) updated = updated.map((block, blockIndex) => {
+      if (blockIndex !== index) return block;
+      if (field !== "hvac_mode") return block;
+      return reconcileDraftTargetFormat(previous, block, editorTargetFormats(this.data, this.hass?.states, entityId, block.hvac_mode || undefined));
+    });
     this._setBlocks(entityId, weekday, updated);
   }
 
@@ -2153,6 +2127,7 @@ export class VelairProfilesView extends LitElement {
         state,
         draftBlockUsesRange(block) ? "range" : "scalar",
         block.hvac_mode,
+        this.data?.zones?.[entityId]?.target_format_policy,
       )) {
         return this._t("profileCloneDayIncompatibleTarget", { entity: name, start: block.start });
       }
@@ -2211,6 +2186,7 @@ export class VelairProfilesView extends LitElement {
       classList: this.classList,
       renderRoot: this.renderRoot,
       _selectedEntity: entityId,
+      _targetFormatEntityId: entityId,
       _data: this.data,
       _t: (key: TranslationKey, replacements: Record<string, string | number> = {}) => this._t(key, replacements),
       _temperatureError: (block: DraftScheduleBlock) => this._temperatureError(entityId, block),
@@ -2369,23 +2345,6 @@ export class VelairProfilesView extends LitElement {
       for (const weekday of WEEKDAYS) {
         if (zone.template_links?.[weekday]?.mode === "full") continue;
         const blocks = this._blocks(entityId, weekday);
-        const unsupportedRangeMode = blocks.find((block) =>
-          block.action === ACTION_SET_TEMPERATURE
-          && draftBlockUsesRange(block)
-          && block.hvac_mode !== undefined
-          && block.hvac_mode !== "heat_cool");
-        if (unsupportedRangeMode?.hvac_mode) {
-          return this._t("unsupportedModeForClimateOnWeekday", {
-            entity: state?.attributes?.friendly_name ?? entityId,
-            mode: dictionaryLabel(
-              languageFromHass(this.hass),
-              "hvacModes",
-              unsupportedRangeMode.hvac_mode,
-            ),
-            start: unsupportedRangeMode.start,
-            weekday: weekdayName(languageFromHass(this.hass), weekday),
-          });
-        }
         const unsupportedRange = blocks.find((block) =>
           block.action === ACTION_SET_TEMPERATURE
           && draftBlockUsesRange(block)
@@ -2393,6 +2352,7 @@ export class VelairProfilesView extends LitElement {
             state,
             "range",
             block.hvac_mode,
+            this.data?.zones?.[entityId]?.target_format_policy,
           ));
         if (unsupportedRange) {
           return this._t("unsupportedRangeTargetForClimateOnWeekday", {
@@ -2420,6 +2380,7 @@ export class VelairProfilesView extends LitElement {
             state,
             "scalar",
             block.hvac_mode,
+            this.data?.zones?.[entityId]?.target_format_policy,
           ));
         if (unsupportedScalar) {
           return this._t("unsupportedSingleTargetForClimateOnWeekday", {

@@ -29,6 +29,13 @@ Scalar `auto` and `heat_cool` targets, and native `heat_cool` ranges, retain the
 
 The climate entity remains the actuator. Velair does not create a virtual climate entity and does not bypass device firmware. If your thermostat or TRV supports binding an external sensor directly, that device-native option is still usually the best first choice.
 
+Range-only entities can also accept scheduled pairs in Heat, Cool and Auto.
+Room Assist does not adjust those pairs: range assistance requires `heat_cool`.
+The live status explains the limitation, and Velair sends the nominal pair
+without a shift. Saved Room Assist settings are retained for compatible targets.
+Changing from an assisted target to one of these ranges clears the former
+assistance without restoring an old corrected target over the new pair.
+
 ## Setup
 
 1. Open the Room Assist tab.

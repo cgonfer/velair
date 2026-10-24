@@ -1,3 +1,4 @@
+import { climateRequiresRangeTarget } from "../domain/climate";
 import { renderOverviewTimelineGraphic, overviewTimelineGraphicClasses } from "./timeline-block-graphic";
 import { renderPreconditioningDependency } from "./preconditioning-dependency";
 import { html, nothing } from "lit";
@@ -268,13 +269,14 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     && climateState.state !== "unavailable";
   const roomTemperature = numericTemperature(status.room_temperature)
     ?? (!hasRuntime ? numericTemperature(climateState?.attributes?.current_temperature) : undefined);
-  const targetTemperature = numericTemperature(status.target_temperature)
-    ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.temperature) : undefined);
+  const targetTemperature = climateRequiresRangeTarget(climateState, undefined, host._data?.zones?.[entityId]?.target_format_policy) ? undefined
+    : numericTemperature(status.target_temperature)
+      ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.temperature) : undefined);
   const targetLow = numericTemperature(status.target_temp_low)
     ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.target_temp_low) : undefined);
   const targetHigh = numericTemperature(status.target_temp_high)
     ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.target_temp_high) : undefined);
-  const targetRange = targetLow !== undefined && targetHigh !== undefined
+  const targetRange = targetLow !== undefined && targetHigh !== undefined && targetLow <= targetHigh
     ? formatOverviewRange(host, targetLow, targetHigh, entityId)
     : undefined;
   const appliedTemperature = numericTemperature(status.applied_temperature);
@@ -899,8 +901,10 @@ function currentTargetTemperature(host: OverviewViewHost, entityId: string): str
 
   const low = state.attributes?.target_temp_low;
   const high = state.attributes?.target_temp_high;
-  if (state.state === "heat_cool" && typeof low === "number" && typeof high === "number") {
-    return formatOverviewRange(host, low, high, entityId);
+  if (climateRequiresRangeTarget(state, undefined, host._data?.zones?.[entityId]?.target_format_policy)) {
+    return typeof low === "number" && Number.isFinite(low)
+      && typeof high === "number" && Number.isFinite(high) && low <= high
+      ? formatOverviewRange(host, low, high, entityId) : "-";
   }
   const temperature = state.attributes?.temperature;
   if (typeof temperature === "number") {

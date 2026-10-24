@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.3 |
-| Letzte Synchronisierung | 2026-10-21 |
+| Referenzversion | 1.9.0-beta.5 |
+| Letzte Synchronisierung | 2026-10-24 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -193,7 +193,7 @@ Konfiguriere beispielsweise Montag bis Freitag um 18:15. Nach leerem Zuhause üb
 
 Das Ziel ist der **bei Ankunft** wirksame Block einschließlich Wochenkontinuität. Fordert Zuhause vor 18:00 17 Grad und danach 21 Grad, bereitet Rückkehr um 18:15 21 Grad vor, auch mit Vorbereitungsbeginn vor 18:00. Der Wochenplan wird weder bearbeitet noch mit temporären Blöcken ergänzt.
 
-Zur erwarteten Zeit wählt Velair das Ziel und folgt dem normalen Zeitplan. Frühzeitige Anwesenheit wählt das Ziel sofort, sobald die überwachte Abreise bestätigt ist. Späte Ankunft schaltet nicht zurück zu Abwesend. Pausen, temporäre und manuelle Anpassung, deaktivierte Zonen und gestoppter Zeitplaner behalten die Übermittlungsbedingungen. Vorbereitung unterstützt Heizen, Kühlen und native Bereiche. Sie soll den Raum nahe ans Ziel bringen, garantiert aber keine genaue Temperatur.
+Zur erwarteten Zeit wählt Velair das Ziel und folgt dem normalen Zeitplan. Frühzeitige Anwesenheit wählt das Ziel sofort, sobald die überwachte Abreise bestätigt ist. Späte Ankunft schaltet nicht zurück zu Abwesend. Pausen, temporäre und manuelle Anpassung, deaktivierte Zonen und gestoppter Zeitplaner behalten die Übermittlungsbedingungen. Vorbereitung unterstützt Heizen, Kühlen und native `heat_cool`-Bereiche. Sie soll den Raum nahe ans Ziel bringen, garantiert aber keine genaue Temperatur. Reine Bereichsentitäten in Heizen, Kühlen oder Auto werden nur bei Ankunft angewendet: Velair sendet beide Grenzen ohne frühzeitige Vorbereitung oder thermisches Lernen für dieses Ziel. Die Raumvorbereitung erklärt die Einschränkung; gespeicherte Vorbereitungseinstellungen bleiben für kompatible Ziele verfügbar.
 
 <a id="preparation-and-room-assist"></a>
 ### Vorbereitung und Room Assist

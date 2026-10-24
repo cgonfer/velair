@@ -1005,6 +1005,15 @@ class RuntimeDiagnosticsManager:
             issues.append({"severity": "warning", "code": "hvac_modes_not_reported"})
             status = "warning"
 
+        from .target_format_policy import resolve_target_format_policy
+        policy = resolve_target_format_policy(entity_id, attributes, zone,
+            available=state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN))
+        if policy["invalid_modes"]:
+            issues.append({"severity": "warning", "code": "invalid_target_range_modes",
+                           "modes": policy["invalid_modes"]})
+            if status != "error":
+                status = "warning"
+
         delivery = deepcopy(
             self._delivery.get(
                 entity_id,
@@ -1131,6 +1140,7 @@ class RuntimeDiagnosticsManager:
                 "target_temperature_step": attributes.get("target_temp_step"),
             },
             "configuration": {
+                "target_format_policy": policy,
                 "enabled": bool(zone.get("enabled", True)),
                 "preconditioning": preconditioning,
                 "comfort": comfort_config,

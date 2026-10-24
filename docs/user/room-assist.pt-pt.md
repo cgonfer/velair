@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.0-beta.5 |
+| Última sincronização | 2026-10-24 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -38,6 +38,8 @@ Para um alvo único em `heat` ou `cool` fixo, uma zona morta diferente de zero c
 Alvos escalares de `auto` e `heat_cool` e intervalos nativos de `heat_cool` mantêm o seu comportamento neutro ou de margem do intervalo. O Velair não força esses modos a alternar aquecimento e arrefecimento ativos num ciclo escalar de histerese.
 
 A entidade de climatização continua a ser o atuador. O Velair não cria uma entidade virtual nem contorna o firmware. Se o termóstato ou válvula permite associar diretamente um sensor separado, essa opção nativa continua normalmente a ser a melhor primeira escolha.
+
+Entidades apenas de intervalo também aceitam pares programados em Aquecimento, Arrefecimento e Auto. O Room Assist não ajusta esses pares: a assistência a intervalos exige `heat_cool`. O estado em direto explica a limitação e o Velair envia o par nominal sem deslocamento. As definições do Room Assist mantêm-se para alvos compatíveis. Mudar de um alvo assistido para um destes intervalos elimina a assistência anterior sem restaurar um alvo corrigido antigo por cima do novo par.
 
 <a id="setup"></a>
 ## Configuração

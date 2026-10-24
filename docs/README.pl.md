@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](README.md) · [Español](README.e
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.5 |
+| Ostatnia synchronizacja | 2026-10-24 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -38,6 +38,7 @@ Dokumentacja Velair jest podzielona według odbiorców i tematów.
 - [Adaptacyjne przygotowanie temperatury](user/adaptive-preconditioning.pl.md): wcześniejsze osiąganie zaplanowanego komfortu dzięki lokalnemu uczeniu.
 - [Planowany powrót](user/planned-return.pl.md): nieobecność oparta na wykrywaniu obecności i cotygodniowe lub jednorazowe powroty, z przykładami anulowania przed potwierdzonym wyjściem i po nim.
 - [Room Assist](user/room-assist.pl.md): osobny czujnik temperatury pomieszczenia dla głowic TRV, termostatów i klimatyzatorów.
+- [Sterowanie zasilaniem](user/shared-climate-supply.pl.md): steruj wspólnym przełącznikiem ogrzewania lub chłodzenia na podstawie szacowanego zapotrzebowania pomieszczeń, z histerezą zasilania i wyjątkami termostatów.
 - [Niezawodne przekazywanie poleceń klimatycznych](user/resilient-climate-delivery.pl.md): odroczone próby i zachowanie po ponownym połączeniu chwilowo niedostępnej encji.
 - [Komfort otoczenia](user/comfort.pl.md): temperatura, wilgotność, jakość powietrza CO2 i aktualność odczytów w lokalnej ocenie pomieszczeń.
 - [Jednostki temperatury i migracja](user/temperature-units.pl.md): wartości domyślne Celsjusza/Fahrenheita, aktualizacje, migracja, import/eksport i przywracanie działania.

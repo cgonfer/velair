@@ -145,7 +145,7 @@ export class VelairPanel extends LitElement {
                   ?active=${view === this._activeView}
                   @click=${(event: Event) => this._handleTabClick(view, event)}
                 >
-                  ${this._t(view === "modes" ? "modesTitle" : view === "planned-return" ? "plannedReturn" : view)}
+                  ${this._t(view === "modes" ? "modesTitle" : view === "planned-return" ? "plannedReturn" : view === "supply-control" ? "supplyControl" : view)}
                 </ha-tab-group-tab>
               `,
             )}

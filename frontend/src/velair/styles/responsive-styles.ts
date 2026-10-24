@@ -634,29 +634,6 @@ export const responsiveStyles = css`
       width: 30px;
     }
 
-    .settings-zone-row {
-      grid-template-columns: 28px minmax(0, 1fr);
-    }
-
-    .settings-zone-row > .settings-drag-handle {
-      grid-column: 1;
-      grid-row: 1;
-      justify-self: center;
-    }
-
-    .settings-zone-main {
-      grid-column: 2;
-      grid-row: 1 / span 2;
-    }
-
-    .settings-row-actions {
-      align-items: center;
-      flex-direction: column;
-      grid-column: 1;
-      grid-row: 2;
-      justify-content: flex-start;
-      justify-self: center;
-    }
   }
 
   @container (max-width: 340px) {

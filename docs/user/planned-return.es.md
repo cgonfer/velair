@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](planned-return.md) · [Español](planned-ret
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.3 |
-| Última sincronización | 2026-10-21 |
+| Versión de referencia | 1.9.0-beta.5 |
+| Última sincronización | 2026-10-24 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -202,7 +202,7 @@ Por ejemplo, configura de lunes a viernes a las 18:15. Después de que la casa p
 
 El objetivo es el bloque efectivo **a la llegada**, incluida la continuidad semanal. Si En casa solicita 17 grados antes de las 18:00 y 21 grados después, un retorno a las 18:15 prepara 21 grados aunque la preparación comience antes de las 18:00. El horario semanal no se edita ni se llena con bloques temporales.
 
-A la hora prevista, Velair selecciona el destino y continúa su horario habitual. Una señal temprana de ocupación selecciona el destino inmediatamente una vez confirmada la salida supervisada. Una llegada tardía no vuelve a cambiar el hogar a Ausente. Las pausas, Refuerzo, ajuste Manual, zonas desactivadas y un programador detenido mantienen sus restricciones existentes de entrega. La preparación admite calefacción, refrigeración e intervalos de temperatura nativos. Busca acercar la habitación al objetivo; no puede garantizar una temperatura exacta.
+A la hora prevista, Velair selecciona el destino y continúa su horario habitual. Una señal temprana de ocupación selecciona el destino inmediatamente una vez confirmada la salida supervisada. Una llegada tardía no vuelve a cambiar el hogar a Ausente. Las pausas, Refuerzo, ajuste Manual, zonas desactivadas y un programador detenido mantienen sus restricciones existentes de entrega. La preparación admite calefacción, refrigeración e intervalos nativos `heat_cool`. Busca acercar la habitación al objetivo; no puede garantizar una temperatura exacta. Las entidades que solo aceptan intervalos en Calor, Frío o Auto actúan únicamente a la llegada: Velair aplica ambos límites al llegar sin preparación anticipada ni aprendizaje térmico para ese objetivo. La preparación de habitaciones explica esta limitación; los ajustes guardados se conservan para objetivos compatibles.
 
 <a id="preparation-and-room-assist"></a>
 

@@ -1,6 +1,7 @@
-import type { HassState, ZoneRuntimeStatus } from "../types";
+import type { HassState, TargetFormatPolicy, ZoneRuntimeStatus } from "../types";
 import {
   climateRequiresRangeTarget,
+  climateRangeModeCompatible,
   climateSupportedModes,
   climateSupportsSingleTarget,
 } from "./climate";
@@ -16,12 +17,13 @@ export type ClimateCardTarget =
   | { kind: "single"; temperature: number }
   | { kind: "range"; low: number; high: number };
 
-export function climateCardTarget(state?: HassState): ClimateCardTarget | undefined {
+export function climateCardTarget(state?: HassState, policy?: TargetFormatPolicy): ClimateCardTarget | undefined {
   const attributes = state?.attributes;
   if (!attributes) return undefined;
   const low = finiteNumber(attributes.target_temp_low);
   const high = finiteNumber(attributes.target_temp_high);
-  if (climateRequiresRangeTarget(state)) {
+  if (climateRequiresRangeTarget(state, undefined, policy)) {
+    if (!climateRangeModeCompatible(state, state?.state, policy)) return undefined;
     return low !== undefined && high !== undefined && low <= high
       ? { kind: "range", low, high }
       : undefined;
@@ -53,8 +55,9 @@ export function climateCardTargetPayload(
   direction: -1 | 1,
   temperatureUnit?: string,
   fallbackStep?: number,
+  policy?: TargetFormatPolicy,
 ): Record<string, number> | undefined {
-  const target = climateCardTarget(state);
+  const target = climateCardTarget(state, policy);
   const grid = climateCardPublishedTemperatureGrid(state, temperatureUnit, fallbackStep);
   if (!target || !grid) return undefined;
   if (target.kind === "single") {

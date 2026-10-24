@@ -1405,7 +1405,6 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("confirmReset", source)
         self.assertIn("resetVelairDescription", source)
         self.assertNotIn("settings-capability-section", source)
-        self.assertIn(".settings-zone-row > .settings-drag-handle", responsive_styles_source)
         self.assertIn('class="settings-drag-handle"', source)
         self.assertNotIn('class="settings-zone-row"\n      draggable="true"', source)
         self.assertIn("flex-direction: column", responsive_styles_source)

@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.0-beta.5 |
+| Laatst gesynchroniseerd | 2026-10-24 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -38,6 +38,8 @@ Bij één doel in vaste `heat` of `cool` maakt een niet-nul dode band twee schak
 Afzonderlijke doelen in `auto` en `heat_cool` en oorspronkelijke `heat_cool`-bereiken behouden hun neutrale of bereikmargegedrag. Velair dwingt deze modi niet om tijdens een hysterese voor één doel afwisselend actief te verwarmen en koelen.
 
 De klimaatentiteit blijft het uitvoerende apparaat. Velair maakt geen virtuele klimaatentiteit en omzeilt apparaatfirmware niet. Als je thermostaat of radiatorkraan zelf een externe sensor kan koppelen, is dat doorgaans nog steeds de beste eerste keuze.
+
+Entiteiten die alleen bereiken ondersteunen kunnen ook geplande paren in Verwarmen, Koelen en Auto ontvangen. Room Assist past die paren niet aan: bereikondersteuning vereist `heat_cool`. De actuele status verklaart de beperking en Velair stuurt het nominale paar zonder verschuiving. Opgeslagen Room Assist-instellingen blijven behouden voor geschikte doelen. Overschakelen van een ondersteund doel naar zo’n bereik wist de eerdere ondersteuning zonder een oud gecorrigeerd doel over het nieuwe paar te herstellen.
 
 <a id="setup"></a>
 ## Instellen

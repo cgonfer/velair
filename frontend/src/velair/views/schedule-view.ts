@@ -1,3 +1,4 @@
+import { editorTargetFormats } from "../domain/target-format-policy";
 import { renderTimelineGraphic, timelineGraphicClasses } from "./timeline-block-graphic";
 import { linkedDraftBlocks, linkedDayBlocks } from "../domain/linked-schedules";
 import { selectedDayGroup, schedulesEqual, resolveDayLayout, dayConfigurationFingerprint } from "../domain/day-layouts";
@@ -683,7 +684,12 @@ export function renderEditableBlock(
   const optionItems = climateOptionSummaryItems(host, block);
   const hasSelectedClimateOptions = optionItems.length > 0;
   const hasDeviceOptions = (!isPreset || Boolean(effective)) && (hasSupportedClimateOptions || hasSelectedClimateOptions);
-  const hasClimateOptions = hasDeviceOptions || allowPresets || isPreset || block.temperature_only === true;
+  const targetEntityId = host._targetFormatEntityId ?? (source === "schedule" ? host._selectedEntity : undefined);
+  const formatChoice = editorTargetFormats(host._data, host.hass?.states, targetEntityId, block.hvac_mode || undefined);
+  const currentFormat = usesRange ? "range" : "single";
+  const formatMismatch = !formatChoice.uncertain && !formatChoice.formats.includes(currentFormat);
+  const canSelectTargetType = formatChoice.formats.length > 1 || formatChoice.uncertain || formatMismatch;
+  const hasClimateOptions = hasDeviceOptions || allowPresets || isPreset || block.temperature_only === true || canSelectTargetType;
   const optionError = isOptionsOnly && !isPreset
     ? String(block.humidity ?? "").trim() && !Number.isFinite(Number(block.humidity))
       ? host._t("climateOptionsHumidityInvalidAt", { start: block.start })
@@ -699,7 +705,7 @@ export function renderEditableBlock(
   );
   const guidanceState = guidance?.entityId ? host.hass?.states?.[guidance.entityId] : undefined;
   const mismatch = keepGuidance && !isOptionsOnly && guidance
-    ? keepTargetMismatch(block, guidance.dayBlocks, guidanceState)
+    ? keepTargetMismatch(block, guidance.dayBlocks, guidanceState, guidance.entityId ? host._data?.zones?.[guidance.entityId]?.target_format_policy : undefined)
     : undefined;
 
   return html`
@@ -793,6 +799,14 @@ export function renderEditableBlock(
               ></button>
               <fieldset class="advanced-climate-options-fields">
                 <legend>${host._t("additionalSettings")}</legend>
+      ${canSelectTargetType && !readonly && action === ACTION_SET_TEMPERATURE ? html`<button
+        type="button" class="command-button compact target-format-action"
+        @click=${(event: Event) => {
+          host._updateDraftBlock(index, "action", usesRange ? "target_scalar" : "target_range", source);
+          (event.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
+        }}><ha-icon icon=${usesRange ? "mdi:thermometer" : "mdi:thermometer-lines"} aria-hidden="true"></ha-icon><span>${host._t(usesRange ? "useSingleTarget" : "useRangeTarget")}</span></button>
+        ${formatMismatch ? html`<p class="warning">${host._t("targetFormatIncompatible")}</p>` : nothing}` : nothing}
+
                 ${allowPresets || isPreset ? fullLinked ? html`<p class="full-template-settings">${host._t("linkedFullHelp")}</p>` : renderVelairPresetSettings(host, referenceBlock, index, source, !effective && isPreset) : nothing}
                 ${hasDeviceOptions ? html`<fieldset class="device-settings-fields" ?disabled=${readonly}><legend>${host._t("deviceOptions")}</legend>
                 ${renderAdvancedOptionSelect(
@@ -1048,7 +1062,7 @@ function renderRangeTargetInputs(
           source,
           "target_temp_low",
           "minimumShort",
-          "heatBelow",
+          block.hvac_mode === "heat_cool" ? "heatBelow" : "climateCardLowerTarget",
           minimum,
           maximum,
           step,
@@ -1064,7 +1078,7 @@ function renderRangeTargetInputs(
           source,
           "target_temp_high",
           "maximumShort",
-          "coolAbove",
+          block.hvac_mode === "heat_cool" ? "coolAbove" : "climateCardUpperTarget",
           minimum,
           maximum,
           step,
@@ -1112,7 +1126,7 @@ function renderRangeTargetInput(
   source: BlockDraftSource,
   field: "target_temp_low" | "target_temp_high",
   shortLabelKey: "minimumShort" | "maximumShort",
-  accessibleLabelKey: "heatBelow" | "coolAbove",
+  accessibleLabelKey: "heatBelow" | "coolAbove" | "climateCardLowerTarget" | "climateCardUpperTarget",
   minimum: number,
   maximum: number,
   step: number | undefined,
