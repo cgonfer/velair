@@ -1,3 +1,4 @@
+import { controlUnitIds, controlUnitState } from "../domain/control-units";
 import { html, nothing } from "lit";
 import "../components/target-range-settings-element";
 import { VELAIR_FRONTEND_BUILD, VELAIR_RELEASE_VERSION } from "../build-info";
@@ -63,6 +64,7 @@ export function renderSettingsView(host: SettingsViewHost, zoneIds: string[]) {
       ${renderExternalSystemsSettings(host)}
 
       ${renderPortabilitySettings(host)}
+
 
       <section class="settings-zone-order">
         <div class="section-heading">
@@ -381,7 +383,7 @@ export function renderPortabilitySettings(host: SettingsViewHost) {
   const unmatchedLearningEntities = host._importSections.has("preconditioning_learning")
     ? unmatchedPreconditioningLearningEntities(
         host._importPayload,
-        host._data?.configured_entities ?? [],
+        [...controlUnitIds(host._data), ...(host._importSections.has("room_groups") ? Object.keys(host._importPayload?.sections?.room_groups ?? {}) : [])],
       )
     : [];
   const legacyTemperatureUnit = Boolean(
@@ -597,7 +599,7 @@ export function renderSettingsZoneOrderRow(
 }
 
 export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: string, disabled = host._settingsSaving) {
-  const publishedStep = entityTemperatureStep(host.hass?.states?.[entityId]);
+  const publishedStep = entityTemperatureStep(controlUnitState(host._data, host.hass, entityId));
   if (publishedStep !== undefined) return nothing;
   const zone = host._data?.zones?.[entityId];
   const configuredStep = zone?.last_reported_target_temp_step

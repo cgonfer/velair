@@ -29,12 +29,23 @@ Scalar `auto` and `heat_cool` targets, and native `heat_cool` ranges, retain the
 
 The climate entity remains the actuator. Velair does not create a virtual climate entity and does not bypass device firmware. If your thermostat or TRV supports binding an external sensor directly, that device-native option is still usually the best first choice.
 
-Range-only entities can also accept scheduled pairs in Heat, Cool and Auto.
-Room Assist does not adjust those pairs: range assistance requires `heat_cool`.
-The live status explains the limitation, and Velair sends the nominal pair
-without a shift. Saved Room Assist settings are retained for compatible targets.
-Changing from an assisted target to one of these ranges clears the former
-assistance without restoring an old corrected target over the new pair.
+For two setpoints in fixed `heat` or `cool`, first select **Reference setpoint**
+for that climate and mode in **Settings → Climates and groups**. Choose **Lower
+setpoint** or **Upper setpoint** according to which value your device actually
+uses in that mode; Velair does not infer this from its range capability. The
+selection is shared with Adaptive Preconditioning.
+
+Room Assist uses the selected boundary as its fixed heating or cooling target,
+including the scalar hysteresis cycle and scheduled-target protection. It moves
+both setpoints by the same amount, preserving their separation. Both boundaries
+must fit the climate's target step and physical limits, so the other boundary
+can limit the available correction. Existing limitation warnings still apply.
+
+With **Not configured**, fixed-mode pairs are delivered unchanged without Room
+Assist correction. Ranges in `auto` remain unsupported for assistance; native
+`heat_cool` bands keep their existing behavior. Saved Room Assist settings are
+retained. A reference or mode change clears obsolete assistance without restoring
+an old corrected target over the new intent.
 
 ## Setup
 
@@ -43,14 +54,30 @@ assistance without restoring an old corrected target over the new pair.
 3. Select a room temperature sensor.
 4. Enable Room Sensor Assist.
 5. Adjust Room Assist deadband to set the lower and upper switching limits for
-   fixed heating or cooling, or the neutral margin for automatic modes and
-   native ranges.
+   fixed heating or cooling around its scalar target or selected range reference,
+   or the neutral margin for scalar automatic modes and native `heat_cool` bands.
 6. Adjust Maximum assist delta if the default is too small for that room or
    lower than the target gap the thermostat may need to stop heating or
    cooling.
 7. Adjust Refresh delay if sensor updates feel too slow or too chatty.
 
 Selecting a room sensor alone only stores the sensor. Velair starts using it as the effective room temperature only when Room Sensor Assist is enabled.
+
+### Room groups
+
+Choose the group in Room Assist and use the same sensor selector, enable switch,
+deadband, maximum correction and refresh controls. The group's own temperature
+comes from the member selected in **Room groups → Temperature reference**; the
+optional external room sensor is configured here. Disabling or clearing Room
+Assist returns the effective measurement to that member's temperature.
+
+The group has one shared Room Assist configuration and correction, rather than
+an independent controller for each member. Velair keeps the scheduled room target
+and sends the assisted command through the group's existing command-delivery
+mode: all members by default, or the explicitly selected recipient when the
+installation already propagates commands. Device capability, step and temperature
+limit checks still apply to the actual command destinations. Members remain
+individually visible in Overview.
 
 Room Sensor Assist does not require Adaptive Preconditioning. It can run on normal scheduled blocks and on blocks that Adaptive Preconditioning has started early.
 
@@ -103,7 +130,7 @@ climate instead of requiring you to infer it from the thermostat target:
 | **Idle** | Room Assist is enabled, but there is no active compatible temperature block or no usable calculation yet. |
 | **Ready** | Velair has the readings and target needed to calculate assistance, but no assisted target has been applied yet. |
 | **Assisting** | Velair has applied a temporary corrected target or shifted range. |
-| **Holding** | Room Assist is keeping an automatic scalar target neutral, holding a native range, or scheduled-target protection is keeping a target on the safe side. A fixed `heat` or `cool` cycle can instead remain **Assisting** while it travels through the deadband. |
+| **Holding** | Room Assist is keeping an automatic scalar target neutral, holding a native `heat_cool` range, or scheduled-target protection is keeping a target on the safe side. A fixed `heat` or `cool` cycle can instead remain **Assisting** while it travels through the deadband. |
 | **Blocked** | A pause, Boost, Manual state, or another scheduler state currently has priority over Room Assist. |
 | **Unavailable** | The managed climate or required target capability cannot currently be used. The interface shows the available reason when one is known. |
 
@@ -499,9 +526,11 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-The four hysteresis fields are optional. They appear for a fixed scalar
+The four hysteresis fields are optional. In automation events, they appear for a fixed scalar
 `heat` or `cool` cycle with a non-zero deadband and are absent for legacy
-zero-deadband correction, scalar automatic modes, and native ranges.
+zero-deadband correction, scalar automatic modes, and all ranges. Fixed ranges
+with a configured reference expose their hysteresis phase in live runtime status;
+their automation events retain the complete boundary pairs and `range_shift`.
 
 A range update uses the complete scheduled and applied bands instead of scalar
 target fields:

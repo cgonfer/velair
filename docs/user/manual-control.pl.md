@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](manual-control.md) · [Español](
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.5 |
-| Ostatnia synchronizacja | 2026-10-24 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -39,6 +39,15 @@ Velair rozdziela następujące pojęcia:
 | Globalna pauza lub zatrzymanie | Wszystkie urządzenia | Harmonogram jest globalnie wstrzymany albo wyłączony. |
 
 Stany mogą współistnieć. Tryb **Ręczny** może wybierać Profil `Sleep`, gdy `climate.living_room` jest sterowane ręcznie. Profil pozostaje obowiązującą konfiguracją harmonogramu, ale to urządzenie zachowuje zewnętrzną nastawę do końca sterowania ręcznego.
+
+<a id="room-groups"></a>
+## Grupy pomieszczeń
+
+Dla [grupy pomieszczenia](room-groups.pl.md#pauses-manual-adjustment-and-resuming) opisany wyżej zakres urządzenia oznacza jedną wspólną jednostkę sterowania. Ustawienia przechowują jedną politykę **Korekt zewnętrznych** dla grupy. Wykryta zmiana jednego urządzenia może oddać sterowanie harmonogramem całego pokoju; nie tworzy niezależnej sesji ręcznej urządzenia.
+
+Velair zachowuje stan każdego urządzenia zamiast kopiować zmieniony cel na pozostałe. Przy **Do następnego bloku** wszystkie wracają wtedy do wspólnego programu. Wznowienie automatyki przez dowolne urządzenie też dotyczy grupy i stosuje jej zamiar do odbiorców z uwzględnieniem pozostałych przyczyn pauzy. Jawne pauzy strefy i wzmocnienia przez urządzenie również należą do całej grupy.
+
+Karta grupy pokazuje stan sterowania bez osobnego przycisku pauzy. Komfort i fizyczne obserwacje pozostają indywidualne.
 
 <a id="what-velair-observes"></a>
 ## Co obserwuje Velair

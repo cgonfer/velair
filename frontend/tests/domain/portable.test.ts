@@ -23,6 +23,18 @@ const payload: VelairPortablePayload = {
 };
 
 describe("portable preconditioning learning", () => {
+  it("preserves internal member Comfort data without adding a selectable portable section", () => {
+    const memberComfort = { "climate.office": { enabled: true, temperature_min: 19 } };
+    const grouped = {
+      ...payload, model_version: PORTABLE_MODEL_VERSION,
+      sections: { room_groups: {}, zones: {}, member_comfort: memberComfort },
+    } as VelairPortablePayload;
+    expect(validatePortablePayload(grouped)).toEqual({ ok: true, sections: ["room_groups", "zones"] });
+    expect(portableImportSummaryItems(grouped)).toEqual([
+      { section: "room_groups", value: 0 }, { section: "zones", value: 0 },
+    ]);
+    expect(grouped.sections?.member_comfort).toBe(memberComfort);
+  });
   it("recognizes learning as an importable portable section", () => {
     expect(validatePortablePayload(payload)).toEqual({
       ok: true,
@@ -119,12 +131,28 @@ describe("portable preconditioning learning", () => {
     };
     const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(22);
+    expect(PORTABLE_MODEL_VERSION).toBe(25);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
     expect(roundTrip.sections.zones).toEqual(current.sections.zones);
     expect(validatePortablePayload({ ...roundTrip, model_version: 13 })).toEqual({ ok: true, sections: ["zones"] });
     expect(validatePortablePayload({ ...roundTrip, model_version: 14 })).toEqual({ ok: true, sections: ["zones"] });
     expect(validatePortablePayload({ ...roundTrip, model_version: 19 })).toEqual({ ok: true, sections: ["zones"] });
+    expect(validatePortablePayload({ ...roundTrip, model_version: 22 })).toEqual({ ok: true, sections: ["zones"] });
+    const withRangeReference = {
+      ...roundTrip,
+      model_version: 23,
+      sections: { zones: { "climate.office": {
+        ...roundTrip.sections.zones?.["climate.office"],
+        target_range_reference: { heat: "high", cool: "low" },
+      } } },
+    };
+    const referenceRoundTrip = JSON.parse(JSON.stringify(withRangeReference));
+    expect(validatePortablePayload(referenceRoundTrip)).toEqual({ ok: true, sections: ["zones"] });
+    expect(referenceRoundTrip.sections.zones["climate.office"].target_range_reference).toEqual({ heat: "high", cool: "low" });
+    const withSupplyDelay = { ...roundTrip, model_version: 24, sections: {
+      settings: { shared_demand_groups: [{ id: "boiler", on_delay_seconds: 30 }] },
+    } };
+    expect(validatePortablePayload(JSON.parse(JSON.stringify(withSupplyDelay)))).toEqual({ ok: true, sections: ["settings"] });
     expect(validatePortablePayload({ ...roundTrip, model_version: PORTABLE_MODEL_VERSION + 1 })).toEqual({
       ok: false,
       errorKey: "invalidImportFile",

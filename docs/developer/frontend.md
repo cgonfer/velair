@@ -197,14 +197,35 @@ This bundle must be committed for HACS users.
 
 ## Optional Lovelace Resource
 
-Use the integration-served resource:
+The backend registers and reconciles the integration-served module through
+Home Assistant's Lovelace resource collection during frontend setup. In storage
+mode it creates a missing entry or updates the existing entry in place, preserving
+its ID. Repeated setup with an unchanged bundle does not rewrite the entry.
+
+The panel and automatically registered resource share the exact URL
+`/velair_frontend/velair-card.js?v=<bundle file mtime>`. This reuses the existing
+panel identifier and changes when a different installed bundle has a different
+modification time. Matching existing entries ignores query parameters and
+fragments, but only recognizes the exact local current path and the legacy
+`/local/velair-card.js` path. Reconciliation prefers a current entry, fixes its
+type, migrates the legacy path, and removes recognized duplicates only after
+the retained entry is ready. Other paths and external URLs are untouched.
+
+YAML-mode resources are inspected without writes. The stable URL remains
+supported for YAML and manual configuration:
 
 ```yaml
 url: /velair_frontend/velair-card.js
 type: module
 ```
 
-Velair serves this resource with `no-store` response headers. The sidebar adds its own automatic build identifier and uses isolated internal element names, so users must not append manual build identifiers or edit the Lovelace resource between releases.
+Velair serves this resource with `no-store` response headers. Users must not
+append manual build identifiers or maintain version parameters between releases.
+Registration failures and YAML configuration problems produce log guidance,
+without persistent notifications or blocking the panel and scheduler. Reloading
+the integration checks again; temporary unloads leave the resource registered.
+There is no polling or browser hot replacement: restart Home Assistant after
+installing an update, then reload the browser or companion app.
 
 Then add one or more Velair cards. The card does not carry an independent UI; it selects one panel view fragment and renders it with the same data model as the sidebar panel.
 

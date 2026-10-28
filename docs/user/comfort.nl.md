@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](comfort.md) · [Español](comfort.es.md) · [Fra
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -24,6 +24,8 @@ Comfortdrempels gebruiken de ingestelde Home Assistant-temperatuureenheid en wor
 
 Omgevingscomfort geeft voor elk beheerd klimaatapparaat een begrijpelijke beschrijving van de kamer in plaats van een algemeen waarschuwingsniveau.
 
+Comfort blijft onafhankelijk voor elk fysiek apparaat in een kamergroep. Elk lid heeft eigen bewaking, sensoren, drempels en beoordeling. Groeperen deelt planning en kamerbesturing zonder die instellingen te vervangen.
+
 Het volgt lokaal beschikbare metingen van temperatuur, luchtvochtigheid en CO2. Het verandert geen schema's en bestuurt apparaten niet automatisch. Velair toont de beoordeling in het paneel, Lovelace-kaarten en Home Assistant-gebeurtenissen, zodat automatiseringen kunnen bepalen wat ze ermee doen.
 
 <a id="sources"></a>
@@ -34,6 +36,8 @@ Voor temperatuur wordt de eerste beschikbare bron in deze volgorde gebruikt:
 1. de temperatuursensor die in het tabblad Comfort is geselecteerd;
 2. de Room Assist-sensor die voor het klimaatapparaat is ingesteld;
 3. de `current_temperature` van de klimaatentiteit.
+
+Voor groepsleden gebruikt automatische temperatuur het fysieke `current_temperature` van het lid; de Room Assist-sensor van de groep wordt niet overgenomen. Kies indien nodig expliciet een externe sensor in de Comfortconfiguratie van dat lid.
 
 Voor luchtvochtigheid wordt gebruikt:
 
@@ -187,7 +191,7 @@ Velair biedt één waarde voor gegevenskwaliteit:
 - `stale`: er is geen actuele meting en elke gevolgde bron is verouderd;
 - `unavailable`: om een andere reden kan geen actuele meting worden gebruikt.
 
-Het paneel groepeert bruikbare metingen waarvan de actualiteit niet kan worden geverifieerd onder **Actualiteit gegevens** van de zone, in plaats van dezelfde melding naast elke afgeleide meting te herhalen. Een Lovelace Comfort-kaart die configuratie verbergt, toont één samenvatting boven de metingen; Diagnose toont ook de context voor actualiteit. De ingeklapte zonelijst laat deze gebruikelijke status weg om leesbaar te blijven. Dit is een geldige automatische configuratie met een klimaatapparaat als bron, geen configuratiefout. Ontbrekende of verouderde metingen tonen nog steeds een waarschuwing in de zonelijst.
+Comfort groepeert bruikbare metingen waarvan de actualiteit niet verifieerbaar is naast de sensorkeuzes bij **Configuratie → Gegevensbronnen**. Een rustige uitleg noemt de betrokken waarden en verduidelijkt dat een onbekend meettijdstip niet betekent dat waarden onjuist zijn of de kamer oncomfortabel is. Overzicht en Lovelace-kaarten laten deze routinestatus weg; Diagnostiek bewaart de technische context. Dit is een geldige automatische apparaatbron, geen configuratiefout. Ontbrekende of verouderde waarden blijven een waarschuwing in de zonelijst geven.
 
 <a id="visual-status"></a>
 ## Visuele status
@@ -252,7 +256,7 @@ Zichtbaarheidsopties voor temperatuur, luchtvochtigheid en CO2 beïnvloeden alle
 
 `Verouderd na` is de maximale tijd sinds de geselecteerde sensor zijn status voor het laatst aan Home Assistant heeft gemeld (`last_reported`). Het herhalen van dezelfde waarde vernieuwt het rapportagetijdstip en houdt de meting actueel. Velair luistert naar deze meldingen en plant het volgende vervalmoment, zodat paneel, sensoren en gebeurtenissen `stale` kunnen tonen wanneer de termijn verstrijkt zonder nieuw rapport.
 
-De instelling staat in een eigen onderdeel **Actualiteit gegevens** na de broninstellingen. Dit groepeert ook actuele metingen met niet-verifieerbare actualiteit, inclusief ingeschakelde afgeleide metingen en buitensensormetingen, zonder berekende buitenwaarden te herhalen. Het noemt directe bronnen waarop de limiet geldt, zoals Room Assist, CO2, buiten- of externe afgeleide sensoren. Buitensensoren kunnen de limiet actief houden zelfs als binnentemperatuur en -luchtvochtigheid beide van het klimaatapparaat komen; de limiet laat die klimaatmetingen niet verlopen. Je kunt dit vóór het inschakelen van Comfort instellen. Zonder directe bron is het veld uitgeschakeld met een uitleg; de opgeslagen waarde blijft voor een toekomstige sensorkeuze bewaard.
+De instelling staat in **Actualiteit gegevens** na de bronkeuzes. Dit noemt de directe bronnen waarop de limiet geldt: Room Assist, CO2, buiten- of externe sensoren voor afgeleide metingen. De uitleg over niet-verifieerbare actualiteit staat bij de sensorkeuzes, inclusief ingeschakelde afgeleide en buitenmetingen. Buitensensoren kunnen de limiet actief houden als binnentemperatuur en vochtigheid van het klimaatapparaat komen; de limiet laat die apparaatmetingen niet verlopen. Je kunt dit vóór inschakelen van Comfort instellen. Zonder directe bron is het veld uitgeschakeld met uitleg; de waarde blijft bewaard voor een latere sensorkeuze.
 
 De automatische temperatuur- en luchtvochtigheidsattributen van `climate.*` hebben geen onafhankelijk rapportagetijdstip. Velair blijft een geldige waarde tonen met actualiteit `unverified`; wijzigingen aan een doeltemperatuur bevestigen geen nieuwe meting. Kies indien beschikbaar de oorspronkelijke temperatuur- of luchtvochtigheidssensor. Als een geselecteerde sensor geen `last_reported` heeft, is de geldige waarde eveneens `unverified`. Een entiteit met status `unavailable` of `unknown` kan geen bruikbare meting leveren, ook niet als oude numerieke attributen nog aanwezig zijn.
 

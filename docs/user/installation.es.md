@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](installation.md) · [Español](installation.
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -76,16 +76,11 @@ Las ejecuciones de versiones etiquetadas también adjuntan archivos zip a la ver
 
 ## Tarjeta Lovelace opcional
 
-El panel de la barra lateral se registra automáticamente. La tarjeta Lovelace es opcional.
+El panel de la barra lateral se registra automáticamente. La tarjeta Lovelace es opcional. Si los recursos del panel se gestionan desde la interfaz de Home Assistant, Velair registra automáticamente su módulo JavaScript al configurar la integración, también en instalaciones existentes tras actualizar. Puedes verlo en **Ajustes > Paneles > Recursos** (desde el menú de tres puntos). En este modo no necesitas configurar recursos manualmente: añade las tarjetas directamente.
 
-Añade el recurso servido por la integración:
+La URL es `/velair_frontend/velair-card.js?v=...`. Velair actualiza el parámetro de versión cuando cambia el bundle instalado; no lo edites manualmente. Tras instalar o actualizar, reinicia Home Assistant y recarga el navegador o la aplicación complementaria. Las tarjetas deben funcionar al abrir el panel directamente, sin visitar antes la barra lateral de Velair.
 
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Después añade una o varias tarjetas Velair. Cada tarjeta utiliza los mismos datos del backend y componentes visuales que el panel de la barra lateral.
+Añade una o varias tarjetas Velair. Usan los mismos datos del backend y componentes visuales que el panel de la barra lateral.
 
 ```yaml
 type: custom:velair-card
@@ -108,11 +103,28 @@ Valores de `view` admitidos:
 - `planned-return`: controles compactos de regreso puntual, recuentos de las fuentes de ocupación configuradas y una línea temporal de salida confirmada. Sin fuentes de ocupación guardadas, Programar regreso aplica Ausente inmediatamente; la rutina semanal automática sigue necesitando fuentes.
 - `diagnostics`: estado de ejecución, historial limitado, filtros y exportación de informes de problemas.
 
+<a id="resources-managed-in-yaml"></a>
+### Recursos gestionados en YAML
+
+Si tu configuración usa `lovelace.resource_mode: yaml`, Velair deja el listado de recursos bajo tu control. Añade esto a la configuración `lovelace` existente:
+
+```yaml
+lovelace:
+  resource_mode: yaml
+  resources:
+    - url: /velair_frontend/velair-card.js
+      type: module
+```
+
+La URL estable sin parámetro de versión sigue siendo válida; no tienes que mantener ninguna versión en YAML. Conserva los demás recursos configurados. Escribir una tarjeta o panel en YAML no selecciona por sí solo la gestión de recursos en YAML.
+
 <a id="card-discovery-and-resource-troubleshooting"></a>
 
 ### Detección de la card y diagnóstico de recursos
 
-Utiliza solo el recurso de módulo `/velair_frontend/velair-card.js` servido por la integración. Elimina los recursos duplicados de Velair, incluido cualquier `/local/velair-card.js` antiguo, y después recarga el navegador. Los elementos personalizados del navegador no se pueden sustituir una vez registrados, por lo que un recurso antiguo cargado primero puede dejar ese navegador usando una implementación obsoleta de la card.
+Usa solo el módulo `/velair_frontend/velair-card.js` servido por la integración, con su parámetro automático de versión si los recursos se gestionan desde la interfaz. Velair migra la entrada antigua exacta `/local/velair-card.js` y consolida automáticamente los duplicados de estas dos rutas locales. Otras rutas y URL externas no cambian. Para recursos gestionados en YAML, elimina tú las entradas antiguas o duplicadas, reinicia Home Assistant y recarga el navegador. Los elementos personalizados del navegador no pueden sustituirse tras registrarse; cargar antes una versión antigua puede dejar una tarjeta obsoleta.
+
+Si un recurso requiere atención en modo YAML o falla el registro automático, consulta las instrucciones de Velair en los registros de Home Assistant. Estas comprobaciones no crean notificaciones persistentes.
 
 El selector de cards del dashboard descubre Velair mediante metadatos del frontend. Añadir manualmente `type: custom:velair-card` en YAML utiliza el elemento personalizado registrado; son comprobaciones distintas. Si la card funciona mediante YAML pero no aparece en el selector, indica esa diferencia al comunicar el problema.
 

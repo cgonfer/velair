@@ -28,7 +28,7 @@ def state(mode="heat", temperature=20, target=21, **attributes):
 
 class SharedDemandValidationTests(unittest.TestCase):
     def test_timing_requires_whole_seconds_and_accepts_integral_floats(self):
-        for field in ("minimum_off_seconds", "off_delay_seconds"):
+        for field in ("minimum_off_seconds", "on_delay_seconds", "off_delay_seconds"):
             for value in (0.1, 1.5, 86399.9):
                 with self.subTest(field=field, value=value):
                     raw = group()
@@ -48,6 +48,7 @@ class SharedDemandValidationTests(unittest.TestCase):
         raw["zones"]["climate.room"]["hysteresis"] = 0.6
         normalized = normalize_groups([raw], ["climate.room"])
         self.assertFalse(normalized[0]["enabled"])
+        self.assertEqual(normalized[0]["on_delay_seconds"], 0)
         self.assertEqual(normalized[0]["zones"]["climate.room"], {"hysteresis": 0.6})
         normalized[0]["zones"]["climate.room"]["hysteresis"] = 1
         self.assertEqual(raw["zones"]["climate.room"]["hysteresis"], 0.6)
@@ -58,6 +59,8 @@ class SharedDemandValidationTests(unittest.TestCase):
             "enabled": [1, "true"], "suspended": [1], "direction": ["auto", "off"],
             "hysteresis": [True, float("nan"), float("inf"), -1, "0.3"],
             "minimum_off_seconds": [-1, float("nan")],
+            "on_delay_seconds": [True, -1, float("nan"), float("inf"), 86401, "30"],
+            "suspension_reason": ["manual", True, None],
             "switch_entity_id": ["climate.room", "switch.bad name", None],
             "zones": [{}, {"climate.unmanaged": {}}, {"climate.room": {"extra": 1}}],
         }.items():
@@ -329,13 +332,70 @@ class SharedDemandRuntimeTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(module, "async_dispatcher_send") as publish:
             self.controller._state_changed(SimpleNamespace(data={"entity_id": "climate.room", "old_state": state(), "new_state": self.hass.states["climate.room"]}))
             await self.flush()
-            publish.assert_not_called()
+            publish.assert_called_once_with(self.hass, module.SIGNAL_SHARED_DEMAND_LIVE_UPDATED)
         self.assertEqual(self.controller.get_statuses()["boiler"]["zones"]["climate.room"]["temperature"], 20.1)
 
     async def test_room_assist_range_hold_without_direction(self):
         self.assist = dict(active=True, valid=True, direction=None, demand=False)
         self.assertFalse(self.demand()["demand"])
         self.assertEqual(self.demand()["source"], "room_assist")
+
+    async def test_live_reference_preserves_units_and_detached_committed_snapshot(self):
+        self.hass.states["climate.room"] = state(temperature=68, target=70, temperature_unit="°F")
+        await self.start()
+        snapshot = self.controller.get_statuses()
+        zone = snapshot["boiler"]["zones"]["climate.room"]
+        self.assertEqual((zone["temperature_unit"], zone["sensor_entity_id"]), ("°F", "climate.room"))
+        self.assertAlmostEqual(zone["start_temperature"], 69.46)
+        phases = deepcopy(self.controller._phases)
+        zone["temperature"] = -100
+        self.assertEqual(self.controller.get_statuses()["boiler"]["zones"]["climate.room"]["temperature"], 68)
+        self.assertEqual(phases, self.controller._phases)
+
+    async def test_live_disabled_and_off_readings_are_observations_without_control(self):
+        raw = self.data["settings"]["shared_demand_groups"][0]
+        raw["enabled"] = False
+        await self.start()
+        self.assertEqual(self.controller.get_statuses()["boiler"]["zones"], {})
+        before = self.controller.get_live_statuses()["boiler"]["zones"]["climate.room"]
+        self.assertEqual((before["temperature"], before["reason"], before["demand"]), (20, "disabled", None))
+        self.hass.states["climate.room"] = state(temperature=20.2)
+        with patch.object(module, "async_dispatcher_send") as publish:
+            self.controller._state_changed(SimpleNamespace(data={"entity_id": "climate.room",
+                "old_state": state(), "new_state": self.hass.states["climate.room"]}))
+            await self.flush()
+            publish.assert_called_once_with(self.hass, module.SIGNAL_SHARED_DEMAND_LIVE_UPDATED)
+        self.assertEqual(self.controller.get_live_statuses()["boiler"]["zones"]["climate.room"]["temperature"], 20.2)
+        self.assertFalse(self.controller._phases)
+        self.assertFalse(self.calls)
+        self.save.assert_not_awaited()
+        self.assist = dict(active=True, valid=True, direction="heat", demand=True,
+                           temperature=19, temperature_unit="°C", sensor_entity_id="sensor.room")
+        self.controller.reconfigure(); await self.flush()
+        observed = self.controller.get_live_statuses()["boiler"]["zones"]["climate.room"]
+        self.assertEqual((observed["source"], observed["temperature"], observed["sensor_entity_id"]),
+                         ("room_assist", 19, "sensor.room"))
+        self.assertIsNone(observed["demand"])
+        self.assist = {"active": False}
+        raw["enabled"] = True
+        self.hass.states["climate.room"] = state("off", temperature=19.5)
+        self.controller.reconfigure(); await self.flush()
+        off = self.controller.get_live_statuses()["boiler"]["zones"]["climate.room"]
+        self.assertEqual((off["temperature"], off["reason"], off["demand"]), (19.5, "off", False))
+        self.assertNotIn("start_temperature", off)
+
+    async def test_live_assist_copies_real_reference_and_direction_boundaries(self):
+        self.assist = dict(active=True, valid=True, direction=None, demand=False,
+            temperature=21.5, temperature_unit="°C", sensor_entity_id="sensor.room",
+            thresholds={"heat": {"target": 20, "start_temperature": 19.7, "stop_temperature": 19.7},
+                        "cool": {"target": 24, "start_temperature": 24.3, "stop_temperature": 24.3}})
+        result = self.demand()
+        self.assertEqual(result["sensor_entity_id"], "sensor.room")
+        self.assertEqual(result["temperature"], 21.5)
+        self.assertEqual(result["target"], 20)
+        self.assertEqual(result["stop_temperature"], 19.7)
+        self.assist.update(valid=False)
+        self.assertNotIn("temperature", self.demand())
 
     async def test_malformed_load_disables_and_dangling_zone_is_unknown(self):
         self.data["settings"]["shared_demand_groups"] = [{"id": "broken", "zones": None}]
@@ -771,7 +831,9 @@ class SharedDemandRuntimeTests(unittest.IsolatedAsyncioTestCase):
                         self.controller._state_changed(SimpleNamespace(data={
                             "entity_id": "climate.room", "old_state": old, "new_state": new}))
                         await self.flush()
-                    publish.assert_not_called()
+                    self.assertEqual(publish.call_count, 5)
+                    self.assertTrue(all(call.args[1] == module.SIGNAL_SHARED_DEMAND_LIVE_UPDATED
+                                        for call in publish.call_args_list))
                 self.assertEqual(len(self.calls), before_calls)
                 self.assertEqual(self.controller.get_statuses()["boiler"]["zones"]
                                  ["climate.room"]["temperature"], 20.5)
@@ -851,7 +913,7 @@ class SharedDemandBandValidationTests(unittest.TestCase):
             self.assertEqual(normalized["hysteresis_stop"], offset)
             self.assertEqual(normalized["zones"]["climate.room"],
                              {"hysteresis": offset, "hysteresis_stop": offset})
-        for field in ("minimum_off_seconds", "off_delay_seconds"):
+        for field in ("minimum_off_seconds", "on_delay_seconds", "off_delay_seconds"):
             raw = group(); raw[field] = 86401
             with self.subTest(field=field), self.assertRaises(ValueError):
                 normalize_groups([raw], ["climate.room"])

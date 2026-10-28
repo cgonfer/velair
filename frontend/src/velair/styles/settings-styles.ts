@@ -197,6 +197,7 @@ export const settingsStyles = css`
 }
 
 .settings-zone-order p,
+.settings-help .section-heading p,
 .settings-maintenance p,
 .settings-reset p,
 .settings-startup p {
@@ -224,6 +225,7 @@ export const settingsStyles = css`
   padding-top: 12px;
 }
 
+
 .external-controller-conditions {
   background: var(--card-background-color);
   border: 1px solid var(--divider-color);
@@ -231,7 +233,8 @@ export const settingsStyles = css`
   min-width: 0;
 }
 
-.external-controller-conditions summary {
+.external-controller-conditions summary,
+.external-controller-conditions .settings-section-heading {
   align-items: center;
   cursor: pointer;
   display: grid;
@@ -242,16 +245,20 @@ export const settingsStyles = css`
   padding: 10px;
 }
 
+.external-controller-conditions .settings-section-heading { cursor: default; grid-template-columns: 20px minmax(0, 1fr); }
+
 .external-controller-conditions summary::-webkit-details-marker {
   display: none;
 }
 
-.external-controller-conditions summary > ha-icon:first-child {
+.external-controller-conditions summary > ha-icon:first-child,
+.external-controller-conditions .settings-section-heading > ha-icon:first-child {
   --mdc-icon-size: 17px;
   color: var(--primary-color);
 }
 
-.external-controller-conditions summary strong {
+.external-controller-conditions summary strong,
+.external-controller-conditions .settings-section-heading strong {
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -272,6 +279,13 @@ export const settingsStyles = css`
   border-top: 1px solid var(--divider-color);
   padding: 9px 10px 10px;
 }
+
+.settings-disclosure .external-controller-conditions-body { display: grid; gap: 12px; padding-top: 12px; }
+.settings-disclosure > summary,
+.settings-disclosure > .settings-section-heading { box-sizing: border-box; min-height: 44px; }
+.settings-disclosure > summary strong,
+.settings-disclosure > .settings-section-heading strong { overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; }
+.settings-disclosure > summary:focus-visible { border-radius: 4px; outline: 2px solid var(--primary-color); outline-offset: 3px; }
 
 .external-controller-conditions ul {
   color: var(--secondary-text-color);
@@ -337,6 +351,26 @@ export const settingsStyles = css`
   min-width: 0;
 }
 
+.settings-zone-configuration > .settings-external-policy,
+.settings-zone-configuration > .settings-target-temp-step,
+.settings-zone-configuration > .settings-target-range-modes,
+.settings-zone-configuration > .target-range-reference {
+  align-items: start;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: 4px;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .settings-zone-configuration > .settings-external-policy,
+  .settings-zone-configuration > .settings-target-temp-step,
+  .settings-zone-configuration > .settings-target-range-modes,
+  .settings-zone-configuration > .target-range-reference {
+    grid-row: auto;
+    grid-template-rows: minmax(24px, auto) auto;
+  }
+}
+
 .settings-row-actions { align-items: center; display: flex; gap: 2px; }
 .settings-row-actions .icon-button { height: 36px; width: 36px; }
 .settings-zone-row .target-range-review { border-top: 1px solid var(--divider-color); margin-top: 4px; padding-top: 12px; }
@@ -362,6 +396,7 @@ export const settingsStyles = css`
   display: flex;
   flex: 0 0 auto;
   gap: 2px;
+  min-height: 24px;
 }
 
 .settings-policy-heading .label { font-size: 12px; }
@@ -720,4 +755,5 @@ export const settingsStyles = css`
 }
 
 
+  .room-group-warning { color: var(--warning-color); }
 `;

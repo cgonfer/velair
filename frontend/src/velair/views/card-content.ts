@@ -1,3 +1,4 @@
+import { controlUnitIds, controlUnitZone, filteredPhysicalClimateIds } from "../domain/control-units";
 import { html, nothing } from "lit";
 import type { VelairViewHost } from "../host-types";
 import type { ScheduleResponse, ScheduleZone, VelairCardView } from "../types";
@@ -20,22 +21,24 @@ import { renderSchedulesView } from "./schedule-view";
 import { renderSensorsView, type RoomSensorViewOptions } from "./sensors-view";
 import { renderSettingsView } from "./settings-view";
 import { renderSupplyControlView } from "./supply-control-view";
+import { renderRoomGroupsView } from "./room-groups-view";
 import { renderDiagnosticsView } from "./diagnostics-view";
 import { renderTemplatesView } from "./templates-view";
 import "../components/profiles-view-element";
 import { renderClimateCard } from "./climate-card-view";
+import "../components/shared-demand-live-element";
 
 type CardContentHost = VelairViewHost;
 
 export function renderCardContent(host: CardContentHost) {
   const view = host._effectiveView();
   const showOperationStatus = !host._hasExternalConfig || view === "active-setup";
-  const zoneIds = host._orderedZoneIds(host._data?.configured_entities ?? []);
+  const zoneIds = host._orderedZoneIds(controlUnitIds(host._data));
   const visibleZoneIds = host._visibleZoneIds(host._data?.configured_entities ?? []);
   const selectedEntity = host._selectedEntity && visibleZoneIds.includes(host._selectedEntity)
     ? host._selectedEntity
     : visibleZoneIds[0];
-  const selectedZone = selectedEntity ? host._data?.zones[selectedEntity] : undefined;
+  const selectedZone = selectedEntity ? controlUnitZone(host._data, selectedEntity) : undefined;
   const incompatibleTargets = host._data && !host._data.temperature_migration.required
     ? incompatibleScheduleTargetCount(
       host._data.zones,
@@ -135,6 +138,18 @@ function renderViewContent(
   selectedEntity?: string,
   selectedZone?: ScheduleZone,
 ) {
+  const physicalZoneIds = host._orderedZoneIds(filteredPhysicalClimateIds(host._data, host._config?.entities));
+  if (view === "supply-live") {
+    const supplies = host._data?.settings.shared_demand_groups ?? [];
+    const supply = supplies.find(item => item.id === host._config.supply_id);
+    if (!supply) return html`<div class="notice" role="status">${host._t(host._config.supply_id ? "supplyLiveCardSupplyUnavailable" : supplies.length ? "supplyLiveCardChooseSupply" : "supplyLiveCardNoSupplies")}</div>`;
+    return html`<velair-shared-demand-live .host=${host} .hass=${host.hass} .supply=${supply}
+      .supplyTemperatureUnit=${host._data?.temperature_unit} .embedded=${true} .heading=${host._config.title}
+      .visibility=${{ header: host._config.supply_show_header, connection: host._config.supply_show_connection,
+        switchState: host._config.supply_show_switch_state, roomCount: host._config.supply_show_room_count,
+        legend: host._config.supply_show_legend, demandDescription: host._config.supply_show_demand_description }}
+    ></velair-shared-demand-live>`;
+  }
   if (host._data?.temperature_migration?.required && view !== "settings" && view !== "diagnostics") {
     return html`<div class="notice">${host._t(
       host._data.temperature_migration.reason === "legacy_celsius_upgrade_reset_required"
@@ -147,9 +162,9 @@ function renderViewContent(
       ${renderOverviewSummary(host, zoneIds)}
       ${renderCompactActiveSetup(host)}
       ${renderOverviewActiveBoosts(host, visibleZoneIds)}
-      ${renderNextEvents(host, visibleZoneIds)}
-      ${renderOverviewTimelines(host, visibleZoneIds)}
-      ${renderOverviewZones(host, visibleZoneIds)}
+      ${renderNextEvents(host, host._orderedZoneIds(filteredPhysicalClimateIds(host._data, host._config?.entities)))}
+      ${renderOverviewTimelines(host, physicalZoneIds)}
+      ${renderOverviewZones(host, physicalZoneIds)}
     `;
   }
 
@@ -181,15 +196,15 @@ function renderViewContent(
   }
 
   if (view === "overview-events") {
-    return renderNextEvents(host, visibleZoneIds);
+    return renderNextEvents(host, host._orderedZoneIds(filteredPhysicalClimateIds(host._data, host._config?.entities)));
   }
 
   if (view === "overview-timeline") {
-    return renderOverviewTimelines(host, visibleZoneIds);
+    return renderOverviewTimelines(host, physicalZoneIds);
   }
 
   if (view === "overview-zones") {
-    return renderOverviewZones(host, visibleZoneIds);
+    return renderOverviewZones(host, physicalZoneIds);
   }
 
   if (view === "schedules") {
@@ -204,12 +219,16 @@ function renderViewContent(
     return renderSupplyControlView(host);
   }
 
+  if (view === "room-groups") {
+    return renderRoomGroupsView(host);
+  }
+
   if (view === "sensors") {
     return renderSensorsView(host, visibleZoneIds, roomSensorViewOptions(host));
   }
 
   if (view === "comfort") {
-    return renderComfortView(host, visibleZoneIds, comfortViewOptions(host));
+    return renderComfortView(host, host._orderedZoneIds(filteredPhysicalClimateIds(host._data, host._config.entities)), comfortViewOptions(host));
   }
 
   if (view === "planned-return") {

@@ -6,6 +6,7 @@ import type { TranslationKey } from "../translations";
 const REASONS: Record<string, TranslationKey> = {
   learning_suspended: "learningReasonSuspended",
   unsupported_range_mode: "unsupportedRangeThermalMode",
+  range_reference_not_configured: "rangeReferenceNotConfigured",
   temperature_unavailable: "learningReasonTemperatureUnavailable",
   target_not_resolved: "learningReasonTargetNotResolved",
   no_lead_time: "learningReasonNoLeadTime",

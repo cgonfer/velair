@@ -1,3 +1,4 @@
+import { controlUnitIds } from "../domain/control-units";
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
 import type { ComfortSettingsUpdate, PanelSettings, PreconditioningSettings, ScheduleResponse, VelairCardConfig } from "../types";
@@ -166,7 +167,7 @@ export async function resetZonePreconditioningSettings(
 }
 
 export function moveSettingsZone(host: SettingsActionsHost, entityId: string, direction: -1 | 1): void {
-  const entities = host._orderedZoneIds(host._data?.configured_entities ?? []);
+  const entities = host._orderedZoneIds(controlUnitIds(host._data));
   const currentIndex = entities.indexOf(entityId);
   const nextIndex = currentIndex + direction;
   if (currentIndex < 0 || nextIndex < 0 || nextIndex >= entities.length) {
@@ -205,7 +206,7 @@ export function handleSettingsZoneDrop(
     return;
   }
 
-  const entities = host._orderedZoneIds(host._data?.configured_entities ?? []).filter(
+  const entities = host._orderedZoneIds(controlUnitIds(host._data)).filter(
     (entityId: string) => entityId !== draggedEntityId,
   );
   const targetIndex = entities.indexOf(targetEntityId);
@@ -222,7 +223,7 @@ export function handleSettingsZoneDragEnd(host: SettingsActionsHost): void {
 }
 
 export function updateSettingsZoneOrder(host: SettingsActionsHost, entityIds: string[]): void {
-  const knownEntities = new Set(host._data?.configured_entities ?? []);
+  const knownEntities = new Set(controlUnitIds(host._data));
   const zoneOrder = entityIds.filter((entityId) => knownEntities.has(entityId));
-  void host._saveSettings({ zone_order: zoneOrder });
+  void host._saveSettings(host._data?.room_groups && Object.keys(host._data.room_groups).length ? { unit_order: zoneOrder } : { zone_order: zoneOrder });
 }

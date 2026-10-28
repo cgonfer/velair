@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](comfort.md) · [Español](comfort.es.md) · [
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.6 |
+| Ultima sincronizzazione | 2026-10-28 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -19,6 +19,8 @@ Traduzioni: [Originale in inglese](comfort.md) · [Español](comfort.es.md) · [
 <!-- velair-docs:end -->
 
 L’intervallo predefinito di temperatura confortevole è `20–24 °C`. Se l’installazione usa Fahrenheit, l’intervallo predefinito è `68–75 °F`, con limiti arrotondati a valori senza decimali.
+
+Il Comfort resta indipendente per ogni dispositivo fisico di un gruppo stanza. Ogni membro ha interruttore di monitoraggio, sensori e soglie propri e mostra la propria valutazione. Il raggruppamento condivide programmazione e controllo della stanza senza sostituire le impostazioni di Comfort.
 
 Le soglie di comfort usano l’unità di temperatura configurata in Home Assistant e vengono migrate o importate insieme agli altri dati termici salvati di Velair. Un sensore che dichiara l’altra unità viene convertito prima di confrontarne la lettura con le soglie di comfort del dispositivo climatico gestito.
 
@@ -34,6 +36,8 @@ La temperatura usa la prima fonte disponibile in quest’ordine:
 1. il sensore di temperatura selezionato nella scheda Comfort;
 2. il sensore Room Assist configurato per quel dispositivo;
 3. `current_temperature` dell’entità climatica.
+
+Per i dispositivi raggruppati, la temperatura automatica usa `current_temperature` del membro fisico; il sensore Room Assist del gruppo non viene ereditato. Se necessario, seleziona esplicitamente un sensore esterno nel Comfort del membro.
 
 L’umidità usa:
 
@@ -181,7 +185,7 @@ Velair espone un unico valore di qualità dei dati:
 - `stale`: non esiste una lettura attuale e tutte le fonti monitorate non sono aggiornate;
 - `unavailable`: nessuna lettura attuale è utilizzabile per un altro motivo.
 
-Il pannello raggruppa le letture utilizzabili di cui non può verificare l’aggiornamento nella sezione **Freschezza dei dati** della zona, invece di ripetere la stessa nota accanto a ogni lettura derivata. Una scheda Lovelace Comfort che nasconde la configurazione mostra un riepilogo sopra le letture; anche la diagnostica espone il contesto di aggiornamento. L’elenco compresso delle zone omette questo stato ordinario per restare leggibile. È una configurazione automatica valida della fonte climatica, non un errore di configurazione. Le letture mancanti o non aggiornate mostrano comunque un avviso nell’elenco delle zone.
+La scheda Comfort raggruppa le letture utilizzabili con aggiornamento non verificabile accanto ai selettori dei sensori in **Configurazione → Fonti dei dati**. Una spiegazione discreta identifica le letture interessate e chiarisce che un’ora di misurazione sconosciuta non significa valori errati o stanza non confortevole. Panoramica e schede Lovelace omettono questo stato ordinario; Diagnostica conserva il contesto tecnico dell’aggiornamento. È una configurazione automatica valida con fonte dal dispositivo, non un errore. Le letture mancanti o scadute mostrano ancora un avviso nell’elenco delle zone.
 
 <a id="visual-status"></a>
 ## Stato visivo
@@ -246,7 +250,7 @@ Le opzioni di visibilità di temperatura, umidità e CO2 influiscono solo sui gr
 
 `Considera obsoleto dopo` è il tempo massimo da quando un sensore selezionato ha comunicato l’ultimo stato a Home Assistant (`last_reported`). Ripetere lo stesso valore aggiorna l’orario della segnalazione e mantiene attuale la lettura. Velair ascolta quelle segnalazioni e pianifica la scadenza successiva, così pannello, sensori ed eventi possono mostrare `stale` quando il termine passa senza una nuova segnalazione.
 
-L’impostazione si trova nella propria sezione **Freschezza dei dati**, dopo i controlli delle fonti. La sezione raggruppa anche le letture attuali con aggiornamento non verificabile, comprese le misure derivate abilitate e le letture dei sensori esterni, senza ripetere i valori esterni calcolati. Elenca le fonti dirette coperte dal limite, inclusi Room Assist, CO2, sensori esterni o di misure derivate esterne. I sensori esterni possono mantenerlo attivo anche quando temperatura e umidità interne provengono entrambe dal dispositivo climatico; il limite non fa scadere quelle letture climatiche. Puoi impostarlo prima di abilitare Comfort. Se non è configurata una fonte diretta, il campo è disabilitato con una spiegazione; il valore salvato viene conservato per una futura selezione di sensore.
+L’impostazione resta nella propria sezione **Freschezza dei dati**, dopo i controlli delle fonti. Elenca le fonti dirette coperte dal limite, inclusi Room Assist, CO2, sensori esterni o metriche derivate esterne. La spiegazione delle letture con aggiornamento non verificabile appare accanto ai selettori dei sensori, incluse metriche derivate abilitate e letture esterne. I sensori esterni possono mantenere attivo il limite anche se temperatura e umidità interne provengono dal dispositivo; il limite non fa scadere queste letture. Puoi impostarlo prima di abilitare Comfort. Senza una fonte diretta configurata, il campo è disabilitato con una spiegazione; il valore salvato resta per una futura selezione.
 
 Gli attributi automatici di temperatura e umidità `climate.*` non hanno un orario di segnalazione indipendente. Velair mantiene visibile un valore valido e ne indica l’aggiornamento come `unverified`; cambiare l’obiettivo climatico non verifica una nuova misura. Scegli il sensore originale di temperatura o umidità quando disponibile. Se un sensore selezionato non ha `last_reported`, anche il suo valore valido è `unverified`. Un’entità `unavailable` o `unknown` non può fornire una lettura utilizzabile, anche se conserva vecchi attributi numerici.
 

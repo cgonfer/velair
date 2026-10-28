@@ -83,6 +83,7 @@ describe("complete documentation availability used by the build", () => {
     ["manualControl", "docs/user/manual-control.md"],
     ["externalSystems", "docs/user/external-systems.md"],
     ["sharedSupply", "docs/user/shared-climate-supply.md"],
+    ["roomGroups", "docs/user/room-groups.md"],
   ];
   it.each([
     ["es-ES", "es"], ["fr-FR", "fr"], ["de-DE", "de"], ["it-IT", "it"],

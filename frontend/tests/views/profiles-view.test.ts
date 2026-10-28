@@ -3237,3 +3237,37 @@ it("treats the Profile template editor as a concrete entity and restores alterna
   expect(internal._cloneCompatibilityError(internal._blocks("climate.office", "monday"), "climate.office")).toBeUndefined();
   element.remove();
 });
+
+
+it("uses compact member information for a group's Profile schedule and closes help on removal", async () => {
+  const element = new VelairProfilesView();
+  element.workspace = "profiles";
+  element.scheduleWorkspace = true;
+  element.hass = { language: "en", connection: {} as never, states: {
+    "climate.a": { state: "heat", attributes: { friendly_name: "First climate" } },
+    "climate.b": { state: "heat", attributes: { friendly_name: "Second climate" } },
+  } };
+  element.data = {
+    ...data,
+    configured_entities: ["climate.a", "climate.b"], control_units: ["group.room"],
+    room_groups: { "group.room": { id: "group.room", name: "Room", members: ["climate.a", "climate.b"], temperature_entity_id: "climate.a", delivery_mode: "all" } },
+    member_to_unit: { "climate.a": "group.room", "climate.b": "group.room" },
+    zones: { "group.room": { enabled: true, schedule: {} } },
+    profiles: [{ ...(data.profiles ?? [])[0], zones: { "group.room": { behavior: "schedule", schedule: {} } } }],
+  } as unknown as ScheduleResponse;
+  document.body.append(element);
+  await element.updateComplete;
+  await selectFirstProfile(element);
+  const note = element.shadowRoot!.querySelector(".profile-week .room-group-schedule-note")!;
+  expect(note).not.toBeNull();
+  expect(note.querySelector(".room-group-schedule-copy")?.textContent).toContain("Room");
+  expect(note.querySelector("details")).toBeNull();
+  expect(element.shadowRoot!.querySelector(".room-group-details")).toBeNull();
+  const button = note.querySelector<HTMLButtonElement>(".inline-help")!;
+  const help = note.querySelector('[role="tooltip"]')!;
+  button.click();
+  expect(help.classList.contains("visible")).toBe(true);
+  expect(help.textContent).toContain("First climate (climate.a)");
+  element.remove();
+  expect(help.classList.contains("visible")).toBe(false);
+});

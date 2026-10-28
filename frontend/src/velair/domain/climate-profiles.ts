@@ -1,3 +1,4 @@
+import { controlUnitId } from "./control-units";
 import { cloneWithTargetDrafts } from "./target-format-policy";
 import { resolveDayLayout } from "./day-layouts";
 import { WEEKDAYS } from "../constants";
@@ -92,6 +93,7 @@ export function activeClimateProfiles(data?: ScheduleResponse): ClimateProfile[]
 
 /** Resolve ownership separately from behavior: explicit Default still claims a zone. */
 export function effectiveZoneProfileId(data: ScheduleResponse | undefined, entityId: string): string | null {
+  entityId = controlUnitId(data, entityId);
   if (data?.effective_zone_profiles && entityId in data.effective_zone_profiles) return data.effective_zone_profiles[entityId];
   const selection = data?.profile_selection;
   if (selection && entityId in selection.zone_profile_overrides) return selection.zone_profile_overrides[entityId];
@@ -103,6 +105,7 @@ export function activeClimateProfileZoneEffect(
   data: ScheduleResponse | undefined,
   entityId: string,
 ): { profile: ClimateProfile; zone: Exclude<ClimateProfileZone, { behavior: "normal" }> } | undefined {
+  entityId = controlUnitId(data, entityId);
   const profileId = effectiveZoneProfileId(data, entityId);
   const profile = data?.profiles?.find((candidate) => candidate.key === profileId);
   const zone = profile?.zones[entityId];
@@ -116,6 +119,7 @@ export function effectiveClimateSchedule(
   data: ScheduleResponse | undefined,
   entityId: string,
 ): Record<string, ScheduleBlock[]> | undefined {
+  entityId = controlUnitId(data, entityId);
   if (data?.effective_schedules && entityId in data.effective_schedules) return data.effective_schedules[entityId] ?? undefined;
   const effect = activeClimateProfileZoneEffect(data, entityId);
   if (effect?.zone.behavior === "pause") {

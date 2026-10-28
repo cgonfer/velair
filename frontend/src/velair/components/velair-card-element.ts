@@ -1,6 +1,8 @@
+import { controlUnitId, controlUnitIds, controlUnitState, controlUnitZone } from "../domain/control-units";
 import { targetFormatsForEntity } from "../domain/target-format-policy";
+import { activeClimateProfileZoneEffect } from "../domain/climate-profiles";
 import { resolveDayLayout, selectedDayGroup, schedulesEqual } from "../domain/day-layouts";
-import type { PanelSubsection } from "../domain/panel-routes";
+import { scheduleUsagePath, type PanelSubsection } from "../domain/panel-routes";
 import { isScheduleResponseCurrent, rawScheduleHass, type PanelScheduleSession } from "../controllers/panel-schedule-session";
 import { acquireLovelaceScheduleSession } from "../controllers/lovelace-schedule-sessions";
 import { normalizeTemplateBlocks } from "../controllers/template-impact";
@@ -18,6 +20,7 @@ import {
   INITIAL_LOADING_DELAY_MS,
   OPERATION_SUCCESS_VISIBLE_MS,
   PORTABLE_SECTIONS,
+  WEEKDAYS,
 } from "../constants";
 import {
   asCardContextHost,
@@ -66,6 +69,7 @@ import {
   climateCardPublishedHvacModes,
   climateCardRuntimeBlocksThermostat,
   climateCardTargetPayload,
+  climateCardControlState,
   type ClimateCardTargetField,
 } from "../domain/climate-card-controls";
 import {
@@ -382,6 +386,8 @@ export class VelairCard extends LitElement {
   }
 
   private async _openResourceUsage(usage: import("../types").ResourceUsage): Promise<void> {
+    if (!controlUnitIds(this._data).includes(usage.entity_id) || !WEEKDAYS.includes(usage.weekday)) return;
+    if (usage.source === "profile" && this._data?.profiles?.find(profile => profile.key === usage.profile_key)?.zones[usage.entity_id]?.behavior !== "schedule") return;
     if (this._effectiveView() !== "schedules") {
       this.dispatchEvent(new CustomEvent("velair-open-resource-usage", { bubbles: true, composed: true, detail: usage }));
       return;
@@ -390,6 +396,29 @@ export class VelairCard extends LitElement {
     if (this._scheduleSource !== (usage.source === "default" ? "default" : "profile")) return;
     if (usage.source === "default") { this._selectEntity(usage.entity_id); if (this._selectedEntity === usage.entity_id) this._selectWeekday(usage.weekday); }
     else { await this.updateComplete; this.renderRoot.querySelector<import("./profiles-view-element").VelairProfilesView>("velair-profiles-view")?.focusUsage(usage); }
+  }
+
+  private async _openNextEventSchedule(entityId: string, weekday?: string, modeId?: string): Promise<void> {
+    const owner = controlUnitId(this._data, entityId);
+    if (!controlUnitIds(this._data).includes(owner)) return;
+    const day = weekday && WEEKDAYS.includes(weekday) ? weekday
+      : WEEKDAYS.includes(this._selectedWeekday) ? this._selectedWeekday : weekdayForDate(new Date());
+    const mode = modeId ? this._data?.modes?.find(candidate => candidate.key === modeId) : undefined;
+    if (modeId && modeId !== "default" && !mode) return;
+    const selectionData = modeId && this._data ? {
+      ...this._data,
+      profile_selection: { base_profile_ids: mode?.profile_ids ?? [], base_mode_id: mode?.key ?? null, zone_profile_overrides: {} },
+      effective_zone_profiles: undefined, effective_profile_ids: undefined,
+    } : this._data;
+    const effect = activeClimateProfileZoneEffect(selectionData, owner);
+    const usage: import("../types").ResourceUsage = {
+      source: effect?.zone.behavior === "schedule" ? "profile" : "default",
+      entity_id: owner, weekday: day,
+      ...(effect?.zone.behavior === "schedule" ? { profile_key: effect.profile.key } : {}),
+    };
+    if (!this._hasExternalConfig) { await this._openResourceUsage(usage); return; }
+    window.history.pushState({ from: `${window.location.pathname}${window.location.search}${window.location.hash}` }, "", scheduleUsagePath(usage));
+    window.dispatchEvent(new CustomEvent("location-changed"));
   }
 
   @state() private _config: VelairCardConfig = {};
@@ -437,11 +466,19 @@ export class VelairCard extends LitElement {
   @state() private _plannedReturnDirty = false;
   @state() private _plannedReturnBusy = false;
   private _setPlannedReturnBusy(busy: boolean): void { this._plannedReturnBusy = busy; }
-  public canNavigatePanel(): boolean { return !this._plannedReturnBusy && !this._applyingTemplateTargets && !this._sharedDemandBusy; }
+  public canNavigatePanel(): boolean { return !this._roomGroupsBusy && !this._plannedReturnBusy && !this._applyingTemplateTargets && !this._sharedDemandBusy; }
   private _setPlannedReturnDirty(dirty: boolean): void { this._plannedReturnDirty = dirty; }
   @state() private _profileScheduleDirty = false;
   @state() private _presetLibraryDirty = false;
   @state() private _presetLibraryDraft?: import("../types").PresetLibraryDraft;
+  @state() private _roomGroupsDirty = false;
+  @state() private _roomGroupsBusy = false;
+  private _roomGroupsDraft?: import("./room-groups-settings-element").RoomGroupsDraft;
+  private _setRoomGroupsState(dirty: boolean, busy: boolean, draft?: import("./room-groups-settings-element").RoomGroupsDraft): void {
+    this._roomGroupsDirty = dirty;
+    this._roomGroupsBusy = busy;
+    this._roomGroupsDraft = draft;
+  }
   @state() private _sharedDemandDirty = false;
   @state() private _sharedDemandBusy = false;
   @state() private _sharedSupplyLibraryDraft?: import("./shared-demand-settings-element").SharedSupplyLibraryDraft;
@@ -1019,12 +1056,12 @@ export class VelairCard extends LitElement {
     }
     this._syncDiagnosticsLogResizeObserver();
     this._syncClimateCardActionsResizeObserver();
-    if (changedProperties.has("_sharedDemandDirty") || changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty") || changedProperties.has("_templateApplication")) {
+    if (changedProperties.has("_roomGroupsDirty") || changedProperties.has("_sharedDemandDirty") || changedProperties.has("_plannedReturnDirty") || changedProperties.has("_dirty") || changedProperties.has("_profileScheduleDirty") || changedProperties.has("_presetLibraryDirty") || changedProperties.has("_templateDirty") || changedProperties.has("_templateApplication")) {
       this.dispatchEvent(new CustomEvent("velair-dirty-changed", {
         bubbles: true,
         composed: true,
         detail: {
-          dirty: this._sharedDemandDirty || this._plannedReturnDirty || Boolean(this._templateApplication?.dirty) || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
+          dirty: this._roomGroupsDirty || this._sharedDemandDirty || this._plannedReturnDirty || Boolean(this._templateApplication?.dirty) || this._templateDirty || this._presetLibraryDirty || (this._scheduleSource === "profile" ? this._profileScheduleDirty : this._dirty),
           scope: this._scheduleSource === "profile" ? "profile" : "default-schedule",
         },
       }));
@@ -2005,7 +2042,7 @@ export class VelairCard extends LitElement {
     this._climateCardPause = undefined;
     const state = this.hass?.states?.[entityId];
     const attributes = state?.attributes;
-    const runtime = this._data?.zone_runtime?.[entityId];
+    const runtime = this._data?.zone_runtime?.[controlUnitId(this._data, entityId)];
     const low = attributes?.target_temp_low ?? runtime?.target_temp_low;
     const high = attributes?.target_temp_high ?? runtime?.target_temp_high;
     const target = attributes?.temperature ?? runtime?.target_temperature ?? attributes?.current_temperature;
@@ -2376,20 +2413,20 @@ export class VelairCard extends LitElement {
     if (!this._climateCardThermostatReady(entityId)) return;
     const hass = this.hass;
     if (!hass) return;
-    const state = hass.states?.[entityId];
+    const state = climateCardControlState(this._data, hass, entityId);
     const payload = climateCardTargetPayload(
       state,
       field,
       direction,
       this._temperatureUnit(entityId),
       this._entityTemperatureStep(entityId),
-      this._data?.zones[entityId]?.target_format_policy,
+      controlUnitZone(this._data, entityId)?.target_format_policy,
     );
     if (!payload) return;
     this._climateCardThermostatAction = "temperature";
     this._error = undefined;
     try {
-      await hass.callService("climate", "set_temperature", {
+      await hass.callService(controlUnitId(this._data, entityId) !== entityId ? "velair" : "climate", "set_temperature", {
         entity_id: entityId,
         ...payload,
       });
@@ -2405,11 +2442,11 @@ export class VelairCard extends LitElement {
     const hass = this.hass;
     if (!hass) return;
     const state = hass.states?.[entityId];
-    if (!climateCardPublishedHvacModes(state).includes(mode)) return;
+    if (!climateCardPublishedHvacModes(controlUnitState(this._data, hass, controlUnitId(this._data, entityId)) ?? state).includes(mode)) return;
     this._climateCardThermostatAction = "hvac-mode";
     this._error = undefined;
     try {
-      await hass.callService("climate", "set_hvac_mode", {
+      await hass.callService(controlUnitId(this._data, entityId) !== entityId ? "velair" : "climate", "set_hvac_mode", {
         entity_id: entityId,
         hvac_mode: mode,
       });
@@ -2429,7 +2466,7 @@ export class VelairCard extends LitElement {
       return false;
     }
     const state = hass.states?.[entityId];
-    const runtime = this._data.zone_runtime?.[entityId];
+    const runtime = this._data.zone_runtime?.[controlUnitId(this._data, entityId)];
     return Boolean(state && state.state !== "unavailable" && state.state !== "unknown"
       && !climateCardRuntimeBlocksThermostat("manual", runtime));
   }

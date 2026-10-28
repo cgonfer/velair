@@ -8,8 +8,8 @@ Traduções: [Original em inglês](comfort.md) · [Español](comfort.es.md) · [
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.6 |
+| Última sincronização | 2026-10-28 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -24,6 +24,8 @@ Os limites de conforto usam a unidade configurada no Home Assistant e são migra
 
 O conforto ambiental dá a cada dispositivo gerenciado uma descrição clara do cômodo, em vez de um nível genérico de aviso.
 
+Conforto permanece independente para cada dispositivo físico de um grupo de cômodo. Cada membro tem seu interruptor de monitoramento, sensores e limites, e mostra sua própria avaliação. O grupo compartilha programação e controle do cômodo sem substituir os ajustes de Conforto.
+
 Monitora leituras locais de temperatura, umidade e CO2. Não altera programações nem controla dispositivos automaticamente. O Velair disponibiliza a avaliação no painel, cartões Lovelace e eventos do Home Assistant para que automações decidam como agir.
 
 <a id="sources"></a>
@@ -34,6 +36,8 @@ A temperatura usa a primeira fonte disponível nesta ordem:
 1. sensor de temperatura selecionado na aba Conforto;
 2. sensor do Room Assist configurado para o dispositivo;
 3. `current_temperature` da entidade de climatização.
+
+Para dispositivos agrupados, a temperatura automática usa o `current_temperature` do membro físico; o sensor do Room Assist do grupo não é herdado. Quando necessário, selecione explicitamente um sensor externo nos ajustes de Conforto daquele membro.
 
 A umidade usa:
 
@@ -182,7 +186,7 @@ O Velair disponibiliza um valor de qualidade dos dados:
 - `stale`: não há leitura atual, e todas as fontes monitoradas estão desatualizadas;
 - `unavailable`: nenhuma leitura atual pode ser usada por outro motivo.
 
-O painel agrupa leituras utilizáveis cuja atualização não pode ser verificada na seção **Atualização de dados** da zona, em vez de repetir a mesma nota em cada métrica derivada. Um cartão Conforto que oculta a configuração mostra um resumo acima das leituras; o Diagnóstico também informa o contexto. A lista recolhida de zonas omite esse estado rotineiro para manter a legibilidade. É uma configuração válida de fonte automática da climatização, não um erro. Leituras ausentes ou desatualizadas ainda mostram aviso na lista.
+A aba Conforto agrupa leituras utilizáveis cuja atualização não pode ser verificada junto aos seletores de sensores em **Configuração → Fontes de dados**. Uma explicação discreta identifica as leituras afetadas e esclarece que um horário desconhecido não significa valores incorretos nem desconforto no cômodo. Visão geral e cartões Lovelace omitem esse estado rotineiro; Diagnóstico mantém o contexto técnico de atualização. É uma configuração válida de fonte automática do dispositivo, não um erro. Leituras ausentes ou desatualizadas ainda mostram um aviso na lista de zonas.
 
 <a id="visual-status"></a>
 ## Apresentação do estado
@@ -247,7 +251,7 @@ Opções de visibilidade de temperatura, umidade e CO2 afetam somente os gráfic
 
 `Obsoleto depois` é o tempo máximo desde que um sensor selecionado informou seu estado ao Home Assistant (`last_reported`). Repetir o mesmo valor atualiza o horário do informe e mantém a leitura atual. O Velair observa esses informes e agenda a próxima expiração para que painel, sensores e eventos possam mostrar `stale` quando o prazo termina sem novo informe.
 
-A configuração fica em sua própria seção **Atualização de dados**, após os controles de fontes. Ela também agrupa leituras atuais com atualização não verificável, incluindo métricas derivadas habilitadas e sensores externos, sem repetir valores externos calculados. Lista fontes diretas abrangidas pelo limite, incluindo Room Assist, CO2, sensores externos ou métricas derivadas externas. Sensores externos podem mantê-la ativa mesmo se temperatura e umidade internas vierem do dispositivo; o limite não expira essas leituras do dispositivo. Pode ser definida antes de habilitar Conforto. Sem fonte direta configurada, o campo é desabilitado com explicação, preservando o valor salvo para uma futura seleção.
+A configuração fica em sua própria seção **Atualização de dados**, após os controles de fontes. Lista fontes diretas abrangidas pelo limite, incluindo Room Assist, CO2, sensores externos ou de métricas derivadas externas. A explicação das leituras com atualização não verificável fica junto aos seletores de sensores, incluindo métricas derivadas habilitadas e leituras externas. Sensores externos podem manter o limite ativo mesmo se temperatura e umidade internas vierem do dispositivo; ele não expira essas leituras do dispositivo. Pode ser definido antes de habilitar Conforto. Sem fonte direta configurada, o campo fica desabilitado com explicação; seu valor salvo é mantido para uma seleção futura.
 
 Atributos automáticos de temperatura e umidade de `climate.*` não têm horário independente de informe. O Velair mantém um valor válido visível e marca a atualização como `unverified`; mudar o alvo do dispositivo não verifica uma nova medição. Escolha o sensor original de temperatura ou umidade quando disponível. Se um sensor selecionado não tiver `last_reported`, seu valor válido também é `unverified`. Uma entidade `unavailable` ou `unknown` não fornece leitura utilizável, mesmo com atributos numéricos antigos.
 

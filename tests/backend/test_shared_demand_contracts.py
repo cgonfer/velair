@@ -20,12 +20,32 @@ def supply_group():
 
 
 class SharedDemandContractTest(unittest.TestCase):
+    def test_model_24_roundtrips_on_delay_and_import_replaces_pause_provenance(self):
+        self.assertEqual(api.EXPORT_MODEL_VERSION, 25)
+        data = normalize_schedule_data({}, ["climate.room"])
+        raw = supply_group()
+        raw.update(on_delay_seconds=37, suspended=True, suspension_reason="external_off")
+        data["settings"]["shared_demand_groups"] = [raw]
+        runtime = {"storage": SimpleNamespace(data=data, effective_temperature_unit="°C"),
+                   "scheduler": SimpleNamespace(), "entry": SimpleNamespace(options={}, data={})}
+        restored = normalize_schedule_data(serialize_schedule_data(data), ["climate.room"])
+        self.assertEqual(restored["settings"]["shared_demand_groups"][0]["on_delay_seconds"], 37)
+        payload = {"format": api.EXPORT_FORMAT, "model_version": 24,
+                   "temperature_unit": "°C", "sections": {"settings": {"shared_demand_groups": [raw]}}}
+        imported = api._build_import_data(runtime, payload, ["settings"])
+        result = imported["settings"]["shared_demand_groups"][0]
+        self.assertEqual(result["on_delay_seconds"], 37)
+        self.assertEqual(result["suspension_reason"], "imported")
+        self.assertTrue(result["suspended"])
+        self.assertFalse(result["enabled"])
+        self.assertEqual(raw["suspension_reason"], "external_off")
+
     def test_import_rejects_fractional_timing_without_mutating_payload_or_storage(self):
         data = normalize_schedule_data({}, ["climate.room"])
         runtime = {"storage": SimpleNamespace(data=data, effective_temperature_unit="°C"),
                    "scheduler": SimpleNamespace(), "entry": SimpleNamespace(options={}, data={})}
         original_data = deepcopy(data)
-        for field in ("minimum_off_seconds", "off_delay_seconds"):
+        for field in ("minimum_off_seconds", "on_delay_seconds", "off_delay_seconds"):
             with self.subTest(field=field):
                 group = supply_group()
                 group[field] = 1.5
@@ -181,6 +201,42 @@ class SharedDemandRoomAssistTest(unittest.IsolatedAsyncioTestCase):
         self.scheduler._room_sensor_assist_suppressed.add(self.entity)
         self.assertFalse(self.scheduler.get_shared_demand_room_assist(self.entity)["valid"])
 
+    def test_live_assist_fixed_boundaries_are_committed_without_preview_mutation(self):
+        from dataclasses import replace
+        for mode in ("heat", "cool"):
+            self.committed(mode)
+            committed = replace(self.scheduler._room_sensor_assist_states[self.entity],
+                                deadband_low=20.7, deadband_high=21.3)
+            self.scheduler._room_sensor_assist_states[self.entity] = committed
+            result = self.scheduler.get_shared_demand_room_assist(self.entity)
+            self.assertEqual(result["temperature"], 20)
+            self.assertEqual(result["sensor_entity_id"], "sensor.room")
+            self.assertEqual(result["temperature_unit"], "°C")
+            self.assertEqual(set(result["thresholds"]), {mode})
+            self.assertEqual(result["thresholds"][mode], {
+                "target": 21, "start_temperature": 20.7 if mode == "heat" else 21.3,
+                "stop_temperature": 21.3 if mode == "heat" else 20.7})
+            self.assertIs(self.scheduler._room_sensor_assist_states[self.entity], committed)
+
+    def test_live_assist_range_has_no_invented_retained_hysteresis(self):
+        from dataclasses import replace
+        self.committed("heat_cool", None)
+        self.target.temperature = None
+        self.target.target_temp_low = 20
+        self.target.target_temp_high = 24
+        self.scheduler._room_sensor_assist_states[self.entity] = replace(
+            self.scheduler._room_sensor_assist_states[self.entity],
+            target_temperature=None, target_temp_low=20, target_temp_high=24,
+            direction=None, hysteresis_mode=None)
+        with patch.object(self.scheduler, "_range_thermal_mode_supported", return_value=True):
+            result = self.scheduler.get_shared_demand_room_assist(self.entity)
+        self.assertTrue(result["valid"])
+        self.assertFalse(result["demand"])
+        self.assertEqual(result["thresholds"]["heat"], {
+            "target": 20, "start_temperature": 19.7, "stop_temperature": 19.7})
+        self.assertEqual(result["thresholds"]["cool"], {
+            "target": 24, "start_temperature": 24.3, "stop_temperature": 24.3})
+
     def test_same_block_mode_edit_waits_for_new_commit(self):
         self.committed()
         self.target.hvac_mode = "cool"
@@ -227,7 +283,7 @@ class SharedDemandRoomAssistTest(unittest.IsolatedAsyncioTestCase):
 class SharedDemandApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_fractional_timing_is_rejected_before_controller_or_storage_mutation(self):
         original = deepcopy(self.data)
-        for field in ("minimum_off_seconds", "off_delay_seconds"):
+        for field in ("minimum_off_seconds", "on_delay_seconds", "off_delay_seconds"):
             with self.subTest(field=field):
                 self.connection.reset_mock()
                 group = supply_group()

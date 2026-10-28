@@ -1,3 +1,4 @@
+import { controlUnitId } from "./control-units";
 import type { DraftScheduleBlock, HassState, ScheduleResponse, TargetFormat, TargetFormatPolicy } from "../types";
 import { climateIsRangeOnly, climateSupportedModes, climateSupportsRangeTarget, configurationTargetFormatPolicy } from "./climate";
 
@@ -5,6 +6,8 @@ export type TargetFormatChoice = { formats: TargetFormat[]; uncertain: boolean; 
 
 /** Backend policies are authoritative. The fallback supports older snapshots only. */
 export function targetFormatsForEntity(data: ScheduleResponse | undefined, entityId: string, state?: HassState, mode?: string): TargetFormatChoice {
+  entityId = controlUnitId(data, entityId);
+  state = data?.control_unit_states?.[entityId] ?? state;
   const policy = data?.zones?.[entityId]?.target_format_policy;
   if (policy) return targetFormatsForPolicy(configurationTargetFormatPolicy(state, policy), mode);
   if (climateIsRangeOnly(state)) return { formats: ["range"], uncertain: false, preferred: "range" };
@@ -33,7 +36,7 @@ export function targetFormatsForPolicy(policy: TargetFormatPolicy, mode?: string
 export function targetFormatsForResource(data: ScheduleResponse | undefined, states: Record<string, HassState> | undefined, mode?: string): TargetFormatChoice {
   const choices = (data?.configured_entities ?? Object.keys(data?.zones ?? {})).flatMap((entityId) => {
     const policy = data?.zones?.[entityId]?.target_format_policy;
-    const state = states?.[entityId];
+    const state = data?.control_unit_states?.[entityId] ?? states?.[entityId];
     const modes = policy ? Object.keys(policy.formats_by_mode) : climateSupportedModes(state);
     if (mode && modes.length && !modes.includes(mode)) return [];
     if (!modes.length) return [{ formats: ["single", "range"] as TargetFormat[], uncertain: true, preferred: "single" as const }];

@@ -19,6 +19,10 @@ export function roomAssistDeadbandZone(
   }
 
   const scheduledRange = scheduledAssistRange(status);
+  if (scheduledRange && status.target_boundary) {
+    const target = scheduledRange[status.target_boundary];
+    return { low: target - deadband, high: target + deadband };
+  }
   if (scheduledRange) {
     return {
       low: scheduledRange.low - deadband,

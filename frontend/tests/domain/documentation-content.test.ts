@@ -97,7 +97,7 @@ describe("complete localized user documentation", () => {
   });
 
   for (const source of sources) {
-    for (const language of ["es", "fr", "de", "it", "nl", "pl", "pt-br", "pt-pt", "ru"]) {
+    for (const language of Object.keys(catalogue.documents[source].translations)) {
       it(`${source} retains all sections and literal code examples in ${language}`, () => {
         const original = read(source);
         const translated = read(source.replace(/\.md$/, `.${language}.md`));

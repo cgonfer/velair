@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](README.md) · [Español](README.es.md) · [Fran�
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.5 |
-| Laatst gesynchroniseerd | 2026-10-24 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -25,6 +25,7 @@ De Velair-documentatie is ingedeeld naar doelgroep en onderwerp.
 
 - [Installatie](user/installation.nl.md): installeer Velair via HACS of handmatig.
 - [Gebruik](user/usage.nl.md): stel klimaatapparaten, schema's, sjablonen, profielen, tijdelijke aanpassingen, pauzes, import/export en services in.
+- [Kamergroepen](user/room-groups.nl.md): deel planning, besturing en leren van één kamer over meerdere apparaten, met individuele waarnemingen.
 - [Paneelnavigatie en directe links](user/usage.nl.md#panel-navigation-and-direct-links): link naar tabbladen en onderdelen, herstel het onderdeel na vernieuwen en gebruik browsergeschiedenis.
 - [Externe wijzigingen en handmatige aanpassing](user/manual-control.nl.md): kies of Velair de automatische besturing behoudt of voorrang geeft aan wijzigingen via HA-kaarten, afstandsbedieningen, apparaten en automatiseringen.
 - [Externe schema-uitvoering](user/external-systems.nl.md): publiceer compatibele effectieve weekschema's, inclusief profiel- en moduskeuze, naar ondersteunde regelaars zonder aanbiederspecifieke logica in de Velair-planner te mengen.

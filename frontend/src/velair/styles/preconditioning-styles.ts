@@ -162,6 +162,30 @@ export const preconditioningStyles = css`
   padding: 12px;
 }
 
+.preconditioning-zone-warnings {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.preconditioning-range-warning {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--warning-color, #f9a825) 10%, var(--card-background-color));
+  border-color: color-mix(in srgb, var(--warning-color, #f9a825) 55%, var(--divider-color));
+  box-shadow: none;
+  color: var(--primary-text-color);
+  font-size: 12px;
+  justify-content: flex-start;
+  line-height: 1.4;
+}
+
+.preconditioning-range-warning > ha-icon {
+  --mdc-icon-size: 20px;
+  color: var(--warning-color, #f9a825);
+  flex: 0 0 20px;
+}
+
 .preconditioning-config-sections {
   display: grid;
   gap: 16px 24px;

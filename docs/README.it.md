@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](README.md) · [Español](README.es.md) · [Fr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.5 |
-| Ultima sincronizzazione | 2026-10-24 |
+| Versione di riferimento | 1.9.0-beta.6 |
+| Ultima sincronizzazione | 2026-10-28 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -25,6 +25,7 @@ La documentazione di Velair è organizzata per destinatari e argomento.
 
 - [Installazione](user/installation.it.md): installare Velair tramite HACS o manualmente.
 - [Uso](user/usage.it.md): configurare dispositivi climatici, programmazioni, modelli, profili, incrementi, pause, importazione/esportazione e servizi.
+- [Gruppi stanza](user/room-groups.it.md): condividi programmazione, controllo e apprendimento di una stanza tra più dispositivi, osservandoli individualmente.
 - [Navigazione del pannello e collegamenti diretti](user/usage.it.md#panel-navigation-and-direct-links): aprire schede e sottosezioni tramite collegamenti, ripristinare la sezione dopo un aggiornamento della pagina e usare la cronologia del browser.
 - [Modifiche esterne e regolazione manuale](user/manual-control.it.md): scegliere se Velair mantiene il controllo automatico o lascia spazio alle modifiche effettuate tramite schede HA, telecomandi, dispositivi e automazioni.
 - [Esecuzione esterna della programmazione](user/external-systems.it.md): pubblicare programmazioni settimanali effettive compatibili, comprese le selezioni di profili e modalità, su controller supportati senza integrare la logica dei fornitori nel pianificatore di Velair.

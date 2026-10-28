@@ -714,3 +714,63 @@ describe("target format Settings review", () => {
     expect(repaired[1]).toMatchObject({ target_temp_low: 20, target_temp_high: 25 });
   });
 });
+
+
+describe("shared range reference settings", () => {
+  it.each(["range", "mixed"])("offers fixed-mode references for %s entities only where ranges apply", async (kind) => {
+    const view = element();
+    view.data.zones["climate.room"].target_format_policy = { ...mapped, kind,
+      formats_by_mode: { heat: "range", cool: "single", auto: "range", heat_cool: "range" } };
+    view.requestUpdate(); await view.updateComplete;
+    const inputs = [...view.shadowRoot.querySelectorAll("select[data-range-reference-mode]")] as HTMLSelectElement[];
+    expect(inputs.map((input) => input.dataset.rangeReferenceMode)).toEqual(["heat"]);
+    expect(inputs[0].getAttribute("aria-label")).toContain("heat");
+    expect([...inputs[0].options].map((option) => option.value)).toEqual(["", "low", "high"]);
+  });
+
+  it("saves through the backend with a revision and preserves the other mode", async () => {
+    const view = element();
+    view.data.zones["climate.room"].target_range_reference = { heat: "low", cool: "high" };
+    const saved = structuredClone(view.data);
+    saved.configuration_revision = 8;
+    saved.zones["climate.room"].target_range_reference.heat = "high";
+    const update = vi.spyOn(VelairApiClient.prototype, "updateZoneRangeReference").mockResolvedValue(saved);
+    await view._saveReference("climate.room", "heat", "high");
+    expect(update).toHaveBeenCalledWith({ entity_id: "climate.room", target_range_reference: { heat: "high", cool: "high" }, expected_revision: 7 });
+    expect(view.host._applyScheduleData).toHaveBeenCalledWith(saved);
+    expect(view.data).toBe(saved);
+    update.mockResolvedValue(saved);
+    await view._saveReference("climate.room", "heat", "");
+    expect(update).toHaveBeenLastCalledWith({ entity_id: "climate.room", target_range_reference: { cool: "high" }, expected_revision: 8 });
+  });
+
+  it("retains the saved selection after a failed save and prevents concurrent writes", async () => {
+    const view = element();
+    view.data.zones["climate.room"].target_format_policy = mapped;
+    view.data.zones["climate.room"].target_range_reference = { heat: "low" };
+    let reject!: (error: Error) => void;
+    const update = vi.spyOn(VelairApiClient.prototype, "updateZoneRangeReference").mockReturnValue(new Promise((_resolve, rejectSave) => { reject = rejectSave; }));
+    const save = view._saveReference("climate.room", "heat", "high");
+    await view.updateComplete;
+    expect(view.shadowRoot.querySelector("select[data-range-reference-mode]").disabled).toBe(true);
+    await view._saveReference("climate.room", "cool", "low");
+    expect(update).toHaveBeenCalledTimes(1);
+    reject(new Error("Configuration changed")); await save; await view.updateComplete;
+    expect(view.shadowRoot.querySelector("select[data-range-reference-mode]").value).toBe("low");
+    expect(view.shadowRoot.querySelector('[role="alert"]').textContent).toContain("Configuration changed");
+    expect(view.host._applyScheduleData).not.toHaveBeenCalled();
+    expect(view.data.zones["climate.room"].target_range_reference).toEqual({ heat: "low" });
+  });
+
+  it("preserves hidden selections and blocks reference saves during a format review", async () => {
+    const view = element();
+    view.data.zones["climate.room"].target_range_reference = { heat: "high" };
+    await view.updateComplete;
+    expect(view.shadowRoot.querySelector("select[data-range-reference-mode]")).toBeNull();
+    const update = vi.spyOn(VelairApiClient.prototype, "updateZoneRangeReference");
+    view._selectMode("climate.room", "heat", true);
+    await view._saveReference("climate.room", "heat", "low");
+    expect(update).not.toHaveBeenCalled();
+    expect(view.data.zones["climate.room"].target_range_reference).toEqual({ heat: "high" });
+  });
+});

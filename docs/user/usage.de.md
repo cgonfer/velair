@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.5 |
-| Letzte Synchronisierung | 2026-10-24 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -19,6 +19,8 @@
 <!-- velair-docs:end -->
 
 Dieses Handbuch erklärt Velair aus Sicht eines Home-Assistant-Nutzers.
+
+Verwende [Raumgruppen](room-groups.de.md), wenn mehrere Geräte denselben Raum steuern. Die Gruppe besitzt einen Zeitplan, eine Profilzuordnung und ein Lernmodell; die Übersicht zeigt weiterhin Einzelgeräte. Mitgliedschaft wird im Tab Raumgruppen, Anzeigereihenfolge in den Einstellungen konfiguriert.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation im Panel und direkte Links
@@ -34,6 +36,7 @@ Das Seitenleisten-Panel aktualisiert seine URL beim Wechsel zwischen Tabs oder d
 | Vorlagen: Vorlagen | `/velair/templates/templates` |
 | Vorlagen: Klima-Presets | `/velair/templates/presets` |
 | [Versorgungssteuerung](shared-climate-supply.de.md) | `/velair/supply-control` |
+| [Raumgruppen](room-groups.de.md) | `/velair/room-groups` |
 | Sensoren | `/velair/sensors` |
 | Komfort | `/velair/comfort` |
 | Vorkonditionierung | `/velair/preconditioning` |
@@ -176,7 +179,40 @@ Die Lovelace-Karte unterstützt folgende `view`-Werte:
 - `comfort`;
 - `preconditioning`;
 - `planned-return`;
+- `supply-live`;
 - `diagnostics`.
+
+<a id="supply-live-status-card"></a>
+### Karte für den Live-Versorgungsstatus
+
+Wähle im visuellen Editor die Ansicht `supply-live` und eine konfigurierte Versorgung anhand ihres Namens aus. Die Karte zeigt denselben schreibgeschützten Live-Monitor wie die Seitenleiste: Backend-Messwerte, Sollwerte, Hysterese und Heiz- oder Kühlbedarf, mit einem climate pro Zeile und einer an den Inhalt angepassten Höhe. Solange sie eingebunden ist, empfängt sie Live-Aktualisierungen, auch außerhalb des sichtbaren Bereichs; beim Entfernen wird das Abonnement beendet. Versorgung und Regeln werden nicht bearbeitet.
+
+Der Editor speichert die stabile interne Versorgungs-ID in `supply_id`. Ersetze im Beispiel `boiler` durch die vom Editor gespeicherte ID; sie ist weder eine `switch.*`-Entitäts-ID noch eine Raumgruppen-ID. Es wird keine Versorgung automatisch ausgewählt. Wird die ausgewählte Versorgung gelöscht, fordert die Karte zur Auswahl einer anderen auf, statt zur ersten verfügbaren zu wechseln.
+
+```yaml
+type: custom:velair-card
+view: supply-live
+supply_id: boiler
+supply_show_header: true
+supply_show_connection: true
+supply_show_switch_state: true
+supply_show_room_count: true
+supply_show_legend: true
+supply_show_demand_description: true
+```
+
+Alle sechs Anzeigeoptionen sind standardmäßig `true`. Mit `false` lässt sich die jeweilige reguläre Information ausblenden. Das optionale Feld `title` ersetzt den Standardtitel, wenn die Kopfzeile angezeigt wird.
+
+| YAML | Information |
+| --- | --- |
+| `supply_show_header` | Kopfzeile |
+| `supply_show_connection` | Live-Verbindungsanzeige |
+| `supply_show_switch_state` | Schalterzustand |
+| `supply_show_room_count` | Anzahl der Räume mit Versorgungsbedarf |
+| `supply_show_legend` | Diagrammlegende |
+| `supply_show_demand_description` | Reguläre Bedarfsbeschreibung, etwa Geschätzter Bedarf |
+
+Ladezustand, Fehler, Verbindungsabbruch, Aussetzung, unbekannter Schalterzustand oder Bedarf und laufende Wartezeiten bleiben auch bei deaktivierten Anzeigeoptionen sichtbar. Das Ausblenden regulärer Informationen verbirgt keine Bedingungen, die die Interpretation der Messwerte beeinflussen.
 
 <a id="planned-return-card"></a>
 ### Karte für geplante Rückkehr
@@ -210,6 +246,10 @@ Verwende `view: climate` für eine kompakte Karte einer einzelnen von Velair ver
 
 Die Karte kombiniert vom Gerät gemeldete Temperatur, Luftfeuchtigkeit, HVAC-Modus und `hvac_action` mit Velairs aktueller Steuerungsverantwortung und Laufzeitdaten. Sie verwendet dieselbe wirksame Tageszeitleiste, dasselbe Profilsymbol und dieselbe Profilfarbe wie die Übersicht. Modus-, Profil-, Komfort-, Room-Assist- und Vorkonditionierungsinformationen erscheinen nur, wenn sie konfiguriert und relevant sind. Eine extern ausgeführte Klimaentität zeigt Anbieter und Veröffentlichungsstatus statt rein lokaler Velair-Funktionen oder klimabezogener Aktionen. Die optionale einmalige Rückkehraktion steuert den Haushalt unabhängig davon, wer die ausgewählte Klimaentität steuert.
 
+Bei einem Gruppenmitglied zeigt die Karte weiterhin die eigenen Messwerte und den individuellen Komfort des Thermostats an, verwendet aber die gemeinsamen Steuerungen und den gemeinsamen Zeitplan. Temperatursteuerungen beachten die gemeinsamen Gruppengrenzen. Eine dritte Kopfzeile zeigt Gruppensymbol, Namen und Informationsschaltfläche unter dem bisherigen Status, ohne die Ausrichtung des Modussymbols zu verändern. Die Hilfe erklärt gemeinsame Aktionen und listet die Mitglieder auf. **Gruppe anzeigen** ist standardmäßig aktiviert (`climate_show_group: true`), unabhängig von der Anzeige des Thermostatnamens. Das Ausschalten blendet nur diesen Kontext aus. Thermostate ohne Gruppe zeigen auch bei aktivierter Option keine Gruppenzeile.
+
+Die Karten Übersicht, Heutiger Zeitverlauf und Zonenübersicht beschränken einen einzelnen Mitgliederfilter weiterhin auf dieses Thermostat. Bei Auswahl einer Gruppe werden alle Mitglieder einbezogen.
+
 ```yaml
 type: custom:velair-card
 view: climate
@@ -223,6 +263,7 @@ climate_window_entities:
 climate_window_display: grouped
 climate_room_assist_display: both
 climate_preconditioning_display: both
+climate_show_group: true
 climate_show_control_mode: true
 climate_show_target_control: true
 climate_show_hvac_mode_control: true
@@ -375,7 +416,7 @@ Beibehalten startet eine ausgeschaltete reine Bereichsentität im ersten gemelde
 
 Der Editor verwendet für diese Entitäten untere und obere Zieltemperatur. Das sind die beiden akzeptierten Werte; Velair unterstellt Auto nicht die automatische Heiz-/Kühlbandfunktion von `heat_cool`. Dieselben Prüfungen gelten für Profile, Presets, temporäre Anpassung sowie kopierte oder verknüpfte Vorlagen. Vorlagen und Presets folgen den Formaten ihrer möglichen Ziele; beim Anwenden prüft Velair jedes tatsächliche Ziel. Hat eine temporäre Anpassung keine brauchbaren aktuellen Grenzen, gib beide vor dem Anwenden ein.
 
-Room Assist und adaptive Vorkonditionierung unterstützen Bereiche nur in `heat_cool`. Bereiche in Heizen, Kühlen oder Auto werden nominell zur geplanten Zeit angewendet, ohne Room Assist, Frühstart oder thermisches Lernen. Betroffene Ansichten erklären die Einschränkung. Geplante Rückkehr wendet das Ankunftsziel bei Ankunft ohne frühzeitige Vorbereitung an.
+Room Assist und adaptive Vorkonditionierung unterstützen native `heat_cool`-Bereiche sowie feste Heiz- oder Kühlbereiche mit gewähltem Referenzsollwert unter **Einstellungen → Klimageräte und Gruppen**. Ohne Auswahl gilt das nominelle Festmoduspaar zur geplanten Zeit, ohne Room-Assist-Verschiebung, Frühstart oder thermisches Lernen; geplante Rückkehr wendet es bei Ankunft an. Auto-Bereiche behalten diese Einschränkung.
 
 Veröffentlicht die gewählte Klimaentität zusätzliche Bedienelemente, zeigt der Blockeditor diese ebenfalls. Eine Klimaanlage kann etwa Lüfter-, Preset-, Schwenk- und horizontalen Schwenkmodus sowie Luftfeuchtigkeit anbieten. Velair speichert und sendet ausschließlich unterstützte Optionen; nicht unterstützte werden weggelassen und nicht blind gesendet.
 
@@ -404,9 +445,13 @@ Aufteilungen überstehen Home-Assistant-Neustarts und portable Exporte. Ältere 
 <a id="target-format-by-climate-and-mode"></a>
 ## Sollwertformat je Klimaentität und Modus
 
-Home Assistant meldet die Unterstützung einzelner Temperaturen und Bereiche, aber keine Kompatibilitätstabelle je HVAC-Modus. Unter **Einstellungen → Verwaltete Thermostate** bietet jede Entität mit beiden Formaten **Modi mit zwei Sollwerten**. Die geschlossene Auswahl zeigt gewählte Modi; geöffnet kannst du einzelne Modi auswählen oder abwählen. Angeboten werden nur gemeldete Modi ohne Aus. Heizen/Kühlen ist anfangs gewählt, falls verfügbar; weitere Modi werden nicht automatisch gewählt. Eine leere Auswahl ist gültig. Entitäten mit nur einem Format verwenden es ohne Auswahl. Die Hilfe erläutert die Grenzen. Änderungen durchlaufen vor der Anwendung die Inkompatibilitätsprüfung.
+Home Assistant meldet die Unterstützung einzelner Temperaturen und Bereiche, aber keine Kompatibilitätstabelle je HVAC-Modus. Unter **Einstellungen → Klimageräte und Gruppen** bietet jede Entität mit beiden Formaten **Modi mit zwei Sollwerten**. Die geschlossene Auswahl zeigt gewählte Modi; geöffnet kannst du einzelne Modi auswählen oder abwählen. Angeboten werden nur gemeldete Modi ohne Aus. Heizen/Kühlen ist anfangs gewählt, falls verfügbar; weitere Modi werden nicht automatisch gewählt. Eine leere Auswahl ist gültig. Entitäten mit nur einem Format verwenden es ohne Auswahl. Die Hilfe erläutert die Grenzen. Änderungen durchlaufen vor der Anwendung die Inkompatibilitätsprüfung.
 
 Diese Einstellung bestimmt, wie Velair Ziele sendet; sie beweist nicht, dass das Gerät beide Werte akzeptiert oder nutzt. Die Integration kann Parameter ablehnen oder ignorieren. Velair meldet bekannte Inkompatibilitäten vor dem Speichern und empfangene Übermittlungsfehler. Es gibt weder automatischen Gerätetest noch probeweise Moduswechsel.
+
+Für Modi mit zwei Sollwerten erscheint **Referenzsollwert** bei Heizen und Kühlen, auch bei reinen Bereichsgeräten. Wähle **Unterer Sollwert** oder **Oberer Sollwert** gemäß Gerätenutzung. **Nicht konfiguriert** erhält die Zeitplanübermittlung, deaktiviert aber Room Assist und adaptive Vorkonditionierung für diesen Festmodusbereich. Konfiguriere einmal pro Gerät und Modus; beide Funktionen teilen die im Backend gespeicherte, exportierte und importierte Auswahl. Ändern beendet veraltete Unterstützung und Lernbeobachtungen, ohne Zeitplantemperaturen oder Zielformat zu ändern.
+
+Room Assist berechnet die Festmodushysterese um die Referenz und verschiebt beide Sollwerte gleich weit innerhalb der Gerätegrenzen. Vorkonditionierung prognostiziert und lernt anhand dieser Grenze in Modusrichtung und sendet das vollständige ursprüngliche Paar früh. `heat_cool` behält seine Bandregelung ohne Auswahl; `auto`-Bereiche bleiben für diese Funktionen ohne Unterstützung.
 
 **Standard**, Zonen in **Profilen**, **Temporäre Anpassung** und die Klimasteuerung zeigen anhand dieser Richtlinie ein oder zwei Felder für einen expliziten Modus. Moduswechsel halten getrennte temporäre Entwürfe beider Formate vor. Die Rückkehr stellt die während dieser Bearbeitung eingegebenen Werte wieder her; fehlende Werte musst du ergänzen. Velair erfindet keinen Bereich und reduziert kein Paar auf einen Wert. Alternative Entwürfe werden nicht gespeichert und überstehen kein Neuladen.
 
@@ -506,7 +551,7 @@ Zeitpläne, Vorlagen, aktuelle und vorherige Übersteuerungssollwerte, Komfortgr
 
 Das einmalige Upgrade früher veröffentlichter, ausschließlich Celsius unterstützender Velair-Daten ist anders. Verwendet Home Assistant bereits Fahrenheit, nimmt Velair für die Altdaten ohne Rückfrage Celsius an, hält den Zeitplaner gestoppt und verweist auf **Velair zurücksetzen**. Dies verwirft die alte Konfiguration und erstellt atomar neue Fahrenheit-Standardwerte. Spätere Home-Assistant-Einheitenwechsel nach diesem Upgrade verwenden die vollständige ausdrückliche Umrechnung oben und erhalten Daten.
 
-Aktuelle Exporte des portablen Modells v22 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v22 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
+Aktuelle Exporte des portablen Modells v25 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v25 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
 
 War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren können.
 
@@ -514,7 +559,7 @@ Das vollständige Upgrade-, Migrations-, Sicherungs- und Wiederherstellungsverha
 
 Bei aktiviertem Room Sensor Assist zeigt dessen Tab eine kompakte Live-Temperaturskala, solange ein verwalteter Temperaturblock aktiv ist. Bei einem einzelnen Sollwert markiert sie Zeitplansollwert, Raumsensor, Klimasollwert und Thermostatmesswert. Ein neutrales gestreiftes Band zeigt die untere und obere Totbandgrenze. Bei festem `heat` oder `cool` zeigt der Status auch die Richtung zur unteren oder oberen Grenze; bei einzelnen automatischen Sollwerten bleibt das Band ein neutraler Spielraum.
 Bei nativen Bereichen reicht es von geplanter Untergrenze minus Totband bis geplanter Obergrenze plus Totband. Separate Klammern zeigen weiterhin vollständige geplante und angewandte Bereiche; eine Verbindung ihrer Mittelpunkte stellt die vorzeichenbehaftete Bewegung des gesamten Bereichs dar. Raum- und Klimamesswert bleiben einzelne Markierungen. Die vollständig übersetzte Legende bleibt auf dem dargestellten Totband zentriert, auch wenn dieses schmaler als die Beschriftung ist. Bei Totband null entfällt die Fläche und dies wird ausdrücklich angegeben. Ausblenden von `show_room_assist_deadband` entfernt gemeinsam Einstellung, Band und Legende.
-Die Werte stammen aus Home-Assistant- und Velair-Laufzeitzustand und werden nicht als neuer Verlauf gespeichert. Ohne aktiven verwalteten Temperaturblock zeigt der Tab einen Wartezustand statt Platzhalterwerten. Ist ein Sensor gewählt, Assist aber ausgeschaltet, zeigt er, dass der Sensor gespeichert, jedoch nicht wirksam ist.
+Die Werte stammen aus Home-Assistant- und Velair-Laufzeitzustand und werden nicht als neuer Verlauf gespeichert. Ohne aktiven verwalteten Temperaturblock zeigt der Tab einen Wartezustand statt Platzhalterwerten. Ist ein Sensor gewählt, Assist aber ausgeschaltet, zeigt er, dass der Sensor gespeichert, jedoch nicht wirksam ist. Bei einem konfigurierten festen Heiz- oder Kühlbereich liegt das Totband stattdessen um den gewählten Referenzsollwert, jeweils minus und plus Totband.
 
 Room Sensor Assist arbeitet ereignisgesteuert, ohne regelmäßige Temperaturabfragen. Bei aktiver Unterstützung hört Velair nur auf den gewählten Raumsensor und die Klimaentität. Änderungen werden anhand der zonenbezogenen Aktualisierungsverzögerung gebündelt. Temporäre Sollwerte werden an die wirksame veröffentlichte, zuletzt gemeldete oder konfigurierte Schrittweite angepasst; kleinere Bewegungen werden ignoriert.
 Der echte Zeitplansollwert wird wiederhergestellt, wenn der Zeitplaner oder eine Zone pausiert, eine temporäre Anpassung beginnt, ein Block ausschaltet, der Sensor unbrauchbar wird oder die Funktion deaktiviert wird. Löschen dieses Laufzeitzustands löscht auch die Hysteresephase fester Modi. Hat Vorkonditionierung einen zukünftigen Block vorzeitig gestartet, folgt Room Sensor Assist bis zum geplanten Komfortzeitpunkt diesem zukünftigen Sollwert statt dem vorherigen Zeitblock.
@@ -684,13 +729,15 @@ Die Einstellungen können eine versionierte JSON-Datei exportieren und importier
 - Klimaprofildefinitionen;
 - Modusdefinitionen.
 
-Aktuelle Exporte des Modells 22 erhalten beide Vorlagenverknüpfungstypen, Presetreferenzen und Vorkonditionierungs-Master-Verknüpfungen. Referenzen angenommener Master-Ausführungen bleiben lokal und werden nicht exportiert. Export von Zeitplänen oder Profilen enthält benötigte Vorlagen und Presets als zusätzlich ausgewählte Bereiche. Importe prüfen die zusammengeführte Konfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden anhand stabiler Schlüssel zusammengeführt: Passende Schlüssel werden ersetzt, nicht in der Datei enthaltene lokale Presets bleiben erhalten. Bestehende Sicherungen bleiben importierbar. Ältere Velair-Versionen können Modell-22-Dateien nicht importieren. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup). Die aktuellen Exporte bewahren außerdem die Richtlinien für Sollwertformate je Klimaentität.
+Aktuelle Exporte des Modells 25 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 25 nicht importieren. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
 
 Beim Import wählst du die zu überschreibenden Bereiche. Ausgewählte Daten werden ersetzt; exportiere vorher, wenn ein Wiederherstellungspunkt nötig ist. Profil- und Modusdefinitionen sind portabel, ihre aktive Auswahl nicht. Velair behält aktive Profil-IDs, die noch existieren, und kehrt nur dann zu Standardzeitplänen zurück, wenn keine übrig bleiben.
 
 Jeder neue Export zeichnet seine Temperatureinheit auf. Beim Import einer Datei aus dem anderen Einheitensystem rechnet Velair ausgewählte Temperaturwerte in die aktuelle Home-Assistant-Einheit um. An verfügbare Klimaentitäten gebundene Werte werden an deren wirksame Sollwertschrittweite angepasst. Unabhängige Werte verwenden sichere Genauigkeit, wenn keine gemeinsame Geräteschrittweite vorliegt. Der manuelle Zonen-Fallback ist portabel; die zuletzt lokal beobachtete Schrittweite wird bewusst nicht exportiert. Ältere Exporte ohne Einheit werden im Importbildschirm angekündigt und als Celsius interpretiert.
 
-Lerndaten werden über die genaue Home-Assistant-Klimaentitäts-ID zugeordnet. Daten aktuell nicht verwalteter Klimaentitäten werden vor dem Import angezeigt und übersprungen. Bei passenden Entitäten ersetzen importierte Lerndaten die vorhandene Kalibrierung. Lerndaten lokaler Klimaentitäten, die nicht in der Datei enthalten sind, bleiben unverändert.
+Lernen wird über die genaue Steuereinheits-ID zugeordnet: Home-Assistant-Klimaentitäts-ID für unabhängige Geräte oder stabile interne Gruppen-ID für Raumgruppen. Nicht zuordenbare Daten werden vor dem Import angezeigt und übersprungen. Passende Daten ersetzen die Kalibrierung; nicht enthaltenes lokales Lernen bleibt unverändert. Gruppenverläufe werden nicht auf Mitglieder verteilt. Lies [Raumgruppen](room-groups.de.md#learning-and-membership-changes) vor Entfernen oder Auflösen.
+
+Das Wiederherstellen einer Gruppenlernsicherung stellt auch erforderliche Gruppenzuständigkeit und gemeinsame Konfiguration wieder her. Prüfe diese Abhängigkeiten in der Importvorschau; es ist keine isolierte Kalibrierungswiederherstellung ohne Mitgliedschaftsänderungen.
 
 Vorkonditionierungseinstellungen sind bereits in **Thermostatzeitpläne** enthalten. Der separate Bereich **Vorkonditionierungs-Lerndaten** enthält den aufwendig aufgebauten lokalen Kalibrierungsverlauf.
 

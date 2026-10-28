@@ -119,7 +119,7 @@ describe("panel-only shared schedule lifecycle", () => {
   });
   it("shares one load and stream across top tabs and renders cached data on the new editor", async () => {
     const mock = backend(); const element = await panel(mock); const first = activeCard(element);
-    for (const view of ["schedules", "modes", "templates", "supply-control", "sensors", "comfort", "preconditioning", "planned-return", "settings", "overview"]) {
+    for (const view of ["schedules", "modes", "templates", "room-groups", "supply-control", "sensors", "comfort", "preconditioning", "planned-return", "settings", "overview"]) {
       await navigate(element, view);
       expect(internals(activeCard(element))._data?.configuration_revision).toBe(1);
       expect(activeCard(element).shadowRoot!.querySelector(".initial-loading")).toBeNull();
@@ -128,6 +128,35 @@ describe("panel-only shared schedule lifecycle", () => {
     expect(mock.send).toHaveBeenCalledTimes(1);
     expect(mock.subscribe.mock.calls.filter(([, message]) => message.type === "velair/subscribe_updates")).toHaveLength(1);
     expect(mock.unsubscribe).not.toHaveBeenCalled(); element.remove(); await flush(); expect(mock.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("mounts room groups in its own tab and leaves Settings free of the group editor", async () => {
+    const element = await panel(backend(), "/velair/room-groups");
+    expect(element.shadowRoot!.querySelector('ha-tab-group-tab[panel="room-groups"]')?.textContent).toContain("Room groups");
+    expect(activeCard(element).shadowRoot!.querySelector("velair-room-groups-settings")).not.toBeNull();
+    await navigate(element, "settings");
+    expect(activeCard(element).shadowRoot!.querySelector("velair-room-groups-settings")).toBeNull();
+    expect(activeCard(element).shadowRoot!.querySelector(".settings-zone-order")).not.toBeNull();
+  });
+
+  it("keeps the room group editor during busy or rejected dirty navigation", async () => {
+    const element = await panel(backend(), "/velair/room-groups");
+    const card = activeCard(element);
+    const editor = card.shadowRoot!.querySelector("velair-room-groups-settings")!;
+    const notify = (busy: boolean) => editor.dispatchEvent(new CustomEvent("room-groups-state-changed", {
+      bubbles: true, composed: true, detail: { dirty: true, busy },
+    }));
+    notify(true); await card.updateComplete; await element.updateComplete;
+    await navigate(element, "settings");
+    expect(activeCard(element)).toBe(card);
+    expect(window.location.pathname).toBe("/velair/room-groups");
+    notify(false); await card.updateComplete; await element.updateComplete;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await navigate(element, "settings");
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(card.shadowRoot!.querySelector("velair-room-groups-settings")).toBe(editor);
+    confirm.mockReturnValue(true); await navigate(element, "settings");
+    expect(window.location.pathname).toBe("/velair/settings");
   });
   it("retains subsection editor and preserves dirty drafts during push and cancelled navigation", async () => {
     const mock = backend(); const element = await panel(mock, "/velair/schedules/default"); const card = activeCard(element);

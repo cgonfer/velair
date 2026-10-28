@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -21,14 +21,23 @@
 <a id="a-lovelace-card-shows-configuration-error"></a>
 ## Eine Lovelace-Karte zeigt einen Konfigurationsfehler
 
-Prüfe, ob Velair installiert und konfiguriert ist, bevor das Dashboard die Karte lädt. Die Integration stellt ihre Frontend-Ressource früh beim Start von Home Assistant bereit, damit Karten bei normalen Neustarts nicht auf das Modul warten müssen.
+Prüfe, ob Velair vor dem Laden der Karte installiert und eingerichtet ist. Bei über die Home-Assistant-Oberfläche verwalteten Ressourcen registriert und aktualisiert Velair sein Modul automatisch. Im normalen Installationsablauf ist keine manuelle Ressourceneinrichtung nötig.
 
 Bleibt der Fehler bestehen:
 
-1. Prüfe, ob die Dashboard-Ressourcen-URL genau `/velair_frontend/velair-card.js` lautet und ihr Typ **JavaScript-Modul** ist.
-2. Entferne doppelte oder alte Ressourcen wie `/local/velair-card.js`.
-3. Starte Home Assistant nach einer Aktualisierung der Integration neu.
-4. Lade den Browser oder die Home-Assistant-Companion-App neu.
+1. Prüfe, ob die Dashboard-Ressource `/velair_frontend/velair-card.js` mit Typ **JavaScript-Modul** verwendet wird. Ein automatisches `?v=...` ist bei Oberflächenverwaltung vorgesehen; entferne oder bearbeite es nicht.
+2. Prüfe auf alte oder doppelte Ressourcen wie `/local/velair-card.js`. Velair migriert und konsolidiert genau diese lokalen Pfade bei Oberflächenverwaltung automatisch. Andere Pfade und externe URLs müssen manuell geprüft werden.
+3. Starte Home Assistant nach dem Integrationsupdate neu.
+4. Lade Browser oder Companion-App neu und öffne das Dashboard direkt, ohne vorher die Velair-Seitenleiste zu besuchen.
+
+Bei YAML-Ressourcenverwaltung füge das Modul manuell mit stabiler URL ohne Parameter hinzu und entferne dort alte oder doppelte Einträge. Ein Dashboard oder eine Karte in YAML bedeutet allein noch keine YAML-Ressourcenverwaltung. Siehe [Installation](installation.de.md#resources-managed-in-yaml). Prüfe Home-Assistant-Protokolle auf Registrierungsfehler oder YAML-Hinweise; Velair erstellt dafür keine dauerhaften Benachrichtigungen.
+
+Schlägt die automatische Registrierung fehl, kannst du die Ressource unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul** manuell hinzufügen:
+
+```yaml
+url: /velair_frontend/velair-card.js
+type: module
+```
 
 Die Browserkonsole oder der Netzwerkbereich sollte anzeigen, ob die Modulanfrage fehlgeschlagen ist. Füge den vollständigen Fehler bei der Meldung eines reproduzierbaren Problems hinzu.
 
@@ -42,21 +51,11 @@ Wurde die Integration gerade aktualisiert, lade den Browser ohne Cache neu oder 
 <a id="the-lovelace-card-shows-old-ui"></a>
 ## Die Lovelace-Karte zeigt eine alte Oberfläche
 
-Prüfe die Dashboard-Ressourcen. Entferne alte Entwicklungsressourcen wie:
+Starte zuerst Home Assistant neu und lade den betroffenen Browser oder die Companion-App neu. Velair aktualisiert oberflächenverwaltete Ressourcen automatisch, migriert `/local/velair-card.js` und konsolidiert erkannte Duplikate. Prüfe bei Fehlern die Protokolle. Andere Pfade und externe URLs brauchen manuelle Prüfung.
 
-```yaml
-url: /local/velair-card.js
-type: module
-```
+Velair liefert die Ressource mit No-Cache-Headern. Bei Oberflächenverwaltung pflegt es `?v=...` automatisch und nutzt dieselbe versionierte URL für Seitenleiste und Dashboard-Karten. Die stabile URL `/velair_frontend/velair-card.js` bleibt für manuelle und YAML-Einrichtung gültig. Füge keine Buildkennungen hinzu und bearbeite Versionsparameter zwischen Releases nicht.
 
-Verwende stattdessen die von der Integration bereitgestellte Ressource:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Velair liefert diese Ressource mit Headern aus, die eine Cache-Speicherung verhindern. Die Seitenleiste verwendet eine automatisch versionierte URL und isolierte interne Elemente, damit eine ältere zwischengespeicherte Lovelace-Karte eine Panelaktualisierung nicht blockiert. Nach einer Integrationsaktualisierung reichen normalerweise ein Neustart von Home Assistant und ein Neuladen des Browsers oder der Companion-App. Meldet das Backend die neue Version, während weiterhin die alte Oberfläche erscheint, lade ohne Cache neu oder lösche den Website-Cache, bevor du das Problem meldest. Zwischen Releases musst du weder Build-Kennungen hinzufügen noch die Ressourcen-URL bearbeiten.
+Nach einem Integrationsupdate reichen normalerweise Home-Assistant-Neustart und Browser-/App-Neuladen. Meldet das Backend die neue Version, zeigt aber die Oberfläche die alte, lade vollständig neu oder leere den Websitecache, bevor du das Problem meldest.
 
 <a id="a-climate-entity-is-missing"></a>
 ## Eine Klimaentität fehlt

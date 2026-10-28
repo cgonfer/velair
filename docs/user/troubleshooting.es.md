@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](troubleshooting.md) · [Español](troublesho
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -20,19 +20,27 @@ Traducciones: [Original en inglés](troubleshooting.md) · [Español](troublesho
 <!-- velair-docs:end -->
 
 <a id="a-lovelace-card-shows-configuration-error"></a>
-
 ## Una tarjeta Lovelace muestra un error de configuración
 
-Comprueba que Velair está instalado y configurado antes de que el panel cargue la tarjeta. La integración publica su recurso del frontend al principio del arranque de Home Assistant para que los reinicios habituales no dejen las tarjetas esperando el módulo.
+Comprueba que Velair está instalado y configurado antes de que el panel cargue la tarjeta. Si los recursos se gestionan desde la interfaz de Home Assistant, Velair registra y actualiza el módulo automáticamente. La instalación normal no requiere añadir recursos manualmente.
 
 Si el error persiste:
 
-1. Comprueba que la URL del recurso del panel es exactamente `/velair_frontend/velair-card.js` y su tipo es **Módulo JavaScript**.
-2. Elimina recursos duplicados o antiguos, como `/local/velair-card.js`.
-3. Reinicia Home Assistant después de actualizar la integración.
-4. Recarga el navegador o la aplicación complementaria de Home Assistant.
+1. Comprueba que el recurso usa `/velair_frontend/velair-card.js` y el tipo **Módulo JavaScript**. El parámetro automático `?v=...` es normal en los recursos gestionados desde la interfaz; no lo quites ni edites.
+2. Revisa recursos duplicados o antiguos, como `/local/velair-card.js`. Velair migra y consolida automáticamente estas rutas locales exactas en la gestión por interfaz. Otras rutas y URL externas requieren revisión manual.
+3. Reinicia Home Assistant tras actualizar.
+4. Recarga el navegador o la aplicación complementaria y abre el panel directamente sin visitar antes la barra lateral de Velair.
 
-La consola o el panel de red del navegador deberían indicar si falló la solicitud del módulo. Incluye ese error completo al comunicar un problema reproducible.
+Con recursos gestionados en YAML, añade el módulo manualmente con la URL estable sin parámetros y elimina allí entradas antiguas o duplicadas. Escribir una tarjeta o panel en YAML no significa por sí solo gestionar recursos en YAML. Consulta [Instalación](installation.es.md#resources-managed-in-yaml). Revisa los registros de Home Assistant para fallos de registro o avisos YAML; Velair no crea notificaciones persistentes por estas comprobaciones.
+
+Si falla el registro automático, puedes añadir el recurso desde **Ajustes > Paneles > Recursos** como **Módulo JavaScript**:
+
+```yaml
+url: /velair_frontend/velair-card.js
+type: module
+```
+
+La consola o el panel de red del navegador deben indicar si falló la solicitud del módulo. Incluye el error completo al comunicar un problema reproducible.
 
 <a id="velair-does-not-appear-in-the-sidebar"></a>
 
@@ -43,24 +51,13 @@ Reinicia Home Assistant después de instalar o actualizar la integración. El pa
 Si acabas de actualizarla, recarga el navegador sin utilizar la caché o recarga la aplicación complementaria de Home Assistant.
 
 <a id="the-lovelace-card-shows-old-ui"></a>
-
 ## La tarjeta Lovelace muestra la interfaz antigua
 
-Revisa los recursos del panel. Elimina los recursos antiguos de desarrollo, como:
+Primero reinicia Home Assistant y recarga el navegador o aplicación afectados. Velair actualiza automáticamente los recursos gestionados por interfaz, incluida la migración de `/local/velair-card.js` y la consolidación de duplicados reconocidos. Si falla, revisa los registros de Home Assistant. Otras rutas y URL externas requieren revisión manual.
 
-```yaml
-url: /local/velair-card.js
-type: module
-```
+Velair sirve el recurso con cabeceras sin caché. Para recursos gestionados por interfaz mantiene automáticamente `?v=...` y usa la misma URL con versión para la barra lateral y las tarjetas. La URL estable `/velair_frontend/velair-card.js` sigue siendo válida para configuración manual y YAML. No añadas identificadores de compilación ni edites parámetros de versión entre entregas.
 
-Utiliza en su lugar el recurso servido por la integración:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Velair sirve este recurso con cabeceras que evitan la caché. La barra lateral utiliza una URL con versión automática y elementos internos aislados, para que una tarjeta Lovelace antigua almacenada en caché no bloquee una actualización del panel. Actualizar la integración suele requerir solo reiniciar Home Assistant y recargar el navegador o la aplicación complementaria. Si el backend indica la nueva versión pero sigue visible la interfaz anterior, recarga sin caché o borra la caché del sitio antes de comunicar el problema. No es necesario añadir identificadores de compilación ni editar la URL del recurso entre versiones.
+Actualizar normalmente solo requiere reiniciar Home Assistant y recargar navegador o aplicación. Si el backend informa de la versión nueva pero sigue visible la anterior, fuerza la recarga o borra la caché del sitio antes de comunicarlo.
 
 <a id="a-climate-entity-is-missing"></a>
 

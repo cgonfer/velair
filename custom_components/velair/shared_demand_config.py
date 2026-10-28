@@ -39,7 +39,7 @@ def normalize_groups(value: object, managed_ids: Iterable[str]) -> list[dict]:
     outputs: set[str] = set()
     result = []
     allowed = {"id", "name", "enabled", "switch_entity_id", "direction", "hysteresis", "hysteresis_mode", "hysteresis_stop",
-               "minimum_off_seconds", "off_delay_seconds", "zones", "suspended"}
+               "minimum_off_seconds", "on_delay_seconds", "off_delay_seconds", "zones", "suspended", "suspension_reason"}
     for raw in value:
         if not isinstance(raw, dict) or set(raw) - allowed:
             raise ValueError("Invalid shared supply fields")
@@ -58,13 +58,15 @@ def normalize_groups(value: object, managed_ids: Iterable[str]) -> list[dict]:
         for key in ("enabled", "suspended"):
             if key in raw and not isinstance(raw[key], bool):
                 raise ValueError(f"{key} must be a boolean")
+        if "suspension_reason" in raw and raw["suspension_reason"] not in ("external_off", "imported"):
+            raise ValueError("suspension_reason must be external_off or imported")
         zones = raw.get("zones")
         if not isinstance(zones, dict) or not zones:
             raise ValueError("Shared supply requires at least one managed climate")
         normalized_zones = {}
         for entity_id, settings in zones.items():
-            if entity_id not in managed or not isinstance(entity_id, str) or not entity_id.startswith("climate.") or not _ENTITY.fullmatch(entity_id):
-                raise ValueError("Supply thermostats must reference managed climate entities")
+            if entity_id not in managed or not isinstance(entity_id, str) or not entity_id.startswith(("climate.", "group.")) or not _ENTITY.fullmatch(entity_id):
+                raise ValueError("Supply thermostats must reference managed climate entities or room groups")
             if not isinstance(settings, dict) or set(settings) - {"hysteresis", "hysteresis_stop"}:
                 raise ValueError("Invalid supply thermostat override")
             normalized_zones[entity_id] = {
@@ -76,9 +78,12 @@ def normalize_groups(value: object, managed_ids: Iterable[str]) -> list[dict]:
             "switch_entity_id": output, "direction": direction,
             "hysteresis": _number(raw.get("hysteresis", 0.3), "hysteresis"),
             "minimum_off_seconds": _seconds(raw.get("minimum_off_seconds", 0), "minimum_off_seconds"),
+            "on_delay_seconds": _seconds(raw.get("on_delay_seconds", 0), "on_delay_seconds"),
             "off_delay_seconds": _seconds(raw.get("off_delay_seconds", 0), "off_delay_seconds"),
             "zones": normalized_zones, "suspended": raw.get("suspended", False),
         })
+        if raw.get("suspended") and "suspension_reason" in raw:
+            result[-1]["suspension_reason"] = raw["suspension_reason"]
         # Optional fields stay absent for legacy configurations. Keep explicitly
         # configured custom stop distances even while another mode is selected.
         if "hysteresis_mode" in raw:

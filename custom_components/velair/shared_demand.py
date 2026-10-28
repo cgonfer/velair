@@ -23,9 +23,11 @@ from homeassistant.util import dt as dt_util
 from .const import SIGNAL_SCHEDULER_UPDATED
 from .shared_demand_config import normalize_groups
 from .shared_supply_notifications import SharedSupplyNotifications
+from .target_format_policy import selected_range_boundary
 
 _LOGGER = logging.getLogger(__name__)
 SIGNAL_SHARED_DEMAND_UPDATED = "velair_shared_demand_updated"
+SIGNAL_SHARED_DEMAND_LIVE_UPDATED = "velair_shared_demand_live_updated"
 _RELEVANT = ("current_temperature", "temperature", "target_temp_low", "target_temp_high", "temperature_unit", "supported_features", "hvac_modes")
 
 
@@ -69,9 +71,12 @@ class SharedDemandController:
         self._scheduler = scheduler
         self._groups: dict[str, dict] = {}
         self._status: dict[str, dict] = {}
+        self._live_status: dict[str, dict] = {}
+        self._live_initialized = False
         self._phases: dict[tuple[str, str], tuple[tuple, bool]] = {}
         self._off_since: dict[str, datetime] = {}
         self._no_demand_since: dict[str, datetime] = {}
+        self._demand_since: dict[str, datetime] = {}
         self._timers: dict[str, tuple[datetime, Any]] = {}
         self._commands: dict[str, tuple[bool, int]] = {}
         self._retry_due: dict[str, datetime] = {}
@@ -104,6 +109,10 @@ class SharedDemandController:
     def get_statuses(self) -> dict[str, dict]:
         """Return a detached public snapshot, suitable for websocket responses."""
         return deepcopy(self._status)
+
+    def get_live_statuses(self) -> dict[str, dict]:
+        """Return committed readings, including observation-only inactive rooms."""
+        return deepcopy(self._live_status)
 
     async def async_start(self) -> None:
         if self._started:
@@ -158,6 +167,8 @@ class SharedDemandController:
         self._groups = {}
         self._phases.clear()
         self._commands.clear()
+        self._demand_since.clear()
+        self._no_demand_since.clear()
 
     @callback
     def reconfigure(self, *_args) -> None:
@@ -204,10 +215,17 @@ class SharedDemandController:
                 self._external_ons.pop(group_id, None)
                 self._cancel_timer(group_id)
                 self._no_demand_since.pop(group_id, None)
+                self._demand_since.pop(group_id, None)
                 self._commands.pop(old["switch_entity_id"], None)
                 for key in [key for key in self._phases if key[0] == group_id]:
                     del self._phases[key]
         self._groups = groups
+        # Room Assist commits can change demand without a device state event.
+        # Preserve interruptions even when refreshes coalesce before evaluation.
+        for group_id in list(self._demand_since):
+            group = groups.get(group_id)
+            if group is not None:
+                self._reset_interrupted_demand(group)
         self._supply_notifications.retain(groups)
         self._manual_off_versions = {key: value for key, value in self._manual_off_versions.items() if key in groups}
         self._pending_suspensions.intersection_update(groups)
@@ -218,17 +236,23 @@ class SharedDemandController:
         entities = set(self._retired)
         entity_groups: dict[str, set[str]] = {}
         for group in groups.values():
-            if not group["enabled"]:
-                continue
             entities.add(group["switch_entity_id"])
             entity_groups.setdefault(group["switch_entity_id"], set()).add(group["id"])
             for entity_id in group["zones"]:
-                entities.add(entity_id)
-                entity_groups.setdefault(entity_id, set()).add(group["id"])
-                source = (data.get("zones", {}).get(entity_id, {}).get("preconditioning") or {}).get("room_temperature_entity_id")
-                if source:
-                    entities.add(source)
-                    entity_groups.setdefault(source, set()).add(group["id"])
+                members = getattr(self._scheduler, "physical_members", None)
+                watched_members = data.get("room_groups", {}).get(entity_id, {}).get("members")
+                if watched_members is None:
+                    watched_members = members(entity_id) if callable(members) else [entity_id]
+                for member_id in watched_members:
+                    entities.add(member_id)
+                    entity_groups.setdefault(member_id, set()).add(group["id"])
+                preconditioning = data.get("zones", {}).get(entity_id, {}).get("preconditioning") or {}
+                external = preconditioning.get("room_temperature_entity_id")
+                native = data.get("room_groups", {}).get(entity_id, {}).get("temperature_entity_id")
+                for source in (native, external):
+                    if source:
+                        entities.add(source)
+                        entity_groups.setdefault(source, set()).add(group["id"])
         self._entity_groups = entity_groups
         watched = tuple(sorted(entities))
         if watched != self._entities:
@@ -255,6 +279,7 @@ class SharedDemandController:
                 if resumed is None:
                     raise ValueError("Unknown shared supply")
                 resumed["suspended"] = False
+                resumed.pop("suspension_reason", None)
             groups = normalize_groups(value, self._data.get("zones", {}))
             settings = self._data.setdefault("settings", {})
             previous = settings.get("shared_demand_groups", [])
@@ -262,6 +287,12 @@ class SharedDemandController:
             for group in groups:
                 if group["id"] in suspended and group["id"] != _resume_group_id:
                     group["suspended"] = True
+                    old = next((g for g in previous if g["id"] == group["id"]), {})
+                    reason = "external_off" if group["id"] in self._safety_suspended else old.get("suspension_reason")
+                    if reason:
+                        group["suspension_reason"] = reason
+                    else:
+                        group.pop("suspension_reason", None)
             active = {g["switch_entity_id"] for g in groups if g["enabled"]}
             cleanup_present = "shared_demand_cleanup" in settings
             cleanup_previous = settings.get("shared_demand_cleanup", [])
@@ -353,12 +384,29 @@ class SharedDemandController:
                     or getattr(context, "parent_id", None) in self._contexts
                 )
                 if old is not None and old.state == "on" and not owned:
+                    if not group["suspended"] and group_id not in self._safety_suspended:
+                        self._supply_notifications.queue(group, new, _utc_now(), kind="suspension")
+                    self._demand_since.pop(group_id, None)
                     self._manual_off_versions[group_id] = self._manual_off_versions.get(group_id, 0) + 1
                     self._safety_suspended.add(group_id)
                     self._pending_suspensions.add(group_id)
                     self._suspension_attempts.pop(group_id, None)
                     self._suspension_retry.pop(group_id, None)
+        # A brief interruption must reset the continuous-demand window even if
+        # another state event restores demand before the coalescing worker runs.
+        for group_id in self._entity_groups.get(entity_id, ()):
+            self._reset_interrupted_demand(self._groups[group_id])
         self._queue(self._entity_groups.get(entity_id, set()))
+
+    @callback
+    def _reset_interrupted_demand(self, group: dict) -> None:
+        group_id = group["id"]
+        if group_id not in self._demand_since:
+            return
+        output_state = self._hass.states.get(group["switch_entity_id"])
+        if (getattr(output_state, "state", None) != "off"
+                or not any(value is True for value in self._preview_demands(group))):
+            self._demand_since.pop(group_id, None)
 
     @callback
     def _notice_eligible(self, group: dict) -> bool:
@@ -368,13 +416,15 @@ class SharedDemandController:
                 and not self._unsafe_output(group["switch_entity_id"])
                 and not getattr(self._scheduler, "temperature_migration_blocked", False)):
             return False
-        # A reporting-only preview must not commit hysteresis phases before the
-        # coalescing control worker evaluates the latest sensor state.
+        return all(value is False for value in self._preview_demands(group))
+
+    def _preview_demands(self, group: dict) -> list[bool | None]:
+        """Observe aggregate demand without committing retained phases."""
         previous = {key: self._phases.get(key) for key in
                     ((group["id"], entity) for entity in group["zones"])}
         try:
-            return all(self._zone_demand(group, entity, options)["demand"] is False
-                       for entity, options in group["zones"].items())
+            return [self._zone_demand(group, entity, options)["demand"]
+                    for entity, options in group["zones"].items()]
         finally:
             for key, value in previous.items():
                 if value is None:
@@ -433,7 +483,26 @@ class SharedDemandController:
                         != self._notification_snapshot({key: self._status.get(key, {})})
                         for key, value in statuses.items()
                     )
+                    live_statuses = {}
+                    for group_id, status in statuses.items():
+                        group = self._groups.get(group_id)
+                        live_statuses[group_id] = status
+                        if group is not None:
+                            zones = {}
+                            for entity in group["zones"]:
+                                zone = status.get("zones", {}).get(entity)
+                                if zone is None:
+                                    zone = {"demand": None, "source": "estimated", "reason": status["status"]}
+                                if "temperature" not in zone:
+                                    zone = {**zone, **self._zone_observation(entity)}
+                                zones[entity] = zone
+                            live_statuses[group_id] = {**status, "zones": zones}
+                    live_changed = live_statuses != self._live_status or not self._live_initialized
                     self._status = statuses
+                    self._live_status = live_statuses
+                    self._live_initialized = True
+                    if live_changed:
+                        async_dispatcher_send(self._hass, SIGNAL_SHARED_DEMAND_LIVE_UPDATED)
                     if changed:
                         async_dispatcher_send(self._hass, SIGNAL_SHARED_DEMAND_UPDATED)
         except asyncio.CancelledError:
@@ -498,8 +567,10 @@ class SharedDemandController:
         for group in groups:
             if group["id"] in pending:
                 group["suspended"] = True
+                group["suspension_reason"] = "external_off"
                 if group["id"] in self._groups:
                     self._groups[group["id"]]["suspended"] = True
+                    self._groups[group["id"]]["suspension_reason"] = "external_off"
         revision = self._data.get("configuration_revision", 0)
         self._data["configuration_revision"] = revision + 1
         try:
@@ -525,8 +596,31 @@ class SharedDemandController:
                 self._suspension_failed.discard(group_id)
                 self._suspension_attempts.pop(group_id, None)
 
+    def _zone_state(self, entity_id: str):
+        """Read a control unit through the scheduler, retaining physical fallback."""
+        reader = getattr(self._scheduler, "climate_state", None)
+        return reader(entity_id) if callable(reader) else self._hass.states.get(entity_id)
+
+    def _zone_observation(self, entity_id: str) -> dict:
+        """Observe real readings without evaluating demand or corrected targets."""
+        state = self._zone_state(entity_id)
+        if entity_id not in self._data.get("zones", {}) or state is None or state.state in ("unknown", "unavailable"):
+            return {}
+        assist = self._scheduler.get_shared_demand_room_assist(entity_id)
+        if assist.get("active"):
+            return {"source": "room_assist", **{
+                key: assist[key] for key in ("temperature", "temperature_unit", "sensor_entity_id")
+                if key in assist}} if assist.get("valid") else {}
+        current = _finite(state.attributes.get("current_temperature"))
+        if current is None:
+            return {}
+        unit = state.attributes.get("temperature_unit", getattr(
+            getattr(getattr(self._hass, "config", None), "units", None), "temperature_unit", None))
+        source = self._data.get("room_groups", {}).get(entity_id, {}).get("temperature_entity_id", entity_id)
+        return {"temperature": current, "temperature_unit": unit, "sensor_entity_id": source}
+
     def _zone_demand(self, group: dict, entity_id: str, settings: dict) -> dict:
-        state = self._hass.states.get(entity_id)
+        state = self._zone_state(entity_id)
         direction = group["direction"]
         key = (group["id"], entity_id)
         def unknown(reason):
@@ -542,12 +636,20 @@ class SharedDemandController:
         assist = self._scheduler.get_shared_demand_room_assist(entity_id)
         if assist.get("active"):
             self._phases.pop(key, None)
+            reference = {
+                field: assist[field] for field in ("temperature", "temperature_unit", "sensor_entity_id")
+                if field in assist
+            }
+            thresholds = assist.get("thresholds", {}).get(direction, {})
             if assist.get("valid") and assist.get("demand") is False and assist.get("direction") is None:
-                return {"demand": False, "source": "room_assist", "reason": None}
+                return {"demand": False, "source": "room_assist", "reason": None,
+                        **reference, **thresholds}
             if not assist.get("valid") or assist.get("direction") not in ("heat", "cool"):
                 return {"demand": None, "source": "room_assist", "reason": "unavailable"}
+            compatible = bool(thresholds) or assist["direction"] == direction
             return {"demand": bool(assist.get("demand")) if assist["direction"] == direction else False,
-                    "source": "room_assist", "reason": None}
+                    "source": "room_assist", "reason": None if compatible else "incompatible_mode",
+                    **reference, **thresholds}
         mode = state.state
         if mode not in (direction, "heat_cool", "auto"):
             self._phases.pop(key, None)
@@ -585,6 +687,10 @@ class SharedDemandController:
                 target = scalar
         if current is None or target is None:
             return unknown("missing_temperature")
+        if target_format == "range":
+            reference = selected_range_boundary(self._data["zones"][entity_id], mode)
+            if reference is not None:
+                target = low if reference == "low" else high
         # HA climate attributes normally use HA's configured temperature unit.
         # Honour explicit units from integrations when present.
         hysteresis_mode = group.get("hysteresis_mode", "at_target")
@@ -621,6 +727,7 @@ class SharedDemandController:
         self._phases[key] = (identity, demand)
         return {"demand": demand, "source": "estimated", "reason": None,
                 "temperature": current, "target": target, "hysteresis": hysteresis,
+                "temperature_unit": entity_unit, "sensor_entity_id": entity_id,
                 "hysteresis_mode": hysteresis_mode, "hysteresis_stop": stop_offset,
                 "start_temperature": start_temperature, "stop_temperature": stop_temperature}
 
@@ -635,11 +742,17 @@ class SharedDemandController:
         status = {"enabled": group["enabled"], "suspended": group["suspended"] or group_id in self._safety_suspended,
                   "switch_entity_id": output, "output_state": actual, "demand": False,
                   "status": "disabled", "zones": {}, "pending_until": None}
+        if status["suspended"]:
+            reason = "external_off" if group_id in self._safety_suspended else group.get("suspension_reason")
+            if reason:
+                status["suspension_reason"] = reason
         if unsafe_output:
+            self._demand_since.pop(group_id, None)
             self._cancel_timer(group_id)
             status["status"] = "invalid_output"
             return status
         if not group["enabled"] or status["suspended"]:
+            self._demand_since.pop(group_id, None)
             self._cancel_timer(group_id)
             self._no_demand_since.pop(group_id, None)
             status["status"] = "suspended" if status["suspended"] else "disabled"
@@ -666,6 +779,7 @@ class SharedDemandController:
                 status["pending_until"] = retry.isoformat()
             return status
         if getattr(self._scheduler, "temperature_migration_blocked", False):
+            self._demand_since.pop(group_id, None)
             self._cancel_timer(group_id)
             self._no_demand_since.pop(group_id, None)
             for key in [key for key in self._phases if key[0] == group_id]:
@@ -682,6 +796,7 @@ class SharedDemandController:
         demand = any(z["demand"] is True for z in zones.values())
         status.update(zones=zones, demand=demand)
         if actual not in ("on", "off"):
+            self._demand_since.pop(group_id, None)
             self._cancel_timer(group_id)
             status["status"] = "unavailable"
             return status
@@ -693,20 +808,27 @@ class SharedDemandController:
         if demand:
             self._no_demand_since.pop(group_id, None)
             if actual == "off":
-                deadline = self._off_since[output] + timedelta(seconds=group["minimum_off_seconds"])
+                since = self._demand_since.setdefault(group_id, now)
+                on_deadline = since + timedelta(seconds=group["on_delay_seconds"])
+                protection_deadline = self._off_since[output] + timedelta(seconds=group["minimum_off_seconds"])
+                deadline = max(on_deadline, protection_deadline)
                 if deadline > now:
                     desired = False
-                    status["status"] = "minimum_off"
+                    status["status"] = "on_delay" if on_deadline >= protection_deadline else "minimum_off"
                 else:
                     deadline = None
-        elif actual == "on" and group["off_delay_seconds"]:
-            since = self._no_demand_since.setdefault(group_id, now)
-            deadline = since + timedelta(seconds=group["off_delay_seconds"])
-            if deadline > now:
-                desired = True
-                status["status"] = "off_delay"
             else:
-                deadline = None
+                self._demand_since.pop(group_id, None)
+        else:
+            self._demand_since.pop(group_id, None)
+            if actual == "on" and group["off_delay_seconds"]:
+                since = self._no_demand_since.setdefault(group_id, now)
+                deadline = since + timedelta(seconds=group["off_delay_seconds"])
+                if deadline > now:
+                    desired = True
+                    status["status"] = "off_delay"
+                else:
+                    deadline = None
         if deadline:
             self._set_timer(group_id, deadline)
             status["pending_until"] = deadline.isoformat()

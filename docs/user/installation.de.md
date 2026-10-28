@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -73,14 +73,9 @@ Release-Läufe mit Tag hängen außerdem ZIP-Dateien an das GitHub Release an. V
 <a id="optional-lovelace-card"></a>
 ## Optionale Lovelace-Karte
 
-Das Seitenleisten-Panel wird automatisch registriert. Die Lovelace-Karte ist optional.
+Das Seitenleisten-Panel wird automatisch registriert. Die Lovelace-Karte ist optional. Bei über die Home-Assistant-Oberfläche verwalteten Dashboard-Ressourcen registriert Velair sein JavaScript-Modul automatisch beim Einrichten der Integration, auch nach Updates bestehender Installationen. Prüfen kannst du es unter **Einstellungen > Dashboards > Ressourcen** im Dreipunktmenü. In diesem Modus ist keine manuelle Ressourceneinrichtung nötig; füge Karten direkt hinzu.
 
-Füge die von der Integration bereitgestellte Ressource hinzu:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
+Die URL lautet `/velair_frontend/velair-card.js?v=...`. Velair aktualisiert den Versionsparameter bei Bundleänderungen; bearbeite ihn nicht manuell. Starte nach Installation oder Update Home Assistant neu und lade Browser oder Companion-App neu. Karten sollten direkt im Dashboard funktionieren, ohne vorher die Velair-Seitenleiste zu öffnen.
 
 Füge anschließend eine oder mehrere Velair-Karten hinzu. Jede Karte verwendet dieselben Backend-Daten und visuellen Komponenten wie das Seitenleisten-Panel.
 
@@ -105,10 +100,27 @@ Unterstützte Werte für `view`:
 - `planned-return`: kompakte Bedienelemente für eine einmalige Rückkehr, Anzahl der konfigurierten Anwesenheitsquellen und ein Zeitverlauf ab bestätigter Abreise. Ohne gespeicherte Anwesenheitsquellen aktiviert **Plan return** sofort die Abwesenheitskonfiguration; die automatische Wochenroutine benötigt weiterhin Quellen.
 - `diagnostics`: Laufzeitzustand, begrenzter Verlauf, Filter und Export von Fehlerberichten.
 
+<a id="resources-managed-in-yaml"></a>
+### In YAML verwaltete Ressourcen
+
+Bei `lovelace.resource_mode: yaml` bleibt die Ressourcenliste unter deiner Kontrolle. Ergänze die bestehende `lovelace`-Konfiguration:
+
+```yaml
+lovelace:
+  resource_mode: yaml
+  resources:
+    - url: /velair_frontend/velair-card.js
+      type: module
+```
+
+Die stabile URL ohne Versionsparameter bleibt unterstützt; in YAML ist kein Versionswert zu pflegen. Erhalte alle anderen bestehenden Ressourcen. Eine Karte oder ein Dashboard in YAML zu schreiben wählt nicht automatisch YAML-Ressourcenverwaltung.
+
 <a id="card-discovery-and-resource-troubleshooting"></a>
 ### Kartenerkennung und Fehlerbehebung bei Ressourcen
 
-Verwende nur die von der Integration bereitgestellte Modulressource <code>/velair_frontend/velair-card.js</code>. Entferne doppelte Velair-Ressourcen einschließlich einer älteren <code>/local/velair-card.js</code> und lade den Browser neu. Bereits registrierte benutzerdefinierte Browserelemente können nicht ersetzt werden. Wird eine ältere Ressource zuerst geladen, kann dieser Browser eine veraltete Kartenimplementierung verwenden.
+Verwende nur das Integrationsmodul `/velair_frontend/velair-card.js`, mit automatischem Versionsparameter bei über die Oberfläche verwalteten Ressourcen. Velair migriert exakt den alten Eintrag `/local/velair-card.js` und fasst Duplikate dieser beiden lokalen Pfade automatisch zusammen. Andere Pfade und externe URLs bleiben unverändert. Entferne in YAML alte oder doppelte Einträge selbst, starte Home Assistant neu und lade den Browser neu. Registrierte benutzerdefinierte Browserelemente lassen sich nicht ersetzen: Eine zuerst geladene alte Ressource kann eine veraltete Karte festhalten.
+
+Benötigt eine YAML-Ressource Aufmerksamkeit oder schlägt die automatische Registrierung fehl, folge den Hinweisen in Home Assistants Protokollen. Die Ressourcenprüfung erzeugt keine dauerhaften Benachrichtigungen.
 
 Die Kartenauswahl des Dashboards erkennt Velair über Frontend-Metadaten. Ein manuell hinzugefügtes <code>type: custom:velair-card</code> in YAML verwendet dagegen das registrierte benutzerdefinierte Element. Dies sind getrennte Prüfungen. Erwähne bei einem Problembericht ausdrücklich, wenn die Karte über YAML funktioniert, aber in der Auswahl fehlt.
 

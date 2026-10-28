@@ -25,12 +25,12 @@ def profile_ids(value):
 
 
 def climate_entity_id(value):
-    """Accept a climate entity identifier without coercion or group expansion."""
+    """Accept a climate or stable room control-unit identifier."""
     if not isinstance(value, str):
         raise vol.Invalid("entity_id must identify a climate entity")
     result = cv.entity_id(value)
-    if not result.startswith("climate."):
-        raise vol.Invalid("entity_id must identify a climate entity")
+    if not result.startswith(("climate.", "group.")):
+        raise vol.Invalid("entity_id must identify a climate or room group")
     return result
 
 

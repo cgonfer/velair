@@ -15,6 +15,11 @@ the managed climate's Comfort thresholds.
 
 Environmental Comfort gives each managed climate a readable description of the room instead of a generic warning level.
 
+Comfort stays independent for every physical climate in a room group. Each member
+has its own monitoring switch, sensors and thresholds, and displays its own
+assessment. Grouping shares scheduling and room control, without replacing those
+Comfort settings.
+
 It monitors locally available temperature, humidity, and CO2 readings. It does not change schedules or control devices automatically. Velair exposes the assessment in the panel, Lovelace cards, and Home Assistant events so automations can decide what to do.
 
 ## Sources
@@ -24,6 +29,10 @@ Temperature uses the first available source in this order:
 1. the temperature sensor selected in the Comfort tab;
 2. the Room Assist sensor configured for that climate;
 3. the climate entity's `current_temperature`.
+
+For grouped climates, automatic temperature uses the physical member's
+`current_temperature`; the group's Room Assist sensor is not inherited. Select
+an external sensor explicitly in that member's Comfort configuration when needed.
 
 Humidity uses:
 
@@ -305,7 +314,7 @@ Velair exposes one data-quality value:
 - `stale`: no current reading exists and every monitored source is stale;
 - `unavailable`: no current reading can be used for another reason.
 
-The panel groups usable readings whose freshness cannot be verified in the zone's **Data freshness** section, instead of repeating the same note beside each derived reading. A Lovelace Comfort card that hides configuration shows one summary above the readings; Diagnostics also exposes freshness context. The collapsed panel zone list omits this routine status to stay readable. This is a valid automatic climate-source setup, not a configuration error. Missing or stale readings still show a warning in the zone list.
+The Comfort tab groups usable readings whose freshness cannot be verified beside the sensor selectors in **Configuration → Data sources**. A quiet explanation identifies the affected readings and clarifies that an unknown measurement time does not mean the values are incorrect or the room is uncomfortable. Overview and Lovelace cards omit this routine status; Diagnostics retains the technical freshness context. This is a valid automatic climate-source setup, not a configuration error. Missing or stale readings still show a warning in the zone list.
 
 ## Visual Status
 
@@ -376,7 +385,7 @@ card falls back to the same single-metric scale used by the main Velair panel.
 
 `Stale after` is the maximum time since a selected sensor last reported its state to Home Assistant (`last_reported`). Repeating the same value refreshes its report timestamp and keeps the reading current. Velair listens for those reports and schedules the next expiry, so the panel, sensors, and events can show `stale` when the deadline passes without another report.
 
-The setting sits in its own **Data freshness** section after the source controls. That section also groups the current readings with unverifiable freshness, including enabled derived metrics and outdoor sensor readings, without repeating calculated outdoor values. It lists the direct sources covered by the limit, including Room Assist, CO2, outdoor, or external derived-metric sensors. Outdoor sensors can keep it active even when indoor temperature and humidity both come from the climate; the limit does not expire those climate readings. You can set it before enabling Comfort. If no direct source is configured, the field is disabled with an explanation; its saved value is kept for a future sensor selection.
+The setting sits in its own **Data freshness** section after the source controls. It lists the direct sources covered by the limit, including Room Assist, CO2, outdoor, or external derived-metric sensors. The explanation of readings with unverifiable freshness appears beside the sensor selectors, including enabled derived metrics and outdoor readings. Outdoor sensors can keep the limit active even when indoor temperature and humidity both come from the climate; the limit does not expire those climate readings. You can set it before enabling Comfort. If no direct source is configured, the field is disabled with an explanation; its saved value is kept for a future sensor selection.
 
 The automatic `climate.*` temperature and humidity attributes have no independent report timestamp. Velair keeps a valid value visible and labels its freshness `unverified`; changes to the climate target do not verify a new measurement. Choose the original temperature or humidity sensor when available. If a selected sensor has no `last_reported`, its valid value is also `unverified`. An `unavailable` or `unknown` entity cannot supply a usable reading, even if old numeric attributes remain.
 

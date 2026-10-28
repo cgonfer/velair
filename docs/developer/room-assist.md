@@ -37,7 +37,7 @@ Key meanings:
 
 - `room_temperature_entity_id`: optional Home Assistant `sensor.*` temperature entity selected from the Room Assist tab.
 - `room_sensor_assist_enabled`: enables runtime target assistance. Selecting a sensor alone does not make it operational.
-- `room_sensor_assist_deadband`: defines the lower and upper runtime-hysteresis limits for fixed scalar `heat` and `cool`, and the neutral margin for scalar automatic modes and native ranges. A zero value preserves the legacy signed correction without phase state. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
+- `room_sensor_assist_deadband`: defines the lower and upper runtime-hysteresis limits for fixed `heat` and `cool` around the scalar target or configured range reference, and the neutral margin for scalar automatic modes and native `heat_cool` ranges. A zero value preserves the legacy signed correction without phase state. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
 - `room_sensor_assist_max_delta`: caps how far Velair may temporarily move the target sent to the climate entity while preserving the scheduled target as the real user target. It must be large enough to permit any known target gap the device may need to stop heating or cooling; the cap is not applied in full unless the external room error requires it.
 - `room_sensor_assist_debounce_seconds`: waits this many seconds after relevant room sensor or climate state changes before recalculating assistance. The supported range is `0` to `300` seconds.
 
@@ -72,7 +72,7 @@ This status can include:
 - the absolute logical assist delta and signed applied target offset.
 - for a scalar scheduled-target protection, `scheduled_target_guard` and the
   step-aligned `calculated_temperature` before that protection was applied.
-- for fixed scalar hysteresis, optional `hysteresis_phase`,
+- for fixed-mode scalar or configured-reference range hysteresis, optional `hysteresis_phase`,
   `hysteresis_target`, `deadband_low`, and `deadband_high` fields. The phase is
   `towards_lower` or `towards_upper`; the target is the active edge.
 
@@ -301,7 +301,7 @@ Room Assist emits:
 - `room_sensor_assist_updated`: Velair applied a temporary assisted climate target.
 - `room_sensor_assist_restored`: Velair stopped managing the temporary assisted target and restored the normal scheduled target where possible.
 
-The event payload includes the climate entity, room sensor entity, scheduled target, applied target, measured temperatures, the absolute logical correction (`assist_delta`), direction, HVAC mode, and reason. Scalar events use `target_temperature`, `applied_temperature`, and signed `applied_offset`. A fixed scalar hysteresis update can additionally include `hysteresis_phase`, `hysteresis_target`, `deadband_low`, and `deadband_high`. When scheduled protection changes a scalar result, the update also includes `scheduled_target_guard` and `calculated_temperature`; older consumers can ignore these additive fields. Range events use the complete scheduled and applied boundary pairs plus signed `range_shift`. Restoration events return the scheduled target form and report correction or shift as zero. All hysteresis fields are optional so older consumers and non-hysteresis paths remain compatible.
+The event payload includes the climate entity, room sensor entity, scheduled target, applied target, measured temperatures, the absolute logical correction (`assist_delta`), direction, HVAC mode, and reason. Scalar events use `target_temperature`, `applied_temperature`, and signed `applied_offset`. A fixed scalar hysteresis event update can additionally include `hysteresis_phase`, `hysteresis_target`, `deadband_low`, and `deadband_high`. When scheduled protection changes a scalar result, the update also includes `scheduled_target_guard` and `calculated_temperature`; older consumers can ignore these additive fields. Range events use the complete scheduled and applied boundary pairs plus signed `range_shift`; they omit hysteresis fields even when a configured fixed-mode reference exposes those fields in live runtime status. Restoration events return the scheduled target form and report correction or shift as zero. All hysteresis fields are optional so older consumers and non-hysteresis paths remain compatible.
 
 The public payload contract is centralized in
 [Automation Events](../user/automation-events.md#room-sensor-assist-state-changed).

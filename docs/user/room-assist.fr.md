@@ -9,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.5 |
-| Dernière synchronisation | 2026-10-24 |
+| Version de référence | 1.9.0-beta.6 |
+| Dernière synchronisation | 2026-10-28 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -40,7 +40,11 @@ Les consignes uniques `auto` et `heat_cool`, ainsi que les plages natives `heat_
 
 L’entité climatique reste l’actionneur. Velair ne crée pas d’entité climatique virtuelle et ne contourne pas le micrologiciel. Si votre thermostat ou votre tête thermostatique permet d’associer directement un capteur externe, cette option native reste généralement le meilleur premier choix.
 
-Les entités n’acceptant que des plages peuvent aussi recevoir des paires programmées en Chauffage, Refroidissement et Auto. Room Assist ne les ajuste pas : l’assistance des plages exige `heat_cool`. L’état actuel explique la limite et Velair envoie la paire nominale sans décalage. Les réglages Room Assist sont conservés pour les cibles compatibles. Passer d’une cible assistée à l’une de ces plages efface l’assistance précédente sans rétablir une ancienne cible corrigée sur la nouvelle paire.
+Pour deux consignes en `heat` ou `cool` fixe, sélectionnez d’abord **Consigne de référence** pour cet équipement et ce mode dans **Paramètres → Équipements et groupes**. Choisissez **Consigne basse** ou **Consigne haute** selon la valeur réellement utilisée ; Velair ne la déduit pas de la capacité à gérer des plages. Le préconditionnement adaptatif partage ce choix.
+
+Room Assist utilise la limite choisie comme cible fixe de chauffage ou de refroidissement, avec le cycle d’hystérésis à cible unique et la protection de la cible programmée. Il déplace les deux consignes du même écart, conservant leur séparation. Les deux limites doivent respecter le pas et les limites physiques de l’équipement ; l’autre limite peut donc restreindre la correction disponible. Les avertissements existants restent applicables.
+
+Avec **Non configurée**, les paires en mode fixe sont envoyées sans modification ni correction Room Assist. Les plages `auto` restent incompatibles avec l’assistance ; les bandes natives `heat_cool` conservent leur comportement. Les réglages enregistrés restent conservés. Changer de référence ou de mode efface l’assistance obsolète sans rétablir une ancienne cible corrigée sur la nouvelle intention.
 
 <a id="setup"></a>
 ## Configuration
@@ -49,11 +53,18 @@ Les entités n’acceptant que des plages peuvent aussi recevoir des paires prog
 2. Développez l’appareil à configurer.
 3. Sélectionnez un capteur de température ambiante.
 4. Activez **Assistance du capteur ambiant**.
-5. Ajustez **Zone morte de Room Assist** pour définir les limites basse et haute de commutation en chauffage ou refroidissement fixes, ou la marge neutre des modes automatiques et des plages natives.
+5. Réglez la bande morte de Room Assist pour définir les limites basse et haute du chauffage ou refroidissement fixe autour de la cible unique ou de la référence de plage choisie, ou la marge neutre des modes automatiques à cible unique et des bandes natives `heat_cool`.
 6. Ajustez **Écart d’assistance maximal** si la valeur par défaut est trop faible pour la pièce ou inférieure à l’écart de consigne dont le thermostat peut avoir besoin pour arrêter de chauffer ou refroidir.
 7. Ajustez **Délai d’actualisation** si les mises à jour semblent trop lentes ou trop fréquentes.
 
 Sélectionner un capteur seul l’enregistre simplement. Velair l’utilise comme température effective de la pièce uniquement lorsque l’assistance est activée.
+
+<a id="room-groups"></a>
+### Groupes de pièce
+
+Choisissez le groupe dans Room Assist et utilisez les mêmes contrôles de sonde, activation, bande morte, correction maximale et actualisation. Sa température propre vient du membre choisi dans **Groupes de pièce → Référence de température** ; la sonde externe facultative se configure ici. Désactiver ou retirer Room Assist ramène la mesure effective à ce membre.
+
+Le groupe a une configuration et une correction partagées, pas un contrôleur indépendant par membre. Velair conserve la cible programmée et envoie la commande assistée selon le mode d’envoi du groupe : tous les membres par défaut, ou le destinataire explicite lorsque l’installation transmet déjà les commandes. Les contrôles de capacités, pas et limites s’appliquent aux destinataires réels. Les membres restent visibles individuellement dans la Vue d’ensemble.
 
 L’assistance par capteur ambiant ne nécessite pas le préconditionnement adaptatif. Elle fonctionne sur les blocs programmés normaux et ceux que le préconditionnement adaptatif a démarrés en avance.
 
@@ -81,7 +92,7 @@ L’onglet Room Assist indique ce que Velair peut faire pour chaque appareil gé
 | **En attente** | Room Assist est activé, mais sans bloc de température compatible actif ou sans calcul utilisable. |
 | **Prêt** | Velair dispose des mesures et de la consigne nécessaires, mais n’a pas encore appliqué de consigne assistée. |
 | **Correction active** | Velair a appliqué une consigne corrigée temporaire ou une plage décalée. |
-| **Maintien** | Room Assist maintient une consigne automatique neutre, une plage native ou une consigne du côté sûr grâce à la protection de programmation. Un cycle fixe `heat` ou `cool` peut rester en **Correction active** pendant la traversée de la bande morte. |
+| **Maintien** | Room Assist maintient une consigne automatique neutre, une plage native `heat_cool` ou une consigne du côté sûr grâce à la protection de programmation. Un cycle fixe `heat` ou `cool` peut rester en **Correction active** pendant la traversée de la bande morte. |
 | **Bloqué** | Une pause, un forçage, un état manuel ou un autre état du planificateur a priorité. |
 | **Indisponible** | L’appareil ou la capacité de consigne nécessaire ne peut pas être utilisé. L’interface affiche la raison lorsqu’elle est connue. |
 
@@ -351,7 +362,7 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-Les quatre champs d’hystérésis sont facultatifs. Ils apparaissent pour un cycle fixe `heat` ou `cool` à consigne unique avec bande morte non nulle, et sont absents pour l’ancienne correction sans bande morte, les modes automatiques à consigne unique et les plages natives.
+Les quatre champs d’hystérésis sont facultatifs. Dans les événements d’automatisation, ils apparaissent pour un cycle fixe à cible unique `heat` ou `cool` avec une bande morte non nulle ; ils sont absents pour l’ancienne correction à bande morte nulle, les modes automatiques à cible unique et toutes les plages. Les plages fixes avec référence configurée exposent leur phase d’hystérésis dans l’état en direct ; leurs événements conservent les paires complètes de limites et `range_shift`.
 
 Une mise à jour de plage utilise les bandes programmées et appliquées complètes plutôt que les champs de consigne unique :
 

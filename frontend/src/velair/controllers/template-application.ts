@@ -1,3 +1,4 @@
+import { controlUnitIds } from "../domain/control-units";
 import { templateApplyTargetKey } from "../domain/templates";
 import { normalizeTemplateBlocks } from "./template-impact";
 import type { VelairViewHost } from "../host-types";
@@ -35,7 +36,7 @@ export function updateApplication(host: ApplicationHost, changes: Partial<Templa
 }
 export function applicationRequest(host: ApplicationHost): TemplateApplicationRequest {
   const state = applicationState(host);
-  const groups = (host._data?.configured_entities ?? []).flatMap(entity_id => dayGroups(state.layout)
+  const groups = (controlUnitIds(host._data)).flatMap(entity_id => dayGroups(state.layout)
     .filter(days => host._templateApplyTargets.has(templateApplyTargetKey(entity_id, days[0]))).map(weekdays => {
       const key = applicationGroupKey(entity_id, weekdays);
       return { entity_id, weekdays, ...(state.bases[key] ? { base_weekday: state.bases[key] } : {}), ...(state.bindings[key] ? { bindings: state.bindings[key] } : {}) };

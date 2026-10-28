@@ -30,7 +30,8 @@
       }
     },
     "error": {
-      "no_climate_entities": "Select at least one climate entity."
+      "no_climate_entities": "Select at least one climate entity.",
+      "grouped_climate_entities": "Remove these climates from their room groups in Velair Settings before removing them from the integration."
     }
   },
   "entity": {

@@ -1,3 +1,4 @@
+import { controlUnitState } from "../domain/control-units";
 import { effectiveClimateHvacModeForEnsureOn } from "../domain/climate";
 import { html, nothing } from "lit";
 import { preconditioningMasterCandidates, preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
@@ -42,10 +43,6 @@ export function renderPreconditioningView(
 ) {
   return html`
     <section class="preconditioning-view">
-      ${zoneIds.some((entityId) => (host._data?.next_events ?? []).some((event) =>
-        event.entity_id === entityId && hasTemperatureRange(event)
-        && effectiveClimateHvacModeForEnsureOn(host.hass?.states?.[entityId], event.hvac_mode ?? undefined, "range", host._data?.zones?.[entityId]?.target_format_policy) !== "heat_cool"))
-        ? html`<p role="status">${host._t("unsupportedRangeThermalMode")}</p>` : nothing}
       ${showIntro ? html`<header class="preconditioning-intro">
         <ha-icon icon="mdi:clock-fast"></ha-icon>
         <span>
@@ -85,6 +82,12 @@ function renderPreconditioningZone(
     temperatureUnit,
   );
   const learning = host._data?.preconditioning_learning?.[entityId];
+  const rangeWarnings = exists && preconditioning.enabled
+    ? [...new Set((host._data?.next_events ?? [])
+      .filter((event) => event.entity_id === entityId)
+      .map((event) => rangeThermalReason(host, event))
+      .filter((reason): reason is TranslationKey => Boolean(reason)))]
+    : [];
   const expanded = exists && host._expandedPreconditioningZones.has(entityId);
   const contentId = `preconditioning-zone-content-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
   const toggleLabel = exists
@@ -167,6 +170,12 @@ function renderPreconditioningZone(
               ${host._t("preconditioningUnavailable")}
             </span>`}
       </header>
+      ${rangeWarnings.length ? html`<div class="preconditioning-zone-warnings">
+        ${rangeWarnings.map((reason) => html`<div class="notice warning preconditioning-range-warning" role="status">
+          <ha-icon icon="mdi:alert-outline" aria-hidden="true"></ha-icon>
+          <span>${host._t(reason)}</span>
+        </div>`)}
+      </div>` : nothing}
       ${exists && expanded
         ? html`
             <div id=${contentId} class="preconditioning-zone-content">
@@ -418,10 +427,6 @@ function renderPreconditioningPrediction(
     `;
   }
 
-  const unsupportedRange = hasTemperatureRange(event) && effectiveClimateHvacModeForEnsureOn(
-    host.hass?.states?.[entityId], event.hvac_mode ?? undefined, "range",
-    host._data?.zones?.[entityId]?.target_format_policy,
-  ) !== "heat_cool";
   const targetWhen = event.target_when && event.target_when !== event.when
     ? event.target_when
     : event.when;
@@ -454,7 +459,6 @@ function renderPreconditioningPrediction(
           <span>${host._formatEventMode(event)}</span>
         </div>
       </div>
-      ${unsupportedRange ? html`<p role="status">${host._t("unsupportedRangeThermalMode")}</p>` : nothing}
       ${event.preconditioning_diagnostics || event.preconditioning_dependency
         ? renderPreconditioningCalculationDetails(host, event.preconditioning_diagnostics, event.preconditioning_dependency)
         : nothing}
@@ -467,16 +471,15 @@ function renderPredictionRangeBoundary(
   event: ScheduleEvent,
   direction: "heat" | "cool",
 ) {
-  if (!hasTemperatureRange(event) || effectiveClimateHvacModeForEnsureOn(
-    host.hass?.states?.[event.entity_id], event.hvac_mode ?? undefined, "range",
-    host._data?.zones?.[event.entity_id]?.target_format_policy,
-  ) !== "heat_cool") {
-    return nothing;
-  }
+  if (!hasTemperatureRange(event) || rangeThermalReason(host, event)) return nothing;
+  const mode = rangeEventMode(host, event);
+  const selected = mode === "heat" || mode === "cool"
+    ? host._data?.zones?.[event.entity_id]?.target_range_reference?.[mode]
+    : direction === "heat" ? "low" : "high";
   const diagnosticBoundary = event.preconditioning_diagnostics?.boundary_temperature;
   const boundaryTemperature = typeof diagnosticBoundary === "number"
     ? diagnosticBoundary
-    : direction === "heat"
+    : selected === "low"
       ? event.target_temp_low
       : event.target_temp_high;
   if (typeof boundaryTemperature !== "number") {
@@ -485,7 +488,7 @@ function renderPredictionRangeBoundary(
   return html`
     <small class="preconditioning-range-boundary">
       ${host._t(
-        direction === "heat"
+        selected === "low"
           ? "preconditioningPredictionLowerBoundary"
           : "preconditioningPredictionUpperBoundary",
         { temperature: host._formatTemperature(boundaryTemperature, event.entity_id) },
@@ -601,7 +604,7 @@ function renderMasterSelector(host: PreconditioningViewHost, entityId: string, s
   const candidates = preconditioningMasterCandidates(host._data, entityId);
   const valid = !selected || candidates.includes(selected);
   const source = selected ? host._data?.zones[selected] : undefined;
-  const sourceState = host.hass?.states?.[selected]?.state;
+  const sourceState = controlUnitState(host._data, host.hass, selected)?.state;
   let helpKey: TranslationKey = "preconditioningMasterHelp";
   if (selected) {
     if (!source) helpKey = "preconditioningMasterNotManaged";
@@ -667,6 +670,24 @@ function formatDiagnosticMinutes(
   }
   const rounded = Math.round(value * 10) / 10;
   return host._t("preconditioningFallbackLead", { minutes: rounded });
+}
+
+function rangeEventMode(host: PreconditioningViewHost, event: ScheduleEvent): string | undefined {
+  const state = controlUnitState(host._data, host.hass, event.entity_id);
+  if (event.temperature_only) return state?.state;
+  return effectiveClimateHvacModeForEnsureOn(state, event.hvac_mode ?? undefined,
+    "range", host._data?.zones?.[event.entity_id]?.target_format_policy);
+}
+
+function rangeThermalReason(host: PreconditioningViewHost, event: ScheduleEvent): TranslationKey | undefined {
+  if (!hasTemperatureRange(event)) return undefined;
+  const mode = rangeEventMode(host, event);
+  if (mode === "heat_cool") return undefined;
+  if (mode === "heat" || mode === "cool") {
+    return host._data?.zones?.[event.entity_id]?.target_range_reference?.[mode]
+      ? undefined : "rangeReferenceNotConfigured";
+  }
+  return "unsupportedRangeThermalMode";
 }
 
 function nextPreconditioningEvent(

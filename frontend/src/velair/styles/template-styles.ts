@@ -147,7 +147,8 @@ export const templateStyles = css`
   font-size: 12px;
 }
 
-.template-item .icon-button.danger.template-item-delete {
+.template-item .icon-button.danger.template-item-delete,
+.icon-button.danger.resource-item-delete {
   background: transparent;
   border-color: transparent;
   color: var(--error-color, #c62828);
@@ -155,7 +156,8 @@ export const templateStyles = css`
   width: 34px;
 }
 
-.template-item .icon-button.danger.template-item-delete:hover {
+.template-item .icon-button.danger.template-item-delete:hover,
+.icon-button.danger.resource-item-delete:hover {
   background: color-mix(in srgb, var(--error-color, #c62828) 10%, transparent);
   border-color: transparent;
   color: var(--error-color, #c62828);
@@ -202,6 +204,10 @@ export const templateStyles = css`
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
+}
+
+@media (any-pointer: coarse) {
+  .template-placeholder.compact > .icon-button { height: 44px; width: 44px; }
 }
 
 .template-editor {

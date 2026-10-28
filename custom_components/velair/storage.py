@@ -286,10 +286,13 @@ class VelairStorage:
         if not isinstance(zones, dict):
             zones = {}
             hydrated["zones"] = zones
-        for entity_id in self._climate_entities:
+        from .room_groups import normalize_room_groups, control_unit_ids
+        room_groups = normalize_room_groups(hydrated.get("room_groups"), self._climate_entities)
+        for entity_id in control_unit_ids(room_groups, self._climate_entities):
             zone = zones.get(entity_id)
             zone = zone if isinstance(zone, dict) else {}
-            default_zone = defaults["zones"][entity_id]
+            default_entity = room_groups[entity_id]["members"][0] if entity_id in room_groups else entity_id
+            default_zone = defaults["zones"][default_entity]
             zone["preconditioning"] = {
                 **default_zone["preconditioning"],
                 **(zone.get("preconditioning") if isinstance(zone.get("preconditioning"), dict) else {}),
@@ -299,6 +302,15 @@ class VelairStorage:
                 **(zone.get("comfort") if isinstance(zone.get("comfort"), dict) else {}),
             }
             zones[entity_id] = zone
+        members = hydrated.get("member_comfort")
+        if isinstance(members, dict):
+            for group in room_groups.values():
+                for member in group["members"]:
+                    if member in members:
+                        members[member] = {
+                            **defaults["zones"][member]["comfort"],
+                            **(members[member] if isinstance(members[member], dict) else {}),
+                        }
         if not isinstance(hydrated.get("templates"), list):
             hydrated["templates"] = defaults["templates"]
             hydrated["templates_seeded"] = True
@@ -665,6 +677,12 @@ def _convert_scheduler_temperatures(
     for preset in data.get("block_presets", []):
         if isinstance(preset, dict):
             _convert_blocks([preset.get("config")], source, target)
+    members = data.get("member_comfort")
+    if isinstance(members, dict):
+        _convert_scheduler_temperatures(
+            {"zones": {entity: {"comfort": config} for entity, config in members.items()}},
+            source, target,
+        )
     zones = data.get("zones", {})
     if isinstance(zones, dict):
         for entity_id, zone in zones.items():
@@ -682,11 +700,16 @@ def _convert_scheduler_temperatures(
                         override[key] = round(absolute_temperature(override[key], source, target), 6)
             previous_state = override.get("previous_state") if isinstance(override, dict) else None
             if isinstance(previous_state, dict):
-                for key in ("temperature", "target_temp_low", "target_temp_high"):
-                    if isinstance(previous_state.get(key), (int, float)):
-                        previous_state[key] = round(
-                            absolute_temperature(previous_state[key], source, target), 6
-                        )
+                snapshots = [previous_state]
+                members = previous_state.get("group_members")
+                if isinstance(members, dict):
+                    snapshots.extend(item for item in members.values() if isinstance(item, dict))
+                for snapshot in snapshots:
+                    for key in ("temperature", "target_temp_low", "target_temp_high"):
+                        if isinstance(snapshot.get(key), (int, float)):
+                            snapshot[key] = round(
+                                absolute_temperature(snapshot[key], source, target), 6
+                            )
             pre = zone.get("preconditioning")
             if isinstance(pre, dict):
                 for key in (

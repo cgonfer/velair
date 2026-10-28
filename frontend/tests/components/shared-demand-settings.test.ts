@@ -97,6 +97,10 @@ afterEach(() => document.body.replaceChildren());
 describe("shared demand settings", () => {
   it("creates a focused draft from the clean library empty state without saving anything", async () => {
     const { element, send } = await setup([]);
+    expect(element.shadowRoot!.querySelector(".template-library > .template-placeholder.compact.shared-demand-empty-state")).not.toBeNull();
+    expect(element.shadowRoot!.querySelector(".template-library-layout")).toBeNull();
+    expect(element.shadowRoot!.querySelector(".template-list-wrap")).toBeNull();
+    expect(element.shadowRoot!.querySelector(".template-detail")).toBeNull();
     expect(element.shadowRoot!.querySelector('[data-field="name"]')).toBeNull();
     expect(element.shadowRoot!.querySelector('[data-action="save"]')).toBeNull();
     const add = element.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="add"]')!;
@@ -342,7 +346,7 @@ describe("shared demand settings", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it.each(["minimum-off", "off-delay"])("validates %s immediately and accepts timing boundaries", async field => {
+  it.each(["minimum-off", "on-delay", "off-delay"])("validates %s immediately and accepts timing boundaries", async field => {
     const { element, send } = await setup();
     const selector = `[data-field="${field}"]`;
     const save = () => element.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="save"]')!;
@@ -603,11 +607,12 @@ describe("shared demand settings", () => {
   it("shows Room Assist demand and suspended state, resuming only by explicit action", async () => {
     const { element, data, send } = await setup([{ ...supply(), enabled: true, suspended: true }]);
     element.data = { ...data, shared_demand_status: { boiler: {
-      status: "suspended", suspended: true, demand: true, output_state: "off",
+      status: "suspended", suspended: true, suspension_reason: "external_off", demand: true, output_state: "off",
       zones: { "climate.room": { demand: true, source: "room_assist" } },
     } } } as ScheduleResponse;
     await element.updateComplete;
     expect(element.shadowRoot!.querySelector('[data-select-supply="boiler"]')!.textContent).toContain("sharedDemandControlSuspended");
+    expect(element.shadowRoot!.querySelector('[data-action="resume"]')!.parentElement!.textContent).toContain("sharedDemandExternalOffPaused");
     expect(element.shadowRoot!.querySelector('[data-section="rooms"]')!.textContent).not.toContain("sharedDemandRoomAssist");
     const demandBody = element.shadowRoot!.querySelector('[data-section="demand"] .external-controller-conditions-body')!;
     expect(demandBody.firstElementChild!.textContent).toBe("sharedDemandRoomAssist");
@@ -668,6 +673,14 @@ describe("shared demand settings", () => {
     }));
   });
 
+  it.each([undefined, "imported" as const])("keeps %s suspension provenance generic beside Resume", async suspension_reason => {
+    const { element, data } = await setup([{ ...supply(), enabled: true, suspended: true, suspension_reason }]);
+    element.data = { ...data, shared_demand_status: { boiler: { status: "suspended", suspended: true, suspension_reason } } };
+    await element.updateComplete;
+    const message = element.shadowRoot!.querySelector('[data-action="resume"]')!.parentElement!.textContent!;
+    expect(message).toContain("sharedDemandPaused");
+    expect(message).not.toContain("sharedDemandExternalOffPaused");
+  });
   it("shows a failed suspension save as suspended and retains explicit resume", async () => {
     const { element, data, send } = await setup([{ ...supply(), enabled: true, suspended: false }]);
     element.data = { ...data, shared_demand_status: { boiler: {
@@ -1080,7 +1093,7 @@ describe("shared demand settings", () => {
 
   it("explains switch observations, purpose and timings with the shared info control", async () => {
     const { element } = await setup([{ ...supply(), id: "boiler / one" }]);
-    for (const kind of ["control", "state", "purpose", "minimum-off", "off-delay"]) {
+    for (const kind of ["control", "state", "purpose", "minimum-off", "on-delay", "off-delay"]) {
       const id = `shared-demand-${kind}-help-${encodeURIComponent("boiler / one")}`;
       const tooltip = [...element.shadowRoot!.querySelectorAll<HTMLElement>(".inline-help-tooltip")].find(node => node.id === id)!;
       expect(tooltip).toBeDefined();
@@ -1171,7 +1184,7 @@ describe("shared demand settings", () => {
     expect(element.shadowRoot!.querySelector('[data-action="save"]')).toBeNull();
   });
 
-  it.each([["minimum_off", "sharedDemandWaitingMinimumOff"], ["off_delay", "sharedDemandWaitingOffDelay"]])("keeps %s timing status beside the observed switch", async (status, label) => {
+  it.each([["minimum_off", "sharedDemandWaitingMinimumOff"], ["on_delay", "sharedDemandWaitingOnDelay"], ["off_delay", "sharedDemandWaitingOffDelay"]])("keeps %s timing status beside the observed switch", async (status, label) => {
     const { element, data } = await setup([{ ...supply(), enabled: true }]);
     element.data = { ...data, shared_demand_status: { boiler: { enabled: true, status, output_state: "off" } } };
     await element.updateComplete;

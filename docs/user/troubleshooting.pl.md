@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](troubleshooting.md) · [Español]
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -21,14 +21,23 @@ Tłumaczenia: [Oryginał w języku angielskim](troubleshooting.md) · [Español]
 <a id="a-lovelace-card-shows-configuration-error"></a>
 ## Karta Lovelace pokazuje błąd konfiguracji
 
-Sprawdź, czy Velair jest zainstalowany i skonfigurowany, zanim pulpit załaduje kartę. Integracja udostępnia zasób interfejsu na wczesnym etapie uruchamiania Home Assistant, dzięki czemu zwykły restart nie pozostawia kart oczekujących na moduł.
+Sprawdź, czy Velair jest zainstalowany i skonfigurowany przed załadowaniem karty. Przy zasobach zarządzanych przez interfejs Home Assistant Velair rejestruje i aktualizuje moduł automatycznie. Zwykła instalacja nie wymaga ręcznej konfiguracji zasobu.
 
 Jeśli błąd nie ustępuje:
 
-1. Sprawdź, czy adres zasobu pulpitu to dokładnie `/velair_frontend/velair-card.js`, a jego typ to **JavaScript module**.
-2. Usuń zduplikowane lub stare zasoby, np. `/local/velair-card.js`.
+1. Sprawdź zasób pulpitu `/velair_frontend/velair-card.js` typu **Moduł JavaScript**. Automatyczny parametr `?v=...` jest oczekiwany przy zarządzaniu przez interfejs; nie usuwaj ani nie edytuj go.
+2. Sprawdź stare lub podwójne zasoby, np. `/local/velair-card.js`. Velair migruje i scala dokładnie te lokalne ścieżki automatycznie przy zarządzaniu przez interfejs. Inne ścieżki i zewnętrzne adresy wymagają ręcznej kontroli.
 3. Po aktualizacji integracji uruchom ponownie Home Assistant.
-4. Odśwież przeglądarkę lub aplikację mobilną Home Assistant.
+4. Odśwież przeglądarkę lub Companion i otwórz pulpit bezpośrednio, bez wcześniejszego wejścia do panelu Velair.
+
+Przy zasobach YAML dodaj moduł ręcznie pod stałym adresem bez parametrów i usuń stare lub podwójne wpisy. Sam zapis karty lub pulpitu w YAML nie oznacza zarządzania zasobami w YAML. Zobacz [instalację](installation.pl.md#resources-managed-in-yaml). Sprawdź błędy rejestracji i ostrzeżenia YAML w dziennikach Home Assistant; Velair nie tworzy dla nich trwałych powiadomień.
+
+Gdy automatyczna rejestracja zawiedzie, możesz dodać zasób ręcznie przez **Ustawienia > Pulpity > Zasoby** jako **Moduł JavaScript**:
+
+```yaml
+url: /velair_frontend/velair-card.js
+type: module
+```
 
 Konsola przeglądarki lub panel sieci powinny pokazać, czy żądanie modułu się nie powiodło. Zgłaszając powtarzalny problem, dołącz pełną treść błędu.
 
@@ -42,21 +51,11 @@ Jeśli integrację właśnie zaktualizowano, wymuś pełne odświeżenie przegl�
 <a id="the-lovelace-card-shows-old-ui"></a>
 ## Karta Lovelace pokazuje stary interfejs
 
-Sprawdź zasoby pulpitu. Usuń stare zasoby deweloperskie, takie jak:
+Najpierw uruchom ponownie Home Assistant i odśwież przeglądarkę lub Companion. Velair automatycznie aktualizuje zasoby zarządzane przez interfejs, migruje `/local/velair-card.js` i scala rozpoznane duplikaty. W razie błędu sprawdź dzienniki. Inne ścieżki i zewnętrzne adresy wymagają ręcznej kontroli.
 
-```yaml
-url: /local/velair-card.js
-type: module
-```
+Velair udostępnia zasób z nagłówkami no-cache. Przy zarządzaniu przez interfejs automatycznie utrzymuje `?v=...` i używa tego samego wersjonowanego adresu dla panelu i kart pulpitu. Stały `/velair_frontend/velair-card.js` pozostaje poprawny dla konfiguracji ręcznej i YAML. Nie dodawaj identyfikatorów kompilacji ani nie zmieniaj parametrów wersji między wydaniami.
 
-Zamiast tego używaj zasobu udostępnianego przez integrację:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Velair udostępnia ten zasób z nagłówkami wyłączającymi pamięć podręczną. Panel boczny korzysta z automatycznie wersjonowanego adresu i odizolowanych elementów wewnętrznych, więc starsza karta Lovelace w pamięci podręcznej nie blokuje aktualizacji panelu. Aktualizacja integracji zwykle wymaga jedynie restartu Home Assistant i odświeżenia przeglądarki lub aplikacji mobilnej. Jeśli backend zgłasza nową wersję, ale nadal widzisz poprzedni interfejs, wymuś pełne odświeżenie lub wyczyść pamięć podręczną witryny przed zgłoszeniem problemu. Nie trzeba dodawać identyfikatorów kompilacji ani edytować adresu zasobu między wydaniami.
+Aktualizacja zwykle wymaga tylko restartu Home Assistant i odświeżenia przeglądarki lub aplikacji. Jeśli backend raportuje nową wersję, ale stary interfejs pozostaje widoczny, wykonaj pełne odświeżenie lub wyczyść pamięć witryny przed zgłoszeniem problemu.
 
 <a id="a-climate-entity-is-missing"></a>
 ## Brakuje encji klimatu

@@ -139,11 +139,12 @@ class SharedDemandAuditTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status["zones"]["climate.room"]["reason"], "missing_temperature")
         self.assertEqual(self.hass.states["switch.boiler"].state, "off")
 
-    async def test_sensor_burst_coalesces_without_writes_services_or_broadcasts(self):
+    async def test_sensor_burst_coalesces_live_update_without_writes_services_or_panel_broadcasts(self):
         self.acknowledge_services()
         await self.start()
         self.calls.clear()
         self.save.reset_mock()
+        phases = deepcopy(self.controller._phases)
         with patch.object(self.hass, "async_create_task", wraps=self.hass.async_create_task) as jobs, \
                 patch.object(fixtures.module, "async_dispatcher_send") as broadcasts:
             for index in range(1000):
@@ -154,10 +155,16 @@ class SharedDemandAuditTests(unittest.IsolatedAsyncioTestCase):
                     "entity_id": "climate.room", "old_state": old, "new_state": new}))
             await self.flush()
             self.assertEqual(jobs.call_count, 1)
-            broadcasts.assert_not_called()
+            broadcasts.assert_called_once_with(
+                self.hass, fixtures.module.SIGNAL_SHARED_DEMAND_LIVE_UPDATED
+            )
         self.assertEqual(self.calls, [])
         self.save.assert_not_awaited()
         self.assertEqual(self.controller._timers, {})
+        self.assertEqual(self.controller._phases, phases)
+        reading = self.controller.get_live_statuses()["boiler"]["zones"]["climate.room"]
+        self.assertAlmostEqual(reading["temperature"], 20.0999)
+        self.assertTrue(reading["demand"])
 
     async def test_manual_off_survives_temperature_migration_commit_and_restart(self):
         storage = temperatures.make_storage(temperatures.CELSIUS)

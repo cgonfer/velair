@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -24,6 +24,8 @@ Komfortgrenzwerte verwenden die in Home Assistant konfigurierte Temperatureinhei
 
 Umgebungskomfort gibt für jedes verwaltete Klimagerät eine verständliche Beschreibung des Raums statt einer allgemeinen Warnstufe.
 
+Behaglichkeit bleibt für jedes physische Klimagerät einer Raumgruppe unabhängig. Jedes Mitglied hat eigene Überwachung, Sensoren, Grenzwerte und Bewertung. Gruppieren teilt Zeitplanung und Raumsteuerung, ohne diese Einstellungen zu ersetzen.
+
 Die Funktion überwacht lokal verfügbare Temperatur-, Luftfeuchtigkeits- und CO2-Messwerte. Sie verändert keine Zeitpläne und steuert Geräte nicht automatisch. Velair stellt die Bewertung im Panel, in Lovelace-Karten und über Home-Assistant-Ereignisse bereit, damit Automationen über das weitere Vorgehen entscheiden können.
 
 <a id="sources"></a>
@@ -34,6 +36,8 @@ Für die Temperatur wird die erste verfügbare Quelle in dieser Reihenfolge verw
 1. der im Komfort-Tab ausgewählte Temperatursensor;
 2. der für das Klimagerät konfigurierte Room-Assist-Sensor;
 3. `current_temperature` der Klimaentität.
+
+Bei gruppierten Geräten verwendet die automatische Temperatur das physische `current_temperature` des Mitglieds; der Room-Assist-Sensor der Gruppe wird nicht übernommen. Wähle bei Bedarf einen externen Sensor ausdrücklich in den Behaglichkeitseinstellungen dieses Mitglieds.
 
 Für die Luftfeuchtigkeit werden verwendet:
 
@@ -183,7 +187,7 @@ Velair stellt einen Datenqualitätswert bereit:
 - `stale`: es gibt keinen aktuellen Messwert und alle überwachten Quellen sind veraltet;
 - `unavailable`: aus einem anderen Grund ist kein aktueller Messwert nutzbar.
 
-Das Panel gruppiert nutzbare Messwerte, deren Aktualität nicht überprüfbar ist, im Bereich **Datenaktualität** der Zone, statt denselben Hinweis neben jedem abgeleiteten Wert zu wiederholen. Eine Lovelace-Komfortkarte mit ausgeblendeter Konfiguration zeigt eine Zusammenfassung über den Messwerten; auch die Diagnose enthält Aktualitätskontext. Die eingeklappte Zonenliste lässt diesen normalen Status aus, damit sie lesbar bleibt. Das ist eine gültige automatische Konfiguration mit dem Klimagerät als Quelle, kein Konfigurationsfehler. Fehlende oder veraltete Messwerte zeigen weiterhin eine Warnung in der Zonenliste.
+Der Tab Behaglichkeit gruppiert nutzbare Messwerte mit nicht überprüfbarer Aktualität neben den Sensorauswahlen unter **Konfiguration → Datenquellen**. Eine dezente Erklärung nennt die betroffenen Werte: Ein unbekannter Messzeitpunkt bedeutet weder falsche Werte noch einen unbehaglichen Raum. Übersicht und Lovelace-Karten lassen diesen Routinezustand weg; die Diagnose behält den technischen Kontext. Das ist eine gültige automatische Gerätequelle, kein Konfigurationsfehler. Fehlende oder veraltete Werte erzeugen weiterhin eine Warnung in der Zonenliste.
 
 <a id="visual-status"></a>
 ## Visuelle Statusanzeige
@@ -248,7 +252,7 @@ Sichtbarkeitsoptionen für Temperatur, Luftfeuchtigkeit und CO2 beeinflussen nur
 
 `Veraltet nach` ist die maximale Zeit seit der letzten Zustandsmeldung eines ausgewählten Sensors an Home Assistant (`last_reported`). Das erneute Melden desselben Werts aktualisiert den Meldezeitpunkt und hält den Wert aktuell. Velair überwacht diese Meldungen und plant den nächsten Ablaufzeitpunkt, damit Panel, Sensoren und Ereignisse `stale` anzeigen können, wenn die Frist ohne weitere Meldung verstreicht.
 
-Die Einstellung hat nach den Quellenbedienelementen einen eigenen Bereich **Datenaktualität**. Dort werden auch aktuelle Werte mit ungeprüfter Aktualität gruppiert, einschließlich aktivierter abgeleiteter Messgrößen und Außensensorwerte, ohne berechnete Außenwerte zu wiederholen. Er führt die direkten Quellen auf, für die die Grenze gilt, einschließlich Room Assist, CO2, Außen- und externer abgeleiteter Messgrößensensoren. Außensensoren können sie aktiv halten, auch wenn Innentemperatur und Luftfeuchtigkeit beide vom Klimagerät kommen; die Grenze lässt diese Klimagerätemesswerte nicht ablaufen. Du kannst sie vor dem Aktivieren von Komfort setzen. Ist keine direkte Quelle konfiguriert, ist das Feld mit einer Erklärung deaktiviert; sein gespeicherter Wert bleibt für eine spätere Sensorauswahl erhalten.
+Die Einstellung liegt im eigenen Bereich **Datenaktualität** hinter der Quellenauswahl. Er nennt direkte Quellen, für die die Grenze gilt, darunter Room Assist, CO2, Außen- oder externe Sensoren abgeleiteter Größen. Der Hinweis zu nicht überprüfbarer Aktualität steht neben der Sensorauswahl, einschließlich aktivierter abgeleiteter Größen und Außenwerte. Außensensoren können die Grenze aktiv halten, auch wenn Temperatur und Feuchtigkeit innen vom Klimagerät kommen; dessen Werte lässt sie nicht veralten. Du kannst sie vor der Behaglichkeitsaktivierung einstellen. Ohne direkte Quelle ist das Feld mit Erklärung deaktiviert; sein Wert bleibt für eine spätere Sensorwahl erhalten.
 
 Die automatischen Temperatur- und Luftfeuchtigkeitsattribute von `climate.*` haben keinen unabhängigen Meldezeitpunkt. Velair hält einen gültigen Wert sichtbar und kennzeichnet seine Aktualität als `unverified`. Änderungen des Klimaziels bestätigen keine neue Messung. Wähle wenn möglich den ursprünglichen Temperatur- oder Luftfeuchtigkeitssensor. Fehlt einem ausgewählten Sensor `last_reported`, ist auch sein gültiger Wert `unverified`. Eine Entität mit `unavailable` oder `unknown` liefert keinen nutzbaren Messwert, selbst wenn alte numerische Attribute erhalten bleiben.
 

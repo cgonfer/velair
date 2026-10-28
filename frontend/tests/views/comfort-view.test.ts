@@ -16,6 +16,8 @@ import type {
 import { comfortSettings, defaultComfortSettings } from "../../src/velair/domain/comfort";
 import { comfortStyles } from "../../src/velair/styles/comfort-styles";
 import { renderComfortView } from "../../src/velair/views/comfort-view";
+import { renderCardContent } from "../../src/velair/views/card-content";
+import { visibleZoneIdsForHost } from "../../src/velair/controllers/card-context";
 import { translate } from "../../src/velair/i18n";
 import { en } from "../../src/velair/translations/en";
 import { es } from "../../src/velair/translations/es";
@@ -111,6 +113,57 @@ function host(
 }
 
 describe("comfort view", () => {
+  it.each([undefined, ["group.room"], ["climate.second"]])("keeps grouped Comfort physical with card filter %j", (entities) => {
+    const { viewHost, saveZoneComfort } = host({ expanded: true });
+    const data = viewHost._data!;
+    data.configured_entities = ["climate.first", "climate.second"];
+    data.control_units = ["group.room"];
+    data.member_to_unit = { "climate.first": "group.room", "climate.second": "group.room" };
+    data.room_groups = { "group.room": { id: "group.room", name: "Shared room", members: data.configured_entities, temperature_entity_id: "climate.first", delivery_mode: "all" } };
+    data.zones = { "group.room": { enabled: true, schedule: {}, comfort: comfortSettings({ enabled: false }, "C"), preconditioning: { room_temperature_entity_id: "sensor.group_room_assist" } as never } };
+    data.temperature_migration = { required: false } as never;
+    data.comfort_settings = {
+      "climate.first": comfortSettings({ enabled: true, temperature_entity_id: null, humidity_entity_id: null, temperature_min: 18 }, "C"),
+      "climate.second": comfortSettings({ enabled: true, temperature_entity_id: "sensor.second_temperature", humidity_entity_id: "sensor.second_humidity", temperature_min: 23 }, "C"),
+    };
+    data.comfort = Object.fromEntries([["climate.first", 19, 40], ["climate.second", 25, 65]].map(([id, temperature, humidity]) => [id, {
+      enabled: true, data_quality: "complete", data_issues: [], condition: "comfortable", air_quality: "not_monitored",
+      temperature: { availability: "current", metric: "temperature", value: temperature, source: "climate", entity_id: id, min: 18, max: 24 },
+      humidity: { availability: "current", metric: "humidity", value: humidity, source: "climate", entity_id: id, min: 40, max: 60 },
+    }])) as never;
+    Object.assign(viewHost, { hass: { states: {
+      "climate.first": { state: "heat", attributes: { current_temperature: 19, current_humidity: 40 } },
+      "climate.second": { state: "cool", attributes: { current_temperature: 25, current_humidity: 65 } },
+    } } as HomeAssistant });
+    Object.assign(viewHost, {
+      _config: { view: "comfort", entities }, _effectiveView: () => "comfort", _hasExternalConfig: true,
+      _visibleZoneIds: (ids: string[]) => visibleZoneIdsForHost(viewHost, ids),
+      _entityTemperatureStep: () => 0.5, _entityTemperatureLimits: () => [5, 35],
+      _friendlyEntityName: (id: string) => id,
+      _expandedComfortZones: new Set(data.configured_entities),
+    });
+    const container = document.createElement("div");
+    render(renderCardContent(viewHost), container);
+    const sections = [...container.querySelectorAll<HTMLElement>(".comfort-zone")];
+    expect(sections).toHaveLength(entities?.includes("climate.second") ? 1 : 2);
+    expect(container.textContent).not.toContain("Shared room");
+    expect(container.textContent).not.toContain("sensor.group_room_assist");
+    const last = sections.at(-1)!;
+    expect(last.textContent).toContain("climate.second");
+    expect(last.textContent).toContain("sensor.second_temperature");
+    expect(last.textContent).toContain("sensor.second_humidity");
+    expect(last.textContent).toContain("25");
+    expect(last.textContent).toContain("65");
+    if (sections.length === 2) {
+      expect(sections[0].textContent).toContain("19");
+      expect(sections[0].textContent).toContain("40");
+      expect(sections[0].textContent).not.toContain("sensor.second_temperature");
+    }
+    const toggle = last.querySelector(".comfort-zone-actions ha-switch") as HTMLElement & { checked: boolean };
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZoneComfort).toHaveBeenCalledWith("climate.second", { enabled: false });
+  });
   it("uses the exact Humidex delta placeholder instead of threshold copy", () => {
     expect(en.comfortInsightHumidexWarmer).toContain("{delta}");
     expect(en.comfortInsightHumidexWarmer).not.toContain("at least");
@@ -408,9 +461,13 @@ describe("comfort view", () => {
     render(renderComfortView(viewHost, ["climate.first"]), container);
 
     expect(container.querySelector(".comfort-zone-heading .comfort-data-warning")).toBeNull();
-    const freshness = container.querySelector(".comfort-freshness-config-section");
+    const freshness = container.querySelector(".comfort-data-sources-config-section .comfort-freshness-status");
     expect(freshness?.textContent).toContain("comfortDataUnverified (comfortTemperature)");
     expect(freshness?.textContent).toContain("comfortClimateSourceFreshnessHelp");
+    expect(freshness?.textContent).toContain("comfortReadingFreshnessHelp");
+    expect(freshness?.getAttribute("role")).toBeNull();
+    expect(container.querySelectorAll(".comfort-freshness-status")).toHaveLength(1);
+    expect(en.comfortReadingFreshnessHelp).toContain("does not mean they are incorrect");
     expect(container.querySelector(".comfort-assessment-card .comfort-freshness-note")).toBeNull();
     expect(container.textContent).toContain("22 C");
     expect(en.comfortDataIssueTemperatureUnverified).not.toContain("direct sensor");
@@ -1208,7 +1265,7 @@ describe("comfort view", () => {
     const container = document.createElement("div");
     render(renderComfortView(viewHost, ["climate.first"]), container);
 
-    const freshnessStatus = container.querySelector(".comfort-freshness-config-section .comfort-freshness-status");
+    const freshnessStatus = container.querySelector(".comfort-data-sources-config-section .comfort-freshness-status");
     expect(freshnessStatus?.textContent).toContain("comfortDataUnverified");
     expect(freshnessStatus?.textContent).toContain("comfortHumidex, comfortDewPoint, comfortAbsoluteHumidity");
     expect(container.querySelectorAll(".comfort-derived-reading .comfort-data-warning")).toHaveLength(0);
@@ -1217,10 +1274,7 @@ describe("comfort view", () => {
     const cardWithoutConfiguration = document.createElement("div");
     render(renderComfortView(viewHost, ["climate.first"], { showConfiguration: false }), cardWithoutConfiguration);
     expect(cardWithoutConfiguration.querySelector(".comfort-freshness-config-section")).toBeNull();
-    expect(cardWithoutConfiguration.querySelectorAll(".comfort-assessment-card > .comfort-freshness-status"))
-      .toHaveLength(1);
-    expect(cardWithoutConfiguration.querySelector(".comfort-freshness-status")?.textContent)
-      .toContain("comfortHumidex, comfortDewPoint, comfortAbsoluteHumidity");
+    expect(cardWithoutConfiguration.querySelector(".comfort-freshness-status")).toBeNull();
   });
 
   it("shows simple Humidex values and availability without a Current readings row", () => {
@@ -1396,9 +1450,9 @@ describe("comfort view", () => {
     render(renderComfortView(viewHost, ["climate.first"]), container);
 
     expect(container.querySelector(".comfort-outdoor-comparison.quality-partial .comfort-data-warning")).toBeNull();
-    expect(container.querySelector(".comfort-freshness-config-section .comfort-freshness-status")?.textContent)
+    expect(container.querySelector(".comfort-data-sources-config-section .comfort-freshness-status")?.textContent)
       .toContain("comfortOutdoorTemperatureSensor");
-    expect(container.querySelector(".comfort-freshness-config-section .comfort-freshness-status")?.textContent)
+    expect(container.querySelector(".comfort-data-sources-config-section .comfort-freshness-status")?.textContent)
       .not.toContain("comfortIndoorAbsoluteHumidity");
     expect(container.querySelector(".comfort-outdoor-cell.temperature")?.textContent).toContain("17 C");
   });
@@ -2167,4 +2221,16 @@ describe("comfort visual positions", () => {
     expect(comfortCo2Position(0, 1000, 1500)).toBe(4);
     expect(comfortCo2Position(10000, 1000, 1500)).toBe(96);
   });
+});
+
+it("uses each member's own humidity capability rather than a group's virtual state", () => {
+  const { viewHost } = host({ comfort: { humidity_entity_id: null, humidity_enabled: true }, expanded: true,
+    hassStates: { "climate.first": { state: "heat", attributes: { current_humidity: 45 } } } });
+  const data = viewHost._data!;
+  data.room_groups = { "group.room": { id: "group.room", name: "Room", members: ["climate.first", "climate.second"], temperature_entity_id: "sensor.room", delivery_mode: "all" } };
+  data.control_unit_states = { "group.room": { state: "heat", attributes: {} } };
+  const container = document.createElement("div");
+  render(renderComfortView(viewHost, ["climate.first"]), container);
+  expect(container.textContent).toContain("comfortHumidityRange");
+  expect(container.textContent).toContain("comfortAutomaticSourceValue:climate.first");
 });

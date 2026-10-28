@@ -4,6 +4,9 @@ export const resourceUsageStyles = css`
   .resource-section > summary { align-items: center; box-sizing: border-box; display: flex; gap: 8px; list-style: none; min-height: 44px; padding: 6px 0; cursor: pointer; color: var(--primary-text-color); font-size: 13px; line-height: 1.5; }
   .resource-section > summary::-webkit-details-marker { display: none; }
   .resource-section > summary > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .resource-section-description { display: none; color: var(--secondary-text-color); font-size: 12px; font-weight: 400; line-height: 1.5; margin-top: 4px; }
+  .resource-section[open] > .resource-section-summary-description { align-items: flex-start; }
+  .resource-section[open] > summary .resource-section-description { display: block; }
   .resource-section > summary > ha-icon { --mdc-icon-size: 18px; color: var(--primary-color); flex: 0 0 18px; }
   .resource-section > summary > .resource-section-chevron { color: var(--secondary-text-color); transition: transform 160ms ease; }
   .resource-section[open] > summary > .resource-section-chevron { transform: rotate(180deg); }

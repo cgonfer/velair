@@ -75,6 +75,70 @@ function hass(currentTemperature: number, outdoorTemperature = "10"): HomeAssist
   };
 }
 
+function groupedData(): ScheduleResponse {
+  const schedule = data();
+  schedule.control_units = ["group.room"];
+  schedule.member_to_unit = { "climate.office": "group.room", "climate.bedroom": "group.room" };
+  schedule.room_groups = { "group.room": {
+    id: "group.room", name: "Room", members: ["climate.bedroom", "climate.office"],
+    temperature_entity_id: "climate.bedroom", delivery_mode: "all",
+  } };
+  schedule.zones = { "group.room": schedule.zones["climate.office"] };
+  const preconditioning = schedule.zones["group.room"].preconditioning!;
+  preconditioning.room_sensor_assist_enabled = true;
+  preconditioning.room_temperature_entity_id = "sensor.room";
+  return schedule;
+}
+
+describe("group-filtered Home Assistant updates", () => {
+  it.each(["overview", "overview-zones", "overview-timeline", "overview-events", "comfort"])("refreshes %s for a physical group member, without requiring a HA group entity", view => {
+    const host = { _data: groupedData(), _config: { view, entities: ["group.room"] } } as any;
+    const previous = hass(18);
+    expect(shouldUpdateForHass(host, hass(19), previous)).toBe(true);
+    expect(shouldUpdateForHass(host, previous, previous)).toBe(false);
+    expect(previous.states).not.toHaveProperty("group.room");
+  });
+
+  it("keeps an exact physical filter for native member changes", () => {
+    const schedule = groupedData();
+    schedule.zones["group.room"].preconditioning = undefined;
+    const previous = hass(18);
+    expect(shouldUpdateForHass({ _data: schedule, _config: { entities: ["climate.bedroom"] } }, hass(19), previous)).toBe(false);
+  });
+
+  it.each(["group.room", "climate.office"])("observes shared inputs selected through %s", entityId => {
+    const schedule = groupedData();
+    const host = { _data: schedule, _config: { entities: [entityId] } };
+    const previous = hass(18);
+    previous.states!["sensor.room"] = { state: "20" };
+    for (const change of [
+      (next: HomeAssistant) => { next.states!["climate.bedroom"].attributes!.current_temperature = 21; },
+      (next: HomeAssistant) => { next.states!["climate.office"].attributes!.temperature = 22; },
+      (next: HomeAssistant) => { next.states!["sensor.room"].state = "21"; },
+      (next: HomeAssistant) => { next.states!["sensor.outdoor"].state = "12"; },
+    ]) {
+      const next = structuredClone(previous);
+      change(next);
+      expect(preconditioningInputsChanged(host, next, previous)).toBe(true);
+      expect(shouldUpdateForHass(host, next, previous)).toBe(true);
+    }
+    expect(preconditioningInputsChanged(host, previous, previous)).toBe(false);
+  });
+
+  it("uses a climate card's selected member to resolve the shared Room Assist sensors", () => {
+    const previous = hass(18);
+    const next = hass(18, "12");
+    expect(preconditioningInputsChanged({ _data: groupedData(), _config: { view: "climate", selected_entity: "climate.office" } }, next, previous)).toBe(true);
+  });
+
+  it("preserves ungrouped selection and ignores disabled or unrelated inputs", () => {
+    const schedule = data();
+    const host = { _data: schedule, _config: { entities: ["climate.bedroom"] } };
+    expect(shouldUpdateForHass(host, hass(19, "12"), hass(18))).toBe(false);
+    expect(shouldUpdateForHass({ ...host, _config: {} }, hass(19), hass(18))).toBe(true);
+  });
+});
+
 describe("preconditioning input changes", () => {
   it("normalizes the legacy Profiles view to Modes", () => {
     expect(effectiveView("profiles", "overview-status")).toBe("modes");

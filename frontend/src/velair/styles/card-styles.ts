@@ -265,6 +265,9 @@ export const cardStyles = [baseStyles, climateCardStyles, comfortStyles, diagnos
       padding: 9px 10px;
     }
 
+    .room-group-schedule-note > .room-group-schedule-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .room-group-schedule-note > .inline-help-wrapper { flex: 0 0 auto; }
+
     .external-execution-notice ha-icon {
       --mdc-icon-size: 18px;
       color: var(--info-color, #039be5);

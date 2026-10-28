@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](adaptive-preconditioning.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.5 |
-| Ostatnia synchronizacja | 2026-10-24 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -29,19 +29,23 @@ Blok **Tylko temperatura** nie zezwala na zmianę trybu HVAC. Gdy termostat jest
 <a id="setup"></a>
 ## Konfiguracja
 
-Karta **Przygotowanie wstępne** zawiera adaptacyjne ustawienia i uczenie dla każdego urządzenia. **Planowany powrót** ma osobną kartę dla obecności, tygodniowych przyjazdów i bieżącej nieobecności. Obie karty mają wprowadzenie i pomoc kontekstową. Bezpośrednie ścieżki to `/velair/preconditioning` i `/velair/planned-return`. Zapisane odnośniki do wcześniejszych podsekcji nadal otwierają odpowiednią kartę. Zobacz [Planowany powrót](planned-return.pl.md).
+Karta przygotowania zawiera adaptacyjne ustawienia i uczenie dla niezależnego urządzenia lub grupy pomieszczenia. Urządzenia grupy pojawiają się tu jako jeden pokój. Planowany powrót ma osobną kartę dla obecności, tygodniowych przyjazdów i bieżącej nieobecności. Obie zawierają wprowadzenie i pomoc kontekstową. Ścieżki to `/velair/preconditioning` i `/velair/planned-return`. Dawne odnośniki podsekcji nadal otwierają właściwą kartę. Zobacz [Planowany powrót](planned-return.pl.md).
 
 1. Otwórz kartę przygotowania temperatury.
-2. Rozwiń encję, którą chcesz skonfigurować.
-3. Włącz przygotowanie temperatury.
-4. Pozostaw domyślne ustawienia modelu, chyba że masz konkretny powód, aby je dostosować.
+2. Rozwiń urządzenie lub grupę pomieszczenia do konfiguracji.
+3. Włącz przygotowanie.
+4. Zachowaj domyślne ustawienia modelu, chyba że masz konkretny powód do zmiany.
 5. Opcjonalnie wybierz czujnik temperatury zewnętrznej.
 
-Przygotowanie konfiguruje się osobno dla każdej encji. Uczenie ogrzewania i chłodzenia jest rozdzielone: próbki chłodzenia nie zastępują próbek ogrzewania ani odwrotnie.
+Przygotowanie konfiguruje się dla niezależnego urządzenia lub grupy pomieszczenia. Uczenie ogrzewania i chłodzenia pozostaje oddzielne; próbki jednego kierunku nie zastępują drugiego.
+
+[Grupa pomieszczenia](room-groups.pl.md#learning-and-membership-changes) przechowuje jeden model cieplny i podejmuje jedną decyzję startu. Urządzenia nie uczą się ani nie przygotowują niezależnie. Odniesienie temperatury dostarcza własny pomiar, a włączony czujnik Room Assist efektywny pomiar pokoju. Usunięcie urządzenia rozpoczyna uczenie od nowa dla niego i pozostałej grupy. Rozwiązanie tworzy niezależne historie dla wszystkich; dawnych nie dzieli się ani nie przywraca. Zmiana nazwy lub kolejności zachowuje uczenie grupy.
 
 Obsługiwane są natywne zakresy `heat_cool`. Jeśli temperatura pomieszczenia jest niższa od dolnej granicy o więcej niż minimalna różnica temperatury, Velair prognozuje względem dolnej granicy i wcześniej uruchamia cały zakres dla ogrzewania. Jeśli jest wyższa od górnej granicy o więcej niż tę różnicę, prognozuje względem górnej i wcześniej uruchamia cały zakres dla chłodzenia. Odczyty wewnątrz zakresu lub martwych stref przy jego granicach zachowują zwykły czas bloku. Velair zawsze wysyła obie granice; nigdy nie sprowadza zakresu do jednej temperatury.
 
-Encja może wymagać obu granic w Ogrzewaniu, Chłodzeniu lub Auto bez obsługi `heat_cool`. Velair planuje i wysyła te cele, ale nie uruchamia ich wcześniej ani nie zbiera dla nich termicznych próbek uczenia. Widok przygotowania wyjaśnia, że ta funkcja wymaga dla zakresów Ogrzewania/chłodzenia. Zaplanowana para pozostaje bez zmian, a Planowany powrót stosuje ją przy przyjeździe bez wcześniejszego przygotowania. Włączenie przygotowania nie usuwa tego ograniczenia.
+Dla dwóch wartości w stałym `heat` lub `cool` wybierz **Wartość zadana odniesienia** dla urządzenia i trybu w **Ustawienia → Urządzenia klimatyczne i grupy**: **Dolna wartość zadana** lub **Górna wartość zadana**, zależnie od rzeczywiście używanej przez urządzenie. Room Assist współdzieli to ustawienie. Przygotowanie i uczenie ogrzewania używają tylko wybranej granicy jako celu ogrzewania, a chłodzenie jako celu chłodzenia. Kierunek określa tryb, także przy górnej granicy ogrzewania lub dolnej chłodzenia. Velair wysyła wcześniej całą nominalną parę, także dla Planowanego powrotu, nigdy samą wybraną granicę.
+
+Przy **Nie skonfigurowano** pary stałego trybu zachowują zaplanowaną godzinę i nie tworzą próbek uczenia cieplnego. Planowany powrót stosuje je przy przybyciu, bez wyprzedzenia. Zakresy `auto` zachowują ograniczenie, ponieważ wybór granicy nie określa sposobu ogrzewania/chłodzenia urządzenia. Natywne `heat_cool` nie zmienia się. Zmiana odniesienia unieważnia obserwacje rozpoczęte z poprzednią interpretacją.
 
 Po rozwinięciu encji każdy obsługiwany tryb pokazuje kartę bieżącej prognozy. Korzysta ona z tych samych danych backendu o następnym zdarzeniu co Przegląd, dzięki czemu pauzy, wzmocnienia, nieobsługiwane tryby i bloki nienadające się do przygotowania są traktowane spójnie. Jeśli istnieje pasujący przyszły blok, karta pokazuje obliczony czas rozpoczęcia, czas docelowy, wyprzedzenie, zaplanowaną temperaturę i tryb oraz informację, czy Velair używa modelu początkowego, czy podobnej lokalnej historii.
 
@@ -89,7 +93,7 @@ Niezmienna liczba próbek nie dowodzi awarii. Zmiana może nie dawać użyteczne
 
 Velair oblicza bieżącą różnicę temperatury dla następnego zaplanowanego bloku z temperaturą.
 
-Dla zakresu `heat_cool` „temperatura docelowa” poniżej oznacza dolną granicę podczas ogrzewania i górną podczas chłodzenia.
+Dla zakresu `heat_cool` „temperatura docelowa” poniżej oznacza dolną granicę podczas ogrzewania i górną podczas chłodzenia. Dla stałego zakresu `heat` lub `cool` oznacza wybraną granicę odniesienia, z kierunkiem określonym przez stały tryb.
 
 Dla ogrzewania:
 

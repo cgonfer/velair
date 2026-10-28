@@ -101,3 +101,11 @@ describe("Room Assist deadband zone", () => {
     expect(roomAssistDeadbandZone(status({}), 0.3)).toBeUndefined();
   });
 });
+
+
+it.each([
+  { boundary: "low" as const, expected: { low: 19.5, high: 20.5 } },
+  { boundary: "high" as const, expected: { low: 23.5, high: 24.5 } },
+])("centres fixed-mode range hysteresis on the selected $boundary setpoint", ({ boundary, expected }) => {
+  expect(roomAssistDeadbandZone(status({ target_temp_low: 20, target_temp_high: 24, target_boundary: boundary }), 0.5)).toEqual(expected);
+});

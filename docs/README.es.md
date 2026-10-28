@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](README.md) · [Español](README.es.md) · [F
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.5 |
-| Última sincronización | 2026-10-24 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -27,6 +27,7 @@ La documentación de Velair se agrupa por destinatarios y temas.
 
 - [Instalación](user/installation.es.md): instala Velair mediante HACS o manualmente.
 - [Uso](user/usage.es.md): configura equipos de climatización, horarios, plantillas, perfiles, refuerzos, pausas, importación/exportación y servicios.
+- [Grupos de habitación](user/room-groups.es.md): comparte la programación, el control y el aprendizaje de una habitación entre varios equipos, observando cada dispositivo individualmente.
 - [Navegación del panel y enlaces directos](user/usage.es.md#panel-navigation-and-direct-links): enlaza pestañas y subsecciones, recupera la sección al actualizar y utiliza el historial del navegador.
 - [Cambios externos y ajuste manual](user/manual-control.es.md): elige si Velair mantiene el control automático o cede ante cambios desde tarjetas de HA, mandos, dispositivos y automatizaciones.
 - [Ejecución externa de horarios](user/external-systems.es.md): publica horarios semanales efectivos compatibles, incluida la selección de Perfiles y Modos, en controladores compatibles sin mezclar la lógica del proveedor con el programador de Velair.

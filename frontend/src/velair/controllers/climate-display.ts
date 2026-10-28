@@ -1,3 +1,4 @@
+import { controlUnitState, controlUnitId } from "../domain/control-units";
 import {
   climateCapabilities,
   climateFanModeOptions,
@@ -64,7 +65,7 @@ export function entityTemperatureLimitsForHost(
   entityId?: string,
 ): [number, number] {
   return entityTemperatureLimits(
-    entityId ? host.hass?.states?.[entityId] : undefined,
+    entityId ? controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)) : undefined,
     host._temperatureUnit(entityId),
   );
 }
@@ -93,7 +94,7 @@ export function temperatureStep(
 
 export function entityTemperatureStepForHost(host: ClimateDisplayHost, entityId?: string): number | undefined {
   const published = entityTemperatureStep(
-    entityId ? host.hass?.states?.[entityId] : undefined,
+    entityId ? controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)) : undefined,
     host._temperatureUnit(entityId),
   );
   if (published !== undefined) return published;
@@ -110,15 +111,15 @@ export function entityTemperatureStepForHost(host: ClimateDisplayHost, entityId?
 }
 
 export function entityExists(host: ClimateDisplayHost, entityId: string): boolean {
-  return Boolean(host.hass?.states?.[entityId]);
+  return Boolean(controlUnitState(host._data, host.hass, entityId));
 }
 
 export function friendlyEntityName(host: ClimateDisplayHost, entityId: string): string {
-  return host.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
+  return host._data?.room_groups?.[entityId]?.name ?? host.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
 }
 
 export function climateSupportedModesForHost(host: ClimateDisplayHost, entityId: string): string[] {
-  return climateSupportedModes(host.hass?.states?.[entityId]);
+  return climateSupportedModes(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)));
 }
 
 export function hvacModeOptions(host: ClimateDisplayHost, source: BlockDraftSource = "schedule"): string[] {
@@ -136,7 +137,7 @@ export function fanModeOptions(host: ClimateDisplayHost, source: BlockDraftSourc
 }
 
 export function entityFanModeOptionsForHost(host: ClimateDisplayHost, entityId: string): string[] {
-  return uniqueOptionValues(climateFanModeOptions(host.hass?.states?.[entityId]));
+  return uniqueOptionValues(climateFanModeOptions(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId))));
 }
 
 export function presetModeOptions(host: ClimateDisplayHost, source: BlockDraftSource = "schedule"): string[] {
@@ -144,7 +145,7 @@ export function presetModeOptions(host: ClimateDisplayHost, source: BlockDraftSo
 }
 
 export function entityPresetModeOptionsForHost(host: ClimateDisplayHost, entityId: string): string[] {
-  return uniqueOptionValues(climatePresetModeOptions(host.hass?.states?.[entityId]));
+  return uniqueOptionValues(climatePresetModeOptions(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId))));
 }
 
 export function swingModeOptions(host: ClimateDisplayHost, source: BlockDraftSource = "schedule"): string[] {
@@ -152,7 +153,7 @@ export function swingModeOptions(host: ClimateDisplayHost, source: BlockDraftSou
 }
 
 export function entitySwingModeOptionsForHost(host: ClimateDisplayHost, entityId: string): string[] {
-  return uniqueOptionValues(climateSwingModeOptions(host.hass?.states?.[entityId]));
+  return uniqueOptionValues(climateSwingModeOptions(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId))));
 }
 
 export function swingHorizontalModeOptions(host: ClimateDisplayHost, source: BlockDraftSource = "schedule"): string[] {
@@ -160,7 +161,7 @@ export function swingHorizontalModeOptions(host: ClimateDisplayHost, source: Blo
 }
 
 export function entitySwingHorizontalModeOptionsForHost(host: ClimateDisplayHost, entityId: string): string[] {
-  return uniqueOptionValues(climateSwingHorizontalModeOptions(host.hass?.states?.[entityId]));
+  return uniqueOptionValues(climateSwingHorizontalModeOptions(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId))));
 }
 
 export function humidityLimits(
@@ -169,7 +170,7 @@ export function humidityLimits(
 ): [number, number] | undefined {
   if (source === "template") {
     const limits = (host._data?.configured_entities ?? [])
-      .map((entityId: string) => climateHumidityLimits(host.hass?.states?.[entityId]))
+      .map((entityId: string) => climateHumidityLimits(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId))))
       .filter((item): item is [number, number] => Boolean(item));
     if (!limits.length) {
       return undefined;
@@ -179,11 +180,11 @@ export function humidityLimits(
       Math.max(...limits.map((item) => item[1])),
     ];
   }
-  return host._selectedEntity ? climateHumidityLimits(host.hass?.states?.[host._selectedEntity]) : undefined;
+  return host._selectedEntity ? climateHumidityLimits(controlUnitState(host._data, host.hass, host._selectedEntity)) : undefined;
 }
 
 export function entityHumidityLimitsForHost(host: ClimateDisplayHost, entityId: string): [number, number] | undefined {
-  return climateHumidityLimits(host.hass?.states?.[entityId]);
+  return climateHumidityLimits(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)));
 }
 
 export function uniqueModes(modes: string[]): string[] {
@@ -196,8 +197,8 @@ export function uniqueOptionValues(values: string[]): string[] {
 
 export function entityDiagnostic(host: ClimateDisplayHost, entityId: string): EntityDiagnostic {
   const diagnostic = entityDiagnosticState(
-    entityId,
-    host.hass?.states?.[entityId],
+    host._data?.room_groups?.[entityId] ? "climate.group" : entityId,
+    controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)),
     host._climateSupportedModes(entityId),
   );
   const messages = diagnostic.messageKeys.map((key: string) => host._t(key));
@@ -210,7 +211,7 @@ export function entityDiagnostic(host: ClimateDisplayHost, entityId: string): En
 }
 
 export function climateProvidedData(host: ClimateDisplayHost, entityId: string): { icon: string; label: string }[] {
-  return climateCapabilities(host.hass?.states?.[entityId]).map((item) => ({
+  return climateCapabilities(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId))).map((item) => ({
     icon: item.icon,
     label: host._t(item.labelKey),
   }));
@@ -272,8 +273,8 @@ function climateOptionValues(
 ): string[] {
   if (source === "template") {
     return uniqueOptionValues((host._data?.configured_entities ?? [])
-      .flatMap((entityId: string) => optionReader(host.hass?.states?.[entityId])));
+      .flatMap((entityId: string) => optionReader(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)))));
   }
 
-  return uniqueOptionValues(host._selectedEntity ? optionReader(host.hass?.states?.[host._selectedEntity]) : []);
+  return uniqueOptionValues(host._selectedEntity ? optionReader(controlUnitState(host._data, host.hass, host._selectedEntity)) : []);
 }

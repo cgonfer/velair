@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.5 |
-| Ostatnia synchronizacja | 2026-10-24 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -39,7 +39,11 @@ Pojedyncze temperatury w trybach `auto` i `heat_cool` oraz natywne zakresy `heat
 
 Encja klimatu nadal odpowiada za wykonanie polecenia. Velair nie tworzy wirtualnego termostatu ani nie omija oprogramowania urządzenia. Jeśli termostat lub głowica pozwala bezpośrednio powiązać osobny czujnik pokojowy, zwykle warto najpierw skorzystać z tej możliwości.
 
-Encje obsługujące tylko zakresy mogą otrzymywać zaplanowane pary także w Ogrzewaniu, Chłodzeniu i Auto. Room Assist nie koryguje tych par: wspomaganie zakresu wymaga `heat_cool`. Bieżący stan wyjaśnia ograniczenie, a Velair wysyła nominalną parę bez przesunięcia. Zapisane ustawienia Room Assist pozostają dla zgodnych celów. Zmiana wspomaganego celu na taki zakres usuwa wcześniejsze wspomaganie bez przywracania starego skorygowanego celu na nową parę.
+Dla dwóch wartości w stałym `heat` lub `cool` wybierz najpierw **Wartość zadana odniesienia** dla urządzenia i trybu w **Ustawienia → Urządzenia klimatyczne i grupy**: **Dolna wartość zadana** lub **Górna wartość zadana**, zgodnie z rzeczywistym użyciem przez urządzenie. Velair nie wnioskuje tego z samej obsługi zakresu. Adaptacyjne przygotowanie współdzieli wybór.
+
+Room Assist używa wybranej granicy jako stałego celu ogrzewania lub chłodzenia, wraz z cyklem histerezy pojedynczego celu i ochroną celu harmonogramu. Przesuwa obie granice o tę samą wartość, zachowując odstęp. Obie muszą pasować do kroku i fizycznych limitów urządzenia, więc druga granica może ograniczyć korektę. Dotychczasowe ostrzeżenia o ograniczeniach nadal obowiązują.
+
+Przy **Nie skonfigurowano** pary stałego trybu są wysyłane bez zmian i bez korekty Room Assist. Zakresy `auto` nadal nie są obsługiwane; natywne pasma `heat_cool` zachowują działanie. Zapisane ustawienia pozostają. Zmiana odniesienia lub trybu usuwa nieaktualne wspomaganie bez przywracania starego skorygowanego celu na nowy zamiar.
 
 <a id="setup"></a>
 ## Konfiguracja
@@ -48,7 +52,7 @@ Encje obsługujące tylko zakresy mogą otrzymywać zaplanowane pary także w Og
 2. Rozwiń urządzenie, które chcesz skonfigurować.
 3. Wybierz czujnik temperatury pomieszczenia.
 4. Włącz **Asystent czujnika pokojowego**.
-5. Ustaw strefę nieczułości Room Assist. Wyznacza ona dolną i górną granicę dla stałego ogrzewania lub chłodzenia, a dla trybów automatycznych i natywnych zakresów — margines neutralny.
+5. Ustaw strefę nieczułości Room Assist dla stałego ogrzewania lub chłodzenia wokół pojedynczego celu lub wybranego odniesienia zakresu; dla automatycznych pojedynczych celów i natywnych pasm `heat_cool` określa ona neutralny margines.
 6. Zwiększ ustawienie **Maksymalna delta wspomagania**, jeśli domyślna wartość jest za mała dla pomieszczenia lub dla różnicy temperatur, której termostat potrzebuje do zatrzymania ogrzewania albo chłodzenia.
 7. Dostosuj opóźnienie odświeżania, jeśli odczyty są uwzględniane zbyt wolno lub zbyt często.
 
@@ -66,6 +70,13 @@ Skala temperatury pokazuje strefę nieczułości jako neutralny, kreskowany pas.
 
 Przy aktualizacji z wersji, w której Room Assist współdzieliło minimalną różnicę z adaptacyjnym przygotowaniem, Velair jednorazowo kopiuje dotychczasową wartość do nowej strefy nieczułości. Zachowuje wcześniejszą szerokość pasa, również gdy historyczna wartość nie jest wielokrotnością nowego kroku 0,1 stopnia. Stałe tryby `heat` i `cool` korzystają następnie z tej wartości w opisanym niżej cyklu histerezy. Po migracji oba ustawienia są niezależne. Nowa lub zresetowana strefa otrzymuje wartość domyślną odpowiednią dla jednostki.
 
+<a id="room-groups"></a>
+### Grupy pomieszczeń
+
+Wybierz grupę w Room Assist i używaj tego samego wyboru czujnika, włącznika, strefy nieczułości, maksymalnej korekty i odświeżania. Własna temperatura grupy pochodzi z urządzenia wybranego w **Grupy pomieszczeń → Odniesienie temperatury**; opcjonalny zewnętrzny czujnik ustawia się tutaj. Wyłączenie lub usunięcie Room Assist przywraca efektywny pomiar tego urządzenia.
+
+Grupa ma jedną wspólną konfigurację i korektę Room Assist, a nie niezależny regulator każdego urządzenia. Velair zachowuje zaplanowany cel pokoju i wysyła skorygowane polecenie według trybu grupy: domyślnie do wszystkich albo wybranego odbiorcy, gdy instalacja już przekazuje polecenia. Kontrole możliwości, kroków i granic nadal dotyczą rzeczywistych odbiorców. Urządzenia pozostają indywidualnie widoczne w przeglądzie.
+
 <a id="understanding-the-live-status"></a>
 ## Znaczenie bieżącego stanu
 
@@ -78,7 +89,7 @@ Karta Room Assist informuje, co Velair może obecnie zrobić dla każdego urząd
 | **Bezczynny** | Funkcja jest włączona, ale nie ma zgodnego aktywnego bloku temperatury lub danych do obliczeń. |
 | **Gotowy** | Są wymagane odczyty i temperatura docelowa, ale korekta nie została jeszcze zastosowana. |
 | **Wspomaganie** | Zastosowano tymczasową korektę temperatury lub przesunięcie zakresu. |
-| **Utrzymywanie** | Room Assist utrzymuje neutralną temperaturę automatyczną, natywny zakres lub temperaturę po bezpiecznej stronie dzięki ochronie harmonogramu. Cykl `heat` lub `cool` może zamiast tego nadal pokazywać **Wspomaganie** podczas przechodzenia przez strefę nieczułości. |
+| **Utrzymywanie** | Room Assist utrzymuje neutralną temperaturę automatyczną, natywny zakres `heat_cool` lub temperaturę po bezpiecznej stronie dzięki ochronie harmonogramu. Cykl `heat` lub `cool` może zamiast tego nadal pokazywać **Wspomaganie** podczas przechodzenia przez strefę nieczułości. |
 | **Zablokowany** | Pauza, Wzmocnienie, sterowanie ręczne lub inny stan harmonogramu ma pierwszeństwo. |
 | **Niedostępny** | Nie można obecnie użyć urządzenia lub wymaganej możliwości ustawiania temperatury. Interfejs pokazuje przyczynę, jeśli jest znana. |
 
@@ -348,7 +359,7 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-Cztery pola histerezy są opcjonalne. Pojawiają się przy pojedynczej temperaturze w stałym trybie `heat` lub `cool` z niezerową strefą nieczułości. Nie występują przy dotychczasowej korekcie z zerową strefą, pojedynczych temperaturach automatycznych ani natywnych zakresach.
+Cztery pola histerezy są opcjonalne. W zdarzeniach automatyzacji występują dla pojedynczego celu w stałym `heat` lub `cool` z niezerową strefą nieczułości; nie występują przy starszej korekcie bez strefy, automatycznych pojedynczych celach i wszystkich zakresach. Stałe zakresy z odniesieniem pokazują fazę histerezy w stanie działania na żywo; ich zdarzenia zachowują pełne pary granic i `range_shift`.
 
 Aktualizacja zakresu korzysta z pełnych pasów zaplanowanych i zastosowanych zamiast pól pojedynczej temperatury:
 

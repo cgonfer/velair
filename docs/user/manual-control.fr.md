@@ -8,8 +8,8 @@ Traductions: [Original en anglais](manual-control.md) · [Español](manual-contr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.5 |
-| Dernière synchronisation | 2026-10-24 |
+| Version de référence | 1.9.0-beta.6 |
+| Dernière synchronisation | 2026-10-28 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -45,6 +45,15 @@ Velair distingue toujours ces concepts :
 | Pause ou arrêt global | Tous les appareils | Le planificateur est globalement en pause ou désactivé. |
 
 Ces états peuvent coexister. Le mode Velair **Manuel** peut sélectionner le profil `Sleep` tandis que `climate.living_room` est en **Réglage manuel**. Le profil reste la configuration de programmation de référence, mais cet appareil conserve son réglage externe jusqu’à la fin du réglage manuel.
+
+<a id="room-groups"></a>
+## Groupes de pièce
+
+Pour un [groupe de pièce](room-groups.fr.md#pauses-manual-adjustment-and-resuming), la portée par équipement décrite ci-dessus devient une unité de contrôle partagée. Les Paramètres enregistrent une politique de **Réglages externes** pour le groupe. Un changement externe détecté sur un membre peut céder l’autorité de programmation de toute la pièce ; il ne crée pas de session Manuelle indépendante pour cet appareil.
+
+Velair conserve l’état actuel de chaque membre au lieu de copier la cible modifiée aux autres. Avec **Jusqu’au prochain bloc**, tous reviennent à la programmation partagée à ce bloc. Reprendre Automatique depuis n’importe quel membre résout également l’action vers le groupe et réapplique son intention actuelle aux destinataires configurés, sous réserve des motifs de pause restants. Les pauses explicites de zone et les forçages demandés depuis un membre appartiennent aussi au groupe entier.
+
+L’onglet de configuration du groupe montre l’état du contrôle sans bouton de pause distinct. Les réglages de Confort et observations physiques restent individuels.
 
 <a id="what-velair-observes"></a>
 ## Ce que Velair observe

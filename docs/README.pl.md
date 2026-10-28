@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](README.md) · [Español](README.e
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.5 |
-| Ostatnia synchronizacja | 2026-10-24 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -25,6 +25,7 @@ Dokumentacja Velair jest podzielona według odbiorców i tematów.
 
 - [Instalacja](user/installation.pl.md): instalacja Velair przez HACS lub ręcznie.
 - [Użytkowanie](user/usage.pl.md): konfiguracja encji klimatu, harmonogramów, szablonów, profili, wzmocnień, pauz, importu/eksportu i usług.
+- [Grupy pomieszczeń](user/room-groups.pl.md): współdziel harmonogram, sterowanie i uczenie jednego pokoju między urządzeniami, obserwując każde osobno.
 - [Nawigacja panelu i bezpośrednie odnośniki](user/usage.pl.md#panel-navigation-and-direct-links): odnośniki do kart i podsekcji, przywracanie sekcji po odświeżeniu i historia przeglądarki.
 - [Zmiany zewnętrzne i regulacja ręczna](user/manual-control.pl.md): wybór między zachowaniem automatycznego sterowania przez Velair a respektowaniem zmian z kart HA, pilotów, urządzeń i automatyzacji.
 - [Zewnętrzne wykonywanie harmonogramów](user/external-systems.pl.md): publikowanie zgodnych, efektywnych harmonogramów tygodniowych, uwzględniających Profile i Tryby, do obsługiwanych sterowników bez mieszania logiki dostawcy z harmonogramem Velair.

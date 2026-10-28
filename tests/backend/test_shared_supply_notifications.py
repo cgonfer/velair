@@ -109,7 +109,8 @@ class SharedSupplyNotificationTests(unittest.IsolatedAsyncioTestCase):
         await self.flush()
         self.switch("off")
         await self.flush()
-        self.assertEqual(self.notices(), [])
+        self.assertEqual(len(self.notices()), 1)
+        self.assertIn("paused until", self.notices()[0][2]["message"])
         self.assertTrue(self.controller.get_statuses()["boiler"]["suspended"])
 
     async def test_relevant_output_attribute_changes_keep_context_tracking_bounded(self):
@@ -231,11 +232,47 @@ class SharedSupplyNotificationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_absent_logbook_is_skipped(self):
         await self.idle()
-        self.hass.services.has_service = lambda domain, service: False
+        self.hass.services.has_service = lambda domain, service: domain == "persistent_notification"
         self.switch("on")
         await self.flush()
         self.assertEqual(len(self.notices()), 1)
         self.assertEqual(self.notices("logbook"), [])
+
+    async def test_external_off_reports_pause_once_with_independent_correction_cooldown(self):
+        await self.idle()
+        self.switch("on")
+        await self.flush()
+        self.assertEqual(len(self.notices()), 1)
+        # A recent correction must not suppress a subsequent pause notification.
+        self.hass.states["climate.room"] = fixtures.state(temperature=20)
+        self.controller.request_refresh()
+        await self.flush()
+        self.switch("off")
+        await self.flush()
+        self.assertEqual(len(self.notices()), 2)
+        self.assertEqual(len(self.notices("logbook")), 2)
+        payload = self.notices()[-1][2]
+        self.assertEqual(payload["notification_id"], "velair_supply_control_boiler_paused")
+        for fragment in ("outside Velair", "paused until", "Resume automatic control", "Boiler"):
+            self.assertIn(fragment, payload["message"])
+        self.assertNotIn("manually", payload["message"])
+        for _ in range(20):
+            self.controller.request_refresh()
+        await self.flush()
+        self.switch("on")
+        self.switch("off")
+        await self.flush()
+        self.assertEqual(len(self.notices()), 2)
+
+    async def test_pause_notification_failure_keeps_paused_and_records_activity(self):
+        self.services(fail_notification=True)
+        self.hass.states["switch.boiler"] = fixtures.state("on")
+        await self.start()
+        self.switch("off")
+        await self.flush()
+        self.assertTrue(self.controller.get_statuses()["boiler"]["suspended"])
+        self.assertEqual(len(self.notices("logbook")), 1)
+        self.assertIn("paused until", self.notices("logbook")[0][2]["message"])
 
     async def test_suspension_and_reconfiguration_drop_pending_candidate(self):
         await self.idle()

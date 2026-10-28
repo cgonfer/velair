@@ -68,3 +68,13 @@ describe("resource editor integration", () => {
     expect(backendErrorMessage({ code: "resource_in_use", message: "Preset is in use", details: { usages: [{ source: "profile", profile_key: "winter", entity_id: "climate.room", weekday: "monday" }] } }, "Failed")).toBe("Preset is in use\nwinter · climate.room · monday");
   });
 });
+
+
+describe("opaque backend errors", () => {
+  it.each(["Unknown error", " unknown_error ", "UNKNOWN", " ", ""])("replaces %s with actionable fallback and retains its code", (message) => {
+    expect(backendErrorMessage({ code: "unknown_error", message }, "Reload and retry.")).toBe("Reload and retry. (unknown_error)");
+  });
+  it("preserves useful backend reasons and destination details", () => {
+    expect(backendErrorMessage({ code: "room_group_save_failed", message: "Disk unavailable", details: { usages: [{ entity_id: "climate.a" }] } }, "Failed")).toBe("Disk unavailable\nclimate.a");
+  });
+});

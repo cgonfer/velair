@@ -22,12 +22,32 @@ import type {
 export class VelairApiClient {
   public constructor(private readonly hass: HomeAssistant) {}
 
+  public previewRoomGroup(request: { group: import("../types").RoomGroup; expected_revision: number; source_entity_id?: string }): Promise<import("../types").RoomGroupPreview> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_room_group", ...request });
+  }
+
+  public setRoomGroup(request: { group: import("../types").RoomGroup; expected_revision: number; source_entity_id?: string }): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/set_room_group", ...request });
+  }
+
+  public removeRoomGroup(group_id: string, expected_revision: number): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/remove_room_group", group_id, expected_revision });
+  }
+
   public previewTargetRangePolicy(request: import("../types").TargetRangePolicyRequest): Promise<import("../types").TargetRangePolicyPreview> {
     return this.hass.connection.sendMessagePromise({ type: "velair/preview_target_range_policy", ...request });
   }
 
   public applyTargetRangePolicy(request: import("../types").TargetRangePolicyRequest): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise({ type: "velair/apply_target_range_policy", ...request });
+  }
+
+  public updateZoneRangeReference(request: {
+    entity_id: string;
+    target_range_reference: import("../types").TargetRangeReference;
+    expected_revision: number;
+  }): Promise<ScheduleResponse> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/update_zone_range_reference", ...request });
   }
 
   public updatePlannedReturn(planned_return: PlannedReturnConfig): Promise<ScheduleResponse> {
@@ -96,6 +116,12 @@ export class VelairApiClient {
     callback: (message: { loaded: boolean; diagnostics?: DiagnosticsSnapshot }) => void,
   ): Promise<() => Promise<void> | void> {
     return this.hass.connection.subscribeMessage(callback, { type: "velair/subscribe_diagnostics" });
+  }
+
+  public subscribeSharedDemand(
+    callback: (message: { loaded: boolean; shared_demand?: Record<string, import("../types").SharedDemandStatus> }) => void,
+  ): Promise<() => Promise<void> | void> {
+    return this.hass.connection.subscribeMessage(callback, { type: "velair/subscribe_shared_demand" });
   }
 
   public subscribeUpdates(

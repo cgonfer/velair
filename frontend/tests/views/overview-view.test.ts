@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { html, render } from "lit";
+import { renderCardContent } from "../../src/velair/views/card-content";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VelairViewHost } from "../../src/velair/host-types";
@@ -855,6 +856,7 @@ describe("overview next events", () => {
     const activity = container.querySelector(".overview-zone-activity");
     expect(activity?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:calendar-clock");
     expect(activity?.querySelector("strong")?.textContent).toBe("action:idle");
+    expect(activity?.querySelector(".overview-zone-activity-summary.stacked")).not.toBeNull();
     expect(activity?.querySelector(".overview-zone-activity-context")?.textContent)
       .toBe("overviewZoneScheduled · mode:off");
   });
@@ -987,6 +989,7 @@ describe("overview next events", () => {
       expect(activity?.className).toBe("overview-zone-activity state-scheduled");
       expect(activity?.querySelector("strong")?.textContent).toBe("overviewZoneScheduled");
       expect(activity?.querySelector(".overview-zone-activity-context")).toBeNull();
+      expect(activity?.querySelector(".overview-zone-activity-summary.stacked")).toBeNull();
     }
   });
 
@@ -1289,6 +1292,49 @@ describe("overview next events", () => {
     expect(container.textContent).toContain("preconditioningMasterStateUnknown");
     expect(container.textContent).not.toContain("preconditioningDependencyMissing");
     expect(container.querySelectorAll(".preconditioning-dependency")).toHaveLength(1);
+  });
+
+  it.each(["heat", "cool"])("keeps the master beside its %s climate and reveals its reason on demand", (hvacMode) => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const viewHost = {
+      ...host(),
+      _friendlyEntityName: (entityId: string) => entityId === "climate.master" ? "Hall" : "Office",
+      _data: {
+        configured_entities: ["climate.office", "climate.bedroom"],
+        next_events: [
+          { entity_id: "climate.office", hvac_mode: hvacMode, temperature: 21, start: "08:00",
+            weekday: "monday", when: "2026-06-22T08:00:00+02:00",
+            preconditioning_dependency: { master_entity_id: "climate.master", reason: "master_missing",
+              reason_detail: "master_preconditioning_disabled", result: "blocked" } },
+          { entity_id: "climate.bedroom", hvac_mode: "off", start: "09:00",
+            weekday: "monday", when: "2026-06-22T09:00:00+02:00" },
+        ],
+        zones: {},
+      },
+      _orderedZoneIds: (entityIds: string[]) => entityIds,
+    } as unknown as VelairViewHost;
+    try {
+      render(renderNextEvents(viewHost), container);
+      const identity = container.querySelector('.effective-event[data-entity-id="climate.office"] .effective-event-identity')!;
+      expect(identity.querySelector(".overview-climate-name")?.textContent).toBe("Office");
+      expect(identity.querySelector(".effective-event-master")?.textContent).toContain("Hall");
+      expect(container.querySelector(".preconditioning-dependency")).toBeNull();
+      expect(container.querySelectorAll(".effective-event-master")).toHaveLength(1);
+      const button = identity.querySelector<HTMLButtonElement>(".effective-event-master button")!;
+      const tooltip = identity.querySelector('[role="tooltip"]')!;
+      expect(tooltip.textContent).toContain("preconditioningMasterPreconditioningDisabled");
+      expect(tooltip.textContent).not.toContain("preconditioningDependencyMissing");
+      expect(button.getAttribute("aria-expanded")).toBe("false");
+      expect(tooltip.classList.contains("visible")).toBe(false);
+      button.click();
+      expect(button.getAttribute("aria-expanded")).toBe("true");
+      expect(tooltip.classList.contains("visible")).toBe(true);
+      button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(button.getAttribute("aria-expanded")).toBe("false");
+    } finally {
+      container.remove();
+    }
   });
 
   it("keeps the compact single time for a normal next event", () => {
@@ -1801,7 +1847,7 @@ describe("overview timeline", () => {
     expect(overviewStyles.cssText).toMatch(/\.overview-timeline-name ha-icon\s*\{[^}]*height:\s*100%/);
   });
 
-  it("shows an unverified climate reading as information in the zone overview", () => {
+  it("keeps unverified reading metadata out of the zone overview", () => {
     const container = document.createElement("div");
     const overviewHost = {
       ...host(),
@@ -1819,21 +1865,9 @@ describe("overview timeline", () => {
 
     render(renderOverviewZones(overviewHost, ["climate.office"]), container);
 
-    const data = container.querySelector(".overview-zone-signal.comfort-data");
-    expect(data?.classList).toContain("info");
-    expect(data?.querySelector("ha-icon")?.getAttribute("icon"))
-      .toBe("mdi:information-outline");
-    expect(data?.querySelector(".overview-zone-signal-accent small")?.textContent).toBe("overviewZoneDataLabel");
-    expect(data?.querySelector(".overview-zone-signal-value")?.textContent).toBe("comfortDataUnverified");
-    expect(data?.getAttribute("title")).toBeNull();
-    const navigate = vi.fn(); container.addEventListener("click", navigate);
-    const helper = data?.querySelector<HTMLButtonElement>("button")!;
-    helper.click();
-    expect(helper.getAttribute("aria-expanded")).toBe("true");
-    expect(data?.querySelector(".inline-help-tooltip")?.textContent).toBe("overviewZoneDataUnverifiedHelp");
-    expect(en.overviewZoneDataUnverifiedHelp).toContain("when the device measured them");
-    expect(es.overviewZoneDataUnverifiedHelp).toContain("cuándo las midió el dispositivo");
-    expect(navigate).not.toHaveBeenCalled();
+    expect(container.querySelector(".overview-zone-signal.comfort-data")).toBeNull();
+    expect(container.querySelector(".comfort-environment")?.textContent)
+      .toContain("comfortConditionComfortable");
   });
 });
 
@@ -1852,4 +1886,129 @@ it.each([
   render(renderOverviewZones(viewHost, ["climate.office"]), container);
   expect((container.querySelector(".overview-zone-details")?.textContent ?? "")).not.toContain("22 °C");
   if (expected) expect(container.querySelector(".overview-zone-details")?.textContent).toContain(expected);
+});
+
+it("shows unavailable physical group members without stale activity or readings while retaining group policy", () => {
+  const viewHost = host();
+  viewHost.hass = { states: { "climate.valve": { state: "unavailable", attributes: { hvac_action: "heating", current_temperature: 19.3, temperature: 21 } } } } as never;
+  viewHost._data = {
+    configured_entities: ["climate.valve"], member_to_unit: { "climate.valve": "group.room" },
+    zones: { "group.room": { enabled: true, schedule: {} } },
+    zone_runtime: { "group.room": { state: "scheduled", room_temperature: 20, target_temperature: 21 } },
+    next_events: [{ entity_id: "group.room", when: "2030-01-01T08:00:00Z" }],
+  } as never;
+  const container = document.createElement("div");
+  render(renderOverviewZones(viewHost, ["climate.valve"]), container);
+  const activity = container.querySelector(".overview-zone-activity")!;
+  expect(activity.textContent).toContain("roomGroupUnavailable");
+  expect(activity.textContent).toContain("overviewZoneScheduled");
+  expect(activity.textContent).toContain("overviewZoneNextAt");
+  expect(activity.textContent).not.toContain("action:heating");
+  expect(container.textContent).not.toContain("19.3");
+});
+
+
+describe("physical next events for room groups", () => {
+  function groupedHost(phase = "scheduled") {
+    const event = { entity_id: "group.room", weekday: "monday", start: "08:00", when: "2030-01-07T07:00:00Z", target_when: "2030-01-07T08:00:00Z", temperature: 21, hvac_mode: "heat" };
+    return {
+      ...host(),
+      _data: {
+        configured_entities: ["climate.a", "climate.b", "climate.other"],
+        control_units: ["group.room", "climate.other"],
+        room_groups: { "group.room": { name: "Room", members: ["climate.b", "climate.a"] } },
+        member_to_unit: { "climate.a": "group.room", "climate.b": "group.room" },
+        zones: {}, next_events: [],
+        next_effective_events: [{ entity_id: "group.room", phase, source: phase === "scheduled" ? "weekly_schedule" : "planned_return", when: event.when, event, weekly_event: event, return_at: event.target_when }],
+      },
+      _friendlyEntityName: (id: string) => id === "group.room" ? "Room" : id,
+      _openNextEventSchedule: vi.fn(),
+    } as unknown as VelairViewHost;
+  }
+  it.each(["scheduled", "preparation", "arrival", "suspended"])("projects %s per member while retaining a single authoritative group event", phase => {
+    const viewHost = groupedHost(phase);
+    const before = JSON.stringify(viewHost._data);
+    const container = document.createElement("div");
+    render(renderNextEvents(viewHost), container);
+    const rows = [...container.querySelectorAll<HTMLElement>(".effective-event")];
+    expect(rows.map(row => row.dataset.entityId)).toEqual(["climate.b", "climate.a"]);
+    expect(rows.every(row => row.dataset.controlUnitId === "group.room" && row.dataset.phase === phase)).toBe(true);
+    expect(rows.every(row => row.querySelector(".overview-group-ownership")?.textContent?.includes("Room"))).toBe(true);
+    expect(container.querySelectorAll('[id="next-event-climate.a"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[id="next-event-climate.b"]')).toHaveLength(1);
+    expect(JSON.stringify(viewHost._data)).toBe(before);
+  });
+  it.each([{ selected: ["climate.a"] }, { selected: ["group.room"] }])("honors physical or group filters $selected", ({ selected }) => {
+    const container = document.createElement("div");
+    render(renderNextEvents(groupedHost(), selected), container);
+    const ids = [...container.querySelectorAll<HTMLElement>(".effective-event")].map(row => row.dataset.entityId);
+    expect(ids).toEqual(selected[0] === "climate.a" ? ["climate.a"] : ["climate.b", "climate.a"]);
+  });
+  it("opens shared programming through the existing navigation action and retains owner update highlighting", () => {
+    const viewHost = groupedHost();
+    viewHost._changedNextEventIds.add("group.room");
+    const container = document.createElement("div");
+    render(renderNextEvents(viewHost), container);
+    const row = container.querySelector('[data-entity-id="climate.a"]')!;
+    const button = row.querySelector<HTMLButtonElement>("button.effective-event-schedule")!;
+    expect(button.type).toBe("button");
+    expect(button.getAttribute("aria-label")).toContain("climate.a");
+    button.click();
+    expect(viewHost._openNextEventSchedule).toHaveBeenCalledWith("climate.a", "monday", undefined);
+    expect(row.querySelector(".next-event-updated")).not.toBeNull();
+    expect(row.querySelector(".target-time")?.textContent).toContain("2030-01-07T08:00:00Z");
+  });
+  it("keeps an explicit member filter in a dashboard card even when shared selectors resolve its group", () => {
+    const base = groupedHost();
+    const viewHost = {
+      ...base,
+      _data: { ...base._data, temperature_migration: { required: false } },
+      _config: { view: "overview-events", entities: ["climate.a"] },
+      _effectiveView: () => "overview-events",
+      _hasExternalConfig: true,
+      _orderedZoneIds: (ids: string[]) => ids,
+      _visibleZoneIds: () => ["group.room"],
+    } as unknown as VelairViewHost;
+    const container = document.createElement("div");
+    render(renderCardContent(viewHost), container);
+    expect([...container.querySelectorAll<HTMLElement>(".effective-event")].map(row => row.dataset.entityId)).toEqual(["climate.a"]);
+  });
+  it("passes the planned-return destination mode when opening its shared programming", () => {
+    const viewHost = groupedHost("preparation");
+    viewHost._data!.next_effective_events![0].mode_id = "home";
+    const container = document.createElement("div");
+    render(renderNextEvents(viewHost), container);
+    container.querySelector<HTMLButtonElement>('[data-entity-id="climate.a"] .effective-event-schedule')!.click();
+    expect(viewHost._openNextEventSchedule).toHaveBeenCalledWith("climate.a", "monday", "home");
+  });
+  it("separates climate titles from the shared group subtitle in events and today's timeline", () => {
+    const viewHost = groupedHost();
+    const groupName = "A long shared room group name";
+    viewHost._friendlyEntityName = (id: string) => id === "group.room" ? groupName : "Physical climate";
+    const events = document.createElement("div");
+    const timeline = document.createElement("div");
+    render(renderNextEvents(viewHost, ["climate.a"]), events);
+    render(renderOverviewTimelineName(viewHost, "climate.a"), timeline);
+    for (const container of [events, timeline]) {
+      const identity = container.querySelector(".overview-climate-identity")!;
+      expect(identity.querySelector(".overview-climate-name")?.textContent).toBe("Physical climate");
+      const subtitle = identity.querySelector(".overview-group-subtitle")!;
+      expect(subtitle.textContent).toBe(groupName);
+      expect(subtitle.getAttribute("title")).toContain(groupName);
+      expect(identity.firstElementChild?.nextElementSibling).toBe(subtitle);
+    }
+    // Event spans are secondary 12px text. Keep the original strong title so
+    // that generic event styling cannot also dim/shrink the climate name.
+    expect(events.querySelector(".effective-event-schedule > strong.overview-climate-name")?.textContent)
+      .toBe("Physical climate");
+    expect(events.querySelector(".effective-event-schedule > span.overview-climate-name")).toBeNull();
+    expect(timeline.querySelector(".overview-timeline-name")?.getAttribute("title")).toContain(groupName);
+  });
+  it("does not manufacture group rows when the authoritative projection is empty", () => {
+    const viewHost = groupedHost();
+    viewHost._data!.next_effective_events = [];
+    const container = document.createElement("div");
+    render(renderNextEvents(viewHost), container);
+    expect(container.querySelector(".effective-event")).toBeNull();
+  });
 });

@@ -1,6 +1,7 @@
 import { renderTemplateApplication as renderTemplateApplyPanel } from "./template-application-view";
 import { html, nothing } from "lit";
 import { renderDocumentationHelp } from "./documentation-links";
+import { renderEmptyLibrary } from "./empty-library";
 import { keyed } from "lit/directives/keyed.js";
 import { editableBlockRowKey, renderAddBlockButton, renderDraftListHeader, renderEditableBlock, renderTimeline } from "./schedule-view";
 import type { VelairViewHost } from "../host-types";
@@ -64,18 +65,7 @@ function renderDailyTemplatesView(host: TemplatesViewHost, selectedEntity?: stri
     return html`
       <section class="templates-view">
         <div class="template-library">
-          <div class="template-placeholder compact">
-            <span>${host._t("noTemplates")}</span>
-            <button
-              class="icon-button primary"
-              type="button"
-              ?disabled=${host._templateAction === "save"}
-              @click=${() => host._createTemplate()}
-              title=${host._t("createTemplate")}
-            >
-              <ha-icon icon="mdi:plus"></ha-icon>
-            </button>
-          </div>
+          ${renderEmptyLibrary({ message: host._t("noTemplates"), addLabel: host._t("createTemplate"), disabled: host._templateAction === "save", onAdd: () => host._createTemplate() })}
         </div>
       </section>
     `;

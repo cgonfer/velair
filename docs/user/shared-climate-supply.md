@@ -58,7 +58,7 @@ the mode; you can override its numeric values without configuring another mode.
 In each selected thermostat row, **Thermostat hysteresis** chooses **Use supply
 hysteresis** or **Custom hysteresis values**. The selector aligns with the
 thermostat checkbox/name; numeric exceptions and effective limits appear below.
-In Custom mode, each of the two values can inherit independently. Values are temperature
+In **Custom hysteresis** mode, each of the two values can inherit independently. Values are temperature
 differences in the panel's current temperature unit; changing units converts
 these differences without treating them as absolute temperatures.
 
@@ -78,12 +78,67 @@ Home Assistant or connection errors retain their original explanation without
 assigning them to an unrelated field. Drafts remain available for correction
 and retry, including after removing the final supply.
 
+## Live status
+
+Choose **Live status** in a saved supply's detail header to open its read-only
+monitor. It uses the saved configuration, even while the editor has unsaved
+changes. Newly added supplies need to be saved before their monitor is available.
+
+The summary shows the supply switch state reported by Home Assistant, the number
+of thermostats requesting supply, and the automatic-control state, including
+minimum-off or switch-off waits. A request and an On switch do not confirm
+physical heating, cooling, valve opening or flow.
+
+When demand is evaluated and its readings are available, each thermostat has a
+temperature line showing its current reading, effective target and start/stop
+thresholds. A hatched band using the same theme colour as Room Assist marks the
+interval between the two limits, independently of whether supply is requested.
+When the room requests supply, a thin coloured arrow lies on the temperature
+track from the current reading towards the stop limit: orange for heating,
+blue for cooling. It indicates requested temperature direction, not physical
+heat flow or confirmed equipment operation. With no demand the arrow disappears
+and the current marker is neutral; the static band remains visible. Temperature increases
+from left to right for both heating and cooling. Values and threshold labels
+remain visible without hovering, including on mobile screens.
+Current and target values are centred over their actual positions on the line;
+close labels use separate rows. Each start/stop marker groups its threshold
+temperature and signed distance from target, so the readings and their distances
+can be understood together without a separate limits table.
+
+Labels emphasise the next relevant switching limit. During demand, **Stops at**
+identifies the stop limit. Before the current reading passes the start threshold,
+that threshold is simply the **Lower limit** for heating or **Upper limit** for
+cooling. Once the reading passes it into the retained band, **Restarts at**
+identifies the boundary for the next cycle. With no demand, **Starts at** is
+highlighted and the other boundary uses a neutral limit label. Coincident limits
+share a single marker. Unknown demand stays neutral without assuming a request.
+
+When Room Assist owns demand, the monitor identifies that source and uses its
+room sensor and committed control limits instead of treating a corrected
+thermostat setpoint as the room target. A compact **Why isn't my hysteresis
+used?** question opens an explanation of Room Assist's priority and the inactive
+saved supply settings. It stays closed until selected and preserves the chosen
+open state during live updates. Normal start/stop instructions are not repeated
+below the graph; unavailable or unevaluated data still has an explanation. For example,
+a 17 °C comfort target with Room Assist limits of 16 and 18 °C means a start
+distance of 1 °C below target and a stop distance of 1 °C above target, even if
+the unused supply start distance is 0.2 °C. Native Room Assist ranges can use
+one switching boundary: coincident start/stop markers do not mean that the
+distance from the comfort target is zero. Missing readings or unevaluated demand
+are shown explicitly rather than retaining an earlier request as live data.
+Off thermostats and disabled or suspended supplies keep available current
+readings visible without presenting unevaluated targets or control limits.
+
+The monitor receives updates while open and stops its subscription when closed.
+It shows the latest readings reported to Home Assistant; it does not increase
+the devices' reporting frequency, simulate temperatures, or store a history.
+
 ## How estimated demand works
 
-New supplies created in the panel use **Stop at target**, with a start distance
-of **0.3 °C** or **0.54 °F** and a zero stop distance. These are equivalent
+New supplies created in the panel use **Stop at target**, with **Activation
+hysteresis** of **0.3 °C** or **0.54 °F** and zero **Deactivation hysteresis**. These are equivalent
 temperature differences; thermostat overrides inherit the supply values unless
-you choose custom values. The examples below use different distances to show
+you choose custom values. The examples below use different values to show
 each mode clearly.
 
 For ordinary thermostats, hysteresis defines a start threshold and a stop
@@ -92,9 +147,9 @@ the threshold itself. These examples use a 22 °C target:
 
 | Mode | Values | Heating: start / stop | Cooling: start / stop |
 | --- | --- | --- | --- |
-| Stop at target (default) | Start distance 0.5 °C | ≤21.5 / ≥22 °C | ≥22.5 / ≤22 °C |
-| Symmetric | Distance 0.5 °C | ≤21.5 / ≥22.5 °C | ≥22.5 / ≤21.5 °C |
-| Custom | Start 0.5 °C; stop 0.2 °C | ≤21.5 / ≥22.2 °C | ≥22.5 / ≤21.8 °C |
+| Stop at target (default) | Activation hysteresis 0.5 °C | ≤21.5 / ≥22 °C | ≥22.5 / ≤22 °C |
+| Symmetric | Symmetric hysteresis 0.5 °C per side | ≤21.5 / ≥22.5 °C | ≥22.5 / ≤21.5 °C |
+| Custom hysteresis | Activation hysteresis 0.5 °C; deactivation hysteresis 0.2 °C | ≤21.5 / ≥22.2 °C | ≥22.5 / ≤21.8 °C |
 
 The temperature diagram in **Demand and hysteresis** updates as you edit the
 supply's purpose, mode or distances. It uses a labelled example target rather than
@@ -109,15 +164,18 @@ Its example target is 22 °C or 72 °F. If a numeric value is empty, incomplete 
 invalid while editing, a grey diagram without temperature readings preserves
 the preview's height until the value is valid again.
 
-Start distance is measured away from the target before heating or cooling is
-needed. Stop distance extends beyond the target in the direction of heating or
-cooling. Both accept zero; with both zero, exactly at target means no demand.
+**Activation hysteresis** is the temperature difference from the target before
+heating or cooling is requested. **Deactivation hysteresis** is the temperature
+difference past the target before the request stops. **Symmetric hysteresis**
+applies the same temperature difference on each side of the target; it is not
+the total band width. **Custom hysteresis** lets you set activation and
+deactivation separately. Both accept zero; with both zero, exactly at target means no demand.
 Inside the band after a restart, target change or hysteresis configuration change,
 no new demand is assumed. Switching modes preserves previously entered custom
-stop values, which apply again when you return to Custom mode.
+stop values, which apply again when you return to **Custom hysteresis** mode.
 
 **Stop at target** is the recommended starting point for ordinary thermostats.
-Symmetric and Custom are advanced choices: a thermostat may close its valve or
+**Symmetric** and **Custom hysteresis** are advanced choices: a thermostat may close its valve or
 stop its compressor at the target before the room reaches a beyond-target stop
 threshold. The shared source could then remain requested. These settings estimate
 demand; they do not change the thermostat's own switching limits or force heat flow.
@@ -136,7 +194,10 @@ With no valid requesting room, the supply requests off after its configured dela
 Current thermostat targets are used, including manual changes and targets applied
 by Adaptive Preconditioning or Planned Return. Pausing a schedule does not disable
 automatic supply control. A valid temperature range uses its lower bound for
-heating and upper bound for cooling; an ambiguous target cannot request supply.
+heating and upper bound for cooling by default. For a fixed Heat or Cool range
+with a **Reference setpoint** selected in **Settings → Managed climates**, supply
+control uses that same selected boundary and the fixed mode's direction. An
+ambiguous target cannot request supply.
 
 ## Room Assist
 
@@ -156,10 +217,30 @@ the same adjusted target.
 
 ## Timing and manual control
 
-**Minimum time off** delays a new start after the switch turns off. **Switch-off
-delay** requires a continuous period without demand before switching off; returning
-demand cancels that delay. Both accept whole seconds from 0 to 86,400 and default
-to zero. There is no forced
+**Switch-on delay** requires continuous estimated demand before starting the supply.
+If demand disappears or becomes unknown, the countdown resets. The countdown
+belongs to the supply: one room can stop requesting while another continues
+without restarting it. **Minimum time off** delays a new start after the switch
+turns off. When demand appears, the wait is whichever is longer: the **remaining
+minimum time off** or the **full switch-on delay**. They are not added together.
+
+For example, with a 60-second minimum time off and a 20-second switch-on delay:
+
+- If the supply has been off for a day, protection has already finished. Wait
+  only 20 seconds from when demand appears.
+- If demand appears immediately after shutdown, wait 60 seconds, the longer of
+  the two configured times.
+- If demand appears 50 seconds after shutdown, only 10 seconds of protection
+  remain. Wait 20 seconds from when demand appears, allowing a start 70 seconds
+  after shutdown.
+
+Demand must remain present throughout the wait. Live status shows the remaining
+wait and whether demand confirmation or minimum time off is preventing the start.
+Setting either timing option to zero disables only that wait; the other still applies.
+
+**Switch-off delay** requires a continuous period without demand before switching
+off; returning demand cancels that delay. All three timing settings accept whole
+seconds from 0 to 86,400 and default to zero. There is no forced
 minimum on period keeping the source active after valves may have closed.
 
 Renaming a supply or editing a currently unused stop distance does not restart
@@ -167,7 +248,13 @@ its demand cycle or switch-off delay. Re-enabling a supply uses the switch's
 latest reported off transition to enforce its minimum time off.
 
 Turning an enabled supply's switch off outside Velair suspends automatic
-control. Use **Resume automatic control** to resume it. The suspension is saved
+control. A persistent Home Assistant notification and an Activity entry explain
+that the supply was turned off outside Velair and remains paused until resumed.
+The pause reason also appears beside **Resume automatic control** and in Live
+status. Available room temperatures remain visible while automatic control is paused.
+Use **Resume automatic control** to evaluate current demand again; resuming does
+not necessarily turn the supply on. A new switch-on delay starts when demand is
+confirmed, and minimum time off still applies. The suspension is saved
 across restarts. Saving other supply changes does not clear it. Disabling or
 removing a supply requests off for its previously controlled output.
 
@@ -183,7 +270,9 @@ to review or disable that control. It does not assume a person caused the change
 Repeated corrections for the same supply and switch are reported at most once
 every 15 minutes during the current integration run. Reassigning the switch starts
 a new reporting period. Each supply uses one notification, so a later allowed
-notice replaces its previous notice. Delivery failures or service acceptance
+correction notice replaces its previous correction notice. Pause notices have a
+separate notification and 15-minute reporting limit; a recent correction does not
+hide a subsequent pause. Delivery failures or service acceptance
 without a matching reported off transition do not produce a success notice.
 Unknown thermostat demand is not reported as confirmed zero demand. A switch
 integration that does not preserve the command context cannot provide the

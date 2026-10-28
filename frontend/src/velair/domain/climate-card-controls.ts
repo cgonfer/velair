@@ -1,4 +1,5 @@
-import type { HassState, TargetFormatPolicy, ZoneRuntimeStatus } from "../types";
+import type { HassState, HomeAssistant, ScheduleResponse, TargetFormatPolicy, ZoneRuntimeStatus } from "../types";
+import { controlUnitId, controlUnitState } from "./control-units";
 import {
   climateRequiresRangeTarget,
   climateRangeModeCompatible,
@@ -7,6 +8,19 @@ import {
 } from "./climate";
 
 export type ClimateCardTargetField = "temperature" | "target_temp_low" | "target_temp_high";
+
+/** Keep the displayed member's target, but constrain edits to shared capabilities. */
+export function climateCardControlState(data: ScheduleResponse | undefined, hass: HomeAssistant | undefined, entityId: string): HassState | undefined {
+  const member = hass?.states?.[entityId];
+  const owner = controlUnitId(data, entityId);
+  if (!member || owner === entityId) return member;
+  const shared = controlUnitState(data, hass, owner);
+  return { ...member, attributes: { ...member.attributes,
+    min_temp: shared?.attributes?.min_temp,
+    max_temp: shared?.attributes?.max_temp,
+    target_temp_step: shared?.attributes?.target_temp_step,
+  } };
+}
 
 export const MANUAL_ADJUSTMENT_PAUSE_ID = "velair.manual_adjustment";
 
@@ -68,11 +82,11 @@ export function climateCardTargetPayload(
   if (field === "temperature") return undefined;
   if (field === "target_temp_low") {
     const low = nextGridValue(target.low, direction, grid);
-    if (low === undefined || low > target.high) return undefined;
+    if (low === undefined || low > target.high || target.high > grid.maximum || target.high < grid.minimum) return undefined;
     return { target_temp_low: low, target_temp_high: target.high };
   }
   const high = nextGridValue(target.high, direction, grid);
-  if (high === undefined || high < target.low) return undefined;
+  if (high === undefined || high < target.low || target.low < grid.minimum || target.low > grid.maximum) return undefined;
   return { target_temp_low: target.low, target_temp_high: high };
 }
 

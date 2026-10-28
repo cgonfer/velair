@@ -8,8 +8,8 @@ Traductions: [Original en anglais](comfort.md) · [Español](comfort.es.md) · [
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.6 |
+| Dernière synchronisation | 2026-10-28 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -20,6 +20,8 @@ Traductions: [Original en anglais](comfort.md) · [Español](comfort.es.md) · [
 
 La plage de température confortable par défaut est `20–24 °C`. Si Home Assistant utilise
 les degrés Fahrenheit, elle est de `68–75 °F`, avec des limites arrondies sans décimales.
+
+Le Confort reste indépendant pour chaque équipement physique d’un groupe de pièce. Chaque membre a son activation du suivi, ses sondes et ses seuils, et affiche sa propre évaluation. Le regroupement partage programmation et contrôle de la pièce sans remplacer ces réglages de Confort.
 
 Les seuils de confort utilisent l’unité de température configurée dans Home Assistant et sont
 migrés ou importés avec les autres données thermiques stockées par Velair. Un capteur de température
@@ -42,6 +44,8 @@ La température utilise la première source disponible dans cet ordre :
 1. le capteur de température sélectionné dans l’onglet Confort ;
 2. le capteur Room Assist configuré pour cet appareil ;
 3. l’attribut `current_temperature` de l’entité climatique.
+
+Pour les équipements groupés, la température automatique utilise `current_temperature` du membre physique ; la sonde Room Assist du groupe n’est pas héritée. Sélectionnez explicitement une sonde externe dans le Confort du membre si nécessaire.
 
 L’humidité utilise :
 
@@ -323,13 +327,7 @@ Velair expose une valeur de qualité des données :
 - `stale` : aucune mesure actuelle n’existe et toutes les sources surveillées sont périmées ;
 - `unavailable` : aucune mesure actuelle n’est utilisable pour une autre raison.
 
-Le panneau regroupe les mesures utilisables dont la fraîcheur ne peut être vérifiée dans la section
-**Fraîcheur des données** de la zone, au lieu de répéter la même note à côté de chaque mesure dérivée.
-Une carte Confort Lovelace qui masque la configuration montre un résumé au-dessus des mesures ;
-le diagnostic expose aussi le contexte de fraîcheur. La liste repliée des zones omet cet état
-courant pour rester lisible. C’est une configuration automatique valide avec l’appareil comme source,
-pas une erreur de configuration. Les mesures manquantes ou périmées affichent toujours un
-avertissement dans la liste des zones.
+L’onglet Confort regroupe les relevés utilisables dont la fraîcheur ne peut être vérifiée près des sélecteurs de sondes dans **Configuration → Sources de données**. Une explication discrète identifie les relevés concernés et précise qu’une heure de mesure inconnue ne signifie pas que les valeurs sont incorrectes ni que la pièce est inconfortable. La Vue d’ensemble et les cartes Lovelace omettent cet état courant ; Diagnostic conserve le contexte technique de fraîcheur. C’est une configuration automatique valide à partir de l’équipement, pas une erreur. Les relevés manquants ou périmés gardent un avertissement dans la liste des zones.
 
 <a id="visual-status"></a>
 ## État visuel
@@ -412,15 +410,7 @@ la mesure actuelle. Velair écoute ces rapports et programme la prochaine expira
 panneau, les capteurs et les événements puissent afficher `stale` lorsque l’échéance passe sans
 nouveau rapport.
 
-Le réglage se trouve dans sa propre section **Fraîcheur des données**, après les commandes de sources.
-Cette section regroupe aussi les mesures actuelles dont la fraîcheur n’est pas vérifiable, y compris
-les mesures dérivées activées et les capteurs extérieurs, sans répéter les valeurs extérieures calculées.
-Elle liste les sources directes couvertes par la limite, notamment Room Assist, CO2, les capteurs
-extérieurs ou les capteurs externes de mesures dérivées. Les capteurs extérieurs peuvent la garder
-active même si température et humidité intérieures proviennent toutes deux de l’appareil ; ce délai
-ne rend pas périmées les mesures de l’appareil. Vous pouvez la régler avant d’activer le confort. Si aucune
-source directe n’est configurée, le champ est désactivé avec une explication ; sa valeur enregistrée
-est conservée pour une sélection future de capteur.
+Le réglage reste dans sa propre section **Fraîcheur des données**, après les contrôles de sources. Elle liste les sources directes couvertes par la limite, dont Room Assist, CO2, sondes extérieures ou métriques dérivées externes. L’explication des relevés à fraîcheur non vérifiable apparaît près des sélecteurs de sondes, y compris les métriques dérivées activées et les relevés extérieurs. Les sondes extérieures peuvent maintenir la limite active même si température et humidité intérieures viennent de l’équipement ; elle ne fait pas expirer ces relevés. Vous pouvez la régler avant d’activer le Confort. Sans source directe configurée, le champ est désactivé avec une explication ; sa valeur reste conservée pour une sélection ultérieure.
 
 Les attributs automatiques de température et d’humidité de `climate.*` n’ont pas d’horodatage de
 rapport indépendant. Velair garde une valeur valide visible et marque sa fraîcheur `unverified` ;

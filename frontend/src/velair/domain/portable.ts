@@ -25,6 +25,10 @@ export function portableSectionsWithDependencies(
 ): Set<PortableSection> {
   const result = new Set(selected);
   const source = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  if (result.has("room_groups") || source.room_groups && typeof source.room_groups === "object" && Object.keys(source.room_groups).length
+    && ["zones", "profiles", "preconditioning_learning"].some(section => result.has(section as PortableSection))) {
+    result.add("room_groups"); result.add("zones"); result.add("profiles");
+  }
   if (result.has("planned_return")) {
     const routine = source.planned_return as { away_mode_id?: string; destination_mode_id?: string } | undefined;
     if ([routine?.away_mode_id, routine?.destination_mode_id].some((key) => key && key !== "default")) {
@@ -83,10 +87,11 @@ export function portableSectionsFromPayload(payload?: VelairPortablePayload): Po
 
 export function portableExportSummaryItems(
   sections: Set<PortableSection>,
-  counts: { zones: number; templates: number; preconditioningLearning: number; profiles: number; modes: number; blockPresets?: number },
+  counts: { roomGroups?: number; zones: number; templates: number; preconditioningLearning: number; profiles: number; modes: number; blockPresets?: number },
 ): PortableSummaryItem[] {
   const items: PortableSummaryItem[] = [];
   if (sections instanceof Set ? sections.has("planned_return") : Object.prototype.hasOwnProperty.call(sections, "planned_return")) items.push({ section: "planned_return", value: "included" });
+  if (sections.has("room_groups")) items.push({ section: "room_groups", value: counts.roomGroups ?? 0 });
   if (sections.has("block_presets")) items.push({ section: "block_presets", value: counts.blockPresets ?? 0 });
   if (sections.has("zones")) {
     items.push({ section: "zones", value: counts.zones });
@@ -120,6 +125,7 @@ export function portableImportSummaryItems(payload?: VelairPortablePayload): Por
 
   const items: PortableSummaryItem[] = [];
   if (sections instanceof Set ? sections.has("planned_return") : Object.prototype.hasOwnProperty.call(sections, "planned_return")) items.push({ section: "planned_return", value: "included" });
+  if (Object.prototype.hasOwnProperty.call(sections, "room_groups")) items.push({ section: "room_groups", value: Object.keys(sections.room_groups ?? {}).length });
   if (Object.prototype.hasOwnProperty.call(sections, "block_presets")) items.push({ section: "block_presets", value: Array.isArray(sections.block_presets) ? sections.block_presets.length : 0 });
   if (Object.prototype.hasOwnProperty.call(sections, "zones")) {
     const zones = sections.zones;

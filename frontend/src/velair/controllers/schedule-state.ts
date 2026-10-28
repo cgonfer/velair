@@ -1,3 +1,4 @@
+import { controlUnitId, controlUnitIds } from "../domain/control-units";
 import { configurationFingerprint, resolveDayLayout } from "../domain/day-layouts";
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
@@ -125,9 +126,10 @@ export function applyScheduleData(
   if (isInitialDataLoad) {
     host._selectedWeekday = host._initialScheduleWeekday(data.settings.first_weekday);
   }
-  const zoneIds = host._orderedZoneIds(data.configured_entities);
+  const zoneIds = host._orderedZoneIds(controlUnitIds(data));
+  if (host._selectedEntity && host._config.view !== "climate") host._selectedEntity = controlUnitId(data, host._selectedEntity);
   const visibleZoneIds = host._visibleZoneIds(data.configured_entities);
-  if (!host._selectedEntity || !data.configured_entities.includes(host._selectedEntity)) {
+  if (!host._selectedEntity || !(host._config.view === "climate" ? data.configured_entities : controlUnitIds(data)).includes(host._selectedEntity)) {
     host._selectedEntity = zoneIds[0];
   }
   if (visibleZoneIds.length && host._selectedEntity && !visibleZoneIds.includes(host._selectedEntity)) {

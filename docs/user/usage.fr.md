@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.5 |
-| Dernière synchronisation | 2026-10-24 |
+| Version de référence | 1.9.0-beta.6 |
+| Dernière synchronisation | 2026-10-28 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -20,6 +20,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 <!-- velair-docs:end -->
 
 Ce guide présente Velair du point de vue d’un utilisateur de Home Assistant.
+
+Utilisez les [Groupes de pièce](room-groups.fr.md) lorsque plusieurs équipements contrôlent une même pièce. Le groupe possède une programmation, une affectation de Profil et un modèle d’apprentissage ; la Vue d’ensemble conserve les appareils individuels. Configurez les membres dans Groupes de pièce et l’ordre d’affichage dans Paramètres.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation du panneau et liens directs
@@ -38,6 +40,7 @@ Précédent et Suivant du navigateur suivent également cette navigation.
 | Modèles : Modèles | `/velair/templates/templates` |
 | Modèles : Préréglages climatiques | `/velair/templates/presets` |
 | [Contrôle de l’alimentation](shared-climate-supply.fr.md) | `/velair/supply-control` |
+| [Groupes de pièce](room-groups.fr.md) | `/velair/room-groups` |
 | Capteurs | `/velair/sensors` |
 | Confort | `/velair/comfort` |
 | Anticipation | `/velair/preconditioning` |
@@ -384,7 +387,40 @@ La carte Lovelace accepte les valeurs `view` suivantes :
 - `comfort` ;
 - `preconditioning` ;
 - `planned-return` ;
+- `supply-live`;
 - `diagnostics`.
+
+<a id="supply-live-status-card"></a>
+### Carte de suivi en direct de la fourniture
+
+Choisissez la vue `supply-live` dans l’éditeur visuel et sélectionnez par son nom une fourniture configurée dans le contrôle de fourniture. La carte intègre le même suivi en lecture seule que le panneau latéral : mesures du backend, consignes, hystérésis et demande de chauffage ou de refroidissement, avec un climate par ligne et une hauteur adaptée au contenu. Elle reçoit les mises à jour en direct tant qu’elle est montée, même hors de la zone visible ; retirer la carte libère l’abonnement. Elle ne modifie ni la fourniture ni ses règles.
+
+L’éditeur enregistre l’identifiant interne stable de la fourniture dans `supply_id`. Dans cet exemple, remplacez `boiler` par l’identifiant enregistré par l’éditeur ; ce n’est ni un identifiant d’entité `switch.*` ni un identifiant de groupe de pièce. Aucune fourniture n’est sélectionnée automatiquement. Si celle sélectionnée est supprimée, la carte demande d’en choisir une autre au lieu de passer à la première disponible.
+
+```yaml
+type: custom:velair-card
+view: supply-live
+supply_id: boiler
+supply_show_header: true
+supply_show_connection: true
+supply_show_switch_state: true
+supply_show_room_count: true
+supply_show_legend: true
+supply_show_demand_description: true
+```
+
+Les six options d’affichage valent `true` par défaut. Passez une option à `false` pour masquer cette information habituelle. Le champ facultatif `title` remplace le titre par défaut lorsque l’en-tête est affiché.
+
+| YAML | Information |
+| --- | --- |
+| `supply_show_header` | En-tête |
+| `supply_show_connection` | Indicateur de connexion en direct |
+| `supply_show_switch_state` | État de l’interrupteur |
+| `supply_show_room_count` | Nombre de pièces demandant la fourniture |
+| `supply_show_legend` | Légende du graphique |
+| `supply_show_demand_description` | Description habituelle de la demande, comme Demande estimée |
+
+Le chargement, les erreurs, la déconnexion, la suspension, l’état inconnu de l’interrupteur ou de la demande et les attentes en cours restent visibles même si toutes les options sont désactivées. Masquer les informations habituelles ne masque pas les conditions qui influencent l’interprétation des mesures.
 
 <a id="planned-return-card"></a>
 ### Carte Retour prévu
@@ -481,6 +517,10 @@ la place des fonctions Velair uniquement locales ou des actions propres à
 l’appareil. L’action facultative Retour ponctuel contrôle le foyer et reste
 indépendante du responsable du contrôle de l’appareil sélectionné.
 
+Pour un membre d’un groupe, la carte conserve les mesures et le Confort propres au thermostat tout en utilisant les commandes et la programmation partagées. Les commandes de température respectent les limites communes du groupe. Une troisième ligne d’en-tête affiche l’icône, le nom du groupe et le bouton d’information sous l’état existant, sans modifier l’alignement de l’icône du mode. L’aide explique les actions partagées et liste les membres. **Afficher le groupe** est activé par défaut (`climate_show_group: true`), indépendamment de l’affichage du nom du thermostat. Désactiver cette option masque uniquement ce contexte. Un thermostat sans groupe n’affiche aucune ligne de groupe, même si l’option est activée.
+
+Les cartes Vue d’ensemble, Chronologie du jour et Résumé des zones conservent un filtre individuel limité au thermostat choisi. Sélectionner un groupe inclut tous ses membres.
+
 ```yaml
 type: custom:velair-card
 view: climate
@@ -494,6 +534,7 @@ climate_window_entities:
 climate_window_display: grouped
 climate_room_assist_display: both
 climate_preconditioning_display: both
+climate_show_group: true
 climate_show_control_mode: true
 climate_show_target_control: true
 climate_show_hvac_mode_control: true
@@ -873,7 +914,7 @@ Avec une entité à plage uniquement, Conserver démarre un équipement éteint 
 
 L’éditeur de plage utilise **Consigne basse** et **Consigne haute** pour ces entités. Ce sont les deux valeurs acceptées par l’intégration ; Velair ne déduit pas qu’Auto possède la bande automatique de chauffage/refroidissement de `heat_cool`. Les mêmes contrôles s’appliquent aux Profils, préréglages, Forçage et modèles copiés ou liés. Modèles et Préréglages utilisent les formats configurés pour leurs destinations possibles. Velair vérifie chaque destination réelle lors de l’application. Si Forçage ne dispose pas de limites actuelles utilisables, saisissez les deux valeurs avant application.
 
-Room Assist et le préconditionnement adaptatif prennent en charge les plages uniquement en `heat_cool`. Pour une plage en Chauffage, Refroidissement ou Auto, la paire nominale est appliquée à l’heure programmée, sans décalage Room Assist, départ anticipé ni apprentissage thermique. Les vues concernées expliquent cette limite. Retour prévu applique la cible d’arrivée à l’arrivée, sans préparation anticipée pour ces plages.
+Room Assist et le préconditionnement adaptatif prennent en charge les plages natives `heat_cool` et les plages fixes Chauffage ou Refroidissement avec une consigne de référence choisie dans **Paramètres → Équipements et groupes**. Sans ce choix, la paire nominale du mode fixe est appliquée à l’heure prévue sans correction Room Assist, avance ni apprentissage thermique ; Retour prévu l’applique à l’arrivée. Les plages Auto gardent cette limitation.
 
 Lorsque l’appareil sélectionné expose des commandes supplémentaires, l’éditeur
 les affiche également. Par exemple, un climatiseur peut exposer le mode de
@@ -907,6 +948,10 @@ Les répartitions survivent aux redémarrages Home Assistant et aux exports port
 Home Assistant signale la prise en charge des températures uniques et des plages, sans fournir de tableau par mode HVAC. Dans **Réglages → Climats gérés**, chaque équipement à deux formats dispose de **Modes avec deux consignes**. Fermé, le menu résume les modes sélectionnés ; ouvrez-le pour cocher ou décocher chaque mode. Seuls les modes annoncés sont proposés, sauf Arrêt. Chauffage/Refroidissement est sélectionné initialement s’il est disponible ; les autres ne le sont pas automatiquement. Une sélection vide est valide. Les équipements à un seul format l’utilisent sans sélecteur. L’aide près du libellé explique les limites. Les modifications passent toujours par la vérification des incompatibilités avant application.
 
 Ce réglage décrit comment Velair envoie les cibles ; il ne prouve pas que l’appareil physique accepte ou utilise les deux valeurs. L’intégration peut rejeter ou ignorer un paramètre. Velair signale les incompatibilités connues avant l’enregistrement et les erreurs de transmission reçues. Il n’effectue aucun test automatique ni essai de changement de mode.
+
+Pour les modes à deux consignes, **Consigne de référence** apparaît en Chauffage et Refroidissement, y compris sur les équipements ne gérant que des plages. Choisissez **Consigne basse** ou **Consigne haute** selon la valeur utilisée dans ce mode. **Non configurée** conserve la transmission de la programmation mais désactive Room Assist et le préconditionnement adaptatif pour cette plage fixe. Configurez-la une fois par équipement et mode ; les deux fonctions partagent ce choix géré par le backend, inclus dans les exports et imports. Le modifier retire l’assistance et les observations d’apprentissage obsolètes. Cela ne change ni les températures ni le format de cible.
+
+Room Assist calcule l’hystérésis du mode fixe autour de la limite choisie et décale les deux consignes ensemble, conservant leur séparation dans les limites physiques. Le préconditionnement prédit et apprend depuis cette limite dans la direction du mode et envoie la paire originale complète en avance. `heat_cool` conserve son contrôle de bande existant sans ce sélecteur. Les plages `auto` restent incompatibles avec ces fonctions.
 
 **Par défaut**, chaque zone des **Profils**, **Forçage** et les commandes climatiques utilisent cette politique pour afficher un ou deux champs pour un mode explicite. Changer de mode conserve des brouillons temporaires distincts pour chaque format. Revenir à un format restaure les valeurs saisies pendant cette modification ; les valeurs manquantes doivent être complétées. Velair n’invente pas de plage et ne réduit pas deux limites à une seule cible. Ces brouillons alternatifs ne sont pas enregistrés ni récupérés après actualisation.
 
@@ -1104,9 +1149,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v22 conservent les valeurs brutes et
+Les exports actuels du format portable v25 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v22 ; utilisez une version prenant en charge v22 pour les
+les exports v25 ; utilisez une version prenant en charge v25 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1146,7 +1191,7 @@ l’état Home Assistant et de l’état d’exécution Velair ; elles ne sont p
 enregistrées comme nouvel historique. Si aucun bloc de température géré n’est
 actif, l’onglet montre un état d’attente plutôt que des valeurs fictives. Si
 un capteur est sélectionné mais que l’assistance est désactivée, l’onglet
-indique qu’il est enregistré mais non opérationnel.
+indique qu’il est enregistré mais non opérationnel. Pour une plage fixe Chauffage ou Refroidissement avec référence configurée, la bande marque la consigne de référence choisie moins et plus la bande morte ; les crochets montrent toujours les plages programmée et appliquée complètes.
 
 L’assistance par capteur de pièce est pilotée par événements. Velair n’interroge
 pas périodiquement les températures. Il écoute uniquement le capteur configuré
@@ -1524,14 +1569,7 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du format 22 conservent les deux types de liaison aux modèles, les références de préréglages et les relations de Maître de préconditionnement et les politiques de format de température par équipement. Les références d’exécution acceptée du maître restent locales et ne sont pas exportées. Exporter les programmations ou Profils inclut les modèles et
-préréglages requis, affichés comme sections supplémentaires sélectionnées.
-Les imports valident la configuration combinée, y compris les consommateurs
-existants des ressources partagées remplacées. Les préréglages sont fusionnés
-par clé stable : les clés correspondantes sont remplacées et les préréglages
-locaux absents du fichier restent. Les sauvegardes existantes restent
-importables ; les anciennes versions de Velair ne peuvent pas importer
-le format 22. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+Les exports actuels du modèle 25 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 25. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin
@@ -1550,11 +1588,9 @@ que le dernier pas observé sur l’entité locale n’est délibérément pas e
 Les exports anciens sans unité enregistrée sont annoncés dans l’écran
 d’import et interprétés comme Celsius.
 
-L’apprentissage du préconditionnement adaptatif est associé par identifiant
-exact d’entité climatique Home Assistant. L’apprentissage des appareils
-non actuellement gérés est montré avant import et ignoré. Pour les appareils
-correspondants, l’apprentissage importé remplace leur étalonnage existant.
-L’apprentissage des appareils locaux absents du fichier reste inchangé.
+L’apprentissage du préconditionnement adaptatif est associé à l’ID exact de l’unité de contrôle : ID d’entité Home Assistant pour un équipement indépendant, ou ID interne stable pour un groupe. L’apprentissage sans unité correspondante est affiché avant import puis ignoré. Pour les unités correspondantes, il remplace l’étalonnage ; l’apprentissage local absent du fichier reste inchangé. Les historiques de groupe ne sont pas répartis entre les membres. Consultez [Groupes de pièce](room-groups.fr.md#learning-and-membership-changes) avant de retirer un membre ou de dissoudre le groupe.
+
+Restaurer une sauvegarde d’apprentissage de groupe restaure aussi l’appartenance au groupe et les sections partagées nécessaires. Vérifiez ces dépendances dans l’aperçu d’import ; ce n’est pas une restauration isolée d’étalonnage laissant les membres inchangés.
 
 Les valeurs de configuration du préconditionnement sont déjà incluses dans
 **Programmations des thermostats**. La section séparée **Apprentissage du

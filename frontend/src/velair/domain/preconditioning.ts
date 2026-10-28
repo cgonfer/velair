@@ -1,3 +1,4 @@
+import { controlUnitIds } from "./control-units";
 import type { HomeAssistant, PreconditioningSettings, ScheduleResponse } from "../types";
 import {
   defaultMinimumDelta,
@@ -89,7 +90,7 @@ export function preconditioningSettings(
 /** Offer only local, managed roots; the backend validates the complete graph. */
 export function preconditioningMasterCandidates(data: ScheduleResponse | undefined, entityId: string): string[] {
   if (!data || Object.values(data.zones).some(zone => zone.preconditioning?.master_entity_id === entityId)) return [];
-  return data.configured_entities.filter(candidate => candidate !== entityId
+  return controlUnitIds(data).filter(candidate => candidate !== entityId
     && data.zones[candidate] && !data.zones[candidate].execution
     && !data.zones[candidate].preconditioning?.master_entity_id);
 }

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VelairPanel } from "../../src/velair/views/panel";
 import { VelairCard } from "../../src/velair/components/velair-card-element";
 import type { PanelSubsection } from "../../src/velair/domain/panel-routes";
+import type { ResourceUsage, ScheduleResponse } from "../../src/velair/types";
 if (!customElements.get("routing-test-panel")) customElements.define("routing-test-panel", VelairPanel);
 if (!customElements.get("routing-test-card")) customElements.define("routing-test-card", VelairCard);
 type Internal = {
@@ -24,6 +25,37 @@ beforeEach(() => window.history.replaceState(null, "", "/"));
 afterEach(() => { document.body.replaceChildren(); window.history.replaceState(null, "", "/"); vi.restoreAllMocks(); });
 
 describe("panel URL navigation", () => {
+  it("consumes a dashboard schedule jump while preserving unrelated HA URL state", async () => {
+    const panel = await panelAt("/velair/schedules/default?entity_id=room_group.living&weekday=friday&edit=1#section");
+    const card = panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard;
+    expect(card.resourceUsage).toEqual({ source: "default", entity_id: "room_group.living", weekday: "friday" });
+    expect(window.location.search).toBe("?edit=1");
+    expect(window.location.hash).toBe("#section");
+    window.dispatchEvent(new CustomEvent("location-changed")); await panel.updateComplete;
+    expect(card.resourceUsage?.weekday).toBe("friday");
+  });
+  it("does not pass invalid weekday jumps to the schedule", async () => {
+    const panel = await panelAt("/velair/schedules/default?entity_id=room_group.living&weekday=invalid");
+    expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).resourceUsage).toBeUndefined();
+    expect(window.location.search).toBe("");
+  });
+  it("passes the named profile and shared owner from a dashboard profile jump", async () => {
+    const panel = await panelAt("/velair/schedules/profiles?entity_id=room_group.living&weekday=saturday&profile_key=home");
+    expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).resourceUsage)
+      .toEqual({ source: "profile", entity_id: "room_group.living", weekday: "saturday", profile_key: "home" });
+    expect(window.location.search).toBe("");
+  });
+  it("keeps the current draft and does not apply a dashboard jump when navigation is rejected", async () => {
+    const panel = await panelAt("/velair/settings");
+    state(panel)._activeViewDirty = true;
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    browserTo("/velair/schedules/default?entity_id=room_group.living&weekday=friday", 1);
+    await panel.updateComplete;
+    expect(state(panel)._activeView).toBe("settings");
+    expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).resourceUsage).toBeUndefined();
+    expect(go).toHaveBeenCalledWith(-1);
+  });
   it("replaces the legacy Groups bookmark with Supply control without losing HA state", async () => {
     const panel = await panelAt("/velair/groups");
     expect(state(panel)._activeView).toBe("supply-control");
@@ -46,7 +78,7 @@ describe("panel URL navigation", () => {
     expect(window.location.pathname).toBe("/velair/diagnostics");
   });
 
-  it.each(["/velair/schedules/profiles", "/velair/templates/presets", "/velair/supply-control", "/velair/preconditioning", "/velair/planned-return"])("restores direct entry and refresh at %s", async (path) => {
+  it.each(["/velair/schedules/profiles", "/velair/templates/presets", "/velair/room-groups", "/velair/supply-control", "/velair/preconditioning", "/velair/planned-return"])("restores direct entry and refresh at %s", async (path) => {
     let panel = await panelAt(path);
     const destination = { view: state(panel)._activeView, subsection: state(panel)._activeSubsection };
     expect((panel.shadowRoot!.querySelector("velair-panel-card") as unknown as VelairCard).subsection).toBe(destination.subsection);
@@ -211,6 +243,101 @@ describe("panel URL navigation", () => {
 });
 
 describe("card subsection contract", () => {
+  const navigationCard = () => {
+    const card = document.createElement("routing-test-card") as VelairCard;
+    const internal = card as unknown as {
+      _data: ScheduleResponse; _hasExternalConfig: boolean; _selectedWeekday: string;
+      _openNextEventSchedule(entityId: string, weekday?: string, modeId?: string): Promise<void>;
+      _openResourceUsage(usage: ResourceUsage): Promise<void>;
+      _selectEntity: (id: string) => void; _selectWeekday: (day: string) => void;
+      _selectScheduleSource: (source: string) => void;
+    };
+    internal._data = { configured_entities: ["climate.one", "climate.two"], control_units: ["room_group.living"], member_to_unit: { "climate.one": "room_group.living", "climate.two": "room_group.living" } } as unknown as ScheduleResponse;
+    return { card, internal };
+  };
+  const withProfiles = (data: ScheduleResponse): ScheduleResponse => ({
+    ...data,
+    profiles: ["away", "home"].map(key => ({ key, name: key, icon: "mdi:home", zones: { "room_group.living": { behavior: "schedule", schedule: { friday: [] } } } })),
+    modes: [{ key: "return-home", name: "Home", profile_ids: ["home"] }],
+    profile_selection: { base_profile_ids: ["away"], base_mode_id: null, zone_profile_overrides: {} },
+    effective_zone_profiles: { "room_group.living": "away" }, effective_profile_ids: ["away"],
+  });
+  it("opens the active group Profile schedule instead of the different default plan", async () => {
+    const { card, internal } = navigationCard(); internal._data = withProfiles(internal._data);
+    const event = vi.fn(); card.addEventListener("velair-open-resource-usage", event);
+    await internal._openNextEventSchedule("climate.two", "friday");
+    expect(event.mock.calls[0][0].detail).toEqual({ source: "profile", profile_key: "away", entity_id: "room_group.living", weekday: "friday" });
+  });
+  it("opens a Planned Return destination Profile in dashboards without mutating current selection", async () => {
+    const { internal } = navigationCard(); internal._data = withProfiles(internal._data); internal._hasExternalConfig = true;
+    const before = JSON.stringify(internal._data);
+    await internal._openNextEventSchedule("climate.two", "saturday", "return-home");
+    expect(window.location.pathname).toBe("/velair/schedules/profiles");
+    expect(new URLSearchParams(window.location.search).get("profile_key")).toBe("home");
+    expect(new URLSearchParams(window.location.search).get("entity_id")).toBe("room_group.living");
+    expect(new URLSearchParams(window.location.search).get("weekday")).toBe("saturday");
+    expect(JSON.stringify(internal._data)).toBe(before);
+  });
+  it("opens the default schedule for default destination modes and normal Profile behavior", async () => {
+    const { internal } = navigationCard(); internal._data = withProfiles(internal._data);
+    const open = vi.spyOn(internal, "_openResourceUsage").mockResolvedValue();
+    await internal._openNextEventSchedule("climate.one", "friday", "default");
+    expect(open).toHaveBeenLastCalledWith({ source: "default", entity_id: "room_group.living", weekday: "friday" });
+    internal._data.profiles![0].zones["room_group.living"] = { behavior: "normal" };
+    await internal._openNextEventSchedule("climate.one", "friday");
+    expect(open).toHaveBeenLastCalledWith({ source: "default", entity_id: "room_group.living", weekday: "friday" });
+  });
+  it("rejects stale or non-scheduled Profile query targets", async () => {
+    const { card, internal } = navigationCard(); internal._data = withProfiles(internal._data); card.view = "schedules";
+    internal._selectScheduleSource = vi.fn();
+    await internal._openResourceUsage({ source: "profile", profile_key: "missing", entity_id: "room_group.living", weekday: "friday" });
+    expect(internal._selectScheduleSource).not.toHaveBeenCalled();
+  });
+  it("focuses the named shared Profile and day through the existing Profile editor navigation", async () => {
+    const { card, internal } = navigationCard(); internal._data = withProfiles(internal._data); card.view = "schedules";
+    const focusUsage = vi.fn();
+    Object.defineProperty(card, "renderRoot", { value: { querySelector: () => ({ focusUsage }) } });
+    Object.defineProperty(card, "updateComplete", { value: Promise.resolve(true) });
+    Object.assign(internal, { _scheduleSource: "profile" });
+    const usage: ResourceUsage = { source: "profile", profile_key: "home", entity_id: "room_group.living", weekday: "saturday" };
+    await internal._openResourceUsage(usage);
+    expect(focusUsage).toHaveBeenCalledWith(usage);
+  });
+  it("opens the shared default schedule from a physical member inside the panel", async () => {
+    const { card, internal } = navigationCard();
+    const event = vi.fn(); card.addEventListener("velair-open-resource-usage", event);
+    await internal._openNextEventSchedule("climate.two", "friday");
+    expect(event.mock.calls[0][0].detail).toEqual({ source: "default", entity_id: "room_group.living", weekday: "friday" });
+    expect(window.location.pathname).toBe("/");
+  });
+  it("navigates dashboard members to the real panel and keeps the event weekday", async () => {
+    window.history.replaceState(null, "", "/lovelace/home");
+    const { card, internal } = navigationCard(); internal._hasExternalConfig = true;
+    const localEvent = vi.fn(); card.addEventListener("velair-open-resource-usage", localEvent);
+    const haEvent = vi.fn(); window.addEventListener("location-changed", haEvent);
+    try {
+      await internal._openNextEventSchedule("climate.two", "sunday");
+      expect(window.location.pathname).toBe("/velair/schedules/default");
+      expect(new URLSearchParams(window.location.search).get("entity_id")).toBe("room_group.living");
+      expect(new URLSearchParams(window.location.search).get("weekday")).toBe("sunday");
+      expect(window.history.state.from).toBe("/lovelace/home");
+      expect(haEvent).toHaveBeenCalledTimes(1); expect(localEvent).not.toHaveBeenCalled();
+    } finally { window.removeEventListener("location-changed", haEvent); }
+  });
+  it("falls back to the selected weekday and ignores unmanaged climate navigation", async () => {
+    const { internal } = navigationCard(); internal._selectedWeekday = "wednesday";
+    const open = vi.spyOn(internal, "_openResourceUsage").mockResolvedValue();
+    await internal._openNextEventSchedule("climate.one", "invalid");
+    expect(open).toHaveBeenCalledWith({ source: "default", entity_id: "room_group.living", weekday: "wednesday" });
+    open.mockClear(); await internal._openNextEventSchedule("climate.unmanaged", "friday");
+    expect(open).not.toHaveBeenCalled();
+  });
+  it("rejects unmanaged direct schedule jumps after backend data loads", async () => {
+    const { card, internal } = navigationCard(); card.view = "schedules";
+    internal._selectEntity = vi.fn(); internal._selectWeekday = vi.fn(); internal._selectScheduleSource = vi.fn();
+    await internal._openResourceUsage({ source: "default", entity_id: "climate.unmanaged", weekday: "friday" });
+    expect(internal._selectEntity).not.toHaveBeenCalled(); expect(internal._selectScheduleSource).not.toHaveBeenCalled();
+  });
   it("applies selection before data is loaded", async () => {
     const card = document.createElement("routing-test-card") as VelairCard;
     card.view = "schedules"; card.subsection = "profiles"; document.body.append(card); await card.updateComplete;

@@ -1,3 +1,4 @@
+import { controlUnitId } from "./control-units";
 import type {
   ComfortAssessment,
   HassState,
@@ -19,6 +20,7 @@ const REPORTED_CLIMATE_ACTIONS = new Set([
 ]);
 
 export function climateCardOwner(data: ScheduleResponse, entityId: string): ClimateCardOwner {
+  entityId = controlUnitId(data, entityId);
   if (data.zones[entityId]?.execution?.type === "external") return "external";
   return data.zone_runtime?.[entityId]?.control_mode === "manual" ? "manual" : "automatic";
 }

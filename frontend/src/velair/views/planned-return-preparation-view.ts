@@ -1,3 +1,4 @@
+import { controlUnitName } from "../domain/control-units";
 import { css, html, nothing } from "lit";
 import type { HomeAssistant, PlannedReturnPreparation, ScheduleResponse } from "../types";
 import type { TranslationKey } from "../translations";
@@ -13,6 +14,7 @@ export const plannedReturnPreparationReasons: Record<string, TranslationKey> = {
   missing_temperature: "plannedReturnPreparationReasonTemperature",
   unsupported_mode: "plannedReturnPreparationReasonMode",
   unsupported_range_mode: "unsupportedRangeThermalMode",
+  range_reference_not_configured: "rangeReferenceNotConfigured",
   no_estimate: "plannedReturnPreparationReasonEstimate",
   scheduler_stopped: "plannedReturnPreparationReasonSchedulerStopped",
   scheduler_not_auto: "plannedReturnPreparationReasonSchedulerNotAuto",
@@ -91,10 +93,10 @@ export function renderPlannedReturnPreparation(options: {
         const stateIcon = zone.state === "reached" ? "mdi:check-circle-outline" : zone.state === "suspended" ? "mdi:pause-circle-outline" : categoryIcons[zone.preparation];
         return html`<li class="preparation-room" data-entity=${zone.entity_id} data-state=${zone.state}>
           <ha-icon icon=${hass?.states?.[zone.entity_id]?.attributes?.icon ?? "mdi:thermostat"}></ha-icon>
-          <div class="preparation-room-name"><strong>${hass?.states?.[zone.entity_id]?.attributes?.friendly_name ?? zone.entity_id}</strong><small>${t("plannedReturnPreparationSchedule", { schedule })}</small></div>
+          <div class="preparation-room-name"><strong>${controlUnitName(data, hass, zone.entity_id)}</strong><small>${t("plannedReturnPreparationSchedule", { schedule })}</small></div>
           <div class="preparation-room-status"><span><ha-icon icon=${stateIcon}></ha-icon>${t(labelKey)}</span>
             ${zone.reason && zone.reason !== zone.preconditioning_dependency?.reason ? html`<span class="preparation-reason">${t(plannedReturnPreparationReasons[zone.reason] ?? "plannedReturnPreparationReasonUnknown")}</span>` : nothing}
-            ${renderPreconditioningDependency(zone.preconditioning_dependency, t, displayTime, zone.preconditioning_dependency ? hass?.states?.[zone.preconditioning_dependency.master_entity_id]?.attributes?.friendly_name : undefined)}
+            ${renderPreconditioningDependency(zone.preconditioning_dependency, t, displayTime, zone.preconditioning_dependency ? controlUnitName(data, hass, zone.preconditioning_dependency.master_entity_id) : undefined)}
             ${arrival && zone.start_at ? html`<span class="preparation-detail">${t("plannedReturnPreparationPlannedStart", { time: displayTime(zone.start_at) })}</span>` : nothing}
             ${arrival && temperature !== null ? html`<span class="preparation-detail">${t("plannedReturnPreparationTarget", { temperature, unit: data?.temperature_unit ?? "" })}</span>` : nothing}
           </div>

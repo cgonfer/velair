@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](installation.md) · [Español](installation.es.m
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -73,14 +73,9 @@ Bij releases met een tag worden ook zipbestanden aan de GitHub Release toegevoeg
 <a id="optional-lovelace-card"></a>
 ## Optionele Lovelace-kaart
 
-Het zijbalkpaneel wordt automatisch geregistreerd. De Lovelace-kaart is optioneel.
+Het zijbalkpaneel wordt automatisch geregistreerd. De Lovelace-kaart is optioneel. Bij dashboardresources beheerd via de Home Assistant-interface registreert Velair zijn JavaScript-module automatisch bij het instellen van de integratie, ook na updates van bestaande installaties. Controleer dit bij **Instellingen > Dashboards > Bronnen** via het driepuntenmenu. Handmatig instellen is in deze modus niet nodig; voeg kaarten direct toe.
 
-Voeg de resource toe die door de integratie wordt aangeboden:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
+De URL is `/velair_frontend/velair-card.js?v=...`. Velair werkt de versieparameter bij wanneer de bundel verandert; bewerk deze niet zelf. Herstart na installatie of update Home Assistant en herlaad browser of Companion-app. Kaarten moeten direct in het dashboard werken, zonder eerst de Velair-zijbalk te bezoeken.
 
 Voeg daarna een of meer Velair-kaarten toe. Elke kaart gebruikt dezelfde backendgegevens en visuele onderdelen als het zijbalkpaneel.
 
@@ -105,10 +100,27 @@ Ondersteunde waarden voor `view`:
 - `planned-return`: compacte bediening voor een eenmalige terugkeer, aantallen ingestelde bezettingsbronnen en een tijdlijn van het bevestigde vertrek. Zonder opgeslagen bezettingsbronnen activeert **Plan return** de afwezigheidsmodus onmiddellijk; de automatische wekelijkse routine vereist wel bronnen.
 - `diagnostics`: runtimegezondheid, begrensde geschiedenis, filters en export van probleemrapporten.
 
+<a id="resources-managed-in-yaml"></a>
+### Resources beheerd in YAML
+
+Bij `lovelace.resource_mode: yaml` blijft de resourcelijst onder jouw beheer. Voeg dit toe aan de bestaande `lovelace`-configuratie:
+
+```yaml
+lovelace:
+  resource_mode: yaml
+  resources:
+    - url: /velair_frontend/velair-card.js
+      type: module
+```
+
+De stabiele URL zonder versieparameter blijft ondersteund; je hoeft geen versiewaarde in YAML bij te houden. Behoud alle overige resources. Alleen een kaart of dashboard in YAML schrijven schakelt YAML-resourcebeheer niet in.
+
 <a id="card-discovery-and-resource-troubleshooting"></a>
 ### Kaartdetectie en problemen met bronnen oplossen
 
-Gebruik alleen de door de integratie aangeboden modulebron <code>/velair_frontend/velair-card.js</code>. Verwijder dubbele Velair-bronnen, waaronder een oudere <code>/local/velair-card.js</code>, en herlaad de browser. Aangepaste browserelementen kunnen na registratie niet worden vervangen. Een oudere bron die als eerste laadt, kan daardoor een verouderde kaartimplementatie actief houden.
+Gebruik alleen de integratiemodule `/velair_frontend/velair-card.js`, met automatische versieparameter bij interfacebeheer. Velair migreert exact de oude `/local/velair-card.js` en voegt dubbele vermeldingen voor deze twee lokale paden automatisch samen. Andere paden en externe URL's blijven ongewijzigd. Verwijder bij YAML-beheer oude of dubbele vermeldingen zelf, herstart Home Assistant en herlaad de browser. Aangepaste browserelementen zijn na registratie niet vervangbaar; een eerst geladen oude resource kan een verouderde kaart vasthouden.
+
+Controleer bij YAML-waarschuwingen of mislukte automatische registratie de instructies in Home Assistant-logboeken. Deze resourcecontroles maken geen blijvende meldingen.
 
 De kaartkiezer van het dashboard ontdekt Velair via frontendmetadata. Handmatig <code>type: custom:velair-card</code> toevoegen in YAML gebruikt het geregistreerde aangepaste element; dit zijn afzonderlijke controles. Vermeld bij een probleemmelding of de kaart via YAML werkt maar niet in de kiezer verschijnt.
 

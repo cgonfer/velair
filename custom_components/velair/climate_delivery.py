@@ -55,6 +55,9 @@ class ClimateDeliveryCoordinator:
         self._last_available: dict[str, bool] = {}
         self._stopped = False
         self._observer = observer
+        self._state_provider = hass.states.get
+        self._entity_provider = lambda entity_id: [entity_id]
+        self._target_valid = lambda _entity_id: True
 
     async def async_deliver(
         self,
@@ -223,7 +226,7 @@ class ClimateDeliveryCoordinator:
         return not self._stopped and self._generations.get(entity_id) == generation
 
     def _is_available(self, entity_id: str) -> bool:
-        state = self._hass.states.get(entity_id)
+        state = self._state_provider(entity_id)
         if state is None:
             return False
         state_value = getattr(state, "state", None)
@@ -253,7 +256,7 @@ class ClimateDeliveryCoordinator:
             )
             return "unavailable"
         async with self._locks.setdefault(entity_id, asyncio.Lock()):
-            if not self._is_current(entity_id, generation):
+            if not self._is_current(entity_id, generation) or not self._target_valid(entity_id):
                 return "cancelled"
             current = asyncio.current_task()
             self._owners[entity_id] = current
@@ -327,14 +330,20 @@ class ClimateDeliveryCoordinator:
             available = self._is_available(entity_id)
             was_available = self._last_available.get(entity_id, available)
             self._last_available[entity_id] = available
-            if not was_available and available and entity_id in self._eligible:
+            event_data = getattr(_event, "data", {})
+            old_state = event_data.get("old_state")
+            new_state = event_data.get("new_state")
+            member_recovered = (len(self._entity_provider(entity_id)) > 1
+                and getattr(old_state, "state", "unavailable") in ("unknown", "unavailable")
+                and getattr(new_state, "state", "unavailable") not in ("unknown", "unavailable"))
+            if available and (not was_available or member_recovered) and entity_id in self._eligible:
                 self._spawn(
                     entity_id,
                     self._async_redeliver_current(entity_id)
                 )
 
         self._availability_unsubs[entity_id] = async_track_state_change_event(
-            self._hass, [entity_id], _state_changed
+            self._hass, self._entity_provider(entity_id), _state_changed
         )
 
     def _clear_eligibility(

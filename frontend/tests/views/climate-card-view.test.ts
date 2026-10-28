@@ -41,6 +41,45 @@ function host(external = false): VelairViewHost {
 }
 
 describe("climate card view", () => {
+  it("shows group action scope and members while disabling an increment beyond shared limits", () => {
+    const value = host();
+    const member = value.hass!.states["climate.office"];
+    member.attributes = { ...member.attributes, temperature: 30, current_temperature: 19, min_temp: 5, max_temp: 35, supported_features: 1 };
+    value._data!.member_to_unit = { "climate.office": "group.room" };
+    value._data!.room_groups = { "group.room": { id: "group.room", name: "Living room", members: ["climate.office", "climate.valve"] } } as never;
+    value._data!.zones["group.room"] = { ...value._data!.zones["climate.office"] };
+    value._data!.control_unit_states = { "group.room": { ...member, attributes: { ...member.attributes, min_temp: 7, max_temp: 30 } } };
+    value._data!.zone_runtime!["group.room"] = { state: "scheduled", control_mode: "manual" };
+    const container = document.createElement("div");
+    render(renderClimateCard(value, "climate.office"), container);
+    const notice = container.querySelector(".climate-card-header .climate-card-group");
+    const primary = container.querySelector(".climate-card-header-main");
+    expect(primary?.querySelector(".climate-card-title")).not.toBeNull();
+    expect(primary?.querySelector(".climate-card-operation")).not.toBeNull();
+    expect(primary?.querySelector(".climate-card-operation-icon")).not.toBeNull();
+    expect(primary?.querySelector(".climate-card-group")).toBeNull();
+    expect(notice?.querySelector(".climate-card-group-name")?.textContent).toBe("Living room");
+    expect(container.querySelector(".room-group-schedule-note")).toBeNull();
+    expect(notice?.textContent).toContain("climateCardSharedControlHelp");
+    expect(notice?.textContent).toContain("climate.office");
+    expect(notice?.textContent).toContain("climate.valve");
+    const buttons = container.querySelectorAll<HTMLButtonElement>(".climate-card-target-control button");
+    expect(buttons[0].disabled).toBe(false);
+    expect(buttons[1].disabled).toBe(true);
+    expect(container.textContent).toContain("19 °C");
+    value._config.climate_show_name = false;
+    value._config.climate_show_operation = false;
+    render(renderClimateCard(value, "climate.office"), container);
+    expect(container.querySelector(".climate-card-group")).not.toBeNull();
+    value._config.climate_show_group = false;
+    render(renderClimateCard(value, "climate.office"), container);
+    expect(container.querySelector(".climate-card-group")).toBeNull();
+    expect(container.querySelector(".climate-card-header-content")).toBeNull();
+    value._config.climate_show_group = true;
+    value._data!.room_groups = {};
+    render(renderClimateCard(value, "climate.office"), container);
+    expect(container.querySelector(".climate-card-group")).toBeNull();
+  });
   it.each(["heat", "cool"])("shows a blocked nominal %s dependency without an active state or fabricated chart", direction => {
     const value = host();
     value._data!.next_events = [{ entity_id: "climate.office", when: "2026-09-07T12:00:00Z", hvac_mode: direction,
@@ -521,7 +560,7 @@ describe("climate card view", () => {
       .toMatch(/comfortInsightHumidexWarmer 10[,.]3 °F/);
   });
 
-  it("explains unverified Comfort freshness without warning about a valid climate reading", () => {
+  it("keeps valid readings without freshness notices in the expanded card", () => {
     const container = document.createElement("div");
     const cardHost = host();
     cardHost._data!.comfort = { "climate.office": {
@@ -538,15 +577,12 @@ describe("climate card view", () => {
 
     render(renderClimateCard(cardHost, "climate.office"), container);
 
-    expect(container.querySelector(".climate-card-comfort-notices")?.textContent)
-      .toContain("comfortDataUnverified");
-    expect(container.querySelector(".climate-card-comfort-notices .climate-card-comfort-notice.info ha-icon")?.getAttribute("icon"))
-      .toBe("mdi:information-outline");
+    expect(container.textContent).not.toContain("comfortDataUnverified");
     expect(container.querySelector(".climate-card-comfort")?.textContent)
       .toContain("comfortConditionComfortable");
   });
 
-  it("flags a visible derived reading with unverified freshness when primary data is complete", () => {
+  it("keeps derived readings visible without duplicating freshness metadata", () => {
     const cardHost = host();
     cardHost._data!.comfort = { "climate.office": {
       enabled: true, condition: "comfortable", air_quality: "good",
@@ -558,10 +594,7 @@ describe("climate card view", () => {
     } };
     const expanded = document.createElement("div");
     render(renderClimateCard(cardHost, "climate.office"), expanded);
-    expect(expanded.querySelector(".climate-card-comfort-notices")?.textContent)
-      .toContain("comfortDataUnverified: comfortDewPoint");
-    expect(expanded.querySelector(".climate-card-comfort-notices .climate-card-comfort-notice.info ha-icon")?.getAttribute("icon"))
-      .toBe("mdi:information-outline");
+    expect(expanded.textContent).not.toContain("comfortDataUnverified");
     expect(expanded.querySelector(".climate-card-comfort-metrics")?.textContent)
       .toContain("12.4");
 
@@ -569,8 +602,9 @@ describe("climate card view", () => {
     cardHost._config.climate_show_comfort_collapsed_readings = true;
     const collapsed = document.createElement("div");
     render(renderClimateCard(cardHost, "climate.office"), collapsed);
+    expect(collapsed.textContent).not.toContain("comfortDataUnverified");
     expect(collapsed.querySelector(".climate-card-current-collapsed-comfort-row")?.textContent)
-      .toContain("comfortDataUnverified: comfortDewPoint");
+      .toContain("12.4");
   });
 
   it("uses the first prioritized outdoor Comfort insight in the compact card", () => {
@@ -742,7 +776,7 @@ describe("climate card view", () => {
     render(renderClimateCard(host(), "climate.office"), container);
 
     const header = container.querySelector(".climate-card-header");
-    expect(header?.firstElementChild?.classList.contains("climate-card-operation-icon")).toBe(true);
+    expect(header?.querySelector(".climate-card-header-main")?.firstElementChild?.classList.contains("climate-card-operation-icon")).toBe(true);
     expect(header?.querySelector(".climate-card-operation-icon")?.getAttribute("icon")).toBe("mdi:fire");
     expect(header?.querySelector(".climate-card-operation-icon")?.getAttribute("aria-hidden")).toBe("true");
     expect(header?.querySelector(".climate-card-title")?.textContent).toContain("Office");
@@ -1109,7 +1143,7 @@ describe("climate card view", () => {
     expect(collapsedComfort?.getAttribute("style")).toContain("--comfort-secondary-accent:var(--success-color, #65a56f)");
   });
 
-  it("shows unverified climate freshness as information in the collapsed Comfort row", () => {
+  it("keeps unverified freshness out of the collapsed Comfort row", () => {
     const container = document.createElement("div");
     const cardHost = host() as VelairViewHost & { _data: any };
     cardHost._climateCardCurrentStateCollapsed = true;
@@ -1121,7 +1155,7 @@ describe("climate card view", () => {
 
     const info = [...container.querySelectorAll(".climate-card-current-collapsed-comfort-row .climate-card-comfort-chip.info")]
       .find((chip) => chip.textContent?.includes("comfortDataUnverified"));
-    expect(info?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:information-outline");
+    expect(info).toBeUndefined();
     expect(container.querySelector(".climate-card-current-collapsed-comfort-row .climate-card-comfort-chip.warning"))
       .toBeNull();
   });

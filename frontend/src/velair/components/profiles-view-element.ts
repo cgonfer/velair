@@ -1,3 +1,5 @@
+import { renderRoomGroupScheduleNotice } from "../views/room-group-summary";
+import { controlUnitIds, controlUnitName, controlUnitState, controlUnitStates } from "../domain/control-units";
 import { editorTargetFormats, initializeDraftTargetFormat, reconcileDraftTargetFormat } from "../domain/target-format-policy";
 import { activeSetupSummary } from "../domain/active-setup";
 import { timelinePresentation } from "../views/schedule-view";
@@ -8,7 +10,7 @@ import { resolvedResourceBlock } from "../domain/resource-display";
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
-import { renderInlineHelp } from "../views/inline-help";
+import { renderInlineHelp, dismissDisconnectedInlineHelp, dismissInlineHelpWithin } from "../views/inline-help";
 import { renderDocumentationHelp } from "../views/documentation-links";
 import { VelairApiClient } from "../api/client";
 import { activateClimateProfile, deleteClimateProfile, saveClimateProfile } from "../controllers/climate-profile-actions";
@@ -236,6 +238,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    dismissInlineHelpWithin(this);
     this.ownerDocument.removeEventListener("click", this._handleDocumentClick);
     this._validationNotices.dispose();
     super.disconnectedCallback();
@@ -243,8 +246,8 @@ export class VelairProfilesView extends LitElement {
 
   private _localEntityIds(): string[] {
     return orderedZoneIds(
-      this.data?.configured_entities ?? [],
-      this.data?.settings?.zone_order ?? [],
+      controlUnitIds(this.data),
+      this.data?.settings?.unit_order ?? this.data?.settings?.zone_order ?? [],
     );
   }
 
@@ -296,6 +299,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   protected updated(changed: Map<string, unknown>): void {
+    dismissDisconnectedInlineHelp();
     this._refreshPresetPreviews();
     if (changed.has("_error") && this._error) {
       this.dispatchEvent(new CustomEvent("profile-error", {
@@ -384,11 +388,11 @@ export class VelairProfilesView extends LitElement {
   private _renderClimateCloneDialog() {
     const dialog = this._climateCloneDialog;
     if (!dialog) return nothing;
-    const sourceName = this.hass?.states?.[dialog.entityId]?.attributes?.friendly_name ?? dialog.entityId;
+    const sourceName = controlUnitName(this.data, this.hass, dialog.entityId);
     const days = this._groupDays(dialog.entityId, dialog.weekday);
     const grouped = days.length > 1;
     const targetNames = [...dialog.targets].map(
-      (entityId) => this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
+      (entityId) => controlUnitName(this.data, this.hass, entityId),
     );
     const changed = [...dialog.targets].filter(
       (entityId) => profileZoneBehavior(this._draft.zones[entityId]) !== "schedule",
@@ -404,7 +408,7 @@ export class VelairProfilesView extends LitElement {
             <span>${targetNames.join(", ")}</span>
           </p>
           <p class="profile-dialog-warning">${this._t(grouped ? "profileCloneDaysClimatesOverwrite" : "profileCloneDayClimatesOverwrite")}</p>
-          ${changed.length ? html`<p class="profile-dialog-warning">${this._t("profileCloneDayClimatesBehaviorChange", { targets: changed.map((id) => this.hass?.states?.[id]?.attributes?.friendly_name ?? id).join(", ") })}</p>` : nothing}
+          ${changed.length ? html`<p class="profile-dialog-warning">${this._t("profileCloneDayClimatesBehaviorChange", { targets: changed.map((id) => controlUnitName(this.data, this.hass, id)).join(", ") })}</p>` : nothing}
           ${dialog.error ? html`<div class="notice error profile-dialog-error" role="alert">${dialog.error}</div>` : nothing}
           <div class="profile-dialog-actions">
             <button type="button" @click=${this._closeClimateCloneDialog}>${this._t("cancel")}</button>
@@ -758,7 +762,7 @@ export class VelairProfilesView extends LitElement {
                     aria-hidden=${String(!expanded)} ?inert=${!expanded}>
                     <div><ul class="exception-detail-zones" tabindex=${expanded ? "0" : "-1"}
                       aria-label=${this._t("activeSetupExceptionZones", { count: group.entityIds.length })}>
-                      ${group.entityIds.map((id) => html`<li>${this.hass?.states?.[id]?.attributes?.friendly_name ?? id}</li>`)}
+                      ${group.entityIds.map((id) => html`<li>${controlUnitName(this.data, this.hass, id)}</li>`)}
                     </ul></div>
                   </div>
                 </div>`;
@@ -1206,7 +1210,7 @@ export class VelairProfilesView extends LitElement {
             const zoneError = this._zoneScheduleError(id);
             const dirty = this._profileZoneDirty(id, currentInput, persistedInput);
             const label = this._profileZoneSummary(id);
-            const climateName = this.hass?.states?.[id]?.attributes?.friendly_name ?? id;
+            const climateName = controlUnitName(this.data, this.hass, id);
             return html`
             <button
               type="button"
@@ -1229,7 +1233,7 @@ export class VelairProfilesView extends LitElement {
           <span class="profile-zone-toggle profile-zone-static">
             <ha-icon icon="mdi:thermostat"></ha-icon>
             <span class="profile-zone-identity">
-              <strong>${this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId}</strong>
+              <strong>${controlUnitName(this.data, this.hass, entityId)}</strong>
               <span>${entityId}</span>
             </span>
           </span>
@@ -1275,7 +1279,7 @@ export class VelairProfilesView extends LitElement {
     const scheduleError = this._zoneScheduleError(entityId);
     const expanded = this._expandedZones.has(entityId);
     const contentId = `profile-zone-content-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-    const climateName = this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
+    const climateName = controlUnitName(this.data, this.hass, entityId);
     const toggleLabel = this._t(expanded ? "profileCollapseClimate" : "profileExpandClimate", {
       climate: climateName,
     });
@@ -1349,7 +1353,7 @@ export class VelairProfilesView extends LitElement {
       const boundary = key.lastIndexOf(":");
       const entityId = key.slice(0, boundary);
       return renderGroupSaveSummary({ _t: this._t.bind(this), _weekdayName: day => weekdayName(languageFromHass(this.hass), day) }, {
-        sourceDay: candidate.selectedDay!, days: key.slice(boundary + 1).split(","), zoneName: this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId,
+        sourceDay: candidate.selectedDay!, days: key.slice(boundary + 1).split(","), zoneName: controlUnitName(this.data, this.hass, entityId),
       });
     })}</div><small>${this._t("profileGroupSaveHint")}</small></div>` : nothing;
   }
@@ -1592,7 +1596,7 @@ export class VelairProfilesView extends LitElement {
                       (event.currentTarget as HTMLInputElement).checked,
                     )}
                   />
-                  <span>${this.hass?.states?.[targetEntityId]?.attributes?.friendly_name ?? targetEntityId}</span>
+                  <span>${controlUnitName(this.data, this.hass, targetEntityId)}</span>
                 </label>
               `)}
             </div>
@@ -1616,6 +1620,7 @@ export class VelairProfilesView extends LitElement {
         ` : nothing}`;
     return html`
       <div class="profile-week">
+        ${renderRoomGroupScheduleNotice({ _t: this._t.bind(this), _friendlyEntityName: id => controlUnitName(this.data, this.hass, id) }, this.data?.room_groups?.[entityId], `profile-${this._selectedKey}`)}
         ${!ready ? dayTabs : renderWeeklyScheduleEditor({
           dayTabs,
           timeline,
@@ -1924,8 +1929,8 @@ export class VelairProfilesView extends LitElement {
   private _addBlock(entityId: string, weekday: string): void {
     const blocks = this._blocks(entityId, weekday);
     let updated = addDraftBlock(blocks, nextProfileBlockStart(blocks), this.data?.temperature_unit);
-    const choice = editorTargetFormats(this.data, this.hass?.states, entityId);
-    if (updated.at(-1)) updated[updated.length - 1] = initializeDraftTargetFormat(updated.at(-1)!, choice, this.hass?.states?.[entityId]);
+    const choice = editorTargetFormats(this.data, controlUnitStates(this.data, this.hass), entityId);
+    if (updated.at(-1)) updated[updated.length - 1] = initializeDraftTargetFormat(updated.at(-1)!, choice, controlUnitState(this.data, this.hass, entityId));
     this._setBlocks(
       entityId,
       weekday,
@@ -1944,7 +1949,7 @@ export class VelairProfilesView extends LitElement {
     if (previous) updated = updated.map((block, blockIndex) => {
       if (blockIndex !== index) return block;
       if (field !== "hvac_mode") return block;
-      return reconcileDraftTargetFormat(previous, block, editorTargetFormats(this.data, this.hass?.states, entityId, block.hvac_mode || undefined));
+      return reconcileDraftTargetFormat(previous, block, editorTargetFormats(this.data, controlUnitStates(this.data, this.hass), entityId, block.hvac_mode || undefined));
     });
     this._setBlocks(entityId, weekday, updated);
   }
@@ -2105,7 +2110,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _filterCopiedBlocks(entityId: string, blocks: DraftScheduleBlock[]): DraftScheduleBlock[] {
-    const state = this.hass?.states?.[entityId];
+    const state = controlUnitState(this.data, this.hass, entityId);
     const filtered = filterBlocksForClimateOptions(blocks as ScheduleBlock[], {
       fanModes: climateFanModeOptions(state),
       humidityLimits: climateHumidityLimits(state),
@@ -2117,7 +2122,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _cloneCompatibilityError(blocks: DraftScheduleBlock[], entityId: string): string | undefined {
-    const state = this.hass?.states?.[entityId];
+    const state = controlUnitState(this.data, this.hass, entityId);
     const name = state?.attributes?.friendly_name ?? entityId;
     for (const block of blocks) {
       if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
@@ -2142,7 +2147,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _blockEditorHost(entityId: string, weekday: string): VelairViewHost {
-    const state = this.hass?.states?.[entityId];
+    const state = controlUnitState(this.data, this.hass, entityId);
     const external = this._externalCapabilities(entityId);
     const temperatureLimits = entityTemperatureLimits(state, this.data?.temperature_unit);
     const temperatureStep = this._entityTemperatureStep(entityId, state);
@@ -2262,7 +2267,7 @@ export class VelairProfilesView extends LitElement {
 
   private _entityTemperatureStep(
     entityId: string,
-    state = this.hass?.states?.[entityId],
+    state = controlUnitState(this.data, this.hass, entityId),
   ): number {
     const published = entityTemperatureStep(state, this.data?.temperature_unit);
     if (published !== undefined) return published;
@@ -2279,7 +2284,7 @@ export class VelairProfilesView extends LitElement {
   }
 
   private _temperatureError(entityId: string, block: DraftScheduleBlock): string | undefined {
-    const state = this.hass?.states?.[entityId];
+    const state = controlUnitState(this.data, this.hass, entityId);
     const [minTemperature, maxTemperature] = entityTemperatureLimits(state, this.data?.temperature_unit);
     const temperatureStep = this._entityTemperatureStep(entityId, state);
     return draftBlockTemperatureError(block, {
@@ -2327,7 +2332,7 @@ export class VelairProfilesView extends LitElement {
         id: "schedule-summary",
         message: this._t("profileScheduleErrorsSummary", {
           climates: climateScheduleErrors.map((entityId) =>
-            this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId).join(", "),
+            controlUnitName(this.data, this.hass, entityId)).join(", "),
         }),
       });
     }
@@ -2341,7 +2346,7 @@ export class VelairProfilesView extends LitElement {
     for (const [entityId, zone] of Object.entries(this._draft.zones)) {
       if (onlyEntityId && entityId !== onlyEntityId) continue;
       if (zone.behavior !== "schedule") continue;
-      const state = this.hass?.states?.[entityId];
+      const state = controlUnitState(this.data, this.hass, entityId);
       for (const weekday of WEEKDAYS) {
         if (zone.template_links?.[weekday]?.mode === "full") continue;
         const blocks = this._blocks(entityId, weekday);
@@ -2399,7 +2404,7 @@ export class VelairProfilesView extends LitElement {
     if (unsupported) return unsupported;
     const zone = this._draft.zones[entityId];
     if (zone?.behavior !== "schedule") return undefined;
-    const climate = this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
+    const climate = controlUnitName(this.data, this.hass, entityId);
     const external = this._externalCapabilities(entityId);
     for (const weekday of WEEKDAYS) {
       if (zone.template_links?.[weekday]?.mode === "full") continue;

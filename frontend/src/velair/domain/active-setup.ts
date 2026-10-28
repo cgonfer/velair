@@ -1,3 +1,4 @@
+import { controlUnitIds } from "./control-units";
 import type { ClimateProfile, ScheduleResponse } from "../types";
 
 /** Describe persisted selection, independently from which schedules currently have blocks. */
@@ -9,7 +10,7 @@ export function activeSetupSummary(data?: ScheduleResponse) {
   const baseProfiles = ids.map((id) => profiles.find((profile) => profile.key === id))
     .filter((profile): profile is ClimateProfile => Boolean(profile));
   const overrides = data?.profile_selection?.zone_profile_overrides ?? {};
-  const managed = new Set(data?.configured_entities ?? []);
+  const managed = new Set(controlUnitIds(data));
   const covered = mode || ids.length ? new Set(baseProfiles.flatMap((profile) => Object.keys(profile.zones))
     .filter((entityId) => managed.has(entityId))) : managed;
   const active = [...covered].filter((entityId) => !Object.prototype.hasOwnProperty.call(overrides, entityId)).length;

@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](manual-control.md) · [Español](manual-contr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.5 |
-| Ultima sincronizzazione | 2026-10-24 |
+| Versione di riferimento | 1.9.0-beta.6 |
+| Ultima sincronizzazione | 2026-10-28 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -45,6 +45,15 @@ Velair mantiene sempre separati questi concetti:
 | Pausa globale o arresto | Tutti i dispositivi | Il pianificatore è in pausa o disabilitato globalmente. |
 
 Questi stati possono coesistere. Per esempio, la modalità Velair **Manuale** può selezionare il profilo `Sleep` mentre `climate.living_room` è in **Regolazione manuale**. Il profilo resta la configurazione di riferimento della programmazione, ma quel singolo dispositivo conserva l’impostazione esterna fino alla fine della regolazione manuale.
+
+<a id="room-groups"></a>
+## Gruppi stanza
+
+Per un [gruppo stanza](room-groups.it.md#pauses-manual-adjustment-and-resuming), l’ambito per dispositivo descritto sopra va inteso come un’unità di controllo condivisa. Le Impostazioni salvano una politica di **Regolazioni esterne** per il gruppo. Un cambiamento esterno rilevato su un membro può cedere l’autorità di programmazione dell’intera stanza; non crea una sessione Manuale indipendente per quel dispositivo.
+
+Velair conserva lo stato attuale di ogni membro anziché copiare l’obiettivo modificato agli altri. Con **Fino al prossimo blocco**, tutti tornano alla programmazione condivisa a quel blocco. Riprendere Automatico da qualsiasi membro risolve inoltre l’azione sul gruppo e riapplica il suo intento attuale ai destinatari configurati, nel rispetto dei motivi di pausa rimanenti. Anche le pause esplicite di zona e i boost richiesti da un membro appartengono all’intero gruppo.
+
+La scheda di configurazione del gruppo mostra lo stato del controllo senza un pulsante di pausa separato. Impostazioni di Comfort e osservazioni fisiche restano individuali.
 
 <a id="what-velair-observes"></a>
 ## Cosa osserva Velair

@@ -182,15 +182,15 @@ class RangeOnlyRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertNotIn(self.entity, self.scheduler._room_sensor_assist_states)
         status = self.scheduler._room_sensor_assist_status(self.entity)
-        self.assertEqual(status["reason"], "unsupported_range_mode")
+        self.assertEqual(status["reason"], "range_reference_not_configured")
         self.assertEqual(status["status"], "unavailable")
         self.assertEqual(self.scheduler.preconditioning_learning_activity(self.entity, "heat"),
-                         {"state": "unavailable", "reason": "unsupported_range_mode"})
+                         {"state": "unavailable", "reason": "range_reference_not_configured"})
         row = {}
         _arrival_preparation(self.scheduler, self.scheduler._planned_return, self.entity, zone,
                              normalize_preconditioning_data(zone["preconditioning"]), self.block(), arrival, NOW, None, False, row)
         self.assertEqual(row["preparation"], "arrival_only")
-        self.assertEqual(row["reason"], "unsupported_range_mode")
+        self.assertEqual(row["reason"], "range_reference_not_configured")
 
     async def test_range_learning_session_stops_after_effective_mode_changes(self):
         self.data["zones"][self.entity]["preconditioning"] = {"enabled": True}
