@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](shared-climate-supply.md) · [Español](shared-c
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.5 |
-| Laatst gesynchroniseerd | 2026-10-24 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -43,30 +43,47 @@ Sla uitdrukkelijk op om de configuratie toe te passen. Een ingeschakelde toevoer
 
 Opslagfouten staan in de detailkop naast de opslagactie. Configuratiefouten noemen toevoer, veld en correctie. Velair selecteert de toevoer, opent de juiste sectie, markeert het veld en geeft het focus. Home Assistant- en verbindingsfouten behouden hun oorspronkelijke uitleg zonder verwijzing naar een ongerelateerd veld. Concepten blijven bewaard voor correctie en opnieuw proberen, ook na het verwijderen van de laatste toevoer.
 
+<a id="live-status"></a>
+## Live status
+
+Kies **Live status** in de detailkop van een opgeslagen toevoer om de alleen-lezenmonitor te openen. Deze gebruikt de opgeslagen configuratie, ook bij niet-opgeslagen wijzigingen. Nieuwe toevoeren moeten eerst worden opgeslagen.
+
+De samenvatting toont de door Home Assistant gemelde schakelaarstatus, het aantal vragende thermostaten en de automatische besturingsstatus inclusief minimale-uit- en uitschakelwachttijden. Vraag en een Aan-schakelaar bevestigen geen fysieke verwarming, koeling, klepopening of stroming.
+
+Bij beoordeelde vraag en beschikbare metingen toont elke thermostaat een temperatuurlijn met actuele waarde, effectief doel en start-/stopgrenzen. Een gearceerde band in dezelfde themakleur als Room Assist markeert het interval, onafhankelijk van vraag. Bij vraag loopt een dunne pijl over de temperatuurlijn van huidige waarde naar stopgrens: oranje bij verwarmen, blauw bij koelen. Dit toont gevraagde temperatuurrichting, geen fysieke warmtestroom of bevestigde werking. Zonder vraag verdwijnt de pijl, wordt de actuele markering neutraal en blijft de statische band. Temperatuur stijgt voor verwarmen en koelen naar rechts. Waarden en grenslabels blijven zichtbaar zonder aanwijzen, ook mobiel. Huidige en doelwaarden staan gecentreerd boven hun echte posities; nabije labels krijgen aparte rijen. Elke start-/stopmarkering groepeert grenstemperatuur met getekende afstand tot doel, zonder aparte grenstabel.
+
+Labels benadrukken de volgende relevante grens. Bij vraag geeft **Stopt bij** de stopgrens aan. Voordat de meting de startdrempel passeert, heet deze **Ondergrens** bij verwarmen of **Bovengrens** bij koelen. Na passeren naar de vastgehouden band duidt **Herstart bij** de volgende cyclusgrens aan. Zonder vraag wordt **Start bij** benadrukt en blijft de andere grens neutraal. Samenvallende grenzen delen één markering. Onbekende vraag blijft neutraal zonder vraag aan te nemen.
+
+Als Room Assist de vraag bepaalt, benoemt de monitor die bron en gebruikt zijn kamersensor en vastgelegde regelgrenzen in plaats van een gecorrigeerd thermostaatinstelpunt als kamerdoel. **Waarom wordt mijn toevoerhysterese niet gebruikt?** opent uitleg over voorrang en inactieve toevoerinstellingen. De uitleg blijft dicht tot selectie en behoudt zijn open toestand bij updates. Normale start-/stopinstructies worden niet onder de grafiek herhaald; ontbrekende of niet-beoordeelde data krijgt wel uitleg. Bijvoorbeeld: comfortdoel 17 °C en Room Assist-grenzen 16/18 °C betekenen startafstand 1 °C onder en stopafstand 1 °C boven doel, ook als de ongebruikte toevoerstartafstand 0.2 °C is. Oorspronkelijke bereiken kunnen één schakelgrens gebruiken: gedeelde start-/stopmarkeringen betekenen niet nul afstand tot comfortdoel. Ontbrekende metingen en niet-beoordeelde vraag worden expliciet getoond in plaats van oude vraag als live te behouden. Uitgeschakelde thermostaten en uitgeschakelde/opgeschorte toevoeren tonen beschikbare huidige waarden zonder niet-beoordeelde doelen of regelgrenzen.
+
+De monitor ontvangt updates terwijl hij open is en stopt zijn abonnement bij sluiten. Hij toont de laatste Home Assistant-metingen, verhoogt de meldfrequentie niet, simuleert geen temperaturen en bewaart geen geschiedenis.
+
 <a id="how-estimated-demand-works"></a>
 ## Hoe geschatte vraag werkt
 
-Nieuwe toevoeren gebruiken **Stoppen bij doeltemperatuur**, een startafstand van **0,3 °C** of **0,54 °F** en een stopafstand van nul. Dit zijn gelijkwaardige temperatuurverschillen. Thermostaten erven deze waarden tenzij je aangepaste waarden kiest. De voorbeelden hieronder gebruiken andere afstanden om de modi te verduidelijken.
+Nieuwe toevoeren gebruiken **Stoppen bij doeltemperatuur**, met **Inschakelhysterese** van **0,3 °C** of **0,54 °F** en nul **Uitschakelhysterese**. Dit zijn gelijkwaardige temperatuurverschillen. Thermostaatuitzonderingen erven de toevoerwaarden tenzij je aangepaste kiest. De voorbeelden hieronder gebruiken andere waarden om elke modus te verduidelijken.
 
 Bij gewone thermostaten bepaalt hysterese een start- en stopgrens. Daartussen blijft de vorige vraag behouden. Alle vergelijkingen omvatten de grens zelf. Voorbeelden met een doel van 22 °C:
 
+Hysteresewaarden zijn temperatuurverschillen ten opzichte van de doeltemperatuur. De inschakelhysterese bepaalt wanneer de vraag begint. De uitschakelhysterese bepaalt hoe ver de temperatuur voorbij het doel moet komen, in de verwarmings- of koelrichting, om de vraag te beëindigen. Stoppen bij doeltemperatuur gebruikt nul voor de uitschakelhysterese. Symmetrisch gebruikt aan beide zijden dezelfde waarde; Aangepaste hysterese stelt beide waarden afzonderlijk in.
+
 | Gedrag | Waarden | Verwarmen: start / stop | Koelen: start / stop |
 | --- | --- | --- | --- |
-| Stoppen bij doeltemperatuur (standaard) | Startafstand 0,5 °C | ≤21,5 / ≥22 °C | ≥22,5 / ≤22 °C |
-| Symmetrisch | Afstand 0,5 °C | ≤21,5 / ≥22,5 °C | ≥22,5 / ≤21,5 °C |
-| Aangepast | Start 0,5 °C; stop 0,2 °C | ≤21,5 / ≥22,2 °C | ≥22,5 / ≤21,8 °C |
+| Stoppen bij doeltemperatuur (standaard) | Inschakelhysterese 0.5 °C | ≤21.5 / ≥22 °C | ≥22.5 / ≤22 °C |
+| Symmetrisch | Symmetrische hysterese 0.5 °C per zijde | ≤21.5 / ≥22.5 °C | ≥22.5 / ≤21.5 °C |
+| Aangepaste hysterese | Inschakelhysterese 0.5 °C; uitschakelhysterese 0.2 °C | ≤21.5 / ≥22.2 °C | ≥22.5 / ≤21.8 °C |
 
 Het diagram in **Vraag en hysterese** volgt wijzigingen in doel, gedrag en afstanden. Het gebruikt een benoemd voorbeelddoel in plaats van een actuele thermostaatwaarde. Temperaturen staan bij start- en stopmarkeringen; haakjes verbinden elke hystereseafstand met het doel. De benoemde kamertemperatuuras loopt naar rechts op. De uitleg eronder zegt dat tussen start en stop alleen een bestaande vraag doorgaat. Verwarming vraagt toevoer aan de koudere kant, koeling aan de warmere kant. Het diagram verklaart de schatting en simuleert geen apparatuur of vertragingen. Het voorbeelddoel is 22 °C of 72 °F. Tijdens een lege, onvolledige of ongeldige invoer houdt een grijs diagram zonder temperaturen dezelfde hoogte totdat de invoer geldig is.
 
-De startafstand meet hoeveel de temperatuur van het doel afwijkt voordat verwarmen of koelen nodig is. De stopafstand ligt voorbij het doel in de verwarmings- of koelrichting. Beide mogen nul zijn; zijn beide nul, dan betekent precies op het doel geen vraag. Binnen de band wordt na herstart, doelwijziging of hystereseverandering geen nieuwe vraag aangenomen. Wisselen van gedrag bewaart eerder ingevoerde aangepaste stopwaarden en gebruikt ze opnieuw wanneer je terugkeert naar aangepast gedrag.
+**Inschakelhysterese** is het temperatuurverschil vanaf het doel voordat verwarming of koeling wordt gevraagd. **Uitschakelhysterese** is het verschil voorbij het doel waar de vraag eindigt. **Symmetrische hysterese** geldt aan elke kant en is niet de totale bandbreedte. **Aangepaste hysterese** stelt beide apart in. Beide mogen nul zijn; bij beide nul betekent precies op doel geen vraag. Binnen de band wordt na herstart of doel-/hysteresewijziging geen nieuwe vraag aangenomen. Moduswissels bewaren eigen stopwaarden die weer gelden bij **Aangepaste hysterese**.
 
-**Stoppen bij doeltemperatuur** is het aanbevolen beginpunt voor gewone thermostaten. Symmetrisch en Aangepast zijn geavanceerd: een thermostaat kan de klep sluiten of de compressor stoppen bij het doel voordat de kamer de stopgrens voorbij het doel bereikt. De gedeelde bron kan dan gevraagd blijven. Deze instellingen schatten vraag, wijzigen geen eigen schakelgrenzen van de thermostaat en forceren geen warmtestroom.
+**Stoppen bij doeltemperatuur** is het aanbevolen beginpunt voor gewone thermostaten. **Symmetrisch** en **Aangepaste hysterese** zijn geavanceerd: een thermostaat kan de klep sluiten of de compressor stoppen bij het doel voordat de kamer de stopgrens voorbij het doel bereikt. De gedeelde bron kan dan gevraagd blijven. Deze instellingen schatten vraag, wijzigen geen eigen schakelgrenzen van de thermostaat en forceren geen warmtestroom.
 
 Houd grenzen van afzonderlijke warmte- en koeltoevoeren uit elkaar wanneer ze een bereikthermostaat delen. Grote stopafstanden kunnen warmtevraag vasthouden terwijl koeling start, of andersom. Toevoeren combineren vraag onafhankelijk en vergrendelen tegengestelde uitgangen niet. Gebruik waar nodig geschikte apparatuurvergrendelingen.
 
 De bron wordt gevraagd zodra minstens één gekoppelde thermostaat geldige vraag heeft. Een uitgeschakelde thermostaat of onverenigbare HVAC-richting vraagt niets. Ontbrekende of niet-beschikbare temperatuurgegevens geven onbekende vraag en behouden een eerdere vraag niet onbeperkt. Andere geldige kamers kunnen nog vraag leveren. Zonder geldig vragende kamer schakelt de toevoer na de ingestelde vertraging uit.
 
-Actuele thermostaatdoelen gelden, inclusief handmatige wijzigingen en doelen van adaptieve voorconditionering of Geplande terugkeer. Een schema pauzeren schakelt automatische toevoerregeling niet uit. Een geldig bereik gebruikt de ondergrens voor verwarming en de bovengrens voor koeling; een dubbelzinnig doel kan geen toevoer vragen.
+Actuele thermostaatdoelen gelden, inclusief handmatige wijzigingen en doelen van voorconditionering of Geplande terugkeer. Een schema pauzeren schakelt automatische toevoer niet uit. Geldige bereiken gebruiken standaard de ondergrens bij verwarmen en bovengrens bij koelen. Met een **Referentie-instelpunt** voor vaste Verwarmen of Koelen bij **Instellingen → Klimaatapparaten en groepen** gebruikt de toevoer dezelfde grens en de vaste modusrichting. Een dubbelzinnig doel kan geen vraag leveren.
 
 <a id="room-assist"></a>
 ## Room Assist
@@ -80,15 +97,25 @@ Het gecorrigeerde thermostaatdoel wordt niet met een aparte kamersensor vergelek
 <a id="timing-and-manual-control"></a>
 ## Timing en handmatige regeling
 
-**Minimale uitduur** vertraagt een herstart na uitschakelen. **Uitschakelvertraging** vereist een ononderbroken periode zonder vraag voordat wordt uitgeschakeld; terugkerende vraag annuleert die vertraging. Beide accepteren gehele seconden van 0 tot 86.400 en staan standaard op nul. Er is geen verplichte minimale aanperiode die de bron actief houdt nadat kleppen mogelijk sluiten.
+**Inschakelvertraging** vereist voortdurende geschatte vraag vóór de start. Bij verdwenen of onbekende vraag begint de bevestiging opnieuw. De timer hoort bij de toevoer: wisselen van vragende kamer terwijl er vraag blijft, herstart deze niet. **Minimale uittijd** beschermt na uitschakelen. Bij vraag geldt de langste tijd: **resterende minimale uittijd** of **volledige inschakelvertraging**. Ze worden niet opgeteld.
+
+Voorbeeld met 60 seconden minimale uittijd en 20 seconden inschakelvertraging:
+
+- Na een dag Uit is de bescherming voorbij: wacht alleen 20 seconden vanaf vraag.
+- Bij vraag direct na uitschakelen wacht je 60 seconden, de langste ingestelde tijd.
+- Bij vraag 50 seconden na uitschakelen resteren 10 seconden bescherming. Wacht 20 seconden vanaf vraag; starten kan 70 seconden na uitschakelen.
+
+Vraag moet voortdurend aanwezig blijven. Live status toont resterende tijd en of bevestiging of minimale uittijd blokkeert. Nul schakelt alleen die wachttijd uit; de andere blijft gelden.
+
+**Uitschakelvertraging** vereist voortdurend geen vraag; terugkerende vraag annuleert deze. Alle drie tijden accepteren gehele seconden van 0 tot 86.400, standaard nul. Er is geen afgedwongen minimale aantijd die de bron na mogelijk sluiten van kranen actief houdt.
 
 Een toevoer hernoemen of een ongebruikte stopafstand wijzigen herstart de vraagcyclus of uitschakelvertraging niet. Opnieuw inschakelen gebruikt de laatst gemelde uitschakelovergang voor de minimale uitduur.
 
-De schakelaar van een ingeschakelde toevoer buiten Velair uitschakelen onderbreekt automatische regeling. Gebruik **Automatische regeling hervatten** om verder te gaan. De onderbreking blijft na herstart bestaan en wordt niet opgeheven door andere toevoerwijzigingen op te slaan. Uitschakelen of verwijderen van een toevoer vraagt uitschakeling van de eerder geregelde uitgang.
+De schakelaar van een ingeschakelde toevoer buiten Velair uitzetten pauzeert de automatiek. Een blijvende Home Assistant-melding en Activiteit-item verklaren de oorzaak en dat hervatten nodig is. De reden staat ook bij **Automatisch hervatten** en Live status. Beschikbare kamertemperaturen blijven zichtbaar. Hervatten beoordeelt actuele vraag opnieuw en schakelt niet noodzakelijk in. Bij bevestigde vraag begint een nieuwe inschakelvertraging; minimale uittijd blijft gelden. De pauze blijft na herstarts en andere opgeslagen wijzigingen bestaan. Uitschakelen of verwijderen vraagt Uit aan voor de eerder bestuurde uitgang.
 
 Extern inschakelen overschrijft de automatische regeling niet. Wanneer alle gekoppelde thermostaten geen vraag melden, schakelt Velair na de uitschakelvertraging weer uit. Bevestigt Home Assistant dat deze overgang bij Velairs correctie hoort, dan maakt Velair een blijvende melding en een Activiteit-item bij de schakelaar. De tekst noemt de toevoer, verklaart dat een externe activering is gecorrigeerd omdat de automatische regeling geen geschatte warmte- of koelvraag had en verwijst naar **Toevoerregeling** om die regeling te bekijken of uit te schakelen. Het bericht neemt niet aan dat een persoon de wijziging veroorzaakte.
 
-Herhaalde correcties voor dezelfde toevoer en schakelaar worden tijdens de huidige integratierun hoogstens eenmaal per 15 minuten gemeld. Een andere schakelaar toewijzen begint een nieuwe meldperiode. Elke toevoer gebruikt één melding; een latere toegestane melding vervangt de vorige. Mislukte opdrachten of acceptatie van een serviceaanroep zonder bijbehorende gemelde uitschakelovergang geven geen succesmelding. Onbekende thermostaatvraag geldt niet als bevestigde nulvraag. Een schakelaarintegratie die de opdrachtcontext niet behoudt, kan niet de benodigde toeschrijving leveren. Deze meldregels wijzigen de regeling niet en vereisen geen polling. Fouten in meldingen of Activiteit onderbreken de regeling niet; Activiteit vereist Home Assistants activiteit-/logboekintegratie.
+Herhaalde correcties voor dezelfde toevoer en schakelaar worden tijdens de huidige integratierun hoogstens eenmaal per 15 minuten gemeld. Een andere schakelaar toewijzen begint een nieuwe meldperiode. Elke toevoer gebruikt één melding; een latere toegestane melding vervangt de vorige. Mislukte opdrachten of acceptatie van een serviceaanroep zonder bijbehorende gemelde uitschakelovergang geven geen succesmelding. Onbekende thermostaatvraag geldt niet als bevestigde nulvraag. Een schakelaarintegratie die de opdrachtcontext niet behoudt, kan niet de benodigde toeschrijving leveren. Deze meldregels wijzigen de regeling niet en vereisen geen polling. Fouten in meldingen of Activiteit onderbreken de regeling niet; Activiteit vereist Home Assistants activiteit-/logboekintegratie. Pauzemeldingen hebben een aparte melding en eigen limiet van 15 minuten; een recente correctie verbergt geen latere pauze.
 
 Een nieuwere handmatige uitschakeling gaat vóór een reeds lopend opslag- of hervatverzoek. Hervat daarna opnieuw uitdrukkelijk als je automatische regeling wilt. Handmatige onderbreking blijft ook tijdens eenheidsmigratie en herstart opgeslagen.
 

@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CORE_CONFIG_UPDATE
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.typing import ConfigType
 
@@ -27,6 +28,7 @@ from .external_execution import ExternalExecutionManager
 from .external_execution.registry import build_provider_registry
 from .frontend import (
     async_setup_frontend,
+    async_setup_frontend_resources,
     async_setup_frontend_route,
     async_unload_frontend,
 )
@@ -34,7 +36,7 @@ from .runtime_diagnostics import RuntimeDiagnosticsManager
 from .scheduler import VelairScheduler
 from .services import async_setup_services, async_unload_services
 from .storage import VelairStorage
-from .shared_demand import SharedDemandController
+from .shared_demand import SharedDemandController, SIGNAL_SHARED_DEMAND_LIVE_UPDATED
 from .temperature_migration import (
     async_dismiss_temperature_migration_notification,
     async_notify_temperature_migration,
@@ -65,6 +67,7 @@ type VelairConfigEntry = ConfigEntry[VelairData]
 async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     """Set up Velair before config entries are loaded."""
     await async_setup_frontend_route(hass)
+    await async_setup_frontend_resources(hass)
     return True
 
 
@@ -245,6 +248,7 @@ async def async_unload_entry(
 
     await async_unload_frontend(hass)
     hass.data[DOMAIN].pop(entry.entry_id, None)
+    async_dispatcher_send(hass, SIGNAL_SHARED_DEMAND_LIVE_UPDATED)
     if not hass.data[DOMAIN]:
         await async_unload_services(hass)
 

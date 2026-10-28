@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.5 |
-| Ultima sincronizzazione | 2026-10-24 |
+| Versione di riferimento | 1.9.0-beta.6 |
+| Ultima sincronizzazione | 2026-10-28 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -40,7 +40,11 @@ Gli obiettivi singoli `auto` e `heat_cool` e gli intervalli nativi `heat_cool` m
 
 L’entità climatica resta l’attuatore. Velair non crea un’entità climatica virtuale e non aggira il firmware. Se termostato o valvola permettono il collegamento diretto di un sensore ambiente separato, questa opzione nativa del dispositivo resta normalmente la scelta preferibile.
 
-Le entità che accettano solo intervalli possono anche ricevere coppie programmate in Caldo, Freddo e Auto. Room Assist non modifica queste coppie: l’assistenza agli intervalli richiede `heat_cool`. Lo stato attuale spiega il limite e Velair invia la coppia nominale senza spostamento. Le impostazioni Room Assist restano disponibili per obiettivi compatibili. Passare da un obiettivo assistito a uno di questi intervalli cancella l’assistenza precedente senza ripristinare un vecchio obiettivo corretto sopra la nuova coppia.
+Per due setpoint in `heat` o `cool` fisso, seleziona prima **Setpoint di riferimento** per dispositivo e modalità in **Impostazioni → Dispositivi e gruppi**. Scegli **Setpoint inferiore** o **Setpoint superiore** secondo il valore realmente usato; Velair non lo deduce dalla capacità di gestire intervalli. Il Precondizionamento adattivo condivide la selezione.
+
+Room Assist usa il limite scelto come obiettivo fisso di riscaldamento o raffrescamento, inclusi il ciclo di isteresi a obiettivo singolo e la protezione dell’obiettivo programmato. Sposta entrambi i setpoint della stessa quantità, conservandone la distanza. Entrambi devono rispettare passo e limiti fisici del dispositivo, quindi l’altro limite può restringere la correzione disponibile. Gli avvisi di limitazione esistenti restano validi.
+
+Con **Non configurato**, le coppie in modalità fissa vengono inviate invariate senza correzione di Room Assist. Gli intervalli `auto` restano non supportati; le bande native `heat_cool` conservano il loro comportamento. Le impostazioni salvate restano conservate. Cambiare riferimento o modalità elimina l’assistenza obsoleta senza ripristinare un vecchio obiettivo corretto sul nuovo intento.
 
 <a id="setup"></a>
 ## Configurazione
@@ -49,11 +53,18 @@ Le entità che accettano solo intervalli possono anche ricevere coppie programma
 2. Espandi il dispositivo da configurare.
 3. Seleziona un sensore di temperatura ambiente.
 4. Abilita l’assistenza con sensore ambiente.
-5. Regola **Banda morta di Room Assist**, cioè la fascia di tolleranza, per impostare i limiti inferiori e superiori di commutazione nel riscaldamento o raffrescamento fisso, o il margine neutro per modalità automatiche e intervalli nativi.
+5. Regola la banda morta di Room Assist per definire i limiti inferiore e superiore del riscaldamento o raffrescamento fisso intorno all’obiettivo singolo o al riferimento di intervallo scelto, oppure il margine neutro delle modalità automatiche a obiettivo singolo e delle bande native `heat_cool`.
 6. Regola **Delta assistenza massimo** se il valore predefinito è troppo piccolo per la stanza o inferiore alla differenza di obiettivo necessaria al termostato per interrompere riscaldamento o raffrescamento.
 7. Regola **Ritardo aggiornamento** se gli aggiornamenti del sensore sembrano troppo lenti o troppo frequenti.
 
 Selezionare solo un sensore ne salva soltanto la scelta. Velair lo usa come temperatura ambiente effettiva solo quando l’assistenza è abilitata.
+
+<a id="room-groups"></a>
+### Gruppi stanza
+
+Scegli il gruppo in Room Assist e usa gli stessi controlli di sensore, abilitazione, banda morta, correzione massima e aggiornamento. La temperatura propria del gruppo proviene dal membro scelto in **Gruppi stanza → Riferimento di temperatura**; il sensore esterno facoltativo si configura qui. Disabilitare o rimuovere Room Assist riporta la misura effettiva a quel membro.
+
+Il gruppo ha una configurazione e una correzione condivise, non un controllore indipendente per membro. Velair conserva l’obiettivo programmato e invia il comando assistito secondo la modalità di invio del gruppo: tutti i membri per impostazione predefinita, oppure il destinatario esplicito quando l’impianto propaga già i comandi. I controlli di capacità, passo e limiti si applicano ai destinatari reali. I membri restano visibili individualmente nella Panoramica.
 
 L’assistenza con sensore ambiente non richiede il precondizionamento adattivo. Può operare sui normali blocchi e su quelli avviati anticipatamente dal precondizionamento adattivo.
 
@@ -79,7 +90,7 @@ La scheda Room Assist indica cosa può fare attualmente Velair per ogni disposit
 | **Inattivo** | È abilitato, ma non c’è un blocco di temperatura compatibile attivo o un calcolo utilizzabile. |
 | **Pronto** | Velair ha letture e obiettivo necessari, ma non ha ancora applicato un obiettivo assistito. |
 | **Assistenza attiva** | Velair ha applicato un obiettivo temporaneo corretto o un intervallo spostato. |
-| **Mantenimento** | Room Assist mantiene neutro un obiettivo singolo automatico, mantiene un intervallo nativo o la protezione mantiene l’obiettivo sul lato sicuro. Un ciclo fisso `heat` o `cool` può restare in **Assistenza attiva** attraversando la fascia di tolleranza. |
+| **Mantenimento** | Room Assist mantiene neutro un obiettivo singolo automatico, mantiene un intervallo nativo `heat_cool` o la protezione mantiene l’obiettivo sul lato sicuro. Un ciclo fisso `heat` o `cool` può restare in **Assistenza attiva** attraversando la fascia di tolleranza. |
 | **Bloccato** | Pausa, incremento, stato manuale o altro stato del pianificatore ha la priorità. |
 | **Non disponibile** | Il dispositivo o la capacità richiesta dell’obiettivo non è utilizzabile al momento. L’interfaccia mostra il motivo quando noto. |
 
@@ -300,9 +311,9 @@ Alla ripresa automatica, Velair risolve l’intento della programmazione o del p
 Una modifica esterna idonea mantiene il controllo automatico oppure entra/aggiorna la regolazione manuale secondo il criterio salvato del dispositivo. Per criteri, servizi, interazioni con incrementi/profili e limiti di attribuzione, consulta [Modifiche esterne e regolazione manuale](manual-control.it.md).
 
 <a id="planned-return"></a>
-## Rientro pianificato
+## Ritorno programmato
 
-Durante il [Rientro pianificato](planned-return.it.md), Room Assist segue l’obiettivo temporaneo di arrivo di ogni zona appena inizia la preparazione. Non continua a usare la temperatura della modalità Assenza e non vi ritorna quando cambia un suo blocco. Le altre zone seguono Assenza fino all’inizio della propria preparazione.
+Durante il [Ritorno programmato](planned-return.it.md), Room Assist segue l’obiettivo temporaneo di arrivo di ogni zona appena inizia la preparazione. Non continua a usare la temperatura della modalità Assenza e non vi ritorna quando cambia un suo blocco. Le altre zone seguono Assenza fino all’inizio della propria preparazione.
 
 Per esempio, un obiettivo Assenza di 16 gradi diventa un obiettivo di arrivo di 21 gradi quando quella stanza inizia a prepararsi. Room Assist può regolare la temperatura fisica impostata per raggiungere 21 gradi sul sensore ambiente. Regolazione manuale e pause esplicite sospendono l’intervento nella zona. Una selezione esplicita di modalità/profilo annulla la preparazione anticipata dell’episodio e mantiene la selezione. Anche **Annulla** del rientro rimuove la preparazione; dopo la partenza confermata ripristina modalità e profili precedenti registrati. Consulta gli [esempi di annullamento](planned-return.it.md#cancelling-a-return-examples).
 
@@ -349,7 +360,7 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-I quattro campi di isteresi sono facoltativi. Compaiono per un ciclo singolo fisso `heat` o `cool` con tolleranza diversa da zero e sono assenti per la correzione precedente senza tolleranza, modalità automatiche singole e intervalli nativi.
+I quattro campi di isteresi sono facoltativi. Negli eventi di automazione compaiono per un ciclo fisso a obiettivo singolo `heat` o `cool` con banda morta non nulla; sono assenti per la correzione precedente con banda morta zero, le modalità automatiche a obiettivo singolo e tutti gli intervalli. Gli intervalli fissi con riferimento configurato mostrano la fase di isteresi nello stato in tempo reale; i loro eventi conservano le coppie complete di limiti e `range_shift`.
 
 Un aggiornamento a intervallo usa le fasce complete programmate e applicate anziché campi di obiettivo singolo:
 

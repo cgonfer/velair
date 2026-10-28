@@ -13,6 +13,57 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
+## Room groups and control-unit identity
+
+Schedule responses preserve `configured_entities` as real managed climates and
+add `room_groups`, ordered `control_units`, `member_to_unit`,
+`control_unit_states` and `group_delivery_status`. Group state is a backend
+projection, not an HA entity. Scheduling/Profile editors use control-unit IDs;
+Overview uses physical members with their owner's effective configuration.
+
+- `velair/preview_room_group`: `group`, `expected_revision`, and
+  `source_entity_id` when creating a group. Returns the normalized group,
+  configuration differences, removed members and whether learning resets.
+- `velair/set_room_group`: the same request fields; validates and commits the
+  complete ownership change, then returns the schedule response.
+- `velair/remove_room_group`: `group_id` and `expected_revision`; makes each
+  member independent with the common configuration and returns the response.
+
+`group` contains a stable `id`, `name`, ordered `members`,
+`temperature_entity_id`, and `delivery_mode` (`all` or `selected`). Selected
+delivery also requires `delivery_entity_id` from the members. Group IDs use
+`group.` followed by lowercase letters, digits or underscores. Member-targeted
+room actions resolve to their one owner. Real HA climate service calls always
+use physical climate IDs.
+
+The `group.*` prefix is an internal namespace, not a registered Home Assistant
+group. Generated IDs use `group.` plus a UUID hex string and remain stable on
+rename. They do not create HA states and must not be sent directly to HA
+`climate.*` services. Velair room actions resolve either a physical member ID
+or the group ID to the same shared zone. This includes boosts, zone pauses,
+Manual adjustment and automatic resume. An external change on one member can
+pause the group's schedule while retaining the members' distinct live states.
+
+Preconditioning learning is keyed by the control-unit ID. Group creation starts
+one history; member histories are not merged. Membership-set, native-reference
+or delivery changes invalidate group learning. Member order and name changes
+preserve it. Removing members or dissolving a group copies shared configuration
+without copying the group's active overrides or learning into independent units.
+
+New groups and changes to `temperature_entity_id` require a member climate. This
+is the native group measurement; the optional external Room Assist sensor remains
+in the shared zone's `preconditioning.room_temperature_entity_id`, with ordinary
+`room_sensor_assist_enabled` semantics. Group creation adopts that zone setting
+without replacing it with the group's native reference. Reload and portable import
+preserve both independent values. Legacy external native references remain readable
+and unchanged metadata edits may retain them; they are not accepted as new or
+replacement references. Loading legacy groups never automatically enables Assist.
+
+Settings `unit_order` arranges groups and independent climates. Legacy
+`zone_order` remains the physical compatibility order. Group membership order
+determines the individual entries when Overview expands a group. Portable model
+25 includes room groups with their shared zone/Profile configuration.
+
 ## Day layouts and grouped Default saves
 
 Default zones and Profile schedule zones include `day_layout_key`, one of
@@ -358,10 +409,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 22,
+    "portable_model": 23,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.5"
+    "integration": "1.9.0-beta.6"
   }
 }
 ```
@@ -1093,7 +1144,7 @@ Preconditioning is adaptive. The scheduler predicts a lead for each concrete fut
 
 Outdoor temperature context is optional and local. In the Preconditioning tab, `outdoor_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Velair reads the selected sensor's numeric state, stores it with learning samples, and uses it only to compare similar preconditioning samples once enough history exists. It does not call external weather services and does not apply fixed weather-based adjustments to the initial model.
 
-Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. For fixed scalar `heat` and `cool`, a non-zero `room_sensor_assist_deadband` defines a runtime hysteresis cycle between the scheduled target minus and plus that value; `room_sensor_assist_max_delta` caps correction relative to the active edge. A zero deadband preserves legacy signed correction. Scalar automatic modes retain their neutral deadband, while native ranges retain their stable holding margin. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native-range holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
+Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. For fixed `heat` and `cool` with a scalar target or configured range reference, a non-zero `room_sensor_assist_deadband` defines a runtime hysteresis cycle between the scalar target or selected reference minus and plus that value; `room_sensor_assist_max_delta` caps correction relative to the active edge. A zero deadband preserves legacy signed correction. Scalar automatic modes retain their neutral deadband, while native `heat_cool` ranges retain their stable holding margin. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native `heat_cool` holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
 
@@ -1130,6 +1181,14 @@ change, when assistance is cleared, and when Velair or Home Assistant reloads.
 See [Adaptive preconditioning](adaptive-preconditioning.md) for the full learning lifecycle, input/output examples, prediction rules, storage behavior, and known limitations. See [Room Assist](room-assist.md) for the room sensor assistance lifecycle, target calculation, runtime status, restoration behavior, and events.
 
 ## Zone Comfort
+
+Comfort targets are configured physical `climate.*` IDs, including grouped
+members. Logical `group.*` IDs are rejected for Comfort updates. The schedule
+response exposes `comfort_settings` for each physical climate and `comfort`
+assessments keyed by the same physical IDs. Persisted `member_comfort` retains
+settings only for grouped members; singleton settings stay in their existing
+zone. Group creation and dissolution preserve these independent settings.
+
 
 ```ts
 await hass.connection.sendMessagePromise({
@@ -1358,6 +1417,37 @@ await hass.connection.sendMessagePromise({
 
 Deletes local adaptive preconditioning observations for one managed climate direction. Valid directions are `heat` and `cool`. Schedule blocks, preconditioning settings, and the other direction's observations are kept.
 
+## Shared fixed-mode range reference
+
+Managed zones may persist `target_range_reference`, an object with optional
+`heat` and `cool` keys whose values are `"low"` or `"high"`. An omitted key
+means unconfigured. This is separate from `target_range_modes`: one determines
+which boundary controls fixed-mode assistance, the other determines delivery
+format. Neither `auto` nor `heat_cool` accepts a reference override.
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/update_zone_range_reference",
+  entity_id: "climate.living_room",
+  target_range_reference: {heat: "high", cool: "low"},
+  expected_revision: currentRevision
+});
+```
+
+This replaces the reference object; send `{}` to clear both modes, or omit a
+mode key to clear just that selection. The command requires a managed entity,
+valid mode/boundary keys and the current configuration revision. It returns the
+updated schedule response. Failed validation, revision conflicts and failed
+persistence leave the previous configuration in place. A successful change
+retires obsolete Room Assist corrections and incompatible learning observations.
+
+Room Assist and Adaptive Preconditioning share this interpretation. Fixed-mode
+range assistance is disabled until its reference is configured; nominal schedule
+delivery remains available. The selected boundary supplies the scalar target,
+while the mode fixes the heating/cooling direction. Room Assist shifts the full
+pair together; preconditioning sends the full nominal pair. Auto ranges remain
+unsupported; Heat/Cool bands keep their existing interpretation.
+
 ## Target-format policy review
 
 Each managed zone includes derived `target_format_policy` data:
@@ -1454,7 +1544,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 22,
+  "model_version": 23,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1517,7 +1607,11 @@ unmatched climate IDs is not applied or used to transform existing local zones.
 Export is available while scheduling is blocked by a pending temperature-unit
 resolution and remains a read-only operation during reset, migration, or import.
 
-The `preconditioning_learning` section is incremental by climate entity ID: matching managed climates receive the normalized imported history, unknown climate IDs are ignored, and existing history for local climates absent from the file is preserved.
+The `preconditioning_learning` section is incremental by exact control-unit ID:
+an independent climate entity ID or an internal room-group ID. Matching managed
+units receive the normalized imported history, unknown IDs are ignored, and
+existing history for local units absent from the file is preserved. A group
+history is not copied or split among physical members.
 
 ## Reset Data
 
@@ -1674,9 +1768,26 @@ Portable model 21 adds `settings.shared_demand_groups`. Each shared supply conta
 an empty object or `{ "hysteresis": 0.5 }`) and `suspended`. Hysteresis values are
 temperature differences. Import always disables and suspends supplies; local
 `settings.shared_demand_cleanup` recovery intent is never exported or imported.
-Both timing fields require whole seconds from 0 to 86,400 on API save and import;
+Timing fields require whole seconds from 0 to 86,400 on API save and import;
 fractional values are rejected before configuration is mutated. Integral numeric
 values such as `1.0` are accepted.
+
+Portable model 24 adds supply `on_delay_seconds`, defaulting to zero when absent.
+It requires continuous known aggregate demand before a new start. Loss of demand,
+unknown aggregate intent, suspension or disabling resets confirmation. Room-to-room
+handoffs do not reset it while aggregate demand stays true. Confirmation and
+minimum-off deadlines overlap; the later deadline determines when starting is
+allowed. Confirmation is runtime-only and starts fresh after resume or restart.
+Optional `suspension_reason` records `external_off` for an observed external
+shutdown and `imported` for an imported supply. Legacy suspensions can omit it.
+Import replaces the original reason with `imported`; resume clears it. Runtime
+status includes the reason so the UI does not attribute imported or unknown
+suspensions to an external shutdown.
+
+Portable model 23 adds optional zone `target_range_reference`, preserving each
+mode's explicit lower/upper reference through export and import. Older payloads
+leave both modes unconfigured; older importers reject the newer model instead
+of silently dropping this interpretation.
 
 Portable model 22 adds optional supply `hysteresis_mode` (`at_target`, `symmetric`,
 `custom`) and `hysteresis_stop`. Missing mode retains model 21's at-target behavior;
@@ -1701,3 +1812,10 @@ The schedule response includes `shared_demand_status` keyed by supply ID, with
 failures; `_configuration` exposes malformed stored setup. These are estimates
 and accepted service actions, not physical supply measurements. Status updates
 exclude measured-temperature-only notification changes and introduce no polling.
+
+`status: "on_delay"` identifies demand confirmation; `minimum_off` identifies the
+minimum-off protection when that deadline is later. For either wait,
+`pending_until` is the effective earliest start deadline. Reaching it triggers a
+fresh backend evaluation, not a guarantee that the output will turn on. External
+off suspension is reported separately from confirmed external-on corrections,
+with a persistent notification and Activity entry explaining the need to resume.

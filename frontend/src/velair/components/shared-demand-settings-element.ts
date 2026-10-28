@@ -1,3 +1,4 @@
+import { controlUnitIds, controlUnitState } from "../domain/control-units";
 import { LitElement, css, html, noChange, nothing, svg, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
@@ -10,6 +11,9 @@ import { cardStyles } from "../styles/card-styles";
 import { profileStyles } from "../styles/profile-styles";
 import { dismissDisconnectedInlineHelp, dismissInlineHelpWithin, renderInlineHelp } from "../views/inline-help";
 import { renderDocumentationHelp } from "../views/documentation-links";
+import { renderSettingsDisclosure } from "../views/settings-disclosure";
+import { renderEmptyLibrary } from "../views/empty-library";
+import "./shared-demand-live-element";
 
 export type SharedSupplyLibraryDraft = {
   supplies: SharedSupply[];
@@ -21,7 +25,7 @@ export type SharedSupplyLibraryDraft = {
   validationAttempted?: boolean;
 };
 
-type ValidationField = "name" | "switch" | "direction" | "hysteresis-mode" | "zone" | "hysteresis" | "hysteresis-stop" | "override" | "override-stop" | "minimum-off" | "off-delay";
+type ValidationField = "name" | "switch" | "direction" | "hysteresis-mode" | "zone" | "hysteresis" | "hysteresis-stop" | "override" | "override-stop" | "minimum-off" | "on-delay" | "off-delay";
 type ValidationIssue = {
   supplyId: string;
   field: ValidationField;
@@ -87,6 +91,9 @@ export class VelairSharedDemandSettings extends LitElement {
     .shared-demand-field { display: grid; gap: var(--shared-demand-control-gap); min-width: 0; }
     .shared-demand-field > .label, .shared-demand-field > .settings-policy-heading { align-items: center; display: flex; min-height: 24px; }
     .shared-demand-field .select-wrap { min-width: 0; }
+    .shared-demand-number-input { display: block; min-width: 0; position: relative; }
+    .shared-demand-number-input input { box-sizing: border-box; padding-inline-end: 4rem; width: 100%; }
+    .shared-demand-input-unit { color: var(--secondary-text-color); font-size: 12px; inset-inline-end: 30px; pointer-events: none; position: absolute; top: 50%; transform: translateY(-50%); }
     .shared-demand-section input:not([type="checkbox"]), .shared-demand-section .select-wrap { margin-top: 0; }
     .shared-demand-field > .field-error { margin-top: 0; }
     .shared-demand-fact dt .inline-help-wrapper, .shared-demand-field > .settings-policy-heading .inline-help-wrapper { height: 24px; position: relative; width: 32px; }
@@ -94,7 +101,7 @@ export class VelairSharedDemandSettings extends LitElement {
     .shared-demand-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
     .shared-demand-copy { line-height: 1.5; overflow-wrap: anywhere; }
     .shared-demand-room-assist-info { align-items: flex-start; margin-top: 0; }
-    .shared-demand-zones.target-range-options { box-shadow: none; inset: auto; max-height: none; position: static; }
+    .shared-demand-zones.target-range-options { border: 0; border-radius: 0; box-shadow: none; inset: auto; max-height: none; position: static; }
     .shared-demand-zone { align-items: start; display: grid; gap: var(--shared-demand-control-gap) 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 6px 4px; }
     .shared-demand-zone.selected { grid-template-rows: auto auto auto; }
     .shared-demand-zone.selected > .checkbox-label { align-self: center; grid-column: 1; grid-row: 2; }
@@ -122,10 +129,6 @@ export class VelairSharedDemandSettings extends LitElement {
     .shared-demand-switch-state { align-items: center; color: var(--secondary-text-color); display: flex; gap: 4px; font-size: 12px; line-height: 1.4; }
     .shared-demand-switch-state ha-icon { --mdc-icon-size: 16px; }
     .shared-demand-output-wait { margin-top: 6px; }
-    .shared-demand-disclosure .external-controller-conditions-body { display: grid; gap: 12px; padding-top: 12px; }
-    .shared-demand-disclosure > summary { box-sizing: border-box; min-height: 44px; }
-    .shared-demand-disclosure > summary strong { overflow: visible; overflow-wrap: anywhere; text-overflow: clip; white-space: normal; }
-    .shared-demand-disclosure > summary:focus-visible { border-radius: 4px; outline: 2px solid var(--primary-color); outline-offset: 3px; }
     .shared-demand-band-values { align-items: start; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); min-width: 0; }
     .shared-demand-effective { grid-column: 1 / -1; }
     .shared-demand-hysteresis-controls { align-items: start; display: grid; gap: 8px 12px; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
@@ -144,7 +147,7 @@ export class VelairSharedDemandSettings extends LitElement {
     .shared-demand-band-values > .shared-demand-field > .field-error,
     .shared-demand-hysteresis-controls > .shared-demand-field > .field-error { margin-top: 4px; }
     .shared-demand-warning { color: var(--warning-color, var(--primary-text-color)); font-size: 12px; line-height: 1.5; }
-    .shared-demand-preview { border: 1px solid var(--divider-color); border-radius: 8px; display: grid; gap: 8px; margin: 0; min-width: 0; padding: 12px; }
+    .shared-demand-preview { display: grid; gap: 8px; margin: 0; min-width: 0; padding: 12px; }
     .shared-demand-preview figcaption { color: var(--secondary-text-color); display: grid; font-size: 12px; line-height: 1.5; }
     .shared-demand-preview figcaption::before { content: attr(data-caption-space); grid-area: 1 / 1; visibility: hidden; }
     .shared-demand-preview figcaption > span { grid-area: 1 / 1; }
@@ -301,7 +304,7 @@ export class VelairSharedDemandSettings extends LitElement {
     this._draft = [...this._begin(), {
       id, name: "", enabled: false, switch_entity_id: "", direction: "heat", hysteresis_mode: "at_target",
       hysteresis: Number(convertTemperatureDelta(0.3, "°C", this.data?.temperature_unit).toFixed(2)),
-      minimum_off_seconds: 0, off_delay_seconds: 0, zones: {}, suspended: false,
+      minimum_off_seconds: 0, on_delay_seconds: 0, off_delay_seconds: 0, zones: {}, suspended: false,
     }];
   }
 
@@ -331,6 +334,7 @@ export class VelairSharedDemandSettings extends LitElement {
   private _supplyNumbersValid(supply: SharedSupply): boolean {
     return this._numericValid(supply.hysteresis) && this._numericValid(supply.hysteresis_stop, false, true)
       && this._numericValid(supply.minimum_off_seconds, true) && this._numericValid(supply.off_delay_seconds, true)
+      && this._numericValid(supply.on_delay_seconds, true, true)
       && Object.values(supply.zones).every(zone => this._numericValid(zone.hysteresis, false, true)
         && this._numericValid(zone.hysteresis_stop, false, true));
   }
@@ -354,7 +358,7 @@ export class VelairSharedDemandSettings extends LitElement {
     const switches = new Map<string, SharedSupply>();
     const allowedSwitches = new Set(this._switches());
     const stored = new Map((this.data?.settings?.shared_demand_groups ?? []).map(supply => [supply.id, supply]));
-    const managed = new Set(this.data?.configured_entities ?? []);
+    const managed = new Set(controlUnitIds(this.data));
     for (const supply of supplies) {
       const add = (field: ValidationField, cause: ValidationIssue["cause"], section?: ValidationIssue["section"], zoneId?: string, conflictName?: string) => issues.push({ supplyId: supply.id, field, cause, section, zoneId, conflictName });
       const preservedDisabledOutput = !supply.enabled && stored.get(supply.id)?.switch_entity_id === supply.switch_entity_id;
@@ -370,6 +374,7 @@ export class VelairSharedDemandSettings extends LitElement {
       if (!this._numericValid(supply.hysteresis)) add("hysteresis", "sharedDemandHysteresisInvalid", "demand");
       if (!this._numericValid(supply.hysteresis_stop, false, true)) add((supply.hysteresis_mode ?? "at_target") === "custom" ? "hysteresis-stop" : "hysteresis-mode", (supply.hysteresis_mode ?? "at_target") === "custom" ? "sharedDemandHysteresisInvalid" : "sharedDemandHiddenStopInvalid", "demand");
       if (!this._numericValid(supply.minimum_off_seconds, true)) add("minimum-off", "sharedDemandSecondsInvalid", "timing");
+      if (!this._numericValid(supply.on_delay_seconds, true, true)) add("on-delay", "sharedDemandSecondsInvalid", "timing");
       if (!this._numericValid(supply.off_delay_seconds, true)) add("off-delay", "sharedDemandSecondsInvalid", "timing");
       if (!Object.keys(supply.zones).length) add("zone", "sharedDemandZonesRequired", "rooms");
       for (const [id, zone] of Object.entries(supply.zones)) {
@@ -396,7 +401,7 @@ export class VelairSharedDemandSettings extends LitElement {
 
   private _issueMessage(issue: ValidationIssue): string {
     const supply = this._supplies().find(supply => supply.id === issue.supplyId);
-    const labels = { name: "sharedDemandName", switch: "sharedDemandSwitch", direction: "sharedDemandDirection", "hysteresis-mode": "sharedDemandMode", zone: "sharedDemandThermostats", hysteresis: "sharedDemandStartDistance", "hysteresis-stop": "sharedDemandStopDistance", override: "sharedDemandStartDistance", "override-stop": "sharedDemandStopDistance", "minimum-off": "sharedDemandMinimumOff", "off-delay": "sharedDemandOffDelay" } as const;
+    const labels = { name: "sharedDemandName", switch: "sharedDemandSwitch", direction: "sharedDemandDirection", "hysteresis-mode": "sharedDemandMode", zone: "sharedDemandThermostats", hysteresis: "sharedDemandStartDistance", "hysteresis-stop": "sharedDemandStopDistance", override: "sharedDemandStartDistance", "override-stop": "sharedDemandStopDistance", "minimum-off": "sharedDemandMinimumOff", "on-delay": "sharedDemandOnDelay", "off-delay": "sharedDemandOffDelay" } as const;
     const label = (issue.field === "hysteresis" || issue.field === "override") && supply?.hysteresis_mode === "symmetric" ? "sharedDemandSymmetricDistance" : labels[issue.field];
     const zoneName = issue.zoneId ? this.host!._friendlyEntityName(issue.zoneId) : "";
     const zoneContext = issue.zoneId ? ` — ${zoneName}${zoneName === issue.zoneId ? "" : ` (${issue.zoneId})`}` : "";
@@ -506,17 +511,19 @@ export class VelairSharedDemandSettings extends LitElement {
     const stopValid = this._numericValid(stop, false, Boolean(id));
     const numberValue = (value: number | undefined) => value === undefined ? "" : Number.isFinite(value) ? String(value) : noChange;
     return html`<div class="shared-demand-band-values">
-      <label class="shared-demand-field"><span class="label">${t(mode === "symmetric" ? "sharedDemandSymmetricDistance" : "sharedDemandStartDistance")} (${unit})</span>
-        <input data-field=${id ? "override" : "hysteresis"} type="number" min="0" step="any" ?required=${!id}
+      <label class="shared-demand-field"><span class="label">${t(mode === "symmetric" ? "sharedDemandSymmetricDistance" : "sharedDemandStartDistance")}</span>
+        <span class="shared-demand-number-input"><input data-field=${id ? "override" : "hysteresis"} type="number" min="0" step="any" ?required=${!id}
+          aria-label=${`${t(mode === "symmetric" ? "sharedDemandSymmetricDistance" : "sharedDemandStartDistance")} (${unit})`}
           class=${startValid ? "" : "invalid"} aria-invalid=${String(!startValid)} aria-describedby=${startValid ? nothing : this._numericErrorId(supply, "hysteresis", id)}
           .value=${numberValue(start)} placeholder=${Number.isFinite(supply.hysteresis) ? String(supply.hysteresis) : ""}
-          @input=${(event: Event) => change("hysteresis", event)}>
+          @input=${(event: Event) => change("hysteresis", event)}><span class="shared-demand-input-unit" aria-hidden="true">${unit}</span></span>
         ${this._numericError(supply, "hysteresis", startValid, false, id)}</label>
-      ${mode === "custom" ? html`<label class="shared-demand-field"><span class="label">${t("sharedDemandStopDistance")} (${unit})</span>
-        <input data-field=${id ? "override-stop" : "hysteresis-stop"} type="number" min="0" step="any" ?required=${!id}
+      ${mode === "custom" ? html`<label class="shared-demand-field"><span class="label">${t("sharedDemandStopDistance")}</span>
+        <span class="shared-demand-number-input"><input data-field=${id ? "override-stop" : "hysteresis-stop"} type="number" min="0" step="any" ?required=${!id}
+          aria-label=${`${t("sharedDemandStopDistance")} (${unit})`}
           class=${stopValid ? "" : "invalid"} aria-invalid=${String(!stopValid)} aria-describedby=${stopValid ? nothing : this._numericErrorId(supply, "hysteresis-stop", id)}
           .value=${numberValue(stop)} placeholder=${Number.isFinite(supply.hysteresis_stop ?? 0) ? String(supply.hysteresis_stop ?? 0) : ""}
-          @input=${(event: Event) => change("hysteresis_stop", event)}>
+          @input=${(event: Event) => change("hysteresis_stop", event)}><span class="shared-demand-input-unit" aria-hidden="true">${unit}</span></span>
         ${this._numericError(supply, "hysteresis-stop", stopValid, false, id)}</label>` : nothing}
       ${this._hiddenStopError(supply, id)}
       ${id ? html`<p class="subtle shared-demand-copy shared-demand-effective">${this._bandSummary(supply, id)}</p>` : nothing}
@@ -588,10 +595,7 @@ export class VelairSharedDemandSettings extends LitElement {
   }
 
   private _disclosure(section: string, icon: string, title: string, body: TemplateResult, open = false) {
-    return html`<details class="external-controller-conditions shared-demand-disclosure" data-section=${section} .open=${open ? true : noChange}>
-      <summary><ha-icon icon=${icon} aria-hidden="true"></ha-icon><strong>${title}</strong><ha-icon class="external-controller-expand-icon" icon="mdi:chevron-down" aria-hidden="true"></ha-icon></summary>
-      <div class="external-controller-conditions-body">${body}</div>
-    </details>`;
+    return renderSettingsDisclosure(section, icon, title, body, open ? true : noChange);
   }
 
   /** Runtime facts describe saved configuration, never the editing draft. */
@@ -641,11 +645,12 @@ export class VelairSharedDemandSettings extends LitElement {
     const host = this.host!;
     const t = host._t.bind(host);
     const status = this.data?.shared_demand_status?.[supply.id];
+    const stored = this.data?.settings?.shared_demand_groups?.find(value => value.id === supply.id);
     const control = this._controlState(supply);
     const suspended = control.suspended;
     const switches = [...availableSwitches];
     if (supply.switch_entity_id && !switches.includes(supply.switch_entity_id)) switches.push(supply.switch_entity_id);
-    const zoneIds = [...new Set([...(this.data?.configured_entities ?? []), ...Object.keys(supply.zones)])];
+    const zoneIds = [...new Set([...(controlUnitIds(this.data)), ...Object.keys(supply.zones)])];
     const sameOutput = control.sameOutput;
     const switchState = sameOutput ? status?.output_state ?? host.hass?.states?.[supply.switch_entity_id]?.state : undefined;
     const switchLabel = switchState === "on" ? t("sharedDemandOn") : switchState === "off" ? t("sharedDemandOff")
@@ -655,6 +660,10 @@ export class VelairSharedDemandSettings extends LitElement {
     const mode = supply.hysteresis_mode ?? "at_target";
     const isNew = this._newSupplies.has(supply.id);
     return html`<article class="shared-demand-supply" data-supply-id=${supply.id}>
+      <velair-shared-demand-live .host=${host} .hass=${host.hass}
+        .supplyTemperatureUnit=${this.data?.temperature_unit}
+        .supply=${this.data?.settings.shared_demand_groups?.find(saved => saved.id === supply.id)}
+        .unsaved=${this.hasUnsavedChanges}></velair-shared-demand-live>
       <fieldset ?disabled=${disabled}>
         <header class="template-detail-heading shared-demand-supply-header shared-demand-identity">
           <div class="shared-demand-header-top">
@@ -691,7 +700,7 @@ export class VelairSharedDemandSettings extends LitElement {
               <ha-icon icon="mdi:power" aria-hidden="true"></ha-icon><span>${t("sharedDemandSwitchState")}: ${switchLabel}</span>
             </span></div>
             ${this._fieldError(supply, "switch")}
-            ${sameOutput && (status?.status === "minimum_off" || status?.status === "off_delay") ? html`<span class="shared-demand-output-wait pill warning" role="status">${t(status.status === "minimum_off" ? "sharedDemandWaitingMinimumOff" : "sharedDemandWaitingOffDelay")}</span>` : nothing}
+            ${sameOutput && (status?.status === "minimum_off" || status?.status === "on_delay" || status?.status === "off_delay") ? html`<span class="shared-demand-output-wait pill warning" role="status">${t(status.status === "minimum_off" ? "sharedDemandWaitingMinimumOff" : status.status === "on_delay" ? "sharedDemandWaitingOnDelay" : "sharedDemandWaitingOffDelay")}</span>` : nothing}
           </dd></div>
           <div class="shared-demand-fact"><dt class="label"><label for=${`shared-demand-purpose-${domId}`}>${t("sharedDemandDirection")}</label>${renderInlineHelp(`shared-demand-purpose-help-${domId}`, t("sharedDemandDirection"), t("sharedDemandPurposeHelp"))}</dt><dd>
             <span class="select-wrap"><select id=${`shared-demand-purpose-${domId}`} data-field="direction" .value=${supply.direction}
@@ -708,17 +717,21 @@ export class VelairSharedDemandSettings extends LitElement {
         ${status?.status === "temperature_migration_blocked" ? html`<p class="shared-demand-warning" role="status">${t("sharedDemandMigrationBlocked")}</p>` : nothing}
         ${status?.status === "invalid_output" ? html`<p class="shared-demand-error" role="status">${t("sharedDemandInvalidOutput")}</p>` : nothing}
         ${status?.status === "suspension_persistence_failed" ? html`<p class="shared-demand-error" role="status">${t("sharedDemandSuspensionSaveFailed")}</p>` : nothing}
-        ${suspended ? html`<div class="shared-demand-actions"><span class="shared-demand-warning">${t("sharedDemandControlSuspended")}</span><button class="command-button primary compact" data-action="resume" ?disabled=${disabled || Boolean(this._draft)} @click=${() => this._resume(supply.id)}><ha-icon icon="mdi:play" aria-hidden="true"></ha-icon><span>${t("sharedDemandResume")}</span></button></div>` : nothing}
+        ${suspended ? html`<div class="shared-demand-actions"><span class="shared-demand-warning">${t((status?.suspension_reason ?? stored?.suspension_reason) === "external_off" ? "sharedDemandExternalOffPaused" : "sharedDemandPaused")}</span><button class="command-button primary compact" data-action="resume" ?disabled=${disabled || Boolean(this._draft)} @click=${() => this._resume(supply.id)}><ha-icon icon="mdi:play" aria-hidden="true"></ha-icon><span>${t("sharedDemandResume")}</span></button></div>` : nothing}
         ${this._disclosure("timing", "mdi:timer-outline", t("sharedDemandAdvanced"), html`<p class="subtle shared-demand-copy">${t("sharedDemandTimingDescription")}</p><div class="shared-demand-fields">
-          <div class="shared-demand-field"><div class="settings-policy-heading"><label class="label" for=${`shared-demand-minimum-off-${domId}`}>${t("sharedDemandMinimumOff")}</label>${renderInlineHelp(`shared-demand-minimum-off-help-${domId}`, t("sharedDemandMinimumOff"), t("sharedDemandMinimumOffHelp"))}</div><input id=${`shared-demand-minimum-off-${domId}`} data-field="minimum-off" type="number" min="0" max="86400" step="1" required
+          <div class="shared-demand-field"><div class="settings-policy-heading"><label class="label" for=${`shared-demand-minimum-off-${domId}`}>${t("sharedDemandMinimumOff")}</label>${renderInlineHelp(`shared-demand-minimum-off-help-${domId}`, t("sharedDemandMinimumOff"), t("sharedDemandMinimumOffHelp"))}</div><span class="shared-demand-number-input"><input id=${`shared-demand-minimum-off-${domId}`} data-field="minimum-off" type="number" min="0" max="86400" step="1" required aria-label=${`${t("sharedDemandMinimumOff")} (${t("secondsShort")})`}
             class=${this._numericValid(supply.minimum_off_seconds, true) ? "" : "invalid"} aria-invalid=${String(!this._numericValid(supply.minimum_off_seconds, true))} aria-describedby=${this._numericValid(supply.minimum_off_seconds, true) ? nothing : this._numericErrorId(supply, "minimum-off")} .value=${Number.isFinite(supply.minimum_off_seconds) ? String(supply.minimum_off_seconds) : noChange}
-            @input=${(e: Event) => this._patch(supply.id, { minimum_off_seconds: (e.target as HTMLInputElement).valueAsNumber })}>
+            @input=${(e: Event) => this._patch(supply.id, { minimum_off_seconds: (e.target as HTMLInputElement).valueAsNumber })}><span class="shared-demand-input-unit" aria-hidden="true">${t("secondsShort")}</span></span>
             ${this._numericError(supply, "minimum-off", this._numericValid(supply.minimum_off_seconds, true), true)}</div>
-          <div class="shared-demand-field"><div class="settings-policy-heading"><label class="label" for=${`shared-demand-off-delay-${domId}`}>${t("sharedDemandOffDelay")}</label>${renderInlineHelp(`shared-demand-off-delay-help-${domId}`, t("sharedDemandOffDelay"), t("sharedDemandOffDelayHelp"))}</div><input id=${`shared-demand-off-delay-${domId}`} data-field="off-delay" type="number" min="0" max="86400" step="1" required
+          <div class="shared-demand-field"><div class="settings-policy-heading"><label class="label" for=${`shared-demand-on-delay-${domId}`}>${t("sharedDemandOnDelay")}</label>${renderInlineHelp(`shared-demand-on-delay-help-${domId}`, t("sharedDemandOnDelay"), t("sharedDemandOnDelayHelp"))}</div><span class="shared-demand-number-input"><input id=${`shared-demand-on-delay-${domId}`} data-field="on-delay" type="number" min="0" max="86400" step="1" required aria-label=${`${t("sharedDemandOnDelay")} (${t("secondsShort")})`}
+            class=${this._numericValid(supply.on_delay_seconds, true, true) ? "" : "invalid"} aria-invalid=${String(!this._numericValid(supply.on_delay_seconds, true, true))} aria-describedby=${this._numericValid(supply.on_delay_seconds, true, true) ? nothing : this._numericErrorId(supply, "on-delay")} .value=${Number.isFinite((supply.on_delay_seconds ?? 0)) ? String((supply.on_delay_seconds ?? 0)) : noChange}
+            @input=${(e: Event) => this._patch(supply.id, { on_delay_seconds: (e.target as HTMLInputElement).valueAsNumber })}><span class="shared-demand-input-unit" aria-hidden="true">${t("secondsShort")}</span></span>
+            ${this._numericError(supply, "on-delay", this._numericValid(supply.on_delay_seconds, true, true), true)}</div>
+          <div class="shared-demand-field"><div class="settings-policy-heading"><label class="label" for=${`shared-demand-off-delay-${domId}`}>${t("sharedDemandOffDelay")}</label>${renderInlineHelp(`shared-demand-off-delay-help-${domId}`, t("sharedDemandOffDelay"), t("sharedDemandOffDelayHelp"))}</div><span class="shared-demand-number-input"><input id=${`shared-demand-off-delay-${domId}`} data-field="off-delay" type="number" min="0" max="86400" step="1" required aria-label=${`${t("sharedDemandOffDelay")} (${t("secondsShort")})`}
             class=${this._numericValid(supply.off_delay_seconds, true) ? "" : "invalid"} aria-invalid=${String(!this._numericValid(supply.off_delay_seconds, true))} aria-describedby=${this._numericValid(supply.off_delay_seconds, true) ? nothing : this._numericErrorId(supply, "off-delay")} .value=${Number.isFinite(supply.off_delay_seconds) ? String(supply.off_delay_seconds) : noChange}
-            @input=${(e: Event) => this._patch(supply.id, { off_delay_seconds: (e.target as HTMLInputElement).valueAsNumber })}>
+            @input=${(e: Event) => this._patch(supply.id, { off_delay_seconds: (e.target as HTMLInputElement).valueAsNumber })}><span class="shared-demand-input-unit" aria-hidden="true">${t("secondsShort")}</span></span>
             ${this._numericError(supply, "off-delay", this._numericValid(supply.off_delay_seconds, true), true)}</div>
-        </div>`, !this._numericValid(supply.minimum_off_seconds, true) || !this._numericValid(supply.off_delay_seconds, true))}
+        </div>`, !this._numericValid(supply.minimum_off_seconds, true) || !this._numericValid(supply.on_delay_seconds, true, true) || !this._numericValid(supply.off_delay_seconds, true))}
         ${this._disclosure("demand", "mdi:thermometer-lines", t("sharedDemandDemandSettings"), html`
           <p class="notice external-execution-notice shared-demand-room-assist-info"><ha-icon icon="mdi:information-outline" aria-hidden="true"></ha-icon><span>${t("sharedDemandRoomAssist")}</span></p>
           <div class=${mode === "custom" ? "shared-demand-hysteresis-controls custom" : "shared-demand-hysteresis-controls"}>
@@ -816,9 +829,7 @@ export class VelairSharedDemandSettings extends LitElement {
             </div>
           </div>
           <div class="template-detail shared-demand-detail">${selected ? keyed(selected.id, this._renderSupply(selected, switches)) : nothing}</div>
-        </div>` : !this.hasUnsavedChanges && !this._error ? html`<div class="template-placeholder compact shared-demand-empty-state"><span>${t("sharedDemandEmpty")}</span>
-          <button class="icon-button primary" data-action="add" type="button" title=${t("sharedDemandAdd")} aria-label=${t("sharedDemandAdd")} ?disabled=${this._controlsDisabled} @click=${this._add}><ha-icon icon="mdi:plus" aria-hidden="true"></ha-icon></button>
-        </div>` : html`<div class="template-detail shared-demand-detail shared-demand-empty-state"><div class="template-detail-heading">
+        </div>` : !this.hasUnsavedChanges && !this._error ? renderEmptyLibrary({ message: t("sharedDemandEmpty"), addLabel: t("sharedDemandAdd"), disabled: this._controlsDisabled, onAdd: () => this._add(), className: "shared-demand-empty-state" }) : html`<div class="template-detail shared-demand-detail shared-demand-empty-state"><div class="template-detail-heading">
           <div class="shared-demand-identity">${this.hasUnsavedChanges ? html`<span class="pill warning">${t("unsaved")}</span>` : nothing}<span class="subtle">${t("sharedDemandEmpty")}</span></div>
           <div class="template-detail-actions"><button class="icon-button primary" data-action="add" type="button" title=${t("sharedDemandAdd")} aria-label=${t("sharedDemandAdd")} ?disabled=${this._controlsDisabled} @click=${this._add}><ha-icon icon="mdi:plus" aria-hidden="true"></ha-icon></button>
             ${this.hasUnsavedChanges ? this._renderSaveAction() : nothing}</div>

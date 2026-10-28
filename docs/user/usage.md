@@ -7,6 +7,11 @@ Translations: [English original](usage.md) · [Español](usage.es.md) · [Franç
 
 This guide explains Velair from a Home Assistant user's point of view.
 
+Use [Room groups](room-groups.md) when several climates control the same room.
+The group owns one schedule, Profile assignment and learning model; Overview
+continues to show the individual devices. Configure membership in the Room groups
+tab and display order in Settings.
+
 ## Panel navigation and direct links
 
 The sidebar panel updates its URL when you change tabs or switch between the
@@ -22,6 +27,7 @@ that section. Browser Back and Forward also follow this navigation.
 | Templates: Templates | `/velair/templates/templates` |
 | Templates: Climate presets | `/velair/templates/presets` |
 | [Supply control](shared-climate-supply.md) | `/velair/supply-control` |
+| [Room groups](room-groups.md) | `/velair/room-groups` |
 | Sensors | `/velair/sensors` |
 | Comfort | `/velair/comfort` |
 | Preconditioning | `/velair/preconditioning` |
@@ -351,7 +357,39 @@ The Lovelace card supports these `view` values:
 - `comfort`;
 - `preconditioning`;
 - `planned-return`;
+- `supply-live`;
 - `diagnostics`.
+
+### Supply live-status card
+
+Choose the `supply-live` view in the visual editor and select a configured Supply control supply by name. The card embeds the same read-only live monitor available from the sidebar: backend readings, targets, hysteresis and demand for heating or cooling, with one climate per row and height adapted to its content. It subscribes to live updates while mounted, including when outside the viewport; removing the card releases the subscription. It does not edit the supply or its rules.
+
+The editor stores the stable internal supply ID in `supply_id`. In this example, replace `boiler` with the ID saved by the editor; it is neither a `switch.*` entity ID nor a room-group ID. No supply is selected automatically. If the selected supply is deleted, the card asks you to choose another rather than switching to the first available supply.
+
+```yaml
+type: custom:velair-card
+view: supply-live
+supply_id: boiler
+supply_show_header: true
+supply_show_connection: true
+supply_show_switch_state: true
+supply_show_room_count: true
+supply_show_legend: true
+supply_show_demand_description: true
+```
+
+All six display options default to `true`. Set any to `false` to hide that routine information. The optional `title` replaces the default heading when the header is shown.
+
+| YAML | Information |
+| --- | --- |
+| `supply_show_header` | Header |
+| `supply_show_connection` | Live connection indicator |
+| `supply_show_switch_state` | Switch state |
+| `supply_show_room_count` | Number of rooms requesting supply |
+| `supply_show_legend` | Graph legend |
+| `supply_show_demand_description` | Routine demand description, such as Estimated demand |
+
+Loading, errors, disconnection, suspension, unknown switch state or demand, and pending waits remain visible even when every display option is disabled. Hiding routine information does not hide conditions that affect the interpretation of the readings.
 
 ### Planned Return card
 
@@ -454,6 +492,10 @@ shows the external provider and publication state instead of local-only Velair
 features or climate-specific actions. The optional One-off return action controls
 the household and remains independent of the selected climate's ownership.
 
+For a group member, the card keeps the climate's own readings and Comfort while using the shared controls and schedule. Temperature controls respect the group's common limits. A third header line shows the group icon, name and information button below the existing status, without changing the mode icon's alignment. Help explains shared actions and lists the members. **Show group** is enabled by default (`climate_show_group: true`), independently of **Show climate name**. Disabling it hides only this context. Ungrouped climates show no group line, even when enabled.
+
+Overview, Today's timeline and zone-summary cards keep an individual member filter restricted to that climate. Selecting a group includes all its members.
+
 ```yaml
 type: custom:velair-card
 view: climate
@@ -467,6 +509,7 @@ climate_window_entities:
 climate_window_display: grouped
 climate_room_assist_display: both
 climate_preconditioning_display: both
+climate_show_group: true
 climate_show_control_mode: true
 climate_show_target_control: true
 climate_show_hvac_mode_control: true
@@ -878,11 +921,11 @@ Templates and Presets use the formats configured for their possible destinations
 Velair checks compatibility against each actual destination when applying them.
 If Boost has no usable current limits, enter both values before applying it.
 
-Room Assist and Adaptive Preconditioning support ranges only in `heat_cool`.
-For a range in Heat, Cool or Auto, the nominal pair still applies at the scheduled
-time, with no Room Assist shift, early start, or thermal learning. The affected
-views explain the limitation. Planned Return applies the arrival target at
-arrival, without advance preparation for those ranges.
+Room Assist and Adaptive Preconditioning support native `heat_cool` ranges and
+fixed Heat or Cool ranges with a reference setpoint selected in **Settings →
+Climates and groups**. Without that selection, the nominal fixed-mode pair applies
+at the scheduled time with no Room Assist shift, early start, or thermal learning;
+Planned Return applies it at arrival. Auto ranges retain this limitation.
 
 When the selected climate exposes extra controls, the block editor also shows those controls. For example, an AC may expose fan mode, preset mode, swing mode, horizontal swing mode, or humidity. Velair only stores and sends options supported by the selected climate; unsupported options are omitted instead of being sent blindly.
 
@@ -960,7 +1003,7 @@ also open as Individual days, preserving every day's blocks and template links.
 
 Home Assistant reports support for single temperatures and temperature ranges,
 but does not provide a compatibility table for each HVAC mode. Under **Settings
-→ Managed climates**, each mixed-format climate has a **Modes with two setpoints**
+→ Climates and groups**, each mixed-format climate has a **Modes with two setpoints**
 dropdown. Its closed summary shows the selected modes; open it to select or clear
 individual modes. Only modes advertised
 by that climate are offered, excluding Off. Heat/Cool is selected initially when
@@ -973,6 +1016,21 @@ This setting describes how Velair should send targets; it does not prove the
 physical device accepts or uses both values. The integration may reject or ignore
 a parameter. Velair reports known incompatibilities before saving and delivery
 errors when received. There is no automatic device test or mode switching probe.
+
+For modes using two setpoints, **Reference setpoint** appears for Heat and Cool,
+including on climates that only support ranges. Select **Lower setpoint** or
+**Upper setpoint** according to which value the device uses in that mode.
+**Not configured** preserves schedule delivery but disables Room Assist and
+Adaptive Preconditioning for that fixed-mode range. Configure it once per climate
+and mode; both features share the backend-owned selection, which is included in
+export and import. Changing the selection retires obsolete assistance and
+learning observations. It does not change schedule temperatures or target format.
+
+Room Assist calculates fixed-mode hysteresis around the selected boundary and
+shifts both setpoints together, preserving their separation within device limits.
+Preconditioning predicts and learns from that boundary in the mode's direction
+and sends the complete original pair early. `heat_cool` retains its existing band
+control without this selector. `auto` ranges remain unsupported by these features.
 
 **Default**, each zone in **Profiles**, **Boost**, and the climate controls use
 this policy to show one or two fields for an explicit mode. Changing modes keeps
@@ -1140,9 +1198,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v22 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v22 exports; use a version that supports
-v22 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v25 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v25 exports; use a version that supports
+v25 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1159,7 +1217,7 @@ no longer compatible so it can be edited before relying on that schedule.
 The complete upgrade, migration, backup, and recovery behavior is documented in
 [Temperature Units and Migration](temperature-units.md).
 
-When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. A neutral striped band marks the lower and upper deadband limits. With fixed `heat` or `cool`, the status also shows whether control is moving towards the lower or upper limit; with scalar automatic modes, the band remains a neutral margin. For a native range it extends from the scheduled low minus the deadband to the scheduled high plus the deadband; separate brackets still show the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. The complete translated legend stays centered on the represented deadband range, including when that range is narrower than the label; a zero deadband removes the surface and is stated explicitly. Hiding `show_room_assist_deadband` hides its setting, band, and legend together. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
+When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. A neutral striped band marks the lower and upper deadband limits. With fixed `heat` or `cool`, the status also shows whether control is moving towards the lower or upper limit; with scalar automatic modes, the band remains a neutral margin. For a native `heat_cool` range it extends from the scheduled low minus the deadband to the scheduled high plus the deadband. For a configured fixed Heat or Cool range, it instead marks the selected reference setpoint minus and plus the deadband; separate brackets still show the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. The complete translated legend stays centered on the represented deadband range, including when that range is narrower than the label; a zero deadband removes the surface and is stated explicitly. Hiding `show_room_assist_deadband` hides its setting, band, and legend together. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
 
 Room Sensor Assist is event-driven. Velair does not poll temperatures. It listens only to the configured room sensor and climate entity while assistance is active, debounces changes using the per-climate Refresh delay setting, aligns temporary targets to the effective published, last-reported, or configured temperature step, ignores movements smaller than that step, and restores the real scheduled target when the scheduler is paused, a zone is paused, a boost starts, the block turns off, the sensor becomes unusable, or the feature is disabled. Clearing that runtime state also clears any fixed-mode hysteresis phase. If Adaptive Preconditioning has already started a future block early, Room Sensor Assist follows that future target until the scheduled comfort time instead of falling back to the previous time block.
 
@@ -1420,14 +1478,16 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Current model 22 exports preserve both template link types, preset references,
-Preconditioning master relationships and per-climate target-format policies. Accepted master execution anchors
-remain local and are not exported. Exporting
-schedules or Profiles includes required templates and presets, shown as additional
-selected sections. Imports validate the combined configuration, including existing
+Current model 25 exports preserve both template link types, preset references,
+Preconditioning master relationships, target-format and reference policies,
+room-group ownership and shared configuration. Accepted master execution anchors
+remain local and are not exported. Exporting schedules or Profiles includes
+required templates and presets, shown as additional selected sections. If group
+data is involved, required room groups, schedules and Profiles are also included,
+even when starting from a learning export. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 22 files. See
+remain importable; older Velair versions cannot import model 25 files. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 
 When importing, Velair lets you choose which sections to overwrite. Importing
@@ -1445,7 +1505,18 @@ last step observed from a local climate entity is intentionally not exported.
 Legacy exports without a recorded unit are announced in the import screen and
 interpreted as Celsius.
 
-Adaptive preconditioning learning is matched by the exact Home Assistant climate entity ID. Learning from climates that are not currently managed is shown before import and skipped. For matching climates, the imported learning replaces that climate's existing calibration. Learning for local climates that are not present in the file is kept unchanged.
+Adaptive preconditioning learning is matched by the exact control-unit ID: a
+Home Assistant climate entity ID for an independent climate, or the stable
+internal group ID for a room group. Learning for an unmatched unit is shown
+before import and skipped. For matching units, imported learning replaces the
+existing calibration; local learning absent from the file is kept unchanged.
+Group histories are not distributed among their members. See
+[Room groups](room-groups.md#learning-and-membership-changes) before removing
+members or dissolving a group.
+
+Restoring a group learning backup also restores the required group ownership and
+shared configuration sections. Review those dependencies in the import preview;
+it is not an isolated calibration restore that leaves membership untouched.
 
 Preconditioning configuration values are already included with **Thermostat schedules**. The separate **Preconditioning learning** section contains the costly local calibration history.
 

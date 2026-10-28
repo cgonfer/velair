@@ -215,11 +215,13 @@ def _loaded_velair_integration(frontend_module):
         "custom_components.velair.scheduler",
         "custom_components.velair.services",
         "custom_components.velair.storage",
+        "custom_components.velair.shared_demand",
         "custom_components.velair.temperature_migration",
         "homeassistant.config_entries",
         "homeassistant.const",
         "homeassistant.core",
         "homeassistant.helpers.config_validation",
+        "homeassistant.helpers.dispatcher",
         "homeassistant.helpers.event",
         "homeassistant.helpers.typing",
     )
@@ -273,6 +275,7 @@ def _loaded_velair_integration(frontend_module):
         async_track_state_report_event=lambda *_args, **_kwargs: lambda: None,
     )
     install_module("homeassistant.helpers.typing", ConfigType=dict)
+    install_module("homeassistant.helpers.dispatcher", async_dispatcher_send=lambda *_args: None)
     install_module("custom_components.velair.api", async_setup_api=lambda *_args: None)
     install_module(
         "custom_components.velair.climate_delivery",
@@ -307,6 +310,11 @@ def _loaded_velair_integration(frontend_module):
     install_module(
         "custom_components.velair.storage",
         VelairStorage=RuntimePlaceholder,
+    )
+    install_module(
+        "custom_components.velair.shared_demand",
+        SharedDemandController=RuntimePlaceholder,
+        SIGNAL_SHARED_DEMAND_LIVE_UPDATED="velair_shared_demand_live_updated",
     )
     install_module(
         "custom_components.velair.temperature_migration",
@@ -352,6 +360,9 @@ class FakeHass:
     def __init__(self) -> None:
         self.data = {}
         self.http = FakeHttp()
+
+    async def async_add_executor_job(self, target, *args):
+        return await asyncio.to_thread(target, *args)
 
 
 class FrontendRegistrationTest(unittest.TestCase):
@@ -831,9 +842,9 @@ class FrontendSourceContractTest(unittest.TestCase):
 
         self.assertIn("renderOverviewSummary(host, zoneIds)", source)
         self.assertIn("renderOverviewActiveBoosts(host, visibleZoneIds)", source)
-        self.assertIn("renderNextEvents(host, visibleZoneIds)", source)
-        self.assertIn("renderOverviewTimelines(host, visibleZoneIds)", source)
-        self.assertIn("renderOverviewZones(host, visibleZoneIds)", source)
+        self.assertIn("renderNextEvents(host, host._orderedZoneIds(filteredPhysicalClimateIds(host._data, host._config?.entities)))", source)
+        self.assertIn("renderOverviewTimelines(host, physicalZoneIds)", source)
+        self.assertIn("renderOverviewZones(host, physicalZoneIds)", source)
         self.assertIn("const visibleZoneIds = host._visibleZoneIds", source)
         self.assertIn("function renderOverviewSectionHeading", source)
         self.assertIn('class="overview-section-title section-heading"', source)
@@ -1160,7 +1171,9 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn('renderDraftListHeader(host, "schedule")', source)
         self.assertIn("export function renderAddBlockButton", source)
         self.assertIn('renderAddBlockButton(host, "schedule")', source)
-        self.assertIn('aria-label=${host._t("addBlock")}', source)
+        self.assertIn('renderAddListButton(host._t("addBlock"), () => host._addBlock(source))', source)
+        add_list_source = (ROOT / "frontend/src/velair/views/add-list-button.ts").read_text(encoding="utf-8")
+        self.assertIn("aria-label=${label}", add_list_source)
         self.assertNotIn('<span>${host._t("addBlock")}</span>', source)
         self.assertIn('host._t("time")', source)
         self.assertIn('"time": "Time"', en_source)
@@ -1430,8 +1443,8 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("entityDiagnosticState(", source)
         self.assertIn("export function entityDiagnosticState", entity_diagnostics_domain_source)
         self.assertIn("private _entityExists", source)
-        self.assertIn("host._orderedZoneIds(host._data?.configured_entities ?? [])", source)
-        self.assertIn("orderedZoneIds(entityIds, host._config.zone_order)", source)
+        self.assertIn("host._orderedZoneIds(controlUnitIds(host._data))", source)
+        self.assertIn("orderedZoneIds(entityIds, order)", source)
         self.assertIn("export function orderedZoneIds", settings_domain_source)
         self.assertIn("export function orderedWeekdays", settings_domain_source)
         self.assertIn("export function combinedTemperatureLimits", settings_domain_source)

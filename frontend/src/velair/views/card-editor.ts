@@ -1,3 +1,4 @@
+import { controlUnitId, controlUnitIds, controlUnitName, filteredPhysicalClimateIds } from "../domain/control-units";
 import { LitElement, css, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LOVELACE_CARD_VIEWS, WEEKDAYS } from "../constants";
@@ -16,6 +17,9 @@ import type {
 } from "../types";
 
 const FIRST_WEEKDAY_CARD_VIEWS = new Set<VelairCardView>(["schedules"]);
+const PHYSICAL_CLIMATE_CARD_VIEWS = new Set<VelairCardView>([
+  "comfort", "overview", "overview-events", "overview-timeline", "overview-zones",
+]);
 const ACTIVE_SETUP_CONTROL_CARD_VIEWS = new Set<VelairCardView>(["active-setup"]);
 const THERMOSTAT_FILTER_CARD_VIEWS = new Set<VelairCardView>([
   "comfort",
@@ -56,6 +60,7 @@ export class VelairCardEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
   @state() private _config: VelairCardConfig = {};
   @state() private _entities: string[] = [];
+  private _scheduleData?: ScheduleResponse;
   @state() private _loading = false;
   @state() private _loaded = false;
   @state() private _error?: string;
@@ -70,7 +75,7 @@ export class VelairCardEditor extends LitElement {
     if (
       (changedProperties.has("hass") || changedProperties.has("_config"))
       && this.hass
-      && (this._showsThermostatOptions() || this._showsClimateCardOptions())
+      && (this._showsThermostatOptions() || this._showsClimateCardOptions() || this._selectedView() === "supply-live")
       && !this._loaded
       && !this._loading
     ) {
@@ -168,6 +173,7 @@ export class VelairCardEditor extends LitElement {
           : nothing}
 
         ${showClimateCardOptions ? this._renderClimateCardOptions() : nothing}
+        ${this._selectedView() === "supply-live" ? this._renderSupplyLiveOptions() : nothing}
 
         ${showComfortVisibilityOptions
           ? html`
@@ -201,6 +207,43 @@ export class VelairCardEditor extends LitElement {
             `
           : nothing}
       </div>
+    `;
+  }
+
+  private _renderSupplyLiveOptions() {
+    const supplies = this._scheduleData?.settings?.shared_demand_groups ?? [];
+    const selected = this._config.supply_id ?? "";
+    const missing = Boolean(selected && this._loaded && !supplies.some(supply => supply.id === selected));
+    const visibility = [
+      ["supply_show_header", "supplyLiveCardShowHeader"],
+      ["supply_show_connection", "supplyLiveCardShowConnection"],
+      ["supply_show_switch_state", "supplyLiveCardShowSwitchState"],
+      ["supply_show_room_count", "supplyLiveCardShowRoomCount"],
+      ["supply_show_legend", "supplyLiveCardShowLegend"],
+      ["supply_show_demand_description", "supplyLiveCardShowDemandDescription"],
+    ] as const;
+    return html`
+      <section class="card-visibility-options supply-live-options">
+        <label>
+          <span>${this._t("supplyLiveCardSupply")}</span>
+          <select class="supply-live-selector" .value=${selected}
+            @change=${(event: Event) => this._setStringConfig("supply_id", this._inputValue(event))}>
+            <option value="" ?selected=${!selected}>${this._t("supplyLiveCardChooseSupply")}</option>
+            ${selected && !supplies.some(supply => supply.id === selected)
+              ? html`<option value=${selected} selected>${this._t("supplyLiveCardSupplyUnavailable")} (${selected})</option>` : nothing}
+            ${supplies.map(supply => html`<option value=${supply.id} ?selected=${supply.id === selected}>${supply.name || supply.id}</option>`)}
+          </select>
+        </label>
+        ${missing ? html`<div class="notice warning supply-live-unavailable">${this._t("supplyLiveCardSupplyUnavailable")}</div>` : nothing}
+        ${this._loaded && !supplies.length ? html`<p class="supply-live-empty">${this._t("supplyLiveCardNoSupplies")}</p>` : nothing}
+        <div class="visibility-list">
+          ${visibility.map(([field, label]) => html`<label class="visibility-option">
+            <input type="checkbox" data-option=${field} .checked=${this._config[field] !== false}
+              @change=${(event: Event) => this._setBooleanConfig(field, Boolean((event.currentTarget as HTMLInputElement).checked))}>
+            <span>${this._t(label)}</span>
+          </label>`)}
+        </div>
+      </section>
     `;
   }
 
@@ -248,6 +291,7 @@ export class VelairCardEditor extends LitElement {
         ${this._renderClimateToggle("climateCardShowName", "climate_show_name")}
         ${this._config.climate_show_name !== false ? html`<div class="nested-option"><label><span>${this._t("climateCardCustomName")}</span><div class="climate-card-name-row"><input type="text" maxlength="80" .value=${this._config.climate_name ?? this._friendlyEntityName(selected)} @input=${(event: Event) => this._setClimateName(this._inputValue(event))}><button class="icon-button" type="button" title=${this._t("climateCardResetName")} ?disabled=${this._config.climate_name === undefined} @click=${this._resetClimateName}><ha-icon icon="mdi:restore"></ha-icon></button></div></label></div>` : nothing}
         ${this._renderClimateToggle("climateCardShowOperation", "climate_show_operation")}
+        ${this._renderClimateToggle("climateCardShowGroup", "climate_show_group")}
         </div>
       </details>
       <details class="climate-card-option-group climate-card-thermostat-editor" open>
@@ -704,6 +748,7 @@ export class VelairCardEditor extends LitElement {
         type: "velair/get_schedule",
       });
       this._entities = data.configured_entities;
+      this._scheduleData = data;
       this._loaded = true;
     } catch (error) {
       this._error = error instanceof Error ? error.message : this._t("unableLoad");
@@ -714,10 +759,14 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _orderedEntities(): string[] {
-    const entities = [...this._entities];
-    if (this._config.selected_entity && !entities.includes(this._config.selected_entity)) {
-      entities.unshift(this._config.selected_entity);
+    if (PHYSICAL_CLIMATE_CARD_VIEWS.has(this._config.view ?? "overview-status") && this._scheduleData) {
+      const entities = filteredPhysicalClimateIds(this._scheduleData);
+      const ordered = (this._config.zone_order ?? []).filter(id => entities.includes(id));
+      return [...ordered, ...entities.filter(id => !ordered.includes(id))];
     }
+    const entities = this._config.view === "climate" || !this._scheduleData ? [...this._entities] : controlUnitIds(this._scheduleData);
+    const selected = this._config.selected_entity && this._config.view !== "climate" ? controlUnitId(this._scheduleData, this._config.selected_entity) : this._config.selected_entity;
+    if (selected && !entities.includes(selected)) entities.unshift(selected);
 
     const knownEntities = new Set(entities);
     const orderedEntities = (this._config.zone_order ?? []).filter((entityId) => knownEntities.has(entityId));
@@ -726,8 +775,11 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _selectedEntities(): string[] {
+    if (PHYSICAL_CLIMATE_CARD_VIEWS.has(this._config.view ?? "overview-status") && this._scheduleData) {
+      return filteredPhysicalClimateIds(this._scheduleData, this._config.entities);
+    }
     const entities = this._orderedEntities();
-    const selectedEntities = this._config.entities?.filter((entityId) => entities.includes(entityId)) ?? [];
+    const selectedEntities = [...new Set(this._config.entities?.map(id => this._config.view === "climate" ? id : controlUnitId(this._scheduleData, id)).filter((entityId) => entities.includes(entityId)) ?? [])];
     return selectedEntities.length ? selectedEntities : entities;
   }
 
@@ -914,7 +966,9 @@ export class VelairCardEditor extends LitElement {
       "active-setup": "cardViewActiveSetup",
       "schedules": "cardViewSchedules",
       "templates": "templates",
+      "room-groups": "roomGroups",
       "supply-control": "supplyControl",
+      "supply-live": "supplyLiveCardView",
       "sensors": "cardViewSensors",
       "comfort": "cardViewComfort",
       "preconditioning": "cardViewPreconditioning",
@@ -957,7 +1011,7 @@ export class VelairCardEditor extends LitElement {
   }
 
   private _friendlyEntityName(entityId: string): string {
-    return this.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
+    return controlUnitName(this._scheduleData, this.hass, entityId);
   }
 
   static styles = css`

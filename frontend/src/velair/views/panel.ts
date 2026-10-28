@@ -5,7 +5,7 @@ import { PANEL_VIEWS } from "../constants";
 import { languageFromHass, translate } from "../i18n";
 import type { SupportedLanguage, TranslationKey } from "../translations";
 import type { HomeAssistant, VelairPanelInfo, VelairPanelRoute, VelairPanelView } from "../types";
-import { panelDestination, panelPath, parsePanelPath, type PanelDestination, type PanelSubsection } from "../domain/panel-routes";
+import { panelDestination, panelPath, parsePanelPath, scheduleUsageFromSearch, type PanelDestination, type PanelSubsection } from "../domain/panel-routes";
 import type { VelairCard } from "../components/velair-card-element";
 import { panelTabIcon } from "./tabs";
 import { PanelScheduleSession } from "../controllers/panel-schedule-session";
@@ -85,6 +85,15 @@ export class VelairPanel extends LitElement {
     }
     this._historyPosition = position ?? this._historyPosition;
     this._routeInitialized = true;
+    if (destination.view === "schedules") {
+      const usage = scheduleUsageFromSearch(window.location.search, destination.subsection);
+      if (usage) this._pendingResourceUsage = usage;
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("entity_id") || params.has("weekday") || params.has("profile_key")) {
+        params.delete("entity_id"); params.delete("weekday"); params.delete("profile_key");
+        window.history.replaceState(window.history.state, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
+      }
+    }
     this._writeLocation(destination, true);
   }
 
@@ -145,7 +154,7 @@ export class VelairPanel extends LitElement {
                   ?active=${view === this._activeView}
                   @click=${(event: Event) => this._handleTabClick(view, event)}
                 >
-                  ${this._t(view === "modes" ? "modesTitle" : view === "planned-return" ? "plannedReturn" : view === "supply-control" ? "supplyControl" : view)}
+                  ${this._t(view === "modes" ? "modesTitle" : view === "planned-return" ? "plannedReturn" : view === "supply-control" ? "supplyControl" : view === "room-groups" ? "roomGroups" : view)}
                 </ha-tab-group-tab>
               `,
             )}

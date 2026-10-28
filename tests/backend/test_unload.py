@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 from . import helpers
 
@@ -67,6 +67,7 @@ def _load_integration_init():
         "custom_components.velair.frontend": _module(
             "custom_components.velair.frontend",
             async_setup_frontend=AsyncMock(),
+            async_setup_frontend_resources=AsyncMock(),
             async_setup_frontend_route=AsyncMock(),
             async_unload_frontend=AsyncMock(),
         ),
@@ -117,6 +118,7 @@ class VelairUnloadTests(unittest.IsolatedAsyncioTestCase):
         integration.PLATFORMS = ("sensor",)
         integration.async_unload_frontend = AsyncMock()
         integration.async_unload_services = AsyncMock()
+        integration.async_dispatcher_send = Mock()
         self.scheduler = SimpleNamespace(async_stop=AsyncMock())
         self.delivery = SimpleNamespace(async_stop=AsyncMock())
         self.entry = SimpleNamespace(
@@ -142,6 +144,7 @@ class VelairUnloadTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.scheduler.async_stop.assert_not_awaited()
+        integration.async_dispatcher_send.assert_not_called()
         self.delivery.async_stop.assert_not_awaited()
         integration.async_unload_frontend.assert_not_awaited()
         self.assertIn("entry-1", self.hass.data["velair"])
@@ -160,6 +163,9 @@ class VelairUnloadTests(unittest.IsolatedAsyncioTestCase):
         integration.async_unload_frontend.assert_awaited_once_with(self.hass)
         integration.async_unload_services.assert_awaited_once_with(self.hass)
         self.assertNotIn("entry-1", self.hass.data["velair"])
+        integration.async_dispatcher_send.assert_called_once_with(
+            self.hass, integration.SIGNAL_SHARED_DEMAND_LIVE_UPDATED
+        )
 
 
 if __name__ == "__main__":

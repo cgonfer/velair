@@ -12,7 +12,7 @@ export const diagnosticsStyles = css`
 .diagnostics-command-mismatch-field > strong { display: block; margin-bottom: 6px; }
 .diagnostics-learning-direction { min-width: 0; overflow-wrap: anywhere; border-top: 1px solid var(--divider-color); margin-top: 12px; padding-top: 8px; }
 .diagnostics-learning-direction h5 { font-size: 13px; margin: 4px 0; }
-.diagnostics-learning-direction p { margin: 8px 0; color: var(--secondary-text-color); }
+.diagnostics-learning-direction p { margin: 8px 0; color: var(--secondary-text-color); font-size: 12px; line-height: 1.5; }
 .diagnostics-learning-last { display: grid; gap: 4px; }
 .diagnostics-learning-evidence summary { min-height: 44px; box-sizing: border-box; padding: 12px 0; cursor: pointer; color: var(--primary-color); }
 

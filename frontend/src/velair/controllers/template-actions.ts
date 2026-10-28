@@ -1,3 +1,4 @@
+import { controlUnitIds } from "../domain/control-units";
 import { commitApplication, newTemplateApplication } from "./template-application";
 import { backendErrorMessage } from "../domain/backend-errors";
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_TEMPERATURE, WEEKDAYS } from "../constants";
@@ -270,7 +271,7 @@ export function toggleTemplateApplyTargetForHost(
   weekday: string,
   checked: boolean,
 ): void {
-  if (!WEEKDAYS.includes(weekday) || !(host._data?.configured_entities ?? []).includes(entityId)) {
+  if (!WEEKDAYS.includes(weekday) || !(controlUnitIds(host._data)).includes(entityId)) {
     return;
   }
 

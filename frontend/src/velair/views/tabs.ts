@@ -29,6 +29,11 @@ export const PANEL_TABS: PanelTabDefinition[] = [
     view: "templates",
   },
   {
+    icon: "mdi:home-group",
+    labelKey: "roomGroups",
+    view: "room-groups",
+  },
+  {
     icon: "mdi:heat-pump-outline",
     labelKey: "supplyControl",
     view: "supply-control",

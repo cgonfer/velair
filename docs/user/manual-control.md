@@ -40,6 +40,24 @@ These states can coexist. For example, Velair Mode **Manual** can select the
 Profile remains authoritative scheduling configuration, but that one climate
 keeps its external setting until Manual adjustment ends.
 
+## Room groups
+
+For a [room group](room-groups.md#pauses-manual-adjustment-and-resuming), read
+the per-climate scope above as one shared control unit. Settings stores one
+**External adjustments** policy for the group. A detected external change to
+one member can yield scheduling authority for the entire room; it does not
+create an independent Manual session for that device.
+
+Velair preserves each member's current state instead of copying the changed
+member's target to its peers. With **Until next block**, all members return to
+their shared programming at that block. Resuming Automatic through any member
+also resolves to the group and reapplies its current intent to the configured
+command destinations, subject to remaining pause reasons. Explicit zone pauses
+and boosts requested through a member likewise belong to the whole group.
+
+The group configuration tab shows control status without a separate pause
+button. Comfort settings and physical observations remain individual.
+
 ## What Velair Observes
 
 Velair observes these control fields on managed climates:

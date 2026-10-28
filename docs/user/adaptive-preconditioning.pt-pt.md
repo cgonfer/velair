@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.5 |
-| Última sincronização | 2026-10-24 |
+| Versão de referência | 1.9.0-beta.6 |
+| Última sincronização | 2026-10-28 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -29,15 +29,17 @@ O pré-condicionamento adaptativo funciona localmente no Home Assistant. O Velai
 <a id="setup"></a>
 ## Configuração
 
-O separador Pré-condicionamento contém definições adaptativas e aprendizagem por equipamento. Regresso planeado tem o seu próprio separador para ocupação, chegadas semanais e ausência atual. Ambas incluem uma introdução e ajuda contextual. Os caminhos diretos são `/velair/preconditioning` e `/velair/planned-return`. Ligações antigas de subseções continuam abrindo o separador correspondente. Consulta [Regresso planeado](planned-return.pt-pt.md).
+O separador Pré-condicionamento contém definições adaptativas e aprendizagem para cada dispositivo independente ou grupo de divisão. Os membros agrupados aparecem aqui como uma divisão. Regresso planeado tem o seu próprio separador para ocupação, chegadas semanais e ausência atual. Ambas incluem uma introdução e ajuda contextual. Os caminhos diretos são `/velair/preconditioning` e `/velair/planned-return`. Ligações antigas de subsecções continuam abrindo o separador correspondente. Consulta [Regresso planeado](planned-return.pt-pt.md).
 
 1. Abra o separador Pré-condicionamento.
-2. Expanda o dispositivo de climatização que deseja configurar.
+2. Expanda o dispositivo ou grupo de divisão que deseja configurar.
 3. Ative o pré-condicionamento.
 4. Mantenha as definições predefinidas do modelo, a menos que tenha um motivo específico para ajustá-las.
 5. Opcionalmente, selecione um sensor de temperatura exterior.
 
-O pré-condicionamento é configurado por dispositivo. A aprendizagem de aquecimento e arrefecimento é acompanhada separadamente: as amostras de arrefecimento não substituem as de aquecimento, nem o contrário.
+O pré-condicionamento é configurado por dispositivo independente ou grupo de divisão. A aprendizagem de aquecimento e arrefecimento é acompanhada separadamente: as amostras de arrefecimento não substituem as de aquecimento, nem o contrário.
+
+Um [grupo de divisão](room-groups.pt-pt.md#learning-and-membership-changes) armazena um modelo térmico e toma uma decisão de início; seus membros não aprendem nem se preparam independentemente. A referência de temperatura fornece a medição nativa, ou um sensor ativado do Room Assist fornece a medição efetiva. Remover um membro reinicia a aprendizagem dele e do grupo restante. Desfazer o grupo inicia históricos independentes para todos; os antigos não são repartidos nem recuperados. Renomear ou reordenar membros mantém a aprendizagem.
 
 Os intervalos nativos de `heat_cool` são compatíveis. Se a temperatura da divisão estiver abaixo do limite inferior por uma diferença maior que o delta mínimo de temperatura, o Velair calcula a previsão a partir desse limite e inicia antecipadamente o intervalo completo para aquecer. Se estiver acima do limite superior por uma diferença maior que esse delta, calcula a previsão a partir do limite superior e inicia o intervalo completo para arrefecer. Leituras dentro do intervalo ou das zonas de tolerância dos limites mantêm o horário normal. O Velair sempre envia os dois limites; nunca reduz um intervalo a uma única temperatura.
 
@@ -47,7 +49,9 @@ A preparação do Regresso planeado é identificada separadamente da antecipaç�
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa secção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por predefinição para manter a visão habitual simples.
 
-Uma entidade pode exigir ambos os limites em Aquecimento, Arrefecimento ou Auto sem suportar `heat_cool`. O Velair programa e entrega esses alvos, mas não antecipa o início nem recolhe amostras de aprendizagem térmica para eles. A vista de preparação explica que esta funcionalidade exige Aquecimento/Arrefecimento para intervalos. O par programado permanece inalterado e o Regresso planeado aplica-o na chegada, sem preparação antecipada. Ativar o pré-condicionamento não elimina esta limitação.
+Para dois alvos em `heat` ou `cool` fixo, selecione **Alvo de referência** para o dispositivo e modo em **Definições → Dispositivos de climatização e grupos**. Escolha o limite que o equipamento realmente usa: **Alvo inferior** ou **Alvo superior**. A seleção é partilhada com Room Assist. A preparação e a aprendizagem de aquecimento usam somente o limite selecionado como alvo de aquecimento; arrefecimento o usa como alvo de arrefecimento. A direção vem do modo, mesmo se for o limite superior em aquecimento ou inferior em arrefecimento. O Velair antecipa o par nominal completo, inclusive no Regresso planeado; nunca envia apenas o limite escolhido.
+
+Com **Não configurado**, pares em modo fixo mantêm o horário programado e não produzem amostras de aprendizagem térmica. Regresso planeado os aplica na chegada, sem preparação antecipada. Faixas em `auto` mantêm essa limitação, pois escolher um limite não estabelece o comportamento de aquecimento ou arrefecimento. O comportamento nativo de `heat_cool` não muda. Alterar a referência invalida observações de aprendizagem iniciadas com a interpretação anterior.
 
 <a id="preconditioning-master"></a>
 ## Mestre do pré-condicionamento
@@ -90,6 +94,8 @@ Uma contagem de amostras inalterada não comprova falha. Uma transição pode n�
 O Velair calcula a diferença atual de temperatura para o próximo bloco de temperatura programado.
 
 Para um intervalo `heat_cool`, «temperatura-alvo» abaixo significa o limite inferior durante o aquecimento e o superior durante o arrefecimento.
+
+Para uma faixa fixa em `heat` ou `cool`, a temperatura-alvo significa o limite de referência selecionado, com a direção determinada pelo modo fixo.
 
 Para aquecimento:
 

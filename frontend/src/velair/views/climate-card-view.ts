@@ -1,3 +1,4 @@
+import { controlUnitId, controlUnitZone, controlUnitState } from "../domain/control-units";
 import { targetFormatsForEntity } from "../domain/target-format-policy";
 import { renderPlannedReturn } from "./planned-return-view";
 import { currentArrivalPreparation, preparationRoom } from "../domain/planned-return-preparation";
@@ -36,6 +37,7 @@ import {
   humidexPerceivedHeatDelta,
 } from "../domain/comfort";
 import { renderOverviewTimelineTrack } from "./overview-view";
+import { renderRoomGroupControlContext } from "./room-group-summary";
 import { preconditioningSettings } from "../domain/preconditioning";
 import { renderPreconditioningDependency } from "./preconditioning-dependency";
 import { hasRoomAssistScheduledTarget } from "../domain/room-assist";
@@ -48,6 +50,7 @@ import {
 } from "../domain/climate-card-actions";
 import {
   climateCardPublishedHvacModes,
+  climateCardControlState,
   climateCardPublishedTemperatureGrid,
   climateCardRuntimeBlocksThermostat,
   climateCardTarget,
@@ -71,7 +74,7 @@ export function renderClimateCard(host: VelairViewHost, entityId?: string) {
   const action = climateCardAction(state);
   const mode = state?.state || "off";
   const owner = climateCardOwner(host._data, entityId);
-  const runtime = host._data.zone_runtime?.[entityId];
+  const runtime = host._data.zone_runtime?.[controlUnitId(host._data, entityId)];
   const external = host._data.external_execution?.zones[entityId];
   const externalSystem = host._data.external_execution?.systems.find(
     (system) => system.provider === external?.provider,
@@ -87,18 +90,20 @@ export function renderClimateCard(host: VelairViewHost, entityId?: string) {
   const operationLabel = operationUsesAction ? actionLabel(host, action) : host._modeLabel(mode);
   const showName = host._config.climate_show_name !== false;
   const showOperation = host._config.climate_show_operation !== false;
+  const group = host._config.climate_show_group === false ? undefined : host._data.room_groups?.[controlUnitId(host._data, entityId)];
 
   return html`
     <section class=${`climate-card-view climate-action-${action} climate-mode-${mode}`}>
       ${host._config.climate_show_state_bar !== false ? html`<div class="climate-card-state-line" aria-hidden="true"></div>` : nothing}
-      <header class="climate-card-header">
+      <header class=${`climate-card-header${showOperation ? " has-operation-icon" : ""}`}>
+        <div class="climate-card-header-main">
         ${showOperation ? html`<ha-icon
           class="climate-card-operation-icon"
           icon=${operationIcon}
           title=${operationLabel}
           aria-hidden="true"
         ></ha-icon>` : nothing}
-        ${showName || showOperation ? html`<div class="climate-card-header-content">
+        ${showName || showOperation || group ? html`<div class="climate-card-header-content">
           ${showName ? html`<div class="climate-card-title">
             <h2>${host._config.climate_name === undefined ? host._friendlyEntityName(entityId) : host._config.climate_name}</h2>
             <ha-icon
@@ -124,6 +129,8 @@ export function renderClimateCard(host: VelairViewHost, entityId?: string) {
           <img src=${VELAIR_LOADING_ICON_URL} alt="" width="20" height="20">
           <span class="climate-card-brand-copy"><strong>Velair</strong><small>by cgonfer</small></span>
         </button>
+        </div>
+        ${renderRoomGroupControlContext(host, group)}
       </header>
 
       ${renderThermostatControls(host, entityId, owner, available, runtime)}
@@ -156,8 +163,8 @@ function renderThermostatControls(
   const showNative = host._config.climate_show_native_climate_link !== false;
   const showControlMode = host._config.climate_show_control_mode !== false;
   const state = host.hass?.states?.[entityId];
-  const target = showTarget && state?.state !== "off" ? climateCardTarget(state, host._data?.zones[entityId]?.target_format_policy) : undefined;
-  const modes = showMode ? climateCardPublishedHvacModes(state) : [];
+  const target = showTarget && state?.state !== "off" ? climateCardTarget(state, controlUnitZone(host._data, entityId)?.target_format_policy) : undefined;
+  const modes = showMode ? climateCardPublishedHvacModes(controlUnitState(host._data, host.hass, controlUnitId(host._data, entityId)) ?? state) : [];
   const showAuthority = owner !== "external" && showControlMode;
   const showControlSurface = Boolean(target || modes.length || showNative);
   const actionPresentation = climateCardActionPresentation(host, owner, available, runtime);
@@ -183,7 +190,7 @@ function renderThermostatControls(
   const editable = owner === "manual" && available && !runtimeBlocked && !authorityPending;
   const temperatureUnit = host._temperatureUnit(entityId);
   const targetTempStep = host._entityTemperatureStep(entityId);
-  const grid = climateCardPublishedTemperatureGrid(state, temperatureUnit, targetTempStep);
+  const grid = climateCardPublishedTemperatureGrid(climateCardControlState(host._data, host.hass, entityId), temperatureUnit, targetTempStep);
   const reason = thermostatControlReason(
     host,
     owner,
@@ -320,9 +327,9 @@ function renderTargetControl(
   temperatureUnit?: string,
   targetTempStep?: number,
 ) {
-  const state = host.hass?.states?.[entityId];
-  const decrease = editable && Boolean(climateCardTargetPayload(state, field, -1, temperatureUnit, targetTempStep, host._data?.zones[entityId]?.target_format_policy));
-  const increase = editable && Boolean(climateCardTargetPayload(state, field, 1, temperatureUnit, targetTempStep, host._data?.zones[entityId]?.target_format_policy));
+  const state = climateCardControlState(host._data, host.hass, entityId);
+  const decrease = editable && Boolean(climateCardTargetPayload(state, field, -1, temperatureUnit, targetTempStep, controlUnitZone(host._data, entityId)?.target_format_policy));
+  const increase = editable && Boolean(climateCardTargetPayload(state, field, 1, temperatureUnit, targetTempStep, controlUnitZone(host._data, entityId)?.target_format_policy));
   return html`<div class="climate-card-target-control" ?data-pending=${pending} aria-busy=${String(pending)}>
     <div class="climate-card-target-stepper">
       <button type="button" aria-label=${host._t("climateCardDecreaseTarget")} aria-disabled=${String(!decrease || pending)} ?disabled=${!decrease}
@@ -696,20 +703,9 @@ function climateCardComfortChips(
   if (compact) {
     const insight = climateCardContextComfortInsight(host, entityId, comfort);
     if (insight) chips.push({ icon: "mdi:thermometer-lines", text: insight, tone: "info" });
-    if (comfort.data_quality === "unverified") {
-      chips.push({ icon: "mdi:information-outline", text: host._t("comfortDataUnverified"), tone: "info" });
-    }
     if (host._config.climate_show_comfort_collapsed_readings === true) {
       const metrics = climateCardComfortMetricChips(host, entityId, comfort);
       chips.push(...metrics);
-      const unverified = metrics.filter((metric) => metric.freshness === "unverified");
-      if (unverified.length) {
-        chips.push({
-          icon: "mdi:information-outline",
-          text: `${host._t("comfortDataUnverified")}: ${unverified.map((metric) => metric.label).join(", ")}`,
-          tone: "info",
-        });
-      }
     }
   }
   return chips;
@@ -732,21 +728,11 @@ function climateCardComfortNotices(
   if (insight) {
     notices.push({ icon: "mdi:thermometer-lines", text: insight, tone: "info" });
   }
-  if (comfort.data_quality !== "complete") {
-    const informational = comfort.data_quality === "unverified";
+  if (comfort.data_quality !== "complete" && comfort.data_quality !== "unverified") {
     notices.push({
-      icon: informational ? "mdi:information-outline" : "mdi:alert-circle-outline",
+      icon: "mdi:alert-circle-outline",
       text: host._t(comfortQualityKey(comfort.data_quality)),
-      tone: informational ? "info" : "warning",
-    });
-  }
-  const unverified = climateCardComfortMetricChips(host, entityId, comfort)
-    .filter((metric) => metric.freshness === "unverified");
-  if (unverified.length) {
-    notices.push({
-      icon: "mdi:information-outline",
-      text: `${host._t("comfortDataUnverified")}: ${unverified.map((metric) => metric.label).join(", ")}`,
-      tone: "info",
+      tone: "warning",
     });
   }
   return notices;
@@ -897,7 +883,7 @@ function renderTimeline(
 }
 
 function renderFeatures(host: VelairViewHost, entityId: string) {
-  const roomAssist = host._data?.room_sensor_assist?.[entityId];
+  const roomAssist = host._data?.room_sensor_assist?.[controlUnitId(host._data, entityId)];
   const showAssist = host._config.climate_show_room_assist !== false;
   const showPreconditioning = host._config.climate_show_preconditioning !== false;
   const assistDisplay = host._config.climate_room_assist_display ?? "both";
@@ -908,13 +894,13 @@ function renderFeatures(host: VelairViewHost, entityId: string) {
     && hasRoomAssistScheduledTarget(roomAssist);
   const preconditioningEvent = showPreconditioning ? nextActualPreconditioningEvent(host, entityId) : undefined;
   const blockedDependency = showPreconditioning && !preconditioningEvent
-    ? host._data?.next_events.find(event => event.entity_id === entityId
+    ? host._data?.next_events.find(event => event.entity_id === controlUnitId(host._data, entityId)
       && event.preconditioning_dependency?.result === "blocked"
       && Date.parse(event.when) > host._currentTimelineNow().getTime())?.preconditioning_dependency
     : undefined;
   const now = host._currentTimelineNow().getTime();
   const preparation = showPreconditioning ? currentArrivalPreparation(host._data?.planned_return_status, now) : undefined;
-  const returnRoom = preparationRoom(preparation, entityId);
+  const returnRoom = preparationRoom(preparation, controlUnitId(host._data, entityId));
   if (!showAssistPanel && !preconditioningEvent && !returnRoom && !blockedDependency) {
     return nothing;
   }
@@ -940,7 +926,7 @@ function renderRoomAssistPanel(
   showSummary: boolean,
   showGraph: boolean,
 ) {
-  showGraph = showGraph && assist.reason !== "unsupported_range_mode";
+  showGraph = showGraph && assist.reason !== "unsupported_range_mode" && assist.reason !== "range_reference_not_configured";
   const collapsed = showGraph && host._climateCardRoomAssistCollapsed;
   const summary = roomAssistSummary(host, entityId, assist);
   const title = host._t("roomSensorAssistBadge");
@@ -1027,7 +1013,7 @@ function renderPreconditioningPanel(
 function nextActualPreconditioningEvent(host: VelairViewHost, entityId: string): ScheduleEvent | undefined {
   const now = host._currentTimelineNow().getTime();
   return host._data?.next_events.find((event) => {
-    if (event.entity_id !== entityId || !event.target_when || event.target_when === event.when) return false;
+    if (event.entity_id !== controlUnitId(host._data, entityId) || !event.target_when || event.target_when === event.when) return false;
     const start = new Date(event.when).getTime();
     const target = new Date(event.target_when).getTime();
     const direction = event.preconditioning_diagnostics?.direction ?? event.hvac_mode;
@@ -1055,6 +1041,7 @@ function renderCompactPreconditioning(host: VelairViewHost, event: ScheduleEvent
 }
 
 function roomAssistSummary(host: VelairViewHost, entityId: string, assist: RoomSensorAssistStatus): string {
+  if (assist.reason === "range_reference_not_configured") return host._t("rangeReferenceNotConfigured");
   if (assist.reason === "unsupported_range_mode") return host._t("unsupportedRangeThermalMode");
   const scheduled = roomAssistTemperature(host, entityId, assist.target_temperature, assist.target_temp_low, assist.target_temp_high);
   const applied = roomAssistTemperature(
@@ -1130,7 +1117,7 @@ function roomAssistSummaryKey(status: RoomSensorAssistStatus["status"]): Transla
 
 function renderRoomAssist(host: VelairViewHost, entityId: string, assist: RoomSensorAssistStatus) {
   const settings = preconditioningSettings(
-    host._data?.zones[entityId]?.preconditioning,
+    controlUnitZone(host._data, entityId)?.preconditioning,
     host._temperatureUnit(entityId),
   );
   return html`<div class="climate-card-room-assist-graph">
@@ -1434,8 +1421,8 @@ function renderExternalOwner(host: VelairViewHost, entityId: string, provider?: 
   const publication = external?.publication?.state;
   const attributes = host.hass?.states?.[entityId]?.attributes;
   const next = host._data?.next_effective_events !== undefined
-    ? host._data.next_effective_events.find(row => row.entity_id === entityId)?.event ?? undefined
-    : host._data?.next_events.find((event) => event.entity_id === entityId)
+    ? host._data.next_effective_events.find(row => row.entity_id === controlUnitId(host._data, entityId))?.event ?? undefined
+    : host._data?.next_events.find((event) => event.entity_id === controlUnitId(host._data, entityId))
       ?? (host._data?.next_event?.entity_id === entityId ? host._data.next_event : undefined);
   const providerState = external?.available === false
     ? "externalProviderUnavailable"

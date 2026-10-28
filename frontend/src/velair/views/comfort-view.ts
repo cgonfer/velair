@@ -102,7 +102,7 @@ function renderComfortZone(
 ) {
   const exists = host._entityExists(entityId);
   const settings = comfortSettings(
-    host._data?.zones[entityId]?.comfort,
+    host._data?.comfort_settings?.[entityId] ?? host._data?.zones[entityId]?.comfort,
     host._temperatureUnit(entityId),
   );
   const assessment = host._data?.comfort?.[entityId];
@@ -206,7 +206,6 @@ function renderComfortRuntime(
           ${renderComfortAirQualityPill(host, assessment.air_quality)}
         </span>
       </div>
-      ${options.showConfiguration ? nothing : renderComfortFreshnessSummary(host, settings, assessment)}
       ${renderComfortInsights(host, entityId, assessment)}
       ${renderComfortVisual(host, entityId, assessment, options)}
       ${renderDerivedMetricsVisualSection(host, entityId, settings, assessment)}
@@ -867,6 +866,7 @@ function renderComfortConfigurationDetails(
             ${renderComfortSensorPicker(host, entityId, settings, "humidity_entity_id", "humidity", "comfortHumiditySensor")}
             ${renderComfortSensorPicker(host, entityId, settings, "co2_entity_id", "co2", "comfortCo2Sensor")}
           </div>
+          ${renderComfortFreshnessSummary(host, settings, assessment)}
         </section>
         <section class="comfort-config-section comfort-freshness-config-section">
           <h3><ha-icon icon="mdi:clock-check-outline"></ha-icon>${host._t("comfortDataFreshness")}</h3>
@@ -890,7 +890,6 @@ function renderComfortConfigurationDetails(
               ? host._t("comfortStaleAfterSources", { entities: directSources.join(", ") })
               : host._t("comfortStaleAfterNotApplicable")}
           </p>
-          ${renderComfortFreshnessSummary(host, settings, assessment)}
         </section>
         <section class="comfort-config-section comfort-model-config-section">
           <h3><ha-icon icon="mdi:shape-outline"></ha-icon>${host._t("comfortModel")}</h3>
@@ -1775,6 +1774,7 @@ function renderComfortFreshnessSummary(
   );
   return html`<div class="comfort-freshness-status">
     <p>${host._t("comfortDataUnverified")} (${unverifiedReadings.join(", ")})</p>
+    <p>${host._t("comfortReadingFreshnessHelp")}</p>
     ${climateUnverified ? html`<p>${host._t("comfortClimateSourceFreshnessHelp")}</p>` : nothing}
   </div>`;
 }

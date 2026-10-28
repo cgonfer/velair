@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](adaptive-preconditioning.md) · [Español](a
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.5 |
-| Última sincronización | 2026-10-24 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -28,22 +28,25 @@ Por ejemplo, un bloque a las `07:00` con `21 °C` significa «estar cerca de `21
 El Preacondicionamiento adaptativo se ejecuta localmente en Home Assistant. Velair guarda sus ajustes y muestras de aprendizaje en el almacenamiento de Home Assistant y nunca envía su historial de temperaturas, observaciones ni datos de calibración a un controlador externo. Las zonas delegadas mediante Ejecución externa de horarios no utilizan Preacondicionamiento adaptativo; solo se publica su horario semanal efectivo.
 
 <a id="setup"></a>
-
 ## Configuración
 
-La pestaña de preacondicionamiento contiene los ajustes adaptativos y el aprendizaje de cada equipo. Regreso a casa tiene su propia pestaña para la ocupación, las llegadas semanales y la ausencia actual. Ambas incluyen una introducción y ayuda contextual. Sus rutas directas son `/velair/preconditioning` y `/velair/planned-return`. Los enlaces antiguos de subsección siguen abriendo la pestaña correspondiente. Consulta [Regreso a casa](planned-return.es.md).
+La pestaña de Preacondicionamiento contiene los ajustes adaptativos y el aprendizaje de cada equipo independiente o grupo de habitación. Aquí los miembros agrupados aparecen como una habitación. Regreso a casa tiene su propia pestaña para ocupación, llegadas semanales y ausencia actual. Ambas incluyen introducción y ayuda contextual. Sus rutas directas son `/velair/preconditioning` y `/velair/planned-return`. Los enlaces antiguos siguen abriendo su pestaña correspondiente. Consulta [Regreso a casa](planned-return.es.md).
 
-1. Abre la pestaña Preparación del confort.
-2. Expande el equipo que quieras configurar.
-3. Activa el preacondicionamiento.
-4. Mantén los ajustes predeterminados del modelo salvo que tengas un motivo concreto para modificarlos.
-5. Opcionalmente, selecciona un sensor de temperatura exterior.
+1. Abre la pestaña de Preacondicionamiento.
+2. Expande el equipo o grupo que quieras configurar.
+3. Habilita el preacondicionamiento.
+4. Conserva los ajustes predeterminados salvo que tengas un motivo para modificarlos.
+5. Opcionalmente, selecciona un sensor exterior.
 
-El preacondicionamiento se configura por equipo. El aprendizaje de calefacción y refrigeración se registra por separado: las muestras de refrigeración no sustituyen a las de calefacción, ni viceversa.
+El preacondicionamiento se configura por equipo independiente o grupo de habitación. El aprendizaje de calefacción y refrigeración se registra por separado: las muestras de una dirección no sustituyen a las de la otra.
 
-Se admiten intervalos nativos `heat_cool`. Si la habitación está por debajo del objetivo inferior en más de la Diferencia mínima de temperatura, Velair calcula la predicción desde ese límite y aplica anticipadamente el intervalo completo para calentar. Si está por encima del objetivo superior en más de esa diferencia, calcula desde el límite superior y aplica anticipadamente el intervalo completo para refrigerar. Las lecturas dentro del intervalo o de las bandas muertas de sus límites mantienen la hora programada habitual. Velair siempre envía ambos límites; nunca reduce un intervalo a una sola temperatura.
+Un [grupo de habitación](room-groups.es.md#learning-and-membership-changes) guarda un modelo térmico y decide un único inicio; sus miembros no aprenden ni se preparan por separado. La referencia de temperatura aporta la lectura propia, o el sensor de Room Assist habilitado aporta la medición efectiva de la habitación. Quitar un miembro reinicia el aprendizaje de ese miembro y del grupo restante. Disolver el grupo inicia historiales independientes para todos; los antiguos no se reparten ni restauran. Renombrar o reordenar conserva el aprendizaje.
 
-Una entidad puede necesitar ambos límites en Calor, Frío o Auto sin admitir `heat_cool`. Velair puede programar y enviar esos objetivos, pero no los adelanta ni recoge muestras de aprendizaje térmico para ellos. La vista de preparación explica que esta función requiere Calor/Frío para intervalos. El par programado no cambia y Regreso a casa lo aplica a la llegada sin preparación anticipada. Habilitar el preacondicionamiento no elimina esta limitación.
+Se admiten intervalos nativos `heat_cool`. Si la habitación está por debajo del objetivo inferior en más de la Diferencia mínima de temperatura, Velair calcula desde ese límite y aplica anticipadamente el intervalo completo para calentar. Por encima del objetivo superior en más de esa diferencia, calcula desde el límite superior y aplica el intervalo completo para refrigerar. Dentro del intervalo o de las bandas muertas de sus límites, mantiene la hora habitual. Siempre envía ambos límites; nunca reduce el intervalo a una temperatura.
+
+Para dos consignas en `heat` o `cool` fijo, selecciona **Consigna de referencia** para ese equipo y modo en **Ajustes → Equipos y grupos**. Elige el límite que use realmente tu equipo: **Consigna inferior** o **Consigna superior**. Room Assist comparte esta selección. La preparación y el aprendizaje usan solo ese límite como objetivo de calefacción o refrigeración según el modo, incluso si eliges el superior para calentar o el inferior para refrigerar. Velair adelanta el par nominal completo, también en Regreso a casa; nunca envía solo el límite seleccionado.
+
+Con **Sin configurar**, los pares de modo fijo mantienen su hora y no producen muestras térmicas. Regreso a casa los aplica a la llegada sin anticipación. Los intervalos en `auto` conservan esta limitación porque elegir un límite no define cómo calienta o enfría el equipo. El comportamiento nativo `heat_cool` no cambia. Cambiar la referencia invalida las observaciones iniciadas con la interpretación anterior.
 
 Al expandir un equipo, cada modo compatible muestra una tarjeta de predicción actual. Utiliza los mismos datos del backend sobre el próximo evento que la pestaña Resumen, de modo que las pausas, refuerzos, modos incompatibles y bloques que no pueden adelantarse se tratan de forma coherente. Cuando existe un bloque futuro adecuado, la tarjeta muestra el inicio calculado, la hora objetivo, el adelanto, la temperatura y el modo programados, y si Velair utiliza el modelo inicial o un historial local de casos similares.
 
@@ -93,6 +96,8 @@ Un contador de muestras que no cambia no demuestra una avería. Una transición 
 Velair calcula la diferencia de temperatura actual para el próximo bloque de temperatura programado.
 
 Para un intervalo `heat_cool`, «temperatura objetivo» significa a continuación el límite inferior al calentar y el superior al refrigerar.
+
+Para un intervalo fijo `heat` o `cool`, significa el límite de referencia elegido, con la dirección determinada por ese modo fijo.
 
 Para calefacción:
 

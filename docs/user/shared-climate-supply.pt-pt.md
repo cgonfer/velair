@@ -8,8 +8,8 @@ Traduções: [Original em inglês](shared-climate-supply.md) · [Español](share
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.5 |
-| Última sincronização | 2026-10-24 |
+| Versão de referência | 1.9.0-beta.6 |
+| Última sincronização | 2026-10-28 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -96,24 +96,37 @@ Assistant ou de ligação mantêm a explicação original, sem os atribuir a out
 Os rascunhos ficam disponíveis para corrigir e tentar novamente, mesmo depois
 de remover o último fornecimento.
 
+<a id="live-status"></a>
+## Estado em tempo real
+
+Escolha **Estado em tempo real** no cabeçalho de um fornecimento guardado para abrir o monitor somente leitura. Ele usa a configuração guardada, mesmo com alterações não guardadas no editor. Fornecimentos novos precisam ser guardados antes de abrir o monitor.
+
+O resumo mostra o estado do interruptor informado pelo Home Assistant, o número de termostatos solicitando fornecimento e o estado do controlo automático, incluindo esperas de tempo mínimo desligado ou atraso para desligar. Uma solicitação e um interruptor ligado não confirmam aquecimento, arrefecimento, abertura de válvula ou fluxo físicos.
+
+Quando a demanda é avaliada e há leituras, cada termostato tem uma linha de temperatura com leitura atual, alvo efetivo e limites de início/parada. Uma faixa hachurada com a cor de tema do Room Assist marca o intervalo entre os limites, haja ou não solicitação. Com demanda, uma seta fina colorida vai da leitura atual ao limite de parada: laranja para aquecimento, azul para arrefecimento. Indica a direção de temperatura solicitada, não fluxo térmico nem operação física confirmada. Sem demanda, a seta desaparece e o marcador atual é neutro; a faixa estática continua visível. A temperatura aumenta da esquerda para a direita nos dois sentidos. Valores e rótulos ficam visíveis sem passar o mouse, inclusive em ecrãs móveis. Atual e alvo ficam centralizados em suas posições reais; rótulos próximos usam linhas separadas. Cada marcador agrupa a temperatura-limite e a distância com sinal ao alvo, sem tabela separada.
+
+Os rótulos destacam o próximo limite relevante. Durante a demanda, **Para a** identifica a parada. Antes de a leitura ultrapassar o início, esse limite é simplesmente **Limite inferior** no aquecimento ou **Limite superior** no arrefecimento. Depois de entrar na faixa de retenção, **Reinicia a** identifica o limite do próximo ciclo. Sem demanda, **Inicia a** fica destacado e o outro limite usa nome neutro. Limites coincidentes compartilham um marcador. Demanda desconhecida permanece neutra, sem presumir solicitação.
+
+Quando o Room Assist controla a demanda, o monitor identifica essa origem e usa seu sensor e limites de controlo efetivos, em vez de tratar o alvo corrigido do termostato como alvo da divisão. A pergunta compacta **Porque não é utilizada a minha histerese?** explica a prioridade do Room Assist e os ajustes guardados de fornecimento inativos. Só abre ao selecionar e mantém essa escolha durante atualizações. Instruções normais de início/parada não se repetem abaixo do gráfico; dados indisponíveis ou não avaliados continuam explicados. Por exemplo, alvo de conforto de 17 °C com limites de 16 e 18 °C significa início 1 °C abaixo e parada 1 °C acima, mesmo se a distância de início do fornecimento, não usada, for 0,2 °C. Faixas nativas do Room Assist podem usar um só limite: marcadores coincidentes não significam distância zero ao alvo de conforto. Leituras ausentes e demanda não avaliada são explícitas, sem manter uma solicitação anterior como dado atual. Termostatos desligados e fornecimentos desativados ou suspensos mantêm leituras atuais disponíveis, sem apresentar alvos ou limites não avaliados.
+
+O monitor recebe atualizações enquanto aberto e encerra a inscrição ao fechar. Mostra as últimas leituras informadas ao Home Assistant; não aumenta a frequência de informes dos dispositivos, não simula temperaturas e não armazena histórico.
+
 <a id="how-estimated-demand-works"></a>
 ## Como funciona a procura estimada
 
-Novos fornecimentos no painel usam **Parar no alvo**, com distância de início
-de **0,3 °C** ou **0,54 °F** e distância de paragem zero. São diferenças de
-temperatura equivalentes. As exceções por termóstato herdam estes valores até
-escolheres valores personalizados. Os exemplos seguintes usam distâncias diferentes
-para distinguir os modos.
+Novos fornecimentos no painel usam **Parar no alvo**, com **Histerese de ativação** de **0.3 °C** ou **0.54 °F** e **Histerese de desativação** zero. São diferenças de temperatura equivalentes; os termostatos herdam os valores do fornecimento até escolher valores próprios. Os exemplos abaixo usam valores diferentes para esclarecer cada modo.
 
 Nos termóstatos comuns, a histerese define um limite de início e outro de paragem.
 Entre eles, a procura anterior mantém-se. Todas as comparações incluem o próprio
 limite. Exemplos com alvo de 22 °C:
 
+Os valores de histerese são diferenças de temperatura em relação ao alvo. A histerese de ativação determina o início da procura. A de desativação define quanto a temperatura deve ultrapassar o alvo, no sentido do aquecimento ou arrefecimento, para terminar a procura. Parar no alvo usa zero para a desativação. Simétrica aplica o mesmo valor dos dois lados; Histerese personalizada permite ajustar ambos separadamente.
+
 | Modo | Valores | Aquecimento: início / paragem | Arrefecimento: início / paragem |
 | --- | --- | --- | --- |
-| Parar no alvo (predefinido) | Início 0,5 °C | ≤21,5 / ≥22 °C | ≥22,5 / ≤22 °C |
-| Simétrica | Distância 0,5 °C | ≤21,5 / ≥22,5 °C | ≥22,5 / ≤21,5 °C |
-| Personalizada | Início 0,5 °C; paragem 0,2 °C | ≤21,5 / ≥22,2 °C | ≥22,5 / ≤21,8 °C |
+| Parar no alvo (predefinido) | Histerese de ativação 0,5 °C | ≤21,5 / ≥22 °C | ≥22,5 / ≤22 °C |
+| Simétrica | Histerese simétrica 0,5 °C de cada lado | ≤21,5 / ≥22,5 °C | ≥22,5 / ≤21,5 °C |
+| Histerese personalizada | Histerese de ativação 0,5 °C; Histerese de desativação 0,2 °C | ≤21,5 / ≥22,2 °C | ≥22,5 / ≤21,8 °C |
 
 O gráfico em **Procura e histerese** acompanha a edição da finalidade, modo e
 distâncias. Usa um alvo de exemplo identificado, não o alvo real de um termóstato.
@@ -126,12 +139,7 @@ estimativa, sem simular equipamento ou atrasos. O alvo de exemplo é 22 °C ou 7
 Durante valores vazios, incompletos ou inválidos, um gráfico cinzento sem leituras
 mantém a altura da pré-visualização até o valor voltar a ser válido.
 
-A distância de início afasta-se do alvo antes de ser necessário aquecer ou
-arrefecer. A distância de paragem ultrapassa o alvo na direção do aquecimento ou
-arrefecimento. Ambas aceitam zero; com as duas a zero, no alvo exato não há procura.
-Dentro da banda após um reinício, alteração de alvo ou da histerese, não se presume
-nova procura. Mudar de modo conserva os valores de paragem personalizados, que
-voltam a aplicar-se quando regressas ao modo personalizado.
+**Histerese de ativação** é a diferença de temperatura em relação ao alvo antes de solicitar aquecimento ou arrefecimento. **Histerese de desativação** é a diferença além do alvo antes de terminar a solicitação. **Histerese simétrica** aplica a mesma diferença de cada lado do alvo, não a largura total da faixa. **Histerese personalizada** permite definir ativação e desativação separadamente. Ambas aceitam zero; com ambas zero, exatamente no alvo significa sem demanda. Dentro da faixa após reiniciar, mudar o alvo ou a histerese, não se presume nova demanda. Trocar de modo preserva os valores personalizados de parada, que voltam a valer ao retornar à **Histerese personalizada**.
 
 **Parar no alvo** é o ponto de partida recomendado para termóstatos comuns.
 Simétrica e Personalizada são opções avançadas: o termóstato pode fechar a válvula
@@ -152,10 +160,7 @@ anterior indefinidamente. Outras divisões válidas continuam a poder solicitar.
 Sem nenhuma divisão válida a solicitar, o fornecimento pede para desligar após
 o atraso configurado.
 
-São usados os alvos atuais, incluindo alterações manuais e alvos aplicados pelo
-Pré-condicionamento adaptativo ou Regresso planeado. Pausar uma programação não
-desativa o controlo do fornecimento. Um intervalo válido usa o limite inferior
-para aquecimento e o superior para arrefecimento; um alvo ambíguo não solicita.
+São usados os alvos atuais dos termostatos, incluindo alterações manuais e alvos aplicados pelo Pré-condicionamento adaptativo ou Regresso planeado. Pausar uma programação não desativa o controlo automático do fornecimento. Uma faixa válida usa o limite inferior para aquecimento e o superior para arrefecimento por predefinição. Para uma faixa fixa de Aquecimento ou Arrefecimento com **Alvo de referência** selecionado em **Definições → Dispositivos de climatização e grupos**, o controlo do fornecimento usa o mesmo limite e a direção do modo fixo. Um alvo ambíguo não pode solicitar fornecimento.
 
 <a id="room-assist"></a>
 ## Room Assist
@@ -178,20 +183,23 @@ a comunicar o mesmo alvo ajustado.
 <a id="timing-and-manual-control"></a>
 ## Temporização e controlo manual
 
-**Tempo mínimo desligado** adia um novo arranque após desligar o interruptor.
-**Atraso ao desligar** exige um período contínuo sem procura antes de desligar;
-o regresso da procura cancela-o. Ambos aceitam segundos inteiros de 0 a 86 400,
-com zero por predefinição. Não há um período mínimo ligado que mantenha a fonte
-ativa quando as válvulas já possam estar fechadas.
+**Atraso para ligar** exige demanda estimada contínua antes de iniciar o fornecimento. Se a demanda desaparece ou fica desconhecida, a contagem reinicia. Ela pertence ao fornecimento: uma divisão pode parar de solicitar enquanto outro continua, sem reiniciar a espera. **Tempo mínimo desligado** adia o reinício após desligar. Quando surge demanda, vale a maior espera: o **tempo mínimo desligado restante** ou o **atraso para ligar completo**. Eles não são somados.
+
+Por exemplo, com tempo mínimo desligado de 60 segundos e atraso para ligar de 20 segundos:
+
+- Desligado há um dia: a proteção terminou; espere somente 20 segundos desde o surgimento da demanda.
+- Demanda logo após desligar: espere 60 segundos, o maior dos tempos configurados.
+- Demanda 50 segundos após desligar: restam 10 segundos de proteção. Espere 20 segundos desde a demanda, permitindo ligar 70 segundos após o desligamento.
+
+A demanda deve continuar durante toda a espera. Estado em tempo real mostra o tempo restante e se a confirmação de demanda ou o tempo mínimo desligado impede o início. Zero desativa apenas a espera correspondente; a outra continua valendo.
+
+**Atraso para desligar** exige um período contínuo sem demanda antes de desligar; a volta da demanda cancela o atraso. As três configurações aceitam segundos inteiros de 0 a 86.400 e têm predefinição zero. Não existe tempo mínimo ligado forçado que mantenha a fonte ativa depois de as válvulas poderem ter fechado.
 
 Mudar o nome ou uma distância de paragem atualmente sem uso não reinicia o ciclo
 de procura nem o atraso. Reativar um fornecimento usa a última transição comunicada
 para desligado para respeitar o tempo mínimo desligado.
 
-Desligar fora do Velair o interruptor de um fornecimento ativado suspende o
-controlo automático. Usa **Retomar controlo automático**. A suspensão persiste após
-reinícios; guardar outras alterações não a elimina. Desativar ou remover um
-fornecimento solicita que a saída anteriormente controlada seja desligada.
+Desligar fora do Velair o interruptor de um fornecimento ativado suspende o controlo automático. Uma notificação persistente do Home Assistant e uma entrada em Atividade explicam que o fornecimento foi desligado fora do Velair e permanece pausado até a retomada. O motivo também aparece junto a **Retomar automático** e no Estado em tempo real. Temperaturas disponíveis continuam visíveis durante a pausa. Use **Retomar automático** para reavaliar a demanda atual; retomar não implica ligar. Um novo atraso para ligar começa quando a demanda é confirmada, e o tempo mínimo desligado continua valendo. A suspensão é guardada entre reinícios. Guardar outras alterações não a remove. Desabilitar ou excluir o fornecimento não chama o interruptor.
 
 Ligar o interruptor fora do Velair não substitui o controlo automático. Quando
 todos os termóstatos associados comunicam ausência de procura, o Velair desliga
@@ -202,16 +210,7 @@ fornecimento, explica que a ativação externa foi corrigida por não existir pr
 estimada de calor ou frio e liga a **Controlo do fornecimento** para rever ou
 desativar o controlo. Não presume que a alteração foi feita por uma pessoa.
 
-Correções repetidas do mesmo fornecimento e interruptor são comunicadas no máximo
-uma vez a cada 15 minutos durante a execução atual da integração. Mudar de
-interruptor inicia um novo período de aviso. Cada fornecimento usa uma notificação;
-um aviso posterior permitido substitui o anterior. Falhas de entrega ou aceitação
-do serviço sem uma transição correspondente para desligado não produzem aviso de
-sucesso. Procura desconhecida não é comunicada como ausência confirmada de procura.
-Uma integração de interruptor que não conserve o contexto do comando não permite
-a atribuição necessária. Estas regras não alteram o controlo nem exigem sondagem.
-Falhas nas notificações ou na Atividade não interrompem o controlo; a Atividade
-exige a integração de atividade/registo do Home Assistant.
+Correções repetidas para o mesmo fornecimento e interruptor são informadas no máximo uma vez a cada 15 minutos durante a execução atual da integração. Reatribuir o interruptor inicia um novo período. Cada fornecimento usa uma notificação; uma correção posterior permitida substitui a anterior. Avisos de pausa têm notificação separada e limite próprio de 15 minutos; uma correção recente não oculta uma pausa posterior. Falhas de entrega ou aceitação do serviço sem transição informada para desligado não geram aviso de sucesso.
 
 Um desligar manual mais recente tem prioridade sobre um pedido de guardar ou
 retomar em curso. Retoma explicitamente de novo se pretenderes controlo automático

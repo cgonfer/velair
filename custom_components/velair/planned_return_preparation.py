@@ -5,6 +5,7 @@ from dataclasses import asdict
 from homeassistant.util import dt as dt_util
 
 from .models import normalize_preconditioning_data, temperature_target_from_mapping
+from .target_format_policy import selected_range_boundary
 
 
 def preparation_status(runtime, now, arrival, mode_id, plans):
@@ -95,14 +96,18 @@ def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
     is_range = "target_temp_low" in block
     mode = (mode_getter(entity, block.get("hvac_mode"), ensure_on=not block.get("temperature_only", False), range_target=is_range)
             if callable(mode_getter) else block.get("hvac_mode") or owner._current_hvac_mode(entity))
-    supported = mode == "heat_cool" if is_range else mode in ("heat", "cool", "auto", "heat_cool")
+    reference = selected_range_boundary(zone, mode) if is_range else None
+    supported = (mode == "heat_cool" or reference is not None) if is_range else mode in ("heat", "cool", "auto", "heat_cool")
     if is_range and not supported:
-        row.update(preparation="arrival_only", reason="unsupported_range_mode")
+        row.update(preparation="arrival_only", reason="range_reference_not_configured" if mode in ("heat", "cool") else "unsupported_range_mode")
         return
     reached = False
     if temperature is not None and supported:
         delta = config["minimum_delta_temperature"]
-        if is_range:
+        if is_range and reference is not None:
+            target = block[f"target_temp_{reference}"]
+            reached = temperature >= target - delta if mode == "heat" else temperature <= target + delta
+        elif is_range:
             reached = block["target_temp_low"] - delta <= temperature <= block["target_temp_high"] + delta
         elif mode == "heat":
             reached = temperature >= block["temperature"] - delta

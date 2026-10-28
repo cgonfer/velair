@@ -1,3 +1,4 @@
+import { controlUnitIds, controlUnitName } from "../domain/control-units";
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
@@ -600,7 +601,7 @@ export class PlannedReturnElement extends LitElement {
     </div>`;
   }
   private preparationPoints(status: PlannedReturnStatus, timeline: NonNullable<ReturnType<typeof plannedReturnTimeline>>) {
-    return overviewPreparationPoints(currentArrivalPreparation(status, this.timelineNow), timeline.departure, this.data?.configured_entities ?? [])
+    return overviewPreparationPoints(currentArrivalPreparation(status, this.timelineNow), timeline.departure, controlUnitIds(this.data))
       .filter(point => !this.embedded || point.entityId === this.entityId);
   }
   private renderClimatePreparationMessage(status: PlannedReturnStatus) {
@@ -635,7 +636,7 @@ export class PlannedReturnElement extends LitElement {
   private renderPanelTimeline(status: PlannedReturnStatus, timeline: NonNullable<ReturnType<typeof plannedReturnTimeline>>) {
     const labels = plannedReturnTimelineLabels(timeline.departure, timeline.arrival, this.timeZone, languageFromHass(this.hass), this.displayHour12);
     const points = this.preparationPoints(status, timeline);
-    const names = Object.fromEntries(points.map(point => [point.entityId, String(this.hass?.states?.[point.entityId]?.attributes?.friendly_name ?? point.entityId)]));
+    const names = Object.fromEntries(points.map(point => [point.entityId, controlUnitName(this.data, this.hass, point.entityId)]));
     const departureMode = status.away_mode_id ? this.routineMode(status.away_mode_id) : undefined;
     const arrivalMode = status.destination_mode_id ? this.routineMode(status.destination_mode_id) : undefined;
     return html`<div class="return-timeline panel-return-timeline" role="group" aria-label=${this.t("plannedReturnTimeline")}>

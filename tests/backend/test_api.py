@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import importlib
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from . import helpers
 import voluptuous as vol
@@ -434,6 +434,45 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
                 },
             }
         )
+
+
+class SharedDemandLiveApiTest(unittest.TestCase):
+    def test_stream_uses_committed_snapshots_and_survives_unload_reload(self):
+        snapshots = {"boiler": {"zones": {"climate.room": {"temperature": 20}}}}
+        controller = SimpleNamespace(get_live_statuses=Mock(return_value=snapshots))
+        runtime = {"shared_demand": controller}
+        callbacks = []
+        unsubscribe = Mock()
+        connection = SimpleNamespace(subscriptions={}, send_result=Mock(), send_message=Mock())
+        order = []
+        connection.send_result.side_effect = lambda *_: order.append("result")
+        connection.send_message.side_effect = lambda *_: order.append("event")
+        with patch.object(api_module, "_get_runtime", side_effect=lambda _: runtime), patch.object(
+            api_module, "async_dispatcher_connect", side_effect=lambda _h, _s, cb: callbacks.append(cb) or unsubscribe
+        ):
+            api_module.ws_subscribe_shared_demand(SimpleNamespace(), connection, {"id": 1})
+            self.assertEqual(order, ["result", "event"])
+            self.assertEqual(connection.send_message.call_args.args[0]["event"],
+                             {"loaded": True, "shared_demand": snapshots})
+            runtime = None
+            callbacks[0]()
+            self.assertEqual(connection.send_message.call_args.args[0]["event"], {"loaded": False})
+            runtime = {"shared_demand": controller}
+            snapshots["boiler"]["zones"]["climate.room"]["temperature"] = 20.2
+            callbacks[0]()
+            self.assertEqual(connection.send_message.call_args.args[0]["event"]["shared_demand"], snapshots)
+            connection.subscriptions[1]()
+            unsubscribe.assert_called_once()
+        self.assertEqual(controller.get_live_statuses.call_count, 2)
+
+    def test_subscription_accepts_missing_runtime_and_reports_unloaded(self):
+        connection = SimpleNamespace(subscriptions={}, send_result=Mock(), send_message=Mock())
+        with patch.object(api_module, "_get_runtime", return_value=None), patch.object(
+            api_module, "async_dispatcher_connect", return_value=lambda: None
+        ):
+            api_module.ws_subscribe_shared_demand(SimpleNamespace(), connection, {"id": 1})
+        connection.send_result.assert_called_once_with(1)
+        self.assertEqual(connection.send_message.call_args.args[0]["event"], {"loaded": False})
 
 
 class DiagnosticsApiTest(unittest.IsolatedAsyncioTestCase):

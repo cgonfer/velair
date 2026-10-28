@@ -1,6 +1,7 @@
+import { controlUnitId, controlUnitZone } from "../domain/control-units";
 import { climateRequiresRangeTarget } from "../domain/climate";
 import { renderOverviewTimelineGraphic, overviewTimelineGraphicClasses } from "./timeline-block-graphic";
-import { renderPreconditioningDependency } from "./preconditioning-dependency";
+import { dependencyReasonDetailKeys, dependencyReasonKeys, renderPreconditioningDependency } from "./preconditioning-dependency";
 import { html, nothing } from "lit";
 import { ACTION_TURN_OFF } from "../constants";
 import {
@@ -128,7 +129,7 @@ export function renderOverviewSummary(host: OverviewViewHost, zoneIds: string[])
 
   const schedulerState = overviewSchedulerState(host);
   const externalCount = zoneIds.filter(
-    (entityId) => host._data?.zones[entityId]?.execution?.type === "external",
+    (entityId) => controlUnitZone(host._data, entityId)?.execution?.type === "external",
   ).length;
   return html`
     <section class="overview-summary">
@@ -166,7 +167,7 @@ export function renderOverviewActiveBoosts(host: OverviewViewHost, zoneIds?: str
   const visibleEntities = zoneIds ? new Set(zoneIds) : undefined;
   const activeBoosts = activeOverrideEntityIds(overviewHost).filter(
     (entityId: string) => (!visibleEntities || visibleEntities.has(entityId))
-      && host._data?.zones[entityId]?.execution?.type !== "external",
+      && controlUnitZone(host._data, entityId)?.execution?.type !== "external",
   );
   return html`
     <section class="overview-boost-panel">
@@ -175,7 +176,7 @@ export function renderOverviewActiveBoosts(host: OverviewViewHost, zoneIds?: str
             ${renderOverviewSectionHeading(host._t("activeBoosts"), "mdi:lightning-bolt")}
             <div class="event-list overview-boost-list">
               ${activeBoosts.map((entityId: string) => {
-                const override = activeOverrideForEntity(overviewHost, entityId, host._data?.zones[entityId]);
+                const override = activeOverrideForEntity(overviewHost, entityId, controlUnitZone(host._data, entityId));
                 return html`
                   <div class="event">
                     <div>
@@ -249,7 +250,7 @@ const zoneStatePresentation: Record<ZoneRuntimeStatus["state"], { icon: string; 
 };
 
 function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
-  const runtime = host._data?.zone_runtime?.[entityId];
+  const runtime = host._data?.zone_runtime?.[controlUnitId(host._data, entityId)];
   const hasRuntime = runtime !== undefined && runtime !== null;
   const fallback: ZoneRuntimeStatus = { state: "idle" };
   const status = (runtime ?? fallback) as ZoneRuntimeStatus & {
@@ -257,7 +258,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     target_when: string;
     until: string;
   };
-  const externallyManaged = host._data?.zones[entityId]?.execution?.type === "external";
+  const externallyManaged = controlUnitZone(host._data, entityId)?.execution?.type === "external";
   const displayStatus: ZoneRuntimeStatus & typeof status = externallyManaged
     && status.state !== "externally_managed"
     ? { ...status, state: "externally_managed" }
@@ -267,14 +268,16 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     && climateState.state !== "off"
     && climateState.state !== "unknown"
     && climateState.state !== "unavailable";
-  const roomTemperature = numericTemperature(status.room_temperature)
+  const groupedMember = controlUnitId(host._data, entityId) !== entityId;
+  const memberUnavailable = groupedMember && (!climateState || ["unknown", "unavailable"].includes(climateState.state ?? ""));
+  const roomTemperature = groupedMember ? memberUnavailable ? undefined : numericTemperature(climateState?.attributes?.current_temperature) : numericTemperature(status.room_temperature)
     ?? (!hasRuntime ? numericTemperature(climateState?.attributes?.current_temperature) : undefined);
-  const targetTemperature = climateRequiresRangeTarget(climateState, undefined, host._data?.zones?.[entityId]?.target_format_policy) ? undefined
-    : numericTemperature(status.target_temperature)
+  const targetTemperature = climateRequiresRangeTarget(climateState, undefined, controlUnitZone(host._data, entityId)?.target_format_policy) ? undefined
+    : groupedMember ? memberUnavailable ? undefined : numericTemperature(climateState?.attributes?.temperature) : numericTemperature(status.target_temperature)
       ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.temperature) : undefined);
-  const targetLow = numericTemperature(status.target_temp_low)
+  const targetLow = groupedMember ? memberUnavailable ? undefined : numericTemperature(climateState?.attributes?.target_temp_low) : numericTemperature(status.target_temp_low)
     ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.target_temp_low) : undefined);
-  const targetHigh = numericTemperature(status.target_temp_high)
+  const targetHigh = groupedMember ? memberUnavailable ? undefined : numericTemperature(climateState?.attributes?.target_temp_high) : numericTemperature(status.target_temp_high)
     ?? (!hasRuntime && climateAvailable ? numericTemperature(climateState.attributes?.target_temp_high) : undefined);
   const targetRange = targetLow !== undefined && targetHigh !== undefined && targetLow <= targetHigh
     ? formatOverviewRange(host, targetLow, targetHigh, entityId)
@@ -287,7 +290,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
   const manualUnavailable = manualAllowed
     ? ""
     : manualAdjustmentUnavailableDetail(host, displayStatus.manual_adjustment_unavailable_reason);
-  const assist = host._data?.room_sensor_assist?.[entityId];
+  const assist = host._data?.room_sensor_assist?.[controlUnitId(host._data, entityId)];
   const comfort = host._data?.comfort?.[entityId];
   const externalExecution = host._data?.external_execution?.zones[entityId];
   const externalProvider = host._data?.external_execution?.systems.find(
@@ -307,7 +310,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     <article class=${`overview-zone-card state-${displayStatus.state}`}>
       <div class="overview-zone-card-heading">
         <div class="overview-zone-card-name">
-          <strong>${host._friendlyEntityName(entityId)}</strong><span>${entityId}</span>
+          <strong>${host._friendlyEntityName(entityId)}</strong><span>${entityId}</span>${renderGroupOwnership(host, entityId)}
         </div>
         ${externallyManaged ? nothing : renderManualControlSelector(
           host,
@@ -339,7 +342,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
         </div>
       </div>
       ${assistIsActive || hasStandardDetails ? html`<div class="overview-zone-details">
-        ${assistIsActive ? renderRoomAssistThermalFlow(host, entityId, assist!) : html`<div class="overview-zone-metrics">
+        ${assistIsActive && !groupedMember ? renderRoomAssistThermalFlow(host, entityId, assist!) : html`<div class="overview-zone-metrics">
           ${roomTemperature !== undefined
             ? renderOverviewMetric(host._t("overviewZoneRoom"), roomTemperature, host, entityId)
             : nothing}
@@ -535,22 +538,26 @@ function renderOverviewStateBadge(host: OverviewViewHost, entityId: string, stat
   if (status.state === "boost" && status.until) detail = host._t("overviewZoneUntil", { time: host._formatDateTime(status.until) });
   if (status.state === "preconditioning" && status.target_when) detail = host._t("overviewZoneReadyAt", { time: host._formatDateTime(status.target_when) });
   if (status.state === "scheduled") {
-    const next = host._data?.next_events?.find((event) => event.entity_id === entityId);
+    const next = host._data?.next_events?.find((event) => event.entity_id === controlUnitId(host._data, entityId));
     detail = next?.when ? host._t("overviewZoneNextAt", { time: host._formatDateTime(next.when) }) : "";
   }
   const stateLabel = host._t(presentation.key as never);
-  const action = status.state === "externally_managed"
+  const physical = host.hass?.states?.[entityId];
+  const memberUnavailable = controlUnitId(host._data, entityId) !== entityId
+    && (!physical || ["unknown", "unavailable"].includes(physical.state ?? ""));
+  const action = status.state === "externally_managed" || memberUnavailable
     ? undefined
     : climateHvacAction(asOverviewDataHost(host), entityId);
   const actionPresentation = action ? hvacActionPresentation[action] : undefined;
-  const activityIcon = action === "idle"
+  const activityIcon = memberUnavailable ? "mdi:alert-circle-outline" : action === "idle"
     ? presentation.icon
     : actionPresentation?.icon ?? presentation.icon;
-  const primaryLabel = action ? asOverviewDataHost(host)._hvacActionLabel(action) : stateLabel;
-  const context = [
-    ...(action ? [stateLabel] : []),
+  const primaryLabel = memberUnavailable ? host._t("roomGroupUnavailable") : action ? asOverviewDataHost(host)._hvacActionLabel(action) : stateLabel;
+  const contextParts = [
+    ...(action || memberUnavailable ? [stateLabel] : []),
     ...(status.hvac_mode ? [host._modeLabel(status.hvac_mode)] : []),
-  ].join(" · ");
+  ];
+  const context = contextParts.join(" · ");
   const accessibleParts = [primaryLabel, context, detail].filter(Boolean);
   const actionClasses = action
     ? ` action-${action}${actionPresentation?.styleAction ? ` action-${actionPresentation.styleAction}` : ""}`
@@ -562,7 +569,7 @@ function renderOverviewStateBadge(host: OverviewViewHost, entityId: string, stat
   >
     <span class="overview-zone-activity-icon"><ha-icon icon=${activityIcon}></ha-icon></span>
     <span class="overview-zone-activity-copy">
-      <span class="overview-zone-activity-summary">
+      <span class=${`overview-zone-activity-summary${contextParts.length > 1 ? " stacked" : ""}`}>
         <strong>${primaryLabel}</strong>
         ${context ? html`
           <span class="overview-zone-activity-separator" aria-hidden="true">·</span>
@@ -670,7 +677,7 @@ function renderOverviewMetric(label: string, value: number, host: OverviewViewHo
 
 function renderOverviewComfortSignals(host: OverviewViewHost, comfort: ComfortAssessment | undefined, entityId: string) {
   if (!comfort?.enabled) return nothing;
-  const qualityIssue = comfort.data_quality !== "complete" && comfort.condition !== "no_readings";
+  const qualityIssue = comfort.data_quality !== "complete" && comfort.data_quality !== "unverified" && comfort.condition !== "no_readings";
   const conditionKeys: Record<string, string> = {
     comfortable: "comfortConditionComfortable",
     temperature_comfortable: "comfortConditionTemperatureComfortable",
@@ -701,11 +708,10 @@ function renderOverviewComfortSignals(host: OverviewViewHost, comfort: ComfortAs
       ? renderOverviewSignal(
         entityId,
         "comfort-data",
-        comfort.data_quality === "unverified" ? "mdi:information-outline" : "mdi:alert-circle-outline",
+        "mdi:alert-circle-outline",
         host._t("overviewZoneDataLabel"),
-        host._t(comfort.data_quality === "unverified" ? "comfortDataUnverified" : "overviewZoneSensorIssue"),
-        comfort.data_quality === "unverified" ? "info" : "warning",
-        comfort.data_quality === "unverified" ? host._t("overviewZoneDataUnverifiedHelp") : undefined,
+        host._t("overviewZoneSensorIssue"),
+        "warning",
       )
       : nothing}
   `;
@@ -729,7 +735,7 @@ function renderOverviewZoneRow(host: OverviewViewHost, entityId: string, zone?: 
     <div class="overview-zone-table-row" role="row">
       <div class="overview-zone-cell sticky name" role="cell">
         <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>
-        <span>${entityId}</span>
+        <span>${entityId}</span>${renderGroupOwnership(host, entityId)}
       </div>
       <div class="overview-zone-cell" role="cell">
         <strong>${currentTemperatureValue}</strong>
@@ -901,7 +907,7 @@ function currentTargetTemperature(host: OverviewViewHost, entityId: string): str
 
   const low = state.attributes?.target_temp_low;
   const high = state.attributes?.target_temp_high;
-  if (climateRequiresRangeTarget(state, undefined, host._data?.zones?.[entityId]?.target_format_policy)) {
+  if (climateRequiresRangeTarget(state, undefined, controlUnitZone(host._data, entityId)?.target_format_policy)) {
     return typeof low === "number" && Number.isFinite(low)
       && typeof high === "number" && Number.isFinite(high) && low <= high
       ? formatOverviewRange(host, low, high, entityId) : "-";
@@ -966,7 +972,7 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
             </div>
             <div class="overview-timeline-now-line" aria-label=${host._t("currentTime", { time: marker.label })}></div>
             ${zoneIds.map((entityId: string) => {
-              const zone = host._data?.zones[entityId];
+              const zone = controlUnitZone(host._data, entityId);
               const schedule = effectiveClimateSchedule(host._data, entityId);
               return renderOverviewTimelineTrack(
                 host,
@@ -995,13 +1001,13 @@ export function renderOverviewTimelineTrack(
     ? timelineCarryOverFromWeeklySchedule(weeklySchedule, weekday)
     : undefined;
   const overviewHost = asOverviewDataHost(host);
-  const zone = host._data?.zones[entityId];
+  const zone = controlUnitZone(host._data, entityId);
   const external = zone?.execution?.type === "external";
   const override = external ? undefined : activeOverrideForEntity(overviewHost, entityId, zone);
   const zonePauseOverride = external ? undefined : activePauseOverrideForEntity(overviewHost, entityId, zone);
   const pauseOverride = external ? undefined : zonePauseOverride ?? globalTimelinePause(host);
   const manualZonePause = Boolean(
-    zonePauseOverride && host._data?.zone_runtime?.[entityId]?.control_mode === "manual",
+    zonePauseOverride && host._data?.zone_runtime?.[controlUnitId(host._data, entityId)]?.control_mode === "manual",
   );
   const boostBlock = override ? timelineBoostBlockFromOverride(override, host._currentTimelineNow()) : undefined;
   const pauseBlock = pauseOverride ? timelinePauseBlockFromOverride(pauseOverride, host._currentTimelineNow()) : undefined;
@@ -1046,17 +1052,19 @@ export function renderOverviewTimelineTrack(
 
 export function renderOverviewTimelineName(host: OverviewViewHost, entityId: string) {
   const overviewHost = asOverviewDataHost(host);
-  const zone = host._data?.zones[entityId];
+  const zone = controlUnitZone(host._data, entityId);
   const external = zone?.execution?.type === "external";
   const boostOverride = external ? undefined : activeOverrideForEntity(overviewHost, entityId, zone);
   const zonePauseOverride = external ? undefined : activePauseOverrideForEntity(overviewHost, entityId, zone);
   const pauseOverride = external ? undefined : zonePauseOverride ?? globalTimelinePause(host);
   const manualZonePause = Boolean(
-    zonePauseOverride && host._data?.zone_runtime?.[entityId]?.control_mode === "manual",
+    zonePauseOverride && host._data?.zone_runtime?.[controlUnitId(host._data, entityId)]?.control_mode === "manual",
   );
   const effect = activeClimateProfileZoneEffect(host._data, entityId);
   const showProfile = Boolean(effect && !boostOverride && !pauseOverride);
-  const label = host._friendlyEntityName(entityId);
+  const groupId = controlUnitId(host._data, entityId);
+  const name = host._friendlyEntityName(entityId);
+  const label = name + (groupId !== entityId ? ` · ${host._friendlyEntityName(groupId)}` : "");
   const detail = pauseOverride ? pauseDetailText(overviewHost, pauseOverride) : "";
   const profileDetail = effect ? `${host._t("profileOverviewLabel")}: ${effect.profile.name}` : "";
   const pauseDescription = pauseOverride
@@ -1087,7 +1095,7 @@ export function renderOverviewTimelineName(host: OverviewViewHost, entityId: str
       ${showProfile && effect
         ? html`<ha-icon icon=${effect.profile.icon || "mdi:account-outline"} aria-hidden="true"></ha-icon>`
         : nothing}
-      <span class="overview-climate-name">${label}</span>
+      <span class="overview-climate-identity"><span class="overview-climate-name">${name}</span>${renderGroupOwnership(host, entityId, true)}</span>
     </div>
   `;
 }
@@ -1318,21 +1326,30 @@ function overviewTimelineDetailPlacementClass(anchorPercent: number): string {
 
 export function renderNextEvents(host: OverviewViewHost, zoneIds?: string[]) {
   const visible = zoneIds ? new Set(zoneIds) : undefined;
-  const rows = overviewEffectiveNextEvents(asOverviewDataHost(host)).filter(row => !visible || visible.has(row.entity_id));
-  const hasPreconditioning = rows.some(row => (row.phase === "preparation" && row.return_at) || (row.event?.target_when && row.event.target_when !== row.event.when));
+  const rows = overviewEffectiveNextEvents(asOverviewDataHost(host)).flatMap(row =>
+    (host._data?.room_groups?.[row.entity_id]?.members ?? [row.entity_id])
+      .filter(entityId => !visible || visible.has(entityId) || visible.has(row.entity_id))
+      .map(entityId => ({ row, entityId })));
+  const hasPreconditioning = rows.some(({ row }) => (row.phase === "preparation" && row.return_at) || (row.event?.target_when && row.event.target_when !== row.event.when));
   return html`<section class="next effective-next">
     ${rows.length ? html`${renderOverviewSectionHeading(host._t(rows.length === 1 ? "nextEvent" : "nextEvents"), "mdi:calendar-clock")}
-      <div class=${`effective-event-list event-list${hasPreconditioning ? " has-preconditioning" : ""}`}><div class="effective-event-grid">${rows.map(row => renderEffectiveEvent(host, row))}</div></div>`
+      <div class=${`effective-event-list event-list${hasPreconditioning ? " has-preconditioning" : ""}`}><div class="effective-event-grid">${rows.map(({ row, entityId }) => renderEffectiveEvent(host, row, entityId))}</div></div>`
       : renderOverviewEmptyState(host._t("nextEvent"), "mdi:calendar-clock", host._t("noUpcomingEvent"))}
   </section>`;
 }
 
-function renderEffectiveEvent(host: OverviewViewHost, row: EffectiveNextEvent) {
+function renderEffectiveEvent(host: OverviewViewHost, row: EffectiveNextEvent, entityId: string) {
   const labels = { scheduled: "nextEffectiveWeekly", preparation: "nextEffectivePreparation", arrival: "nextEffectiveArrival", suspended: "nextEffectiveSuspended" } as const;
   const mode = plannedReturnModeName(host, row.mode_id);
   const event = row.event && row.when ? { ...row.event, when: row.when,
     target_when: row.phase === "preparation" ? row.return_at ?? row.event.target_when : row.phase === "arrival" ? null : row.event.target_when } : row.event;
-  const name = host._friendlyEntityName(row.entity_id);
+  const name = host._friendlyEntityName(entityId);
+  const dependency = event?.preconditioning_dependency;
+  const dependencyReason = dependencyReasonDetailKeys[dependency?.reason_detail ?? ""]
+    ?? dependencyReasonKeys[dependency?.reason ?? ""];
+  const masterLabel = dependency ? host._t("preconditioningDependencyAssociation", {
+    master: host._friendlyEntityName(dependency.master_entity_id),
+  }) : "";
   const describeEvent = (value: ScheduleEvent) => [host._formatDateTime(value.when),
     value.target_when && value.target_when !== value.when ? host._t("plannedReturnArrival") + ": " + host._formatDateTime(value.target_when) : "",
     host._formatEventAction(value), host._formatEventMode(value)].filter(Boolean).join(" · ");
@@ -1344,15 +1361,18 @@ function renderEffectiveEvent(host: OverviewViewHost, row: EffectiveNextEvent) {
     row.phase === "suspended" && row.blocked_until ? host._t("nextEffectiveExpiryHelp") : "",
     row.source === "planned_return" && row.weekly_event ? `${host._t("nextEffectiveWeeklyReference")}: ${describeEvent(row.weekly_event)}` : "",
   ].filter(Boolean);
-  return html`<div class="effective-event event" data-source=${row.source} data-phase=${row.phase} data-entity-id=${row.entity_id}>
-    <div class="effective-event-identity event-identity"><strong class="overview-climate-name">${name}</strong></div>
+  return html`<div class="effective-event event" data-source=${row.source} data-phase=${row.phase} data-entity-id=${entityId} data-control-unit-id=${row.entity_id}>
+    <div class="effective-event-identity event-identity"><button class="overview-climate-identity effective-event-schedule" type="button" title=${host._t("nextEventOpenSchedule", { name })} aria-label=${host._t("nextEventOpenSchedule", { name })} @click=${() => host._openNextEventSchedule?.(entityId, event?.weekday ?? row.weekly_event?.weekday, row.source === "planned_return" ? row.mode_id ?? "default" : undefined)}><strong class="overview-climate-name">${name}</strong>${renderGroupOwnership(host, entityId, true)}</button>${dependency ? html`<span class="effective-event-master">
+        <span>${masterLabel}</span>
+        ${dependencyReason ? renderInlineHelp(`next-event-master-${entityId}`, masterLabel, host._t(dependencyReason)) : nothing}
+      </span>` : nothing}</div>
     <span class="effective-event-origin">${host._t(row.source === "planned_return" ? "nextEffectiveCompactReturn" : "nextEffectiveCompactSchedule")}</span>
     <div class="effective-event-body">
       ${row.phase === "suspended" ? html`<div class="event-details"><span class="event-time">${host._t("nextEffectiveCompactSuspended")}</span><strong class="event-target">—</strong><span class="event-mode">—</span></div>`
-        : event ? renderEventDetails(host, event)
+        : event ? renderEventDetails(host, event, false)
           : html`<div class="event-details"><span class="event-time">${row.when ? host._formatDateTime(row.when) : "—"}</span><strong class="event-target">${host._t("nextEffectiveCompactApplyMode")}</strong><span class="event-mode">—</span></div>`}
     </div>
-    <span class="effective-event-help">${renderInlineHelp(`next-event-${row.entity_id}`, host._t("nextEffectiveDetails", { name }), help)}</span>
+    <span class="effective-event-help">${renderInlineHelp(`next-event-${entityId}`, host._t("nextEffectiveDetails", { name }), help)}</span>
   </div>`;
 }
 
@@ -1376,7 +1396,7 @@ export function renderEvent(host: OverviewViewHost, event: ScheduleEvent) {
   `;
 }
 
-export function renderEventDetails(host: OverviewViewHost, event: ScheduleEvent) {
+export function renderEventDetails(host: OverviewViewHost, event: ScheduleEvent, showDependency = true) {
   const hasPreconditioningTarget = Boolean(event.target_when && event.target_when !== event.when);
   const changed = Boolean(host._changedNextEventIds?.has(event.entity_id));
   const changeClass = changed
@@ -1411,7 +1431,7 @@ export function renderEventDetails(host: OverviewViewHost, event: ScheduleEvent)
           `}
       <strong class="event-target">${host._formatEventAction(event)}</strong>
       <span class="event-mode">${host._formatEventMode(event)}</span>
-      ${renderPreconditioningDependency(event.preconditioning_dependency, host._t.bind(host), host._formatDateTime.bind(host), event.preconditioning_dependency ? host._friendlyEntityName(event.preconditioning_dependency.master_entity_id) : undefined)}
+      ${showDependency ? renderPreconditioningDependency(event.preconditioning_dependency, host._t.bind(host), host._formatDateTime.bind(host), event.preconditioning_dependency ? host._friendlyEntityName(event.preconditioning_dependency.master_entity_id) : undefined) : nothing}
     </div>
   `;
 }
@@ -1581,4 +1601,12 @@ export function renderPauseProgress(host: OverviewViewHost) {
       </div>
     </div>
   `;
+}
+
+function renderGroupOwnership(host: OverviewViewHost, entityId: string, subtitle = false) {
+  const owner = controlUnitId(host._data, entityId);
+  if (owner === entityId) return nothing;
+  const group = host._friendlyEntityName(owner);
+  const description = host._t("roomGroupControlledBy", { group });
+  return html`<span class=${subtitle ? "overview-group-ownership overview-group-subtitle" : "overview-group-ownership"} title=${description}>${subtitle ? group : description}</span>`;
 }

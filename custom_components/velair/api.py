@@ -85,6 +85,7 @@ from .models import (
 )
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .selection_requests import climate_entity_id, climate_entity_ids, profile_id, profile_ids
+from .room_groups import member_to_unit, normalize_room_groups, control_unit_ids
 from .save_timing import measure_save_phase, trace_save_operation, trace_schedule_save
 from .temperature import (
     CELSIUS,
@@ -100,8 +101,10 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 22
+EXPORT_MODEL_VERSION = 25
 EXPORT_SECTIONS = (
+    "member_comfort",
+    "room_groups",
     "zones",
     "templates",
     "settings",
@@ -341,7 +344,11 @@ def async_setup_api(hass: HomeAssistant) -> None:
 
     websocket_api.async_register_command(hass, ws_preview_target_range_policy)
     websocket_api.async_register_command(hass, ws_apply_target_range_policy)
+    websocket_api.async_register_command(hass, ws_update_zone_range_reference)
     websocket_api.async_register_command(hass, ws_get_schedule)
+    websocket_api.async_register_command(hass, ws_preview_room_group)
+    websocket_api.async_register_command(hass, ws_set_room_group)
+    websocket_api.async_register_command(hass, ws_remove_room_group)
     websocket_api.async_register_command(hass, ws_get_diagnostics)
     websocket_api.async_register_command(hass, ws_export_diagnostics)
     websocket_api.async_register_command(hass, ws_subscribe_diagnostics)
@@ -380,6 +387,7 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update_settings)
     websocket_api.async_register_command(hass, ws_update_shared_demand)
     websocket_api.async_register_command(hass, ws_resume_shared_demand)
+    websocket_api.async_register_command(hass, ws_subscribe_shared_demand)
     websocket_api.async_register_command(hass, ws_set_zone_execution)
     websocket_api.async_register_command(hass, ws_update_external_change_policy)
     websocket_api.async_register_command(hass, ws_update_zone_target_temp_step)
@@ -394,6 +402,27 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_reset_data)
     websocket_api.async_register_command(hass, ws_subscribe_updates)
     hass.data[API_REGISTERED] = True
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/subscribe_shared_demand"})
+@callback
+def ws_subscribe_shared_demand(hass, connection, msg) -> None:
+    """Stream committed supply readings without rebuilding scheduler responses."""
+    from .shared_demand import SIGNAL_SHARED_DEMAND_LIVE_UPDATED
+
+    @callback
+    def _send_update() -> None:
+        runtime = _get_runtime(hass)
+        controller = runtime.get("shared_demand") if runtime is not None else None
+        payload = ({"loaded": True, "shared_demand": controller.get_live_statuses()}
+                   if controller is not None else {"loaded": False})
+        connection.send_message(websocket_api.event_message(msg["id"], payload))
+
+    connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+        hass, SIGNAL_SHARED_DEMAND_LIVE_UPDATED, _send_update
+    )
+    connection.send_result(msg["id"])
+    _send_update()
 
 
 @websocket_api.websocket_command(
@@ -1284,6 +1313,7 @@ async def _shared_demand_mutation(hass, connection, msg, *, resume: bool) -> Non
         vol.Required("type"): f"{DOMAIN}/update_settings",
         vol.Optional("first_weekday"): vol.In(WEEKDAYS),
         vol.Optional("zone_order"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Optional("unit_order"): vol.All(cv.ensure_list, [climate_entity_id]),
         vol.Optional("min_temperature"): vol.Coerce(float),
         vol.Optional("max_temperature"): vol.Coerce(float),
         vol.Optional(CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP): bool,
@@ -1318,6 +1348,7 @@ async def ws_update_settings(
         for key in (
             "first_weekday",
             "zone_order",
+            "unit_order",
             "min_temperature",
             "max_temperature",
         )
@@ -2144,6 +2175,110 @@ async def ws_apply_target_range_policy(hass, connection, msg):
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/update_zone_range_reference",
+    vol.Required("entity_id"): cv.entity_id,
+    vol.Required("target_range_reference"): {
+        vol.Optional("heat"): vol.In(["low", "high"]),
+        vol.Optional("cool"): vol.In(["low", "high"]),
+    },
+    vol.Required("expected_revision"): vol.All(int, vol.Range(min=0)),
+})
+@websocket_api.async_response
+async def ws_update_zone_range_reference(hass, connection, msg):
+    """Save the device's shared Room Assist and preparation interpretation."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        await runtime["scheduler"].async_update_zone_range_reference(
+            msg["entity_id"], msg["target_range_reference"], msg["expected_revision"]
+        )
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    connection.send_result(msg["id"], _build_schedule_response(runtime))
+
+
+ROOM_GROUP_FIELDS = {
+    vol.Required("group"): dict,
+    vol.Required("expected_revision"): vol.All(int, vol.Range(min=0)),
+    vol.Optional("source_entity_id"): climate_entity_id,
+}
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/preview_room_group", **ROOM_GROUP_FIELDS})
+@websocket_api.async_response
+async def ws_preview_room_group(hass, connection, msg):
+    """Review membership, adopted configuration and discarded learning."""
+    try:
+        await _configuration_preview(hass, connection, msg, "preview_room_group",
+            **{key: value for key, value in msg.items() if key not in ("id", "type")})
+    except Exception as err:
+        _send_room_group_operation_error(connection, msg, err,
+            "room_group_preview_failed", "Could not preview the room group.")
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/set_room_group", **ROOM_GROUP_FIELDS})
+@websocket_api.async_response
+async def ws_set_room_group(hass, connection, msg):
+    await _room_group_mutation(hass, connection, msg, "async_set_room_group",
+        **{key: value for key, value in msg.items() if key not in ("id", "type")})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/remove_room_group",
+    vol.Required("group_id"): climate_entity_id,
+    vol.Required("expected_revision"): vol.All(int, vol.Range(min=0)),
+})
+@websocket_api.async_response
+async def ws_remove_room_group(hass, connection, msg):
+    await _room_group_mutation(hass, connection, msg, "async_remove_room_group",
+        group_id=msg["group_id"], expected_revision=msg["expected_revision"])
+
+
+async def _room_group_mutation(hass, connection, msg, method, **kwargs):
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    if _reject_temperature_migration_mutation(runtime, connection, msg):
+        return
+    try:
+        await getattr(runtime["scheduler"], method)(**kwargs)
+    except ValueError as err:
+        _send_configuration_error(connection, msg, err)
+        return
+    except Exception as err:
+        saving = method == "async_set_room_group"
+        _send_room_group_operation_error(connection, msg, err,
+            "room_group_save_failed" if saving else "room_group_remove_failed",
+            "Could not complete the room group save." if saving else "Could not complete dissolving the room group.",
+            "Reload the panel before retrying.")
+        return
+    try:
+        response = _build_schedule_response(runtime)
+    except Exception as err:
+        action = "saved" if method == "async_set_room_group" else "dissolved"
+        _send_room_group_operation_error(connection, msg, err,
+            "room_group_response_failed",
+            f"The room group was {action}, but Velair could not refresh its state.",
+            "Reload the panel before making further changes.")
+        return
+    connection.send_result(msg["id"], response)
+
+
+def _send_room_group_operation_error(connection, msg, err, code, message, recovery=""):
+    """Keep unexpected group failures actionable while logging their traceback."""
+    _LOGGER.exception("%s", message)
+    reason = str(err).strip() or type(err).__name__
+    connection.send_error(msg["id"], code,
+        " ".join(part for part in (message, recovery, f"Reason: {reason}") if part))
+
+
 async def _configuration_preview(hass, connection, msg, method, *args, **kwargs) -> None:
     runtime = _get_runtime(hass)
     if runtime is None:
@@ -2175,7 +2310,20 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
 
     return {
         **getattr(scheduler, "get_configuration_resources", lambda: {})(),
-        "configured_entities": list(storage.data["zones"]),
+        "configured_entities": list(getattr(storage, "_climate_entities", []) or get_configured_climate_entities(entry)),
+        "control_units": list(storage.data["zones"]),
+        "room_groups": deepcopy(stored_data.get("room_groups", {})),
+        "comfort_settings": (scheduler.get_comfort_settings() if scheduler is not None and callable(getattr(scheduler, "get_comfort_settings", None)) else {}),
+        "member_to_unit": member_to_unit(stored_data.get("room_groups", {})),
+        "control_unit_states": {
+            entity: {"state": state.state, "attributes": dict(state.attributes)}
+            for entity in stored_data.get("room_groups", {})
+            if hasattr(scheduler, "climate_state") and (state := scheduler.climate_state(entity)) is not None
+        },
+        "group_delivery_status": {
+            entity: scheduler.group_delivery_status(entity)
+            for entity in stored_data.get("room_groups", {})
+        } if hasattr(scheduler, "group_delivery_status") else {},
         "temperature_unit": getattr(storage, "effective_temperature_unit", CELSIUS),
         "home_assistant_temperature_unit": getattr(
             storage, "home_assistant_temperature_unit", CELSIUS
@@ -2275,6 +2423,14 @@ def _reference_dependencies(value: Any) -> tuple[set[str], set[str]]:
 
 def _with_dependency_sections(sections: list[str], payload: dict[str, Any]) -> list[str]:
     selected = list(sections)
+    if "member_comfort" in selected or "room_groups" in selected or (payload.get("room_groups") and any(section in selected for section in ("zones", "profiles", "preconditioning_learning"))):
+        for section in ("room_groups", "zones", "profiles"):
+            if section not in payload:
+                raise ValueError(f"Room group portability requires {section}")
+            if section not in selected:
+                selected.append(section)
+    if "room_groups" in selected and "member_comfort" in payload and "member_comfort" not in selected:
+        selected.append("member_comfort")
     while True:
         presets, templates = _reference_dependencies({key: payload.get(key) for key in selected})
         previous = len(selected)
@@ -2324,6 +2480,10 @@ def _build_export_payload(
     _normalize_portable_day_layouts(stored_data)
     sections = _with_dependency_sections(sections, stored_data)
     exported_sections: dict[str, Any] = {}
+    if "member_comfort" in sections:
+        exported_sections["member_comfort"] = deepcopy(stored_data.get("member_comfort", {}))
+    if "room_groups" in sections:
+        exported_sections["room_groups"] = deepcopy(stored_data.get("room_groups", {}))
     if "block_presets" in sections:
         exported_sections["block_presets"] = deepcopy(stored_data.get("block_presets", []))
 
@@ -2390,6 +2550,21 @@ def _build_import_data(
     target_unit = getattr(storage, "effective_temperature_unit", CELSIUS)
     current_zones = storage.data["zones"]
     import_data: dict[str, Any] = {}
+    if "room_groups" in sections:
+        physical = list(getattr(storage, "_climate_entities", []) or get_configured_climate_entities(runtime["entry"]))
+        imported_groups = normalize_room_groups(payload_sections.get("room_groups"), physical)
+        if "zones" not in sections or "profiles" not in sections:
+            raise ValueError("Room group import requires zones and profiles")
+        from .room_groups import remove_group_candidate
+        baseline = deepcopy(storage.data)
+        for group_id in list(baseline.get("room_groups", {})):
+            baseline = remove_group_candidate(baseline, group_id)
+        baseline["room_groups"] = imported_groups
+        baseline = normalize_schedule_data(baseline, physical)
+        current_zones = baseline["zones"]
+        import_data["room_groups"] = imported_groups
+        # Local profile references cannot outlive a replaced ownership graph.
+        import_data["zones"] = deepcopy(current_zones)
 
     missing_sections = [
         section for section in sections if section not in payload_sections
@@ -2428,6 +2603,17 @@ def _build_import_data(
         )
     if "templates" in sections:
         _validate_portable_templates(selected_payload["templates"])
+    if "member_comfort" in selected_payload:
+        members = selected_payload["member_comfort"]
+        owned = member_to_unit(import_data.get("room_groups", {}))
+        if (not isinstance(members, dict)
+                or any(entity not in owned or not isinstance(config, dict)
+                       for entity, config in members.items())):
+            raise ValueError("Member Comfort settings must belong to configured grouped climates")
+        _validate_portable_zone_schedules(
+            {entity: {"comfort": config} for entity, config in members.items()},
+            {entity: {} for entity in owned}, payload_unit,
+        )
     _hydrate_portable_temperature_defaults(selected_payload, payload_unit)
     payload_sections = convert_portable_temperature_data(
         selected_payload,
@@ -2441,6 +2627,10 @@ def _build_import_data(
             payload_sections["zones"],
             current_zones,
         )
+    if "room_groups" in sections:
+        physical = list(getattr(storage, "_climate_entities", []) or get_configured_climate_entities(runtime["entry"]))
+        imported = normalize_schedule_data({**import_data, "member_comfort": payload_sections.get("member_comfort", {})}, physical)
+        import_data["member_comfort"] = imported["member_comfort"]
     if "templates" in sections:
         raw_templates = payload_sections["templates"]
         if not isinstance(raw_templates, list):
@@ -2457,6 +2647,7 @@ def _build_import_data(
         for group in groups:
             group["enabled"] = False
             group["suspended"] = True
+            group["suspension_reason"] = "imported"
         raw_settings["shared_demand_groups"] = groups
         raw_settings.pop("shared_demand_cleanup", None)
         # Local retirement intent is merged at the locked scheduler commit,
@@ -2530,7 +2721,8 @@ def _build_import_data(
     validate_reference_graph(candidate)
     from .day_layouts import validate_day_layout_references
     validate_day_layout_references(candidate)
-    validator = getattr(runtime.get("scheduler"), "_validate_configuration_resources", None)
+    validator = getattr(runtime.get("scheduler"),
+                        "_validate_group_candidate" if "room_groups" in import_data else "_validate_configuration_resources", None)
     if callable(validator):
         validator(candidate)
     return import_data
@@ -2551,6 +2743,12 @@ def _hydrate_portable_temperature_defaults(
             absolute_temperature(DEFAULT_MAX_TEMPERATURE, CELSIUS, source_unit),
         )
 
+    members = sections.get("member_comfort")
+    if isinstance(members, dict):
+        _hydrate_portable_temperature_defaults(
+            {"zones": {entity: {"comfort": config} for entity, config in members.items()}},
+            source_unit,
+        )
     zones = sections.get("zones")
     if not isinstance(zones, dict):
         return
@@ -2654,6 +2852,7 @@ def _export_zones(zones: dict[str, Any]) -> dict[str, Any]:
             "template_links": deepcopy(zone.get("template_links", {})),
             "day_layout_key": zone.get("day_layout_key", "individual"),
             **({"target_range_modes": list(zone["target_range_modes"])} if "target_range_modes" in zone else {}),
+            **({"target_range_reference": dict(zone["target_range_reference"])} if "target_range_reference" in zone else {}),
             "preconditioning": deepcopy(zone.get("preconditioning", {})),
             "comfort": deepcopy(zone.get("comfort", {})),
             "external_change_policy": deepcopy(
@@ -2765,6 +2964,9 @@ def _build_preconditioning_learning_response(
 
 def _runtime_climate_manager(runtime: dict[str, Any]):
     """Return the climate manager from current or legacy runtime data."""
+    scheduler_manager = getattr(runtime.get("scheduler"), "_climate_manager", None)
+    if scheduler_manager is not None:
+        return scheduler_manager
     climate_manager = runtime.get("climate_manager")
     if climate_manager is not None:
         return climate_manager
@@ -2967,6 +3169,9 @@ def _validate_portable_zone_schedules(
         zone = raw_zones[entity_id]
         if not isinstance(zone, dict):
             raise ValueError(f"Schedule for {entity_id} is not valid")
+        if "target_range_reference" in zone:
+            from .target_format_policy import validate_range_reference
+            validate_range_reference(zone["target_range_reference"])
         if "target_temp_step_override" in zone:
             try:
                 fallback_step = float(zone["target_temp_step_override"])

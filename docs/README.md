@@ -11,6 +11,7 @@ Velair documentation is grouped by audience and topic.
 
 - [Installation](user/installation.md): install Velair through HACS or manually.
 - [Usage](user/usage.md): configure climates, schedules, templates, profiles, boosts, pauses, import/export, and services.
+- [Room groups](user/room-groups.md): share one room's scheduling, control and learning across several climates while observing each device individually.
 - [Panel navigation and direct links](user/usage.md#panel-navigation-and-direct-links): link to tabs and subsections, restore the section on refresh, and use browser history.
 - [External changes and Manual adjustment](user/manual-control.md): choose whether Velair keeps automatic authority or yields to HA-card, remote, device, and automation changes.
 - [External schedule execution](user/external-systems.md): publish compatible effective weekly schedules, including Profile and Mode selection, to supported controllers without mixing provider logic into Velair's scheduler.

@@ -32,6 +32,11 @@ class ReleaseMetadataTest(unittest.TestCase):
 
     def test_release_version_is_valid_and_synchronized(self) -> None:
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(
+            list(manifest),
+            ["domain", "name", *sorted(set(manifest) - {"domain", "name"})],
+            "Hassfest requires domain, name, then alphabetical manifest keys",
+        )
         package = json.loads(FRONTEND_PACKAGE.read_text(encoding="utf-8"))
         lock = json.loads(FRONTEND_LOCK.read_text(encoding="utf-8"))
         version = manifest["version"]

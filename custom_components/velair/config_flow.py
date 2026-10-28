@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult, OptionsFlowWithReload
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.helpers.storage import Store
 
 from .const import CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP, CONF_CLIMATE_ENTITIES, DOMAIN
 
@@ -71,8 +72,18 @@ class VelairOptionsFlow(OptionsFlowWithReload):
 
         if user_input is not None:
             climate_entities = user_input.get(CONF_CLIMATE_ENTITIES, [])
+            runtime = getattr(self.config_entry, "runtime_data", None)
+            storage = getattr(runtime, "storage", None)
+            saved = getattr(storage, "data", None)
+            if saved is None:
+                from .storage import STORAGE_VERSION
+                saved = await Store(self.hass, STORAGE_VERSION, f"{DOMAIN}.{self.config_entry.entry_id}").async_load()
+            grouped = {member for group in (saved or {}).get("room_groups", {}).values()
+                       for member in group.get("members", [])}
             if not climate_entities:
                 errors[CONF_CLIMATE_ENTITIES] = "no_climate_entities"
+            elif grouped - set(climate_entities):
+                errors[CONF_CLIMATE_ENTITIES] = "grouped_climate_entities"
             else:
                 return self.async_create_entry(
                     data={

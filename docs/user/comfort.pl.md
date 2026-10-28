@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](comfort.md) · [Español](comfort
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -24,6 +24,8 @@ Progi Komfortu używają jednostki Home Assistant i są migrowane lub importowan
 
 Komfort otoczenia daje każdej zarządzanej encji czytelny opis pomieszczenia zamiast ogólnego poziomu ostrzeżenia.
 
+Komfort pozostaje niezależny dla każdego fizycznego urządzenia w grupie. Każde ma własny przełącznik monitorowania, czujniki, progi i ocenę. Grupowanie współdzieli harmonogram i sterowanie pokojem bez zastępowania ustawień komfortu.
+
 Monitoruje lokalne odczyty temperatury, wilgotności i CO2. Nie zmienia harmonogramów ani nie steruje automatycznie urządzeniami. Velair udostępnia ocenę w panelu, kartach Lovelace i zdarzeniach Home Assistant, aby automatyzacje mogły zdecydować o działaniu.
 
 <a id="sources"></a>
@@ -34,6 +36,8 @@ Temperatura korzysta z pierwszego dostępnego źródła w tej kolejności:
 1. czujnika temperatury wybranego na karcie Komfort;
 2. czujnika Room Assist skonfigurowanego dla encji;
 3. `current_temperature` encji klimatu.
+
+Dla urządzeń grupy automatyczna temperatura używa ich fizycznego `current_temperature`; czujnik Room Assist grupy nie jest dziedziczony. W razie potrzeby jawnie wybierz zewnętrzny czujnik w konfiguracji komfortu danego urządzenia.
 
 Wilgotność korzysta z:
 
@@ -181,7 +185,7 @@ Velair udostępnia jedną wartość jakości danych:
 - `stale`: nie ma aktualnego odczytu i wszystkie monitorowane źródła są nieaktualne;
 - `unavailable`: z innego powodu nie można wykorzystać żadnego aktualnego odczytu.
 
-Panel grupuje użyteczne odczyty o niezweryfikowanej aktualności w sekcji **Świeżość danych**, zamiast powtarzać uwagę przy każdym odczycie pochodnym. Karta Komfortu Lovelace ukrywająca konfigurację pokazuje jedno podsumowanie nad odczytami; Diagnostyka również udostępnia kontekst aktualności. Zwinięta lista stref pomija ten rutynowy status dla czytelności. To prawidłowa konfiguracja automatycznego źródła encji, nie błąd. Brakujące i nieaktualne odczyty nadal pokazują ostrzeżenie na liście.
+Karta Komfort grupuje użyteczne odczyty o niezweryfikowanej aktualności obok wyboru czujników w **Konfiguracja → Źródła danych**. Dyskretny opis wskazuje odczyty i wyjaśnia, że nieznany czas pomiaru nie oznacza błędnych wartości ani braku komfortu. Przegląd i karty Lovelace pomijają ten rutynowy stan; diagnostyka zachowuje kontekst techniczny. To poprawna automatyczna konfiguracja źródła urządzenia, nie błąd. Brakujące lub nieaktualne odczyty nadal wyświetlają ostrzeżenie na liście stref.
 
 <a id="visual-status"></a>
 ## Stan wizualny
@@ -246,7 +250,7 @@ Widoczność temperatury, wilgotności i CO2 wpływa tylko na wykresy danej kart
 
 `Nieaktualne po` to maksymalny czas od ostatniego raportu stanu wybranego czujnika do Home Assistant (`last_reported`). Powtórzenie wartości odświeża czas raportu i aktualność. Velair nasłuchuje raportów i planuje następne wygaśnięcie, więc panel, czujniki i zdarzenia mogą pokazać `stale` po terminie bez kolejnego raportu.
 
-Ustawienie ma osobną sekcję **Świeżość danych** po wyborze źródeł. Grupuje też bieżące odczyty o niezweryfikowanej aktualności, w tym pochodne i zewnętrzne, bez powtarzania obliczonych wartości zewnętrznych. Wymienia bezpośrednie źródła objęte limitem, w tym czujnik pokojowy Room Assist, czujnik CO2, czujniki na zewnątrz oraz osobne czujniki odczytów pochodnych. Czujniki na zewnątrz mogą utrzymać pole aktywne nawet wtedy, gdy temperatura i wilgotność wewnątrz pochodzą z encji klimatu. Limit nie powoduje oznaczenia tych odczytów encji jako nieaktualnych. Możesz ustawić go przed włączeniem Komfortu. Bez bezpośredniego źródła pole jest wyłączone z wyjaśnieniem, a wartość zachowana dla przyszłego wyboru.
+Ustawienie znajduje się w sekcji **Świeżość danych** za wyborem źródeł. Wskazuje bezpośrednie źródła objęte limitem, w tym Room Assist, CO2, zewnętrzne czujniki i czujniki wielkości pochodnych. Wyjaśnienie niezweryfikowanej aktualności jest obok wyboru czujników, także dla włączonych wielkości pochodnych i odczytów zewnętrznych. Czujniki zewnętrzne mogą utrzymywać limit aktywny, gdy temperatura i wilgotność wewnątrz pochodzą z urządzenia; limit nie unieważnia tych odczytów urządzenia. Możesz go ustawić przed włączeniem Komfortu. Bez bezpośredniego źródła pole jest wyłączone z wyjaśnieniem, ale wartość pozostaje do przyszłego wyboru czujnika.
 
 Automatyczne atrybuty temperatury i wilgotności `climate.*` nie mają niezależnego czasu raportu. Velair zachowuje prawidłową wartość i oznacza aktualność jako `unverified`; zmiana celu encji nie potwierdza nowego pomiaru. Wybierz oryginalny czujnik temperatury lub wilgotności, jeśli istnieje. Jeśli wybrany czujnik nie ma `last_reported`, jego wartość też jest `unverified`. Encja `unavailable` lub `unknown` nie daje użytecznego odczytu, nawet przy zachowanych starych atrybutach liczbowych.
 

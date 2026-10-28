@@ -1,8 +1,26 @@
-import { PANEL_VIEWS } from "../constants";
-import type { VelairPanelView } from "../types";
+import { PANEL_VIEWS, WEEKDAYS } from "../constants";
+import type { ResourceUsage, VelairPanelView } from "../types";
 
 export type PanelSubsection = "default" | "profiles" | "templates" | "presets" | "preconditioning" | "planned-return";
 export type PanelDestination = { view: VelairPanelView; subsection?: PanelSubsection };
+
+/** A transient cross-dashboard jump; the panel consumes it after accepting navigation. */
+export function scheduleUsagePath(usage: ResourceUsage, prefix = "/velair"): string {
+  const params = new URLSearchParams({ entity_id: usage.entity_id, weekday: usage.weekday });
+  if (usage.source === "profile" && usage.profile_key) params.set("profile_key", usage.profile_key);
+  return `${panelPath({ view: "schedules", subsection: usage.source === "profile" ? "profiles" : "default" }, prefix)}?${params}`;
+}
+
+export function scheduleUsageFromSearch(search: string, subsection?: PanelSubsection): ResourceUsage | undefined {
+  const params = new URLSearchParams(search);
+  const entity_id = params.get("entity_id");
+  const weekday = params.get("weekday");
+  if (!entity_id || !weekday || !WEEKDAYS.includes(weekday)) return undefined;
+  const profile_key = params.get("profile_key");
+  return subsection === "profiles"
+    ? profile_key ? { source: "profile", entity_id, weekday, profile_key } : undefined
+    : { source: "default", entity_id, weekday };
+}
 
 export function panelDestination(view: VelairPanelView, subsection?: string): PanelDestination {
   if (view === "schedules") return { view, subsection: subsection === "profiles" ? "profiles" : "default" };

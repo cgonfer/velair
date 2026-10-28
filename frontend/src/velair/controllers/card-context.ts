@@ -1,3 +1,4 @@
+import { controlUnitId, expandedControlUnitIds, filteredPhysicalClimateIds, orderedControlUnitIds } from "../domain/control-units";
 import { climateCardConfiguredActions } from "../domain/climate-card-actions";
 import { LOVELACE_CARD_VIEWS, PANEL_VIEWS } from "../constants";
 import {
@@ -32,6 +33,7 @@ import type { SupportedLanguage, TranslationKey } from "../translations";
 type CardContextHost = {
   readonly hass?: HomeAssistant;
   _config: VelairCardConfig;
+  _hasExternalConfig?: boolean;
   _data?: ScheduleResponse;
 };
 
@@ -93,13 +95,13 @@ export function shouldUpdateForHass(
     });
     if (changed || host._config.view === "planned-return") return changed;
   }
-  const entityIds = visibleZoneIds(host._data?.configured_entities ?? [], host._config);
+  const entityIds = filteredPhysicalClimateIds(host._data, host._config.entities);
   if (!entityIds.length) {
     return false;
   }
   if (host._config.view === "climate") {
     const scriptEntityIds = new Set(climateCardScriptEntityIds(host._config));
-    return climateCardEntityIds(host._config, host._data?.configured_entities ?? []).some(
+    return preconditioningInputsChanged(host, value, oldValue) || climateCardEntityIds(host._config, host._data?.configured_entities ?? []).some(
       (entityId) => scriptEntityIds.has(entityId)
         ? climateCardAvailabilitySignature(value.states?.[entityId])
           !== climateCardAvailabilitySignature(oldValue.states?.[entityId])
@@ -107,7 +109,7 @@ export function shouldUpdateForHass(
           !== climateCardStateSignature(oldValue.states?.[entityId]),
     );
   }
-  return entityIds.some(
+  return preconditioningInputsChanged(host, value, oldValue) || entityIds.some(
     (entityId) =>
       climateStateSignature(value.states?.[entityId]) !== climateStateSignature(oldValue.states?.[entityId]),
   );
@@ -122,7 +124,10 @@ export function preconditioningInputsChanged(
     return false;
   }
 
-  const visibleEntities = new Set(visibleZoneIds(host._data.configured_entities, host._config));
+  const selectedEntities = host._config.view === "climate" && host._config.selected_entity
+    ? [host._config.selected_entity]
+    : host._config.entities;
+  const visibleEntities = new Set(filteredPhysicalClimateIds(host._data, selectedEntities).map(id => controlUnitId(host._data, id)));
   return Object.entries(host._data.zones).some(([entityId, zone]) => {
     if (!visibleEntities.has(entityId)) {
       return false;
@@ -133,15 +138,16 @@ export function preconditioningInputsChanged(
       return false;
     }
 
+    const group = host._data?.room_groups?.[entityId];
+    const reference = group?.temperature_entity_id ?? entityId;
     const climateTemperatureChanged =
-      currentTemperatureValue(value, entityId) !==
-      currentTemperatureValue(oldValue, entityId);
+      currentTemperatureValue(value, reference) !== currentTemperatureValue(oldValue, reference)
+      || Boolean(group && value.states?.[reference]?.state !== oldValue.states?.[reference]?.state);
     if (climateTemperatureChanged) {
       return true;
     }
     const climateTargetChanged =
-      targetTemperatureValue(value, entityId) !==
-      targetTemperatureValue(oldValue, entityId);
+      (group?.members ?? [entityId]).some(id => targetTemperatureValue(value, id) !== targetTemperatureValue(oldValue, id));
     if (preconditioning?.room_sensor_assist_enabled && climateTargetChanged) {
       return true;
     }
@@ -210,9 +216,17 @@ export function orderedWeekdaysForHost(host: CardContextHost): string[] {
 }
 
 export function orderedZoneIdsForHost(host: CardContextHost, entityIds: string[]): string[] {
-  return orderedZoneIds(entityIds, host._config.zone_order);
+  const grouped = Boolean(Object.keys(host._data?.room_groups ?? {}).length);
+  if (grouped && entityIds === host._data?.configured_entities) {
+    return orderedZoneIds(expandedControlUnitIds(host._data), host._hasExternalConfig ? host._config.zone_order : undefined);
+  }
+  const order = grouped && !host._hasExternalConfig ? host._data?.settings?.unit_order ?? host._config.zone_order : host._config.zone_order;
+  return orderedZoneIds(entityIds, order);
 }
 
 export function visibleZoneIdsForHost(host: CardContextHost, entityIds: string[]): string[] {
-  return visibleZoneIds(entityIds, host._config);
+  if (host._config.view === "climate") return visibleZoneIds(entityIds, host._config);
+  if (!host._data?.room_groups || !Object.keys(host._data.room_groups).length) return visibleZoneIds(entityIds, host._config);
+  const allowed = host._config.entities?.map(id => controlUnitId(host._data, id));
+  return orderedControlUnitIds(host._data).filter(id => !allowed?.length || allowed.includes(id));
 }

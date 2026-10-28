@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.5 |
-| Laatst gesynchroniseerd | 2026-10-24 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -39,7 +39,11 @@ Afzonderlijke doelen in `auto` en `heat_cool` en oorspronkelijke `heat_cool`-ber
 
 De klimaatentiteit blijft het uitvoerende apparaat. Velair maakt geen virtuele klimaatentiteit en omzeilt apparaatfirmware niet. Als je thermostaat of radiatorkraan zelf een externe sensor kan koppelen, is dat doorgaans nog steeds de beste eerste keuze.
 
-Entiteiten die alleen bereiken ondersteunen kunnen ook geplande paren in Verwarmen, Koelen en Auto ontvangen. Room Assist past die paren niet aan: bereikondersteuning vereist `heat_cool`. De actuele status verklaart de beperking en Velair stuurt het nominale paar zonder verschuiving. Opgeslagen Room Assist-instellingen blijven behouden voor geschikte doelen. Overschakelen van een ondersteund doel naar zo’n bereik wist de eerdere ondersteuning zonder een oud gecorrigeerd doel over het nieuwe paar te herstellen.
+Kies voor twee instelpunten in vaste `heat` of `cool` eerst het **Referentie-instelpunt** per apparaat en modus bij **Instellingen → Klimaatapparaten en groepen**: **Onderste instelpunt** of **Bovenste instelpunt**, volgens wat het apparaat werkelijk gebruikt. Velair leidt dit niet af uit bereikondersteuning. Adaptieve voorconditionering deelt deze keuze.
+
+Room Assist gebruikt de gekozen grens als vast verwarmings- of koeldoel, inclusief enkeldoelhysterese en bescherming van het geplande doel. Het verschuift beide grenzen evenveel en bewaart hun afstand. Beide moeten bij de doelstap en fysieke grenzen passen; de andere grens kan de correctie beperken. Bestaande beperkingsmeldingen blijven gelden.
+
+Bij **Niet ingesteld** worden vaste paren ongewijzigd zonder Room Assist-correctie verstuurd. `auto`-bereiken blijven ongeschikt voor ondersteuning; oorspronkelijke `heat_cool`-banden behouden hun gedrag. Opgeslagen instellingen blijven bewaard. Een referentie- of moduswijziging wist oude ondersteuning zonder een oud gecorrigeerd doel over de nieuwe intentie terug te zetten.
 
 <a id="setup"></a>
 ## Instellen
@@ -48,7 +52,7 @@ Entiteiten die alleen bereiken ondersteunen kunnen ook geplande paren in Verwarm
 2. Vouw het gewenste apparaat uit.
 3. Kies een kamertemperatuursensor.
 4. Schakel Ondersteuning via kamersensor in.
-5. Pas de Room Assist-dode band aan voor de onder- en bovenschakelgrens bij vaste verwarming/koeling, of de neutrale marge bij automatische modi en oorspronkelijke bereiken.
+5. Stel de Room Assist-dode band in voor vast verwarmen of koelen rond het enkele doel of de gekozen bereikreferentie; bij automatische enkeldoelmodi en oorspronkelijke `heat_cool`-banden bepaalt deze de neutrale marge.
 6. Pas Maximale correctie aan als de standaard te klein is voor die kamer of onder het verschil ligt dat de thermostaat nodig kan hebben om verwarmen/koelen te stoppen.
 7. Pas Vernieuwingsvertraging aan als sensorupdates te traag of te frequent aanvoelen.
 
@@ -68,6 +72,13 @@ Bij dode band `0` wordt geen vlak getekend en noemt de vaste legenda expliciet d
 
 Bij upgrade vanaf een versie waarin Room Assist het minimumverschil van voorconditionering deelde, kopieert Velair de bestaande waarde één keer naar de nieuwe dode band. Dit behoudt eerdere bandbreedte, ook een historische waarde buiten de nieuwe invoerstap van 0.1 graad. Vaste `heat` en `cool` gebruiken die waarde daarna met de onderstaande hysterese. Na migratie zijn instellingen onafhankelijk: één veranderen wijzigt de andere nooit. Een nieuwe of geresette zone krijgt de eenheidsafhankelijke standaard hierboven.
 
+<a id="room-groups"></a>
+### Kamergroepen
+
+Kies de groep in Room Assist en gebruik dezelfde sensorkeuze, inschakeling, dode band, maximale correctie en vernieuwingsregelaars. De eigen groepstemperatuur komt van het lid bij **Kamergroepen → Temperatuurreferentie**; de optionele externe sensor stel je hier in. Uitschakelen of wissen herstelt de effectieve meting van dat lid.
+
+De groep heeft één gedeelde Room Assist-configuratie en correctie, geen onafhankelijke regelaar per lid. Velair behoudt het geplande kamerdoel en verzendt de ondersteunde opdracht volgens de groepsverzending: standaard alle leden, of de gekozen ontvanger als de installatie al doorgeeft. Mogelijkheden, stappen en temperatuurgrenzen worden nog steeds voor de echte ontvangers gecontroleerd. Leden blijven individueel zichtbaar in Overzicht.
+
 <a id="understanding-the-live-status"></a>
 ## De actuele status begrijpen
 
@@ -80,7 +91,7 @@ Room Assist meldt wat Velair nu per apparaat kan doen, zodat je dit niet uit het
 | **Inactief** | Ingeschakeld, maar geen passend actief temperatuurblok of nog geen bruikbare berekening. |
 | **Gereed** | Metingen en doel beschikbaar voor correctie, maar nog geen gecorrigeerd doel toegepast. |
 | **Ondersteunt** | Tijdelijk gecorrigeerd doel of verschoven bereik toegepast. |
-| **Vasthouden** | Neutraal automatisch doel of oorspronkelijk bereik behouden, of gepland-doelbeveiliging houdt het doel aan de veilige kant. Een vaste `heat`-/`cool`-cyclus kan binnen de dode band **Ondersteunt** blijven. |
+| **Vasthouden** | Neutraal automatisch doel of oorspronkelijk `heat_cool`-bereik behouden, of gepland-doelbeveiliging houdt het doel aan de veilige kant. Een vaste `heat`-/`cool`-cyclus kan binnen de dode band **Ondersteunt** blijven. |
 | **Geblokkeerd** | Pauze, tijdelijke aanpassing, handmatige status of andere plannerstatus heeft voorrang. |
 | **Niet beschikbaar** | Apparaat of benodigde doelmogelijkheid nu niet bruikbaar. Bekende redenen verschijnen in de interface. |
 
@@ -350,7 +361,7 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-De vier hysteresevelden zijn optioneel. Ze verschijnen bij vaste enkeldoel-`heat`/`cool` met niet-nul dode band en ontbreken bij eerdere nuldodebandcorrectie, automatische enkeldoelmodi en oorspronkelijke bereiken.
+De vier hysteresevelden zijn optioneel. In automatiseringsgebeurtenissen verschijnen ze voor vaste enkeldoel-`heat` of `cool` met niet-nul dode band; ze ontbreken bij oude nul-dodebandcorrectie, automatische enkeldoelmodi en alle bereiken. Vaste bereiken met ingestelde referentie tonen hun hysteresefase in de live uitvoeringsstatus; hun gebeurtenissen behouden volledige grensparen en `range_shift`.
 
 Een bereikupdate gebruikt volledige geplande en toegepaste banden in plaats van enkeldoelvelden:
 

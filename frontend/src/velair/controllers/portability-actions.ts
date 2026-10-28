@@ -190,7 +190,8 @@ export function importAvailableSections(host: PortabilityHost): PortableSection[
 
 export function portableExportItems(host: PortabilityHost): PortableSummaryViewItem[] {
   return portableExportSummaryItems(new Set(PORTABLE_SECTIONS), {
-    zones: host._data?.configured_entities.length ?? 0,
+    roomGroups: Object.keys(host._data?.room_groups ?? {}).length,
+    zones: Object.keys(host._data?.zones ?? {}).length,
     templates: host._scheduleTemplates().length,
     blockPresets: host._data?.block_presets?.length ?? 0,
     preconditioningLearning: Object.values(host._data?.preconditioning_learning ?? {})
@@ -219,6 +220,7 @@ export function portableSummaryItem(
 
 export function portableSectionLabel(host: PortabilityHost, section: PortableSection): string {
   switch (section) {
+    case "room_groups": return host._t("roomGroups");
     case "planned_return": return host._t("plannedReturn");
     case "block_presets": return host._t("blockPresets");
     case "modes":

@@ -23,7 +23,8 @@ Adaptive Preconditioning; only their effective weekly schedule is published.
 
 ## Setup
 
-The Preconditioning tab contains per-climate adaptive settings and learning.
+The Preconditioning tab contains adaptive settings and learning for each
+independent climate or room group. Grouped members appear as one room here.
 Planned return has its own tab for occupancy, weekly arrivals and the current
 absence. Both tabs include an introduction and contextual help. Their direct
 panel paths are `/velair/preconditioning` and `/velair/planned-return`.
@@ -31,12 +32,22 @@ Previously saved subsection links still open the corresponding tab.
 See [Planned Return](planned-return.md).
 
 1. Open the Preconditioning tab.
-2. Expand the climate you want to configure.
+2. Expand the climate or room group you want to configure.
 3. Enable preconditioning.
 4. Leave the default model settings unless you have a specific reason to tune them.
 5. Optionally select an outdoor temperature sensor.
 
-Preconditioning is configured per climate. Heat and cool learning are tracked separately, so cooling samples do not replace heating samples and heating samples do not replace cooling samples.
+Preconditioning is configured per independent climate or room group. Heat and
+cool learning are tracked separately, so cooling samples do not replace heating
+samples and heating samples do not replace cooling samples.
+
+A [room group](room-groups.md#learning-and-membership-changes) stores one thermal
+model and makes one start decision; its members do not learn or prepare
+independently. Its temperature reference supplies the native measurement, or an
+enabled Room Assist sensor supplies the effective room measurement. Removing a
+member restarts learning for that member and the remaining group. Dissolving the
+group starts independent histories for all members; old histories are not split
+or restored. Renaming or reordering members retains the group's learning.
 
 Native `heat_cool` ranges are supported. If the room is below the lower target
 by more than Minimum temperature delta, Velair predicts from the lower boundary
@@ -46,12 +57,21 @@ the complete range early for cooling. Readings inside the range or its boundary
 deadbands keep the normal scheduled time. Velair always sends both range limits;
 it never collapses a range into one temperature.
 
-An entity may require both limits in Heat, Cool or Auto without supporting
-`heat_cool`. Velair can schedule and deliver those targets, but does not start
-them early or collect thermal learning samples for them. The preparation view
-explains that ranges require Heat/Cool for this feature. Their scheduled pair
-remains unchanged, and Planned Return applies it at arrival without advance
-preparation. Enabling preconditioning does not change that limitation.
+For two setpoints in fixed `heat` or `cool`, select **Reference setpoint** for
+that climate and mode in **Settings → Climates and groups**. Choose whichever
+boundary your equipment actually uses: **Lower setpoint** or **Upper setpoint**.
+This selection is shared with Room Assist. Heating preparation and learning use
+only the selected boundary as a heating target; cooling uses it as a cooling
+target. The direction comes from the mode, even when the selected boundary is
+upper for heating or lower for cooling. Velair starts the complete nominal pair
+early, including for Planned Return; it never sends just the selected boundary.
+
+With **Not configured**, fixed-mode pairs keep their scheduled time and do not
+produce thermal learning samples. Planned Return applies them at arrival without
+advance preparation. Ranges in `auto` retain this limitation because selecting
+a boundary does not establish the device's heating or cooling behavior. Native
+`heat_cool` behavior is unchanged. Changing the reference invalidates learning
+observations started with the previous interpretation.
 
 When a climate is expanded, each supported mode shows a live prediction card. It uses the same backend next-event data as the Overview tab, so pauses, boosts, unsupported modes, and blocks that cannot be preconditioned are handled consistently. When a matching future block exists, the card shows the calculated start time, the target time, the lead time, the scheduled temperature and mode, and whether Velair is using the initial model or similar local history.
 
@@ -149,6 +169,8 @@ Velair calculates the current temperature gap for the next scheduled temperature
 
 For a `heat_cool` range, "target temperature" below means the lower boundary
 while heating and the upper boundary while cooling.
+For a fixed `heat` or `cool` range, it means the selected reference boundary,
+with the direction determined by that fixed mode.
 
 For heating:
 

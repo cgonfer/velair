@@ -1581,10 +1581,6 @@ export const comfortStyles = css`
   margin-top: 4px;
 }
 
-.comfort-assessment-card > .comfort-freshness-status {
-  margin: 0 0 10px;
-}
-
 .comfort-temperature-aware-ranges {
   display: grid;
   gap: 8px;

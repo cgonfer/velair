@@ -9,8 +9,8 @@ Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](ad
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.5 |
-| Dernière synchronisation | 2026-10-24 |
+| Version de référence | 1.9.0-beta.6 |
+| Dernière synchronisation | 2026-10-28 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -30,19 +30,23 @@ Le préconditionnement adaptatif fonctionne localement dans Home Assistant. Vela
 <a id="setup"></a>
 ## Configuration
 
-L’onglet **Anticipation** contient les réglages adaptatifs et l’apprentissage par équipement. **Retour prévu** possède son propre onglet pour l’occupation, les arrivées hebdomadaires et l’absence actuelle. Les deux onglets comprennent une introduction et une aide contextuelle. Leurs chemins directs sont `/velair/preconditioning` et `/velair/planned-return`. Les anciens liens de sous-section ouvrent toujours l’onglet correspondant. Consultez [Retour prévu](planned-return.fr.md).
+L’onglet Préconditionnement contient les réglages adaptatifs et l’apprentissage de chaque équipement indépendant ou groupe de pièce. Les membres groupés y apparaissent comme une seule pièce. Retour prévu a son propre onglet pour l’occupation, les arrivées hebdomadaires et l’absence actuelle. Les deux comprennent une introduction et une aide contextuelle. Leurs chemins directs sont `/velair/preconditioning` et `/velair/planned-return`. Les anciens liens ouvrent toujours l’onglet correspondant. Consultez [Retour prévu](planned-return.fr.md).
 
-1. Ouvrez l’onglet **Anticipation**.
-2. Développez l’appareil à configurer.
+1. Ouvrez l’onglet Anticipation.
+2. Développez l’équipement ou le groupe à configurer.
 3. Activez le préconditionnement.
-4. Conservez les réglages du modèle par défaut, sauf raison précise de les ajuster.
-5. Sélectionnez éventuellement un capteur de température extérieure.
+4. Conservez les réglages par défaut sauf raison particulière.
+5. Sélectionnez éventuellement une sonde extérieure.
 
-Le préconditionnement se configure par appareil. L’apprentissage du chauffage et du refroidissement est suivi séparément : les échantillons de refroidissement ne remplacent pas ceux du chauffage, et inversement.
+Le préconditionnement se configure par équipement indépendant ou groupe de pièce. Les apprentissages de chauffage et de refroidissement sont séparés : les échantillons d’une direction ne remplacent pas ceux de l’autre.
 
-Les plages natives `heat_cool` sont prises en charge. Si la pièce est plus froide que la limite basse et que l’écart dépasse l’écart minimal de température, Velair calcule sa prévision à partir de cette limite et applique la plage complète en avance pour chauffer. Si la pièce est plus chaude que la limite haute et que l’écart dépasse ce seuil, il utilise la limite haute et applique la plage complète en avance pour refroidir. Les mesures dans la plage ou dans les bandes mortes autour de ses limites conservent l’horaire normal. Velair envoie toujours les deux limites ; il ne réduit jamais une plage à une seule température.
+Un [groupe de pièce](room-groups.fr.md#learning-and-membership-changes) stocke un modèle thermique et prend une seule décision de démarrage ; ses membres n’apprennent ni ne se préparent indépendamment. Sa référence fournit la mesure native, ou une sonde Room Assist activée fournit la mesure effective de la pièce. Retirer un membre réinitialise l’apprentissage de ce membre et du groupe restant. Dissoudre le groupe crée des historiques indépendants pour tous ; les anciens ne sont ni répartis ni restaurés. Renommer ou réordonner conserve l’apprentissage.
 
-Une entité peut exiger les deux limites en Chauffage, Refroidissement ou Auto sans prendre en charge `heat_cool`. Velair peut programmer et transmettre ces cibles, mais ne les anticipe pas et ne recueille aucun échantillon d’apprentissage thermique pour elles. La vue de préparation explique que cette fonction exige Chauffage/Refroidissement pour les plages. La paire programmée reste inchangée et Retour prévu l’applique à l’arrivée sans préparation anticipée. Activer le préconditionnement ne supprime pas cette limite.
+Les plages natives `heat_cool` sont prises en charge. Sous la cible basse de plus que l’écart minimal de température, Velair prédit depuis cette limite et applique toute la plage en avance pour chauffer. Au-dessus de la cible haute de plus que cet écart, il prédit depuis la limite haute pour refroidir. Dans la plage ou les bandes mortes des limites, l’horaire normal est conservé. Velair envoie toujours les deux limites, jamais une température unique à la place de la plage.
+
+Pour deux consignes en `heat` ou `cool` fixe, sélectionnez **Consigne de référence** pour l’équipement et le mode dans **Paramètres → Équipements et groupes**. Choisissez la limite réellement utilisée : **Consigne basse** ou **Consigne haute**. Room Assist partage ce réglage. Préparation et apprentissage utilisent uniquement cette limite comme cible de chauffage ou de refroidissement selon le mode, même si la limite choisie est haute pour chauffer ou basse pour refroidir. Velair démarre la paire nominale complète en avance, y compris pour Retour prévu ; il n’envoie jamais seulement la limite choisie.
+
+Avec **Non configurée**, les paires en mode fixe gardent leur horaire et ne produisent pas d’échantillons thermiques. Retour prévu les applique à l’arrivée sans préparation anticipée. Les plages `auto` gardent cette limite car choisir une borne ne définit pas le comportement de chauffage ou de refroidissement. Le comportement natif `heat_cool` reste inchangé. Changer de référence invalide les observations commencées selon l’interprétation précédente.
 
 Lorsque l’appareil est développé, chaque mode pris en charge affiche une carte de prévision en direct. Elle utilise les mêmes données backend du prochain événement que Vue d’ensemble ; les pauses, forçages, modes non pris en charge et blocs ne pouvant pas démarrer en avance sont donc traités de façon cohérente. Lorsqu’un futur bloc correspondant existe, la carte affiche l’heure de début calculée, l’heure cible, l’avance, la température et le mode programmés, ainsi que le choix du modèle initial ou d’un historique local similaire.
 
@@ -91,6 +95,8 @@ Un nombre d’échantillons inchangé ne prouve pas une panne. Une transition pe
 Velair calcule l’écart actuel de température pour le prochain bloc de température programmé.
 
 Pour une plage `heat_cool`, « température cible » désigne ci-dessous la limite basse en chauffage et la limite haute en refroidissement.
+
+Pour une plage fixe `heat` ou `cool`, il s’agit de la limite de référence sélectionnée, avec la direction définie par ce mode fixe.
 
 Pour le chauffage :
 

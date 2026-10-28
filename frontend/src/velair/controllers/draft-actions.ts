@@ -1,3 +1,5 @@
+import { controlUnitState } from "../domain/control-units";
+import { controlUnitIds } from "../domain/control-units";
 import { WEEKDAYS } from "../constants";
 import { newTemplateKey } from "../domain/templates";
 import { nextStartTime } from "../schedule-time";
@@ -47,7 +49,7 @@ export function addBlock(host: DraftActionsHost, source: BlockDraftSource = "sch
   if (added) {
     const entityId = host._targetFormatEntityId ?? (source === "schedule" ? host._selectedEntity : undefined);
     const choice = editorTargetFormats(host._data, host.hass?.states, entityId);
-    updated[updated.length - 1] = initializeDraftTargetFormat(added, choice, entityId ? host.hass?.states?.[entityId] : undefined);
+    updated[updated.length - 1] = initializeDraftTargetFormat(added, choice, entityId ? controlUnitState(host._data, host.hass, entityId) : undefined);
   }
   host._setBlocksForSource(source, updated);
   host._markBlocksDirty(source);
@@ -132,7 +134,7 @@ export function setCopyTargetPreset(host: DraftActionsHost, preset: CloneDayPres
 }
 
 export function toggleZoneTarget(host: DraftActionsHost, entityId: string, checked: boolean): void {
-  const configuredEntities = host._data?.configured_entities ?? [];
+  const configuredEntities = controlUnitIds(host._data);
   if (!configuredEntities.includes(entityId) || entityId === host._selectedEntity) {
     return;
   }

@@ -1,3 +1,6 @@
+import { renderRoomGroupScheduleNotice } from "./room-group-summary";
+import { renderAddListButton } from "./add-list-button";
+import { controlUnitState } from "../domain/control-units";
 import { editorTargetFormats } from "../domain/target-format-policy";
 import { renderTimelineGraphic, timelineGraphicClasses } from "./timeline-block-graphic";
 import { linkedDraftBlocks, linkedDayBlocks } from "../domain/linked-schedules";
@@ -244,6 +247,7 @@ export function renderScheduleEditor(host: ScheduleViewHost, entityId: string, z
 
   return html`
     <section class="schedule">
+      ${renderRoomGroupScheduleNotice(host, host._data?.room_groups?.[entityId])}
       ${(host._data?.resource_diagnostics ?? []).filter((item) => item.source === "default" && item.entity_id === entityId).map((item) => html`<div class="notice error">${item.message}</div>`)}
       <div class="schedule-editor-heading">
         <div>
@@ -586,19 +590,7 @@ export function renderDraftListHeader(host: ScheduleViewHost, source: BlockDraft
 
 export function renderAddBlockButton(host: ScheduleViewHost, source: BlockDraftSource = "schedule") {
   if (host._linkedHours ?? (source === "schedule" && Boolean(host._draftTemplateLink))) return nothing;
-  return html`
-    <div class="draft-add-row">
-      <button
-        class="icon-button success draft-add-button"
-        type="button"
-        @click=${() => host._addBlock(source)}
-        title=${host._t("addBlock")}
-        aria-label=${host._t("addBlock")}
-      >
-        <ha-icon icon="mdi:plus"></ha-icon>
-      </button>
-    </div>
-  `;
+  return renderAddListButton(host._t("addBlock"), () => host._addBlock(source));
 }
 
 export type BlockGuidanceContext = {

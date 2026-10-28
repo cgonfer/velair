@@ -1,13 +1,13 @@
-import { html } from "lit";
+import { html, nothing } from "lit";
 import type { VelairViewHost } from "../host-types";
 import type { ScheduleResponse } from "../types";
 import type { ResourceUsageGroup } from "../domain/resource-usages";
 
-export function renderResourceSectionSummary(icon: string, label: string) {
+export function renderResourceSectionSummary(icon: string, label: string, description?: string) {
   return html`
-    <summary>
+    <summary class=${description ? "resource-section-summary-description" : nothing}>
       <ha-icon icon=${icon} aria-hidden="true"></ha-icon>
-      <span>${label}</span>
+      <span>${label}${description ? html`<small class="resource-section-description">${description}</small>` : nothing}</span>
       <ha-icon class="resource-section-chevron preset-section-chevron" icon="mdi:chevron-down" aria-hidden="true"></ha-icon>
     </summary>
   `;

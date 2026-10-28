@@ -8,8 +8,8 @@ Traduções: [Original em inglês](README.md) · [Español](README.es.md) · [Fr
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.5 |
-| Última sincronização | 2026-10-24 |
+| Versão de referência | 1.9.0-beta.6 |
+| Última sincronização | 2026-10-28 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -25,7 +25,8 @@ A documentação do Velair está organizada por público e tema.
 
 - [Instalação](user/installation.pt-pt.md): instalar o Velair através do HACS ou manualmente.
 - [Utilização](user/usage.pt-pt.md): configurar equipamentos de climatização, programações, modelos, perfis, reforços, pausas, importação/exportação e serviços.
-- [Navegação no painel e ligações diretas](user/usage.pt-pt.md#panel-navigation-and-direct-links): criar ligações para separadores e secções, restaurar a secção ao atualizar a página e utilizar o histórico do navegador.
+- [Grupos de divisão](user/room-groups.pt-pt.md): compartilhe programação, controlo e aprendizagem de uma divisão entre vários dispositivos, observando cada um individualmente.
+- [Navegação no painel e ligações diretas](user/usage.pt-pt.md#panel-navigation-and-direct-links): criar ligações paro separadores e secções, restaurar a secção ao atualizar a página e utilizar o histórico do navegador.
 - [Alterações externas e ajuste manual](user/manual-control.pt-pt.md): escolher se o Velair mantém o controlo automático ou o cede a alterações feitas em cartões do HA, comandos remotos, dispositivos e automações.
 - [Execução externa de programações](user/external-systems.pt-pt.md): publicar programações semanais efetivas compatíveis, incluindo a seleção de Perfis e Modos, em controladores suportados, sem misturar a lógica dos fornecedores com o programador do Velair.
 - [Perfis de climatização](user/climate-profiles.pt-pt.md): coordenar programações alternativas e disponibilizar Modos configuráveis às automações do Home Assistant.

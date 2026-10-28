@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.5 |
-| Letzte Synchronisierung | 2026-10-24 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -25,6 +25,7 @@ Die Velair-Dokumentation ist nach Zielgruppe und Thema gegliedert.
 
 - [Installation](user/installation.de.md): Velair über HACS oder manuell installieren.
 - [Verwendung](user/usage.de.md): Klimageräte, Zeitpläne, Vorlagen, Profile, temporäre Anpassungen, Pausen, Import/Export und Dienste konfigurieren.
+- [Raumgruppen](user/room-groups.de.md): Zeitplanung, Steuerung und Lernen eines Raums für mehrere Klimageräte gemeinsam nutzen und jedes Gerät einzeln beobachten.
 - [Panelnavigation und Direktlinks](user/usage.de.md#panel-navigation-and-direct-links): Tabs und Unterbereiche verlinken, den Bereich beim Neuladen wiederherstellen und den Browserverlauf verwenden.
 - [Externe Änderungen und manuelle Anpassungen](user/manual-control.de.md): festlegen, ob Velair die automatische Steuerung beibehält oder Änderungen durch HA-Karten, Fernbedienungen, Geräte und Automationen den Vorrang gibt.
 - [Externe Ausführung von Zeitplänen](user/external-systems.de.md): kompatible wirksame Wochenzeitpläne einschließlich Profil- und Modusauswahl an unterstützte Regler übertragen, ohne Anbieterlogik in den Velair-Zeitplaner einzubauen.

@@ -177,6 +177,7 @@ class ClimateStateSnapshot(TypedDict, total=False):
     swing_mode: str
     swing_horizontal_mode: str
     humidity: float
+    group_members: dict[str, ClimateStateSnapshot]
 
 
 class PreconditioningData(TypedDict):
@@ -375,6 +376,7 @@ class ZoneData(TypedDict):
     comfort: ComfortData
     external_change_policy: ExternalChangePolicyData
     target_range_modes: NotRequired[list[str]]
+    target_range_reference: NotRequired[dict[str, str]]
     target_temp_step_override: NotRequired[float]
     last_reported_target_temp_step: NotRequired[float]
     execution: NotRequired[ZoneExecutionData]
@@ -393,6 +395,7 @@ class PanelSettingsData(TypedDict):
 
     first_weekday: str
     zone_order: list[str]
+    unit_order: NotRequired[list[str]]
     min_temperature: float
     max_temperature: float
     shared_demand_groups: NotRequired[list[dict[str, Any]]]
@@ -466,6 +469,8 @@ class SchedulerData(TypedDict):
     block_presets: NotRequired[list[BlockPresetData]]
     configuration_revision: NotRequired[int]
     zones: dict[str, ZoneData]
+    room_groups: dict[str, dict[str, Any]]
+    member_comfort: dict[str, ComfortData]
     global_: GlobalData
     settings: PanelSettingsData
     templates: list[ScheduleTemplateData]
@@ -821,6 +826,11 @@ def normalize_schedule_data(
     data: dict[str, Any] = raw_data or {}
     zones: dict[str, ZoneData] = {}
 
+    from .room_groups import normalize_room_groups, control_unit_ids
+    physical_entities = list(climate_entities)
+    room_groups = normalize_room_groups(data.get("room_groups"), climate_entities)
+    climate_entities = control_unit_ids(room_groups, climate_entities)
+
     configured_entities = set(climate_entities)
 
     for entity_id, zone_data in data.get("zones", {}).items():
@@ -887,6 +897,11 @@ def normalize_schedule_data(
         if "target_range_modes" in zone_data:
             from .target_format_policy import validate_range_modes
             zones[entity_id]["target_range_modes"] = validate_range_modes(zone_data["target_range_modes"])
+        if "target_range_reference" in zone_data:
+            from .target_format_policy import validate_range_reference
+            zones[entity_id]["target_range_reference"] = validate_range_reference(
+                zone_data["target_range_reference"]
+            )
         target_temp_step_override = normalize_target_temp_step_override(
             zone_data.get("target_temp_step_override")
         )
@@ -1043,6 +1058,14 @@ def normalize_schedule_data(
         "block_presets": deepcopy(data.get("block_presets", [])),
         "configuration_revision": int(data.get("configuration_revision", 0)),
         "zones": zones,
+        "room_groups": room_groups,
+        "member_comfort": {
+            member: normalize_comfort_data(
+                (data["member_comfort"] if isinstance(data.get("member_comfort"), dict) else {}).get(member, zones[group_id]["comfort"])
+            )
+            for group_id, group in room_groups.items()
+            for member in group["members"]
+        },
         "global_": {
             "mode": mode,
             "paused_until": global_data.get("paused_until"),
@@ -1053,7 +1076,10 @@ def normalize_schedule_data(
             "base_mode_id": active_mode_id,
             "zone_profile_overrides": overrides,
         },
-        "settings": normalize_panel_settings(data.get("settings"), climate_entities),
+        "settings": {
+            **normalize_panel_settings(data.get("settings"), climate_entities),
+            "zone_order": normalize_panel_settings(data.get("settings"), physical_entities)["zone_order"],
+        },
         "templates": templates,
         "templates_seeded": templates_seeded,
         "templates_seeded_version": templates_seeded_version,
@@ -1221,7 +1247,7 @@ def normalize_planned_return_episode(raw: Any, config: dict[str, Any]) -> dict[s
                 and isinstance(profile_ids, list)
                 and all(isinstance(key, str) and bool(key.strip()) and key == key.strip() for key in profile_ids)
                 and len(set(profile_ids)) == len(profile_ids)):
-            if isinstance(overrides, dict) and all(isinstance(entity, str) and entity.startswith("climate.") and (key is None or isinstance(key, str) and bool(key.strip()) and key == key.strip()) for entity, key in overrides.items()):
+            if isinstance(overrides, dict) and all(isinstance(entity, str) and entity.startswith(("climate.", "group.")) and (key is None or isinstance(key, str) and bool(key.strip()) and key == key.strip()) for entity, key in overrides.items()):
                 episode["previous_selection"] = {"base_mode_id": mode_id, "base_profile_ids": list(profile_ids), "zone_profile_overrides": deepcopy(overrides)}
     return episode
 
@@ -1246,6 +1272,8 @@ def serialize_schedule_data(data: SchedulerData) -> dict[str, Any]:
         "block_presets": deepcopy(data.get("block_presets", [])),
         "configuration_revision": data.get("configuration_revision", 0),
         "zones": data["zones"],
+        "room_groups": deepcopy(data.get("room_groups", {})),
+        "member_comfort": deepcopy(data.get("member_comfort", {})),
         "global": data["global_"],
         "settings": data.get(
             "settings",
@@ -1751,6 +1779,9 @@ def normalize_panel_settings(
     return {
         "first_weekday": str(first_weekday),
         "zone_order": zone_order,
+        **({"unit_order": list(dict.fromkeys(entity for entity in settings["unit_order"]
+                                        if isinstance(entity, str) and entity in known_entities))}
+           if isinstance(settings.get("unit_order"), list) else {}),
         "min_temperature": min_temperature,
         "max_temperature": max_temperature,
         **({"shared_demand_groups": deepcopy(settings["shared_demand_groups"])}
@@ -3096,12 +3127,21 @@ def validate_pause_id(value: Any) -> str:
     return pause_id
 
 
-def _normalize_climate_state_snapshot(raw_state: Any) -> ClimateStateSnapshot | None:
+def _normalize_climate_state_snapshot(raw_state: Any, *, _allow_group: bool = True) -> ClimateStateSnapshot | None:
     """Normalize a stored climate state snapshot."""
     if not isinstance(raw_state, dict):
         return None
 
     snapshot: ClimateStateSnapshot = {}
+    if _allow_group and isinstance(raw_state.get("group_members"), dict):
+        members = {}
+        for entity_id, member_state in raw_state["group_members"].items():
+            if isinstance(entity_id, str) and re.fullmatch(r"climate\.[a-z0-9_]+", entity_id):
+                normalized = _normalize_climate_state_snapshot(member_state, _allow_group=False)
+                if normalized is not None:
+                    members[entity_id] = normalized
+        if members:
+            snapshot["group_members"] = members
 
     hvac_mode = raw_state.get("hvac_mode")
     if isinstance(hvac_mode, str) and hvac_mode:

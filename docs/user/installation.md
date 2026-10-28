@@ -64,15 +64,20 @@ Tagged release runs also attach zip files to the GitHub Release. Prefer HACS for
 ## Optional Lovelace Card
 
 The sidebar panel is registered automatically. The Lovelace card is optional.
+When dashboard resources are managed through the Home Assistant interface,
+Velair automatically registers its JavaScript module during integration setup,
+including for existing installations after an update. You can inspect it in
+**Settings > Dashboards > Resources** (available from the three-dot menu).
+No manual resource setup is needed in this mode; add your cards directly.
 
-Add the integration-served resource:
+The resource URL is `/velair_frontend/velair-card.js?v=...`. Velair updates the
+version parameter when the installed frontend bundle changes; do not edit it
+manually. After installation or an update, restart Home Assistant and reload
+the browser or Home Assistant companion app. Cards should work when you open
+the dashboard directly, without visiting the Velair sidebar first.
 
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Then add one or more Velair cards. Each card uses the same backend data and visual components as the sidebar panel.
+Add one or more Velair cards. Each card uses the same backend data and visual
+components as the sidebar panel.
 
 ```yaml
 type: custom:velair-card
@@ -95,13 +100,40 @@ Supported `view` values:
 - `planned-return`: compact one-off return controls, configured occupancy counts and a confirmed-departure timeline. Without saved occupancy sources, Plan return applies Away immediately; the automatic weekly routine still requires sources.
 - `diagnostics`: runtime health, bounded history, filters, and issue-report export.
 
+### Resources managed in YAML
+
+If your Home Assistant configuration uses `lovelace.resource_mode: yaml`,
+Velair leaves the resource list under your control. Add this to your existing
+`lovelace` configuration:
+
+```yaml
+lovelace:
+  resource_mode: yaml
+  resources:
+    - url: /velair_frontend/velair-card.js
+      type: module
+```
+
+The stable URL without a version parameter remains supported; there is no
+version value to maintain in YAML. Keep any other resources already configured.
+Writing a card or dashboard in YAML does not by itself select YAML resource
+management.
+
 ### Card discovery and resource troubleshooting
 
-Use only the integration-served `/velair_frontend/velair-card.js` module resource.
-Remove duplicate Velair resources, including an older `/local/velair-card.js`,
-then reload the browser. Browser custom elements cannot be replaced after they
-have registered, so an older resource loaded first can leave that browser using
-an obsolete card implementation.
+Use only the integration-served `/velair_frontend/velair-card.js` module resource,
+with its automatic version parameter when resources are managed through the
+interface. Velair migrates the exact older `/local/velair-card.js` entry and
+consolidates duplicate entries for these two local paths automatically. Other
+paths and external URLs are left unchanged. For YAML-managed resources, remove
+old or duplicate entries yourself, then restart Home Assistant and reload the
+browser. Browser custom elements cannot be replaced after they have registered,
+so an older resource loaded first can leave that browser using an obsolete card
+implementation.
+
+If a resource needs attention in YAML mode or automatic registration fails,
+check the Home Assistant logs for Velair's instructions. Resource checks do not
+create persistent notifications.
 
 The dashboard card picker discovers Velair through frontend metadata. Adding
 `type: custom:velair-card` manually in YAML uses the registered custom element;

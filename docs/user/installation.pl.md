@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](installation.md) · [Español](in
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -73,14 +73,9 @@ Wykonania dla oznaczonych tagiem wydań dołączają również pliki ZIP do GitH
 <a id="optional-lovelace-card"></a>
 ## Opcjonalna karta Lovelace
 
-Panel boczny rejestruje się automatycznie. Karta Lovelace jest opcjonalna.
+Panel boczny rejestruje się automatycznie. Karta Lovelace jest opcjonalna. Gdy zasobami pulpitu zarządza interfejs Home Assistant, Velair automatycznie rejestruje moduł JavaScript podczas konfiguracji integracji, również po aktualizacji istniejącej instalacji. Sprawdzisz go w **Ustawienia > Pulpity > Zasoby** z menu trzech kropek. Ręczna konfiguracja zasobu nie jest w tym trybie potrzebna; dodaj karty bezpośrednio.
 
-Dodaj zasób udostępniany przez integrację:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
+Adres to `/velair_frontend/velair-card.js?v=...`. Velair aktualizuje parametr wersji przy zmianie pakietu; nie edytuj go ręcznie. Po instalacji lub aktualizacji uruchom ponownie Home Assistant i odśwież przeglądarkę lub aplikację Companion. Karty powinny działać po bezpośrednim otwarciu pulpitu, bez wcześniejszego odwiedzania panelu Velair.
 
 Następnie dodaj jedną lub więcej kart Velair. Każda używa tych samych danych backendu i komponentów wizualnych co panel boczny.
 
@@ -105,10 +100,27 @@ Obsługiwane wartości `view`:
 - `planned-return`: kompaktowe sterowanie jednorazowym powrotem, liczby skonfigurowanych źródeł obecności i oś czasu potwierdzonego wyjścia. Bez zapisanych źródeł obecności zaplanowanie powrotu od razu stosuje tryb nieobecności; automatyczna cotygodniowa rutyna nadal wymaga źródeł.
 - `diagnostics`: stan działania, ograniczona historia, filtry i eksport raportu zgłoszenia.
 
+<a id="resources-managed-in-yaml"></a>
+### Zasoby zarządzane w YAML
+
+Przy `lovelace.resource_mode: yaml` lista zasobów pozostaje pod Twoją kontrolą. Dodaj do istniejącej konfiguracji `lovelace`:
+
+```yaml
+lovelace:
+  resource_mode: yaml
+  resources:
+    - url: /velair_frontend/velair-card.js
+      type: module
+```
+
+Stały adres bez parametru wersji pozostaje obsługiwany; nie trzeba utrzymywać wersji w YAML. Zachowaj pozostałe zasoby. Sam zapis karty lub pulpitu w YAML nie wybiera zarządzania zasobami przez YAML.
+
 <a id="card-discovery-and-resource-troubleshooting"></a>
 ### Wykrywanie karty i rozwiązywanie problemów z zasobem
 
-Używaj wyłącznie zasobu modułowego integracji `/velair_frontend/velair-card.js`. Usuń zduplikowane zasoby Velair, także starszy `/local/velair-card.js`, i przeładuj przeglądarkę. Zarejestrowanego elementu niestandardowego nie można zastąpić; starszy zasób wczytany jako pierwszy może pozostawić przeglądarkę z nieaktualną kartą.
+Używaj tylko modułu integracji `/velair_frontend/velair-card.js`, z automatycznym parametrem wersji przy zasobach zarządzanych przez interfejs. Velair migruje dokładnie stary wpis `/local/velair-card.js` i scala duplikaty tych dwóch lokalnych ścieżek. Inne ścieżki i zewnętrzne adresy pozostają bez zmian. Przy zasobach YAML usuń stare i zduplikowane wpisy samodzielnie, uruchom ponownie Home Assistant i odśwież przeglądarkę. Zarejestrowanych elementów przeglądarki nie można zastąpić; starszy zasób wczytany jako pierwszy może zachować starą kartę.
+
+Jeśli zasób YAML wymaga uwagi lub automatyczna rejestracja zawiedzie, sprawdź instrukcje w dziennikach Home Assistant. Kontrole zasobów nie tworzą trwałych powiadomień.
 
 Selektor kart pulpitu wykrywa Velair przez metadane frontendu. Ręczne dodanie `type: custom:velair-card` w YAML korzysta z zarejestrowanego elementu. Są to oddzielne sprawdzenia: jeśli YAML działa, ale karty nie ma w selektorze, zaznacz tę różnicę w zgłoszeniu.
 

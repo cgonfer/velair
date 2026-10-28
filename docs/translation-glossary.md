@@ -7,6 +7,7 @@ Use these terms consistently when translating Velair user documentation. Keep Ho
 | sidebar panel | panel de la barra lateral | panneau de la barre latérale |
 | climate entity | entidad de climatización | entité climatique |
 | managed climate | equipo de climatización gestionado | équipement climatique géré |
+| Room groups | Grupos de habitación | Groupes de pièce |
 | scheduler | programador | planificateur |
 | schedule | horario / programación | horaire / programmation |
 | schedule block | bloque del horario | bloc horaire |
@@ -100,6 +101,25 @@ match the maintained panel controls. Backend identifiers such as
 | Portuguese (Portugal) | Usar histerese do fornecimento | Valores de histerese personalizados |
 | Russian | Использовать гистерезис источника подачи | Свои значения гистерезиса |
 
+The following field and mode names are literal panel labels. Their values are
+temperature differences from the target. Symmetric hysteresis is the magnitude
+on each side; deactivation hysteresis extends past the target in the heating or
+cooling direction. Live monitor distances describe computed control limits and
+can differ from these saved settings.
+
+| Language | Activation hysteresis | Deactivation hysteresis | Symmetric hysteresis | Custom hysteresis |
+| --- | --- | --- | --- | --- |
+| English | Activation hysteresis | Deactivation hysteresis | Symmetric hysteresis | Custom hysteresis |
+| Spanish | Histéresis de activación | Histéresis de desactivación | Histéresis simétrica | Histéresis personalizada |
+| French | Hystérésis d’activation | Hystérésis de désactivation | Hystérésis symétrique | Hystérésis personnalisée |
+| German | Einschalthysterese | Ausschalthysterese | Symmetrische Hysterese | Benutzerdefinierte Hysterese |
+| Italian | Isteresi di attivazione | Isteresi di disattivazione | Isteresi simmetrica | Isteresi personalizzata |
+| Dutch | Inschakelhysterese | Uitschakelhysterese | Symmetrische hysterese | Aangepaste hysterese |
+| Polish | Histereza włączenia | Histereza wyłączenia | Symetryczna histereza | Niestandardowa histereza |
+| Portuguese (Brazil) | Histerese de ativação | Histerese de desativação | Histerese simétrica | Histerese personalizada |
+| Portuguese (Portugal) | Histerese de ativação | Histerese de desativação | Histerese simétrica | Histerese personalizada |
+| Russian | Гистерезис включения | Гистерезис выключения | Симметричный гистерезис | Настраиваемый гистерезис |
+
 ## German
 
 | English | German |
@@ -107,6 +127,7 @@ match the maintained panel controls. Backend identifiers such as
 | sidebar panel | Seitenleisten-Panel |
 | climate entity | Klimaentität |
 | managed climate | verwaltetes Klimagerät |
+| Room groups | Raumgruppen |
 | scheduler | Zeitplaner |
 | schedule | Zeitplan |
 | schedule block | Zeitplanblock |
@@ -161,6 +182,7 @@ The environmental-condition sensor is named **Raumklima** in the integration. **
 | sidebar panel | pannello della barra laterale |
 | climate entity | entità climatica |
 | managed climate | dispositivo climatico gestito |
+| Room groups | Gruppi stanza |
 | scheduler | pianificatore |
 | schedule | programmazione |
 | schedule block | blocco della programmazione |
@@ -215,6 +237,7 @@ The Planned Return selector uses **Ritorno programmato**, while history uses **R
 | sidebar panel | zijbalkpaneel |
 | climate entity | klimaatentiteit |
 | managed climate | beheerd klimaatapparaat |
+| Room groups | Kamergroepen |
 | scheduler | planner |
 | schedule | schema / planning |
 | schedule block | schemablok |
@@ -269,6 +292,7 @@ The delivery sensor is named **Leveringsdiagnose van {zone}**. The general Boost
 | sidebar panel | panel boczny |
 | climate entity | encja klimatu |
 | managed climate | zarządzane urządzenie klimatyczne / zarządzana encja klimatu |
+| Room groups | Grupy pomieszczeń |
 | scheduler | mechanizm harmonogramów |
 | schedule | harmonogram |
 | schedule block | blok harmonogramu |
@@ -323,6 +347,7 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | sidebar panel | painel da barra lateral |
 | climate entity | entidade de climatização |
 | managed climate | equipamento de climatização gerenciado |
+| Room groups | Grupos de cômodo |
 | scheduler | agendador |
 | schedule | programação |
 | schedule block | bloco da programação |
@@ -375,6 +400,7 @@ The Planned Return selector uses **Planowany powrót**, while history uses **Zap
 | sidebar panel | painel da barra lateral |
 | climate entity | entidade de climatização |
 | managed climate | equipamento de climatização gerido |
+| Room groups | Grupos de divisão |
 | scheduler | programador / agendador |
 | schedule | programação |
 | schedule block | bloco da programação |
@@ -429,6 +455,7 @@ Some existing interface labels use other Portuguese variants: **Cronograma de pe
 | sidebar panel | панель в боковом меню |
 | climate entity | климатическая сущность |
 | managed climate | управляемое климатическое устройство |
+| Room groups | Группы для комнат |
 | scheduler | планировщик |
 | schedule | расписание |
 | schedule block | блок расписания |

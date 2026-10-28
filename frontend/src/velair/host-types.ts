@@ -62,6 +62,7 @@ export type VelairViewHost = {
   _setSharedSupplyLibraryState?(dirty: boolean, draft?: import("./components/shared-demand-settings-element").SharedSupplyLibraryDraft, busy?: boolean): void;
   _resourceProfileKey?: string;
   _openResourceUsage?(usage: import("./types").ResourceUsage): void;
+  _openNextEventSchedule?(entityId: string, weekday?: string, modeId?: string): void | Promise<void>;
   _draftTemplateLink?: import("./types").TemplateLink;
   _draftConfigurationRevision?: number;
   _materializingTemplate?: boolean;
@@ -152,6 +153,8 @@ export type VelairViewHost = {
   _schedulerMenuOpen: boolean;
   _scheduleSource: "default" | "profile";
   _profileScheduleDirty: boolean;
+  _roomGroupsDraft?: import("./components/room-groups-settings-element").RoomGroupsDraft;
+  _setRoomGroupsState(dirty: boolean, busy: boolean, draft?: import("./components/room-groups-settings-element").RoomGroupsDraft): void;
   _selectedEntity?: string;
   _selectedTemplateKey: string;
   _selectedWeekday: string;

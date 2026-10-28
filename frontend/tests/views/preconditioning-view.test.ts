@@ -971,13 +971,57 @@ describe("preconditioning view", () => {
   });
 });
 
-it("explains that range-only Heat, Cool and Auto targets cannot prepare early", () => {
+it("explains that two-setpoint Auto targets cannot prepare early", () => {
   const { viewHost } = host();
+  viewHost._data!.zones["climate.first"].preconditioning.enabled = true;
   viewHost._data!.next_events = [{ entity_id: "climate.first", hvac_mode: "auto",
     action: "set_temperature", target_temp_low: 19, target_temp_high: 24, when: "2026-10-22T18:00:00Z" }] as ScheduleEvent[];
   const container = document.createElement("div");
   render(renderPreconditioningView(viewHost, ["climate.first"]), container);
   expect(container.textContent).toContain("unsupportedRangeThermalMode");
+  expect(container.querySelector(".preconditioning-view > [role='status']")).toBeNull();
+  expect(container.querySelector(".preconditioning-zone .preconditioning-range-warning ha-icon")?.getAttribute("icon")).toBe("mdi:alert-outline");
+});
+
+it.each([
+  { enabled: false, expanded: false },
+  { enabled: false, expanded: true },
+  { enabled: true, expanded: false },
+  { enabled: true, expanded: true },
+])("keeps range warnings inside only the enabled affected climate: %j", ({ enabled, expanded }) => {
+  const affected = "climate.first";
+  const { viewHost } = host({ expandedZoneIds: expanded ? [affected] : [] });
+  viewHost._data!.zones[affected].preconditioning.enabled = enabled;
+  const event = { entity_id: affected, hvac_mode: "heat", action: "set_temperature",
+    target_temp_low: 19, target_temp_high: 24, when: "2026-10-22T18:00:00Z" } as ScheduleEvent;
+  // Several upcoming occurrences must still produce just one warning per reason.
+  viewHost._data!.next_events = [event, { ...event, when: "2026-10-23T18:00:00Z" }];
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, [affected, "climate.second"]), container);
+  const zones = container.querySelectorAll(".preconditioning-zone");
+  const warnings = zones[0].querySelectorAll(".preconditioning-range-warning");
+  expect(warnings).toHaveLength(enabled ? 1 : 0);
+  expect(zones[1].querySelector(".preconditioning-range-warning")).toBeNull();
+  expect(container.querySelector(".preconditioning-view > [role='status']")).toBeNull();
+  if (enabled) {
+    expect(warnings[0].getAttribute("role")).toBe("status");
+    expect(warnings[0].textContent).toContain("rangeReferenceNotConfigured");
+    expect(warnings[0].querySelector("ha-icon")?.getAttribute("aria-hidden")).toBe("true");
+    expect(container.textContent!.match(/rangeReferenceNotConfigured/g)).toHaveLength(1);
+  }
+});
+
+it("removes the climate warning after selecting its reference", () => {
+  const { viewHost } = host();
+  const entityId = "climate.second";
+  viewHost._data!.next_events = [{ entity_id: entityId, hvac_mode: "cool", action: "set_temperature",
+    target_temp_low: 19, target_temp_high: 24, when: "2026-10-22T18:00:00Z" }] as ScheduleEvent[];
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, [entityId]), container);
+  expect(container.querySelector(".preconditioning-range-warning")).not.toBeNull();
+  viewHost._data!.zones[entityId].target_range_reference = { cool: "high" };
+  render(renderPreconditioningView(viewHost, [entityId]), container);
+  expect(container.querySelector(".preconditioning-range-warning")).toBeNull();
 });
 
 it.each([
@@ -1000,6 +1044,47 @@ it.each([
   viewHost._data!.next_events = [{ entity_id: entityId, when: "2026-10-22T18:00:00Z", action: "set_temperature", target_temp_low: 19, target_temp_high: 24, hvac_mode: requested, preconditioning_diagnostics: diagnostics("heat", 19) }] as ScheduleEvent[];
   const container = document.createElement("div");
   render(renderPreconditioningView(viewHost, [entityId]), container);
-  expect(container.textContent!.includes("unsupportedRangeThermalMode")).toBe(!thermal);
+  expect(container.textContent!.includes("rangeReferenceNotConfigured")).toBe(!thermal);
   expect(Boolean(container.querySelector(".preconditioning-range-boundary"))).toBe(thermal);
+});
+
+
+it.each([
+  { mode: "heat", reference: "high", boundary: 24, label: "preconditioningPredictionUpperBoundary" },
+  { mode: "cool", reference: "low", boundary: 19, label: "preconditioningPredictionLowerBoundary" },
+])("uses the configured $reference reference in $mode prediction", ({ mode, reference, boundary, label }) => {
+  const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+  const entityId = "climate.second";
+  viewHost._data!.zones[entityId].target_range_reference = { [mode]: reference } as any;
+  viewHost._data!.preconditioning_learning = { [entityId]: learningBothDirections() };
+  viewHost._data!.next_events = [{ entity_id: entityId, when: "2026-10-22T18:00:00Z", action: "set_temperature", target_temp_low: 19, target_temp_high: 24, hvac_mode: mode }] as ScheduleEvent[];
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, [entityId]), container);
+  expect(container.textContent).not.toContain("unsupportedRangeThermalMode");
+  expect(container.textContent).not.toContain("rangeReferenceNotConfigured");
+  expect(container.querySelector(".preconditioning-range-boundary")?.textContent).toContain(label);
+  expect(container.querySelector(".preconditioning-range-boundary")?.textContent).toContain(String(boundary));
+});
+
+
+it.each([
+  { temperatureOnly: true, supported: false },
+  { temperatureOnly: false, supported: true },
+])("keeps an off climate inactive for temperature-only range preparation: $temperatureOnly", ({ temperatureOnly, supported }) => {
+  const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+  const entityId = "climate.second";
+  viewHost.hass!.states[entityId] = { state: "off", attributes: { supported_features: 2, hvac_modes: ["off", "heat"] } } as any;
+  viewHost._data!.zones[entityId].target_format_policy = {
+    entity_id: entityId, kind: "range", configured_modes: null, range_modes: ["heat"],
+    formats_by_mode: { heat: "range" }, invalid_modes: [], uncertain: false,
+  };
+  viewHost._data!.zones[entityId].target_range_reference = { heat: "high" };
+  viewHost._data!.preconditioning_learning = { [entityId]: learningBothDirections() };
+  viewHost._data!.next_events = [{ entity_id: entityId, when: "2026-10-22T18:00:00Z", action: "set_temperature",
+    target_temp_low: 19, target_temp_high: 24, temperature_only: temperatureOnly,
+    preconditioning_diagnostics: diagnostics("heat", 24) }] as ScheduleEvent[];
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, [entityId]), container);
+  expect(container.textContent!.includes("unsupportedRangeThermalMode")).toBe(!supported);
+  expect(Boolean(container.querySelector(".preconditioning-range-boundary"))).toBe(supported);
 });

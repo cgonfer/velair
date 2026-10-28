@@ -28,6 +28,7 @@ from .const import (
     SIGNAL_DIAGNOSTICS_UPDATED,
     SIGNAL_SCHEDULER_UPDATED,
 )
+from .room_groups import comfort_settings as physical_comfort_settings, member_to_unit
 from .temperature import CELSIUS, normalize_temperature_unit, state_temperature_unit
 
 DIAGNOSTIC_HISTORY_LIMIT = 100
@@ -379,7 +380,8 @@ class RuntimeDiagnosticsManager:
     def observe_target_applied(self, data: dict[str, Any]) -> None:
         """Record trusted target evidence emitted directly by the scheduler."""
         entity_id = data.get("entity_id")
-        if not isinstance(entity_id, str) or entity_id not in self._entity_ids:
+        groups = self._runtime["storage"].data.get("room_groups", {}) if self._runtime else {}
+        if not isinstance(entity_id, str) or (entity_id not in self._entity_ids and entity_id not in groups):
             return
         safe_data = {
             key: deepcopy(data[key])
@@ -559,9 +561,14 @@ class RuntimeDiagnosticsManager:
         """Return the deduplicated active sensor IDs from backend configuration."""
         if self._runtime is None:
             return ()
-        zones = self._runtime["storage"].data.get("zones", {})
+        data = self._runtime["storage"].data
+        zones = data.get("zones", {})
+        grouped = member_to_unit(data.get("room_groups", {}))
+        scopes = [{**zone, "comfort": {}} if entity in data.get("room_groups", {}) else zone
+                  for entity, zone in zones.items()]
+        scopes.extend({"comfort": physical_comfort_settings(data, entity)} for entity in grouped)
         entity_ids: set[str] = set()
-        for zone in zones.values():
+        for zone in scopes:
             preconditioning = zone.get("preconditioning", {})
             comfort = zone.get("comfort", {})
             candidates = (
@@ -731,7 +738,7 @@ class RuntimeDiagnosticsManager:
 
     def zone_delivery_diagnostics(self, entity_id: str) -> dict[str, Any]:
         """Return compact runtime-only delivery evidence for one zone."""
-        delivery = self._delivery.get(entity_id, {})
+        owner_id, delivery = self._delivery_for_entity(entity_id)
         raw_status = delivery.get("status", "idle")
         public_statuses = {
             "idle",
@@ -744,7 +751,7 @@ class RuntimeDiagnosticsManager:
             "unavailable",
         }
         last_error = delivery.get("last_error")
-        last_accepted = self._last_applied.get(entity_id)
+        last_accepted = self._last_applied.get(owner_id) if owner_id == entity_id or delivery else None
         result: dict[str, Any] = {
             "status": raw_status if raw_status in public_statuses else "failed",
             "updated_at": delivery.get("updated_at"),
@@ -788,6 +795,21 @@ class RuntimeDiagnosticsManager:
                 }
             )
         return result
+
+    def _delivery_for_entity(self, entity_id: str) -> tuple[str, dict[str, Any]]:
+        """Join group recovery evidence with the physical member's last outcome."""
+        scheduler = self._runtime.get("scheduler") if self._runtime else None
+        owner_id = getattr(scheduler, "owner_for_entity", lambda entity: entity)(entity_id)
+        delivery = deepcopy(self._delivery.get(owner_id, {}))
+        if owner_id != entity_id:
+            reader = getattr(scheduler, "group_delivery_status", None)
+            member = reader(owner_id).get(entity_id) if callable(reader) else None
+            if member is not None:
+                delivery["status"] = member["status"]
+            elif delivery.get("status") == "success":
+                # A vendor-propagated member was observed, not commanded by Velair.
+                delivery = {}
+        return owner_id, delivery
 
     @staticmethod
     def _issue_identity(
@@ -861,16 +883,24 @@ class RuntimeDiagnosticsManager:
         units: dict[str, Any] = {}
         counts = {"ok": 0, "warning": 0, "error": 0}
         climate_manager = runtime.get("climate_manager")
-        for entity_id, zone in zones.items():
+        resolve_owner = getattr(scheduler, "owner_for_entity", lambda entity: entity)
+        for entity_id in self._entity_ids:
+            owner_id = resolve_owner(entity_id)
+            zone = zones.get(owner_id)
+            if zone is None:
+                continue
             unit = self._unit_snapshot(
                 entity_id,
                 zone,
                 data,
-                zone_runtime.get(entity_id),
-                room_assist.get(entity_id),
+                zone_runtime.get(owner_id),
+                room_assist.get(owner_id),
                 comfort.get(entity_id),
                 scheduler,
             )
+            if owner_id != entity_id:
+                unit["control_unit_id"] = owner_id
+                unit["group_name"] = data.get("room_groups", {}).get(owner_id, {}).get("name")
             settling_diagnostics = getattr(
                 climate_manager, "command_settling_diagnostics", None
             )
@@ -1014,12 +1044,10 @@ class RuntimeDiagnosticsManager:
             if status != "error":
                 status = "warning"
 
-        delivery = deepcopy(
-            self._delivery.get(
-                entity_id,
-                {"status": "idle", "retry_count": 0, "last_error": None},
-            )
-        )
+        owner_id, delivery = self._delivery_for_entity(entity_id)
+        directly_delivered = owner_id == entity_id or bool(delivery)
+        if not delivery:
+            delivery = {"status": "idle", "retry_count": 0, "last_error": None}
         delivery_status = delivery.get("status")
         if delivery_status in ("exhausted", "invalid_intent"):
             issues.append({"severity": "error", "code": f"delivery_{delivery_status}"})
@@ -1041,7 +1069,7 @@ class RuntimeDiagnosticsManager:
                 status = "warning"
 
         preconditioning = deepcopy(zone.get("preconditioning", {}))
-        comfort_config = deepcopy(zone.get("comfort", {}))
+        comfort_config = deepcopy(physical_comfort_settings(data, entity_id))
         sensors = []
         sensor_candidates = [
             (
@@ -1147,7 +1175,7 @@ class RuntimeDiagnosticsManager:
             },
             "effective_setup": scheduler.get_zone_effective_setup(entity_id),
             "intent": deepcopy(runtime_status),
-            "last_application": deepcopy(self._last_applied.get(entity_id)),
+            "last_application": deepcopy(self._last_applied.get(owner_id)) if directly_delivered else None,
             "delivery": delivery,
             "override": deepcopy(zone.get("override")),
             "pauses": deepcopy(zone.get("pauses", [])),
@@ -1163,6 +1191,7 @@ class RuntimeDiagnosticsManager:
 
     def _learning_summary(self, entity_id: str, data: dict[str, Any], scheduler) -> dict[str, Any] | None:
         """Join current activity with evidence still retained by history policy."""
+        entity_id = getattr(scheduler, "owner_for_entity", lambda entity: entity)(entity_id)
         summary = _learning_summary(data.get("preconditioning_learning", {}).get(entity_id)) or {
             "heat": {"observation_count": 0}, "cool": {"observation_count": 0},
         }

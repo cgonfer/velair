@@ -357,13 +357,13 @@ function renderSensorRuntime(
         ${renderSensorStatusPill(host, status)}
       </h3>
       <div class="sensor-status-card">
-        ${status?.reason === "unsupported_range_mode" ? html`<p role="status">${host._t("unsupportedRangeThermalMode")}</p>` : nothing}
+        ${status?.reason === "unsupported_range_mode" || status?.reason === "range_reference_not_configured" ? html`<p role="status">${host._t(status.reason === "range_reference_not_configured" ? "rangeReferenceNotConfigured" : "unsupportedRangeThermalMode")}</p>` : nothing}
         ${hasActiveBlock
           ? renderSensorActiveBlockSummary(host, entityId, status)
           : renderSensorIdleState(host)}
         ${hasActiveBlock ? renderRoomAssistLimitWarning(host, entityId, status) : nothing}
         ${hasActiveBlock ? renderRoomAssistScheduledGuard(host, entityId, status) : nothing}
-        ${hasActiveBlock && status?.reason !== "unsupported_range_mode" && scale.markers.length
+        ${hasActiveBlock && status?.reason !== "unsupported_range_mode" && status?.reason !== "range_reference_not_configured" && scale.markers.length
           ? renderTemperatureScale(host, entityId, scale, status, deadbandZone, deadband)
           : nothing}
       </div>
@@ -378,7 +378,7 @@ export function renderRoomAssistTemperatureScale(
   status?: RoomSensorAssistStatus,
   settings?: PreconditioningSettings,
 ) {
-  if (!status || status.reason === "unsupported_range_mode" || !hasRoomAssistScheduledTarget(status) || !status.start) {
+  if (!status || (status.reason === "unsupported_range_mode" || status.reason === "range_reference_not_configured") || !hasRoomAssistScheduledTarget(status) || !status.start) {
     return nothing;
   }
   const deadband = settings?.room_sensor_assist_deadband ?? 0;
@@ -517,14 +517,15 @@ function renderTemperatureScale(
   const hasFixedHysteresis = status.hysteresis_phase === "towards_lower"
     || status.hysteresis_phase === "towards_upper";
   const hasScheduledRange = scheduledAssistRange(status) !== undefined;
-  const hasFixedDirectionMode = status.hvac_mode === "heat" || status.hvac_mode === "cool";
+  const mode = status.effective_hvac_mode ?? status.hvac_mode;
+  const hasFixedDirectionMode = mode === "heat" || mode === "cool";
   const hasScalarAutomaticMode = !hasScheduledRange
     && (status.hvac_mode === "auto" || status.hvac_mode === "heat_cool");
   const deadbandValue = formatTemperatureDelta(host, entityId, deadband);
   const deadbandLabel = deadbandZone
     ? deadband === 0
       ? host._t("roomSensorDeadbandZoneZero", { value: deadbandValue })
-      : hasScheduledRange
+      : hasScheduledRange && !status.target_boundary
         ? host._t("roomSensorDeadbandZoneRange", { value: deadbandValue })
         : hasFixedHysteresis || hasFixedDirectionMode
           ? host._t("roomSensorDeadbandZoneSingle", { value: deadbandValue })
@@ -1136,7 +1137,9 @@ function buildRoomTargetGap(
 ) {
   const roomMarker = markers.find((marker) => marker.key === "room");
   const scheduledRange = scheduledAssistRange(status);
-  const boundaryKey = scheduledRange && roomMarker
+  const boundaryKey = scheduledRange && status.target_boundary
+    ? status.target_boundary === "low" ? "scheduledLow" : "scheduledHigh"
+    : scheduledRange && roomMarker
     ? roomMarker.value < scheduledRange.low
       ? "scheduledLow"
       : roomMarker.value > scheduledRange.high
@@ -1369,7 +1372,7 @@ function rangeBoundaryMarkerKey(
     return undefined;
   }
   const room = typeof status.room_temperature === "number" ? status.room_temperature : undefined;
-  const boundary = status.direction === "cool" || (room !== undefined && room > scheduled.high)
+  const boundary = (status.target_boundary ? status.target_boundary === "high" : status.direction === "cool" || (room !== undefined && room > scheduled.high))
     ? "High"
     : "Low";
   return `${kind}${boundary}` as TemperatureMarker["key"];

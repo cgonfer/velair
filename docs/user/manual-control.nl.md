@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](manual-control.md) · [Español](manual-control.
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.5 |
-| Laatst gesynchroniseerd | 2026-10-24 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -45,6 +45,15 @@ Velair houdt deze begrippen altijd gescheiden:
 | Globale pauze of Stop | Alle apparaten | De planner is globaal gepauzeerd of uitgeschakeld. |
 
 Deze statussen kunnen samen bestaan. Modus **Handmatig** kan bijvoorbeeld profiel `Sleep` kiezen terwijl `climate.living_room` een **Handmatige aanpassing** heeft. Het profiel blijft de leidende schemaconfiguratie, maar dat ene apparaat behoudt de externe instelling tot de handmatige aanpassing eindigt.
+
+<a id="room-groups"></a>
+## Kamergroepen
+
+Bij een [kamergroep](room-groups.nl.md#pauses-manual-adjustment-and-resuming) geldt de bovengenoemde apparaatscope voor één gedeelde besturingseenheid. Instellingen bewaart één beleid **Externe aanpassingen** voor de groep. Een gedetecteerde externe wijziging bij één lid kan de planningsbevoegdheid voor de hele kamer afgeven; er ontstaat geen onafhankelijke handmatige sessie voor dat apparaat.
+
+Velair bewaart elke lidstatus in plaats van het gewijzigde doel naar anderen te kopiëren. Met **Tot het volgende blok** keren alle leden bij dat blok terug naar het gezamenlijke schema. Automatisch hervatten via een lid verwijst ook naar de groep en past haar intentie toe op de ontvangers, onder voorbehoud van resterende pauzeredenen. Expliciete zonepauzes en boosts via een lid horen eveneens bij de hele groep.
+
+De groepsconfiguratie toont de besturingsstatus zonder eigen pauzeknop. Comfort en fysieke waarnemingen blijven individueel.
 
 <a id="what-velair-observes"></a>
 ## Wat Velair waarneemt

@@ -30,7 +30,8 @@
       }
     },
     "error": {
-      "no_climate_entities": "Selecione pelo menos uma entidade de climatização."
+      "no_climate_entities": "Selecione pelo menos uma entidade de climatização.",
+      "grouped_climate_entities": "Remova estes dispositivos de climatização dos grupos de cômodo nas Configurações do Velair antes de removê-los da integração."
     }
   },
   "entity": {

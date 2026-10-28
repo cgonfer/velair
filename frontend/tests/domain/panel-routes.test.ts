@@ -9,6 +9,7 @@ describe("panel destinations", () => {
   });
   it.each([
     ["/velair/overview", "/velair"], ["/velair/profiles", "/velair/modes"],
+    ["/velair/groups", "/velair/supply-control"], ["/velair/room-groups", "/velair/room-groups"],
     ["/velair/schedules", "/velair/schedules/default"], ["/velair/schedules/unknown", "/velair/schedules/default"],
     ["/velair/templates", "/velair/templates/templates"], ["/velair/templates/unknown", "/velair/templates/templates"],
     ["/velair/preconditioning", "/velair/preconditioning"],

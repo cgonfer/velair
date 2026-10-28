@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.5 |
-| Última sincronización | 2026-10-24 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -41,7 +41,11 @@ Los objetivos únicos `auto` y `heat_cool` y los intervalos nativos `heat_cool` 
 
 La entidad de climatización sigue siendo el actuador. Velair no crea una entidad virtual ni evita el firmware del dispositivo. Si tu termostato o válvula permite vincular directamente un sensor externo, esa opción nativa suele seguir siendo la mejor primera elección.
 
-Las entidades que solo aceptan intervalos también pueden recibir pares programados en Calor, Frío y Auto. Room Assist no ajusta esos pares: la asistencia de intervalos requiere `heat_cool`. El estado actual explica la limitación y Velair envía el par nominal sin desplazarlo. Los ajustes de Room Assist se conservan para objetivos compatibles. Cambiar de un objetivo asistido a uno de estos intervalos elimina la asistencia anterior sin restaurar una antigua consigna corregida sobre el nuevo par.
+Para dos consignas en `heat` o `cool` fijo, selecciona primero **Consigna de referencia** para ese equipo y modo en **Ajustes → Equipos y grupos**. Elige **Consigna inferior** o **Consigna superior** según el valor que use realmente tu equipo; Velair no lo deduce de su capacidad de intervalos. El Preacondicionamiento adaptativo comparte esta selección.
+
+Room Assist utiliza el límite elegido como objetivo fijo de calefacción o refrigeración, incluidos el ciclo de histéresis de una consigna y la protección del objetivo programado. Mueve ambas consignas la misma cantidad, conservando su separación. Las dos deben ajustarse al paso y a los límites físicos del equipo, por lo que el otro límite puede restringir la corrección disponible. Los avisos de limitación existentes siguen aplicándose.
+
+Con **Sin configurar**, los pares de modo fijo se envían sin cambios ni corrección de Room Assist. Los intervalos en `auto` siguen sin admitir asistencia; las bandas nativas `heat_cool` conservan su comportamiento. Se mantienen los ajustes guardados. Cambiar referencia o modo elimina la asistencia obsoleta sin restaurar un objetivo corregido antiguo sobre la nueva intención.
 
 <a id="setup"></a>
 
@@ -51,11 +55,18 @@ Las entidades que solo aceptan intervalos también pueden recibir pares programa
 2. Expande el equipo que quieras configurar.
 3. Selecciona un sensor de temperatura de habitación.
 4. Activa Control por sensor de estancia.
-5. Ajusta Banda de control de Room Assist para definir los límites inferior y superior de conmutación de calefacción o refrigeración fijas, o el margen neutro para modos automáticos e intervalos nativos.
+5. Ajusta la banda muerta de Room Assist para definir los límites inferior y superior de conmutación en calor o frío fijo alrededor de su objetivo único o referencia de intervalo elegida, o el margen neutro para modos automáticos de una consigna y bandas nativas `heat_cool`.
 6. Modifica Ajuste máximo de control si el valor predeterminado es insuficiente para esa habitación o menor que la diferencia de consigna que el termostato puede necesitar para dejar de calentar o enfriar.
 7. Ajusta Retraso de actualización si las actualizaciones de sensores parecen demasiado lentas o frecuentes.
 
 Seleccionar un sensor de habitación por sí solo únicamente guarda el sensor. Velair empieza a utilizarlo como temperatura efectiva de la habitación cuando se activa Room Sensor Assist.
+
+<a id="room-groups"></a>
+### Grupos de habitación
+
+Elige el grupo en Room Assist y usa los mismos controles de sensor, habilitación, banda muerta, corrección máxima y actualización. La temperatura propia del grupo procede del miembro elegido en **Grupos de habitación → Referencia de temperatura**; el sensor externo opcional se configura aquí. Deshabilitar o quitar Room Assist devuelve la medición efectiva a ese miembro.
+
+El grupo tiene una configuración y una corrección compartidas, no un controlador independiente por miembro. Velair conserva el objetivo programado y envía la orden asistida según el modo de envío del grupo: todos los miembros por defecto, o el destinatario explícito cuando la instalación ya propaga las órdenes. Las comprobaciones de capacidades, paso y límites se aplican a los destinatarios reales. Los miembros siguen visibles individualmente en Resumen.
 
 Room Sensor Assist no requiere Preacondicionamiento adaptativo. Puede funcionar con bloques programados normales y con bloques que el Preacondicionamiento adaptativo haya iniciado antes.
 
@@ -82,7 +93,7 @@ La pestaña Room Assist indica qué puede hacer Velair actualmente para cada equ
 | **En espera** | Room Assist está activado, pero no hay un bloque de temperatura activo compatible o todavía no hay un cálculo utilizable. |
 | **Listo** | Velair tiene las lecturas y el objetivo necesarios para calcular la asistencia, pero aún no ha aplicado un objetivo asistido. |
 | **Ajustando** | Velair ha aplicado un objetivo corregido temporal o un intervalo desplazado. |
-| **Manteniendo** | Room Assist mantiene neutro un objetivo único automático, mantiene un intervalo nativo o la protección programada conserva un objetivo del lado seguro. Un ciclo fijo `heat` o `cool` puede permanecer **Ajustando** mientras recorre la banda muerta. |
+| **Manteniendo** | Room Assist mantiene neutro un objetivo único automático, mantiene un intervalo nativo `heat_cool` o la protección programada conserva un objetivo del lado seguro. Un ciclo fijo `heat` o `cool` puede permanecer **Ajustando** mientras recorre la banda muerta. |
 | **Bloqueado** | Una pausa, Refuerzo, estado Manual u otro estado del programador tiene prioridad sobre Room Assist. |
 | **No disponible** | No puede utilizarse actualmente el equipo gestionado o la capacidad de objetivo necesaria. La interfaz muestra el motivo cuando se conoce. |
 
@@ -364,7 +375,7 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-Los cuatro campos de histéresis son opcionales. Aparecen para un ciclo fijo de temperatura única `heat` o `cool` con banda muerta distinta de cero y no están presentes para la corrección anterior sin banda muerta, modos automáticos de temperatura única ni intervalos nativos.
+Los cuatro campos de histéresis son opcionales. En los eventos de automatización aparecen para un ciclo fijo de una consigna `heat` o `cool` con banda muerta no nula; faltan para la corrección antigua con banda muerta cero, los modos automáticos de una consigna y todos los intervalos. Los intervalos fijos con referencia configurada muestran su fase de histéresis en el estado de funcionamiento en directo; sus eventos conservan los pares completos de límites y `range_shift`.
 
 Una actualización de intervalo utiliza las bandas programada y aplicada completas, en lugar de campos de temperatura única:
 

@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.5 |
-| Letzte Synchronisierung | 2026-10-24 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -45,6 +45,15 @@ Velair trennt diese Begriffe immer:
 | Globale Pause oder Stopp | Alle Klimageräte | Der Zeitplaner ist global pausiert oder deaktiviert. |
 
 Diese Zustände können gleichzeitig bestehen. Beispielsweise kann der Velair-Modus **Manuell** das Profil `Sleep` wählen, während `climate.living_room` eine **Manuelle Anpassung** hat. Das Profil bleibt maßgebliche Zeitplankonfiguration, aber dieses Gerät behält seine externe Einstellung bis zum Ende der manuellen Anpassung.
+
+<a id="room-groups"></a>
+## Raumgruppen
+
+Bei einer [Raumgruppe](room-groups.de.md#pauses-manual-adjustment-and-resuming) ist der oben genannte Geräteumfang eine gemeinsame Steuereinheit. Die Einstellungen speichern eine Richtlinie **Externe Anpassungen** für die Gruppe. Eine erkannte externe Änderung eines Mitglieds kann die Zeitplanungszuständigkeit für den ganzen Raum abgeben; sie erstellt keine unabhängige manuelle Sitzung für dieses Gerät.
+
+Velair erhält jeden Mitgliedszustand, statt den geänderten Sollwert zu kopieren. Mit **Bis zum nächsten Block** kehren alle beim nächsten Block zur gemeinsamen Programmierung zurück. Automatik über ein beliebiges Mitglied fortzusetzen gilt ebenfalls für die Gruppe und wendet deren Absicht auf die Empfänger an, vorbehaltlich verbleibender Pausengründe. Auch explizite Zonenpausen und Verstärkungen über ein Mitglied gehören zur ganzen Gruppe.
+
+Der Gruppentab zeigt den Steuerungsstatus ohne eigene Pausenschaltfläche. Behaglichkeit und physische Beobachtungen bleiben individuell.
 
 <a id="what-velair-observes"></a>
 ## Was Velair beobachtet

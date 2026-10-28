@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.5 |
-| Ostatnia synchronizacja | 2026-10-24 |
+| Wersja odniesienia | 1.9.0-beta.6 |
+| Ostatnia synchronizacja | 2026-10-28 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -19,6 +19,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 <!-- velair-docs:end -->
 
 Ten poradnik opisuje Velair z perspektywy użytkownika Home Assistant.
+
+Używaj [Grup pomieszczeń](room-groups.pl.md), gdy kilka urządzeń steruje jednym pokojem. Grupa ma jeden harmonogram, przypisanie profilu i model uczenia; przegląd nadal pokazuje urządzenia indywidualnie. Skład ustawisz na karcie Grupy pomieszczeń, a kolejność w Ustawieniach.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Nawigacja panelu i bezpośrednie odnośniki
@@ -34,6 +36,7 @@ Panel boczny zmienia adres przy przełączaniu kart lub podsekcji Harmonogramów
 | Szablony: Szablony | `/velair/templates/templates` |
 | Szablony: Presety klimatyczne | `/velair/templates/presets` |
 | [Sterowanie zasilaniem](shared-climate-supply.pl.md) | `/velair/supply-control` |
+| [Grupy pomieszczeń](room-groups.pl.md) | `/velair/room-groups` |
 | Czujniki | `/velair/sensors` |
 | Komfort | `/velair/comfort` |
 | Przygotowanie wstępne | `/velair/preconditioning` |
@@ -175,7 +178,40 @@ Karta Lovelace obsługuje `view`:
 - `comfort`;
 - `preconditioning`;
 - `planned-return`;
+- `supply-live`;
 - `diagnostics`.
+
+<a id="supply-live-status-card"></a>
+### Karta bieżącego stanu zasilania
+
+W edytorze wizualnym wybierz widok `supply-live`, a następnie skonfigurowane zasilanie według nazwy. Karta osadza ten sam monitor tylko do odczytu co panel boczny: odczyty backendu, wartości docelowe, histerezę i zapotrzebowanie na ogrzewanie lub chłodzenie, z jednym climate w wierszu i wysokością dostosowaną do zawartości. Subskrybuje aktualizacje na żywo, dopóki jest zamontowana, także poza widocznym obszarem; usunięcie karty zwalnia subskrypcję. Nie zmienia zasilania ani jego reguł.
+
+Edytor zapisuje stabilny wewnętrzny identyfikator zasilania w `supply_id`. W przykładzie zastąp `boiler` identyfikatorem zapisanym przez edytor; nie jest to identyfikator encji `switch.*` ani grupy pomieszczeń. Żadne zasilanie nie jest wybierane automatycznie. Jeśli wybrane zasilanie zostanie usunięte, karta poprosi o wybór innego, zamiast przełączyć się na pierwsze dostępne.
+
+```yaml
+type: custom:velair-card
+view: supply-live
+supply_id: boiler
+supply_show_header: true
+supply_show_connection: true
+supply_show_switch_state: true
+supply_show_room_count: true
+supply_show_legend: true
+supply_show_demand_description: true
+```
+
+Wszystkie sześć opcji wyświetlania ma domyślnie wartość `true`. Ustaw daną opcję na `false`, aby ukryć zwykłą informację. Opcjonalne pole `title` zastępuje domyślny tytuł, gdy nagłówek jest widoczny.
+
+| YAML | Informacja |
+| --- | --- |
+| `supply_show_header` | Nagłówek |
+| `supply_show_connection` | Wskaźnik połączenia na żywo |
+| `supply_show_switch_state` | Stan przełącznika |
+| `supply_show_room_count` | Liczba pomieszczeń zgłaszających zapotrzebowanie |
+| `supply_show_legend` | Legenda wykresu |
+| `supply_show_demand_description` | Zwykły opis zapotrzebowania, np. Szacowane zapotrzebowanie |
+
+Ładowanie, błędy, rozłączenie, zawieszenie, nieznany stan przełącznika lub zapotrzebowania oraz trwające oczekiwanie pozostają widoczne nawet po wyłączeniu wszystkich opcji. Ukrycie zwykłych informacji nie ukrywa warunków wpływających na interpretację odczytów.
 
 <a id="planned-return-card"></a>
 ### Karta Planowanego powrotu
@@ -212,6 +248,10 @@ Użyj `view: climate`, aby wyświetlić kompaktową kartę jednej zarządzanej e
 
 Łączy zgłaszaną temperaturę, wilgotność, HVAC i `hvac_action` z bieżącym sterowaniem Velair. Używa tej samej efektywnej osi dnia, ikony i koloru Profilu co Przegląd. Informacje o Trybie, Profilu, Komforcie, Room Assist i przygotowaniu pojawiają się tylko wtedy, gdy te funkcje są skonfigurowane i mają znaczenie dla bieżącego stanu. Encja zewnętrzna pokazuje dostawcę i publikację zamiast funkcji lokalnych lub działań encji. Opcjonalny jednorazowy powrót steruje domem niezależnie od sterowania wybranej encji.
 
+W przypadku członka grupy karta zachowuje własne odczyty i indywidualny Komfort termostatu, korzystając ze wspólnego sterowania i harmonogramu. Sterowanie temperaturą uwzględnia wspólne granice grupy. Trzeci wiersz nagłówka pokazuje ikonę, nazwę grupy i przycisk informacji pod dotychczasowym stanem, bez zmiany wyrównania ikony trybu. Pomoc wyjaśnia wspólne działania i wymienia członków. Opcja **Pokaż grupę** jest domyślnie włączona (`climate_show_group: true`), niezależnie od wyświetlania nazwy termostatu. Jej wyłączenie ukrywa tylko te informacje. Termostat bez grupy nie pokazuje tego wiersza, nawet gdy opcja jest włączona.
+
+Karty Przegląd, Dzisiejsza oś czasu i Podsumowanie stref ograniczają filtr pojedynczego członka do wybranego termostatu. Wybranie grupy obejmuje wszystkich jej członków.
+
 ```yaml
 type: custom:velair-card
 view: climate
@@ -225,6 +265,7 @@ climate_window_entities:
 climate_window_display: grouped
 climate_room_assist_display: both
 climate_preconditioning_display: both
+climate_show_group: true
 climate_show_control_mode: true
 climate_show_target_control: true
 climate_show_hvac_mode_control: true
@@ -366,7 +407,7 @@ Zachowanie trybu uruchamia wyłączoną encję zakresową w pierwszym zgłaszany
 
 Edytor zakresu pokazuje dolny i górny cel. To wartości przyjmowane przez integrację; Velair nie zakłada, że Auto ma automatyczny pas ogrzewania/chłodzenia jak `heat_cool`. Te same kontrole dotyczą Profili, presetów, Wzmocnienia i kopiowanych lub powiązanych szablonów. Szablony i Presety używają formatów możliwych miejsc docelowych; przy stosowaniu sprawdzane jest każde rzeczywiste miejsce. Gdy Wzmocnienie nie ma użytecznych bieżących granic, podaj obie przed zastosowaniem.
 
-Room Assist i adaptacyjne przygotowanie temperatury obsługują zakresy tylko w `heat_cool`. Zakres w Ogrzewaniu, Chłodzeniu lub Auto jest stosowany nominalnie o zaplanowanej godzinie, bez korekty Room Assist, wcześniejszego startu ani termicznego uczenia. Widoki wyjaśniają ograniczenie. Planowany powrót stosuje cel przy przyjeździe bez wcześniejszego przygotowania.
+Room Assist i adaptacyjne przygotowanie obsługują natywne zakresy `heat_cool` oraz stałe zakresy ogrzewania lub chłodzenia z odniesieniem wybranym w **Ustawienia → Urządzenia klimatyczne i grupy**. Bez wyboru nominalna para obowiązuje o zaplanowanej godzinie bez korekty, wcześniejszego startu i uczenia; Planowany powrót stosuje ją przy przybyciu. Zakresy Auto zachowują ograniczenie.
 
 Edytor pokazuje dodatkowe obsługiwane kontrolki, np. wentylator, preset, oscylację/poziomą i wilgotność AC. Tylko obsługiwane są zapisywane i wysyłane; reszta pomijana.
 
@@ -393,9 +434,13 @@ Dodanie, usunięcie i przesunięcie bloków, zastosowanie szablonu, zmiana rodza
 <a id="target-format-by-climate-and-mode"></a>
 ## Format celu według encji i trybu
 
-Home Assistant zgłasza obsługę pojedynczych temperatur i zakresów, ale nie tabelę zgodności każdego trybu HVAC. W **Ustawienia → Zarządzane encje klimatu** każda encja z oboma formatami ma listę **Tryby z dwiema nastawami**. Zamknięta pokazuje wybrane tryby, a otwarta pozwala je zaznaczać i usuwać. Dostępne są tylko zgłaszane tryby poza Off. Ogrzewanie/chłodzenie jest początkowo wybrane, jeśli dostępne; inne tryby nie są wybierane automatycznie. Pusty wybór jest poprawny. Encje z jednym formatem używają go bez selektora. Pomoc przy etykiecie wyjaśnia ograniczenia. Zmiany przed zastosowaniem przechodzą sprawdzenie niezgodności.
+Home Assistant zgłasza obsługę pojedynczych temperatur i zakresów, ale nie tabelę zgodności każdego trybu HVAC. W **Ustawienia → Urządzenia klimatyczne i grupy** każda encja z oboma formatami ma listę **Tryby z dwiema nastawami**. Zamknięta pokazuje wybrane tryby, a otwarta pozwala je zaznaczać i usuwać. Dostępne są tylko zgłaszane tryby poza Off. Ogrzewanie/chłodzenie jest początkowo wybrane, jeśli dostępne; inne tryby nie są wybierane automatycznie. Pusty wybór jest poprawny. Encje z jednym formatem używają go bez selektora. Pomoc przy etykiecie wyjaśnia ograniczenia. Zmiany przed zastosowaniem przechodzą sprawdzenie niezgodności.
 
 To ustawienie opisuje wysyłanie celów przez Velair, a nie potwierdza przyjmowania i używania obu wartości przez urządzenie. Integracja może odrzucić lub zignorować parametr. Velair zgłasza znane niezgodności przed zapisem i otrzymane błędy dostarczenia. Nie ma automatycznego testu urządzenia ani próbnego przełączania trybów.
+
+Dla trybów z dwiema wartościami **Wartość zadana odniesienia** pojawia się w Ogrzewaniu i Chłodzeniu, także na urządzeniach obsługujących tylko zakresy. Wybierz **Dolna wartość zadana** lub **Górna wartość zadana** zgodnie z urządzeniem. **Nie skonfigurowano** zachowuje wysyłanie harmonogramu, ale wyłącza Room Assist i adaptacyjne przygotowanie tego stałego zakresu. Skonfiguruj raz na urządzenie i tryb; obie funkcje współdzielą wybór backendu, eksportowany i importowany. Zmiana usuwa nieaktualne wspomaganie i obserwacje bez zmiany temperatur harmonogramu ani formatu celu.
+
+Room Assist oblicza histerezę wokół wybranej granicy i przesuwa obie wartości razem, zachowując odstęp w granicach urządzenia. Przygotowanie przewiduje i uczy się z tej granicy w kierunku trybu oraz wysyła wcześniej całą pierwotną parę. `heat_cool` zachowuje dotychczasowe sterowanie pasmem bez selektora. Zakresy `auto` pozostają nieobsługiwane przez te funkcje.
 
 **Domyślny**, strefy w **Profilach**, **Wzmocnienie** i sterowanie klimatem używają tej polityki do pokazania jednego lub dwóch pól jawnego trybu. Zmiana trybów zachowuje oddzielne tymczasowe wersje robocze każdego formatu. Powrót przywraca wartości wpisane podczas tej edycji; brakujące trzeba uzupełnić. Velair nie tworzy zakresu ani nie sprowadza pary do jednej temperatury. Alternatywne szkice nie są zapisywane i znikają po odświeżeniu.
 
@@ -483,11 +528,11 @@ Velair zapisuje wartości związane z temperaturą bez przeliczania, w jednostce
 
 Jednorazowa aktualizacja z opublikowanych wersji Velair zapisujących wyłącznie Celsjusza przebiega inaczej. Jeśli Home Assistant już używa Fahrenheita, Velair bez pytania uznaje dawne dane za zapisane w Celsjuszu, pozostawia harmonogram zatrzymany i kieruje do **Zresetuj Velair**. Reset usuwa dawną konfigurację i atomowo tworzy nowe ustawienia domyślne w Fahrenheitach. Po tej aktualizacji kolejne zmiany jednostki Home Assistant korzystają z pełnego jawnego przeliczenia opisanego wyżej, z zachowaniem danych.
 
-Eksporty przenośnego modelu v22 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v22; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
+Eksporty przenośnego modelu v25 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v25; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
 
 Jeśli urządzenie było niedostępne podczas migracji lub importu, Velair sprawdza jego limity i efektywny krok temperatury po odzyskaniu dostępności. Prawidłowy `target_temp_step` ma pierwszeństwo przed ostatnim zgłoszonym i ręcznym zastępczym. Panel ostrzega o niezgodnych celach do edycji przed użyciem. Pełne zasady w [Jednostkach temperatury i migracji](temperature-units.pl.md).
 
-Przy włączonym Room Assist karta pokazuje kompaktową bieżącą skalę temperatury, gdy aktywny jest zarządzany blok temperatury. Dla pojedynczego celu oznacza temperaturę z harmonogramu, odczyt czujnika pokojowego, nastawę urządzenia i odczyt jego termometru. Neutralny kreskowany pas wskazuje dolną i górną granicę strefy nieczułości. Dla stałego `heat` lub `cool` stan pokazuje również, czy sterowanie zmierza ku dolnej czy górnej granicy; dla pojedynczych celów automatycznych pas pozostaje neutralnym marginesem. Przy natywnym zakresie rozciąga się od dolnej zaplanowanej granicy pomniejszonej o strefę nieczułości do górnej powiększonej o tę strefę. Osobne nawiasy nadal pokazują pełny zakres zaplanowany i zastosowany, a jeden łącznik ich środków wskazuje przesunięcie całego zakresu ze znakiem. Odczyty pokojowy i urządzenia pozostają osobnymi znacznikami.
+Przy włączonym Room Assist karta pokazuje kompaktową bieżącą skalę temperatury, gdy aktywny jest zarządzany blok temperatury. Dla pojedynczego celu oznacza temperaturę z harmonogramu, odczyt czujnika pokojowego, nastawę urządzenia i odczyt jego termometru. Neutralny kreskowany pas wskazuje dolną i górną granicę strefy nieczułości. Dla stałego `heat` lub `cool` stan pokazuje również, czy sterowanie zmierza ku dolnej czy górnej granicy; dla pojedynczych celów automatycznych pas pozostaje neutralnym marginesem. Przy natywnym zakresie rozciąga się od dolnej zaplanowanej granicy pomniejszonej o strefę nieczułości do górnej powiększonej o tę strefę. Osobne nawiasy nadal pokazują pełny zakres zaplanowany i zastosowany, a jeden łącznik ich środków wskazuje przesunięcie całego zakresu ze znakiem. Odczyty pokojowy i urządzenia pozostają osobnymi znacznikami. Dla skonfigurowanego stałego zakresu ogrzewania lub chłodzenia pas oznacza zamiast tego wybraną wartość odniesienia minus i plus strefa nieczułości.
 
 Pełna tłumaczona legenda pozostaje wyśrodkowana względem przedstawionej strefy nieczułości, także gdy pas jest węższy od etykiety. Zerowa strefa usuwa powierzchnię pasa i jest opisana wprost. Ukrycie `show_room_assist_deadband` ukrywa razem ustawienie, pas i legendę. Wartości pochodzą ze stanów Home Assistant i bieżącego stanu Velair; nie są zapisywane jako nowa historia. Bez aktywnego zarządzanego bloku temperatury karta pokazuje oczekiwanie zamiast wartości zastępczych. Jeśli czujnik wybrano, ale wspomaganie jest wyłączone, karta pokazuje, że czujnik jest zapisany, lecz nie bierze udziału w działaniu.
 
@@ -638,13 +683,15 @@ Ustawienia eksportują/importują wersjonowany JSON zawierający:
 - definicje Profili;
 - definicje Trybów.
 
-Bieżące eksporty modelu 22 zachowują oba rodzaje powiązań z szablonem, odwołania do presetów i zależności Nadrzędnego termostatu przygotowania. Odwołania do przyjętych uruchomień nadrzędnego pozostają lokalne i nie są eksportowane. Eksport harmonogramów lub Profili dołącza wymagane szablony i presety, pokazując je jako dodatkowo wybrane sekcje. Import sprawdza całą połączoną konfigurację, także istniejące miejsca użycia zastępowanych wspólnych zasobów. Presety są łączone po stałym kluczu: zgodne klucze zastępują lokalne definicje, a lokalne presety nieobecne w pliku pozostają. Starsze kopie nadal można importować, ale starsze wersje Velair nie importują plików modelu 22. Zobacz [przykład kopii całej konfiguracji](linked-schedule-examples.pl.md#back-up-the-whole-setup). Bieżące eksporty zachowują również polityki formatu celu dla poszczególnych encji klimatu.
+Bieżący model eksportu 25 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 25. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
 
 Podczas importu możesz wybrać sekcje do nadpisania. Import zastępuje wybrane dane, więc najpierw wykonaj eksport, jeśli potrzebujesz punktu odzyskania. Definicje Profili i Trybów są przenośne, ale ich aktywny wybór nie jest. Velair zachowuje aktywne identyfikatory Profili, które nadal istnieją, i wraca do harmonogramów domyślnych tylko wtedy, gdy żaden z nich nie pozostał.
 
 Każdy nowy eksport zapisuje jednostkę temperatury. Przy imporcie pliku z innego systemu jednostek Velair przelicza wybrane wartości temperatury na bieżącą jednostkę Home Assistant. Wartości powiązane z dostępnym urządzeniem są dopasowywane do jego efektywnego kroku nastawy; niezależne wartości korzystają z bezpiecznej precyzji, gdy nie ma wspólnego kroku urządzeń. Ręczny zastępczy krok strefy jest przenośny, ale ostatni krok zaobserwowany w lokalnej encji celowo nie jest eksportowany. Starsze eksporty bez jednostki są wskazywane na ekranie importu i interpretowane jako Celsjusz.
 
-Uczenie adaptacyjnego przygotowania jest dopasowywane po dokładnym identyfikatorze encji klimatu Home Assistant. Dane uczenia urządzeń, którymi Velair obecnie nie zarządza, są pokazane przed importem i pomijane. Dla zgodnych urządzeń importowane uczenie zastępuje istniejącą kalibrację. Historia lokalnych urządzeń nieobecnych w pliku pozostaje bez zmian. Wartości konfiguracji przygotowania są już zawarte w sekcji **Harmonogramy termostatów**. Osobna sekcja **Uczenie przygotowania wstępnego** zawiera lokalną historię kalibracji zgromadzoną podczas działania.
+Uczenie dopasowuje się według dokładnego identyfikatora jednostki sterowania: encji klimatycznej Home Assistant dla niezależnego urządzenia lub stałego wewnętrznego identyfikatora grupy. Niedopasowane dane są pokazywane przed importem i pomijane. Pasujące zastępują kalibrację; lokalne nieobecne w pliku pozostają bez zmian. Historii grup nie rozdziela się między urządzenia. Przed usuwaniem lub rozwiązaniem przeczytaj [Grupy pomieszczeń](room-groups.pl.md#learning-and-membership-changes).
+
+Przywrócenie kopii uczenia grupy przywraca także wymaganą własność grupy i wspólną konfigurację. Sprawdź zależności w podglądzie importu; nie jest to izolowane przywrócenie kalibracji bez wpływu na skład grupy.
 
 <a id="maintenance"></a>
 ## Konserwacja

@@ -29,6 +29,7 @@ const TOPIC_COPY: Record<DocumentationTopic, { title: TranslationKey; summary: T
   manualControl: { title: "externalChangePolicy", summary: "externalChangePolicyDescription" },
   externalSystems: { title: "externalSystems", summary: "externalSystemsDescription" },
   sharedSupply: { title: "sharedDemandTitle", summary: "sharedDemandDescription" },
+  roomGroups: { title: "roomGroups", summary: "roomGroupsDescription" },
 };
 
 function openDocumentationDialog(event: Event) {
@@ -50,7 +51,7 @@ function restoreTriggerFocus(event: Event) {
   if (trigger?.isConnected) trigger.focus();
 }
 
-function handleDialogClick(event: MouseEvent) {
+export function handleDialogClick(event: MouseEvent) {
   event.stopPropagation();
   const dialog = event.currentTarget as HTMLDialogElement;
   if (event.target !== dialog) return;

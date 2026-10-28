@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](adaptive-preconditioning.md) · [Español](adapt
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.5 |
-| Laatst gesynchroniseerd | 2026-10-24 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -29,19 +29,23 @@ Een blok met **Alleen temperatuur** staat geen HVAC-moduswijziging toe. Zolang h
 <a id="setup"></a>
 ## Instellen
 
-Het tabblad **Voorconditionering** bevat adaptieve instellingen en leergegevens per thermostaat. **Geplande terugkeer** heeft een eigen tabblad voor bezetting, wekelijkse aankomsten en de huidige afwezigheid. Beide tabbladen hebben een inleiding en contextuele hulp. De directe paden zijn `/velair/preconditioning` en `/velair/planned-return`. Eerder opgeslagen koppelingen naar onderdelen openen nog steeds het bijbehorende tabblad. Zie [Geplande terugkeer](planned-return.nl.md).
+Het tabblad Voorconditionering bevat adaptieve instellingen en leergegevens per onafhankelijk klimaatapparaat of kamergroep. Groepsleden verschijnen hier als één kamer. Geplande terugkeer heeft een eigen tabblad voor bezetting, wekelijkse aankomsten en huidige afwezigheid. Beide hebben een inleiding en contextuele hulp. De directe paden zijn `/velair/preconditioning` en `/velair/planned-return`. Eerdere onderdeelverwijzingen openen nog steeds het juiste tabblad. Zie [Geplande terugkeer](planned-return.nl.md).
 
-1. Open het tabblad Voorconditionering.
-2. Vouw het gewenste klimaatapparaat uit.
+1. Open Voorconditionering.
+2. Vouw het gewenste klimaatapparaat of de kamergroep uit.
 3. Schakel voorconditionering in.
-4. Laat de standaardinstellingen van het model staan, tenzij je een concrete reden hebt om ze aan te passen.
+4. Behoud de modelstandaarden tenzij je een specifieke reden hebt om ze aan te passen.
 5. Selecteer eventueel een buitentemperatuursensor.
 
-Voorconditionering wordt per klimaatapparaat ingesteld. Verwarmen en koelen hebben afzonderlijke leergegevens: koelwaarnemingen vervangen geen verwarmingswaarnemingen en andersom.
+Voorconditionering wordt per onafhankelijk apparaat of kamergroep ingesteld. Leerdata voor verwarmen en koelen blijft gescheiden; monsters uit de ene richting vervangen de andere niet.
+
+Een [kamergroep](room-groups.nl.md#learning-and-membership-changes) bewaart één thermisch model en neemt één startbeslissing. Leden leren en bereiden niet onafhankelijk voor. De temperatuurreferentie levert de eigen meting, of een ingeschakelde Room Assist-sensor de effectieve kamermeting. Een lid verwijderen herstart leren voor dat lid en de resterende groep. Opheffen begint voor iedereen een onafhankelijke geschiedenis; oude worden niet gesplitst of hersteld. Hernoemen of herschikken behoudt het groepsleren.
 
 Oorspronkelijke `heat_cool`-bereiken worden ondersteund. Als de kamertemperatuur meer dan het minimale temperatuurverschil onder de ondergrens ligt, berekent Velair de voorspelling vanaf die ondergrens en past het volledige bereik eerder toe om te verwarmen. Als de kamer meer dan dat verschil boven de bovengrens ligt, gebeurt hetzelfde vanaf de bovengrens voor koeling. Bij metingen binnen het bereik of binnen de dode band aan de grenzen blijft de normale schematijd gelden. Velair verstuurt altijd beide grenzen en maakt van een bereik nooit één temperatuur.
 
-Een entiteit kan beide grenzen vereisen in Verwarmen, Koelen of Auto zonder `heat_cool` te ondersteunen. Velair kan die doelen plannen en leveren, maar start ze niet vroeg en verzamelt er geen thermische leermonsters voor. De voorbereidingsweergave legt uit dat bereiken voor deze functie Verwarmen/koelen vereisen. Het geplande paar blijft ongewijzigd; Geplande terugkeer past het bij aankomst toe zonder vroege voorbereiding. Voorconditionering inschakelen verandert deze beperking niet.
+Kies voor twee instelpunten in vaste `heat` of `cool` bij **Instellingen → Klimaatapparaten en groepen** het **Referentie-instelpunt** voor apparaat en modus: **Onderste instelpunt** of **Bovenste instelpunt**, afhankelijk van wat het apparaat werkelijk gebruikt. Room Assist deelt deze instelling. Voorbereiding en leren gebruiken alleen die grens als verwarmings- of koeldoel. De modus bepaalt de richting, ook bij bovenste grens voor verwarmen of onderste voor koelen. Velair start het volledige nominale paar vroeg, ook bij Geplande terugkeer, nooit alleen de referentiegrens.
+
+Bij **Niet ingesteld** behouden paren in vaste modi hun geplande tijd en produceren ze geen thermische leermonsters. Geplande terugkeer past ze zonder voorbereiding bij aankomst toe. `auto`-bereiken houden deze beperking: een grens kiezen bepaalt het verwarmings-/koelgedrag niet. Oorspronkelijk `heat_cool` blijft ongewijzigd. Referentiewijzigingen maken leerwaarnemingen met de oude interpretatie ongeldig.
 
 Wanneer je een klimaatapparaat uitvouwt, krijgt elke ondersteunde modus een kaart met een actuele voorspelling. Deze gebruikt dezelfde backendgegevens voor de volgende gebeurtenis als het tabblad Overzicht. Pauzes, tijdelijke aanpassingen, niet-ondersteunde modi en blokken zonder mogelijkheid voor voorconditionering worden daardoor op dezelfde manier afgehandeld. Als er een passend toekomstig blok bestaat, toont de kaart de berekende starttijd, de doeltijd, de voorbereidingstijd, de geplande temperatuur en modus en of Velair het beginmodel of vergelijkbare lokale geschiedenis gebruikt.
 
@@ -89,7 +93,7 @@ Een gelijkblijvend aantal waarnemingen bewijst geen storing. Een overgang kan on
 
 Velair berekent het huidige temperatuurverschil voor het volgende geplande temperatuurblok.
 
-Bij een `heat_cool`-bereik betekent «doeltemperatuur» hieronder de ondergrens bij verwarmen en de bovengrens bij koelen.
+Bij een `heat_cool`-bereik betekent «doeltemperatuur» hieronder de ondergrens bij verwarmen en de bovengrens bij koelen. Bij een vast `heat`- of `cool`-bereik is dit de gekozen referentiegrens, met de richting van de vaste modus.
 
 Voor verwarmen:
 

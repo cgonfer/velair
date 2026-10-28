@@ -6,6 +6,25 @@ from typing import Any
 CONDITIONING_MODES = {"heat", "cool", "auto", "heat_cool"}
 
 
+def validate_range_reference(value: Any) -> dict[str, str]:
+    """Validate the explicit per-mode boundary used for fixed range control."""
+    if not isinstance(value, dict) or any(
+        mode not in ("heat", "cool") or boundary not in ("low", "high")
+        for mode, boundary in value.items()
+    ):
+        raise ValueError("target_range_reference must map heat or cool to low or high")
+    return dict(value)
+
+
+def selected_range_boundary(zone: dict, mode: str | None) -> str | None:
+    """Resolve user-confirmed fixed-mode semantics without inferring auto behavior."""
+    if mode not in ("heat", "cool"):
+        return None
+    reference = zone.get("target_range_reference", {})
+    boundary = reference.get(mode) if isinstance(reference, dict) else None
+    return boundary if boundary in ("low", "high") else None
+
+
 def validate_range_modes(value: Any) -> list[str]:
     """Validate persisted syntax separately from changing entity capabilities."""
     if not isinstance(value, list) or any(

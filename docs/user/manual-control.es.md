@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](manual-control.md) · [Español](manual-cont
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.5 |
-| Última sincronización | 2026-10-24 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -47,6 +47,15 @@ Velair mantiene separados estos conceptos:
 | Pausa o detención global | Todos los equipos | El programador está pausado o desactivado globalmente. |
 
 Estos estados pueden coexistir. Por ejemplo, el Modo **Manual** de Velair puede seleccionar el Perfil `Sleep` mientras `climate.living_room` está en **Ajuste manual**. El Perfil sigue determinando la configuración del horario, pero ese equipo conserva su ajuste externo hasta que termina el ajuste manual.
+
+<a id="room-groups"></a>
+## Grupos de habitación
+
+Para un [grupo de habitación](room-groups.es.md#pauses-manual-adjustment-and-resuming), el alcance por equipo descrito arriba se interpreta como una unidad de control compartida. Ajustes guarda una política de **Ajustes externos** para el grupo. Un cambio externo detectado de un miembro puede ceder el control de programación de toda la habitación; no crea una sesión Manual independiente para ese dispositivo.
+
+Velair conserva el estado actual de cada miembro en lugar de copiar el objetivo modificado a los demás. Con **Hasta el próximo bloque**, todos vuelven a la programación compartida en ese bloque. Reanudar Automático desde cualquier miembro también se resuelve al grupo y aplica su intención actual a los destinatarios configurados, sujeto a los motivos de pausa restantes. Las pausas explícitas de zona y los refuerzos solicitados desde un miembro también pertenecen al grupo completo.
+
+La pestaña de configuración del grupo muestra el estado de control sin botón propio de pausa. Los ajustes de Confort y las observaciones físicas siguen siendo individuales.
 
 <a id="what-velair-observes"></a>
 

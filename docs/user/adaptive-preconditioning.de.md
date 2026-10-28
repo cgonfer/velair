@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.5 |
-| Letzte Synchronisierung | 2026-10-24 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -29,19 +29,23 @@ Ein Block mit **Nur Temperatur** erlaubt keinen HVAC-Moduswechsel. Solange das K
 <a id="setup"></a>
 ## Einrichtung
 
-Der Tab für die Vorkonditionierung enthält adaptive Einstellungen und Lerndaten je Klimagerät. Geplante Rückkehr hat einen eigenen Tab für Anwesenheit, wöchentliche Ankünfte und die aktuelle Abwesenheit. Beide Tabs enthalten eine Einführung und kontextbezogene Hilfe. Die direkten Panelpfade sind `/velair/preconditioning` und `/velair/planned-return`. Frühere Bereichslinks öffnen weiterhin den jeweiligen Tab. Siehe [Geplante Rückkehr](planned-return.de.md).
+Der Tab für die Vorkonditionierung enthält adaptive Einstellungen und Lerndaten für jedes unabhängige Klimagerät oder jede Raumgruppe. Gruppierte Mitglieder erscheinen hier als ein Raum. Geplante Rückkehr hat einen eigenen Tab für Anwesenheit, wöchentliche Ankünfte und die aktuelle Abwesenheit. Beide Tabs enthalten Einführung und kontextbezogene Hilfe. Die direkten Pfade sind `/velair/preconditioning` und `/velair/planned-return`. Frühere Bereichslinks öffnen weiterhin den jeweiligen Tab. Siehe [Geplante Rückkehr](planned-return.de.md).
 
 1. Öffne den Tab für die Vorkonditionierung.
-2. Klappe das gewünschte Klimagerät auf.
+2. Klappe das gewünschte Klimagerät oder die Raumgruppe auf.
 3. Aktiviere die Vorkonditionierung.
-4. Behalte die Standardmodelleinstellungen bei, sofern es keinen konkreten Grund für eine Anpassung gibt.
+4. Behalte die Standardmodelleinstellungen bei, sofern es keinen konkreten Grund zur Anpassung gibt.
 5. Wähle bei Bedarf einen Außentemperatursensor.
 
-Die Vorkonditionierung wird je Klimagerät konfiguriert. Lerndaten für Heizen und Kühlen werden getrennt geführt: Kühlbeispiele ersetzen keine Heizbeispiele und umgekehrt.
+Die Vorkonditionierung wird je unabhängigem Klimagerät oder Raumgruppe konfiguriert. Heiz- und Kühllernen bleiben getrennt; Beispiele einer Richtung ersetzen keine der anderen.
+
+Eine [Raumgruppe](room-groups.de.md#learning-and-membership-changes) speichert ein thermisches Modell und trifft eine Startentscheidung. Mitglieder lernen und bereiten nicht unabhängig vor. Die Temperaturreferenz liefert den eigenen Messwert; ein aktivierter Room-Assist-Sensor liefert den wirksamen Raummesswert. Entfernen startet das Lernen für das Mitglied und die verbleibende Gruppe neu. Auflösen beginnt unabhängige Verläufe für alle; alte werden weder aufgeteilt noch wiederhergestellt. Umbenennen und Umordnen erhalten das Gruppenlernen.
 
 Native `heat_cool`-Bereiche werden unterstützt. Liegt der Raum um mehr als die minimale Temperaturdifferenz unter der unteren Zielgrenze, berechnet Velair die Vorhersage anhand dieser Grenze und startet den vollständigen Bereich zum Heizen frühzeitig. Liegt der Raum um mehr als diese Differenz über der oberen Zielgrenze, verwendet Velair die obere Grenze und startet den vollständigen Bereich zum Kühlen frühzeitig. Bei Messwerten innerhalb des Bereichs oder des Totbands an seinen Grenzen bleibt die normale Zeitplanzeit erhalten. Velair sendet immer beide Bereichsgrenzen und reduziert einen Bereich niemals auf eine einzelne Temperatur.
 
-Eine Entität kann auch in Heizen, Kühlen oder Auto beide Grenzen benötigen, ohne `heat_cool` zu unterstützen. Velair kann diese Ziele planen und übertragen, startet sie aber nicht früher und sammelt dafür keine thermischen Lernproben. Die Vorbereitungsansicht erklärt, dass Bereiche für diese Funktion Heizen/Kühlen benötigen. Das geplante Wertepaar bleibt unverändert; Geplante Rückkehr wendet es bei Ankunft ohne frühzeitige Vorbereitung an. Auch aktivierte Vorkonditionierung hebt diese Einschränkung nicht auf.
+Für zwei Sollwerte in festem `heat` oder `cool` wähle unter **Einstellungen → Klimageräte und Gruppen** den **Referenzsollwert** für Gerät und Modus: **Unterer Sollwert** oder **Oberer Sollwert**, je nachdem, welchen das Gerät tatsächlich nutzt. Room Assist teilt diese Einstellung. Heizvorbereitung und Lernen nutzen nur die gewählte Grenze als Heizsollwert, Kühlung als Kühlsollwert. Der Modus bestimmt die Richtung, auch bei oberer Heiz- oder unterer Kühlgrenze. Velair sendet das vollständige nominelle Paar frühzeitig, auch bei geplanter Rückkehr, niemals nur die Referenzgrenze.
+
+Bei **Nicht konfiguriert** behalten Festmoduspaarungen ihre geplante Zeit und erzeugen keine thermischen Lernproben. Geplante Rückkehr wendet sie ohne Vorlauf bei Ankunft an. `auto`-Bereiche behalten diese Einschränkung, da die Grenzwahl das Heiz-/Kühlverhalten nicht bestimmt. Natives `heat_cool` bleibt unverändert. Referenzänderungen verwerfen mit der alten Interpretation gestartete Lernbeobachtungen.
 
 Beim Aufklappen eines Klimageräts erscheint für jeden unterstützten Modus eine Karte mit der aktuellen Vorhersage. Sie verwendet dieselben Backend-Daten zum nächsten Ereignis wie die Übersicht. Pausen, temporäre Anpassungen, nicht unterstützte Modi und Blöcke, die nicht vorkonditioniert werden können, werden dadurch einheitlich berücksichtigt. Existiert ein passender zukünftiger Block, zeigt die Karte den berechneten Start, die Zielzeit, den Vorlauf, die geplante Temperatur und den Modus. Außerdem zeigt sie, ob Velair das Anfangsmodell oder ähnliche lokale Verlaufsdaten verwendet.
 
@@ -89,7 +93,7 @@ Eine unveränderte Stichprobenzahl belegt keinen Defekt. Ein Übergang liefert m
 
 Velair berechnet die aktuelle Temperaturdifferenz für den nächsten geplanten Temperaturblock.
 
-Bei einem `heat_cool`-Bereich bezeichnet „Zieltemperatur“ im Folgenden die untere Grenze beim Heizen und die obere Grenze beim Kühlen.
+Bei einem `heat_cool`-Bereich bezeichnet „Zieltemperatur“ im Folgenden die untere Grenze beim Heizen und die obere Grenze beim Kühlen. Bei einem festen `heat`- oder `cool`-Bereich ist es die gewählte Referenzgrenze; die Richtung bestimmt der feste Modus.
 
 Beim Heizen:
 

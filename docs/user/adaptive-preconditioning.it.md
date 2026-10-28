@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](ad
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.5 |
-| Ultima sincronizzazione | 2026-10-24 |
+| Versione di riferimento | 1.9.0-beta.6 |
+| Ultima sincronizzazione | 2026-10-28 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -30,19 +30,23 @@ Il precondizionamento adattivo viene eseguito localmente in Home Assistant. Vela
 <a id="setup"></a>
 ## Configurazione
 
-La scheda **Precondizionamento** contiene le impostazioni adattive e l’apprendimento per ogni dispositivo. **Ritorno programmato** ha una scheda dedicata a presenza, arrivi settimanali e assenza attuale. Entrambe includono un’introduzione e aiuti contestuali. I percorsi diretti sono `/velair/preconditioning` e `/velair/planned-return`. I collegamenti alle precedenti sottosezioni continuano ad aprire la scheda corrispondente. Consulta [Rientro pianificato](planned-return.it.md).
+La scheda Precondizionamento contiene impostazioni adattive e apprendimento per ogni dispositivo indipendente o gruppo stanza. I membri raggruppati compaiono qui come una sola stanza. Ritorno programmato ha una scheda dedicata a presenza, arrivi settimanali e assenza attuale. Entrambe includono introduzione e aiuto contestuale. I percorsi diretti sono `/velair/preconditioning` e `/velair/planned-return`. I vecchi collegamenti aprono ancora la scheda corrispondente. Vedi [Ritorno programmato](planned-return.it.md).
 
-1. Apri la scheda di precondizionamento.
-2. Espandi il dispositivo climatico da configurare.
+1. Apri la scheda Precondizionamento.
+2. Espandi il dispositivo o gruppo da configurare.
 3. Abilita il precondizionamento.
-4. Mantieni le impostazioni predefinite del modello, salvo un motivo preciso per modificarle.
-5. Se vuoi, seleziona un sensore di temperatura esterna.
+4. Mantieni le impostazioni predefinite salvo un motivo specifico per cambiarle.
+5. Seleziona facoltativamente un sensore esterno.
 
-Il precondizionamento viene configurato per ciascun dispositivo climatico. L’apprendimento di riscaldamento e raffrescamento è separato: i campioni di raffrescamento non sostituiscono quelli di riscaldamento e viceversa.
+Il precondizionamento si configura per dispositivo indipendente o gruppo stanza. Gli apprendimenti di riscaldamento e raffrescamento sono separati: i campioni di una direzione non sostituiscono quelli dell’altra.
 
-Sono supportati gli intervalli nativi `heat_cool`. Se la stanza è sotto l’obiettivo inferiore di più del delta minimo di temperatura, Velair calcola la previsione dal limite inferiore e avvia anticipatamente l’intero intervallo per riscaldare. Se la stanza è sopra l’obiettivo superiore di più di quel delta, calcola la previsione dal limite superiore e avvia anticipatamente l’intero intervallo per raffrescare. Le letture all’interno dell’intervallo o delle fasce di tolleranza dei limiti mantengono il normale orario programmato. Velair invia sempre entrambi i limiti; non riduce mai un intervallo a una sola temperatura.
+Un [gruppo stanza](room-groups.it.md#learning-and-membership-changes) salva un modello termico e decide un solo avvio; i membri non apprendono né si preparano indipendentemente. Il riferimento fornisce la misura nativa, oppure un sensore Room Assist abilitato fornisce la misura effettiva della stanza. Rimuovere un membro azzera l’apprendimento di quel membro e del gruppo restante. Sciogliere il gruppo avvia storici indipendenti per tutti; quelli precedenti non vengono divisi né ripristinati. Rinominare o riordinare conserva l’apprendimento.
 
-Un’entità può richiedere entrambi i limiti in Caldo, Freddo o Auto senza supportare `heat_cool`. Velair può programmare e inviare questi obiettivi, ma non li anticipa né raccoglie campioni di apprendimento termico per essi. La vista di preparazione spiega che questa funzione richiede Caldo/Freddo per gli intervalli. La coppia programmata resta invariata e Ritorno programmato la applica all’arrivo senza preparazione anticipata. Abilitare il precondizionamento non elimina questa limitazione.
+Sono supportati gli intervalli nativi `heat_cool`. Sotto l’obiettivo inferiore di più del Delta minimo di temperatura, Velair calcola da quel limite e applica in anticipo l’intero intervallo per riscaldare. Sopra l’obiettivo superiore di più di quel delta, calcola dal limite superiore per raffrescare. Dentro l’intervallo o le bande morte dei limiti mantiene l’orario normale. Velair invia sempre entrambi i limiti, senza ridurre l’intervallo a una sola temperatura.
+
+Per due setpoint in `heat` o `cool` fisso, seleziona **Setpoint di riferimento** per dispositivo e modalità in **Impostazioni → Dispositivi e gruppi**. Scegli il limite realmente usato: **Setpoint inferiore** o **Setpoint superiore**. Room Assist condivide questa impostazione. Preparazione e apprendimento usano solo quel limite come obiettivo di riscaldamento o raffrescamento secondo la modalità, anche se scegli il limite superiore per scaldare o quello inferiore per raffrescare. Velair anticipa la coppia nominale completa, anche per Ritorno programmato; non invia mai solo il limite scelto.
+
+Con **Non configurato**, le coppie in modalità fissa mantengono l’orario e non producono campioni termici. Ritorno programmato le applica all’arrivo senza anticipo. Gli intervalli `auto` conservano questa limitazione perché scegliere un limite non definisce il comportamento di riscaldamento o raffrescamento. Il comportamento nativo `heat_cool` non cambia. Cambiare riferimento invalida le osservazioni iniziate con l’interpretazione precedente.
 
 Quando espandi un dispositivo climatico, ogni modalità supportata mostra una scheda di previsione in tempo reale. Usa gli stessi dati backend del prossimo evento della panoramica, gestendo in modo coerente pause, incrementi, modalità non supportate e blocchi che non possono essere precondizionati. Quando esiste un blocco futuro corrispondente, la scheda mostra l’orario di avvio calcolato, l’orario obiettivo, l’anticipo, temperatura e modalità programmate e se Velair usa il modello iniziale o una cronologia locale simile.
 
@@ -91,6 +95,8 @@ Un numero di campioni invariato non dimostra un guasto. Una transizione può non
 Velair calcola la differenza di temperatura attuale per il prossimo blocco di temperatura programmato.
 
 Per un intervallo `heat_cool`, «temperatura obiettivo» qui sotto indica il limite inferiore durante il riscaldamento e quello superiore durante il raffrescamento.
+
+Per un intervallo fisso `heat` o `cool`, indica il limite di riferimento selezionato, con la direzione determinata dalla modalità fissa.
 
 Per il riscaldamento:
 

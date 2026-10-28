@@ -1,10 +1,11 @@
+import { controlUnitState } from "../domain/control-units";
 import { LitElement, css, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import type { TemplateResult } from "lit";
 import { VelairApiClient } from "../api/client";
 import type { VelairViewHost } from "../host-types";
-import type { DraftScheduleBlock, ScheduleBlock, ScheduleResponse, TargetRangePolicyCorrections, TargetRangePolicyDestination, TargetRangePolicyPreview } from "../types";
+import type { DraftScheduleBlock, ScheduleBlock, ScheduleResponse, TargetRangeReference, TargetRangePolicyCorrections, TargetRangePolicyDestination, TargetRangePolicyPreview } from "../types";
 import { cardStyles } from "../styles/card-styles";
 import { draftBlockTemperatureError, draftBlocksFromScheduleBlocks, normalizeDraftBlocks } from "../domain/draft-blocks";
 import { changeDraftTargetFormat, carryTargetDraft, targetFormatsForPolicy } from "../domain/target-format-policy";
@@ -34,6 +35,7 @@ export class VelairTargetRangeSettings extends LitElement {
   @state() private _reviewPage = 0;
   @state() private _busy = false;
   @state() private _error = "";
+  @state() private _referenceError?: { entityId: string; message: string };
   private _revision = 0;
   private _checkedCorrections = "";
   private _previewDrafts = new Map<string, string>();
@@ -43,6 +45,16 @@ export class VelairTargetRangeSettings extends LitElement {
     .checkbox-label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-inline-end: 16px; }
     .checkbox-label input { width: auto; }
     .target-range-review p { overflow-wrap: anywhere; }
+    .target-range-reference { min-width: 0; display: grid; gap: 4px; }
+    .target-range-reference-controls { align-self: start; display: grid; gap: 8px; min-width: 0; }
+    .settings-target-range-controls { align-self: start; display: grid; gap: 4px; min-width: 0; }
+    .target-range-reference label { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+    .target-range-reference label > span:first-child { max-width: 100%; overflow-wrap: anywhere; }
+    .target-range-mode-label { color: var(--secondary-text-color); font-size: 12px; font-weight: 400; }
+    .target-range-reference .select-wrap { flex: 1 1 12rem; min-width: 0; margin-top: 0; }
+    .target-range-reference select { width: 100%; height: 44px; font-size: 12px; }
+    .target-range-reference p { margin: 0; overflow-wrap: anywhere; color: var(--secondary-text-color); }
+
   `];
 
   private _selectMode(entityId: string, mode: string, checked: boolean): void {
@@ -308,6 +320,52 @@ export class VelairTargetRangeSettings extends LitElement {
     }
   }
 
+  private async _saveReference(entityId: string, mode: "heat" | "cool", value: string): Promise<void> {
+    if (!this.host?.hass || this._busy || this.host._settingsSaving || this._modes) return;
+    const reference: TargetRangeReference = { ...this.data?.zones[entityId]?.target_range_reference };
+    if (value === "low" || value === "high") reference[mode] = value;
+    else delete reference[mode];
+    this._busy = true; this._referenceError = undefined;
+    try {
+      const data = await new VelairApiClient(this.host.hass).updateZoneRangeReference({
+        entity_id: entityId, target_range_reference: reference,
+        expected_revision: this.data?.configuration_revision ?? 0,
+      });
+      this.host._applyScheduleData(data);
+      this.data = data;
+    } catch (error) {
+      this._referenceError = { entityId, message: error instanceof Error ? error.message : String(error) };
+    } finally { this._busy = false; }
+  }
+
+  private _referenceControl(entityId: string) {
+    const host = this.host!;
+    const zone = this.data?.zones[entityId];
+    const modes = (["heat", "cool"] as const).filter((mode) => zone?.target_format_policy?.formats_by_mode[mode] === "range");
+    if (!modes.length) return nothing;
+    const disabled = this._busy || host._settingsSaving || Boolean(this._modes);
+    return html`<div class="target-range-reference">
+      <span class="settings-policy-heading"><span class="label">${host._t("targetRangeReference")}</span>${renderInlineHelp(`target-range-reference-${entityId.replace(/[^a-z0-9_-]/gi, "-")}`, host._t("targetRangeReference"), host._t("targetRangeReferenceHelp"))}</span>
+      <div class="target-range-reference-controls">${modes.map((mode) => {
+        const value = zone?.target_range_reference?.[mode] ?? "";
+        return html`<label><span class="target-range-mode-label">${host._modeLabel(mode)}</span><span class="select-wrap"><select
+          data-range-reference-mode=${mode} aria-label=${`${host._modeLabel(mode)}: ${host._t("targetRangeReference")}`}
+          .value=${value} ?disabled=${disabled} @change=${(event: Event) => {
+            const input = event.currentTarget as HTMLSelectElement;
+            const selected = input.value;
+            input.value = value;
+            void this._saveReference(entityId, mode, selected);
+          }}>
+          <option value="" ?selected=${!value}>${host._t("targetRangeReferenceUnconfigured")}</option>
+          <option value="low" ?selected=${value === "low"}>${host._t("targetRangeReferenceLow")}</option>
+          <option value="high" ?selected=${value === "high"}>${host._t("targetRangeReferenceHigh")}</option>
+        </select></span></label>`;
+      })}
+      ${this._referenceError?.entityId === entityId ? html`<p class="error" role="alert">${this._referenceError.message}</p>` : nothing}
+      </div>
+    </div>`;
+  }
+
   private _policyControl(entityId: string) {
     const host = this.host!;
     const policy = this.data?.zones[entityId]?.target_format_policy;
@@ -327,7 +385,7 @@ export class VelairTargetRangeSettings extends LitElement {
       : host._t("targetRangeModesSeveral", { mode: first, count: selected.length - 1 }) : first;
     return html`<div class="settings-target-range-modes">
       <div class="settings-policy-heading"><span class="label" id=${labelId}>${host._t("targetRangeModes")}</span>${renderInlineHelp(`${labelId}-help`, host._t("targetRangeModes"), host._t("targetRangePolicyHelp"))}</div>
-      <details class="target-range-dropdown select-wrap" data-target-range-entity=${entityId} .open=${this._openEntity === entityId}
+      <div class="settings-target-range-controls"><details class="target-range-dropdown select-wrap" data-target-range-entity=${entityId} .open=${this._openEntity === entityId}
         @keydown=${(event: KeyboardEvent) => this._dropdownKey(event, entityId)}>
         <summary class="target-range-trigger" role="button" aria-label=${`${host._t("targetRangeModes")}: ${selected.map((mode) => host._modeLabel(mode)).join(", ") || first}`} aria-expanded=${String(this._openEntity === entityId)} aria-controls=${`${labelId}-options`} aria-disabled=${String(Boolean(busy))} title=${selected.map((mode) => host._modeLabel(mode)).join(", ") || first}
           @click=${(event: Event) => { event.preventDefault(); if (!busy) this._openEntity = this._openEntity === entityId ? "" : entityId; }}>
@@ -340,7 +398,7 @@ export class VelairTargetRangeSettings extends LitElement {
             input.checked = (this._entityId === entityId && this._modes ? this._modes : policy.configured_modes ?? policy.range_modes).includes(mode);
           }}><span>${host._modeLabel(mode)}</span></label>`)}
         </div>
-      </details>${diagnostic}
+      </details>${diagnostic}</div>
     </div>`;
   }
 
@@ -485,7 +543,7 @@ export class VelairTargetRangeSettings extends LitElement {
     if (!this.host || !this.data) return nothing;
     const entityIds = this.zoneIds ?? Object.keys(this.data.zones);
     return html`<div class="settings-zone-list">${repeat(entityIds, (entityId) => entityId, (entityId, index) => {
-      const control = this._policyControl(entityId);
+      const control = html`${this._policyControl(entityId)}${this._referenceControl(entityId)}`;
       const review = this._entityId === entityId ? this._renderReview() : nothing;
       return this.renderRow ? this.renderRow(entityId, index, entityIds.length, control, review, this._busy)
         : html`<div class="settings-zone-row"><strong>${this.host!._friendlyEntityName(entityId)}</strong>${control}${review}</div>`;

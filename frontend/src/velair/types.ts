@@ -1,4 +1,6 @@
 export type HassConnection = {
+  addEventListener?(event: string, callback: () => void): void;
+  removeEventListener?(event: string, callback: () => void): void;
   sendMessagePromise<T>(message: Record<string, unknown>): Promise<T>;
   subscribeMessage<T>(
     callback: (message: T) => void,
@@ -77,6 +79,13 @@ export type ClimateCardAction =
   | ({ type: "script" } & ClimateCardCustomAction);
 
 export type VelairCardConfig = {
+  supply_id?: string;
+  supply_show_header?: boolean;
+  supply_show_connection?: boolean;
+  supply_show_switch_state?: boolean;
+  supply_show_room_count?: boolean;
+  supply_show_legend?: boolean;
+  supply_show_demand_description?: boolean;
   active_setup_controls?: ActiveSetupControls;
   climate_name?: string;
   climate_actions?: ClimateCardAction[];
@@ -100,6 +109,7 @@ export type VelairCardConfig = {
   climate_show_current_humidity?: boolean;
   climate_show_current_temperature?: boolean;
   climate_show_name?: boolean;
+  climate_show_group?: boolean;
   climate_show_operation?: boolean;
   climate_show_outdoor_temperature?: boolean;
   climate_show_preconditioning?: boolean;
@@ -154,7 +164,7 @@ export type VelairPanelRoute = {
   prefix?: string;
 };
 
-export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "supply-control" | "sensors" | "comfort" | "preconditioning" | "planned-return" | "diagnostics" | "settings";
+export type VelairPanelView = "overview" | "modes" | "schedules" | "templates" | "room-groups" | "supply-control" | "sensors" | "comfort" | "preconditioning" | "planned-return" | "diagnostics" | "settings";
 export type VelairOverviewCardView =
   | "overview-status"
   | "active-setup"
@@ -164,7 +174,16 @@ export type VelairOverviewCardView =
   | "overview-zones";
 // `profiles` remains accepted as a legacy panel/card route. New navigation
 // exposes Profiles through the Schedules workspace and uses `modes` here.
-export type VelairCardView = VelairPanelView | VelairOverviewCardView | "climate" | "profiles" | "planned-return";
+export type VelairCardView = VelairPanelView | VelairOverviewCardView | "climate" | "profiles" | "planned-return" | "supply-live";
+
+export type SharedDemandLiveVisibility = {
+  header?: boolean;
+  connection?: boolean;
+  switchState?: boolean;
+  roomCount?: boolean;
+  legend?: boolean;
+  demandDescription?: boolean;
+};
 
 export type ScheduleBlock = {
   preset_key?: string;
@@ -547,7 +566,7 @@ export type RoomSensorAssistStatus = {
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;
-  reason?: "missing_target_step" | "unsupported_temperature_range" | "unsupported_range_mode" | null;
+  reason?: "missing_target_step" | "unsupported_temperature_range" | "unsupported_range_mode" | "range_reference_not_configured" | null;
   room_temperature_entity_id?: string | null;
   target_temperature?: number | null;
   target_temp_low?: number | null;
@@ -562,6 +581,8 @@ export type RoomSensorAssistStatus = {
   climate_temperature?: number | null;
   applied_offset?: number | null;
   range_shift?: number | null;
+  target_boundary?: "low" | "high" | null;
+  effective_hvac_mode?: string | null;
   limited_by?: "minimum" | "maximum" | null;
   limit_temperature?: number | null;
   requested_temperature?: number | null;
@@ -587,6 +608,7 @@ export type RoomSensorAssistStatus = {
 
 export type ScheduleZone = {
   target_range_modes?: string[];
+  target_range_reference?: TargetRangeReference;
   target_format_policy?: TargetFormatPolicy;
   day_layout_key?: string;
   template_links?: Record<string, TemplateLink>;
@@ -606,6 +628,8 @@ export type ScheduleZone = {
   last_reported_target_temp_step?: number;
   execution?: { type: "external"; provider: string };
 };
+
+export type TargetRangeReference = Partial<Record<"heat" | "cool", "low" | "high">>;
 
 export type TargetFormat = "single" | "range";
 export type TargetFormatPolicy = {
@@ -815,22 +839,58 @@ export type SharedSupply = {
   hysteresis_mode?: "at_target" | "symmetric" | "custom";
   hysteresis_stop?: number;
   minimum_off_seconds: number;
+  on_delay_seconds?: number;
   off_delay_seconds: number;
   zones: Record<string, { hysteresis?: number; hysteresis_stop?: number }>;
   suspended: boolean;
+  suspension_reason?: "external_off" | "imported" | null;
+};
+
+export type SharedDemandZoneStatus = {
+  demand?: boolean | null;
+  source?: string;
+  reason?: string | null;
+  temperature?: number;
+  target?: number;
+  temperature_unit?: string;
+  sensor_entity_id?: string | null;
+  start_temperature?: number;
+  stop_temperature?: number;
 };
 
 export type SharedDemandStatus = {
   status: string;
   enabled?: boolean;
   suspended?: boolean;
+  suspension_reason?: "external_off" | "imported" | null;
   demand?: boolean;
   output_state?: string;
-  zones?: Record<string, { demand?: boolean | null; source?: string; reason?: string }>;
+  pending_until?: string | null;
+  zones?: Record<string, SharedDemandZoneStatus>;
   [key: string]: unknown;
 };
 
+export type RoomGroup = {
+  id: string;
+  name: string;
+  members: string[];
+  temperature_entity_id: string;
+  delivery_mode: "all" | "selected";
+  delivery_entity_id?: string;
+};
+
+export type RoomGroupPreview = {
+  group: RoomGroup;
+  source_entity_id?: string;
+  conflicts: Array<{ entity_id: string; fields: string[] }>;
+  removed_members: string[];
+  learning_reset: boolean;
+  temporary_control_reset?: boolean;
+  configuration_revision: number;
+};
+
 export type PanelSettings = {
+  unit_order?: string[];
   first_weekday: string;
   zone_order: string[];
   min_temperature?: number;
@@ -979,6 +1039,11 @@ export type ScheduleResponse = {
   profile_id?: string;
   mode_id?: string;
   configured_entities: string[];
+  control_units?: string[];
+  room_groups?: Record<string, RoomGroup>;
+  member_to_unit?: Record<string, string>;
+  control_unit_states?: Record<string, HassState>;
+  group_delivery_status?: Record<string, Record<string, { status: "success" | "failed"; message?: string }>>;
   temperature_unit: "°C" | "°F";
   home_assistant_temperature_unit: "°C" | "°F";
   temperature_migration: {
@@ -1018,6 +1083,7 @@ export type ScheduleResponse = {
   active_overrides: Record<string, Record<string, unknown>>;
   room_sensor_assist?: Record<string, RoomSensorAssistStatus>;
   comfort?: Record<string, ComfortAssessment>;
+  comfort_settings?: Record<string, ComfortSettings>;
   zone_runtime?: Record<string, ZoneRuntimeStatus>;
   preconditioning_learning?: Record<string, PreconditioningLearningSummary>;
   diagnostics?: DiagnosticsSnapshot;
@@ -1045,6 +1111,7 @@ export type ScheduleUpdateMessage = {
 };
 
 export type PortableSection =
+  | "room_groups"
   | "planned_return"
   | "block_presets"
   | "zones"
@@ -1059,7 +1126,10 @@ export type VelairPortablePayload = {
   model_version?: number;
   temperature_unit?: "°C" | "°F";
   exported_at?: string;
-  sections?: Partial<Record<PortableSection, unknown>>;
+  sections?: Partial<Record<PortableSection, unknown>> & {
+    /** Backend-owned dependency of grouped configuration, not a separate UI option. */
+    member_comfort?: Record<string, ComfortSettings>;
+  };
 };
 
 export type EntityDiagnostic = {

@@ -432,3 +432,32 @@ it("uses configured mixed-mode formats in Boost and native manual adjustment", a
   await card._adjustClimateCardTarget(entityId, "target_temp_low", 1);
   expect(callService).toHaveBeenCalledWith("climate", "set_temperature", { entity_id: entityId, target_temp_low: 19.5, target_temp_high: 24 });
 });
+
+  it("routes member manual actions through the shared Velair control including the shared HVAC off action", async () => {
+    const callService = vi.fn().mockResolvedValue(undefined);
+    const card = document.createElement("velair-climate-card-actions-test") as VelairCard & Record<string, any>;
+    const entityId = "climate.valve";
+    card.hass = { callService, states: { [entityId]: { state: "heat", attributes: {
+      temperature: 21, min_temp: 7, max_temp: 35, target_temp_step: .5, hvac_modes: ["off", "heat", "cool"],
+    } } } } as never;
+    card["_data"] = {
+      configured_entities: [entityId], room_groups: { "group.room": { members: [entityId] } },
+      member_to_unit: { [entityId]: "group.room" }, zones: { "group.room": { enabled: true } },
+      control_unit_states: { "group.room": { state: "heat", attributes: { hvac_modes: ["off", "heat"], min_temp: 7, max_temp: 30, target_temp_step: .5 } } },
+      zone_runtime: { "group.room": { state: "scheduled", control_mode: "manual" } },
+    };
+    await card["_adjustClimateCardTarget"](entityId, "temperature", 1);
+    await card["_setClimateCardHvacMode"](entityId, "cool");
+    await card["_setClimateCardHvacMode"](entityId, "off");
+    expect(callService).toHaveBeenNthCalledWith(1, "velair", "set_temperature", { entity_id: entityId, temperature: 21.5 });
+    expect(callService).toHaveBeenNthCalledWith(2, "velair", "set_hvac_mode", { entity_id: entityId, hvac_mode: "off" });
+    expect(callService).toHaveBeenCalledTimes(2);
+    card.hass!.states[entityId].attributes.temperature = 30;
+    await card["_adjustClimateCardTarget"](entityId, "temperature", 1);
+    expect(callService).toHaveBeenCalledTimes(2);
+    await card["_adjustClimateCardTarget"](entityId, "temperature", -1);
+    expect(callService).toHaveBeenLastCalledWith("velair", "set_temperature", { entity_id: entityId, temperature: 29.5 });
+    card.hass!.states[entityId].attributes.temperature = 7;
+    await card["_adjustClimateCardTarget"](entityId, "temperature", -1);
+    expect(callService).toHaveBeenCalledTimes(3);
+  });

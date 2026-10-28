@@ -5,14 +5,38 @@ import {
   climateCardRuntimeBlocksThermostat,
   climateCardTarget,
   climateCardTargetPayload,
+  climateCardControlState,
 } from "../../src/velair/domain/climate-card-controls";
-import type { HassState } from "../../src/velair/types";
+import type { HassState, HomeAssistant, ScheduleResponse } from "../../src/velair/types";
 
 function state(attributes: Record<string, unknown>, mode = "heat"): HassState {
   return { state: mode, attributes } as HassState;
 }
 
 describe("climate card thermostat controls", () => {
+  it.each(["heat", "cool"])("uses shared bounds with the physical member's current target in %s", mode => {
+    const member = state({ temperature: 30, min_temp: 5, max_temp: 35, current_temperature: 19, supported_features: 1 }, mode);
+    const data = { member_to_unit: { "climate.a": "group.room" }, room_groups: { "group.room": {} }, control_unit_states: { "group.room": state({ temperature: 21, min_temp: 7, max_temp: 30, target_temp_step: .5 }, mode) } } as unknown as ScheduleResponse;
+    const hass = { states: { "climate.a": member } } as unknown as HomeAssistant;
+    const effective = climateCardControlState(data, hass, "climate.a");
+    expect(effective?.attributes.current_temperature).toBe(19);
+    expect(effective?.attributes.temperature).toBe(30);
+    expect(climateCardTargetPayload(effective, "temperature", 1, "°C", .5)).toBeUndefined();
+    expect(climateCardTargetPayload(effective, "temperature", -1, "°C", .5)).toEqual({ temperature: 29.5 });
+    member.attributes.temperature = 7;
+    expect(climateCardTargetPayload(climateCardControlState(data, hass, "climate.a"), "temperature", -1, "°C", .5)).toBeUndefined();
+    expect(climateCardControlState(undefined, hass, "climate.a")).toBe(member);
+    delete data.control_unit_states;
+    expect(climateCardTargetPayload(climateCardControlState(data, hass, "climate.a"), "temperature", 1, "°C", .5)).toBeUndefined();
+  });
+  it.each(["heat", "cool", "heat_cool"])("does not send an unchanged range boundary outside shared bounds in %s", mode => {
+    const member = state({ target_temp_low: 7, target_temp_high: 30, min_temp: 7, max_temp: 30, supported_features: 2, hvac_modes: [mode] }, mode);
+    expect(climateCardTargetPayload(member, "target_temp_low", -1, "°C", .5)).toBeUndefined();
+    expect(climateCardTargetPayload(member, "target_temp_high", 1, "°C", .5)).toBeUndefined();
+    expect(climateCardTargetPayload(member, "target_temp_low", 1, "°C", .5)).toEqual({ target_temp_low: 7.5, target_temp_high: 30 });
+    expect(climateCardTargetPayload({ ...member, attributes: { ...member.attributes, target_temp_high: 35 } }, "target_temp_low", 1, "°C", .5)).toBeUndefined();
+    expect(climateCardTargetPayload({ ...member, attributes: { ...member.attributes, target_temp_low: 5 } }, "target_temp_high", -1, "°C", .5)).toBeUndefined();
+  });
   it("uses only a fully published target grid and aligns scalar adjustments to it", () => {
     const climate = state({ temperature: 20.3, min_temp: 7, max_temp: 35, target_temp_step: 0.5 });
     expect(climateCardPublishedTemperatureGrid(climate)).toEqual({ minimum: 7, maximum: 35, step: 0.5 });

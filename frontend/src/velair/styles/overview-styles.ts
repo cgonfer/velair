@@ -326,6 +326,7 @@ ${plannedReturnDepartureStatusStyles}
 
 .overview-timeline-layout {
   --overview-timeline-name-column: 168px;
+  --overview-timeline-row-gap: 8px;
   display: grid;
   grid-template-columns: var(--overview-timeline-name-column) minmax(480px, 1fr);
   min-width: calc(var(--overview-timeline-name-column) + 480px);
@@ -334,7 +335,7 @@ ${plannedReturnDepartureStatusStyles}
 .overview-timeline-names,
 .overview-timeline-rows {
   display: grid;
-  gap: 8px;
+  gap: var(--overview-timeline-row-gap);
   grid-auto-rows: 34px;
   min-width: 0;
 }
@@ -440,6 +441,8 @@ ${plannedReturnDepartureStatusStyles}
   border-bottom: 1px solid var(--divider-color);
   display: flex;
   gap: 6px;
+  /* Put separators halfway between tracks so both text lines have breathing room. */
+  margin-block: calc(var(--overview-timeline-row-gap) / -2);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -463,7 +466,10 @@ ${plannedReturnDepartureStatusStyles}
   line-height: 1;
 }
 
-.overview-timeline-name .overview-climate-name { align-items: center; display: inline-flex; height: 100%; line-height: 1.2; }
+.overview-climate-identity { display: grid; align-content: center; gap: 2px; min-width: 0; }
+.overview-group-subtitle { color: var(--secondary-text-color); font-size: 12px; font-weight: 400; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overview-timeline-name .overview-climate-identity { flex: 1; }
+.overview-timeline-name .overview-climate-name { display: block; line-height: 1.2; }
 
 .overview-timeline-name.paused {
   color: var(--secondary-text-color);
@@ -790,9 +796,11 @@ ${plannedReturnDepartureStatusStyles}
 .manual-control-segmented button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -3px; position: relative; z-index: 1; }
 .manual-control-segmented button[aria-pressed="true"]:focus-visible { outline-color: var(--text-primary-color, var(--card-background-color)); }
 .manual-control-detail, .manual-control-reason { color: var(--secondary-text-color); font-size: 11px; line-height: 1.35; }
-.overview-zone-activity-copy { display: grid; gap: 1px; min-width: 0; }
+.overview-zone-activity-copy { display: grid; gap: 1px; min-width: 0; text-align: end; }
 .overview-zone-activity-copy strong, .overview-zone-activity-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.overview-zone-activity-summary { align-items: baseline; display: flex; flex-wrap: wrap; font-size: 12px; gap: 0 4px; line-height: 1.3; min-width: 0; }
+.overview-zone-activity-summary { align-items: baseline; display: flex; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; gap: 0 4px; line-height: 1.3; min-width: 0; }
+.overview-zone-activity-summary.stacked { display: grid; grid-template-columns: minmax(0, 1fr) max-content; }
+.overview-zone-activity-summary.stacked .overview-zone-activity-context { grid-column: 1 / -1; }
 .overview-zone-activity-summary strong { font-size: 13px; font-weight: 600; line-height: inherit; }
 .overview-zone-activity-context,
 .overview-zone-activity-separator { color: var(--secondary-text-color); font-size: 12px; line-height: inherit; }
@@ -1197,7 +1205,11 @@ ${plannedReturnDepartureStatusStyles}
 .effective-event-grid { display: grid; grid-template-columns: minmax(130px,1fr) repeat(4,max-content) 32px; column-gap: 16px; width: max-content; min-width: 100%; }
 .next.effective-next .effective-event { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; gap: 8px 16px; align-items: center; border-top: 1px solid var(--divider-color); padding-block: 6px; min-width: 0; }
 .effective-event-body, .next.effective-next .effective-event .event-details { display: contents; }
-.next.effective-next .effective-event-identity strong { white-space: normal; overflow-wrap: anywhere; max-width: 320px; }
+.effective-event-identity { display: grid; gap: 2px; min-width: 0; }
+.effective-event-schedule { background: transparent; border: 0; color: var(--primary-text-color); cursor: pointer; font: inherit; padding: 0; text-align: start; min-height: 44px; max-width: 320px; }
+.effective-event-schedule:hover { color: var(--primary-color); }
+.effective-event-schedule:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 4px; }
+.next.effective-next .effective-event-identity .overview-climate-name { white-space: normal; overflow-wrap: anywhere; max-width: 320px; }
 .effective-event-origin { justify-self: start; font-size: 12px; color: var(--secondary-text-color); padding: 3px 6px; border-radius: 5px; background: var(--secondary-background-color); }
 .next.effective-next .event-time { justify-self: end; min-width: 0; white-space: nowrap; overflow: visible; }
 .next.effective-next .event-time-flow { flex-wrap: nowrap; white-space: nowrap; }
@@ -1206,25 +1218,30 @@ ${plannedReturnDepartureStatusStyles}
 .next.effective-next .event-mode { justify-self: end; max-width: 100%; }
 .effective-event-help { display: flex; justify-content: end; }
 .next.effective-next .effective-event-help { grid-column: 6; grid-row: 1; }
-.next.effective-next .effective-event .preconditioning-dependency {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  position: sticky;
-  left: 0;
-  max-width: min(100%, calc(100cqw - 32px));
-  margin: 0 0 6px;
+.effective-event-master {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 320px;
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.4;
 }
-.next.effective-next .preconditioning-dependency > span {
+.effective-event-master > span:first-child {
+  min-width: 0;
   white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
   overflow-wrap: anywhere;
 }
+.effective-event-master > .inline-help-wrapper { flex: 0 0 auto; }
+.effective-event-master .inline-help { width: 24px; height: 24px; }
 .next.effective-next .inline-help-tooltip:not(.visible) { display: none; }
 @container next-events (max-width: 800px) {
   .effective-event-grid { grid-template-columns: minmax(150px,1fr) repeat(4,max-content) 32px; }
-  .next.effective-next .effective-event-identity { position: sticky; left: 0; z-index: 2; background: var(--secondary-background-color); align-self: stretch; display: flex; align-items: center; box-shadow: 1px 0 0 var(--divider-color); padding-inline-end: 10px; }
-  .next.effective-next .effective-event-identity strong { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .next.effective-next .effective-event-identity { position: sticky; left: 0; z-index: 2; background: var(--secondary-background-color); align-self: stretch; display: flex; flex-direction: column; align-items: start; justify-content: center; box-shadow: 1px 0 0 var(--divider-color); padding-inline-end: 10px; }
+  .next.effective-next .effective-event-master { max-width: 140px; }
+  .next.effective-next .effective-event-schedule { width: 140px; max-width: 140px; }
+  .next.effective-next .effective-event-identity .overview-climate-name { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .next.effective-next .event-time-flow { flex-wrap: nowrap; white-space: nowrap; }
   .next.effective-next .event-time-flow > span, .next.effective-next .event-target { white-space: nowrap; }
 }

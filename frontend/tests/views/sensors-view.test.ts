@@ -1510,3 +1510,27 @@ it("shows the localized range thermal limitation in French and hides its tempera
   expect(container.textContent).toContain(translate("fr", "unsupportedRangeThermalMode"));
   expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
 });
+
+describe("group Room Assist uses the ordinary external sensor configuration", () => {
+  it.each(["climate.first", "group.room"])("uses the same selection, save and clear path for %s", (entityId) => {
+    const { viewHost, saveZonePreconditioning } = host({ assistEnabled: true, roomTemperatureEntityId: "sensor.bedroom_temperature", expandedZoneIds: [entityId] });
+    if (entityId.startsWith("group.")) {
+      viewHost._data!.zones[entityId] = viewHost._data!.zones["climate.first"];
+      viewHost._data!.room_groups = { [entityId]: { id: entityId, name: "Room", members: ["climate.first", "climate.second"], temperature_entity_id: "climate.first", delivery_mode: "all" } };
+    }
+    viewHost.hass!.states!["sensor.external"] = { state: "21", attributes: { device_class: "temperature", friendly_name: "External room temperature", unit_of_measurement: "°C" } };
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, [entityId]), container);
+    const select = container.querySelector<HTMLSelectElement>(".sensor-picker-row select")!;
+    expect(select).not.toBeNull();
+    expect(select.value).toBe("sensor.bedroom_temperature");
+    select.value = "sensor.external"; select.dispatchEvent(new Event("change"));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith(entityId, { room_temperature_entity_id: "sensor.external" });
+    select.value = ""; select.dispatchEvent(new Event("change"));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith(entityId, { room_temperature_entity_id: null, room_sensor_assist_enabled: false });
+    if (entityId.startsWith("group.")) expect(viewHost._data!.room_groups![entityId].temperature_entity_id).toBe("climate.first");
+    viewHost._settingsSaving = true;
+    render(renderSensorsView(viewHost, [entityId]), container);
+    expect(container.querySelector<HTMLSelectElement>(".sensor-picker-row select")!.disabled).toBe(true);
+  });
+});

@@ -30,7 +30,8 @@
       }
     },
     "error": {
-      "no_climate_entities": "Selecteer minimaal één klimaatentiteit."
+      "no_climate_entities": "Selecteer minimaal één klimaatentiteit.",
+      "grouped_climate_entities": "Verwijder deze klimaatapparaten uit hun kamergroepen in de Velair-instellingen voordat je ze uit de integratie verwijdert."
     }
   },
   "entity": {

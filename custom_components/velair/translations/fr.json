@@ -30,7 +30,8 @@
       }
     },
     "error": {
-      "no_climate_entities": "Sélectionnez au moins une entité de climatisation."
+      "no_climate_entities": "Sélectionnez au moins une entité de climatisation.",
+      "grouped_climate_entities": "Retirez ces équipements de leurs groupes de pièce dans les Paramètres de Velair avant de les retirer de l’intégration."
     }
   },
   "entity": {

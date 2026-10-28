@@ -1,5 +1,55 @@
 # Manual Testing
 
+## Room groups
+
+1. Create a named group in the Room groups tab from climates with different schedules and
+   Profiles. Review the adoption preview; cancel first, then save. Verify one
+   owner and one effective schedule, with each member visible in Overview.
+2. Choose a member temperature and then a separate sensor. Check preparation
+   and learning use only the configured reference. Heating and cooling histories
+   remain separate. Missing references must not create fabricated observations.
+3. Test all-member and selected-member delivery. Inspect partial failures,
+   reconnection, retries and observed vendor propagation. Confirm accepted service
+   calls are distinguished from physical state and uncommanded members.
+4. Change name/order during a boost and preparation; retain the active intent
+   and learning. Change membership or delivery and verify stale work is retired.
+   Reject conflicting ownership changes and recover from a failed storage write.
+5. Exercise common HVAC modes, ranges, temperature limits and compatible steps.
+   Reject incompatible grids. With mixed active HVAC modes, require an explicit
+   mode. Verify per-device fallback when climates are off and no mode is supplied.
+6. Use a grouped member's Lovelace manual controls, boosts and pauses; verify
+   the entire room is targeted once. Reject unmanaged climates. Remove members
+   and dissolve the group; check inherited schedules/Profiles and cleared
+   temporary actions. Options must reject removal of a still-grouped climate.
+7. Export/import portable model v25, including empty groups, the same group graph,
+   imported learning, changed Profiles and active selection reconciliation. Test
+   restart/reload, temperature conversion and per-member boost restoration.
+8. Reorder groups and members; reload and check Settings, scheduling selectors
+   and individual Overview entries. At 320/390/768/1024 px in both themes, check
+   long names, configuration summary, delivery warnings and keyboard controls.
+   Leaving with pending edits must prompt, and saving must block navigation.
+9. Check Room Assist, Planned Return, dependencies and Supply control use one
+   logical room while Diagnostics and sensor identities retain physical members.
+
+## Fixed-mode range references
+
+1. In Settings > Managed climates, configure Lower target and Upper target in
+   turn for range-format Heat and Cool. Save/reload and export/import model 23;
+   verify both advanced features share the selection. Clearing it preserves
+   nominal pair delivery and explains why advanced control is unavailable.
+2. Exercise Room Assist hysteresis around the selected reference with equal and
+   unequal targets, both temperature units, target limits and missing sensors.
+   Both values must move together, preserving their separation and valid order.
+3. Change the selection, mode or sensor during assistance and preparation. Old
+   phases and learning must not survive. Fail a settings write and verify the
+   previous configuration and runtime intent remain intact.
+4. Reach an anticipated target before its nominal time; Room Assist must retain
+   that target until the block starts. Repeat for Planned Return and dependent
+   preparation, checking shared supply uses only the permitted direction.
+5. Auto ranges remain unavailable for advanced control; Heat/Cool band behavior
+   and single-target modes remain unchanged. Check labeled selectors at phone
+   and tablet widths and confirm behavior on physical equipment.
+
 ## Shared Command Button Sizing
 
 1. Compare Active setup's Change summary with ordinary text/icon commands in
@@ -2017,6 +2067,12 @@ produce unknown demand rather than keeping an earlier request indefinitely.
 Confirm the tab is **Supply control**, the list is **Shared supplies**, and the
 controls use **Supply name**, **Add supply**, **Remove supply** and **Save supplies**.
 Thermostat inheritance uses **Use supply hysteresis**.
+Within **Demand and hysteresis**, confirm the fields use **Activation hysteresis**,
+**Deactivation hysteresis** and **Symmetric hysteresis**, and the custom mode is
+**Custom hysteresis**, matching each maintained panel language. Their help must
+describe temperature differences from target: symmetric is per side, and
+deactivation extends past target. Do not relabel the live monitor's computed
+Room Assist distances as saved hysteresis settings.
 
 Compare Supply control with Templates, Presets and Modes at 320/390/768/1024/1440 px in
 both themes. Check shared empty/add states, field-label and selector typography,
@@ -2050,7 +2106,7 @@ Check numeric validation before saving: enter negative, fractional, empty and
 over-86,400 timing values, then correct them to 0 and 86,400. Errors should appear
 beside the field and prevent saving, including after selecting another supply.
 Check negative and non-finite hysteresis, partial numeric input, and empty
-thermostat exceptions (inheritance). Switch away from Custom with an invalid stop
+thermostat exceptions (inheritance). Switch away from **Custom hysteresis** with an invalid stop
 value and verify the message explains how to return and correct it. Repeat at
 320 px and with keyboard focus; error text must remain readable.
 
@@ -2083,13 +2139,24 @@ value and verify the message explains how to return and correct it. Repeat at
    block independently: control of other supplies must remain responsive, and a
    notification failure must not prevent the Activity attempt.
 5. Check failed writes, stale edits, temperature migration blocks, Fahrenheit
-   difference conversion and portable model v22. Imports remain disabled/suspended.
+   difference conversion and portable model v24. Imports remain disabled/suspended.
+   Configure a switch-on delay and check continuous aggregate demand in heating
+   and cooling. Interrupt demand, including Room Assist commits without a device
+   write, and verify a new full interval is required. Hand demand between rooms
+   without a gap and verify the countdown continues. Combine minimum time off
+   with confirmation and verify the waits overlap. Restart and resume must use
+   fresh demand and confirmation; resuming with no demand must leave the output off.
+   Verify external-off notification and Activity reporting, independent cooldowns
+   from correction notices, and accurate pause reasons beside Resume and in Live
+   status. Imported/legacy suspensions must not claim an external shutdown.
+   Check live countdowns, unknown demand and timer disposal after closing the
+   dialog or disconnecting, with no server polling.
 6. At 320/390/768/1024 px and both HA themes, check supply forms, overrides,
    long room names, errors, resume and cleanup messages. Check keyboard access.
    Emit sensor bursts and confirm bounded tasks/timers, no sample persistence and
    no panel broadcasts for unchanged demand. Confirm physical output behavior on
    the actual installation; command acceptance alone cannot verify it.
-7. Exercise Stop at target, Symmetric and Custom for heating and cooling, including
+7. Exercise **Stop at target**, **Symmetric** and **Custom hysteresis** for heating and cooling, including
    equality and zero offsets. Override start and stop independently per thermostat;
    change modes and verify dormant custom values survive save/reload and conversion.
    Confirm supply mode applies to every associated thermostat and Room Assist's
@@ -2138,3 +2205,56 @@ value and verify the message explains how to return and correct it. Repeat at
     inheritance selector, independently of custom-field height. Narrow rows stack
     controls aligned to the thermostat text. Verify long names, custom start/stop
     values, the read-only effective limits and both touch/keyboard interaction.
+
+
+## Room group beta acceptance
+
+Use the [Room groups guide](../user/room-groups.md) as the user-facing procedure.
+Exercise heating and cooling where supported, desktop/mobile layouts and both
+command-delivery modes. A simulated device confirms transport behavior; actual
+vendor propagation must also be checked on the installation using selected delivery.
+
+1. Back up schedules and learning. Create a named group of at least two managed
+   climates. Verify member search, ordering, reference selection and initial
+   configuration adoption. The review must show configuration conflicts and
+   learning reset before **Confirm and save**; **Back to editing** preserves the
+   draft. Trigger a validation/save error and verify useful recovery information.
+2. Verify the group owns one schedule, Profile configuration, boost, zone pause,
+   Room Assist configuration and preconditioning history. Overview, Next events,
+   Today's timeline, Comfort and Diagnostics still show physical members.
+3. In all-member delivery, observe the command on every recipient. In selected
+   delivery, confirm Velair directly commands only that recipient and does not
+   claim direct delivery to the others. Check actual installation propagation.
+4. With **Until next block**, change one member externally. Verify the group
+   enters Manual adjustment while peer targets are preserved unless the
+   installation propagates the change. Resume through another member and check
+   shared scheduling. Repeat expiry at the next block, a duration and explicit
+   resume. Verify a zone pause through a member affects the same group, with the
+   chosen preserve-state/Off action and remaining pause reasons respected.
+5. Confirm one preconditioning start decision and one heating/cooling history
+   for the group. Test native member reference and enabled Room Assist separately;
+   a normal scheduled setpoint must not change device-internal sensor selection.
+6. Rename and reorder without losing learning. Remove one member from a
+   three-member group: it becomes independent with shared configuration and
+   fresh learning, and the remaining group restarts learning. Dissolve a group
+   and verify independent configuration copies, no inherited temporary pauses
+   or boosts, and fresh independent learning. Earlier histories must not reappear.
+7. Reload and export/import. Verify stable internal group IDs, ownership,
+   reference, delivery settings and ordering. Confirm no HA `group.*` or
+   `climate.*` entity is created for the room group.
+
+## Independent Comfort in room groups
+
+1. Give two managed climates different Comfort thresholds and external sensor
+   selections. Enable monitoring on one and leave the other disabled.
+2. Create a room group from them. In Comfort, confirm both physical climates
+   appear with their original settings and individual temperature/humidity.
+3. Enable the second member and change only its sensor or threshold. Verify the
+   first member and the group's schedule, Room Assist and learning are unchanged.
+4. Configure a group Room Assist sensor. Verify that Comfort still uses each
+   member's native temperature unless explicitly configured to use that sensor.
+5. Reload, export/import, remove a member and dissolve the group. Verify each
+   climate keeps its independent Comfort settings throughout. Repeat thermal
+   conversion with Celsius and Fahrenheit installations.
+6. Filter a Comfort card by the group, then by one member. Verify the group filter
+   shows its members and the member filter does not include the other members.

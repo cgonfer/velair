@@ -966,6 +966,7 @@ function diagnosticReasonLabel(host: VelairViewHost, value: unknown): string | u
     turn_off: "diagnosticsOverrideTurnOff",
     unsupported_mode: "diagnosticsReasonUnsupportedMode",
     unsupported_range_mode: "unsupportedRangeThermalMode",
+  range_reference_not_configured: "rangeReferenceNotConfigured",
     unsupported_temperature_range: "diagnosticsReasonUnsupportedTemperatureRange",
     zone_paused: "diagnosticsEventZonePaused",
     zone_unavailable: "diagnosticsReasonZoneUnavailable",

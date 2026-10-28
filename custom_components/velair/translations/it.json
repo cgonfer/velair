@@ -30,7 +30,8 @@
       }
     },
     "error": {
-      "no_climate_entities": "Seleziona almeno un'entità climatica."
+      "no_climate_entities": "Seleziona almeno un'entità climatica.",
+      "grouped_climate_entities": "Rimuovi questi dispositivi dai loro gruppi stanza nelle Impostazioni di Velair prima di rimuoverli dall’integrazione."
     }
   },
   "entity": {

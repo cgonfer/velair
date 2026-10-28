@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.5 |
-| Laatst gesynchroniseerd | 2026-10-24 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -19,6 +19,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 <!-- velair-docs:end -->
 
 Deze handleiding legt Velair uit vanuit het perspectief van een Home Assistant-gebruiker.
+
+Gebruik [Kamergroepen](room-groups.nl.md) als meerdere apparaten dezelfde kamer regelen. De groep bezit één schema, profieltoewijzing en leermodel; Overzicht blijft individuele apparaten tonen. Stel leden in bij Kamergroepen en weergavevolgorde bij Instellingen.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Paneelnavigatie en rechtstreekse links
@@ -34,6 +36,7 @@ Het zijbalkpaneel werkt zijn URL bij wanneer je van tabblad wisselt of een onder
 | Sjablonen: sjablonen | `/velair/templates/templates` |
 | Sjablonen: klimaatpresets | `/velair/templates/presets` |
 | [Toevoerregeling](shared-climate-supply.nl.md) | `/velair/supply-control` |
+| [Kamergroepen](room-groups.nl.md) | `/velair/room-groups` |
 | Sensoren | `/velair/sensors` |
 | Comfort | `/velair/comfort` |
 | Voorconditionering | `/velair/preconditioning` |
@@ -177,7 +180,40 @@ De Lovelace-kaart ondersteunt de volgende waarden van `view`:
 - `comfort`;
 - `preconditioning`;
 - `planned-return`;
+- `supply-live`;
 - `diagnostics`.
+
+<a id="supply-live-status-card"></a>
+### Kaart voor live toevoerstatus
+
+Kies in de visuele editor de weergave `supply-live` en selecteer een geconfigureerde toevoer op naam. De kaart bevat dezelfde alleen-lezen livemonitor als het zijpaneel: backendmetingen, doelen, hysterese en verwarmings- of koelvraag, met één climate per rij en een hoogte die zich aanpast aan de inhoud. Zolang de kaart is gemonteerd ontvangt deze live updates, ook buiten het zichtbare gebied; bij verwijderen wordt het abonnement beëindigd. De kaart wijzigt de toevoer of regels niet.
+
+De editor slaat de stabiele interne toevoer-ID op in `supply_id`. Vervang in dit voorbeeld `boiler` door de ID die de editor opslaat; dit is geen `switch.*`-entiteits-ID of kamergroep-ID. Er wordt niet automatisch een toevoer geselecteerd. Als de geselecteerde toevoer wordt verwijderd, vraagt de kaart om een andere te kiezen in plaats van naar de eerste beschikbare over te schakelen.
+
+```yaml
+type: custom:velair-card
+view: supply-live
+supply_id: boiler
+supply_show_header: true
+supply_show_connection: true
+supply_show_switch_state: true
+supply_show_room_count: true
+supply_show_legend: true
+supply_show_demand_description: true
+```
+
+Alle zes weergaveopties staan standaard op `true`. Zet een optie op `false` om die gewone informatie te verbergen. Het optionele veld `title` vervangt de standaardtitel wanneer de kop zichtbaar is.
+
+| YAML | Informatie |
+| --- | --- |
+| `supply_show_header` | Kop |
+| `supply_show_connection` | Indicator voor live verbinding |
+| `supply_show_switch_state` | Schakelaarstatus |
+| `supply_show_room_count` | Aantal kamers dat toevoer vraagt |
+| `supply_show_legend` | Grafieklegenda |
+| `supply_show_demand_description` | Gewone vraagbeschrijving, zoals Geschatte vraag |
+
+Laden, fouten, verbroken verbinding, opschorting, onbekende schakelaarstatus of vraag en lopende wachttijden blijven zichtbaar als alle opties zijn uitgeschakeld. Het verbergen van gewone informatie verbergt geen omstandigheden die de interpretatie van de metingen beïnvloeden.
 
 <a id="planned-return-card"></a>
 ### Kaart voor geplande terugkeer
@@ -216,6 +252,10 @@ Gebruik `view: climate` voor een compacte kaart voor één beheerde `climate.*`-
 
 De kaart combineert apparaattemperatuur, luchtvochtigheid, HVAC-modus en `hvac_action` met Velairs huidige regeling en uitvoeringsgegevens. Ze gebruikt dezelfde effectieve dagtijdlijn, profielkleur en profielicoon als Overzicht. Modus, profiel, comfort, Room Assist en voorbereiding verschijnen alleen als ze ingesteld en relevant zijn. Bij externe uitvoering toont de kaart provider en publicatiestatus in plaats van lokale functies of apparaatacties. De optionele eenmalige terugkeer bestuurt het huishouden en staat los van wie de geselecteerde zone beheert.
 
+Bij een groepslid behoudt de kaart de eigen metingen en het individuele Comfort van de thermostaat en gebruikt ze de gedeelde bediening en het gedeelde schema. De temperatuurbediening houdt rekening met de gemeenschappelijke groepsgrenzen. Een derde kopregel toont het groepspictogram, de naam en de informatieknop onder de bestaande status, zonder de uitlijning van het moduspictogram te veranderen. De hulp legt gedeelde acties uit en vermeldt de leden. **Groep tonen** staat standaard aan (`climate_show_group: true`), onafhankelijk van het tonen van de thermostaatnaam. Uitschakelen verbergt alleen deze informatie. Thermostaten zonder groep tonen geen groepsregel, ook als de optie aanstaat.
+
+De kaarten Overzicht, Tijdlijn van vandaag en Zoneoverzicht beperken een filter voor één lid tot die thermostaat. Een groep selecteren omvat alle leden.
+
 ```yaml
 type: custom:velair-card
 view: climate
@@ -229,6 +269,7 @@ climate_window_entities:
 climate_window_display: grouped
 climate_room_assist_display: both
 climate_preconditioning_display: both
+climate_show_group: true
 climate_show_control_mode: true
 climate_show_target_control: true
 climate_show_hvac_mode_control: true
@@ -376,7 +417,7 @@ Behouden start een uitgeschakelde entiteit met alleen bereik in de eerste gepubl
 
 De bereikeditor gebruikt een onder- en bovendoel voor deze entiteiten. Dit zijn de twee geaccepteerde waarden; Velair neemt niet aan dat Auto de automatische verwarmings-/koelband van `heat_cool` heeft. Dezelfde controles gelden voor profielen, presets, tijdelijke aanpassing en gekopieerde of gekoppelde sjablonen. Sjablonen en Presets gebruiken formaten van hun mogelijke bestemmingen; Velair controleert elke echte bestemming bij toepassen. Zonder bruikbare huidige grenzen voor een tijdelijke aanpassing moet je beide waarden invoeren.
 
-Room Assist en adaptieve voorconditionering ondersteunen bereiken alleen in `heat_cool`. Een bereik in Verwarmen, Koelen of Auto wordt op de geplande tijd nominaal toegepast, zonder Room Assist-verschuiving, vroeg starten of thermisch leren. De betrokken weergaven verklaren de beperking. Geplande terugkeer past het aankomstdoel bij aankomst toe zonder vroege voorbereiding.
+Room Assist en adaptieve voorconditionering ondersteunen oorspronkelijke `heat_cool`-bereiken en vaste verwarmings- of koelbereiken met een referentie-instelpunt bij **Instellingen → Klimaatapparaten en groepen**. Zonder selectie geldt het nominale vaste paar op geplande tijd zonder Room Assist-verschuiving, vroeg starten of thermisch leren; Geplande terugkeer past het bij aankomst toe. Auto-bereiken behouden die beperking.
 
 Als het apparaat extra bediening aanbiedt, toont de editor deze, bijvoorbeeld ventilatorstand, apparaatpreset, oscillatie, horizontale oscillatie of vochtigheid bij airconditioning. Alleen ondersteunde opties worden opgeslagen en verstuurd. Bij **Uit** worden temperatuurvelden niet gebruikt, omdat het blok de klimaatentiteit uitschakelt.
 
@@ -403,9 +444,13 @@ Indelingen overleven Home Assistant-herstarts en overdraagbare exports. Oudere e
 <a id="target-format-by-climate-and-mode"></a>
 ## Doelformaat per klimaatentiteit en modus
 
-Home Assistant meldt ondersteuning voor één temperatuur en bereiken, maar geen compatibiliteitstabel per HVAC-modus. Onder **Instellingen → Beheerde klimaatapparaten** krijgt elke entiteit met beide formaten **Modi met twee instelpunten**. Gesloten toont de keuzelijst geselecteerde modi; open selecteer of wis je afzonderlijke modi. Alleen gepubliceerde modi behalve Uit verschijnen. Verwarmen/koelen is aanvankelijk gekozen indien beschikbaar; andere modi niet automatisch. Een lege keuze is geldig. Apparaten met één formaat gebruiken dat zonder kiezer. De labelhulp verklaart de grenzen. Wijzigingen doorlopen eerst de compatibiliteitscontrole.
+Home Assistant meldt ondersteuning voor één temperatuur en bereiken, maar geen compatibiliteitstabel per HVAC-modus. Onder **Instellingen → Klimaatapparaten en groepen** krijgt elke entiteit met beide formaten **Modi met twee instelpunten**. Gesloten toont de keuzelijst geselecteerde modi; open selecteer of wis je afzonderlijke modi. Alleen gepubliceerde modi behalve Uit verschijnen. Verwarmen/koelen is aanvankelijk gekozen indien beschikbaar; andere modi niet automatisch. Een lege keuze is geldig. Apparaten met één formaat gebruiken dat zonder kiezer. De labelhulp verklaart de grenzen. Wijzigingen doorlopen eerst de compatibiliteitscontrole.
 
 Dit bepaalt hoe Velair doelen stuurt en bewijst niet dat het fysieke apparaat beide waarden accepteert of gebruikt. De integratie kan een parameter weigeren of negeren. Velair meldt bekende onverenigbaarheid vóór opslaan en ontvangen afleverfouten. Er is geen automatische apparaattest of proefwisseling van modi.
+
+Voor modi met twee instelpunten verschijnt **Referentie-instelpunt** bij Verwarmen en Koelen, ook op apparaten met alleen bereikondersteuning. Kies **Onderste instelpunt** of **Bovenste instelpunt** volgens het apparaat. **Niet ingesteld** behoudt schemaverzending maar schakelt Room Assist en adaptieve voorconditionering voor dat vaste bereik uit. Configureer eenmaal per apparaat en modus; beide functies delen de backendkeuze, inclusief export en import. Wijzigen beëindigt oude hulp en leerwaarnemingen zonder schematemperaturen of doelformaat te veranderen.
+
+Room Assist berekent vaste-modushysterese rond de gekozen grens en verschuift beide instelpunten samen binnen apparaatgrenzen, met behoud van hun afstand. Voorconditionering voorspelt en leert vanaf die grens in de modusrichting en verstuurt vroeg het volledige oorspronkelijke paar. `heat_cool` behoudt zijn bandregeling zonder deze keuze; `auto`-bereiken blijven ongeschikt voor deze functies.
 
 **Standaard**, zones in **Profielen**, **Tijdelijke aanpassing** en klimaatbediening gebruiken dit beleid voor één of twee velden bij een expliciete modus. Moduswisselingen bewaren afzonderlijke tijdelijke concepten per formaat. Terugkeren herstelt de tijdens deze bewerking ingevoerde waarden; ontbrekende waarden vul je in. Velair verzint geen bereik en maakt van twee grenzen geen enkel doel. Alternatieve concepten worden niet opgeslagen en verdwijnen bij vernieuwen.
 
@@ -490,13 +535,13 @@ Thermische waarden worden onbewerkt opgeslagen in de vastgelegde eenheid. Bij ee
 
 De eenmalige upgrade van gepubliceerde gegevens die alleen Celsius ondersteunden is anders. Gebruikt Home Assistant al Fahrenheit, dan neemt Velair zonder vraag aan dat oude gegevens Celsius zijn, houdt planning gestopt en verwijst naar **Velair resetten**. Reset wist de oude configuratie en maakt atomair nieuwe Fahrenheit-standaarden. Latere eenheidswijzigingen gebruiken daarna de volledige expliciete conversie met gegevensbehoud.
 
-Huidige draagbare exports in model v22 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v22 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
+Huidige draagbare exports in model v25 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v25 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
 
 Was een apparaat tijdens migratie of import niet beschikbaar, dan controleert Velair later grenzen en effectieve temperatuurstap. Een actuele geldige `target_temp_step` heeft voorrang op de laatst gemelde stap en handmatige zoneterugval. Het paneel waarschuwt bij onverenigbare opgeslagen doelen, zodat je vóór gebruik kunt corrigeren. Zie [Temperatuureenheden en migratie](temperature-units.nl.md) voor volledige upgrade-, migratie-, back-up- en herstelregels.
 
 Met kamersensorondersteuning en een actief temperatuurblok toont Room Assist een compacte actuele schaal. Voor één doel markeert deze gepland doel, kamersensor, apparaatdoel en apparaatmeting. Een neutraal gestreepte band markeert de dode-zonegrenzen. Bij vast `heat` of `cool` vermeldt status beweging naar onder- of bovengrens; bij automatische enkele doelen is de band een neutrale marge.
 
-Bij een oorspronkelijk bereik loopt de band van geplande ondergrens minus marge tot bovengrens plus marge. Aparte haken tonen volledige geplande en toegepaste bereiken, met één verbinding tussen hun middelpunten voor de verplaatsing met teken. Kamer- en apparaatmetingen blijven afzonderlijke markeringen. De volledige vertaalde legenda blijft rond de dode zone gecentreerd, ook als die smaller is dan het label. Nul verwijdert de band en wordt expliciet vermeld. `show_room_assist_deadband` verbergen verbergt instelling, band en legenda samen.
+Bij een oorspronkelijk `heat_cool`-bereik loopt de band van geplande ondergrens minus marge tot bovengrens plus marge. Aparte haken tonen volledige geplande en toegepaste bereiken, met één verbinding tussen hun middelpunten voor de verplaatsing met teken. Kamer- en apparaatmetingen blijven afzonderlijke markeringen. De volledige vertaalde legenda blijft rond de dode zone gecentreerd, ook als die smaller is dan het label. Nul verwijdert de band en wordt expliciet vermeld. `show_room_assist_deadband` verbergen verbergt instelling, band en legenda samen. Bij een ingesteld vast verwarmings- of koelbereik markeert de band in plaats daarvan het gekozen referentie-instelpunt min en plus de dode band.
 
 Deze waarden komen uit Home Assistant en actuele Velair-toestand, zonder nieuwe opgeslagen geschiedenis. Zonder actief temperatuurblok verschijnt een wachttoestand in plaats van voorbeeldwaarden. Met een gekozen sensor maar uitgeschakelde ondersteuning staat vermeld dat de sensor opgeslagen maar niet operationeel is.
 
@@ -621,13 +666,15 @@ De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) bevestigt st
 
 Instellingen kan een JSON-bestand met versie exporteren en importeren. Het kan thermostaatschema's, sjablonen, gedeelde blokpresets, paneelinstellingen, leergegevens voor adaptieve voorconditionering, klimaatprofielen en modussen bevatten.
 
-Huidige exports in model 22 behouden beide sjabloonkoppeltypes, presetverwijzingen en koppelingen met een Master voor voorconditionering. Geaccepteerde uitvoeringsreferenties van de master blijven lokaal en worden niet geëxporteerd. Schema's of profielen exporteren neemt vereiste sjablonen en presets mee, zichtbaar als extra gekozen secties. Import valideert de gecombineerde configuratie, ook bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op vaste sleutel samengevoegd: overeenkomstige sleutels worden vervangen; lokale presets buiten het bestand blijven. Oude back-ups blijven importeerbaar; oude Velair-versies kunnen model 22 niet importeren. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup). Huidige exports bewaren ook het doelformaatbeleid per klimaatentiteit.
+Huidige exports in model 25 behouden beide sjabloonkoppelingen, presetverwijzingen, voorconditioneringsmasterrelaties, doel- en referentiebeleid, kamergroepeigenaarschap en gedeelde configuratie. Geaccepteerde masteruitvoeringsankers blijven lokaal. Schema- en profielexports nemen benodigde sjablonen en presets automatisch op als extra geselecteerde onderdelen. Bij groepsgegevens worden vereiste kamergroepen, schema's en profielen ook opgenomen, zelfs vanuit een leerexport. Imports valideren de gecombineerde configuratie inclusief bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op stabiele sleutel samengevoegd: overeenkomsten vervangen, ontbrekende lokale behouden. Oude back-ups blijven importeerbaar; oudere Velair-versies kunnen model 25 niet importeren. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
 
 Bij import kies je te overschrijven secties. Import vervangt gekozen gegevens; exporteer eerst voor een herstelpunt. Profiel- en modusdefinities zijn overdraagbaar, de actieve selectie niet. Velair behoudt actieve profiel-ID's die nog bestaan en keert pas naar standaard terug als geen meer overblijven.
 
 Elke nieuwe export vermeldt de temperatuureenheid. Vanuit een ander eenhedenstelsel worden gekozen thermische waarden omgerekend naar Home Assistant. Waarden bij beschikbare apparaten volgen hun effectieve stap; zelfstandige waarden gebruiken veilige precisie zonder gemeenschappelijke stap. Handmatige zoneterugval is overdraagbaar, de lokaal waargenomen laatste apparaatstap bewust niet. Oude exports zonder eenheid worden in het importscherm aangekondigd en als Celsius behandeld.
 
-Leerdata wordt op exact klimaatentiteits-ID gekoppeld. Gegevens voor niet-beheerde apparaten worden vóór import getoond en overgeslagen. Bij passende apparaten vervangt import de bestaande kalibratie. Lokale apparaten buiten het bestand blijven intact. Voorbereidingsinstellingen zitten al in **Thermostaatschema's**; de aparte sectie **Leerdata voorconditionering** bevat de opgebouwde lokale kalibratiegeschiedenis.
+Leren wordt gekoppeld op de exacte besturingseenheid-ID: een Home Assistant-klimaatentiteits-ID voor een onafhankelijk apparaat of de stabiele interne groeps-ID voor een kamergroep. Niet-passende data wordt vóór import getoond en overgeslagen. Passend leren vervangt de kalibratie; lokale data die niet in het bestand staat blijft ongewijzigd. Groepsgeschiedenis wordt niet over leden verdeeld. Lees [Kamergroepen](room-groups.nl.md#learning-and-membership-changes) vóór verwijderen of opheffen.
+
+Een groepsleerback-up herstellen herstelt ook het vereiste groepeigenaarschap en de gedeelde configuratie. Controleer deze afhankelijkheden in de importvoorvertoning; het is geen geïsoleerd kalibratieherstel waarbij lidmaatschap ongemoeid blijft.
 
 <a id="maintenance"></a>
 ## Onderhoud

@@ -42,6 +42,44 @@ custom_components/velair/
 
 ## Data Model
 
+### Room control units
+
+`configured_entities` remains the physical climate inventory. A control unit is
+either an independent climate, retaining its existing identity, or a room group
+with a stable `group.*` identifier. Logical IDs are never registered as Home
+Assistant entities. `room_groups.py` validates ownership and builds detached
+configuration candidates; `zones` stores the common policy once per control unit.
+Group creation adopts an explicitly selected member's configuration and remaps
+Profile, selection, dependency and shared-supply references atomically.
+
+The existing scheduler, effective schedules, overrides, Room Assist and thermal
+learning run once per unit. `group_climate_manager.py` projects common capabilities
+and the explicit temperature reference for those existing paths, then delivers
+through the physical ClimateManager. Physical ownership attribution and per-member
+outcomes remain distinct from logical command acceptance. No group state is
+inserted into HA's state machine and there is no additional polling controller.
+
+The group reference is a member climate's native reading. Optional external Room
+Assist measurement is independent and uses the existing shared zone configuration,
+activation rules and correction pipeline. Temperature-source subscriptions and
+learning identify the actual member or enabled external sensor, not the logical
+`group.*` projection. Existing delivery fan-out applies the resulting command to
+the configured physical destinations.
+
+Frontend control-unit helpers resolve names, capabilities and ownership centrally.
+Existing schedule/Profile editors consume control-unit IDs; Overview expands them
+into physical devices. Backend settings persist logical unit order and each
+group's ordered membership. Singleton-only installations retain their previous
+IDs and behavior. Portable model 25 includes room ownership; importing it requires
+the group and its shared configuration together.
+
+Comfort remains owned by physical climates. Standalone climates retain their
+existing zone settings; `member_comfort` stores independent settings for grouped
+members. A shared resolver supplies physical assessments, listeners and API
+`comfort_settings`, without duplicating the assessment engine. Group transitions
+preserve these settings and Comfort writes serialize with ownership changes.
+A grouped member does not inherit the group's Room Assist sensor automatically.
+
 Planned Return adds backend-owned `planned_return` configuration and a persisted
 `planned_return_episode`. `planned_return.py` owns combined-occupancy
 listeners, absence confirmation and arrival timers. It resolves arrival targets
@@ -616,7 +654,7 @@ The current export format is:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 22,
+  "model_version": 23,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
@@ -630,6 +668,24 @@ The current export format is:
   }
 }
 ```
+
+Model 23 adds optional per-zone `target_range_reference`: `heat` and `cool` may
+independently select `low` or `high`. Missing selections remain unconfigured;
+older models do not infer defaults. The backend owns validation, revision checks,
+persistence and export/import. Settings → Managed climates edits this once for
+Room Assist and Adaptive Preconditioning through
+`velair/update_zone_range_reference`.
+
+The shared resolver interprets the selected boundary as the scalar comfort
+target while retaining the complete pair for delivery. Fixed heating/cooling
+Room Assist uses its scalar hysteresis algorithm, then shifts both boundaries
+together within the advertised step and physical limits. Preconditioning uses
+the same boundary and fixed direction for anticipation and learning, including
+Planned Return. A reference change retires obsolete assistance and observations.
+Unconfigured fixed-mode ranges receive nominal schedule delivery only. Auto
+ranges remain unsupported for these features; native Heat/Cool band control is
+unchanged. Shared supply consumes the same configured reference or committed
+Room Assist intent. This adds no polling or frontend-owned persistence.
 
 Model 20 adds the optional per-zone `target_range_modes` policy. An absent field
 retains the default (Heat/Cool when advertised); an explicit empty array selects
@@ -715,6 +771,14 @@ hysteresis as temperature differences. A local `shared_demand_cleanup` ledger
 retains off requests for retired outputs across restarts and is not portable.
 Shared supplies are independent of Preconditioning master timing dependencies.
 
+Supply switch-on confirmation retains a runtime start time only while aggregate
+demand is known true. It shares the existing per-supply deadline timer with
+minimum-off protection and switch-off delay. The later of confirmation and
+minimum-off deadlines gates a start, avoiding additive waits. Suspension, disable,
+unknown/no demand and resume clear confirmation; resume evaluates current room
+state before starting a new interval. Portable model 24 carries the optional
+`on_delay_seconds` setting with a zero legacy default.
+
 Confirmed corrections of external supply activations are reported separately
 from the control worker. An explicit external off-to-on event creates a candidate;
 only a later on-to-off acknowledgment matching one of Velair's correction-command
@@ -722,5 +786,8 @@ contexts can produce a notice. Candidates survive the existing off-delay and
 bounded retries, but known demand, unknown intent or loss of ownership invalidates
 them. One coalescing notification worker performs best-effort persistent-notification
 and logbook calls outside the controller/profile locks. A bounded per-supply/output
-15-minute runtime cooldown applies to both channels, with one stable notification
-identifier per supply. No additional storage writes or polling are introduced.
+15-minute runtime cooldown applies to both channels. External-off suspension has
+its own reporting cooldown and stable notification identifier, so a recent
+correction notice cannot suppress a new pause notice. Suspension reporting follows
+the observed external transition and does not claim its persistence succeeded.
+No additional storage writes or polling are introduced for reporting.

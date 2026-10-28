@@ -92,6 +92,31 @@ describe("frontend entrypoint", () => {
     });
   });
 
+  it.each(["comfort", "overview-events"])("offers physical climates for %s and expands saved group filters in its editor", async view => {
+    await import("../../src/velair-card");
+    const editor = document.createElement("velair-card-editor") as any;
+    editor._loaded = true;
+    editor._scheduleData = {
+      configured_entities: ["climate.first", "climate.second", "climate.other"],
+      control_units: ["group.room", "climate.other"],
+      member_to_unit: { "climate.first": "group.room", "climate.second": "group.room" },
+      room_groups: { "group.room": { name: "Shared group", members: ["climate.second", "climate.first"] } },
+    };
+    editor.setConfig({ view, entities: ["group.room"], zone_order: ["climate.first"] });
+    document.body.append(editor);
+    await editor.updateComplete;
+    const rows = [...editor.shadowRoot.querySelectorAll(".zone-row")] as HTMLElement[];
+    expect(rows.map(row => row.querySelector("span")?.textContent)).toEqual(["climate.first", "climate.second", "climate.other"]);
+    expect(rows.map(row => row.querySelector<HTMLInputElement>("input")!.checked)).toEqual([true, true, false]);
+    expect(editor.shadowRoot.textContent).not.toContain("Shared group");
+    editor.setConfig({ view, entities: ["climate.second"] });
+    await editor.updateComplete;
+    const selected = [...editor.shadowRoot.querySelectorAll(".zone-row")].filter((row: any) => row.querySelector("input").checked);
+    expect(selected).toHaveLength(1);
+    expect((selected[0] as HTMLElement).textContent).toContain("climate.second");
+    editor.remove();
+  });
+
   it("renders the sidebar panel shell and active scheduler view", async () => {
     await import("../../src/velair-card");
     const panel = document.createElement("velair-sidebar-panel") as HTMLElement & { updateComplete?: Promise<boolean> };
@@ -102,12 +127,13 @@ describe("frontend entrypoint", () => {
     expect(panel.shadowRoot?.querySelector(".main-title")?.textContent).toContain("Velair");
     expect(panel.shadowRoot?.querySelector(".version")).toBeNull();
     const tabs = [...(panel.shadowRoot?.querySelectorAll("ha-tab-group-tab") ?? [])];
-    expect(tabs).toHaveLength(11);
+    expect(tabs).toHaveLength(12);
     expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
       "Overview",
       "Schedules",
       "Modes",
       "Templates",
+      "Room groups",
       "Supply control",
       "Room Assist",
       "Comfort",
@@ -184,6 +210,7 @@ describe("frontend entrypoint", () => {
       { label: "Overview: zone overview", value: "overview-zones" },
       { label: "Profiles: active setup", value: "active-setup" },
       { label: "Schedules: editor", value: "schedules" },
+      { label: "Supply control: live status", value: "supply-live" },
       { label: "Room Assist: configuration and status", value: "sensors" },
       { label: "Comfort: configuration and status", value: "comfort" },
       { label: "Preconditioning: configuration and status", value: "preconditioning" },

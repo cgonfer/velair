@@ -8,8 +8,8 @@ Traduções: [Original em inglês](manual-control.md) · [Español](manual-contr
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.5 |
-| Última sincronização | 2026-10-24 |
+| Versão de referência | 1.9.0-beta.6 |
+| Última sincronização | 2026-10-28 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -45,6 +45,15 @@ O Velair sempre mantém estes conceitos separados:
 | Pausa global ou Paragem | Todos | Agendador pausado ou desativado globalmente. |
 
 Esses estados podem coexistir. Por exemplo, o Modo **Manual** pode selecionar o Perfil `Sleep` enquanto `climate.living_room` está em **Ajuste manual**. O Perfil mantém a autoridade sobre a configuração da programação, mas aquele dispositivo conserva o ajuste externo até terminar o Ajuste manual.
+
+<a id="room-groups"></a>
+## Grupos de divisão
+
+Para um [grupo de divisão](room-groups.pt-pt.md#pauses-manual-adjustment-and-resuming), o alcance por dispositivo descrito acima representa uma unidade partilhada de controlo. Definições armazena uma política de **Ajustes externos** para o grupo. Uma alteração externa detectada em um membro pode ceder a autoridade de programação de toda a divisão; não cria uma sessão Manual independente para aquele dispositivo.
+
+O Velair preserva o estado atual de cada membro, sem copiar o alvo alterado aos demais. Com **Até ao próximo bloco**, todos voltam à programação partilhada nesse bloco. Retomar Automático por qualquer membro também resolve para o grupo e reaplica sua intenção atual aos destinatários configurados, respeitando outros motivos de pausa. Pausas de zona explícitas e reforços solicitados por um membro também pertencem a todo o grupo.
+
+O separador de configuração do grupo mostra o estado de controlo sem um botão próprio de pausa. Ajustes de Conforto e observações físicas permanecem individuais.
 
 <a id="what-velair-observes"></a>
 ## O que o Velair observa

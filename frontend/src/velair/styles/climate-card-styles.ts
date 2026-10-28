@@ -28,6 +28,7 @@ export const climateCardStyles = css`
     z-index: 0;
   }
   .climate-card-view > * { position: relative; z-index: 1; }
+  .climate-card-view > .climate-card-header:has(.inline-help-tooltip.visible) { z-index: 4; }
   /* Keep the HVAC menu above adjacent sections in both opening directions. */
   .climate-card-view > .climate-card-thermostat-controls:has(.climate-card-mode-control[open]) { z-index: 2; }
   .climate-card-view.climate-action-heating,
@@ -50,9 +51,16 @@ export const climateCardStyles = css`
     content: ""; inset: 0; position: absolute; transform: translateX(-100%);
   }
   @keyframes climate-card-energy { 0%, 12% { transform: translateX(-100%); } 68%, 100% { transform: translateX(100%); } }
-  .climate-card-header { align-items: center; display: flex; gap: 10px; min-width: 0; }
+  .climate-card-header { display: grid; gap: 2px; min-width: 0; }
+  .climate-card-header-main { align-items: center; display: flex; gap: 10px; min-width: 0; }
   .climate-card-operation-icon { --mdc-icon-size: 24px; background: linear-gradient(145deg, color-mix(in srgb, var(--climate-action-color) 20%, var(--card-background-color)), color-mix(in srgb, var(--climate-action-color) 7%, var(--card-background-color))); border: 1px solid color-mix(in srgb, var(--climate-action-color) 34%, var(--divider-color)); border-radius: 12px; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 5px 14px color-mix(in srgb, var(--climate-action-color) 11%, transparent); color: var(--climate-action-color); flex: 0 0 auto; padding: 7px; }
   .climate-card-header-content { display: grid; flex: 1 1 auto; min-width: 0; }
+  .climate-card-group { align-items: center; color: var(--secondary-text-color); display: flex; font-size: 12px; gap: 4px; min-width: 0; }
+  /* Align the third line with the original text, outside the icon's flex row. */
+  .climate-card-header.has-operation-icon > .climate-card-group { margin-inline-start: 50px; }
+  .climate-card-group > ha-icon { --mdc-icon-size: 14px; flex: 0 0 auto; }
+  .climate-card-group-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .climate-card-group > .inline-help-wrapper { align-items: center; flex: 0 0 auto; height: 16px; }
   .climate-card-brand { align-items: center; align-self: center; background: transparent; border: 0; border-radius: 9px; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; flex: 0 0 auto; font: inherit; gap: 6px; justify-content: center; margin-inline-start: auto; min-height: 44px; min-width: 44px; padding: 5px 6px; }
   .climate-card-brand { transition: background-color 150ms ease, color 150ms ease, transform 150ms ease; }
   .climate-card-brand:hover { background: color-mix(in srgb, var(--primary-color) 8%, transparent); color: var(--primary-color); transform: translateY(-1px); }

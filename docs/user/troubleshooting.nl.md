@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](troubleshooting.md) · [Español](troubleshootin
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.6 |
+| Laatst gesynchroniseerd | 2026-10-28 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -21,14 +21,23 @@ Vertalingen: [Engels origineel](troubleshooting.md) · [Español](troubleshootin
 <a id="a-lovelace-card-shows-configuration-error"></a>
 ## Een Lovelace-kaart toont een configuratiefout
 
-Controleer of Velair is geïnstalleerd en geconfigureerd voordat het dashboard de kaart laadt. De integratie stelt de frontendresource al vroeg beschikbaar tijdens het opstarten van Home Assistant, zodat kaarten bij een normale herstart niet op de module hoeven te wachten.
+Controleer of Velair is geïnstalleerd en ingesteld voordat het dashboard de kaart laadt. Bij resources beheerd via de Home Assistant-interface registreert en vernieuwt Velair zijn module automatisch. Normale installatie vereist geen handmatige resourceconfiguratie.
 
 Als de fout blijft bestaan:
 
-1. Controleer of de dashboardresource exact de URL `/velair_frontend/velair-card.js` gebruikt en het type **JavaScript-module** heeft.
-2. Verwijder dubbele of oude resources, zoals `/local/velair-card.js`.
-3. Herstart Home Assistant nadat je de integratie hebt bijgewerkt.
-4. Laad de browser of de Home Assistant-companion-app opnieuw.
+1. Controleer de dashboardresource `/velair_frontend/velair-card.js` met type **JavaScript-module**. Een automatisch `?v=...` hoort bij interfacebeheer; verwijder of bewerk dit niet.
+2. Controleer oude of dubbele resources zoals `/local/velair-card.js`. Velair migreert en consolideert precies deze lokale paden bij interfacebeheer automatisch. Andere paden en externe URL's vragen handmatige controle.
+3. Herstart Home Assistant na een integratie-update.
+4. Herlaad browser of Companion-app en open het dashboard direct, zonder eerst de Velair-zijbalk te bezoeken.
+
+Voeg bij YAML-resourcebeheer de module handmatig toe met de stabiele URL zonder parameters en verwijder daar oude of dubbele vermeldingen. Een kaart of dashboard in YAML betekent op zichzelf geen YAML-resourcebeheer. Zie [installatie](installation.nl.md#resources-managed-in-yaml). Controleer Home Assistant-logboeken op registratiefouten of YAML-waarschuwingen; Velair maakt hiervoor geen blijvende meldingen.
+
+Als automatische registratie mislukt, voeg de resource handmatig toe via **Instellingen > Dashboards > Bronnen** als **JavaScript-module**:
+
+```yaml
+url: /velair_frontend/velair-card.js
+type: module
+```
 
 De browserconsole of het netwerkpaneel laat zien of het verzoek voor de module is mislukt. Vermeld de volledige foutmelding wanneer je een reproduceerbaar probleem meldt.
 
@@ -42,21 +51,11 @@ Als de integratie net is bijgewerkt, vernieuw de browser dan volledig of laad de
 <a id="the-lovelace-card-shows-old-ui"></a>
 ## De Lovelace-kaart toont de oude interface
 
-Controleer de dashboardresources. Verwijder oude ontwikkelresources, zoals:
+Herstart eerst Home Assistant en herlaad de betreffende browser of Companion-app. Velair vernieuwt interfacebeheerde resources automatisch, inclusief migratie van `/local/velair-card.js` en samenvoegen van herkende duplicaten. Controleer de logboeken bij fouten. Andere paden en externe URL's vragen handmatige controle.
 
-```yaml
-url: /local/velair-card.js
-type: module
-```
+Velair levert deze resource met no-cacheheaders. Bij interfacebeheer onderhoudt het automatisch `?v=...` en gebruikt dezelfde versie-URL voor zijbalk en dashboardkaarten. De stabiele URL `/velair_frontend/velair-card.js` blijft geldig voor handmatige en YAML-configuratie. Voeg geen buildidentificaties toe en wijzig versieparameters niet tussen releases.
 
-Gebruik in plaats daarvan de resource die de integratie aanbiedt:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Velair biedt deze resource aan met headers die caching verhinderen. De zijbalk gebruikt een URL met automatische versieaanduiding en afgeschermde interne elementen, zodat een oudere Lovelace-kaart in de cache een paneelupdate niet kan blokkeren. Na een integratie-update hoef je doorgaans alleen Home Assistant te herstarten en de browser of companion-app te vernieuwen. Als de backend de nieuwe versie meldt maar de oude interface zichtbaar blijft, vernieuw de browser dan volledig of wis de sitecache voordat je het probleem meldt. Je hoeft tussen releases geen build-ID's toe te voegen of de resource-URL te wijzigen.
+Een integratie-update vereist normaal alleen Home Assistant herstarten en browser of app herladen. Meldt het backend de nieuwe versie maar blijft de oude interface zichtbaar, voer dan een harde vernieuwing uit of wis de sitecache voordat je het probleem meldt.
 
 <a id="a-climate-entity-is-missing"></a>
 ## Een klimaatentiteit ontbreekt

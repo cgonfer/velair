@@ -1,3 +1,4 @@
+import { controlUnitId, controlUnitName, orderedControlUnitIds } from "../domain/control-units";
 import { html, nothing } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import type { VelairViewHost } from "../host-types";
@@ -90,8 +91,8 @@ function renderOverviewPreparationCounts(host: VelairViewHost, preparation: Arri
 function renderOverviewReturnTimeline(host: VelairViewHost, status: PlannedReturnStatus, timeline: NonNullable<ReturnType<typeof plannedReturnTimeline>>, preparation?: ArrivalPreparationSummary) {
   const hour12 = host.hass?.locale?.time_format === "12" ? true : host.hass?.locale?.time_format === "24" ? false : undefined;
   const labels = plannedReturnTimelineLabels(timeline.departure, timeline.arrival, host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12);
-  const points = overviewPreparationPoints(preparation, timeline.departure, host._data?.configured_entities ?? []);
-  const names = Object.fromEntries(points.map(point => [point.entityId, String(host.hass?.states?.[point.entityId]?.attributes?.friendly_name ?? point.entityId)]));
+  const points = overviewPreparationPoints(preparation, timeline.departure, orderedControlUnitIds(host._data));
+  const names = Object.fromEntries(points.map(point => [point.entityId, controlUnitName(host._data, host.hass, point.entityId)]));
   const estimateLabel = (start: number) => host._t("plannedReturnOverviewPreparationStartEstimate", { time: plannedReturnTimelineLabels(timeline.departure, start,
     host.hass?.config?.time_zone ?? "UTC", languageFromHass(host.hass), hour12).arrival });
   const departureText = host._formatDateTime(status.departure_at!);
@@ -116,6 +117,7 @@ function renderOverviewReturnTimeline(host: VelairViewHost, status: PlannedRetur
 }
 
 export function renderPlannedReturnZoneSignal(host: VelairViewHost, entityId: string) {
+  entityId = controlUnitId(host._data, entityId);
   const intent = host._data?.zone_runtime?.[entityId]?.planned_return;
   const now = host._currentTimelineNow?.().getTime() ?? Date.now();
   const preparation = currentArrivalPreparation(host._data?.planned_return_status, now);

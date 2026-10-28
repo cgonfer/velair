@@ -1,3 +1,4 @@
+import { controlUnitState } from "../domain/control-units";
 import { selectedDayGroup, schedulesEqual } from "../domain/day-layouts";
 import { backendErrorMessage } from "../domain/backend-errors";
 import {
@@ -281,7 +282,7 @@ export function unsupportedModeError(
     const capabilities = host._data?.external_execution?.systems.find((system) => system.provider === execution.provider)?.capabilities;
     if (!capabilities?.supports_temperature_only) return host._t("profileExternalUnsupportedBlock", { climate: host._friendlyEntityName(entityId) });
   }
-  const state = host.hass?.states?.[entityId];
+  const state = controlUnitState(host._data, host.hass, entityId);
   const unsupportedRange = blocks.find((block) =>
     block.action === ACTION_SET_TEMPERATURE
     && (block.target_temp_low !== undefined || block.target_temp_high !== undefined)

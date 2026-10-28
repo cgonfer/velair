@@ -8,16 +8,37 @@ Translations: [English original](troubleshooting.md) · [Español](troubleshooti
 ## A Lovelace Card Shows Configuration Error
 
 Confirm that Velair is installed and configured before the dashboard loads the
-card. The integration exposes its frontend resource early during Home Assistant
-startup so normal restarts do not leave cards waiting for the module.
+card. When resources are managed through the Home Assistant interface, Velair
+registers and updates its module automatically. No manual resource setup is
+needed during normal installation.
 
 If the error remains:
 
-1. Confirm that the dashboard resource URL is exactly
+1. Confirm that the dashboard resource uses
    `/velair_frontend/velair-card.js` and its type is **JavaScript module**.
-2. Remove duplicate or old resources such as `/local/velair-card.js`.
+   An automatic `?v=...` parameter is expected when resources are managed through
+   the interface; do not remove or edit it.
+2. Check for duplicate or old resources such as `/local/velair-card.js`.
+   Velair migrates and consolidates these exact local paths automatically in
+   interface-managed resources. Other paths and external URLs need manual review.
 3. Restart Home Assistant after updating the integration.
-4. Reload the browser or Home Assistant companion app.
+4. Reload the browser or Home Assistant companion app and open the dashboard
+   directly, without visiting the Velair sidebar first.
+
+If resources are managed in YAML, add the module manually using the stable URL
+without parameters and remove old or duplicate entries there. Writing a card or
+dashboard in YAML alone does not mean resources are managed in YAML. See
+[installation](installation.md#resources-managed-in-yaml) for the configuration.
+Check Home Assistant logs for registration failures or YAML resource warnings;
+Velair does not create persistent notifications for these checks.
+
+If automatic registration fails, you can add the resource manually through
+**Settings > Dashboards > Resources** as a **JavaScript module**:
+
+```yaml
+url: /velair_frontend/velair-card.js
+type: module
+```
 
 The browser console or network panel should show whether the module request
 failed. Include that complete error when reporting a reproducible problem.
@@ -30,21 +51,23 @@ If the integration was just updated, hard refresh the browser or reload the Home
 
 ## The Lovelace Card Shows Old UI
 
-Check dashboard resources. Remove old development resources such as:
+Restart Home Assistant and reload the affected browser or companion app first.
+Velair updates interface-managed resources automatically, including migration
+from `/local/velair-card.js` and consolidation of recognized duplicates.
+Check Home Assistant logs if that update fails. Other paths and external URLs
+need manual review.
 
-```yaml
-url: /local/velair-card.js
-type: module
-```
+Velair serves this resource with no-cache headers. For interface-managed
+resources, Velair automatically maintains a `?v=...` parameter and uses the same
+versioned URL for the sidebar and dashboard cards. The stable
+`/velair_frontend/velair-card.js` URL remains valid for manual and YAML
+configuration. Do not add build identifiers or edit
+version parameters between releases.
 
-Use the integration-served resource instead:
-
-```yaml
-url: /velair_frontend/velair-card.js
-type: module
-```
-
-Velair serves this resource with no-cache headers. The sidebar uses an automatically versioned URL and isolated internal elements so an older cached Lovelace card cannot block a panel update. An integration update normally requires only a Home Assistant restart and browser or companion-app refresh. If the backend reports the new version but the previous interface remains visible, perform a hard refresh or clear the site cache before reporting the problem. Users should not add build identifiers or edit the resource URL between releases.
+An integration update normally requires only a Home Assistant restart and
+browser or companion-app refresh. If the backend reports the new version but
+the previous interface remains visible, perform a hard refresh or clear the site
+cache before reporting the problem.
 
 ## A Climate Entity Is Missing
 

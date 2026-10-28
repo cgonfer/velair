@@ -67,7 +67,7 @@ class PreconditioningDependencyContractsTest(unittest.TestCase):
         restored = normalize_schedule_data(serialize_schedule_data(self.data), list(self.data["zones"]))
         self.assertEqual(restored["preconditioning_accepted_anchors"], {"occurrence": anchor})
         payload = api_module._build_export_payload(self._runtime(), ["zones"])
-        self.assertEqual(payload["model_version"], 22)
+        self.assertEqual(payload["model_version"], api_module.EXPORT_MODEL_VERSION)
         self.assertNotIn("preconditioning_accepted_anchors", str(payload))
         imported = api_module._build_import_data(self._runtime(), payload, ["zones"])
         self.assertEqual(imported["zones"]["climate.child"]["preconditioning"]["master_entity_id"], "climate.master")

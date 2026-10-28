@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](comfort.md) · [Español](comfort.es.md) · 
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.6 |
+| Última sincronización | 2026-10-28 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -20,6 +20,8 @@ Traducciones: [Original en inglés](comfort.md) · [Español](comfort.es.md) · 
 <!-- velair-docs:end -->
 
 El intervalo predeterminado de temperatura confortable es `20–24 °C`. Si Home Assistant utiliza Fahrenheit, el intervalo predeterminado es `68–75 °F`, con límites redondeados a valores sin decimales.
+
+Confort sigue siendo independiente para cada equipo físico de un grupo de habitación. Cada miembro tiene su interruptor de supervisión, sensores y umbrales propios y muestra su propia evaluación. Agrupar comparte programación y control de la habitación sin sustituir esos ajustes de Confort.
 
 Los umbrales de Confort utilizan la unidad de temperatura configurada en Home Assistant y se migran o importan con el resto de los datos térmicos guardados de Velair. Un sensor de temperatura que declare la otra unidad se convierte antes de comparar su lectura con los umbrales de Confort del equipo gestionado.
 
@@ -36,6 +38,8 @@ La temperatura utiliza la primera fuente disponible en este orden:
 1. el sensor de temperatura seleccionado en la pestaña Confort;
 2. el sensor Room Assist configurado para ese equipo;
 3. el atributo `current_temperature` de la entidad de climatización.
+
+Para los equipos agrupados, la temperatura automática usa `current_temperature` del miembro físico; no hereda el sensor Room Assist del grupo. Selecciona un sensor externo expresamente en Confort para ese miembro si lo necesitas.
 
 La humedad utiliza:
 
@@ -193,7 +197,7 @@ Velair expone un valor de calidad de datos:
 - `stale`: no hay lecturas actuales y todas las fuentes supervisadas están desactualizadas;
 - `unavailable`: no puede utilizarse ninguna lectura actual por otro motivo.
 
-El panel agrupa las lecturas utilizables cuya vigencia no puede verificarse en la sección **Vigencia de los datos** de la zona, en lugar de repetir la misma nota junto a cada lectura derivada. Una tarjeta Lovelace de Confort que oculta la configuración muestra un resumen sobre las lecturas; Diagnóstico también expone el contexto sobre la vigencia. La lista contraída de zonas omite este estado habitual para mantener la legibilidad. Es una configuración automática válida con la fuente del equipo, no un error de configuración. Las lecturas ausentes o desactualizadas siguen mostrando una advertencia en la lista de zonas.
+La pestaña Confort agrupa las lecturas utilizables cuya vigencia no puede verificarse junto a los selectores de sensores en **Configuración → Fuentes de datos**. Una explicación discreta identifica las lecturas afectadas y aclara que desconocer la hora de medición no significa que sean incorrectas ni que la habitación sea incómoda. Resumen y las tarjetas Lovelace omiten este estado habitual; Diagnóstico conserva el contexto técnico de vigencia. Es una configuración automática válida con la fuente del equipo, no un error. Las lecturas ausentes o desactualizadas siguen mostrando una advertencia en la lista de zonas.
 
 <a id="visual-status"></a>
 
@@ -259,7 +263,7 @@ Las opciones de visibilidad de temperatura, humedad y CO2 solo afectan a los gr�
 
 `Desactualizado tras` es el tiempo máximo desde que un sensor seleccionado comunicó por última vez su estado a Home Assistant (`last_reported`). Repetir el mismo valor actualiza la marca temporal de la comunicación y mantiene vigente la lectura. Velair escucha esas comunicaciones y programa el siguiente vencimiento, para que el panel, los sensores y los eventos puedan mostrar `stale` cuando se alcance el plazo sin otra comunicación.
 
-El ajuste está en su propia sección **Vigencia de los datos** después de los controles de fuentes. Esa sección también agrupa las lecturas actuales con vigencia no verificable, incluidas las métricas derivadas activadas y lecturas exteriores, sin repetir valores exteriores calculados. Enumera las fuentes directas cubiertas por el límite, incluidos sensores Room Assist, CO2, exteriores o métricas derivadas externas. Los sensores exteriores pueden mantenerlo activo aunque tanto la temperatura como la humedad interiores procedan del equipo; el límite no hace caducar esas lecturas del equipo. Puedes configurarlo antes de activar Confort. Si no hay una fuente directa configurada, el campo se desactiva con una explicación; su valor guardado se conserva para una futura selección de sensor.
+El ajuste está en su propia sección **Vigencia de los datos**, después de los controles de fuentes. Enumera las fuentes directas cubiertas por el límite, incluidos sensores Room Assist, CO2, exteriores o métricas derivadas externas. La explicación de lecturas con vigencia no verificable aparece junto a los selectores de sensores e incluye métricas derivadas habilitadas y lecturas exteriores. Los sensores exteriores pueden mantener el límite activo aunque la temperatura y humedad interiores procedan del equipo; el límite no hace caducar esas lecturas. Puedes configurarlo antes de habilitar Confort. Sin una fuente directa configurada, el campo se deshabilita con una explicación; el valor guardado se conserva para una futura selección.
 
 Los atributos automáticos de temperatura y humedad de `climate.*` no tienen una marca temporal de comunicación independiente. Velair mantiene visible un valor válido y etiqueta su vigencia como `unverified`; los cambios en el objetivo del equipo no verifican una medición nueva. Selecciona el sensor original de temperatura o humedad cuando esté disponible. Si un sensor seleccionado no tiene `last_reported`, su valor válido también es `unverified`. Una entidad `unavailable` o `unknown` no puede proporcionar una lectura utilizable, aunque conserve atributos numéricos antiguos.
 

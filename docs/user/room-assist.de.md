@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.5 |
-| Letzte Synchronisierung | 2026-10-24 |
+| Referenzversion | 1.9.0-beta.6 |
+| Letzte Synchronisierung | 2026-10-28 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -39,7 +39,11 @@ Einzelziele in `auto` und `heat_cool` sowie native `heat_cool`-Bereiche behalten
 
 Die Klimaentität bleibt das Stellglied. Velair erstellt keine virtuelle Klimaentität und umgeht keine Gerätefirmware. Unterstützt dein Thermostat oder Heizkörperventil die direkte Einbindung eines externen Sensors, ist diese native Geräteoption normalerweise weiterhin die beste erste Wahl.
 
-Entitäten, die ausschließlich Bereiche unterstützen, können geplante Wertepaare auch in Heizen, Kühlen und Auto empfangen. Room Assist korrigiert diese Paare nicht: Bereichsunterstützung benötigt `heat_cool`. Der Live-Status erläutert die Einschränkung; Velair sendet das nominelle Paar ohne Verschiebung. Gespeicherte Einstellungen bleiben für kompatible Ziele erhalten. Der Wechsel von einem unterstützten Ziel zu einem solchen Bereich beendet die vorherige Unterstützung, ohne einen alten korrigierten Sollwert über das neue Paar zurückzuschreiben.
+Für zwei Sollwerte in festem `heat` oder `cool` wähle zunächst den **Referenzsollwert** für Gerät und Modus unter **Einstellungen → Klimageräte und Gruppen**: **Unterer Sollwert** oder **Oberer Sollwert**, entsprechend dem tatsächlich genutzten Wert. Velair leitet dies nicht aus der Bereichsfähigkeit ab. Adaptive Vorkonditionierung verwendet dieselbe Auswahl.
+
+Room Assist nutzt diese Grenze als festen Heiz- oder Kühlsollwert, einschließlich Einzelwert-Hysteresezyklus und Schutz des geplanten Sollwerts. Es verschiebt beide Grenzen gleich weit und erhält ihren Abstand. Beide müssen ins Temperaturraster und die physischen Grenzen passen; die andere Grenze kann die Korrektur begrenzen. Bestehende Einschränkungshinweise gelten weiterhin.
+
+Bei **Nicht konfiguriert** werden Festmoduspaare ohne Room-Assist-Korrektur gesendet. `auto`-Bereiche bleiben ohne Unterstützung; native `heat_cool`-Bänder behalten ihr Verhalten. Gespeicherte Einstellungen bleiben erhalten. Referenz- oder Modusänderungen verwerfen veraltete Unterstützung, ohne einen alten korrigierten Sollwert über die neue Absicht zurückzuschreiben.
 
 <a id="setup"></a>
 ## Einrichtung
@@ -48,7 +52,7 @@ Entitäten, die ausschließlich Bereiche unterstützen, können geplante Wertepa
 2. Klappe das gewünschte Klimagerät auf.
 3. Wähle einen Raumtemperatursensor.
 4. Aktiviere die Raumsensorunterstützung.
-5. Passe das Room-Assist-Totband an: Es setzt die untere und obere Schaltgrenze für festes Heizen/Kühlen oder den neutralen Rand für Automatikmodi und native Bereiche.
+5. Stelle das Room-Assist-Totband für festes Heizen oder Kühlen um den Einzelwert oder die gewählte Bereichsreferenz ein; bei automatischen Einzelwertmodi und nativen `heat_cool`-Bändern bestimmt es den neutralen Abstand.
 6. Passe die maximale Unterstützungsdifferenz an, wenn der Standard für den Raum zu klein ist oder unter der Zielabweichung liegt, die das Thermostat zum Beenden von Heizen/Kühlen benötigt.
 7. Passe die Aktualisierungsverzögerung an, wenn Sensoraktualisierungen zu langsam oder zu häufig erscheinen.
 
@@ -66,6 +70,13 @@ Die aktuelle Temperaturskala zeichnet das konfigurierte Totband als neutrales sc
 
 Bei einem Upgrade von einer Version, in der Room Assist die Mindestdifferenz der adaptiven Vorkonditionierung mitverwendete, kopiert Velair den bestehenden Wert einmal in das neue Room-Assist-Totband. Dadurch bleibt die konfigurierte Bandbreite erhalten, auch bei einem historischen Wert außerhalb des neueren 0.1-Grad-Eingaberasters. Festes `heat` und `cool` verwenden diesen Wert dann mit dem unten beschriebenen Hysteresezyklus. Nach der Migration sind beide Einstellungen unabhängig: Ändern einer Einstellung verändert nie die andere. Neu konfigurierte oder zurückgesetzte Zonen verwenden den oben genannten einheitenabhängigen Standard.
 
+<a id="room-groups"></a>
+### Raumgruppen
+
+Wähle in Room Assist die Gruppe und nutze dieselbe Sensorauswahl, Aktivierung, Totband-, Maximalkorrektur- und Aktualisierungsregler. Die eigene Gruppentemperatur stammt vom unter **Raumgruppen → Temperaturreferenz** gewählten Mitglied; der optionale externe Sensor wird hier eingerichtet. Deaktivieren oder Löschen von Room Assist stellt diesen Mitgliedsmesswert wieder her.
+
+Die Gruppe hat eine gemeinsame Room-Assist-Konfiguration und Korrektur statt unabhängiger Regler pro Mitglied. Velair erhält den geplanten Raumsollwert und sendet den unterstützten Befehl gemäß Gruppenübermittlung: standardmäßig alle Mitglieder oder der gewählte Empfänger, wenn die Anlage bereits weitergibt. Fähigkeits-, Schritt- und Grenzprüfungen gelten für die echten Empfänger. Mitglieder bleiben individuell in der Übersicht sichtbar.
+
 <a id="understanding-the-live-status"></a>
 ## Den aktuellen Status verstehen
 
@@ -78,7 +89,7 @@ Der Room-Assist-Tab zeigt, was Velair für jedes verwaltete Klimagerät aktuell 
 | **Inaktiv** | Room Assist ist aktiviert, aber kein kompatibler Temperaturblock aktiv oder noch keine nutzbare Berechnung vorhanden. |
 | **Bereit** | Velair hat Messwerte und Ziel für eine Berechnung, aber noch kein unterstütztes Ziel angewendet. |
 | **Unterstützt** | Velair hat ein vorübergehend korrigiertes Ziel oder einen verschobenen Bereich angewendet. |
-| **Hält** | Room Assist hält ein automatisches Einzelziel neutral, einen nativen Bereich oder durch Zeitplanzielschutz ein Ziel auf der sicheren Seite. Ein fester `heat`-/`cool`-Zyklus kann beim Durchlaufen des Totbands stattdessen **Unterstützt** bleiben. |
+| **Hält** | Room Assist hält ein automatisches Einzelziel neutral, einen nativen `heat_cool`-Bereich oder durch Zeitplanzielschutz ein Ziel auf der sicheren Seite. Ein fester `heat`-/`cool`-Zyklus kann beim Durchlaufen des Totbands stattdessen **Unterstützt** bleiben. |
 | **Blockiert** | Pause, temporäre Anpassung, manueller Zustand oder anderer Zeitplanerzustand hat derzeit Vorrang. |
 | **Nicht verfügbar** | Das verwaltete Klimagerät oder erforderliche Zielfähigkeit ist nicht nutzbar. Die Oberfläche zeigt einen bekannten Grund an. |
 
@@ -348,7 +359,7 @@ deadband_high: 21.3
 reason: current_schedule
 ```
 
-Die vier Hysteresefelder sind optional. Sie erscheinen bei festem Einzelziel `heat` oder `cool` mit Totband ungleich null und fehlen bei bisheriger Korrektur bei Totband null, Einzelziel-Automatikmodi und nativen Bereichen.
+Die vier Hysteresefelder sind optional. In Automationsereignissen erscheinen sie für einen festen Einzelwertzyklus `heat` oder `cool` mit Totband ungleich null. Bei alter Null-Totband-Korrektur, automatischen Einzelwertmodi und allen Bereichen fehlen sie. Feste Bereiche mit konfigurierter Referenz zeigen ihre Hysteresephase im Live-Laufzeitstatus; ihre Ereignisse behalten vollständige Grenzpaare und `range_shift`.
 
 Ein Bereichsupdate verwendet vollständige geplante und angewendete Bänder statt Einzelzielfeldern:
 

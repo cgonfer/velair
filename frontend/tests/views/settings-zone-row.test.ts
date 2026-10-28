@@ -138,7 +138,7 @@ describe("settings climate row", () => {
     expect(cssText).toMatch(/\.external-system-zone\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(160px, 1fr\) minmax\(220px, 0\.8fr\)/);
     expect(cssText).toMatch(/@container \(max-width:\s*720px\)[\s\S]*\.external-system-zone\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
     expect(cssText).toMatch(/\.external-system-zone-identity strong\s*\{[^}]*font-size:\s*14px/);
-    expect(cssText).toMatch(/\.external-controller-conditions summary\s*\{[^}]*cursor:\s*pointer/);
+    expect(cssText).toMatch(/\.external-controller-conditions summary,\s*\.external-controller-conditions \.settings-section-heading\s*\{[^}]*cursor:\s*pointer/);
   });
 
   it("selects local execution for an eligible zone without external configuration", () => {
@@ -561,4 +561,13 @@ describe("settings climate row", () => {
     expect(cssText).not.toContain(".settings-zone-main");
     expect(cssText).not.toContain("external-adjustment-popover");
   });
+});
+
+it("uses a published group temperature step without showing a manual fallback", () => {
+  const container = document.createElement("div");
+  const viewHost = host(false);
+  viewHost._data!.room_groups = { "group.room": { id: "group.room", name: "Room", members: ["climate.office", "climate.second"], temperature_entity_id: "sensor.room", delivery_mode: "all" } };
+  viewHost._data!.control_unit_states = { "group.room": { state: "heat", attributes: { target_temp_step: .5 } } };
+  render(renderSettingsTargetTempStep(viewHost, "group.room"), container);
+  expect(container.querySelector(".settings-target-temp-step")).toBeNull();
 });

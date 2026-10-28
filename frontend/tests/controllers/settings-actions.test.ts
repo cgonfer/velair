@@ -7,6 +7,7 @@ import {
   resetZonePreconditioningSettings,
   saveSettings,
   saveZonePreconditioning,
+  saveZoneComfort,
 } from "../../src/velair/controllers/settings-actions";
 import type { ScheduleResponse } from "../../src/velair/types";
 
@@ -30,6 +31,7 @@ function host(externalConfig = false) {
     resetZonePreconditioningSettings: vi.fn(async () => scheduleResponse()),
     updateSettings: vi.fn(async () => scheduleResponse()),
     updateZonePreconditioning: vi.fn(async () => scheduleResponse()),
+    updateZoneComfort: vi.fn(async () => scheduleResponse()),
   };
   const state = {
     _api: () => api,
@@ -52,6 +54,13 @@ function host(externalConfig = false) {
 }
 
 describe("settings actions", () => {
+  it("persists Comfort for the physical member rather than its shared control owner", async () => {
+    const { api, state } = host();
+    state._data = { ...scheduleResponse(), member_to_unit: { "climate.office": "group.room" } };
+    await saveZoneComfort(state, "climate.office", { temperature_min: 19, humidity_entity_id: "sensor.office_humidity" });
+    expect(api.updateZoneComfort).toHaveBeenCalledWith("climate.office", { temperature_min: 19, humidity_entity_id: "sensor.office_humidity" });
+    expect(state._applyScheduleData).toHaveBeenCalledWith(await api.updateZoneComfort.mock.results[0].value);
+  });
   beforeEach(() => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });

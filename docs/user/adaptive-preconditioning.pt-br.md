@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.5 |
-| Última sincronização | 2026-10-24 |
+| Versão de referência | 1.9.0-beta.6 |
+| Última sincronização | 2026-10-28 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -29,15 +29,17 @@ O pré-condicionamento adaptativo funciona localmente no Home Assistant. O Velai
 <a id="setup"></a>
 ## Configuração
 
-A aba Pré-condicionamento contém configurações adaptativas e aprendizado por equipamento. Retorno planejado tem sua própria aba para ocupação, chegadas semanais e ausência atual. Ambas incluem uma introdução e ajuda contextual. Os caminhos diretos são `/velair/preconditioning` e `/velair/planned-return`. Links antigos de subseções continuam abrindo a aba correspondente. Consulte [Retorno planejado](planned-return.pt-br.md).
+A aba Pré-condicionamento contém configurações adaptativas e aprendizado para cada dispositivo independente ou grupo de cômodo. Os membros agrupados aparecem aqui como um cômodo. Retorno planejado tem sua própria aba para ocupação, chegadas semanais e ausência atual. Ambas incluem uma introdução e ajuda contextual. Os caminhos diretos são `/velair/preconditioning` e `/velair/planned-return`. Links antigos de subseções continuam abrindo a aba correspondente. Consulte [Retorno planejado](planned-return.pt-br.md).
 
 1. Abra a aba Pré-condicionamento.
-2. Expanda o dispositivo de climatização que deseja configurar.
+2. Expanda o dispositivo ou grupo de cômodo que deseja configurar.
 3. Habilite o pré-condicionamento.
 4. Mantenha as configurações padrão do modelo, a menos que tenha um motivo específico para ajustá-las.
 5. Opcionalmente, selecione um sensor de temperatura externa.
 
-O pré-condicionamento é configurado por dispositivo. O aprendizado de aquecimento e resfriamento é acompanhado separadamente: amostras de resfriamento não substituem as de aquecimento, nem o contrário.
+O pré-condicionamento é configurado por dispositivo independente ou grupo de cômodo. O aprendizado de aquecimento e resfriamento é acompanhado separadamente: amostras de resfriamento não substituem as de aquecimento, nem o contrário.
+
+Um [grupo de cômodo](room-groups.pt-br.md#learning-and-membership-changes) armazena um modelo térmico e toma uma decisão de início; seus membros não aprendem nem se preparam independentemente. A referência de temperatura fornece a medição nativa, ou um sensor habilitado do Room Assist fornece a medição efetiva. Remover um membro reinicia o aprendizado dele e do grupo restante. Desfazer o grupo inicia históricos independentes para todos; os antigos não são repartidos nem recuperados. Renomear ou reordenar membros mantém o aprendizado.
 
 As faixas nativas de `heat_cool` são compatíveis. Se a temperatura do cômodo estiver abaixo do limite inferior por uma diferença maior que o delta mínimo de temperatura, o Velair calcula a previsão a partir desse limite e inicia antecipadamente a faixa completa para aquecer. Se estiver acima do limite superior por uma diferença maior que esse delta, calcula a previsão a partir do limite superior e inicia a faixa completa para resfriar. Leituras dentro da faixa ou das zonas de tolerância dos limites mantêm o horário normal. O Velair sempre envia os dois limites; nunca reduz uma faixa a uma única temperatura.
 
@@ -47,7 +49,9 @@ A preparação do Retorno planejado é identificada separadamente da antecipaç�
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa seção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por padrão para manter a visão habitual simples.
 
-Uma entidade pode exigir ambos os limites em Aquecimento, Resfriamento ou Auto sem suportar `heat_cool`. O Velair programa e entrega esses alvos, mas não antecipa o início nem recolhe amostras de aprendizado térmica para eles. A vista de preparação explica que esta funcionalidade exige Aquecimento/Resfriamento para intervalos. O par programado permanece inalterado e o Retorno planejado aplica-o na chegada, sem preparação antecipada. Ativar o pré-condicionamento não elimina esta limitação.
+Para dois alvos em `heat` ou `cool` fixo, selecione **Alvo de referência** para o dispositivo e modo em **Configurações → Dispositivos de climatização e grupos**. Escolha o limite que o equipamento realmente usa: **Alvo inferior** ou **Alvo superior**. A seleção é compartilhada com Room Assist. A preparação e o aprendizado de aquecimento usam somente o limite selecionado como alvo de aquecimento; resfriamento o usa como alvo de resfriamento. A direção vem do modo, mesmo se for o limite superior em aquecimento ou inferior em resfriamento. O Velair antecipa o par nominal completo, inclusive no Retorno planejado; nunca envia apenas o limite escolhido.
+
+Com **Não configurado**, pares em modo fixo mantêm o horário programado e não produzem amostras de aprendizado térmico. Retorno planejado os aplica na chegada, sem preparação antecipada. Faixas em `auto` mantêm essa limitação, pois escolher um limite não estabelece o comportamento de aquecimento ou resfriamento. O comportamento nativo de `heat_cool` não muda. Alterar a referência invalida observações de aprendizado iniciadas com a interpretação anterior.
 
 <a id="preconditioning-master"></a>
 ## Mestre do pré-condicionamento
@@ -90,6 +94,8 @@ Uma contagem de amostras inalterada não comprova falha. Uma transição pode n�
 O Velair calcula a diferença atual de temperatura para o próximo bloco de temperatura programado.
 
 Para uma faixa `heat_cool`, «temperatura-alvo» abaixo significa o limite inferior durante o aquecimento e o superior durante o resfriamento.
+
+Para uma faixa fixa em `heat` ou `cool`, a temperatura-alvo significa o limite de referência selecionado, com a direção determinada pelo modo fixo.
 
 Para aquecimento:
 

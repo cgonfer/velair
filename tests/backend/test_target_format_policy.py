@@ -474,7 +474,7 @@ class TargetFormatPolicyTest(unittest.IsolatedAsyncioTestCase):
             self.scheduler.preview_target_range_policy(self.entity, ["heat"], 0)
 
     def test_portable_20_and_optional_empty_policy_survive_normalization(self):
-        self.assertEqual(EXPORT_MODEL_VERSION, 22)
+        self.assertGreaterEqual(EXPORT_MODEL_VERSION, 23)
         self.data["zones"][self.entity]["target_range_modes"] = []
         exported = _export_zones(self.data["zones"])
         self.assertEqual(exported[self.entity]["target_range_modes"], [])

@@ -8,8 +8,8 @@ Traductions: [Original en anglais](README.md) · [Español](README.es.md) · [Fr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.5 |
-| Dernière synchronisation | 2026-10-24 |
+| Version de référence | 1.9.0-beta.6 |
+| Dernière synchronisation | 2026-10-28 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -25,6 +25,7 @@ La documentation de Velair est organisée par public et par sujet.
 
 - [Installation](user/installation.fr.md) : installer Velair avec HACS ou manuellement.
 - [Utilisation](user/usage.fr.md) : configurer les appareils de chauffage ou de climatisation, programmations, modèles, profils, forçages, pauses, importations/exportations et services.
+- [Groupes de pièce](user/room-groups.fr.md): partagez la programmation, le contrôle et l’apprentissage d’une pièce entre plusieurs équipements, avec des observations individuelles.
 - [Navigation du panneau et liens directs](user/usage.fr.md#panel-navigation-and-direct-links) : créer des liens vers les onglets et sous-sections, retrouver la section après une actualisation et utiliser l’historique du navigateur.
 - [Modifications externes et réglage manuel](user/manual-control.fr.md) : choisir si Velair conserve le contrôle automatique ou laisse la priorité aux modifications provenant des cartes HA, télécommandes, appareils et automatisations.
 - [Exécution externe des programmations](user/external-systems.fr.md) : publier des programmations hebdomadaires effectives compatibles, y compris la sélection des profils et modes, vers des contrôleurs pris en charge sans mélanger la logique des fournisseurs au planificateur de Velair.

@@ -1,3 +1,4 @@
+import { controlUnitId, controlUnitZone, controlUnitState, controlUnitIds } from "../domain/control-units";
 import { modeClassName } from "../domain/climate";
 import { effectiveClimateSchedule } from "../domain/climate-profiles";
 import { isActiveBoostOverride, isActivePauseOverride } from "../domain/overrides";
@@ -46,7 +47,7 @@ export function activeOverrideForEntity(
   entityId: string,
   zone?: ScheduleZone,
 ): Record<string, unknown> | undefined {
-  const override = zone?.override ?? host._data?.active_overrides?.[entityId];
+  const override = zone?.override ?? host._data?.active_overrides?.[controlUnitId(host._data, entityId)];
   return isActiveBoostOverride(override) ? override : undefined;
 }
 
@@ -55,8 +56,8 @@ export function activeOverrideEntityIds(host: OverviewDataHost): string[] {
     return [];
   }
 
-  return host._orderedZoneIds(host._data.configured_entities).filter((entityId: string) => {
-    const zone = host._data?.zones[entityId];
+  return host._orderedZoneIds(controlUnitIds(host._data)).filter((entityId: string) => {
+    const zone = controlUnitZone(host._data, entityId);
     return Boolean(activeOverrideForEntity(host, entityId, zone));
   });
 }
@@ -66,6 +67,7 @@ export function activePauseOverrideForEntity(
   _entityId: string,
   zone?: ScheduleZone,
 ): Record<string, unknown> | undefined {
+  zone ??= controlUnitZone(_host._data, _entityId);
   if (!isActivePauseOverride(zone?.override)) return undefined;
   return { ...(zone?.override ?? {}), pause_count: zone?.pauses?.length ?? 1 };
 }
@@ -130,8 +132,8 @@ export function overviewNextEvents(host: OverviewDataHost): ScheduleEvent[] {
     return host._data.next_events;
   }
 
-  const calculatedEvents = host._orderedZoneIds(host._data.configured_entities)
-    .map((entityId: string) => nextEventForEntity(host, entityId, host._data?.zones[entityId]))
+  const calculatedEvents = host._orderedZoneIds(controlUnitIds(host._data))
+    .map((entityId: string) => nextEventForEntity(host, entityId, controlUnitZone(host._data, entityId)))
     .filter((event: ScheduleEvent | undefined): event is ScheduleEvent => Boolean(event))
     .sort((first: ScheduleEvent, second: ScheduleEvent) =>
       new Date(first.when).getTime() - new Date(second.when).getTime());
@@ -180,7 +182,7 @@ export function todayWeekday(hass?: HomeAssistant, value = new Date()): string {
 }
 
 export function currentTemperature(host: OverviewDataHost, entityId: string): string | undefined {
-  const attributes = host.hass?.states?.[entityId]?.attributes;
+  const attributes = controlUnitState(host._data, host.hass, entityId)?.attributes;
   const currentTemperatureValue = attributes?.current_temperature ?? attributes?.temperature;
   if (typeof currentTemperatureValue !== "number") {
     return undefined;
@@ -193,14 +195,14 @@ export function climateHvacAction(
   host: OverviewDataHost,
   entityId: string,
 ): ClimateHvacAction | undefined {
-  const action = host.hass?.states?.[entityId]?.attributes?.hvac_action;
+  const action = controlUnitState(host._data, host.hass, entityId)?.attributes?.hvac_action;
   return typeof action === "string" && CLIMATE_HVAC_ACTIONS.has(action as ClimateHvacAction)
     ? action as ClimateHvacAction
     : undefined;
 }
 
 export function climateMode(host: OverviewDataHost, entityId: string): string | undefined {
-  const state = host.hass?.states?.[entityId];
+  const state = controlUnitState(host._data, host.hass, entityId);
   const mode = state?.state;
   if (!mode || mode === "unknown" || mode === "unavailable") {
     return undefined;
@@ -215,6 +217,6 @@ export function climateMode(host: OverviewDataHost, entityId: string): string | 
 }
 
 export function climateModeClass(host: OverviewDataHost, entityId: string): string {
-  const mode = host.hass?.states?.[entityId]?.state;
+  const mode = controlUnitState(host._data, host.hass, entityId)?.state;
   return mode ? `mode-${modeClassName(mode)}` : "";
 }
