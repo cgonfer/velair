@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](usage.md) · [Español](usage.es.md) · [Fran
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Versione di riferimento | 1.9.0-beta.7 |
+| Ultima sincronizzazione | 2026-10-30 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -646,7 +646,9 @@ Velair supporta anche la pausa per zona tramite servizi e automazioni. Una pausa
 
 L’incremento agisce su una singola zona climatica. Sostituisce temporaneamente la programmazione di un’entità e lascia funzionare normalmente le altre zone.
 
-All’avvio di un incremento, Velair acquisisce lo stato climatico ripristinabile della zona, inclusi modalità HVAC e singolo obiettivo o intervallo completo quando Home Assistant li espone. Questa istantanea serve soltanto a decidere cosa fare al termine dell’incremento.
+All’avvio di un incremento, Velair acquisisce lo stato climatico ripristinabile della zona, inclusi modalità HVAC e singolo obiettivo o intervallo completo quando Home Assistant li espone. L’istantanea può includere anche le opzioni supportate dal dispositivo, come il suo preset, la modalità ventola, le impostazioni di oscillazione e l’umidità obiettivo. Questa istantanea serve soltanto a decidere cosa fare al termine dell’incremento.
+
+Quando ripristina lo stato salvato, Velair evita di reinviare modalità HVAC e opzioni del dispositivo che corrispondono già. Se un’opzione deve cambiare, la applica prima della temperatura o dell’intervallo finale, in modo che un preset del dispositivo non sostituisca l’obiettivo di ripresa previsto con una temperatura precedente. L’effetto del preset del dispositivo sulla sua programmazione nativa o sulla durata della forzatura dipende comunque dall’integrazione Home Assistant.
 
 L’incremento è disponibile tramite servizi Home Assistant, script, automazioni e controlli della dashboard. L’editor principale rimane così concentrato sulla programmazione, mentre sono possibili automazioni avanzate, per esempio:
 
@@ -862,7 +864,7 @@ Un incremento con intervallo usa `target_temp_low` e `target_temp_high` al posto
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Annulla in anticipo un incremento attivo. Usa sempre lo stesso comportamento di ripresa della scadenza normale: applica l’obiettivo programmato esplicito attivo se presente; altrimenti, anche con un blocco `Keep`, ripristina modalità HVAC e obiettivo acquisiti prima dell’incremento. Non ha effetto se non è attivo un incremento.
+Annulla in anticipo un incremento attivo. Usa sempre lo stesso comportamento di ripresa della scadenza normale: applica l’obiettivo programmato esplicito attivo se presente; altrimenti, anche con un blocco `Keep`, ripristina lo stato climatico salvato, incluse le opzioni supportate dal dispositivo. Non ha effetto se non è attivo un incremento.
 
 ```yaml
 action: velair.cancel_boost

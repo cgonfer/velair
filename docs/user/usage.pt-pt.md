@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Versão de referência | 1.9.0-beta.7 |
+| Última sincronização | 2026-10-30 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -648,7 +648,9 @@ O Velair também suporta pausas por zona via serviços e automações. Uma pausa
 
 O reforço é aplicado por zona de climatização. Ele substitui temporariamente a programação de uma entidade e deixa as outras zonas funcionando normalmente.
 
-Quando um reforço começa, o Velair captura o estado atual restaurável do termóstato daquela zona, incluindo modo HVAC e temperatura única ou intervalo completo, quando o Home Assistant os expõe. Essa captura é usada apenas para decidir o que deve acontecer quando o reforço termina.
+Quando um reforço começa, o Velair captura o estado atual restaurável do termóstato daquela zona, incluindo modo HVAC e temperatura única ou intervalo completo, quando o Home Assistant os expõe. A captura também pode incluir opções suportadas do dispositivo, como a predefinição do dispositivo, o modo do ventilador, as definições de oscilação e a humidade-alvo. Essa captura é usada apenas para decidir o que deve acontecer quando o reforço termina.
+
+Ao restaurar o estado guardado, o Velair evita reenviar modos HVAC e opções do dispositivo que já correspondem aos valores pretendidos. Se uma opção tiver de mudar, o Velair aplica-a antes da temperatura ou do intervalo final, para que uma predefinição do dispositivo não substitua a temperatura-alvo de retorno pretendida por uma temperatura antiga. O efeito da predefinição do dispositivo na programação nativa ou na duração da sobreposição continua a depender da integração do Home Assistant.
 
 O reforço está disponível por serviços, scripts, automações e controlos de painel do Home Assistant. Isso mantém o editor principal focado na programação, permitindo automações avançadas como:
 
@@ -864,7 +866,7 @@ Um reforço com intervalo usa `target_temp_low` e `target_temp_high` no lugar de
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Cancele antecipadamente um reforço ativo. Isso sempre usa o mesmo comportamento da expiração normal: o Velair aplica a temperatura-alvo explícita da programação ativa, se houver; caso contrário, inclusive com um bloco `Keep`, restaura o modo HVAC e a temperatura-alvo capturados antes do reforço. A chamada não tem efeito quando não há reforço ativo.
+Cancele antecipadamente um reforço ativo. Isso sempre usa o mesmo comportamento da expiração normal: o Velair aplica a temperatura-alvo explícita da programação ativa, se houver; caso contrário, inclusive com um bloco `Keep`, restaura o estado de climatização guardado, incluindo as opções suportadas do dispositivo. A chamada não tem efeito quando não há reforço ativo.
 
 ```yaml
 action: velair.cancel_boost

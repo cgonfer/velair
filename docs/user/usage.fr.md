@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.0-beta.7 |
+| Dernière synchronisation | 2026-10-30 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -1487,8 +1487,18 @@ programmation d’une entité et laisse les autres zones fonctionner normalement
 
 Au démarrage d’un forçage, Velair capture l’état restaurable actuel de la zone,
 y compris son mode HVAC et sa consigne unique ou sa plage complète lorsque
-Home Assistant les expose. Cet instantané sert uniquement à déterminer
+Home Assistant les expose. L’instantané peut aussi inclure les options prises en
+charge par l’appareil, comme son préréglage, le mode du ventilateur, les réglages
+d’oscillation et l’humidité cible. Cet instantané sert uniquement à déterminer
 ce qui doit se produire à la fin du forçage.
+
+Lors de la restauration de l’état enregistré, Velair évite de renvoyer les modes
+HVAC et les options de l’appareil qui correspondent déjà à l’état enregistré.
+Si une option doit changer, il l’applique avant la température ou la plage finale afin qu’un
+préréglage de l’appareil ne remplace pas la consigne de retour prévue par une
+ancienne température. L’effet du préréglage de l’appareil sur sa programmation
+native ou la durée de sa dérogation dépend toujours de l’intégration Home
+Assistant.
 
 Le forçage est accessible via les services, scripts et automatisations et commandes des
 tableaux de bord Home Assistant. L’éditeur principal reste concentré sur les
@@ -1804,8 +1814,8 @@ de `temperature`, selon les mêmes règles que `velair.set_temperature`.
 Annule un forçage actif avant son expiration. Le retour est toujours le même
 qu’à l’expiration normale : Velair applique la consigne explicite active
 lorsqu’elle existe ; sinon, y compris avec un bloc `Conserver`, il rétablit
-le mode HVAC et la consigne capturés avant le forçage. L’appel n’a aucun effet
-si aucun forçage n’est actif.
+l’état climatique enregistré, y compris les options prises en charge par
+l’appareil. L’appel n’a aucun effet si aucun forçage n’est actif.
 
 ```yaml
 action: velair.cancel_boost

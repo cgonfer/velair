@@ -468,6 +468,24 @@ When applying a temperature:
 
 This keeps schedule blocks useful across heating-only, cooling-only, and mixed systems.
 
+Combined temperature commands deliver HVAC mode, optional device settings, then
+the final scalar or range target. Device presets can themselves write a target
+using an integration's cached temperature, so the explicit target is sent last,
+even when feedback from earlier services is delayed. The complete mode/target
+expectation is registered before delivery, and the stages share one Home
+Assistant context. Room groups use this sequence for each physical recipient;
+failures retain per-member delivery status.
+
+Saved-state restoration skips HVAC modes and options that match the observed
+state. If the HVAC mode must change, options are reapplied even if they matched
+before the mode command, since that command may reset them. This deduplication
+does not suppress explicit schedule commands or options-only actions. An off
+snapshot restores off without sending its stored target/options; a
+temperature-only snapshot restores only its target. A failed option stage stops
+before the target; undelivered target expectations are discarded while accepted
+HVAC expectations are retained. Accepted services do not prove physical
+convergence or integration-specific preset/override-duration semantics.
+
 An opt-in `temperature_only: true` policy on `set_temperature` blocks is the
 exception to implicit activation: it owns the target without owning HVAC mode.
 It forbids explicit modes and optional device controls, preserves the actual

@@ -164,12 +164,12 @@ class GroupClimateManager(ClimateManager):
             if len(modes) > 1:
                 raise ValueError("Group members have different effective HVAC modes; choose an explicit group mode")
 
-    async def _async_set_temperature_target(self, entity_id, target, *, blocking, ensure_on, hvac_mode, range_target):
+    async def _async_set_temperature_target(self, entity_id, target, *, blocking, ensure_on, hvac_mode, range_target, climate_options):
         """Retain physical mode fallback, validation and complete action ownership."""
         if entity_id not in self._data.get("room_groups", {}):
             return await self._physical._async_set_temperature_target(
                 entity_id, target, blocking=blocking, ensure_on=ensure_on,
-                hvac_mode=hvac_mode, range_target=range_target)
+                hvac_mode=hvac_mode, range_target=range_target, climate_options=climate_options)
         members = self.members(entity_id)
         unit = self.temperature_unit(entity_id)
         status = {}
@@ -204,7 +204,8 @@ class GroupClimateManager(ClimateManager):
                 if state is None or state.state in ("unknown", "unavailable"):
                     raise HomeAssistantError("Climate is unavailable")
                 await self._physical._async_set_temperature_target(member, converted,
-                    blocking=blocking, ensure_on=ensure_on, hvac_mode=hvac_mode, range_target=range_target)
+                    blocking=blocking, ensure_on=ensure_on, hvac_mode=hvac_mode,
+                    range_target=range_target, climate_options=climate_options)
                 status[member] = {"status": "success"}
             except Exception as err:
                 status[member] = {"status": "failed", "message": str(err)}

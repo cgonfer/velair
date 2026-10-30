@@ -412,7 +412,7 @@ its absence when using an older backend.
     "portable_model": 23,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.6"
+    "integration": "1.9.0-beta.7"
   }
 }
 ```

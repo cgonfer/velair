@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.0-beta.7 |
+| Laatst gesynchroniseerd | 2026-10-30 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -630,7 +630,9 @@ Zonepauzes via services en automatiseringen betreffen één beheerde entiteit; o
 <a id="boost"></a>
 ## Tijdelijke aanpassing
 
-Een tijdelijke aanpassing overschrijft het schema van één zone; andere zones gaan normaal door. Bij starten legt Velair herstelbare toestand vast, met HVAC-modus en enkele temperatuur of volledig bereik indien Home Assistant die aanbiedt. Deze momentopname bepaalt alleen het gedrag bij einde.
+Een tijdelijke aanpassing overschrijft het schema van één zone; andere zones gaan normaal door. Bij starten legt Velair herstelbare toestand vast, met HVAC-modus en enkele temperatuur of volledig bereik indien Home Assistant die aanbiedt. De momentopname kan ook ondersteunde apparaatopties bevatten, zoals de apparaatpreset, ventilatormodus, zwenkinstellingen en doelluchtvochtigheid. Deze momentopname bepaalt alleen het gedrag bij einde.
+
+Bij het herstellen van de opgeslagen toestand stuurt Velair HVAC-modi en apparaatopties die al overeenkomen niet opnieuw. Als een optie moet veranderen, past Velair die toe vóór de uiteindelijke temperatuur of het bereik, zodat een apparaatpreset het bedoelde terugkeerdoel niet kan vervangen door een oudere temperatuur. Het effect van de apparaatpreset op het eigen schema of de duur van een tijdelijke overschrijving blijft afhankelijk van de Home Assistant-integratie.
 
 De functie is beschikbaar via services, scripts, automatiseringen en dashboards, zodat de schema-editor overzichtelijk blijft. Je kunt bijvoorbeeld via een knop, beweging of spraak een kamer tijdelijk aanpassen, eventueel met gewenste HVAC-modus.
 
@@ -812,7 +814,7 @@ Velair legt herstelbare toestand vóór toepassing vast. Is het apparaat niet be
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Beëindig een actieve tijdelijke aanpassing vroeg. Dit gebruikt hetzelfde herstel als verlopen: een actief expliciet doel of anders, ook bij `Huidige modus behouden`, de vooraf vastgelegde modus en temperatuur. Zonder actieve aanpassing doet de aanroep niets.
+Beëindig een actieve tijdelijke aanpassing vroeg. Dit gebruikt hetzelfde herstel als verlopen: een actief expliciet doel of anders, ook bij `Huidige modus behouden`, de opgeslagen klimaattoestand, inclusief ondersteunde apparaatopties. Zonder actieve aanpassing doet de aanroep niets.
 
 ```yaml
 action: velair.cancel_boost
