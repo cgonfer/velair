@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.0-beta.7 |
+| Letzte Synchronisierung | 2026-10-30 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -677,7 +677,9 @@ Velair unterstützt zonenbezogene Pausen über Dienste und Automatisierungen. Si
 
 Eine temporäre Anpassung gilt je Klimazone. Sie übersteuert vorübergehend den Zeitplan einer Klimaentität; andere Zonen laufen normal weiter.
 
-Beim Start erfasst Velair den wiederherstellbaren Klimazustand dieser Zone: HVAC-Modus sowie einzelnen Sollwert oder vollständigen Bereich, soweit Home Assistant diese meldet. Die Momentaufnahme bestimmt ausschließlich das Verhalten am Ende der Anpassung.
+Beim Start erfasst Velair den wiederherstellbaren Klimazustand dieser Zone: HVAC-Modus sowie einzelnen Sollwert oder vollständigen Bereich, soweit Home Assistant diese meldet. Die Momentaufnahme kann auch unterstützte Geräteoptionen enthalten, etwa das Geräte-Preset, den Lüftermodus, die Schwenkeinstellungen und die Zielluftfeuchtigkeit. Die Momentaufnahme bestimmt ausschließlich das Verhalten am Ende der Anpassung.
+
+Bei der Wiederherstellung des gespeicherten Zustands sendet Velair bereits übereinstimmende HVAC-Modi und Geräteoptionen nicht erneut. Muss eine Option geändert werden, wendet Velair sie vor der abschließenden Temperatur oder dem Temperaturbereich an, damit ein Geräte-Preset den vorgesehenen Rückkehrsollwert nicht durch eine ältere Temperatur ersetzt. Welche Wirkung das Geräte-Preset auf seinen eigenen Zeitplan oder die Dauer der Übersteuerung hat, hängt weiterhin von der Home-Assistant-Integration ab.
 
 Temporäre Anpassungen sind über Home-Assistant-Dienste, Skripte, Automatisierungen und Dashboard-Bedienelemente verfügbar. Der Hauptzeitplaneditor bleibt dadurch übersichtlich, während weitergehende Automatisierungen möglich sind, beispielsweise:
 
@@ -892,7 +894,7 @@ Eine Bereichsanpassung verwendet `target_temp_low` und `target_temp_high` statt 
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Beendet eine aktive temporäre Anpassung vorzeitig. Es gilt immer dasselbe Rückkehrverhalten wie beim normalen Ablauf: Ein vorhandener aktiver ausdrücklicher Zeitplansollwert wird angewendet; andernfalls, auch bei einem `Keep`-Block, werden zuvor erfasster HVAC-Modus und Sollwert wiederhergestellt. Ohne aktive Anpassung hat der Aufruf keine Wirkung.
+Beendet eine aktive temporäre Anpassung vorzeitig. Es gilt immer dasselbe Rückkehrverhalten wie beim normalen Ablauf: Ein vorhandener aktiver ausdrücklicher Zeitplansollwert wird angewendet; andernfalls, auch bei einem `Keep`-Block, wird der gespeicherte Klimazustand einschließlich unterstützter Geräteoptionen wiederhergestellt. Ohne aktive Anpassung hat der Aufruf keine Wirkung.
 
 ```yaml
 action: velair.cancel_boost

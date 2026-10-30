@@ -1414,7 +1414,9 @@ Velair also supports per-zone pause through services and automations. A zone pau
 
 Boost is per climate zone. It temporarily overrides the schedule for one climate entity and leaves other zones running normally.
 
-When a boost starts, Velair captures the current restorable climate state for that zone, including the HVAC mode and either its single target or complete target range when Home Assistant exposes them. This snapshot is used only to decide what should happen when the boost ends.
+When a boost starts, Velair captures the current restorable climate state for that zone, including the HVAC mode and either its single target or complete target range when Home Assistant exposes them. The snapshot can also include supported device options such as the device preset, fan mode, swing settings, and target humidity. This snapshot is used only to decide what should happen when the boost ends.
+
+When restoring the saved state, Velair avoids resending HVAC modes and device options that already match. If an option needs to change, Velair applies it before the final temperature or range so that a device preset cannot replace the intended return target with an older temperature. The device preset's effect on its native schedule or override duration still depends on the Home Assistant integration.
 
 Boost is exposed through Home Assistant services, scripts, automations, and dashboard controls. This keeps the main schedule editor focused while allowing advanced automations such as:
 
@@ -1686,7 +1688,7 @@ A range Boost uses `target_temp_low` and `target_temp_high` in place of
 
 ### `velair.cancel_boost`
 
-Cancel an active boost early. This always uses the same return behavior as normal expiration: Velair applies the active explicit schedule target when one exists; otherwise, including a `Keep` block, it restores the HVAC mode and target captured before the boost. Calling it when no boost is active has no effect.
+Cancel an active boost early. This always uses the same return behavior as normal expiration: Velair applies the active explicit schedule target when one exists; otherwise, including a `Keep` block, it restores the saved climate state, including supported device options. Calling it when no boost is active has no effect.
 
 ```yaml
 action: velair.cancel_boost

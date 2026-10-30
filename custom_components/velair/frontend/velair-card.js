@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20261028124101", r = "1.9.0-beta.6", i = [
+}, n = "20261030192315", r = "1.9.0-beta.7", i = [
 	"monday",
 	"tuesday",
 	"wednesday",
@@ -39262,7 +39262,7 @@ var od = "https://github.com/cgonfer/velair", sd = {
 		"pt-pt": "docs/user/shared-climate-supply.pt-pt.md",
 		ru: "docs/user/shared-climate-supply.ru.md"
 	}
-}, ld = "1.9.0-beta.6";
+}, ld = "1.9.0-beta.7";
 function ud(e, t, n = {}) {
 	let r = V(t), [i, a] = (e === "index" ? "docs/README.md" : sd[e]).split("#"), o = (n.availability ?? cd)[i]?.[r], s = r !== "en" && o ? o : i, c = n.releaseVersion ?? ld;
 	return {
@@ -49342,7 +49342,7 @@ function iv(e) {
         ${av(e._t("frontendBuild"), n)}
         ${av(e._t("portableFormatVersion"), `v${r}`)}
         ${av(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${av(e._t("integrationVersion"), "1.9.0-beta.6")}
+        ${av(e._t("integrationVersion"), "1.9.0-beta.7")}
       </div>
     </section>
 

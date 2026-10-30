@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](usage.md) · [Español](usage.es.md) · [Fra
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.0-beta.7 |
+| Última sincronización | 2026-10-30 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -661,7 +661,9 @@ Velair también admite pausas por zona mediante servicios y automatizaciones. Un
 
 Refuerzo se aplica por zona climática. Anula temporalmente el horario de una entidad de climatización y deja que las demás zonas funcionen normalmente.
 
-Cuando comienza un Refuerzo, Velair captura el estado del equipo de climatización actual restaurable de esa zona, incluido el modo HVAC y su objetivo único o rango completo cuando Home Assistant los expone. Esta instantánea solo se utiliza para decidir qué debe suceder al finalizar el Refuerzo.
+Cuando comienza un Refuerzo, Velair captura el estado del equipo de climatización actual restaurable de esa zona, incluido el modo HVAC y su objetivo único o rango completo cuando Home Assistant los expone. La instantánea también puede incluir opciones compatibles del dispositivo, como su preset, el modo del ventilador, los ajustes de oscilación y la humedad objetivo. Esta instantánea solo se utiliza para decidir qué debe suceder al finalizar el Refuerzo.
+
+Al restaurar el estado guardado, Velair evita reenviar modos HVAC y opciones del dispositivo que ya coinciden. Si una opción necesita cambiar, la aplica antes de la temperatura o el rango final para que un preset del dispositivo no sustituya el objetivo de retorno previsto por una temperatura anterior. El efecto del preset del dispositivo sobre su programación nativa o la duración de su anulación sigue dependiendo de la integración de Home Assistant.
 
 Refuerzo está disponible mediante servicios, scripts, automatizaciones y controles del panel de Home Assistant. Así, el editor principal de horarios se centra en su función mientras se permiten automatizaciones avanzadas como:
 
@@ -890,7 +892,7 @@ Un Refuerzo de rango utiliza `target_temp_low` y `target_temp_high` en lugar de 
 
 ### `velair.cancel_boost`
 
-Cancela anticipadamente un Refuerzo activo. Siempre utiliza el mismo comportamiento de retorno que el vencimiento normal: Velair aplica el objetivo explícito del horario activo si existe; en caso contrario, incluido un bloque `Keep`, restaura el modo HVAC y el objetivo capturados antes del Refuerzo. Llamarlo cuando no hay un Refuerzo activo no tiene efecto.
+Cancela anticipadamente un Refuerzo activo. Siempre utiliza el mismo comportamiento de retorno que el vencimiento normal: Velair aplica el objetivo explícito del horario activo si existe; en caso contrario, incluido un bloque `Keep`, restaura el estado guardado del equipo de climatización, incluidas las opciones compatibles del dispositivo. Llamarlo cuando no hay un Refuerzo activo no tiene efecto.
 
 ```yaml
 action: velair.cancel_boost

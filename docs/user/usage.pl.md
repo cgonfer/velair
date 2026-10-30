@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.0-beta.7 |
+| Ostatnia synchronizacja | 2026-10-30 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -634,7 +634,9 @@ Pauza strefy przez usługi dotyczy jednej encji; reszta działa. Wznowienie stos
 
 Wzmocnienie tymczasowo zastępuje harmonogram jednej strefy, zostawiając pozostałe.
 
-Przy rozpoczęciu Wzmocnienia Velair przechwytuje możliwy do przywrócenia tryb HVAC oraz temperaturę lub pełny zakres udostępniany przez Home Assistant. Używa tego obrazu stanu wyłącznie do ustalenia działania po zakończeniu Wzmocnienia.
+Przy rozpoczęciu Wzmocnienia Velair przechwytuje możliwy do przywrócenia tryb HVAC oraz temperaturę lub pełny zakres udostępniany przez Home Assistant. Obraz stanu może również zawierać obsługiwane opcje urządzenia, takie jak preset urządzenia, tryb wentylatora, ustawienia oscylacji i wilgotność docelowa. Używa tego obrazu stanu wyłącznie do ustalenia działania po zakończeniu Wzmocnienia.
+
+Podczas przywracania zapisanego stanu Velair nie wysyła ponownie trybów HVAC ani opcji urządzenia, które już mają odpowiednią wartość. Jeśli opcja wymaga zmiany, Velair stosuje ją przed końcową temperaturą lub zakresem, aby preset urządzenia nie zastąpił zamierzonego celu powrotu starszą temperaturą. Wpływ presetu urządzenia na jego własny harmonogram lub czas trwania nadpisania nadal zależy od integracji Home Assistant.
 
 Wzmocnienie jest dostępne w usługach, skryptach, automatyzacjach i pulpitach bez dodawania tych wyzwalaczy do edytora harmonogramu. Możesz je uruchamiać:
 
@@ -838,7 +840,7 @@ Wzmocnienie z zakresem korzysta z `target_temp_low` i `target_temp_high` zamiast
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Anuluje aktywne Wzmocnienie przed upływem jego czasu. Powrót przebiega tak samo jak przy zwykłym wygaśnięciu: Velair stosuje aktywny cel wyraźnie określony w harmonogramie, jeśli taki istnieje. W przeciwnym razie, także przy bloku `Keep`, przywraca tryb HVAC i temperaturę docelową zapamiętane przed Wzmocnieniem. Wywołanie bez aktywnego Wzmocnienia nie ma skutku.
+Anuluje aktywne Wzmocnienie przed upływem jego czasu. Powrót przebiega tak samo jak przy zwykłym wygaśnięciu: Velair stosuje aktywny cel wyraźnie określony w harmonogramie, jeśli taki istnieje. W przeciwnym razie, także przy bloku `Keep`, przywraca zapisany stan urządzenia, w tym obsługiwane opcje urządzenia. Wywołanie bez aktywnego Wzmocnienia nie ma skutku.
 
 ```yaml
 action: velair.cancel_boost

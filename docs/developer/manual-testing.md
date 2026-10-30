@@ -931,6 +931,43 @@ entity names or data in screenshots.
 12. Pause one zone with `velair.pause_zone` and confirm other zones keep scheduling normally.
 13. Resume the paused zone and confirm Velair applies its active block only when one exists.
 
+### Boost restoration with device presets and delayed feedback
+
+Use a managed climate with a device preset that also writes a temperature when
+selected. When available, include an evohome zone using `permanent`. Observe the
+Home Assistant service calls as well as the eventual device state; accepted
+calls alone do not establish physical convergence.
+
+1. Start with `heat`, a target of 18.5 °C, and the device preset active. Run a
+   short Boost to 20.5 °C without changing its mode or preset. With no explicit
+   scheduled return target, let it expire and confirm restoration sends only
+   18.5 °C, without reapplying the matching HVAC mode or preset. Repeat by
+   cancelling the Boost.
+2. Start or replace the Boost using `velair.boost` with a different `preset_mode`.
+   Confirm the original pre-Boost snapshot is retained and the required preset
+   change precedes the final 18.5 °C command, including when the reported target
+   still shows 20.5 °C. After delayed feedback settles, verify the device's
+   temperature and preset, including its native override duration where relevant.
+3. Start or replace the Boost using its `hvac_mode` option to select a different
+   mode. Confirm restoration sends the saved mode and
+   reapplies its options before the target, even if the preset appeared to match
+   before the mode command. Repeat with an explicit active scheduled return
+   target and its device options.
+4. Repeat with cooling, a native low/high range, and an off snapshot. Off
+   restoration must not send stored temperature or option commands. In an adapter
+   test harness, also restore a `temperature_only` snapshot and verify it
+   preserves mode/options; an ordinary Boost does not create this snapshot flag.
+5. For a room group, verify the same order on each configured recipient. Simulate
+   a rejected preset or final temperature command on one member; healthy members
+   must still receive their final target and Diagnostics must identify the
+   failed member. Confirm newer control intent takes precedence during recovery.
+
+Do not introduce polling or a corrective automation for this test. Record delayed
+feedback and any preset/override-duration limitation separately from service
+acceptance. Use Boost service options rather than external edits in these
+scenarios: external changes follow their configured policy and may end or
+reassert the Boost. See [issue #59](https://github.com/cgonfer/velair/issues/59).
+
 ## Manual Adjustment Smoke Test
 
 Use at least one scalar heat or cool climate and, when available, one native

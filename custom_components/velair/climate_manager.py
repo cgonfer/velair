@@ -1308,14 +1308,11 @@ class ClimateManager:
             ensure_on=ensure_on,
             hvac_mode=hvac_mode,
             range_target=False,
-        )
-        await self.async_apply_climate_options(
-            entity_id,
-            fan_mode=fan_mode,
-            humidity=humidity,
-            preset_mode=preset_mode,
-            swing_mode=swing_mode,
-            swing_horizontal_mode=swing_horizontal_mode,
+            climate_options=dict(
+                fan_mode=fan_mode, preset_mode=preset_mode,
+                swing_mode=swing_mode, swing_horizontal_mode=swing_horizontal_mode,
+                humidity=humidity,
+            ),
         )
 
     async def async_set_temperature_range(
@@ -1364,14 +1361,11 @@ class ClimateManager:
             ensure_on=ensure_on,
             hvac_mode=hvac_mode,
             range_target=True,
-        )
-        await self.async_apply_climate_options(
-            entity_id,
-            fan_mode=fan_mode,
-            humidity=humidity,
-            preset_mode=preset_mode,
-            swing_mode=swing_mode,
-            swing_horizontal_mode=swing_horizontal_mode,
+            climate_options=dict(
+                fan_mode=fan_mode, preset_mode=preset_mode,
+                swing_mode=swing_mode, swing_horizontal_mode=swing_horizontal_mode,
+                humidity=humidity,
+            ),
         )
 
     async def _async_set_temperature_target(
@@ -1383,6 +1377,7 @@ class ClimateManager:
         ensure_on: bool,
         hvac_mode: str | None,
         range_target: bool,
+        climate_options: dict[str, Any],
     ) -> None:
         """Deliver one logical mode-and-target intent with shared ownership."""
         mode_service: str | None = None
@@ -1442,6 +1437,12 @@ class ClimateManager:
                 self._discard_expected_action(entity_id, context.id)
                 raise
         try:
+            # Presets can also write a target using the integration's cached
+            # temperature. Deliver the explicit target last, even when state
+            # feedback from preceding services has not arrived yet.
+            await self._async_apply_climate_options(
+                entity_id, climate_options, context=context
+            )
             temperature_data = {
                 ATTR_ENTITY_ID: entity_id,
                 **{key: value for key, value in target.items() if value is not None},
@@ -1487,6 +1488,12 @@ class ClimateManager:
             ATTR_SWING_HORIZONTAL_MODE: swing_horizontal_mode,
             ATTR_HUMIDITY: humidity,
         }
+        await self._async_apply_climate_options(entity_id, options)
+
+    async def _async_apply_climate_options(
+        self, entity_id: str, options: dict[str, Any], *, context: Any | None = None
+    ) -> None:
+        """Apply options, optionally as stages of one logical target action."""
         for attr, value in options.items():
             if value is None or value == "":
                 continue
@@ -1497,6 +1504,8 @@ class ClimateManager:
                     attr: value,
                 },
                 blocking=True,
+                context=context,
+                register_expected=context is None,
             )
 
     def climate_state_snapshot(self, entity_id: str) -> dict[str, Any]:
@@ -1596,9 +1605,23 @@ class ClimateManager:
         target_temp_high = snapshot.get(ATTR_TARGET_TEMP_HIGH)
         climate_options = {} if temperature_only else self._climate_options_from_snapshot(snapshot)
 
+        state = self._hass.states.get(entity_id)
         if hvac_mode == HVAC_MODE_OFF:
-            await self.async_turn_off(entity_id)
+            if state is None or state.state != HVAC_MODE_OFF:
+                await self.async_turn_off(entity_id)
             return
+
+        if state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            mode_changes = hvac_mode is not None and hvac_mode != state.state
+            if not mode_changes:
+                # Reasserting an unchanged HVAC mode or preset may reset a
+                # device's native override. Keep explicit schedule commands
+                # intact; only deduplicate restoration of observed state.
+                hvac_mode = None
+                climate_options = {
+                    key: value for key, value in climate_options.items()
+                    if state.attributes.get(key) != value
+                }
 
         if temperature is not None:
             await self.async_set_temperature(
