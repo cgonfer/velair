@@ -7,6 +7,7 @@ import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATUR
 import { cardStyles } from "../../src/velair/styles/card-styles";
 import { responsiveStyles } from "../../src/velair/styles/responsive-styles";
 import { renderEditableBlock } from "../../src/velair/views/schedule-view";
+import { draftBlockTemperatureError, updateDraftBlock } from "../../src/velair/domain/draft-blocks";
 import type { BlockDraftSource, DraftScheduleBlock } from "../../src/velair/types";
 
 function host() {
@@ -66,6 +67,93 @@ function block(hvacMode: string): DraftScheduleBlock {
     temperature: 21,
   };
 }
+
+describe("decimal temperature editing", () => {
+  it("allows a minus sign on mobile for negative or unbounded targets", () => {
+    for (const range of [false, true]) for (const unbounded of [false, true]) {
+      const container = document.createElement("div");
+      render(renderEditableBlock({ ...host(), _temperatureLimits: () => [unbounded ? 5 : -10, 35] as [number, number],
+        _unboundedTemperatureTargets: unbounded }, range
+        ? { ...block("heat_cool"), temperature: undefined, target_temp_low: -5, target_temp_high: 10 }
+        : { ...block("heat"), temperature: -5 }, 0), container);
+      for (const input of container.querySelectorAll<HTMLInputElement>("input.temperature-input")) {
+        expect(input.inputMode).toBe("text");
+      }
+    }
+  });
+  it("omits retained numeric targets when disabled and exposes range errors", () => {
+    const container = document.createElement("div");
+    render(renderEditableBlock(host(), { ...block("heat"), action: ACTION_SET_HVAC_MODE }, 0), container);
+    expect(container.querySelector("input.temperature-input")?.hasAttribute("aria-valuenow")).toBe(false);
+    render(renderEditableBlock({ ...host(), _temperatureError: () => "order" }, {
+      ...block("heat_cool"), temperature: undefined, target_temp_low: 24, target_temp_high: 19,
+    }, 0), container);
+    expect([...container.querySelectorAll("input.temperature-input")].map(input => input.getAttribute("aria-invalid")))
+      .toEqual(["true", "true"]);
+  });
+  it.each(["schedule", "template"] as const)("preserves both separators and validates each %s edit", (source) => {
+    for (const separator of [".", ","]) for (const mode of ["heat", "cool"]) for (const step of [0.1, 0.5, 1]) {
+      const container = document.createElement("div");
+      let draft = block(mode);
+      const viewHost = { ...host(), _temperatureStep: () => step,
+        _temperatureError: (value: DraftScheduleBlock) => draftBlockTemperatureError(value, {
+          minTemperature: 5, maxTemperature: 30, temperatureStep: step, rangeError: "range", stepError: "step",
+        }),
+        _updateDraftBlock: (_index: number, field: keyof DraftScheduleBlock, value: string) => {
+          draft = updateDraftBlock([draft], 0, field, value)[0];
+          draw();
+        },
+      };
+      const draw = () => render(renderEditableBlock(viewHost, draft, 0, source), container);
+      draw();
+      const input = container.querySelector<HTMLInputElement>("input.temperature-input")!;
+      expect(input.type).toBe("text");
+      expect(input.inputMode).toBe("decimal");
+      for (const value of ["1", "19", `19${separator}`, `19${separator}5`]) {
+        input.value = value;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        expect(container.querySelector("input.temperature-input")).toBe(input);
+        expect(input.value).toBe(value);
+        expect(draft.temperature).toBe(value);
+        if (value.endsWith(separator)) expect(viewHost._temperatureError(draft)).toBe("range");
+      }
+      expect(viewHost._temperatureError(draft)).toBe(step === 1 ? "step" : undefined);
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      expect(input.value).toBe(`19${separator}5`);
+      expect(input.getAttribute("aria-valuenow")).toBe("19.5");
+    }
+  });
+  it.each(["schedule", "template"] as const)("steps scalar and range %s fields with keyboard arrows", (source) => {
+    for (const range of [false, true]) {
+      const container = document.createElement("div");
+      const update = vi.fn();
+      render(renderEditableBlock({ ...host(), _updateDraftBlock: update }, range
+        ? { ...block("heat_cool"), temperature: undefined, target_temp_low: "19,5", target_temp_high: "24,5" }
+        : { ...block("heat"), temperature: "19,5" }, 0, source), container);
+      const input = container.querySelector<HTMLInputElement>("input.temperature-input")!;
+      const up = new KeyboardEvent("keydown", { key: "ArrowUp", cancelable: true });
+      input.dispatchEvent(up);
+      expect(up.defaultPrevented).toBe(true);
+      expect(update).toHaveBeenLastCalledWith(0, range ? "target_temp_low" : "temperature", "20", source);
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", cancelable: true }));
+      expect(update).toHaveBeenLastCalledWith(0, range ? "target_temp_low" : "temperature", "19.5", source);
+      input.value = "19,";
+      update.mockClear();
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", cancelable: true }));
+      expect(update).not.toHaveBeenCalled();
+      expect(input.value).toBe("19,");
+      input.readOnly = true;
+      input.value = "19";
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", cancelable: true }));
+      expect(update).not.toHaveBeenCalled();
+      if (range) {
+        const upper = container.querySelectorAll<HTMLInputElement>("input.temperature-input")[1];
+        upper.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", cancelable: true }));
+        expect(update).toHaveBeenLastCalledWith(0, "target_temp_high", "24", source);
+      }
+    }
+  });
+});
 
 function modeSelect(container: HTMLElement): HTMLSelectElement {
   const select = container.querySelector("select");
@@ -277,9 +365,9 @@ describe("editable schedule block view", () => {
     expect(modeOnlyToggle?.getAttribute("aria-pressed")).toBe("true");
     expect(modeOnlyToggle?.getAttribute("aria-label")).toBe("includeTargetTemperature");
     expect(modeOnlyToggle?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:thermometer");
-    expect(container.querySelector<HTMLInputElement>('.single-temperature-field input[type="number"]')?.value).toBe("21");
+    expect(container.querySelector<HTMLInputElement>('.single-temperature-field input.temperature-input')?.value).toBe("21");
     const targetLabel = container.querySelector<HTMLLabelElement>(".single-temperature-field > label");
-    const targetInput = container.querySelector<HTMLInputElement>('.single-temperature-field input[type="number"]');
+    const targetInput = container.querySelector<HTMLInputElement>('.single-temperature-field input.temperature-input');
     expect(targetLabel?.htmlFor).toBe(targetInput?.id);
     expect(targetLabel?.querySelector("button")).toBeNull();
     modeOnlyToggle?.click();
@@ -296,7 +384,7 @@ describe("editable schedule block view", () => {
     }, 0, "schedule"), container);
     await Promise.resolve();
     const deviceTarget = container.querySelector<HTMLButtonElement>(".target-action-toggle.device-controlled");
-    const disabledInput = container.querySelector<HTMLInputElement>('.single-temperature-field input[type="number"]');
+    const disabledInput = container.querySelector<HTMLInputElement>('.single-temperature-field input.temperature-input');
     expect(deviceTarget?.getAttribute("aria-pressed")).toBe("false");
     expect(deviceTarget?.getAttribute("aria-label")).toBe("includeTargetTemperature");
     expect(deviceTarget?.querySelector("ha-icon")?.getAttribute("icon")).toBe("mdi:thermometer-off");
@@ -349,7 +437,7 @@ describe("editable schedule block view", () => {
 
     render(renderEditableBlock(viewHost, { ...block("heat"), temperature: 42.3 }, 0), container);
 
-    const input = container.querySelector<HTMLInputElement>('input[type="number"]');
+    const input = container.querySelector<HTMLInputElement>('input.temperature-input');
     expect(input?.min).toBe("41.3");
     expect(input?.step).toBe("1");
     expect(input?.value).toBe("42.3");
@@ -361,7 +449,7 @@ describe("editable schedule block view", () => {
 
     render(renderEditableBlock(viewHost, { ...block("heat"), temperature: 42.17 }, 0), container);
 
-    const input = container.querySelector<HTMLInputElement>('input[type="number"]');
+    const input = container.querySelector<HTMLInputElement>('input.temperature-input');
     expect(input?.step).toBe("any");
     expect(input?.min).toBe("5");
     expect(input?.value).toBe("42.17");

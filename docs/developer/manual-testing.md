@@ -1086,6 +1086,15 @@ Use at least one scalar heat or cool climate and, when available, one native
     change displayed values before Home Assistant updates the entity. Remove
     `target_temp_step` and confirm Settings exposes a fallback of `1`; change it
     to `0.5` and confirm schedule inputs and card buttons use that increment.
+    In Default schedules, Profile schedules and templates, type and paste both
+    `19.5` and `19,5` into scalar and range targets. Confirm intermediate `19.`
+    and `19,` remain visible but cannot be saved, and saved payloads contain
+    numbers. With published step `0.1`, manual fallback `0.5`, and default `1`,
+    verify compatible targets, incompatible steps, bounds and reversed ranges.
+    Check Up/Down arrows on and between device-grid points and at both limits;
+    unrestricted templates must step `19.5` to `20.5` and back. Repeat with
+    French (Canada) and English browser locales, mobile widths and iOS Companion
+    when available. Negative or unrestricted targets must allow a minus sign.
 24. With Automatic scheduling active, use a climate that publishes delayed or
     out-of-order command echoes. Apply a scheduled target and reproduce both
     `expected -> old/intermediate -> expected` and

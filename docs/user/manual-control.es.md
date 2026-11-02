@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](manual-control.md) · [Español](manual-cont
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.0-beta.9 |
+| Última sincronización | 2026-11-02 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -96,9 +96,11 @@ Algunos dispositivos comunican varios valores mientras procesan una orden. Puede
 
 Cuando una actualización anónima durante la estabilización no puede distinguirse de forma fiable del proceso del dispositivo para alcanzar el estado solicitado, Velair mantiene prudentemente el control Automático. Así evita convertir una orden rechazada o retrasada en un falso ajuste manual. El estado de estabilización solo existe durante la ejecución y se borra al reiniciar. Si el equipo sigue sin coincidir con el valor solicitado al terminar la estabilización, Velair mantiene el control Automático y registra una advertencia de estabilización de la orden. La siguiente instantánea actualizada de Diagnóstico muestra la advertencia; sus datos incluyen los valores esperados y observados. Velair no reintenta la orden a ciegas ni convierte la discrepancia en un ajuste manual diferido.
 
+Se aplica una excepción independiente mientras Velair mantiene un equipo en planificación automática en `off`. Algunos dispositivos comunican un objetivo de sustitución, como `0 °C` cuando su mínimo publicado es `5 °C`. Si solo cambian los objetivos y todos los valores nuevos quedan fuera del mínimo y el máximo publicados explícitamente por el dispositivo, Velair ignora la actualización, incluso si llega después de la estabilización. No emite un evento de cambio externo, no inicia un ajuste manual ni interrumpe la ejecución del horario. Ambos límites deben ser válidos; si falta alguno, se mantiene la detección habitual. Los cambios de objetivo válidos, los cambios externos de modo HVAC, las acciones identificables de usuarios o automatizaciones y las sesiones manuales existentes conservan su comportamiento habitual.
+
 El registro de valores esperados tiene un tamaño limitado, caduca automáticamente, nunca se guarda y no realiza sondeo continuo. El origen no necesita conservar el `Context` de Home Assistant para que funcione la correlación, aunque conservarlo permite relacionar los cambios con mayor precisión.
 
-Cualquier campo de control observado que no pueda relacionarse con una orden de Velair se clasifica como externo. Esto atribuye el cambio, pero no identifica su origen: Velair no afirma saber si lo causó una persona, mando, automatización, servicio del fabricante o firmware del dispositivo.
+Cualquier otro campo de control observado que no pueda relacionarse con una orden de Velair se clasifica como externo. Esto atribuye el cambio, pero no identifica su origen: Velair no afirma saber si lo causó una persona, mando, automatización, servicio del fabricante o firmware del dispositivo.
 
 <a id="choose-a-policy"></a>
 

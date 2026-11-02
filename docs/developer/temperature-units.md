@@ -48,6 +48,15 @@ range-limited and rounded to safe `0.1` precision.
 Editable Room Assist, Adaptive Preconditioning, and rate fields use their own
 valid precision rules.
 
+Schedule, template and Profile target fields retain the user's raw text while
+editing. A complete decimal point or comma value is normalized only for
+validation and numeric payloads; incomplete values such as `19.` or `19,` cannot
+be saved. Device-bound editors still enforce their effective step, minimum,
+maximum and range ordering. Up/Down arrows use the device grid; unrestricted
+template fields increment by one while preserving fractions. Fields that allow
+negative or unrestricted targets use a keyboard mode with access to the minus
+sign instead of requiring the decimal keypad.
+
 ## Unit-Change Guard
 
 When the stored and Home Assistant units differ, storage exposes

@@ -117,7 +117,7 @@ describe.each(["default", "profile"] as const)("full template links in %s", (sou
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     const host = h.host(); const container = document.createElement("div");
     render(renderEditableBlock(host, h.blocks()[1], 1, source === "default" ? "schedule" : "template"), container);
-    expect(container.querySelector<HTMLInputElement>('input[type="number"]')?.value).toBe("18.5");
+    expect(container.querySelector<HTMLInputElement>('input.temperature-input')?.value).toBe("18.5");
     for (const input of container.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select")) expect(input.disabled).toBe(true);
     expect(container.querySelector<HTMLButtonElement>("button.danger")?.disabled).toBe(true);
     expect(bindingsFromBlocks(h.link(), [])).toEqual({ mode: "full", template_key: "work" });

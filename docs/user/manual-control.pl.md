@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](manual-control.md) · [Español](
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.0-beta.9 |
+| Ostatnia synchronizacja | 2026-11-02 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -75,9 +75,11 @@ Niektóre urządzenia podczas obsługi jednego polecenia chwilowo wracają do st
 
 Jeśli anonimowej aktualizacji podczas stabilizacji nie można wiarygodnie odróżnić od dochodzenia urządzenia do oczekiwanego stanu, Velair zachowuje automatykę. Zapobiega to traktowaniu odrzuconego lub opóźnionego polecenia jako zmiany ręcznej. Stan stabilizacji znika przy restarcie. Jeśli po jej zakończeniu urządzenie nadal różni się od żądanej wartości, automatyka pozostaje aktywna, a Velair zapisuje ostrzeżenie o stabilizacji polecenia. Następny świeży raport Diagnostyki pokazuje oczekiwane i zaobserwowane wartości. Velair nie ponawia polecenia w ciemno ani nie zamienia rozbieżności w opóźnione sterowanie ręczne.
 
+Osobny wyjątek obowiązuje, gdy Velair utrzymuje urządzenie sterowane automatycznie w stanie `off`. Niektóre urządzenia zgłaszają zastępczą temperaturę docelową, na przykład `0 °C`, chociaż opublikowane minimum wynosi `5 °C`. Jeśli zmieniają się wyłącznie temperatury docelowe, a wszystkie nowe wartości znajdują się poza zakresem wyznaczonym przez minimum i maksimum jawnie zgłoszone przez urządzenie, Velair ignoruje aktualizację, także gdy nadejdzie po zakończeniu stabilizacji. Nie emituje zdarzenia zmiany zewnętrznej, nie uruchamia regulacji ręcznej ani nie przerywa wykonywania harmonogramu. Obie granice muszą być prawidłowe; jeśli którejś brakuje, działa zwykłe wykrywanie. Prawidłowe zmiany temperatury docelowej, zewnętrzne zmiany trybu HVAC, rozpoznawalne działania użytkowników lub automatyzacji oraz istniejące sesje ręczne zachowują dotychczasowe działanie.
+
 Rejestr oczekiwań ma ograniczony rozmiar, wygasa automatycznie, nie jest trwale zapisywany i nie odpytuje urządzeń. Zachowanie `Context` nie jest konieczne, choć pozwala dokładniej dopasować kandydatów.
 
-Pole sterowania, którego nie da się powiązać z poleceniem Velair, jest klasyfikowane jako pochodzące spoza Velair. To przypisanie pochodzenia, nie identyfikacja sprawcy: funkcja nie rozstrzyga, czy źródłem był człowiek, pilot, automatyzacja, usługa producenta czy oprogramowanie urządzenia.
+Każde pozostałe zaobserwowane pole sterowania, którego nie da się powiązać z poleceniem Velair, jest klasyfikowane jako pochodzące spoza Velair. To przypisanie pochodzenia, nie identyfikacja sprawcy: funkcja nie rozstrzyga, czy źródłem był człowiek, pilot, automatyzacja, usługa producenta czy oprogramowanie urządzenia.
 
 <a id="choose-a-policy"></a>
 ## Wybór polityki

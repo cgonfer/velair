@@ -3,6 +3,7 @@ import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATUR
 import type { DraftScheduleBlock, NormalizedBlocks, ScheduleBlock } from "../types";
 import { temperatureMatchesStep } from "./climate";
 import { defaultTargetTemperature } from "./temperature-units";
+import { normalizedTemperatureDraft, parseTemperatureInput } from "./temperature-input";
 
 type TemperatureErrorOptions = {
   maxTemperature: number;
@@ -63,7 +64,7 @@ export function addDraftBlock(blocks: DraftScheduleBlock[], nextStart: string, u
         target_temp_low: lastBlock?.target_temp_low ?? "",
         target_temp_high: lastBlock?.target_temp_high ?? "",
       }
-    : { temperature: Number(lastBlock?.temperature || defaultTargetTemperature(unit)) };
+    : { temperature: lastBlock?.temperature || defaultTargetTemperature(unit) };
   return [
     ...blocks,
     {
@@ -161,11 +162,7 @@ export function draftBlockTemperatureError(
     : [block.temperature];
   const parsed: number[] = [];
   for (const value of values) {
-    const rawValue = String(value ?? "").trim();
-    if (!rawValue || !/^-?\d+(\.\d+)?$/.test(rawValue)) {
-      return options.rangeError;
-    }
-    const temperature = Number(rawValue);
+    const temperature = parseTemperatureInput(value);
     if (
       !Number.isFinite(temperature)
       || temperature < options.minTemperature
@@ -198,7 +195,8 @@ export function normalizeDraftBlocks(
   const seen = new Set<string>();
   const blocks: ScheduleBlock[] = [];
 
-  for (const block of draftBlocks) {
+  for (const draft of draftBlocks) {
+    const block = normalizedTemperatureDraft(draft);
     const start = String(block.start || "").trim();
     if (!/^\d{2}:\d{2}$/.test(start)) {
       return { ok: false, error: options.invalidStartError(start || "empty") };

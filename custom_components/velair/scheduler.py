@@ -736,6 +736,46 @@ class VelairScheduler:
         task = self._hass.async_create_task(refresh())
         self._projection_capability_task = None if task.done() else task
 
+    def is_maintaining_off(self, entity_id: str) -> bool:
+        """Read conclusive prepared Off authority without refreshing projections.
+
+        The climate monitor also calls this before state listeners run, inside
+        delivery guards. Unprepared or stale authority must stay external.
+        """
+        entity_id = self.owner_for_entity(entity_id)
+        zone = self._data["zones"].get(entity_id)
+        if (
+            zone is None or not zone["enabled"]
+            or self._stopped or self._temperature_migration_blocked
+            or self.mode != MODE_AUTO or self._is_external_execution(entity_id)
+            or self._schedule_projection.preparing
+            or self._projection_authority_entities(entity_id) & self._projection_pending_entities.keys()
+            or not self._schedule_projection.capabilities_current(entity_id)
+        ):
+            return False
+        now = dt_util.now()
+        if (
+            self._manual_control_status(entity_id, now) is not None
+            or not self._planned_return.control_ready(entity_id, now)
+            or self._planned_return.suppress_departure_delivery()
+        ):
+            return False
+        override = self._get_active_zone_override(entity_id, now)
+        if _is_pause_override(override):
+            return override.get("action") == ZONE_PAUSE_ACTION_TURN_OFF
+        if _is_boost_override(override):
+            return False
+        planned_target = self._planned_return.target(entity_id, now)
+        if planned_target is not None:
+            return planned_target.action == ACTION_TURN_OFF
+        behavior = self._profile_zone_behavior(entity_id)
+        if behavior["behavior"] == "pause":
+            return behavior.get("action") == ZONE_PAUSE_ACTION_TURN_OFF
+        target = self._room_sensor_assist_target_event(
+            entity_id, planned_target=planned_target, planned_target_resolved=True, now=now,
+        )
+        return target is not None and target.action == ACTION_TURN_OFF
+
     def _pending_external_change_blocks_delivery(self, entity_id, event=None):
         """Yield to unprocessed manual changes without resolving calendars."""
         probe = getattr(self, "pending_external_change_fields", None)

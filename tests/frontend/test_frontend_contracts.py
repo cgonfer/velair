@@ -1246,10 +1246,6 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("updateDraftBlockDomain(blocks, index, field, value)", source)
         self.assertIn("export function draftBlocksFromScheduleBlocks", draft_blocks_domain_source)
         self.assertIn("export function addDraftBlock", draft_blocks_domain_source)
-        self.assertIn(
-            "temperature: Number(lastBlock?.temperature || defaultTargetTemperature(unit))",
-            draft_blocks_domain_source,
-        )
         self.assertIn('hvac_mode: ""', draft_blocks_domain_source)
         self.assertIn("export function updateDraftBlock", draft_blocks_domain_source)
         self.assertIn("export function isActiveBoostOverride", overrides_domain_source)

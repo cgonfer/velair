@@ -809,65 +809,65 @@
       "translations": {
         "es": {
           "path": "docs/user/manual-control.es.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/manual-control.fr.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/manual-control.de.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/manual-control.it.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/manual-control.nl.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/manual-control.pl.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/manual-control.pt-br.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/manual-control.pt-pt.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/manual-control.ru.md",
-          "sourceHash": "addd4e9270876fdd478a756a8a35910be06014387978a5500b4b000f45a20b9e",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "75f6d63864faa5cc04849ba23b702cd5a9c1d7888aea8b8360737d342bb6fc18",
+          "synchronizedAt": "2026-11-02",
+          "referenceVersion": "1.9.0-beta.9",
           "reviewStatus": "automatic"
         }
       }

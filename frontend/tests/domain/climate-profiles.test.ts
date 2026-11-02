@@ -18,6 +18,22 @@ import {
 } from "../../src/velair/domain/climate-profiles";
 
 describe("climate profiles domain", () => {
+  it("validates and serializes comma temperatures from the shared profile editor", () => {
+    const draft = withProfileZoneBehavior(createClimateProfileDraft(), "climate.office", "schedule");
+    draft.name = "Decimal profile";
+    const zone = draft.zones["climate.office"];
+    if (zone.behavior !== "schedule") throw new Error("Expected schedule");
+    zone.schedule.monday = [{ start: "08:00", action: "set_temperature", hvac_mode: "cool", temperature: "19,5" },
+      { start: "09:00", action: "set_temperature", hvac_mode: "heat_cool", target_temp_low: "19,5", target_temp_high: "24,5" }];
+    expect(climateProfileValidationError(draft)).toBeUndefined();
+    const input = climateProfileInput(draft).zones["climate.office"];
+    expect(input.behavior === "schedule" && input.schedule.monday).toMatchObject([
+      { temperature: 19.5 }, { target_temp_low: 19.5, target_temp_high: 24.5 },
+    ]);
+    expect(zone.schedule.monday[0].temperature).toBe("19,5");
+    zone.schedule.monday[0].temperature = "19,";
+    expect(climateProfileValidationError(draft)).toBe("schedule");
+  });
   it("preserves explicit Default and sends a complete week for scheduled zones", () => {
     let draft = createClimateProfileDraft();
     draft = { ...draft, name: "Away" };

@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.0-beta.9 |
+| Letzte Synchronisierung | 2026-11-02 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -92,9 +92,11 @@ Manche Geräte melden beim Verarbeiten eines Befehls mehrere Werte. Sie kehren k
 
 Lässt sich ein anonymes Update während der Stabilisierung nicht zuverlässig von der Geräteangleichung unterscheiden, behält Velair vorsichtig die automatische Steuerung. So wird ein abgelehnter oder verzögerter Velair-Befehl nicht zur falschen manuellen Anpassung. Dieser Zustand existiert nur zur Laufzeit und wird beim Neustart gelöscht. Weicht das Gerät nach Ablauf noch vom angeforderten Wert ab, bleibt die automatische Steuerung bestehen und Velair vermerkt eine Laufzeitwarnung zur Befehlsstabilisierung. Die nächste aktuelle Diagnose-Momentaufnahme zeigt sie; der Bericht enthält erwartete und beobachtete Werte. Velair wiederholt den Befehl nicht blind und macht daraus keine verspätete manuelle Anpassung.
 
+Eine gesonderte Ausnahme gilt, solange Velair ein automatisch gesteuertes Klimagerät in `off` hält. Manche Geräte melden einen Platzhalter als Zieltemperatur, etwa `0 °C` bei einem veröffentlichten Minimum von `5 °C`. Ändern sich ausschließlich Zieltemperaturen und liegen alle neuen Werte außerhalb des vom Gerät ausdrücklich gemeldeten Minimums und Maximums, ignoriert Velair die Aktualisierung, auch wenn sie erst nach der Stabilisierung eintrifft. Es wird kein Ereignis für eine externe Änderung ausgelöst, keine manuelle Anpassung gestartet und die Zeitplanausführung nicht unterbrochen. Beide Grenzwerte müssen gültig sein; fehlt einer, bleibt die bisherige Erkennung aktiv. Gültige Zieländerungen, externe HVAC-Modusänderungen, erkennbare Benutzer- oder Automationsaktionen sowie bestehende manuelle Sitzungen behalten ihr bisheriges Verhalten.
+
 Die Erwartungsliste ist begrenzt, läuft automatisch ab, wird nie dauerhaft gespeichert und fragt nicht regelmäßig ab. Quellen müssen den Home-Assistant-`Context` für einen Abgleich nicht erhalten, auch wenn er die Zuordnung präziser macht.
 
-Ein beobachtetes Steuerungsfeld ohne Zuordnung zu einem Velair-Befehl gilt als Nicht-Velair. Das ist eine Zuordnung, keine Identität: Velair behauptet nicht zu wissen, ob Mensch, Fernbedienung, Automation, Herstellerdienst oder Gerätefirmware die Änderung verursacht hat.
+Ein verbleibendes beobachtetes Steuerungsfeld ohne Zuordnung zu einem Velair-Befehl gilt als Nicht-Velair. Das ist eine Zuordnung, keine Identität: Velair behauptet nicht zu wissen, ob Mensch, Fernbedienung, Automation, Herstellerdienst oder Gerätefirmware die Änderung verursacht hat.
 
 <a id="choose-a-policy"></a>
 ## Eine Richtlinie wählen

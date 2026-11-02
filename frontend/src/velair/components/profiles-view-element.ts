@@ -1,3 +1,4 @@
+import { parseTemperatureInput } from "../domain/temperature-input";
 import { renderRoomGroupScheduleNotice } from "../views/room-group-summary";
 import { controlUnitIds, controlUnitName, controlUnitState, controlUnitStates } from "../domain/control-units";
 import { editorTargetFormats, initializeDraftTargetFormat, reconcileDraftTargetFormat } from "../domain/target-format-policy";
@@ -1989,8 +1990,8 @@ export class VelairProfilesView extends LitElement {
       if (block.action !== ACTION_SET_TEMPERATURE) return false;
       return Boolean(this._temperatureError(dialog.entityId, block))
         || (draftBlockUsesRange(block)
-          ? !Number.isFinite(Number(block.target_temp_low)) || !Number.isFinite(Number(block.target_temp_high))
-          : !Number.isFinite(Number(block.temperature)));
+          ? !Number.isFinite(parseTemperatureInput(block.target_temp_low)) || !Number.isFinite(parseTemperatureInput(block.target_temp_high))
+          : !Number.isFinite(parseTemperatureInput(block.temperature)));
     });
     if (invalid) {
       this._templateDialog = { ...dialog, error: this._t("profileInvalidSchedule") };

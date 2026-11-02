@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -20,6 +21,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 _UNAVAILABLE = {"unknown", "unavailable"}
+_TARGET_FIELDS = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
 
 
 class ClimateChangeMonitor:
@@ -93,8 +95,42 @@ class ClimateChangeMonitor:
         owned = self._climate_manager.preview_owned_state_change_fields(entity_id, new, old)
         assist = getattr(self._scheduler, "room_sensor_assist_owned_state_change_fields", None)
         assisted = assist(entity_id, new) if callable(assist) else set()
-        pending.update(field for field in changed if field not in owned and field not in assisted)
+        pending.update(self._external_fields(old, new, changed, owned, assisted))
         return pending
+
+    def _external_fields(
+        self, old_state, new_state, changed_fields, owned_fields, assisted_fields,
+        *, event_context=None,
+    ) -> list[str]:
+        """Keep invalid Off placeholders out of both pending and processed input."""
+        external = [field for field in changed_fields
+                    if field not in owned_fields and field not in assisted_fields]
+        if (
+            not external
+            or not set(external) <= _TARGET_FIELDS
+            or new_state.state != "off"
+            or (old_state.state != "off" and ATTR_HVAC_MODE not in owned_fields)
+        ):
+            return external
+        for context in (getattr(new_state, "context", None), event_context):
+            if context is not None and (
+                getattr(context, "user_id", None) is not None
+                or getattr(context, "parent_id", None) is not None
+            ):
+                return external
+        attributes = new_state.attributes
+        minimum, maximum = attributes.get("min_temp"), attributes.get("max_temp")
+        values = [minimum, maximum, *(attributes.get(field) for field in external)]
+        if not all(isinstance(value, int | float) and not isinstance(value, bool)
+                   and math.isfinite(value) for value in values):
+            return external
+        # Only explicit device limits are evidence; adapter defaults are not.
+        if minimum >= maximum or any(minimum <= value <= maximum for value in values[2:]):
+            return external
+        maintaining_off = getattr(self._scheduler, "is_maintaining_off", None)
+        if callable(maintaining_off) and maintaining_off(new_state.entity_id):
+            return []
+        return external
 
     @callback
     def _handle_state_change(self, event: Any) -> None:
@@ -132,11 +168,10 @@ class ClimateChangeMonitor:
                 new_state.entity_id,
                 new_state,
             )
-        external_fields = [
-            field
-            for field in changed_fields
-            if field not in owned_fields and field not in room_assist_owned_fields
-        ]
+        external_fields = self._external_fields(
+            old_state, new_state, changed_fields, owned_fields, room_assist_owned_fields,
+            event_context=getattr(event, "context", None),
+        )
         if not external_fields:
             return
         previous = {field: previous.get(field) for field in external_fields}

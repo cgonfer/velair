@@ -8,8 +8,8 @@ Traduções: [Original em inglês](manual-control.md) · [Español](manual-contr
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Versão de referência | 1.9.0-beta.9 |
+| Última sincronização | 2026-11-02 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -92,9 +92,11 @@ Alguns dispositivos informam vários valores enquanto processam um comando. Pode
 
 Quando uma atualização anônima na estabilização não pode ser distinguida da convergência do dispositivo, o Velair mantém conservadoramente o controle Automático. Isso evita transformar um comando rejeitado ou atrasado em falso Ajuste manual. O estado de estabilização só existe durante a execução e é removido ao reiniciar. Se o dispositivo ainda divergir do valor solicitado ao terminar, mantém Automático e registra um aviso de estabilização. A próxima visão atualizada do Diagnóstico mostra o aviso, com valores esperados e observados no relatório. O Velair não repete cegamente o comando nem transforma a divergência em Ajuste manual atrasado.
 
+Uma exceção separada se aplica enquanto o Velair mantém um dispositivo sob agendamento automático em `off`. Alguns dispositivos informam uma temperatura-alvo de substituição, como `0 °C` quando o mínimo publicado é `5 °C`. Se apenas os alvos mudarem e todos os novos valores estiverem fora do mínimo e do máximo informados explicitamente pelo dispositivo, o Velair ignora a atualização, inclusive quando ela chega após a estabilização. Não emite um evento de alteração externa, não inicia um ajuste manual nem interrompe a execução do agendamento. Ambos os limites devem ser válidos; se algum estiver ausente, a detecção habitual permanece ativa. Alterações válidas dos alvos, alterações externas do modo HVAC, ações identificáveis de usuários ou automações e sessões manuais existentes mantêm o comportamento habitual.
+
 O registro de expectativas é limitado, expira automaticamente, nunca é persistido e não faz consultas periódicas. Uma origem não precisa preservar `Context` para permitir correlação, embora um contexto preservado torne a associação mais precisa.
 
-Qualquer campo observado que não possa ser correlacionado a um comando do Velair é classificado como externo. Isso atribui origem, não identidade: o Velair não afirma saber se pessoa, controle remoto, automação, serviço do fabricante ou firmware causou a mudança.
+Qualquer outro campo observado que não possa ser correlacionado a um comando do Velair é classificado como externo. Isso atribui origem, não identidade: o Velair não afirma saber se pessoa, controle remoto, automação, serviço do fabricante ou firmware causou a mudança.
 
 <a id="choose-a-policy"></a>
 ## Escolher uma política
