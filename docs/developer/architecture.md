@@ -32,6 +32,12 @@ custom_components/velair/
   runtime_diagnostics.py bounded runtime health/history projection and report redaction
   save_timing.py       opt-in DEBUG phase timings without configuration payloads
   scheduler.py         event calculation, timers, overrides, preconditioning runtime
+  schedule_projection.py detached nominal occurrences and recurring target index
+  runtime_projection.py per-zone thermal forecasts and Room Assist listener contributions
+  projection_inputs.py immutable consumed input values for local reconciliation
+  comfort_projection.py maintained physical Comfort settings and assessments
+  prepared_configuration.py committed configuration resource metadata
+  delivery_guard.py    task-scoped authority checks before physical services
   sensor.py            scheduler and per-zone state sensors
   services.py          Home Assistant service actions
   services.yaml        service descriptions
@@ -39,6 +45,54 @@ custom_components/velair/
   switch.py            automatic scheduling control
   translations/        Home Assistant translations
 ```
+
+## Prepared scheduling and delivery
+
+The backend prepares detached nominal schedules when their configuration,
+resources, capabilities or local calendar horizon change. Temperature and runtime
+changes update the affected thermal forecasts using those prepared inputs.
+Room Assist reads the maintained current and next targets; its listener candidates
+come from per-zone contributions. Planned Return prepares destination schedules,
+arrival effects and public status before readers consume them.
+
+Local validation reconciles only the requested zone and its master. Prepared
+topology and authority tokens avoid copying configuration or unrelated HA
+attributes before each service. Changes to consumed values, availability,
+capabilities, accepted anchors and time boundaries still invalidate the relevant
+zone immediately. Physical target attributes infer capabilities only when an
+explicit supported-feature mask is unavailable.
+
+Planned Return maintains independent predictions, dependency results and
+explanatory rows per zone. Its control projection can change before a complete
+household publication; the published status is replaced coherently after a full
+producer pass. That pass also observes changes whose HA listeners are pending.
+Each zone retains its own resolution deadlines, so a local check cannot consume
+another zone's transition. Public results keep defensive copies; internal nominal
+reads can borrow frozen events.
+
+Comfort maintains normalized settings and complete assessments per physical
+climate in `comfort_projection.py`. Before each read, it validates the effective
+unit, resolved physical configuration and fallback source, plus the source values,
+availability and original freshness classification consumed by that assessment.
+Missing sources and in-place value changes are included, even when a HA listener
+is pending. A changed build is retried before returning; pending saves never
+install candidate results. Public payloads and outward events remain detached.
+
+Comfort callbacks share synchronous read preparation; every scheduler publication
+still rebases its observation. Outward event listeners run outside shared reads,
+so reentrant changes are visible before evaluation resumes. The scan preserves
+its initial enabled-zone selection. Diagnostics commits a prepared snapshot only
+when its captured revision remains current. No observation scope crosses an
+`await`, and no debounce or deferred-publication policy is introduced.
+
+Scheduled intent, the effective control target and an accepted physical command
+remain separate. Each physical service checks current ownership, mode, pauses,
+availability, capabilities, temperatures and target validity. Checks also run
+after suspension points, including manual changes whose HA listener or policy
+task is still pending. Metadata-only saves defer publication without withdrawing
+unrelated climate authority. API readiness waits for committed configuration and
+rechecks the loaded integration instance after an await. No schedule projection
+or task-scoped delivery guard changes the persisted configuration format.
 
 ## Data Model
 

@@ -146,6 +146,7 @@ class ResourceRuntimeTest(unittest.IsolatedAsyncioTestCase):
     async def test_invalid_stored_links_are_quarantined_without_losing_data(self):
         self.data["zones"]["climate.salon"]["template_links"] = {"tuesday": {"template_key": "workday", "bindings": None}}
         self.assertIsNone(self.scheduler._effective_schedule("climate.salon", self.data["zones"]["climate.salon"]))
+        self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
         self.assertIsNone(self.scheduler.get_configuration_resources()["resolved_default_schedules"]["climate.salon"])
         self.assertIsNone(self.data["zones"]["climate.salon"]["template_links"]["tuesday"]["bindings"])
 

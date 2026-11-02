@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from homeassistant.exceptions import HomeAssistantError
 
 from .climate_manager import ClimateManager
+from .delivery_guard import DeliverySuperseded
 from .temperature import absolute_temperature, temperature_delta
 
 
@@ -120,6 +121,7 @@ class GroupClimateManager(ClimateManager):
         unit = self.temperature_unit(entity_id)
         mirror_context = self._physical._new_owned_context()
         group_members = self._data["room_groups"][entity_id]["members"]
+        mirrored_members = list(group_members)
         for member in group_members:
             expected = self._physical._expected_for_service(service, data)
             if expected:
@@ -136,6 +138,11 @@ class GroupClimateManager(ClimateManager):
                     raise HomeAssistantError("Climate is unavailable")
                 await self._physical._async_call(service, payload, **kwargs)
                 status[member] = {"status": "success"}
+            except DeliverySuperseded:
+                self.delivery_status[entity_id] = status
+                for pending_member in mirrored_members:
+                    self._physical._discard_expected_action(pending_member, mirror_context.id)
+                raise
             except Exception as err:
                 status[member] = {"status": "failed", "message": str(err)}
         self.delivery_status[entity_id] = status
@@ -189,6 +196,7 @@ class GroupClimateManager(ClimateManager):
         group = self._data["room_groups"][entity_id]
         mirror_context = self._physical._new_owned_context()
         mirrored = list(group["members"])
+        mirrored_members = mirrored
         for member in mirrored:
             expected = {key: absolute_temperature(value, unit, self._physical.temperature_unit(member))
                         if isinstance(value, (int, float)) else value for key, value in target.items()}
@@ -207,6 +215,11 @@ class GroupClimateManager(ClimateManager):
                     blocking=blocking, ensure_on=ensure_on, hvac_mode=hvac_mode,
                     range_target=range_target, climate_options=climate_options)
                 status[member] = {"status": "success"}
+            except DeliverySuperseded:
+                self.delivery_status[entity_id] = status
+                for pending_member in mirrored_members:
+                    self._physical._discard_expected_action(pending_member, mirror_context.id)
+                raise
             except Exception as err:
                 status[member] = {"status": "failed", "message": str(err)}
         self.delivery_status[entity_id] = status
@@ -245,6 +258,8 @@ class GroupClimateManager(ClimateManager):
                 restored = self._convert_snapshot(snapshot["group_members"][member],
                     self.temperature_unit(entity_id), self._physical.temperature_unit(member))
                 await self._physical.async_restore_state(member, restored)
+            except DeliverySuperseded:
+                raise
             except Exception:
                 failures.append(member)
         if failures:

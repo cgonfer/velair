@@ -186,6 +186,7 @@ class TemperatureOnlyRuntimeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.calls, [])
             self.block().pop("hvac_mode")
             self.block().update(temperature_only=True, temperature=24)
+            self.scheduler._prepare_runtime_projection(configuration=True)
             self.state.state = "off"
             callbacks[0](object())
             await asyncio.sleep(0)
@@ -235,6 +236,7 @@ class TemperatureOnlyRuntimeTest(unittest.IsolatedAsyncioTestCase):
             "return_at": arrival.isoformat(), "destination_mode_id": "default",
             "away_mode_id": "default", "preparing_entities": [self.entity]}
         runtime._applied[self.entity] = (arrival, 21, None, None, None, "tuesday", "00:00", True)
+        self.scheduler._prepare_runtime_projection(configuration=True)
         self.assertTrue(await runtime.async_suspend_temperature_only(self.entity))
         self.assertEqual(runtime.episode["preparing_entities"], [])
         self.assertNotIn(self.entity, runtime._applied)

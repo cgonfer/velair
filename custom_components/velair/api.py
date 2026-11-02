@@ -425,22 +425,35 @@ def ws_subscribe_shared_demand(hass, connection, msg) -> None:
     _send_update()
 
 
+async def _async_ready_runtime(hass):
+    """Wait for a stable loaded runtime across persistence and reloads."""
+    while (runtime := _get_runtime(hass)) is not None:
+        ensure_ready = getattr(runtime["scheduler"], "async_ensure_projection_ready", None)
+        if callable(ensure_ready):
+            await ensure_ready()
+        current = _get_runtime(hass)
+        if current is runtime:
+            return runtime
+    return None
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/get_schedule",
     }
 )
-@callback
-def ws_get_schedule(
+@websocket_api.async_response
+async def ws_get_schedule(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle schedule state requests."""
-    runtime = _get_runtime(hass)
+    runtime = await _async_ready_runtime(hass)
     if runtime is None:
         connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
         return
+
 
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
@@ -613,19 +626,22 @@ def ws_subscribe_diagnostics(
         vol.Required("type"): f"{DOMAIN}/subscribe_updates",
     }
 )
-@callback
-def ws_subscribe_updates(
+@websocket_api.async_response
+async def ws_subscribe_updates(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Subscribe a frontend client to scheduler updates."""
-    runtime = _get_runtime(hass)
+    runtime = await _async_ready_runtime(hass)
     if runtime is None:
         connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
         return
 
+
     last_learning_evidence = None
+    pending_update_task = None
+    subscribed = True
 
     def learning_evidence(current_runtime):
         diagnostics = current_runtime.get("diagnostics")
@@ -644,7 +660,7 @@ def ws_subscribe_updates(
 
     @callback
     def _send_update() -> None:
-        nonlocal last_learning_evidence
+        nonlocal last_learning_evidence, pending_update_task
         current_runtime = _get_runtime(hass)
         if current_runtime is None:
             connection.send_message(
@@ -653,6 +669,26 @@ def ws_subscribe_updates(
                     {"loaded": False},
                 )
             )
+            return
+
+        scheduler = current_runtime["scheduler"]
+        ready = getattr(scheduler, "projection_horizon_ready", None)
+        pending = getattr(scheduler, "_projection_save_depth", 0)
+        if pending or callable(ready) and not ready():
+            if pending_update_task is not None and not pending_update_task.done():
+                return
+
+            async def send_when_ready():
+                nonlocal pending_update_task
+                try:
+                    await scheduler.async_ensure_projection_ready()
+                finally:
+                    pending_update_task = None
+                if subscribed:
+                    _send_update()
+
+            task = hass.async_create_task(send_when_ready())
+            pending_update_task = None if task.done() else task
             return
 
         last_learning_evidence = learning_evidence(current_runtime)
@@ -680,6 +716,11 @@ def ws_subscribe_updates(
 
     @callback
     def unsubscribe() -> None:
+        nonlocal subscribed, pending_update_task
+        subscribed = False
+        if pending_update_task is not None:
+            pending_update_task.cancel()
+            pending_update_task = None
         for unsub in unsubs:
             unsub()
 
@@ -2297,10 +2338,19 @@ async def _configuration_preview(hass, connection, msg, method, *args, **kwargs)
 @trace_save_operation("response")
 def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     """Build the schedule API response."""
+    snapshot = getattr(runtime["scheduler"], "observation_snapshot", nullcontext)
+    with snapshot():
+        return _build_schedule_response_snapshot(runtime)
+
+
+def _build_schedule_response_snapshot(runtime: dict[str, Any]) -> dict[str, Any]:
+    """Serialize one synchronous scheduler observation."""
     scheduler = runtime["scheduler"]
     storage = runtime["storage"]
     entry = runtime["entry"]
-    stored_data = serialize_schedule_data(storage.data)
+    configuration_getter = getattr(scheduler, "get_published_configuration", None)
+    configuration = configuration_getter() if callable(configuration_getter) else storage.data
+    stored_data = serialize_schedule_data(configuration)
     settings = {
         **stored_data["settings"],
         CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP: (
@@ -2311,7 +2361,7 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     return {
         **getattr(scheduler, "get_configuration_resources", lambda: {})(),
         "configured_entities": list(getattr(storage, "_climate_entities", []) or get_configured_climate_entities(entry)),
-        "control_units": list(storage.data["zones"]),
+        "control_units": list(configuration["zones"]),
         "room_groups": deepcopy(stored_data.get("room_groups", {})),
         "comfort_settings": (scheduler.get_comfort_settings() if scheduler is not None and callable(getattr(scheduler, "get_comfort_settings", None)) else {}),
         "member_to_unit": member_to_unit(stored_data.get("room_groups", {})),

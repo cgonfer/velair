@@ -32,8 +32,15 @@ class EffectiveEventsTest(unittest.TestCase):
         self.data['profiles'] = [{'key': 'return_profile', 'name': 'Return', 'color': '#112233',
                                  'zones': {self.entity: {'behavior': 'schedule', 'schedule': week}}}]
         self.data['modes'] = [{'key': 'destination', 'name': 'Return', 'profile_ids': ['return_profile']}]
+        self.prepare()
+
+    def prepare(self, now=NOW):
+        """Explicit producer boundary for fixture-only input changes."""
+        self.owner._prepare_runtime_projection(now, configuration=True,
+                                               refresh_horizon=True, clear_applied=False)
 
     def project(self, now=NOW):
+        self.prepare(now)
         return project_next_effective_events(self.owner, now)
 
     def event(self, when, **changes):
@@ -164,6 +171,7 @@ class EffectiveEventsTest(unittest.TestCase):
         before = deepcopy(self.data)
         self.assertIsNone(self.owner._resolve_preconditioning_target(self.entity, zone['preconditioning'],
             {'start': '19:00', 'temperature': 21, 'hvac_mode': 'heat'}))
+        self.prepare()
         plans = self.runtime.plans(NOW)
         self.assertEqual(len(plans), 1)
         row = self.project()[0]
@@ -179,13 +187,14 @@ class EffectiveEventsTest(unittest.TestCase):
             self.assertEqual(self.project(), [])
 
     def test_reads_do_not_mutate_episode_data_runtime_caches_or_timers(self):
+        self.prepare()
         data = deepcopy(self.data)
         caches = deepcopy((self.owner._applied_preconditioning_targets, self.owner._attempted_preconditioning_events,
                            self.runtime._applied, self.owner.next_events))
         timer = self.runtime._timer
         with patch.object(self.owner, '_clear_applied_preconditioning_targets', side_effect=AssertionError('write')):
-            first = self.project()
-            self.assertEqual(first, self.project())
+            first = project_next_effective_events(self.owner, NOW)
+            self.assertEqual(first, project_next_effective_events(self.owner, NOW))
         self.assertEqual(self.data, data)
         self.assertEqual(caches, (self.owner._applied_preconditioning_targets, self.owner._attempted_preconditioning_events,
                                  self.runtime._applied, self.owner.next_events))
@@ -200,7 +209,7 @@ class EffectiveEventsTest(unittest.TestCase):
         second = now.replace(hour=2, minute=15, fold=1)
         weekly = self.event(first)
         plan = self.event(second, target_when=arrival)
-        with patch.object(self.owner, '_iter_future_events', return_value=[weekly]), patch.object(self.runtime, 'plans', return_value=[plan]):
+        with patch.object(self.owner._schedule_projection, 'future', return_value=[weekly]), patch.object(self.runtime, 'plans', return_value=[plan]):
             row = self.project(now)[0]
             self.assertEqual(row['source'], 'weekly_schedule')
             encoded = _serialize_effective_event(row)
@@ -285,3 +294,11 @@ class EffectiveEventsTest(unittest.TestCase):
              patch.object(self.owner, '_is_applied_preconditioning_event', side_effect=lambda event: event is first), \
              patch.object(self.owner, '_iter_future_events', side_effect=AssertionError('no new scan')):
             self.assertEqual(self.owner.get_next_effective_events()[0]['when'], later.when)
+
+    def test_effective_read_uses_prepared_arrival_without_calendar_or_profiles(self):
+        self.prepare()
+        with patch.object(self.owner, "_iter_future_events", side_effect=AssertionError("reader built future events")), \
+             patch.object(self.owner, "_profile_transition_effect", side_effect=AssertionError("reader resolved arrival")), \
+             patch.object(self.runtime, "profiles", side_effect=AssertionError("reader validated profiles")):
+            first = project_next_effective_events(self.owner, NOW)
+            self.assertEqual(first, project_next_effective_events(self.owner, NOW))

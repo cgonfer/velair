@@ -85,6 +85,7 @@ class PreconditioningDependencyRuntimeTest(unittest.IsolatedAsyncioTestCase):
                      if item.entity_id == self.child)
         self.assertTrue(restored._dependency_delivery_allowed(child))
         restored_data["zones"][self.master]["schedule"]["tuesday"][-1]["temperature"] = 24
+        restored._prepare_runtime_projection(self.now, configuration=True)
         self.assertEqual(restored._accepted_dependency_anchors(self.now), {})
 
     async def test_automatic_recovery_does_not_release_child_until_master_accepts(self):

@@ -40,10 +40,17 @@ class ClimateChangeMonitor:
         self._execution_authority = execution_authority
         self._unsubscribe = None
         self._tasks: set[asyncio.Task[Any]] = set()
+        self._last_states = {}
+        self._pending_changes = {}
+        self._processing_tokens = {}
+        self._active = False
 
     def async_start(self) -> None:
         """Start listening without polling."""
         if self._unsubscribe is None:
+            self._last_states = {entity: self._hass.states.get(entity) for entity in self._entity_ids}
+            self._active = True
+            self._scheduler.pending_external_change_fields = self.pending_external_fields
             self._unsubscribe = async_track_state_change_event(
                 self._hass, self._entity_ids, self._handle_state_change
             )
@@ -57,11 +64,45 @@ class ClimateChangeMonitor:
         for task in self._tasks:
             task.cancel()
         self._tasks.clear()
+        self._active = False
+        self._last_states.clear()
+        self._pending_changes.clear()
+        self._processing_tokens.clear()
+
+    def pending_external_fields(self, entity_id):
+        """Read changes whose ownership listener or policy task is pending."""
+        if not self._active:
+            return set()
+        try:
+            token = self._processing_tokens.get(asyncio.current_task())
+        except RuntimeError:
+            token = None
+        pending = set().union(*(fields for key, fields in
+            self._pending_changes.get(entity_id, {}).items() if key is not token))
+        old = self._last_states.get(entity_id)
+        new = self._hass.states.get(entity_id)
+        if old is None or new is None or old is new:
+            return pending
+        if old.state in _UNAVAILABLE or new.state in _UNAVAILABLE:
+            return pending
+        if self._execution_authority is not None and self._execution_authority.is_external(entity_id):
+            return pending
+        changed, _, _ = _control_change(old, new)
+        if not changed:
+            return pending
+        owned = self._climate_manager.preview_owned_state_change_fields(entity_id, new, old)
+        assist = getattr(self._scheduler, "room_sensor_assist_owned_state_change_fields", None)
+        assisted = assist(entity_id, new) if callable(assist) else set()
+        pending.update(field for field in changed if field not in owned and field not in assisted)
+        return pending
 
     @callback
     def _handle_state_change(self, event: Any) -> None:
         old_state = event.data.get("old_state")
         new_state = event.data.get("new_state")
+        entity_id = event.data.get("entity_id") or getattr(new_state, "entity_id", None)
+        if isinstance(entity_id, str):
+            self._last_states[entity_id] = new_state
         if old_state is None or new_state is None:
             return
         if (
@@ -101,7 +142,12 @@ class ClimateChangeMonitor:
         previous = {field: previous.get(field) for field in external_fields}
         current = {field: current.get(field) for field in external_fields}
 
+        token = object()
+        self._pending_changes.setdefault(new_state.entity_id, {})[token] = frozenset(external_fields)
+
         async def _async_process() -> None:
+            task = asyncio.current_task()
+            self._processing_tokens[task] = token
             try:
                 context_snapshot = _event_context_snapshot(event)
                 if context_snapshot is not None:
@@ -126,6 +172,13 @@ class ClimateChangeMonitor:
                     "Failed to process external climate change for %s",
                     new_state.entity_id,
                 )
+
+            finally:
+                self._processing_tokens.pop(task, None)
+                pending = self._pending_changes.get(new_state.entity_id, {})
+                pending.pop(token, None)
+                if not pending:
+                    self._pending_changes.pop(new_state.entity_id, None)
 
         task = self._hass.async_create_task(_async_process())
         self._tasks.add(task)

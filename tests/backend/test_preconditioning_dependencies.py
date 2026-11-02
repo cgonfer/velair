@@ -129,6 +129,7 @@ class DependencySchedulerTest(unittest.IsolatedAsyncioTestCase):
         self.data["profiles"] = [{"key": "changed", "zones": {self.master: {"behavior": "normal"}}}]
         self.data["global_"]["active_profile_ids"] = ["changed"]
         self.data["global_"]["base_profile_ids"] = ["changed"]
+        self.scheduler._prepare_runtime_projection(NOW, configuration=True)
         self.assertNotIn(key, self.scheduler._accepted_dependency_anchors(NOW))
 
     async def test_graph_write_rejects_chain_without_mutation(self):
@@ -144,6 +145,7 @@ class DependencySchedulerTest(unittest.IsolatedAsyncioTestCase):
             "started_at": (NOW-timedelta(hours=1)).isoformat(), "return_at": (NOW+timedelta(minutes=20)).isoformat(),
             "away_mode_id": "default", "destination_mode_id": "default", "preparing_entities": []}
         runtime = self.scheduler._planned_return
+        self.scheduler._prepare_runtime_projection(NOW, configuration=True)
         original = self.scheduler._climate_manager.async_set_temperature
         attempts = []
         now = NOW

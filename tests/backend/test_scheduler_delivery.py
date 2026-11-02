@@ -95,6 +95,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
             self.data["zones"][self.entity_id]["schedule"]["tuesday"][0].update(
                 {"temperature": 24, "hvac_mode": "cool"}
             )
+            self.scheduler._prepare_runtime_projection(configuration=True)
             self.hass.states[self.entity_id] = SimpleNamespace(
                 state="cool", attributes={}
             )
@@ -197,6 +198,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.data["zones"][self.entity_id]["schedule"]["tuesday"][0].update(
             {"temperature": 24, "hvac_mode": "cool"}
         )
+        self.scheduler._prepare_runtime_projection(configuration=True)
         new_task = asyncio.create_task(self.scheduler._async_apply_event(new))
         await asyncio.sleep(0)
         release.set()
@@ -245,6 +247,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.data["zones"][self.entity_id]["schedule"]["tuesday"][0].update(
             {"temperature": 24, "hvac_mode": "cool"}
         )
+        self.scheduler._prepare_runtime_projection(configuration=True)
         new_task = asyncio.create_task(self.scheduler._async_apply_event(new))
         await asyncio.sleep(0)
         release_assist.set()
@@ -430,6 +433,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
             self.data["zones"][self.entity_id]["schedule"]["tuesday"][0].update(
                 {"temperature": 24, "hvac_mode": "cool"}
             )
+            self.scheduler._prepare_runtime_projection(configuration=True)
             for _ in range(5):
                 await asyncio.sleep(0)
 

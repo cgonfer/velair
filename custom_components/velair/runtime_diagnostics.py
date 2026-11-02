@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
+from contextlib import nullcontext
 from copy import deepcopy
 from datetime import UTC, datetime
 import logging
@@ -481,18 +482,32 @@ class RuntimeDiagnosticsManager:
         if self._runtime is not None:
             scheduler = self._runtime.get("scheduler")
             if scheduler is not None:
-                try:
-                    zone_runtime = scheduler.get_zone_runtime_statuses().get(entity_id)
-                except Exception:
-                    zone_runtime = None
-                if isinstance(zone_runtime, dict):
-                    context["intent"] = deepcopy(zone_runtime)
-                try:
-                    room_assist = scheduler.get_room_sensor_assist_statuses().get(entity_id)
-                except Exception:
-                    room_assist = None
-                if isinstance(room_assist, dict):
-                    context["room_assist"] = deepcopy(room_assist)
+                snapshot = getattr(scheduler, "observation_snapshot", nullcontext)
+                with snapshot():
+                    try:
+                        runtime_status = getattr(scheduler, "get_zone_runtime_status", None)
+                        zone_runtime = (
+                            runtime_status(entity_id) if callable(runtime_status)
+                            else scheduler.get_zone_runtime_statuses().get(entity_id)
+                        )
+                    except Exception:
+                        zone_runtime = None
+                    if isinstance(zone_runtime, dict):
+                        context["intent"] = deepcopy(zone_runtime)
+                    try:
+                        assist_status = getattr(scheduler, "get_room_sensor_assist_status", None)
+                        zones = getattr(self._runtime.get("storage"), "data", {}).get("zones")
+                        # Aggregate maps use logical control-unit keys. Keep
+                        # physical group-member events absent from this context.
+                        room_assist = (
+                            None if isinstance(zones, dict) and entity_id not in zones
+                            else assist_status(entity_id) if callable(assist_status)
+                            else scheduler.get_room_sensor_assist_statuses().get(entity_id)
+                        )
+                    except Exception:
+                        room_assist = None
+                    if isinstance(room_assist, dict):
+                        context["room_assist"] = deepcopy(room_assist)
             climate_manager = self._runtime.get("climate_manager")
             settling_diagnostics = getattr(
                 climate_manager, "command_settling_diagnostics", None
@@ -657,8 +672,11 @@ class RuntimeDiagnosticsManager:
     @callback
     def _notify(self) -> None:
         self._notification_pending = False
-        self._publish_issue_changes()
-        async_dispatcher_send(self._hass, SIGNAL_DIAGNOSTICS_UPDATED)
+        scheduler = (self._runtime or {}).get("scheduler")
+        observe = getattr(scheduler, "observation_snapshot", nullcontext)
+        with observe():
+            self._publish_issue_changes()
+            async_dispatcher_send(self._hass, SIGNAL_DIAGNOSTICS_UPDATED)
 
     def _record(
         self,
@@ -860,10 +878,19 @@ class RuntimeDiagnosticsManager:
         for key in ("entity_id", "purpose"):
             if isinstance(issue.get(key), str):
                 data[key] = issue[key]
-        self._hass.bus.async_fire(EVENT_VELAIR, data)
+        scheduler = (self._runtime or {}).get("scheduler")
+        boundary = getattr(scheduler, "observation_callback_boundary", nullcontext)
+        with boundary():
+            self._hass.bus.async_fire(EVENT_VELAIR, data)
 
     def snapshot(self, runtime: dict[str, Any]) -> dict[str, Any]:
         """Build a read-only snapshot from current authoritative runtime state."""
+        snapshot = getattr(runtime["scheduler"], "observation_snapshot", nullcontext)
+        with snapshot():
+            return self._build_snapshot(runtime)
+
+    def _build_snapshot(self, runtime: dict[str, Any]) -> dict[str, Any]:
+        """Build the diagnostics payload within one scheduler observation."""
         scheduler = runtime["scheduler"]
         storage = runtime["storage"]
         data = storage.data
@@ -955,9 +982,15 @@ class RuntimeDiagnosticsManager:
 
     def cached_snapshot(self, runtime: dict[str, Any]) -> dict[str, Any]:
         """Share one immutable-by-convention snapshot for one diagnostics revision."""
-        if self._cached_snapshot is None or self._cached_revision != self._revision:
-            self._cached_snapshot = self.snapshot(runtime)
-            self._cached_revision = self._revision
+        while self._cached_snapshot is None or self._cached_revision != self._revision:
+            revision = self._revision
+            snapshot = self.snapshot(runtime)
+            if revision != self._revision:
+                # A synchronous callback invalidated the inputs while building.
+                # Do not stamp its old result with the newer revision.
+                continue
+            self._cached_snapshot = snapshot
+            self._cached_revision = revision
         return self._cached_snapshot
 
     def export_snapshot(

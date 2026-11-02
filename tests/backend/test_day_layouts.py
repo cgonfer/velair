@@ -152,6 +152,7 @@ class DayLayoutRuntimeTest(unittest.IsolatedAsyncioTestCase):
         for key in (["bad"], {"bad": True}):
             with self.subTest(key=key):
                 self.data["zones"]["climate.salon"]["day_layout_key"] = key
+                self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
                 resources = self.scheduler.get_configuration_resources()
                 self.assertTrue(any(item["source"] == "day_layout" for item in resources["resource_diagnostics"]))
 

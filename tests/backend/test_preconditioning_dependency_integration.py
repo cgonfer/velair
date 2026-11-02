@@ -80,6 +80,7 @@ class PreconditioningDependencyIntegrationTest(unittest.IsolatedAsyncioTestCase)
             "destination_mode_id": "default", "preparing_entities": [],
         }
         runtime = self.scheduler._planned_return
+        self.scheduler._prepare_runtime_projection(NOW, configuration=True)
         self.assertEqual(runtime.plans(NOW), [])
         self.assertIsNone(runtime.target(self.child, NOW))
         self.assertEqual(self.climate.calls, [])

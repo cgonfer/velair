@@ -144,6 +144,8 @@ async def async_setup_entry(
 
     @callback
     def _handle_temperature_unit_update(event: Event) -> None:
+        if getattr(event, "event_type", None) == EVENT_CORE_CONFIG_UPDATE:
+            scheduler.handle_schedule_timezone_change()
         entity_id = event.data.get("entity_id")
         if isinstance(entity_id, str):
             hass.async_create_task(

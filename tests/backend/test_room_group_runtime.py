@@ -280,6 +280,7 @@ class RoomGroupRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(observation.get("temperature_source", "climate"), "climate")
         self.assertNotIn("room_temperature_entity_id", observation)
         config.update(room_sensor_assist_enabled=True, room_temperature_entity_id="sensor.room")
+        self.scheduler._prepare_runtime_projection(configuration=True)
         self.scheduler._start_preconditioning_session(event, "heat", NOW)
         await self.scheduler._async_observe_preconditioning_temperature("group.room", NOW + timedelta(minutes=35), 22.0)
         observation = self.data["preconditioning_learning"]["group.room"]["heat"]["observations"][-1]

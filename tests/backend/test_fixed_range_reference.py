@@ -28,6 +28,7 @@ class FixedRangeReferenceTest(unittest.IsolatedAsyncioTestCase):
             "room_sensor_assist_deadband": .5,
         }
         self.hass.states["sensor.room"] = SimpleNamespace(state=str(room), attributes={"unit_of_measurement": "°C"})
+        self.scheduler._prepare_runtime_projection(NOW, configuration=True, refresh_horizon=True)
         return zone
 
     async def test_predictor_uses_selected_boundary_and_only_fixed_direction(self):
@@ -85,6 +86,7 @@ class FixedRangeReferenceTest(unittest.IsolatedAsyncioTestCase):
                     zone["target_range_reference"]["heat"] = "low"
                 else:
                     zone["preconditioning"]["room_temperature_entity_id"] = "sensor.other"
+                self.scheduler._prepare_runtime_projection(NOW, configuration=True)
                 await self.scheduler._async_observe_preconditioning_temperature(self.entity, NOW + timedelta(minutes=10), 26)
                 self.assertNotIn(self.entity, self.scheduler._preconditioning_sessions)
 
@@ -141,6 +143,7 @@ class FixedRangeReferenceTest(unittest.IsolatedAsyncioTestCase):
                     self.hass.states["sensor.other"] = SimpleNamespace(state="25", attributes={"unit_of_measurement": "°C"})
                 else:
                     zone["target_range_reference"]["heat"] = "low"
+                self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
                 status = self.scheduler._room_sensor_assist_status(self.entity)
                 self.assertIsNone(status["applied_target_temp_low"])
                 self.assertIsNone(status["applied_target_temp_high"])
@@ -160,6 +163,7 @@ class FixedRangeReferenceTest(unittest.IsolatedAsyncioTestCase):
                 current = zone["schedule"][self.weekday][0]
                 current.update(target_temp_low=16 if mode != "cool" else 26,
                                target_temp_high=18 if mode != "cool" else 28)
+                self.scheduler._prepare_runtime_projection(NOW, configuration=True)
                 event = replace(self.scheduler.get_current_event(self.entity), start=start,
                                 target_temp_low=21, target_temp_high=25, when=NOW, target_when=arrival)
                 self.scheduler._mark_preconditioning_applied(event)
