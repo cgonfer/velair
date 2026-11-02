@@ -150,6 +150,7 @@ class IndependentComfortRuntimeTest(unittest.IsolatedAsyncioTestCase):
             dissolved = remove_group_candidate(self.data, GROUP["id"])
             self.data.clear()
             self.data.update(dissolved)
+            self.scheduler._prepare_runtime_projection(configuration=True)
         await task
         self.assertEqual(self.data["zones"][PHYSICAL[0]]["comfort"]["humidity_min"], 39)
         self.assertEqual(self.data["member_comfort"], {})

@@ -59,6 +59,7 @@ class PreconditioningDependencyReasonTest(unittest.IsolatedAsyncioTestCase):
                     elif scenario in ("off", "unavailable", "unknown"): self.hass.states[self.master].state = scenario
                     elif scenario == "not_managed": self.data["zones"].pop(self.master)
                     elif scenario == "external": self.scheduler._execution_authority = SimpleNamespace(is_external=lambda entity: entity == self.master)
+                    self.scheduler._prepare_runtime_projection(NOW, configuration=True)
                     with patch.object(self.scheduler, "_preconditioning_master_reason_detail", return_value=None):
                         baseline = self.resolve(mode)
                     explained = self.resolve(mode)
@@ -76,7 +77,7 @@ class PreconditioningDependencyReasonTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.scheduler, "_profile_zone_behavior", return_value={"behavior": "pause", "action": "turn_off"}):
             self.assertEqual(self.scheduler._preconditioning_master_reason_detail(self.master, NOW), "master_profile_paused")
             self.assertIsNone(self.scheduler._preconditioning_master_reason_detail(self.master, NOW, episode=episode))
-        with patch.object(self.scheduler._planned_return, "profiles", return_value=paused):
+        with patch.object(self.scheduler._planned_return, "prepared_profile_effect", return_value=(paused[0], paused[0]["zones"][self.master])):
             self.assertEqual(self.scheduler._preconditioning_master_reason_detail(self.master, NOW, episode=episode), "master_profile_paused")
 
     def test_override_reason_is_factual_without_changing_effective_window(self):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
+from contextlib import nullcontext
 from dataclasses import asdict, replace
 from datetime import datetime, timedelta
 import logging
@@ -12,8 +13,9 @@ from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_point_in_time, async_track_state_change_event
 from homeassistant.util import dt as dt_util
 
-from .models import WEEKDAYS, ClimateEvent, temperature_target_from_mapping
+from .models import WEEKDAYS, ClimateEvent, temperature_target_from_mapping, normalize_preconditioning_data, preconditioning_observations_for_direction
 from .planned_return_preparation import preparation_status
+from .projection_inputs import input_value, thermal_input
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +65,52 @@ class PlannedReturnRuntime:
         self._reported_confirmation = None
         self._last_error = None
         self._cancel_previous_episode = None
+        self._projection_configuration = None
+        self._projection_inputs = None
+        self._nominal_key = None
+        self._projected_profiles = {}
+        self._destination_profiles = None
+        self._prepared_schedules = {}
+        self._prepared_nominals = {}
+        self._prepared_arrival_effects = {}
+        self.generation = 0
+        self._prepared_events = ()
+        self._prepared_by_entity = {}
+        self._prepared_status = {}
+        self._prepared_until = None
+        self._prepared_at = None
+        self._preparing = False
+        self._projection_eligibility = None
+        self._prepared_can_start = False
+        self.control_generation = 0
+        self._zone_order = ()
+        self._zone_positions = {}
+        self._zone_configs = {}
+        self._zone_config_values = {}
+        self._return_blocks = {}
+        self._return_relations = {}
+        self._return_dependents = {}
+        self._has_return_master = False
+        self._profile_effects = {}
+        self._dependency_contexts = {}
+        self._dependency_context_key = None
+        self._dependency_episode_key = None
+        self._zone_prediction_inputs = {}
+        self._prediction_values = {}
+        self._prepared_predictions = {}
+        self._raw_return_events = {}
+        self._raw_return_inputs = {}
+        self._zone_resolution_inputs = {}
+        self._zone_live_inputs = {}
+        self._zone_row_inputs = {}
+        self._zone_row_facts = {}
+        self._zone_rows = {}
+        self._zone_external = {}
+        self._control_events = {}
+        self._control_pending = set()
+        self._resolution_dirty = set()
+        self._status_dirty = True
+        self._published_plans_key = None
 
     @property
     def config(self):
@@ -176,39 +224,394 @@ class PlannedReturnRuntime:
                 if any(effect != effects[0] for effect in effects[1:]):
                     raise ValueError(f"Planned return requires local execution for {entity}")
 
+    def invalidate_configuration(self):
+        """Retire derived destination data after a configuration commit."""
+        self._projection_configuration = None
+        self._projection_inputs = None
+        self._nominal_key = None
+        self._projection_eligibility = None
+        self._projected_profiles.clear()
+
+    def _profiles_for_projection(self, mode_id):
+        if mode_id not in self._projected_profiles:
+            try:
+                self._projected_profiles[mode_id] = self.profiles(mode_id)
+            except ValueError:
+                self._projected_profiles[mode_id] = None
+        profiles = self._projected_profiles[mode_id]
+        if profiles is None:
+            raise ValueError("Return mode references a missing or invalid profile")
+        return profiles
+
+    def prepared_profiles(self):
+        """Read the destination context without validating or resolving it."""
+        return deepcopy(self._destination_profiles or [])
+
+    def prepared_arrival_effects(self):
+        """Read active/destination effects already resolved for the arrival."""
+        return deepcopy(self._prepared_arrival_effects)
+
+    def prepared_schedule(self, entity):
+        """Read an already resolved destination week, never materialize it."""
+        return deepcopy(self._prepared_schedules.get(entity))
+
+    def _nominal_context(self, now):
+        owner = self.scheduler
+        revision = getattr(getattr(owner, "_schedule_projection", None), "configuration_revision", 0)
+        episode = self.episode or {}
+        arrival = parse_instant(episode.get("return_at"))
+        if episode.get("state") not in ("armed", "away") or arrival is None or arrival <= now:
+            arrival = None
+        mode_id = episode["destination_mode_id"] if arrival else self.config.get("destination_mode_id", "default")
+        return (revision, mode_id, arrival), arrival, mode_id
+
+    def control_ready(self, entity, now):
+        """Fail closed if a local guard encounters unprepared Return authority."""
+        episode = self.episode or {}
+        arrival = parse_instant(episode.get("return_at"))
+        if episode.get("state") != "away" or arrival is None or arrival <= now:
+            return True
+        key, _arrival, _mode = self._nominal_context(now)
+        pending = getattr(self.scheduler, "_projection_pending_entities", {})
+        return (key == self._nominal_key and self.scheduler._dependency_episode() == self._dependency_episode_key
+                and entity in self._zone_positions and entity not in self._control_pending and entity not in pending
+                and self._return_relations.get(entity) not in pending)
+
+    def prepared_profile_effect(self, entity):
+        """Read only the small destination ownership descriptor."""
+        profile, behavior = self._profile_effects.get(entity, (None, {"behavior": "normal"}))
+        return profile, dict(behavior)
+
+    def prepared_dependency_context(self, entity):
+        """Read the committed anchor context without hashing calendar inputs."""
+        return self._dependency_contexts.get(entity)
+
+    def _prepare_nominal_context(self, now, key, arrival, mode_id):
+        owner = self.scheduler
+        revision = key[0]
+        if revision != self._projection_configuration:
+            self._projected_profiles.clear()
+            self._projection_configuration = revision
+        if key == self._nominal_key:
+            self._prepare_dependency_contexts()
+            return
+        episode = self.episode or {}
+        if episode.get("away_mode_id"):
+            try:
+                self._profiles_for_projection(episode["away_mode_id"])
+            except ValueError:
+                pass
+        try:
+            profiles = self._profiles_for_projection(mode_id)
+        except ValueError:
+            profiles = None
+        order = tuple(owner._data["zones"])
+        schedules, nominals, effects, profile_effects = {}, {}, {}, {}
+        local_arrival = dt_util.as_local(arrival) if arrival is not None else None
+        active = owner._active_profiles() if local_arrival is not None and profiles is not None else []
+        configs, config_values, relations, dependents, blocks = {}, {}, {}, {}, {}
+        for entity in order:
+            zone = owner._data["zones"][entity]
+            config = normalize_preconditioning_data(zone.get("preconditioning"))
+            configs[entity] = config
+            config_values[entity] = input_value((
+                config, zone.get("target_range_reference"), zone.get("target_range_modes"),
+                zone.get("target_temp_step_override"), zone.get("last_reported_target_temp_step")))
+            relation = config.get("master_entity_id")
+            relations[entity] = relation
+            if relation:
+                dependents.setdefault(relation, set()).add(entity)
+            profile_id, behavior = owner._profile_effect_from_profiles(profiles or [], entity)
+            descriptor = {"behavior": behavior["behavior"]}
+            if "action" in behavior:
+                descriptor["action"] = behavior["action"]
+            profile_effects[entity] = (profile_id, descriptor)
+            if local_arrival is not None and profiles is not None:
+                schedule = owner._effective_schedule_from_profiles(profiles, entity)
+                target = owner._current_schedule_event_for_schedule(entity, schedule, local_arrival)
+                schedules[entity], nominals[entity] = schedule, target
+                if target is not None and target.action == "set_temperature":
+                    block = {"start": target.start, "action": target.action,
+                             "temperature_only": target.temperature_only,
+                             **temperature_target_from_mapping({name: value for name, value in asdict(target).items() if value is not None})}
+                    if target.hvac_mode:
+                        block["hvac_mode"] = target.hvac_mode
+                    blocks[entity] = block
+                before = owner._profile_transition_effect(active, entity, local_arrival)
+                after = (profile_id, behavior["behavior"],
+                         behavior.get("action") if behavior["behavior"] == "pause" else None, target)
+                effects[entity] = (before, after)
+        self._destination_profiles = profiles
+        self._prepared_schedules, self._prepared_nominals = deepcopy(schedules), deepcopy(nominals)
+        self._prepared_arrival_effects = deepcopy(effects)
+        self._profile_effects = profile_effects
+        self._zone_order, self._zone_positions = order, {entity: index for index, entity in enumerate(order)}
+        self._zone_configs, self._zone_config_values, self._return_blocks = configs, config_values, blocks
+        self._return_relations, self._return_dependents = relations, dependents
+        self._has_return_master = any(relations.values())
+        self._nominal_key = key
+        self._control_pending.clear()
+        for values in (self._zone_prediction_inputs, self._prediction_values, self._raw_return_events,
+                       self._raw_return_inputs, self._zone_resolution_inputs, self._zone_row_inputs,
+                       self._zone_rows, self._control_events, self._prepared_by_entity, self._prepared_predictions,
+                       self._zone_live_inputs, self._zone_row_facts, self._zone_external):
+            for entity in set(values) - self._zone_positions.keys():
+                values.pop(entity, None)
+        self._resolution_dirty.intersection_update(order)
+        self._prepare_dependency_contexts()
+        self._status_dirty = True
+
+    def _prepare_dependency_contexts(self):
+        owner = self.scheduler
+        episode_key = owner._dependency_episode()
+        context_key = (self._nominal_key, episode_key)
+        if context_key == self._dependency_context_key:
+            return
+        compute = getattr(owner, "_compute_dependency_context", None)
+        self._dependency_contexts = ({entity: compute(entity, episode_key) for entity in self._zone_order}
+                                     if compute is not None and episode_key is not None else {})
+        self._dependency_context_key, self._dependency_episode_key = context_key, episode_key
+        self._resolution_dirty.update(self._zone_order)
+        self._status_dirty = True
+
+    def _authority_selection(self, entities):
+        selected = {entity for entity in entities if entity in self._zone_positions}
+        selected.update(master for entity in tuple(selected)
+                        if (master := self._return_relations.get(entity)) in self._zone_positions)
+        return tuple(sorted(selected, key=self._zone_positions.__getitem__))
+
+    def _zone_inputs(self, entity, now, arrival):
+        owner = self.scheduler
+        zone = owner._data["zones"][entity]
+        config = self._zone_configs[entity]
+        target = self._prepared_nominals.get(entity)
+        external = owner._is_external_execution(entity)
+        consumes_temperature = target is not None and target.action == "set_temperature"
+        thermal = thermal_input(owner, entity, config) if consumes_temperature else None
+        mode_getter = getattr(owner._climate_manager, "effective_hvac_mode", None)
+        effective_mode = (
+            mode_getter(entity, None if target.temperature_only else target.hvac_mode,
+                        ensure_on=not target.temperature_only,
+                        range_target=target.target_temp_low is not None and target.target_temp_high is not None)
+            if consumes_temperature and callable(mode_getter) else None)
+        thermal = (thermal, effective_mode) if consumes_temperature else None
+        learning = owner._data.get("preconditioning_learning", {}).get(entity, {}) if consumes_temperature else {}
+        history = any(bool(preconditioning_observations_for_direction(learning, direction)) for direction in ("heat", "cool"))
+        prediction = (arrival, target, self._zone_config_values[entity], thermal, input_value(learning),
+                      dt_util.as_utc(now) if history else None,
+                      owner._preconditioned_event_details, owner._adaptive_preconditioning_prediction)
+        override = owner._is_zone_override_active(entity, now) if arrival is not None else False
+        manual = owner._manual_control_status(entity, now) if override else None
+        latched = self.is_preparing(entity)
+        current_mode = owner._current_hvac_mode(entity) if target is not None and target.temperature_only else None
+        gate = (self.available() and (self.episode or {}).get("state") == "away",
+                zone.get("enabled"), external, current_mode, latched,
+                entity in self._temperature_only_suspensions, (self.episode or {}).get("started_at"), self._has_return_master)
+        row = (self._zone_config_values[entity], self._profile_effects.get(entity),
+               zone.get("enabled"), external, owner.mode, owner._stopped,
+               owner.temperature_migration_blocked, override, input_value(manual),
+               (zone.get("override") or {}).get("type"), thermal, latched)
+        return prediction, gate, row, external
+
+    def _independent_return_event(self, entity, now, arrival, gate, prediction):
+        target = self._prepared_nominals.get(entity)
+        active, enabled, external, current_mode, latched, suspended, started_at, has_master = gate
+        episode = self.episode or {}
+        if (target is None or target.action != "set_temperature" or arrival is None
+                or not active or episode.get("state") != "away" or not enabled or external
+                or target.temperature_only and current_mode == "off"):
+            return None
+        start, diagnostics = prediction
+        if start >= arrival:
+            if not latched or suspended:
+                return replace(target, when=arrival, target_when=None) if has_master else None
+            start = parse_instant(started_at) or now
+        return replace(target, when=start, target_when=arrival, preconditioning_diagnostics=diagnostics)
+
+    def _anchor_inputs(self, entity, now, arrival):
+        owner = self.scheduler
+        target = self._prepared_nominals.get(entity)
+        if target is None or arrival is None:
+            return None
+        key = owner._preconditioning_event_key(entity, target.weekday, target.start, arrival)
+        anchor = owner._data.get("preconditioning_accepted_anchors", {}).get(key)
+        marker = owner._applied_preconditioning_targets.get(key)
+        expiry = parse_instant(anchor.get("expires_at")) if anchor else None
+        marker_value = ((getattr(marker, "active_from", None), marker.target_when,
+                         input_value(getattr(marker, "dependency", None)), marker.target_when > now)
+                        if marker is not None else None)
+        return input_value(anchor), expiry is not None and expiry > now, marker_value
+
+    def _resolve_return_controls(self, now, selected, arrival):
+        owner = self.scheduler
+        episode = owner._dependency_episode()
+        evidence = {entity: self._anchor_inputs(entity, now, arrival) for entity in selected}
+        signatures = {}
+        for entity in selected:
+            master = self._return_relations.get(entity)
+            event = self._raw_return_events.get(entity)
+            source = self._raw_return_events.get(master)
+            instants = tuple((item.when <= now, (item.target_when or item.when) > now)
+                             for item in (event, source) if item is not None)
+            signatures[entity] = (
+                event, source, evidence.get(entity), evidence.get(master),
+                self._zone_live_inputs.get(entity), self._zone_live_inputs.get(master), episode, instants,
+                self._dependency_contexts.get(entity), self._dependency_contexts.get(master),
+                owner._preconditioning_master_reason_detail(master, now, episode=episode) if master else None)
+        if all(signatures[entity] == self._zone_resolution_inputs.get(entity)
+               and entity not in self._resolution_dirty for entity in selected):
+            return set()
+        raw = [event for entity in selected if (event := self._raw_return_events.get(entity)) is not None]
+        resolved = owner._resolve_preconditioning_dependencies(raw, now, episode=episode, entities=selected) if raw else []
+        by_entity = {event.entity_id: event for event in resolved}
+        changed = set()
+        for entity in selected:
+            event = by_entity.get(entity)
+            if event != self._control_events.get(entity):
+                changed.add(entity)
+                if event is None:
+                    self._control_events.pop(entity, None)
+                else:
+                    self._control_events[entity] = event
+            if event is not None and event.target_when is not None:
+                self._prepared_by_entity[entity] = event
+            else:
+                self._prepared_by_entity.pop(entity, None)
+            if signatures[entity] != self._zone_resolution_inputs.get(entity):
+                self._resolution_dirty.update(self._return_dependents.get(entity, ()))
+            self._zone_resolution_inputs[entity] = signatures[entity]
+        self._resolution_dirty.difference_update(selected)
+        self._control_pending.difference_update(selected)
+        return changed
+
+    def _prepare_controls(self, now, selected, arrival):
+        owner = self.scheduler
+        changed = set()
+        for entity in selected:
+            prediction_key, gate, row, external = self._zone_inputs(entity, now, arrival)
+            if prediction_key != self._zone_prediction_inputs.get(entity):
+                target = self._prepared_nominals.get(entity)
+                if target is not None and target.action == "set_temperature" and arrival is not None:
+                    block = self._return_blocks[entity]
+                    prediction = owner._preconditioned_event_details(entity, owner._data["zones"][entity], block, arrival)
+                else:
+                    prediction = (arrival, None)
+                self._prepared_predictions[entity] = prediction
+                self._prediction_values[entity] = input_value(prediction)
+                self._zone_prediction_inputs[entity] = prediction_key
+                changed.add(entity)
+            raw_key = (self._prepared_nominals.get(entity), self._prediction_values.get(entity), gate)
+            if raw_key != self._raw_return_inputs.get(entity):
+                self._raw_return_events[entity] = self._independent_return_event(
+                    entity, now, arrival, gate, self._prepared_predictions[entity])
+                self._raw_return_inputs[entity] = raw_key
+                changed.add(entity)
+            if row != self._zone_row_facts.get(entity):
+                changed.add(entity)
+            self._zone_live_inputs[entity] = (gate, row)
+            self._zone_row_facts[entity] = row
+            self._zone_external[entity] = external
+        changed.update(self._resolve_return_controls(now, selected, arrival))
+        if changed:
+            self.control_generation += 1
+            self._status_dirty = True
+        return changed
+
+    def _publish_prepared_return(self, now, arrival, mode_id):
+        owner = self.scheduler
+        self._prepared_events = tuple(sorted(
+            (self._control_events[entity] for entity in self._zone_order if entity in self._control_events),
+            key=lambda event: bool(self._return_relations.get(event.entity_id))))
+        plans = self.plans(now, include_nominal=True)
+        events = {event.entity_id: event for event in plans}
+        rows_changed = False
+        for entity in self._zone_order:
+            event = events.get(entity)
+            row_key = (arrival, mode_id, self._destination_profiles is not None,
+                       self._prepared_nominals.get(entity), self._zone_row_facts.get(entity),
+                       self._prediction_values.get(entity), event,
+                       event.when <= now if event is not None else None)
+            if row_key == self._zone_row_inputs.get(entity):
+                continue
+            projection = preparation_status(
+                self, now, arrival, mode_id, [event] if event is not None else [],
+                prepared_profiles=self._destination_profiles, prepared_targets=self._prepared_nominals,
+                prepared_predictions=self._prepared_predictions, prepared_configs=self._zone_configs,
+                entities=(entity,))
+            row = projection["zones"][0]
+            rows_changed |= row != self._zone_rows.get(entity)
+            self._zone_rows[entity] = row
+            self._zone_row_inputs[entity] = row_key
+        episode = self.episode or {}
+        sources = self.sources()
+        eligibility = (self._projection_configuration, self.operational(),
+                       episode.get("state") in (None, "armed", "away", "cancelled", "fulfilled", "skipped"),
+                       tuple((source, owner._hass.states.get(source) is not None) for source in self.source_ids()),
+                       tuple((entity, self._zone_external.get(entity)) for entity in self._zone_order))
+        if eligibility != self._projection_eligibility:
+            self._prepared_can_start = self.can_start()
+            self._projection_eligibility = eligibility
+        household = (self._nominal_key, tuple((name, episode.get(name)) for name in (
+            "state", "origin", "return_at", "departure_at", "away_mode_id", "destination_mode_id",
+            "awaiting_departure_confirmation", "dismissed")), self._confirmation, self.error,
+            getattr(self, "notice", None), input_value(sources), self._prepared_can_start)
+        plans_key = input_value(self._prepared_events)
+        if self._status_dirty or rows_changed or household != self._projection_inputs or plans_key != self._published_plans_key:
+            status = self._build_prepared_status(now)
+            if status != self._prepared_status or plans_key != self._published_plans_key:
+                self._prepared_status = status
+                self.generation += 1
+            self._published_plans_key = plans_key
+            self._projection_inputs = household
+        self._prepared_at = dt_util.as_utc(now)
+        self._status_dirty = False
+
+    @callback
+    def prepare(self, now, entities=None, publish=True):
+        """Reconcile one control component or publish a complete read projection."""
+        owner = self.scheduler
+        if self._preparing or (publish or entities is None) and getattr(owner, "_projection_save_depth", 0):
+            return frozenset()
+        key, arrival, mode_id = self._nominal_context(now)
+        if not publish and entities is not None:
+            selected = self._authority_selection(entities)
+            pending = getattr(owner, "_projection_pending_entities", {})
+            selected = tuple(entity for entity in selected
+                             if entity not in pending and self._return_relations.get(entity) not in pending)
+            if not selected:
+                return frozenset()
+            if key != self._nominal_key or owner._dependency_episode() != self._dependency_episode_key:
+                self._control_pending.update(selected)
+                for entity in selected:
+                    self._prepared_by_entity.pop(entity, None)
+                self._status_dirty = True
+                return frozenset(selected)
+            if (self.episode or {}).get("state") != "away" or arrival is None:
+                return frozenset()
+        else:
+            selected = None
+        self._preparing = True
+        try:
+            if publish:
+                self._prepare_nominal_context(now, key, arrival, mode_id)
+                selected = self._zone_order
+            elif selected is None:
+                selected = self._zone_order
+            changed = self._prepare_controls(now, selected, arrival)
+            if publish:
+                self._publish_prepared_return(now, arrival, mode_id)
+            return frozenset(changed)
+        finally:
+            self._preparing = False
+
     def plans(self, now, *, include_nominal=False):
+        """Read a prepared plan; producer boundaries own all prediction work."""
         episode = self.episode
         arrival = parse_instant((episode or {}).get("return_at"))
         if not self.available() or not episode or episode["state"] != "away" or arrival is None or arrival <= now:
             return []
-        owner = self.scheduler
-        try:
-            profiles = self.profiles(episode["destination_mode_id"])
-        except ValueError:
-            return []
-        events = []
-        for entity, zone in owner._data["zones"].items():
-            if not zone["enabled"] or owner._is_external_execution(entity):
-                continue
-            schedule = owner._effective_schedule_from_profiles(profiles, entity)
-            target = owner._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
-            if target is None or target.action != "set_temperature":
-                continue
-            block = {"start": target.start, "action": target.action, "temperature_only": target.temperature_only, **temperature_target_from_mapping({key: value for key, value in asdict(target).items() if value is not None})}
-            if target.hvac_mode:
-                block["hvac_mode"] = target.hvac_mode
-            if target.temperature_only and owner._current_hvac_mode(entity) == "off":
-                continue
-            start, diagnostics = owner._preconditioned_event_details(entity, zone, block, arrival)
-            if start >= arrival:
-                if entity not in episode.get("preparing_entities", []) or entity in self._temperature_only_suspensions:
-                    if any(item.get("preconditioning", {}).get("master_entity_id") for item in owner._data["zones"].values()):
-                        events.append(replace(target, when=arrival, target_when=None))
-                    continue
-                start = parse_instant(episode["started_at"]) or now
-            events.append(replace(target, when=start, target_when=arrival, preconditioning_diagnostics=diagnostics))
-        resolved = owner._resolve_preconditioning_dependencies(events, now, episode=owner._dependency_episode())
-        return [event for event in resolved if event.target_when is not None or include_nominal and event.preconditioning_dependency]
+        return deepcopy([event for event in self._prepared_events
+                         if event.target_when is not None or include_nominal and event.preconditioning_dependency])
 
     @callback
     def mark_temperature_only_suspended(self, entity):
@@ -219,12 +622,7 @@ class PlannedReturnRuntime:
         arrival = parse_instant(episode.get("return_at"))
         if arrival is None:
             return False
-        try:
-            profiles = self.profiles(episode["destination_mode_id"])
-        except ValueError:
-            return False
-        schedule = self.scheduler._effective_schedule_from_profiles(profiles, entity)
-        target = self.scheduler._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
+        target = self._prepared_nominals.get(entity)
         if target is None or not target.temperature_only:
             return False
         if entity not in episode.get("preparing_entities", []) and entity not in self._applied:
@@ -261,9 +659,16 @@ class PlannedReturnRuntime:
     def target(self, entity, now=None):
         now = now or dt_util.now()
         owner = self.scheduler
+        if not self.control_ready(entity, now):
+            return None
         if entity not in owner._data["zones"] or owner._is_zone_override_active(entity, now):
             return None
-        return next((event for event in self.plans(now) if event.entity_id == entity and (event.when <= now or self.is_preparing(entity)) and self.scheduler._dependency_delivery_allowed(event)), None)
+        episode = self.episode
+        arrival = parse_instant((episode or {}).get("return_at"))
+        if not self.available() or not episode or episode["state"] != "away" or arrival is None or arrival <= now:
+            return None
+        event = self._prepared_by_entity.get(entity)
+        return deepcopy(event) if event is not None and (event.when <= now or self.is_preparing(entity)) and owner._dependency_delivery_allowed(event) else None
 
     def zone_context(self, entity, now, *, planned_target=None, effective_event=None, blocked=False):
         """Describe the winning return intent, never a forecast or delivery receipt."""
@@ -279,7 +684,9 @@ class PlannedReturnRuntime:
         if phase == "away" and owner.active_mode_id != (None if mode_id == "default" else mode_id):
             return None
         try:
-            profiles = self.profiles(mode_id)
+            profiles = self._projected_profiles.get(mode_id)
+            if profiles is None:
+                return None
         except ValueError:
             return None
         profile = next((item for item in profiles if entity in item["zones"]), None)
@@ -320,7 +727,10 @@ class PlannedReturnRuntime:
             self._emit("confirmation_reset", reason="absence_not_confirmed")
 
     def status(self):
-        now = dt_util.now()
+        """Read the complete Return publication without rebuilding plans."""
+        return deepcopy(self._prepared_status)
+
+    def _build_prepared_status(self, now):
         episode = self.episode
         plans = self.plans(now, include_nominal=True)
         state = (episode or {}).get("state", "idle" if self.config.get("enabled") else "disabled")
@@ -334,11 +744,15 @@ class PlannedReturnRuntime:
         if (episode or {}).get("state") not in ("armed", "away") or arrival is None or arrival <= now:
             arrival = None
         mode_id = (episode["destination_mode_id"] if arrival else self.config.get("destination_mode_id", "default"))
-        preparation = preparation_status(self, now, arrival, mode_id, plans)
+        preparation = preparation_status(self, now, arrival, mode_id, plans,
+            prepared_profiles=self._destination_profiles,
+            prepared_targets=self._prepared_nominals,
+            prepared_predictions=self._prepared_predictions,
+            prepared_configs=self._zone_configs, prepared_rows=self._zone_rows)
         terminal = (episode or {}).get("state") in ("cancelled", "fulfilled", "skipped")
         dismissed = terminal and (episode or {}).get("dismissed") is True
         episode_active = (episode or {}).get("state") in ("armed", "away")
-        return {"awaiting_departure_confirmation": self.awaiting_departure_confirmation(), "state": state, "occupancy": self.occupancy(), "sources": self.sources(), "origin": (episode or {}).get("origin"), "can_start": self.can_start(), "dismissed": dismissed, "can_dismiss": terminal and not dismissed, "episode_active": episode_active, "can_cancel": episode is not None and not dismissed, "notice": getattr(self, "notice", None), "return_at": (episode or {}).get("return_at"), "departure_at": (episode or {}).get("departure_at"), "away_mode_id": (episode or {}).get("away_mode_id"), "destination_mode_id": (episode or {}).get("destination_mode_id"), "absence_confirm_at": self._confirmation.isoformat() if self._confirmation else None, "preparation": preparation, "zones": [{"entity_id": event.entity_id, "start_at": event.when.isoformat(), "target_when": (event.target_when or event.when).isoformat(), "preconditioning_dependency": event.preconditioning_dependency, **temperature_target_from_mapping({key: value for key, value in asdict(event).items() if value is not None}), "preparing": self.target(event.entity_id, now) is not None} for event in plans], "error": self.error}
+        return {"awaiting_departure_confirmation": self.awaiting_departure_confirmation(), "state": state, "occupancy": self.occupancy(), "sources": self.sources(), "origin": (episode or {}).get("origin"), "can_start": self._prepared_can_start, "dismissed": dismissed, "can_dismiss": terminal and not dismissed, "episode_active": episode_active, "can_cancel": episode is not None and not dismissed, "notice": getattr(self, "notice", None), "return_at": (episode or {}).get("return_at"), "departure_at": (episode or {}).get("departure_at"), "away_mode_id": (episode or {}).get("away_mode_id"), "destination_mode_id": (episode or {}).get("destination_mode_id"), "absence_confirm_at": self._confirmation.isoformat() if self._confirmation else None, "preparation": preparation, "zones": [{"entity_id": event.entity_id, "start_at": event.when.isoformat(), "target_when": (event.target_when or event.when).isoformat(), "preconditioning_dependency": event.preconditioning_dependency, **temperature_target_from_mapping({key: value for key, value in asdict(event).items() if value is not None}), "preparing": self.target(event.entity_id, now) is not None} for event in plans], "error": self.error}
 
     @callback
     def refresh(self):
@@ -349,6 +763,7 @@ class PlannedReturnRuntime:
             self._timer = None
         if not self.available():
             self.stop()
+            self.prepare(dt_util.now())
             return
         owner = self.scheduler
         entities = set(self.source_ids())
@@ -369,6 +784,7 @@ class PlannedReturnRuntime:
                     self._state_changed(event)
             self._listener = async_track_state_change_event(owner._hass, entities, state_changed)
         now = dt_util.now()
+        self.prepare(now)
         if self.error:
             return
         eligible_departure = bool(self.source_ids()) and (self.awaiting_departure_confirmation() or (self.episode or {}).get("state") == "armed" or (self.episode is None and self.config.get("enabled")))
@@ -387,18 +803,11 @@ class PlannedReturnRuntime:
         else:
             self._temperature_only_suspensions.intersection_update(episode.get("preparing_entities", []))
         if episode.get("state") == "away" and arrival is not None and arrival > now:
-            try:
-                profiles = self.profiles(episode["destination_mode_id"])
-            except ValueError:
-                profiles = None
-            if profiles is not None:
-                for entity in episode.get("preparing_entities", []):
-                    if owner._current_hvac_mode(entity) != "off":
-                        continue
-                    schedule = owner._effective_schedule_from_profiles(profiles, entity)
-                    target = owner._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
-                    if target is not None and target.temperature_only:
-                        self.mark_temperature_only_suspended(entity)
+            for entity in episode.get("preparing_entities", []):
+                target = self._prepared_nominals.get(entity)
+                if owner._current_hvac_mode(entity) == "off" and target is not None and target.temperature_only:
+                    self.mark_temperature_only_suspended(entity)
+        self.prepare(now)
         times = [self._confirmation] if self._confirmation else []
         if self._temperature_only_suspensions:
             times.append(now)
@@ -439,12 +848,15 @@ class PlannedReturnRuntime:
         owner._data["planned_return_episode"] = episode
         self._persistence_depth += 1
         try:
-            await owner._async_save_data()
+            with getattr(owner, "_projection_save_scope", nullcontext)():
+                await owner._async_save_data()
         except BaseException:
             owner._data["planned_return_episode"] = previous
             raise
         finally:
             self._persistence_depth -= 1
+        self._projection_inputs = None
+        self.prepare(dt_util.now())
 
     async def _select(self, mode_id, *, episode=None, on_persisted=None):
         owner = self.scheduler
@@ -473,6 +885,8 @@ class PlannedReturnRuntime:
                 nonlocal committed
                 committed = True
                 self._persistence_depth -= 1
+                self._projection_inputs = None
+                self.prepare(dt_util.now())
                 if on_persisted is not None:
                     on_persisted()
                 if episode is not None and (current_episode or {}).get("state") != episode["state"]:
@@ -483,7 +897,8 @@ class PlannedReturnRuntime:
 
             try:
                 if ids == owner.active_profile_ids and mode_marker == owner.active_mode_id and not owner.profile_selection["zone_profile_overrides"]:
-                    await owner._async_save_data()
+                    with getattr(owner, "_projection_save_scope", nullcontext)():
+                        await owner._async_save_data()
                     persisted()
                 else:
                     await owner._async_activate_profiles_locked(ids, source="planned_return", mode_id=mode_marker, rollback_data=previous, on_persisted=persisted)
@@ -549,6 +964,7 @@ class PlannedReturnRuntime:
                         for entity in tuple(self._temperature_only_suspensions):
                             await self.async_suspend_temperature_only(entity)
                             self._temperature_only_suspensions.discard(entity)
+                        self.prepare(now)
                         for event in self.plans(now):
                             if event.when > now or self._applied.get(event.entity_id) == self._intent(event) or self.scheduler._is_zone_override_active(event.entity_id, now):
                                 continue
@@ -877,7 +1293,8 @@ class PlannedReturnRuntime:
         owner._data["planned_return_episode"] = updated
         try:
             if selection is None or (selection["profile_ids"] == owner.active_profile_ids and selection["mode_id"] == owner.profile_selection["base_mode_id"] and selection["zone_profile_overrides"] == owner.profile_selection["zone_profile_overrides"]):
-                await owner._async_save_data()
+                with getattr(owner, "_projection_save_scope", nullcontext)():
+                    await owner._async_save_data()
                 persisted()
             else:
                 await owner._async_activate_profiles_locked(

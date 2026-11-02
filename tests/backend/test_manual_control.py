@@ -894,6 +894,38 @@ class ManualControlTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("keep_automatic", exported["external_change_policy"]["action"])
         self.assertNotIn("manual_control", exported)
 
+    async def test_new_external_intent_during_manual_save_prevents_old_snapshot_restore(self):
+        await self.scheduler.async_update_external_change_policy(
+            self.entity_id, {"action": "until_resumed"})
+        entered, release = asyncio.Event(), asyncio.Event()
+        newer = [False]
+        self.scheduler.pending_external_change_fields = lambda entity: (
+            {"temperature"} if newer[0] and entity == self.entity_id else set())
+        async def save():
+            entered.set()
+            await release.wait()
+        with patch.object(self.scheduler, "_async_save_data", side_effect=save):
+            task = asyncio.create_task(self.scheduler.async_handle_external_climate_change(
+                self.entity_id, changed_fields=["temperature"],
+                previous={"temperature": 24}, current={"temperature": 26},
+                observed_snapshot={"hvac_mode": "cool", "temperature": 26}))
+            try:
+                await asyncio.wait_for(entered.wait(), 2)
+                newer[0] = True
+                release.set()
+                await asyncio.wait_for(task, 2)
+            finally:
+                release.set()
+                if not task.done():
+                    task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
+        self.assertFalse(any(call[0] == "restore_state"
+                             for call in self.scheduler._climate_manager.calls))
+        self.assertEqual(self.scheduler._manual_control_status(self.entity_id, NOW)["policy"],
+                         "until_resumed")
+
+
+
 
 class ExternalChangeProjectionTest(unittest.TestCase):
     def test_keep_automatic_is_the_first_external_option_but_not_a_manual_policy(self) -> None:
@@ -964,6 +996,8 @@ class ExternalChangeProjectionTest(unittest.TestCase):
         )
         self.assertEqual("off", previous["hvac_mode"])
         self.assertEqual(25.0, current["target_temp_high"])
+
+
 
 
 class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):

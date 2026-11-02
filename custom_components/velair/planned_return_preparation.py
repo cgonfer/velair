@@ -8,23 +8,37 @@ from .models import normalize_preconditioning_data, temperature_target_from_mapp
 from .target_format_policy import selected_range_boundary
 
 
-def preparation_status(runtime, now, arrival, mode_id, plans):
+_UNPREPARED = object()
+
+
+def preparation_status(runtime, now, arrival, mode_id, plans, *, prepared_profiles=_UNPREPARED, prepared_targets=None, prepared_predictions=None, prepared_configs=None, entities=None, prepared_rows=None):
     """Project every managed zone without changing episodes or thermal learning."""
     owner = runtime.scheduler
-    try:
-        profiles = runtime.profiles(mode_id)
-    except ValueError:
-        profiles = None
+    if prepared_rows is not None:
+        selected = owner._data["zones"] if entities is None else entities
+        return {"context": "arrival" if arrival is not None else "configuration",
+                "return_at": arrival.isoformat() if arrival else None, "mode_id": mode_id,
+                "zones": [deepcopy(prepared_rows[entity]) for entity in selected if entity in prepared_rows]}
+    if prepared_profiles is _UNPREPARED:
+        try:
+            profiles = runtime.profiles(mode_id)
+        except ValueError:
+            profiles = None
+    else:
+        profiles = prepared_profiles
     context = "arrival" if arrival is not None else "configuration"
     result = {"context": context, "return_at": arrival.isoformat() if arrival else None,
               "mode_id": mode_id, "zones": []}
     events = {event.entity_id: event for event in plans}
-    latched = [entity for entity in (runtime.episode or {}).get("preparing_entities", []) if runtime.is_preparing(entity)]
-    for entity, zone in owner._data["zones"].items():
+    selected = owner._data["zones"] if entities is None else entities
+    for entity in selected:
+        zone = owner._data["zones"].get(entity)
+        if zone is None:
+            continue
         profile_id, effect = owner._profile_effect_from_profiles(profiles or [], entity)
         source = "paused" if effect["behavior"] == "pause" else (
             "profile" if effect["behavior"] == "schedule" else "default")
-        config = normalize_preconditioning_data(zone.get("preconditioning"))
+        config = prepared_configs[entity] if prepared_configs is not None else normalize_preconditioning_data(zone.get("preconditioning"))
         row = {"entity_id": entity, "profile_id": profile_id, "schedule_source": source,
                "preparation": "adaptive" if config["enabled"] else "arrival_only",
                "state": "configured", "reason": None, "start_at": None}
@@ -38,8 +52,11 @@ def preparation_status(runtime, now, arrival, mode_id, plans):
         elif source == "paused":
             _unavailable(row, "profile_paused")
         elif arrival is not None:
-            schedule = owner._effective_schedule_from_profiles(profiles, entity)
-            target = owner._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
+            if prepared_targets is None:
+                schedule = owner._effective_schedule_from_profiles(profiles, entity)
+                target = owner._current_schedule_event_for_schedule(entity, schedule, dt_util.as_local(arrival))
+            else:
+                target = prepared_targets.get(entity)
             if target is None or target.action != "set_temperature":
                 _unavailable(row, "missing_target")
             else:
@@ -49,7 +66,8 @@ def preparation_status(runtime, now, arrival, mode_id, plans):
                     block["hvac_mode"] = target.hvac_mode
                 row["target"] = temperature_target_from_mapping(block)
                 _arrival_preparation(owner, runtime, entity, zone, config, block,
-                                     arrival, now, events.get(entity), entity in latched, row)
+                                     arrival, now, events.get(entity), runtime.is_preparing(entity), row,
+                                     prediction=(prepared_predictions or {}).get(entity))
         if row["preparation"] == "arrival_only" and row["reason"] is None:
             row["reason"] = "preconditioning_disabled"
         if arrival is not None and row["preparation"] != "none":
@@ -77,7 +95,7 @@ def _suspension(owner, entity, now):
 
 
 def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
-                         now, event, latched, row):
+                         now, event, latched, row, *, prediction=None):
     row["state"] = "pending"
     dependency = getattr(event, "preconditioning_dependency", None)
     if dependency is not None:
@@ -118,6 +136,8 @@ def _arrival_preparation(owner, runtime, entity, zone, config, block, arrival,
     # Read the predictor's planned time, never the departure fallback of a latched event.
     if event is not None and (event.preconditioning_diagnostics is not None or dependency is not None):
         start = event.when
+    elif prediction is not None:
+        start, _diagnostics = prediction
     else:
         start, _diagnostics = owner._preconditioned_event_details(entity, zone, block, arrival)
     if start < arrival:

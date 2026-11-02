@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
+from copy import copy, deepcopy
 import logging
 import math
 from types import SimpleNamespace
@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 try:
     from homeassistant.core import Context
@@ -33,6 +34,7 @@ from .const import (
 )
 from .temperature import absolute_temperature, snap_temperature_to_step, temperature_delta
 from .execution import ExecutionAuthority
+from .delivery_guard import check_delivery, delivery_guard_active
 
 CLIMATE_DOMAIN = "climate"
 CLIMATE_SERVICE_SET_HVAC_MODE = "set_hvac_mode"
@@ -90,6 +92,14 @@ class ClimateManager:
         self._settling_mismatches: dict[str, dict[str, dict[str, Any]]] = {}
         self._field_generations: dict[str, dict[str, int]] = {}
 
+    def _check_current_delivery(self, entity_id: Any) -> None:
+        """Validate task authority and the physical entity before each call."""
+        check_delivery()
+        if delivery_guard_active() and isinstance(entity_id, str):
+            state = self._hass.states.get(entity_id)
+            if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                raise HomeAssistantError("Climate is unavailable")
+
     async def _async_call(
         self,
         service: str,
@@ -101,6 +111,7 @@ class ClimateManager:
     ) -> None:
         """Call climate while marking the resulting state as Velair-owned."""
         entity_id = data.get(ATTR_ENTITY_ID)
+        self._check_current_delivery(entity_id)
         if isinstance(entity_id, str) and self._execution_authority is not None:
             self._execution_authority.ensure_local(entity_id)
         context = context or self._new_owned_context()
@@ -160,6 +171,7 @@ class ClimateManager:
             except TypeError as err:
                 if "context" not in str(err):
                     raise
+                self._check_current_delivery(entity_id)
                 await self._hass.services.async_call(
                     CLIMATE_DOMAIN, service, data, blocking=blocking
                 )
@@ -480,6 +492,16 @@ class ClimateManager:
                 entity_id, removed_settling
             )
             self._cleanup_field_generations(entity_id)
+
+    def preview_owned_state_change_fields(self, entity_id, new_state, old_state=None):
+        """Classify live changes without consuming ownership evidence."""
+        preview = copy(self)
+        preview._contexts = dict(self._contexts)
+        for name in ("_expected", "_settling", "_settling_mismatches", "_field_generations"):
+            values = getattr(self, name)
+            setattr(preview, name, {entity_id: deepcopy(values[entity_id])}
+                    if entity_id in values else {})
+        return preview.owned_state_change_fields(entity_id, new_state, old_state)
 
     def owned_state_change_fields(
         self, entity_id: str, new_state: Any, old_state: Any | None = None

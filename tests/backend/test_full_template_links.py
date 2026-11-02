@@ -79,6 +79,7 @@ class FullTemplateLinksTest(unittest.IsolatedAsyncioTestCase):
         loaded = normalize_schedule_data(self.data, ["climate.salon"])
         retained = next(template for template in loaded["templates"] if template["key"] == "workday")
         self.assertEqual(retained["blocks"][0]["preset_key"], "missing")
+        self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
         self.assertIsNone(self.scheduler.get_configuration_resources()["resolved_template_blocks"]["workday"])
 
     async def test_preset_edit_revalidates_inactive_full_profile(self):

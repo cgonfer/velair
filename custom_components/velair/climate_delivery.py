@@ -13,6 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import async_track_state_change_event
 
 from .climate_manager import STATE_UNAVAILABLE, STATE_UNKNOWN
+from .delivery_guard import DeliverySuperseded, check_delivery, delivery_guard
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class Delivery:
 
     apply: AsyncStep
     commit: CommitStep | None = None
+    is_current: CurrentGuard | None = None
 
 
 DeliveryResolver = Callable[[], Delivery | None]
@@ -264,8 +266,22 @@ class ClimateDeliveryCoordinator:
                 delivery = resolver()
                 if delivery is None:
                     return "cancelled"
+                def is_current() -> bool:
+                    return (
+                        self._is_current(entity_id, generation)
+                        and self._target_valid(entity_id)
+                        and (delivery.is_current is None or delivery.is_current())
+                    )
+
                 try:
-                    await delivery.apply()
+                    with delivery_guard(lambda: is_current() and self._is_available(entity_id)):
+                        check_delivery()
+                        await delivery.apply()
+                except DeliverySuperseded:
+                    if self._is_current(entity_id, generation) and not self._is_available(entity_id):
+                        self._observe(entity_id, "unavailable", {"retry_count": retry_count})
+                        return "unavailable"
+                    return "cancelled"
                 except asyncio.CancelledError:
                     raise
                 except HomeAssistantError:
@@ -293,13 +309,11 @@ class ClimateDeliveryCoordinator:
                         },
                     )
                     return "failed"
-                if not self._is_current(entity_id, generation):
+                if not is_current():
                     return "cancelled"
                 if delivery.commit is not None:
                     try:
-                        await delivery.commit(
-                            lambda: self._is_current(entity_id, generation)
-                        )
+                        await delivery.commit(is_current)
                     except asyncio.CancelledError:
                         raise
                     except Exception:

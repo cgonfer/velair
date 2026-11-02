@@ -235,6 +235,7 @@ class RangeOnlyRuntimeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.calls, [])
             self.block().update(hvac_mode="auto", target_temp_low=22, target_temp_high=26)
             self.state.state = "heat"
+            self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
             callbacks[0](object())
             await asyncio.sleep(0)
             await asyncio.sleep(0)

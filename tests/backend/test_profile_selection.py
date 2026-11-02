@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from .helpers import FakeClimateManager, VelairScheduler, normalize_schedule_data, NOW
 from .test_profiles import _available_hass, _profile
+from custom_components.velair.scheduler import _PreconditioningSession
 
 
 class ProfileSelectionTest(unittest.IsolatedAsyncioTestCase):
@@ -247,10 +248,12 @@ class ProfileSelectionTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_set_profile(future)
         event = SimpleNamespace(entity_id="climate.salon", weekday="tuesday", start="20:00", when=NOW, target_when=NOW+timedelta(hours=2))
         self.scheduler._mark_preconditioning_applied(event)
-        self.scheduler._preconditioning_sessions["climate.salon"] = SimpleNamespace(
+        self.scheduler._preconditioning_sessions["climate.salon"] = _PreconditioningSession(
             entity_id="climate.salon", direction="heat", started_at=NOW,
-            target_when=NOW + timedelta(hours=2), start_temperature=18,
-            target_temperature=23,
+            target_when=NOW + timedelta(hours=2), weekday="tuesday", start="20:00",
+            target_temperature=23, target_kind="scalar", target_boundary="temperature",
+            start_temperature=18, hvac_mode="heat", startup_minutes=120,
+            outdoor_temp_start=None,
         )
         boost = {"type": "boost", "temperature": 24, "previous_state": {}}
         self.data["zones"]["climate.salon"]["override"] = boost

@@ -134,6 +134,7 @@ class LinkedScheduleAcceptanceTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_invalid_reference_has_visible_destination_diagnostic(self):
         self.data["zones"]["climate.salon"]["template_links"]["tuesday"]["template_key"] = "missing"
+        self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
         resources = self.scheduler.get_configuration_resources()
         self.assertIsNone(resources["resolved_default_schedules"]["climate.salon"])
         self.assertEqual(resources["resource_diagnostics"][0]["source"], "default")
@@ -144,6 +145,7 @@ class LinkedScheduleAcceptanceTest(unittest.IsolatedAsyncioTestCase):
         duplicate = deepcopy(self.data["block_presets"][0])
         duplicate["config"]["temperature"] = 10
         self.data["block_presets"].append(duplicate)
+        self.scheduler._prepare_runtime_projection(configuration=True, refresh_horizon=True)
         resources = self.scheduler.get_configuration_resources()
         self.assertIsNone(resources["resolved_default_schedules"]["climate.salon"])
         self.assertIsNotNone(resources["resolved_profile_schedules"]["winter"]["climate.salon"])

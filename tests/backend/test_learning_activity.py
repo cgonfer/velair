@@ -168,6 +168,10 @@ class LearningActivityTest(unittest.IsolatedAsyncioTestCase):
         manager = diagnostics_module.RuntimeDiagnosticsManager(self.hass, [self.entity])
         manager._schedule_notify = lambda: None
         manager._handle_event(SimpleNamespace(data=self.events()[0]))
+        normalized = normalize_schedule_data(self.data, [self.entity])
+        self.data.clear()
+        self.data.update(normalized)
+        self.scheduler._prepare_runtime_projection(configuration=True)
         runtime = {
             "scheduler": self.scheduler,
             "storage": SimpleNamespace(data=normalize_schedule_data(self.data, [self.entity])),
@@ -183,7 +187,7 @@ class LearningActivityTest(unittest.IsolatedAsyncioTestCase):
         await manager.async_update_history_categories([])
         self.assertNotIn("last_transition", summary())
 
-    def test_subscription_updates_history_projection_and_removes_both_listeners(self):
+    async def test_subscription_updates_history_projection_and_removes_both_listeners(self):
         manager = diagnostics_module.RuntimeDiagnosticsManager(self.hass, [self.entity])
         runtime = {"storage": SimpleNamespace(data=self.data), "diagnostics": manager, "scheduler": self.scheduler}
         connection = SimpleNamespace(subscriptions={}, send_result=Mock(), send_message=Mock(), send_error=Mock())
@@ -194,7 +198,7 @@ class LearningActivityTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(api_module, "_get_runtime", return_value=runtime), \
              patch.object(api_module, "_build_schedule_response", return_value={}), \
              patch.object(api_module, "async_dispatcher_connect", side_effect=connect):
-            api_module.ws_subscribe_updates(self.hass, connection, {"id": 42})
+            await api_module.ws_subscribe_updates(self.hass, connection, {"id": 42})
             self.assertEqual(connection.send_message.call_count, 1)
             callbacks[api_module.SIGNAL_DIAGNOSTICS_UPDATED]()
             self.assertEqual(connection.send_message.call_count, 1)

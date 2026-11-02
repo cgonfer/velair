@@ -11,6 +11,7 @@ from . import test_scheduler_application as application
 from .helpers import NOW, scheduler_module
 from custom_components.velair.execution import ExecutionAuthority
 from custom_components.velair.models import WEEKDAYS
+from custom_components.velair import runtime_projection
 
 
 class FutureEventProjectionTest(unittest.IsolatedAsyncioTestCase):
@@ -54,24 +55,27 @@ class FutureEventProjectionTest(unittest.IsolatedAsyncioTestCase):
                     self.data["zones"][entity]["schedule"]["tuesday"] = [block]
                 self.assert_filtered_matches_global(NOW)
 
-    def test_effective_week_is_resolved_once_per_requested_zone_and_never_retained(self):
+    def test_prepared_effective_weeks_are_reused_and_changed_zone_is_refreshed(self):
         for zone in self.data["zones"].values():
             zone["preconditioning"]["enabled"] = False
         selected = self.entities[0]
+        self.scheduler._prepare_runtime_projection(NOW, configuration=True)
         original = self.scheduler._effective_schedule
         with patch.object(self.scheduler, "_effective_schedule", wraps=original) as resolve:
             self.scheduler._iter_future_events(NOW, entity_id_filter=selected)
-            self.assertEqual([call.args[0] for call in resolve.call_args_list], [selected])
+            self.assertEqual(resolve.call_count, 0)
         self.data["zones"][selected]["schedule"]["tuesday"][0]["temperature"] = 22
-        refreshed = self.scheduler._iter_future_events(NOW, entity_id_filter=selected)
+        with patch.object(runtime_projection, "PreparedSchedule", wraps=runtime_projection.PreparedSchedule) as prepare:
+            refreshed = self.scheduler._iter_future_events(NOW, entity_id_filter=selected)
+            self.assertEqual([call.args[0] for call in prepare.call_args_list], [selected])
         self.assertTrue(refreshed)
         self.assertTrue(all(event.temperature == 22 for event in refreshed))
         with patch.object(self.scheduler, "_effective_schedule", wraps=original) as resolve:
             events = self.scheduler._iter_future_events(NOW)
-            self.assertEqual([call.args[0] for call in resolve.call_args_list], self.entities)
+            self.assertEqual(resolve.call_count, 0)
         self.assertEqual({event.entity_id for event in events}, set(self.entities))
 
-    def test_due_preconditioning_query_predicts_only_its_destination(self):
+    def test_due_preconditioning_query_reads_its_prepared_destination_without_prediction(self):
         original = self.scheduler._preconditioned_event_details
         for now in (NOW - timedelta(hours=1), NOW, NOW + timedelta(hours=2)):
             for entity in self.entities:
@@ -80,8 +84,7 @@ class FutureEventProjectionTest(unittest.IsolatedAsyncioTestCase):
                 with patch.object(self.scheduler, "_preconditioned_event_details", wraps=original) as predict:
                     actual = self.scheduler._room_sensor_assist_due_preconditioning_event(entity, now)
                 self.assertEqual(actual, expected)
-                self.assertTrue(predict.called)
-                self.assertEqual({call.args[0] for call in predict.call_args_list}, {entity})
+                self.assertEqual(predict.call_count, 0)
 
     async def test_profiles_disabled_paused_boosted_and_external_zones(self):
         self.scheduler._execution_authority = ExecutionAuthority(self.data)

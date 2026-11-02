@@ -31,6 +31,19 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         config['weekly']['tuesday'] = '19:30'
         await self.scheduler.async_update_planned_return(config)
 
+    def read_return(self, runtime, method, *args, **kwargs):
+        """Enter the producer boundary after fixture-only raw input changes."""
+        now = args[0] if method == "plans" and args else (
+            kwargs.get("now", args[1] if len(args) > 1 else None)
+            if method == "target" else None)
+        runtime.scheduler._prepare_runtime_projection(now, configuration=True)
+        return getattr(runtime, method)(*args, **kwargs)
+
+    def read_zone(self, scheduler, entity):
+        """Prepare a coherent publication before directly reading its zone."""
+        scheduler._prepare_runtime_projection(configuration=True)
+        return scheduler._zone_runtime_status(entity)
+
     async def asyncTearDown(self):
         await self.scheduler.async_stop()
 
@@ -42,21 +55,21 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_runtime_attribution_away_effects_and_default_ownership(self):
         await self.depart()
-        status = self.scheduler._zone_runtime_status('climate.salon')
+        status = self.read_zone(self.scheduler, 'climate.salon')
         self.assertEqual(status['planned_return'], {'phase': 'away', 'origin': 'automatic', 'mode_id': 'away', 'profile_id': 'away_profile', 'effect': 'turn_off'})
         self.scheduler._profile_by_id('away_profile')['zones']['climate.salon']['action'] = 'leave_as_is'
-        self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['effect'], 'pause')
+        self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['effect'], 'pause')
         self.scheduler._profile_by_id('away_profile')['zones'] = {}
-        self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+        self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         self.runtime.episode['away_mode_id'] = 'default'
         self.data['global_']['active_mode_id'] = None
         self.data['global_']['base_mode_id'] = None
         self.data['global_']['active_profile_ids'] = []
         self.data['global_']['base_profile_ids'] = []
-        self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['profile_id'], None)
-        self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['effect'], 'schedule')
+        self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['profile_id'], None)
+        self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['effect'], 'schedule')
         self.data['zones']['climate.salon']['schedule']['tuesday'][0] = {'start': '00:00', 'action': 'turn_off'}
-        self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['effect'], 'turn_off')
+        self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['effect'], 'turn_off')
 
     async def test_runtime_attribution_requires_actual_away_profile_winner(self):
         await self.depart()
@@ -68,48 +81,49 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             with self.subTest(active_ids=active_ids):
                 self.data['global_']['active_profile_ids'] = active_ids
                 self.data['global_']['base_profile_ids'] = active_ids
-                self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+                self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         self.data['global_']['active_profile_ids'] = ['away_profile', 'independent_profile']
         self.data['global_']['base_profile_ids'] = ['away_profile', 'independent_profile']
-        self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['profile_id'], 'away_profile')
+        self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['profile_id'], 'away_profile')
         self.runtime.episode['away_mode_id'] = 'default'
         self.data['global_']['active_mode_id'] = None
         self.data['global_']['base_mode_id'] = None
-        self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+        self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         # An unrelated active profile does not replace this climate's Default fallback.
         other['zones'] = {}
         self.data['global_']['active_profile_ids'] = ['independent_profile']
         self.data['global_']['base_profile_ids'] = ['independent_profile']
-        self.assertIsNone(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['profile_id'])
+        self.assertIsNone(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['profile_id'])
 
     async def test_runtime_attribution_uses_due_target_without_extra_prediction(self):
         await self.depart()
         self.data['zones']['climate.salon']['preconditioning']['enabled'] = True
+        self.scheduler._prepare_runtime_projection(configuration=True)
         with patch.object(self.scheduler, '_room_sensor_assist_status', return_value={}), patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)) as predict:
-            status = self.scheduler._zone_runtime_status('climate.salon')
+            status = self.read_zone(self.scheduler, 'climate.salon')
             self.assertEqual(status['planned_return']['phase'], 'preparing')
             self.assertEqual(status['planned_return']['mode_id'], 'default')
             self.assertEqual(predict.call_count, 1)
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW + timedelta(minutes=20), None)):
-            self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['phase'], 'away')
+            self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['phase'], 'away')
         await self.scheduler.async_cancel_planned_return()
-        self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+        self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
 
     async def test_runtime_attribution_independent_overrides_and_global_blocks(self):
         await self.depart()
         for method, args in [('_manual_control_status', {'source': 'user'}), ('_get_active_zone_override', {'type': 'boost', 'temperature': 24}), ('_get_active_zone_override', {'type': 'pause', 'action': 'leave_as_is'})]:
             with self.subTest(method=method, args=args), patch.object(self.scheduler, method, return_value=args):
-                self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+                self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         for field, value in [('_stopped', True), ('_temperature_migration_blocked', True)]:
             with patch.object(self.scheduler, field, value):
-                self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+                self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         with patch.object(self.scheduler, '_is_external_execution', return_value=True):
-            self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+            self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         self.data['global_']['mode'] = 'paused'
-        self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+        self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
         self.data['global_']['mode'] = 'auto'
         self.data['zones']['climate.salon']['enabled'] = False
-        self.assertNotIn('planned_return', self.scheduler._zone_runtime_status('climate.salon'))
+        self.assertNotIn('planned_return', self.read_zone(self.scheduler, 'climate.salon'))
 
     async def test_history_commits_confirmation_reset_and_deduplicates_retime(self):
         self.hass.bus.events.clear()
@@ -145,7 +159,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.save.side_effect = None
         await self.runtime.start((NOW + timedelta(hours=3)).isoformat())
         self.assertEqual([item['transition'] for item in self.return_history()], ['registered', 'departed'])
-        self.assertEqual(self.scheduler._zone_runtime_status('climate.salon')['planned_return']['origin'], 'manual')
+        self.assertEqual(self.read_zone(self.scheduler, 'climate.salon')['planned_return']['origin'], 'manual')
 
     async def test_history_failed_save_listener_does_not_report_draft_confirmation(self):
         self.data['planned_return']['enabled'] = False
@@ -168,8 +182,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)):
             await self.runtime._tick(NOW, self.runtime._generation)
             await self.runtime._tick(NOW, self.runtime._generation)
-            self.runtime.status()
-            self.scheduler._zone_runtime_status('climate.salon')
+            self.read_return(self.runtime, "status")
+            self.read_zone(self.scheduler, 'climate.salon')
         self.assertEqual([item['transition'] for item in self.return_history()], ['preparation_started'])
         self.assertEqual(self.return_history()[0]['entity_id'], 'climate.salon')
         later = NOW + timedelta(minutes=90)
@@ -212,7 +226,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         try:
             with patch.object(restored, '_preconditioned_event_details', return_value=(NOW, None)):
                 await restored._planned_return._tick(NOW, restored._planned_return._generation)
-                self.assertEqual(restored._zone_runtime_status('climate.salon')['planned_return']['phase'], 'preparing')
+                self.assertEqual(self.read_zone(restored, 'climate.salon')['planned_return']['phase'], 'preparing')
             self.assertNotIn('preparation_started', [item['transition'] for item in self.return_history()])
         finally:
             await restored.async_stop()
@@ -230,30 +244,30 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([item['transition'] for item in self.return_history()].count('error'), 2)
 
     async def test_public_departure_timestamp_and_episode_modes(self):
-        initial = self.runtime.status()
+        initial = self.read_return(self.runtime, "status")
         for field in ('departure_at', 'away_mode_id', 'destination_mode_id'):
             self.assertIsNone(initial[field])
         await self.depart()
-        self.assertEqual(self.runtime.status()['departure_at'], NOW.isoformat())
-        self.assertEqual(self.runtime.status()['away_mode_id'], 'away')
-        self.assertEqual(self.runtime.status()['destination_mode_id'], 'default')
+        self.assertEqual(self.read_return(self.runtime, "status")['departure_at'], NOW.isoformat())
+        self.assertEqual(self.read_return(self.runtime, "status")['away_mode_id'], 'away')
+        self.assertEqual(self.read_return(self.runtime, "status")['destination_mode_id'], 'default')
         # Display identities belong to the episode, even while configuration is
         # changing or its cancellation notice is retained.
         self.data['planned_return']['away_mode_id'] = 'default'
-        self.assertEqual(self.runtime.status()['away_mode_id'], 'away')
+        self.assertEqual(self.read_return(self.runtime, "status")['away_mode_id'], 'away')
 
     async def test_manual_departure_is_confirmed_later_than_intent(self):
         self.hass.states['binary_sensor.occupied'].state = 'on'
         self.data['planned_return']['absence_delay_minutes'] = 10
         await self.scheduler.async_start_planned_return((NOW + timedelta(hours=3)).isoformat())
-        self.assertIsNone(self.runtime.status()['departure_at'])
+        self.assertIsNone(self.read_return(self.runtime, "status")['departure_at'])
         self.assertEqual(self.runtime.episode['started_at'], NOW.isoformat())
         leave = NOW + timedelta(minutes=30)
         self.hass.states['binary_sensor.occupied'].state = 'off'
         with patch.object(scheduler_module.dt_util, 'now', return_value=leave):
             self.runtime.refresh()
             await self.runtime._tick(leave, self.runtime._generation)
-            self.assertIsNone(self.runtime.status()['departure_at'])
+            self.assertIsNone(self.read_return(self.runtime, "status")['departure_at'])
         confirmed = leave + timedelta(minutes=10)
         with patch.object(scheduler_module.dt_util, 'now', return_value=confirmed):
             await self.runtime._tick(confirmed, self.runtime._generation)
@@ -269,7 +283,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         restored_data = normalize_schedule_data(deepcopy(self.data), ['climate.salon'])
         restored = VelairScheduler(self.hass, restored_data, self.climate, self.save)
         try:
-            self.assertEqual(restored._planned_return.status()['departure_at'], departure)
+            self.assertEqual(self.read_return(restored._planned_return, "status")['departure_at'], departure)
             self.assertEqual(restored._planned_return.episode['state'], 'skipped')
         finally:
             await restored.async_stop()
@@ -277,7 +291,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
     async def test_same_active_mode_records_departure_only_after_saved_confirmation(self):
         self.data['planned_return']['away_mode_id'] = 'default'
         await self.depart()
-        self.assertEqual(self.runtime.status()['departure_at'], NOW.isoformat())
+        self.assertEqual(self.read_return(self.runtime, "status")['departure_at'], NOW.isoformat())
         self.assertIsNone(self.scheduler.active_mode_id)
 
     async def test_failed_manual_confirmation_keeps_armed_without_departure(self):
@@ -285,7 +299,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.save.side_effect = OSError('storage failed')
         await self.depart()
         self.assertEqual(self.runtime.episode['state'], 'armed')
-        self.assertIsNone(self.runtime.status()['departure_at'])
+        self.assertIsNone(self.read_return(self.runtime, "status")['departure_at'])
         self.assertIsNone(self.scheduler.active_mode_id)
         self.save.side_effect = None
 
@@ -323,7 +337,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.data['zones']['climate.salon']['preconditioning']['enabled'] = True
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)):
-            target = self.runtime.target('climate.salon')
+            target = self.read_return(self.runtime, "target", 'climate.salon')
             self.assertEqual(target.temperature, 21)
             self.assertEqual(self.scheduler._resolve_authoritative_delivery_event('climate.salon').temperature, 21)
             self.assertEqual(self.scheduler._room_sensor_assist_target_event('climate.salon').temperature, 21)
@@ -332,14 +346,14 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.data['planned_return_episode']['preparing_entities'], ['climate.salon'])
         # Predictor no longer asks for lead when room warmed; preparation remains latched.
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW + timedelta(minutes=90), None)):
-            self.assertEqual(self.runtime.target('climate.salon').temperature, 21)
+            self.assertEqual(self.read_return(self.runtime, "target", 'climate.salon').temperature, 21)
 
     async def test_boost_is_preserved_and_owns_delivery(self):
         await self.scheduler.async_set_zone_boost('climate.salon', temperature=24, until=(NOW + timedelta(minutes=120)).isoformat())
         await self.depart()
         self.assertEqual(self.data['zones']['climate.salon']['override']['temperature'], 24)
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)):
-            self.assertIsNone(self.runtime.target('climate.salon'))
+            self.assertIsNone(self.read_return(self.runtime, "target", 'climate.salon'))
             self.assertEqual(self.scheduler._resolve_authoritative_delivery_event('climate.salon').temperature, 24)
         await self.scheduler.async_arrive_planned_return()
         self.assertEqual(self.data['zones']['climate.salon']['override']['temperature'], 24)
@@ -386,7 +400,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.assertIsNone(self.data['planned_return_episode'])
         self.assertIsNone(self.scheduler.active_mode_id)
-        self.assertEqual(self.runtime.status()['state'], 'error')
+        self.assertEqual(self.read_return(self.runtime, "status")['state'], 'error')
         self.assertIsNone(self.runtime._timer)
         self.save.side_effect = None
 
@@ -413,7 +427,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.assertIsNone(self.data['planned_return_episode'])
         self.assertIsNone(self.scheduler.active_mode_id)
-        self.assertEqual(self.runtime.status()['state'], 'error')
+        self.assertEqual(self.read_return(self.runtime, "status")['state'], 'error')
 
     async def test_captured_timer_and_source_callback_are_stale_after_rebind(self):
         import custom_components.velair.planned_return as module
@@ -451,7 +465,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 self.climate.temperature_range_support['climate.salon'] = True
                 self.runtime.refresh()
                 await self.depart()
-                plan = self.runtime.plans(NOW)[0]
+                plan = self.read_return(self.runtime, "plans", NOW)[0]
                 self.assertLess(plan.when, plan.target_when)
                 preparation_at = max(NOW, plan.when)
                 with patch.object(scheduler_module.dt_util, 'now', return_value=preparation_at):
@@ -487,10 +501,10 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         for entity in self.data['zones']:
             self.data['zones'][entity]['preconditioning']['enabled'] = True
         await self.depart()
-        plans = {event.entity_id: event for event in self.runtime.plans(NOW)}
+        plans = {event.entity_id: event for event in self.read_return(self.runtime, "plans", NOW)}
         self.assertLess(plans['climate.salon'].when, plans['climate.office'].when)
         await self.scheduler.async_pause_zone('climate.salon')
-        self.assertIsNone(self.runtime.target('climate.salon'))
+        self.assertIsNone(self.read_return(self.runtime, "target", 'climate.salon'))
         self.assertIsNone(self.scheduler._resolve_authoritative_delivery_event('climate.salon'))
 
     async def test_disable_waits_for_inflight_preparation_then_removes_authority(self):
@@ -513,7 +527,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             await asyncio.wait_for(asyncio.gather(prepare, disable), 2)
         self.assertFalse(self.data['planned_return']['enabled'])
         self.assertEqual(self.data['planned_return_episode']['state'], 'cancelled')
-        self.assertIsNone(self.runtime.target('climate.salon'))
+        self.assertIsNone(self.read_return(self.runtime, "target", 'climate.salon'))
         self.save.side_effect = None
 
     async def test_fulfill_waits_for_explicit_manual_selection_and_preserves_it(self):
@@ -564,7 +578,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.save.side_effect = OSError('storage unavailable')
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)):
             await self.runtime._tick(NOW, self.runtime._generation)
-        self.assertEqual(self.runtime.status()['state'], 'error')
+        self.assertEqual(self.read_return(self.runtime, "status")['state'], 'error')
         self.assertIsNone(self.runtime._timer)
         self.save.side_effect = None
 
@@ -589,8 +603,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.scheduler.active_mode_id, 'away')
         self.assertEqual(self.climate.calls, [('turn_off', 'climate.salon')])
         self.assertIsNone(self.runtime._confirmation)
-        self.assertEqual(self.runtime.status()['occupancy'], 'unknown')
-        self.assertEqual(self.runtime.status()['sources'], [])
+        self.assertEqual(self.read_return(self.runtime, "status")['occupancy'], 'unknown')
+        self.assertEqual(self.read_return(self.runtime, "status")['sources'], [])
         self.assertEqual(self.runtime._entities, ('climate.salon',))
         self.climate.calls.clear()
         await self.scheduler.async_start_planned_return((arrival + timedelta(days=1)).isoformat())
@@ -616,7 +630,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                     with patch.object(restored, '_preconditioned_event_details', return_value=(NOW, None)):
                         await runtime._tick(NOW, runtime._generation)
                         self.assertEqual(runtime.episode['preparing_entities'], ['climate.salon'])
-                        self.assertEqual(runtime.target('climate.salon').hvac_mode, mode)
+                        self.assertEqual(self.read_return(runtime, "target", 'climate.salon').hvac_mode, mode)
                         self.assertTrue(any(call[0] == 'set_temperature' and call[2] == 21 for call in self.climate.calls))
                     preparing = normalize_schedule_data(deepcopy(restored_data), ['climate.salon'])
                     self.assertEqual(preparing['planned_return_episode']['preparing_entities'], ['climate.salon'])
@@ -782,7 +796,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_start_planned_return(arrival.isoformat())
         self.assertEqual(self.data['zones']['climate.salon']['override']['temperature'], 24)
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)):
-            self.assertIsNone(self.runtime.target('climate.salon'))
+            self.assertIsNone(self.read_return(self.runtime, "target", 'climate.salon'))
             self.assertEqual(self.scheduler._resolve_authoritative_delivery_event('climate.salon').temperature, 24)
         await self.scheduler.async_select_velair_mode('away')
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
@@ -793,7 +807,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_start_planned_return(arrival.isoformat())
         await self.scheduler.async_update_planned_return(self.runtime.config | {'occupancy_entity_ids': ['binary_sensor.occupied']})
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
-        self.assertEqual(self.runtime.status()['notice'], 'configuration_changed')
+        self.assertEqual(self.read_return(self.runtime, "status")['notice'], 'configuration_changed')
         await self.scheduler.async_update_planned_return(self.runtime.config | {'occupancy_entity_ids': []})
         from custom_components.velair.execution import ExecutionAuthority
         self.scheduler._execution_authority = ExecutionAuthority(self.data)
@@ -817,7 +831,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_start_planned_return(arrival)
         self.assertEqual(self.data['planned_return_episode']['state'], 'armed')
         self.assertEqual(self.data['planned_return_episode']['origin'], 'manual')
-        self.assertEqual(self.runtime.status()['state'], 'armed')
+        self.assertEqual(self.read_return(self.runtime, "status")['state'], 'armed')
         self.assertEqual(self.climate.calls, [])
         await self.runtime._tick(NOW, self.runtime._generation)
         self.assertEqual(self.data['planned_return_episode']['state'], 'armed')
@@ -896,7 +910,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_adjust_planned_return((NOW + timedelta(minutes=85)).isoformat())
         await self.scheduler.async_cancel_planned_return()
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
-        self.assertTrue(self.runtime.status()['dismissed'])
+        self.assertTrue(self.read_return(self.runtime, "status")['dismissed'])
         self.assertEqual(self.climate.calls, [])
         await self.scheduler.async_cancel_planned_return()
 
@@ -909,7 +923,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.climate.calls, [])
         await self.scheduler.async_cancel_planned_return()
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
-        self.assertTrue(self.runtime.status()['dismissed'])
+        self.assertTrue(self.read_return(self.runtime, "status")['dismissed'])
 
     async def test_weekly_and_enabled_edits_preserve_manual_intent_and_restore_restart(self):
         arrival = await self.manual_only()
@@ -937,7 +951,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_update_planned_return(config)
         self.assertIsNone(self.data['planned_return_episode'])
         self.assertEqual(self.climate.calls, [])
-        self.assertEqual(self.runtime.status()['notice'], 'configuration_changed')
+        self.assertEqual(self.read_return(self.runtime, "status")['notice'], 'configuration_changed')
 
     async def test_start_rejects_invalid_entities_modes_time_but_accepts_terminal_episode(self):
         arrival = await self.manual_only()
@@ -958,7 +972,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_start_planned_return(arrival)
         self.data['planned_return_episode']['state'] = 'fulfilled'
         self.hass.states['binary_sensor.occupied'].state = 'off'
-        self.assertTrue(self.runtime.status()['can_start'])
+        self.assertTrue(self.read_return(self.runtime, "status")['can_start'])
         await self.scheduler.async_start_planned_return(arrival)
         self.assertEqual(self.runtime.episode['state'], 'armed')
 
@@ -968,7 +982,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         for value, expected in [('0', 'away'), ('1', 'home'), ('2', 'home'), ('-1', 'unknown'), ('0.5', 'unknown'), ('nan', 'unknown'), ('inf', 'unknown'), ('unavailable', 'unknown')]:
             self.hass.states['zone.home'] = SimpleNamespace(state=value, attributes={})
             self.assertEqual(self.runtime.occupancy(), expected)
-            self.assertEqual(self.runtime.status()['sources'][-1]['state'], expected)
+            self.assertEqual(self.read_return(self.runtime, "status")['sources'][-1]['state'], expected)
         self.hass.states['binary_sensor.occupied'].state = 'on'
         self.assertEqual(self.runtime.occupancy(), 'home')
 
@@ -1049,7 +1063,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_update_planned_return(config)
         self.assertEqual(self.data['planned_return_episode']['state'], 'away')
         self.assertEqual(self.data['planned_return_episode']['return_at'], arrival)
-        self.assertEqual(self.runtime.status()['origin'], 'manual')
+        self.assertEqual(self.read_return(self.runtime, "status")['origin'], 'manual')
 
     async def test_weekly_and_enabled_edits_preserve_elapsed_manual_absence_confirmation(self):
         arrival = await self.manual_only(home=False, delay=10)
@@ -1093,7 +1107,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                       away_mode_id='default', destination_mode_id='away')
         await self.scheduler.async_update_planned_return(config)
         self.assertEqual(self.data['planned_return_episode']['state'], 'cancelled')
-        self.assertTrue(self.runtime.status()['can_start'])
+        self.assertTrue(self.read_return(self.runtime, "status")['can_start'])
         old_generation = self.runtime._generation
         self.climate.calls.clear()
         later = NOW + timedelta(minutes=5)
@@ -1108,7 +1122,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         })
         self.assertEqual(self.runtime._confirmation, later + timedelta(minutes=10))
         self.assertGreater(self.runtime._generation, old_generation)
-        self.assertIsNone(self.runtime.status()['notice'])
+        self.assertIsNone(self.read_return(self.runtime, "status")['notice'])
         self.assertEqual(self.climate.calls, [])
         await self.runtime._tick(new_arrival, old_generation)
         self.assertEqual(self.data['planned_return_episode']['state'], 'armed')
@@ -1260,7 +1274,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.data['planned_return_episode']['state'] = 'cancelled'
         self.runtime.refresh()
         self.assertIsNone(self.runtime._confirmation)
-        self.assertEqual(self.runtime.status()['state'], 'cancelled')
+        self.assertEqual(self.read_return(self.runtime, "status")['state'], 'cancelled')
 
     async def test_dismiss_cancelled_return_without_operational_scheduler_or_sources(self):
         await self.depart()
@@ -1275,8 +1289,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 self.runtime.error = 'previous failure'
                 self.runtime.notice = 'configuration_changed'
                 self.climate.calls.clear()
-                self.assertTrue(self.runtime.status()['can_dismiss'])
-                self.assertEqual(self.runtime.status()['state'], 'error')
+                self.assertTrue(self.read_return(self.runtime, "status")['can_dismiss'])
+                self.assertEqual(self.read_return(self.runtime, "status")['state'], 'error')
                 await self.scheduler.async_cancel_planned_return()
                 self.assertEqual(self.data['planned_return_episode'], previous | {'dismissed': True})
                 self.assertEqual(self.scheduler.active_mode_id, 'away')
@@ -1284,8 +1298,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(self.runtime.error)
                 self.assertIsNone(self.runtime.notice)
                 self.assertIsNone(self.runtime._confirmation)
-                self.assertTrue(self.runtime.status()['dismissed'])
-                self.assertFalse(self.runtime.status()['can_dismiss'])
+                self.assertTrue(self.read_return(self.runtime, "status")['dismissed'])
+                self.assertFalse(self.read_return(self.runtime, "status")['can_dismiss'])
                 self.save.reset_mock()
                 await self.scheduler.async_cancel_planned_return()
                 self.save.assert_not_awaited()
@@ -1303,8 +1317,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         try:
             await restored.async_start()
             runtime = restored._planned_return
-            self.assertTrue(runtime.status()['dismissed'])
-            self.assertFalse(runtime.status()['can_dismiss'])
+            self.assertTrue(self.read_return(runtime, "status")['dismissed'])
+            self.assertFalse(self.read_return(runtime, "status")['can_dismiss'])
             self.climate.calls.clear()
             await runtime._tick(NOW + timedelta(minutes=90), runtime._generation)
             self.assertEqual(restored_data['planned_return_episode']['state'], 'cancelled')
@@ -1312,7 +1326,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             await restored.async_start_planned_return((NOW + timedelta(minutes=110)).isoformat())
             self.assertEqual(restored_data['planned_return_episode']['state'], 'armed')
             self.assertNotIn('dismissed', restored_data['planned_return_episode'])
-            self.assertFalse(runtime.status()['dismissed'])
+            self.assertFalse(self.read_return(runtime, "status")['dismissed'])
             self.assertEqual(self.climate.calls, [])
         finally:
             await restored.async_stop()
@@ -1339,8 +1353,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(OSError):
             await self.scheduler.async_cancel_planned_return()
         self.assertEqual(self.data['planned_return_episode'], previous)
-        self.assertTrue(self.runtime.status()['can_dismiss'])
-        self.assertFalse(self.runtime.status()['dismissed'])
+        self.assertTrue(self.read_return(self.runtime, "status")['can_dismiss'])
+        self.assertFalse(self.read_return(self.runtime, "status")['dismissed'])
         self.assertEqual(self.runtime.error, 'old error')
         self.assertEqual(self.runtime.notice, 'configuration_changed')
         self.assertEqual(self.climate.calls, [])
@@ -1380,7 +1394,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.runtime._confirmation, later + timedelta(minutes=10))
 
     def preparation_row(self):
-        return self.runtime.status()['preparation']['zones'][0]
+        return self.read_return(self.runtime, "status")['preparation']['zones'][0]
 
     async def test_active_cancel_restores_profile_authority_and_never_rearms_weekly(self):
         await self.depart()
@@ -1393,9 +1407,9 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.scheduler.active_mode_id)
         self.assertEqual(self.scheduler.active_profile_ids, [])
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
-        self.assertTrue(self.runtime.status()['dismissed'])
-        self.assertFalse(self.runtime.status()['can_cancel'])
-        self.assertFalse(self.runtime.status()['episode_active'])
+        self.assertTrue(self.read_return(self.runtime, "status")['dismissed'])
+        self.assertFalse(self.read_return(self.runtime, "status")['can_cancel'])
+        self.assertFalse(self.read_return(self.runtime, "status")['episode_active'])
         self.climate.calls.clear()
         await self.runtime._tick(NOW + timedelta(hours=2), self.runtime._generation)
         self.assertEqual(self.climate.calls, [])
@@ -1408,12 +1422,12 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.scheduler._stopped = True
         self.data['planned_return']['occupancy_entity_ids'] = []
         self.runtime.error = 'delivery failed'
-        self.assertTrue(self.runtime.status()['episode_active'])
-        self.assertTrue(self.runtime.status()['can_cancel'])
+        self.assertTrue(self.read_return(self.runtime, "status")['episode_active'])
+        self.assertTrue(self.read_return(self.runtime, "status")['can_cancel'])
         with patch.object(self.scheduler, 'async_apply_current_schedule', new_callable=AsyncMock) as restore:
             await self.scheduler.async_cancel_planned_return()
         self.assertNotIn(unittest.mock.call('climate.salon', source='planned_return_cancelled'), restore.call_args_list)
-        self.assertFalse(self.runtime.status()['episode_active'])
+        self.assertFalse(self.read_return(self.runtime, "status")['episode_active'])
         self.assertIsNone(self.runtime.error)
         self.scheduler._stopped = False
 
@@ -1427,7 +1441,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(OSError):
                 await self.scheduler.async_cancel_planned_return()
         self.assertEqual(self.runtime.episode, previous)
-        self.assertTrue(self.runtime.status()['episode_active'])
+        self.assertTrue(self.read_return(self.runtime, "status")['episode_active'])
         self.assertIsNotNone(self.runtime._timer)
         self.assertEqual(self.runtime._selection_snapshot(), previous_selection)
         assist.assert_not_awaited()
@@ -1438,7 +1452,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.runtime.episode['preparing_entities'] = ['climate.salon']
         with patch.object(self.scheduler, 'async_apply_current_schedule', new_callable=AsyncMock, side_effect=OSError('climate offline')):
             await self.scheduler.async_cancel_planned_return()
-        self.assertTrue(self.runtime.status()['dismissed'])
+        self.assertTrue(self.read_return(self.runtime, "status")['dismissed'])
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
 
     async def test_cancel_preparation_preserves_boost_and_manual_holds(self):
@@ -1454,7 +1468,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 else:
                     await self.scheduler.async_pause_zone('climate.salon')
                 saved_override = deepcopy(self.data['zones']['climate.salon']['override'])
-                marker = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+                marker = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
                 self.scheduler._applied_preconditioning_targets['climate.salon|old-return'] = marker
                 with patch.object(self.scheduler, '_invalidate_climate_delivery') as invalidate, patch.object(self.scheduler, '_discard_preconditioning_session') as discard, patch.object(self.scheduler, '_async_clear_room_sensor_assist', new_callable=AsyncMock) as assist, patch.object(self.scheduler, 'async_apply_current_schedule', new_callable=AsyncMock) as restore:
                     await self.scheduler.async_cancel_planned_return()
@@ -1471,10 +1485,10 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             with self.subTest(state=state):
                 self.runtime.episode.update(state=state)
                 self.runtime.episode.pop('dismissed', None)
-                self.assertTrue(self.runtime.status()['can_cancel'])
+                self.assertTrue(self.read_return(self.runtime, "status")['can_cancel'])
                 await self.scheduler.async_cancel_planned_return()
                 self.assertEqual(self.runtime.episode['state'], state)
-                self.assertFalse(self.runtime.status()['can_cancel'])
+                self.assertFalse(self.read_return(self.runtime, "status")['can_cancel'])
                 restored = normalize_schedule_data(deepcopy(self.data), ['climate.salon'])
                 self.assertTrue(restored['planned_return_episode']['dismissed'])
 
@@ -1482,7 +1496,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.runtime.episode['state'] = 'skipped'
         self.runtime.episode['preparing_entities'] = []
-        self.scheduler._applied_preconditioning_targets['climate.salon|old-target'] = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+        self.scheduler._applied_preconditioning_targets['climate.salon|old-target'] = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
         self.runtime._applied['climate.salon'] = 'old-return-intent'
         with patch.object(self.scheduler, '_async_clear_room_sensor_assist', new_callable=AsyncMock) as assist, patch.object(self.scheduler, 'async_apply_current_schedule', new_callable=AsyncMock) as restore:
             await self.scheduler.async_start_planned_return((NOW + timedelta(hours=4)).isoformat())
@@ -1496,7 +1510,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.runtime.episode['state'] = 'skipped'
         previous = deepcopy(self.runtime.episode)
-        marker = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+        marker = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
         self.scheduler._applied_preconditioning_targets['climate.salon|old-target'] = marker
         self.save.side_effect = OSError('storage failed')
         with self.assertRaises(OSError):
@@ -1521,8 +1535,12 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.runtime.episode['preparing_entities'] = ['climate.salon']
         self.data['zones']['climate.office'] = deepcopy(self.data['zones']['climate.salon'])
-        marker = SimpleNamespace(target_when=NOW + timedelta(hours=2))
-        session = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+        marker = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
+        session = scheduler_module._PreconditioningSession(
+            entity_id='climate.office', direction='heat', started_at=NOW,
+            target_when=NOW + timedelta(hours=2), weekday='tuesday', start='19:00',
+            target_temperature=21, target_kind='scalar', target_boundary='temperature',
+            start_temperature=16, hvac_mode='heat', startup_minutes=0, outdoor_temp_start=None)
         self.scheduler._applied_preconditioning_targets['climate.office|ordinary-schedule'] = marker
         self.scheduler._preconditioning_sessions['climate.office'] = session
         with patch.object(self.scheduler, '_invalidate_climate_delivery') as invalidate, patch.object(self.scheduler, '_async_clear_room_sensor_assist', new_callable=AsyncMock), patch.object(self.scheduler, 'async_apply_current_schedule', new_callable=AsyncMock):
@@ -1537,7 +1555,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.runtime.episode.update(state='fulfilled', preparing_entities=['climate.salon'])
         self.runtime._applied.clear()
-        marker = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+        marker = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
         self.scheduler._applied_preconditioning_targets['climate.salon|ordinary-schedule'] = marker
         with patch.object(self.scheduler, '_invalidate_climate_delivery') as invalidate, patch.object(self.scheduler, '_discard_preconditioning_session') as discard, patch.object(self.scheduler, '_async_clear_room_sensor_assist', new_callable=AsyncMock) as assist, patch.object(self.scheduler, 'async_apply_current_schedule', new_callable=AsyncMock) as restore:
             await self.scheduler.async_start_planned_return((NOW + timedelta(hours=4)).isoformat())
@@ -1549,7 +1567,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_initial_pending_start_preserves_existing_adaptive_delivery(self):
         self.hass.states['binary_sensor.occupied'].state = 'on'
-        marker = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+        marker = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
         self.scheduler._applied_preconditioning_targets['climate.salon|ordinary-schedule'] = marker
         with patch.object(self.scheduler, '_invalidate_climate_delivery') as invalidate, patch.object(self.scheduler, '_discard_preconditioning_session') as discard:
             await self.scheduler.async_start_planned_return((NOW + timedelta(hours=4)).isoformat())
@@ -1577,7 +1595,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_retime_preserves_unrelated_adaptive_delivery_and_same_time_intent(self):
         await self.depart()
-        marker = SimpleNamespace(target_when=NOW + timedelta(hours=2))
+        marker = scheduler_module._AppliedPreconditioningTarget(active_from=NOW, target_when=NOW + timedelta(hours=2), dependency=None)
         self.scheduler._applied_preconditioning_targets['climate.salon|ordinary-schedule'] = marker
         with patch.object(self.scheduler, '_invalidate_climate_delivery') as invalidate, patch.object(self.scheduler, '_discard_preconditioning_session') as discard:
             await self.scheduler.async_adjust_planned_return((NOW + timedelta(hours=4)).isoformat())
@@ -1596,7 +1614,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.runtime._applied['climate.removed'] = 'old-return-intent'
         await self.scheduler.async_cancel_planned_return()
         self.assertEqual(self.runtime.episode['state'], 'cancelled')
-        self.assertTrue(self.runtime.status()['dismissed'])
+        self.assertTrue(self.read_return(self.runtime, "status")['dismissed'])
         self.runtime._applied['climate.removed'] = 'old-return-intent'
         await self.scheduler.async_start_planned_return((NOW + timedelta(hours=4)).isoformat())
         self.assertEqual(self.runtime.episode['state'], 'armed')
@@ -1667,7 +1685,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(row['start_at'], start.isoformat())
             self.assertEqual(row['state'], 'pending')
             self.assertEqual(row['preparation'], 'adaptive')
-            self.assertEqual(self.runtime.status()['zones'][0]['start_at'], row['start_at'])
+            self.assertEqual(self.read_return(self.runtime, "status")['zones'][0]['start_at'], row['start_at'])
 
     async def test_preparation_armed_does_not_report_preparing_when_start_is_due(self):
         await self.scheduler.async_start_planned_return((NOW + timedelta(minutes=90)).isoformat())
@@ -1698,7 +1716,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         calls = list(self.climate.calls)
         saves = self.save.await_count
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, {'source': 'test'})):
-            status = self.runtime.status()
+            status = self.read_return(self.runtime, "status")
         self.assertEqual(status['preparation']['zones'][0]['state'], 'preparing')
         self.assertTrue(status['zones'][0]['preparing'])
         self.assertNotIn('climate.salon', self.data['planned_return_episode'].get('preparing_entities', []))
@@ -1766,7 +1784,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         for state in ('cancelled', 'skipped', 'fulfilled'):
             with self.subTest(state=state):
                 self.data['planned_return_episode']['state'] = state
-                preparation = self.runtime.status()['preparation']
+                preparation = self.read_return(self.runtime, "status")['preparation']
                 self.assertEqual(preparation['context'], 'configuration')
                 self.assertIsNone(preparation['return_at'])
                 self.assertNotIn('target', preparation['zones'][0])
@@ -1801,7 +1819,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             return NOW + timedelta(minutes=10 if entity == 'climate.salon' else 40), {'source': 'test'}
         before = deepcopy(self.data)
         with patch.object(self.scheduler, '_preconditioned_event_details', side_effect=predict):
-            rows = self.runtime.status()['preparation']['zones']
+            rows = self.read_return(self.runtime, "status")['preparation']['zones']
         self.assertEqual(len(rows), 2)
         self.assertEqual([row['schedule_source'] for row in rows], ['default', 'default'])
         self.assertEqual([row['target']['temperature'] for row in rows], [21, 20])
@@ -1835,13 +1853,13 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             await self.scheduler.async_start_planned_return(arrival.isoformat())
             await self.depart()
             with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(arrival - timedelta(hours=3), None)) as predictor:
-                event = self.runtime.plans(NOW)[0]
+                event = self.read_return(self.runtime, "plans", NOW)[0]
                 self.assertEqual(event.weekday, 'wednesday')
                 self.assertEqual(event.temperature, 23)
                 self.assertEqual(event.hvac_mode, 'cool')
                 self.assertEqual(event.target_when, arrival)
                 self.assertEqual(predictor.call_args.args[-1].tzinfo, UTC)
-                row = self.runtime.status()['preparation']['zones'][0]
+                row = self.read_return(self.runtime, "status")['preparation']['zones'][0]
                 self.assertEqual(row['target']['temperature'], 23)
 
     async def test_postponement_clears_preparation_and_restores_away_then_new_target(self):
@@ -1854,9 +1872,9 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.scheduler, '_preconditioned_event_details', side_effect=lambda entity, zone, block, due: (due - timedelta(hours=3), None)):
             await self.scheduler.async_adjust_planned_return(arrival.isoformat())
             self.assertEqual(self.data['planned_return_episode']['preparing_entities'], [])
-            self.assertIsNone(self.runtime.target('climate.salon'))
+            self.assertIsNone(self.read_return(self.runtime, "target", 'climate.salon'))
             self.assertEqual(self.climate.calls, [('turn_off', 'climate.salon')])
-            event = self.runtime.plans(NOW)[0]
+            event = self.read_return(self.runtime, "plans", NOW)[0]
             self.assertEqual(event.target_temp_low, 19)
             self.assertEqual(event.target_temp_high, 24)
             self.assertEqual(event.when, arrival - timedelta(hours=3))
@@ -1906,7 +1924,8 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             await self.scheduler.async_start_planned_return(local_arrival.isoformat())
             await self.runtime._tick(now, self.runtime._generation)
             with patch.object(self.scheduler, '_adaptive_preconditioning_prediction', return_value={'recommended_lead_minutes': 120, 'diagnostics': None}):
-                event = self.runtime.plans(now)[0]
+                self.runtime._projection_inputs = None
+                event = self.read_return(self.runtime, "plans", now)[0]
                 self.assertEqual(event.target_when, datetime(2026, 3, 29, 1, 30, tzinfo=UTC))
                 self.assertEqual(event.when, datetime(2026, 3, 28, 23, 30, tzinfo=UTC))
                 self.assertEqual(event.temperature, 22)
@@ -1927,7 +1946,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(track.call_args.args[-1], NOW)
         self.assertEqual(self.data['planned_return_episode'], previous)
         self.assertIsNotNone(self.runtime._timer)
-        self.assertEqual(self.runtime.target('climate.salon').temperature, 21)
+        self.assertEqual(self.read_return(self.runtime, "target", 'climate.salon').temperature, 21)
         self.save.side_effect = None
 
     async def test_postponement_clears_room_assist_marker_and_restores_away_schedule(self):
@@ -1940,7 +1959,7 @@ class PlannedReturnRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.depart()
         self.data['planned_return_episode']['preparing_entities'] = ['climate.salon']
         with patch.object(self.scheduler, '_preconditioned_event_details', return_value=(NOW, None)):
-            old_target = self.runtime.target('climate.salon')
+            old_target = self.read_return(self.runtime, "target", 'climate.salon')
         self.scheduler._mark_preconditioning_applied(old_target)
         self.scheduler._room_sensor_assist_states['climate.salon'] = scheduler_module._RoomSensorAssistState(
             entity_id='climate.salon', target_temperature=21, applied_temperature=23,

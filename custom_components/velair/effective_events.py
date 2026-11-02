@@ -17,7 +17,7 @@ def project_next_effective_events(owner, now: datetime, *, weekly_events=None) -
     from .scheduler import _event_control_intent, _is_due_preconditioning_event
 
     weekly = {}
-    candidates = (owner._iter_future_events(now, clear_applied=False)
+    candidates = (owner._schedule_projection.future(now)
                   if weekly_events is None else weekly_events)
     for event in candidates:
         if dt_util.as_utc(event.when) <= dt_util.as_utc(now) and not _is_due_preconditioning_event(event, now):
@@ -37,19 +37,19 @@ def project_next_effective_events(owner, now: datetime, *, weekly_events=None) -
             or not (episode.get("origin") == "manual" or (
                 runtime.config.get("enabled") and runtime.source_ids()))):
         return _sorted(rows.values())
-    try:
-        destination = runtime.profiles(episode["destination_mode_id"])
-    except (KeyError, ValueError):
+    arrival_effects = runtime.prepared_arrival_effects()
+    if not arrival_effects:
         return _sorted(rows.values())
 
     plans = {event.entity_id: event for event in runtime.plans(now)}
-    active = owner._active_profiles()
     arrival_local = dt_util.as_local(arrival)
     for entity, zone in owner._data["zones"].items():
         if not zone["enabled"] or owner._is_external_execution(entity):
             continue
-        before = owner._profile_transition_effect(active, entity, arrival_local)
-        after = owner._profile_transition_effect(destination, entity, arrival_local)
+        effects = arrival_effects.get(entity)
+        if effects is None:
+            continue
+        before, after = effects
         changed = before[:3] != after[:3] or _event_control_intent(before[3]) != _event_control_intent(after[3])
         plan = plans.get(entity)
         if not changed and plan is None:

@@ -376,7 +376,7 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
             "invalid profile data",
         )
 
-    def test_subscription_immediately_sends_current_operation_snapshot(self) -> None:
+    async def test_subscription_immediately_sends_current_operation_snapshot(self) -> None:
         operation = {
             "id": "operation-1",
             "kind": "mode_change",
@@ -418,7 +418,7 @@ class ClimateProfileApiTest(unittest.IsolatedAsyncioTestCase):
             original_build_response,
         )
 
-        api_module.ws_subscribe_updates(
+        await api_module.ws_subscribe_updates(
             SimpleNamespace(),
             connection,
             {"id": 7, "type": "velair/subscribe_updates"},

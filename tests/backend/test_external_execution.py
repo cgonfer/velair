@@ -306,7 +306,8 @@ class ExternalProviderTest(unittest.IsolatedAsyncioTestCase):
             save,
             lambda entity_id: "°C",
         )
-        with patch.object(scheduler_module, "async_dispatcher_send") as dispatch:
+        with patch.object(scheduler_module, "async_dispatcher_send") as dispatch, \
+             patch.object(VelairScheduler, "_prepare_runtime_projection"):
             VelairScheduler(
                 hass,
                 data,

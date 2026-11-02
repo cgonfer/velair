@@ -688,6 +688,7 @@ class TargetFormatPolicyTest(unittest.IsolatedAsyncioTestCase):
             self.state.attributes["hvac_modes"].remove("cool")
             await self.scheduler.async_capture_reported_target_temp_steps(self.entity)
             notify.assert_called_once()
+            self.assertTrue(self.scheduler._schedule_projection.capabilities_current(self.entity))
             self.assertFalse(self.saves)
 
     async def test_mapped_mixed_modes_deliver_pair_and_reject_wrong_format_before_call(self):
