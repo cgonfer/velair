@@ -8,8 +8,8 @@ Traductions: [Original en anglais](comfort.md) · [Español](comfort.es.md) · [
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.0-beta.10 |
+| Dernière synchronisation | 2026-11-06 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -39,11 +39,14 @@ puissent décider de la suite.
 <a id="sources"></a>
 ## Sources
 
-La température utilise la première source disponible dans cet ordre :
+La température utilise la source configurée, choisie dans cet ordre :
 
 1. le capteur de température sélectionné dans l’onglet Confort ;
 2. le capteur Room Assist configuré pour cet appareil ;
 3. l’attribut `current_temperature` de l’entité climatique.
+
+Cela sélectionne une source préférée ; aucune autre source n’est utilisée
+automatiquement si elle cesse de fournir une température exploitable.
 
 Pour les équipements groupés, la température automatique utilise `current_temperature` du membre physique ; la sonde Room Assist du groupe n’est pas héritée. Sélectionnez explicitement une sonde externe dans le Confort du membre si nécessaire.
 
@@ -61,6 +64,44 @@ Le CO2 n’est surveillé que lorsqu’un capteur de CO2 est sélectionné.
 
 L’identifiant d’entité effectif apparaît sous chaque sélecteur. Les mesures facultatives sans
 source ne sont pas considérées comme des défaillances.
+
+<a id="backup-sensors"></a>
+
+### Capteurs de secours
+
+Lorsqu’un capteur de température ou d’humidité sélectionné possède une source
+par défaut différente, **Sources de données** affiche une sous-section distincte
+**Capteurs de secours**. Chaque ligne comprend sa case à cocher, le libellé et
+l’icône Température ou Humidité et l’identifiant exact de l’entité de secours.
+Les deux cases sont décochées par défaut.
+
+- **Température** utilise le capteur de température configuré pour cet équipement
+  physique, ou son propre `current_temperature` si aucune sonde d’ambiance n’est configurée.
+- **Humidité** utilise uniquement le `current_humidity` mesuré de l’équipement.
+  Un secours d’humidité apparaît seulement si cette source mesurée est prise en
+  charge ; la consigne `humidity` n’est jamais utilisée comme mesure.
+
+Les lignes apparaissent uniquement pour les capteurs explicitement sélectionnés
+dont la source par défaut est différente. Choisir **Utiliser la source automatique**
+ou sélectionner la source par défaut elle-même supprime la ligne et désactive son
+réglage de secours enregistré. Désactiver le suivi d’humidité désactive aussi son
+secours enregistré. Une source automatique n’a pas de secours supplémentaire.
+
+Avec un secours activé, une mesure sélectionnée absente, indisponible, inconnue
+ou non numérique peut utiliser cet unique secours si sa mesure est actuelle et
+valide. **Capteur de secours utilisé** identifie le secours actif. Le capteur
+sélectionné reste enregistré et le Confort le réutilise dès son rétablissement.
+Une mesure sélectionnée périmée ne déclenche pas le secours et un secours périmé
+n’est pas utilisé. Si aucune source n’offre de mesure exploitable, le Confort
+continue d’afficher l’état absent ou périmé.
+
+Ces réglages sont enregistrés par équipement physique et conservés après un
+redémarrage ou un export/import portable. Les configurations existantes gardent
+les deux secours désactivés. Les membres d’un groupe de pièce conservent leurs
+réglages indépendants et n’héritent jamais du capteur de commande du groupe comme
+secours. Les secours concernent uniquement l’observation du Confort ; ils ne
+modifient ni Room Assist, ni le préconditionnement, ni la commande de l’équipement,
+ni le suivi du CO2.
 
 <a id="comfort-models"></a>
 ## Modèles de confort
@@ -327,7 +368,17 @@ Velair expose une valeur de qualité des données :
 - `stale` : aucune mesure actuelle n’existe et toutes les sources surveillées sont périmées ;
 - `unavailable` : aucune mesure actuelle n’est utilisable pour une autre raison.
 
-L’onglet Confort regroupe les relevés utilisables dont la fraîcheur ne peut être vérifiée près des sélecteurs de sondes dans **Configuration → Sources de données**. Une explication discrète identifie les relevés concernés et précise qu’une heure de mesure inconnue ne signifie pas que les valeurs sont incorrectes ni que la pièce est inconfortable. La Vue d’ensemble et les cartes Lovelace omettent cet état courant ; Diagnostic conserve le contexte technique de fraîcheur. C’est une configuration automatique valide à partir de l’équipement, pas une erreur. Les relevés manquants ou périmés gardent un avertissement dans la liste des zones.
+L’onglet Confort regroupe les relevés utilisables dont la fraîcheur ne peut être
+vérifiée près des sélecteurs de sondes dans **Configuration → Sources de données**.
+Un bloc d’information replié identifie les relevés concernés. Ouvrez-le pour lire
+l’explication complète : les relevés sont utilisables, une heure de mesure inconnue
+ne signifie pas que les valeurs sont incorrectes ni que la pièce est inconfortable,
+et la fraîcheur de la mesure du thermostat ne peut être vérifiée séparément lorsque
+son relevé est utilisé. La Vue d’ensemble et les cartes Lovelace omettent cet état
+courant ; Diagnostic conserve le contexte technique de fraîcheur. C’est une
+configuration automatique valide à partir de l’équipement, pas une erreur. Les
+relevés manquants ou périmés gardent un avertissement dans la liste des zones.
+Les commandes distinctes de **Fraîcheur des données** conservent leur fonctionnement.
 
 <a id="visual-status"></a>
 ## État visuel

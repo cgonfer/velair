@@ -23,6 +23,17 @@ const payload: VelairPortablePayload = {
 };
 
 describe("portable preconditioning learning", () => {
+  it("accepts model26 sensor schedules without stripping references or accepting future models", () => {
+    const sensorSchedule = { enabled: true, default_source: null, periods: [{
+      weekdays: ["monday", "friday"], start: "22:00", end: "07:00", source: "sensor.office",
+    }] };
+    const current = { ...payload, model_version: 26, sections: { zones: {
+      "climate.office": { preconditioning: { room_sensor_schedule: sensorSchedule } },
+    } } } as unknown as VelairPortablePayload;
+    expect(validatePortablePayload(current)).toEqual({ ok: true, sections: ["zones"] });
+    expect(JSON.parse(JSON.stringify(current)).sections.zones["climate.office"].preconditioning.room_sensor_schedule).toEqual(sensorSchedule);
+    expect(validatePortablePayload({ ...current, model_version: 27 })).toEqual({ ok: false, errorKey: "invalidImportFile" });
+  });
   it("preserves internal member Comfort data without adding a selectable portable section", () => {
     const memberComfort = { "climate.office": { enabled: true, temperature_min: 19 } };
     const grouped = {
@@ -131,7 +142,7 @@ describe("portable preconditioning learning", () => {
     };
     const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(25);
+    expect(PORTABLE_MODEL_VERSION).toBe(26);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
     expect(roundTrip.sections.zones).toEqual(current.sections.zones);
     expect(validatePortablePayload({ ...roundTrip, model_version: 13 })).toEqual({ ok: true, sections: ["zones"] });

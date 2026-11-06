@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](comfort.md) · [Español](comfort.es.md) · [
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Versione di riferimento | 1.9.0-beta.10 |
+| Ultima sincronizzazione | 2026-11-06 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -31,11 +31,14 @@ Monitora letture di temperatura, umidità e CO2 disponibili localmente. Non modi
 <a id="sources"></a>
 ## Fonti
 
-La temperatura usa la prima fonte disponibile in quest’ordine:
+La temperatura usa la fonte configurata, scelta in quest’ordine:
 
 1. il sensore di temperatura selezionato nella scheda Comfort;
 2. il sensore Room Assist configurato per quel dispositivo;
 3. `current_temperature` dell’entità climatica.
+
+Questo sceglie una fonte preferita; non passa automaticamente a un’altra fonte
+quando quella preferita smette di fornire una temperatura utilizzabile.
 
 Per i dispositivi raggruppati, la temperatura automatica usa `current_temperature` del membro fisico; il sensore Room Assist del gruppo non viene ereditato. Se necessario, seleziona esplicitamente un sensore esterno nel Comfort del membro.
 
@@ -49,6 +52,43 @@ L’opzione predefinita `Utilizza la sorgente automatica` mantiene questo compor
 La CO2 viene monitorata solo quando è selezionato un sensore CO2.
 
 L’ID dell’entità effettiva compare sotto ogni selettore. Le misure facoltative senza una fonte non vengono considerate errori.
+
+<a id="backup-sensors"></a>
+
+### Sensori di riserva
+
+Quando il sensore di temperatura o umidità selezionato ha una fonte predefinita
+diversa, **Origini dati** mostra una sottosezione separata **Sensori di riserva**.
+Ogni riga contiene la propria casella, l’etichetta e l’icona Temperatura o
+Umidità e l’ID esatto dell’entità di riserva. Entrambe le caselle sono
+disattivate per impostazione predefinita.
+
+- **Temperatura** usa il sensore di temperatura configurato per quel dispositivo
+  fisico, oppure il suo `current_temperature` se non è configurato un sensore ambiente.
+- **Umidità** usa solo il `current_humidity` misurato dal dispositivo. La riserva
+  per l’umidità appare solo se quella fonte misurata è supportata; l’impostazione
+  obiettivo `humidity` non viene mai usata come lettura.
+
+Le righe appaiono solo per sensori selezionati esplicitamente con una fonte
+predefinita diversa. Scegliere **Utilizza la sorgente automatica** o selezionare
+la stessa fonte predefinita rimuove la riga e disattiva la relativa impostazione
+di riserva salvata. Disattivare il monitoraggio dell’umidità disattiva anche la
+sua riserva salvata. Una fonte automatica non ha un’ulteriore riserva.
+
+Con una riserva attiva, una lettura selezionata mancante, non disponibile,
+sconosciuta o non numerica può usare quell’unica riserva se la sua lettura è
+attuale e valida. **Sensore di riserva in uso** identifica la riserva attiva.
+Il sensore selezionato resta salvato e il Comfort torna a usarlo quando si
+ripristina. Una lettura selezionata non aggiornata non attiva la riserva e una
+riserva non aggiornata non viene usata. Se nessuna fonte ha una lettura
+utilizzabile, il Comfort continua a mostrare lo stato mancante o non aggiornato.
+
+Queste impostazioni sono salvate per dispositivo fisico e conservate dopo un
+riavvio o un’esportazione/importazione portabile. Le configurazioni esistenti
+mantengono entrambe le riserve disattivate. I membri dei gruppi stanza mantengono
+impostazioni indipendenti e non ereditano mai il sensore di controllo del gruppo
+come riserva. Le riserve riguardano solo l’osservazione del Comfort; non cambiano
+Room Assist, precondizionamento, controllo del dispositivo o monitoraggio della CO2.
 
 <a id="comfort-models"></a>
 ## Modelli di comfort
@@ -185,7 +225,18 @@ Velair espone un unico valore di qualità dei dati:
 - `stale`: non esiste una lettura attuale e tutte le fonti monitorate non sono aggiornate;
 - `unavailable`: nessuna lettura attuale è utilizzabile per un altro motivo.
 
-La scheda Comfort raggruppa le letture utilizzabili con aggiornamento non verificabile accanto ai selettori dei sensori in **Configurazione → Fonti dei dati**. Una spiegazione discreta identifica le letture interessate e chiarisce che un’ora di misurazione sconosciuta non significa valori errati o stanza non confortevole. Panoramica e schede Lovelace omettono questo stato ordinario; Diagnostica conserva il contesto tecnico dell’aggiornamento. È una configurazione automatica valida con fonte dal dispositivo, non un errore. Le letture mancanti o scadute mostrano ancora un avviso nell’elenco delle zone.
+La scheda Comfort raggruppa le letture utilizzabili con aggiornamento non
+verificabile accanto ai selettori dei sensori in **Configurazione → Origini dati**.
+Un riquadro informativo chiuso identifica le letture interessate. Aprilo per
+leggere la spiegazione completa: le letture sono utilizzabili, un’ora di
+misurazione sconosciuta non significa valori errati o stanza non confortevole,
+e l’aggiornamento della misura del termostato non può essere verificato
+separatamente quando si usa la sua lettura. Panoramica e schede Lovelace
+omettono questo stato ordinario; Diagnostica conserva il contesto tecnico
+dell’aggiornamento. È una configurazione automatica valida con fonte dal
+dispositivo, non un errore. Le letture mancanti o scadute mostrano ancora un
+avviso nell’elenco delle zone. I controlli separati di **Freschezza dei dati**
+mantengono il comportamento esistente.
 
 <a id="visual-status"></a>
 ## Stato visivo

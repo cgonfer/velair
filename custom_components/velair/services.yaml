@@ -671,7 +671,7 @@ clear_schedule:
 
 enable_room_sensor_assist:
   name: Enable Room Sensor Assist
-  description: Enable Room Sensor Assist for one managed climate entity that already has a room temperature sensor configured.
+  description: Enable Room Sensor Assist for one managed climate entity with a configured room temperature sensor or an enabled sensor schedule.
   fields:
     entity_id:
       required: true

@@ -11,6 +11,8 @@ import type {
   VelairModeInput,
   PortableSection,
   PreconditioningSettings,
+  PreconditioningSettingsUpdate,
+  RoomSensorScheduleDetail,
   ScheduleBlock,
   ScheduleResponse,
   ScheduleUpdateMessage,
@@ -83,6 +85,12 @@ export class VelairApiClient {
   public getSchedule(): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/get_schedule",
+    });
+  }
+
+  public getRoomSensorSchedule(entityId: string): Promise<RoomSensorScheduleDetail> {
+    return this.hass.connection.sendMessagePromise<RoomSensorScheduleDetail>({
+      type: `${DOMAIN}/get_room_sensor_schedule`, entity_id: entityId,
     });
   }
 
@@ -333,7 +341,7 @@ export class VelairApiClient {
 
   public updateZonePreconditioning(
     entityId: string,
-    preconditioning: Partial<PreconditioningSettings>,
+    preconditioning: PreconditioningSettingsUpdate,
   ): Promise<ScheduleResponse> {
     return this.hass.connection.sendMessagePromise<ScheduleResponse>({
       type: "velair/update_zone_preconditioning",

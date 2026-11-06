@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.3 |
-| Letzte Synchronisierung | 2026-10-21 |
+| Referenzversion | 1.9.0-beta.10 |
+| Letzte Synchronisierung | 2026-11-04 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -72,6 +72,10 @@ Nur die Kategorieauswahl wird dauerhaft gespeichert. Der Ereignisverlauf liegt a
 Die lokale Diagnoseansicht verwendet beim Filtern die Anzeigenamen der Klimageräte aus Home Assistant. Ihr Detailpanel zeigt bewusst lokale Entitäts-IDs, damit du die Konfiguration überprüfen kannst. Bei aktivierter Standard-Datenschutzoption ersetzen heruntergeladene Berichte sowohl strukturierte IDs als auch IDs in gespeicherten Fehlertexten durch deterministische Aliasnamen wie `climate_unit_1` und `associated_entity_1`. Wiederholte Verweise behalten denselben Alias, sodass Beziehungen nachvollziehbar bleiben, ohne ursprüngliche lokale IDs offenzulegen. Wenn du unveränderte Entitäts-IDs ausdrücklich beibehältst, bleiben diese lokalen Kennungen im Bericht. Profil-, Modus- und Pausenkennungen werden trotzdem entfernt. Prüfe jeden Bericht vor dem Teilen.
 
 Die Diagnose bietet keine Bedienelemente für Zeitplaner, Wiederholungen, Rücknahmen oder Klimageräte. Konfiguration und Wartungsaktionen bleiben in den Einstellungen; Gerätefähigkeiten und Zustandsdetails gehören nun zur Diagnose.
+
+Die Übertragungsdetails des gewählten Klimageräts unterscheiden einen angenommenen Dienstaufruf davon, dass Home Assistant dessen Zielwert meldet. Die Bestätigung kann ausstehen, vorliegen, nach einer Wiederholung wiederhergestellt oder nach Erreichen der Wiederholungsgrenze unbestätigt sein. Ein behobener stiller Fehler bleibt mit seiner Wiederholungsanzahl im Verlauf **Übertragung an das Klimagerät** erhalten, damit du erkennen kannst, dass Velair die Abweichung behoben hat. Übereinstimmende Meldungen erzeugen nicht für jeden normalen Befehl einen Verlaufseintrag. Der heruntergeladene Bericht enthält dieselben Bestätigungsnachweise.
+
+Die Wiederherstellung läuft im Backend auch bei geschlossener Diagnose. Wechseln mehrere unabhängige Klimageräte gleichzeitig den Block, benötigt nur ein Gerät, das weiterhin einen abweichenden Zielwert meldet, eine Wiederholung. Das Öffnen oder Aktualisieren dieser Ansicht sendet niemals einen Klimabefehl. Eine bestätigte Meldung belegt den Zustand in Home Assistant; sie überprüft ein Gerät mit optimistisch gemeldeten Werten nicht unabhängig.
 
 Jedes verwaltete Klimagerät meldet außerdem ausschließlich zur Laufzeit verfügbare Informationen zur Stabilisierung von Befehlen. Während sich ein neuer Velair-Befehl stabilisiert, führt die Diagnose die betroffenen Steuerungsfelder in ihrer Momentaufnahme auf. Hat sich das Klimagerät bis zum begrenzten Ablaufzeitpunkt nicht angeglichen, kennzeichnet die nächste aktuelle Momentaufnahme das Gerät mit der Warnung `command_settling_mismatch`. Klappe diese Warnung im Diagnosepanel des gewählten Klimageräts auf, um den erwarteten Wert jedes betroffenen Feldes mit dem vom Thermostat gemeldeten Wert zu vergleichen. Temperaturen enthalten die Geräteeinheit, HVAC-Modi verwenden ihre üblichen Bezeichnungen und fehlende Werte werden ausdrücklich gekennzeichnet. Verwendet wird der aufgezeichnete Vergleich, nicht der aktuelle Zeitplan oder ein neuer Messwert. Der heruntergeladene Bericht enthält weiterhin den Block `command_settling`. Das sind Informationen zur Fehlerbehebung: Die Diagnose wiederholt keinen Befehl, verändert kein Klimagerät und erstellt keine manuelle Anpassung. Ein neuerer Befehl für dieses Feld oder ein Neustart löscht diese Informationen.
 

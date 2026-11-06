@@ -166,6 +166,20 @@ Diagnostics has no scheduler, retry, rollback, or climate controls. Settings
 continues to contain configuration and maintenance actions; climate capability
 and health details now belong to Diagnostics.
 
+The selected climate's delivery details distinguish an accepted service call
+from its target being reported by Home Assistant. Confirmation can be pending,
+confirmed, recovered after a retry, or unconfirmed after the retry limit. A
+recovered silent failure remains in the **Climate delivery** history with its
+retry count, so you can see that Velair resolved the discrepancy. Matching
+reports do not add a history entry for every normal command. The downloaded
+report retains the same confirmation evidence.
+
+Recovery runs in the backend even when Diagnostics is closed. If several
+independent climates change blocks together, only a climate that keeps reporting
+a different target needs a retry. Opening or refreshing this view never sends
+a climate command. A confirmed report is evidence of Home Assistant's state;
+it does not independently verify a device that reports optimistic values.
+
 Each managed climate also reports runtime-only command-settling evidence. While
 a recent Velair command is stabilizing, Diagnostics lists the affected control
 fields in its runtime snapshot. If the climate has not converged by the bounded

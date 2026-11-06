@@ -21,7 +21,7 @@ def supply_group():
 
 class SharedDemandContractTest(unittest.TestCase):
     def test_model_24_roundtrips_on_delay_and_import_replaces_pause_provenance(self):
-        self.assertEqual(api.EXPORT_MODEL_VERSION, 25)
+        self.assertEqual(api.EXPORT_MODEL_VERSION, 26)
         data = normalize_schedule_data({}, ["climate.room"])
         raw = supply_group()
         raw.update(on_delay_seconds=37, suspended=True, suspension_reason="external_off")

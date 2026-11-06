@@ -83,6 +83,7 @@ from .models import (
     validate_modes,
     validate_planned_return,
 )
+from .room_sensor_schedule import normalize_room_sensor_schedule
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .selection_requests import climate_entity_id, climate_entity_ids, profile_id, profile_ids
 from .room_groups import member_to_unit, normalize_room_groups, control_unit_ids
@@ -101,7 +102,7 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 25
+EXPORT_MODEL_VERSION = 26
 EXPORT_SECTIONS = (
     "member_comfort",
     "room_groups",
@@ -241,6 +242,7 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("use_outdoor_temperature"): bool,
         vol.Optional("outdoor_temperature_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("room_temperature_entity_id"): vol.Any(None, cv.entity_id),
+        vol.Optional("room_sensor_schedule"): normalize_room_sensor_schedule,
         vol.Optional("room_sensor_assist_enabled"): bool,
         vol.Optional("room_sensor_assist_deadband"): vol.All(
             _room_sensor_assist_deadband,
@@ -261,8 +263,10 @@ COMFORT_SCHEMA = vol.Schema(
     {
         vol.Optional("enabled"): bool,
         vol.Optional("temperature_entity_id"): vol.Any(None, cv.entity_id),
+        vol.Optional("temperature_fallback_enabled"): bool,
         vol.Optional("humidity_enabled"): bool,
         vol.Optional("humidity_entity_id"): vol.Any(None, cv.entity_id),
+        vol.Optional("humidity_fallback_enabled"): bool,
         vol.Optional("co2_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("temperature_min"): vol.All(
             vol.Coerce(float),
@@ -394,6 +398,7 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_enter_manual_adjustment)
     websocket_api.async_register_command(hass, ws_resume_automatic_control)
     websocket_api.async_register_command(hass, ws_update_zone_preconditioning)
+    websocket_api.async_register_command(hass, ws_get_room_sensor_schedule)
     websocket_api.async_register_command(hass, ws_update_zone_comfort)
     websocket_api.async_register_command(hass, ws_reset_zone_preconditioning_settings)
     websocket_api.async_register_command(hass, ws_reset_zone_preconditioning_learning)
@@ -1531,6 +1536,31 @@ async def ws_resume_automatic_control(
 
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/get_room_sensor_schedule",
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+    }
+)
+@websocket_api.async_response
+async def ws_get_room_sensor_schedule(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Read a full calendar on demand without expanding recurring live responses."""
+    runtime = _get_runtime(hass)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return
+    try:
+        result = runtime["scheduler"].get_room_sensor_schedule_configuration(msg[ATTR_ENTITY_ID])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_entity", str(err))
+        return
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/update_zone_preconditioning",
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required("preconditioning"): PRECONDITIONING_SCHEMA,
@@ -2348,7 +2378,9 @@ def _build_schedule_response_snapshot(runtime: dict[str, Any]) -> dict[str, Any]
     scheduler = runtime["scheduler"]
     storage = runtime["storage"]
     entry = runtime["entry"]
-    configuration_getter = getattr(scheduler, "get_published_configuration", None)
+    configuration_getter = getattr(scheduler, "get_published_configuration_summary", None)
+    if not callable(configuration_getter):
+        configuration_getter = getattr(scheduler, "get_published_configuration", None)
     configuration = configuration_getter() if callable(configuration_getter) else storage.data
     stored_data = serialize_schedule_data(configuration)
     settings = {
@@ -2992,7 +3024,9 @@ def _build_preconditioning_learning_response(
     response = {
         entity_id: _build_zone_preconditioning_learning_summary(
             zone,
-            learning.get(entity_id, {}),
+            (scheduler._preconditioning_learning_for_current_source(entity_id, learning.get(entity_id, {}))
+             if callable(getattr(scheduler, "_preconditioning_learning_for_current_source", None))
+             else learning.get(entity_id, {})),
             climate_manager.supported_hvac_modes(entity_id),
         )
         for entity_id, zone in zones.items()
@@ -3054,7 +3088,10 @@ def _build_zone_preconditioning_learning_summary(
 
     heat_supported = _supports_preconditioning_direction(supported_hvac_modes, "heat")
     cool_supported = _supports_preconditioning_direction(supported_hvac_modes, "cool")
-    preconditioning = normalize_preconditioning_data(zone.get("preconditioning"))
+    raw_preconditioning = zone.get("preconditioning")
+    if isinstance(raw_preconditioning, dict) and "room_sensor_schedule" in raw_preconditioning:
+        raw_preconditioning = {key: value for key, value in raw_preconditioning.items() if key != "room_sensor_schedule"}
+    preconditioning = normalize_preconditioning_data(raw_preconditioning)
     heat = _build_preconditioning_direction_summary(
         heat_observations,
         preconditioning,
@@ -3236,6 +3273,8 @@ def _validate_portable_zone_schedules(
         preconditioning = zone.get("preconditioning")
         if preconditioning is not None and not isinstance(preconditioning, dict):
             raise ValueError(f"Preconditioning for {entity_id} is not valid")
+        if isinstance(preconditioning, dict) and "room_sensor_schedule" in preconditioning:
+            normalize_room_sensor_schedule(preconditioning["room_sensor_schedule"])
         if isinstance(preconditioning, dict) and "master_entity_id" in preconditioning:
             master = preconditioning["master_entity_id"]
             if master is not None and (
@@ -3293,6 +3332,11 @@ def _validate_portable_zone_schedules(
                             f"Derived Comfort metric {metric} for {entity_id} must use a sensor entity"
                         )
         if isinstance(comfort, dict):
+            for field in ("temperature_fallback_enabled", "humidity_fallback_enabled"):
+                if field in comfort and not isinstance(comfort[field], bool):
+                    raise ValueError(
+                        f"Comfort {field} for {entity_id} must be a boolean"
+                    )
             comfort_model = comfort.get("comfort_model")
             if comfort_model is not None and comfort_model not in (
                 "simple",

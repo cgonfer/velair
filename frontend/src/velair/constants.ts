@@ -54,7 +54,7 @@ export const LOVELACE_CARD_VIEWS: VelairCardView[] = [
   "planned-return",
 ];
 export const PORTABLE_FORMAT = "velair_portable_data";
-export const PORTABLE_MODEL_VERSION = 25;
+export const PORTABLE_MODEL_VERSION = 26;
 export const PORTABLE_SECTIONS: PortableSection[] = [
   "room_groups",
   "planned_return",

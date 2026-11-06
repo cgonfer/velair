@@ -18,9 +18,26 @@ offline. If Home mode is selected before it reconnects, Velair resolves and
 delivers the current Home target, not the obsolete 17 °C payload. The same rule
 applies to Modes, Boost, Pause, Room Assist, and early Adaptive Preconditioning.
 
-When Home Assistant explicitly rejects a climate call, Velair makes at most two
-additional attempts: after about 2 seconds and 10 seconds. A newer intention or
-stopping/unloading Velair cancels pending work for that climate.
+When Home Assistant rejects a climate call, or accepts it but the climate keeps
+reporting a different target, Velair makes at most two additional attempts in
+that delivery episode. The first retry waits about 2 seconds and the second about
+10 further seconds. After the last accepted attempt, Velair allows 5 seconds
+for the target report to arrive. A matching report can complete confirmation
+earlier; climates that report the requested value need no retry.
+
+Recovery is independent for each managed zone. If several separate climates
+change blocks at the same time, only the one whose target remains different is
+retried. The other climates are not delayed or sent their commands again. These
+checks use Home Assistant's reported states and existing state-change listeners,
+without periodic reads from the device.
+
+Before retrying, Velair checks the current intention again, including any new
+block, Boost or pause. A newer intention or stopping/unloading Velair cancels
+obsolete pending work for that climate. Diagnostics shows whether confirmation
+is pending, completed, recovered after a retry, or still unconfirmed. A recovered
+silent failure also remains in the bounded delivery history.
+
+A genuine transition from unavailable to available retains reconnection recovery. If confirmation or recovery is already pending, it keeps the original deadline and retry budget; a matching report can complete confirmation without another command. Otherwise reconnection starts a fresh delivery episode for the current target. Ordinary temperature, humidity or target reports do not restart an exhausted retry budget. A late report matching the requested target clears the discrepancy without sending another command.
 
 Manual temperature actions are one-shot. Velair does not make an old manual
 target appear later after the device reconnects.

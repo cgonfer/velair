@@ -796,6 +796,15 @@ export const comfortStyles = css`
 
 .comfort-derived-visual[class*="availability-"]:not(.availability-current) {
   color: var(--secondary-text-color);
+}
+
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) > strong,
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) > small,
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) > .comfort-derived-detail,
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) .comfort-derived-summary-value,
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) .comfort-derived-summary-row > header > ha-icon,
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) .comfort-derived-title > strong,
+.comfort-derived-visual[class*="availability-"]:not(.availability-current) .comfort-derived-title .inline-help {
   opacity: 0.72;
 }
 
@@ -1406,6 +1415,88 @@ export const comfortStyles = css`
   min-width: 0;
 }
 
+.comfort-backup-sensors {
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  min-width: 0;
+}
+
+.comfort-data-sources-config-section .comfort-config-rows {
+  align-items: start;
+}
+
+.comfort-backup-sensors h4 {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  gap: 6px;
+  margin: 0;
+}
+
+.comfort-backup-sensors h4 ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--primary-color);
+}
+
+.comfort-backup-description {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  margin: 0;
+}
+
+.comfort-backup-options {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.comfort-backup-row {
+  align-items: center;
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: minmax(132px, max-content) minmax(0, 1fr) max-content;
+  min-width: 0;
+}
+
+.comfort-backup-toggle {
+  align-items: center;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.comfort-backup-toggle ha-icon {
+  --mdc-icon-size: 15px;
+  color: var(--secondary-text-color);
+  flex: 0 0 15px;
+}
+
+.comfort-backup-toggle input {
+  accent-color: var(--primary-color);
+  box-sizing: border-box;
+  flex: 0 0 15px;
+  height: 15px;
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+  width: 15px;
+}
+
+.comfort-backup-source {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.comfort-backup-active {
+  color: var(--primary-color);
+  font-size: 12px;
+}
+
 .comfort-config-label {
   align-items: center;
   color: var(--secondary-text-color);
@@ -1567,18 +1658,67 @@ export const comfortStyles = css`
 }
 
 .comfort-freshness-status {
-  color: var(--secondary-text-color);
+  background: var(--card-background-color);
+  border: 0;
+  border-left: 3px solid var(--info-color, var(--primary-color));
+  box-sizing: border-box;
+  color: var(--primary-text-color);
   font-size: 12px;
   line-height: 1.4;
-  margin: 6px 0 0;
+  margin: 16px 0 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.comfort-freshness-status > summary {
+  align-items: center;
+  border-bottom: 1px solid var(--divider-color);
+  box-sizing: border-box;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 17px minmax(0, 1fr) 16px;
+  list-style: none;
+  min-width: 0;
+  padding: 12px;
+  width: 100%;
+}
+
+.comfort-freshness-status > summary::-webkit-details-marker {
+  display: none;
+}
+
+.comfort-freshness-status > summary:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.comfort-freshness-status > summary > ha-icon {
+  --mdc-icon-size: 17px;
+}
+
+.comfort-freshness-status > summary > .comfort-freshness-chevron {
+  --mdc-icon-size: 16px;
+  grid-column: 3;
+  justify-self: end;
+}
+
+.comfort-freshness-status[open] .comfort-freshness-chevron {
+  transform: rotate(180deg);
+}
+
+.comfort-freshness-content {
+  display: grid;
+  gap: 10px;
+  padding: 12px 12px 12px 37px;
 }
 
 .comfort-freshness-status p {
   margin: 0;
 }
 
-.comfort-freshness-status p + p {
-  margin-top: 4px;
+.comfort-freshness-metrics {
+  color: var(--secondary-text-color);
 }
 
 .comfort-temperature-aware-ranges {
@@ -1776,6 +1916,33 @@ export const comfortStyles = css`
   .comfort-number-pair input,
   .comfort-number-single input {
     width: 100%;
+  }
+}
+@media (max-width: 580px) {
+  .comfort-backup-row {
+    grid-template-columns: minmax(118px, max-content) minmax(0, 1fr);
+  }
+
+  .comfort-backup-active {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 400px) {
+  .comfort-backup-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .comfort-backup-source,
+  .comfort-backup-active {
+    grid-column: 1;
+    padding-left: 42px;
+  }
+}
+
+@media (pointer: coarse) {
+  .comfort-backup-toggle {
+    min-height: 44px;
   }
 }
 `;

@@ -48,7 +48,7 @@ range-limited and rounded to safe `0.1` precision.
 Editable Room Assist, Adaptive Preconditioning, and rate fields use their own
 valid precision rules.
 
-Schedule, template and Profile target fields retain the user's raw text while
+Schedule, template, Profile and Climate-card Boost target fields retain the user's raw text while
 editing. A complete decimal point or comma value is normalized only for
 validation and numeric payloads; incomplete values such as `19.` or `19,` cannot
 be saved. Device-bound editors still enforce their effective step, minimum,

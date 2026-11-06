@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.0-beta.10 |
+| Letzte Synchronisierung | 2026-11-04 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -24,7 +24,13 @@ Wechselt eine Entität zu `unknown` oder `unavailable`, wartet Velair, bis Home 
 
 Ein Beispiel: Ein Abwesenheitsprofil hat 17 °C angefordert, während ein Thermostat offline war. Wird vor der Wiederverbindung der Zuhause-Modus gewählt, ermittelt und übermittelt Velair die aktuelle Zuhause-Zieltemperatur statt des veralteten Befehls für 17 °C. Dasselbe gilt für Modi, temporäre Anpassung, Pause, Room Assist und die frühzeitige adaptive Vorkonditionierung.
 
-Lehnt Home Assistant einen Klimasteueraufruf ausdrücklich ab, unternimmt Velair höchstens zwei weitere Versuche: nach ungefähr 2 Sekunden und 10 Sekunden. Eine neuere Steuerungsabsicht oder das Stoppen beziehungsweise Entladen von Velair verwirft ausstehende Aufgaben für dieses Klimagerät.
+Lehnt Home Assistant einen Klimasteueraufruf ab oder nimmt ihn an, während das Klimagerät weiterhin einen anderen Zielwert meldet, unternimmt Velair in diesem Übermittlungsvorgang höchstens zwei weitere Versuche. Der erste wartet ungefähr 2 Sekunden, der zweite weitere ungefähr 10 Sekunden. Nach dem letzten angenommenen Versuch wartet Velair 5 Sekunden auf die Zielwertmeldung. Eine übereinstimmende Meldung kann die Bestätigung früher abschließen; Geräte, die den angeforderten Wert melden, benötigen keine Wiederholung.
+
+Die Wiederherstellung erfolgt unabhängig für jede verwaltete Zone. Wechseln mehrere separate Klimageräte gleichzeitig den Block, erhält nur das Gerät mit weiterhin abweichendem Zielwert eine Wiederholung. Die anderen Geräte werden weder aufgehalten noch erneut angesteuert. Die Prüfungen verwenden die von Home Assistant gemeldeten Zustände und vorhandene Listener für Zustandsänderungen, ohne das Gerät regelmäßig abzufragen.
+
+Vor jeder Wiederholung prüft Velair die aktuelle Steuerungsabsicht erneut, einschließlich eines neuen Blocks, einer temporären Anpassung oder Pause. Eine neuere Absicht oder das Stoppen beziehungsweise Entladen von Velair verwirft veraltete ausstehende Aufgaben für dieses Klimagerät. Die Diagnose zeigt, ob die Bestätigung aussteht, vorliegt, nach einer Wiederholung wiederhergestellt wurde oder weiterhin fehlt. Ein behobener stiller Fehler bleibt ebenfalls im begrenzten Übermittlungsverlauf erhalten.
+
+Ein tatsächlicher Wechsel von nicht verfügbar zu verfügbar behält die Wiederherstellung nach Wiederverbindung bei. Steht eine Bestätigung oder Wiederherstellung bereits aus, bleiben der ursprüngliche Ablaufzeitpunkt und das Wiederholungsbudget erhalten; eine übereinstimmende Meldung kann die Bestätigung ohne einen weiteren Befehl abschließen. Andernfalls beginnt die Wiederverbindung einen neuen Übermittlungsvorgang für den aktuellen Zielwert. Normale Temperatur-, Luftfeuchtigkeits- oder Zielwertmeldungen setzen ein ausgeschöpftes Wiederholungsbudget nicht zurück. Eine verspätete Meldung, die dem angeforderten Zielwert entspricht, hebt die Abweichung auf, ohne einen weiteren Befehl zu senden.
 
 Manuelle Temperaturaktionen werden nur einmal ausgeführt. Velair wendet eine alte manuelle Zieltemperatur nach der Wiederverbindung des Geräts nicht nachträglich an.
 

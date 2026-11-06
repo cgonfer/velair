@@ -494,6 +494,13 @@ class PlannedReturnRuntime:
                 if target is not None and target.action == "set_temperature" and arrival is not None:
                     block = self._return_blocks[entity]
                     prediction = owner._preconditioned_event_details(entity, owner._data["zones"][entity], block, arrival)
+                    if entity in owner._room_sensor_schedules.entries:
+                        start = owner._room_sensor_schedules.earliest_start(entity, prediction[0], arrival, now)
+                        diagnostics = prediction[1] if start < arrival else None
+                        if diagnostics is not None and dt_util.as_utc(start) != dt_util.as_utc(prediction[0]):
+                            diagnostics = {**diagnostics, "final_lead_minutes": max(0, int(round(
+                                (dt_util.as_utc(arrival) - dt_util.as_utc(start)).total_seconds() / 60)))}
+                        prediction = (start, diagnostics)
                 else:
                     prediction = (arrival, None)
                 self._prepared_predictions[entity] = prediction

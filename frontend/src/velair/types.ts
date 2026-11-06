@@ -291,6 +291,31 @@ export type TemplateUpdatePreview = {
   changes?: Array<{ destination: ResourceDestination; slot_id: string; kind: "added" | "removed" | "moved" | "configuration"; previous_start?: string; start?: string }>;
 };
 
+export type RoomSensorSchedulePeriod = {
+  weekdays: string[];
+  start: string;
+  end: string;
+  source: string | null;
+};
+
+export type RoomSensorSchedule = {
+  enabled: boolean;
+  default_source: string | null;
+  periods: RoomSensorSchedulePeriod[];
+};
+
+/** Compact live projection; fetch the full calendar only when opening its editor. */
+export type RoomSensorScheduleSummary = {
+  enabled: boolean;
+  default_source: string | null;
+  period_count: number;
+};
+
+export type RoomSensorScheduleDetail = {
+  entity_id: string;
+  room_sensor_schedule: RoomSensorSchedule | null;
+};
+
 export type PreconditioningSettings = {
   master_entity_id?: string | null;
   enabled: boolean;
@@ -307,17 +332,24 @@ export type PreconditioningSettings = {
   use_outdoor_temperature: boolean;
   outdoor_temperature_entity_id: string | null;
   room_temperature_entity_id: string | null;
+  room_sensor_schedule?: RoomSensorSchedule | RoomSensorScheduleSummary;
   room_sensor_assist_enabled: boolean;
   room_sensor_assist_deadband: number;
   room_sensor_assist_max_delta: number;
   room_sensor_assist_debounce_seconds: number;
 };
 
+export type PreconditioningSettingsUpdate = Omit<Partial<PreconditioningSettings>, "room_sensor_schedule"> & {
+  room_sensor_schedule?: RoomSensorSchedule;
+};
+
 export type ComfortSettings = {
   enabled: boolean;
   comfort_model: "simple" | "guided" | "temperature_aware";
   temperature_entity_id: string | null;
+  temperature_fallback_enabled: boolean;
   humidity_enabled: boolean;
+  humidity_fallback_enabled: boolean;
   humidity_entity_id: string | null;
   co2_entity_id: string | null;
   temperature_min: number;
@@ -418,6 +450,9 @@ export type ComfortMetricAssessment = {
   unit?: string | null;
   issues?: string[];
   input_entity_ids?: string[];
+  fallback_entity_id?: string | null;
+  fallback_source?: "climate" | "room_sensor" | null;
+  using_fallback?: boolean;
   temperature_range_position?: "below" | "within" | "above" | null;
 };
 
@@ -566,7 +601,13 @@ export type RoomSensorAssistStatus = {
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;
-  reason?: "missing_target_step" | "unsupported_temperature_range" | "unsupported_range_mode" | "range_reference_not_configured" | null;
+  reason?: "missing_target_step" | "unsupported_temperature_range" | "unsupported_range_mode" | "range_reference_not_configured" | "native_reference" | "room_sensor_unavailable" | null;
+  room_sensor_schedule?: {
+    enabled: boolean;
+    effective_source: string | null;
+    next_change: string | null;
+    next_source: string | null;
+  };
   room_temperature_entity_id?: string | null;
   target_temperature?: number | null;
   target_temp_low?: number | null;

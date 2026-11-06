@@ -32,6 +32,7 @@ import type {
 import { absoluteTemperatureBounds } from "../domain/temperature-units";
 
 type ComfortViewHost = VelairViewHost;
+type ComfortBackupMetric = "temperature" | "humidity";
 const COMFORT_HUMIDITY_DISABLED = "__humidity_not_monitored__";
 const OUTDOOR_INSIGHT_CODES = new Set([
   "ventilation_may_help_cool",
@@ -844,7 +845,7 @@ function renderComfortConfigurationDetails(
     "co2_entity_id",
     "co2",
   );
-  const directSources = configuredDirectComfortSources(host, entityId, settings);
+  const directSources = configuredDirectComfortSources(host, entityId, settings, assessment);
   const freshnessSourcesId = `comfort-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}-freshness-sources`;
   return html`
     <details class="comfort-configuration">
@@ -862,10 +863,11 @@ function renderComfortConfigurationDetails(
         <section class="comfort-config-section comfort-data-sources-config-section">
           <h3><ha-icon icon="mdi:database-outline"></ha-icon>${host._t("comfortDataSources")}</h3>
           <div class="comfort-config-rows">
-            ${renderComfortSensorPicker(host, entityId, settings, "temperature_entity_id", "temperature", "comfortTemperatureSensor")}
-            ${renderComfortSensorPicker(host, entityId, settings, "humidity_entity_id", "humidity", "comfortHumiditySensor")}
+            ${renderComfortSensorPicker(host, entityId, settings, "temperature_entity_id", "temperature", "comfortTemperatureSensor", assessment?.temperature)}
+            ${renderComfortSensorPicker(host, entityId, settings, "humidity_entity_id", "humidity", "comfortHumiditySensor", assessment?.humidity)}
             ${renderComfortSensorPicker(host, entityId, settings, "co2_entity_id", "co2", "comfortCo2Sensor")}
           </div>
+          ${renderComfortBackupSensors(host, entityId, settings, assessment)}
           ${renderComfortFreshnessSummary(host, settings, assessment)}
         </section>
         <section class="comfort-config-section comfort-freshness-config-section">
@@ -1647,13 +1649,16 @@ function renderComfortSensorPicker(
   field: "temperature_entity_id" | "humidity_entity_id" | "co2_entity_id",
   kind: "temperature" | "humidity" | "co2",
   labelKey: TranslationKey,
+  assessment?: ComfortMetricAssessment,
 ) {
   const configuredValue = settings[field] ?? "";
   const value = kind === "humidity" && !settings.humidity_enabled
     ? COMFORT_HUMIDITY_DISABLED
     : configuredValue;
   const sensors = comfortSensorOptions(host.hass, configuredValue, kind);
-  const sourceDetail = comfortSensorSourceDetail(host, entityId, settings, field, kind);
+  const sourceDetail = assessment?.using_fallback && assessment.entity_id
+    ? host._t("comfortFallbackActive", { entity: assessment.entity_id })
+    : comfortSensorSourceDetail(host, entityId, settings, field, kind);
   const emptyOptionKey = kind === "co2" ? "comfortDoNotMonitor" : "comfortSelectSensor";
   return html`
     <label class="comfort-config-row comfort-picker-row">
@@ -1713,15 +1718,95 @@ function renderComfortSensorPicker(
   `;
 }
 
+function hasComfortBackup(
+  kind: ComfortBackupMetric,
+  settings: ComfortSettings,
+  assessment?: ComfortMetricAssessment,
+): boolean {
+  const preferredEntity = settings[`${kind}_entity_id`];
+  return Boolean(
+    (kind !== "humidity" || settings.humidity_enabled)
+    && preferredEntity
+    && assessment?.fallback_entity_id
+    && assessment.fallback_entity_id !== preferredEntity,
+  );
+}
+
+function renderComfortBackupSensors(
+  host: ComfortViewHost,
+  entityId: string,
+  settings: ComfortSettings,
+  assessment?: ComfortAssessment,
+) {
+  const metrics = (["temperature", "humidity"] as const)
+    .filter((kind) => hasComfortBackup(kind, settings, assessment?.[kind]));
+  if (!metrics.length) return nothing;
+  const id = `comfort-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}-backups`;
+  return html`
+    <section class="comfort-backup-sensors" aria-labelledby=${`${id}-title`}>
+      <h4 id=${`${id}-title`}>
+        <ha-icon icon="mdi:swap-horizontal" aria-hidden="true"></ha-icon>
+        ${host._t("comfortBackupSensors")}
+      </h4>
+      <p class="comfort-backup-description" id=${`${id}-description`}>${host._t("comfortBackupSensorsDescription")}</p>
+      <div class="comfort-backup-options">
+        ${metrics.map((kind) => renderComfortBackupRow(host, entityId, settings, kind, assessment![kind]!, id))}
+      </div>
+    </section>
+  `;
+}
+
+function renderComfortBackupRow(
+  host: ComfortViewHost,
+  entityId: string,
+  settings: ComfortSettings,
+  kind: ComfortBackupMetric,
+  assessment: ComfortMetricAssessment,
+  id: string,
+) {
+  const fallbackEntity = assessment.fallback_entity_id!;
+  const fallbackField = `${kind}_fallback_enabled` as const;
+  const labelKey = kind === "temperature" ? "comfortTemperature" : "comfortHumidity";
+  return html`
+    <div class=${`comfort-backup-row metric-${kind}`}>
+      <label class="comfort-backup-toggle">
+        <input
+          type="checkbox"
+          .checked=${settings[fallbackField]}
+          ?disabled=${host._settingsSaving}
+          aria-label=${host._t(kind === "temperature" ? "comfortTemperatureFallback" : "comfortHumidityFallback")}
+          aria-describedby=${`${id}-description ${id}-${kind}-source`}
+          @change=${(event: Event) => {
+            host._saveZoneComfort(entityId, {
+              [fallbackField]: (event.currentTarget as HTMLInputElement).checked,
+            });
+          }}
+        />
+        <ha-icon icon=${kind === "temperature" ? "mdi:thermometer" : "mdi:water-percent"} aria-hidden="true"></ha-icon>
+        <span>${host._t(labelKey)}</span>
+      </label>
+      <span class="comfort-backup-source" id=${`${id}-${kind}-source`}>${fallbackEntity}</span>
+      ${assessment.using_fallback
+        ? html`<span class="comfort-backup-active" role="status">${host._t("comfortBackupInUse")}</span>`
+        : nothing}
+    </div>
+  `;
+}
+
 function configuredDirectComfortSources(
   host: ComfortViewHost,
   entityId: string,
   settings: ComfortSettings,
+  assessment?: ComfortAssessment,
 ): string[] {
   const roomSensor = host._data?.zones[entityId]?.preconditioning?.room_temperature_entity_id;
   const sources = [
     settings.temperature_entity_id || roomSensor,
+    settings.temperature_fallback_enabled && hasComfortBackup("temperature", settings, assessment?.temperature)
+      ? assessment?.temperature?.fallback_entity_id : null,
     settings.humidity_enabled ? settings.humidity_entity_id : null,
+    settings.humidity_fallback_enabled && hasComfortBackup("humidity", settings, assessment?.humidity)
+      ? assessment?.humidity?.fallback_entity_id : null,
     settings.co2_entity_id,
     ...(settings.outdoor_comparison_enabled
       ? [settings.outdoor_temperature_entity_id, settings.outdoor_humidity_entity_id]
@@ -1772,11 +1857,20 @@ function renderComfortFreshnessSummary(
   const climateUnverified = [assessment?.temperature, assessment?.humidity].some(
     (metric) => metric?.source === "climate" && metric.freshness === "unverified",
   );
-  return html`<div class="comfort-freshness-status">
-    <p>${host._t("comfortDataUnverified")} (${unverifiedReadings.join(", ")})</p>
-    <p>${host._t("comfortReadingFreshnessHelp")}</p>
-    ${climateUnverified ? html`<p>${host._t("comfortClimateSourceFreshnessHelp")}</p>` : nothing}
-  </div>`;
+  return html`
+    <details class="comfort-freshness-status">
+      <summary>
+        <ha-icon icon="mdi:information-outline" aria-hidden="true"></ha-icon>
+        <strong>${host._t("comfortDataUnverified")}</strong>
+        <ha-icon class="comfort-freshness-chevron" icon="mdi:chevron-down" aria-hidden="true"></ha-icon>
+      </summary>
+      <div class="comfort-freshness-content">
+        <p class="comfort-freshness-metrics">(${unverifiedReadings.join(", ")})</p>
+        <p>${host._t("comfortReadingFreshnessHelp")}</p>
+        ${climateUnverified ? html`<p>${host._t("comfortClimateSourceFreshnessHelp")}</p>` : nothing}
+      </div>
+    </details>
+  `;
 }
 
 function hasComfortMetricSource(

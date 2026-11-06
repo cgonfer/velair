@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.0-beta.10 |
+| Ostatnia synchronizacja | 2026-11-05 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -50,7 +50,7 @@ Przy **Nie skonfigurowano** pary stałego trybu są wysyłane bez zmian i bez ko
 
 1. Otwórz kartę Room Assist.
 2. Rozwiń urządzenie, które chcesz skonfigurować.
-3. Wybierz czujnik temperatury pomieszczenia.
+3. W sekcji **Asystent czujnika pokojowego** wybierz **Stały czujnik** lub **Według harmonogramu**, skonfiguruj wybraną opcję i zapisz zmianę sposobu działania.
 4. Włącz **Asystent czujnika pokojowego**.
 5. Ustaw strefę nieczułości Room Assist dla stałego ogrzewania lub chłodzenia wokół pojedynczego celu lub wybranego odniesienia zakresu; dla automatycznych pojedynczych celów i natywnych pasm `heat_cool` określa ona neutralny margines.
 6. Zwiększ ustawienie **Maksymalna delta wspomagania**, jeśli domyślna wartość jest za mała dla pomieszczenia lub dla różnicy temperatur, której termostat potrzebuje do zatrzymania ogrzewania albo chłodzenia.
@@ -68,7 +68,26 @@ Strefa nieczułości jest niezależna od minimalnej różnicy adaptacyjnego przy
 
 Skala temperatury pokazuje strefę nieczułości jako neutralny, kreskowany pas. Dla pojedynczej temperatury w stałym trybie jego krawędzie oznaczają granice histerezy, a stan wskazuje, do której granicy zmierza Room Assist. Dla pojedynczych temperatur w trybach automatycznych pas pozostaje marginesem neutralnym. Dla natywnego zakresu `heat_cool` rozciąga się od dolnej granicy pomniejszonej o strefę nieczułości do górnej granicy powiększonej o nią. Skala rozszerza się, aby obie krawędzie były widoczne. Pełna, przetłumaczona legenda pozostaje wyśrodkowana względem rzeczywistego pasa, nawet jeśli tekst jest szerszy, więc znaczenie nie zależy od szerokości wykresu. Pełne objaśnienie jest także dostępne dla technologii wspomagających i po najechaniu kursorem. Przy wartości `0` pas nie jest rysowany, a legenda wyraźnie informuje o braku strefy nieczułości. Wykres i legenda korzystają z wartości zapisanej w backendzie. Ukrycie `show_room_assist_deadband` w karcie Lovelace ukrywa jednocześnie ustawienie, pas i legendę.
 
-Przy aktualizacji z wersji, w której Room Assist współdzieliło minimalną różnicę z adaptacyjnym przygotowaniem, Velair jednorazowo kopiuje dotychczasową wartość do nowej strefy nieczułości. Zachowuje wcześniejszą szerokość pasa, również gdy historyczna wartość nie jest wielokrotnością nowego kroku 0,1 stopnia. Stałe tryby `heat` i `cool` korzystają następnie z tej wartości w opisanym niżej cyklu histerezy. Po migracji oba ustawienia są niezależne. Nowa lub zresetowana strefa otrzymuje wartość domyślną odpowiednią dla jednostki.
+Wyświetlana jest tylko wybrana opcja. Gdy **Stały czujnik** jest już zapisanym sposobem działania, zmiana jego czujnika zapisuje się natychmiast. Przełączanie między **Stały czujnik** a **Według harmonogramu** zmienia wersję roboczą: **Zapisz** stosuje wybór i jego ustawienia, a **Anuluj** przywraca zapisaną konfigurację. Przy przełączaniu zachowywane są stały czujnik i zapisany harmonogram; obie opcje nie są aktywne jednocześnie.
+
+
+<a id="optional-sensor-schedule-beta"></a>
+
+### Opcjonalny harmonogram czujników (beta)
+
+Room Assist może używać różnych źródeł temperatury w ciągu tygodnia bez zmiany harmonogramów temperatury, profili ani trybów. Aby je skonfigurować, wybierz **Według harmonogramu** w sekcji **Asystent czujnika pokojowego**. Wybierz **Stały czujnik**, aby wrócić do stałego czujnika pokojowego.
+
+Wybierz domyślne źródło odniesienia i dodaj przedziały z dniami tygodnia, godzinami początku i końca oraz źródłem odniesienia. Zapisz cały szkic, aby go zastosować; Anuluj odrzuca zmiany. Źródłami mogą być czujniki temperatury dostępne w Home Assistant albo własna temperatura urządzenia klimatyzacyjnego. Poza przedziałami obowiązuje domyślne źródło. Przedziały mogą przechodzić przez północ i są przypisane do wybranych dni rozpoczęcia; nakładające się przedziały są odrzucane. Godzina początku jest włączona, a końca wyłączona. Obowiązuje strefa czasowa skonfigurowana w Home Assistant.
+
+Na przykład wybierz **Bez korekty Room Assist** jako źródło domyślne i czujnik w gabinecie od 08:00 do 17:00 od poniedziałku do piątku. Istniejące letnie/zimowe harmonogramy temperatury nadal określają żądaną temperaturę. W godzinach pracy Room Assist oblicza korekcje na podstawie czujnika w gabinecie. Poza nimi Velair wysyła zwykłą zaplanowaną nastawę, a termostat reguluje na podstawie własnego źródła odniesienia. Nie zmienia to fizycznego czujnika używanego wewnętrznie przez oprogramowanie urządzenia.
+
+Jedyny przełącznik Room Assist decyduje o włączeniu wspomagania. Wyłączenie go zachowuje obie zapisane konfiguracje. Wybranie **Stały czujnik** i zapisanie przywraca zachowany stały czujnik pokojowy. Jeżeli źródło zewnętrzne jest niedostępne, Velair wstrzymuje korekcję i używa zwykłej zaplanowanej nastawy, gdy sprawuje automatyczne sterowanie; nie wybiera po cichu innego pomieszczenia ani nie używa ponownie starego odczytu. Wspomaganie jest wznawiane, gdy to źródło znów nadaje się do użycia.
+
+Zmiany źródła odniesienia nie odbierają sterowania regulacji ręcznej, funkcji Boost ani pauzom. Po wznowieniu sterowania automatycznego Velair używa źródła obowiązującego w danej chwili. W grupach pomieszczeń własna temperatura urządzenia oznacza skonfigurowane źródło temperatury odniesienia grupy.
+
+**Ograniczenie wersji beta:** źródło odniesienia zmienia się dokładnie o zaplanowanej godzinie. Adaptacyjne przygotowanie wstępne nie uruchamia wcześniejszego celu obejmującego zmianę źródła odniesienia; po tej zmianie wykonuje obliczenia ponownie. Przełączenie pomieszczenia nie jest żądaniem wcześniejszego przygotowania następnego pokoju. Obserwacje uczenia są dopasowywane do źródła temperatury, aby skok odczytu między pomieszczeniami nie był interpretowany jako ogrzewanie lub chłodzenie.
+
+Wszystkie wybrane odczyty zewnętrzne muszą być dostępne niezależnie w Home Assistant. W przypadku Nest konfiguracja wykorzystująca oficjalną integrację termostatu i inną integrację zdalnego czujnika wymaga sprawdzenia w instalacji. Utrzymuj stałe własne źródło odniesienia Nest, jeśli odczyt termostatu ma być stabilnym odniesieniem dla pomieszczenia. Velair nie wybiera wewnętrznego aktywnego czujnika Nest. Wspólny system HVAC nadal oddziałuje na wszystkie obsługiwane pomieszczenia; wybór źródła odniesienia nie tworzy niezależnych stref fizycznych.
 
 <a id="room-groups"></a>
 ### Grupy pomieszczeń

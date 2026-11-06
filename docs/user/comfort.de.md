@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.0-beta.10 |
+| Letzte Synchronisierung | 2026-11-06 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -31,11 +31,14 @@ Die Funktion überwacht lokal verfügbare Temperatur-, Luftfeuchtigkeits- und CO
 <a id="sources"></a>
 ## Quellen
 
-Für die Temperatur wird die erste verfügbare Quelle in dieser Reihenfolge verwendet:
+Für die Temperatur wird die konfigurierte Quelle in dieser Reihenfolge ausgewählt:
 
 1. der im Komfort-Tab ausgewählte Temperatursensor;
 2. der für das Klimagerät konfigurierte Room-Assist-Sensor;
 3. `current_temperature` der Klimaentität.
+
+Damit wird eine bevorzugte Quelle ausgewählt. Liefert sie keine nutzbare
+Temperatur mehr, wird nicht automatisch zu einer anderen Quelle gewechselt.
 
 Bei gruppierten Geräten verwendet die automatische Temperatur das physische `current_temperature` des Mitglieds; der Room-Assist-Sensor der Gruppe wird nicht übernommen. Wähle bei Bedarf einen externen Sensor ausdrücklich in den Behaglichkeitseinstellungen dieses Mitglieds.
 
@@ -49,6 +52,45 @@ Die Standardoption `Automatische Quelle verwenden` behält dieses automatische V
 CO2 wird nur überwacht, wenn ein CO2-Sensor ausgewählt ist.
 
 Die wirksame Entitäts-ID erscheint unter jeder Auswahl. Optionale Messgrößen ohne Quelle gelten nicht als Fehler.
+
+<a id="backup-sensors"></a>
+
+### Ersatzsensoren
+
+Wenn ein ausgewählter Temperatur- oder Luftfeuchtigkeitssensor eine andere
+Standardquelle hat, erscheint unter **Datenquellen** ein eigener Unterabschnitt
+**Ersatzsensoren**. Jede Zeile enthält ein Kontrollkästchen, die Bezeichnung und
+das Symbol für Temperatur oder Luftfeuchtigkeit sowie die genaue Entitäts-ID
+der Ersatzquelle. Beide Kontrollkästchen sind standardmäßig deaktiviert.
+
+- **Temperatur** verwendet den für dieses physische Klimagerät konfigurierten
+  Temperatursensor oder dessen eigenes `current_temperature`, wenn kein Raumsensor konfiguriert ist.
+- **Luftfeuchtigkeit** verwendet nur das gemessene `current_humidity` des
+  Klimageräts. Eine Ersatzquelle erscheint nur, wenn diese Messquelle unterstützt
+  wird. Der Zielwert `humidity` wird niemals als Messwert verwendet.
+
+Zeilen erscheinen nur für ausdrücklich ausgewählte Sensoren mit einer anderen
+Standardquelle. **Automatische Quelle verwenden** oder die Auswahl der
+Standardquelle selbst entfernt die Zeile und deaktiviert ihre gespeicherte
+Ersatzquellen-Einstellung. Das Abschalten der Luftfeuchtigkeitsüberwachung
+deaktiviert auch deren gespeicherte Ersatzquelle. Hinter einer automatischen
+Quelle gibt es keine zusätzliche Ersatzquelle.
+
+Bei aktivierter Ersatzquelle kann ein fehlender, nicht verfügbarer, unbekannter
+oder nicht numerischer ausgewählter Messwert diese eine Ersatzquelle nutzen,
+sofern deren Messwert aktuell und gültig ist. **Ersatzsensor aktiv** kennzeichnet
+die aktive Ersatzquelle. Der ausgewählte Sensor bleibt gespeichert und wird
+nach seiner Wiederherstellung wieder für den Komfort verwendet. Ein veralteter
+ausgewählter Messwert löst keinen Wechsel aus; eine veraltete Ersatzquelle wird
+nicht verwendet. Hat keine Quelle einen nutzbaren Messwert, zeigt der Komfort
+weiterhin den Zustand für fehlende oder veraltete Daten.
+
+Diese Einstellungen werden pro physischem Klimagerät gespeichert und bleiben
+bei Neustart und portablem Export/Import erhalten. Bestehende Konfigurationen
+lassen beide Ersatzquellen deaktiviert. Raumgruppenmitglieder behalten eigene
+Einstellungen und übernehmen nie den Steuersensor der Gruppe als Ersatzquelle.
+Die Ersatzquellen betreffen nur die Komfortbeobachtung; Room Assist,
+Vorkonditionierung, Klimasteuerung und CO2-Überwachung bleiben unverändert.
 
 <a id="comfort-models"></a>
 ## Komfortmodelle
@@ -187,7 +229,17 @@ Velair stellt einen Datenqualitätswert bereit:
 - `stale`: es gibt keinen aktuellen Messwert und alle überwachten Quellen sind veraltet;
 - `unavailable`: aus einem anderen Grund ist kein aktueller Messwert nutzbar.
 
-Der Tab Behaglichkeit gruppiert nutzbare Messwerte mit nicht überprüfbarer Aktualität neben den Sensorauswahlen unter **Konfiguration → Datenquellen**. Eine dezente Erklärung nennt die betroffenen Werte: Ein unbekannter Messzeitpunkt bedeutet weder falsche Werte noch einen unbehaglichen Raum. Übersicht und Lovelace-Karten lassen diesen Routinezustand weg; die Diagnose behält den technischen Kontext. Das ist eine gültige automatische Gerätequelle, kein Konfigurationsfehler. Fehlende oder veraltete Werte erzeugen weiterhin eine Warnung in der Zonenliste.
+Der Tab Behaglichkeit gruppiert nutzbare Messwerte mit nicht überprüfbarer
+Aktualität neben den Sensorauswahlen unter **Konfiguration → Datenquellen**.
+Ein eingeklappter Informationsbereich nennt die betroffenen Werte. Beim Öffnen
+erscheint die vollständige Erklärung: Die Werte sind nutzbar, ein unbekannter
+Messzeitpunkt bedeutet weder falsche Werte noch einen unbehaglichen Raum, und
+die Aktualität der Thermostatmessung lässt sich bei Verwendung ihres Messwerts
+nicht separat überprüfen. Übersicht und Lovelace-Karten lassen diesen
+Routinezustand weg; die Diagnose behält den technischen Kontext. Das ist eine
+gültige automatische Gerätequelle, kein Konfigurationsfehler. Fehlende oder
+veraltete Werte erzeugen weiterhin eine Warnung in der Zonenliste. Die separaten
+Bedienelemente für **Datenaktualität** behalten ihr bisheriges Verhalten.
 
 <a id="visual-status"></a>
 ## Visuelle Statusanzeige

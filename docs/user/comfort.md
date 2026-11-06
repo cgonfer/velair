@@ -24,11 +24,14 @@ It monitors locally available temperature, humidity, and CO2 readings. It does n
 
 ## Sources
 
-Temperature uses the first available source in this order:
+Temperature uses the configured source, selected in this order:
 
 1. the temperature sensor selected in the Comfort tab;
 2. the Room Assist sensor configured for that climate;
 3. the climate entity's `current_temperature`.
+
+This selects a preferred source; it does not automatically switch sources when
+that source stops reporting a usable temperature.
 
 For grouped climates, automatic temperature uses the physical member's
 `current_temperature`; the group's Room Assist sensor is not inherited. Select
@@ -44,6 +47,38 @@ The default `Use automatic source` option keeps this automatic behavior. Select 
 CO2 is monitored only when a CO2 sensor is selected.
 
 The effective entity ID appears below every selector. Optional metrics without a source are not treated as failures.
+
+### Backup sensors
+
+When a selected temperature or humidity sensor has a different default source,
+**Data sources** shows a separate **Backup sensors** subsection. Each row has
+its own checkbox, a Temperature or Humidity label and icon, and the exact backup
+entity ID. Both checkboxes are off by default.
+
+- **Temperature** uses the temperature sensor configured for that physical
+  climate, or its own `current_temperature` if no room sensor is configured.
+- **Humidity** uses only the climate's measured `current_humidity`. A humidity
+  backup appears only when that measured source is supported; the target
+  `humidity` setting is never used as a reading.
+
+Rows appear only for explicitly selected sensors with a different default source.
+Choosing **Use automatic source** or selecting the default source itself removes
+that row and clears its saved backup setting. Disabling humidity monitoring also
+clears the humidity backup setting. There is no additional backup behind an
+automatic source.
+
+With a backup enabled, a missing, unavailable, unknown, or non-numeric selected
+reading can use that one backup, provided its reading is current and valid.
+**Fallback in use** identifies the active backup. The selected sensor remains
+saved, and Comfort returns to it when it recovers. A stale selected reading does
+not trigger fallback, and a stale backup is not used. If neither source has a
+usable reading, Comfort continues to show the missing or stale state.
+
+These settings are saved per physical climate and survive restart and portable
+export/import. Existing configurations keep both backups off. Room-group members
+keep independent settings and never inherit the group's control sensor as a
+backup. Backups affect only Comfort observation; they do not change Room Assist,
+preconditioning, climate control, or CO2 monitoring.
 
 ## Comfort Models
 
@@ -314,7 +349,16 @@ Velair exposes one data-quality value:
 - `stale`: no current reading exists and every monitored source is stale;
 - `unavailable`: no current reading can be used for another reason.
 
-The Comfort tab groups usable readings whose freshness cannot be verified beside the sensor selectors in **Configuration → Data sources**. A quiet explanation identifies the affected readings and clarifies that an unknown measurement time does not mean the values are incorrect or the room is uncomfortable. Overview and Lovelace cards omit this routine status; Diagnostics retains the technical freshness context. This is a valid automatic climate-source setup, not a configuration error. Missing or stale readings still show a warning in the zone list.
+The Comfort tab groups usable readings whose freshness cannot be verified beside
+the sensor selectors in **Configuration → Data sources**. A collapsed information
+disclosure identifies the affected readings. Open it to read the full explanation:
+the readings can be used, an unknown measurement time does not mean they are
+incorrect or the room is uncomfortable, and the thermostat's measurement
+freshness cannot be checked separately when its reading is used. Overview and
+Lovelace cards omit this routine status; Diagnostics retains the technical
+freshness context. This is a valid automatic climate-source setup, not a
+configuration error. Missing or stale readings still show a warning in the zone
+list. The separate **Data freshness** controls keep their existing behavior.
 
 ## Visual Status
 

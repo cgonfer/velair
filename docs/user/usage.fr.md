@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.7 |
-| Dernière synchronisation | 2026-10-30 |
+| Version de référence | 1.9.0-beta.10 |
+| Dernière synchronisation | 2026-11-05 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -1149,9 +1149,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v25 conservent les valeurs brutes et
+Les exports actuels du format portable v26 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v25 ; utilisez une version prenant en charge v25 pour les
+les exports v26 ; utilisez une version prenant en charge v26 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1579,7 +1579,7 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du modèle 25 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 25. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+Les exports actuels du modèle 26 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 26. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin

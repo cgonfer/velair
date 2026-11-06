@@ -39,6 +39,7 @@ Use these terms consistently when translating Velair user documentation. Keep Ho
 | return setup | configuración de retorno | configuration de retour |
 | Room Assist | Room Assist | Room Assist |
 | Environmental Comfort | Confort ambiental | Confort environnemental |
+| Backup sensors | Sensores de respaldo | Capteurs de secours |
 | Environmental condition | Estado ambiental | Conditions ambiantes |
 | relative humidity | humedad relativa | humidité relative |
 | absolute humidity | humedad absoluta | humidité absolue |

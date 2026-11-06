@@ -1,3 +1,4 @@
+import { climateCardBoostTemperatureError, climateCardBoostTargetPayload, type ClimateCardBoostDraft } from "../domain/climate-card-boost";
 import { controlUnitId, controlUnitIds, controlUnitState, controlUnitZone } from "../domain/control-units";
 import { targetFormatsForEntity } from "../domain/target-format-policy";
 import { activeClimateProfileZoneEffect } from "../domain/climate-profiles";
@@ -57,6 +58,7 @@ import type {
   ScheduleResponse,
   ScheduleTemplate,
   PreconditioningSettings,
+  PreconditioningSettingsUpdate,
   VelairCardConfig,
   VelairCardView,
   VelairPortablePayload,
@@ -423,20 +425,7 @@ export class VelairCard extends LitElement {
 
   @state() private _config: VelairCardConfig = {};
   @state() private _changedNextEventIds = new Set<string>();
-  @state() private _climateCardBoost?: {
-    entityId: string;
-    durationMinutes: number;
-    targetKind: "single" | "range";
-    target?: number;
-    low?: number;
-    high?: number;
-    hvacMode?: string;
-    fanMode?: string;
-    presetMode?: string;
-    swingMode?: string;
-    swingHorizontalMode?: string;
-    humidity?: number;
-  };
+  @state() private _climateCardBoost?: ClimateCardBoostDraft;
   @state() private _climateCardPause?: {
     entityId: string;
     indefinite: boolean;
@@ -2285,7 +2274,8 @@ export class VelairCard extends LitElement {
     const numeric = Number(value);
     this._climateCardBoost = {
       ...this._climateCardBoost,
-      [field]: value.trim() && Number.isFinite(numeric) ? numeric : undefined,
+      [field]: field === "target" || field === "low" || field === "high"
+        ? value : value.trim() && Number.isFinite(numeric) ? numeric : undefined,
     };
   }
 
@@ -2324,12 +2314,20 @@ export class VelairCard extends LitElement {
       if (action === "boost") {
         const boost = this._climateCardBoost;
         if (!boost || boost.entityId !== entityId) return;
+        const [minimum, maximum] = this._entityTemperatureLimits(entityId);
+        const step = this._entityTemperatureStep(entityId) ?? 0.5;
+        const humidityLimits = this._entityHumidityLimits(entityId);
+        if (climateCardBoostTemperatureError(boost, minimum, maximum, step)
+          || !Number.isInteger(boost.durationMinutes) || boost.durationMinutes < 1 || boost.durationMinutes > 10080
+          || (boost.humidity !== undefined && (!Number.isInteger(boost.humidity) || !humidityLimits
+            || boost.humidity < humidityLimits[0] || boost.humidity > humidityLimits[1]))) {
+          this._error = this._t("climateCardActionFailed");
+          return;
+        }
         const data: Record<string, unknown> = {
           entity_id: entityId,
           duration_minutes: boost.durationMinutes,
-          ...(boost.targetKind === "range"
-            ? { target_temp_low: boost.low, target_temp_high: boost.high }
-            : { temperature: boost.target }),
+          ...climateCardBoostTargetPayload(boost),
         };
         if (boost.hvacMode) data.hvac_mode = boost.hvacMode;
         if (boost.fanMode) data.fan_mode = boost.fanMode;
@@ -2489,7 +2487,7 @@ export class VelairCard extends LitElement {
 
   private async _saveZonePreconditioning(
     entityId: string,
-    preconditioning: Partial<PreconditioningSettings>,
+    preconditioning: PreconditioningSettingsUpdate,
   ): Promise<void> {
     await saveZonePreconditioning(asSettingsActionsHost(this), entityId, preconditioning);
   }
@@ -2541,6 +2539,7 @@ export class VelairCard extends LitElement {
     }
     this._expandedPreconditioningZones = expandedZones;
   }
+
 
   private _toggleComfortZone(entityId: string): void {
     const expandedZones = new Set(this._expandedComfortZones);

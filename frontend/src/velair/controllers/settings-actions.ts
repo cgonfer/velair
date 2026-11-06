@@ -1,7 +1,7 @@
 import { controlUnitIds } from "../domain/control-units";
 import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
-import type { ComfortSettingsUpdate, PanelSettings, PreconditioningSettings, ScheduleResponse, VelairCardConfig } from "../types";
+import type { ComfortSettingsUpdate, PanelSettings, PreconditioningSettingsUpdate, ScheduleResponse, VelairCardConfig } from "../types";
 
 type SettingsActionsHost = {
   _config: VelairCardConfig;
@@ -67,7 +67,7 @@ export async function saveSettings(host: SettingsActionsHost, settings: Partial<
 export async function saveZonePreconditioning(
   host: SettingsActionsHost,
   entityId: string,
-  preconditioning: Partial<PreconditioningSettings>,
+  preconditioning: PreconditioningSettingsUpdate,
 ): Promise<void> {
   const api = host._api();
   if (!api) {

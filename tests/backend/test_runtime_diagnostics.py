@@ -172,6 +172,150 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
             "operation_recovery": None,
         }
 
+    def test_confirmation_preserves_acceptance_and_retains_recovered_history(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "confirmation_pending", {
+            "retry_count": 0, "reason": "target_not_confirmed",
+            "expected": {entity: {"temperature": 21.5}},
+            "observed": {entity: {"temperature": 22}},
+        })
+        pending = self.manager.snapshot(self.runtime)["units"][entity]["delivery"]
+        self.assertEqual("success", pending["status"])
+        self.assertEqual("pending", pending["confirmation"]["status"])
+        self.manager.observe_delivery(entity, "recovered", {
+            "retry_count": 1, "reason": "target_not_confirmed",
+        })
+        snapshot = self.manager.snapshot(self.runtime)
+        delivery = snapshot["units"][entity]["delivery"]
+        self.assertEqual("success", delivery["status"])
+        self.assertEqual("recovered", delivery["confirmation"]["status"])
+        self.assertEqual(1, delivery["confirmation"]["retry_count"])
+        self.assertIn("updated_at", delivery["confirmation"])
+        self.assertIn({"status": "recovered", "retry_count": 1,
+                       "reason": "target_not_confirmed"},
+                      [item["data"] for item in snapshot["history"]])
+
+    def test_success_can_include_confirmation_without_normal_history(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success", {
+            "retry_count": 0, "confirmation": {"status": "confirmed", "retry_count": 0},
+        })
+        snapshot = self.manager.snapshot(self.runtime)
+        delivery = snapshot["units"][entity]["delivery"]
+        self.assertEqual("success", delivery["status"])
+        self.assertEqual("confirmed", delivery["confirmation"]["status"])
+        self.assertEqual([], snapshot["history"])
+
+    def test_unconfirmed_warns_until_a_reported_confirmation(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "unconfirmed", {
+            "retry_count": 2, "reason": "target_not_confirmed",
+        })
+        unit = self.manager.snapshot(self.runtime)["units"][entity]
+        self.assertEqual("warning", unit["status"])
+        self.assertIn({"severity": "warning", "code": "delivery_unconfirmed"}, unit["issues"])
+        self.assertNotIn({"severity": "error", "code": "delivery_unconfirmed"}, unit["issues"])
+        self.manager.observe_delivery(entity, "confirmation_confirmed", {"retry_count": 2})
+        unit = self.manager.snapshot(self.runtime)["units"][entity]
+        self.assertNotIn("delivery_unconfirmed", [issue["code"] for issue in unit["issues"]])
+        self.assertEqual("success", unit["delivery"]["status"])
+        self.assertEqual("confirmed", unit["delivery"]["confirmation"]["status"])
+
+    def test_confirmation_export_redacts_receipt_entity_keys_and_filters_extra_details(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "unconfirmed", {
+            "retry_count": 2, "reason": "target_not_confirmed",
+            "expected": {entity: {"temperature": 21.5}},
+            "observed": {entity: {"temperature": 22}},
+            "protocol_response": "private payload", "message": "private payload",
+        })
+        snapshot = self.manager.snapshot(self.runtime)
+        self.assertNotIn("private payload", str(snapshot))
+        self.assertEqual({entity: {"temperature": 21.5}},
+                         snapshot["units"][entity]["delivery"]["confirmation"]["expected"])
+        report = self.manager.export_snapshot(self.runtime)
+        self.assertNotIn(entity, str(report))
+        self.assertIn("21.5", str(report))
+        self.assertIn("22", str(report))
+
+    def test_compact_confirmation_does_not_change_public_delivery_status(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "recovered", {"retry_count": 1})
+        compact = self.manager.zone_delivery_diagnostics(entity)
+        self.assertEqual("success", compact["status"])
+        self.assertEqual("recovered", compact["confirmation"]["status"])
+        self.assertEqual(1, compact["confirmation"]["retry_count"])
+        self.assertEqual({"status", "retry_count", "updated_at"}, set(compact["confirmation"]))
+
+    def test_cancelled_delivery_retires_pending_confirmation(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "confirmation_pending", {"retry_count": 0})
+        self.manager.observe_delivery(entity, "cancelled")
+        delivery = self.manager.snapshot(self.runtime)["units"][entity]["delivery"]
+        self.assertEqual("cancelled", delivery["status"])
+        self.assertNotIn("confirmation", delivery)
+
+    def test_confirmation_keeps_reported_mode_for_turn_on_fallback(self) -> None:
+        entity = "climate.living_room"
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "confirmation_pending", {
+            "expected": {entity: {"__not_off__": True}},
+            "observed": {entity: {"__not_off__": "heat"}},
+        })
+        evidence = self.manager.snapshot(self.runtime)["units"][entity]["delivery"]["confirmation"]
+        self.assertEqual({entity: {"__not_off__": True}}, evidence["expected"])
+        self.assertEqual({entity: {"__not_off__": "heat"}}, evidence["observed"])
+
+    def test_unconfirmed_warning_replaces_only_its_same_legacy_comparison(self) -> None:
+        entity = "climate.living_room"
+        mismatches = {"temperature": {"expected": 21.5, "observed": 22}}
+        self.runtime["climate_manager"] = SimpleNamespace(
+            command_settling_diagnostics=lambda _entity: {"mismatches": mismatches},
+        )
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "unconfirmed", {
+            "retry_count": 2, "expected": {entity: {"temperature": 21.5}},
+        })
+        unit = self.manager.snapshot(self.runtime)["units"][entity]
+        self.assertIn("delivery_unconfirmed", [issue["code"] for issue in unit["issues"]])
+        self.assertNotIn("command_settling_mismatch", [issue["code"] for issue in unit["issues"]])
+        self.assertEqual(mismatches, unit["command_settling"]["mismatches"])
+
+    def test_unconfirmed_warning_does_not_hide_an_unrelated_legacy_field(self) -> None:
+        entity = "climate.living_room"
+        self.runtime["climate_manager"] = SimpleNamespace(
+            command_settling_diagnostics=lambda _entity: {"mismatches": {
+                "temperature": {"expected": 21.5, "observed": 22},
+                "hvac_mode": {"expected": "cool", "observed": "heat"},
+            }},
+        )
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "unconfirmed", {
+            "retry_count": 2, "expected": {entity: {"temperature": 21.5}},
+        })
+        unit = self.manager.snapshot(self.runtime)["units"][entity]
+        self.assertIn("delivery_unconfirmed", [issue["code"] for issue in unit["issues"]])
+        self.assertIn("command_settling_mismatch", [issue["code"] for issue in unit["issues"]])
+
+    def test_unconfirmed_warning_does_not_hide_a_different_legacy_target(self) -> None:
+        entity = "climate.living_room"
+        self.runtime["climate_manager"] = SimpleNamespace(
+            command_settling_diagnostics=lambda _entity: {"mismatches": {
+                "temperature": {"expected": 24, "observed": 22},
+            }},
+        )
+        self.manager.observe_delivery(entity, "success")
+        self.manager.observe_delivery(entity, "unconfirmed", {
+            "retry_count": 2, "expected": {entity: {"temperature": 21.5}},
+        })
+        unit = self.manager.snapshot(self.runtime)["units"][entity]
+        self.assertIn("command_settling_mismatch", [issue["code"] for issue in unit["issues"]])
+
     def test_snapshot_includes_heat_cool_runtime_evidence(self) -> None:
         unit = self.manager.snapshot(self.runtime)["units"]["climate.living_room"]
         self.assertIn("heat_cool", unit["capabilities"]["hvac_modes"])

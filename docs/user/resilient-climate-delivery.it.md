@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](resilient-climate-delivery.md) · [Español](
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.10 |
+| Ultima sincronizzazione | 2026-11-04 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -24,7 +24,13 @@ Se un’entità diventa `unknown` o `unavailable`, Velair attende che Home Assis
 
 Per esempio, supponiamo che un profilo Assenza richiedesse 17 °C mentre un termostato era offline. Se prima della riconnessione viene selezionata la modalità Presenza, Velair risolve e invia l’obiettivo attuale di Presenza, anziché il comando ormai superato a 17 °C. La stessa regola vale per modalità, incremento, pausa, Room Assist e precondizionamento adattivo anticipato.
 
-Quando Home Assistant rifiuta esplicitamente una chiamata climatica, Velair effettua al massimo due ulteriori tentativi: dopo circa 2 secondi e 10 secondi. Un nuovo intento o l’arresto/la rimozione di Velair annulla le operazioni in attesa per quel dispositivo.
+Quando Home Assistant rifiuta una chiamata climatica, oppure la accetta ma il dispositivo continua a riportare un obiettivo diverso, Velair effettua al massimo due ulteriori tentativi in quell’episodio di invio. Il primo attende circa 2 secondi e il secondo altri 10 secondi circa. Dopo l’ultimo tentativo accettato, Velair attende 5 secondi per la segnalazione dell’obiettivo. Una segnalazione corrispondente può completare prima la conferma; i dispositivi che riportano il valore richiesto non richiedono nuovi tentativi.
+
+Il ripristino è indipendente per ogni zona gestita. Se più dispositivi separati cambiano blocco contemporaneamente, solo quello il cui obiettivo rimane diverso riceve un nuovo tentativo. Gli altri dispositivi non vengono ritardati né ricevono di nuovo i comandi. Questi controlli usano gli stati riportati da Home Assistant e i listener esistenti dei cambiamenti di stato, senza letture periodiche del dispositivo.
+
+Prima di riprovare, Velair verifica nuovamente l’intento attuale, compresi eventuali nuovi blocchi, incrementi o pause. Un nuovo intento o l’arresto/la rimozione di Velair annulla le operazioni obsolete in attesa per quel dispositivo. Diagnostica mostra se la conferma è in attesa, ottenuta, ripristinata dopo un nuovo tentativo o ancora assente. Anche un errore silenzioso risolto rimane nella cronologia limitata degli invii.
+
+Una vera transizione da non disponibile a disponibile mantiene il ripristino alla riconnessione. Se una conferma o un ripristino è già in attesa, vengono mantenuti la scadenza originale e il numero di tentativi ancora disponibili; una segnalazione corrispondente può completare la conferma senza un altro comando. Altrimenti, la riconnessione avvia un nuovo episodio di invio per l’obiettivo attuale. Le normali segnalazioni di temperatura, umidità o obiettivo non azzerano un numero di tentativi già esaurito. Una segnalazione tardiva corrispondente all’obiettivo richiesto elimina la discrepanza senza inviare un altro comando.
 
 Le azioni manuali sulla temperatura vengono eseguite una sola volta. Velair non applica in ritardo un vecchio obiettivo manuale dopo la riconnessione del dispositivo.
 

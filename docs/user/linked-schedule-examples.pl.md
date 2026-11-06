@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](linked-schedule-examples.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.0-beta.10 |
+| Ostatnia synchronizacja | 2026-11-05 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -234,6 +234,6 @@ Nieobsługiwane opcje mogą być filtrowane. Temperatury poza zakresem i niezgod
 <a id="back-up-the-whole-setup"></a>
 ## Kopia całej konfiguracji
 
-Korzystaj z eksportu Velair zamiast kopiować tylko widoczny dzień z obliczonymi ustawieniami. Eksport modelu 16 zachowuje oba rodzaje powiązań, presety i tożsamości bloków. Eksport harmonogramów lub Profili dołącza szablony i presety, od których one zależą; ekran eksportu pokazuje automatycznie dodane sekcje.
+Korzystaj z eksportu Velair zamiast kopiować tylko widoczny dzień z obliczonymi ustawieniami. Eksport modelu 26 zachowuje oba rodzaje powiązań, presety i tożsamości bloków. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist. Eksport harmonogramów lub Profili dołącza szablony i presety, od których one zależą; ekran eksportu pokazuje automatycznie dodane sekcje.
 
-Przed importem sprawdź zastąpienia, także lokalne użycia wspólnych zasobów. Całość musi być zgodna; nowe Profile nie aktywują się samym importem. Starsze kopie nadal można importować, ale starsze wersje Velair nie obsługują importu modelu 16. Zobacz [Przenoszenie konfiguracji](usage.pl.md#portability).
+Przed importem sprawdź zastąpienia, także lokalne użycia wspólnych zasobów. Całość musi być zgodna; nowe Profile nie aktywują się samym importem. Starsze kopie nadal można importować, ale starsze wersje Velair nie obsługują importu modelu 26. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [Przenoszenie konfiguracji](usage.pl.md#portability).

@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](comfort.md) · [Español](comfort
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.0-beta.10 |
+| Ostatnia synchronizacja | 2026-11-06 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -31,11 +31,14 @@ Monitoruje lokalne odczyty temperatury, wilgotności i CO2. Nie zmienia harmonog
 <a id="sources"></a>
 ## Źródła
 
-Temperatura korzysta z pierwszego dostępnego źródła w tej kolejności:
+Temperatura korzysta ze skonfigurowanego źródła, wybieranego w tej kolejności:
 
 1. czujnika temperatury wybranego na karcie Komfort;
 2. czujnika Room Assist skonfigurowanego dla encji;
 3. `current_temperature` encji klimatu.
+
+To wybór preferowanego źródła; nie powoduje automatycznego przejścia na inne
+źródło, gdy preferowane przestaje dostarczać użyteczną temperaturę.
 
 Dla urządzeń grupy automatyczna temperatura używa ich fizycznego `current_temperature`; czujnik Room Assist grupy nie jest dziedziczony. W razie potrzeby jawnie wybierz zewnętrzny czujnik w konfiguracji komfortu danego urządzenia.
 
@@ -49,6 +52,45 @@ Domyślne `Użyj automatycznego źródła` zachowuje ten automatyczny wybór. Wy
 CO2 jest monitorowane tylko po wybraniu czujnika CO2.
 
 Efektywny identyfikator encji jest widoczny pod każdym wyborem źródła. Opcjonalne pomiary bez źródła nie są traktowane jako błędy.
+
+<a id="backup-sensors"></a>
+
+### Czujniki zapasowe
+
+Jeśli wybrany czujnik temperatury lub wilgotności ma inne źródło domyślne,
+sekcja **Źródła danych** pokazuje osobną podsekcję **Czujniki zapasowe**.
+Każdy wiersz zawiera własne pole wyboru, etykietę Temperatura lub Wilgotność
+wraz z ikoną oraz dokładny identyfikator encji zapasowej. Oba pola są domyślnie
+odznaczone.
+
+- **Temperatura** korzysta z czujnika temperatury skonfigurowanego dla tego
+  fizycznego urządzenia lub jego własnego `current_temperature`, jeśli nie skonfigurowano czujnika pokojowego.
+- **Wilgotność** korzysta wyłącznie ze zmierzonego `current_humidity` urządzenia.
+  Źródło zapasowe wilgotności pojawia się tylko przy obsłudze takiego pomiaru;
+  nastawa docelowa `humidity` nigdy nie jest odczytem.
+
+Wiersze pojawiają się tylko dla jawnie wybranych czujników z innym źródłem
+domyślnym. Wybranie **Użyj automatycznego źródła** lub samego źródła domyślnego
+usuwa wiersz i wyłącza zapisane ustawienie źródła zapasowego. Wyłączenie
+monitorowania wilgotności wyłącza również jej zapisane źródło zapasowe.
+Źródło automatyczne nie ma dodatkowego źródła zapasowego.
+
+Po włączeniu źródła zapasowego brakujący, niedostępny, nieznany lub nieliczbowy
+odczyt z wybranego czujnika może użyć tego jednego źródła, jeśli jego odczyt
+jest aktualny i poprawny. **Czujnik zapasowy w użyciu** wskazuje aktywne źródło
+zapasowe. Wybrany czujnik pozostaje zapisany, a Komfort wraca do niego po
+przywróceniu działania. Nieaktualny odczyt z wybranego czujnika nie uruchamia
+źródła zapasowego, a nieaktualne źródło zapasowe nie jest używane. Gdy żadne
+źródło nie ma użytecznego odczytu, Komfort nadal pokazuje stan braku danych
+lub ich nieaktualności.
+
+Ustawienia są zapisywane dla każdego fizycznego urządzenia i zachowywane po
+ponownym uruchomieniu oraz przenośnym eksporcie/imporcie. Istniejące konfiguracje
+mają oba źródła zapasowe wyłączone. Członkowie grup pokojowych zachowują
+niezależne ustawienia i nigdy nie dziedziczą czujnika sterującego grupy jako
+źródła zapasowego. Źródła zapasowe dotyczą tylko obserwacji Komfortu; nie
+zmieniają Room Assist, wstępnego przygotowania, sterowania urządzeniem ani
+monitorowania CO2.
 
 <a id="comfort-models"></a>
 ## Modele komfortu
@@ -185,7 +227,16 @@ Velair udostępnia jedną wartość jakości danych:
 - `stale`: nie ma aktualnego odczytu i wszystkie monitorowane źródła są nieaktualne;
 - `unavailable`: z innego powodu nie można wykorzystać żadnego aktualnego odczytu.
 
-Karta Komfort grupuje użyteczne odczyty o niezweryfikowanej aktualności obok wyboru czujników w **Konfiguracja → Źródła danych**. Dyskretny opis wskazuje odczyty i wyjaśnia, że nieznany czas pomiaru nie oznacza błędnych wartości ani braku komfortu. Przegląd i karty Lovelace pomijają ten rutynowy stan; diagnostyka zachowuje kontekst techniczny. To poprawna automatyczna konfiguracja źródła urządzenia, nie błąd. Brakujące lub nieaktualne odczyty nadal wyświetlają ostrzeżenie na liście stref.
+Karta Komfort grupuje użyteczne odczyty o niezweryfikowanej aktualności obok
+wyboru czujników w **Konfiguracja → Źródła danych**. Zwinięty blok informacyjny
+wskazuje odczyty, których dotyczy. Otwórz go, aby przeczytać pełne wyjaśnienie:
+odczyty można wykorzystać, nieznany czas pomiaru nie oznacza błędnych wartości
+ani braku komfortu w pomieszczeniu, a aktualności pomiaru termostatu nie można
+sprawdzić oddzielnie, gdy używany jest jego odczyt. Przegląd i karty Lovelace
+pomijają ten rutynowy stan; diagnostyka zachowuje kontekst techniczny. To
+poprawna automatyczna konfiguracja źródła urządzenia, nie błąd. Brakujące lub
+nieaktualne odczyty nadal wyświetlają ostrzeżenie na liście stref. Osobne
+ustawienia **Świeżość danych** zachowują dotychczasowe działanie.
 
 <a id="visual-status"></a>
 ## Stan wizualny

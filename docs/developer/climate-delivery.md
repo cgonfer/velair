@@ -17,8 +17,8 @@ Per managed climate, the coordinator provides:
 - a generation that invalidates older work;
 - an async lock around the complete mode/target/options sequence;
 - an event-driven availability wait for `unknown` and `unavailable`;
-- two retries, after 2 and 10 seconds, only after recoverable physical-call
-  `HomeAssistantError` exceptions;
+- up to two retries, sharing one per-delivery-episode budget between recoverable
+  `HomeAssistantError` exceptions and accepted but unconfirmed targets;
 - teardown cancellation with no persisted recovery state.
 
 The scheduler must resolve the priority stack again on recovery: stop and
@@ -47,6 +47,54 @@ The early-target and learning effects apply only to target-based
 preconditioning. That success boundary records command acceptance, not physical convergence.
 Physical confirmation remains the responsibility of the climate integration's
 state reporting.
+
+## Reported-target confirmation
+
+Each accepted physical mode or target call contributes its normalized payload to
+a task-scoped delivery receipt. Only actually commanded, non-null control fields
+are compared. Room Assist therefore confirms its final corrected target, and a
+scalar target does not require an integration to remove inactive range attributes.
+The pure climate comparison is shared with command-settling diagnostics rather
+than inferred again from the current schedule or from Diagnostics being opened.
+
+Reports arriving before the first deadline need no recovery coroutine or event
+waiter. A pending receipt arms one cancellable timer per logical owner, and its
+existing availability listener compares relevant reports synchronously. A match
+cancels the timer and shares the existing Diagnostics notification coalescing.
+At expiry, the timer checks the current receipt and starts a recovery worker only
+if the target still differs. The worker rechecks before sending because a report
+can arrive between the timer callback and task execution.
+
+Pending timers count as recovery work for cancellation and reconnect gating, but
+the listener keeps ownership of comparisons until a worker actually starts.
+Unrelated state events and other zones do not restart the budget. The first retry is due after
+2 seconds, the second after a further 10 seconds, and the last attempt has a
+5-second confirmation-only deadline. State events can resolve the discrepancy
+earlier. These waits never hold the delivery lock or delay another zone's normal
+delivery. No periodic device reads or polling are added.
+
+Confirmed settling fields are retired using the immediately preceding synchronous
+receipt comparison, without reading or matching those values again. Normal pending
+and confirmed outcomes do not allocate discarded recovery-history evidence. If a
+worker waits for availability, a reconnect that already reports the expected
+target confirms it without resending.
+
+Every retry reads current reported state and re-resolves the current authoritative
+intent. New targets, pauses, Manual adjustment, stop or unload retire obsolete
+work. A later standalone Room Assist write replaces its earlier confirmation
+receipt. Retrying an already accepted intent does not duplicate its applied event,
+logbook entry or preconditioning learning session.
+
+A genuine unavailable-to-available transition preserves existing reconnection
+delivery and starts a fresh episode, even after the previous episode exhausted
+its retries. Ordinary reports never reset the budget. A retained unconfirmed
+receipt may resolve on a late matching report without another write.
+
+Diagnostics preserves accepted-call delivery status and adds confirmation status,
+attempt count and bounded expected/reported evidence. Silent failures that recover
+leave a `recovered` entry in the delivery history; an exhausted silent failure is
+`unconfirmed`. A matching Home Assistant report is not independent physical-device
+verification, because some integrations publish optimistic values.
 
 Room Assist listener refreshes, target restoration, and clearing use the same
 per-climate delivery boundary as schedule delivery. The lock order is always

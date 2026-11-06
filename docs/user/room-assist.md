@@ -51,7 +51,7 @@ an old corrected target over the new intent.
 
 1. Open the Room Assist tab.
 2. Expand the climate you want to configure.
-3. Select a room temperature sensor.
+3. Under **Room Sensor Assist**, choose **Fixed sensor** or **By schedule**, configure the selected option, and save any mode change.
 4. Enable Room Sensor Assist.
 5. Adjust Room Assist deadband to set the lower and upper switching limits for
    fixed heating or cooling around its scalar target or selected range reference,
@@ -61,7 +61,50 @@ an old corrected target over the new intent.
    cooling.
 7. Adjust Refresh delay if sensor updates feel too slow or too chatty.
 
-Selecting a room sensor alone only stores the sensor. Velair starts using it as the effective room temperature only when Room Sensor Assist is enabled.
+Only the selected option is shown. When **Fixed sensor** is already the saved mode, changing its sensor saves immediately. Switching between **Fixed sensor** and **By schedule** changes a draft: **Save** applies the mode and its settings, and **Cancel** restores the saved configuration. Switching options retains the fixed sensor and the saved schedule; it does not activate both at once.
+
+### Optional sensor schedule (beta)
+
+Room Assist can follow different temperature references during the week without changing your temperature schedules, Profiles or Modes. Choose **By schedule** under **Room Sensor Assist** to configure it. Choose **Fixed sensor** to return to the fixed room sensor.
+
+Choose a default reference and add periods with weekdays, start/end times and a reference. Save the complete draft to apply it;
+Cancel discards your edits. References can be temperature sensors exposed to
+Home Assistant or the climate's own temperature. Outside the periods, the default
+reference applies. Periods may cross midnight and belong to their selected start
+days; overlapping periods are rejected. Start times are inclusive and end times
+are exclusive. Times follow Home Assistant's configured time zone.
+
+For example, choose **No Room Assist correction** as the default and an office
+sensor from 08:00 to 17:00, Monday to Friday. Your existing Summer/Winter
+temperature schedules continue to determine the desired temperature. During work
+hours, Room Assist calculates corrections using the office sensor. Otherwise,
+Velair sends the normal scheduled target and the thermostat regulates using its
+own reference. This does not change which physical sensor the device firmware
+uses internally.
+
+The single Room Assist switch controls whether assistance is enabled. Turning it off keeps both configurations saved. Choosing **Fixed sensor** and saving returns to the retained fixed room sensor. If an external reference is unavailable, Velair
+suspends its correction and uses the normal scheduled target when it owns
+automatic control; it does not silently choose another room or reuse an old
+reading. Assistance resumes when that reference becomes usable again.
+
+Reference changes do not take control away from Manual adjustment, Boost or
+pauses. When automatic control resumes, Velair uses the reference valid then.
+For room groups, the climate's own temperature means the group's configured
+temperature reference.
+
+**Beta limitation:** a reference changes at its exact scheduled time. Adaptive
+Preconditioning does not start an advance target across a reference change; it
+recalculates after that transition. Switching rooms is not a request to prepare
+the next room early. Learning observations are matched to their temperature
+source so a reading jump between rooms is not treated as heating or cooling.
+
+All selected external readings must be available independently in Home Assistant.
+For Nest, a setup using the official integration for the thermostat and another
+integration for a remote sensor needs installation testing. Keep Nest's own
+reference fixed if you intend to use the thermostat reading as one stable room
+reference. Velair does not select Nest's internal active sensor. A shared HVAC
+system still affects every room it supplies; choosing a reference does not create
+independent physical zones.
 
 ### Room groups
 

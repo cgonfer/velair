@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
+import { render } from "lit";
+import type { VelairViewHost } from "../../src/velair/host-types";
+import { renderClimateCard } from "../../src/velair/views/climate-card-view";
 import { VelairCard } from "../../src/velair/components/velair-card-element";
 
 describe("climate card actions", () => {
@@ -427,8 +430,8 @@ it("uses configured mixed-mode formats in Boost and native manual adjustment", a
   card._updateClimateCardBoost("low", "20");
   card._updateClimateCardBoostOption("hvacMode", "cool"); expect(card._climateCardBoost.targetKind).toBe("single");
   card._updateClimateCardBoost("target", "23");
-  card._updateClimateCardBoostOption("hvacMode", "heat"); expect(card._climateCardBoost.low).toBe(20);
-  card._updateClimateCardBoostOption("hvacMode", "cool"); expect(card._climateCardBoost.target).toBe(23);
+  card._updateClimateCardBoostOption("hvacMode", "heat"); expect(card._climateCardBoost.low).toBe("20");
+  card._updateClimateCardBoostOption("hvacMode", "cool"); expect(card._climateCardBoost.target).toBe("23");
   await card._adjustClimateCardTarget(entityId, "target_temp_low", 1);
   expect(callService).toHaveBeenCalledWith("climate", "set_temperature", { entity_id: entityId, target_temp_low: 19.5, target_temp_high: 24 });
 });
@@ -461,3 +464,106 @@ it("uses configured mixed-mode formats in Boost and native manual adjustment", a
     await card["_adjustClimateCardTarget"](entityId, "temperature", -1);
     expect(callService).toHaveBeenCalledTimes(3);
   });
+
+function decimalBoostCard(range = false, mode = "heat") {
+  if (!customElements.get("velair-climate-card-actions-test")) customElements.define("velair-climate-card-actions-test", VelairCard);
+  const card = document.createElement("velair-climate-card-actions-test") as VelairCard & Record<string, any>;
+  const entityId = "climate.office";
+  const callService = vi.fn().mockResolvedValue(undefined);
+  card["_config"] = { view: "climate", selected_entity: entityId };
+  card["_data"] = {
+    configured_entities: [entityId], temperature_unit: "°C", home_assistant_temperature_unit: "°C",
+    temperature_migration: { required: false }, global: { mode: "auto" },
+    settings: { first_weekday: "monday", zone_order: [] },
+    zones: { [entityId]: { enabled: true, schedule: {} } }, operational_status: "running",
+    next_event: null, next_events: [], active_overrides: {},
+    zone_runtime: { [entityId]: { state: "scheduled", control_mode: "automatic" } },
+  };
+  card.hass = { callService, states: { [entityId]: { state: mode, attributes: {
+    supported_features: range ? 2 : 1, hvac_modes: ["off", "heat", "cool", "heat_cool"],
+    temperature: 24, target_temp_low: 19, target_temp_high: 25,
+    min_temp: 7, max_temp: 35, target_temp_step: 0.5, min_humidity: 30, max_humidity: 70,
+  } } } } as never;
+  card["_loadSchedule"] = vi.fn().mockResolvedValue(undefined);
+  card["_showSuccess"] = vi.fn();
+  card["_openClimateCardBoost"](entityId);
+  card["_climateCardBoost"] = { ...card["_climateCardBoost"], targetKind: range ? "range" : "single" };
+  return { card, callService, entityId };
+}
+
+describe("Climate-card decimal Boost regression", () => {
+  it.each(["heat", "cool"])("preserves sequential point/comma edits and sends numbers in %s", async (mode) => {
+    for (const range of [false, true]) for (const separator of [".", ","]) {
+      const { card, callService, entityId } = decimalBoostCard(range, mode);
+      const container = document.createElement("div");
+      const draw = () => render(renderClimateCard(card as unknown as VelairViewHost, entityId), container);
+      draw();
+      const fields = range ? ["low", "high"] : ["target"];
+      for (const field of fields) {
+        const input = container.querySelector<HTMLInputElement>(`input[data-target-field="${field}"]`)!;
+        expect(input.type).toBe("text");
+        for (const value of ["2", "24", `24${separator}`, `24${separator}5`]) {
+          input.value = value;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          draw();
+          expect(container.querySelector(`input[data-target-field="${field}"]`)).toBe(input);
+          expect(input.value).toBe(value);
+          expect(card["_climateCardBoost"][field]).toBe(value);
+          if (value.endsWith(separator)) {
+            expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+            container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            expect(callService).not.toHaveBeenCalled();
+          }
+        }
+      }
+      expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false);
+      await card["_runClimateCardService"]("boost", entityId);
+      expect(callService).toHaveBeenCalledWith("velair", "boost", {
+        entity_id: entityId, duration_minutes: 60,
+        ...(range ? { target_temp_low: 24.5, target_temp_high: 24.5 } : { temperature: 24.5 }),
+      });
+      render(null, container);
+    }
+  });
+
+  it.each(["", "24.", "24,", "24..5", "24,5.0", "NaN", "Infinity", "0x18", "2e1", "6.5", "35.5", "24.2"])("blocks direct service invocation for scalar draft %s", async (target) => {
+    const { card, callService, entityId } = decimalBoostCard();
+    card["_updateClimateCardBoost"]("target", target);
+    await card["_runClimateCardService"]("boost", entityId);
+    expect(callService).not.toHaveBeenCalled();
+    expect(card["_climateCardBoost"].target).toBe(target);
+    expect(card["_error"]).toBeTruthy();
+  });
+
+  it.each([["", "25"], ["24.", "25"], ["19", "25,"], ["25", "24.5"], ["19.2", "25"], ["19", "35.5"]])("blocks invalid native range %s/%s", async (low, high) => {
+    const { card, callService, entityId } = decimalBoostCard(true);
+    card["_updateClimateCardBoost"]("low", low);
+    card["_updateClimateCardBoost"]("high", high);
+    await card["_runClimateCardService"]("boost", entityId);
+    expect(callService).not.toHaveBeenCalled();
+  });
+
+  it.each([["durationMinutes", "0"], ["durationMinutes", "1.5"], ["durationMinutes", "10081"], ["durationMinutes", ""], ["humidity", "29"], ["humidity", "70.5"], ["humidity", "71"]])("retains integer and bounds checks for %s=%s", async (field, value) => {
+    const { card, callService, entityId } = decimalBoostCard();
+    card["_updateClimateCardBoost"](field, value);
+    await card["_runClimateCardService"]("boost", entityId);
+    expect(callService).not.toHaveBeenCalled();
+  });
+
+  it("uses configured fallback steps and Fahrenheit device grids for numeric Boost targets", async () => {
+    for (const fahrenheit of [false, true]) {
+      const { card, callService, entityId } = decimalBoostCard();
+      const attributes = card.hass!.states[entityId].attributes;
+      if (fahrenheit) {
+        card["_data"].temperature_unit = "°F";
+        attributes.min_temp = 41; attributes.max_temp = 95; attributes.target_temp_step = 0.9;
+      } else {
+        delete attributes.target_temp_step;
+        card["_data"].zones[entityId].target_temp_step_override = 0.5;
+      }
+      card["_updateClimateCardBoost"]("target", fahrenheit ? "68,9" : "24,5");
+      await card["_runClimateCardService"]("boost", entityId);
+      expect(callService).toHaveBeenCalledWith("velair", "boost", { entity_id: entityId, duration_minutes: 60, temperature: fahrenheit ? 68.9 : 24.5 });
+    }
+  });
+});

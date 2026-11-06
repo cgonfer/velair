@@ -44,7 +44,7 @@ const HISTORY_CATEGORIES: DiagnosticHistoryCategory[] = [
 type DetailRow = {
   label: TranslationKey;
   value: unknown;
-  presentation?: "mode" | "modes" | "delivery-status";
+  presentation?: "mode" | "modes" | "delivery-status" | "confirmation-status";
 };
 
 export function renderDiagnosticsView(host: VelairViewHost) {
@@ -108,7 +108,7 @@ export function renderDiagnosticsView(host: VelairViewHost) {
         })}</small>
       </div>
     </section>
-    ${diagnostics.overall.issues.length ? html`<div class="diagnostics-issues">${diagnostics.overall.issues.map((issue) => renderIssue(host, issue))}</div>` : nothing}
+    ${diagnostics.overall.issues.length ? html`<div class="diagnostics-issues">${diagnosticIssues(host, diagnostics.overall.issues).map(({ issue, text }) => renderIssue(host, issue, text))}</div>` : nothing}
     ${renderPlannedReturnDiagnostics(host)}
     <div class="diagnostics-master-detail">
       <nav class="diagnostics-unit-list" aria-label=${host._t("diagnosticsUnits")}>
@@ -156,6 +156,8 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
   const configuration = record(unit.configuration);
   const preconditioning = record(configuration.preconditioning);
   const comfortConfiguration = record(configuration.comfort);
+  const confirmation = record(unit.delivery.confirmation);
+  const confirmationStatus = confirmationStatusLabel(host, confirmation.status);
   const statusRows: DetailRow[] = [
     { label: "diagnosticsCurrentState", value: unit.state, presentation: "mode" },
     { label: "diagnosticsCalculatedIntent", value: intentSummary(host, unit.intent, entityId) },
@@ -164,6 +166,13 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
     { label: "diagnosticsRetryCount", value: unit.delivery.retry_count },
     { label: "diagnosticsLastError", value: deliveryErrorLabel(host, unit.delivery.last_error) },
   ];
+  if (confirmationStatus) {
+    statusRows.push(
+      { label: "diagnosticsSetpointConfirmation", value: confirmation.status, presentation: "confirmation-status" },
+      { label: "diagnosticsConfirmationRetries", value: confirmation.retry_count },
+      { label: "diagnosticsConfirmationUpdatedAt", value: typeof confirmation.updated_at === "string" ? host._formatDateTime(confirmation.updated_at) : undefined },
+    );
+  }
   const setupRows: DetailRow[] = [
     { label: "diagnosticsScheduleSource", value: scheduleSourceLabel(host, unit.effective_setup.schedule_source) },
     { label: "diagnosticsMode", value: unit.effective_setup.mode_name ?? unit.effective_setup.mode_id },
@@ -195,10 +204,10 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
         title=${diagnosticStatusDescription(host, unit)}
         aria-label=${diagnosticStatusDescription(host, unit)}></span>
     </header>
-    ${unit.issues.length ? html`<div class="diagnostics-issues">${unit.issues.map((issue) => {
+    ${unit.issues.length ? html`<div class="diagnostics-issues">${diagnosticIssues(host, unit.issues, unit.sensors).map(({ issue, text }) => {
       const comparison = issue.code === "command_settling_mismatch"
         ? renderCommandSettlingMismatch(host, entityId, unit.command_settling) : nothing;
-      return comparison === nothing ? renderIssue(host, issue) : comparison;
+      return comparison === nothing ? renderIssue(host, issue, text) : comparison;
     })}</div>` : nothing}
     <div class="diagnostics-groups">
       ${renderPlannedReturnUnitDiagnostics(host, entityId)}
@@ -294,6 +303,13 @@ function renderDetailValue(host: VelairViewHost, row: DetailRow) {
       ${deliveryStatusLabel(host, status)}
     </span>`;
   }
+  if (row.presentation === "confirmation-status") {
+    const status = String(row.value ?? "");
+    const severity = status === "confirmed" || status === "recovered" ? "success" : "warning";
+    return html`<span class=${`diagnostics-state-chip ${severity}`}>
+      ${confirmationStatusLabel(host, status)}
+    </span>`;
+  }
   return displayValue(host, row.value);
 }
 
@@ -327,8 +343,35 @@ function renderHistoryPolicy(host: VelairViewHost, diagnostics: DiagnosticsSnaps
   </section>`;
 }
 
-function renderIssue(host: VelairViewHost, issue: DiagnosticIssue) {
-  return html`<p class=${`diagnostics-issue ${issue.severity}`}><ha-icon icon=${issue.severity === "error" ? "mdi:alert-circle" : "mdi:alert"}></ha-icon><span>${issueText(host, issue.code)}</span></p>`;
+function diagnosticIssues(host: VelairViewHost, issues: DiagnosticIssue[], sensors: UnitDiagnostics["sensors"] = []) {
+  const grouped = new Map<string, {
+    issue: DiagnosticIssue;
+    sensor?: UnitDiagnostics["sensors"][number];
+    purposes: Set<string>;
+  }>();
+  for (const issue of issues) {
+    const sensor = issue.code === "associated_sensor_unavailable" && issue.purpose
+      ? sensors.find((candidate) => candidate.purpose === issue.purpose) : undefined;
+    const key = JSON.stringify([issue.code, sensor?.entity_id ?? issue.purpose ?? ""]);
+    const existing = grouped.get(key);
+    if (existing) {
+      if (issue.severity === "error") existing.issue = issue;
+      if (issue.purpose) existing.purposes.add(issue.purpose);
+    } else {
+      grouped.set(key, { issue, sensor, purposes: new Set(issue.purpose ? [issue.purpose] : []) });
+    }
+  }
+  return [...grouped.values()].map(({ issue, sensor, purposes }) => {
+    const uses = [...new Set([...purposes].map((purpose) => sensorPurposeDescription(host, purpose)))].join(" / ");
+    const text = sensor
+      ? [sensor.entity_id, sensorValue(host, sensor), uses].filter(Boolean).join(" · ")
+      : [issueText(host, issue.code), uses].filter(Boolean).join(" · ");
+    return { issue, text };
+  });
+}
+
+function renderIssue(host: VelairViewHost, issue: DiagnosticIssue, text = issueText(host, issue.code)) {
+  return html`<p class=${`diagnostics-issue ${issue.severity}`}><ha-icon icon=${issue.severity === "error" ? "mdi:alert-circle" : "mdi:alert"}></ha-icon><span>${text}</span></p>`;
 }
 
 function issueText(host: VelairViewHost, code: string): string {
@@ -341,6 +384,7 @@ function issueText(host: VelairViewHost, code: string): string {
     temperature_range_not_reported: "entityDiagnosticNoRange", temperature_migration_required: "temperatureMigrationRequired",
     operation_recovery_required: "operationRecoveryRequired", delivery_failed: "diagnosticsDeliveryFailed",
     delivery_retrying: "diagnosticsDeliveryRetrying", delivery_exhausted: "diagnosticsDeliveryExhausted",
+    delivery_unconfirmed: "diagnosticsConfirmationUnconfirmed",
     delivery_invalid_intent: "diagnosticsDeliveryInvalidIntent", runtime_status_unavailable: "diagnosticsRuntimeUnavailable",
     associated_sensor_unavailable: "diagnosticsSensorUnavailable",
   };
@@ -628,6 +672,16 @@ function keyboardLogResize(host: VelairViewHost, column: DiagnosticsLogColumn, e
 
 function historyDescription(host: VelairViewHost, item: DiagnosticHistoryItem): string {
   const data = item.data;
+  if (item.category === "delivery" && (data.reason === "target_not_confirmed"
+      || data.status === "recovered" || data.status === "unconfirmed")) {
+    const description = data.status === "recovered" ? "diagnosticsConfirmationRecoveredDescription"
+      : data.status === "unconfirmed" ? "diagnosticsConfirmationUnconfirmedDescription"
+        : "diagnosticsConfirmationPendingDescription";
+    return [
+      host._t(description),
+      typeof data.retry_count === "number" ? labeledValue(host._t("diagnosticsConfirmationRetries"), formatNumber(host, data.retry_count)) : undefined,
+    ].filter(Boolean).join(" · ");
+  }
   if (item.category === "planned_return") {
     return [plannedReturnOrigin(host, data.origin), plannedReturnModeName(host, typeof data.mode_id === "string" ? data.mode_id : undefined),
       typeof data.away_mode_id === "string" ? `${host._t("plannedReturnAway")}: ${plannedReturnModeName(host, data.away_mode_id)}` : undefined,
@@ -881,7 +935,7 @@ function diagnosticStatusDescription(
   if (!unit.issues.length) return status;
   return host._t("diagnosticsStatusWithIssues", {
     status,
-    issues: unit.issues.map((issue) => issueText(host, issue.code)).join("; "),
+    issues: diagnosticIssues(host, unit.issues, unit.sensors).map(({ text }) => text).join("; "),
   });
 }
 
@@ -896,8 +950,9 @@ function sensorValue(
   host: VelairViewHost,
   sensor: UnitDiagnostics["sensors"][number],
 ): string | undefined {
+  if (sensor.state === "unknown") return host._t("unknown");
   const stateLabel = runtimeStateLabel(host, sensor.state);
-  if (["unknown", "unavailable"].includes(sensor.state)) return stateLabel;
+  if (["missing", "unavailable"].includes(sensor.state)) return stateLabel;
   const numeric = Number(sensor.state);
   if (!Number.isFinite(numeric)) return stateLabel;
   const state = host.hass?.states?.[sensor.entity_id];
@@ -1019,10 +1074,21 @@ function deliveryStatusLabel(host: VelairViewHost, value: unknown): string | und
     idle: "roomSensorStatusIdle",
     invalid_intent: "diagnosticsDeliveryInvalidIntent",
     retrying: "diagnosticsDeliveryRetrying",
-    success: "diagnosticsDeliverySuccess",
+    success: "diagnosticsCommandAccepted",
     unavailable: "diagnosticsEntityUnavailable",
   };
   return labels[status] ? host._t(labels[status]) : humanizeIdentifier(status);
+}
+
+function confirmationStatusLabel(host: VelairViewHost, value: unknown): string | undefined {
+  const labels: Record<string, TranslationKey> = {
+    pending: "diagnosticsConfirmationPending",
+    confirmed: "diagnosticsConfirmationConfirmed",
+    recovered: "diagnosticsConfirmationRecovered",
+    unconfirmed: "diagnosticsConfirmationUnconfirmed",
+  };
+  const key = labels[String(value ?? "")];
+  return key ? host._t(key) : undefined;
 }
 
 function sensorPurposeLabel(purpose: string): TranslationKey {
@@ -1030,10 +1096,24 @@ function sensorPurposeLabel(purpose: string): TranslationKey {
     comfort_co2: "comfortCo2Sensor",
     comfort_humidity: "comfortHumiditySensor",
     comfort_temperature: "comfortTemperatureSensor",
+    comfort_outdoor_temperature: "comfortOutdoorTemperatureSensor",
+    comfort_outdoor_humidity: "comfortOutdoorHumiditySensor",
+    comfort_dew_point: "comfortDewPoint",
+    comfort_absolute_humidity: "comfortAbsoluteHumidity",
+    comfort_humidex: "comfortHumidex",
     outdoor_temperature: "preconditioningOutdoorTemperatureEntity",
     room_temperature: "roomSensorTemperatureEntity",
   };
   return labels[purpose] ?? "diagnosticsAssociatedSensors";
+}
+
+function sensorPurposeDescription(host: VelairViewHost, purpose: string): string {
+  const label = sensorPurposeLabel(purpose);
+  const description = label === "diagnosticsAssociatedSensors"
+    ? humanizeIdentifier(purpose) ?? host._t(label) : host._t(label);
+  if (purpose.startsWith("comfort_")) return `${host._t("diagnosticsComfort")}: ${description}`;
+  if (purpose === "outdoor_temperature") return `${host._t("diagnosticsPreconditioning")}: ${description}`;
+  return description;
 }
 
 function sensorPurposeIcon(purpose: string): string {
@@ -1055,6 +1135,12 @@ function historyEventLabel(host: VelairViewHost, item: DiagnosticHistoryItem): s
     return host._t(labels[String(item.data.transition)] ?? "diagnosticsHistoryCategoryPlannedReturn");
   }
   if (item.category === "delivery") {
+    if (item.data.status === "recovered" || item.data.status === "unconfirmed") {
+      return confirmationStatusLabel(host, item.data.status)!;
+    }
+    if (item.data.reason === "target_not_confirmed") {
+      return confirmationStatusLabel(host, "pending")!;
+    }
     return deliveryStatusLabel(host, item.data.status) ?? host._t(categoryLabel(item.category));
   }
   if (item.data.event) {

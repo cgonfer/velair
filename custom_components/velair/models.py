@@ -198,6 +198,7 @@ class PreconditioningData(TypedDict):
     use_outdoor_temperature: bool
     outdoor_temperature_entity_id: str | None
     room_temperature_entity_id: str | None
+    room_sensor_schedule: NotRequired[dict[str, Any]]
     room_sensor_assist_enabled: bool
     room_sensor_assist_deadband: float
     room_sensor_assist_max_delta: float
@@ -231,8 +232,10 @@ class ComfortData(TypedDict):
 
     enabled: bool
     temperature_entity_id: str | None
+    temperature_fallback_enabled: bool
     humidity_enabled: bool
     humidity_entity_id: str | None
+    humidity_fallback_enabled: bool
     co2_entity_id: str | None
     temperature_min: float
     temperature_max: float
@@ -283,6 +286,7 @@ class PreconditioningObservation(TypedDict, total=False):
     outdoor_temp_start: float | None
     outdoor_temp_target: float | None
     temperature_source: str
+    temperature_source_entity_id: NotRequired[str]
     room_temperature_entity_id: str | None
     delta_t: float
     startup_minutes: int
@@ -877,15 +881,18 @@ def normalize_schedule_data(
             and override.get("type") == "pause"
         ):
             override = zone_pause_override_from_reasons(pauses)
+        preconditioning = normalize_preconditioning_data(zone_data.get("preconditioning"))
         zones[entity_id] = {
             "enabled": bool(zone_data.get("enabled", True)),
             "schedule": schedule,
             "override": override,
             "pauses": pauses,
-            "preconditioning": normalize_preconditioning_data(
-                zone_data.get("preconditioning")
+            "preconditioning": preconditioning,
+            "comfort": normalize_comfort_data(
+                zone_data.get("comfort"),
+                temperature_default_entity_id=preconditioning.get("room_temperature_entity_id") or entity_id,
+                humidity_default_entity_id=entity_id,
             ),
-            "comfort": normalize_comfort_data(zone_data.get("comfort")),
             "external_change_policy": normalize_external_change_policy(
                 zone_data.get("external_change_policy")
             ),
@@ -1061,7 +1068,9 @@ def normalize_schedule_data(
         "room_groups": room_groups,
         "member_comfort": {
             member: normalize_comfort_data(
-                (data["member_comfort"] if isinstance(data.get("member_comfort"), dict) else {}).get(member, zones[group_id]["comfort"])
+                (data["member_comfort"] if isinstance(data.get("member_comfort"), dict) else {}).get(member, zones[group_id]["comfort"]),
+                temperature_default_entity_id=member,
+                humidity_default_entity_id=member,
             )
             for group_id, group in room_groups.items()
             for member in group["members"]
@@ -1863,7 +1872,7 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         DEFAULT_PRECONDITIONING_MAX_LEAD_MINUTES,
     )
 
-    return {
+    normalized = {
         "enabled": bool(data.get("enabled", False)),
         "master_entity_id": _normalize_optional_entity_id(data.get("master_entity_id")),
         "max_lead_minutes": max_lead_minutes,
@@ -1941,8 +1950,16 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         ),
     }
 
+    if "room_sensor_schedule" in data:
+        from .room_sensor_schedule import normalize_room_sensor_schedule
+        normalized["room_sensor_schedule"] = normalize_room_sensor_schedule(data["room_sensor_schedule"])
+    return normalized
 
-def normalize_comfort_data(raw_data: Any) -> ComfortData:
+
+def normalize_comfort_data(
+    raw_data: Any, *, temperature_default_entity_id: str | None = None,
+    humidity_default_entity_id: str | None = None,
+) -> ComfortData:
     """Normalize stored comfort monitoring settings."""
     data = raw_data if isinstance(raw_data, dict) else {}
 
@@ -2032,14 +2049,24 @@ def normalize_comfort_data(raw_data: Any) -> ComfortData:
             ),
         }
 
+    temperature_source = _normalize_optional_entity_id(data.get("temperature_entity_id"))
+    humidity_source = _normalize_optional_entity_id(data.get("humidity_entity_id"))
+    humidity_enabled = bool(data.get("humidity_enabled", True))
     return {
         "enabled": bool(data.get("enabled", False)),
-        "temperature_entity_id": _normalize_optional_entity_id(
-            data.get("temperature_entity_id")
+        "temperature_entity_id": temperature_source,
+        "temperature_fallback_enabled": (
+            data.get("temperature_fallback_enabled") is True
+            and temperature_source is not None
+            and temperature_source != temperature_default_entity_id
         ),
-        "humidity_enabled": bool(data.get("humidity_enabled", True)),
-        "humidity_entity_id": _normalize_optional_entity_id(
-            data.get("humidity_entity_id")
+        "humidity_enabled": humidity_enabled,
+        "humidity_entity_id": humidity_source,
+        "humidity_fallback_enabled": (
+            data.get("humidity_fallback_enabled") is True
+            and humidity_enabled
+            and humidity_source is not None
+            and humidity_source != humidity_default_entity_id
         ),
         "co2_entity_id": _normalize_optional_entity_id(data.get("co2_entity_id")),
         "temperature_min": temperature_min,
@@ -2672,6 +2699,10 @@ def _normalize_preconditioning_observation(
         observation["target_temp_low"] = optional_low
         observation["target_temp_high"] = optional_high
         observation["target_boundary"] = target_boundary
+
+    source_identity = _normalize_optional_entity_id(raw_observation.get("temperature_source_entity_id"))
+    if source_identity is not None:
+        observation["temperature_source_entity_id"] = source_identity
 
     temperature_source = raw_observation.get("temperature_source")
     if isinstance(temperature_source, str) and temperature_source:
