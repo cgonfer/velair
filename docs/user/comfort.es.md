@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](comfort.md) · [Español](comfort.es.md) · 
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.10 |
-| Última sincronización | 2026-11-06 |
+| Versión de referencia | 1.9.0-beta.11 |
+| Última sincronización | 2026-11-07 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -59,23 +59,33 @@ El identificador de entidad efectivo aparece debajo de cada selector. Las métri
 
 ### Sensores de respaldo
 
-Cuando el sensor de temperatura o humedad seleccionado tiene una fuente
-predeterminada diferente, **Fuentes de datos** muestra una subsección independiente
+Cuando una fuente de temperatura o humedad tiene un respaldo distinto compatible,
+**Fuentes de datos** muestra una subsección independiente
 de **Sensores de respaldo**. Cada fila incluye su casilla, el nombre y el icono de
 Temperatura o Humedad y el identificador exacto de la entidad de respaldo. Ambas
 casillas están desmarcadas por defecto.
 
 - **Temperatura** utiliza el sensor de temperatura configurado para ese equipo
-  físico, o su propio `current_temperature` si no hay sensor de habitación configurado.
+  físico cuando es distinto del sensor externo seleccionado. Si Confort ya
+  utiliza ese sensor de habitación configurado, también mediante **Usar fuente
+  automática**, su respaldo es el `current_temperature` del propio equipo. Si no
+  hay sensor de habitación configurado, un sensor externo de Confort también
+  utiliza como respaldo esa lectura nativa.
 - **Humedad** utiliza únicamente el `current_humidity` medido del equipo. Solo
   aparece un respaldo de humedad si esa fuente de medición está soportada; el
   ajuste objetivo `humidity` nunca se utiliza como lectura.
 
-Solo aparecen filas para sensores seleccionados expresamente con una fuente
-predeterminada diferente. Elegir **Usar fuente automática** o seleccionar la propia
-fuente predeterminada elimina esa fila y desactiva su ajuste de respaldo guardado.
-Desactivar la supervisión de humedad también desactiva su respaldo guardado. Una
-fuente automática no tiene otro respaldo detrás.
+El respaldo de temperatura sigue disponible cuando la fuente automática es un
+sensor externo de habitación. Si la lectura preferida ya es la temperatura del
+propio equipo, la fila desaparece y se desactiva su ajuste de respaldo guardado.
+Cambiar la fuente de habitación configurada al propio equipo desactiva el
+respaldo habilitado para la fuente automática; volver a seleccionar un sensor
+externo de habitación no lo reactiva.
+
+El respaldo de humedad requiere una fuente externa seleccionada expresamente.
+Elegir su fuente automática/nativa o desactivar la supervisión de humedad
+desactiva ese ajuste de respaldo de humedad. Cada lectura tiene como máximo un
+respaldo; si ese respaldo también falla, Confort no prueba otra fuente.
 
 Con un respaldo activado, una lectura seleccionada ausente, no disponible,
 desconocida o no numérica puede utilizar ese único respaldo si su lectura es

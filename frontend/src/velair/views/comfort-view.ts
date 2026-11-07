@@ -1726,7 +1726,7 @@ function hasComfortBackup(
   const preferredEntity = settings[`${kind}_entity_id`];
   return Boolean(
     (kind !== "humidity" || settings.humidity_enabled)
-    && preferredEntity
+    && (kind === "temperature" || preferredEntity)
     && assessment?.fallback_entity_id
     && assessment.fallback_entity_id !== preferredEntity,
   );

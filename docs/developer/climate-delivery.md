@@ -16,7 +16,8 @@ Per managed climate, the coordinator provides:
 
 - a generation that invalidates older work;
 - an async lock around the complete mode/target/options sequence;
-- an event-driven availability wait for `unknown` and `unavailable`;
+- an event-driven availability wait for `unknown`, `unavailable`, or a missing
+  Home Assistant state;
 - up to two retries, sharing one per-delivery-episode budget between recoverable
   `HomeAssistantError` exceptions and accepted but unconfirmed targets;
 - teardown cancellation with no persisted recovery state.
@@ -47,6 +48,13 @@ The early-target and learning effects apply only to target-based
 preconditioning. That success boundary records command acceptance, not physical convergence.
 Physical confirmation remains the responsibility of the climate integration's
 state reporting.
+
+Planned Return retains a stable preparation identity when delivery is deferred
+to the coordinator. Handing off work does not mark the early target applied or
+schedule immediate timer retries. A successful current delivery completes that
+preparation, including normal schedule application, Keep automatic reassertion,
+or Boost restoration. Changes to the authoritative intent still retire obsolete
+work; recovery always resolves the current action.
 
 ## Reported-target confirmation
 

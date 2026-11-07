@@ -407,65 +407,65 @@
       "translations": {
         "es": {
           "path": "docs/user/comfort.es.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/comfort.fr.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/comfort.de.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/comfort.it.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/comfort.nl.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/comfort.pl.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/comfort.pt-br.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/comfort.pt-pt.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/comfort.ru.md",
-          "sourceHash": "de78ed1caafc150961ae11607baba88bce9d4372cd59bbaba27f8d6964d19cd7",
-          "synchronizedAt": "2026-11-06",
-          "referenceVersion": "1.9.0-beta.10",
+          "sourceHash": "1b5d28e3a1c7280515f4074086fa55a8347b522a0f6277d7d05ea0ed6e813eb3",
+          "synchronizedAt": "2026-11-07",
+          "referenceVersion": "1.9.0-beta.11",
           "reviewStatus": "automatic"
         }
       }

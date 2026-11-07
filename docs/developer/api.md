@@ -414,7 +414,7 @@ its absence when using an older backend.
     "portable_model": 23,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.10"
+    "integration": "1.9.0-beta.11"
   }
 }
 ```
@@ -1276,12 +1276,15 @@ Comfort settings are per managed climate. `comfort_model` defaults to `simple`, 
 
 `temperature_fallback_enabled` and `humidity_fallback_enabled` are independent
 optional booleans, both defaulting to `false`. Each permits one backup reading
-only when the explicitly selected source is missing or invalid and differs from
-its default. The temperature default is the physical climate's configured room
-sensor, otherwise its own `current_temperature`. Humidity uses only that
+when the preferred source is missing or invalid. An explicit external temperature
+source distinct from the configured room sensor backs up to that room sensor,
+otherwise to the physical climate's own `current_temperature`. If the preferred
+source is the configured room sensor, including automatic selection, its backup
+is the native climate reading. A native preferred temperature has no backup;
+only one candidate is exposed and used, without a further chain. Humidity uses only that
 climate's measured `current_humidity`, and requires support for that attribute;
-target `humidity` is never a reading. Automatic or default-selected sources have
-no further backup. A stale selected reading does not trigger fallback, and a
+target `humidity` is never a reading. Automatic/native humidity has no backup.
+A stale selected reading does not trigger fallback, and a
 stale backup is rejected. Recovery restores the selected source automatically.
 
 Temperature and humidity assessments expose nullable `fallback_entity_id`,
@@ -1292,9 +1295,11 @@ alternative produces null candidate metadata. The selected source remains
 persisted, and `entity_id` identifies the reading actually used. These runtime
 fields do not change Room Assist control references or HVAC behavior.
 
-The backend clears the corresponding fallback flag when a source update selects
-automatic or the default source itself; disabling humidity also clears
-`humidity_fallback_enabled`. Normalization enforces these rules on stored
+The backend retains a temperature backup opt-in for an automatic external-room
+source, but clears it when the effective preferred source is the native climate.
+Changing the fixed room source back to native clears the automatic opt-in in the
+same save transaction. Humidity keeps its automatic/native reset rule; disabling
+humidity also clears `humidity_fallback_enabled`. Normalization enforces these rules on stored
 settings and portable import, not just frontend interactions. Both flags survive
 restart and portable export/import; older files default them to `false`, reset
 clears them, and grouped members retain independent physical-climate settings.

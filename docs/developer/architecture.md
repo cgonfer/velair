@@ -55,6 +55,13 @@ Room Assist reads the maintained current and next targets; its listener candidat
 come from per-zone contributions. Planned Return prepares destination schedules,
 arrival effects and public status before readers consume them.
 
+Due weekly starts withheld by a pending save retain a per-zone continuation and
+resume after commit or rollback. Other zones keep their own deadlines. External
+climate observations are processed in order by one worker per logical owner;
+obsolete Keep automatic corrections can be skipped without discarding manual
+observations. Room Assist shares one worker and retains matured pending sources
+while delivery waits. Each component cancels its owned pending work on teardown.
+
 Local validation reconciles only the requested zone and its master. Prepared
 topology and authority tokens avoid copying configuration or unrelated HA
 attributes before each service. Changes to consumed values, availability,

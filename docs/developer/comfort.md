@@ -105,17 +105,25 @@ boundary and is not converted again.
 opt-in booleans, both defaulting to `false`, including for legacy settings and
 older portable files. The preferred temperature source remains the explicitly
 selected sensor, otherwise the physical climate's configured room sensor,
-otherwise its own `current_temperature`. A backup exists only for an explicitly
-selected source distinct from that default. The temperature backup is that
-physical climate's configured room sensor, or its own `current_temperature`
-when no room sensor is configured. The humidity backup is the physical climate's
+otherwise its own `current_temperature`. An explicit external source distinct
+from the configured room sensor keeps that room sensor as its backup. When the
+preferred source is that room sensor, whether automatic or explicitly selected,
+the backup is the physical climate's own `current_temperature`. A native preferred
+temperature has no backup. Each assessment exposes only one candidate, without
+chaining through another source after its backup fails. Comfort retains its fixed
+room-source policy; scheduled Room Assist references do not change this policy.
+The humidity backup is the physical climate's
 measured `current_humidity` only, and requires support for that measured attribute;
 target `humidity` is never a backup. Disabled humidity has no backup. Group
 members never inherit the group's control sensor for Comfort.
 
-Backend normalization clears a metric's fallback flag when its source becomes
-automatic or is the default source itself. Disabling humidity monitoring clears
-`humidity_fallback_enabled` as well. This invariant applies to persisted updates,
+Backend normalization keeps an automatic external-room temperature opt-in, and
+clears it when the effective preferred reading becomes the native climate. Fixed
+room-source changes normalize Comfort in the same save/rollback transaction,
+preventing an old opt-in from reappearing after switching back to an external
+source. Transient outages and missing native attributes do not erase opt-ins.
+Humidity normalization still clears its flag for automatic/native selections or
+disabled monitoring. These invariants apply to persisted updates,
 reload and portable import, rather than depending on frontend checkbox resets.
 Both settings are included in portable export/import and return to `false` on
 reset. The selected sensor ID remains saved during temporary fallback use.

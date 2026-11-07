@@ -2314,16 +2314,93 @@ describe("comfort temperature fallback", () => {
       .toBe("sensor.first_temperature");
   });
 
-  it("omits backup rows for automatic selection even if old candidate metadata remains", () => {
-    const { viewHost } = host({ enabled: true, expanded: true,
-      comfort: { temperature_entity_id: null }, roomTemperatureEntityId: "sensor.room",
+  it.each([false, true])("offers the native backup for an automatic external source without changing its selection (%s)", (enabled) => {
+    const { viewHost, saveZoneComfort } = host({ enabled: true, expanded: true,
+      comfort: { temperature_entity_id: null, temperature_fallback_enabled: enabled }, roomTemperatureEntityId: "sensor.room",
       assessment: temperatureAssessment({ source: "room_sensor", entity_id: "sensor.room" }) });
     const container = document.createElement("div");
     render(renderComfortView(viewHost, ["climate.first"]), container);
-    expect(container.querySelector<HTMLSelectElement>(".comfort-data-sources-config-section .comfort-picker-row:first-child select")!.value).toBe("");
+    const picker = container.querySelector<HTMLSelectElement>(".comfort-data-sources-config-section .comfort-picker-row:first-child select")!;
+    expect(picker.value).toBe("");
     expect(container.querySelector(".comfort-data-sources-config-section .comfort-picker-row:first-child .comfort-selected-entity")?.textContent)
       .toContain("comfortAutomaticSourceValue:sensor.room");
+    const checkbox = container.querySelector<HTMLInputElement>(".comfort-backup-row.metric-temperature input")!;
+    expect(checkbox.checked).toBe(enabled);
+    expect(container.querySelector(".comfort-backup-row.metric-temperature .comfort-backup-source")?.textContent).toBe("climate.first");
+    checkbox.checked = !enabled;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZoneComfort).toHaveBeenLastCalledWith("climate.first", { temperature_fallback_enabled: !enabled });
+    expect(picker.value).toBe("");
+    expect(viewHost._data!.zones["climate.first"].comfort!.temperature_entity_id).toBeNull();
+  });
+
+  it("keeps automatic selection and its backup control visible during fallback and recovery", () => {
+    const { viewHost } = host({ enabled: true, expanded: true,
+      comfort: { temperature_entity_id: null, temperature_fallback_enabled: true }, roomTemperatureEntityId: "sensor.room",
+      assessment: temperatureAssessment({ source: "climate", entity_id: "climate.first", using_fallback: true }) });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+    const picker = container.querySelector(".comfort-data-sources-config-section .comfort-picker-row:first-child")!;
+    expect(picker.querySelector<HTMLSelectElement>("select")!.value).toBe("");
+    expect(picker.querySelector(".comfort-selected-entity")?.textContent).toBe("comfortFallbackActive:climate.first");
+    expect(container.querySelector<HTMLInputElement>(".comfort-backup-row.metric-temperature input")!.checked).toBe(true);
+    expect(container.querySelector(".comfort-backup-active[role=status]")?.textContent).toBe("comfortBackupInUse");
+    viewHost._data!.comfort!["climate.first"] = temperatureAssessment({ source: "room_sensor", entity_id: "sensor.room" });
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+    expect(picker.querySelector<HTMLSelectElement>("select")!.value).toBe("");
+    expect(picker.querySelector(".comfort-selected-entity")?.textContent).toContain("comfortAutomaticSourceValue:sensor.room");
+    expect(container.querySelector<HTMLInputElement>(".comfort-backup-row.metric-temperature input")!.checked).toBe(true);
+    expect(container.querySelector(".comfort-backup-active[role=status]")).toBeNull();
+  });
+
+  it("leaves backup applicability to the backend when selecting the automatic external source", () => {
+    const { viewHost, saveZoneComfort } = host({ enabled: true, expanded: true,
+      comfort: { temperature_fallback_enabled: true }, roomTemperatureEntityId: "sensor.room",
+      assessment: temperatureAssessment({ fallback_entity_id: "sensor.room", fallback_source: "room_sensor" }) });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+    const picker = container.querySelector<HTMLSelectElement>(".comfort-data-sources-config-section .comfort-picker-row:first-child select")!;
+    picker.value = "";
+    picker.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZoneComfort).toHaveBeenLastCalledWith("climate.first", { temperature_entity_id: null });
+    expect(viewHost._data!.zones["climate.first"].comfort!.temperature_fallback_enabled).toBe(true);
+    viewHost._data!.zones["climate.first"].comfort!.temperature_entity_id = null;
+    viewHost._data!.comfort!["climate.first"] = temperatureAssessment({ source: "room_sensor", entity_id: "sensor.room" });
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+    expect(picker.value).toBe("");
+    expect(container.querySelector<HTMLInputElement>(".comfort-backup-row.metric-temperature input")!.checked).toBe(true);
+    expect(container.querySelector(".comfort-backup-row.metric-temperature .comfort-backup-source")?.textContent).toBe("climate.first");
+  });
+
+  it.each([null, "climate.first"])("omits the backup for a native primary with no backend alternative (%s)", (preferred) => {
+    const { viewHost } = host({ enabled: true, expanded: true,
+      comfort: { temperature_entity_id: preferred },
+      assessment: temperatureAssessment({ source: "climate", entity_id: "climate.first", fallback_entity_id: null, fallback_source: null }) });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
     expect(container.querySelector(".comfort-backup-sensors")).toBeNull();
+  });
+
+  it("keeps automatic humidity backup hidden even when candidate metadata is present", () => {
+    const { viewHost } = host({ enabled: true, expanded: true,
+      comfort: { temperature_entity_id: null, humidity_entity_id: null },
+      assessment: assessmentWithHumidity({ fallback_entity_id: null }, { source: "climate", entity_id: "climate.first" }) });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+    expect(container.querySelector(".comfort-backup-sensors")).toBeNull();
+  });
+
+  it.each([false, true])("tracks the automatic external primary but excludes its native backup from freshness expiry (%s)", (enabled) => {
+    const { viewHost } = host({ enabled: true, expanded: true,
+      comfort: { temperature_entity_id: null, temperature_fallback_enabled: enabled, humidity_enabled: false, co2_entity_id: null },
+      roomTemperatureEntityId: "sensor.room",
+      assessment: temperatureAssessment({ source: "room_sensor", entity_id: "sensor.room" }) });
+    const container = document.createElement("div");
+    render(renderComfortView(viewHost, ["climate.first"]), container);
+    const sources = container.querySelector(".comfort-freshness-sources")!.textContent;
+    expect(sources).toContain("sensor.room");
+    expect(sources).not.toContain("climate.first");
+    expect(sources).not.toContain("sensor.first_temperature");
   });
 
   it.each([false, true])("includes the physical backup in freshness sources only when opted in (%s)", (enabled) => {

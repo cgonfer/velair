@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](comfort.md) · [Español](comfort.es.md) · [Fra
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.10 |
-| Laatst gesynchroniseerd | 2026-11-06 |
+| Referentieversie | 1.9.0-beta.11 |
+| Laatst gesynchroniseerd | 2026-11-07 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -57,24 +57,34 @@ De effectieve entiteits-ID verschijnt onder elke keuzelijst. Optionele metingen 
 
 ### Reservesensoren
 
-Wanneer een gekozen temperatuur- of luchtvochtigheidssensor een andere
-standaardbron heeft, toont **Gegevensbronnen** een apart onderdeel
+Wanneer een temperatuur- of luchtvochtigheidsbron een afzonderlijke ondersteunde
+reservebron heeft, toont **Gegevensbronnen** een apart onderdeel
 **Reservesensoren**. Elke rij bevat een eigen selectievakje, de naam en het
 pictogram Temperatuur of Luchtvochtigheid en de exacte entiteits-ID van de
 reservebron. Beide selectievakjes staan standaard uit.
 
 - **Temperatuur** gebruikt de temperatuursensor die voor dat fysieke apparaat
-  is ingesteld, of de eigen `current_temperature` als er geen kamersensor is ingesteld.
+  is ingesteld als deze verschilt van de gekozen externe sensor. Als Comfort
+  deze ingestelde kamersensor al gebruikt, ook via **Automatische bron gebruiken**,
+  is de reservebron de eigen `current_temperature` van het apparaat. Als er geen
+  kamersensor is ingesteld, gebruikt een externe Comfortsensor die eigen meting
+  ook als reservebron.
 - **Luchtvochtigheid** gebruikt alleen de gemeten `current_humidity` van het
   apparaat. Een reservebron voor luchtvochtigheid verschijnt alleen als die
   gemeten bron wordt ondersteund; de doelinstelling `humidity` wordt nooit als
   meting gebruikt.
 
-Rijen verschijnen alleen voor expliciet gekozen sensoren met een andere
-standaardbron. **Automatische bron gebruiken** of de standaardbron zelf kiezen
-verwijdert de rij en schakelt de opgeslagen reserve-instelling uit. Bewaking
-van luchtvochtigheid uitschakelen schakelt ook de opgeslagen reservebron
-hiervoor uit. Een automatische bron heeft geen extra reservebron.
+De temperatuurreserve blijft beschikbaar wanneer de automatische bron een externe
+kamersensor is. Als de voorkeursmeting al de eigen temperatuur van het apparaat
+is, verdwijnt de rij en wordt de opgeslagen reserve-instelling gewist. De
+ingestelde kamerbron terugzetten naar het apparaat wist de reservekeuze voor
+de automatische bron; opnieuw een externe kamersensor kiezen schakelt deze
+niet weer in.
+
+Een reservebron voor luchtvochtigheid vereist een expliciet gekozen externe
+bron. De automatische/eigen bron kiezen of de bewaking van luchtvochtigheid
+uitschakelen wist die opgeslagen reserve-instelling. Elke meting heeft hoogstens
+één reservebron; als ook die uitvalt, probeert Comfort geen andere bron.
 
 Met een ingeschakelde reservebron kan een ontbrekende, niet-beschikbare,
 onbekende of niet-numerieke gekozen meting die ene reservebron gebruiken als

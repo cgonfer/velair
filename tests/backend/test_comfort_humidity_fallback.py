@@ -253,7 +253,7 @@ class ComfortFallbackNormalizationTest(unittest.TestCase):
             "humidity_entity_id": H, "humidity_fallback_enabled": True,
         }, "preconditioning": {"room_temperature_entity_id": S}}}}
         loaded = normalize_schedule_data(raw, [E])
-        self.assertFalse(loaded["zones"][E]["comfort"]["temperature_fallback_enabled"])
+        self.assertTrue(loaded["zones"][E]["comfort"]["temperature_fallback_enabled"])
         self.assertTrue(loaded["zones"][E]["comfort"]["humidity_fallback_enabled"])
         loaded["zones"][E]["comfort"].update(humidity_entity_id=E)
         reloaded = normalize_schedule_data(serialize_schedule_data(loaded), [E])

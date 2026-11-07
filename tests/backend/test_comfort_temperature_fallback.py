@@ -83,21 +83,112 @@ class ComfortTemperatureFallbackTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.temperature(f)["availability"], "missing")
         self.assertFalse(self.temperature(f)["using_fallback"])
 
-    async def test_automatic_and_explicit_default_have_no_backup(self):
-        f = self.make(scheduler_module)
-        config = f.data["zones"][E]
-        config["preconditioning"]["room_temperature_entity_id"] = ROOM
-        config["comfort"]["temperature_fallback_enabled"] = True
-        f.hass.states[ROOM].state = "unavailable"
+    async def test_automatic_and_explicit_room_source_can_use_native_backup(self):
         for preferred in (None, ROOM):
             with self.subTest(preferred=preferred):
+                f = self.make(scheduler_module)
+                config = f.data["zones"][E]
+                config["preconditioning"]["room_temperature_entity_id"] = ROOM
                 config["comfort"]["temperature_entity_id"] = preferred
                 metric = self.temperature(f)
-                self.assertIsNone(metric["fallback_entity_id"])
-                self.assertIsNone(metric["fallback_source"])
+                self.assertEqual(metric["fallback_entity_id"], E)
+                self.assertEqual(metric["fallback_source"], "climate")
                 self.assertEqual(metric["entity_id"], ROOM)
                 self.assertFalse(metric["using_fallback"])
-                self.assertFalse(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
+                f.hass.states[ROOM].state = "unavailable"
+                self.assertEqual(self.temperature(f)["availability"], "missing")
+                await f.s.async_update_zone_comfort(E, {"temperature_fallback_enabled": True})
+                metric = self.temperature(f)
+                self.assertEqual(metric["entity_id"], E)
+                self.assertEqual(metric["value"], 22)
+                self.assertTrue(metric["using_fallback"])
+                self.assertTrue(f.data["zones"][E]["comfort"]["temperature_fallback_enabled"])
+                self.assertEqual(f.data["zones"][E]["comfort"]["temperature_entity_id"], preferred)
+                f.hass.states[ROOM].state = "77"
+                self.assertEqual(self.temperature(f)["entity_id"], ROOM)
+                self.assertEqual(self.temperature(f)["value"], 25)
+                self.assertFalse(self.temperature(f)["using_fallback"])
+
+                loaded = normalize_schedule_data(serialize_schedule_data(f.data), list(fixtures.ENTITIES))
+                await f.s.async_stop()
+                f.data.clear()
+                f.data.update(loaded)
+                f.s = scheduler_module.VelairScheduler(
+                    f.hass, f.data, f.manager, f.s._async_save_data)
+                self.addAsyncCleanup(f.s.async_stop)
+                self.assertTrue(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
+                f.hass.states[ROOM].state = "unavailable"
+                self.assertTrue(self.temperature(f)["using_fallback"])
+
+    async def test_native_selection_clears_backup_even_with_room_source(self):
+        f = self.make(scheduler_module)
+        f.data["zones"][E]["preconditioning"]["room_temperature_entity_id"] = ROOM
+        await f.s.async_update_zone_comfort(E, {
+            "temperature_entity_id": None, "temperature_fallback_enabled": True,
+        })
+        self.assertTrue(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
+        await f.s.async_update_zone_comfort(E, {"temperature_entity_id": E})
+        self.assertFalse(f.data["zones"][E]["comfort"]["temperature_fallback_enabled"])
+        self.assertIsNone(self.temperature(f)["fallback_entity_id"])
+        self.assertEqual(self.temperature(f)["entity_id"], E)
+
+    async def test_native_attribute_outage_hides_candidate_without_clearing_opt_in(self):
+        f = self.make(scheduler_module)
+        f.data["zones"][E]["preconditioning"]["room_temperature_entity_id"] = ROOM
+        await f.s.async_update_zone_comfort(E, {
+            "temperature_entity_id": None, "temperature_fallback_enabled": True,
+        })
+        del f.hass.states[E].attributes["current_temperature"]
+        self.assertIsNone(self.temperature(f)["fallback_entity_id"])
+        self.assertTrue(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
+        f.hass.states[ROOM].state = "unavailable"
+        f.hass.states[E].attributes["current_temperature"] = 21
+        self.assertEqual(self.temperature(f)["fallback_entity_id"], E)
+        self.assertTrue(self.temperature(f)["using_fallback"])
+        self.assertEqual(self.temperature(f)["value"], 21)
+
+    async def test_fixed_source_change_to_native_persists_clear_without_resurrection(self):
+        f = self.make(scheduler_module)
+        await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": ROOM})
+        await f.s.async_update_zone_comfort(E, {
+            "temperature_entity_id": None, "temperature_fallback_enabled": True,
+        })
+        saved = []
+        f.s._async_save_data.side_effect = lambda: saved.append(deepcopy(f.data))
+        await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": None})
+        self.assertFalse(f.data["zones"][E]["comfort"]["temperature_fallback_enabled"])
+        self.assertTrue(saved)
+        self.assertTrue(all(not data["zones"][E]["comfort"]["temperature_fallback_enabled"]
+                            for data in saved))
+        await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": ROOM})
+        self.assertFalse(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
+        self.assertEqual(self.temperature(f)["fallback_entity_id"], E)
+
+    async def test_fixed_source_change_save_failure_restores_opt_in_and_source(self):
+        f = self.make(scheduler_module)
+        await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": ROOM})
+        await f.s.async_update_zone_comfort(E, {
+            "temperature_entity_id": None, "temperature_fallback_enabled": True,
+        })
+        before = deepcopy(f.data)
+        f.s._async_save_data.side_effect = RuntimeError("storage unavailable")
+        with self.assertRaisesRegex(RuntimeError, "storage unavailable"):
+            await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": None})
+        self.assertEqual(f.data, before)
+        self.assertTrue(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
+        self.assertEqual(self.temperature(f)["fallback_entity_id"], E)
+
+    async def test_explicit_external_selection_survives_room_assist_source_removal(self):
+        f = self.make(scheduler_module)
+        await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": ROOM})
+        await f.s.async_update_zone_comfort(E, {
+            "temperature_entity_id": ROOM, "temperature_fallback_enabled": True,
+        })
+        await f.s.async_update_zone_preconditioning(E, {"room_temperature_entity_id": None})
+        self.assertTrue(f.data["zones"][E]["comfort"]["temperature_fallback_enabled"])
+        self.assertEqual(self.temperature(f)["fallback_entity_id"], E)
+        f.hass.states[ROOM].state = "unavailable"
+        self.assertTrue(self.temperature(f)["using_fallback"])
 
     async def test_automatic_climate_has_no_duplicate_backup(self):
         f = self.make(scheduler_module)
@@ -107,6 +198,7 @@ class ComfortTemperatureFallbackTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(metric["fallback_entity_id"])
         self.assertIsNone(metric["fallback_source"])
         self.assertFalse(metric["using_fallback"])
+        self.assertFalse(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
 
     async def test_stale_preferred_does_not_trigger_backup(self):
         f = self.make(scheduler_module)
@@ -184,6 +276,11 @@ class ComfortTemperatureFallbackTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(f.s.get_comfort_settings()[E]["temperature_fallback_enabled"])
         loaded = normalize_schedule_data(serialize_schedule_data(f.data), list(fixtures.ENTITIES))
         self.assertTrue(loaded["member_comfort"][B]["temperature_fallback_enabled"])
+        await f.s.async_update_zone_comfort(B, {
+            "temperature_entity_id": None, "temperature_fallback_enabled": True,
+        })
+        self.assertFalse(f.s.get_comfort_settings()[B]["temperature_fallback_enabled"])
+        self.assertIsNone(self.temperature(f, B)["fallback_entity_id"])
 
     async def test_save_failure_rolls_back_and_invalid_values_are_rejected(self):
         f = self.make(scheduler_module)
@@ -214,6 +311,17 @@ class ComfortTemperatureFallbackTest(unittest.IsolatedAsyncioTestCase):
 
 
 class ComfortTemperatureFallbackPersistenceTest(unittest.TestCase):
+    def test_contextual_normalization_preserves_only_external_preferred_backups(self):
+        for preferred in (None, ROOM, S, E):
+            with self.subTest(preferred=preferred):
+                normalized = normalize_comfort_data({
+                    "temperature_entity_id": preferred, "temperature_fallback_enabled": True,
+                }, temperature_default_entity_id=ROOM, temperature_native_entity_id=E)
+                self.assertEqual(normalized["temperature_fallback_enabled"], preferred != E)
+        self.assertFalse(normalize_comfort_data({
+            "temperature_fallback_enabled": True,
+        })["temperature_fallback_enabled"])
+
     def test_legacy_defaults_and_true_round_trip_without_truthy_opt_in(self):
         for value in (None, "true", "false", 1, 0):
             self.assertFalse(normalize_comfort_data({
@@ -239,3 +347,16 @@ class ComfortTemperatureFallbackPersistenceTest(unittest.TestCase):
             payload["sections"]["zones"]["climate.salon"]["comfort"]["temperature_fallback_enabled"] = value
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "boolean"):
                 api._build_import_data(runtime, payload, ["zones"])
+
+    def test_automatic_room_source_backup_survives_portable_round_trip(self):
+        from . import test_api as api_fixtures
+        api = api_fixtures.api_module
+        runtime = api_fixtures.PortableTemperatureContractTest()._runtime(api.CELSIUS)
+        runtime["entry"] = SimpleNamespace(options={})
+        zone = runtime["storage"].data["zones"]["climate.salon"]
+        zone["preconditioning"]["room_temperature_entity_id"] = ROOM
+        zone["comfort"].update(temperature_entity_id=None, temperature_fallback_enabled=True)
+        payload = api._build_export_payload(runtime, ["zones"])
+        imported = api._build_import_data(runtime, payload, ["zones"])
+        self.assertIsNone(imported["zones"]["climate.salon"]["comfort"]["temperature_entity_id"])
+        self.assertTrue(imported["zones"]["climate.salon"]["comfort"]["temperature_fallback_enabled"])

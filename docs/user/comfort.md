@@ -50,26 +50,34 @@ The effective entity ID appears below every selector. Optional metrics without a
 
 ### Backup sensors
 
-When a selected temperature or humidity sensor has a different default source,
+When a temperature or humidity source has a distinct supported backup,
 **Data sources** shows a separate **Backup sensors** subsection. Each row has
 its own checkbox, a Temperature or Humidity label and icon, and the exact backup
 entity ID. Both checkboxes are off by default.
 
 - **Temperature** uses the temperature sensor configured for that physical
-  climate, or its own `current_temperature` if no room sensor is configured.
+  climate when it differs from the selected external sensor. If Comfort already
+  uses that configured room sensor, including through **Use automatic source**,
+  its backup is the climate's own `current_temperature`. If no room sensor is
+  configured, an external Comfort sensor also backs up to that native reading.
 - **Humidity** uses only the climate's measured `current_humidity`. A humidity
   backup appears only when that measured source is supported; the target
   `humidity` setting is never used as a reading.
 
-Rows appear only for explicitly selected sensors with a different default source.
-Choosing **Use automatic source** or selecting the default source itself removes
-that row and clears its saved backup setting. Disabling humidity monitoring also
-clears the humidity backup setting. There is no additional backup behind an
-automatic source.
+Temperature backup remains available when the automatic source is an external
+room sensor. If the preferred reading is already the climate's own temperature,
+the row disappears and its saved backup setting is cleared. Changing the
+configured room source back to the climate clears an automatic-source opt-in;
+selecting an external room sensor again does not reactivate it.
+
+Humidity backup requires an explicitly selected external source. Choosing its
+automatic/native source or disabling humidity monitoring clears that humidity
+backup setting. Each reading has at most one backup; if that backup also fails,
+Comfort does not try another source.
 
 With a backup enabled, a missing, unavailable, unknown, or non-numeric selected
 reading can use that one backup, provided its reading is current and valid.
-**Fallback in use** identifies the active backup. The selected sensor remains
+**Backup in use** identifies the active backup. The selected sensor remains
 saved, and Comfort returns to it when it recovers. A stale selected reading does
 not trigger fallback, and a stale backup is not used. If neither source has a
 usable reading, Comfort continues to show the missing or stale state.

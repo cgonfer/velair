@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.10 |
-| Letzte Synchronisierung | 2026-11-06 |
+| Referenzversion | 1.9.0-beta.11 |
+| Letzte Synchronisierung | 2026-11-07 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -57,24 +57,35 @@ Die wirksame Entitäts-ID erscheint unter jeder Auswahl. Optionale Messgrößen 
 
 ### Ersatzsensoren
 
-Wenn ein ausgewählter Temperatur- oder Luftfeuchtigkeitssensor eine andere
-Standardquelle hat, erscheint unter **Datenquellen** ein eigener Unterabschnitt
+Wenn eine Temperatur- oder Luftfeuchtigkeitsquelle eine andere unterstützte
+Ersatzquelle hat, erscheint unter **Datenquellen** ein eigener Unterabschnitt
 **Ersatzsensoren**. Jede Zeile enthält ein Kontrollkästchen, die Bezeichnung und
 das Symbol für Temperatur oder Luftfeuchtigkeit sowie die genaue Entitäts-ID
 der Ersatzquelle. Beide Kontrollkästchen sind standardmäßig deaktiviert.
 
 - **Temperatur** verwendet den für dieses physische Klimagerät konfigurierten
-  Temperatursensor oder dessen eigenes `current_temperature`, wenn kein Raumsensor konfiguriert ist.
+  Temperatursensor, wenn er sich vom ausgewählten externen Sensor unterscheidet.
+  Nutzt der Komfort bereits diesen konfigurierten Raumsensor, auch über
+  **Automatische Quelle verwenden**, dient das eigene `current_temperature`
+  des Klimageräts als Ersatzquelle. Ist kein Raumsensor konfiguriert, nutzt
+  auch ein externer Komfortsensor diesen geräteeigenen Messwert als Ersatzquelle.
 - **Luftfeuchtigkeit** verwendet nur das gemessene `current_humidity` des
   Klimageräts. Eine Ersatzquelle erscheint nur, wenn diese Messquelle unterstützt
   wird. Der Zielwert `humidity` wird niemals als Messwert verwendet.
 
-Zeilen erscheinen nur für ausdrücklich ausgewählte Sensoren mit einer anderen
-Standardquelle. **Automatische Quelle verwenden** oder die Auswahl der
-Standardquelle selbst entfernt die Zeile und deaktiviert ihre gespeicherte
-Ersatzquellen-Einstellung. Das Abschalten der Luftfeuchtigkeitsüberwachung
-deaktiviert auch deren gespeicherte Ersatzquelle. Hinter einer automatischen
-Quelle gibt es keine zusätzliche Ersatzquelle.
+Die Temperatur-Ersatzquelle bleibt verfügbar, wenn die automatische Quelle ein
+externer Raumsensor ist. Ist der bevorzugte Messwert bereits die Temperatur des
+Klimageräts selbst, verschwindet die Zeile und die gespeicherte Einstellung für
+die Ersatzquelle wird gelöscht. Wird die konfigurierte Raumquelle wieder auf
+das Klimagerät umgestellt, wird die für die automatische Quelle aktivierte
+Ersatzfunktion gelöscht. Eine erneute Auswahl eines externen Raumsensors
+aktiviert sie nicht wieder.
+
+Eine Ersatzquelle für Luftfeuchtigkeit erfordert eine ausdrücklich ausgewählte
+externe Quelle. Die Auswahl ihrer automatischen/geräteeigenen Quelle oder das
+Abschalten der Luftfeuchtigkeitsüberwachung löscht diese gespeicherte
+Ersatzquellen-Einstellung. Jeder Messwert hat höchstens eine Ersatzquelle;
+fällt auch diese aus, versucht der Komfort keine weitere Quelle.
 
 Bei aktivierter Ersatzquelle kann ein fehlender, nicht verfügbarer, unbekannter
 oder nicht numerischer ausgewählter Messwert diese eine Ersatzquelle nutzen,

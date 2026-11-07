@@ -8,8 +8,8 @@ Traduções: [Original em inglês](comfort.md) · [Español](comfort.es.md) · [
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.10 |
-| Última sincronização | 2026-11-06 |
+| Versão de referência | 1.9.0-beta.11 |
+| Última sincronização | 2026-11-07 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -57,22 +57,32 @@ O ID efetivo da entidade aparece abaixo de cada seletor. Métricas opcionais sem
 
 ### Sensores de reserva
 
-Quando o sensor de temperatura ou humidade selecionado tem uma fonte predefinida
-diferente, **Fontes de dados** mostra uma subsecção separada **Sensores de reserva**.
+Quando uma fonte de temperatura ou humidade tem uma reserva distinta e suportada,
+**Fontes de dados** mostra uma subsecção separada **Sensores de reserva**.
 Cada linha tem a sua caixa de seleção, o nome e o ícone Temperatura ou Humidade e
 o ID exato da entidade de reserva. Ambas as caixas estão desmarcadas por predefinição.
 
 - **Temperatura** usa o sensor de temperatura configurado para esse dispositivo
-  físico, ou o seu próprio `current_temperature` se não houver sensor ambiente configurado.
+  físico quando difere do sensor externo selecionado. Se o Conforto já usa esse
+  sensor ambiente configurado, incluindo através de **Usar fonte automática**,
+  a reserva é o `current_temperature` do próprio dispositivo. Se não houver
+  sensor ambiente configurado, um sensor externo do Conforto também usa essa
+  leitura nativa como reserva.
 - **Humidade** usa apenas o `current_humidity` medido do dispositivo. Uma reserva
   de humidade só aparece quando essa fonte medida é suportada; a configuração
   de alvo `humidity` nunca é usada como leitura.
 
-As linhas aparecem apenas para sensores selecionados explicitamente com uma
-fonte predefinida diferente. Escolher **Usar fonte automática** ou selecionar a
-própria fonte predefinida remove a linha e desativa a sua configuração de reserva
-guardada. Desativar a monitorização de humidade também desativa a sua reserva
-guardada. Uma fonte automática não tem outra reserva adicional.
+A reserva de temperatura continua disponível quando a fonte automática é um
+sensor externo de ambiente. Se a leitura preferencial já for a temperatura do
+próprio dispositivo, a linha desaparece e a configuração de reserva guardada é
+desativada. Mudar a fonte ambiente configurada de volta para o dispositivo
+desativa a reserva ativada para a fonte automática; selecionar novamente um
+sensor externo de ambiente não a reativa.
+
+A reserva de humidade exige uma fonte externa selecionada explicitamente.
+Escolher a sua fonte automática/nativa ou desativar a monitorização de humidade
+desativa essa configuração de reserva de humidade. Cada leitura tem no máximo
+uma reserva; se esta também falhar, o Conforto não tenta outra fonte.
 
 Com uma reserva ativada, uma leitura selecionada ausente, indisponível,
 desconhecida ou não numérica pode usar essa única reserva se a leitura for

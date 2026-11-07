@@ -48,6 +48,8 @@ class ClimateDeliveryCoordinator:
     ) -> None:
         self._hass = hass
         self._generations: dict[str, int] = {}
+        self._intent_tokens: dict[str, object] = {}
+        self._intent_changed: Callable[[str], None] | None = None
         self._locks: dict[str, asyncio.Lock] = {}
         self._tasks: dict[str, set[asyncio.Task[None]]] = {}
         self._owners: dict[str, asyncio.Task[object] | None] = {}
@@ -78,11 +80,15 @@ class ClimateDeliveryCoordinator:
         *,
         resilient: bool = True,
         recovery_resolver: DeliveryResolver | None = None,
+        on_handoff: Callable[[CurrentGuard], None] | None = None,
     ) -> bool:
         """Attempt the newest intent once and arrange conservative recovery."""
         generation = self._replace(entity_id)
         if self._stopped:
             return False
+        if on_handoff is not None:
+            token = self._intent_tokens[entity_id]
+            on_handoff(lambda: not self._stopped and self._intent_tokens.get(entity_id) is token)
         current_resolver = recovery_resolver or resolver
         if resilient:
             self._set_eligible(entity_id, generation, current_resolver)
@@ -124,6 +130,10 @@ class ClimateDeliveryCoordinator:
         self._replace(entity_id, reason="cancelled")
         self._clear_eligibility(entity_id)
 
+    def set_intent_changed_callback(self, callback: Callable[[str], None]) -> None:
+        """Wake an intent producer when another delivery supersedes its handoff."""
+        self._intent_changed = callback
+
     def retry_current(self, entity_id: str) -> bool:
         """Back off after a recoverable failure outside the base delivery."""
         resolver = self._eligible.get(entity_id)
@@ -164,7 +174,7 @@ class ClimateDeliveryCoordinator:
                 resolver = self._eligible.get(entity_id)
                 if receipt and resolver is not None and not self._stopped:
                     previous_acceptance = self._accepted.get(entity_id)
-                    generation = self._replace(entity_id, notify=False)
+                    generation = self._replace(entity_id, notify=False, preserve_intent=True)
                     self._eligible_generations[entity_id] = generation
                     self._accepted[entity_id] = (generation, previous_acceptance[1] if previous_acceptance else None)
                     self._set_receipt(entity_id, receipt)
@@ -215,6 +225,7 @@ class ClimateDeliveryCoordinator:
         *,
         reason: str = "replaced",
         notify: bool = True,
+        preserve_intent: bool = False,
     ) -> int:
         if (
             notify
@@ -228,6 +239,10 @@ class ClimateDeliveryCoordinator:
             )
         generation = self._generations.get(entity_id, 0) + 1
         self._generations[entity_id] = generation
+        if not preserve_intent:
+            self._intent_tokens[entity_id] = object()
+            if self._intent_changed is not None:
+                self._intent_changed(entity_id)
         self._cancel_confirmation_deadline(entity_id)
         self._receipts.pop(entity_id, None)
         self._receipt_evidence.pop(entity_id, None)
@@ -500,7 +515,7 @@ class ClimateDeliveryCoordinator:
         resolver = self._eligible.get(entity_id)
         if resolver is None or self._stopped:
             return
-        generation = self._replace(entity_id, notify=False)
+        generation = self._replace(entity_id, notify=False, preserve_intent=True)
         self._eligible_generations[entity_id] = generation
         try:
             outcome = await self._async_attempt(entity_id, generation, resolver)

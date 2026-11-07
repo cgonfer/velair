@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 import logging
 import math
 from typing import Any
@@ -45,6 +46,9 @@ class ClimateChangeMonitor:
         self._last_states = {}
         self._pending_changes = {}
         self._processing_tokens = {}
+        self._queued_changes: dict[str, deque[dict[str, Any]]] = {}
+        self._workers: dict[str, asyncio.Task[Any]] = {}
+        self._latest_tokens: dict[str, object] = {}
         self._active = False
 
     def async_start(self) -> None:
@@ -70,6 +74,11 @@ class ClimateChangeMonitor:
         self._last_states.clear()
         self._pending_changes.clear()
         self._processing_tokens.clear()
+        for queued in self._queued_changes.values():
+            queued.clear()
+        self._queued_changes.clear()
+        self._workers.clear()
+        self._latest_tokens.clear()
 
     def pending_external_fields(self, entity_id):
         """Read changes whose ownership listener or policy task is pending."""
@@ -179,45 +188,95 @@ class ClimateChangeMonitor:
 
         token = object()
         self._pending_changes.setdefault(new_state.entity_id, {})[token] = frozenset(external_fields)
+        owner_for_entity = getattr(self._scheduler, "owner_for_entity", None)
+        owner = (owner_for_entity(new_state.entity_id)
+                 if callable(owner_for_entity) else new_state.entity_id)
+        queued = self._queued_changes.get(owner)
+        start_worker = queued is None
+        if queued is None:
+            # Reserve ownership before HA can eagerly start the worker. A
+            # reentrant report from its first service call joins this queue.
+            queued = deque()
+            self._queued_changes[owner] = queued
+        queued.append({
+            "token": token, "entity_id": new_state.entity_id,
+            "changed_fields": external_fields, "previous": previous,
+            "current": current, "observed_snapshot": observed_snapshot,
+            "change_context": _event_context_snapshot(event),
+        })
+        self._latest_tokens[owner] = token
+        if not start_worker:
+            return
+
+        @callback
+        def release_queue():
+            if self._queued_changes.get(owner) is not queued:
+                return
+            # Cancellation retires this producer's remaining observations. Do
+            # not leave an unowned queue or pending authority blocking later
+            # reports, and never remove a replacement producer's queue.
+            for change in queued:
+                pending = self._pending_changes.get(change["entity_id"], {})
+                pending.pop(change["token"], None)
+                if not pending:
+                    self._pending_changes.pop(change["entity_id"], None)
+            queued.clear()
+            self._queued_changes.pop(owner, None)
+            self._latest_tokens.pop(owner, None)
 
         async def _async_process() -> None:
             task = asyncio.current_task()
-            self._processing_tokens[task] = token
             try:
-                context_snapshot = _event_context_snapshot(event)
-                if context_snapshot is not None:
-                    await self._scheduler.async_handle_external_climate_change(
-                        new_state.entity_id,
-                        changed_fields=external_fields,
-                        previous=previous,
-                        current=current,
-                        observed_snapshot=observed_snapshot,
-                        change_context=context_snapshot,
-                    )
-                else:
-                    await self._scheduler.async_handle_external_climate_change(
-                        new_state.entity_id,
-                        changed_fields=external_fields,
-                        previous=previous,
-                        current=current,
-                        observed_snapshot=observed_snapshot,
-                    )
-            except Exception:
-                _LOGGER.exception(
-                    "Failed to process external climate change for %s",
-                    new_state.entity_id,
-                )
-
+                while queued:
+                    change = queued.popleft()
+                    current_token = change["token"]
+                    self._processing_tokens[task] = current_token
+                    arguments = {key: value for key, value in change.items()
+                                 if key not in ("token", "entity_id", "change_context")}
+                    if change["change_context"] is not None:
+                        arguments["change_context"] = change["change_context"]
+                    # Every report keeps its policy/evidence processing. Only
+                    # obsolete physical keep-automatic corrections are skipped,
+                    # after the scheduler acquires the logical zone lock.
+                    arguments["reassert_if_current"] = (
+                        lambda token=current_token: self._latest_tokens.get(owner) is token)
+                    try:
+                        await self._scheduler.async_handle_external_climate_change(
+                            change["entity_id"], **arguments)
+                    except Exception:
+                        _LOGGER.exception(
+                            "Failed to process external climate change for %s",
+                            change["entity_id"],
+                        )
+                    finally:
+                        self._processing_tokens.pop(task, None)
+                        pending = self._pending_changes.get(change["entity_id"], {})
+                        pending.pop(current_token, None)
+                        if not pending:
+                            self._pending_changes.pop(change["entity_id"], None)
+                    if queued:
+                        # Obsolete corrections can finish without I/O. Keep a
+                        # long evidence queue from monopolizing the HA loop.
+                        await asyncio.sleep(0)
             finally:
                 self._processing_tokens.pop(task, None)
-                pending = self._pending_changes.get(new_state.entity_id, {})
-                pending.pop(token, None)
-                if not pending:
-                    self._pending_changes.pop(new_state.entity_id, None)
+                release_queue()
+                if self._workers.get(owner) is task:
+                    self._workers.pop(owner, None)
 
         task = self._hass.async_create_task(_async_process())
+        self._workers[owner] = task
         self._tasks.add(task)
-        task.add_done_callback(self._tasks.discard)
+
+        @callback
+        def finished(completed):
+            self._tasks.discard(completed)
+            # A task cancelled before its first step never enters its finally.
+            release_queue()
+            if self._workers.get(owner) is completed:
+                self._workers.pop(owner, None)
+
+        task.add_done_callback(finished)
 
 
 def _control_change(

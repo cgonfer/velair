@@ -405,6 +405,9 @@ class VelairScheduler:
         self._timer_generation = 0
         self._timer_epoch = 0
         self._attempted_preconditioning_events: set[tuple[object, ...]] = set()
+        self._deferred_timer_cursors: dict[str, datetime] = {}
+        self._deferred_timer_task = None
+        self._deferred_timer_wake_revision = 0
         self._unsub_group_listener: CALLBACK_TYPE | None = None
         self._group_entities: tuple[str, ...] = ()
         self._unsub_timer: CALLBACK_TYPE | None = None
@@ -429,6 +432,9 @@ class VelairScheduler:
         self._room_sensor_listener_batch_depth = 0
         self._room_sensor_listener_dirty = False
         self._pending_room_sensor_sources = None
+        self._pending_room_sensor_assist_entities: set[str] = set()
+        self._room_sensor_assist_task = None
+        self._room_sensor_assist_worker_token = None
         self._room_sensor_assist_states: dict[str, _RoomSensorAssistState] = {}
         self._room_sensor_assist_inflight: dict[str, _RoomSensorAssistState] = {}
         self._room_sensor_assist_entities: tuple[str, ...] = ()
@@ -458,6 +464,7 @@ class VelairScheduler:
         self._target_policy_signatures = {}
         self._operation_status: OperationStatus | None = None
         self._planned_return = PlannedReturnRuntime(self)
+        self._climate_delivery.set_intent_changed_callback(self._planned_return.delivery_invalidated)
         self._observation_values: dict[tuple[str, str], object] | None = None
         self._observation_at: datetime | None = None
         self._observation_epoch = 0
@@ -528,6 +535,51 @@ class VelairScheduler:
             self._projection_save_depth -= 1
             if not self._projection_save_depth:
                 self._projection_save_finished.set()
+            self._queue_deferred_timer()
+
+    def _timer_authority_pending(self, entity_id: str) -> bool:
+        return bool(self._projection_authority_entities(entity_id)
+                    & self._projection_pending_entities.keys())
+
+    @callback
+    def _defer_timer_entity(self, entity_id: str, cursor: datetime) -> None:
+        cursor = dt_util.as_utc(cursor)
+        previous = self._deferred_timer_cursors.get(entity_id)
+        self._deferred_timer_cursors[entity_id] = min(previous, cursor) if previous is not None else cursor
+
+    @callback
+    def _queue_deferred_timer(self) -> None:
+        """Resume withheld deadlines after their transaction has settled."""
+        if self._stopped or not self._deferred_timer_cursors:
+            return
+        self._deferred_timer_wake_revision += 1
+        if self._deferred_timer_task is not None:
+            return
+
+        async def resume():
+            revision = self._deferred_timer_wake_revision
+            try:
+                # A save scope exits before its caller commits or rolls back.
+                # Yield even with eager tasks, then wait for the transaction.
+                await asyncio.sleep(0)
+                while self._projection_save_depth:
+                    await self._projection_save_finished.wait()
+                async with self._profile_mutation_lock:
+                    if self._stopped:
+                        return
+                    self._prepare_runtime_projection(configuration=True, refresh_horizon=True)
+                revision = self._deferred_timer_wake_revision
+                if self._deferred_timer_cursors and not self._stopped:
+                    await self._handle_timer(dt_util.now(), drain_deferred=True)
+            finally:
+                self._deferred_timer_task = None
+                if (revision != self._deferred_timer_wake_revision
+                        and any(not self._timer_authority_pending(entity)
+                                for entity in self._deferred_timer_cursors)):
+                    self._queue_deferred_timer()
+
+        task = self._hass.async_create_task(resume())
+        self._deferred_timer_task = None if task.done() else task
 
     def projection_horizon_ready(self, now=None):
         """Check a prepared interval without constructing calendar values."""
@@ -1202,6 +1254,7 @@ class VelairScheduler:
         self._timer_epoch += 1
         self._timer_cursor = None
         self._attempted_preconditioning_events.clear()
+        self._deferred_timer_cursors.clear()
         for entity_id in sorted(self._data["zones"]):
             if entity_id in self._room_sensor_assist_notification_cleanup_done:
                 continue
@@ -1220,6 +1273,15 @@ class VelairScheduler:
         """Stop scheduling events."""
         self._stopped = True
         self._projection_started = False
+        self._deferred_timer_cursors.clear()
+        self._room_sensor_assist_worker_token = None
+        for attribute in ("_deferred_timer_task", "_room_sensor_assist_task"):
+            task = getattr(self, attribute)
+            setattr(self, attribute, None)
+            if task is not None and task is not asyncio.current_task():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+        self._pending_room_sensor_assist_entities.clear()
         self._clear_projection_horizon_timer()
         task = self._projection_capability_task
         if task is not None and task is not asyncio.current_task():
@@ -2565,6 +2627,7 @@ class VelairScheduler:
                 self._comfort_preconditioning(entity_id).get("room_temperature_entity_id")
                 or entity_id
             ),
+            temperature_native_entity_id=entity_id,
             humidity_default_entity_id=entity_id,
         )
         unit_getter = getattr(self._climate_manager, "temperature_unit", None)
@@ -3550,6 +3613,7 @@ class VelairScheduler:
         current: dict[str, object],
         observed_snapshot: dict[str, object] | None = None,
         change_context: dict[str, object] | None = None,
+        reassert_if_current: Callable[[], bool] | None = None,
     ) -> None:
         """Serialize an external control transition with other zone overrides."""
         physical_entity_id = entity_id
@@ -3573,6 +3637,7 @@ class VelairScheduler:
                 current=current,
                 observed_snapshot=observed_snapshot,
                 change_context=change_context,
+                reassert_if_current=reassert_if_current,
             )
 
     async def _async_handle_external_climate_change_locked(
@@ -3584,6 +3649,7 @@ class VelairScheduler:
         current: dict[str, object],
         observed_snapshot: dict[str, object] | None = None,
         change_context: dict[str, object] | None = None,
+        reassert_if_current: Callable[[], bool] | None = None,
     ) -> None:
         """Apply the configured policy to an external climate change."""
         self.ensure_managed_entity(entity_id)
@@ -3657,6 +3723,8 @@ class VelairScheduler:
             and session_policy["action"] == EXTERNAL_CHANGE_KEEP_AUTOMATIC
         ):
             if not zone["enabled"]:
+                return
+            if reassert_if_current is not None and not reassert_if_current():
                 return
             authoritative_event = self._resolve_authoritative_delivery_event(entity_id)
             if authoritative_event is None:
@@ -4760,6 +4828,10 @@ class VelairScheduler:
         previous_stored_preconditioning = deepcopy(
             self._data["zones"][entity_id].get("preconditioning")
         )
+        previous_stored_comfort = deepcopy(
+            self._data["zones"][entity_id].get("comfort")
+        )
+        previous_has_comfort = "comfort" in self._data["zones"][entity_id]
         previous_preconditioning = self._normalize_preconditioning_for_entity(
             entity_id,
             previous_stored_preconditioning,
@@ -4771,6 +4843,11 @@ class VelairScheduler:
                 **preconditioning,
             }
         )
+        normalize_physical_comfort = (
+            entity_id in self._configured_physical_entities()
+            and previous_preconditioning.get("room_temperature_entity_id")
+            != next_preconditioning.get("room_temperature_entity_id")
+        )
         candidate_zones = deepcopy(self._data["zones"])
         candidate_zones[entity_id]["preconditioning"] = next_preconditioning
         validate_preconditioning_dependencies(candidate_zones)
@@ -4781,6 +4858,10 @@ class VelairScheduler:
         self._invalidate_climate_delivery(entity_id)
         try:
             self._data["zones"][entity_id]["preconditioning"] = next_preconditioning
+            if normalize_physical_comfort:
+                self._data["zones"][entity_id]["comfort"] = self._normalize_comfort_for_entity(
+                    entity_id, previous_stored_comfort
+                )
             self._data["preconditioning_accepted_anchors"] = {key: value for key, value in previous_anchors.items() if value.get("entity_id") not in invalidated_sources}
             with self._projection_save_scope():
                 await self._async_save_data()
@@ -4789,6 +4870,11 @@ class VelairScheduler:
             self._data["zones"][entity_id]["preconditioning"] = (
                 previous_stored_preconditioning
             )
+            if normalize_physical_comfort:
+                if previous_has_comfort:
+                    self._data["zones"][entity_id]["comfort"] = previous_stored_comfort
+                else:
+                    self._data["zones"][entity_id].pop("comfort", None)
             self._data["preconditioning_accepted_anchors"] = previous_anchors
             await self._async_restore_delivery_after_failed_mutation(entity_id)
             raise
@@ -6826,6 +6912,7 @@ class VelairScheduler:
 
     async def _handle_timer(
         self, now: datetime, *, generation: int | None = None,
+        drain_deferred: bool = False,
     ) -> None:
         """Drain crossed deadlines once, resolving each zone's latest intent."""
         async with self._timer_lock:
@@ -6856,8 +6943,15 @@ class VelairScheduler:
                         return
                     due_by_entity: dict[str, tuple[datetime, ClimateEvent]] = {}
                     if self.mode == MODE_AUTO:
-                        scan_from = (cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
+                        scan_cursor = min((cursor, *self._deferred_timer_cursors.values())) if drain_deferred else cursor
+                        scan_from = (scan_cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
                         for event in self._iter_future_events(scan_from, clear_applied=False):
+                            entity_cursor = self._deferred_timer_cursors.get(event.entity_id, cursor) if drain_deferred else cursor
+                            if self._timer_authority_pending(event.entity_id):
+                                self._defer_timer_entity(event.entity_id, entity_cursor)
+                                continue
+                            if not drain_deferred and event.entity_id in self._deferred_timer_cursors:
+                                continue
                             nominal = dt_util.as_utc(event.target_when or event.when)
                             application = dt_util.as_utc(event.when)
                             if event.entity_id in expired_overrides:
@@ -6866,10 +6960,10 @@ class VelairScheduler:
                                 continue
                             if self._is_applied_preconditioning_event(event):
                                 continue
-                            if cursor < nominal <= cutoff:
+                            if entity_cursor < nominal <= cutoff:
                                 due_at = nominal
                             elif event.target_when is not None and application <= cutoff < nominal:
-                                if application <= cursor and self._was_preconditioning_attempted(event):
+                                if application <= entity_cursor and self._was_preconditioning_attempted(event):
                                     continue
                                 due_at = application
                             else:
@@ -6887,6 +6981,22 @@ class VelairScheduler:
                         target = self._room_sensor_assist_target_event(entity_id, now=action_now)
                         if target is not None:
                             due_by_entity.setdefault(entity_id, (cutoff, target))
+                    if drain_deferred:
+                        # A refreshed forecast may no longer contain nominal
+                        # transitions crossed while its configuration was held.
+                        # Only its latest committed current block can own them.
+                        for entity_id, deferred_cursor in list(self._deferred_timer_cursors.items()):
+                            if (self._timer_authority_pending(entity_id)
+                                    or self.mode != MODE_AUTO
+                                    or self._is_zone_override_active(entity_id, action_now)):
+                                continue
+                            current = self._current_schedule_event(entity_id, action_now)
+                            if (current is not None and deferred_cursor < dt_util.as_utc(current.when) <= cutoff
+                                    and not self._is_applied_preconditioning_event(current)):
+                                due_by_entity.setdefault(entity_id, (dt_util.as_utc(current.when), current))
+                        for entity_id in list(self._deferred_timer_cursors):
+                            if not self._timer_authority_pending(entity_id) and entity_id not in due_by_entity:
+                                self._deferred_timer_cursors.pop(entity_id, None)
                     # Publish the scan boundary before yielding to climate delivery.
                     self._timer_cursor = cutoff
                     self._prepare_runtime_projection(action_now, configuration=True, refresh_horizon=True)
@@ -6894,11 +7004,15 @@ class VelairScheduler:
                         if self._stopped or self._temperature_migration_blocked or epoch != self._timer_epoch:
                             return
                         try:
+                            if self._timer_authority_pending(event.entity_id):
+                                self._defer_timer_entity(event.entity_id, cursor)
+                                continue
                             resolved = self._resolve_authoritative_delivery_event(
                                 event.entity_id, requested_event=event, requested_at=action_now,
                             )
                             if resolved is None:
                                 continue
+                            self._deferred_timer_cursors.pop(event.entity_id, None)
                             intent = (
                                 dt_util.as_utc(resolved.when),
                                 dt_util.as_utc(resolved.target_when) if resolved.target_when else None,
@@ -6945,6 +7059,11 @@ class VelairScheduler:
         if self.mode == MODE_AUTO:
             scan_from = (cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
             for event in self._iter_future_events(scan_from, clear_applied=False):
+                if self._timer_authority_pending(event.entity_id):
+                    self._defer_timer_entity(event.entity_id, cursor)
+                    continue
+                if event.entity_id in self._deferred_timer_cursors:
+                    continue
                 if self._is_applied_preconditioning_event(event):
                     continue
                 if any(cursor < dt_util.as_utc(instant) <= cutoff for instant in (
@@ -7083,10 +7202,16 @@ class VelairScheduler:
         previous_state = override.get("previous_state")
         if not previous_state:
             return
+        preparation = self._planned_return.target(entity_id)
+
+        def handed_off(is_current):
+            self._planned_return.preparation_handed_off(preparation, is_current)
 
         def resolve_restore() -> Delivery | None:
             current_event = self._resolve_authoritative_delivery_event(entity_id)
             if current_event is not None and _event_has_explicit_target(current_event):
+                return_preparation = self._planned_return.preparation_for_delivery(current_event)
+                return_episode = self._dependency_episode()
                 async def apply_current() -> None:
                     await self._async_apply_resolved_event_call(
                         current_event,
@@ -7101,6 +7226,8 @@ class VelairScheduler:
                         source="boost_ended",
                         is_current=is_current,
                     )
+                    if return_preparation is not None:
+                        self._planned_return.preparation_accepted(current_event, return_episode, is_current)
 
                 async def commit_and_announce(is_current: CurrentGuard) -> None:
                     await commit_current(is_current)
@@ -7122,7 +7249,9 @@ class VelairScheduler:
 
             return Delivery(deliver_previous, on_success)
 
-        await self._climate_delivery.async_deliver(entity_id, resolve_restore)
+        await self._climate_delivery.async_deliver(
+            entity_id, resolve_restore,
+            on_handoff=handed_off if preparation is not None else None)
 
     async def _async_clear_expired_global_mode(self, now: datetime) -> None:
         """Return to auto mode when a temporary global mode expires."""
@@ -7927,9 +8056,19 @@ class VelairScheduler:
         source: str = "schedule",
         applied_at: datetime | None = None,
         on_success: Callable[[CurrentGuard], Awaitable[None]] | None = None,
+        on_handoff: Callable[[CurrentGuard], None] | None = None,
     ) -> bool:
         """Deliver the current authoritative scheduler event."""
         self._refresh_control_projection(event.entity_id)
+        preparation = (self._planned_return.target(event.entity_id)
+                       or self._planned_return.preparation_for_delivery(event))
+        def handed_off(is_current):
+            if not self._timer_authority_pending(event.entity_id):
+                self._deferred_timer_cursors.pop(event.entity_id, None)
+            if preparation is not None:
+                self._planned_return.preparation_handed_off(preparation, is_current)
+            if on_handoff is not None:
+                on_handoff(is_current)
         accepted_intent = None
         def delivery_for(
             resolved: ClimateEvent | None,
@@ -7941,6 +8080,8 @@ class VelairScheduler:
                 and accepted_intent != _event_control_intent(resolved)):
                 return None
             authority_context = self._delivery_authority_context(resolved.entity_id)
+            return_preparation = self._planned_return.preparation_for_delivery(resolved)
+            return_episode = self._dependency_episode()
             acceptance = None
 
             async def apply() -> None:
@@ -7964,6 +8105,8 @@ class VelairScheduler:
                     is_current=is_current,
                     acceptance=acceptance,
                 )
+                if return_preparation is not None:
+                    self._planned_return.preparation_accepted(resolved, return_episode, is_current)
                 if on_success is not None and is_current():
                     await on_success(is_current)
 
@@ -7998,6 +8141,7 @@ class VelairScheduler:
             event.entity_id,
             resolve_initial,
             recovery_resolver=resolve_current,
+            on_handoff=handed_off if preparation is not None or on_handoff is not None or event.entity_id in self._deferred_timer_cursors else None,
         )
 
     def _resolve_authoritative_delivery_event(
@@ -8668,7 +8812,7 @@ class VelairScheduler:
 
     def _zone_has_future_preconditioning_candidate(self, entity_id, zone, now):
         """Read recurring target eligibility from the prepared nominal week."""
-        if any(event.entity_id == entity_id for event in self._planned_return.plans(now)):
+        if self._planned_return.has_preparation_plan(entity_id, now):
             return True
         prepared = self._schedule_projection.schedules.get(entity_id)
         return bool(prepared is not None and prepared.is_current_horizon(now)
@@ -11375,6 +11519,8 @@ class VelairScheduler:
     def _handle_room_sensor_assist_timer(self, now: datetime) -> None:
         """Refresh all active assisted targets."""
         self._unsub_room_sensor_assist_timer = None
+        if self._stopped:
+            return
         entity_ids = sorted(
             set(self._room_sensor_assist_states)
             | self._room_sensor_assist_candidate_climates()
@@ -11390,9 +11536,36 @@ class VelairScheduler:
         if not entity_ids:
             _LOGGER.debug("Room Sensor Assist refresh skipped: no active candidates")
             return
-        self._hass.async_create_task(
-            self._async_refresh_room_sensor_assist_candidates(entity_ids)
-        )
+        self._pending_room_sensor_assist_entities.update(entity_ids)
+        if self._room_sensor_assist_worker_token is not None:
+            return
+        token = object()
+        self._room_sensor_assist_worker_token = token
+
+        async def refresh_pending():
+            current = asyncio.current_task()
+            self._room_sensor_assist_task = current
+            try:
+                while self._pending_room_sensor_assist_entities and not self._stopped:
+                    selected = sorted(self._pending_room_sensor_assist_entities)
+                    self._pending_room_sensor_assist_entities.clear()
+                    await self._async_refresh_room_sensor_assist_candidates(selected)
+            finally:
+                if self._room_sensor_assist_worker_token is token:
+                    self._room_sensor_assist_worker_token = None
+                if self._room_sensor_assist_task is current:
+                    self._room_sensor_assist_task = None
+
+        coroutine = refresh_pending()
+        try:
+            task = self._hass.async_create_task(coroutine)
+        except BaseException:
+            coroutine.close()
+            if self._room_sensor_assist_worker_token is token:
+                self._room_sensor_assist_worker_token = None
+            raise
+        if self._room_sensor_assist_worker_token is token and not task.done():
+            self._room_sensor_assist_task = task
 
     async def _async_refresh_room_sensor_assist_candidates(
         self,
@@ -12375,17 +12548,20 @@ class VelairScheduler:
     def _comfort_temperature_sources(
         self, entity_id: str, config: ComfortData,
     ) -> tuple[str, str | None]:
-        """Resolve one preferred source and one distinct default backup."""
+        """Resolve one preferred source and one distinct physical backup."""
         room_sensor = self._comfort_preconditioning(entity_id).get(
             "room_temperature_entity_id"
         )
         default = room_sensor or entity_id
         preferred = config.get("temperature_entity_id") or default
-        if preferred != default and default == entity_id:
+        if preferred == entity_id:
+            return preferred, None
+        fallback = default if preferred != default else entity_id
+        if fallback == entity_id:
             state = self._comfort_state(entity_id)
             if "current_temperature" not in getattr(state, "attributes", {}):
                 return preferred, None
-        return preferred, default if preferred != default else None
+        return preferred, fallback
 
     def _comfort_temperature_metric(
         self,
@@ -13997,16 +14173,24 @@ class VelairScheduler:
                 scan_from = (self._timer_cursor - timedelta(microseconds=1)).astimezone(now.tzinfo)
                 scanned = (self._iter_future_events(scan_from, clear_applied=False) if configuration
                            else self._iter_future_events(scan_from, clear_applied=False, configuration=False))
-                if any(
-                    self._timer_cursor < dt_util.as_utc(event.target_when or event.when) <= dt_util.as_utc(now)
-                    and not self._is_applied_preconditioning_event(event)
-                    for event in scanned
-                ):
-                    candidates.append(now)
+                for event in scanned:
+                    if (not self._timer_cursor < dt_util.as_utc(event.target_when or event.when) <= dt_util.as_utc(now)
+                            or self._is_applied_preconditioning_event(event)):
+                        continue
+                    if self._timer_authority_pending(event.entity_id):
+                        self._defer_timer_entity(event.entity_id, self._timer_cursor)
+                    elif event.entity_id not in self._deferred_timer_cursors:
+                        candidates.append(now)
+                        break
             # Retain the direct-call fallback used by scheduler consumers/tests.
             if not events and self.next_event is not None:
                 events = [self.next_event]
             for event in events:
+                if self._timer_authority_pending(event.entity_id):
+                    self._defer_timer_entity(event.entity_id, self._timer_cursor or dt_util.as_utc(now))
+                    continue
+                if event.entity_id in self._deferred_timer_cursors:
+                    continue
                 action = event.when
                 if self._is_applied_preconditioning_event(event) or (
                     event.target_when is not None

@@ -565,7 +565,7 @@ export class VelairCard extends LitElement {
   private readonly _presetPreviews = new PresetPreviewCache();
 
   private _presetPreviewKey(block: DraftScheduleBlock, index: number, source: BlockDraftSource): string {
-    return presetPreviewKey([this._selectedEntity, this._selectedWeekday, this._scheduleSource, source, index, this._data?.configuration_revision, this._data?.temperature_unit], block);
+    return presetPreviewKey([this._selectedEntity, this._selectedWeekday, this._scheduleSource, source, index, this._data?.configuration_revision, this._data?.temperature_unit, source === "schedule" && this._draftTemplateLink?.mode === "full" ? this._draftTemplateLink : undefined], block);
   }
 
   private _effectivePresetBlock(block: DraftScheduleBlock, index: number, source: BlockDraftSource): ScheduleBlock | undefined {
@@ -624,8 +624,10 @@ export class VelairCard extends LitElement {
     }
     if (this._scheduleSource !== "default") { this._presetPreviews.retain(new Set()); return; }
     this._presetPreviews.retain(new Set(this._draftBlocks.map((block, index) => this._presetPreviewKey(block, index, "schedule"))));
+    const fullLink = this._draftTemplateLink?.mode === "full" ? { ...this._draftTemplateLink } : undefined;
+    let fullDayPreview: ReturnType<VelairApiClient["previewDailySchedule"]> | undefined;
     this._draftBlocks.forEach((block, index) => {
-      if ((!block.preset_key && this._draftTemplateLink?.mode !== "full") || this._effectivePresetBlock(block, index, "schedule")) return;
+      if ((!block.preset_key && !fullLink) || this._effectivePresetBlock(block, index, "schedule")) return;
       const key = this._presetPreviewKey(block, index, "schedule");
       const entityId = this._selectedEntity;
       const weekday = this._selectedWeekday;
@@ -633,7 +635,9 @@ export class VelairCard extends LitElement {
       this._presetPreviews.request(key, async () => {
         const api = this._api();
         if (!api || !entityId) throw new Error(this._t("unableLoad"));
-        const response = await api.previewDailySchedule(entityId, weekday, this._draftTemplateLink?.mode === "full" ? { template_link: this._draftTemplateLink } : { blocks: [{ start, preset_key: block.preset_key }] });
+        const response = await (fullLink
+          ? (fullDayPreview ??= api.previewDailySchedule(entityId, weekday, { template_link: fullLink }))
+          : api.previewDailySchedule(entityId, weekday, { blocks: [{ start, preset_key: block.preset_key }] }));
         return response.blocks.find((item) => item.start === start);
       }, () => key === this._presetPreviewKey(this._draftBlocks[index] ?? {} as DraftScheduleBlock, index, "schedule"), () => this.requestUpdate(), () => undefined);
     });

@@ -318,6 +318,7 @@ def _loaded_velair_integration(frontend_module):
     )
     install_module(
         "custom_components.velair.temperature_migration",
+        TemperatureMigrationNotifications=RuntimePlaceholder,
         async_dismiss_temperature_migration_notification=async_noop,
         async_notify_temperature_migration=async_noop,
     )

@@ -1,5 +1,39 @@
 # Manual Testing
 
+## Event-driven recovery and bounded work (beta.11)
+
+1. Hold a schedule save for the affected zone across a due weekly early start.
+   Check successful commit
+   and failed-write rollback with heating and cooling: preparation resumes with
+   the committed or restored configuration, and an unrelated zone continues.
+   Repeat with overlapping saves and stop/reload while work is pending.
+2. During Planned Return preparation, remove the climate's HA state or make it
+   unknown/unavailable until after the planned arrival. Confirm other zones and
+   the panel remain usable. Reconnect before and after arrival; only current
+   intent may apply. Repeat with Keep automatic, Boost expiry, Pause, cancellation
+   and retiming. Command acceptance must remain separate from reported recovery.
+3. Hold climate delivery while sending a burst of external target changes. Check
+   all external-change policies, heating/cooling/ranges and room groups. Manual
+   observations and transitions must remain ordered; Keep automatic eventually
+   restores the current target. An independent zone must continue. Repeat with
+   Boost, Pause and unload while the worker is waiting.
+4. With Room Assist enabled, update several eligible sensors while delivery is
+   slow. Include sources whose debounce expires during the wait and a scheduled
+   source change. The next correction must include pending sources and current
+   readings. Check positive debounce, a failed delivery, and stop/reload cleanup.
+5. Keep a temperature migration block active across repeated state updates:
+   unchanged successful notifications must not be recreated. Change its reason,
+   unblock, then reblock. A failed create/dismiss must allow a later event to
+   recover and must not prevent scheduling from resuming after unblock.
+6. Open a fully linked multi-block Default/Profile day with a slow or failing
+   preview backend. While waiting, edit a sibling draft or change zone, day,
+   source or link. Reject stale responses, preserve drafts and keep the explicit
+   per-block retry usable after failure. Check phone/tablet layouts and both
+   temperature units. These are behavior checks, with no timing thresholds.
+
+These scenarios complement automated regression tests; exercise them in a real
+Home Assistant installation before treating physical-device recovery as verified.
+
 ## Room Assist sensor schedule (beta)
 
 1. Select **Fixed sensor** and verify existing immediate sensor selection,
@@ -2361,10 +2395,10 @@ vendor propagation must also be checked on the installation using selected deliv
 1. Use a physical managed climate with measured temperature and humidity, and
    select different external sensors in Comfort. Confirm **Backup sensors** has
    independent Temperature and Humidity checkboxes, initially off, with their
-   exact default entity IDs. A climate without measured `current_humidity` must
+   exact backup entity IDs. A climate without measured `current_humidity` must
    not offer humidity backup merely because it exposes a target `humidity`.
 2. Enable only temperature backup and make its selected sensor unavailable.
-   Verify the identified default reading is used and marked **Backup in use**,
+   Verify the identified backup reading is used and marked **Backup in use**,
    while the selector retains the external source. Restore the sensor and confirm
    automatic recovery without changing humidity's choice. Repeat for humidity,
    then both together, heating/cooling, and Celsius/Fahrenheit temperatures.
@@ -2372,11 +2406,19 @@ vendor propagation must also be checked on the installation using selected deliv
    0–100%. Use a valid backup only. If both inputs are unusable, keep the missing
    state; do not reuse retained attributes from an unavailable climate. A stale
    preferred input must retain its stale behavior rather than trigger backup.
-4. With a backup enabled, select **Use automatic source** or that default source
-   explicitly. Confirm the row disappears and the backend saves its flag as false.
-   Select the external sensor again: the option returns unchecked. Repeat for
-   humidity; disabling humidity monitoring must also clear only its backup flag.
-   If neither reading has an alternative, hide the entire subsection.
+4. With an external fixed Room Assist source, select **Use automatic source** in
+   Comfort and verify the temperature row offers the native climate reading,
+   initially unchecked. Enable it, fail/recover the external source, and confirm
+   the checkbox stays visible while the selector remains automatic. Repeat with
+   that room sensor explicitly selected. A different explicit Comfort source
+   keeps the room sensor as its one backup, without a further native chain.
+   Selecting native temperature hides the row and saves its flag as false.
+   Change the fixed room source external → native → external: the automatic
+   backup must not reactivate; a failed save must roll back both configurations.
+   For humidity, automatic/native selection or disabled monitoring still clears
+   only its humidity backup flag. Hide the subsection when neither reading has
+   an alternative. Scheduled Room Assist boundaries retain existing Comfort
+   source behavior.
 5. Restart Home Assistant and round-trip a portable export. Verify valid external
    source opt-ins persist, inapplicable default-source flags are cleared, and
    malformed non-boolean flags are rejected. On a failed save, retain the previous

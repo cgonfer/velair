@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](comfort.md) · [Español](comfort
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.10 |
-| Ostatnia synchronizacja | 2026-11-06 |
+| Wersja odniesienia | 1.9.0-beta.11 |
+| Ostatnia synchronizacja | 2026-11-07 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -57,23 +57,34 @@ Efektywny identyfikator encji jest widoczny pod każdym wyborem źródła. Opcjo
 
 ### Czujniki zapasowe
 
-Jeśli wybrany czujnik temperatury lub wilgotności ma inne źródło domyślne,
+Jeśli źródło temperatury lub wilgotności ma odrębne, obsługiwane źródło zapasowe,
 sekcja **Źródła danych** pokazuje osobną podsekcję **Czujniki zapasowe**.
 Każdy wiersz zawiera własne pole wyboru, etykietę Temperatura lub Wilgotność
 wraz z ikoną oraz dokładny identyfikator encji zapasowej. Oba pola są domyślnie
 odznaczone.
 
 - **Temperatura** korzysta z czujnika temperatury skonfigurowanego dla tego
-  fizycznego urządzenia lub jego własnego `current_temperature`, jeśli nie skonfigurowano czujnika pokojowego.
+  fizycznego urządzenia, jeśli różni się on od wybranego czujnika zewnętrznego.
+  Jeśli Komfort już korzysta z tego skonfigurowanego czujnika pokojowego, także
+  przez **Użyj automatycznego źródła**, źródłem zapasowym jest własny odczyt
+  `current_temperature` urządzenia. Jeśli nie skonfigurowano czujnika pokojowego,
+  zewnętrzny czujnik Komfortu również korzysta z tego własnego odczytu jako
+  źródła zapasowego.
 - **Wilgotność** korzysta wyłącznie ze zmierzonego `current_humidity` urządzenia.
   Źródło zapasowe wilgotności pojawia się tylko przy obsłudze takiego pomiaru;
   nastawa docelowa `humidity` nigdy nie jest odczytem.
 
-Wiersze pojawiają się tylko dla jawnie wybranych czujników z innym źródłem
-domyślnym. Wybranie **Użyj automatycznego źródła** lub samego źródła domyślnego
-usuwa wiersz i wyłącza zapisane ustawienie źródła zapasowego. Wyłączenie
-monitorowania wilgotności wyłącza również jej zapisane źródło zapasowe.
-Źródło automatyczne nie ma dodatkowego źródła zapasowego.
+Źródło zapasowe temperatury pozostaje dostępne, gdy źródłem automatycznym jest
+zewnętrzny czujnik pokojowy. Jeśli preferowanym odczytem jest już temperatura
+samego urządzenia, wiersz znika, a zapisane ustawienie źródła zapasowego jest
+kasowane. Zmiana skonfigurowanego źródła pokojowego z powrotem na urządzenie
+kasuje opcję zapasową włączoną dla źródła automatycznego; ponowne wybranie
+zewnętrznego czujnika pokojowego nie włącza jej ponownie.
+
+Źródło zapasowe wilgotności wymaga jawnie wybranego źródła zewnętrznego.
+Wybranie źródła automatycznego/własnego urządzenia lub wyłączenie monitorowania
+wilgotności kasuje jej zapisane ustawienie zapasowe. Każdy odczyt ma najwyżej
+jedno źródło zapasowe; jeśli ono również zawiedzie, Komfort nie próbuje innego.
 
 Po włączeniu źródła zapasowego brakujący, niedostępny, nieznany lub nieliczbowy
 odczyt z wybranego czujnika może użyć tego jednego źródła, jeśli jego odczyt

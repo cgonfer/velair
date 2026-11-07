@@ -8,8 +8,8 @@ Traductions: [Original en anglais](comfort.md) · [Español](comfort.es.md) · [
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.10 |
-| Dernière synchronisation | 2026-11-06 |
+| Version de référence | 1.9.0-beta.11 |
+| Dernière synchronisation | 2026-11-07 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -69,23 +69,33 @@ source ne sont pas considérées comme des défaillances.
 
 ### Capteurs de secours
 
-Lorsqu’un capteur de température ou d’humidité sélectionné possède une source
-par défaut différente, **Sources de données** affiche une sous-section distincte
+Lorsqu’une source de température ou d’humidité dispose d’un secours distinct
+pris en charge, **Sources de données** affiche une sous-section distincte
 **Capteurs de secours**. Chaque ligne comprend sa case à cocher, le libellé et
 l’icône Température ou Humidité et l’identifiant exact de l’entité de secours.
 Les deux cases sont décochées par défaut.
 
 - **Température** utilise le capteur de température configuré pour cet équipement
-  physique, ou son propre `current_temperature` si aucune sonde d’ambiance n’est configurée.
+  physique lorsqu’il diffère du capteur externe sélectionné. Si le Confort utilise
+  déjà cette sonde d’ambiance configurée, y compris via **Utiliser la source
+  automatique**, son secours est le `current_temperature` de l’équipement lui-même.
+  Si aucune sonde d’ambiance n’est configurée, un capteur externe du Confort
+  utilise également cette mesure native comme secours.
 - **Humidité** utilise uniquement le `current_humidity` mesuré de l’équipement.
   Un secours d’humidité apparaît seulement si cette source mesurée est prise en
   charge ; la consigne `humidity` n’est jamais utilisée comme mesure.
 
-Les lignes apparaissent uniquement pour les capteurs explicitement sélectionnés
-dont la source par défaut est différente. Choisir **Utiliser la source automatique**
-ou sélectionner la source par défaut elle-même supprime la ligne et désactive son
-réglage de secours enregistré. Désactiver le suivi d’humidité désactive aussi son
-secours enregistré. Une source automatique n’a pas de secours supplémentaire.
+Le secours de température reste disponible lorsque la source automatique est
+une sonde d’ambiance externe. Si la mesure préférée est déjà la température de
+l’équipement lui-même, la ligne disparaît et son réglage de secours enregistré
+est désactivé. Remplacer la source d’ambiance configurée par l’équipement lui-même
+désactive le secours activé pour la source automatique ; sélectionner à nouveau
+une sonde d’ambiance externe ne le réactive pas.
+
+Le secours d’humidité nécessite une source externe explicitement sélectionnée.
+Choisir sa source automatique/native ou désactiver le suivi d’humidité désactive
+ce réglage de secours d’humidité. Chaque mesure dispose d’un seul secours au
+maximum ; si ce secours échoue aussi, le Confort n’essaie pas une autre source.
 
 Avec un secours activé, une mesure sélectionnée absente, indisponible, inconnue
 ou non numérique peut utiliser cet unique secours si sa mesure est actuelle et

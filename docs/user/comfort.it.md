@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](comfort.md) · [Español](comfort.es.md) · [
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.10 |
-| Ultima sincronizzazione | 2026-11-06 |
+| Versione di riferimento | 1.9.0-beta.11 |
+| Ultima sincronizzazione | 2026-11-07 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -57,23 +57,34 @@ L’ID dell’entità effettiva compare sotto ogni selettore. Le misure facoltat
 
 ### Sensori di riserva
 
-Quando il sensore di temperatura o umidità selezionato ha una fonte predefinita
-diversa, **Origini dati** mostra una sottosezione separata **Sensori di riserva**.
+Quando una fonte di temperatura o umidità dispone di una riserva distinta
+supportata, **Origini dati** mostra una sottosezione separata **Sensori di riserva**.
 Ogni riga contiene la propria casella, l’etichetta e l’icona Temperatura o
 Umidità e l’ID esatto dell’entità di riserva. Entrambe le caselle sono
 disattivate per impostazione predefinita.
 
 - **Temperatura** usa il sensore di temperatura configurato per quel dispositivo
-  fisico, oppure il suo `current_temperature` se non è configurato un sensore ambiente.
+  fisico quando è diverso dal sensore esterno selezionato. Se il Comfort usa già
+  quel sensore ambiente configurato, anche tramite **Utilizza la sorgente
+  automatica**, la riserva è il `current_temperature` del dispositivo stesso.
+  Se non è configurato un sensore ambiente, anche un sensore esterno del Comfort
+  usa quella lettura nativa come riserva.
 - **Umidità** usa solo il `current_humidity` misurato dal dispositivo. La riserva
   per l’umidità appare solo se quella fonte misurata è supportata; l’impostazione
   obiettivo `humidity` non viene mai usata come lettura.
 
-Le righe appaiono solo per sensori selezionati esplicitamente con una fonte
-predefinita diversa. Scegliere **Utilizza la sorgente automatica** o selezionare
-la stessa fonte predefinita rimuove la riga e disattiva la relativa impostazione
-di riserva salvata. Disattivare il monitoraggio dell’umidità disattiva anche la
-sua riserva salvata. Una fonte automatica non ha un’ulteriore riserva.
+La riserva di temperatura resta disponibile quando la fonte automatica è un
+sensore ambiente esterno. Se la lettura preferita è già la temperatura del
+dispositivo stesso, la riga scompare e la relativa impostazione di riserva
+salvata viene disattivata. Riportare la fonte ambiente configurata al dispositivo
+disattiva la riserva abilitata per la fonte automatica; selezionare nuovamente
+un sensore ambiente esterno non la riattiva.
+
+La riserva per l’umidità richiede una fonte esterna selezionata esplicitamente.
+Scegliere la sua fonte automatica/nativa o disattivare il monitoraggio dell’umidità
+disattiva quell’impostazione di riserva per l’umidità. Ogni lettura ha al massimo
+una riserva; se anche quella riserva non funziona, il Comfort non prova un’altra
+fonte.
 
 Con una riserva attiva, una lettura selezionata mancante, non disponibile,
 sconosciuta o non numerica può usare quell’unica riserva se la sua lettura è

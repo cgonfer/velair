@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20261106214054", r = "1.9.0-beta.10", i = [
+}, n = "20261107001757", r = "1.9.0-beta.11", i = [
 	"monday",
 	"tuesday",
 	"wednesday",
@@ -3772,8 +3772,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 nicht verfügbar",
 	comfortAutomaticSourceValue: "Automatisch: {entity}",
 	comfortBackupSensors: "Ersatzsensoren",
-	comfortBackupSensorsDescription: "Ist ein ausgewählter Sensor nicht verfügbar, wird der Standardsensor verwendet, bis der ausgewählte Sensor wieder verfügbar ist.",
-	comfortTemperatureFallback: "Standardsensor als Ersatz für die Temperaturmessung verwenden",
+	comfortBackupSensorsDescription: "Ist der bevorzugte Sensor nicht verfügbar, wird die unten angezeigte Ersatzquelle verwendet, bis der Sensor wieder verfügbar ist.",
+	comfortTemperatureFallback: "Diese Ersatzquelle für die Temperaturmessung verwenden",
 	comfortHumidityFallback: "Standardsensor als Ersatz für die Luftfeuchtigkeitsmessung verwenden",
 	comfortBackupInUse: "Ersatzsensor aktiv",
 	comfortFallbackActive: "Ersatzsensor aktiv: {entity}",
@@ -5954,8 +5954,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 unavailable",
 	comfortAutomaticSourceValue: "Automatic: {entity}",
 	comfortBackupSensors: "Backup sensors",
-	comfortBackupSensorsDescription: "If a selected sensor is unavailable, use the default sensor until it recovers.",
-	comfortTemperatureFallback: "Use the default sensor as a temperature backup",
+	comfortBackupSensorsDescription: "If the preferred sensor is unavailable, use the backup shown below until it recovers.",
+	comfortTemperatureFallback: "Use this temperature backup",
 	comfortHumidityFallback: "Use the default sensor as a humidity backup",
 	comfortBackupInUse: "Backup in use",
 	comfortFallbackActive: "Backup in use: {entity}",
@@ -8188,8 +8188,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 no disponible",
 	comfortAutomaticSourceValue: "Automático: {entity}",
 	comfortBackupSensors: "Sensores de respaldo",
-	comfortBackupSensorsDescription: "Si un sensor seleccionado no está disponible, utiliza el sensor por defecto hasta que se recupere.",
-	comfortTemperatureFallback: "Usar el sensor por defecto como respaldo de temperatura",
+	comfortBackupSensorsDescription: "Si el sensor preferido no está disponible, utiliza el respaldo indicado abajo hasta que se recupere.",
+	comfortTemperatureFallback: "Usar este respaldo de temperatura",
 	comfortHumidityFallback: "Usar el sensor por defecto como respaldo de humedad",
 	comfortBackupInUse: "Respaldo en uso",
 	comfortFallbackActive: "Respaldo en uso: {entity}",
@@ -10174,8 +10174,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 indisponible",
 	comfortAutomaticSourceValue: "Automatique : {entity}",
 	comfortBackupSensors: "Capteurs de secours",
-	comfortBackupSensorsDescription: "Si un capteur sélectionné est indisponible, utiliser le capteur par défaut en attendant le rétablissement du capteur sélectionné.",
-	comfortTemperatureFallback: "Utiliser le capteur par défaut comme secours pour la température",
+	comfortBackupSensorsDescription: "Si le capteur préféré est indisponible, utiliser le secours indiqué ci-dessous jusqu’au rétablissement du capteur.",
+	comfortTemperatureFallback: "Utiliser ce secours de température",
 	comfortHumidityFallback: "Utiliser le capteur par défaut comme secours pour l’humidité",
 	comfortBackupInUse: "Capteur de secours utilisé",
 	comfortFallbackActive: "Capteur de secours utilisé : {entity}",
@@ -12308,8 +12308,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 non disponibile",
 	comfortAutomaticSourceValue: "Automatico: {entity}",
 	comfortBackupSensors: "Sensori di riserva",
-	comfortBackupSensorsDescription: "Se un sensore selezionato non è disponibile, usa il sensore predefinito finché quello selezionato non torna disponibile.",
-	comfortTemperatureFallback: "Usa il sensore predefinito come riserva per la temperatura",
+	comfortBackupSensorsDescription: "Se il sensore preferito non è disponibile, usa la riserva indicata sotto finché il sensore non torna disponibile.",
+	comfortTemperatureFallback: "Usa questa riserva di temperatura",
 	comfortHumidityFallback: "Usa il sensore predefinito come riserva per l’umidità",
 	comfortBackupInUse: "Sensore di riserva in uso",
 	comfortFallbackActive: "Sensore di riserva in uso: {entity}",
@@ -14442,8 +14442,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 niet beschikbaar",
 	comfortAutomaticSourceValue: "Automatisch: {entity}",
 	comfortBackupSensors: "Reservesensoren",
-	comfortBackupSensorsDescription: "Als een geselecteerde sensor niet beschikbaar is, gebruik dan de standaardsensor totdat de geselecteerde sensor weer beschikbaar is.",
-	comfortTemperatureFallback: "Standaardsensor als reserve voor de temperatuur gebruiken",
+	comfortBackupSensorsDescription: "Als de voorkeurssensor niet beschikbaar is, gebruik dan de hieronder getoonde reservebron totdat de sensor weer beschikbaar is.",
+	comfortTemperatureFallback: "Deze reservebron voor de temperatuur gebruiken",
 	comfortHumidityFallback: "Standaardsensor als reserve voor de luchtvochtigheid gebruiken",
 	comfortBackupInUse: "Reservesensor in gebruik",
 	comfortFallbackActive: "Reservesensor in gebruik: {entity}",
@@ -16576,8 +16576,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 niedostępne",
 	comfortAutomaticSourceValue: "Automatyczny: {entity}",
 	comfortBackupSensors: "Czujniki zapasowe",
-	comfortBackupSensorsDescription: "Jeśli wybrany czujnik jest niedostępny, używaj czujnika domyślnego do czasu przywrócenia odczytów z wybranego czujnika.",
-	comfortTemperatureFallback: "Używaj domyślnego czujnika jako zapasowego źródła temperatury",
+	comfortBackupSensorsDescription: "Jeśli preferowany czujnik jest niedostępny, używaj źródła zapasowego pokazanego poniżej do czasu przywrócenia odczytów z tego czujnika.",
+	comfortTemperatureFallback: "Używaj tego zapasowego źródła temperatury",
 	comfortHumidityFallback: "Używaj domyślnego czujnika jako zapasowego źródła wilgotności",
 	comfortBackupInUse: "Czujnik zapasowy w użyciu",
 	comfortFallbackActive: "Czujnik zapasowy w użyciu: {entity}",
@@ -18563,8 +18563,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 indisponível",
 	comfortAutomaticSourceValue: "Automático: {entity}",
 	comfortBackupSensors: "Sensores de reserva",
-	comfortBackupSensorsDescription: "Se um sensor selecionado estiver indisponível, use o sensor padrão até que o selecionado volte a ficar disponível.",
-	comfortTemperatureFallback: "Usar o sensor padrão como reserva de temperatura",
+	comfortBackupSensorsDescription: "Se o sensor preferencial estiver indisponível, use a reserva mostrada abaixo até que ele volte a ficar disponível.",
+	comfortTemperatureFallback: "Usar esta reserva de temperatura",
 	comfortHumidityFallback: "Usar o sensor padrão como reserva de umidade",
 	comfortBackupInUse: "Sensor de reserva em uso",
 	comfortFallbackActive: "Sensor de reserva em uso: {entity}",
@@ -20697,8 +20697,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO2 indisponível",
 	comfortAutomaticSourceValue: "Automático: {entity}",
 	comfortBackupSensors: "Sensores de reserva",
-	comfortBackupSensorsDescription: "Se um sensor selecionado estiver indisponível, utilize o sensor predefinido até o selecionado voltar a estar disponível.",
-	comfortTemperatureFallback: "Utilizar o sensor predefinido como reserva de temperatura",
+	comfortBackupSensorsDescription: "Se o sensor preferencial estiver indisponível, utilize a reserva apresentada abaixo até que este volte a estar disponível.",
+	comfortTemperatureFallback: "Utilizar esta reserva de temperatura",
 	comfortHumidityFallback: "Utilizar o sensor predefinido como reserva de humidade",
 	comfortBackupInUse: "Sensor de reserva em utilização",
 	comfortFallbackActive: "Sensor de reserva em utilização: {entity}",
@@ -22831,8 +22831,8 @@ var Si = /* @__PURE__ */ t({ de: () => Ci }), Ci = {
 	comfortAirQualityUnavailable: "CO₂ недоступен",
 	comfortAutomaticSourceValue: "Автоматически: {entity}",
 	comfortBackupSensors: "Резервные датчики",
-	comfortBackupSensorsDescription: "Если выбранный датчик недоступен, использовать датчик по умолчанию до восстановления выбранного датчика.",
-	comfortTemperatureFallback: "Использовать датчик по умолчанию как резервный для измерения температуры",
+	comfortBackupSensorsDescription: "Если предпочтительный датчик недоступен, использовать указанный ниже резерв до восстановления этого датчика.",
+	comfortTemperatureFallback: "Использовать этот резерв температуры",
 	comfortHumidityFallback: "Использовать датчик по умолчанию как резервный для измерения влажности",
 	comfortBackupInUse: "Используется резервный датчик",
 	comfortFallbackActive: "Используется резервный датчик: {entity}",
@@ -40206,7 +40206,7 @@ var dd = "https://github.com/cgonfer/velair", fd = {
 		"pt-pt": "docs/user/shared-climate-supply.pt-pt.md",
 		ru: "docs/user/shared-climate-supply.ru.md"
 	}
-}, md = "1.9.0-beta.10";
+}, md = "1.9.0-beta.11";
 function hd(e, t, n = {}) {
 	let r = V(t), [i, a] = (e === "index" ? "docs/README.md" : fd[e]).split("#"), o = (n.availability ?? pd)[i]?.[r], s = r !== "en" && o ? o : i, c = n.releaseVersion ?? md;
 	return {
@@ -41494,7 +41494,7 @@ function Ff(e, t, n, r, i, a, o) {
 }
 function If(e, t, n) {
 	let r = t[`${e}_entity_id`];
-	return !!((e !== "humidity" || t.humidity_enabled) && r && n?.fallback_entity_id && n.fallback_entity_id !== r);
+	return !!((e !== "humidity" || t.humidity_enabled) && (e === "temperature" || r) && n?.fallback_entity_id && n.fallback_entity_id !== r);
 }
 function Lf(e, t, n, r) {
 	let i = ["temperature", "humidity"].filter((e) => If(e, n, r?.[e]));
@@ -45819,8 +45819,8 @@ var Y = class extends Cr {
 		let t = v(this.data?.settings?.first_weekday ?? i[0]);
 		return this._selectedDays[e] ?? (t.includes(this.initialWeekday) ? this.initialWeekday : t[0]);
 	}
-	_presetPreviewKey(e, t, n, r, i = this._draft) {
-		let a = i.zones[e];
+	_presetPreviewKey(e, t, n, r, i = this._draft, a) {
+		let o = i.zones[e];
 		return ei([
 			this._selectedKey,
 			this._selectedEntity,
@@ -45829,17 +45829,17 @@ var Y = class extends Cr {
 			r,
 			this.data?.configuration_revision,
 			this.data?.temperature_unit,
-			a?.behavior === "schedule" ? a.template_links?.[t] : void 0,
-			a?.behavior === "schedule" && a.template_links?.[t]?.mode === "full" ? yt(j(i).zones) : void 0
+			o?.behavior === "schedule" ? o.template_links?.[t] : void 0,
+			o?.behavior === "schedule" && o.template_links?.[t]?.mode === "full" ? a ?? yt(j(i).zones) : void 0
 		], n);
 	}
-	_effectivePresetBlock(e, t, n, r, i = this._draft) {
-		let a = this._presetPreviews.get(this._presetPreviewKey(e, t, n, r, i))?.block;
-		if (a) return {
-			...a,
+	_effectivePresetBlock(e, t, n, r, i = this._draft, a) {
+		let o = this._presetPreviewKey(e, t, n, r, i, a), s = this._presetPreviews.get(o)?.block;
+		if (s) return {
+			...s,
 			start: n.start
 		};
-		let o = n.preset_key ? ni(this.data, {
+		let c = n.preset_key ? ni(this.data, {
 			source: "profile",
 			profile_key: this._selectedKey,
 			entity_id: e,
@@ -45847,22 +45847,30 @@ var Y = class extends Cr {
 			start: n.start,
 			slot_id: n.slot_id
 		}, n.preset_key)?.block : void 0;
-		return o && this._presetPreviews.remember(this._presetPreviewKey(e, t, n, r, i), o), o ? {
-			...o,
+		return c && this._presetPreviews.remember(o, c), c ? {
+			...c,
 			start: n.start
 		} : void 0;
 	}
 	_refreshPresetPreviews() {
-		let e = Object.entries(this._draft.zones).filter(([e, t]) => t.behavior === "schedule" && (e === this._selectedEntity || !this.scheduleWorkspace && this._expandedZones.has(e))).flatMap(([e]) => {
-			let t = this._effectiveWeekday(e), n = this._groupCandidates.get(this._candidateKey(e, t)), r = n?.draft ?? this._draft, a = Object.fromEntries(i.map((t) => [t, this._blocks(e, t, r)])), o = j(r).zones[e], s = this._groupDays(e, t), c = !!n || o?.behavior === "schedule" && !bt(o, s), l = (c ? s : [t]).flatMap((n) => a[n].map((i, a) => ({
+		let e = /* @__PURE__ */ new Map(), t = /* @__PURE__ */ new Map(), n = (t) => {
+			let n = e.get(t);
+			return n || (n = j(t), e.set(t, n)), n;
+		}, r = (e, r, i) => {
+			let a = i.zones[e];
+			if (a?.behavior !== "schedule" || a.template_links?.[r]?.mode !== "full") return;
+			let o = t.get(i);
+			return o === void 0 && (o = yt(n(i).zones), t.set(i, o)), o;
+		}, a = Object.entries(this._draft.zones).filter(([e, t]) => t.behavior === "schedule" && (e === this._selectedEntity || !this.scheduleWorkspace && this._expandedZones.has(e))).flatMap(([e]) => {
+			let t = this._effectiveWeekday(e), r = this._groupCandidates.get(this._candidateKey(e, t)), a = r?.draft ?? this._draft, o = Object.fromEntries(i.map((t) => [t, this._blocks(e, t, a)])), s = n(a).zones[e], c = this._groupDays(e, t), l = !!r || s?.behavior === "schedule" && !bt(s, c), u = (l ? c : [t]).flatMap((n) => o[n].map((r, i) => ({
 				entityId: e,
 				weekday: n,
 				selectedDay: t,
-				block: i,
-				index: a,
-				previewDraft: r
+				block: r,
+				index: i,
+				previewDraft: a
 			})));
-			n?.selectedDay && l.push(...this._blocks(e, t).map((n, r) => ({
+			r?.selectedDay && u.push(...this._blocks(e, t).map((n, r) => ({
 				entityId: e,
 				weekday: t,
 				selectedDay: t,
@@ -45870,40 +45878,40 @@ var Y = class extends Cr {
 				index: r,
 				previewDraft: this._draft
 			})));
-			let u = c ? void 0 : Ss(a, t), d = r.zones[e];
-			if (u && (u.block.preset_key || d?.behavior === "schedule" && d.template_links?.[u.sourceWeekday]?.mode === "full")) {
-				let n = a[u.sourceWeekday].findIndex((e) => e.start === u.block.start);
-				l.push({
+			let d = l ? void 0 : Ss(o, t), f = a.zones[e];
+			if (d && (d.block.preset_key || f?.behavior === "schedule" && f.template_links?.[d.sourceWeekday]?.mode === "full")) {
+				let n = o[d.sourceWeekday].findIndex((e) => e.start === d.block.start);
+				u.push({
 					entityId: e,
-					weekday: u.sourceWeekday,
+					weekday: d.sourceWeekday,
 					selectedDay: t,
-					block: u.block,
+					block: d.block,
 					index: n,
-					previewDraft: r
+					previewDraft: a
 				});
 			}
-			return l;
+			return u;
 		});
-		this._presetPreviews.retain(new Set(e.map(({ entityId: e, weekday: t, block: n, index: r, previewDraft: i }) => this._presetPreviewKey(e, t, n, r, i))));
-		let t = /* @__PURE__ */ new Map();
-		for (let { entityId: n, weekday: r, selectedDay: i, block: a, index: o, previewDraft: s } of e) {
-			let e = s.zones[n], c = e?.behavior === "schedule" && e.template_links?.[r]?.mode === "full";
-			if (!a.preset_key && !c || this._effectivePresetBlock(n, r, a, o, s)) continue;
-			let l = this._presetPreviewKey(n, r, a, o, s), u = a.start;
-			this._presetPreviews.request(l, async () => {
+		this._presetPreviews.retain(new Set(a.map(({ entityId: e, weekday: t, block: n, index: i, previewDraft: a }) => this._presetPreviewKey(e, t, n, i, a, r(e, t, a)))));
+		let o = /* @__PURE__ */ new Map();
+		for (let { entityId: e, weekday: t, selectedDay: i, block: s, index: c, previewDraft: l } of a) {
+			let a = l.zones[e], u = a?.behavior === "schedule" && a.template_links?.[t]?.mode === "full", d = r(e, t, l);
+			if (!s.preset_key && !u || this._effectivePresetBlock(e, t, s, c, l, d)) continue;
+			let f = this._presetPreviewKey(e, t, s, c, l, d), p = s.start;
+			this._presetPreviews.request(f, async () => {
 				if (!this.hass) throw Error(this._t("unableLoad"));
-				if (c) {
-					let e = t.get(s);
-					e || (e = new M(this.hass).previewProfile(j(s)), t.set(s, e));
-					let i = await e;
+				if (u) {
+					let r = o.get(l);
+					r || (r = new M(this.hass).previewProfile(n(l)), o.set(l, r));
+					let i = await r;
 					if (i.configuration_revision !== this.data?.configuration_revision) throw Error(this._t("linkedConfigurationUnavailable"));
-					return i.resolved_schedules[n]?.[r]?.find((e) => e.start === u);
+					return i.resolved_schedules[e]?.[t]?.find((e) => e.start === p);
 				}
-				return (await new M(this.hass).previewDailySchedule(n, r, { blocks: [{
-					start: u,
-					preset_key: a.preset_key
-				}] })).blocks.find((e) => e.start === u);
-			}, () => (this._effectiveWeekday(n) === i || this._groupDays(n).includes(r)) && l === this._presetPreviewKey(n, r, this._blocks(n, r, s)[o] ?? {}, o, s), () => this.requestUpdate(), () => void 0);
+				return (await new M(this.hass).previewDailySchedule(e, t, { blocks: [{
+					start: p,
+					preset_key: s.preset_key
+				}] })).blocks.find((e) => e.start === p);
+			}, () => (this._effectiveWeekday(e) === i || this._groupDays(e).includes(t)) && f === this._presetPreviewKey(e, t, this._blocks(e, t, l)[c] ?? {}, c, l), () => this.requestUpdate(), () => void 0);
 		}
 	}
 	connectedCallback() {
@@ -50674,7 +50682,7 @@ function _v(e) {
         ${vv(e._t("frontendBuild"), n)}
         ${vv(e._t("portableFormatVersion"), `v${r}`)}
         ${vv(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${vv(e._t("integrationVersion"), "1.9.0-beta.10")}
+        ${vv(e._t("integrationVersion"), "1.9.0-beta.11")}
       </div>
     </section>
 
@@ -55352,7 +55360,8 @@ var Q = class extends Cr {
 			n,
 			t,
 			this._data?.configuration_revision,
-			this._data?.temperature_unit
+			this._data?.temperature_unit,
+			n === "schedule" && this._draftTemplateLink?.mode === "full" ? this._draftTemplateLink : void 0
 		], e);
 	}
 	_effectivePresetBlock(e, t, n) {
@@ -55419,17 +55428,19 @@ var Q = class extends Cr {
 			this._presetPreviews.retain(/* @__PURE__ */ new Set());
 			return;
 		}
-		this._presetPreviews.retain(new Set(this._draftBlocks.map((e, t) => this._presetPreviewKey(e, t, "schedule")))), this._draftBlocks.forEach((e, t) => {
-			if (!e.preset_key && this._draftTemplateLink?.mode !== "full" || this._effectivePresetBlock(e, t, "schedule")) return;
-			let n = this._presetPreviewKey(e, t, "schedule"), r = this._selectedEntity, i = this._selectedWeekday, a = e.start;
-			this._presetPreviews.request(n, async () => {
-				let t = this._api();
-				if (!t || !r) throw Error(this._t("unableLoad"));
-				return (await t.previewDailySchedule(r, i, this._draftTemplateLink?.mode === "full" ? { template_link: this._draftTemplateLink } : { blocks: [{
-					start: a,
-					preset_key: e.preset_key
-				}] })).blocks.find((e) => e.start === a);
-			}, () => n === this._presetPreviewKey(this._draftBlocks[t] ?? {}, t, "schedule"), () => this.requestUpdate(), () => void 0);
+		this._presetPreviews.retain(new Set(this._draftBlocks.map((e, t) => this._presetPreviewKey(e, t, "schedule"))));
+		let e = this._draftTemplateLink?.mode === "full" ? { ...this._draftTemplateLink } : void 0, t;
+		this._draftBlocks.forEach((n, r) => {
+			if (!n.preset_key && !e || this._effectivePresetBlock(n, r, "schedule")) return;
+			let i = this._presetPreviewKey(n, r, "schedule"), a = this._selectedEntity, o = this._selectedWeekday, s = n.start;
+			this._presetPreviews.request(i, async () => {
+				let r = this._api();
+				if (!r || !a) throw Error(this._t("unableLoad"));
+				return (await (e ? t ??= r.previewDailySchedule(a, o, { template_link: e }) : r.previewDailySchedule(a, o, { blocks: [{
+					start: s,
+					preset_key: n.preset_key
+				}] }))).blocks.find((e) => e.start === s);
+			}, () => i === this._presetPreviewKey(this._draftBlocks[r] ?? {}, r, "schedule"), () => this.requestUpdate(), () => void 0);
 		});
 	}
 	_setPresetForBlock(e, t, n) {

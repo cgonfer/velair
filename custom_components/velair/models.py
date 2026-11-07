@@ -891,6 +891,7 @@ def normalize_schedule_data(
             "comfort": normalize_comfort_data(
                 zone_data.get("comfort"),
                 temperature_default_entity_id=preconditioning.get("room_temperature_entity_id") or entity_id,
+                temperature_native_entity_id=entity_id,
                 humidity_default_entity_id=entity_id,
             ),
             "external_change_policy": normalize_external_change_policy(
@@ -1070,6 +1071,7 @@ def normalize_schedule_data(
             member: normalize_comfort_data(
                 (data["member_comfort"] if isinstance(data.get("member_comfort"), dict) else {}).get(member, zones[group_id]["comfort"]),
                 temperature_default_entity_id=member,
+                temperature_native_entity_id=member,
                 humidity_default_entity_id=member,
             )
             for group_id, group in room_groups.items()
@@ -1958,6 +1960,7 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
 
 def normalize_comfort_data(
     raw_data: Any, *, temperature_default_entity_id: str | None = None,
+    temperature_native_entity_id: str | None = None,
     humidity_default_entity_id: str | None = None,
 ) -> ComfortData:
     """Normalize stored comfort monitoring settings."""
@@ -2050,6 +2053,17 @@ def normalize_comfort_data(
         }
 
     temperature_source = _normalize_optional_entity_id(data.get("temperature_entity_id"))
+    preferred_temperature_source = temperature_source or temperature_default_entity_id
+    if temperature_native_entity_id is not None:
+        temperature_backup_allowed = (
+            preferred_temperature_source is not None
+            and preferred_temperature_source != temperature_native_entity_id
+        )
+    else:
+        temperature_backup_allowed = (
+            temperature_source is not None
+            and temperature_source != temperature_default_entity_id
+        )
     humidity_source = _normalize_optional_entity_id(data.get("humidity_entity_id"))
     humidity_enabled = bool(data.get("humidity_enabled", True))
     return {
@@ -2057,8 +2071,7 @@ def normalize_comfort_data(
         "temperature_entity_id": temperature_source,
         "temperature_fallback_enabled": (
             data.get("temperature_fallback_enabled") is True
-            and temperature_source is not None
-            and temperature_source != temperature_default_entity_id
+            and temperature_backup_allowed
         ),
         "humidity_enabled": humidity_enabled,
         "humidity_entity_id": humidity_source,
