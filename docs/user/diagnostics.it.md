@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](diagnostics.md) · [Español](diagnostics.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.3 |
-| Ultima sincronizzazione | 2026-10-21 |
+| Versione di riferimento | 1.9.0-beta.10 |
+| Ultima sincronizzazione | 2026-11-04 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -68,6 +68,10 @@ Vengono salvate solo le scelte delle categorie. La cronologia degli eventi esist
 La vista locale Diagnostica usa i nomi descrittivi Home Assistant dei dispositivi nei filtri, ma il pannello dettagliato mostra intenzionalmente gli ID locali per verificare la configurazione. Con l’opzione di privacy predefinita abilitata, i rapporti scaricati sostituiscono sia gli ID strutturati sia quelli incorporati nel testo degli errori conservati con alias deterministici come `climate_unit_1` e `associated_entity_1`. I riferimenti ripetuti mantengono lo stesso alias, preservando le relazioni senza esporre gli ID locali originali. Se scegli esplicitamente di mantenere gli ID originali, quegli identificatori locali restano nel rapporto; quelli di profili, modalità e pause vengono comunque rimossi. Controlla ogni rapporto prima di condividerlo.
 
 La diagnostica non contiene controlli del pianificatore, nuovi tentativi, annullamento delle modifiche o controlli climatici. Le impostazioni continuano a contenere configurazione e manutenzione; i dettagli di capacità e stato dei dispositivi appartengono ora alla diagnostica.
+
+I dettagli di invio del dispositivo selezionato distinguono una chiamata di servizio accettata dall’obiettivo riportato da Home Assistant. La conferma può essere in attesa, ottenuta, ripristinata dopo un nuovo tentativo o assente dopo il limite di tentativi. Un errore silenzioso risolto rimane nella cronologia **Invio all'entità climatica** con il numero di tentativi, così puoi vedere che Velair ha risolto la discrepanza. Le segnalazioni corrispondenti non aggiungono una voce di cronologia per ogni comando normale. Il rapporto scaricato conserva le stesse informazioni di conferma.
+
+Il ripristino viene eseguito nel backend anche con Diagnostica chiusa. Se più dispositivi indipendenti cambiano blocco insieme, solo quello che continua a riportare un obiettivo diverso richiede un nuovo tentativo. Aprire o aggiornare questa vista non invia mai un comando climatico. Una segnalazione confermata dimostra lo stato di Home Assistant; non verifica in modo indipendente un dispositivo che riporta valori ottimistici.
 
 Ogni dispositivo gestito segnala anche informazioni di assestamento dei comandi presenti solo in esecuzione. Mentre un comando Velair recente si stabilizza, Diagnostica elenca i campi di controllo interessati nell’istantanea. Se il dispositivo non converge entro il termine limitato, la successiva istantanea aggiornata lo segnala con un avviso `command_settling_mismatch`. Espandi l’avviso nel pannello Diagnostica del dispositivo selezionato per confrontare il valore atteso di ogni campo con quello riportato dal termostato. Le temperature includono l’unità del dispositivo, le modalità HVAC usano le etichette normali e i valori mancanti sono indicati esplicitamente. Il confronto usa i dati registrati, non la programmazione attuale o una nuova lettura. Il rapporto scaricato conserva anche il blocco `command_settling`. Sono informazioni per risolvere problemi: Diagnostica non riprova il comando, non cambia il dispositivo e non crea una regolazione manuale. Le informazioni vengono cancellate da un nuovo comando per quel campo o da un riavvio.
 

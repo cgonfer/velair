@@ -627,8 +627,10 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
             {
                 "enabled": True,
                 "temperature_entity_id": "sensor.salon_temperature",
+                "temperature_fallback_enabled": False,
                 "humidity_enabled": False,
                 "humidity_entity_id": "sensor.salon_humidity",
+                "humidity_fallback_enabled": False,
                 "co2_entity_id": "sensor.salon_co2",
                 "temperature_min": 19.0,
                 "temperature_max": 25.0,

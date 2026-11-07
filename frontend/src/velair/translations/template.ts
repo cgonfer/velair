@@ -1545,6 +1545,18 @@ export const translationTemplate = {
 
   "comfortAutomaticSourceValue": "",
 
+  "comfortTemperatureFallback": "",
+
+  "comfortBackupSensors": "",
+
+  "comfortBackupSensorsDescription": "",
+
+  "comfortHumidityFallback": "",
+
+  "comfortBackupInUse": "",
+
+  "comfortFallbackActive": "",
+
   "comfortCo2": "",
 
   "comfortCo2Attention": "",
@@ -2458,6 +2470,44 @@ export const translationTemplate = {
 
   "sensors": "",
 
+  "roomSensorAssistSettings": "",
+  "roomSensorReferenceSensor": "",
+  "roomSensorReferenceTitle": "",
+  "roomSensorReferenceNotInUse": "",
+  "roomSensorReferenceFixed": "",
+  "roomSensorReferenceScheduled": "",
+  "roomSensorReferenceChoiceHelp": "",
+  "roomSensorReferenceFixedHelp": "",
+  "roomSensorReferenceScheduleHelp": "",
+  "roomSensorReferenceSummaryFixed": "",
+  "roomSensorReferenceSummarySchedule": "",
+  "roomSensorReferenceSavedInactive": "",
+  "roomSensorReferenceAssistOff": "",
+  "roomSensorScheduleLoadError": "",
+  "roomSensorScheduleOutsideHelp": "",
+  "roomSensorScheduleControlsFixed": "",
+  "roomSensorScheduleVerificationError": "",
+  "roomSensorSchedule": "",
+  "roomSensorScheduleConfigure": "",
+  "roomSensorScheduleEdit": "",
+  "roomSensorScheduleEnabled": "",
+  "roomSensorScheduleDefault": "",
+  "roomSensorScheduleNative": "",
+  "roomSensorScheduleDays": "",
+  "roomSensorScheduleStart": "",
+  "roomSensorScheduleEnd": "",
+  "roomSensorScheduleReference": "",
+  "roomSensorScheduleAdd": "",
+  "roomSensorScheduleTimingHelp": "",
+  "roomSensorScheduleOvernightHelp": "",
+  "roomSensorScheduleInvalidPeriod": "",
+  "roomSensorScheduleOverlap": "",
+  "roomSensorScheduleCurrent": "",
+  "roomSensorScheduleNext": "",
+  "roomSensorScheduleNoNext": "",
+  "roomSensorScheduleNativeDetail": "",
+  "roomSensorScheduleUnavailable": "",
+  "roomSensorScheduleAssistDisabled": "",
   "roomSensorAppliedTarget": "",
 
   "roomSensorAssist": "",
@@ -2472,9 +2522,13 @@ export const translationTemplate = {
 
   "roomSensorAssistDebounce": "",
 
+  "roomSensorAssistDebounceDescription": "",
+
   "roomSensorAssistDebounceHelp": "",
 
   "roomSensorAssistDeadband": "",
+
+  "roomSensorAssistDeadbandDescription": "",
 
   "roomSensorAssistDeadbandHelp": "",
 
@@ -2503,6 +2557,8 @@ export const translationTemplate = {
   "roomSensorDeadbandZoneZero": "",
 
   "roomSensorAssistMaxDelta": "",
+
+  "roomSensorAssistMaxDeltaDescription": "",
 
   "roomSensorAssistMaxDeltaHelp": "",
 
@@ -2735,6 +2791,27 @@ export const translationTemplate = {
   "diagnosticsDeliveryStatus": "",
 
   "diagnosticsDeliverySuccess": "",
+  "diagnosticsCommandAccepted": "",
+
+  "diagnosticsSetpointConfirmation": "",
+
+  "diagnosticsConfirmationPending": "",
+
+  "diagnosticsConfirmationConfirmed": "",
+
+  "diagnosticsConfirmationRecovered": "",
+
+  "diagnosticsConfirmationUnconfirmed": "",
+
+  "diagnosticsConfirmationRetries": "",
+
+  "diagnosticsConfirmationUpdatedAt": "",
+
+  "diagnosticsConfirmationPendingDescription": "",
+
+  "diagnosticsConfirmationRecoveredDescription": "",
+
+  "diagnosticsConfirmationUnconfirmedDescription": "",
 
   "diagnosticsScheduleSourceProfilePause": "",
 

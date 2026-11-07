@@ -108,7 +108,7 @@ describe("full template saves through public components", () => {
     Object.assign(card, { hass, view: "templates" });
     document.body.append(card); await settle(card);
     card.shadowRoot!.querySelector<HTMLButtonElement>(".template-item-main")!.click(); await settle(card);
-    const target = card.shadowRoot!.querySelector<HTMLInputElement>('.template-editor input[type="number"]')!;
+    const target = card.shadowRoot!.querySelector<HTMLInputElement>('.template-editor input.temperature-input')!;
     expect(target.value).toBe("20.5"); expect(target.disabled).toBe(true);
     const name = card.shadowRoot!.querySelector<HTMLInputElement>(".template-name-input-wrap input")!;
     name.value = "Workday updated"; name.dispatchEvent(new Event("input")); await settle(card);

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 import math
 from types import SimpleNamespace
@@ -138,7 +139,7 @@ class GroupClimateManager(ClimateManager):
                     raise HomeAssistantError("Climate is unavailable")
                 await self._physical._async_call(service, payload, **kwargs)
                 status[member] = {"status": "success"}
-            except DeliverySuperseded:
+            except (DeliverySuperseded, asyncio.CancelledError):
                 self.delivery_status[entity_id] = status
                 for pending_member in mirrored_members:
                     self._physical._discard_expected_action(pending_member, mirror_context.id)
@@ -215,7 +216,7 @@ class GroupClimateManager(ClimateManager):
                     blocking=blocking, ensure_on=ensure_on, hvac_mode=hvac_mode,
                     range_target=range_target, climate_options=climate_options)
                 status[member] = {"status": "success"}
-            except DeliverySuperseded:
+            except (DeliverySuperseded, asyncio.CancelledError):
                 self.delivery_status[entity_id] = status
                 for pending_member in mirrored_members:
                     self._physical._discard_expected_action(pending_member, mirror_context.id)

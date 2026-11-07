@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.0-beta.10 |
+| Última sincronización | 2026-11-05 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -53,13 +53,32 @@ Con **Sin configurar**, los pares de modo fijo se envían sin cambios ni correcc
 
 1. Abre la pestaña Room Assist.
 2. Expande el equipo que quieras configurar.
-3. Selecciona un sensor de temperatura de habitación.
+3. En **Control por sensor de estancia**, elige **Sensor fijo** o **Por horario**, configura la opción elegida y guarda cualquier cambio de modalidad.
 4. Activa Control por sensor de estancia.
 5. Ajusta la banda muerta de Room Assist para definir los límites inferior y superior de conmutación en calor o frío fijo alrededor de su objetivo único o referencia de intervalo elegida, o el margen neutro para modos automáticos de una consigna y bandas nativas `heat_cool`.
 6. Modifica Ajuste máximo de control si el valor predeterminado es insuficiente para esa habitación o menor que la diferencia de consigna que el termostato puede necesitar para dejar de calentar o enfriar.
 7. Ajusta Retraso de actualización si las actualizaciones de sensores parecen demasiado lentas o frecuentes.
 
-Seleccionar un sensor de habitación por sí solo únicamente guarda el sensor. Velair empieza a utilizarlo como temperatura efectiva de la habitación cuando se activa Room Sensor Assist.
+Solo se muestra la opción seleccionada. Si **Sensor fijo** ya es la modalidad guardada, cambiar su sensor se guarda inmediatamente. Alternar entre **Sensor fijo** y **Por horario** cambia un borrador: **Guardar** aplica la modalidad y sus ajustes, y **Cancelar** restaura la configuración guardada. Al alternar se conservan el sensor fijo y la programación guardada; no se activan ambos a la vez.
+
+
+<a id="optional-sensor-schedule-beta"></a>
+
+### Programación opcional de sensores (beta)
+
+Room Assist puede utilizar distintas referencias de temperatura durante la semana sin cambiar tus programaciones de temperatura, perfiles ni modos. Elige **Por horario** en **Control por sensor de estancia** para configurarlas. Elige **Sensor fijo** para volver al sensor de estancia fijo.
+
+Elige una referencia predeterminada y añade franjas con días de la semana, horas de inicio y fin y una referencia. Guarda el borrador completo para aplicarlo; Cancelar descarta las ediciones. Las referencias pueden ser sensores de temperatura disponibles en Home Assistant o la temperatura propia del equipo. Fuera de las franjas se aplica la referencia predeterminada. Las franjas pueden cruzar medianoche y pertenecen a los días de inicio seleccionados; se rechazan los solapamientos. La hora de inicio está incluida y la de fin queda excluida. Se utiliza la zona horaria configurada en Home Assistant.
+
+Por ejemplo, elige **Sin corrección de Room Assist** como referencia predeterminada y un sensor del despacho de 08:00 a 17:00, de lunes a viernes. Tus programaciones de temperatura de verano/invierno siguen determinando la temperatura deseada. Durante la jornada laboral, Room Assist calcula las correcciones con el sensor del despacho. Fuera de ese horario, Velair envía la consigna programada normal y el termostato regula con su propia referencia. Esto no cambia el sensor físico que utiliza internamente el firmware del dispositivo.
+
+El único interruptor de Room Assist controla si la asistencia está activada. Apagarlo conserva ambas configuraciones guardadas. Elegir **Sensor fijo** y guardar recupera el sensor de estancia fijo conservado. Si una referencia externa no está disponible, Velair suspende su corrección y utiliza la consigna programada normal cuando tiene el control automático; no elige otra habitación silenciosamente ni reutiliza una lectura antigua. La asistencia se reanuda cuando esa referencia vuelve a ser utilizable.
+
+Los cambios de referencia no quitan el control al ajuste manual, Refuerzo ni las pausas. Cuando se reanuda el control automático, Velair utiliza la referencia válida en ese momento. En los grupos de habitación, la temperatura propia del equipo corresponde a la referencia de temperatura configurada para el grupo.
+
+**Limitación de la beta:** la referencia cambia a su hora exacta programada. El Preacondicionamiento adaptativo no inicia un objetivo anticipado que atraviese un cambio de referencia; vuelve a calcular después de esa transición. Cambiar de habitación no es una solicitud para preparar antes la siguiente habitación. Las observaciones de aprendizaje se relacionan con su fuente de temperatura para que un salto de lectura entre habitaciones no se interprete como calefacción o refrigeración.
+
+Todas las lecturas externas seleccionadas deben estar disponibles de forma independiente en Home Assistant. En Nest, una configuración que utilice la integración oficial para el termostato y otra integración para un sensor remoto necesita pruebas en la instalación. Mantén fija la referencia propia de Nest si pretendes usar la lectura del termostato como referencia estable de una habitación. Velair no selecciona el sensor activo interno de Nest. Un sistema HVAC compartido sigue afectando a todas las habitaciones que abastece; elegir una referencia no crea zonas físicas independientes.
 
 <a id="room-groups"></a>
 ### Grupos de habitación

@@ -1,3 +1,4 @@
+import { parseTemperatureInput } from "./temperature-input";
 import { controlUnitId } from "./control-units";
 import { cloneWithTargetDrafts } from "./target-format-policy";
 import { resolveDayLayout } from "./day-layouts";
@@ -325,10 +326,10 @@ export function climateProfileValidationError(draft: ClimateProfileDraft): strin
             && !Number.isFinite(Number(block.humidity)))) return "schedule";
         } else if (block.action !== ACTION_TURN_OFF) {
           const validTarget = draftBlockUsesRange(block)
-            ? Number.isFinite(Number(block.target_temp_low))
-              && Number.isFinite(Number(block.target_temp_high))
-              && Number(block.target_temp_low) <= Number(block.target_temp_high)
-            : Number.isFinite(Number(block.temperature));
+            ? Number.isFinite(parseTemperatureInput(block.target_temp_low))
+              && Number.isFinite(parseTemperatureInput(block.target_temp_high))
+              && parseTemperatureInput(block.target_temp_low) <= parseTemperatureInput(block.target_temp_high)
+            : Number.isFinite(parseTemperatureInput(block.temperature));
           if (!validTarget) return "schedule";
         }
       }
@@ -379,10 +380,10 @@ export function profileDraftBlockInput(block: DraftScheduleBlock): ScheduleBlock
     action: block.action === ACTION_SET_CLIMATE_OPTIONS ? ACTION_SET_CLIMATE_OPTIONS : ACTION_SET_TEMPERATURE,
     ...(block.action === ACTION_SET_CLIMATE_OPTIONS ? {} : draftBlockUsesRange(block)
       ? {
-          target_temp_low: Number(block.target_temp_low),
-          target_temp_high: Number(block.target_temp_high),
+          target_temp_low: parseTemperatureInput(block.target_temp_low),
+          target_temp_high: parseTemperatureInput(block.target_temp_high),
         }
-      : { temperature: Number(block.temperature) }),
+      : { temperature: parseTemperatureInput(block.temperature) }),
     ...(block.temperature_only ? { temperature_only: true } : {}),
     ...(block.action !== ACTION_SET_CLIMATE_OPTIONS && block.hvac_mode ? { hvac_mode: block.hvac_mode } : {}),
     ...(block.fan_mode ? { fan_mode: block.fan_mode } : {}),

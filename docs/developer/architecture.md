@@ -55,6 +55,13 @@ Room Assist reads the maintained current and next targets; its listener candidat
 come from per-zone contributions. Planned Return prepares destination schedules,
 arrival effects and public status before readers consume them.
 
+Due weekly starts withheld by a pending save retain a per-zone continuation and
+resume after commit or rollback. Other zones keep their own deadlines. External
+climate observations are processed in order by one worker per logical owner;
+obsolete Keep automatic corrections can be skipped without discarding manual
+observations. Room Assist shares one worker and retains matured pending sources
+while delivery waits. Each component cancels its owned pending work on teardown.
+
 Local validation reconciles only the requested zone and its master. Prepared
 topology and authority tokens avoid copying configuration or unrelated HA
 attributes before each service. Changes to consumed values, availability,
@@ -721,12 +728,16 @@ unique id and expected revision under a lock, converts all thermal scopes, and
 persists before replacing runtime data. An exact retry is a no-op and a failed
 write leaves the original runtime untouched.
 
+Model 26 includes optional Room Assist reference schedules in zone configuration.
+This does not change the internal storage version. Earlier supported portable
+models remain importable; older Velair versions cannot import model 26 exports.
+
 The current export format is:
 
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 23,
+  "model_version": 26,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {

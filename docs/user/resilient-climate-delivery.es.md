@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](resilient-climate-delivery.md) · [Español]
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.10 |
+| Última sincronización | 2026-11-04 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -25,7 +25,13 @@ Si una entidad pasa a `unknown` o `unavailable`, Velair espera a que Home Assist
 
 Por ejemplo, supón que un Perfil Ausente solicitaba 17 °C mientras un termostato estaba desconectado. Si se selecciona el Modo En casa antes de que se reconecte, Velair calcula y envía el objetivo actual de En casa, no los datos obsoletos de 17 °C. La misma regla se aplica a Modos, Refuerzo, Pausa, Room Assist y al inicio anticipado del Preacondicionamiento adaptativo.
 
-Cuando Home Assistant rechaza explícitamente una llamada de climatización, Velair realiza como máximo dos intentos adicionales: aproximadamente después de 2 segundos y de 10 segundos. Velair cancela el trabajo pendiente para ese equipo cuando existe una intención más reciente o cuando se detiene o descarga la integración.
+Cuando Home Assistant rechaza una llamada de climatización, o la acepta pero el equipo sigue comunicando un objetivo distinto, Velair realiza como máximo dos intentos adicionales en ese episodio de entrega. El primer reintento espera unos 2 segundos y el segundo unos 10 segundos más. Tras el último intento aceptado, Velair permite 5 segundos para que llegue el informe del objetivo. Un informe coincidente puede completar la confirmación antes; los equipos que comunican el valor solicitado no necesitan reintentos.
+
+La recuperación es independiente para cada zona gestionada. Si varios equipos independientes cambian de bloque a la vez, solo se reintenta el que mantiene un objetivo distinto. Los demás no se retrasan ni reciben otra vez sus órdenes. Estas comprobaciones utilizan los estados comunicados por Home Assistant y los listeners de cambios de estado existentes, sin lecturas periódicas del dispositivo.
+
+Antes de reintentar, Velair comprueba de nuevo la intención actual, incluido cualquier bloque, Refuerzo o pausa nuevos. Una intención más reciente o detener o descargar Velair cancela el trabajo pendiente obsoleto de ese equipo. Diagnóstico muestra si la confirmación está pendiente, completada, recuperada tras un reintento o sigue sin confirmar. Un fallo silencioso recuperado también permanece en el historial limitado de entrega de órdenes.
+
+Una transición real de no disponible a disponible conserva la recuperación de reconexión. Si ya hay una confirmación o recuperación pendiente, mantiene el plazo original y el presupuesto de reintentos; un informe coincidente puede completar la confirmación sin otra orden. En caso contrario, la reconexión inicia un nuevo episodio de entrega para el objetivo actual. Los informes normales de temperatura, humedad u objetivo no reinician un presupuesto de reintentos agotado. Un informe tardío que coincide con el objetivo solicitado elimina la discrepancia sin enviar otra orden.
 
 Las acciones manuales de temperatura se ejecutan una sola vez. Velair no aplica posteriormente un objetivo manual antiguo cuando el dispositivo se reconecta.
 

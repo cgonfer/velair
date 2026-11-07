@@ -33,6 +33,62 @@ from .room_groups import comfort_settings as physical_comfort_settings, member_t
 from .temperature import CELSIUS, normalize_temperature_unit, state_temperature_unit
 
 DIAGNOSTIC_HISTORY_LIMIT = 100
+
+
+def _confirmation_evidence(value: Any, *, observed: bool = False) -> dict[str, dict[str, Any]]:
+    """Retain only reported target fields, never arbitrary protocol payloads."""
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    for entity_id, fields in value.items():
+        if (not isinstance(entity_id, str) or not entity_id.startswith("climate.")
+                or not valid_entity_id(entity_id) or not isinstance(fields, dict)):
+            continue
+        safe = {}
+        for field in ("temperature", "target_temp_low", "target_temp_high", "hvac_mode", "__not_off__"):
+            if field not in fields:
+                continue
+            item = fields[field]
+            if field == "hvac_mode":
+                if isinstance(item, str):
+                    safe[field] = item
+            elif field == "__not_off__":
+                if isinstance(item, bool) or (observed and item in (
+                    "off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only",
+                    STATE_UNKNOWN, STATE_UNAVAILABLE,
+                )):
+                    safe[field] = item
+            elif item is None or (isinstance(item, (int, float)) and not isinstance(item, bool)
+                                  and math.isfinite(item)):
+                safe[field] = item
+        if safe:
+            result[entity_id] = safe
+    return result
+
+
+def _confirmation_covers_legacy_mismatches(
+    delivery: dict[str, Any], entity_id: str, mismatches: dict[str, Any],
+) -> bool:
+    """Join recorded command identities without repeating convergence checks."""
+    confirmation = delivery.get("confirmation")
+    if not isinstance(confirmation, dict) or confirmation.get("status") != "unconfirmed":
+        return False
+    expected_by_entity = confirmation.get("expected")
+    if not isinstance(expected_by_entity, dict):
+        return False
+    expected = expected_by_entity.get(entity_id)
+    if not isinstance(expected, dict) or not mismatches:
+        return False
+    for field, values in mismatches.items():
+        if not isinstance(values, dict) or "expected" not in values:
+            return False
+        expected_field = (
+            "__not_off__" if field == "hvac_mode" and values["expected"] is True
+            and "__not_off__" in expected else field
+        )
+        if expected_field not in expected or expected[expected_field] != values["expected"]:
+            return False
+    return True
 DIAGNOSTIC_POLICY_VERSION = 1
 _CONTROL_EVENT_FIELDS = (
     "action",
@@ -344,8 +400,28 @@ class RuntimeDiagnosticsManager:
             entity_id,
             {"status": "idle", "retry_count": 0, "last_error": None},
         )
+        confirmation_status = {
+            "confirmation_pending": "pending",
+            "confirmation_confirmed": "confirmed",
+            "recovered": "recovered",
+            "unconfirmed": "unconfirmed",
+        }.get(status)
+        if confirmation_status is not None:
+            self._observe_confirmation(entity_id, current, confirmation_status, details or {}, now)
+            self._schedule_notify()
+            return
         current["status"] = status
         current["updated_at"] = now
+        if status == "success":
+            confirmation = (details or {}).get("confirmation")
+            if isinstance(confirmation, dict):
+                self._observe_confirmation(
+                    entity_id, current, str(confirmation.get("status", "")), confirmation, now,
+                )
+            else:
+                current.pop("confirmation", None)
+        elif status == "cancelled":
+            current.pop("confirmation", None)
         if status in (
             "success",
             "failed",
@@ -376,6 +452,40 @@ class RuntimeDiagnosticsManager:
                 data={"status": status, **(details or {})},
             )
         self._schedule_notify()
+
+    def _observe_confirmation(
+        self,
+        entity_id: str,
+        current: dict[str, Any],
+        status: str,
+        details: dict[str, Any],
+        now: str,
+    ) -> None:
+        """Project coordinator evidence without changing delivery acceptance."""
+        if status not in ("pending", "confirmed", "recovered", "unconfirmed"):
+            return
+        try:
+            retries = max(0, int(details.get("retry_count", 0)))
+        except (TypeError, ValueError):
+            retries = 0
+        confirmation = {"status": status, "retry_count": retries, "updated_at": now}
+        history = {"status": status, "retry_count": retries} if status in ("recovered", "unconfirmed") else None
+        if details.get("reason") == "target_not_confirmed":
+            confirmation["reason"] = "target_not_confirmed"
+            if history is not None:
+                history["reason"] = "target_not_confirmed"
+        for key in ("expected", "observed"):
+            evidence = _confirmation_evidence(details.get(key), observed=key == "observed")
+            if evidence:
+                confirmation[key] = evidence
+                if history is not None:
+                    history[key] = deepcopy(evidence)
+        current["confirmation"] = confirmation
+        if history is not None:
+            self._record(
+                "delivery", "info" if status == "recovered" else "warning",
+                entity_id=entity_id, data=history,
+            )
 
     @callback
     def observe_target_applied(self, data: dict[str, Any]) -> None:
@@ -579,13 +689,17 @@ class RuntimeDiagnosticsManager:
         data = self._runtime["storage"].data
         zones = data.get("zones", {})
         grouped = member_to_unit(data.get("room_groups", {}))
-        scopes = [{**zone, "comfort": {}} if entity in data.get("room_groups", {}) else zone
+        scopes = [(entity, {**zone, "comfort": {}} if entity in data.get("room_groups", {}) else zone)
                   for entity, zone in zones.items()]
-        scopes.extend({"comfort": physical_comfort_settings(data, entity)} for entity in grouped)
+        scopes.extend((None, {"comfort": physical_comfort_settings(data, entity)}) for entity in grouped)
         entity_ids: set[str] = set()
-        for zone in scopes:
+        for entity, zone in scopes:
             preconditioning = zone.get("preconditioning", {})
             comfort = zone.get("comfort", {})
+            if entity is not None and preconditioning.get("room_sensor_schedule", {}).get("enabled"):
+                getter = getattr(self._runtime.get("scheduler"), "_prepared_preconditioning", None)
+                if getter is not None:
+                    preconditioning = getter(entity)
             candidates = (
                 (
                     preconditioning.get("room_temperature_entity_id"),
@@ -789,6 +903,13 @@ class RuntimeDiagnosticsManager:
                 else None
             ),
         }
+        confirmation = delivery.get("confirmation")
+        if isinstance(confirmation, dict):
+            result["confirmation"] = {
+                key: deepcopy(confirmation[key])
+                for key in ("status", "retry_count", "updated_at")
+                if key in confirmation
+            }
         if isinstance(last_accepted, dict):
             result.update(
                 {
@@ -933,7 +1054,10 @@ class RuntimeDiagnosticsManager:
             )
             if callable(settling_diagnostics):
                 unit["command_settling"] = settling_diagnostics(entity_id)
-                if unit["command_settling"]["mismatches"]:
+                if (unit["command_settling"]["mismatches"]
+                        and not _confirmation_covers_legacy_mismatches(
+                            unit["delivery"], entity_id, unit["command_settling"]["mismatches"],
+                        )):
                     unit["issues"].append({
                         "severity": "warning",
                         "code": "command_settling_mismatch",
@@ -1089,6 +1213,10 @@ class RuntimeDiagnosticsManager:
             issues.append({"severity": "warning", "code": f"delivery_{delivery_status}"})
             if status != "error":
                 status = "warning"
+        if delivery.get("confirmation", {}).get("status") == "unconfirmed":
+            issues.append({"severity": "warning", "code": "delivery_unconfirmed"})
+            if status != "error":
+                status = "warning"
         if runtime_status is None and not scheduler.temperature_migration_blocked:
             issues.append({"severity": "warning", "code": "runtime_status_unavailable"})
             if status != "error":
@@ -1104,10 +1232,13 @@ class RuntimeDiagnosticsManager:
         preconditioning = deepcopy(zone.get("preconditioning", {}))
         comfort_config = deepcopy(physical_comfort_settings(data, entity_id))
         sensors = []
+        effective_preconditioning = (scheduler._prepared_preconditioning(entity_id)
+            if preconditioning.get("room_sensor_schedule", {}).get("enabled")
+            else preconditioning)
         sensor_candidates = [
             (
                 "room_temperature",
-                preconditioning.get("room_temperature_entity_id"),
+                effective_preconditioning.get("room_temperature_entity_id"),
                 bool(
                     preconditioning.get("enabled")
                     or preconditioning.get("room_sensor_assist_enabled")

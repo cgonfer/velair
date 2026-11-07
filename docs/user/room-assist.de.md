@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.0-beta.10 |
+| Letzte Synchronisierung | 2026-11-05 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -50,7 +50,7 @@ Bei **Nicht konfiguriert** werden Festmoduspaare ohne Room-Assist-Korrektur gese
 
 1. Öffne den Tab Room Assist.
 2. Klappe das gewünschte Klimagerät auf.
-3. Wähle einen Raumtemperatursensor.
+3. Wählen Sie unter **Raumsensor-Assistent** zwischen **Fester Sensor** und **Nach Zeitplan**, konfigurieren Sie die gewählte Option und speichern Sie einen Wechsel.
 4. Aktiviere die Raumsensorunterstützung.
 5. Stelle das Room-Assist-Totband für festes Heizen oder Kühlen um den Einzelwert oder die gewählte Bereichsreferenz ein; bei automatischen Einzelwertmodi und nativen `heat_cool`-Bändern bestimmt es den neutralen Abstand.
 6. Passe die maximale Unterstützungsdifferenz an, wenn der Standard für den Raum zu klein ist oder unter der Zielabweichung liegt, die das Thermostat zum Beenden von Heizen/Kühlen benötigt.
@@ -68,7 +68,26 @@ Das Room-Assist-Totband ist unabhängig von der Mindestdifferenz der adaptiven V
 
 Die aktuelle Temperaturskala zeichnet das konfigurierte Totband als neutrales schraffiertes Band. Bei einem festen Einzelziel sind seine beiden Ränder Hysterese-Schaltgrenzen; der aktuelle Status nennt die Grenze, auf die Room Assist hinarbeitet. Bei Einzelziel-Automatikmodi bleibt das Band ein neutraler Rand. Bei einem nativen `heat_cool`-Bereich reicht es von der unteren Grenze minus Totband bis zur oberen Grenze plus Totband. Die Skala erweitert sich, damit beide Ränder sichtbar bleiben. Die vollständige übersetzte Legende bleibt am tatsächlichen Totband zentriert, auch wenn dieses schmaler als ihr Text ist. Ihre Bedeutung hängt dadurch nicht von der Grafikbreite ab. Die vollständige Erklärung bleibt außerdem für Hilfstechnologien und als Hovertext verfügbar. Bei Totband `0` wird keine Fläche gezeichnet; die statische Legende sagt ausdrücklich, dass kein Totband vorliegt. Grafik und Legende verwenden den gespeicherten Backend-Wert. Ausblenden von `show_room_assist_deadband` in einer Lovelace-Room-Assist-Karte blendet Einstellung, Band und Legende gemeinsam aus.
 
-Bei einem Upgrade von einer Version, in der Room Assist die Mindestdifferenz der adaptiven Vorkonditionierung mitverwendete, kopiert Velair den bestehenden Wert einmal in das neue Room-Assist-Totband. Dadurch bleibt die konfigurierte Bandbreite erhalten, auch bei einem historischen Wert außerhalb des neueren 0.1-Grad-Eingaberasters. Festes `heat` und `cool` verwenden diesen Wert dann mit dem unten beschriebenen Hysteresezyklus. Nach der Migration sind beide Einstellungen unabhängig: Ändern einer Einstellung verändert nie die andere. Neu konfigurierte oder zurückgesetzte Zonen verwenden den oben genannten einheitenabhängigen Standard.
+Es wird nur die gewählte Option angezeigt. Wenn **Fester Sensor** bereits die gespeicherte Variante ist, wird ein anderer Sensor sofort gespeichert. Der Wechsel zwischen **Fester Sensor** und **Nach Zeitplan** ändert einen Entwurf: **Speichern** übernimmt die Variante und ihre Einstellungen, **Abbrechen** stellt die gespeicherte Konfiguration wieder her. Der feste Sensor und der gespeicherte Zeitplan bleiben beim Wechsel erhalten; beide werden nicht gleichzeitig aktiviert.
+
+
+<a id="optional-sensor-schedule-beta"></a>
+
+### Optionaler Sensorzeitplan (Beta)
+
+Room Assist kann während der Woche unterschiedliche Temperaturreferenzen verwenden, ohne Temperaturzeitpläne, Profile oder Modi zu ändern. Wählen Sie unter **Raumsensor-Assistent** die Option **Nach Zeitplan**, um sie zu konfigurieren. Mit **Fester Sensor** kehren Sie zum festen Raumsensor zurück.
+
+Wählen Sie eine Standardreferenz und fügen Sie Zeiträume mit Wochentagen, Start- und Endzeiten sowie einer Referenz hinzu. Speichern Sie den vollständigen Entwurf, um ihn anzuwenden; Abbrechen verwirft Ihre Änderungen. Als Referenzen dienen in Home Assistant verfügbare Temperatursensoren oder die eigene Temperatur des Klimageräts. Außerhalb der Zeiträume gilt die Standardreferenz. Zeiträume dürfen über Mitternacht reichen und gehören zu den ausgewählten Starttagen; Überschneidungen werden abgelehnt. Die Startzeit ist eingeschlossen, die Endzeit ausgeschlossen. Es gilt die in Home Assistant konfigurierte Zeitzone.
+
+Wählen Sie beispielsweise **Keine Korrektur durch Room Assist** als Standard und einen Bürosensor von Montag bis Freitag zwischen 08:00 und 17:00. Ihre bestehenden Sommer-/Winter-Temperaturzeitpläne bestimmen weiterhin die gewünschte Temperatur. Während der Arbeitszeit berechnet Room Assist die Korrekturen anhand des Bürosensors. Ansonsten sendet Velair den normalen geplanten Sollwert und der Thermostat regelt anhand seiner eigenen Referenz. Dadurch wird nicht geändert, welchen physischen Sensor die Gerätefirmware intern verwendet.
+
+Der einzige Room-Assist-Schalter bestimmt, ob die Unterstützung aktiviert ist. Beim Ausschalten bleiben beide Konfigurationen gespeichert. Mit **Fester Sensor** und anschließendem Speichern gilt wieder der beibehaltene feste Raumsensor. Ist eine externe Referenz nicht verfügbar, setzt Velair die Korrektur aus und verwendet den normalen geplanten Sollwert, wenn es die automatische Kontrolle hat; es wählt weder unbemerkt einen anderen Raum noch verwendet es einen alten Messwert. Die Unterstützung wird fortgesetzt, sobald diese Referenz wieder nutzbar ist.
+
+Referenzwechsel verdrängen weder manuelle Anpassung noch Boost oder Pausen. Beim Fortsetzen der automatischen Steuerung verwendet Velair die dann gültige Referenz. Bei Raumgruppen bedeutet die eigene Gerätetemperatur die konfigurierte Temperaturreferenz der Gruppe.
+
+**Beta-Einschränkung:** Eine Referenz wechselt genau zur geplanten Uhrzeit. Die adaptive Vorkonditionierung startet kein vorgezogenes Ziel über einen Referenzwechsel hinweg; sie berechnet nach diesem Wechsel neu. Der Raumwechsel fordert keine frühere Vorbereitung des nächsten Raums an. Lernbeobachtungen werden ihrer Temperaturquelle zugeordnet, damit ein Messwertsprung zwischen Räumen nicht als Erwärmung oder Abkühlung interpretiert wird.
+
+Alle ausgewählten externen Messwerte müssen unabhängig in Home Assistant verfügbar sein. Bei Nest muss eine Konfiguration mit der offiziellen Integration für den Thermostat und einer anderen Integration für einen entfernten Sensor in der Installation getestet werden. Lassen Sie Nests eigene Referenz unverändert, wenn die Thermostatmessung eine stabile Raumreferenz sein soll. Velair wählt Nests internen aktiven Sensor nicht aus. Ein gemeinsames HVAC-System wirkt weiterhin auf alle versorgten Räume; eine Referenzauswahl schafft keine unabhängig geregelten physischen Zonen.
 
 <a id="room-groups"></a>
 ### Raumgruppen

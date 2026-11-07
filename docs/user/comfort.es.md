@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](comfort.md) · [Español](comfort.es.md) · 
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.0-beta.11 |
+| Última sincronización | 2026-11-07 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -33,11 +33,14 @@ Supervisa las lecturas de temperatura, humedad y CO2 disponibles localmente. No 
 
 ## Fuentes
 
-La temperatura utiliza la primera fuente disponible en este orden:
+La temperatura utiliza la fuente configurada, elegida en este orden:
 
 1. el sensor de temperatura seleccionado en la pestaña Confort;
 2. el sensor Room Assist configurado para ese equipo;
 3. el atributo `current_temperature` de la entidad de climatización.
+
+Esto elige una fuente preferida; no cambia automáticamente a otra cuando esa
+fuente deja de proporcionar una temperatura utilizable.
 
 Para los equipos agrupados, la temperatura automática usa `current_temperature` del miembro físico; no hereda el sensor Room Assist del grupo. Selecciona un sensor externo expresamente en Confort para ese miembro si lo necesitas.
 
@@ -51,6 +54,53 @@ La opción predeterminada `Usar fuente automática` mantiene este comportamiento
 El CO2 solo se supervisa si se selecciona un sensor de CO2.
 
 El identificador de entidad efectivo aparece debajo de cada selector. Las métricas opcionales sin fuente no se consideran fallos.
+
+<a id="backup-sensors"></a>
+
+### Sensores de respaldo
+
+Cuando una fuente de temperatura o humedad tiene un respaldo distinto compatible,
+**Fuentes de datos** muestra una subsección independiente
+de **Sensores de respaldo**. Cada fila incluye su casilla, el nombre y el icono de
+Temperatura o Humedad y el identificador exacto de la entidad de respaldo. Ambas
+casillas están desmarcadas por defecto.
+
+- **Temperatura** utiliza el sensor de temperatura configurado para ese equipo
+  físico cuando es distinto del sensor externo seleccionado. Si Confort ya
+  utiliza ese sensor de habitación configurado, también mediante **Usar fuente
+  automática**, su respaldo es el `current_temperature` del propio equipo. Si no
+  hay sensor de habitación configurado, un sensor externo de Confort también
+  utiliza como respaldo esa lectura nativa.
+- **Humedad** utiliza únicamente el `current_humidity` medido del equipo. Solo
+  aparece un respaldo de humedad si esa fuente de medición está soportada; el
+  ajuste objetivo `humidity` nunca se utiliza como lectura.
+
+El respaldo de temperatura sigue disponible cuando la fuente automática es un
+sensor externo de habitación. Si la lectura preferida ya es la temperatura del
+propio equipo, la fila desaparece y se desactiva su ajuste de respaldo guardado.
+Cambiar la fuente de habitación configurada al propio equipo desactiva el
+respaldo habilitado para la fuente automática; volver a seleccionar un sensor
+externo de habitación no lo reactiva.
+
+El respaldo de humedad requiere una fuente externa seleccionada expresamente.
+Elegir su fuente automática/nativa o desactivar la supervisión de humedad
+desactiva ese ajuste de respaldo de humedad. Cada lectura tiene como máximo un
+respaldo; si ese respaldo también falla, Confort no prueba otra fuente.
+
+Con un respaldo activado, una lectura seleccionada ausente, no disponible,
+desconocida o no numérica puede utilizar ese único respaldo si su lectura es
+actual y válida. **Respaldo en uso** identifica el respaldo activo. El sensor
+seleccionado permanece guardado y Confort vuelve a utilizarlo cuando se recupera.
+Una lectura seleccionada desactualizada no activa el respaldo y un respaldo
+desactualizado no se utiliza. Si ninguna fuente tiene una lectura utilizable,
+Confort sigue mostrando el estado de datos ausentes o desactualizados.
+
+Estos ajustes se guardan por equipo físico y se conservan tras reinicios y la
+exportación/importación portable. Las configuraciones existentes mantienen ambos
+respaldos desactivados. Los miembros de grupos de habitación conservan ajustes
+independientes y nunca heredan como respaldo el sensor de control del grupo.
+Los respaldos solo afectan a la observación de Confort; no cambian Room Assist,
+el preacondicionamiento, el control del equipo ni la supervisión de CO2.
 
 <a id="comfort-models"></a>
 
@@ -197,7 +247,18 @@ Velair expone un valor de calidad de datos:
 - `stale`: no hay lecturas actuales y todas las fuentes supervisadas están desactualizadas;
 - `unavailable`: no puede utilizarse ninguna lectura actual por otro motivo.
 
-La pestaña Confort agrupa las lecturas utilizables cuya vigencia no puede verificarse junto a los selectores de sensores en **Configuración → Fuentes de datos**. Una explicación discreta identifica las lecturas afectadas y aclara que desconocer la hora de medición no significa que sean incorrectas ni que la habitación sea incómoda. Resumen y las tarjetas Lovelace omiten este estado habitual; Diagnóstico conserva el contexto técnico de vigencia. Es una configuración automática válida con la fuente del equipo, no un error. Las lecturas ausentes o desactualizadas siguen mostrando una advertencia en la lista de zonas.
+La pestaña Confort agrupa las lecturas utilizables cuya vigencia no puede
+verificarse junto a los selectores de sensores en **Configuración → Fuentes de
+datos**. Un bloque de información cerrado identifica las lecturas afectadas.
+Ábrelo para leer la explicación completa: las lecturas pueden utilizarse,
+desconocer la hora de medición no significa que sean incorrectas ni que la
+habitación sea incómoda, y la vigencia de la medición del termostato no puede
+comprobarse por separado cuando se utiliza su lectura. Resumen y las tarjetas
+Lovelace omiten este estado habitual; Diagnóstico conserva el contexto técnico
+de vigencia. Es una configuración automática válida con la fuente del equipo,
+no un error. Las lecturas ausentes o desactualizadas siguen mostrando una
+advertencia en la lista de zonas. Los controles independientes de **Vigencia de
+los datos** mantienen su comportamiento habitual.
 
 <a id="visual-status"></a>
 

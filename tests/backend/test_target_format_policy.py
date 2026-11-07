@@ -241,7 +241,6 @@ class TargetFormatPolicyTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.saves), 1)
         targets = [data for service, data in self.calls if service == "set_temperature"]
         self.assertEqual(targets, [
-            {"entity_id": self.entity, "target_temp_low": 20, "target_temp_high": 24},
             {"entity_id": self.entity, "target_temp_low": 22.5, "target_temp_high": 26.5},
         ])
 

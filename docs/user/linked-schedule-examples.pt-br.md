@@ -8,8 +8,8 @@ Traduções: [Original em inglês](linked-schedule-examples.md) · [Español](li
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.10 |
+| Última sincronização | 2026-11-05 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -246,6 +246,6 @@ Opções adicionais incompatíveis podem ser filtradas da configuração efetiva
 <a id="back-up-the-whole-setup"></a>
 ## Fazer backup de toda a configuração
 
-Use a exportação do Velair em vez de copiar apenas um dia visível com os valores efetivos. Exportações do modelo 16 preservam ambos os vínculos, predefinições e identidades de blocos. Exportar programações ou Perfis inclui modelos e predefinições de que dependem; a tela mostra as seções adicionadas automaticamente.
+Use a exportação do Velair em vez de copiar apenas um dia visível com os valores efetivos. Exportações do modelo 26 preservam ambos os vínculos, predefinições e identidades de blocos. As configurações de zona também preservam programações opcionais de sensores do Room Assist. Exportar programações ou Perfis inclui modelos e predefinições de que dependem; a tela mostra as seções adicionadas automaticamente.
 
-Na importação, examine as substituições antes de confirmar. Substituir um recurso compartilhado também pode afetar usos locais existentes. A configuração combinada precisa ser válida; novos Perfis não são ativados só porque foram importados. Backups antigos continuam importáveis, mas versões antigas do Velair não podem importar uma exportação de modelo 16. Consulte [Portabilidade](usage.pt-br.md#portability).
+Na importação, examine as substituições antes de confirmar. Substituir um recurso compartilhado também pode afetar usos locais existentes. A configuração combinada precisa ser válida; novos Perfis não são ativados só porque foram importados. Backups antigos continuam importáveis, mas versões antigas do Velair não podem importar uma exportação de modelo 26. Mantenha um backup da versão anterior caso precise voltar a ela. Consulte [Portabilidade](usage.pt-br.md#portability).

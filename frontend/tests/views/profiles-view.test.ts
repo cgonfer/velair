@@ -510,7 +510,7 @@ describe("profiles view", () => {
       await element.updateComplete;
       await selectFirstProfile(element);
 
-      const input = element.shadowRoot!.querySelector<HTMLInputElement>(".editable-block input[type=number]")!;
+      const input = element.shadowRoot!.querySelector<HTMLInputElement>(".editable-block input.temperature-input")!;
       input.value = "";
       input.dispatchEvent(new Event("input"));
       await element.updateComplete;
@@ -1613,7 +1613,7 @@ describe("profiles view", () => {
     await element.updateComplete;
     expect((element.shadowRoot?.querySelector(".editable-block input[type=time]") as HTMLInputElement).value).toBe("12:00");
 
-    const temperatureInput = element.shadowRoot?.querySelector(".editable-block input[type=number]") as HTMLInputElement;
+    const temperatureInput = element.shadowRoot?.querySelector(".editable-block input.temperature-input") as HTMLInputElement;
     temperatureInput.value = "99";
     temperatureInput.dispatchEvent(new Event("input"));
     await element.updateComplete;

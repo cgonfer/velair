@@ -1,4 +1,4 @@
-﻿"""Scheduler application, override, service, and portability behavior tests."""
+"""Scheduler application, override, service, and portability behavior tests."""
 
 from __future__ import annotations
 
@@ -7232,11 +7232,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 22.0, True, "heat"),
-                ("set_temperature", self.entity_id, 23.5, True, "heat"),
-            ],
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 23.5, True, "heat")],
         )
         events = [
             event_data
@@ -7281,11 +7278,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 25.0, True, "heat"),
-                ("set_temperature", self.entity_id, 22.0, True, "heat"),
-            ],
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 22.0, True, "heat")],
         )
 
     async def test_room_sensor_assist_keep_uses_effective_mode_when_climate_is_off(
@@ -7321,11 +7315,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 21.0, True, None),
-                ("set_temperature", self.entity_id, 20.0, True, None),
-            ],
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 20.0, True, None)],
         )
         state = self.scheduler._room_sensor_assist_states[self.entity_id]
         self.assertEqual(state.direction, "heat")
@@ -7779,11 +7770,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 21.0, True, "heat"),
-                ("set_temperature", self.entity_id, 19.0, True, "heat"),
-            ],
+            self.climate.calls,
+            [('set_temperature', self.entity_id, 19.0, True, 'heat')],
         )
 
     async def test_room_sensor_assist_keeps_watching_after_heat_target_reached(
@@ -7818,11 +7806,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 21.0, True, "heat"),
-                ("set_temperature", self.entity_id, 16.0, True, "heat"),
-            ],
+            self.climate.calls,
+            [('set_temperature', self.entity_id, 16.0, True, 'heat')],
         )
         self.assertIn(self.entity_id, self.scheduler._room_sensor_assist_states)
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -7889,11 +7874,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         )
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 24.0, True, "heat"),
-                ("set_temperature", self.entity_id, 19.0, True, "heat"),
-            ],
+            self.climate.calls,
+            [('set_temperature', self.entity_id, 19.0, True, 'heat')],
         )
 
     def test_room_sensor_assist_listens_to_active_block_without_existing_state(
@@ -8251,11 +8233,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler._handle_timer(NOW)
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 25.0, True, "heat"),
-                ("set_temperature", self.entity_id, 22.0, True, "heat"),
-            ],
+            self.climate.calls,
+            [("set_temperature", self.entity_id, 22.0, True, "heat")],
         )
         self.climate.calls.clear()
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -8369,11 +8348,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler._handle_timer(NOW)
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 20.0, True, "cool"),
-                ("set_temperature", self.entity_id, 22.5, True, "cool"),
-            ],
+            self.climate.calls,
+            [('set_temperature', self.entity_id, 22.5, True, 'cool')],
         )
         self.climate.calls.clear()
         self.hass.states["sensor.salon_temperature"] = SimpleNamespace(
@@ -8469,11 +8445,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 22.0, True, "cool"),
-                ("set_temperature", self.entity_id, 23.5, True, "cool"),
-            ],
+            self.climate.calls,
+            [('set_temperature', self.entity_id, 23.5, True, 'cool')],
         )
 
     async def test_room_sensor_assist_zero_error_targets_cooling_upper_boundary(self) -> None:
@@ -8505,11 +8478,8 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         await self.scheduler.async_apply_current_schedule()
 
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                ("set_temperature", self.entity_id, 22.0, True, "cool"),
-                ("set_temperature", self.entity_id, 25.5, True, "cool"),
-            ],
+            self.climate.calls,
+            [('set_temperature', self.entity_id, 25.5, True, 'cool')],
         )
         self.climate.calls.clear()
         self.hass.states[self.entity_id] = SimpleNamespace(
@@ -9824,7 +9794,7 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         self.assertNotIn(self.entity_id, self.scheduler._room_sensor_assist_states)
         self.assertEqual(self.scheduler._room_sensor_assist_entities, ())
 
-    async def test_stop_during_scalar_base_apply_prevents_assist_revival(self) -> None:
+    async def test_stop_during_scalar_assisted_apply_prevents_assist_revival(self) -> None:
         self.hass.states[self.entity_id] = SimpleNamespace(
             state="heat",
             attributes={"current_temperature": 20, "temperature": 25},
@@ -9857,12 +9827,12 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         release = asyncio.Event()
         original_set_temperature = self.climate.async_set_temperature
 
-        async def slow_base_set(*args, **kwargs) -> None:
+        async def slow_assisted_set(*args, **kwargs) -> None:
             started.set()
             await release.wait()
             await original_set_temperature(*args, **kwargs)
 
-        self.climate.async_set_temperature = slow_base_set
+        self.climate.async_set_temperature = slow_assisted_set
         self.scheduler._prepare_runtime_projection(NOW, configuration=True)
         apply_event = asyncio.create_task(self.scheduler._async_apply_event(event))
         await started.wait()
@@ -9873,13 +9843,13 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
 
         self.assertEqual(
             self.climate.calls,
-            [("set_temperature", self.entity_id, 25, True, "heat")],
+            [("set_temperature", self.entity_id, 22.0, True, "heat"), ("set_temperature", self.entity_id, 25.0, False, "heat")],
         )
         self.assertNotIn(self.entity_id, self.scheduler._room_sensor_assist_states)
         self.assertEqual(self.scheduler._room_sensor_assist_entities, ())
         self.assertNotIn(self.entity_id, self.scheduler._preconditioning_sessions)
 
-    async def test_stop_during_range_base_apply_prevents_assist_revival(self) -> None:
+    async def test_stop_during_range_assisted_apply_prevents_assist_revival(self) -> None:
         self.climate.temperature_range_support[self.entity_id] = True
         self.hass.states[self.entity_id] = SimpleNamespace(
             state="heat_cool",
@@ -9920,12 +9890,12 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         release = asyncio.Event()
         original_set_range = self.climate.async_set_temperature_range
 
-        async def slow_base_set_range(*args, **kwargs) -> None:
+        async def slow_assisted_set_range(*args, **kwargs) -> None:
             started.set()
             await release.wait()
             await original_set_range(*args, **kwargs)
 
-        self.climate.async_set_temperature_range = slow_base_set_range
+        self.climate.async_set_temperature_range = slow_assisted_set_range
         self.scheduler._prepare_runtime_projection(NOW, configuration=True)
         apply_event = asyncio.create_task(self.scheduler._async_apply_event(event))
         await started.wait()
@@ -9936,7 +9906,7 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
 
         self.assertEqual(
             self.climate.calls,
-            [("set_temperature_range", self.entity_id, 20, 24, True, "heat_cool")],
+            [("set_temperature_range", self.entity_id, 23.0, 27.0, True, "heat_cool"), ("set_temperature_range", self.entity_id, 20.0, 24.0, False, "heat_cool")],
         )
         self.assertNotIn(self.entity_id, self.scheduler._room_sensor_assist_states)
         self.assertEqual(self.scheduler._room_sensor_assist_entities, ())
@@ -10423,10 +10393,7 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
 
         self.assertEqual(
             self.climate.calls,
-            [
-                ("set_temperature", self.entity_id, 25.0, True, "cool"),
-                ("set_temperature", self.entity_id, 27.0, True, "cool"),
-            ],
+            [('set_temperature', self.entity_id, 27.0, True, 'cool')],
         )
         state = self.scheduler._room_sensor_assist_states[self.entity_id]
         self.assertEqual(state.target_temperature, 25.0)
@@ -11795,33 +11762,15 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
         self.assertNotIn("applied_temperature", updated)
         self.assertNotIn("applied_offset", updated)
 
-        # Reapplying a scheduled block first restores its base range. Room Assist
-        # must then resend the assisted range even when its calculated target has
-        # not changed since the previous application.
+        # Reapplying a block sends its final assisted range once, even when
+        # the calculated target has not changed since the previous application.
         self.climate.calls.clear()
         current_event = self.read_scheduler(self.scheduler, 'get_current_event',self.entity_id)
         self.assertIsNotNone(current_event)
         await self.scheduler._async_apply_event(current_event)
         self.assertEqual(
-            self.climate.calls[-2:],
-            [
-                (
-                    "set_temperature_range",
-                    self.entity_id,
-                    20.0,
-                    24.0,
-                    True,
-                    "heat_cool",
-                ),
-                (
-                    "set_temperature_range",
-                    self.entity_id,
-                    23.0,
-                    27.0,
-                    True,
-                    "heat_cool",
-                ),
-            ],
+            self.climate.calls,
+            [('set_temperature_range', self.entity_id, 23.0, 27.0, True, 'heat_cool')],
         )
 
         self.climate.calls.clear()

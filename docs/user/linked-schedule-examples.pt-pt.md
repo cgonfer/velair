@@ -8,8 +8,8 @@ Traduções: [Original em inglês](linked-schedule-examples.md) · [Español](li
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.0-beta.10 |
+| Última sincronização | 2026-11-05 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -246,6 +246,6 @@ Opções adicionais incompatíveis podem ser filtradas da configuração efetiva
 <a id="back-up-the-whole-setup"></a>
 ## Criar uma cópia de segurança de toda a configuração
 
-Use a exportação do Velair em vez de copiar apenas um dia visível com os valores efetivos. Exportações do modelo 16 preservam ambos os tipos de ligação, predefinições e identidades de blocos. Exportar programações ou Perfis inclui modelos e predefinições de que dependem; o ecrã mostra as secções adicionadas automaticamente.
+Use a exportação do Velair em vez de copiar apenas um dia visível com os valores efetivos. Exportações do modelo 26 preservam ambos os tipos de ligação, predefinições e identidades de blocos. As definições de zona também preservam programações opcionais de sensores do Room Assist. Exportar programações ou Perfis inclui modelos e predefinições de que dependem; o ecrã mostra as secções adicionadas automaticamente.
 
-Na importação, examine as substituições antes de confirmar. Substituir um recurso partilhado também pode afetar usos locais existentes. A configuração combinada precisa de ser válida; novos Perfis não são ativados só porque foram importados. Cópias de segurança antigas continuam importáveis, mas versões antigas do Velair não podem importar uma exportação de modelo 16. Consulte [Portabilidade](usage.pt-pt.md#portability).
+Na importação, examine as substituições antes de confirmar. Substituir um recurso partilhado também pode afetar usos locais existentes. A configuração combinada precisa de ser válida; novos Perfis não são ativados só porque foram importados. Cópias de segurança antigas continuam importáveis, mas versões antigas do Velair não podem importar uma exportação de modelo 26. Mantenha uma cópia de segurança da versão anterior caso precise de voltar a ela. Consulte [Portabilidade](usage.pt-pt.md#portability).

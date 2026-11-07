@@ -8,8 +8,8 @@ Traductions: [Original en anglais](linked-schedule-examples.md) · [Español](li
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.0-beta.10 |
+| Dernière synchronisation | 2026-11-05 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -246,6 +246,6 @@ Les réglages facultatifs d’appareil non pris en charge par une destination pe
 <a id="back-up-the-whole-setup"></a>
 ## Sauvegarder la configuration entière
 
-Utilisez l’export de Velair plutôt que de copier seulement un jour résolu visible. Les exports de modèle 16 conservent les deux types de liens, les préréglages et l’identité des blocs. Exporter les programmations ou Profils inclut les modèles et préréglages dont ils dépendent ; l’écran d’export montre les sections ajoutées automatiquement.
+Utilisez l’export de Velair plutôt que de copier seulement un jour résolu visible. Les exports de modèle 26 conservent les deux types de liens, les préréglages et l’identité des blocs. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist. Exporter les programmations ou Profils inclut les modèles et préréglages dont ils dépendent ; l’écran d’export montre les sections ajoutées automatiquement.
 
-À l’import, inspectez les remplacements avant de confirmer. Remplacer une ressource partagée peut aussi affecter ses utilisations locales existantes. La configuration combinée doit être valide ; les nouveaux Profils ne sont pas activés simplement parce qu’ils sont importés. Les anciennes sauvegardes restent importables, tandis que les anciennes versions de Velair ne peuvent pas importer un export de modèle 16. Consultez [Portabilité](usage.fr.md#portability).
+À l’import, inspectez les remplacements avant de confirmer. Remplacer une ressource partagée peut aussi affecter ses utilisations locales existantes. La configuration combinée doit être valide ; les nouveaux Profils ne sont pas activés simplement parce qu’ils sont importés. Les anciennes sauvegardes restent importables, tandis que les anciennes versions de Velair ne peuvent pas importer un export de modèle 26. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [Portabilité](usage.fr.md#portability).

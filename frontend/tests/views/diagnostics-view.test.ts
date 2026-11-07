@@ -15,6 +15,7 @@ import { diagnosticsStyles } from "../../src/velair/styles/diagnostics-styles";
 import { responsiveStyles } from "../../src/velair/styles/responsive-styles";
 import { de } from "../../src/velair/translations/de";
 import { es } from "../../src/velair/translations/es";
+import { translate } from "../../src/velair/i18n";
 import { renderDiagnosticsView } from "../../src/velair/views/diagnostics-view";
 
 const categories = {
@@ -76,6 +77,129 @@ function host(snapshot = diagnostics()): VelairViewHost {
 }
 
 describe("diagnostics view", () => {
+  it.each([
+    ["pending", "diagnosticsConfirmationPending", "warning"],
+    ["recovered", "diagnosticsConfirmationRecovered", "success"],
+    ["unconfirmed", "diagnosticsConfirmationUnconfirmed", "warning"],
+  ])("shows %s setpoint confirmation independently of accepted delivery", (status, label, severity) => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].delivery = {
+      status: "success", retry_count: 1,
+      confirmation: { status, retry_count: 1, updated_at: "2026-11-03T08:00:00Z" },
+    };
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+
+    const detail = container.querySelector(".diagnostics-detail-panel")!;
+    expect(detail.textContent).toContain("diagnosticsCommandAccepted");
+    expect(detail.textContent).toContain("diagnosticsSetpointConfirmation");
+    expect(detail.textContent).toContain(label);
+    const confirmationRow = Array.from(detail.querySelectorAll(".diagnostics-rows > div"))
+      .find(row => row.querySelector("dt")?.textContent === "diagnosticsSetpointConfirmation");
+    expect(confirmationRow?.querySelector(`.diagnostics-state-chip.${severity}`)).not.toBeNull();
+    expect(detail.textContent).toContain("diagnosticsConfirmationRetries");
+    expect(detail.textContent).toContain("diagnosticsConfirmationUpdatedAt");
+  });
+
+  it("retains a clear successful recovery in delivery history", () => {
+    const snapshot = diagnostics();
+    snapshot.history = [{
+      at: "2026-11-03T08:00:00Z", entity_id: "climate.warning", category: "delivery",
+      severity: "info", kind: "delivery",
+      data: { status: "recovered", reason: "target_not_confirmed", retry_count: 1 },
+    }];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(host(snapshot)), container);
+    const history = container.querySelector(".diagnostics-history")!;
+    expect(history.textContent).toContain("diagnosticsConfirmationRecovered");
+    expect(history.textContent).toContain("diagnosticsConfirmationRecoveredDescription");
+    expect(history.textContent).toContain("diagnosticsConfirmationRetries");
+    expect(history.textContent).not.toContain("target_not_confirmed");
+    expect(history.textContent).not.toContain("retry_count");
+  });
+
+  it("does not add confirmation details to older diagnostics snapshots", () => {
+    const current = host(diagnostics());
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    const detail = container.querySelector(".diagnostics-detail-panel")!;
+    expect(detail.textContent).not.toContain("diagnosticsSetpointConfirmation");
+    expect(detail.textContent).not.toContain("diagnosticsConfirmationRetries");
+  });
+
+  it.each([
+    ["retrying", "diagnosticsConfirmationPending", "diagnosticsConfirmationPendingDescription"],
+    ["unconfirmed", "diagnosticsConfirmationUnconfirmed", "diagnosticsConfirmationUnconfirmedDescription"],
+  ])("explains %s recovery history without displaying internal reason codes", (status, label, description) => {
+    const snapshot = diagnostics();
+    snapshot.history = [{
+      at: "2026-11-03T08:00:00Z", entity_id: "climate.warning", category: "delivery",
+      severity: "warning", kind: "delivery",
+      data: { status, reason: "target_not_confirmed", retry_count: 2 },
+    }];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(host(snapshot)), container);
+    const history = container.querySelector(".diagnostics-history")!;
+    expect(history.textContent).toContain(label);
+    expect(history.textContent).toContain(description);
+    expect(history.textContent).toContain("diagnosticsConfirmationRetries: 2");
+    expect(history.textContent).not.toContain("Target not confirmed");
+  });
+
+  it("ignores unrecognized confirmation payloads without changing delivery status", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].delivery = {
+      status: "success", retry_count: 0,
+      confirmation: { status: "new_internal_status", retry_count: 1, updated_at: "private" },
+    };
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    const detail = container.querySelector(".diagnostics-detail-panel")!;
+    expect(detail.textContent).toContain("diagnosticsCommandAccepted");
+    expect(detail.textContent).not.toContain("diagnosticsSetpointConfirmation");
+    expect(detail.textContent).not.toContain("new_internal_status");
+    expect(detail.textContent).not.toContain("private");
+  });
+
+  it("explains the unconfirmed-delivery warning with the confirmation message", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].issues = [{ severity: "warning", code: "delivery_unconfirmed" }];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    const detail = container.querySelector(".diagnostics-detail-panel")!;
+    expect(detail.querySelector(".diagnostics-issue")?.textContent).toContain("diagnosticsConfirmationUnconfirmed");
+    expect(detail.textContent).not.toContain("delivery_unconfirmed");
+  });
+
+  it("localizes accepted commands and reported-setpoint recovery in Spanish", () => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].delivery = {
+      status: "success", retry_count: 1,
+      confirmation: { status: "recovered", retry_count: 1 },
+    };
+    snapshot.history = [{
+      at: "2026-11-03T08:00:00Z", entity_id: "climate.warning", category: "delivery",
+      severity: "info", kind: "delivery",
+      data: { status: "recovered", reason: "target_not_confirmed", retry_count: 1 },
+    }];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    current._t = ((key, replacements) => translate("es", key, replacements)) as VelairViewHost["_t"];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    expect(container.textContent).toContain(es.diagnosticsCommandAccepted);
+    expect(container.textContent).toContain(es.diagnosticsConfirmationRecovered);
+    expect(container.textContent).toContain(es.diagnosticsConfirmationRecoveredDescription);
+    expect(container.textContent).not.toContain("diagnosticsConfirmationRecovered");
+  });
+
   it("keeps a configured master visible without an upcoming prediction or learning data", () => {
     const snapshot = diagnostics();
     snapshot.units["climate.warning"].configuration.preconditioning = { enabled: false, master_entity_id: "climate.missing" };
@@ -241,6 +365,104 @@ describe("diagnostics view", () => {
       expect(dot.getAttribute("title")).toBe(expected);
       expect(dot.getAttribute("aria-label")).toBe(expected);
     }
+  });
+
+  it("shows separate sensor warnings with entity, state and purpose in Spanish", () => {
+    const snapshot = diagnostics();
+    const affected = snapshot.units["climate.warning"];
+    affected.issues = [
+      { severity: "warning", code: "associated_sensor_unavailable", purpose: "comfort_temperature" },
+      { severity: "warning", code: "associated_sensor_unavailable", purpose: "comfort_humidity" },
+    ];
+    affected.sensors = [
+      { entity_id: "sensor.room_temperature", state: "missing", purpose: "comfort_temperature" },
+      { entity_id: "sensor.room_humidity", state: "unavailable", purpose: "comfort_humidity" },
+    ];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    current._t = ((key, replacements) => translate("es", key, replacements)) as VelairViewHost["_t"];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    const warnings = [...container.querySelectorAll(".diagnostics-detail-panel .diagnostics-issue")];
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0].textContent).toContain(`sensor.room_temperature · ${es.entityDiagnosticMissing} · ${es.diagnosticsComfort}: ${es.comfortTemperatureSensor}`);
+    expect(warnings[1].textContent).toContain(`sensor.room_humidity · ${es.roomSensorStatusUnavailable} · ${es.diagnosticsComfort}: ${es.comfortHumiditySensor}`);
+    expect(warnings[0].textContent).not.toBe(warnings[1].textContent);
+    expect(warnings[0].textContent).not.toContain(es.diagnosticsSensorUnavailable);
+    const description = container.querySelector(".diagnostics-detail-panel .diagnostics-status-dot")?.getAttribute("aria-label");
+    expect(description).toContain("sensor.room_temperature");
+    expect(description).toContain("sensor.room_humidity");
+  });
+
+  it("groups repeated warnings for one sensor while retaining every affected use", () => {
+    const snapshot = diagnostics();
+    const affected = snapshot.units["climate.warning"];
+    affected.issues = [
+      { severity: "warning", code: "associated_sensor_unavailable", purpose: "room_temperature" },
+      { severity: "warning", code: "associated_sensor_unavailable", purpose: "comfort_temperature" },
+      { severity: "warning", code: "associated_sensor_unavailable", purpose: "comfort_temperature" },
+    ];
+    affected.sensors = [
+      { entity_id: "sensor.shared", state: "unknown", purpose: "room_temperature" },
+      { entity_id: "sensor.shared", state: "unknown", purpose: "comfort_temperature" },
+    ];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    current._t = ((key, replacements) => translate("en", key, replacements)) as VelairViewHost["_t"];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    const warnings = container.querySelectorAll(".diagnostics-detail-panel .diagnostics-issue");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].textContent).toContain("sensor.shared · Unknown · Room temperature sensor / Comfort: Temperature sensor");
+    expect(warnings[0].textContent?.match(/sensor.shared/g)).toHaveLength(1);
+    expect(warnings[0].textContent?.match(/Comfort: Temperature sensor/g)).toHaveLength(1);
+    expect(warnings[0].textContent).not.toContain("climate entity");
+    expect(container.querySelectorAll(".diagnostics-sensor-value")[0].textContent).toBe("Unknown");
+    const description = container.querySelector(".diagnostics-detail-panel .diagnostics-status-dot")?.getAttribute("title");
+    expect(description?.match(/sensor.shared/g)).toHaveLength(1);
+  });
+
+  it.each([
+    ["comfort_outdoor_temperature", "Comfort: Outdoor temperature sensor"],
+    ["comfort_outdoor_humidity", "Comfort: Outdoor humidity sensor"],
+    ["comfort_dew_point", "Comfort: Dew point"],
+    ["comfort_absolute_humidity", "Comfort: Absolute humidity"],
+    ["comfort_humidex", "Comfort: Humidex"],
+    ["outdoor_temperature", "Preconditioning: Outdoor temperature sensor"],
+  ])("identifies the %s sensor use", (purpose, expected) => {
+    const snapshot = diagnostics();
+    snapshot.units["climate.warning"].issues = [{ severity: "warning", code: "associated_sensor_unavailable", purpose }];
+    snapshot.units["climate.warning"].sensors = [{ entity_id: "sensor.external", state: "unavailable", purpose }];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    current._t = ((key, replacements) => translate("en", key, replacements)) as VelairViewHost["_t"];
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    expect(container.querySelector(".diagnostics-detail-panel .diagnostics-issue")?.textContent).toContain(expected);
+  });
+
+  it("deduplicates older warnings without inventing sensor identities", () => {
+    const snapshot = diagnostics();
+    const affected = snapshot.units["climate.warning"];
+    affected.issues = [
+      { severity: "warning", code: "associated_sensor_unavailable" },
+      { severity: "warning", code: "associated_sensor_unavailable" },
+      { severity: "warning", code: "associated_sensor_unavailable", purpose: "comfort_humidity" },
+      { severity: "warning", code: "entity_unavailable" },
+      { severity: "error", code: "entity_unavailable" },
+    ];
+    // A different configured source is insufficient evidence to identify an older issue.
+    affected.sensors = [{ entity_id: "sensor.other", state: "unavailable", purpose: "comfort_temperature" }];
+    const current = host(snapshot);
+    current._selectedDiagnosticEntity = "climate.warning";
+    const container = document.createElement("div");
+    render(renderDiagnosticsView(current), container);
+    const warnings = container.querySelectorAll(".diagnostics-detail-panel .diagnostics-issue");
+    expect(warnings).toHaveLength(3);
+    expect(warnings[0].textContent?.trim()).toBe("diagnosticsSensorUnavailable");
+    expect(warnings[1].textContent).toContain("diagnosticsComfort: comfortHumiditySensor");
+    expect(warnings[2].classList.contains("error")).toBe(true);
+    for (const warning of warnings) expect(warning.textContent).not.toContain("sensor.other");
   });
 
   it("adds localized issue evidence to error status dots", () => {
@@ -761,7 +983,7 @@ describe("diagnostics view", () => {
     render(renderDiagnosticsView(viewHost), container);
 
     expect(container.querySelector(".diagnostics-state-chip.success")?.textContent)
-      .toContain("diagnosticsDeliverySuccess");
+      .toContain("diagnosticsCommandAccepted");
     expect(container.querySelectorAll(".diagnostics-mode-list .mode-chip")).toHaveLength(3);
     expect(container.querySelector(".diagnostics-mode-list .mode-heat")).not.toBeNull();
     expect(container.querySelector(".diagnostics-mode-list .mode-cool")).not.toBeNull();
@@ -865,7 +1087,7 @@ describe("diagnostics view", () => {
     render(renderDiagnosticsView(viewHost), container);
 
     expect(container.querySelector("ha-state-icon.diagnostics-climate-icon")).not.toBeNull();
-    expect(container.textContent).toContain("diagnosticsDeliverySuccess");
+    expect(container.textContent).toContain("diagnosticsCommandAccepted");
     expect(container.querySelector(".diagnostics-ok")).toBeNull();
     expect(container.querySelectorAll(".diagnostics-group h4 ha-icon").length).toBeGreaterThan(1);
   });

@@ -318,6 +318,7 @@ def _loaded_velair_integration(frontend_module):
     )
     install_module(
         "custom_components.velair.temperature_migration",
+        TemperatureMigrationNotifications=RuntimePlaceholder,
         async_dismiss_temperature_migration_notification=async_noop,
         async_notify_temperature_migration=async_noop,
     )
@@ -1246,10 +1247,6 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("updateDraftBlockDomain(blocks, index, field, value)", source)
         self.assertIn("export function draftBlocksFromScheduleBlocks", draft_blocks_domain_source)
         self.assertIn("export function addDraftBlock", draft_blocks_domain_source)
-        self.assertIn(
-            "temperature: Number(lastBlock?.temperature || defaultTargetTemperature(unit))",
-            draft_blocks_domain_source,
-        )
         self.assertIn('hvac_mode: ""', draft_blocks_domain_source)
         self.assertIn("export function updateDraftBlock", draft_blocks_domain_source)
         self.assertIn("export function isActiveBoostOverride", overrides_domain_source)

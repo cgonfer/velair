@@ -8,8 +8,8 @@ Traduções: [Original em inglês](comfort.md) · [Español](comfort.es.md) · [
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Versão de referência | 1.9.0-beta.11 |
+| Última sincronização | 2026-11-07 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -31,11 +31,14 @@ Monitoriza leituras locais de temperatura, humidade e CO2. Não altera programa�
 <a id="sources"></a>
 ## Fontes
 
-A temperatura usa a primeira fonte disponível nesta ordem:
+A temperatura usa a fonte configurada, escolhida nesta ordem:
 
 1. sensor de temperatura selecionado no separador Conforto;
 2. sensor do Room Assist configurado para o dispositivo;
 3. `current_temperature` da entidade de climatização.
+
+Isto escolhe uma fonte preferida; não muda automaticamente para outra fonte
+quando a preferida deixa de fornecer uma temperatura utilizável.
 
 Para dispositivos agrupados, a temperatura automática usa o `current_temperature` do membro físico; o sensor do Room Assist do grupo não é herdado. Quando necessário, selecione explicitamente um sensor externo nos ajustes de Conforto daquele membro.
 
@@ -49,6 +52,52 @@ A opção predefinida `Usar fonte automática` mantém esse comportamento. Selec
 O CO2 só é monitorizado quando há um sensor de CO2 selecionado.
 
 O ID efetivo da entidade aparece abaixo de cada seletor. Métricas opcionais sem fonte não são tratadas como falhas.
+
+<a id="backup-sensors"></a>
+
+### Sensores de reserva
+
+Quando uma fonte de temperatura ou humidade tem uma reserva distinta e suportada,
+**Fontes de dados** mostra uma subsecção separada **Sensores de reserva**.
+Cada linha tem a sua caixa de seleção, o nome e o ícone Temperatura ou Humidade e
+o ID exato da entidade de reserva. Ambas as caixas estão desmarcadas por predefinição.
+
+- **Temperatura** usa o sensor de temperatura configurado para esse dispositivo
+  físico quando difere do sensor externo selecionado. Se o Conforto já usa esse
+  sensor ambiente configurado, incluindo através de **Usar fonte automática**,
+  a reserva é o `current_temperature` do próprio dispositivo. Se não houver
+  sensor ambiente configurado, um sensor externo do Conforto também usa essa
+  leitura nativa como reserva.
+- **Humidade** usa apenas o `current_humidity` medido do dispositivo. Uma reserva
+  de humidade só aparece quando essa fonte medida é suportada; a configuração
+  de alvo `humidity` nunca é usada como leitura.
+
+A reserva de temperatura continua disponível quando a fonte automática é um
+sensor externo de ambiente. Se a leitura preferencial já for a temperatura do
+próprio dispositivo, a linha desaparece e a configuração de reserva guardada é
+desativada. Mudar a fonte ambiente configurada de volta para o dispositivo
+desativa a reserva ativada para a fonte automática; selecionar novamente um
+sensor externo de ambiente não a reativa.
+
+A reserva de humidade exige uma fonte externa selecionada explicitamente.
+Escolher a sua fonte automática/nativa ou desativar a monitorização de humidade
+desativa essa configuração de reserva de humidade. Cada leitura tem no máximo
+uma reserva; se esta também falhar, o Conforto não tenta outra fonte.
+
+Com uma reserva ativada, uma leitura selecionada ausente, indisponível,
+desconhecida ou não numérica pode usar essa única reserva se a leitura for
+atual e válida. **Sensor de reserva em utilização** identifica a reserva ativa.
+O sensor selecionado permanece guardado e o Conforto volta a utilizá-lo quando
+recupera. Uma leitura selecionada desatualizada não aciona a reserva e uma
+reserva desatualizada não é utilizada. Se nenhuma fonte tiver uma leitura
+utilizável, o Conforto continua a mostrar o estado ausente ou desatualizado.
+
+Estas configurações são guardadas por dispositivo físico e preservadas após
+reinício e exportação/importação portátil. As configurações existentes mantêm
+ambas as reservas desativadas. Os membros de grupos de divisões mantêm
+configurações independentes e nunca herdam como reserva o sensor de controlo
+do grupo. As reservas afetam apenas a observação do Conforto; não alteram
+Room Assist, pré-condicionamento, controlo do dispositivo ou monitorização de CO2.
 
 <a id="comfort-models"></a>
 ## Modelos de conforto
@@ -186,7 +235,17 @@ O Velair disponibiliza um valor de qualidade dos dados:
 - `stale`: não há leitura atual, e todas as fontes monitorizadas estão desatualizadas;
 - `unavailable`: nenhuma leitura atual pode ser usada por outro motivo.
 
-O separador Conforto agrupa leituras utilizáveis cuja atualização não pode ser verificada junto aos seletores de sensores em **Configuração → Fontes de dados**. Uma explicação discreta identifica as leituras afetadas e esclarece que um horário desconhecido não significa valores incorretos nem desconforto na divisão. Visão geral e cartões Lovelace omitem esse estado rotineiro; Diagnóstico mantém o contexto técnico de atualização. É uma configuração válida de fonte automática do dispositivo, não um erro. Leituras ausentes ou desatualizadas ainda mostram um aviso na lista de zonas.
+O separador Conforto agrupa leituras utilizáveis cuja atualização não pode ser
+verificada junto aos seletores de sensores em **Configuração → Fontes de dados**.
+Um bloco de informação recolhido identifica as leituras afetadas. Abra-o para
+ler a explicação completa: as leituras podem ser utilizadas, desconhecer a hora
+da medição não significa valores incorretos nem desconforto na divisão, e a
+atualização da medição do termostato não pode ser verificada separadamente
+quando a sua leitura é utilizada. Visão geral e cartões Lovelace omitem esse
+estado rotineiro; Diagnóstico mantém o contexto técnico de atualização. É uma
+configuração válida de fonte automática do dispositivo, não um erro. Leituras
+ausentes ou desatualizadas ainda mostram um aviso na lista de zonas. Os controlos
+separados de **Atualização de dados** mantêm o seu comportamento existente.
 
 <a id="visual-status"></a>
 ## Apresentação do estado

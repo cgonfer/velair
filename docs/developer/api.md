@@ -279,8 +279,10 @@ its absence when using an older backend.
       "comfort": {
         "enabled": false,
         "temperature_entity_id": null,
+        "temperature_fallback_enabled": false,
         "humidity_enabled": true,
         "humidity_entity_id": null,
+        "humidity_fallback_enabled": false,
         "co2_entity_id": null,
         "temperature_min": 20.0,
         "temperature_max": 24.0,
@@ -412,7 +414,7 @@ its absence when using an older backend.
     "portable_model": 23,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.8"
+    "integration": "1.9.0-beta.11"
   }
 }
 ```
@@ -1100,6 +1102,44 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
+The optional `preconditioning.room_sensor_schedule` object adds a weekly Room
+Assist reference schedule. It contains `enabled`, `default_source`, and `periods`;
+each period contains `weekdays`, `start`, `end`, and `source`. Sources are
+temperature `sensor.*` IDs or `null` for the native climate/group reference.
+Weekdays use the existing English weekday identifiers. Periods are half-open,
+may cross midnight from a selected start day, and must not overlap. A settings
+update replaces the complete nested schedule atomically. Missing configuration
+retains the legacy fixed-sensor behavior; disabling a stored schedule preserves
+it and returns to `room_temperature_entity_id`.
+
+Routine schedule/status responses contain only the calendar summary
+`{ enabled, default_source, period_count }` in that field. They deliberately omit
+`periods`; absence of that array does not mean the saved calendar is empty. Load
+the complete detached configuration when opening its editor:
+
+```ts
+const detail = await hass.connection.sendMessagePromise({
+  type: "velair/get_room_sensor_schedule",
+  entity_id: "climate.living_room"
+});
+// detail.room_sensor_schedule is the full saved object, or null if unconfigured.
+```
+
+The read validates the managed control unit, including room-group ownership, and
+uses committed configuration. It cannot expose a pending settings write. Keep
+the complete draft local until saving through `velair/update_zone_preconditioning`;
+read the detail again to verify the stored result. Portable exports retain every
+period. This keeps large calendars out of repeated operational responses.
+
+The Room Assist master switch still gates assistance. With an enabled sensor
+schedule, the per-zone `room_sensor_assist` runtime snapshot additionally exposes
+`room_sensor_schedule` with `enabled`, `effective_source`, `next_change`, and
+`next_source`. A native reference deliberately applies no external-sensor
+correction. A missing selected external reading suspends correction without
+silently replacing its identity. See [Room Assist internals](room-assist.md#optional-weekly-temperature-references)
+for the configuration example and exact-clock beta limitations. Portable model
+26 adds this optional configuration; existing older backups remain importable.
+
 When preconditioning moves the apply time earlier than the visible schedule block time, serialized events keep `when` as the apply time and include `target_when` as the comfort target time. These events also include `preconditioning_diagnostics`, a runtime-only calculation breakdown with selected sample counts, complete estimate, partial floor, combined estimate, rounded estimate, final lead, model source, and limit flags. The frontend uses this object for optional calculation details instead of recalculating the prediction.
 
 `master_entity_id` is optional; `null` unlinks a room. The resulting managed
@@ -1197,8 +1237,10 @@ await hass.connection.sendMessagePromise({
   comfort: {
     enabled: true,
     temperature_entity_id: "sensor.living_room_temperature",
+    temperature_fallback_enabled: false,
     humidity_enabled: true,
     humidity_entity_id: "sensor.living_room_humidity",
+    humidity_fallback_enabled: false,
     co2_entity_id: "sensor.living_room_co2",
     temperature_min: 20,
     temperature_max: 24,
@@ -1231,6 +1273,39 @@ await hass.connection.sendMessagePromise({
 ```
 
 Comfort settings are per managed climate. `comfort_model` defaults to `simple`, accepts `guided` when humidity monitoring is enabled, and keeps `temperature_aware` for explicit endpoint control. Guided reuses `humidity_min` and `humidity_max` as the midpoint reference and persists no calculated geometry. `temperature_aware` stores complete humidity ranges at the configured minimum and maximum temperatures. Both `temperature_aware` and `derived_metrics` accept deep partial updates, so omitted boundaries, metrics, and fields retain their stored values. Outdoor comparison requires an explicit temperature `sensor.*`; humidity is optional. Disabling it retains both IDs and removes them from active listeners. The three ventilation thresholds are partial, per-climate settings: temperature is a unit-aware delta, while projected humidity uses percentage points and absolute humidity uses `g/m³`. Omitted values retain their stored values. See [Environmental Comfort internals](comfort.md) for validation, interpolation, comparison policy, source selection, listener behavior, and event payloads.
+
+`temperature_fallback_enabled` and `humidity_fallback_enabled` are independent
+optional booleans, both defaulting to `false`. Each permits one backup reading
+when the preferred source is missing or invalid. An explicit external temperature
+source distinct from the configured room sensor backs up to that room sensor,
+otherwise to the physical climate's own `current_temperature`. If the preferred
+source is the configured room sensor, including automatic selection, its backup
+is the native climate reading. A native preferred temperature has no backup;
+only one candidate is exposed and used, without a further chain. Humidity uses only that
+climate's measured `current_humidity`, and requires support for that attribute;
+target `humidity` is never a reading. Automatic/native humidity has no backup.
+A stale selected reading does not trigger fallback, and a
+stale backup is rejected. Recovery restores the selected source automatically.
+
+Temperature and humidity assessments expose nullable `fallback_entity_id`,
+nullable `fallback_source` (`room_sensor` or `climate` for temperature, `climate`
+for humidity), and boolean `using_fallback`. Candidate metadata remains available
+while the option is off, so clients can show the exact proposed backup. No
+alternative produces null candidate metadata. The selected source remains
+persisted, and `entity_id` identifies the reading actually used. These runtime
+fields do not change Room Assist control references or HVAC behavior.
+
+The backend retains a temperature backup opt-in for an automatic external-room
+source, but clears it when the effective preferred source is the native climate.
+Changing the fixed room source back to native clears the automatic opt-in in the
+same save transaction. Humidity keeps its automatic/native reset rule; disabling
+humidity also clears `humidity_fallback_enabled`. Normalization enforces these rules on stored
+settings and portable import, not just frontend interactions. Both flags survive
+restart and portable export/import; older files default them to `false`, reset
+clears them, and grouped members retain independent physical-climate settings.
+Runtime candidate metadata and active fallback state are not persisted or
+exported. Clients paired with an older backend must tolerate absent runtime
+fallback fields.
 
 `entity_id: null` is valid for an enabled external metric while configuration is
 incomplete; runtime reports it as `missing`. Any non-null external entity ID
@@ -1544,7 +1619,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 23,
+  "model_version": 26,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1552,6 +1627,10 @@ Returns a versioned portable JSON payload:
 ```
 
 ## Import Data
+
+Model 26 preserves optional Room Assist sensor schedules in zone configuration.
+Existing supported backups remain importable; older Velair versions reject new
+model 26 exports, including exports created without an enabled sensor schedule.
 
 ```ts
 await hass.connection.sendMessagePromise({

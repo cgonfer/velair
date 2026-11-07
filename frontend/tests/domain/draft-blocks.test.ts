@@ -45,6 +45,21 @@ const normalize = (blocks: DraftScheduleBlock[]) =>
   });
 
 describe("draft block domain", () => {
+  it.each(["19.5", "19,5"])("validates and saves %s without changing the draft", (temperature) => {
+    const block = { action: ACTION_SET_TEMPERATURE, start: "08:00", hvac_mode: "cool", temperature };
+    expect(temperatureError(block)).toBeUndefined();
+    expect(normalize([block])).toMatchObject({ ok: true, blocks: [{ temperature: 19.5 }] });
+    expect(block.temperature).toBe(temperature);
+    expect(addDraftBlock([block], "09:00")[1].temperature).toBe(temperature);
+  });
+  it("normalizes comma range targets while enforcing order and step", () => {
+    const block = { action: ACTION_SET_TEMPERATURE, start: "08:00", hvac_mode: "heat_cool",
+      target_temp_low: "19,5", target_temp_high: "24,5" };
+    expect(normalize([block])).toMatchObject({ ok: true, blocks: [{ target_temp_low: 19.5, target_temp_high: 24.5 }] });
+    expect(temperatureError({ ...block, target_temp_low: "19,3" })).toBe("step");
+    expect(temperatureError({ ...block, target_temp_low: "24,5", target_temp_high: "19,5" })).toBe("order");
+    expect(normalize([{ ...block, target_temp_low: "19," }]).ok).toBe(false);
+  });
   it("saves preset-only without a target or HVAC mode and restores the draft target", () => {
     const original: DraftScheduleBlock = { action: ACTION_SET_TEMPERATURE, start: "08:00",
       hvac_mode: "cool", temperature: 23, preset_mode: "none" };

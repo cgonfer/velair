@@ -313,7 +313,7 @@ class ExternalProviderTest(unittest.IsolatedAsyncioTestCase):
                 data,
                 SimpleNamespace(),
                 save,
-                climate_delivery=SimpleNamespace(),
+                climate_delivery=SimpleNamespace(set_intent_changed_callback=lambda _callback: None),
                 external_execution=manager,
             )
             await manager.async_set_execution("climate.zone", "ramses_cc", schedule=_schedule())

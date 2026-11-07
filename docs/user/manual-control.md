@@ -119,12 +119,22 @@ The next fresh Diagnostics snapshot exposes the warning; its report payload
 includes the expected and observed values. Velair does not retry the command
 blindly or turn the mismatch into a delayed Manual adjustment.
 
+A separate exception applies while Velair maintains an Automatic climate in
+`off`. Some devices report a placeholder target, such as `0 °C` when their
+published minimum is `5 °C`. If only targets change and every new value is
+outside the device's explicitly reported minimum and maximum, Velair ignores
+the update, including delayed reports after settling. It does not emit an
+external-change event, start Manual adjustment, or interrupt schedule delivery.
+Both limits must be valid; if either is missing, the usual detection remains.
+Valid target changes, external HVAC mode changes, identifiable user or
+automation actions, and existing Manual sessions retain their usual behavior.
+
 The expectation ledger is bounded, expires automatically, is never persisted,
 and does not poll. A source does not have to preserve Home Assistant `Context`
 for correlation to work, although a preserved context makes candidate matching
 more precise.
 
-Any observed control field that cannot be correlated with a Velair command is
+Any remaining observed control field that cannot be correlated with a Velair command is
 classified as non-Velair. This is attribution, not identity: Velair does not
 claim to know whether a person, remote, automation, vendor service, or device
 firmware caused it.

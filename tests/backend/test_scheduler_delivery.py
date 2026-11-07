@@ -224,6 +224,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
                 assist_started.set()
                 await release_assist.wait()
 
+        self.data["zones"][self.entity_id].setdefault("preconditioning", {})["room_sensor_assist_enabled"] = True
         self.scheduler._async_refresh_room_sensor_assist = slow_first_assist
         old = ClimateEvent(
             entity_id=self.entity_id,
@@ -300,6 +301,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
                 assist_started.set()
                 await release_assist.wait()
 
+        self.data["zones"][self.entity_id].setdefault("preconditioning", {})["room_sensor_assist_enabled"] = True
         self.scheduler._async_refresh_room_sensor_assist = slow_first_assist
         old_task = asyncio.create_task(
             self.scheduler.async_apply_current_schedule(source="old_schedule")
@@ -376,6 +378,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
             if attempts == 1:
                 raise HomeAssistantError("temporary Room Assist failure")
 
+        self.data["zones"][self.entity_id].setdefault("preconditioning", {})["room_sensor_assist_enabled"] = True
         self.scheduler._async_refresh_room_sensor_assist = fail_first_assist
         event = ClimateEvent(
             entity_id=self.entity_id,
@@ -411,6 +414,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
         async def initial_assist(*_args, **_kwargs) -> None:
             return None
 
+        self.data["zones"][self.entity_id].setdefault("preconditioning", {})["room_sensor_assist_enabled"] = True
         self.scheduler._async_refresh_room_sensor_assist = initial_assist
         await self.scheduler.async_apply_current_schedule()
         self.hass.bus.events.clear()
@@ -423,6 +427,7 @@ class SchedulerDeliveryTests(unittest.IsolatedAsyncioTestCase):
             if attempts <= 2:
                 raise HomeAssistantError("listener Room Assist failure")
 
+        self.data["zones"][self.entity_id].setdefault("preconditioning", {})["room_sensor_assist_enabled"] = True
         self.scheduler._async_refresh_room_sensor_assist = fail_twice
         with patch(
             "custom_components.velair.climate_delivery.RETRY_DELAYS", (0, 0)

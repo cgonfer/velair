@@ -1,5 +1,71 @@
 # Manual Testing
 
+## Event-driven recovery and bounded work (beta.11)
+
+1. Hold a schedule save for the affected zone across a due weekly early start.
+   Check successful commit
+   and failed-write rollback with heating and cooling: preparation resumes with
+   the committed or restored configuration, and an unrelated zone continues.
+   Repeat with overlapping saves and stop/reload while work is pending.
+2. During Planned Return preparation, remove the climate's HA state or make it
+   unknown/unavailable until after the planned arrival. Confirm other zones and
+   the panel remain usable. Reconnect before and after arrival; only current
+   intent may apply. Repeat with Keep automatic, Boost expiry, Pause, cancellation
+   and retiming. Command acceptance must remain separate from reported recovery.
+3. Hold climate delivery while sending a burst of external target changes. Check
+   all external-change policies, heating/cooling/ranges and room groups. Manual
+   observations and transitions must remain ordered; Keep automatic eventually
+   restores the current target. An independent zone must continue. Repeat with
+   Boost, Pause and unload while the worker is waiting.
+4. With Room Assist enabled, update several eligible sensors while delivery is
+   slow. Include sources whose debounce expires during the wait and a scheduled
+   source change. The next correction must include pending sources and current
+   readings. Check positive debounce, a failed delivery, and stop/reload cleanup.
+5. Keep a temperature migration block active across repeated state updates:
+   unchanged successful notifications must not be recreated. Change its reason,
+   unblock, then reblock. A failed create/dismiss must allow a later event to
+   recover and must not prevent scheduling from resuming after unblock.
+6. Open a fully linked multi-block Default/Profile day with a slow or failing
+   preview backend. While waiting, edit a sibling draft or change zone, day,
+   source or link. Reject stale responses, preserve drafts and keep the explicit
+   per-block retry usable after failure. Check phone/tablet layouts and both
+   temperature units. These are behavior checks, with no timing thresholds.
+
+These scenarios complement automated regression tests; exercise them in a real
+Home Assistant installation before treating physical-device recovery as verified.
+
+## Room Assist sensor schedule (beta)
+
+1. Select **Fixed sensor** and verify existing immediate sensor selection,
+   thermal schedules and manual controls behave as before. Confirm the unit has
+   only one Room Assist switch and only the chosen reference setup is visible.
+2. Configure a native default reference and an external office sensor on selected
+   weekdays. Save, reload and restart; verify the effective source and next change.
+   Check overnight periods, midnight, the week boundary and local daylight saving.
+3. With heating, cooling and supported temperature ranges, cross native/external
+   and external/external boundaries, including equal readings. Verify only the
+   current target is delivered and old corrections do not return.
+4. Repeat with Manual adjustment, Boost, pauses and external execution. Reference
+   metadata may change, but these owners must retain control. Resume Automatic
+   and verify the reference valid at that moment is used.
+5. Make the selected external sensor unavailable and recover it. Verify the
+   unavailable explanation, normal nominal target under automatic ownership and
+   no silent change to a different room.
+6. Verify advance preparation does not cross a source boundary and is recalculated
+   afterward. Learning readiness and samples must match the effective source.
+7. Export/import portable model v26, including a saved disabled schedule. Reject
+   overlapping periods without replacing configuration. Verify native group
+   references and preserve the fixed sensor when disabling the schedule.
+8. Switch between **Fixed sensor** and **By schedule**, edit both setups, and
+   verify switching alone makes no write and preserves the draft. Save each mode
+   and reload; confirm both the fixed source and valid calendar edits are retained.
+   Cancel restores the saved mode and sources. An invalid draft calendar must not
+   block returning to fixed mode or overwrite the saved valid calendar. Check
+   load/write/readback errors, master-off editing and external mode updates.
+   Check the editor, Save/Cancel and source status in mobile/tablet layouts and
+   the optional Room Assist card. Verify responsiveness in the actual Home
+   Assistant installation, including schedule transitions and editor interactions.
+
 ## Room groups
 
 1. Create a named group in the Room groups tab from climates with different schedules and
@@ -21,7 +87,7 @@
    the entire room is targeted once. Reject unmanaged climates. Remove members
    and dissolve the group; check inherited schedules/Profiles and cleared
    temporary actions. Options must reject removal of a still-grouped climate.
-7. Export/import portable model v25, including empty groups, the same group graph,
+7. Export/import portable model v26, including empty groups, the same group graph,
    imported learning, changed Profiles and active selection reconciliation. Test
    restart/reload, temperature conversion and per-member boost restoration.
 8. Reorder groups and members; reload and check Settings, scheduling selectors
@@ -1086,6 +1152,15 @@ Use at least one scalar heat or cool climate and, when available, one native
     change displayed values before Home Assistant updates the entity. Remove
     `target_temp_step` and confirm Settings exposes a fallback of `1`; change it
     to `0.5` and confirm schedule inputs and card buttons use that increment.
+    In Default schedules, Profile schedules, templates and Climate-card Boost, type and paste both
+    `19.5` and `19,5` into scalar and range targets. Confirm intermediate `19.`
+    and `19,` remain visible but cannot be saved, and saved payloads contain
+    numbers. With published step `0.1`, manual fallback `0.5`, and default `1`,
+    verify compatible targets, incompatible steps, bounds and reversed ranges.
+    Check Up/Down arrows on and between device-grid points and at both limits;
+    unrestricted templates must step `19.5` to `20.5` and back. Repeat with
+    French (Canada) and English browser locales, mobile widths and iOS Companion
+    when available. Negative or unrestricted targets must allow a minus sign.
 24. With Automatic scheduling active, use a climate that publishes delayed or
     out-of-order command echoes. Apply a scheduled target and reproduce both
     `expected -> old/intermediate -> expected` and
@@ -1490,6 +1565,9 @@ If you only need to verify next-event scheduling, Home Assistant Developer Tools
    on hover; learning details must remain readable without a wide table.
 
 ## Environmental Comfort Smoke Test
+
+Run the [backup-sensor checks](#comfort-backup-sensors-regression-71) separately
+when validating optional temperature and humidity recovery.
 
 1. Open the Comfort tab.
 2. Enable Comfort for one managed climate.
@@ -2295,3 +2373,66 @@ vendor propagation must also be checked on the installation using selected deliv
    conversion with Celsius and Fahrenheit installations.
 6. Filter a Comfort card by the group, then by one member. Verify the group filter
    shows its members and the member filter does not include the other members.
+
+## Climate-card decimal Boost regression (#68)
+
+- On a managed heating climate, type `24`, `24.`, then `24.5` with a render
+  between each keystroke. Repeat with `24,5`, pasting and a cooling climate.
+  The separator and incomplete draft must remain visible; Apply must require a
+  complete value on the effective device grid and send a numeric service target.
+- Repeat for both native range fields, preserving the other draft. Reject
+  reversed ranges, out-of-bounds values, off-grid values, blank values and
+  malformed text before calling the Boost service. Keyboard Up/Down must use
+  the grid anchored at the climate minimum, including fractional minima.
+- Verify Celsius/Fahrenheit limits, published steps and configured fallback steps,
+  negative targets with access to the minus key, and mobile/tablet widths.
+- Protect Manual adjustment's separate +/- controls and the shared Lovelace
+  Schedules editor: decimal increments and point/comma editing must still work.
+  The other selectable card views must retain their existing input behavior.
+
+## Comfort backup sensors regression (#71)
+
+1. Use a physical managed climate with measured temperature and humidity, and
+   select different external sensors in Comfort. Confirm **Backup sensors** has
+   independent Temperature and Humidity checkboxes, initially off, with their
+   exact backup entity IDs. A climate without measured `current_humidity` must
+   not offer humidity backup merely because it exposes a target `humidity`.
+2. Enable only temperature backup and make its selected sensor unavailable.
+   Verify the identified backup reading is used and marked **Backup in use**,
+   while the selector retains the external source. Restore the sensor and confirm
+   automatic recovery without changing humidity's choice. Repeat for humidity,
+   then both together, heating/cooling, and Celsius/Fahrenheit temperatures.
+3. Test missing entities, `unknown`, non-numeric readings, and humidity outside
+   0–100%. Use a valid backup only. If both inputs are unusable, keep the missing
+   state; do not reuse retained attributes from an unavailable climate. A stale
+   preferred input must retain its stale behavior rather than trigger backup.
+4. With an external fixed Room Assist source, select **Use automatic source** in
+   Comfort and verify the temperature row offers the native climate reading,
+   initially unchecked. Enable it, fail/recover the external source, and confirm
+   the checkbox stays visible while the selector remains automatic. Repeat with
+   that room sensor explicitly selected. A different explicit Comfort source
+   keeps the room sensor as its one backup, without a further native chain.
+   Selecting native temperature hides the row and saves its flag as false.
+   Change the fixed room source external → native → external: the automatic
+   backup must not reactivate; a failed save must roll back both configurations.
+   For humidity, automatic/native selection or disabled monitoring still clears
+   only its humidity backup flag. Hide the subsection when neither reading has
+   an alternative. Scheduled Room Assist boundaries retain existing Comfort
+   source behavior.
+5. Restart Home Assistant and round-trip a portable export. Verify valid external
+   source opt-ins persist, inapplicable default-source flags are cleared, and
+   malformed non-boolean flags are rejected. On a failed save, retain the previous
+   configuration. For grouped climates, only the edited physical member changes;
+   the group's control reference must not become another member's backup.
+6. While humidity backup is active, check the effective Comfort condition and
+   enabled dew point, absolute humidity and Humidex calculations. Missing
+   temperature must not invent a temperature-aware humidity range. Changing
+   either native backup reading must refresh the panel and Comfort entities.
+7. At desktop, tablet and narrow card widths, confirm one compact backup row per
+   reading with a checkbox, metric icon and entity ID. No repeated source
+   description or extra information button is needed. Expand the neutral reading
+   information disclosure: retain the full affected-metric list and both original
+   explanation paragraphs. Check the blue left rule, header underline, rightmost
+   chevron and keyboard/touch operation. **Data freshness** keeps its existing
+   section layout. These Comfort checks must not cause climate service calls or
+   change Room Assist, schedules, preconditioning or CO2 monitoring.

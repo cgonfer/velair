@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.0-beta.10 |
+| Laatst gesynchroniseerd | 2026-11-05 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -50,7 +50,7 @@ Bij **Niet ingesteld** worden vaste paren ongewijzigd zonder Room Assist-correct
 
 1. Open Room Assist.
 2. Vouw het gewenste apparaat uit.
-3. Kies een kamertemperatuursensor.
+3. Kies onder **Ondersteuning via kamersensor** voor **Vaste sensor** of **Volgens schema**, stel de gekozen optie in en sla een wissel op.
 4. Schakel Ondersteuning via kamersensor in.
 5. Stel de Room Assist-dode band in voor vast verwarmen of koelen rond het enkele doel of de gekozen bereikreferentie; bij automatische enkeldoelmodi en oorspronkelijke `heat_cool`-banden bepaalt deze de neutrale marge.
 6. Pas Maximale correctie aan als de standaard te klein is voor die kamer of onder het verschil ligt dat de thermostaat nodig kan hebben om verwarmen/koelen te stoppen.
@@ -70,7 +70,26 @@ De actuele temperatuurschaal toont de dode band als neutrale gestreepte zone. Bi
 
 Bij dode band `0` wordt geen vlak getekend en noemt de vaste legenda expliciet dat er geen dode band is. Grafiek en legenda volgen de opgeslagen backendwaarde; `show_room_assist_deadband` verbergen op een Lovelace-kaart verbergt instelling, band en legenda samen.
 
-Bij upgrade vanaf een versie waarin Room Assist het minimumverschil van voorconditionering deelde, kopieert Velair de bestaande waarde één keer naar de nieuwe dode band. Dit behoudt eerdere bandbreedte, ook een historische waarde buiten de nieuwe invoerstap van 0.1 graad. Vaste `heat` en `cool` gebruiken die waarde daarna met de onderstaande hysterese. Na migratie zijn instellingen onafhankelijk: één veranderen wijzigt de andere nooit. Een nieuwe of geresette zone krijgt de eenheidsafhankelijke standaard hierboven.
+Alleen de gekozen optie wordt getoond. Wanneer **Vaste sensor** al de opgeslagen werkwijze is, wordt een andere sensor direct opgeslagen. Wisselen tussen **Vaste sensor** en **Volgens schema** wijzigt een concept: **Opslaan** past de werkwijze en de instellingen toe, en **Annuleren** herstelt de opgeslagen configuratie. De vaste sensor en het opgeslagen schema blijven bij het wisselen bewaard; beide worden niet tegelijk ingeschakeld.
+
+
+<a id="optional-sensor-schedule-beta"></a>
+
+### Optioneel sensorschema (bèta)
+
+Room Assist kan gedurende de week verschillende temperatuurreferenties gebruiken zonder temperatuurschema’s, profielen of modi te wijzigen. Kies **Volgens schema** onder **Ondersteuning via kamersensor** om ze in te stellen. Kies **Vaste sensor** om terug te keren naar de vaste kamersensor.
+
+Kies een standaardreferentie en voeg perioden toe met weekdagen, begin- en eindtijden en een referentie. Sla het volledige concept op om het toe te passen; Annuleren verwerpt je wijzigingen. Referenties kunnen temperatuursensoren zijn die in Home Assistant beschikbaar zijn, of de eigen temperatuur van het klimaatapparaat. Buiten de perioden geldt de standaardreferentie. Perioden mogen over middernacht lopen en horen bij de geselecteerde begindagen; overlappingen worden geweigerd. De begintijd is inbegrepen en de eindtijd niet. De tijden volgen de ingestelde tijdzone van Home Assistant.
+
+Kies bijvoorbeeld **Geen Room Assist-correctie** als standaard en een kantoorsensor van 08:00 tot 17:00, maandag tot en met vrijdag. Je bestaande zomer-/wintertemperatuurschema’s blijven de gewenste temperatuur bepalen. Tijdens werktijden berekent Room Assist correcties met de kantoorsensor. Daarbuiten stuurt Velair het normale geplande doel en regelt de thermostaat met zijn eigen referentie. Dit verandert niet welke fysieke sensor de apparaatfirmware intern gebruikt.
+
+De enige Room Assist-schakelaar bepaalt of ondersteuning is ingeschakeld. Uitschakelen bewaart beide configuraties. **Vaste sensor** kiezen en opslaan herstelt de bewaarde vaste kamersensor. Als een externe referentie niet beschikbaar is, onderbreekt Velair de correctie en gebruikt het normale geplande doel wanneer het automatisch de regeling beheert; het kiest niet stilzwijgend een andere kamer en gebruikt geen oude meting opnieuw. Ondersteuning hervat zodra die referentie weer bruikbaar is.
+
+Referentiewissels nemen de regeling niet over van handmatige aanpassing, Boost of pauzes. Wanneer de automatische regeling hervat, gebruikt Velair de referentie die op dat moment geldt. Voor kamergroepen betekent de eigen apparaattemperatuur de ingestelde temperatuurreferentie van de groep.
+
+**Bètabeperking:** een referentie wisselt precies op de geplande tijd. Adaptieve voorconditionering start geen vervroegd doel over een referentiewissel heen; na die overgang wordt opnieuw berekend. Een kamerwissel is geen verzoek om de volgende kamer eerder voor te bereiden. Leerwaarnemingen worden aan hun temperatuurbron gekoppeld, zodat een meetverschil tussen kamers niet wordt geïnterpreteerd als verwarming of koeling.
+
+Alle geselecteerde externe metingen moeten onafhankelijk beschikbaar zijn in Home Assistant. Voor Nest moet een opstelling met de officiële integratie voor de thermostaat en een andere integratie voor een externe sensor in de installatie worden getest. Houd Nests eigen referentie vast als je de thermostaatmeting als stabiele kamerreferentie wilt gebruiken. Velair kiest Nests interne actieve sensor niet. Een gedeeld HVAC-systeem blijft alle aangesloten kamers beïnvloeden; een referentie kiezen maakt geen onafhankelijke fysieke zones.
 
 <a id="room-groups"></a>
 ### Kamergroepen

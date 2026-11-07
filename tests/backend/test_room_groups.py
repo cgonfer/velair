@@ -127,7 +127,7 @@ class RoomGroupsTest(unittest.TestCase):
         entry = SimpleNamespace(options={}, data={})
         export_runtime = {"storage": SimpleNamespace(data=candidate), "entry": entry}
         payload = api._build_export_payload(export_runtime, ["zones"])
-        self.assertEqual(payload["model_version"], 25)
+        self.assertEqual(payload["model_version"], 26)
         self.assertIn("room_groups", payload["sections"])
         storage = SimpleNamespace(data=self.data, _climate_entities=self.physical)
         imported = api._build_import_data({"storage": storage, "entry": entry}, payload, ["zones"])

@@ -8,6 +8,13 @@ export const sensorsStyles = css`
   min-width: 0;
 }
 
+.sensor-reference-control {
+  display: block;
+  min-width: 0;
+  grid-column: 1 / -1;
+  padding: 0;
+}
+
 .sensors-intro {
   align-items: center;
   display: grid;
@@ -177,6 +184,20 @@ export const sensorsStyles = css`
   padding: 10px 12px;
 }
 
+.sensor-config-section {
+  container-type: inline-size;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.sensor-config-section h3 {
+  background: transparent;
+  border-bottom: 0;
+  justify-content: flex-start;
+  padding: 4px 0 20px;
+}
+
 .sensor-section-title {
   align-items: center;
   display: inline-flex;
@@ -200,15 +221,81 @@ export const sensorsStyles = css`
   border-top: 1px solid var(--divider-color);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
-  padding: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 180px);
+  padding: 12px 0;
 }
 
 .sensor-config-row:first-child {
   border-top: 0;
 }
 
-.sensor-config-row.inactive {
+.sensor-assist-settings {
+  border-top: 1px solid var(--divider-color);
+  margin-top: 22px;
+  padding-top: 18px;
+  min-width: 0;
+}
+
+.sensor-config-rows > .sensor-assist-settings:first-child {
+  border-top: 0;
+  margin-top: 0;
+}
+
+.sensor-assist-settings h4 {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+
+.sensor-number-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 9px 24px;
+  align-items: start;
+  min-width: 0;
+}
+
+.sensor-number-fields .sensor-config-row {
+  grid-row: span 3;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+  border: 0;
+  padding: 0;
+  gap: 9px;
+}
+
+.sensor-field-description {
+  grid-column: 1 / -1;
+  align-self: start;
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .sensor-number-fields .sensor-config-row {
+    grid-row: auto;
+    grid-template-rows: minmax(32px, auto) 38px auto;
+  }
+}
+
+@container (max-width: 640px) {
+  .sensor-number-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .sensor-number-fields .sensor-config-row {
+    grid-row: auto;
+    grid-template-rows: auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(90px, 112px);
+    gap: 12px;
+  }
+}
+
+.sensor-config-row.inactive > .sensor-config-label > label,
+.sensor-config-row.inactive > .sensor-config-label .inline-help,
+.sensor-config-row.inactive > .sensor-number-input {
   opacity: 0.62;
 }
 
@@ -944,11 +1031,6 @@ export const sensorsStyles = css`
 
   .sensor-zone-actions {
     justify-content: flex-end;
-  }
-
-  .sensor-config-row {
-    align-items: stretch;
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .sensor-block-summary {
