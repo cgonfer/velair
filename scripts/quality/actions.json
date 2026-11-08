@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "actions": [
+    {
+      "id": "panel.navigate", "kind": "action", "source": "browser",
+      "name": "Open Velair's main pages",
+      "checks": "Open Overview, Schedules, Modes and Settings. Check that the panel fits the screen and shows no error notice.",
+      "variants": [{"id": "default", "name": "Main pages", "title": "panel navigation and critical surfaces fit the viewport", "projects": ["desktop", "mobile", "tablet"]}],
+      "steps": {"panel.open-pages": "Opening and checking the main pages"}
+    },
+    {
+      "id": "schedule.edit-save", "kind": "action", "source": "browser",
+      "name": "Edit and save a schedule",
+      "checks": "Use the temperature control, open and close help, then use the editor again. Save and reload a Monday temperature; preserve the other range bound and an untouched block.",
+      "legacyChecks": "Change one temperature in a Monday schedule, save it and reload the page. Confirm that the changed value is still stored.",
+      "variants": [
+        {"id": "heating", "name": "Heating", "title": "heat schedule edits persist after a real save and reload", "projects": ["desktop", "mobile", "tablet"], "maxEvidenceVersion": 1},
+        {"id": "cooling", "name": "Cooling", "title": "cool schedule edits persist after a real save and reload", "projects": ["desktop", "mobile", "tablet"], "maxEvidenceVersion": 1},
+        {"id": "range", "name": "Temperature range", "title": "range schedule edits persist after a real save and reload", "projects": ["desktop", "mobile", "tablet"], "maxEvidenceVersion": 1},
+        {"id": "heating-usable", "name": "Heating", "title": "heat schedule controls remain usable and saved fields persist", "projects": ["desktop", "mobile", "tablet"], "minEvidenceVersion": 2},
+        {"id": "cooling-usable", "name": "Cooling", "title": "cool schedule controls remain usable and saved fields persist", "projects": ["desktop", "mobile", "tablet"], "minEvidenceVersion": 2},
+        {"id": "range-usable", "name": "Temperature range", "title": "range schedule controls remain usable and saved fields persist", "projects": ["desktop", "mobile", "tablet"], "minEvidenceVersion": 2}
+      ],
+      "steps": {"schedule.open": "Opening the schedule", "schedule.change-temperature": "Changing one temperature", "schedule.help-return": "Closing help and using the editor again", "schedule.save": "Saving and confirming the stored value", "schedule.reload": "Reloading and checking the saved value"}
+    },
+    {
+      "id": "profile.create-activate", "kind": "action", "source": "browser",
+      "name": "Create and activate a profile",
+      "checks": "Create a profile and edit its zone schedule. Activate it and confirm the effective schedule and climate target, reload its content and selection, then return to the base schedule and target.",
+      "legacyChecks": "Create a named profile, select it as a base profile and reopen the page. Confirm that the profile remains in the list; activation after reload is not checked.",
+      "variants": [
+        {"id": "default", "name": "Profile", "title": "a profile can be created, edited, activated and reopened", "projects": ["desktop", "mobile", "tablet"], "maxEvidenceVersion": 1},
+        {"id": "effective", "name": "Effective profile", "title": "a profile schedule applies to a climate and returns to the base schedule", "projects": ["desktop", "mobile", "tablet"], "minEvidenceVersion": 2}
+      ],
+      "steps": {"profile.prepare": "Preparing the base schedule", "profile.create": "Creating and saving the profile", "profile.edit-schedule": "Editing the profile schedule", "profile.activate": "Selecting the base profile", "profile.reopen": "Reopening and checking content and selection", "profile.restore-base": "Restoring the base schedule and climate target"}
+    },
+    {
+      "id": "help.open-close", "kind": "action", "source": "browser",
+      "name": "Open and close schedule help",
+      "checks": "Open the help dialog from Schedules, check that it fits the screen and close it.",
+      "variants": [{"id": "default", "name": "Schedule help", "title": "documentation dialog opens, fits and can be dismissed", "projects": ["desktop", "mobile", "tablet"]}],
+      "steps": {"help.open": "Opening and checking the help dialog", "help.close": "Closing the help dialog"}
+    },
+    {
+      "id": "card.manual-temperature", "kind": "action", "source": "browser",
+      "name": "Change temperature from the Lovelace card",
+      "checks": "Open the climate card, select Manual and increase the target temperature. Confirm that the simulated climate entity receives the change.",
+      "variants": [{"id": "default", "name": "Climate card", "title": "committed frontend registers and controls a real Lovelace climate card", "projects": ["desktop", "mobile", "tablet"]}],
+      "steps": {"card.open": "Opening and checking the climate card", "card.manual": "Selecting Manual control", "card.change-temperature": "Increasing and checking the target temperature"}
+    },
+    {
+      "id": "schedule.other-zone-unavailable", "kind": "action", "source": "browser",
+      "name": "Edit a schedule while another zone is offline",
+      "checks": "Make one climate entity unavailable, then change and save one temperature in another zone's schedule.",
+      "variants": [{"id": "default", "name": "Another zone offline", "title": "an unavailable climate does not prevent editing another zone", "projects": ["desktop", "mobile", "tablet"]}],
+      "steps": {"offline.prepare": "Making the other zone unavailable", "offline.edit-save": "Editing and saving the available zone"}
+    },
+    {
+      "id": "schedule.restart", "kind": "action", "source": "browser",
+      "name": "Keep a saved schedule after an HA restart",
+      "checks": "Restart the temporary Home Assistant instance, compare the saved schedule before and after, then open the Velair panel.",
+      "variants": [{"id": "default", "name": "Home Assistant restart", "title": "saved schedule survives a Home Assistant restart", "projects": ["desktop"]}],
+      "steps": {"restart.home-assistant": "Restarting Home Assistant", "restart.verify-schedule": "Checking the saved schedule and opening Velair"}
+    },
+    {
+      "id": "household.use-velair", "kind": "action", "source": "load",
+      "name": "Use and save schedules during household activity",
+      "checks": "Keep an unsaved Monday temperature while a live climate update reaches the page. Then switch Overview/Schedules and edit/save while simulated lights, switches, covers and climate sensors change.",
+      "legacyChecks": "Switch between Overview and Schedules and edit/save one Monday temperature while simulated lights, switches, covers and climate sensors change.",
+      "variants": [
+        {"id": "steady", "name": "Steady household activity", "scenario": "load/combined_activity", "suites": ["smoke", "release", "extended"]},
+        {"id": "sustained", "name": "Sustained household activity", "scenario": "load/soak", "suites": ["extended"]}
+      ],
+      "measurements": [
+        {"metric": "interaction_ms", "name": "Switch between Overview and Schedules", "checks": "Click an Overview or Schedules tab and wait for the requested page to appear."},
+        {"metric": "save_persist_ms", "name": "Edit and confirm one saved temperature", "checks": "Change one Monday temperature, click Save and confirm the stored value."}
+      ],
+      "steps": {"activity.keep-draft": "Keeping an unsaved temperature while live climate updates arrive", "activity.navigate": "Switching between Overview and Schedules", "activity.edit-save": "Editing and confirming a saved temperature"}
+    },
+    {
+      "id": "schedule.execute-boundary", "kind": "action", "source": "browser", "sinceEvidenceVersion": 2, "runtimeOnly": true,
+      "name": "Apply schedules when their time arrives",
+      "checks": "Wait for real Home Assistant schedule deadlines shared by heating, cooling and range climates. Check live modes and targets, one successful delivery per zone, then the following scheduled off action.",
+      "variants": [{"id": "default", "name": "Real schedule deadlines", "title": "automatic schedules reach heating cooling and range climates at their real deadlines", "projects": ["desktop"]}],
+      "steps": {"execution.prepare": "Preparing the upcoming schedule deadlines", "execution.before-deadline": "Checking that targets do not apply early", "execution.targets": "Checking automatic delivery at the target deadline", "execution.off": "Checking the following automatic off deadline"}
+    },
+    {
+      "id": "control.manual-resume", "kind": "action", "source": "browser", "sinceEvidenceVersion": 2, "runtimeOnly": true,
+      "name": "Keep Manual control and resume the current schedule",
+      "checks": "Change a climate target in Manual, change its automatic schedule and confirm the manual target holds. Resume while an independent pause remains without sending a target; remove only that pause and confirm the current schedule applies.",
+      "variants": [{"id": "default", "name": "Manual and independent pause", "title": "Manual survives schedule changes and Automatic respects an independent pause", "projects": ["desktop"]}],
+      "steps": {"manual.prepare": "Preparing automatic control", "manual.enter": "Entering Manual and changing the target", "manual.hold": "Keeping the manual target after an automatic intention changes", "manual.resume-paused": "Resuming Automatic while respecting an independent pause", "manual.resume-current": "Applying the current schedule after the test pause ends"}
+    },
+    {
+      "id": "schedule.save-recovery", "kind": "action", "source": "browser", "sinceEvidenceVersion": 2,
+      "name": "Keep an edited schedule after a rejected save",
+      "checks": "Keep the exact unsaved temperature after another editor changes configuration and the stale save is rejected. Show an error without success, preserve stored schedules, then deliberately reopen and save against the current revision.",
+      "variants": [{"id": "default", "name": "Concurrent edit conflict", "title": "a rejected stale schedule save keeps its draft and can be recovered", "projects": ["desktop"]}],
+      "steps": {"save-recovery.prepare-draft": "Preparing an unsaved temperature", "save-recovery.concurrent-change": "Saving a concurrent change from another editor", "save-recovery.reject-without-data-loss": "Rejecting the stale save without losing draft or stored data", "save-recovery.reopen-and-save": "Deliberately reopening and saving the current revision"}
+    },
+    {
+      "id": "household.idle", "kind": "condition", "source": "load",
+      "name": "Velair open at rest",
+      "checks": "Keep the Velair page open without generated device activity. This measures background resources, not a user interaction.",
+      "variants": [{"id": "default", "name": "At rest", "scenario": "load/idle", "suites": ["smoke", "release", "extended"]}], "steps": {}
+    },
+    {
+      "id": "household.other-devices", "kind": "condition", "source": "load",
+      "name": "Other devices changing while Velair stays open",
+      "checks": "Change simulated lights, switches and covers while the Velair page stays open. No clicks or schedule edits are performed in this condition.",
+      "variants": [{"id": "default", "name": "Other device activity", "scenario": "load/unrelated_activity", "suites": ["smoke", "release", "extended"]}], "steps": {}
+    },
+    {
+      "id": "household.burst", "kind": "condition", "source": "load",
+      "name": "A burst of device updates",
+      "checks": "Keep Velair open during a burst of simulated device updates and the following recovery window. No user interaction is measured here.",
+      "variants": [{"id": "default", "name": "Burst and recovery", "scenario": "load/burst_recovery", "suites": ["release", "extended"]}], "steps": {}
+    },
+    {
+      "id": "appearance.capture", "kind": "visual", "source": "browser",
+      "name": "Review selected screens in both themes",
+      "checks": "Capture Overview, the schedule editor and a dialog in light and dark themes. Captures alone are not an approved visual comparison and do not establish backend scheduling behavior.",
+      "variants": [{"id": "default", "name": "Selected screens", "title": "selected screens have explicit visual evidence in both themes", "projects": ["desktop", "mobile", "tablet"]}], "steps": {}
+    }
+  ]
+}

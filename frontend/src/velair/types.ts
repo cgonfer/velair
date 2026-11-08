@@ -1149,6 +1149,8 @@ export type ResolvedBlockMetadata = { start: string; preset_key?: string; templa
 export type ScheduleUpdateMessage = {
   loaded: boolean;
   schedule?: ScheduleResponse;
+  comfort?: ScheduleResponse["comfort"];
+  operation_status?: OperationStatus | null;
 };
 
 export type PortableSection =

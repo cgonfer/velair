@@ -73,7 +73,9 @@ from .const import (
     MODE_PAUSED,
     MAX_PROFILE_DESCRIPTION_LENGTH,
     NAME,
+    SIGNAL_COMFORT_UPDATED,
     SIGNAL_SCHEDULER_UPDATED,
+    SIGNAL_OPERATION_UPDATED,
     ZONE_PAUSE_ACTION_NONE,
     ZONE_PAUSE_ACTION_TURN_OFF,
     EXTERNAL_CHANGE_FOR_DURATION,
@@ -448,6 +450,12 @@ class VelairScheduler:
         self._comfort_entities: tuple[str, ...] = ()
         self._comfort_report_entities: frozenset[str] = frozenset()
         self._comfort_assessment_snapshots: dict[str, tuple[object, ...]] = {}
+        self._comfort_source_zones: dict[str, frozenset[str]] = {}
+        self._comfort_report_source_zones: dict[str, dict[str, int]] = {}
+        self._comfort_expiry_deadlines: dict[str, datetime] = {}
+        self._comfort_update_collectors: list[set[str]] = []
+        self._comfort_retry_entities: set[str] = set()
+        self._comfort_unpublished_changes: set[str] = set()
         self.next_event: ClimateEvent | None = None
         self.next_events: list[ClimateEvent] = []
         self.next_events_by_zone: list[ClimateEvent] = []
@@ -12953,33 +12961,84 @@ class VelairScheduler:
         return sources
 
     def _refresh_comfort_listener(self) -> None:
-        """Listen only to state changes and reports that affect Comfort."""
-        entity_ids = sorted(self._comfort_candidate_entities())
-        report_ids = frozenset(source for source, _ in self._comfort_report_sources())
+        """Prepare conservative source ownership when Comfort settings change."""
+        source_zones: dict[str, set[str]] = {}
+        report_zones: dict[str, dict[str, int]] = {}
+        for entity_id, config in self.get_comfort_settings().items():
+            if not config["enabled"]:
+                continue
+            preferred, fallback = self._comfort_temperature_sources(entity_id, config)
+            sources = {entity_id, preferred,
+                       self._comfort_preconditioning(entity_id).get("room_temperature_entity_id")}
+            direct = {preferred}
+            if config["temperature_fallback_enabled"]:
+                sources.add(fallback)
+                direct.add(fallback)
+            for source in (config.get("humidity_entity_id") if config["humidity_enabled"] else None,
+                           config.get("co2_entity_id")):
+                sources.add(source)
+                direct.add(source)
+            if config["outdoor_comparison_enabled"]:
+                for source in (config.get("outdoor_temperature_entity_id"),
+                               config.get("outdoor_humidity_entity_id")):
+                    sources.add(source)
+                    direct.add(source)
+            for metric in config["derived_metrics"].values():
+                if metric["enabled"] and metric["source"] == "entity":
+                    sources.add(metric.get("entity_id"))
+                    direct.add(metric.get("entity_id"))
+            for source in sources:
+                if isinstance(source, str) and source:
+                    source_zones.setdefault(source, set()).add(entity_id)
+            for source in direct:
+                if isinstance(source, str) and source and not source.startswith("climate."):
+                    report_zones.setdefault(source, {})[entity_id] = config["stale_after_minutes"]
+        entity_ids = sorted(source_zones)
+        report_ids = frozenset(report_zones)
         next_entities = tuple(entity_ids)
-        if (
-            next_entities == self._comfort_entities
-            and report_ids == self._comfort_report_entities
-        ):
+        if next_entities == self._comfort_entities and report_ids == self._comfort_report_entities:
+            self._comfort_source_zones = {source: frozenset(zones) for source, zones in source_zones.items()}
+            self._comfort_report_source_zones = report_zones
             self._schedule_comfort_expiry()
             return
-
         self._clear_comfort_listener()
+        # Clearing old listeners must not discard the newly prepared ownership.
+        self._comfort_source_zones = {source: frozenset(zones) for source, zones in source_zones.items()}
+        self._comfort_report_source_zones = report_zones
         self._comfort_entities = next_entities
         self._comfort_report_entities = report_ids
         if not entity_ids:
             self._comfort_assessment_snapshots.clear()
             return
-
         self._async_update_comfort_snapshots(fire_events=False)
         self._unsub_comfort_listener = async_track_state_change_event(
-            self._hass, entity_ids, self._handle_comfort_state_change,
-        )
+            self._hass, entity_ids, self._handle_comfort_state_change)
         if report_ids:
             self._unsub_comfort_report_listener = async_track_state_report_event(
-                self._hass, sorted(report_ids), self._handle_comfort_state_reported,
-            )
+                self._hass, sorted(report_ids), self._handle_comfort_state_reported)
         self._schedule_comfort_expiry()
+
+    def _comfort_affected_entities(self, source):
+        """Include pending configuration edits without evaluating foreign zones."""
+        return (set(self._comfort_source_zones.get(source, ()))
+                | self._comfort_projection.configuration_changes() | self._comfort_retry_entities)
+
+    @callback
+    def _publish_comfort_updates(self, entities) -> None:
+        """Publish only physical Comfort changes, without scheduler planning."""
+        entities = set(entities) | self._comfort_unpublished_changes
+        if not entities:
+            return
+        if self._projection_save_depth or self._schedule_projection.preparing:
+            self._comfort_unpublished_changes.update(entities)
+            self._queue_ready_publication()
+            return
+        self._observation_epoch += 1
+        if self._observation_values is not None:
+            self._observation_values.clear()
+        with self.observation_snapshot(prepared=True):
+            async_dispatcher_send(self._hass, SIGNAL_COMFORT_UPDATED, frozenset(entities))
+        self._comfort_unpublished_changes.difference_update(entities)
 
     @callback
     def _handle_comfort_state_change(self, event) -> None:
@@ -12987,20 +13046,25 @@ class VelairScheduler:
         entity_id = event.data.get("entity_id")
         if not isinstance(entity_id, str) or entity_id not in self._comfort_entities:
             return
-        with self.observation_snapshot():
-            if self._async_update_comfort_snapshots(fire_events=True):
-                self._async_write_state()
+        with self.observation_snapshot(prepared=True):
+            changed = set()
+            self._async_update_comfort_snapshots(
+                fire_events=True, entities=self._comfort_affected_entities(entity_id), changed_entities=changed)
+            self._publish_comfort_updates(changed)
             if entity_id in self._comfort_report_entities:
                 self._schedule_comfort_expiry()
 
     @callback
     def _handle_comfort_state_reported(self, event) -> None:
         """Refresh freshness when a direct sensor republishes the same value."""
-        if event.data.get("entity_id") not in self._comfort_report_entities:
+        entity_id = event.data.get("entity_id")
+        if entity_id not in self._comfort_report_entities:
             return
-        with self.observation_snapshot():
-            if self._async_update_comfort_snapshots(fire_events=True):
-                self._async_write_state()
+        with self.observation_snapshot(prepared=True):
+            changed = set()
+            self._async_update_comfort_snapshots(
+                fire_events=True, entities=self._comfort_affected_entities(entity_id), changed_entities=changed)
+            self._publish_comfort_updates(changed)
             self._schedule_comfort_expiry()
 
     def _schedule_comfort_expiry(self) -> None:
@@ -13009,34 +13073,40 @@ class VelairScheduler:
         if self._stopped:
             return
         now = dt_util.now()
-        deadlines: list[datetime] = []
-        for entity_id, minutes in self._comfort_report_sources():
+        deadlines = {}
+        for entity_id, zones in self._comfort_report_source_zones.items():
             state = self.climate_state(entity_id)
             if not _comfort_state_available(state) or _state_numeric_value(state) is None:
                 continue
             last_reported = getattr(state, "last_reported", None)
             if last_reported is None:
                 continue
-            try:
-                deadline = last_reported + timedelta(minutes=minutes)
-                if deadline > now:
-                    deadlines.append(deadline)
-            except TypeError:
-                continue
+            for zone, minutes in zones.items():
+                try:
+                    deadline = last_reported + timedelta(minutes=minutes)
+                    if deadline > now:
+                        deadlines[zone] = min(deadlines.get(zone, deadline), deadline)
+                except TypeError:
+                    continue
+        self._comfort_expiry_deadlines = deadlines
         if deadlines:
             self._unsub_comfort_expiry_timer = async_track_point_in_time(
-                self._hass, self._handle_comfort_expiry, min(deadlines),
-            )
+                self._hass, self._handle_comfort_expiry, min(deadlines.values()))
 
     @callback
     def _handle_comfort_expiry(self, now: datetime) -> None:
-        """Publish the transition to stale at a source's report deadline."""
+        """Publish only assessments whose direct-source deadline was crossed."""
         self._unsub_comfort_expiry_timer = None
         if self._stopped:
             return
-        with self.observation_snapshot():
-            if self._async_update_comfort_snapshots(fire_events=True):
-                self._async_write_state()
+        with self.observation_snapshot(prepared=True):
+            changed = set()
+            affected = {entity for entity, deadline in self._comfort_expiry_deadlines.items()
+                        if deadline <= now}
+            affected.update(self._comfort_projection.configuration_changes())
+            self._async_update_comfort_snapshots(
+                fire_events=True, entities=affected, changed_entities=changed)
+            self._publish_comfort_updates(changed)
             self._schedule_comfort_expiry()
 
     def _clear_comfort_expiry_timer(self) -> None:
@@ -13045,38 +13115,68 @@ class VelairScheduler:
             self._unsub_comfort_expiry_timer()
             self._unsub_comfort_expiry_timer = None
 
-    def _async_update_comfort_snapshots(self, *, fire_events: bool) -> bool:
-        """Update cached comfort assessments and emit meaningful changes."""
-        with self.observation_snapshot():
-            changed = False
-            enabled_entities = set()
-            selected = self._comfort_projection.enabled_entities(
-                self._configured_physical_entities())
-            for entity_id in selected:
-                assessment = self._comfort_projection.current(entity_id, detached=False)
-                enabled_entities.add(entity_id)
-                snapshot = self._comfort_snapshot(assessment)
-                previous = self._comfort_assessment_snapshots.get(entity_id)
-                self._comfort_assessment_snapshots[entity_id] = snapshot
-                if previous is None or previous == snapshot:
-                    continue
-
-                changed = True
-                if fire_events and self._comfort_event_snapshot(previous) != self._comfort_event_snapshot(snapshot):
-                    with self.observation_callback_boundary():
-                        self._async_fire_comfort_assessment_changed(
-                            entity_id,
-                            deepcopy(assessment),
-                            previous_range_summary=self._comfort_range_summary_from_snapshot(
-                                previous
-                            ),
-                        )
-
-            for entity_id in set(self._comfort_assessment_snapshots) - enabled_entities:
-                self._comfort_assessment_snapshots.pop(entity_id, None)
-                changed = True
-
-            return changed
+    def _async_update_comfort_snapshots(self, *, fire_events: bool, entities=None,
+                                       changed_entities=None) -> bool:
+        """Reconcile affected assessments, broadening after outward callbacks."""
+        with self.observation_snapshot(prepared=True):
+            changed = set()
+            pending = []
+            visited = set()
+            entity_id = None
+            self._comfort_update_collectors.append(changed)
+            try:
+                configured = self._configured_physical_entities() if entities is None else None
+                selected = (self._comfort_projection.enabled_entities(configured) if configured is not None
+                            else tuple(entity for entity in entities
+                                       if self._comfort_projection._context(entity)[0][0]))
+                pending = list(selected)
+                visited = set()
+                broadened = False
+                for entity_id in pending:
+                    if entity_id in visited:
+                        continue
+                    visited.add(entity_id)
+                    assessment = self._comfort_projection.current(entity_id, detached=False)
+                    self._comfort_retry_entities.discard(entity_id)
+                    snapshot = self._comfort_snapshot(assessment)
+                    previous = self._comfort_assessment_snapshots.get(entity_id)
+                    self._comfort_assessment_snapshots[entity_id] = snapshot
+                    if previous is None or previous == snapshot:
+                        continue
+                    changed.add(entity_id)
+                    if fire_events and self._comfort_event_snapshot(previous) != self._comfort_event_snapshot(snapshot):
+                        with self.observation_callback_boundary():
+                            self._async_fire_comfort_assessment_changed(
+                                entity_id, deepcopy(assessment),
+                                previous_range_summary=self._comfort_range_summary_from_snapshot(previous))
+                        if not broadened:
+                            # External synchronous listeners can change another
+                            # zone before its ordinary HA/config listener runs.
+                            pending.extend(entity for entity in self._configured_physical_entities()
+                                           if entity not in visited)
+                            broadened = True
+                if configured is not None:
+                    enabled = set(self._comfort_projection.enabled_entities(configured))
+                    for entity_id in set(self._comfort_assessment_snapshots) - enabled:
+                        self._comfort_assessment_snapshots.pop(entity_id, None)
+                        changed.add(entity_id)
+                else:
+                    for entity_id in set(entities) - visited:
+                        if self._comfort_assessment_snapshots.pop(entity_id, None) is not None:
+                            changed.add(entity_id)
+            except Exception:
+                self._comfort_retry_entities.update(set(pending) - visited)
+                if entity_id is not None:
+                    self._comfort_retry_entities.add(entity_id)
+                self._comfort_unpublished_changes.update(changed)
+                raise
+            finally:
+                self._comfort_update_collectors.pop()
+                for collector in self._comfort_update_collectors:
+                    collector.update(changed)
+                if changed_entities is not None:
+                    changed_entities.update(changed)
+            return bool(changed)
 
     def _comfort_snapshot(self, assessment: dict[str, object]) -> tuple[object, ...]:
         """Return a snapshot that changes when visible comfort data changes."""
@@ -13327,6 +13427,11 @@ class VelairScheduler:
             self._unsub_comfort_report_listener = None
         self._comfort_entities = ()
         self._comfort_report_entities = frozenset()
+        self._comfort_source_zones.clear()
+        self._comfort_report_source_zones.clear()
+        self._comfort_expiry_deadlines.clear()
+        self._comfort_retry_entities.clear()
+        self._comfort_unpublished_changes.clear()
 
     def _clear_timer(self) -> None:
         """Cancel the active timer if one exists."""
@@ -13360,8 +13465,20 @@ class VelairScheduler:
         if self._observation_values is not None:
             self._observation_values.clear()
             self._observation_at = dt_util.now()
+        # The full publication includes all Comfort observations. Clear only
+        # prior work; callbacks may enqueue new changes while dispatching.
+        self._comfort_unpublished_changes.clear()
         with self.observation_snapshot(prepared=True):
             async_dispatcher_send(self._hass, SIGNAL_SCHEDULER_UPDATED)
+
+    @callback
+    def _async_publish_operation_status(self) -> None:
+        """Publish progress without rebuilding climate scheduling or entities."""
+        self._observation_epoch += 1
+        if self._observation_values is not None:
+            self._observation_values.clear()
+        with self.observation_snapshot(prepared=True):
+            async_dispatcher_send(self._hass, SIGNAL_OPERATION_UPDATED)
 
     def _begin_operation(
         self,
@@ -13385,7 +13502,7 @@ class VelairScheduler:
             "error_code": None,
             "error_message": None,
         }
-        self._async_write_state()
+        self._async_publish_operation_status()
 
     def _mark_operation_entity_failed(self, entity_id: str) -> None:
         """Record one per-climate processing failure without stopping the operation."""
@@ -13404,7 +13521,7 @@ class VelairScheduler:
             return
         operation["total"] = total
         operation["completed"] = min(operation["completed"], total)
-        self._async_write_state()
+        self._async_publish_operation_status()
 
     def _mark_operation_entity_deferred(self, entity_id: str) -> None:
         """Record delivery queued for retry/reconnection, not a transition error."""
@@ -13420,7 +13537,7 @@ class VelairScheduler:
         if operation is None or operation["state"] != "running":
             return
         operation["current_entity_id"] = entity_id
-        self._async_write_state()
+        self._async_publish_operation_status()
 
     def _advance_operation(self, entity_id: str) -> None:
         """Publish that one climate has been processed."""
@@ -13432,7 +13549,7 @@ class VelairScheduler:
             operation["completed"] + 1,
             operation["total"],
         )
-        self._async_write_state()
+        self._async_publish_operation_status()
 
     def _finish_operation(
         self,

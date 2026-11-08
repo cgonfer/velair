@@ -17,6 +17,8 @@ const schedule = (revision = 1) => ({
   temperature_unit: "°C", home_assistant_temperature_unit: "°C",
   temperature_migration: { required: false }, zones: {},
 }) as unknown as ScheduleResponse;
+const diagnostics = (marker: string) => ({ generated_at: marker, overall: { status: "ok", scheduler_mode: "auto", scheduler_status: "scheduled", unit_counts: { ok: 0, warning: 0, error: 0 }, issues: [] }, units: {}, history: [], history_policy: { categories: {}, runtime_only: true, cleared_on_restart: true } }) as unknown as DiagnosticsSnapshot;
+type DiagnosticsMessage = { loaded: boolean; diagnostics?: DiagnosticsSnapshot };
 type CardInternals = {
   _data?: ScheduleResponse; _dirty: boolean; _draftBlocks: unknown[]; _error?: string;
   _applyScheduleData(data: ScheduleResponse, options?: { forceDraft?: boolean }): void;
@@ -202,15 +204,20 @@ describe("panel-only shared schedule lifecycle", () => {
   });
   it("replaces diagnostics subscription along with the panel connection and rejects old diagnostics", async () => {
     const first = backend(); const second = backend();
-    const diagnostics = (marker: string) => ({ generated_at: marker, overall: { status: "ok", scheduler_mode: "auto", scheduler_status: "scheduled", unit_counts: { ok: 0, warning: 0, error: 0 }, issues: [] }, units: {}, history: [], history_policy: { categories: {}, runtime_only: true, cleared_on_restart: true } }) as unknown as DiagnosticsSnapshot;
     let oldCallback!: (message: { loaded: boolean; diagnostics?: DiagnosticsSnapshot }) => void;
-    first.hass.connection.sendMessagePromise = vi.fn(async (message) => (message.type === "velair/get_diagnostics" ? diagnostics("old") : schedule())) as HomeAssistant["connection"]["sendMessagePromise"];
     first.hass.connection.subscribeMessage = vi.fn(async (callback, message) => {
-      if (message.type === "velair/subscribe_diagnostics") oldCallback = callback as typeof oldCallback;
+      if (message.type === "velair/subscribe_diagnostics") {
+        oldCallback = callback as typeof oldCallback;
+        oldCallback({ loaded: true, diagnostics: diagnostics("old") });
+      }
       return first.unsubscribe;
     });
-    second.hass.connection.sendMessagePromise = vi.fn(async (message) => (message.type === "velair/get_diagnostics" ? diagnostics("new") : schedule(2))) as HomeAssistant["connection"]["sendMessagePromise"];
-    second.hass.connection.subscribeMessage = vi.fn(async () => second.unsubscribe);
+    second.hass.connection.subscribeMessage = vi.fn(async (callback, message) => {
+      if (message.type === "velair/subscribe_diagnostics") {
+        (callback as (message: DiagnosticsMessage) => void)({ loaded: true, diagnostics: diagnostics("new") });
+      }
+      return second.unsubscribe;
+    });
     const element = await panel(first, "/velair/diagnostics"); const card = activeCard(element); await flush();
     expect(internals(card)._data?.diagnostics?.generated_at).toBe("old");
     element.hass = second.hass; await element.updateComplete; await card.updateComplete; await flush();
@@ -219,21 +226,87 @@ describe("panel-only shared schedule lifecycle", () => {
     expect(first.unsubscribe).toHaveBeenCalledTimes(2);
     expect(vi.mocked(second.hass.connection.subscribeMessage).mock.calls.filter(([, message]) => message.type === "velair/subscribe_diagnostics")).toHaveLength(1);
   });
-  it("does not let an old pending diagnostics request clear the new connection's busy flag", async () => {
+  it("does not let an old pending diagnostics subscription clear the new connection's busy flag", async () => {
     const first = backend(); const second = backend();
-    let finishOld!: (data: DiagnosticsSnapshot) => void; let finishNew!: (data: DiagnosticsSnapshot) => void;
-    const oldDiagnostics = new Promise<DiagnosticsSnapshot>((resolve) => { finishOld = resolve; });
-    const newDiagnostics = new Promise<DiagnosticsSnapshot>((resolve) => { finishNew = resolve; });
-    first.hass.connection.sendMessagePromise = vi.fn(async (message) => message.type === "velair/get_diagnostics" ? oldDiagnostics : schedule()) as HomeAssistant["connection"]["sendMessagePromise"];
-    second.hass.connection.sendMessagePromise = vi.fn(async (message) => message.type === "velair/get_diagnostics" ? newDiagnostics : schedule(2)) as HomeAssistant["connection"]["sendMessagePromise"];
+    let finishOld!: (unsubscribe: () => void) => void; let finishNew!: (unsubscribe: () => void) => void;
+    const oldDiagnostics = new Promise<() => void>((resolve) => { finishOld = resolve; });
+    const newDiagnostics = new Promise<() => void>((resolve) => { finishNew = resolve; });
+    first.hass.connection.subscribeMessage = vi.fn(async (_callback, message) => message.type === "velair/subscribe_diagnostics" ? oldDiagnostics : first.unsubscribe);
+    second.hass.connection.subscribeMessage = vi.fn(async (_callback, message) => message.type === "velair/subscribe_diagnostics" ? newDiagnostics : second.unsubscribe);
     const element = await panel(first, "/velair/diagnostics"); const card = activeCard(element);
     element.hass = second.hass; await element.updateComplete; await card.updateComplete; await flush();
-    const snapshot = { generated_at: "new", overall: { status: "ok", scheduler_mode: "auto", scheduler_status: "scheduled", unit_counts: { ok: 0, warning: 0, error: 0 }, issues: [] }, units: {}, history: [], history_policy: { categories: {} } } as unknown as DiagnosticsSnapshot;
-    finishOld(snapshot); await flush();
-    expect(vi.mocked(second.hass.connection.sendMessagePromise).mock.calls.filter(([message]) => message.type === "velair/get_diagnostics")).toHaveLength(1);
-    expect((card as unknown as { _subscribingDiagnostics: boolean })._subscribingDiagnostics).toBe(true);
-    finishNew(snapshot); await flush(); await card.updateComplete;
+    finishOld(first.unsubscribe); await flush();
     expect(vi.mocked(second.hass.connection.subscribeMessage).mock.calls.filter(([, message]) => message.type === "velair/subscribe_diagnostics")).toHaveLength(1);
+    expect((card as unknown as { _subscribingDiagnostics: boolean })._subscribingDiagnostics).toBe(true);
+    finishNew(second.unsubscribe); await flush(); await card.updateComplete;
+    expect(vi.mocked(second.hass.connection.subscribeMessage).mock.calls.filter(([, message]) => message.type === "velair/subscribe_diagnostics")).toHaveLength(1);
+  });
+  it.each([true, false])("uses only the diagnostics stream before setup completes (initial loaded: %s)", async (initialLoaded) => {
+    const mock = backend();
+    let callback!: (message: DiagnosticsMessage) => void;
+    let finish!: (unsubscribe: () => void) => void;
+    const subscribed = new Promise<() => void>((resolve) => { finish = resolve; });
+    const unsubscribe = vi.fn();
+    mock.hass.connection.subscribeMessage = vi.fn(async (handler, message) => {
+      if (message.type !== "velair/subscribe_diagnostics") return mock.unsubscribe;
+      callback = handler as typeof callback;
+      callback({ loaded: initialLoaded, diagnostics: initialLoaded ? diagnostics("initial") : undefined });
+      return subscribed;
+    });
+    const element = await panel(mock, "/velair/diagnostics"); const card = activeCard(element);
+    expect(internals(card)._data?.diagnostics?.generated_at).toBe(initialLoaded ? "initial" : undefined);
+    expect((card as unknown as { _subscribingDiagnostics: boolean })._subscribingDiagnostics).toBe(true);
+    callback({ loaded: true, diagnostics: diagnostics("live") }); await card.updateComplete;
+    expect(internals(card)._data?.diagnostics?.generated_at).toBe("live");
+    finish(unsubscribe); await flush();
+    expect(internals(card)._data?.diagnostics?.generated_at).toBe("live");
+    expect(mock.send.mock.calls).not.toContainEqual([{ type: "velair/get_diagnostics" }]);
+    expect(vi.mocked(mock.hass.connection.subscribeMessage).mock.calls.filter(([, message]) => message.type === "velair/subscribe_diagnostics")).toHaveLength(1);
+    callback({ loaded: false }); await card.updateComplete;
+    expect(internals(card)._data?.diagnostics).toBeUndefined();
+    callback({ loaded: true, diagnostics: diagnostics("recovered") }); await card.updateComplete;
+    expect(internals(card)._data?.diagnostics?.generated_at).toBe("recovered");
+    expect(mock.send.mock.calls).not.toContainEqual([{ type: "velair/get_diagnostics" }]);
+    element.remove(); await flush(); expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+  it("can retry a rejected diagnostics subscription without a separate snapshot request", async () => {
+    const mock = backend(); let attempts = 0;
+    mock.hass.connection.subscribeMessage = vi.fn(async (callback, message) => {
+      if (message.type === "velair/subscribe_diagnostics") {
+        if (++attempts === 1) throw new Error("stream unavailable");
+        (callback as (message: DiagnosticsMessage) => void)({ loaded: true, diagnostics: diagnostics("retried") });
+      }
+      return mock.unsubscribe;
+    });
+    const element = await panel(mock, "/velair/diagnostics"); const card = activeCard(element);
+    expect(internals(card)._error).toBeTruthy();
+    expect((card as unknown as { _subscribingDiagnostics: boolean })._subscribingDiagnostics).toBe(false);
+    await (card as unknown as { _syncDiagnosticsSubscription(): Promise<void> })._syncDiagnosticsSubscription();
+    await card.updateComplete;
+    expect(attempts).toBe(2);
+    expect(internals(card)._data?.diagnostics?.generated_at).toBe("retried");
+    expect(mock.send.mock.calls).not.toContainEqual([{ type: "velair/get_diagnostics" }]);
+  });
+  it.each(["navigation", "disconnect"])("ignores late diagnostics and cleans a pending stream after %s", async (action) => {
+    const mock = backend();
+    let callback!: (message: DiagnosticsMessage) => void;
+    let finish!: (unsubscribe: () => void) => void;
+    const subscribed = new Promise<() => void>((resolve) => { finish = resolve; });
+    const unsubscribe = vi.fn();
+    mock.hass.connection.subscribeMessage = vi.fn(async (handler, message) => {
+      if (message.type !== "velair/subscribe_diagnostics") return mock.unsubscribe;
+      callback = handler as typeof callback;
+      return subscribed;
+    });
+    const element = await panel(mock, "/velair/diagnostics"); const card = activeCard(element);
+    if (action === "navigation") await navigate(element, "settings");
+    else { element.remove(); await flush(); }
+    const apply = vi.spyOn(card, "_applyDiagnosticsSnapshot");
+    callback({ loaded: true, diagnostics: diagnostics("late") });
+    finish(unsubscribe); await flush();
+    expect(apply).not.toHaveBeenCalled();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(mock.send.mock.calls).not.toContainEqual([{ type: "velair/get_diagnostics" }]);
   });
   it("leaves independently mounted Lovelace cards with their own load and subscription", async () => {
     const mock = backend(); const element = await panel(mock);

@@ -39,7 +39,17 @@ function applyTheme(theme, persist = false) {
   }
 }
 
-applyTheme(root.dataset.theme || (systemTheme.matches ? "dark" : "light"));
+applyTheme(root.dataset.theme || storedTheme() || (systemTheme.matches ? "dark" : "light"));
+
+// A restored page and other open tabs should reflect the same preference.
+window.addEventListener("pageshow", () => {
+  applyTheme(storedTheme() || (systemTheme.matches ? "dark" : "light"));
+});
+window.addEventListener("storage", (event) => {
+  if (event.key === "velair-site-theme" || event.key === null) {
+    applyTheme(storedTheme() || (systemTheme.matches ? "dark" : "light"));
+  }
+});
 
 toggle?.addEventListener("click", () => {
   applyTheme(root.dataset.theme === "dark" ? "light" : "dark", true);

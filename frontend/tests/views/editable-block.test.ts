@@ -315,9 +315,9 @@ describe("editable schedule block view", () => {
     expect(css).toMatch(/\.block-command-preview\s*\{[^}]*overflow-wrap:\s*anywhere;/);
   });
 
-  it("gives the target three mobile grid segments at 320–340 px", () => {
+  it("gives native time inputs and range targets separate rows on phones", () => {
     expect(responsiveStyles.cssText).toMatch(
-      /(?:@container|@media) \(max-width: 340px\)[\s\S]*"mode target target target";[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 36px 36px 36px;/,
+      /(?:@container|@media) \(max-width: 600px\)[\s\S]*"mode target target target";[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 44px 44px 44px;/,
     );
   });
 
@@ -327,7 +327,7 @@ describe("editable schedule block view", () => {
       /\.editable-block > label > \.label,\s*\.editable-block > \.block-time-field > label\.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*none;/,
     );
     expect(responsiveStyles.cssText).toMatch(
-      /(?:@container|@media) \(max-width: 340px\)[\s\S]*\.editable-block > label > \.label,\s*\.editable-block > \.block-time-field > label\.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*block;/,
+      /(?:@container|@media) \(max-width: 600px\)[\s\S]*\.editable-block > label > \.label,\s*\.editable-block > \.block-time-field > label\.label,\s*\.editable-block > \.target-action-field > label\.label\s*\{\s*display:\s*block;/,
     );
   });
 

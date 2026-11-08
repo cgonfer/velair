@@ -12,6 +12,8 @@ CONF_CLIMATE_ENTITIES = "climate_entities"
 CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP = "apply_active_schedule_on_startup"
 
 SIGNAL_SCHEDULER_UPDATED = f"{DOMAIN}_scheduler_updated"
+SIGNAL_COMFORT_UPDATED = f"{DOMAIN}_comfort_updated"
+SIGNAL_OPERATION_UPDATED = f"{DOMAIN}_operation_updated"
 SIGNAL_DIAGNOSTICS_UPDATED = f"{DOMAIN}_diagnostics_updated"
 
 DIAGNOSTIC_HISTORY_CATEGORIES = (

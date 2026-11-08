@@ -24,6 +24,20 @@ function fixture() {
 }
 
 describe("linked timeline details", () => {
+  it("keeps the complete editable timeline in a named keyboard-scrollable region", () => {
+    const { container, host, block } = fixture();
+    host._timelineBlocks = () => [block];
+    host._currentTimelineNow = () => new Date("2026-10-05T12:00:00");
+    render(renderTimeline(host, "climate.room"), container);
+    const scroll = container.querySelector<HTMLElement>('.timeline-scroll[role="region"]')!;
+    expect(scroll.getAttribute("aria-label")).toBe("timeline");
+    expect(scroll.tabIndex).toBe(0);
+    expect(scroll.querySelectorAll(".timeline-hours > span")).toHaveLength(5);
+    expect(scroll.querySelector(".timeline-track .timeline-block")?.getAttribute("draggable")).toBe("true");
+    expect(scroll.querySelectorAll(".timeline-resize-handle")).toHaveLength(2);
+    expect(container.querySelector(".timeline-scroll-hint")?.textContent).toBe("timelineScrollHint");
+  });
+
   it("shows adapted target with distinct origin icons and complete details", () => {
     const { container, host, block } = fixture();
     host._draftTemplateLink = { template_key: "work", bindings: {} };

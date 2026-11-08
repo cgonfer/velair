@@ -6,7 +6,61 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  impact:
+    name: Quality scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      runtime: ${{ steps.scope.outputs.runtime }}
+      website: ${{ steps.scope.outputs.website }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect runtime and harness changes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          QUALITY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, subprocess
+          base = os.environ.get('BASE_SHA', '')
+          if not base or set(base) == {'0'}:
+              relevant = True
+              website = True
+          else:
+              changed = subprocess.check_output(['git', 'diff', '--name-only', base, os.environ['HEAD_SHA']], text=True).splitlines()
+              presentation = ('scripts/quality/site.py', 'scripts/quality/actions.py', 'scripts/quality/actions.json', 'tests/quality/test_site.py', 'tests/quality/test_actions.py')
+              relevant = any(p.startswith(('custom_components/', 'frontend/', 'tests/', 'scripts/', '.github/workflows/', '.github/scripts/')) and not p.startswith('tests/website/') and p not in presentation for p in changed)
+              website = any(p.startswith(('website/public/', 'tests/website/')) or p in presentation for p in changed)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write(f'runtime={str(relevant).lower()}\n')
+              stream.write(f'website={str(website).lower()}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
+              stream.write('HA browser/load checks: ' + ('required for changed runtime or tooling.\n' if relevant else 'omitted: no HA runtime, dependencies or HA harness changed.\n'))
+          if not relevant:
+              report = {'schemaVersion': 1, 'commit': os.environ['HEAD_SHA'], 'suite': 'scope', 'status': 'not-run', 'outcome': 'not-run', 'visualStatus': 'off', 'scenarios': [], 'limitations': ['HA browser/load checks omitted: no Home Assistant integration, frontend or workload harness changed.'], 'artifacts': [], 'provenance': {'repository': os.environ['GITHUB_REPOSITORY'], 'headSha': os.environ['QUALITY_HEAD_SHA'], 'baseSha': base, 'runId': os.environ['GITHUB_RUN_ID'], 'runAttempt': os.environ['GITHUB_RUN_ATTEMPT'], 'event': os.environ['GITHUB_EVENT_NAME']}}
+              pathlib.Path(os.environ['RUNNER_TEMP'], 'quality-report.json').write_text(json.dumps(report), encoding='utf-8')
+          PY
+      - name: Record justified quality omission
+        if: steps.scope.outputs.runtime == 'false'
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-summary
+          path: ${{ runner.temp }}/quality-report.json
+          if-no-files-found: error
+          retention-days: 14
   backend-tests:
     name: Backend tests
     runs-on: ubuntu-latest
@@ -46,6 +100,7 @@ jobs:
 
   frontend-build:
     name: Frontend build
+    needs: impact
     runs-on: ubuntu-latest
 
     steps:
@@ -62,6 +117,21 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Test quality report and publication boundaries
+        run: node --test .github/scripts/*.test.mjs
+
+      - name: Test workload validity and measurement guards
+        working-directory: frontend
+        run: npm run test:e2e:calibration
+
+      - name: Check public website themes and navigation
+        if: needs.impact.outputs.website == 'true'
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          python ../scripts/quality/site.py --output ../website/public/quality --empty
+          node --test ../tests/website/*.test.mjs
 
       - name: Validate documentation translations
         run: node scripts/documentation-translations.mjs check
@@ -98,3 +168,45 @@ jobs:
             custom_components/velair/frontend/velair-card.js.map
           if-no-files-found: error
           retention-days: 14
+
+  quality:
+    name: Quality
+    needs: [impact, frontend-build]
+    if: needs.impact.outputs.runtime == 'true'
+    uses: ./.github/workflows/quality-run.yml
+    with:
+      artifact: velair-custom-component
+      label: ci
+
+  quality-gate:
+    name: Quality gate
+    if: always()
+    needs: [impact, backend-tests, blueprint-runtime-tests, frontend-build, quality]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Evaluate required checks and rollout
+        env:
+          JOBS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          jobs = json.loads(os.environ['JOBS'])
+          for name in ('impact', 'backend-tests', 'blueprint-runtime-tests', 'frontend-build'):
+              if jobs[name]['result'] != 'success': raise SystemExit(f'Required check did not succeed: {name}')
+          relevant = jobs['impact']['outputs']['runtime'] == 'true'
+          mode = json.loads(Path('scripts/quality/environment.json').read_text())['rollout']['mode']
+          if mode not in ('observe', 'enforce'): raise SystemExit('Invalid quality rollout policy')
+          result = jobs['quality'].get('outputs', {}).get('result', jobs['quality']['result'])
+          if relevant and mode == 'enforce' and result != 'success': raise SystemExit('Quality checks did not succeed')
+          if relevant and mode != 'enforce':
+              message = f'Observation rollout: browser/load result {result}; not yet a required product gate.'
+          else:
+              message = 'Quality checks passed.' if relevant else 'Quality checks omitted: documented scope exclusion.'
+          print(message)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream: stream.write(message + '\n')
+          PY

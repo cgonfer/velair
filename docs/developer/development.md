@@ -132,6 +132,10 @@ See [manual-testing.md](manual-testing.md) for the full checklist.
 
 CI runs on pushes to `main` and pull requests. It executes backend tests, frontend tests, TypeScript checks, and a frontend build. Successful frontend jobs upload short-lived artifacts so maintainers can test the exact bundle produced by a pipeline:
 
+Selected changes also run real Home Assistant browser journeys and reproducible
+household workloads. See [Quality checks and release evidence](quality.md) for
+local execution, observation-mode results, comparisons and calibration.
+
 - `velair-custom-component`: complete integration folder for copying to Home Assistant `custom_components`.
 - `velair-lovelace-resource`: compiled frontend resource files for advanced manual Lovelace testing.
 

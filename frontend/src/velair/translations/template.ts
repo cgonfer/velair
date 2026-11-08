@@ -3224,6 +3224,8 @@ export const translationTemplate = {
 
   "timeline": "",
 
+  "timelineScrollHint": "",
+
   "timelineContinuesFrom": "",
 
   "title": "",

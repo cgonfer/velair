@@ -13,6 +13,44 @@ await hass.connection.sendMessagePromise({
 });
 ```
 
+## Runtime update subscriptions
+
+`velair/subscribe_updates` always sends an initial full response as
+`{loaded: true, schedule: ...}`. Existing clients continue receiving this shape
+for every update. Clients may opt into lightweight runtime updates:
+
+```ts
+await hass.connection.subscribeMessage(handleUpdate, {
+  type: "velair/subscribe_updates",
+  partial_updates: true,
+});
+```
+
+An opted-in client also accepts these messages:
+
+- `{loaded: true, comfort: {"climate.room": assessment}}`: merge only the
+  included physical-climate assessments into the current `schedule.comfort` map.
+- `{loaded: true, operation_status: status}`: replace the operation status;
+  an explicit `null` clears it. An absent field leaves existing data unchanged.
+
+Configuration changes and terminal operation outcomes still send full snapshots.
+`{loaded: false}` indicates that the integration is unavailable. Lightweight
+updates do not replace configuration or editing drafts. A client must preserve
+newer runtime pushes when a previously requested full response arrives, and
+discard work belonging to a retired connection. The maintained panel and cards
+handle this through their shared schedule session.
+
+Comfort source updates assess the affected physical climates and publish their
+changed observations without waking unrelated scheduling entities. Progress
+updates do not rebuild schedules. Full responses shared by synchronous readers
+reuse their assembly only within the current observation; nested publications
+invalidate it, and each reader receives detached data.
+
+`velair/subscribe_diagnostics` supplies its own fresh initial snapshot. Opening
+Diagnostics uses that snapshot directly, without a preceding
+`velair/get_diagnostics` request. Explicit one-shot diagnostic requests remain
+available.
+
 ## Room groups and control-unit identity
 
 Schedule responses preserve `configured_entities` as real managed climates and

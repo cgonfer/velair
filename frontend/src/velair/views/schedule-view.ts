@@ -400,27 +400,32 @@ export function renderTimeline(
     <div class="timeline-panel">
       <div class="timeline-header">
         <span class="label">${host._t("timeline")}</span>
-        <div class="timeline-hours">
-          <span>00</span>
-          <span>06</span>
-          <span>12</span>
-          <span>18</span>
-          <span>24</span>
-          ${renderTimelineNowMarker(host)}
+      </div>
+      <div class="timeline-scroll" role="region" aria-label=${host._t("timeline")} tabindex="0">
+        <div class="timeline-canvas">
+          <div class="timeline-hours">
+            <span>00</span>
+            <span>06</span>
+            <span>12</span>
+            <span>18</span>
+            <span>24</span>
+            ${renderTimelineNowMarker(host)}
+          </div>
+          <div
+            class="timeline-track"
+            @dragover=${host._handleTimelineDragOver}
+            @drop=${(event: DragEvent) => host._handleTimelineDrop(event, source)}
+          >
+            ${timelineBlocks.length || carryOver
+              ? html`
+                  ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId, source, Boolean(weekly?.resolved && carryOver.sourceWeekday !== weekly.weekday), carryOverIndex ?? 0) : nothing}
+                  ${timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))}
+                `
+              : html`<span class="empty timeline-empty">${host._t("noBlocks")}</span>`}
+          </div>
         </div>
       </div>
-      <div
-        class="timeline-track"
-        @dragover=${host._handleTimelineDragOver}
-        @drop=${(event: DragEvent) => host._handleTimelineDrop(event, source)}
-      >
-        ${timelineBlocks.length || carryOver
-          ? html`
-              ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId, source, Boolean(weekly?.resolved && carryOver.sourceWeekday !== weekly.weekday), carryOverIndex ?? 0) : nothing}
-              ${timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))}
-            `
-          : html`<span class="empty timeline-empty">${host._t("noBlocks")}</span>`}
-      </div>
+      <span class="timeline-scroll-hint">${host._t("timelineScrollHint")}</span>
     </div>
   `;
 }

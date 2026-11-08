@@ -45,6 +45,8 @@ from .const import (
     DOMAIN,
     HVAC_MODE_OPTIONS,
     SIGNAL_SCHEDULER_UPDATED,
+    SIGNAL_COMFORT_UPDATED,
+    SIGNAL_OPERATION_UPDATED,
     SIGNAL_DIAGNOSTICS_UPDATED,
     EXTERNAL_CHANGE_POLICY_OPTIONS,
 )
@@ -629,6 +631,7 @@ def ws_subscribe_diagnostics(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): f"{DOMAIN}/subscribe_updates",
+        vol.Optional("partial_updates", default=False): cv.boolean,
     }
 )
 @websocket_api.async_response
@@ -647,6 +650,7 @@ async def ws_subscribe_updates(
     last_learning_evidence = None
     pending_update_task = None
     subscribed = True
+    partial_updates = msg.get("partial_updates", False)
 
     def learning_evidence(current_runtime):
         diagnostics = current_runtime.get("diagnostics")
@@ -713,8 +717,39 @@ async def ws_subscribe_updates(
         if current_runtime is not None and learning_evidence(current_runtime) != last_learning_evidence:
             _send_update()
 
+    @callback
+    def _send_comfort_update(entities) -> None:
+        if not partial_updates:
+            _send_update()
+            return
+        current_runtime = _get_runtime(hass)
+        if current_runtime is None:
+            connection.send_message(websocket_api.event_message(msg["id"], {"loaded": False}))
+            return
+        scheduler = current_runtime["scheduler"]
+        with scheduler.observation_snapshot(prepared=True):
+            comfort = {entity: scheduler.get_comfort_assessment(entity) for entity in entities}
+        connection.send_message(websocket_api.event_message(
+            msg["id"], {"loaded": True, "comfort": comfort}))
+
+    @callback
+    def _send_operation_update() -> None:
+        if not partial_updates:
+            _send_update()
+            return
+        current_runtime = _get_runtime(hass)
+        if current_runtime is None:
+            connection.send_message(websocket_api.event_message(msg["id"], {"loaded": False}))
+            return
+        connection.send_message(websocket_api.event_message(msg["id"], {
+            "loaded": True,
+            "operation_status": current_runtime["scheduler"].operation_status,
+        }))
+
     unsubs = [
         async_dispatcher_connect(hass, SIGNAL_SCHEDULER_UPDATED, _send_update),
+        async_dispatcher_connect(hass, SIGNAL_COMFORT_UPDATED, _send_comfort_update),
+        async_dispatcher_connect(hass, SIGNAL_OPERATION_UPDATED, _send_operation_update),
         async_dispatcher_connect(hass, SIGNAL_DIAGNOSTICS_UPDATED, _send_learning_update),
         async_dispatcher_connect(hass, "velair_shared_demand_updated", _send_update),
     ]
@@ -2370,6 +2405,9 @@ def _build_schedule_response(runtime: dict[str, Any]) -> dict[str, Any]:
     """Build the schedule API response."""
     snapshot = getattr(runtime["scheduler"], "observation_snapshot", nullcontext)
     with snapshot():
+        observe = getattr(runtime["scheduler"], "_observe", None)
+        if callable(observe):
+            return observe("api_schedule", "", lambda: _build_schedule_response_snapshot(runtime))
         return _build_schedule_response_snapshot(runtime)
 
 

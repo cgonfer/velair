@@ -953,7 +953,7 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
   return html`
     <section class="overview-timeline-panel">
       ${renderOverviewSectionHeading(host._t("todayTimeline"), "mdi:timeline-clock-outline")}
-      <div class="overview-timeline-scroll">
+      <div class="overview-timeline-scroll" role="region" aria-label=${host._t("todayTimeline")} tabindex="0">
         <div class="overview-timeline-layout">
           <div class="overview-timeline-names">
             <div class="overview-timeline-axis-spacer"></div>
@@ -985,6 +985,7 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
           </div>
         </div>
       </div>
+      <span class="timeline-scroll-hint">${host._t("timelineScrollHint")}</span>
     </section>
   `;
 }

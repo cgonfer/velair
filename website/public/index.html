@@ -8,20 +8,7 @@
     <title>Velair</title>
     <link rel="icon" href="assets/velair-icon.png">
     <link rel="stylesheet" href="styles.css">
-    <script>
-      (() => {
-        try {
-          const stored = localStorage.getItem("velair-site-theme");
-          const theme = stored === "light" || stored === "dark"
-            ? stored
-            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-          document.documentElement.dataset.theme = theme;
-          document.documentElement.style.colorScheme = theme;
-        } catch {
-          document.documentElement.dataset.theme = "dark";
-        }
-      })();
-    </script>
+    <script src="theme-init.js"></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -42,6 +29,7 @@
         <a href="#preconditioning">Preconditioning</a>
         <a href="#installation">Install</a>
         <a href="#about">About</a>
+        <a href="quality/">Quality</a>
         <a href="https://github.com/cgonfer/velair/tree/main/docs" target="_blank" rel="noreferrer">Docs</a>
       </nav>
       <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="true">

@@ -137,6 +137,7 @@ export class VelairApiClient {
   ): Promise<() => Promise<void> | void> {
     return this.hass.connection.subscribeMessage<ScheduleUpdateMessage>(callback, {
       type: "velair/subscribe_updates",
+      partial_updates: true,
     });
   }
 

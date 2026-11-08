@@ -98,14 +98,17 @@ class ComfortProjection:
 
     def _context(self, entity):
         owner = self.owner
-        configured = set(owner._configured_physical_entities())
-        if not owner._projection_save_depth:
-            for retired in self._entries.keys() - configured:
-                self._entries.pop(retired, None)
-        if entity not in configured:
-            return (False,), None
-        raw = comfort_settings(owner._data, entity)
-        physical = owner._data["zones"].get(entity, {})
+        physical = owner._data["zones"].get(entity)
+        if physical is not None and entity.startswith("climate."):
+            raw = physical.get("comfort", {})
+        else:
+            group = next((key for key, value in owner._data.get("room_groups", {}).items()
+                          if entity in value["members"]), None)
+            if group is None:
+                return (False,), None
+            raw = owner._data.get("member_comfort", {}).get(
+                entity, owner._data["zones"][group].get("comfort", {}))
+            physical = {}
         preconditioning = physical.get("preconditioning")
         fallback = (preconditioning.get("room_temperature_entity_id")
                     if isinstance(preconditioning, dict) else None)
@@ -137,6 +140,10 @@ class ComfortProjection:
 
     def enabled_entities(self, entities):
         """Capture the scan's initial eligibility before any outward events."""
+        entities = tuple(entities)
+        if not self.owner._projection_save_depth:
+            for retired in self._entries.keys() - set(entities):
+                self._entries.pop(retired, None)
         enabled = []
         for entity in entities:
             raw = comfort_settings(self.owner._data, entity)
@@ -144,6 +151,11 @@ class ComfortProjection:
             if bool(source.get("enabled", False)):
                 enabled.append(entity)
         return tuple(enabled)
+
+    def configuration_changes(self):
+        """Find pending in-place settings changes without evaluating assessments."""
+        return {entity for entity, entry in self._entries.items()
+                if not _same_value(self._context(entity)[0], entry.context)}
 
     def _state_value(self, state, stale_after):
         if state is None:

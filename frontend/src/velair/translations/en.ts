@@ -1996,6 +1996,7 @@ export const en = {
   "templatesPanelIntro": "Create reusable daily schedules and apply them to compatible thermostats and days.",
   "time": "Time",
   "timeline": "Timeline",
+  "timelineScrollHint": "Scroll horizontally to explore the full day.",
   "timelineContinuesFrom": "From {day}, {time}",
   "title": "Title",
   "unableApplyThermostats": "Unable to apply schedule to thermostats",

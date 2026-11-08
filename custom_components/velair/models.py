@@ -2209,6 +2209,15 @@ def predict_preconditioning_lead(
         config,
     )
     if len(complete_samples) >= MIN_PRECONDITIONING_COMPLETE_SAMPLES:
+        # Past samples share the same exponential decay factor as time passes.
+        # Remove that common factor so an unchanged history cannot drift across
+        # the percentile's absolute tolerance or eventually underflow. Keep the
+        # actual clock while future-dated samples are still age-clamped to zero.
+        recency_reference = min(prediction_now, max(
+            (created for sample in complete_samples
+             if (created := _parse_datetime(str(sample["created_at"]))) is not None),
+            default=prediction_now,
+        ))
         complete_rate = _weighted_percentile(
             [
                 _preconditioning_minutes_per_degree(sample)
@@ -2217,7 +2226,7 @@ def predict_preconditioning_lead(
             [
                 _preconditioning_recency_weight(
                     str(sample["created_at"]),
-                    prediction_now,
+                    recency_reference,
                     config["recency_decay_days"],
                 )
                 * _preconditioning_similarity_weight(
@@ -2627,6 +2636,37 @@ def preconditioning_observations_for_direction(
         return []
     observations = direction_learning.get("observations")
     return observations if isinstance(observations, list) else []
+
+
+def preconditioning_prediction_time_input(
+    learning: Any,
+    config: PreconditioningData,
+    now: datetime,
+) -> tuple[tuple[bool, ...], datetime | None] | None:
+    """Describe time changes that can affect otherwise identical predictions.
+
+    Relative complete-sample weights are stable after their creation dates.
+    Partial samples retain the predictor's strict expiry boundary, including
+    after a clock rollback. Future complete samples conservatively keep the
+    exact clock until their age clamp no longer affects relative weights.
+    """
+    if not config.get("enabled"):
+        return None
+    expired_partials = []
+    future_complete = False
+    for direction in PRECONDITIONING_OBSERVATION_DIRECTIONS:
+        for sample in preconditioning_observations_for_direction(learning, direction):
+            if not _preconditioning_observation_is_valid(sample, direction, config):
+                continue
+            created = _parse_datetime(str(sample.get("created_at", "")))
+            if sample["quality"] == "partial":
+                expired_partials.append(
+                    created is None
+                    or (now - created).total_seconds() > config["partial_expiry_days"] * 86400
+                )
+            elif created is not None and created > now:
+                future_complete = True
+    return tuple(expired_partials), now if future_complete else None
 
 
 def trim_preconditioning_observations(

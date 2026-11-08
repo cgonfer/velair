@@ -7,12 +7,20 @@ on:
       - "v*"
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   package-release:
     name: Package release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
 
     steps:
       - name: Check out repository
@@ -43,9 +51,22 @@ jobs:
       - name: Run backend tests
         run: python -m unittest discover -s tests
 
+      - name: Preserve committed integration for HACS-path testing
+        uses: actions/upload-artifact@v7
+        with:
+          name: velair-committed-component
+          path: custom_components/velair
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Run frontend unit tests
         working-directory: frontend
         run: npm run test
+
+      - name: Test quality publication and workload validity
+        run: |
+          node --test .github/scripts/*.test.mjs
+          npm --prefix frontend run test:e2e:calibration
 
       - name: Check TypeScript
         working-directory: frontend
@@ -99,24 +120,147 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub release assets
-        if: startsWith(github.ref, 'refs/tags/')
+  validate-hacs:
+    name: Release HACS validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+
+  validate-hassfest:
+    name: Release Hassfest validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: home-assistant/actions/hassfest@master
+
+  quality-package:
+    name: Validate packaged release
+    needs: package-release
+    uses: ./.github/workflows/quality-run.yml
+    with:
+      artifact: velair-release-${{ needs.package-release.outputs.version }}
+      archive: true
+      suite: release
+      label: package
+      enforce: true
+      compare-release: true
+
+  quality-hacs:
+    name: Validate committed integration
+    needs: package-release
+    uses: ./.github/workflows/quality-run.yml
+    with:
+      artifact: velair-committed-component
+      suite: release
+      label: hacs
+      enforce: true
+
+  evidence:
+    name: Bind release evidence to exact archives
+    needs: [package-release, quality-package, quality-hacs, validate-hacs, validate-hassfest]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v8
+        with:
+          name: quality-summary-package
+          path: ${{ runner.temp }}/quality-package
+      - uses: actions/download-artifact@v8
+        with:
+          name: quality-summary-hacs
+          path: ${{ runner.temp }}/quality-hacs
+      - uses: actions/download-artifact@v8
+        with:
+          name: velair-release-${{ needs.package-release.outputs.version }}
+          path: ${{ runner.temp }}/release-assets
+      - name: Aggregate successful package and HACS evidence
+        env:
+          RELEASE_VERSION: ${{ needs.package-release.outputs.version }}
+        run: |
+          python scripts/quality/report.py --inputs "$RUNNER_TEMP/quality-package" "$RUNNER_TEMP/quality-hacs" --output "$RUNNER_TEMP/release-evidence" --release-version "$RELEASE_VERSION"
+          python - <<'PY'
+          import json, os, pathlib, sys, zipfile
+          sys.path.insert(0, str(pathlib.Path('scripts/quality').resolve()))
+          import report
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          assets = root / 'release-assets'
+          evidence = root / 'release-evidence'
+          result = report.validate(report.read_json(evidence / 'quality-report.json'))
+          component, = assets.glob('velair-custom-component-*.zip')
+          resource, = assets.glob('velair-lovelace-resource-*.zip')
+          expected = next((a['sha256'] for a in result['artifacts'] if a['name'] == component.name), None)
+          if expected != report.digest(component): raise SystemExit('Component archive changed after testing')
+          with zipfile.ZipFile(component) as integration, zipfile.ZipFile(resource) as card:
+              if sorted(card.namelist()) != ['velair-card.js', 'velair-card.js.map']: raise SystemExit('Unexpected Lovelace archive')
+              for name in card.namelist():
+                  if card.read(name) != integration.read('velair/frontend/' + name): raise SystemExit('Lovelace archive differs from tested bundle')
+          result['artifacts'].append({'name': resource.name, 'sha256': report.digest(resource)})
+          report.write(result, evidence)
+          PY
+          cat "$RUNNER_TEMP/release-evidence/quality-report.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: validated-release-evidence
+          path: |
+            ${{ runner.temp }}/release-evidence/quality-report.json
+            ${{ runner.temp }}/release-evidence/quality-report.md
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish exact validated assets
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [package-release, evidence]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - uses: actions/download-artifact@v8
+        with:
+          name: velair-release-${{ needs.package-release.outputs.version }}
+          path: ${{ runner.temp }}/release-assets
+      - uses: actions/download-artifact@v8
+        with:
+          name: validated-release-evidence
+          path: ${{ runner.temp }}/release-evidence
+      - name: Upload into draft and publish after digest verification
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          RELEASE_PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          RELEASE_VERSION: ${{ needs.package-release.outputs.version }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          RELEASE_NOTES=".github/release-notes/v${RELEASE_VERSION}.md"
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            CREATE_ARGS=(
-              "$RELEASE_TAG"
-              --title "Velair ${RELEASE_VERSION}"
-              --notes-file "$RELEASE_NOTES"
-            )
-            if [ "$RELEASE_PRERELEASE" = "true" ]; then
-              CREATE_ARGS+=(--prerelease)
-            fi
-            gh release create "${CREATE_ARGS[@]}"
-          fi
-          gh release upload "$RELEASE_TAG" .release/artifacts/*.zip --clobber
+          RELEASE_ARTIFACTS: ${{ runner.temp }}/release-assets
+          RELEASE_REPORT: ${{ runner.temp }}/release-evidence
+          RELEASE_NOTES: .github/release-notes/v${{ needs.package-release.outputs.version }}.md
+        run: node .github/scripts/publish-release.mjs
+
+  refresh-quality-page:
+    name: Refresh public release evidence
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Explicitly dispatch Pages after publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main

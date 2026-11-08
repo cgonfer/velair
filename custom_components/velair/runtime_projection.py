@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from homeassistant.util import dt as dt_util
 
-from .models import normalize_preconditioning_data, preconditioning_observations_for_direction
+from .models import normalize_preconditioning_data, preconditioning_prediction_time_input
 from .schedule_projection import PreparedSchedule, utc
 from .projection_inputs import input_value, thermal_input, target_feature_presence
 
@@ -248,15 +248,13 @@ class RuntimeScheduleProjection:
         owner = self.owner
         config = self.preconditioning.get(entity, {})
         learning = owner._data.get("preconditioning_learning", {}).get(entity, {})
-        learned_clock = None
-        if config.get("enabled") and any(preconditioning_observations_for_direction(
-                learning, direction) for direction in ("heat", "cool")):
-            learned_clock = dt_util.as_utc(dt_util.now())
+        prediction_time = preconditioning_prediction_time_input(
+            learning, config, dt_util.as_utc(dt_util.now()))
         return (
             self.schedules.get(entity), now.date(), zone.get("enabled"),
             owner._is_external_execution(entity), owner._is_zone_override_active(entity, now),
             thermal_input(owner, entity, config) if config.get("enabled") else None,
-            self._preconditioning_inputs.get(entity), input_value(learning), learned_clock,
+            self._preconditioning_inputs.get(entity), input_value(learning), prediction_time,
         )
 
     def _resolution_input(self, entity, now):

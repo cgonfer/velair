@@ -1,5 +1,6 @@
 import { VelairApiClient } from "../api/client";
-import type { HassConnection, HomeAssistant, ScheduleResponse } from "../types";
+import type { HassConnection, HomeAssistant, ScheduleResponse, ScheduleUpdateMessage } from "../types";
+import { ScheduleRuntimeUpdates } from "./schedule-runtime-updates";
 
 export type PanelScheduleState = {
   data?: ScheduleResponse;
@@ -31,6 +32,7 @@ export class PanelScheduleSession {
   private _generation = 0;
   private _streamGeneration = 0;
   private _sequence = 0;
+  private _runtimeUpdates = new ScheduleRuntimeUpdates();
   private _active = false;
   private _unsubscribe?: () => Promise<void> | void;
   private _subscribing = false;
@@ -78,6 +80,7 @@ export class PanelScheduleSession {
         this._generation++;
         this._refresh = undefined;
         this._refreshAgain = false;
+        this._runtimeUpdates.reset();
         this._set({ loading: false });
       };
       const ready = () => {
@@ -104,9 +107,15 @@ export class PanelScheduleSession {
       const sendMessagePromise = async <T>(message: Record<string, unknown>): Promise<T> => {
           const generation = this._generation;
           const sequence = this._sequence;
-          const response = await connection.sendMessagePromise<T>(message);
+          const runtimeRevision = this._runtimeUpdates.revision;
+          const operationId = this._state.data?.operation_status?.id ?? null;
+          let response: T = await connection.sendMessagePromise<T>(message);
           if (response && typeof response === "object" && "configured_entities" in response && "zones" in response) {
-            const data = response as unknown as ScheduleResponse;
+            let data = response as unknown as ScheduleResponse;
+            if (this._current(connection, generation) && sequence === this._sequence) {
+              data = this._runtimeUpdates.merge(data, runtimeRevision, false, operationId);
+              response = data as unknown as T;
+            }
             responseSessions.set(data, { session: this, generation });
             if (!this._current(connection, generation) || sequence !== this._sequence) {
               staleResponses.add(data);
@@ -136,6 +145,7 @@ export class PanelScheduleSession {
     if (!this._active || origin && (origin.session !== this || origin.generation !== this._generation)) return undefined;
     if (staleResponses.has(data)) return this._state.data;
     if (data !== this._state.data) {
+      this._runtimeUpdates.reset();
       this._sequence++;
       this._set({ data, loading: false, error: undefined });
     }
@@ -155,13 +165,17 @@ export class PanelScheduleSession {
     const generation = this._generation;
     const connection = hass.connection;
     const sequence = this._sequence;
+    const runtimeRevision = this._runtimeUpdates.revision;
+    const operationId = this._state.data?.operation_status?.id ?? null;
     const inputRevision = this._inputRevision;
     this._set({ loading: true, error: undefined });
     // Preserve immediate dispatch, while catching synchronous transport errors.
     const fetchSchedule = async () => new VelairApiClient(hass).getSchedule();
     const request = fetchSchedule().then((data) => {
       if (!data || typeof data !== "object") throw new Error("Invalid schedule response");
-      if (this._current(connection, generation) && sequence === this._sequence && inputRevision === this._inputRevision) this.publish(data);
+      if (this._current(connection, generation) && sequence === this._sequence && inputRevision === this._inputRevision) {
+        this.publish(this._runtimeUpdates.merge(data, runtimeRevision, false, operationId));
+      }
     }).catch((error: unknown) => {
       if (this._current(connection, generation) && sequence === this._sequence && inputRevision === this._inputRevision) this._set({ error: error instanceof Error ? error.message : String(error) });
     }).finally(() => {
@@ -189,11 +203,16 @@ export class PanelScheduleSession {
     const current = () => this._active && this._connection === connection && streamGeneration === this._streamGeneration;
     // Connection identity handles stream continuity across HA's own reconnect.
     try {
-      const unsubscribe = await connection.subscribeMessage<{ loaded: boolean; schedule?: ScheduleResponse }>((message) => {
+      const unsubscribe = await connection.subscribeMessage<ScheduleUpdateMessage>((message) => {
         if (!current()) return;
         if (message.loaded && message.schedule) this.publish(message.schedule);
-        else void this.refresh({});
-      }, { type: "velair/subscribe_updates" });
+        else if (!message.loaded) {
+          this._runtimeUpdates.reset();
+          void this.refresh({});
+        } else if (this._runtimeUpdates.accept(message) && this._state.data) {
+          this._set({ data: this._runtimeUpdates.merge(this._state.data, 0, true) });
+        }
+      }, { type: "velair/subscribe_updates", partial_updates: true });
       if (!current()) await unsubscribe();
       else this._unsubscribe = unsubscribe;
     } catch (error) {
@@ -219,6 +238,7 @@ export class PanelScheduleSession {
     this._refresh = undefined;
     this._refreshAgain = false;
     this._lastInvalidation = undefined;
+    this._runtimeUpdates.reset();
     if (this._preconditioningRefreshTimer !== undefined) clearTimeout(this._preconditioningRefreshTimer);
     this._preconditioningRefreshTimer = undefined;
     this._removeConnectionListeners?.();

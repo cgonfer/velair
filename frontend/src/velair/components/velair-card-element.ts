@@ -6,6 +6,7 @@ import { resolveDayLayout, selectedDayGroup, schedulesEqual } from "../domain/da
 import { scheduleUsagePath, type PanelSubsection } from "../domain/panel-routes";
 import { isScheduleResponseCurrent, rawScheduleHass, type PanelScheduleSession } from "../controllers/panel-schedule-session";
 import { acquireLovelaceScheduleSession } from "../controllers/lovelace-schedule-sessions";
+import { isRuntimeScheduleSnapshot } from "../controllers/schedule-runtime-updates";
 import { normalizeTemplateBlocks } from "../controllers/template-impact";
 import { cancelTemplatePreview, queueTemplatePreview, refreshTemplatePreview } from "../controllers/template-preview";
 import { LitElement, type PropertyValues } from "lit";
@@ -184,6 +185,7 @@ import {
   draftContentFingerprint,
   blocksForSource,
   loadSchedule,
+  receiveScheduleUpdate,
   markBlocksDirty,
   resetDraftBlocks,
   selectEntity,
@@ -1348,8 +1350,7 @@ export class VelairCard extends LitElement {
     try {
       const unsubscribe = await api.subscribeUpdates((message) => {
         if (!current()) return;
-        if (message.loaded && message.schedule) this._applyScheduleData(message.schedule);
-        else void this._loadSchedule();
+        receiveScheduleUpdate(asScheduleStateHost(this), message);
       });
       if (!current()) await unsubscribe();
       else this._unsubscribeUpdates = unsubscribe;
@@ -1375,6 +1376,15 @@ export class VelairCard extends LitElement {
   }
 
   private _applyLocalScheduleData(data: ScheduleResponse, options: { forceDraft?: boolean } = {}): void {
+    if (isRuntimeScheduleSnapshot(data)) {
+      this._data = {
+        ...data,
+        diagnostics: this._diagnosticsSnapshotAuthoritative
+          ? this._latestDiagnostics
+          : data.diagnostics ?? this._data?.diagnostics,
+      };
+      return;
+    }
     const changedEntityIds = changedPreconditioningEventEntityIds(
       this._data?.next_events ?? [],
       data.next_events,
@@ -1513,13 +1523,7 @@ export class VelairCard extends LitElement {
     const generation = ++this._diagnosticsSubscriptionGeneration;
     this._subscribingDiagnostics = true;
     try {
-      const diagnostics = await api.getDiagnostics();
-      if (
-        generation !== this._diagnosticsSubscriptionGeneration
-        || !this.isConnected
-        || this._effectiveView() !== "diagnostics"
-      ) return;
-      this._applyDiagnosticsSnapshot(diagnostics);
+      // The subscription sends a fresh initial snapshot before live updates.
       const unsubscribe = await api.subscribeDiagnostics((message) => {
         if (
           generation !== this._diagnosticsSubscriptionGeneration

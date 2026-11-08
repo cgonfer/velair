@@ -28,6 +28,7 @@ from .const import (
     EVENT_TYPE_EXTERNAL_CLIMATE_CHANGE_DETECTED,
     SIGNAL_DIAGNOSTICS_UPDATED,
     SIGNAL_SCHEDULER_UPDATED,
+    SIGNAL_COMFORT_UPDATED,
 )
 from .room_groups import comfort_settings as physical_comfort_settings, member_to_unit
 from .temperature import CELSIUS, normalize_temperature_unit, state_temperature_unit
@@ -347,6 +348,8 @@ class RuntimeDiagnosticsManager:
                 self._handle_scheduler_update,
             )
         )
+        self._unsubs.append(async_dispatcher_connect(
+            self._hass, SIGNAL_COMFORT_UPDATED, self._handle_comfort_update))
         self._unsubs.append(
             async_track_state_change_event(
                 self._hass,
@@ -660,6 +663,11 @@ class RuntimeDiagnosticsManager:
     def _handle_scheduler_update(self) -> None:
         """Invalidate diagnostics derived from authoritative scheduler state."""
         self._refresh_associated_sensor_listener()
+        self._schedule_notify()
+
+    @callback
+    def _handle_comfort_update(self, _entities) -> None:
+        """Retain freshness and recovery notifications without scheduler fan-out."""
         self._schedule_notify()
 
     @callback
