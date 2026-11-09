@@ -1866,6 +1866,7 @@ export const pl = {
   "templatesPanelIntro": "Twórz codzienne harmonogramy wielokrotnego użytku i stosuj je do zgodnych termostatów i dni.",
   "time": "Czas",
   "timeline": "Oś czasu",
+  "timelineScrollHint": "Przewiń w poziomie, aby zobaczyć cały dzień.",
   "timelineContinuesFrom": "Od {day}, {time}",
   "title": "Tytuł",
   "unableApplyThermostats": "Nie można zastosować harmonogramu do termostatów",

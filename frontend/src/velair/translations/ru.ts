@@ -1720,6 +1720,7 @@ export const ru = {
   "thermostat": "Термостат",
   "time": "Время",
   "timeline": "Расписание",
+  "timelineScrollHint": "Прокрутите по горизонтали, чтобы просмотреть весь день.",
   "timelineContinuesFrom": "{day}, {time} — продолжение",
   "title": "Название",
   "unableApplyThermostats": "Не удалось применить расписание к термостатам",

@@ -1774,6 +1774,7 @@ export const de = {
   "templatesPanelIntro": "Erstelle wiederverwendbare Tagespläne und wende sie auf kompatible Thermostate und Tage an.",
   "time": "Zeit",
   "timeline": "Zeitplan",
+  "timelineScrollHint": "Scrolle horizontal, um den ganzen Tag anzuzeigen.",
   "timelineContinuesFrom": "Ab {day}, {time}",
   "title": "Titel",
   "unableApplyThermostats": "Zeitplan konnte nicht auf Thermostate angewendet werden",

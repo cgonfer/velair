@@ -17,6 +17,10 @@ export const presetLibraryStyles = css`
   .preset-copy-status.error { color: var(--error-color); }
   .preset-config-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 16px; }
   .preset-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Preset forms have no schedule time/options tracks, including on mobile. */
+  .preset-fields.editable-block { grid-template-areas: none; }
+  .preset-fields.editable-block > :is(label, details) { grid-area: auto; }
+  .preset-fields.editable-block > .full-width { grid-column: 1 / -1; }
   .preset-fields label, .preset-compatibility label { display: grid; gap: 6px; color: var(--secondary-text-color); font-size: 12px; min-width: 0; }
   .preset-fields input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--divider-color); border-radius: 8px; background: var(--card-background-color); color: var(--primary-text-color); font: inherit; font-size: 14px; }
   .preset-fields input:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }

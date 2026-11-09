@@ -8,6 +8,7 @@ import { presetLibraryStyles } from "../styles/preset-library-styles";
 import { cardStyles } from "../styles/card-styles";
 import { backendErrorMessage } from "../domain/backend-errors";
 import { availableBlockPresets } from "../domain/resource-display";
+import { resourceId } from "../domain/resource-id";
 import { renderResourceSectionSummary, renderResourceUsageGroups } from "../views/resource-usages";
 import { directPresetUseCount, groupPresetUsages, splitPresetUsages } from "../domain/preset-usages";
 import type { VelairViewHost } from "../host-types";
@@ -72,7 +73,7 @@ export class VelairPresetLibrary extends LitElement {
     if (this._busy) return;
     if (this._block && preset?.key === this._key) return;
     if (this._isDirty && !window.confirm(this.host!._t("discardChanges"))) return;
-    this._key = preset?.key ?? `preset_${crypto.randomUUID()}`;
+    this._key = preset?.key ?? `preset_${resourceId()}`;
     this._name = preset?.name ?? "";
     this._block = draftBlocksFromScheduleBlocks([{ start: "00:00", ...(preset?.config ?? { action: "set_temperature", temperature: this.data?.temperature_unit === "°F" ? 68 : 20 }) }], this.data?.temperature_unit)[0];
     if (!preset) {

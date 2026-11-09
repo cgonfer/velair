@@ -1,6 +1,18 @@
 # Screenshot Assets
 
-These screenshots use the same example data and Home Assistant's dark theme.
+These screenshots show a fictional English household in real Home Assistant,
+using virtual devices and Home Assistant's dark theme. The same scenes are
+captured at desktop, tablet and mobile widths.
+
+Velair computes the displayed states through its normal runtime. Learning
+observations are synthetic; external-publication scenes use a test-only
+controller transport and do not verify physical equipment or RF delivery.
+See the [public screenshot workflow](../../scripts/screenshots/README.md) for
+generation, review and local installation.
+
+Use the sections below to move from room setup and reusable schedules to comfort, preparation and delivery. Each feature keeps its three viewport captures together.
+
+## Control and room setup
 
 ### Overview
 
@@ -14,6 +26,18 @@ See scheduler status, upcoming events, today's timeline and current zone conditi
 | --- | --- |
 | ![Velair overview tablet](../../screenshots/overview-tablet.png) | ![Velair overview mobile](../../screenshots/overview-mobile.png) |
 
+### Room groups
+
+Combine Living Room and Dining Room into one Downstairs zone, with a shared room reading and explicit delivery to both climates. Configure the control unit before assigning its schedules. See the [Room groups guide](../user/room-groups.md).
+
+**Desktop**
+
+![Velair room groups desktop](../../screenshots/room-groups-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair room groups tablet](../../screenshots/room-groups-tablet.png) | ![Velair room groups mobile](../../screenshots/room-groups-mobile.png) |
+
 ### Climate status and control card
 
 Use one Lovelace card to control a managed climate and review Velair context, Comfort, Room Assist, Preconditioning, actions and today's timeline.
@@ -25,6 +49,8 @@ Use one Lovelace card to control a managed climate and review Velair context, Co
 | Tablet | Mobile |
 | --- | --- |
 | ![Velair single-climate card tablet](../../screenshots/climate-card-tablet.png) | ![Velair single-climate card mobile](../../screenshots/climate-card-mobile.png) |
+
+## Scheduling and reusable resources
 
 ### Schedule workspace
 
@@ -49,6 +75,30 @@ Use one full-size workspace for both the normal weekly plan and reusable Profile
 | Tablet | Mobile |
 | --- | --- |
 | ![Velair profile schedules tablet](../../screenshots/profiles-tablet.png) | ![Velair profile schedules mobile](../../screenshots/profiles-mobile.png) |
+
+### Climate presets
+
+Reuse the same climate action in several schedule blocks. The Bedroom comfort preset keeps its native heating/cooling range together, while linked usages show where an edit will apply. Daily templates below reuse whole days instead. See [block presets and linked templates](../user/linked-schedules.md).
+
+**Desktop**
+
+![Velair climate presets desktop](../../screenshots/presets-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair climate presets tablet](../../screenshots/presets-tablet.png) | ![Velair climate presets mobile](../../screenshots/presets-mobile.png) |
+
+### Templates
+
+Create reusable daily schedules and apply them where they are needed.
+
+**Desktop**
+
+![Velair templates desktop](../../screenshots/templates-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair templates tablet](../../screenshots/templates-tablet.png) | ![Velair templates mobile](../../screenshots/templates-mobile.png) |
 
 ### Modes
 
@@ -76,21 +126,26 @@ Switch between the Default schedule, a Mode or a Profile from one place.
 | --- | --- |
 | ![Velair change active setup tablet](../../screenshots/active-setup-change-tablet.png) | ![Velair change active setup mobile](../../screenshots/active-setup-change-mobile.png) |
 
-### Templates
+## Comfort and preparation
 
-Create reusable daily schedules and apply them where they are needed.
+### Comfort
+
+Review the guided psychrometric comfort range, CO₂ air quality, Humidex, dew point and absolute humidity using local sensor readings.
 
 **Desktop**
 
-![Velair templates desktop](../../screenshots/templates-desktop.png)
+![Velair comfort desktop](../../screenshots/comfort-desktop.png)
 
 | Tablet | Mobile |
 | --- | --- |
-| ![Velair templates tablet](../../screenshots/templates-tablet.png) | ![Velair templates mobile](../../screenshots/templates-mobile.png) |
+| ![Velair comfort tablet](../../screenshots/comfort-tablet.png) | ![Velair comfort mobile](../../screenshots/comfort-mobile.png) |
 
 ### Room Assist
 
 Compare the scheduled target, deadband limits, external room sensor, climate reading and target applied to the thermostat.
+
+In the app, narrow graphs scroll horizontally to reveal all markers. A static
+mobile capture shows the initial graph viewport.
 
 #### Assisting
 
@@ -116,18 +171,6 @@ Automatic modes and native ranges keep their neutral deadband behavior when the 
 | --- | --- |
 | ![Velair holding tablet](../../screenshots/room-assist-tablet-2.png) | ![Velair holding mobile](../../screenshots/room-assist-mobile-2.png) |
 
-### Comfort
-
-Review room comfort, air quality and the sensor thresholds used for local evaluation.
-
-**Desktop**
-
-![Velair comfort desktop](../../screenshots/comfort-desktop.png)
-
-| Tablet | Mobile |
-| --- | --- |
-| ![Velair comfort tablet](../../screenshots/comfort-tablet.png) | ![Velair comfort mobile](../../screenshots/comfort-mobile.png) |
-
 ### Adaptive Preconditioning
 
 Follow local learning progress and understand when Velair plans to start before a scheduled block.
@@ -140,53 +183,39 @@ Follow local learning progress and understand when Velair plans to start before 
 | --- | --- |
 | ![Velair adaptive preconditioning tablet](../../screenshots/preconditioning-tablet.png) | ![Velair adaptive preconditioning mobile](../../screenshots/preconditioning-mobile.png) |
 
-### Diagnostics
+### Planned Return
 
-Review scheduler health, managed climate state, delivery failures and a bounded local runtime history.
-
-#### Healthy system
-
-Start with a concise health summary, then inspect the effective setup and runtime evidence for each climate.
+Use the Away setup while the home is empty, then prepare eligible rooms for a one-off arrival. The live return status connects the destination setup, arrival timeline and current room preparation. See the [Planned Return guide](../user/planned-return.md).
 
 **Desktop**
 
-![Velair healthy system desktop](../../screenshots/diagnostics-healthy-desktop.png)
+![Velair planned return desktop](../../screenshots/planned-return-desktop.png)
 
 | Tablet | Mobile |
 | --- | --- |
-| ![Velair healthy system tablet](../../screenshots/diagnostics-healthy-tablet.png) | ![Velair healthy system mobile](../../screenshots/diagnostics-healthy-mobile.png) |
+| ![Velair planned return tablet](../../screenshots/planned-return-tablet.png) | ![Velair planned return mobile](../../screenshots/planned-return-mobile.png) |
 
-#### Errors detected
+## Delivery and shared equipment
 
-See exhausted delivery retries and missing managed entities without relying exclusively on logs.
+### Supply control
+
+Coordinate a shared heating supply from the estimated demand of its associated zones. The live overview shows the observed switch state, demand, timing and each zone's contribution, so the supply decision can be inspected directly. See the [shared climate supply guide](../user/shared-climate-supply.md).
 
 **Desktop**
 
-![Velair errors detected desktop](../../screenshots/diagnostics-errors-desktop.png)
+![Velair supply control live overview desktop](../../screenshots/supply-control-desktop.png)
 
 | Tablet | Mobile |
 | --- | --- |
-| ![Velair errors detected tablet](../../screenshots/diagnostics-errors-tablet.png) | ![Velair errors detected mobile](../../screenshots/diagnostics-errors-mobile.png) |
-
-### Settings
-
-Manage ordering, startup behavior, portability and the capabilities detected for each thermostat.
-
-**Desktop**
-
-![Velair settings desktop](../../screenshots/settings-desktop.png)
-
-| Tablet | Mobile |
-| --- | --- |
-| ![Velair settings tablet](../../screenshots/settings-tablet.png) | ![Velair settings mobile](../../screenshots/settings-mobile.png) |
+| ![Velair supply control live overview tablet](../../screenshots/supply-control-tablet.png) | ![Velair supply control live overview mobile](../../screenshots/supply-control-mobile.png) |
 
 ### External execution
 
-Preview compatible-system discovery and the external schedule states without installing a vendor integration or connecting real hardware.
+Inspect compatible-system discovery and real backend publication states through a test-only integration, without connecting physical hardware.
 
 #### Compatible system available
 
-RAMSES RF is detected only for compatible heating zones, showing local and external execution choices side by side.
+The test integration exposes Guest Room as a compatible heating zone, with the local and external execution choices detected by Velair.
 
 **Desktop**
 
@@ -231,3 +260,48 @@ The external provider returned an error; Velair keeps local actions inactive for
 | Tablet | Mobile |
 | --- | --- |
 | ![Velair publication failed tablet](../../screenshots/external-error-tablet.png) | ![Velair publication failed mobile](../../screenshots/external-error-mobile.png) |
+
+## Diagnostics and settings
+
+### Diagnostics
+
+Review scheduler health, managed climate state, delivery failures and a bounded local runtime history.
+
+#### Healthy system
+
+Start with a concise health summary, then inspect the effective setup and runtime evidence for each climate.
+
+**Desktop**
+
+![Velair healthy system desktop](../../screenshots/diagnostics-healthy-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair healthy system tablet](../../screenshots/diagnostics-healthy-tablet.png) | ![Velair healthy system mobile](../../screenshots/diagnostics-healthy-mobile.png) |
+
+<a id="errors-detected"></a>
+
+#### Issues detected
+
+See an unavailable managed climate and its backend recovery status without relying exclusively on logs.
+
+**Desktop**
+
+![Velair issues detected desktop](../../screenshots/diagnostics-errors-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair issues detected tablet](../../screenshots/diagnostics-errors-tablet.png) | ![Velair issues detected mobile](../../screenshots/diagnostics-errors-mobile.png) |
+
+### Settings
+
+Set temperature units, the first weekday, startup behavior, external execution
+and the order of climates and room groups.
+
+**Desktop**
+
+![Velair settings desktop](../../screenshots/settings-desktop.png)
+
+| Tablet | Mobile |
+| --- | --- |
+| ![Velair settings tablet](../../screenshots/settings-tablet.png) | ![Velair settings mobile](../../screenshots/settings-mobile.png) |

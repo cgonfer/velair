@@ -9,7 +9,7 @@ Vertalingen: [Engels origineel](room-groups.md) · [Español](room-groups.es.md)
 | Gegeven | Status |
 | --- | --- |
 | Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Laatst gesynchroniseerd | 2026-11-08 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -145,7 +145,8 @@ Een verwijderd lid krijgt een onafhankelijke kopie van de gezamenlijke configura
 Bijvoorbeeld: één apparaat uit een groep van drie verwijderen laat twee leden met een nieuwe groepsgeschiedenis en één onafhankelijk apparaat met een nieuwe geschiedenis achter. De groep verwijderen maakt alle drie onafhankelijk. Geen van beide herstelt automatisch de oude geschiedenissen van vóór de groep. Bewaar minstens twee leden in een opgeslagen groep; hef deze op als alle apparaten onafhankelijk moeten worden.
 
 <a id="before-testing-the-beta"></a>
-## Voor het testen van de bèta
+<a id="check-the-group-configuration"></a>
+## De groepsconfiguratie controleren
 
 Maak een configuratieback-up, inclusief voorconditioneringsleren indien nodig. Controleer na beoordelen en opslaan:
 

@@ -1,6 +1,6 @@
 # Manual Testing
 
-## Event-driven recovery and bounded work (beta.11)
+## Event-driven recovery and bounded work
 
 1. Hold a schedule save for the affected zone across a due weekly early start.
    Check successful commit

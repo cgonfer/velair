@@ -230,7 +230,7 @@ class QualitySiteTests(unittest.TestCase):
             self.assertIn('src="../app.js" defer', rendered)
             self.assertIn('class="theme-toggle"', rendered)
             self.assertIn('aria-controls="site-navigation"', rendered)
-            self.assertIn('href="../index.html#schedules"', rendered)
+            self.assertIn('href="../index.html#features"', rendered)
             self.assertIn('href="index.html" aria-current="page"', rendered)
             self.assertLess(rendered.index('src="../theme-init.js"'), rendered.index('<body'))
 

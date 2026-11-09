@@ -1018,8 +1018,11 @@ class VelairScheduler:
             values[key] = deepcopy(result)
         return deepcopy(values[key])
 
-    def _ensure_current_control_unit(self, entity_id):
-        if entity_id not in self._data["zones"]:
+    def _ensure_current_control_unit(self, entity_id, *, requested_entity_id=None):
+        if entity_id not in self._data["zones"] or (
+            requested_entity_id is not None
+            and self.owner_for_entity(requested_entity_id) != entity_id
+        ):
             raise ConfigurationResourceError("revision_conflict", "Group membership changed; reload before retrying this action")
 
     def _configured_physical_entities(self) -> list[str]:
@@ -3076,8 +3079,8 @@ class VelairScheduler:
         swing_horizontal_mode: str | None = None,
     ) -> None:
         """Set a temporary boost override for one zone."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
-        self._ensure_local_execution(entity_id)
         # Expiry owns removal and lifecycle events. Do not overwrite even an
         # already-due canonical reason before that transaction completes.
         if self._zone_pause_reasons(entity_id):
@@ -3089,29 +3092,30 @@ class VelairScheduler:
                 **({ATTR_TARGET_TEMP_HIGH: target_temp_high} if target_temp_high is not None else {}),
             }
         )
-        normalized_target = {
-            key: self.normalize_target_temperature(entity_id, value)
-            for key, value in target.items()
-        }
-        is_range = ATTR_TARGET_TEMP_LOW in normalized_target
-        self._climate_manager.validate_temperature_target(
-            entity_id,
-            range_target=is_range,
-            hvac_mode=hvac_mode,
-            ensure_on=True,
-        )
-        climate_options = self._climate_options_for_entity(
-            entity_id,
-            _climate_options(
-                fan_mode=fan_mode,
-                humidity=humidity,
-                preset_mode=preset_mode,
-                swing_mode=swing_mode,
-                swing_horizontal_mode=swing_horizontal_mode,
-            ),
-        )
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
+            self._ensure_local_execution(entity_id)
+            normalized_target = {
+                key: self.normalize_target_temperature(entity_id, value)
+                for key, value in target.items()
+            }
+            is_range = ATTR_TARGET_TEMP_LOW in normalized_target
+            self._climate_manager.validate_temperature_target(
+                entity_id,
+                range_target=is_range,
+                hvac_mode=hvac_mode,
+                ensure_on=True,
+            )
+            climate_options = self._climate_options_for_entity(
+                entity_id,
+                _climate_options(
+                    fan_mode=fan_mode,
+                    humidity=humidity,
+                    preset_mode=preset_mode,
+                    swing_mode=swing_mode,
+                    swing_horizontal_mode=swing_horizontal_mode,
+                ),
+            )
             await self._async_store_zone_boost(
                 entity_id,
                 until=until,
@@ -3254,10 +3258,11 @@ class VelairScheduler:
 
     async def async_cancel_zone_boost(self, entity_id: str) -> None:
         """Cancel one active boost and restore the scheduled or previous state."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self._ensure_local_execution(entity_id)
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             override = self._data["zones"][entity_id].get("override")
             if not _is_boost_override(override):
                 return
@@ -3296,6 +3301,7 @@ class VelairScheduler:
         changed_fields: list[str] | None = None,
     ) -> None:
         """Add or update one independently owned zone-pause reason."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self._ensure_local_execution(entity_id)
         if until_next_block and (until is not None or duration_minutes is not None):
@@ -3308,7 +3314,7 @@ class VelairScheduler:
                 raise ValueError("pause_id is reserved for Velair Manual adjustment")
 
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             now = dt_util.now()
             if until_next_block:
                 until = self._next_schedule_block_until(entity_id, now)
@@ -3475,9 +3481,10 @@ class VelairScheduler:
         self, entity_id: str, policy: dict[str, object]
     ) -> dict[str, object]:
         """Serialize policy updates with external control transitions."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             self._ensure_manual_control_mutation_allowed()
             return await self._async_update_external_change_policy_locked(
                 entity_id, policy
@@ -3514,10 +3521,11 @@ class VelairScheduler:
         entity_id: str,
     ) -> None:
         """Hold live state using this climate's persisted adjustment policy."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self._ensure_local_execution(entity_id)
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             self._ensure_manual_control_mutation_allowed()
             self.ensure_managed_entity(entity_id)
             if self._manual_control_status(entity_id, dt_util.now()) is not None:
@@ -3635,7 +3643,7 @@ class VelairScheduler:
             group_snapshot.setdefault("group_members", {})[physical_entity_id] = observed_snapshot
             observed_snapshot = group_snapshot
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=physical_entity_id)
             if self._manual_control_mutation_blocked():
                 return
             await self._async_handle_external_climate_change_locked(
@@ -3917,10 +3925,11 @@ class VelairScheduler:
 
     async def async_resume_automatic_control(self, entity_id: str) -> None:
         """Serialize automatic resume with other zone control transitions."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self._ensure_local_execution(entity_id)
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             self._ensure_manual_control_mutation_allowed()
             await self._async_resume_automatic_control_locked(entity_id)
 
@@ -3972,6 +3981,7 @@ class VelairScheduler:
         internal: bool = False,
     ) -> None:
         """Resume automatic schedule execution for one zone."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self._ensure_local_execution(entity_id)
         if pause_id is not None:
@@ -3984,7 +3994,7 @@ class VelairScheduler:
             raise ValueError("resume_all: false requires pause_id")
 
         async with self._zone_override_lock(entity_id):
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             reasons = self._zone_pause_reasons(entity_id)
             if not reasons:
                 return
@@ -4057,6 +4067,7 @@ class VelairScheduler:
 
     async def async_update_zone_range_reference(self, entity_id, target_range_reference, expected_revision):
         """Persist the shared thermal reference before retiring runtime intent."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         from .target_format_policy import validate_range_reference
         self.ensure_managed_entity(entity_id)
@@ -4066,17 +4077,18 @@ class VelairScheduler:
         if any(mode not in modes and saved.get(mode) != boundary for mode, boundary in reference.items()):
             raise ValueError("Range references require an advertised heating or cooling mode")
         async with self._profile_mutation_lock:
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             candidate = deepcopy(self._data)
             candidate["zones"][entity_id]["target_range_reference"] = reference
             await self._async_commit_configuration(candidate, expected_revision, allow_room_assist_stop=True)
         self._async_write_state()
 
     async def async_apply_target_range_policy(self, entity_id, target_range_modes, expected_revision, corrections=None):
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         from .target_policy_review import build_policy_review
         async with self._profile_mutation_lock:
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             candidate, preview = build_policy_review(self, entity_id, target_range_modes, expected_revision, corrections)
             if not preview["can_apply"]:
                 raise ConfigurationResourceError("incompatible_configuration",
@@ -4548,11 +4560,11 @@ class VelairScheduler:
             return None
 
     async def async_set_daily_schedule(self, entity_id, weekday, blocks=None, *, template_link=None, unlink_template=False, expected_revision=None):
-        entity_id = self.owner_for_entity(entity_id)
         return await self.async_set_schedule_days(entity_id, [weekday], blocks, template_link=template_link, unlink_template=unlink_template, expected_revision=expected_revision, _legacy=True)
 
     async def async_set_schedule_days(self, entity_id, weekdays=None, blocks=None, *, template_link=None, unlink_template=False, day_layout_key=None, expected_revision=None, _legacy=False):
         """Commit selected days and presentation together, without partial saves."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self.ensure_managed_entity(entity_id)
         days = weekdays if weekdays is not None else []
@@ -4563,6 +4575,7 @@ class VelairScheduler:
         if not days and (day_layout_key is None or blocks is not None or template_link is not None):
             raise ValueError("Provide days or a day layout change")
         async with timed_save_lock(self._profile_mutation_lock, "configuration_lock_wait"):
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             if not _legacy and expected_revision is None:
                 raise ConfigurationResourceError("revision_conflict", "Grouped edits require a configuration revision")
             candidate = deepcopy(self._data)
@@ -4585,9 +4598,10 @@ class VelairScheduler:
 
     async def async_copy_day_schedule(self, entity_id, source_weekday, target_weekdays, *, target_entity_ids=None, expected_revision=None):
         """Clone a saved day atomically, preserving its resource references."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         async with self._profile_mutation_lock:
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             if self._temperature_migration_blocked:
                 raise ValueError("Velair is stopped until the temperature-data migration is resolved")
             self.ensure_managed_entity(entity_id)
@@ -4617,10 +4631,11 @@ class VelairScheduler:
             await self._async_commit_configuration(candidate, self._data.get("configuration_revision", 0) if expected_revision is None else expected_revision)
 
     async def async_clear_schedule(self, entity_id, weekday=None):
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self.ensure_managed_entity(entity_id)
         async with self._profile_mutation_lock:
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             candidate = deepcopy(self._data)
             zone = candidate["zones"][entity_id]
             for day in WEEKDAYS if weekday is None else [weekday]:
@@ -4680,9 +4695,10 @@ class VelairScheduler:
     async def async_set_zone_execution(
         self, entity_id: str, provider: str | None
     ) -> None:
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         async with self._profile_mutation_lock:
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             await self._async_set_zone_execution_locked(entity_id, provider)
 
     async def _async_set_zone_execution_locked(
@@ -4818,9 +4834,10 @@ class VelairScheduler:
         self, entity_id: str, preconditioning: dict,
     ) -> PreconditioningData:
         """Serialize graph edits with configuration and import mutations."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         async with self._profile_mutation_lock:
-            self._ensure_current_control_unit(entity_id)
+            self._ensure_current_control_unit(entity_id, requested_entity_id=requested_entity_id)
             return await self._async_update_zone_preconditioning_locked(entity_id, preconditioning)
 
     async def _async_update_zone_preconditioning_locked(
@@ -5116,6 +5133,7 @@ class VelairScheduler:
         enabled: bool,
     ) -> PreconditioningData:
         """Enable or disable Room Sensor Assist for one zone."""
+        requested_entity_id = entity_id
         entity_id = self.owner_for_entity(entity_id)
         self._ensure_local_execution(entity_id)
         current = self._normalize_preconditioning_for_entity(
@@ -5128,7 +5146,7 @@ class VelairScheduler:
                 "Room Sensor Assist requires a configured room temperature sensor"
             )
         return await self.async_update_zone_preconditioning(
-            entity_id,
+            requested_entity_id,
             {"room_sensor_assist_enabled": enabled},
         )
 
@@ -5645,8 +5663,9 @@ class VelairScheduler:
 
     async def async_set_zone_profile(self, entity_id: str, profile_id: str | None, *, source: str = "service") -> None:
         """Substitute one zone with a Profile slice or explicit Default."""
-        entity_id = self.owner_for_entity(entity_id)
         async with self._profile_mutation_lock:
+            # A queued group edit may change the physical climate's owner.
+            entity_id = self.owner_for_entity(entity_id)
             self._ensure_current_control_unit(entity_id)
             if not isinstance(entity_id, str) or not isinstance(profile_id, (str, type(None))) or profile_id == "":
                 raise ValueError("A managed entity and Profile identifier or null are required")
@@ -5664,10 +5683,14 @@ class VelairScheduler:
         """Restore the current base for the explicitly requested zones."""
         async with self._profile_mutation_lock:
             entities = [entity_ids] if isinstance(entity_ids, str) else entity_ids
-            if not isinstance(entities, list) or any(not isinstance(entity, str) or entity not in self._data["zones"] for entity in entities):
+            if not isinstance(entities, list) or any(not isinstance(entity, str) for entity in entities):
                 raise ValueError("A managed climate entity or list is required")
             if len(set(entities)) != len(entities):
                 raise ValueError("Climate entities must be unique")
+            # Different members (or the group itself) may name the same owner.
+            entities = list(dict.fromkeys(self.owner_for_entity(entity) for entity in entities))
+            if any(entity not in self._data["zones"] for entity in entities):
+                raise ValueError("A managed climate entity or list is required")
             if not entities:
                 return
             selection = self.profile_selection

@@ -125,11 +125,14 @@ jobs:
         working-directory: frontend
         run: npm run test:e2e:calibration
 
+      - name: Install Chromium for browser regressions
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
       - name: Check public website themes and navigation
         if: needs.impact.outputs.website == 'true'
         working-directory: frontend
         run: |
-          npx playwright install --with-deps chromium
           python ../scripts/quality/site.py --output ../website/public/quality --empty
           node --test ../tests/website/*.test.mjs
 
@@ -150,6 +153,10 @@ jobs:
       - name: Build frontend bundle
         working-directory: frontend
         run: npm run build
+
+      - name: Check screenshot tooling layouts
+        working-directory: frontend
+        run: node --test ../tests/screenshots/*.test.mjs
 
       - name: Upload custom component artifact
         uses: actions/upload-artifact@v7

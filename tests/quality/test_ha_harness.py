@@ -179,6 +179,32 @@ class ReproducibilityTest(unittest.TestCase):
             self.assertFalse(args.state_file.exists())
             self.assertTrue(component.exists())
 
+    def test_additional_fixture_is_prepared_before_launch_and_failure_is_cleaned(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            component = root / "component"
+            component.mkdir()
+            (component / "manifest.json").write_text('{"domain":"velair"}')
+            args = SimpleNamespace(output=root / "output", state_file=root / "private/state.json",
+                                   component=component, image="fixture-image", size="small", port=18123)
+            prepared = []
+
+            def prepare(directory):
+                self.assertTrue((directory / "configuration.yaml").is_file())
+                self.assertTrue((directory / "custom_components/velair/manifest.json").is_file())
+                self.assertTrue((directory / "custom_components/velair_test/manifest.json").is_file())
+                prepared.append(directory)
+                raise ha.HarnessError("fixture preparation failed")
+
+            with patch.object(ha, "docker", return_value="") as docker, patch.object(ha, "sanitized_logs"):
+                with self.assertRaisesRegex(ha.HarnessError, "fixture preparation failed"):
+                    ha.start(args, prepare_config=prepare)
+            self.assertEqual(len(prepared), 1)
+            self.assertFalse(prepared[0].exists())
+            self.assertFalse(args.state_file.exists())
+            self.assertFalse(any(call.args[0] == "run" for call in docker.call_args_list))
+
 
 if __name__ == "__main__":
     unittest.main()

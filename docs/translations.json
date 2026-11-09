@@ -5,64 +5,64 @@
       "translations": {
         "es": {
           "path": "docs/user/room-groups.es.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/room-groups.fr.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/room-groups.de.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/room-groups.it.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/room-groups.nl.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/room-groups.pl.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/room-groups.pt-br.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/room-groups.pt-pt.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/room-groups.ru.md",
-          "sourceHash": "57bd272bc0953df1b0467d7ddd3909f2765354774df5f28deeb5045f0dc952f6",
-          "synchronizedAt": "2026-10-28",
+          "sourceHash": "fe74a581048ec8fe57e1d58f73840ca815054e6a7158553964e125a4eb5886f7",
+          "synchronizedAt": "2026-11-08",
           "referenceVersion": "1.9.0-beta.6",
           "reviewStatus": "automatic"
         }

@@ -1,0 +1,669 @@
+{
+  "schemaVersion": 1,
+  "language": "en",
+  "themes": [
+    "dark"
+  ],
+  "captures": [
+    {
+      "name": "room-groups-desktop.png",
+      "view": "room-groups",
+      "phase": "household",
+      "width": 1440,
+      "height": 2200,
+      "scale": 2,
+      "maxHeight": 2050,
+      "complete": true
+    },
+    {
+      "name": "room-groups-tablet.png",
+      "view": "room-groups",
+      "phase": "household",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2550,
+      "complete": true
+    },
+    {
+      "name": "room-groups-mobile.png",
+      "view": "room-groups",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3550,
+      "complete": true
+    },
+    {
+      "name": "presets-desktop.png",
+      "view": "presets",
+      "phase": "household",
+      "width": 1440,
+      "height": 2200,
+      "scale": 2,
+      "maxHeight": 2050,
+      "complete": true
+    },
+    {
+      "name": "presets-tablet.png",
+      "view": "presets",
+      "phase": "household",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2550,
+      "complete": true
+    },
+    {
+      "name": "presets-mobile.png",
+      "view": "presets",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3550,
+      "complete": true
+    },
+    {
+      "name": "supply-control-desktop.png",
+      "view": "supply-control",
+      "phase": "household",
+      "width": 1440,
+      "height": 2200,
+      "scale": 2,
+      "maxHeight": 2050,
+      "complete": true
+    },
+    {
+      "name": "supply-control-tablet.png",
+      "view": "supply-control",
+      "phase": "household",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2550,
+      "complete": true
+    },
+    {
+      "name": "supply-control-mobile.png",
+      "view": "supply-control",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3550,
+      "complete": true
+    },
+    {
+      "name": "comfort-desktop.png",
+      "view": "comfort",
+      "phase": "household",
+      "width": 1440,
+      "height": 1500,
+      "scale": 2,
+      "maxHeight": 1350,
+      "complete": true
+    },
+    {
+      "name": "comfort-tablet.png",
+      "view": "comfort",
+      "phase": "household",
+      "width": 820,
+      "height": 1800,
+      "scale": 2,
+      "maxHeight": 1650,
+      "complete": true
+    },
+    {
+      "name": "comfort-mobile.png",
+      "view": "comfort",
+      "phase": "household",
+      "width": 390,
+      "height": 2400,
+      "scale": 3,
+      "maxHeight": 2250,
+      "complete": true
+    },
+    {
+      "name": "overview-desktop.png",
+      "view": "overview",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "overview-tablet.png",
+      "view": "overview",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "overview-mobile.png",
+      "view": "overview",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "climate-card-desktop.png",
+      "view": "climate-card",
+      "phase": "household",
+      "width": 1100,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "climate-card-tablet.png",
+      "view": "climate-card",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "climate-card-mobile.png",
+      "view": "climate-card",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "schedules-desktop.png",
+      "view": "schedules",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "schedules-tablet.png",
+      "view": "schedules",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "schedules-mobile.png",
+      "view": "schedules",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "profiles-desktop.png",
+      "view": "profiles",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "profiles-tablet.png",
+      "view": "profiles",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "profiles-mobile.png",
+      "view": "profiles",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "modes-desktop.png",
+      "view": "modes",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "modes-tablet.png",
+      "view": "modes",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "modes-mobile.png",
+      "view": "modes",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "active-setup-change-desktop.png",
+      "view": "active-setup",
+      "phase": "household",
+      "width": 1440,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "active-setup-change-tablet.png",
+      "view": "active-setup",
+      "phase": "household",
+      "width": 820,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "active-setup-change-mobile.png",
+      "view": "active-setup",
+      "phase": "household",
+      "width": 390,
+      "height": 2100,
+      "scale": 3,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "templates-desktop.png",
+      "view": "templates",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": false
+    },
+    {
+      "name": "templates-tablet.png",
+      "view": "templates",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": false
+    },
+    {
+      "name": "templates-mobile.png",
+      "view": "templates",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": false
+    },
+    {
+      "name": "room-assist-desktop-1.png",
+      "view": "sensors",
+      "phase": "household",
+      "width": 1440,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "room-assist-tablet-1.png",
+      "view": "sensors",
+      "phase": "household",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "room-assist-mobile-1.png",
+      "view": "sensors",
+      "phase": "household",
+      "width": 390,
+      "height": 2700,
+      "scale": 3,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "room-assist-desktop-2.png",
+      "view": "sensors-holding",
+      "phase": "household",
+      "width": 1440,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "room-assist-tablet-2.png",
+      "view": "sensors-holding",
+      "phase": "household",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "room-assist-mobile-2.png",
+      "view": "sensors-holding",
+      "phase": "household",
+      "width": 390,
+      "height": 2700,
+      "scale": 3,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "preconditioning-desktop.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "width": 1440,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "preconditioning-tablet.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "preconditioning-mobile.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "width": 390,
+      "height": 2700,
+      "scale": 3,
+      "maxHeight": 2200,
+      "complete": true
+    },
+    {
+      "name": "diagnostics-healthy-desktop.png",
+      "view": "diagnostics",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "diagnostics-healthy-tablet.png",
+      "view": "diagnostics",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "diagnostics-healthy-mobile.png",
+      "view": "diagnostics",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "settings-desktop.png",
+      "view": "settings",
+      "phase": "household",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2450,
+      "complete": true
+    },
+    {
+      "name": "settings-tablet.png",
+      "view": "settings",
+      "phase": "household",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2950,
+      "complete": true
+    },
+    {
+      "name": "settings-mobile.png",
+      "view": "settings",
+      "phase": "household",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3550,
+      "complete": true
+    },
+    {
+      "name": "external-settings-desktop.png",
+      "view": "external-settings",
+      "phase": "household",
+      "width": 1440,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-settings-tablet.png",
+      "view": "external-settings",
+      "phase": "household",
+      "width": 820,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-settings-mobile.png",
+      "view": "external-settings",
+      "phase": "household",
+      "width": 390,
+      "height": 2100,
+      "scale": 3,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-published-desktop.png",
+      "view": "external",
+      "phase": "household",
+      "width": 1440,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-published-tablet.png",
+      "view": "external",
+      "phase": "household",
+      "width": 820,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-published-mobile.png",
+      "view": "external",
+      "phase": "household",
+      "width": 390,
+      "height": 2100,
+      "scale": 3,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-publishing-desktop.png",
+      "view": "external",
+      "phase": "external-publishing",
+      "width": 1440,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-publishing-tablet.png",
+      "view": "external",
+      "phase": "external-publishing",
+      "width": 820,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-publishing-mobile.png",
+      "view": "external",
+      "phase": "external-publishing",
+      "width": 390,
+      "height": 2100,
+      "scale": 3,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-error-desktop.png",
+      "view": "external",
+      "phase": "external-error",
+      "width": 1440,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-error-tablet.png",
+      "view": "external",
+      "phase": "external-error",
+      "width": 820,
+      "height": 2100,
+      "scale": 2,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "external-error-mobile.png",
+      "view": "external",
+      "phase": "external-error",
+      "width": 390,
+      "height": 2100,
+      "scale": 3,
+      "maxHeight": 1600,
+      "complete": true
+    },
+    {
+      "name": "diagnostics-errors-desktop.png",
+      "view": "diagnostics",
+      "phase": "diagnostics-errors",
+      "width": 1440,
+      "height": 2600,
+      "scale": 2,
+      "maxHeight": 2100,
+      "complete": true
+    },
+    {
+      "name": "diagnostics-errors-tablet.png",
+      "view": "diagnostics",
+      "phase": "diagnostics-errors",
+      "width": 820,
+      "height": 3100,
+      "scale": 2,
+      "maxHeight": 2600,
+      "complete": true
+    },
+    {
+      "name": "diagnostics-errors-mobile.png",
+      "view": "diagnostics",
+      "phase": "diagnostics-errors",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3200,
+      "complete": true
+    },
+    {
+      "name": "planned-return-desktop.png",
+      "view": "planned-return",
+      "phase": "return",
+      "width": 1440,
+      "height": 2200,
+      "scale": 2,
+      "maxHeight": 2050,
+      "complete": true
+    },
+    {
+      "name": "planned-return-tablet.png",
+      "view": "planned-return",
+      "phase": "return",
+      "width": 820,
+      "height": 2700,
+      "scale": 2,
+      "maxHeight": 2550,
+      "complete": true
+    },
+    {
+      "name": "planned-return-mobile.png",
+      "view": "planned-return",
+      "phase": "return",
+      "width": 390,
+      "height": 3700,
+      "scale": 3,
+      "maxHeight": 3550,
+      "complete": true
+    }
+  ]
+}

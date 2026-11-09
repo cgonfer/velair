@@ -1674,6 +1674,7 @@ export const pt_pt = {
   "templatesPanelIntro": "Crie programações diárias reutilizáveis ​​e aplique-as a termóstatos e dias compatíveis.",
   "time": "Hora",
   "timeline": "Linha do tempo",
+  "timelineScrollHint": "Desloque a vista na horizontal para ver o dia completo.",
   "timelineContinuesFrom": "De {day}, {time}",
   "title": "Título",
   "unableApplyThermostats": "Não é possível aplicar a programação aos termóstatos",

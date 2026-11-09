@@ -9,6 +9,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from .helpers import FakeClimateManager, VelairScheduler, normalize_schedule_data, NOW
 from .test_profiles import _available_hass, _profile
 from custom_components.velair.scheduler import _PreconditioningSession
+from custom_components.velair.room_groups import build_group_candidate
+from custom_components.velair import api, services
+from custom_components.velair.const import DOMAIN
 
 
 class ProfileSelectionTest(unittest.IsolatedAsyncioTestCase):
@@ -43,6 +46,110 @@ class ProfileSelectionTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_clear_profile_overrides(["climate.office"])
         self.assertEqual(self.scheduler.active_mode_id, "winter-mode")
 
+    async def _group_salon_and_office(self):
+        group = {
+            "id": "group.living_room", "name": "Living room",
+            "members": ["climate.salon", "climate.office"],
+            "temperature_entity_id": "climate.salon", "delivery_mode": "all",
+        }
+        self.data, _ = build_group_candidate(self.data, self.entities, group, "climate.salon")
+        await self.scheduler.async_stop()
+        self.scheduler = VelairScheduler(
+            _available_hass(*self.entities), self.data, self.manager, self.save,
+        )
+        await self.scheduler.async_set_zone_profile("climate.office", "work")
+        await self.scheduler.async_set_zone_profile("climate.bedroom", None)
+        self.save.reset_mock()
+        self.manager.calls.clear()
+
+    async def test_grouped_member_clears_only_its_group_exception(self):
+        await self._group_salon_and_office()
+        await self.scheduler.async_clear_profile_overrides("climate.office")
+        self.assertEqual(self.scheduler.profile_selection["zone_profile_overrides"], {
+            "climate.bedroom": None,
+        })
+        self.assertEqual(self.scheduler.effective_zone_profiles["group.living_room"], "winter")
+        self.save.assert_awaited_once()
+
+    async def test_group_aliases_and_independent_room_clear_in_one_transition(self):
+        await self._group_salon_and_office()
+        with patch.object(self.scheduler, "_async_activate_profiles_locked",
+                          wraps=self.scheduler._async_activate_profiles_locked) as activate:
+            await self.scheduler.async_clear_profile_overrides([
+                "climate.salon", "climate.office", "group.living_room", "climate.bedroom",
+            ])
+        self.assertEqual(self.scheduler.profile_selection["zone_profile_overrides"], {})
+        self.assertEqual(self.scheduler.active_mode_id, "winter-mode")
+        self.save.assert_awaited_once()
+        activate.assert_awaited_once()
+        self.assertEqual(activate.await_args.kwargs["publication_scope"], {
+            "group.living_room", "climate.bedroom",
+        })
+
+    async def test_invalid_group_clear_batch_has_no_partial_effects(self):
+        await self._group_salon_and_office()
+        previous = deepcopy(self.data)
+        self.scheduler._planned_return.cancel = AsyncMock()
+        invalid_targets = (
+            ["climate.office", "climate.unmanaged"],
+            ["climate.office", "group.missing"],
+            ["climate.office", None],
+            ["climate.office", []],
+            ["climate.office", "climate.office"],
+            ("climate.office",), None,
+        )
+        for targets in invalid_targets:
+            with self.subTest(targets=targets), self.assertRaises(ValueError):
+                await self.scheduler.async_clear_profile_overrides(targets)
+            self.assertEqual(self.data, previous)
+            self.assertEqual(self.manager.calls, [])
+            self.save.assert_not_awaited()
+            self.scheduler._planned_return.cancel.assert_not_awaited()
+
+    async def test_group_clear_failed_save_preserves_all_exceptions(self):
+        await self._group_salon_and_office()
+        previous = deepcopy(self.data)
+        self.save.side_effect = OSError("disk")
+        with self.assertRaises(OSError):
+            await self.scheduler.async_clear_profile_overrides("climate.office")
+        self.assertEqual(self.data, previous)
+        self.assertEqual(self.manager.calls, [])
+
+    async def test_service_clears_group_exception_from_selected_climate(self):
+        await self._group_salon_and_office()
+        registry = Mock()
+        registry.has_service.return_value = False
+        hass = SimpleNamespace(services=registry, data={DOMAIN: {"entry": {
+            "scheduler": self.scheduler,
+            "storage": SimpleNamespace(temperature_migration_required=False),
+        }}})
+        await services.async_setup_services(hass)
+        registration = next(call for call in registry.async_register.call_args_list
+                            if call.args[1] == "clear_profile_overrides")
+        handler, schema = registration.args[2], registration.kwargs["schema"]
+        await handler(SimpleNamespace(data=schema({"entity_id": "climate.office"})))
+        self.assertEqual(self.scheduler.profile_selection["zone_profile_overrides"], {
+            "climate.bedroom": None,
+        })
+        self.save.assert_awaited_once()
+
+    async def test_websocket_clears_group_exception_from_member(self):
+        await self._group_salon_and_office()
+        runtime = {"scheduler": self.scheduler}
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        with patch.object(api, "_get_runtime", return_value=runtime), \
+             patch.object(api, "_reject_temperature_migration_mutation", return_value=False), \
+             patch.object(api, "_build_schedule_response", return_value={"updated": True}):
+            await api.ws_clear_profile_overrides(Mock(), connection, {
+                "id": 9, "entity_id": ["climate.office"],
+            })
+        connection.send_error.assert_not_called()
+        connection.send_result.assert_called_once_with(9, {"updated": True})
+        self.assertEqual(self.scheduler.profile_selection["zone_profile_overrides"], {
+            "climate.bedroom": None,
+        })
+        self.save.assert_awaited_once()
+
     async def test_zone_scopes_multizone_profile_and_explicit_default(self):
         await self.scheduler.async_set_zone_profile("climate.office", "work")
         self.assertEqual(self.scheduler.effective_zone_profiles["climate.salon"], "winter")
@@ -64,6 +171,52 @@ class ProfileSelectionTest(unittest.IsolatedAsyncioTestCase):
     async def test_concurrent_zone_changes_survive(self):
         await asyncio.gather(self.scheduler.async_set_zone_profile("climate.office", "work"), self.scheduler.async_set_zone_profile("climate.salon", "visit"))
         self.assertEqual(self.scheduler.profile_selection["zone_profile_overrides"], {"climate.office": "work", "climate.salon": "visit"})
+
+    async def test_queued_zone_profile_uses_membership_after_group_edit(self):
+        self.entities.append("climate.kitchen")
+        self.data["zones"]["climate.kitchen"] = normalize_schedule_data(
+            None, ["climate.kitchen"],
+        )["zones"]["climate.kitchen"]
+        await self._group_salon_and_office()
+        self.manager.temperature_unit = lambda _entity: "°C"
+        await self.scheduler.async_clear_profile_overrides([
+            "group.living_room", "climate.bedroom",
+        ])
+        await self.scheduler.async_set_zone_profile("climate.kitchen", None)
+        group = {
+            **self.data["room_groups"]["group.living_room"],
+            "members": ["climate.salon", "climate.bedroom"],
+        }
+        editing = asyncio.Event()
+        original_commit = self.scheduler._async_commit_group_candidate
+
+        async def commit(candidate):
+            editing.set()
+            return await original_commit(candidate)
+
+        # The real group mutation owns the Profile lock while waiting for an
+        # in-flight timer operation. Queue the member selection behind it.
+        with patch.object(self.scheduler, "_async_commit_group_candidate", side_effect=commit):
+            async with self.scheduler._timer_lock:
+                edit = asyncio.create_task(self.scheduler.async_set_room_group(
+                    group, self.data.get("configuration_revision", 0),
+                ))
+                await asyncio.wait_for(editing.wait(), timeout=1)
+                select = asyncio.create_task(self.scheduler.async_set_zone_profile(
+                    "climate.office", "work",
+                ))
+                await asyncio.sleep(0)
+                self.assertFalse(select.done())
+            await asyncio.gather(edit, select)
+
+        self.assertEqual(self.scheduler.owner_for_entity("climate.office"), "climate.office")
+        self.assertEqual(self.scheduler.profile_selection, {
+            "base_profile_ids": ["winter"], "base_mode_id": "winter-mode",
+            "zone_profile_overrides": {"climate.kitchen": None, "climate.office": "work"},
+        })
+        self.assertEqual(self.scheduler.effective_zone_profiles["group.living_room"], "winter")
+        self.assertEqual(self.scheduler.effective_zone_profiles["climate.office"], "work")
+        self.assertIsNone(self.scheduler.effective_zone_profiles["climate.kitchen"])
 
     async def test_empty_batches_are_true_noops(self):
         self.scheduler._planned_return.cancel = AsyncMock()

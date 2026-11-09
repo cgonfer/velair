@@ -175,6 +175,169 @@ class RoomGroupRuntimeTest(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_replace_portable_data(room_groups=deepcopy(self.data["room_groups"]), zones=zones, profiles=[])
         self.assertEqual(self.data["zones"]["group.room"]["schedule"]["monday"][0]["temperature"], 23.0)
 
+    async def _assert_queued_action_rejected_after_group_edit(
+        self, action, expected_state, *, requested_entity="climate.b",
+        maximum_temperature=None, error="membership changed", valid_action=None,
+    ):
+        self.data["zones"]["climate.c"] = deepcopy(self.base["zones"]["climate.a"])
+        self.hass.states["climate.c"] = deepcopy(self.hass.states["climate.a"])
+        if maximum_temperature is not None:
+            self.hass.states["climate.c"].attributes["max_temp"] = maximum_temperature
+        lock = self.scheduler._zone_override_lock("group.room")
+        await lock.acquire()
+        commit_waiting = asyncio.Event()
+        acquire = lock.acquire
+
+        async def observe_acquire():
+            commit_waiting.set()
+            await acquire()
+
+        saved = []
+        delivery_generations = []
+
+        async def record_save():
+            saved.append(deepcopy(self.data))
+            delivery_generations.append(dict(self.scheduler._climate_delivery._generations))
+
+        self.save.side_effect = record_save
+        with patch.object(lock, "acquire", side_effect=observe_acquire), patch.object(
+            self.scheduler, "async_schedule_next_event"
+        ) as schedule_next:
+            edit = asyncio.create_task(self.scheduler.async_set_room_group(
+                {**GROUP, "members": ["climate.a", "climate.c"]},
+                self.data.get("configuration_revision", 0)))
+            try:
+                await asyncio.wait_for(commit_waiting.wait(), timeout=1)
+                queued = asyncio.create_task(action(requested_entity))
+                await asyncio.sleep(0)
+                self.assertFalse(queued.done())
+            finally:
+                lock.release()
+            await edit
+            with self.assertRaisesRegex(ValueError, error):
+                await queued
+            self.assertEqual(self.data, saved[0])
+            self.assertEqual(self.save.await_count, 1)
+            self.assertEqual(schedule_next.call_count, 1)
+            self.assertEqual(self.hass.services.calls, [])
+            self.assertEqual(self.scheduler._climate_delivery._generations, delivery_generations[0])
+            self.assertEqual(self.scheduler._climate_delivery._tasks, {})
+            self.assertEqual(self.scheduler._climate_delivery._confirmation_deadlines, {})
+            self.assertEqual(self.scheduler.owner_for_entity("climate.b"), "climate.b")
+            for entity in ("group.room", "climate.b"):
+                self.assertEqual(self.scheduler.get_zone_override_status(entity)["state"], "none")
+            await (valid_action or action)("group.room")
+            self.assertEqual(self.scheduler.get_zone_override_status("group.room")["state"], expected_state)
+            self.assertEqual(self.scheduler.get_zone_override_status("climate.b")["state"], "none")
+
+    async def test_queued_boost_rejects_member_removed_from_surviving_group(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            lambda entity: self.scheduler.async_set_zone_boost(
+                entity, 24.0, (NOW + timedelta(hours=1)).isoformat(), "heat"), "boost")
+
+    async def test_queued_pause_rejects_member_removed_from_surviving_group(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            lambda entity: self.scheduler.async_pause_zone(entity, action="turn_off"), "paused")
+
+    async def test_queued_boost_revalidates_retained_group_current_limits_before_saving(self):
+        until = (NOW + timedelta(hours=1)).isoformat()
+        await self._assert_queued_action_rejected_after_group_edit(
+            lambda entity: self.scheduler.async_set_zone_boost(entity, 24.0, until, "heat"),
+            "boost", requested_entity="climate.a", maximum_temperature=22.0,
+            error="Temperature must be between 5 and 22",
+            valid_action=lambda entity: self.scheduler.async_set_zone_boost(entity, 21.0, until, "heat"))
+        self.assertEqual(self.data["zones"]["group.room"]["override"]["temperature"], 21.0)
+
+    async def test_queued_manual_rejects_member_removed_from_surviving_group(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            self.scheduler.async_enter_manual_adjustment, "paused")
+
+    async def test_queued_cancel_boost_rejects_removed_member(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            self.scheduler.async_cancel_zone_boost, "none")
+
+    async def test_queued_resume_rejects_removed_member(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            self.scheduler.async_resume_zone, "none")
+
+    async def test_queued_automatic_control_rejects_removed_member(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            self.scheduler.async_resume_automatic_control, "none")
+
+    async def test_queued_external_policy_rejects_removed_member(self):
+        await self._assert_queued_action_rejected_after_group_edit(
+            lambda entity: self.scheduler.async_update_external_change_policy(
+                entity, {"action": "until_resumed"}), "none")
+        self.assertEqual(self.data["zones"]["group.room"]["external_change_policy"]["action"], "until_resumed")
+
+    async def test_queued_external_observation_rejects_removed_member(self):
+        self.data["zones"]["group.room"]["external_change_policy"]["action"] = "until_resumed"
+        await self._assert_queued_action_rejected_after_group_edit(
+            lambda entity: self.scheduler.async_handle_external_climate_change(
+                entity, changed_fields=["temperature"],
+                previous={"temperature": 20.0}, current={"temperature": 23.0},
+                observed_snapshot={"temperature": 23.0, "hvac_mode": "heat"}), "paused")
+
+    async def _assert_queued_configuration_rejects_removed_member(self, action):
+        self.data["zones"]["climate.c"] = deepcopy(self.base["zones"]["climate.a"])
+        self.hass.states["climate.c"] = deepcopy(self.hass.states["climate.a"])
+        entered_commit = asyncio.Event()
+        commit = self.scheduler._async_commit_group_candidate
+
+        async def observe_commit(candidate):
+            entered_commit.set()
+            await commit(candidate)
+
+        async with self.scheduler._timer_lock:
+            with patch.object(self.scheduler, "_async_commit_group_candidate", side_effect=observe_commit):
+                edit = asyncio.create_task(self.scheduler.async_set_room_group(
+                    {**GROUP, "members": ["climate.a", "climate.c"]},
+                    self.data.get("configuration_revision", 0)))
+                await asyncio.wait_for(entered_commit.wait(), timeout=1)
+                queued = asyncio.create_task(action("climate.b"))
+                await asyncio.sleep(0)
+                self.assertFalse(queued.done())
+        await edit
+        committed = deepcopy(self.data)
+        with self.assertRaisesRegex(ValueError, "membership changed"):
+            await queued
+        self.assertEqual(self.data, committed)
+        self.assertEqual(self.save.await_count, 1)
+        self.assertEqual(self.hass.services.calls, [])
+
+    async def test_queued_legacy_daily_schedule_preserves_requested_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_set_daily_schedule(
+                entity, "monday", [{"start": "08:00", "temperature": 23.0, "hvac_mode": "heat"}]))
+
+    async def test_queued_clear_schedule_rejects_removed_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            self.scheduler.async_clear_schedule)
+
+    async def test_queued_copy_day_rejects_removed_source_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_copy_day_schedule(entity, "monday", ["tuesday"]))
+
+    async def test_queued_preconditioning_rejects_removed_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_update_zone_preconditioning(entity, {"enabled": True}))
+
+    async def test_queued_room_assist_preserves_requested_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_set_room_sensor_assist(entity, False))
+
+    async def test_queued_execution_rejects_removed_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_set_zone_execution(entity, None))
+
+    async def test_queued_range_reference_rejects_removed_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_update_zone_range_reference(entity, {"heat": "low"}, 0))
+
+    async def test_queued_range_policy_rejects_removed_member(self):
+        await self._assert_queued_configuration_rejects_removed_member(
+            lambda entity: self.scheduler.async_apply_target_range_policy(entity, ["heat"], 0))
+
     async def test_import_can_create_group_in_singleton_runtime(self):
         grouped = deepcopy(self.data)
         self.data.clear()

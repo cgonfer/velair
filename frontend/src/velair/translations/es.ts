@@ -2085,6 +2085,7 @@ export const es = {
   "templatesPanelIntro": "Crea planificaciones diarias reutilizables y aplícalas a termostatos y días compatibles.",
   "time": "Hora",
   "timeline": "Línea temporal",
+  "timelineScrollHint": "Desplázate horizontalmente para ver el día completo.",
   "timelineContinuesFrom": "Desde {day}, {time}",
   "title": "Título",
   "unableApplyThermostats": "No se pudo aplicar la planificación a los termostatos",

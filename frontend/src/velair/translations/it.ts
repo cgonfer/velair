@@ -1821,6 +1821,7 @@ export const it = {
   "templatesPanelIntro": "Crea programmazioni giornaliere riutilizzabili e applicale a termostati e giorni compatibili.",
   "time": "Ora",
   "timeline": "Cronologia",
+  "timelineScrollHint": "Scorri in orizzontale per esplorare l'intera giornata.",
   "timelineContinuesFrom": "Da {day}, {time}",
   "title": "Titolo",
   "unableApplyThermostats": "Impossibile applicare la programmazione ai termostati",

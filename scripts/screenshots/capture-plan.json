@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "language": "en",
+  "themes": ["light", "dark"],
+  "captures": [
+    { "name": "overview-desktop.png", "view": "overview", "width": 1440, "height": 2300, "scale": 2, "maxHeight": 2000, "complete": true },
+    { "name": "overview-mobile.png", "view": "overview", "width": 390, "height": 3400, "scale": 3, "maxHeight": 3000 },
+    { "name": "schedules-desktop.png", "view": "schedules", "width": 1440, "height": 2000, "scale": 2, "maxHeight": 1700, "complete": true },
+    { "name": "modes-desktop.png", "view": "modes", "width": 1440, "height": 1450, "scale": 2, "maxHeight": 1100 },
+    { "name": "room-assist-desktop.png", "view": "sensors", "width": 1440, "height": 1800, "scale": 2, "maxHeight": 1400, "complete": true },
+    { "name": "preconditioning-desktop.png", "view": "preconditioning", "width": 1440, "height": 1800, "scale": 2, "maxHeight": 1450, "complete": true },
+    { "name": "external-published-mobile.png", "view": "external", "width": 500, "height": 1700, "scale": 3, "maxHeight": 1350 },
+    { "name": "room-groups-desktop.png", "view": "room-groups", "width": 1440, "height": 1800, "scale": 2, "maxHeight": 1400 },
+    { "name": "presets-desktop.png", "view": "presets", "width": 1440, "height": 1700, "scale": 2, "maxHeight": 1300 },
+    { "name": "supply-control-desktop.png", "view": "supply-control", "width": 1440, "height": 1500, "scale": 2, "maxHeight": 1100 },
+    { "name": "planned-return-desktop.png", "view": "planned-return", "phase": "return", "width": 1440, "height": 1900, "scale": 2, "maxHeight": 1500, "complete": true }
+  ]
+}

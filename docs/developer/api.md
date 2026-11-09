@@ -449,10 +449,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 23,
+    "portable_model": 26,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.0-beta.11"
+    "integration": "1.9.0"
   }
 }
 ```
@@ -1493,6 +1493,11 @@ entries. Successive requests may replace shared zones. Zone selection accepts a
 fragment of a multizone Profile. Clear accepts an explicit entity or list and
 restores inheritance; empty apply/clear lists do nothing. All fields are required,
 IDs must be text, and duplicates or unmanaged targets are rejected.
+
+For room groups, selecting a managed climate member clears its group's exception.
+Different members and the group ID may appear together in a clear request; they
+resolve to one control unit and are cleared once. Repeating the same input ID
+still rejects the request. Every target is validated before any selection changes.
 
 Explicit custom Mode/Default selections clear exceptions. Manual detaches the
 base Mode without clearing selection. Editing the selected base Mode preserves

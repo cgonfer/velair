@@ -92,10 +92,11 @@ async function select(element: VelairSharedDemandSettings, id: string) {
   await element.updateComplete;
 }
 
-afterEach(() => document.body.replaceChildren());
+afterEach(() => { document.body.replaceChildren(); vi.unstubAllGlobals(); });
 
 describe("shared demand settings", () => {
-  it("creates a focused draft from the clean library empty state without saving anything", async () => {
+  it.each(["HTTPS", "local HTTP"])("creates a focused draft without saving anything over %s", async (access) => {
+    if (access === "local HTTP") vi.stubGlobal("crypto", { getRandomValues: crypto.getRandomValues.bind(crypto) });
     const { element, send } = await setup([]);
     expect(element.shadowRoot!.querySelector(".template-library > .template-placeholder.compact.shared-demand-empty-state")).not.toBeNull();
     expect(element.shadowRoot!.querySelector(".template-library-layout")).toBeNull();
@@ -112,6 +113,7 @@ describe("shared demand settings", () => {
     expect(name.value).toBe("");
     expect(element.shadowRoot!.querySelector<HTMLDetailsElement>('[data-section="rooms"]')!.open).toBe(true);
     expect(element.hasUnsavedChanges).toBe(true);
+    expect(element.shadowRoot!.querySelector<HTMLElement>("[data-supply-id]")!.dataset.supplyId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -625,7 +627,8 @@ describe("shared demand settings", () => {
     expect(send).toHaveBeenCalledWith({ type: "velair/resume_shared_demand", group_id: "boiler", expected_revision: 3 });
   });
 
-  it("creates disabled opt-in supplies with a converted Fahrenheit difference", async () => {
+  it.each(["HTTPS", "local HTTP"])("creates and saves disabled cooling supplies with a Fahrenheit difference over %s", async (access) => {
+    if (access === "local HTTP") vi.stubGlobal("crypto", { getRandomValues: crypto.getRandomValues.bind(crypto) });
     const { element, send } = await setup([], "°F");
     await click(element, "add");
     expect(element.shadowRoot!.querySelector<TestHaSwitch>('[data-field="enabled"]')!.checked).toBe(false);
@@ -638,6 +641,7 @@ describe("shared demand settings", () => {
     zone.checked = true; zone.dispatchEvent(new Event("change", { bubbles: true })); await element.updateComplete;
     await click(element, "save");
     expect(send.mock.calls[0][0].groups[0]).toMatchObject({ enabled: false, direction: "cool", hysteresis: 0.54, zones: { "climate.room": {} } });
+    expect(send.mock.calls[0][0].groups[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
   it("excludes Velair control switches and displays supply delivery failures", async () => {

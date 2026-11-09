@@ -1,0 +1,18 @@
+{
+  "climate": {
+    "entity_id": "climate.showcase_garden_room",
+    "name": "Garden Room",
+    "current_temperature": 24.6,
+    "temperature": 23.0
+  },
+  "sensor": [
+    { "entity_id": "sensor.showcase_room_temperature", "name": "Garden Room sensor", "device_class": "temperature", "unit": "°C", "value": 23.4 },
+    { "entity_id": "sensor.showcase_indoor_humidity", "name": "Garden Room humidity", "device_class": "humidity", "unit": "%", "value": 48.0 },
+    { "entity_id": "sensor.showcase_outdoor_temperature", "name": "Garden temperature", "device_class": "temperature", "unit": "°C", "value": 29.1 },
+    { "entity_id": "sensor.showcase_co2", "name": "Garden Room CO2", "device_class": "carbon_dioxide", "unit": "ppm", "value": 642.0 }
+  ],
+  "binary_sensor": [
+    { "entity_id": "binary_sensor.showcase_office_window", "name": "Garden Room window", "device_class": "window", "value": false },
+    { "entity_id": "binary_sensor.showcase_terrace_door", "name": "Terrace door", "device_class": "door", "value": true }
+  ]
+}

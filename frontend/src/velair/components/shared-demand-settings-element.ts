@@ -6,6 +6,7 @@ import { keyed } from "lit/directives/keyed.js";
 import type { VelairViewHost } from "../host-types";
 import type { ScheduleResponse, SharedSupply } from "../types";
 import { convertTemperatureDelta } from "../domain/temperature-units";
+import { resourceId } from "../domain/resource-id";
 import { backendErrorMessage } from "../domain/backend-errors";
 import { cardStyles } from "../styles/card-styles";
 import { profileStyles } from "../styles/profile-styles";
@@ -297,7 +298,7 @@ export class VelairSharedDemandSettings extends LitElement {
 
   private _add(): void {
     if (this._controlsDisabled) return;
-    const id = crypto.randomUUID();
+    const id = resourceId();
     this._newSupplies.add(id);
     this._focusSupply = id;
     this._selectedSupplyId = id;

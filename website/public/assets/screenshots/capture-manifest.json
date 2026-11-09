@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "version": "1.9.0",
+  "language": "en",
+  "capturedAt": "2026-11-09T20:33:04.493Z",
+  "captures": [
+    {
+      "file": "light/overview-desktop.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "timeline-and-comfort",
+      "viewport": {
+        "width": 1440,
+        "height": 2300
+      },
+      "width": 2076,
+      "height": 1916,
+      "sha256": "227d503204a314f7c54429a37d218127f15f5e93d754da91a91ff20030122947"
+    },
+    {
+      "file": "dark/overview-desktop.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "timeline-and-comfort",
+      "viewport": {
+        "width": 1440,
+        "height": 2300
+      },
+      "width": 2076,
+      "height": 1916,
+      "sha256": "737da76d8d2cc4d46c9ac7906a643422ccc06774a42d6b26f8d95742c2653806"
+    },
+    {
+      "file": "light/overview-mobile.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "full-overview",
+      "viewport": {
+        "width": 390,
+        "height": 3400
+      },
+      "width": 1170,
+      "height": 9000,
+      "sha256": "8a5ae4cb5872a9d95500458d9fbfa8e37a7467be8c922c693bb35fc2aaf06a01"
+    },
+    {
+      "file": "dark/overview-mobile.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "full-overview",
+      "viewport": {
+        "width": 390,
+        "height": 3400
+      },
+      "width": 1170,
+      "height": 9000,
+      "sha256": "3c519ca7f23f39dcbfe3480bf254ccf4224535dd5c6d749ac7e17e3bbdb03957"
+    },
+    {
+      "file": "light/schedules-desktop.png",
+      "view": "schedules",
+      "phase": "household",
+      "framing": "timeline-and-blocks",
+      "viewport": {
+        "width": 1440,
+        "height": 2000
+      },
+      "width": 2024,
+      "height": 1498,
+      "sha256": "848e1e827c80c0bf1d2b5417d9287730ce1e0c266cbbbd50c1de4420e0dcaa56"
+    },
+    {
+      "file": "dark/schedules-desktop.png",
+      "view": "schedules",
+      "phase": "household",
+      "framing": "timeline-and-blocks",
+      "viewport": {
+        "width": 1440,
+        "height": 2000
+      },
+      "width": 2024,
+      "height": 1498,
+      "sha256": "8f2bf91e1000a2b70bcab27d6ea8f6caa555f881c9218dc1a9d90cf9a3adb763"
+    },
+    {
+      "file": "light/modes-desktop.png",
+      "view": "modes",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1450
+      },
+      "width": 2076,
+      "height": 1192,
+      "sha256": "a173f59b15435cec1f0af76985cc58a5a8903d17ce4eb5eb633286ed077454a6"
+    },
+    {
+      "file": "dark/modes-desktop.png",
+      "view": "modes",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1450
+      },
+      "width": 2076,
+      "height": 1192,
+      "sha256": "b3c455d2fdbf319a26807d866fa3f8facde07fb0ff89ff789e2c0fc4b46d0d5b"
+    },
+    {
+      "file": "light/room-assist-desktop.png",
+      "view": "sensors",
+      "phase": "household",
+      "framing": "live-assistance",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "width": 2024,
+      "height": 808,
+      "sha256": "753f86b7bcd2c51c85548e5558441eab4ff1e3dbd671ba9577d9fa150f63126b"
+    },
+    {
+      "file": "dark/room-assist-desktop.png",
+      "view": "sensors",
+      "phase": "household",
+      "framing": "live-assistance",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "width": 2024,
+      "height": 808,
+      "sha256": "8e31dbf11837e511ce4ba99518be0007abd59d2d6c2ce96b8389ead4e29229a4"
+    },
+    {
+      "file": "light/preconditioning-desktop.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "framing": "learning-and-prediction",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "width": 1004,
+      "height": 770,
+      "sha256": "3ad4b7aaa15400524e751476ddca6a60d2199b99c075e1627c83119b4665bae2"
+    },
+    {
+      "file": "dark/preconditioning-desktop.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "framing": "learning-and-prediction",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "width": 1004,
+      "height": 770,
+      "sha256": "4f886ec416f4eabdb5abf5c9eb5b2e95fb33b20e82af36807253995f5ff55f42"
+    },
+    {
+      "file": "light/external-published-mobile.png",
+      "view": "external",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 500,
+        "height": 1700
+      },
+      "width": 1374,
+      "height": 564,
+      "sha256": "e1f59c95523e62ddadf1fddc2f3669c1d58dd96c65ce777ee2ca1be6d50f1d3b"
+    },
+    {
+      "file": "dark/external-published-mobile.png",
+      "view": "external",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 500,
+        "height": 1700
+      },
+      "width": 1374,
+      "height": 564,
+      "sha256": "a9a407479394f87b7c3fc55a3c20a69b1f0efd734b3a05954190c73604526f22"
+    },
+    {
+      "file": "light/room-groups-desktop.png",
+      "view": "room-groups",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "width": 2076,
+      "height": 1344,
+      "sha256": "55746363bb0dbcc9dd67a20b9b35d42b525d9b478876c708633adb93ce3f9cb9"
+    },
+    {
+      "file": "dark/room-groups-desktop.png",
+      "view": "room-groups",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "width": 2076,
+      "height": 1344,
+      "sha256": "922f28581a6c15a78a369d8e628f6e2d958d2dd12a80b1da95cad067450501f4"
+    },
+    {
+      "file": "light/presets-desktop.png",
+      "view": "presets",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1700
+      },
+      "width": 2076,
+      "height": 1478,
+      "sha256": "62d1057efa98a1c7dc4df27a2e84c3d8b76283a56bb31408ff3e74bf90de4545"
+    },
+    {
+      "file": "dark/presets-desktop.png",
+      "view": "presets",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1700
+      },
+      "width": 2076,
+      "height": 1478,
+      "sha256": "318aea63c47e1788afff53cb0a314526f26bfc6ee89fc68344cce38958907025"
+    },
+    {
+      "file": "light/supply-control-desktop.png",
+      "view": "supply-control",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1500
+      },
+      "width": 1440,
+      "height": 1894,
+      "sha256": "6cf2015a74d8556660c0d2305634e99cfdf4b456116460965f5bd203ff65acf1"
+    },
+    {
+      "file": "dark/supply-control-desktop.png",
+      "view": "supply-control",
+      "phase": "household",
+      "framing": "complete-panel",
+      "viewport": {
+        "width": 1440,
+        "height": 1500
+      },
+      "width": 1440,
+      "height": 1894,
+      "sha256": "4cea30313d714247dce93f729e989b3018919547a2278b63e55a4e61c89cad07"
+    },
+    {
+      "file": "light/planned-return-desktop.png",
+      "view": "planned-return",
+      "phase": "return",
+      "framing": "arrival-status",
+      "viewport": {
+        "width": 1440,
+        "height": 1900
+      },
+      "width": 2076,
+      "height": 1214,
+      "sha256": "d9f6f7ca00a8a96bffef728449d6c7ab48fb481ccbd13d8673b389c5efb8d847"
+    },
+    {
+      "file": "dark/planned-return-desktop.png",
+      "view": "planned-return",
+      "phase": "return",
+      "framing": "arrival-status",
+      "viewport": {
+        "width": 1440,
+        "height": 1900
+      },
+      "width": 2076,
+      "height": 1214,
+      "sha256": "da1de1e7a0a54554eeef6c80d8ffa95b94e6245cd6f3e222b1a7eb8cdf80ef71"
+    }
+  ],
+  "homeAssistantVersion": "2026.11.0",
+  "homeAssistantImage": "ghcr.io/home-assistant/home-assistant:2026.11.0@sha256:078222f9ea47cf47b172a301c2c45a1d2344b9d666827729b71fc3f7d7a57592",
+  "browserImage": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+  "componentSha256": "9e1422780d8d476ec0f92b3c0a4afb9704ef62464f67bf408c8d7db95c6f0cf6",
+  "bundleSha256": "de44496e092581c40783f40a64ed54827005e95b01295b78eb4a91bda7ae20b1",
+  "data": "Fictional English household with virtual devices in real Home Assistant",
+  "scenarioProvenance": {
+    "devices": "Virtual HA entities in a disposable installation",
+    "learning": "Synthetic observations imported through the public portable-data API",
+    "external_controller": "Test-only service fixture; no physical controller delivery is claimed"
+  },
+  "responseOverrides": false
+}

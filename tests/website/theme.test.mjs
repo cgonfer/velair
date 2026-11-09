@@ -57,6 +57,111 @@ after(async () => {
   if (server) await new Promise((done) => server.close(done));
 });
 
+test("homepage screenshots load in their active theme at desktop and phone widths", async () => {
+  for (const width of [1440, 390]) {
+    for (const color of ["light", "dark"]) {
+      const context = await browser.newContext({ viewport: { width, height: 1000 }, colorScheme: color });
+      try {
+        const page = await context.newPage();
+        await page.goto(`${base}/index.html`);
+        await expect(page.locator("html")).toHaveAttribute("data-theme", color);
+        const images = page.locator("img.theme-image");
+        await expect(images).toHaveCount(11);
+        for (const image of await images.all()) {
+          await image.scrollIntoViewIfNeeded();
+          await expect(image).toHaveAttribute("src", new RegExp(`assets/screenshots/${color}/`));
+          await expect.poll(() => image.evaluate(element => element.complete && element.naturalWidth > 0 && element.naturalHeight > 0)).toBe(true);
+        }
+        const modes = page.locator(".modes-shot img");
+        const modesFrame = await modes.evaluate(element => {
+          const image = element.getBoundingClientRect();
+          const frame = element.parentElement.getBoundingClientRect();
+          return { ratio: image.width / image.height, naturalRatio: element.naturalWidth / element.naturalHeight,
+            imageBottom: image.bottom, frameBottom: frame.bottom };
+        });
+        assert.ok(Math.abs(modesFrame.ratio - modesFrame.naturalRatio) < 0.01, "Modes retains its full screenshot aspect ratio");
+        assert.ok(modesFrame.imageBottom <= modesFrame.frameBottom + 1, "Modes fits entirely inside its frame");
+        const phone = page.locator(".phone-shot");
+        await expect(phone).not.toHaveAttribute("tabindex");
+        await phone.scrollIntoViewIfNeeded();
+        const phoneFrame = await phone.evaluate(element => {
+          element.scrollTop = 100;
+          return { height: element.getBoundingClientRect().height,
+            overflow: getComputedStyle(element).overflowY, scrollTop: element.scrollTop,
+            imageHeight: element.querySelector("img").getBoundingClientRect().height };
+        });
+        assert.ok(phoneFrame.height <= 420, "Phone preview stays compact");
+        assert.equal(phoneFrame.overflow, "clip", "Phone preview has no nested scroll container");
+        assert.equal(phoneFrame.scrollTop, 0, "Full screenshot cannot scroll inside the phone frame");
+        assert.ok(phoneFrame.imageHeight > phoneFrame.height, "Full Overview asset is preserved behind the static crop");
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+      } finally { await context.close(); }
+    }
+  }
+});
+
+test("room resources, live supply control and Planned Return have their own responsive feature scenes", async () => {
+  const sections = [
+    ["room-groups", "Several climates, one room", "room-groups-desktop.png"],
+    ["climate-presets", "Climate settings worth keeping", "presets-desktop.png"],
+    ["supply-control", "See why the supply is running.", "supply-control-desktop.png"],
+    ["planned-return", "Give your home an arrival time.", "planned-return-desktop.png"],
+  ];
+  for (const width of [390, 768, 1440]) {
+    const context = await browser.newContext({ viewport: { width, height: 1000 }, colorScheme: "light", reducedMotion: "reduce" });
+    try {
+      const page = await context.newPage();
+      await page.goto(`${base}/index.html`);
+      for (const [id, title, filename] of sections) {
+        const section = page.locator(`#${id}`);
+        await section.scrollIntoViewIfNeeded();
+        await expect(section.getByRole("heading", { name: title, exact: true })).toBeVisible();
+        await expect(section.locator("img.theme-image")).toHaveAttribute("src", `assets/screenshots/light/${filename}`);
+        const box = await section.boundingBox();
+        assert.ok(box.x >= -1 && box.x + box.width <= width + 1, `${id} fits at ${width}px`);
+      }
+      const positions = await page.locator("#features, #adaptive, .reusable-resources, #advanced").evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+      assert.deepEqual([...positions].sort((a,b) => a-b), positions, "Core, adaptive, resources and advanced sections follow the intended reading order");
+      if (width === 1440) {
+        const primary = await page.locator(".modes-shot .screenshot-link").boundingBox();
+        const advanced = await page.locator("#supply-control .screenshot-link").boundingBox();
+        assert.ok(primary.width > advanced.width && primary.height > advanced.height, "Core Modes has more image space than advanced supply control");
+      }
+      await expect(page.locator("#site-navigation a")).toHaveText(["Features", "Install", "Quality", "Docs"]);
+    } finally { await context.close(); }
+  }
+});
+
+test("screenshots expand in the active theme with keyboard dismissal and restored focus", async () => {
+  for (const width of [390, 1440]) {
+    for (const color of ["light", "dark"]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: color, reducedMotion: "reduce" });
+      try {
+        const page = await context.newPage();
+        await page.goto(`${base}/index.html`);
+        const link = page.locator("#supply-control [data-preview]");
+        await link.scrollIntoViewIfNeeded();
+        await expect(link).toHaveAttribute("href", `assets/screenshots/${color}/supply-control-desktop.png`);
+        await link.focus();
+        await page.keyboard.press("Enter");
+        const viewer = page.getByRole("dialog");
+        await expect(viewer).toBeVisible();
+        await expect(viewer.locator("img")).toHaveAttribute("src", new RegExp(`assets/screenshots/${color}/supply-control-desktop.png$`));
+        await expect(viewer.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+        assert.equal(await page.locator("body").evaluate(element => getComputedStyle(element).overflow), "hidden");
+        await page.keyboard.press("Escape");
+        await expect(viewer).not.toBeVisible();
+        await expect(link).toBeFocused();
+        assert.notEqual(await page.locator("body").evaluate(element => getComputedStyle(element).overflow), "hidden");
+        await link.click();
+        await viewer.getByRole("button", { name: "Close", exact: true }).click();
+        await expect(link).toBeFocused();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+      } finally { await context.close(); }
+    }
+  }
+});
+
 test("theme persists through home, Quality, a release and browser history", async () => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light" });
   try {
@@ -123,8 +228,8 @@ test("mobile menu and theme controls retain the shared keyboard behavior", async
     await expect(page.locator(".nav-toggle")).toBeFocused();
     await expect(page.locator(".nav-toggle")).toHaveAttribute("aria-expanded", "false");
     await page.locator(".nav-toggle").click();
-    await page.getByRole("navigation").getByRole("link", { name: "Schedules", exact: true }).click();
-    await expect(page).toHaveURL(/index\.html#schedules$/);
+    await page.getByRole("navigation").getByRole("link", { name: "Features", exact: true }).click();
+    await expect(page).toHaveURL(/index\.html#features$/);
   } finally { await context.close(); }
 });
 

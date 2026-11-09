@@ -50,6 +50,23 @@ npm.cmd run build:release
 
 Release builds show the integration version from `custom_components/velair/manifest.json`.
 
+## Public Screenshot Tooling
+
+Public capture drivers, plans and fictional household setup live in
+`scripts/screenshots/`. Its `browser/` directory contains the browser drivers;
+`fixtures/ha_components/` contains the capture-specific virtual Home Assistant
+devices. These are development tools and are not part of the integration bundle.
+
+Their Python and browser regressions live in `tests/screenshots/`. Website theme
+and navigation tests remain in `tests/website/`; frontend behavior tests remain
+in `frontend/tests/` and `frontend/e2e/`. The capture drivers reuse the existing
+Home Assistant quality harness and E2E helpers, with Playwright resolved from
+the frontend's installed dependencies.
+
+See the [public screenshot workflow](../../scripts/screenshots/README.md) for
+generation and validation commands. Final documentation images remain in
+`screenshots/`, and website images in `website/public/assets/screenshots/`.
+
 ## Generated Files
 
 Do not edit generated JavaScript files by hand:
@@ -62,6 +79,11 @@ custom_components/velair/frontend/velair-card.js.map
 ```
 
 The integration-served bundle under `custom_components/velair/frontend/` must be generated before publishing a release because HACS users need a ready-to-load frontend.
+
+The release packager refreshes only its generated `.release/package/`,
+`.release/artifacts/` and `.release/lovelace/` directories. Other release and
+recovery outputs are preserved. Redirected paths and file collisions are rejected
+before any existing output is removed.
 
 ## Coding Guidelines
 

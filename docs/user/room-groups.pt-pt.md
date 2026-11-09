@@ -9,7 +9,7 @@ Traduções: [Original em inglês](room-groups.md) · [Español](room-groups.es.
 | Informação | Estado |
 | --- | --- |
 | Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Última sincronização | 2026-11-08 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -143,7 +143,8 @@ Remover um membro dá a ele uma cópia independente da configuração comum. Des
 Por exemplo, remover um dispositivo de um grupo de três deixa dois membros com um novo histórico do grupo e um dispositivo independente com um novo histórico. Excluir o grupo torna os três independentes. Nenhuma operação recupera automaticamente os históricos anteriores ao grupo. No editor, mantenha pelo menos dois membros em um grupo guardado; desfaça-o se todos devem se tornar independentes.
 
 <a id="before-testing-the-beta"></a>
-## Antes de testar a beta
+<a id="check-the-group-configuration"></a>
+## Verificar a configuração do grupo
 
 Crie uma cópia de segurança da configuração e inclua a aprendizagem do pré-condicionamento se precisar da aprendizagem. Após rever e guardar um grupo, confira:
 

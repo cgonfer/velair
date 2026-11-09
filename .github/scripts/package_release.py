@@ -42,14 +42,29 @@ def ignore_generated_files(_directory: str, names: list[str]) -> set[str]:
     }
 
 
+def prepare_output_directories() -> None:
+    """Refresh only owned packaging outputs, preserving other release work."""
+    def redirected(path: Path) -> bool:
+        return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
+
+    if redirected(RELEASE_DIR) or (RELEASE_DIR.exists() and not RELEASE_DIR.is_dir()):
+        raise ValueError("Release output root must be a real directory")
+    root = RELEASE_DIR.resolve()
+    outputs = ((PACKAGE_DIR, "package"), (ARTIFACT_DIR, "artifacts"), (LOVELACE_DIR, "lovelace"))
+    # Validate every target before deleting any output, including on Windows.
+    for directory, name in outputs:
+        if (redirected(directory) or directory.resolve() != root / name
+                or (directory.exists() and not directory.is_dir())):
+            raise ValueError(f"Unsafe release packaging output: {directory}")
+    for directory, _name in outputs:
+        if directory.exists():
+            shutil.rmtree(directory)
+        directory.mkdir(parents=True)
+
+
 def main() -> None:
     version = read_version()
-    if RELEASE_DIR.exists():
-        shutil.rmtree(RELEASE_DIR)
-
-    PACKAGE_DIR.mkdir(parents=True)
-    ARTIFACT_DIR.mkdir(parents=True)
-    LOVELACE_DIR.mkdir(parents=True)
+    prepare_output_directories()
 
     component_source = ROOT_DIR / "custom_components" / "velair"
     component_package = PACKAGE_DIR / "velair"

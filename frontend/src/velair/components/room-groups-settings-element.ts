@@ -10,6 +10,7 @@ import { profileStyles } from "../styles/profile-styles";
 import { cardStyles } from "../styles/card-styles";
 import { roomGroupsStyles } from "../styles/room-groups-styles";
 import { controlUnitId, controlUnitName } from "../domain/control-units";
+import { resourceId } from "../domain/resource-id";
 import { handleDialogClick, renderDocumentationHelp } from "../views/documentation-links";
 import { observePanelDialogAlignment } from "../views/panel-dialog-alignment";
 import { renderRoomGroupSummary } from "../views/room-group-summary";
@@ -169,7 +170,7 @@ export class VelairRoomGroupsSettings extends LitElement {
   private _add() {
     if (!this._canChangeSelection()) return;
     this._load();
-    this._group = { id: `group.${crypto.randomUUID().replaceAll("-", "")}`, name: "", members: [], temperature_entity_id: "", delivery_mode: "all" };
+    this._group = { id: `group.${resourceId().replaceAll("-", "")}`, name: "", members: [], temperature_entity_id: "", delivery_mode: "all" };
     this._selectedId = this._group.id;
     this._dirty = true;
     this._focusTarget = "name";

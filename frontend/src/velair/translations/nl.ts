@@ -1774,6 +1774,7 @@ export const nl = {
   "templatesPanelIntro": "Maak herbruikbare dagschema’s en pas ze toe op compatibele thermostaten en dagen.",
   "time": "Tijd",
   "timeline": "Tijdlijn",
+  "timelineScrollHint": "Scrol horizontaal om de hele dag te bekijken.",
   "timelineContinuesFrom": "Vanaf {day}, {time}",
   "title": "Titel",
   "unableApplyThermostats": "Kan schema niet op thermostaten toepassen",

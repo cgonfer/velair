@@ -292,7 +292,7 @@ def stop(state: dict, output: Path | None = None) -> None:
     shutil.rmtree(directory)
 
 
-def start(args) -> None:
+def start(args, prepare_config=None) -> None:
     output = args.output.resolve()
     state_file = args.state_file.resolve()
     if state_file == output or output in state_file.parents:
@@ -316,6 +316,8 @@ def start(args) -> None:
         copy_component(component, directory / "custom_components/velair")
         shutil.copytree(FIXTURE, directory / "custom_components/velair_test", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         (directory / "configuration.yaml").write_text("homeassistant:\n  name: Velair CI\n  latitude: 40.4168\n  longitude: -3.7038\n  elevation: 650\n  unit_system: metric\n  time_zone: Europe/Madrid\n  country: ES\ndefault_config:\nvelair_test:\n  size: " + args.size + "\n", encoding="utf-8")
+        if prepare_config is not None:
+            prepare_config(directory)
         docker("run", "--detach", "--name", state["container"], "--label", f"{OWNER_LABEL}={run_id}", "--publish", f"127.0.0.1:{args.port}:8123", "--mount", f"type=bind,source={directory},target=/config", "--env", "TZ=Europe/Madrid", image, timeout=300)
         state["image_id"] = docker("inspect", "--format", "{{.Image}}", state["container"])
         bootstrap(state)
