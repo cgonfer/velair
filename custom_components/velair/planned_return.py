@@ -60,6 +60,8 @@ class PlannedReturnRuntime:
         self._lock = asyncio.Lock()
         self.error = None
         self._applied = {}
+        self._delivery_handoffs = {}
+        self._delivery_refresh = None
         self._temperature_only_suspensions = set()
         self._persistence_depth = 0
         self._reported_confirmation = None
@@ -186,6 +188,10 @@ class PlannedReturnRuntime:
 
     @callback
     def stop(self, *, preserve_confirmation=False):
+        if self._delivery_refresh is not None:
+            self._delivery_refresh.cancel()
+            self._delivery_refresh = None
+        self._delivery_handoffs.clear()
         self._temperature_only_suspensions.clear()
         self._generation += 1
         self._timer_generation += 1
@@ -494,6 +500,13 @@ class PlannedReturnRuntime:
                 if target is not None and target.action == "set_temperature" and arrival is not None:
                     block = self._return_blocks[entity]
                     prediction = owner._preconditioned_event_details(entity, owner._data["zones"][entity], block, arrival)
+                    if entity in owner._room_sensor_schedules.entries:
+                        start = owner._room_sensor_schedules.earliest_start(entity, prediction[0], arrival, now)
+                        diagnostics = prediction[1] if start < arrival else None
+                        if diagnostics is not None and dt_util.as_utc(start) != dt_util.as_utc(prediction[0]):
+                            diagnostics = {**diagnostics, "final_lead_minutes": max(0, int(round(
+                                (dt_util.as_utc(arrival) - dt_util.as_utc(start)).total_seconds() / 60)))}
+                        prediction = (start, diagnostics)
                 else:
                     prediction = (arrival, None)
                 self._prepared_predictions[entity] = prediction
@@ -613,6 +626,14 @@ class PlannedReturnRuntime:
         return deepcopy([event for event in self._prepared_events
                          if event.target_when is not None or include_nominal and event.preconditioning_dependency])
 
+    def has_preparation_plan(self, entity, now):
+        """Check maintained per-zone membership without copying household plans."""
+        episode = self.episode
+        arrival = parse_instant((episode or {}).get("return_at"))
+        return bool(self.available() and episode and episode["state"] == "away"
+                    and arrival is not None and arrival > now
+                    and entity in self._prepared_by_entity)
+
     @callback
     def mark_temperature_only_suspended(self, entity):
         """Relinquish preparation immediately; the runtime tick owns persistence."""
@@ -652,6 +673,66 @@ class PlannedReturnRuntime:
     @staticmethod
     def _intent(event):
         return (event.target_when, event.temperature, event.target_temp_low, event.target_temp_high, event.hvac_mode, event.weekday, event.start, event.temperature_only)
+
+    @classmethod
+    def _preparation_intent(cls, event):
+        return (cls._intent(event), event.action, event.fan_mode, event.preset_mode,
+                event.swing_mode, event.swing_horizontal_mode, event.humidity)
+
+    def _delivery_key(self, event):
+        """Identify preparation authority without thermal or clock-based churn."""
+        owner = self.scheduler
+        entity = event.entity_id
+        return (owner._dependency_episode(), self._preparation_intent(event),
+                owner._delivery_authority_context(entity),
+                self.control_ready(entity, dt_util.now()),
+                owner._schedule_projection.capabilities_current(entity),
+                bool(owner._projection_authority_entities(entity) & owner._projection_pending_entities.keys()),
+                owner._pending_external_change_blocks_delivery(entity, event))
+
+    def _delivery_handed_off(self, event):
+        handoff = self._delivery_handoffs.get(event.entity_id)
+        return bool(handoff and handoff[1]() and handoff[0] == self._delivery_key(event))
+
+    @callback
+    def delivery_invalidated(self, entity):
+        """Coalesce replacement wakeups and recheck after a new own handoff."""
+        if entity not in self._delivery_handoffs or self._delivery_refresh is not None:
+            return
+
+        @callback
+        def refresh_delivery():
+            self._delivery_refresh = None
+            if self.available() and any(not current() for _key, current in self._delivery_handoffs.values()):
+                self.refresh()
+
+        self._delivery_refresh = asyncio.get_running_loop().call_soon(refresh_delivery)
+
+    def preparation_for_delivery(self, event):
+        """Match a due preparation, including temporarily unready delivery."""
+        now = dt_util.now()
+        current = self._prepared_by_entity.get(event.entity_id)
+        arrival = parse_instant((self.episode or {}).get("return_at"))
+        if (not self.available() or (self.episode or {}).get("state") != "away"
+                or arrival is None or arrival <= now or current is None
+                or self.scheduler._is_zone_override_active(event.entity_id, now)
+                or current.when > now and not self.is_preparing(event.entity_id)
+                or self._preparation_intent(current) != self._preparation_intent(event)):
+            return None
+        return current
+
+    @callback
+    def preparation_handed_off(self, event, is_current):
+        self._delivery_handoffs[event.entity_id] = (self._delivery_key(event), is_current)
+
+    @callback
+    def preparation_accepted(self, event, expected_episode, is_current):
+        """Latch the actual resolved preparation before recovery can wake peers."""
+        if (not is_current() or expected_episode != self.scheduler._dependency_episode()
+                or self.preparation_for_delivery(event) is None):
+            return
+        self._applied[event.entity_id] = self._intent(event)
+        self.scheduler._hass.async_create_task(self._persist_accepted_preparation(event, expected_episode))
 
     def is_preparing(self, entity):
         return entity not in self._temperature_only_suspensions and entity in (self.episode or {}).get("preparing_entities", [])
@@ -785,6 +866,11 @@ class PlannedReturnRuntime:
             self._listener = async_track_state_change_event(owner._hass, entities, state_changed)
         now = dt_util.now()
         self.prepare(now)
+        episode_key = owner._dependency_episode()
+        self._delivery_handoffs = {
+            entity: handoff for entity, handoff in self._delivery_handoffs.items()
+            if handoff[0][0] == episode_key and entity in self._prepared_by_entity
+        }
         if self.error:
             return
         eligible_departure = bool(self.source_ids()) and (self.awaiting_departure_confirmation() or (self.episode or {}).get("state") == "armed" or (self.episode is None and self.config.get("enabled")))
@@ -815,7 +901,7 @@ class PlannedReturnRuntime:
             arrival = parse_instant(self.episode.get("return_at"))
             if arrival:
                 times.append(arrival)
-            times.extend(event.when for event in self.plans(now) if self._applied.get(event.entity_id) != self._intent(event) and not owner._is_zone_override_active(event.entity_id, now) and (event.when > now or owner._dependency_delivery_allowed(event)))
+            times.extend(event.when for event in self.plans(now) if self._applied.get(event.entity_id) != self._intent(event) and not self._delivery_handed_off(event) and not owner._is_zone_override_active(event.entity_id, now) and (event.when > now or owner._dependency_delivery_allowed(event)))
         if self.occupancy() == "home" and self.episode is not None and self.episode["state"] != "armed" and not self.awaiting_departure_confirmation():
             times.append(now)
         if times:
@@ -966,7 +1052,7 @@ class PlannedReturnRuntime:
                             self._temperature_only_suspensions.discard(entity)
                         self.prepare(now)
                         for event in self.plans(now):
-                            if event.when > now or self._applied.get(event.entity_id) == self._intent(event) or self.scheduler._is_zone_override_active(event.entity_id, now):
+                            if event.when > now or self._applied.get(event.entity_id) == self._intent(event) or self._delivery_handed_off(event) or self.scheduler._is_zone_override_active(event.entity_id, now):
                                 continue
                             if not self.scheduler._dependency_delivery_allowed(event):
                                 continue
@@ -980,16 +1066,7 @@ class PlannedReturnRuntime:
                                 self._emit("preparation_started", entity_id=event.entity_id)
                             episode_key = self.scheduler._dependency_episode()
 
-                            async def accepted(is_current, *, applied_event=event, expected_episode=episode_key):
-                                if not is_current() or expected_episode != self.scheduler._dependency_episode():
-                                    return
-                                # Recovery uses the same commit callback. Latch
-                                # before yielding so an anchor wake cannot repeat
-                                # the accepted master while storage is pending.
-                                self._applied[applied_event.entity_id] = self._intent(applied_event)
-                                self.scheduler._hass.async_create_task(self._persist_accepted_preparation(applied_event, expected_episode))
-
-                            await self.scheduler._async_apply_event(event, source="planned_return", applied_at=now, on_success=accepted)
+                            await self.scheduler._async_apply_event(event, source="planned_return", applied_at=now)
                             if self._applied.get(event.entity_id) == self._intent(event):
                                 await self._persist_preparation_locked(event, episode_key)
                 self.error = None

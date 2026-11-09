@@ -1,0 +1,9 @@
+{
+  "domain": "velair_test",
+  "name": "Velair CI fixtures",
+  "codeowners": [],
+  "documentation": "https://github.com/cgonfer/velair",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "1.0.0"
+}

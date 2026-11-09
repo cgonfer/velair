@@ -27,6 +27,7 @@ frontend/dist/
 frontend/demo/
 website/tests/
 website/public/.vite/
+website/public/quality/v*.html
 .release/
 
 # Local Home Assistant/runtime data

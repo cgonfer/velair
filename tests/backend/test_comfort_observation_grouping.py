@@ -51,6 +51,8 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(module.dt_util, "now", side_effect=lambda: current[0]), \
              patch.object(module, "async_track_point_in_time", side_effect=track):
             f = self.make(module)
+            if action == "humidity":
+                f.data["zones"][ENTITIES[0]]["comfort"]["humidity_enabled"] = True
             f.s._refresh_comfort_listener()
             fired = False
             def fire(event_type, payload):
@@ -63,18 +65,24 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
                     event_action(f)
                     log.append(("listener_reads", deepcopy(f.s.get_comfort_assessments()),
                                 deepcopy(f.s.get_comfort_settings())))
-            def publish(_hass, _signal):
+            def publish(_hass, _signal, entities):
                 # Distinct synchronous readers see the same complete public payload.
                 first = f.s.get_comfort_assessments()
                 second = f.s.get_comfort_assessments()
                 log.append(("publication", deepcopy(first), deepcopy(second)))
                 self.assertEqual(first, second)
             f.hass.bus.async_fire = fire
-            with patch.object(module, "async_dispatcher_send", side_effect=publish):
+            with patch.object(module, "async_dispatcher_send", side_effect=publish), \
+                 patch.object(f.s, "_prepare_runtime_projection",
+                              wraps=f.s._prepare_runtime_projection) as prepare:
                 if action == "changed":
                     f.hass.states[SOURCES[0]].state = "27"
                     callback = lambda: f.s._handle_comfort_state_change(
                         SimpleNamespace(data={"entity_id": SOURCES[0]}))
+                elif action == "humidity":
+                    f.hass.states[ENTITIES[0]].attributes["current_humidity"] = 77
+                    callback = lambda: f.s._handle_comfort_state_change(
+                        SimpleNamespace(data={"entity_id": ENTITIES[0]}))
                 elif action == "reported":
                     current[0] += timedelta(minutes=2)
                     f.hass.states[SOURCES[0]].last_reported = current[0]
@@ -117,8 +125,9 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
                     self.assertIsNone(f.s._observation_at)
                     f.hass.states[SOURCES[1]].state = "28"
                 callback()
+                preparations = prepare.call_count
                 final = deepcopy(f.s.get_comfort_assessments())
-                result = {"log": log, "final": final,
+                result = {"log": log, "final": final, "preparations": preparations,
                           "settings": deepcopy(f.s.get_comfort_settings()),
                           "snapshots": deepcopy(f.s._comfort_assessment_snapshots),
                           "commands": deepcopy(f.manager.calls),
@@ -140,18 +149,21 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_identical_report_rearms_deadline_without_publication(self):
         result = self.assert_callback_trace(action="reported")
+        self.assertEqual(result["preparations"], 0)
         self.assertEqual(result["log"], [])
         self.assertEqual(result["deadlines"], [NOW + timedelta(minutes=5)])
         self.assertEqual(result["final"][ENTITIES[0]]["temperature"]["freshness"], "reported")
 
     async def test_expiry_preserves_both_stale_events_and_single_publication(self):
         result = self.assert_callback_trace(action="expiry")
+        self.assertEqual(result["preparations"], 0)
         self.assertEqual([entry[0] for entry in result["log"]], ["event", "event", "publication"])
         for entity in ENTITIES:
             self.assertEqual(result["final"][entity]["temperature"]["availability"], "stale")
 
     async def test_identical_report_recovers_stale_and_rearms_only_live_source(self):
         result = self.assert_callback_trace(action="recovery")
+        self.assertEqual(result["preparations"], 0)
         self.assertEqual([entry[0] for entry in result["log"]],
                          ["event", "event", "publication", "event", "publication"])
         self.assertEqual(result["final"][ENTITIES[0]]["temperature"]["value"], 22)
@@ -161,6 +173,7 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_standalone_update_keeps_events_without_adding_publications(self):
         result = self.assert_callback_trace(action="standalone")
+        self.assertEqual(result["preparations"], 0)
         self.assertEqual([entry[0] for entry in result["log"]], ["event"])
         self.assertEqual(result["final"][ENTITIES[0]]["temperature"]["value"], 27)
 
@@ -187,6 +200,7 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_builder_exception_discards_scope_and_next_callback_recovers(self):
         result = self.assert_callback_trace(fail_builder=True)
+        self.assertEqual(result["preparations"], 0)
         self.assertEqual(result["final"][ENTITIES[1]]["temperature"]["value"], 28)
         self.assertEqual([entry[0] for entry in result["log"]], ["event", "event", "publication"])
 
@@ -197,3 +211,45 @@ class ComfortObservationGroupingTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["final"][ENTITIES[1]]["enabled"])
         self.assertEqual([entry[0] for entry in result["log"]],
                          ["event", "listener_reads", "event", "publication"])
+
+    async def test_humidity_change_prepares_scheduling_only_once_for_publication(self):
+        result = self.assert_callback_trace(action="humidity")
+        self.assertEqual(result["preparations"], 0)
+        self.assertEqual(result["final"][ENTITIES[0]]["humidity"]["value"], 77)
+        self.assertEqual(result["final"][ENTITIES[0]]["temperature"]["value"], 22)
+        self.assertEqual([entry[0] for entry in result["log"]], ["event", "publication"])
+
+    async def test_publication_prepares_current_thermal_inputs_after_outward_listener(self):
+        with patch.object(scheduler_module.dt_util, "now", return_value=NOW):
+            f = self.make(scheduler_module)
+            for entity, source, mode, target in zip(ENTITIES, SOURCES, ("heat", "cool"), (25, 19)):
+                f.data["zones"][entity]["schedule"]["tuesday"] = [{
+                    "start": "19:00", "action": "set_temperature",
+                    "temperature": target, "hvac_mode": mode}]
+                f.data["zones"][entity]["preconditioning"].update(
+                    enabled=True, room_sensor_assist_enabled=True,
+                    room_temperature_entity_id=source)
+            f.s._prepare_runtime_projection(configuration=True)
+            f.s._refresh_comfort_listener()
+            baseline = {event.entity_id: event for event in f.s._schedule_projection.future(NOW)}
+            published = []
+            def mutate(_event, payload):
+                if payload.get("entity_id") == ENTITIES[0]:
+                    f.hass.states[SOURCES[0]].state = "18"
+                    f.hass.states[SOURCES[1]].state = "28"
+            def publish(_hass, _signal, entities):
+                # Read already prepared forecasts: this observer must not repair them.
+                published.append({event.entity_id: event
+                                  for event in f.s._schedule_projection.future(NOW)})
+            f.hass.bus.async_fire = mutate
+            f.hass.states[SOURCES[0]].state = "27"
+            with patch.object(scheduler_module, "async_dispatcher_send", side_effect=publish), \
+                 patch.object(f.s, "_prepare_runtime_projection",
+                              wraps=f.s._prepare_runtime_projection) as prepare:
+                f.s._handle_comfort_state_change(SimpleNamespace(data={"entity_id": SOURCES[0]}))
+            self.assertEqual(prepare.call_count, 0)
+            self.assertEqual(len(published), 1)
+            self.assertEqual(published[0], baseline)
+            self.assertEqual(f.s.get_comfort_assessment(ENTITIES[0])["temperature"]["value"], 18)
+            self.assertEqual(f.s.get_comfort_assessment(ENTITIES[1])["temperature"]["value"], 28)
+            self.assertEqual(f.manager.calls, [])

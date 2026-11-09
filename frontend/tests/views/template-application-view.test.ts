@@ -155,7 +155,7 @@ describe("template application panel", () => {
   render(renderTemplateApplication(state, template), container);
   expect(container.querySelectorAll(".template-assignment-slot")).toHaveLength(1);
   expect(container.querySelector<HTMLInputElement>('input[type="time"]')!.disabled).toBe(true);
-  expect(container.textContent).toContain("Choose settings"); expect(container.querySelector('input[type="number"]')).not.toBeNull();
+  expect(container.textContent).toContain("Choose settings"); expect(container.querySelector('input.temperature-input')).not.toBeNull();
  });
  it("uses the existing different schedules comparison and keeps selected bases visible", () => {
   const { state, container } = fixture(); state._templateApplication!.mode = "hours";

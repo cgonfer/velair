@@ -1,0 +1,16 @@
+{
+  "service_roundtrip_ms": {"kind":"latency","label":"Device service response","unit":"ms","divisor":1,"scope":"load","context":"Background device service calls; not a Velair click or save."},
+  "interaction_ms": {"kind":"latency","label":"Switch between Overview and Schedules","unit":"ms","divisor":1,"scope":"load","context":"From clicking the tab until the requested Velair page is visible."},
+  "save_persist_ms": {"kind":"latency","label":"Edit and confirm one saved temperature","unit":"ms","divisor":1,"scope":"load","context":"From editing a temperature through saving and confirming its stored value."},
+  "ha_event_loop_lag_ms": {"kind":"series","label":"Home Assistant event-loop delay","unit":"ms","divisor":1,"scope":"load","context":"Periodic delay readings during the activity window; whole Home Assistant instance."},
+  "browser_heap_bytes": {"kind":"series","label":"Page memory (JavaScript)","unit":"MiB","divisor":1048576,"scope":"load","context":"Sampled JavaScript heap during the activity window; excludes the rest of the browser."},
+  "browser_task_ms": {"kind":"series","label":"Page main-thread task time per sampling interval","unit":"ms","divisor":1,"scope":"load","context":"Main-thread task-time deltas between browser polls, approximately one second apart; not operation latency or CPU percentage."},
+  "container_cpu_percent": {"kind":"series","label":"Home Assistant CPU","unit":"%","divisor":1,"scope":"resources","context":"Sampled across the complete browser/load suite, including other integrations; Docker CPU can exceed 100% across cores."},
+  "container_memory_bytes": {"kind":"series","label":"Home Assistant memory","unit":"MiB","divisor":1048576,"scope":"resources","context":"Sampled memory of the whole Home Assistant container across the browser/load suite."},
+  "browser_updates": {"kind":"counter","label":"Selected Velair component updates","unit":"updates","divisor":1,"scope":"load","context":"Total during warm-up and activity; selected components only, not all Home Assistant rendering."},
+  "browser_long_tasks": {"kind":"counter","label":"Page long tasks","unit":"tasks","divisor":1,"scope":"load","context":"Page tasks exceeding 50 ms during warm-up and activity; not attributed exclusively to Velair."},
+  "browser_long_task_duration_ms": {"kind":"counter","label":"Total time in page long tasks","unit":"ms","divisor":1,"scope":"load","context":"Sum of page long-task durations during warm-up and activity; not a response-time distribution."},
+  "browser_velair_requests": {"kind":"counter","label":"Page-originated Velair WebSocket requests","unit":"requests","divisor":1,"scope":"load","context":"Requests sent by the page during warm-up, activity and recovery; excludes the test harness's separate API connection."},
+  "browser_heap_after_load_bytes": {"kind":"snapshot","label":"Page memory after activity","unit":"MiB","divisor":1048576,"scope":"load","context":"One JavaScript heap reading at the end of activity; no forced garbage collection."},
+  "browser_heap_after_recovery_bytes": {"kind":"snapshot","label":"Page memory after recovery","unit":"MiB","divisor":1048576,"scope":"load","context":"One JavaScript heap reading after recovery; a difference alone does not establish a memory leak."}
+}

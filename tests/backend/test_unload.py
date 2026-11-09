@@ -74,6 +74,9 @@ def _load_integration_init():
         "custom_components.velair.scheduler": _module(
             "custom_components.velair.scheduler", VelairScheduler=object
         ),
+        "custom_components.velair.runtime_diagnostics": _module(
+            "custom_components.velair.runtime_diagnostics", RuntimeDiagnosticsManager=object
+        ),
         "custom_components.velair.services": _module(
             "custom_components.velair.services",
             async_setup_services=AsyncMock(),
@@ -84,6 +87,7 @@ def _load_integration_init():
         ),
         "custom_components.velair.temperature_migration": _module(
             "custom_components.velair.temperature_migration",
+            TemperatureMigrationNotifications=object,
             async_dismiss_temperature_migration_notification=AsyncMock(),
             async_notify_temperature_migration=AsyncMock(),
         ),
@@ -97,6 +101,8 @@ def _load_integration_init():
         spec = importlib.util.spec_from_file_location(
             "custom_components.velair._unload_test_subject", path
         )
+        # This alias is a module in the real package, not a second package root.
+        spec.submodule_search_locations = None
         module = importlib.util.module_from_spec(spec)
         module.__package__ = "custom_components.velair"
         sys.modules[spec.name] = module
@@ -166,6 +172,16 @@ class VelairUnloadTests(unittest.IsolatedAsyncioTestCase):
         integration.async_dispatcher_send.assert_called_once_with(
             self.hass, integration.SIGNAL_SHARED_DEMAND_LIVE_UPDATED
         )
+
+    async def test_notification_stop_failure_does_not_skip_runtime_cleanup(self) -> None:
+        self.entry.runtime_data.temperature_notifications = SimpleNamespace(
+            async_stop=AsyncMock(side_effect=RuntimeError("notification cleanup failed"))
+        )
+        with self.assertLogs(integration.__name__, level="ERROR"):
+            self.assertTrue(await integration.async_unload_entry(self.hass, self.entry))
+        self.scheduler.async_stop.assert_awaited_once()
+        self.delivery.async_stop.assert_awaited_once()
+        self.assertNotIn("entry-1", self.hass.data["velair"])
 
 
 if __name__ == "__main__":

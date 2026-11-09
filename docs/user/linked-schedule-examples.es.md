@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](linked-schedule-examples.md) · [Español](l
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.1 |
-| Última sincronización | 2026-10-11 |
+| Versión de referencia | 1.9.0-beta.10 |
+| Última sincronización | 2026-11-05 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -262,6 +262,6 @@ Los ajustes opcionales del dispositivo no admitidos por un destino pueden filtra
 
 ## Guardar una copia de toda la configuración
 
-Utiliza la exportación de Velair en lugar de copiar solo un día visible resuelto. Las exportaciones del modelo 16 conservan ambos tipos de vínculo, los presets y las identidades de bloque. Exportar horarios o Perfiles incluye las plantillas y presets de los que dependen; la pantalla de exportación muestra las secciones añadidas automáticamente.
+Utiliza la exportación de Velair en lugar de copiar solo un día visible resuelto. Las exportaciones del modelo 26 conservan ambos tipos de vínculo, los presets y las identidades de bloque. Los ajustes de zona también conservan las programaciones opcionales de sensores de Room Assist. Exportar horarios o Perfiles incluye las plantillas y presets de los que dependen; la pantalla de exportación muestra las secciones añadidas automáticamente.
 
-Al importar, revisa las sustituciones antes de confirmar. Sustituir un recurso compartido también puede afectar a usos locales existentes. La configuración combinada debe ser válida; los Perfiles nuevos no se activan simplemente por importarlos. Las copias de seguridad antiguas siguen siendo importables, mientras que las versiones antiguas de Velair no pueden importar una exportación del modelo 16. Consulta [Portabilidad](usage.es.md#portability).
+Al importar, revisa las sustituciones antes de confirmar. Sustituir un recurso compartido también puede afectar a usos locales existentes. La configuración combinada debe ser válida; los Perfiles nuevos no se activan simplemente por importarlos. Las copias de seguridad antiguas siguen siendo importables, mientras que las versiones antiguas de Velair no pueden importar una exportación del modelo 26. Conserva una copia de la versión anterior si pudieras necesitar volver a ella. Consulta [Portabilidad](usage.es.md#portability).

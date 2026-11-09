@@ -1,3 +1,4 @@
+import { climateCardBoostTemperatureError, climateCardBoostTargetPayload, type ClimateCardBoostDraft } from "../domain/climate-card-boost";
 import { controlUnitId, controlUnitIds, controlUnitState, controlUnitZone } from "../domain/control-units";
 import { targetFormatsForEntity } from "../domain/target-format-policy";
 import { activeClimateProfileZoneEffect } from "../domain/climate-profiles";
@@ -5,6 +6,7 @@ import { resolveDayLayout, selectedDayGroup, schedulesEqual } from "../domain/da
 import { scheduleUsagePath, type PanelSubsection } from "../domain/panel-routes";
 import { isScheduleResponseCurrent, rawScheduleHass, type PanelScheduleSession } from "../controllers/panel-schedule-session";
 import { acquireLovelaceScheduleSession } from "../controllers/lovelace-schedule-sessions";
+import { isRuntimeScheduleSnapshot } from "../controllers/schedule-runtime-updates";
 import { normalizeTemplateBlocks } from "../controllers/template-impact";
 import { cancelTemplatePreview, queueTemplatePreview, refreshTemplatePreview } from "../controllers/template-preview";
 import { LitElement, type PropertyValues } from "lit";
@@ -57,6 +59,7 @@ import type {
   ScheduleResponse,
   ScheduleTemplate,
   PreconditioningSettings,
+  PreconditioningSettingsUpdate,
   VelairCardConfig,
   VelairCardView,
   VelairPortablePayload,
@@ -182,6 +185,7 @@ import {
   draftContentFingerprint,
   blocksForSource,
   loadSchedule,
+  receiveScheduleUpdate,
   markBlocksDirty,
   resetDraftBlocks,
   selectEntity,
@@ -423,20 +427,7 @@ export class VelairCard extends LitElement {
 
   @state() private _config: VelairCardConfig = {};
   @state() private _changedNextEventIds = new Set<string>();
-  @state() private _climateCardBoost?: {
-    entityId: string;
-    durationMinutes: number;
-    targetKind: "single" | "range";
-    target?: number;
-    low?: number;
-    high?: number;
-    hvacMode?: string;
-    fanMode?: string;
-    presetMode?: string;
-    swingMode?: string;
-    swingHorizontalMode?: string;
-    humidity?: number;
-  };
+  @state() private _climateCardBoost?: ClimateCardBoostDraft;
   @state() private _climateCardPause?: {
     entityId: string;
     indefinite: boolean;
@@ -576,7 +567,7 @@ export class VelairCard extends LitElement {
   private readonly _presetPreviews = new PresetPreviewCache();
 
   private _presetPreviewKey(block: DraftScheduleBlock, index: number, source: BlockDraftSource): string {
-    return presetPreviewKey([this._selectedEntity, this._selectedWeekday, this._scheduleSource, source, index, this._data?.configuration_revision, this._data?.temperature_unit], block);
+    return presetPreviewKey([this._selectedEntity, this._selectedWeekday, this._scheduleSource, source, index, this._data?.configuration_revision, this._data?.temperature_unit, source === "schedule" && this._draftTemplateLink?.mode === "full" ? this._draftTemplateLink : undefined], block);
   }
 
   private _effectivePresetBlock(block: DraftScheduleBlock, index: number, source: BlockDraftSource): ScheduleBlock | undefined {
@@ -635,8 +626,10 @@ export class VelairCard extends LitElement {
     }
     if (this._scheduleSource !== "default") { this._presetPreviews.retain(new Set()); return; }
     this._presetPreviews.retain(new Set(this._draftBlocks.map((block, index) => this._presetPreviewKey(block, index, "schedule"))));
+    const fullLink = this._draftTemplateLink?.mode === "full" ? { ...this._draftTemplateLink } : undefined;
+    let fullDayPreview: ReturnType<VelairApiClient["previewDailySchedule"]> | undefined;
     this._draftBlocks.forEach((block, index) => {
-      if ((!block.preset_key && this._draftTemplateLink?.mode !== "full") || this._effectivePresetBlock(block, index, "schedule")) return;
+      if ((!block.preset_key && !fullLink) || this._effectivePresetBlock(block, index, "schedule")) return;
       const key = this._presetPreviewKey(block, index, "schedule");
       const entityId = this._selectedEntity;
       const weekday = this._selectedWeekday;
@@ -644,7 +637,9 @@ export class VelairCard extends LitElement {
       this._presetPreviews.request(key, async () => {
         const api = this._api();
         if (!api || !entityId) throw new Error(this._t("unableLoad"));
-        const response = await api.previewDailySchedule(entityId, weekday, this._draftTemplateLink?.mode === "full" ? { template_link: this._draftTemplateLink } : { blocks: [{ start, preset_key: block.preset_key }] });
+        const response = await (fullLink
+          ? (fullDayPreview ??= api.previewDailySchedule(entityId, weekday, { template_link: fullLink }))
+          : api.previewDailySchedule(entityId, weekday, { blocks: [{ start, preset_key: block.preset_key }] }));
         return response.blocks.find((item) => item.start === start);
       }, () => key === this._presetPreviewKey(this._draftBlocks[index] ?? {} as DraftScheduleBlock, index, "schedule"), () => this.requestUpdate(), () => undefined);
     });
@@ -1355,8 +1350,7 @@ export class VelairCard extends LitElement {
     try {
       const unsubscribe = await api.subscribeUpdates((message) => {
         if (!current()) return;
-        if (message.loaded && message.schedule) this._applyScheduleData(message.schedule);
-        else void this._loadSchedule();
+        receiveScheduleUpdate(asScheduleStateHost(this), message);
       });
       if (!current()) await unsubscribe();
       else this._unsubscribeUpdates = unsubscribe;
@@ -1382,6 +1376,15 @@ export class VelairCard extends LitElement {
   }
 
   private _applyLocalScheduleData(data: ScheduleResponse, options: { forceDraft?: boolean } = {}): void {
+    if (isRuntimeScheduleSnapshot(data)) {
+      this._data = {
+        ...data,
+        diagnostics: this._diagnosticsSnapshotAuthoritative
+          ? this._latestDiagnostics
+          : data.diagnostics ?? this._data?.diagnostics,
+      };
+      return;
+    }
     const changedEntityIds = changedPreconditioningEventEntityIds(
       this._data?.next_events ?? [],
       data.next_events,
@@ -1520,13 +1523,7 @@ export class VelairCard extends LitElement {
     const generation = ++this._diagnosticsSubscriptionGeneration;
     this._subscribingDiagnostics = true;
     try {
-      const diagnostics = await api.getDiagnostics();
-      if (
-        generation !== this._diagnosticsSubscriptionGeneration
-        || !this.isConnected
-        || this._effectiveView() !== "diagnostics"
-      ) return;
-      this._applyDiagnosticsSnapshot(diagnostics);
+      // The subscription sends a fresh initial snapshot before live updates.
       const unsubscribe = await api.subscribeDiagnostics((message) => {
         if (
           generation !== this._diagnosticsSubscriptionGeneration
@@ -2285,7 +2282,8 @@ export class VelairCard extends LitElement {
     const numeric = Number(value);
     this._climateCardBoost = {
       ...this._climateCardBoost,
-      [field]: value.trim() && Number.isFinite(numeric) ? numeric : undefined,
+      [field]: field === "target" || field === "low" || field === "high"
+        ? value : value.trim() && Number.isFinite(numeric) ? numeric : undefined,
     };
   }
 
@@ -2324,12 +2322,20 @@ export class VelairCard extends LitElement {
       if (action === "boost") {
         const boost = this._climateCardBoost;
         if (!boost || boost.entityId !== entityId) return;
+        const [minimum, maximum] = this._entityTemperatureLimits(entityId);
+        const step = this._entityTemperatureStep(entityId) ?? 0.5;
+        const humidityLimits = this._entityHumidityLimits(entityId);
+        if (climateCardBoostTemperatureError(boost, minimum, maximum, step)
+          || !Number.isInteger(boost.durationMinutes) || boost.durationMinutes < 1 || boost.durationMinutes > 10080
+          || (boost.humidity !== undefined && (!Number.isInteger(boost.humidity) || !humidityLimits
+            || boost.humidity < humidityLimits[0] || boost.humidity > humidityLimits[1]))) {
+          this._error = this._t("climateCardActionFailed");
+          return;
+        }
         const data: Record<string, unknown> = {
           entity_id: entityId,
           duration_minutes: boost.durationMinutes,
-          ...(boost.targetKind === "range"
-            ? { target_temp_low: boost.low, target_temp_high: boost.high }
-            : { temperature: boost.target }),
+          ...climateCardBoostTargetPayload(boost),
         };
         if (boost.hvacMode) data.hvac_mode = boost.hvacMode;
         if (boost.fanMode) data.fan_mode = boost.fanMode;
@@ -2489,7 +2495,7 @@ export class VelairCard extends LitElement {
 
   private async _saveZonePreconditioning(
     entityId: string,
-    preconditioning: Partial<PreconditioningSettings>,
+    preconditioning: PreconditioningSettingsUpdate,
   ): Promise<void> {
     await saveZonePreconditioning(asSettingsActionsHost(this), entityId, preconditioning);
   }
@@ -2541,6 +2547,7 @@ export class VelairCard extends LitElement {
     }
     this._expandedPreconditioningZones = expandedZones;
   }
+
 
   private _toggleComfortZone(entityId: string): void {
     const expandedZones = new Set(this._expandedComfortZones);

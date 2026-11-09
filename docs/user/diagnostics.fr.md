@@ -8,8 +8,8 @@ Traductions: [Original en anglais](diagnostics.md) · [Español](diagnostics.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.3 |
-| Dernière synchronisation | 2026-10-21 |
+| Version de référence | 1.9.0-beta.10 |
+| Dernière synchronisation | 2026-11-04 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -150,6 +150,10 @@ supprimés. Relisez chaque rapport avant de le partager.
 Le diagnostic ne possède aucune commande du planificateur, de nouvelle tentative, de restauration ni
 de contrôle climatique. Les paramètres continuent de contenir les actions de configuration et de
 maintenance ; les détails des capacités et de l’état des appareils appartiennent désormais au diagnostic.
+
+Les détails de transmission de l’équipement sélectionné distinguent un appel de service accepté de la consigne signalée par Home Assistant. La confirmation peut être en attente, obtenue, rétablie après une nouvelle tentative ou absente après la limite de tentatives. Un échec silencieux corrigé reste dans l’historique **Envoi au thermostat**, avec son nombre de tentatives, pour montrer que Velair a résolu l’écart. Les signalements conformes n’ajoutent pas une entrée d’historique pour chaque commande normale. Le rapport téléchargé conserve les mêmes preuves de confirmation.
+
+Le rétablissement s’exécute dans le backend même lorsque Diagnostic est fermé. Si plusieurs équipements indépendants changent de bloc ensemble, seul un équipement qui continue à signaler une consigne différente nécessite une nouvelle tentative. Ouvrir ou actualiser cette vue n’envoie jamais de commande climatique. Un signalement confirmé atteste de l’état dans Home Assistant ; il ne vérifie pas de manière indépendante un appareil qui signale des valeurs optimistes.
 
 Chaque appareil géré fournit également des informations sur la stabilisation des commandes, disponibles uniquement pendant
 l’exécution. Pendant qu’une commande Velair récente se stabilise, le diagnostic liste les champs de

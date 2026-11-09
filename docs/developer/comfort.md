@@ -26,8 +26,10 @@ Only settings are persisted under `zones[entity_id].comfort`:
 {
   "enabled": false,
   "temperature_entity_id": null,
+  "temperature_fallback_enabled": false,
   "humidity_enabled": true,
   "humidity_entity_id": null,
+  "humidity_fallback_enabled": false,
   "co2_entity_id": null,
   "temperature_min": 20.0,
   "temperature_max": 24.0,
@@ -59,17 +61,25 @@ Assessments are derived at runtime and are not stored as history. Disabling the
 outdoor comparison preserves both selected sensor IDs for later reuse.
 
 In the frontend, the collapsed **Comfort configuration** panel presents
-temperature, humidity, and CO2 source selectors, followed immediately by a
-separate **Data freshness** section with `stale_after_minutes` and the effective
-direct source IDs alongside it. Current `freshness: unverified` readings are
-summarized once there, including enabled derived metrics and outdoor sensor
-readings, while value cards omit repeated informational freshness badges. A
-Lovelace Comfort card with configuration hidden renders that same summary once
-above its readings. The explanation says climate temperature and humidity are
-excluded even when outdoor sensors keep the field active. The field can be
-prepared while Comfort itself is off. Without a configured direct source it is
-disabled with an explanation, while the saved value remains intact. Model,
-preferences, outdoor comparison, and derived metric controls follow.
+temperature, humidity, and CO2 source selectors in **Data sources**. A separate
+**Backup sensors** subsection there contains only applicable Temperature and
+Humidity rows: checkbox, metric icon and label, and exact candidate entity ID.
+There is no duplicate thermostat-provenance explanation or backup help button.
+Current `freshness: unverified` readings, including enabled derived metrics and
+outdoor sensor readings, are grouped in a closed native `details` disclosure.
+Its summary identifies the affected metrics; opening it retains the full existing
+reading-availability, measurement-freshness, and applicable climate-source
+messages. The disclosure uses neutral text/background, a blue left rule, and a
+bottom rule below the summary. Value cards omit repeated informational freshness
+badges, and read-only Lovelace views omit this routine configuration information.
+
+The separate **Data freshness** section keeps `stale_after_minutes` and the
+effective direct source IDs alongside it. Its explanation says climate
+temperature and humidity are excluded even when outdoor sensors keep the field
+active. The field can be prepared while Comfort itself is off. Without a
+configured direct source it is disabled with an explanation, while the saved
+value remains intact. Model, preferences, outdoor comparison, and derived metric
+controls follow.
 The source list mirrors the backend's selected report sources; this does not
 change persistence or assessment behavior.
 
@@ -90,6 +100,44 @@ Temperature readings from external sensors are converted from their declared
 unit to the managed climate/Home Assistant temperature unit before assessment.
 The climate entity's own `current_temperature` is already at that runtime
 boundary and is not converted again.
+
+`temperature_fallback_enabled` and `humidity_fallback_enabled` are independent
+opt-in booleans, both defaulting to `false`, including for legacy settings and
+older portable files. The preferred temperature source remains the explicitly
+selected sensor, otherwise the physical climate's configured room sensor,
+otherwise its own `current_temperature`. An explicit external source distinct
+from the configured room sensor keeps that room sensor as its backup. When the
+preferred source is that room sensor, whether automatic or explicitly selected,
+the backup is the physical climate's own `current_temperature`. A native preferred
+temperature has no backup. Each assessment exposes only one candidate, without
+chaining through another source after its backup fails. Comfort retains its fixed
+room-source policy; scheduled Room Assist references do not change this policy.
+The humidity backup is the physical climate's
+measured `current_humidity` only, and requires support for that measured attribute;
+target `humidity` is never a backup. Disabled humidity has no backup. Group
+members never inherit the group's control sensor for Comfort.
+
+Backend normalization keeps an automatic external-room temperature opt-in, and
+clears it when the effective preferred reading becomes the native climate. Fixed
+room-source changes normalize Comfort in the same save/rollback transaction,
+preventing an old opt-in from reappearing after switching back to an external
+source. Transient outages and missing native attributes do not erase opt-ins.
+Humidity normalization still clears its flag for automatic/native selections or
+disabled monitoring. These invariants apply to persisted updates,
+reload and portable import, rather than depending on frontend checkbox resets.
+Both settings are included in portable export/import and return to `false` on
+reset. The selected sensor ID remains saved during temporary fallback use.
+
+Fallback replaces a missing or invalid preferred reading only when its one
+backup has a usable current value. A stale preferred reading does not trigger
+fallback; a stale backup is rejected. Recovery restores the preferred source
+without changing settings. Both temperature and humidity payloads expose nullable
+`fallback_entity_id` and `fallback_source`, plus `using_fallback`; ordinary
+`entity_id` identifies the active source. Candidate metadata remains available
+while the option is off so the frontend can show the proposed backup. A missing
+alternative produces null candidate metadata and no checkbox. Enabled direct
+backups participate in report listeners and expiry timers. This selection affects
+Comfort observation only, not HVAC control or Room Assist temperature references.
 
 ### Comfort Range Models
 
@@ -150,11 +198,17 @@ Each metric payload contains:
   "condition": "comfortable",
   "source": "sensor",
   "entity_id": "sensor.living_room_temperature",
+  "fallback_entity_id": "climate.living_room",
+  "fallback_source": "climate",
+  "using_fallback": false,
   "value": 22.0,
   "min": 20.0,
   "max": 24.0
 }
 ```
+
+The fallback fields belong to temperature and humidity metrics. Other metrics
+omit them. Clients tolerate these fields being absent on older backends.
 
 `availability` is one of:
 
@@ -354,8 +408,9 @@ enabled derived metrics, the visual group is omitted entirely.
 Editable controls live in one native `details` panel after the assessment. It
 is rendered closed by default without binding its `open` property, so ordinary
 Lit updates preserve the user's current open state without adding frontend
-persistence. Its compact sections are ordered as Data sources (including data
-freshness), Comfort model, Preferences, Outdoor comparison and Additional
+persistence. Its compact sections are ordered as Data sources (including Backup
+sensors and the collapsed freshness explanation), Data freshness, Comfort model,
+Preferences, Outdoor comparison and Additional
 environmental information. Controls appear only where their selected source or
 model makes them relevant. The panel remains renderable when Comfort itself is
 disabled and is omitted as a whole when a Lovelace view sets
@@ -468,6 +523,7 @@ The scheduler registers `async_track_state_change_event` only for entities that 
 - the managed climate;
 - configured temperature, humidity, and CO2 sensors;
 - the Room Assist sensor when used as the automatic temperature source.
+- configured backup sources while their corresponding Comfort fallback is enabled;
 - enabled external derived-metric sensor entities.
 - enabled outdoor temperature and optional humidity sensor entities.
 

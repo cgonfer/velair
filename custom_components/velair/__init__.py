@@ -38,8 +38,7 @@ from .services import async_setup_services, async_unload_services
 from .storage import VelairStorage
 from .shared_demand import SharedDemandController, SIGNAL_SHARED_DEMAND_LIVE_UPDATED
 from .temperature_migration import (
-    async_dismiss_temperature_migration_notification,
-    async_notify_temperature_migration,
+    TemperatureMigrationNotifications,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,6 +58,7 @@ class VelairData:
     climate_change_monitor: ClimateChangeMonitor
     external_execution: ExternalExecutionManager
     shared_demand: SharedDemandController
+    temperature_notifications: TemperatureMigrationNotifications | None = None
 
 
 type VelairConfigEntry = ConfigEntry[VelairData]
@@ -108,6 +108,7 @@ async def async_setup_entry(
     )
     shared_demand = SharedDemandController(hass, data, storage.async_save, scheduler)
     scheduler.shared_demand_changed = shared_demand.request_refresh
+    temperature_notifications = TemperatureMigrationNotifications(hass, entry.entry_id)
 
     entry.runtime_data = VelairData(
         climate_delivery=climate_delivery,
@@ -118,6 +119,7 @@ async def async_setup_entry(
         climate_change_monitor=climate_change_monitor,
         external_execution=external_execution,
         shared_demand=shared_demand,
+        temperature_notifications=temperature_notifications,
     )
 
     hass.data.setdefault(DOMAIN, {})
@@ -141,9 +143,12 @@ async def async_setup_entry(
     await async_setup_services(hass)
     diagnostics.async_start(runtime)
     entry.async_on_unload(diagnostics.async_stop)
+    entry.async_on_unload(temperature_notifications.stop)
 
     @callback
     def _handle_temperature_unit_update(event: Event) -> None:
+        if temperature_notifications.stopped:
+            return
         if getattr(event, "event_type", None) == EVENT_CORE_CONFIG_UPDATE:
             scheduler.handle_schedule_timezone_change()
         entity_id = event.data.get("entity_id")
@@ -158,20 +163,17 @@ async def async_setup_entry(
         )
         was_blocked = scheduler.temperature_migration_blocked
         scheduler.set_temperature_migration_blocked(blocked)
+        temperature_notifications.request(
+            blocked, storage.temperature_migration_status().get("reason") if blocked else None,
+        )
         if blocked:
-            hass.async_create_task(
-                async_notify_temperature_migration(
-                    hass,
-                    entry.entry_id,
-                    storage.temperature_migration_status().get("reason"),
-                )
-            )
+            return
         elif was_blocked:
 
             async def _async_resume_after_unit_revert() -> None:
-                await async_dismiss_temperature_migration_notification(
-                    hass, entry.entry_id
-                )
+                await temperature_notifications.async_wait()
+                if temperature_notifications.stopped or scheduler.temperature_migration_blocked:
+                    return
                 await scheduler.async_start(
                     apply_current_schedule=(
                         should_apply_active_schedule_on_startup(entry)
@@ -194,11 +196,8 @@ async def async_setup_entry(
     await scheduler.async_capture_reported_target_temp_steps()
 
     if storage.temperature_migration_required:
-        await async_notify_temperature_migration(
-            hass,
-            entry.entry_id,
-            storage.temperature_migration_status().get("reason"),
-        )
+        temperature_notifications.request(True, storage.temperature_migration_status().get("reason"))
+        await temperature_notifications.async_wait()
     else:
         await scheduler.async_start(
             apply_current_schedule=should_apply_active_schedule_on_startup(entry)
@@ -228,6 +227,12 @@ async def async_unload_entry(
         return False
 
     try:
+        try:
+            temperature_notifications = getattr(entry.runtime_data, "temperature_notifications", None)
+            if temperature_notifications is not None:
+                await temperature_notifications.async_stop()
+        except Exception:
+            _LOGGER.exception("Failed to stop temperature migration notifications cleanly")
         try:
             shared_demand = getattr(entry.runtime_data, "shared_demand", None)
             if shared_demand is not None:

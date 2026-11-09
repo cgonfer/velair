@@ -1,0 +1,169 @@
+name: Reusable quality checks
+
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        description: Component directory or release ZIP artifact from this workflow run
+        type: string
+        required: true
+      archive:
+        type: boolean
+        default: false
+      suite:
+        type: string
+        default: smoke
+      size:
+        type: string
+        default: small
+      image:
+        type: string
+        default: ""
+      label:
+        type: string
+        default: ci
+      enforce:
+        type: boolean
+        default: false
+      compare-release:
+        description: Compare against previous published version using the same harness
+        type: boolean
+        default: false
+      visual:
+        description: policy follows reviewed visual references independently of the PR blocking rollout
+        type: string
+        default: policy
+    outputs:
+      result:
+        value: ${{ jobs.browser.outputs.result }}
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: Browser and load tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ (inputs.suite == 'extended' || inputs.compare-release) && 90 || 20 }}
+    outputs:
+      result: ${{ steps.test.outcome }}
+    env:
+      QUALITY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      QUALITY_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+      QUALITY_TESTED_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: ${{ inputs.compare-release && 0 || 1 }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Download exact build
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact }}
+          path: ${{ runner.temp }}/quality-input
+      - name: Install test driver
+        working-directory: frontend
+        run: npm ci
+      - name: Run real Home Assistant checks
+        id: test
+        continue-on-error: true
+        env:
+          QUALITY_ARCHIVE: ${{ inputs.archive }}
+          QUALITY_SUITE: ${{ inputs.suite }}
+          QUALITY_SIZE: ${{ inputs.size }}
+          QUALITY_IMAGE: ${{ inputs.image }}
+          QUALITY_COMPARE_RELEASE: ${{ inputs.compare-release }}
+          QUALITY_VISUAL: ${{ inputs.visual }}
+          GH_TOKEN: ${{ inputs.compare-release && github.token || '' }}
+        run: |
+          python - <<'PY'
+          import importlib.util, json, os, pathlib, re, subprocess, sys, urllib.request
+          source = pathlib.Path(os.environ['RUNNER_TEMP']) / 'quality-input'
+          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'quality-output'
+          args = [sys.executable, 'scripts/quality/run.py', '--output', str(output), '--suite', os.environ['QUALITY_SUITE'], '--size', os.environ['QUALITY_SIZE']]
+          visual = os.environ['QUALITY_VISUAL']
+          args += ['--visual', visual]
+          if os.environ['QUALITY_ARCHIVE'] == 'true':
+              archives = list(source.glob('velair-custom-component-*.zip'))
+              if len(archives) != 1: raise SystemExit('Expected one component ZIP')
+              args += ['--archive', str(archives[0])]
+          else:
+              args += ['--component', str(source)]
+          if os.environ['QUALITY_IMAGE']: args += ['--image', os.environ['QUALITY_IMAGE']]
+          if os.environ['QUALITY_COMPARE_RELEASE'] == 'true':
+              repo = os.environ['GITHUB_REPOSITORY']
+              current = json.loads(pathlib.Path('custom_components/velair/manifest.json').read_text())['version']
+              request = urllib.request.Request(f'https://api.github.com/repos/{repo}/releases?per_page=100', headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(request, timeout=30) as response: releases = json.load(response)
+              published = [r for r in releases if not r['draft'] and r['tag_name'] != 'v' + current and re.fullmatch(r'v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?', r['tag_name'])]
+              same_series = [r for r in published if '-' in current and r['tag_name'].startswith('v' + current.split('-')[0] + '-')]
+              candidates = same_series or [r for r in published if not r['prerelease']]
+              candidates.sort(key=lambda r: r['published_at'], reverse=True)
+              previous = None
+              for candidate in candidates:
+                  old = subprocess.check_output(['git', 'rev-parse', '--verify', '--end-of-options', candidate['tag_name'] + '^{commit}'], text=True).strip()
+                  if subprocess.call(['git', 'merge-base', '--is-ancestor', old, os.environ['GITHUB_SHA']]) == 0:
+                      previous = candidate; os.environ['QUALITY_BASE_SHA'] = old; break
+              if previous:
+                  name = 'velair-custom-component-' + previous['tag_name'][1:] + '.zip'
+                  asset = next((a for a in previous['assets'] if a['name'] == name), None)
+                  if asset and asset['size'] <= 100_000_000:
+                      url = asset['browser_download_url']
+                      if not url.startswith(f'https://github.com/{repo}/releases/download/'): raise SystemExit('Invalid baseline asset origin')
+                      archive = source / 'baseline.zip'
+                      with urllib.request.urlopen(url, timeout=60) as response, archive.open('wb') as stream:
+                          count = 0
+                          while block := response.read(1024 * 1024):
+                              count += len(block)
+                              if count > 100_000_000: raise SystemExit('Baseline archive exceeds limit')
+                              stream.write(block)
+                      sys.path.insert(0, str(pathlib.Path('scripts/quality').resolve()))
+                      import run as quality_run
+                      baseline = quality_run.extract_component(archive, source / 'baseline')
+                      args += ['--baseline-component', str(baseline)]
+              if '--baseline-component' not in args:
+                  os.environ['QUALITY_COMPARISON_UNAVAILABLE'] = 'No compatible previous published package with verified ancestry was available.'
+          sys.exit(subprocess.call(args))
+          PY
+      - name: Summarize observed results
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/quality-output/quality-report.md" ]; then
+            cat "$RUNNER_TEMP/quality-output/quality-report.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'No quality report: setup or execution did not complete.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload bounded machine summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.label == 'ci' && 'quality-summary' || format('quality-summary-{0}', inputs.label) }}
+          path: ${{ runner.temp }}/quality-output/quality-report.json
+          if-no-files-found: warn
+          retention-days: ${{ inputs.suite == 'extended' && 30 || 14 }}
+      - name: Upload selected public evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-evidence-${{ inputs.label }}
+          path: |
+            ${{ runner.temp }}/quality-output/quality-report.json
+            ${{ runner.temp }}/quality-output/quality-report.md
+            ${{ runner.temp }}/quality-output/playwright.json
+            ${{ runner.temp }}/quality-output/metrics.json
+            ${{ runner.temp }}/quality-output/screenshots/**/*.png
+            ${{ runner.temp }}/quality-output/**/browser/**/*.png
+            ${{ runner.temp }}/quality-output/**/logs/*.log
+          if-no-files-found: warn
+          retention-days: ${{ inputs.suite == 'extended' && 30 || 14 }}
+      - name: Enforce validated release checks
+        if: inputs.enforce && steps.test.outcome != 'success'
+        run: exit 1

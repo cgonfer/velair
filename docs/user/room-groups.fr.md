@@ -9,7 +9,7 @@ Traductions: [Original en anglais](room-groups.md) · [Español](room-groups.es.
 | Information | État |
 | --- | --- |
 | Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Dernière synchronisation | 2026-11-08 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -39,7 +39,7 @@ Le groupe est une unité de contrôle interne à Velair, pas une nouvelle entit�
 2. Saisissez son nom et utilisez **Ajouter des équipements** pour sélectionner les équipements gérés de la pièce. Ajoutez-en au moins deux. Recherchez par nom ou identifiant d’entité, puis confirmez. Les équipements d’un autre groupe sont indisponibles et indiquent leur groupe.
 3. Choisissez un membre dont la température ambiante rapportée représente la température propre au groupe. Cette référence n’en fait pas le propriétaire du groupe. Configurez une sonde externe facultative dans **Room Assist**, comme pour un équipement indépendant.
 4. Choisissez si Velair envoie les commandes à chaque membre ou à un membre dont l’installation les transmet déjà aux autres appareils.
-5. Choisissez la configuration à adopter avec **Utiliser la configuration de**. Exportez d’abord votre configuration si vous avez besoin d’une copie de récupération ; incluez **Apprentissage du préconditionnement** pour sauvegarder aussi l’étalonnage.
+5. Choisissez la configuration à adopter avec **Utiliser la configuration de**. Exportez d’abord votre configuration si vous avez besoin d’une copie de récupération ; incluez **Apprentissage de l’anticipation** pour sauvegarder aussi l’étalonnage.
 6. Utilisez le bouton d’enregistrement de l’en-tête pour ouvrir **Vérifier les modifications du groupe**. Rien n’est encore appliqué. Lisez les différences et l’avertissement de remise à zéro de l’apprentissage, puis choisissez **Confirmer et enregistrer** ou **Revenir à la modification**. Les erreurs de validation et d’enregistrement restent dans ce parcours pour permettre la correction du brouillon et un nouvel essai.
 
 <a id="configuration-fields"></a>
@@ -81,7 +81,7 @@ Le Confort reste individuel : son panneau et ses cartes affichent chaque équipe
 
 La **Vue d’ensemble** continue d’afficher chaque équipement physique. Son groupe identifie la programmation et l’autorité de contrôle communes, tandis que température, disponibilité et état restent individuels. Une action sur un membre s’applique à la pièce ; elle ne crée pas une programmation indépendante concurrente.
 
-Les **Prochains événements** affichent chaque équipement, avec son groupe sous le nom, comme les lignes individuelles de la **Programme du jour**. Les membres affichent le même événement du groupe ; Velair ne crée pas de programmations ni d’événements backend distincts. Sélectionnez un nom pour ouvrir la programmation partagée au jour de l’événement, y compris la programmation propre d’un Profil s’il fournit cet événement. Retour prévu utilise la programmation du Mode de destination. Cela fonctionne aussi depuis une carte Prochains événements du tableau de bord. Un filtre sur un membre ne montre que lui ; un filtre sur un groupe montre tous ses membres.
+Les **Prochains événements** affichent chaque équipement, avec son groupe sous le nom, comme les lignes individuelles du **Programme du jour**. Les membres affichent le même événement du groupe ; Velair ne crée pas de programmations ni d’événements backend distincts. Sélectionnez un nom pour ouvrir la programmation partagée au jour de l’événement, y compris la programmation propre d’un Profil s’il fournit cet événement. Retour prévu utilise la programmation du Mode de destination. Cela fonctionne aussi depuis une carte Prochains événements du tableau de bord. Un filtre sur un membre ne montre que lui ; un filtre sur un groupe montre tous ses membres.
 
 Sélectionnez un groupe pour le modifier dans le panneau adjacent, selon la même disposition liste/détail que Modèles et Contrôle de l’alimentation. Le résumé identifie membres, source de température et destinataires, ainsi que le contrôle commun et l’état de préparation. L’action d’en-tête vérifie et enregistre ; la suppression est dans la liste et demande confirmation. L’aide explique les choix de référence, d’envoi et de configuration. La vérification indique les champs obligatoires manquants. Pendant la modification, le résumé continue de décrire le groupe enregistré jusqu’à la vérification et à l’enregistrement du brouillon.
 
@@ -103,7 +103,7 @@ Le groupe a une seule autorité de programmation. Une pause de zone ou un força
 
 Mettre la programmation en pause n’éteint pas nécessairement les appareils. L’action de pause choisie détermine si Velair conserve leurs états ou envoie Arrêt aux destinataires configurés du groupe.
 
-La politique **Réglages externes** des Paramètres appartient au groupe. Un changement externe détecté de cible ou de mode HVAC d’un membre peut placer tout le groupe en **Réglage manuel**, selon les mêmes règles de programmation et pause qu’un équipement indépendant. Avec **Jusqu’au prochain bloc** :
+La politique **Réglages externes** dans Réglages appartient au groupe. Un changement externe détecté de cible ou de mode HVAC d’un membre peut placer tout le groupe en **Réglage manuel**, selon les mêmes règles de programmation et pause qu’un équipement indépendant. Avec **Jusqu’au prochain bloc** :
 
 1. Trois membres suivent une cible commune de `20 °C`.
 2. Un changement externe monte l’un d’eux à `22 °C`.
@@ -112,19 +112,19 @@ La politique **Réglages externes** des Paramètres appartient au groupe. Un cha
 
 | Politique de réglages externes | Comportement du groupe |
 | --- | --- |
-| Garder automatique | Velair conserve l’autorité et réapplique l’intention effective actuelle lorsqu’elle existe. |
+| Maintenir automatique | Velair conserve l’autorité et réapplique l’intention effective actuelle lorsqu’elle existe. |
 | Jusqu’au prochain bloc | Le réglage manuel se termine au prochain bloc applicable. Sans bloc futur, reprenez Automatique explicitement. |
-| Pour une durée | Le groupe cède pour la durée configurée. Les changements externes suivants renouvellent cette durée. |
+| Pendant une durée | Le groupe cède pour la durée configurée. Les changements externes suivants renouvellent cette durée. |
 | Jusqu’à la reprise | Le groupe cède jusqu’à la reprise explicite du contrôle Automatique. |
 
-Sélectionner explicitement Manuel utilise la politique enregistrée et conserve les états actuels des membres. Avec **Garder automatique**, ce Manuel explicite dure jusqu’à sa reprise. Room Assist cède pendant le réglage manuel.
+Sélectionner explicitement Manuel utilise la politique enregistrée et conserve les états actuels des membres. Avec **Maintenir automatique**, ce Manuel explicite dure jusqu’à sa reprise. Room Assist cède pendant le réglage manuel.
 
 Ce contrôle Manuel/Automatique est distinct du Mode **Manuel** utilisé pour sélectionner directement les Profils. Consultez [Changements externes et réglage manuel](manual-control.fr.md) pour les priorités et cas particuliers des blocs.
 
 <a id="display-order"></a>
 ## Ordre d’affichage
 
-Utilisez les commandes d’ordre des Paramètres pour déplacer groupes et équipements indépendants. Un nouveau groupe prend initialement la position de son premier membre. Ordonnez les membres dans le détail de l’onglet Groupes de pièce. La Vue d’ensemble développe le groupe en entrées individuelles consécutives selon cet ordre ; les sélecteurs de programmation affichent une entrée commune. Les deux ordres sont enregistrés par le backend.
+Utilisez les commandes d’ordre dans Réglages pour déplacer groupes et équipements indépendants. Un nouveau groupe prend initialement la position de son premier membre. Ordonnez les membres dans le détail de l’onglet Groupes de pièce. La Vue d’ensemble développe le groupe en entrées individuelles consécutives selon cet ordre ; les sélecteurs de programmation affichent une entrée commune. Les deux ordres sont enregistrés par le backend.
 
 La liste n’affiche que les équipements sélectionnés. Les nouveaux sont ajoutés à la fin sans changer l’ordre existant. Utilisez les flèches pour réordonner et la corbeille pour retirer un membre. Les listes longues peuvent être développées. Les changements de membres ne s’appliquent qu’après vérification et enregistrement.
 
@@ -145,11 +145,12 @@ Retirer un membre lui donne une copie indépendante de la configuration commune.
 Par exemple, retirer un équipement d’un groupe de trois laisse deux membres avec un nouvel historique de groupe et un équipement indépendant avec un nouvel historique. Supprimer le groupe rend les trois indépendants. Aucune opération ne restaure automatiquement leurs historiques antérieurs au groupe. Gardez au moins deux membres dans un groupe enregistré ; dissolvez-le si tous doivent devenir indépendants.
 
 <a id="before-testing-the-beta"></a>
-## Avant de tester la bêta
+<a id="check-the-group-configuration"></a>
+## Vérifier la configuration du groupe
 
 Sauvegardez la configuration avec l’apprentissage du préconditionnement si nécessaire. Après vérification et enregistrement, contrôlez que :
 
-- Un groupe apparaît dans Programmation, Profils, Préconditionnement et Room Assist.
+- Un groupe apparaît dans Programmes, Profils, Anticipation et Room Assist.
 - Chaque membre reste visible individuellement dans Vue d’ensemble, Prochains événements, Programme du jour, Confort et Diagnostic.
 - L’envoi correspond à l’installation : commandes directes à tous ou au destinataire choisi pour transmission par l’installation.
 - Modifier le Confort d’un membre laisse les autres inchangés.

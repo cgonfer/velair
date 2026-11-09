@@ -4,10 +4,12 @@ import { WEEKDAYS } from "../constants";
 import type { VelairApiClient } from "../api/client";
 import { draftBlocksFromScheduleBlocks } from "../domain/draft-blocks";
 import { bindingsFromBlocks, linkedDraftBlocks } from "../domain/linked-schedules";
+import { isRuntimeScheduleSnapshot, ScheduleRuntimeUpdates } from "./schedule-runtime-updates";
 import type {
   BlockDraftSource,
   DraftScheduleBlock,
   ScheduleResponse,
+  ScheduleUpdateMessage,
   ScheduleTemplate,
   VelairCardConfig,
 } from "../types";
@@ -63,6 +65,30 @@ export function asScheduleStateHost(host: unknown): ScheduleStateHost {
   return host as ScheduleStateHost;
 }
 
+const runtimeUpdates = new WeakMap<ScheduleStateHost, { generation?: number; updates: ScheduleRuntimeUpdates }>();
+
+function runtimeUpdatesFor(host: ScheduleStateHost): ScheduleRuntimeUpdates {
+  let entry = runtimeUpdates.get(host);
+  if (!entry || entry.generation !== host._scheduleSubscriptionGeneration) {
+    entry = { generation: host._scheduleSubscriptionGeneration, updates: new ScheduleRuntimeUpdates() };
+    runtimeUpdates.set(host, entry);
+  }
+  return entry.updates;
+}
+
+export function receiveScheduleUpdate(host: ScheduleStateHost, message: ScheduleUpdateMessage): void {
+  const updates = runtimeUpdatesFor(host);
+  if (!message.loaded) {
+    updates.reset();
+    void host._loadSchedule();
+  } else if (message.schedule) {
+    updates.reset();
+    host._applyScheduleData(message.schedule);
+  } else if (updates.accept(message) && host._data) {
+    host._applyScheduleData(updates.merge(host._data, 0, true));
+  }
+}
+
 export async function loadSchedule(host: ScheduleStateHost): Promise<void> {
   const api = host._api();
   if (!api || host._loading) {
@@ -70,12 +96,15 @@ export async function loadSchedule(host: ScheduleStateHost): Promise<void> {
   }
 
   const generation = host._scheduleSubscriptionGeneration;
+  const updates = runtimeUpdatesFor(host);
+  const runtimeRevision = updates.revision;
+  const operationId = host._data?.operation_status?.id ?? null;
   const current = () => generation === host._scheduleSubscriptionGeneration;
   host._loading = true;
   host._error = undefined;
   try {
     const data = await api.getSchedule();
-    if (current()) host._applyScheduleData(data);
+    if (current()) host._applyScheduleData(updates.merge(data, runtimeRevision, false, operationId));
   } catch (error) {
     if (current()) host._error = error instanceof Error ? error.message : host._t("unableLoad");
   } finally {
@@ -90,19 +119,18 @@ export async function subscribeUpdates(host: ScheduleStateHost): Promise<void> {
   }
 
   host._subscribing = true;
+  const generation = host._scheduleSubscriptionGeneration;
+  const current = () => generation === host._scheduleSubscriptionGeneration;
   try {
-    host._unsubscribeUpdates = await api.subscribeUpdates((message: { loaded?: boolean; schedule?: ScheduleResponse }) => {
-      if (!message.loaded || !message.schedule) {
-        void host._loadSchedule();
-        return;
-      }
-
-      host._applyScheduleData(message.schedule);
+    const unsubscribe = await api.subscribeUpdates((message) => {
+      if (current()) receiveScheduleUpdate(host, message);
     });
+    if (current()) host._unsubscribeUpdates = unsubscribe;
+    else await unsubscribe();
   } catch (error) {
-    host._error = error instanceof Error ? error.message : host._t("unableSubscribe");
+    if (current()) host._error = error instanceof Error ? error.message : host._t("unableSubscribe");
   } finally {
-    host._subscribing = false;
+    if (current()) host._subscribing = false;
   }
 }
 
@@ -111,6 +139,10 @@ export function applyScheduleData(
   data: ScheduleResponse,
   options: { forceDraft?: boolean } = {},
 ): void {
+  if (isRuntimeScheduleSnapshot(data)) {
+    host._data = data;
+    return;
+  }
   const isInitialDataLoad = !host._data;
   if (host._dirty) {
     const savedKey = data.zones[host._selectedEntity ?? ""]?.day_layout_key;

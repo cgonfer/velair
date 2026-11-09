@@ -1,5 +1,6 @@
 import type { BlockConfiguration, DraftScheduleBlock, ResourceDestination, TemplateUpdatePreview, TemplateAssignment } from "../types";
 import { draftBlocksFromScheduleBlocks, draftBlockUsesRange, normalizeDraftBlocks } from "../domain/draft-blocks";
+import { parseTemperatureInput } from "../domain/temperature-input";
 import type { VelairViewHost } from "../host-types";
 
 export type TemplateImpact = {
@@ -43,8 +44,8 @@ export function normalizeTemplateBlocks(host: Pick<VelairViewHost, "_t">, drafts
     invalidClimateOptionsError: (start) => host._t("climateOptionsRequiredAt", { start }),
     temperatureError: (block) => {
       const values = draftBlockUsesRange(block) ? [block.target_temp_low, block.target_temp_high] : [block.temperature];
-      return values.some((value) => String(value ?? "").trim() === "" || !Number.isFinite(Number(value)))
-        || (draftBlockUsesRange(block) && Number(block.target_temp_low) > Number(block.target_temp_high))
+      return values.some((value) => !Number.isFinite(parseTemperatureInput(value)))
+        || (draftBlockUsesRange(block) && parseTemperatureInput(block.target_temp_low) > parseTemperatureInput(block.target_temp_high))
         ? host._t("invalidTemperatureRange") : undefined;
     },
   });

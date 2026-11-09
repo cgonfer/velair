@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](linked-schedule-examples.md) · [Español](li
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.0-beta.10 |
+| Ultima sincronizzazione | 2026-11-05 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -246,6 +246,6 @@ Le impostazioni facoltative non supportate da una destinazione possono essere fi
 <a id="back-up-the-whole-setup"></a>
 ## Eseguire il backup dell’intera configurazione
 
-Usa l’esportazione Velair anziché copiare solo un giorno risolto visibile. Le esportazioni modello 16 conservano entrambi i tipi di collegamento, preset e identità dei blocchi. Esportare programmazioni o profili include i modelli e i preset da cui dipendono; la schermata mostra le sezioni aggiunte automaticamente.
+Usa l’esportazione Velair anziché copiare solo un giorno risolto visibile. Le esportazioni modello 26 conservano entrambi i tipi di collegamento, preset e identità dei blocchi. Le impostazioni di zona conservano anche le programmazioni facoltative dei sensori Room Assist. Esportare programmazioni o profili include i modelli e i preset da cui dipendono; la schermata mostra le sezioni aggiunte automaticamente.
 
-All’importazione, controlla le sostituzioni prima di confermare. Sostituire una risorsa condivisa può interessare anche utilizzi locali esistenti. La configurazione combinata deve essere valida; nuovi profili non vengono attivati solo perché importati. I backup precedenti restano importabili, mentre versioni Velair precedenti non possono importare un’esportazione modello 16. Consulta [Portabilità](usage.it.md#portability).
+All’importazione, controlla le sostituzioni prima di confermare. Sostituire una risorsa condivisa può interessare anche utilizzi locali esistenti. La configurazione combinata deve essere valida; nuovi profili non vengono attivati solo perché importati. I backup precedenti restano importabili, mentre versioni Velair precedenti non possono importare un’esportazione modello 26. Conserva un backup della versione precedente se potresti dovervi tornare. Consulta [Portabilità](usage.it.md#portability).

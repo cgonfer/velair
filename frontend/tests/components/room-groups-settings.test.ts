@@ -10,7 +10,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   HTMLDialogElement.prototype.close = function () { if (!this.open) return; this.open = false; this.dispatchEvent(new Event("close")); };
 });
-afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
+afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const group: RoomGroup = { id: "group.room", name: "Room", members: ["climate.a", "climate.b"], temperature_entity_id: "climate.a", delivery_mode: "all" };
 async function setup(existing = false) {
   const data = { configured_entities: ["climate.a", "climate.b", "climate.other"], configuration_revision: 7,
@@ -38,7 +38,8 @@ async function setup(existing = false) {
 }
 
 describe("room group settings", () => {
-  it("previews explicit source adoption before saving one backend-owned group with revision", async () => {
+  it.each(["HTTPS", "local HTTP"])("previews and saves a new backend-owned group with revision over %s", async (access) => {
+    if (access === "local HTTP") vi.stubGlobal("crypto", { getRandomValues: crypto.getRandomValues.bind(crypto) });
     const { element, send, apply, click } = await setup();
     const dirty = vi.fn(); element.addEventListener("room-groups-state-changed", dirty);
     await click("Create group");

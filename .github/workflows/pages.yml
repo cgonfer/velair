@@ -7,6 +7,10 @@ on:
     paths:
       - "website/**"
       - ".github/workflows/pages.yml"
+      - "scripts/quality/site.py"
+      - "scripts/quality/report.py"
+      - "scripts/quality/actions.py"
+      - "scripts/quality/actions.json"
   workflow_dispatch:
 
 permissions:
@@ -30,6 +34,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up quality report generator
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Generate public quality pages from published release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/quality/site.py --output website/public/quality --repository "$GITHUB_REPOSITORY"
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static website

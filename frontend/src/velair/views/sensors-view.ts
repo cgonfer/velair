@@ -1,4 +1,5 @@
 import { html, nothing } from "lit";
+import "../components/room-sensor-schedule-element";
 import {
   appliedAssistOffset,
   appliedAssistRange,
@@ -8,7 +9,7 @@ import {
   scheduledAssistRange,
 } from "../domain/room-assist";
 import { modeClassName, temperatureMatchesStep } from "../domain/climate";
-import { preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
+import { preconditioningSettings } from "../domain/preconditioning";
 import { temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
 import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
@@ -164,7 +165,9 @@ function renderSensorZone(
         { climate: host._friendlyEntityName(entityId) },
       )
     : host._t("roomSensorUnavailable");
-  const canEnable = exists && Boolean(settings.room_temperature_entity_id);
+  const hasReference = Boolean(settings.room_temperature_entity_id || settings.room_sensor_schedule?.enabled);
+  const canEnable = exists && (hasReference || settings.room_sensor_assist_enabled);
+  const nativeReference = expanded && status?.room_sensor_schedule?.enabled && status.room_sensor_schedule.effective_source === null;
   const handleToggle = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -226,10 +229,19 @@ function renderSensorZone(
         ? html`
             <div id=${contentId} class="sensor-zone-content">
               ${renderSensorConfiguration(host, entityId, settings, options)}
-              ${options.showLiveStatus && settings.room_temperature_entity_id && !settings.room_sensor_assist_enabled
-                ? renderSensorInactiveNotice(host)
+              ${!options.showRoomSensor && options.showLiveStatus && settings.room_sensor_schedule?.enabled && settings.room_sensor_assist_enabled
+                ? html`<velair-room-sensor-schedule .host=${host} .settings=${settings} .runtime=${status}
+                    .entityId=${entityId} .disabled=${host._settingsSaving}
+                    .language=${host._language?.() ?? ""}
+                    .showEditor=${false} .showLiveStatus=${true}></velair-room-sensor-schedule>`
                 : nothing}
-              ${options.showLiveStatus && settings.room_temperature_entity_id && settings.room_sensor_assist_enabled
+              ${options.showLiveStatus && hasReference && !settings.room_sensor_assist_enabled
+                ? renderSensorInactiveNotice(host, Boolean(settings.room_sensor_schedule?.enabled))
+                : nothing}
+              ${options.showLiveStatus && nativeReference && settings.room_sensor_assist_enabled && status?.status === "blocked"
+                ? renderSensorStatusPill(host, status)
+                : nothing}
+              ${options.showLiveStatus && hasReference && settings.room_sensor_assist_enabled && !nativeReference
                 ? renderSensorRuntime(host, entityId, status, settings, options.showDeadband)
                 : nothing}
             </div>
@@ -251,15 +263,19 @@ function renderSensorConfiguration(
 
   return html`
     <section class="sensor-config-section">
-      <h3><ha-icon icon="mdi:tune-variant"></ha-icon>${host._t("roomSensorAssist")}</h3>
+      ${!options.showRoomSensor ? html`<h3><ha-icon icon="mdi:tune-variant"></ha-icon>${renderSensorLabel(host, "roomSensorAssist")}</h3>` : nothing}
       <div class="sensor-config-rows">
         ${options.showRoomSensor
-          ? renderSensorEntityPicker(
-              host,
-              entityId,
-              settings.room_temperature_entity_id ?? "",
-            )
+          ? html`<velair-room-sensor-schedule class="sensor-reference-control"
+              .host=${host} .settings=${settings} .runtime=${host._data?.room_sensor_assist?.[entityId]}
+              .entityId=${entityId} .disabled=${host._settingsSaving}
+              .language=${host._language?.() ?? ""} .showLiveStatus=${options.showLiveStatus}
+            ></velair-room-sensor-schedule>`
           : nothing}
+        ${options.showDeadband || options.showMaxDelta || options.showDebounce ? html`
+        <section class="sensor-assist-settings" aria-label=${host._t("roomSensorAssistSettings")}>
+          <h4>${host._t("roomSensorAssistSettings")}</h4>
+          <div class="sensor-number-fields">
         ${options.showDeadband
           ? renderSensorNumber(
               host,
@@ -273,7 +289,7 @@ function renderSensorConfiguration(
               host._temperatureUnit(entityId),
               {
                 inactive:
-                  !settings.room_temperature_entity_id
+                  !(settings.room_temperature_entity_id || settings.room_sensor_schedule?.enabled)
                   || !settings.room_sensor_assist_enabled,
               },
             )
@@ -291,7 +307,7 @@ function renderSensorConfiguration(
               host._temperatureUnit(entityId),
               {
                 inactive:
-                  !settings.room_temperature_entity_id
+                  !(settings.room_temperature_entity_id || settings.room_sensor_schedule?.enabled)
                   || !settings.room_sensor_assist_enabled,
               },
             )
@@ -309,24 +325,26 @@ function renderSensorConfiguration(
               host._t("secondsShort"),
               {
                 inactive:
-                  !settings.room_temperature_entity_id
+                  !(settings.room_temperature_entity_id || settings.room_sensor_schedule?.enabled)
                   || !settings.room_sensor_assist_enabled,
               },
             )
           : nothing}
+          </div>
+        </section>` : nothing}
       </div>
     </section>
   `;
 }
 
-function renderSensorInactiveNotice(host: SensorsViewHost) {
+function renderSensorInactiveNotice(host: SensorsViewHost, scheduled = false) {
   return html`
     <section class="sensor-runtime-section sensor-inactive-section">
       <h3>
         <ha-icon icon="mdi:power-standby"></ha-icon>
         ${host._t("roomSensorStatusDisabled")}
       </h3>
-      <p>${host._t("roomSensorAssistDisabledDetail")}</p>
+      <p>${host._t(scheduled ? "roomSensorScheduleAssistDisabled" : "roomSensorAssistDisabledDetail")}</p>
     </section>
   `;
 }
@@ -378,7 +396,7 @@ export function renderRoomAssistTemperatureScale(
   status?: RoomSensorAssistStatus,
   settings?: PreconditioningSettings,
 ) {
-  if (!status || (status.reason === "unsupported_range_mode" || status.reason === "range_reference_not_configured") || !hasRoomAssistScheduledTarget(status) || !status.start) {
+  if (!status || status.reason === "native_reference" || (status.reason === "unsupported_range_mode" || status.reason === "range_reference_not_configured") || !hasRoomAssistScheduledTarget(status) || !status.start) {
     return nothing;
   }
   const deadband = settings?.room_sensor_assist_deadband ?? 0;
@@ -974,75 +992,20 @@ function climateTargetHelp(
 function renderSensorLabel(
   host: SensorsViewHost,
   labelKey: TranslationKey,
-  options: { helpId?: string; persistentHelp?: boolean } = {},
+  options: { helpId?: string; inputId?: string; showHelp?: boolean } = {},
 ) {
   const helpKey = SENSOR_HELP_KEYS[labelKey];
   const help = helpKey ? host._t(helpKey) : "";
-  if (helpKey && options.persistentHelp) {
-    return html`
-      <span class="sensor-config-label sensor-config-label-stacked">
-        <span>${host._t(labelKey)}</span>
-        <small class="sensor-config-help-text">${help}</small>
-      </span>
-    `;
-  }
+
   return html`
     <span class="label sensor-config-label">
-      <span>${host._t(labelKey)}</span>
-      ${helpKey
+      ${options.inputId
+        ? html`<label for=${options.inputId}>${host._t(labelKey)}</label>`
+        : html`<span>${host._t(labelKey)}</span>`}
+      ${helpKey && options.showHelp !== false
         ? renderInlineHelp(options.helpId ?? `sensor-${labelKey}-help`, help, help)
         : nothing}
     </span>
-  `;
-}
-
-function renderSensorEntityPicker(
-  host: SensorsViewHost,
-  entityId: string,
-  value: string,
-) {
-  const disabled = host._settingsSaving;
-  const sensors = temperatureSensorOptions(host.hass, value);
-  const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
-  return html`
-    <label class="sensor-config-row sensor-picker-row">
-      ${renderSensorLabel(host, "roomSensorTemperatureEntity", {
-        helpId: `room-sensor-${safeEntityId}-temperature-entity-help`,
-      })}
-      <span class="select-wrap">
-        <select
-          .value=${value}
-          value=${value}
-          ?disabled=${disabled}
-          @change=${(event: Event) => {
-            const nextValue = (event.currentTarget as HTMLSelectElement).value.trim();
-            host._saveZonePreconditioning(
-              entityId,
-              nextValue
-                ? { room_temperature_entity_id: nextValue }
-                : {
-                    room_temperature_entity_id: null,
-                    room_sensor_assist_enabled: false,
-                  },
-            );
-          }}
-        >
-          <option value="" ?selected=${value === ""}>
-            ${host._t("roomSensorSelectSensor")}
-          </option>
-          ${sensors.map(
-            (sensor) => html`
-              <option value=${sensor.entityId} ?selected=${sensor.entityId === value}>
-                ${sensor.label} · ${sensor.entityId}
-              </option>
-            `,
-          )}
-        </select>
-        ${value
-          ? html`<small class="sensor-selected-entity">${value}</small>`
-          : nothing}
-      </span>
-    </label>
   `;
 }
 
@@ -1059,16 +1022,22 @@ function renderSensorNumber(
   options: { inactive?: boolean } = {},
 ) {
   const disabled = host._settingsSaving || Boolean(options.inactive);
-  const persistentHelp = field === "room_sensor_assist_deadband" || field === "room_sensor_assist_max_delta";
   const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const inputId = `room-sensor-${safeEntityId}-${field}`;
+  const descriptionKey = field === "room_sensor_assist_deadband" ? "roomSensorAssistDeadbandDescription"
+    : field === "room_sensor_assist_max_delta" ? "roomSensorAssistMaxDeltaDescription"
+    : "roomSensorAssistDebounceDescription";
   return html`
-    <label class=${`sensor-config-row ${options.inactive ? "inactive" : ""}`}>
+    <div class=${`sensor-config-row ${options.inactive ? "inactive" : ""}`}>
       ${renderSensorLabel(host, labelKey, {
-        helpId: `room-sensor-${safeEntityId}-${field}-help`,
-        persistentHelp,
+        helpId: `${inputId}-help`,
+        inputId,
+        showHelp: field !== "room_sensor_assist_debounce_seconds",
       })}
       <span class="sensor-number-input">
         <input
+          id=${inputId}
+          aria-describedby=${`${inputId}-description`}
           type="number"
           min=${String(min)}
           max=${String(max)}
@@ -1106,7 +1075,8 @@ function renderSensorNumber(
         />
         <span>${unit}</span>
       </span>
-    </label>
+      <small class="sensor-field-description" id=${`${inputId}-description`}>${host._t(descriptionKey)}</small>
+    </div>
   `;
 }
 

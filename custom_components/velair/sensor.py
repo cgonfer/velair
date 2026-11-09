@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
@@ -12,7 +14,7 @@ from homeassistant.util import dt as dt_util
 
 from . import VelairConfigEntry
 from .config_helpers import get_configured_climate_entities
-from .const import SIGNAL_DIAGNOSTICS_UPDATED
+from .const import SIGNAL_COMFORT_UPDATED, SIGNAL_DIAGNOSTICS_UPDATED
 from .entity import VelairEntity
 
 
@@ -273,7 +275,43 @@ class ZoneActiveTargetTemperatureSensor(_ZoneSensor):
         return _serialize_event(event)
 
 
-class ZoneEnvironmentalConditionSensor(_ZoneSensor):
+class _ComfortSensor(_ZoneSensor):
+    """Write only the affected physical assessment, borrowing during one write."""
+
+    _comfort_write_assessment = None
+
+    def _comfort_assessment(self):
+        if self._comfort_write_assessment is not None:
+            return self._comfort_write_assessment
+        projection = getattr(self.scheduler, "_comfort_projection", None)
+        if projection is not None:
+            return projection.current(self._climate_entity_id, detached=False)
+        return self.scheduler.get_comfort_assessment(self._climate_entity_id)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, SIGNAL_COMFORT_UPDATED, self._handle_comfort_update))
+
+    @callback
+    def _handle_comfort_update(self, entities) -> None:
+        if self._climate_entity_id in entities:
+            self._handle_scheduler_update()
+
+    @callback
+    def _handle_scheduler_update(self) -> None:
+        # This reference never escapes the synchronous HA state write. Public
+        # attributes below detach only the fields actually exposed by the sensor.
+        previous = self._comfort_write_assessment
+        self._comfort_write_assessment = None
+        try:
+            self._comfort_write_assessment = self._comfort_assessment()
+            self.async_write_ha_state()
+        finally:
+            self._comfort_write_assessment = previous
+
+
+class ZoneEnvironmentalConditionSensor(_ComfortSensor):
     """Sensor exposing the environmental condition for one zone."""
 
     _attr_device_class = SensorDeviceClass.ENUM
@@ -312,19 +350,15 @@ class ZoneEnvironmentalConditionSensor(_ZoneSensor):
     @property
     def native_value(self) -> str:
         """Return the current human environmental condition."""
-        assessment = self.scheduler.get_comfort_assessment(
-            self._climate_entity_id
-        )
+        assessment = self._comfort_assessment()
         condition = assessment.get("condition")
         return condition if isinstance(condition, str) else "no_readings"
 
     @property
     def extra_state_attributes(self) -> dict[str, object] | None:
         """Return compact source and reading-quality context."""
-        assessment = self.scheduler.get_comfort_assessment(
-            self._climate_entity_id
-        )
-        return _compact_attributes(
+        assessment = self._comfort_assessment()
+        return deepcopy(_compact_attributes(
             {
                 "data_quality": assessment.get("data_quality"),
                 "data_issues": assessment.get("data_issues"),
@@ -345,10 +379,10 @@ class ZoneEnvironmentalConditionSensor(_ZoneSensor):
                 "outdoor": assessment.get("outdoor"),
                 "insights": assessment.get("insights"),
             }
-        )
+        ))
 
 
-class ZoneVentilationOpportunitySensor(_ZoneSensor):
+class ZoneVentilationOpportunitySensor(_ComfortSensor):
     """Sensor exposing cautious, observational ventilation guidance."""
 
     _attr_device_class = SensorDeviceClass.ENUM
@@ -380,9 +414,7 @@ class ZoneVentilationOpportunitySensor(_ZoneSensor):
     @property
     def native_value(self) -> str:
         """Return the current ventilation opportunity."""
-        assessment = self.scheduler.get_comfort_assessment(
-            self._climate_entity_id
-        )
+        assessment = self._comfort_assessment()
         projection = assessment.get("ventilation_opportunity")
         state = projection.get("state") if isinstance(projection, dict) else None
         return state if state in self._attr_options else "unavailable"
@@ -390,9 +422,7 @@ class ZoneVentilationOpportunitySensor(_ZoneSensor):
     @property
     def extra_state_attributes(self) -> dict[str, object] | None:
         """Return compact evidence for the projected state."""
-        assessment = self.scheduler.get_comfort_assessment(
-            self._climate_entity_id
-        )
+        assessment = self._comfort_assessment()
         projection = assessment.get("ventilation_opportunity")
         projection = projection if isinstance(projection, dict) else {}
         outdoor = assessment.get("outdoor")
@@ -419,10 +449,10 @@ class ZoneVentilationOpportunitySensor(_ZoneSensor):
         attributes["blocked_by"] = (
             list(blocked_by) if isinstance(blocked_by, list) else []
         )
-        return attributes
+        return deepcopy(attributes)
 
 
-class ZoneAirQualitySensor(_ZoneSensor):
+class ZoneAirQualitySensor(_ComfortSensor):
     """Sensor exposing the CO2-derived air-quality state for one zone."""
 
     _attr_device_class = SensorDeviceClass.ENUM
@@ -447,18 +477,14 @@ class ZoneAirQualitySensor(_ZoneSensor):
     @property
     def native_value(self) -> str:
         """Return the current CO2-derived air quality."""
-        assessment = self.scheduler.get_comfort_assessment(
-            self._climate_entity_id
-        )
+        assessment = self._comfort_assessment()
         air_quality = assessment.get("air_quality")
         return air_quality if isinstance(air_quality, str) else "unavailable"
 
     @property
     def extra_state_attributes(self) -> dict[str, object] | None:
         """Return compact CO2 source context."""
-        assessment = self.scheduler.get_comfort_assessment(
-            self._climate_entity_id
-        )
+        assessment = self._comfort_assessment()
         co2 = assessment.get("co2")
         return _compact_attributes(
             {

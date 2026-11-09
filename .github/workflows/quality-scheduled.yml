@@ -1,0 +1,181 @@
+name: Extended quality
+run-name: ${{ inputs.suite == 'calibration' && 'Quality calibration' || (inputs.candidate || github.event.schedule == '47 3 * * 1') && 'Quality candidate' || 'Quality fixed' }}
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+    - cron: "47 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      suite:
+        type: choice
+        options: [extended, smoke, release, calibration]
+        default: extended
+      size:
+        type: choice
+        options: [large, small]
+        default: large
+      baseline_ref:
+        description: Optional commit or tag to build and compare sequentially
+        type: string
+        default: ""
+      candidate:
+        description: Check the current stable HA image separately from fixed-reference metrics
+        type: boolean
+        default: false
+      visual:
+        description: Compare only after reviewing references; calibration always compares ten small-profile runs
+        type: choice
+        options: [policy, capture, compare, off]
+        default: policy
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: extended-quality-${{ github.event.schedule || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  exercise:
+    name: Extended browser and load checks
+    runs-on: ubuntu-24.04
+    # Full extended workload plus six sequential paired smoke executions.
+    timeout-minutes: 150
+    env:
+      QUALITY_HEAD_SHA: ${{ github.sha }}
+      QUALITY_TESTED_SHA: ${{ github.sha }}
+      QUALITY_KIND: ${{ inputs.suite == 'calibration' && 'calibration' || (inputs.candidate || github.event.schedule == '47 3 * * 1') && 'candidate' || 'fixed' }}
+      QUALITY_SUITE: ${{ inputs.suite == 'calibration' && 'calibration' || (inputs.candidate || github.event.schedule == '47 3 * * 1') && 'smoke' || inputs.suite || 'extended' }}
+      QUALITY_SIZE: ${{ (inputs.suite == 'calibration' || inputs.candidate || github.event.schedule == '47 3 * * 1') && 'small' || inputs.size || 'large' }}
+      BASELINE_REF: ${{ inputs.baseline_ref }}
+      CANDIDATE: ${{ inputs.candidate || github.event.schedule == '47 3 * * 1' }}
+      QUALITY_VISUAL: ${{ inputs.suite == 'calibration' && 'compare' || inputs.visual || 'policy' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Resolve reviewed visual policy
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, sys
+          sys.path.insert(0, str(pathlib.Path('scripts/quality').resolve()))
+          from run import resolve_visual_policy
+          lock = json.loads(pathlib.Path('scripts/quality/environment.json').read_text())
+          mode = resolve_visual_policy(os.environ['QUALITY_VISUAL'], lock)
+          with open(os.environ['GITHUB_ENV'], 'a') as stream:
+              stream.write('QUALITY_VISUAL=' + mode + '\n')
+          PY
+      - name: Check whether this code and environment need measurement
+        id: admission
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/quality/schedule.py --receipt "$RUNNER_TEMP/schedule-receipt.json" --kind "$QUALITY_KIND" --suite "$QUALITY_SUITE" --size "$QUALITY_SIZE" --visual "$QUALITY_VISUAL"
+      - name: Build target component and install test driver
+        if: steps.admission.outputs.run == 'true'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Build comparison component in separate worktree
+        if: steps.admission.outputs.run == 'true' && env.CANDIDATE != 'true' && env.QUALITY_SUITE != 'calibration'
+        env:
+          AUTO_BASELINE: ${{ steps.admission.outputs.baseline }}
+        run: |
+          BASELINE_REF="${BASELINE_REF:-$AUTO_BASELINE}"
+          if [ -n "$BASELINE_REF" ]; then
+            BASELINE_SHA="$(git rev-parse --verify --end-of-options "${BASELINE_REF}^{commit}")"
+            git worktree add --detach "$RUNNER_TEMP/quality-baseline" "$BASELINE_SHA"
+            (cd "$RUNNER_TEMP/quality-baseline/frontend" && npm ci && npm run build)
+            echo "QUALITY_BASE_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
+          fi
+      - name: Run reproducible scenarios
+        id: exercise
+        if: steps.admission.outputs.run == 'true'
+        continue-on-error: true
+        env:
+          QUALITY_IMAGE: ${{ steps.admission.outputs.image }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, subprocess, sys
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          output = root / 'quality-output'
+          if os.environ['QUALITY_SUITE'] == 'calibration':
+              sys.exit(subprocess.call([sys.executable, 'scripts/quality/calibrate.py', '--component', 'custom_components/velair', '--output', str(output), '--image', os.environ['QUALITY_IMAGE']]))
+          args = [sys.executable, 'scripts/quality/run.py', '--component', 'custom_components/velair', '--output', str(output), '--suite', os.environ['QUALITY_SUITE'], '--size', os.environ['QUALITY_SIZE'], '--visual', os.environ['QUALITY_VISUAL']]
+          if os.environ.get('QUALITY_IMAGE'): args += ['--image', os.environ['QUALITY_IMAGE']]
+          baseline = root / 'quality-baseline/custom_components/velair'
+          paired = baseline.exists() and os.environ['CANDIDATE'] != 'true'
+          if paired and os.environ['QUALITY_SUITE'] != 'extended':
+              args += ['--baseline-component', str(baseline)]
+              sys.exit(subprocess.call(args))
+          primary_result = subprocess.call(args)
+          if paired:
+              benchmark = root / 'quality-benchmark'
+              comparison_result = subprocess.call([sys.executable, 'scripts/quality/run.py', '--component', 'custom_components/velair', '--output', str(benchmark), '--suite', 'smoke', '--size', 'small', '--visual', os.environ['QUALITY_VISUAL'], '--baseline-component', str(baseline)])
+              if (output / 'quality-report.json').exists() and (benchmark / 'quality-report.json').exists():
+                  aggregate_result = subprocess.call([sys.executable, 'scripts/quality/report.py', '--inputs', str(output / 'quality-report.json'), str(benchmark / 'quality-report.json'), '--output', str(output)])
+                  sys.exit(primary_result or comparison_result or aggregate_result)
+              sys.exit(primary_result or comparison_result or 1)
+          sys.exit(primary_result)
+          PY
+      - name: Report quality results
+        if: always() && steps.admission.outputs.run == 'true'
+        run: |
+          if [ -f "$RUNNER_TEMP/quality-output/quality-report.md" ]; then
+            cat "$RUNNER_TEMP/quality-output/quality-report.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'No report: extended quality preparation failed.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload selected evidence
+        if: always() && steps.admission.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-extended-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/quality-output/quality-report.json
+            ${{ runner.temp }}/quality-output/quality-report.md
+            ${{ runner.temp }}/quality-output/playwright.json
+            ${{ runner.temp }}/quality-output/metrics.json
+            ${{ runner.temp }}/quality-output/run-*/quality-report.json
+            ${{ runner.temp }}/quality-output/screenshots/**/*.png
+            ${{ runner.temp }}/quality-output/**/browser/**/*.png
+            ${{ runner.temp }}/quality-output/**/logs/*.log
+            ${{ runner.temp }}/quality-benchmark/quality-report.json
+            ${{ runner.temp }}/quality-benchmark/quality-report.md
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Record completed validation or required retry
+        if: always() && steps.admission.outcome == 'success'
+        env:
+          QUALITY_RESULT: ${{ steps.exercise.outcome }}
+        run: |
+          python scripts/quality/schedule.py --receipt "$RUNNER_TEMP/schedule-receipt.json" --finalize "$RUNNER_TEMP/quality-output" --outcome "$QUALITY_RESULT"
+      - name: Preserve the small scheduling receipt
+        if: always() && steps.admission.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-schedule-receipt
+          path: ${{ runner.temp }}/schedule-receipt.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Clean comparison worktree
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/quality-baseline" ]; then
+            git worktree remove --force "$RUNNER_TEMP/quality-baseline"
+          fi
+      - name: Preserve execution failure
+        if: steps.exercise.outcome == 'failure'
+        run: exit 1

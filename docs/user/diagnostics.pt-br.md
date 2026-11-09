@@ -8,8 +8,8 @@ Traduções: [Original em inglês](diagnostics.md) · [Español](diagnostics.es.
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.3 |
-| Última sincronização | 2026-10-21 |
+| Versão de referência | 1.9.0-beta.10 |
+| Última sincronização | 2026-11-04 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -72,6 +72,10 @@ A seção de exportação fica oculta em layouts de celular porque downloads nã
 A visão local do Diagnóstico usa os nomes amigáveis dos dispositivos ao filtrar, mas o painel detalhado mostra intencionalmente os IDs locais para permitir a conferência da configuração. Com a opção padrão de privacidade habilitada, relatórios baixados substituem IDs estruturados e IDs contidos no texto de erros retidos por identificadores alternativos determinísticos, como `climate_unit_1` e `associated_entity_1`. Referências repetidas mantêm o mesmo identificador alternativo, preservando relações úteis sem revelar os IDs locais originais. Se você optar explicitamente por manter os IDs originais, eles permanecerão no relatório; identificadores de Perfil, Modo e pausa continuam sendo removidos. Revise cada relatório antes de compartilhá-lo.
 
 O Diagnóstico não oferece controles do agendador, novas tentativas, reversão ou climatização. As Configurações continuam reunindo ações de configuração e manutenção; detalhes de capacidade e integridade dos dispositivos ficam no Diagnóstico.
+
+Os detalhes de envio do equipamento selecionado distinguem uma chamada de serviço aceita de seu alvo ser informado pelo Home Assistant. A confirmação pode estar pendente, concluída, recuperada após uma nova tentativa ou não confirmada após o limite de tentativas. Uma falha silenciosa recuperada permanece no histórico de **Entrega climática** com a contagem de tentativas, permitindo verificar que o Velair resolveu a divergência. Informes correspondentes não acrescentam uma entrada ao histórico para cada comando normal. O relatório baixado mantém as mesmas evidências de confirmação.
+
+A recuperação é executada no backend mesmo com o Diagnóstico fechado. Se vários equipamentos independentes mudarem de bloco ao mesmo tempo, apenas aquele que continuar informando um alvo diferente precisará de uma nova tentativa. Abrir ou atualizar esta visão nunca envia um comando de climatização. Um informe confirmado é uma evidência do estado do Home Assistant; não verifica de forma independente um dispositivo que informa valores otimistas.
 
 Cada equipamento gerenciado também informa evidências de estabilização de comandos que existem apenas durante a execução. Enquanto um comando recente do Velair estabiliza, o Diagnóstico lista os campos de controle afetados no retrato operacional. Se o equipamento não convergir até o prazo limitado, o próximo retrato atualizado sinaliza `command_settling_mismatch`. Expanda esse aviso no painel de Diagnóstico do equipamento selecionado para comparar o valor esperado de cada campo afetado com o informado pelo termostato. As temperaturas incluem a unidade do equipamento, os modos HVAC usam os rótulos habituais e valores ausentes são identificados explicitamente. A comparação usa o registro, não a programação atual nem uma nova leitura. O relatório baixado também mantém o bloco `command_settling`. Isso é uma evidência para investigar problemas: o Diagnóstico não repete o comando, não altera o equipamento nem cria um Ajuste manual. A evidência é apagada por um comando mais recente para o mesmo campo ou por reinício.
 

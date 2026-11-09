@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](resilient-climate-delivery.md) · [Español](res
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.0-beta.10 |
+| Laatst gesynchroniseerd | 2026-11-04 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -24,7 +24,13 @@ Als een entiteit `unknown` of `unavailable` wordt, wacht Velair totdat Home Assi
 
 Stel bijvoorbeeld dat een afwezigheidsprofiel 17 °C vroeg terwijl een thermostaat offline was. Als je de thuismodus kiest voordat de verbinding wordt hersteld, bepaalt en verstuurt Velair de actuele doeltemperatuur van die modus, niet de achterhaalde opdracht voor 17 °C. Dezelfde regel geldt voor modi, tijdelijke aanpassingen, pauzes, Room Assist en vervroegde adaptieve voorconditionering.
 
-Wanneer Home Assistant een klimaataanroep expliciet weigert, probeert Velair deze hooguit twee keer opnieuw: na ongeveer 2 seconden en 10 seconden. Een nieuwere opdracht, het stoppen van Velair of het ontladen van de integratie annuleert het lopende werk voor dat apparaat.
+Wanneer Home Assistant een klimaataanroep weigert, of deze accepteert maar het klimaatapparaat een andere doelwaarde blijft melden, doet Velair binnen die overdrachtsepisode hooguit twee aanvullende pogingen. De eerste wacht ongeveer 2 seconden en de tweede ongeveer 10 verdere seconden. Na de laatste geaccepteerde poging wacht Velair 5 seconden op de doelwaardemelding. Een overeenkomende melding kan de bevestiging eerder afronden; apparaten die de gevraagde waarde melden hebben geen herhaalpoging nodig.
+
+Herstel is onafhankelijk voor elke beheerde zone. Als meerdere afzonderlijke klimaatapparaten tegelijk van blok veranderen, wordt alleen het apparaat waarvan de doelwaarde blijft afwijken opnieuw aangestuurd. De andere apparaten worden niet vertraagd en ontvangen hun opdrachten niet opnieuw. Deze controles gebruiken de gemelde statussen van Home Assistant en bestaande listeners voor statuswijzigingen, zonder periodieke uitlezing van het apparaat.
+
+Voor elke herhaalpoging controleert Velair de huidige opdracht opnieuw, inclusief een nieuw blok, een tijdelijke aanpassing of pauze. Een nieuwere opdracht, het stoppen van Velair of het ontladen van de integratie annuleert verouderd lopend werk voor dat apparaat. Diagnostiek toont of de bevestiging in afwachting is, ontvangen is, na een herhaalpoging is hersteld of nog ontbreekt. Een herstelde stille fout blijft ook in de begrensde overdrachtsgeschiedenis staan.
+
+Een werkelijke overgang van niet-beschikbaar naar beschikbaar behoudt het verbindingsherstel. Als bevestiging of herstel al in afwachting is, blijven de oorspronkelijke deadline en het beschikbare aantal herhaalpogingen behouden; een overeenkomende melding kan de bevestiging afronden zonder een nieuwe opdracht. Anders begint bij het herstellen van de verbinding een nieuwe overdrachtsepisode voor de huidige doelwaarde. Gewone temperatuur-, luchtvochtigheids- of doelwaardemeldingen starten een opgebruikt aantal herhaalpogingen niet opnieuw. Een late melding die overeenkomt met de gevraagde doelwaarde heft het verschil op zonder een nieuwe opdracht te sturen.
 
 Handmatige temperatuuracties worden eenmalig uitgevoerd. Velair past een oude handmatige doeltemperatuur niet alsnog toe nadat het apparaat opnieuw verbinding heeft gemaakt.
 

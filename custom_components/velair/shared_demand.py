@@ -247,6 +247,8 @@ class SharedDemandController:
                     entities.add(member_id)
                     entity_groups.setdefault(member_id, set()).add(group["id"])
                 preconditioning = data.get("zones", {}).get(entity_id, {}).get("preconditioning") or {}
+                if preconditioning.get("room_sensor_schedule", {}).get("enabled"):
+                    preconditioning = self._scheduler._prepared_preconditioning(entity_id)
                 external = preconditioning.get("room_temperature_entity_id")
                 native = data.get("room_groups", {}).get(entity_id, {}).get("temperature_entity_id")
                 for source in (native, external):

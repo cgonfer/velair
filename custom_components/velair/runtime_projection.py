@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from homeassistant.util import dt as dt_util
 
-from .models import normalize_preconditioning_data, preconditioning_observations_for_direction
+from .models import normalize_preconditioning_data, preconditioning_prediction_time_input
 from .schedule_projection import PreparedSchedule, utc
 from .projection_inputs import input_value, thermal_input, target_feature_presence
 
@@ -48,6 +48,7 @@ class RuntimeScheduleProjection:
         self.preconditioning = {}
         self.configuration_revision = 0
         self.configuration_data = None
+        self.published_room_sensor_schedules = ()
         self.generation = 0
         self._configuration_inputs = {}
         self._runtime_configuration = None
@@ -55,6 +56,7 @@ class RuntimeScheduleProjection:
         self._raw_forecasts = {}
         self._raw_generations = {}
         self._thermal_results = {}
+        self._source_forecast_contexts = {}
         self._resolution_at = None
         self._next_resolution_deadline = None
         self._resolved_forecasts = ()
@@ -119,10 +121,12 @@ class RuntimeScheduleProjection:
         for entity in set(self.schedules) - configured:
             self.schedules.pop(entity, None)
             self.preconditioning.pop(entity, None)
+            owner._room_sensor_schedules.entries.pop(entity, None)
             self._configuration_inputs.pop(entity, None)
             self._forecast_inputs.pop(entity, None)
             self._raw_forecasts.pop(entity, None)
             self._thermal_results.pop(entity, None)
+            self._source_forecast_contexts.pop(entity, None)
             self._candidate_inputs.pop(entity, None)
             self.candidates.discard(entity)
             self.candidate_sources.pop(entity, None)
@@ -145,6 +149,7 @@ class RuntimeScheduleProjection:
             raw_preconditioning = input_value(zone.get("preconditioning"))
             if raw_preconditioning != self._preconditioning_inputs.get(entity) or entity not in self.preconditioning:
                 self.preconditioning[entity] = normalize_preconditioning_data(zone.get("preconditioning"))
+                owner._room_sensor_schedules.configure(entity, self.preconditioning[entity], now)
                 self._preconditioning_inputs[entity] = raw_preconditioning
         runtime_configuration = (
             {entity: (zone.get("enabled"), zone.get("execution"), zone.get("preconditioning"),
@@ -162,6 +167,11 @@ class RuntimeScheduleProjection:
         self._prepare_topology()
         if owner._data != self.configuration_data:
             self.configuration_data = deepcopy(owner._data)
+            self.published_room_sensor_schedules = tuple(
+                zone["preconditioning"]["room_sensor_schedule"]
+                for zone in self.configuration_data["zones"].values()
+                if isinstance(zone.get("preconditioning"), dict)
+                and isinstance(zone["preconditioning"].get("room_sensor_schedule"), dict))
         if changed:
             self.configuration_revision += 1
             invalidate = getattr(owner._planned_return, "invalidate_configuration", None)
@@ -238,15 +248,13 @@ class RuntimeScheduleProjection:
         owner = self.owner
         config = self.preconditioning.get(entity, {})
         learning = owner._data.get("preconditioning_learning", {}).get(entity, {})
-        learned_clock = None
-        if config.get("enabled") and any(preconditioning_observations_for_direction(
-                learning, direction) for direction in ("heat", "cool")):
-            learned_clock = dt_util.as_utc(dt_util.now())
+        prediction_time = preconditioning_prediction_time_input(
+            learning, config, dt_util.as_utc(dt_util.now()))
         return (
             self.schedules.get(entity), now.date(), zone.get("enabled"),
             owner._is_external_execution(entity), owner._is_zone_override_active(entity, now),
             thermal_input(owner, entity, config) if config.get("enabled") else None,
-            self._preconditioning_inputs.get(entity), input_value(learning), learned_clock,
+            self._preconditioning_inputs.get(entity), input_value(learning), prediction_time,
         )
 
     def _resolution_input(self, entity, now):
@@ -331,7 +339,15 @@ class RuntimeScheduleProjection:
                 for key, block in prepared.thermal_contexts.items():
                     start, diagnostics = owner._preconditioned_event_details(entity, zone, block, reference)
                     results[key] = (reference - start, deepcopy(diagnostics))
-            rebuild = (previous is None or signature[:5] != previous[:5]
+            source_entry = owner._room_sensor_schedules.entries.get(entity)
+            source_context = ((source_entry["prepared"], owner._temperature_source_entity_id(entity))
+                              if source_entry else None)
+            source_changed = source_context != self._source_forecast_contexts.get(entity)
+            if source_context is not None:
+                self._source_forecast_contexts[entity] = source_context
+            else:
+                self._source_forecast_contexts.pop(entity, None)
+            rebuild = (previous is None or source_changed or signature[:5] != previous[:5]
                        or results != self._thermal_results.get(entity))
             if rebuild:
                 events = []
@@ -343,6 +359,14 @@ class RuntimeScheduleProjection:
                         start = nominal.when - lead
                         if not prepared.window_is_valid(start, nominal.when):
                             start, diagnostics = nominal.when, None
+                        if entity in owner._room_sensor_schedules.entries:
+                            requested_start = start
+                            start = owner._room_sensor_schedules.earliest_start(entity, start, nominal.when, now)
+                            if utc(start) >= utc(nominal.when):
+                                start, diagnostics = nominal.when, None
+                            elif utc(start) != utc(requested_start) and diagnostics is not None:
+                                diagnostics = {**diagnostics, "final_lead_minutes": max(0, int(round(
+                                    (utc(nominal.when) - utc(start)).total_seconds() / 60)))}
                         early = utc(start) != utc(nominal.when)
                         events.append(replace(nominal, when=start,
                             target_when=nominal.when if early else None,
@@ -413,7 +437,7 @@ class RuntimeScheduleProjection:
             zone = owner._data["zones"].get(entity)
             if zone is None:
                 continue
-            config = self.preconditioning.get(entity, {})
+            config = owner._prepared_preconditioning(entity)
             if (owner.mode != "auto" or owner._temperature_migration_blocked or owner._stopped
                     or owner._is_external_execution(entity)
                     or entity in owner._room_sensor_assist_suppressed

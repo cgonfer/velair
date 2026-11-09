@@ -1,3 +1,4 @@
+import type { ClimateCardBoostDraft } from "./domain/climate-card-boost";
 import type { VelairApiClient } from "./api/client";
 import type { PortableSummaryItem } from "./domain/portable";
 import type { TimelineBlock } from "./domain/timeline";
@@ -15,6 +16,7 @@ import type {
   PanelSettings,
   PortableSection,
   PreconditioningSettings,
+  PreconditioningSettingsUpdate,
   ExternalChangePolicy,
   ScheduleBlock,
   ScheduleEvent,
@@ -89,20 +91,7 @@ export type VelairViewHost = {
   _applyingTemplateTargets: boolean;
   _applyingZones: boolean;
   _changedNextEventIds: Set<string>;
-  _climateCardBoost?: {
-    entityId: string;
-    durationMinutes: number;
-    targetKind: "single" | "range";
-    target?: number;
-    low?: number;
-    high?: number;
-    hvacMode?: string;
-    fanMode?: string;
-    presetMode?: string;
-    swingMode?: string;
-    swingHorizontalMode?: string;
-    humidity?: number;
-  };
+  _climateCardBoost?: ClimateCardBoostDraft;
   _climateCardPause?: {
     entityId: string;
     indefinite: boolean;
@@ -311,7 +300,7 @@ export type VelairViewHost = {
   _scrollClimateCardActions(direction: -1 | 1): void;
   _enterManualAdjustment(entityId: string): Promise<void>;
   _saveZoneComfort(entityId: string, comfort: ComfortSettingsUpdate): Promise<void>;
-  _saveZonePreconditioning(entityId: string, preconditioning: Partial<PreconditioningSettings>): Promise<void>;
+  _saveZonePreconditioning(entityId: string, preconditioning: PreconditioningSettingsUpdate): Promise<void>;
   _saveTemplate(saveAsNew: boolean): Promise<void>;
   _scheduleTemplates(): ScheduleTemplate[];
   _schedulerModeLabel(mode: string): string;

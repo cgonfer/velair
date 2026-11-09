@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "homeAssistant": {
+    "version": "2026.11.0",
+    "image": "ghcr.io/home-assistant/home-assistant:2026.11.0@sha256:078222f9ea47cf47b172a301c2c45a1d2344b9d666827729b71fc3f7d7a57592"
+  },
+  "browser": {
+    "packageVersion": "1.62.1",
+    "image": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac"
+  },
+  "measurement": { "timezone": "Europe/Madrid", "locale": "en", "seed": 1729 },
+  "visual": { "mode": "compare" },
+  "rollout": { "mode": "observe", "requiredStableRuns": 10 }
+}

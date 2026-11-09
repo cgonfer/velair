@@ -1,0 +1,879 @@
+{
+  "schemaVersion": 1,
+  "collection": "documentation",
+  "version": "1.9.0",
+  "language": "en",
+  "capturedAt": "2026-11-09T22:32:27.461Z",
+  "captures": [
+    {
+      "file": "room-groups-desktop.png",
+      "view": "room-groups",
+      "phase": "household",
+      "framing": "documentation-room-groups",
+      "viewport": {
+        "width": 1440,
+        "height": 2200
+      },
+      "width": 2076,
+      "height": 1344,
+      "sha256": "922f28581a6c15a78a369d8e628f6e2d958d2dd12a80b1da95cad067450501f4"
+    },
+    {
+      "file": "room-groups-tablet.png",
+      "view": "room-groups",
+      "phase": "household",
+      "framing": "documentation-room-groups",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1476,
+      "height": 1700,
+      "sha256": "64643e04f6f8942fea0d1505a2b229bcfdf1aa1fc26e037a1d4eedbc22803d02"
+    },
+    {
+      "file": "room-groups-mobile.png",
+      "view": "room-groups",
+      "phase": "household",
+      "framing": "documentation-room-groups",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 2676,
+      "sha256": "185e3499b9f7ffda5ccb372f42d0e0e7a45e95c7310d4e43dcb1cbb921e7deff"
+    },
+    {
+      "file": "presets-desktop.png",
+      "view": "presets",
+      "phase": "household",
+      "framing": "documentation-presets",
+      "viewport": {
+        "width": 1440,
+        "height": 2200
+      },
+      "width": 2076,
+      "height": 1478,
+      "sha256": "318aea63c47e1788afff53cb0a314526f26bfc6ee89fc68344cce38958907025"
+    },
+    {
+      "file": "presets-tablet.png",
+      "view": "presets",
+      "phase": "household",
+      "framing": "documentation-presets",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1476,
+      "height": 1586,
+      "sha256": "3bb8bb05243157e0d7f9a6fedf5adce76880907aeb72a0f15c3fb422c854fd4c"
+    },
+    {
+      "file": "presets-mobile.png",
+      "view": "presets",
+      "phase": "household",
+      "framing": "documentation-presets",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 4524,
+      "sha256": "dd6ac118e82be7777965b43b99095e1c71921238219edcf178b875cff452a3d1"
+    },
+    {
+      "file": "supply-control-desktop.png",
+      "view": "supply-control",
+      "phase": "household",
+      "framing": "documentation-supply-control",
+      "viewport": {
+        "width": 1440,
+        "height": 2200
+      },
+      "width": 1440,
+      "height": 1722,
+      "sha256": "1a38699d1cf7595405e5232e5e36fe9a665adab08c7d4bd9d658f0fc0d219dc1"
+    },
+    {
+      "file": "supply-control-tablet.png",
+      "view": "supply-control",
+      "phase": "household",
+      "framing": "documentation-supply-control",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1412,
+      "height": 1722,
+      "sha256": "1fe81c2bad1a469a21d208bc8cbbd8bf05897c832209469bbc5f5432379156a9"
+    },
+    {
+      "file": "supply-control-mobile.png",
+      "view": "supply-control",
+      "phase": "household",
+      "framing": "documentation-supply-control",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 3123,
+      "sha256": "21985b0a86e5a23c47e8d7c38828c7d8db529cb47bbe16958a4651db87c6b8e6"
+    },
+    {
+      "file": "comfort-desktop.png",
+      "view": "comfort",
+      "phase": "household",
+      "framing": "documentation-comfort",
+      "viewport": {
+        "width": 1440,
+        "height": 1500
+      },
+      "width": 2076,
+      "height": 2424,
+      "sha256": "5806458b00f8360f8fa2faefa7b9ce1846f6a23c8bd9a041631f213a0a4d2d13"
+    },
+    {
+      "file": "comfort-tablet.png",
+      "view": "comfort",
+      "phase": "household",
+      "framing": "documentation-comfort",
+      "viewport": {
+        "width": 820,
+        "height": 1800
+      },
+      "width": 1476,
+      "height": 2568,
+      "sha256": "d9f9a6e7d20e714cc06a0625b2dbe1d34e2477774838718fc5fcad3848d925e5"
+    },
+    {
+      "file": "comfort-mobile.png",
+      "view": "comfort",
+      "phase": "household",
+      "framing": "documentation-comfort",
+      "viewport": {
+        "width": 390,
+        "height": 2400
+      },
+      "width": 1122,
+      "height": 4266,
+      "sha256": "57c1fdd6fb6af1559f1aadeb958128c78b25c9c53b7894a0ea02bddcd010c7c9"
+    },
+    {
+      "file": "overview-desktop.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "documentation-overview",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 3954,
+      "sha256": "d42c5822e6f70f4ea3f78fb3cd86b3897df0c724cda1ab3236777a9d2575754f"
+    },
+    {
+      "file": "overview-tablet.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "documentation-overview",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 4232,
+      "sha256": "2c1e62835ec317b815a3aad21d7576faac33b578861c30e07ee255a314c29869"
+    },
+    {
+      "file": "overview-mobile.png",
+      "view": "overview",
+      "phase": "household",
+      "framing": "documentation-overview",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 8661,
+      "sha256": "3301cfe69ad22d9f23275e7709d7c017008f073f9ead6d1f05b8cb78a249c83f"
+    },
+    {
+      "file": "climate-card-desktop.png",
+      "view": "climate-card",
+      "phase": "household",
+      "framing": "real-lovelace-climate-card",
+      "viewport": {
+        "width": 1100,
+        "height": 2600
+      },
+      "width": 1624,
+      "height": 1476,
+      "sha256": "8e9a16402ab5602d91d7937d9c69907c192d95245f4f9deb6a11fbe1e07cfd0a"
+    },
+    {
+      "file": "climate-card-tablet.png",
+      "view": "climate-card",
+      "phase": "household",
+      "framing": "real-lovelace-climate-card",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1576,
+      "height": 1476,
+      "sha256": "704d46429267a29a77ee913877efb06fc8a56b0f51ff75c0bf2ad241b6174bc4"
+    },
+    {
+      "file": "climate-card-mobile.png",
+      "view": "climate-card",
+      "phase": "household",
+      "framing": "real-lovelace-climate-card",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1170,
+      "height": 2652,
+      "sha256": "e7eaa79e66ef002ee911c361f3251431f4524f6c02204f226e1a9aa120558366"
+    },
+    {
+      "file": "schedules-desktop.png",
+      "view": "schedules",
+      "phase": "household",
+      "framing": "documentation-schedules",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 3102,
+      "sha256": "1d41de3dcf8a250a2322d91b5c7678a4aee721689d030f530fbcaf134d31f62d"
+    },
+    {
+      "file": "schedules-tablet.png",
+      "view": "schedules",
+      "phase": "household",
+      "framing": "documentation-schedules",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 3150,
+      "sha256": "a9ab76d6a6138e49b412a6c2d16efc22f1ff1323edf3a225cbd3aba5513ed1d4"
+    },
+    {
+      "file": "schedules-mobile.png",
+      "view": "schedules",
+      "phase": "household",
+      "framing": "documentation-schedules",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 8091,
+      "sha256": "f035364c455db8fd1cf1c2061bcff726fbeb5caf4a6bcceba707726c9eb821cf"
+    },
+    {
+      "file": "profiles-desktop.png",
+      "view": "profiles",
+      "phase": "household",
+      "framing": "documentation-profiles",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2050,
+      "height": 3352,
+      "sha256": "318a95caf4c9056b33d4d476617e3b416de6e6e0fbf909631ced66ce674c1192"
+    },
+    {
+      "file": "profiles-tablet.png",
+      "view": "profiles",
+      "phase": "household",
+      "framing": "documentation-profiles",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1424,
+      "height": 3294,
+      "sha256": "011e030724dc249abe555d3ad9c1cd48104a30871d72d0e94bb2e3200dd7b44d"
+    },
+    {
+      "file": "profiles-mobile.png",
+      "view": "profiles",
+      "phase": "household",
+      "framing": "documentation-profiles",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 6699,
+      "sha256": "56680e3da23d120f6a40c04645317865a1ea8f628c06952e46750e1ac1cf5ab1"
+    },
+    {
+      "file": "modes-desktop.png",
+      "view": "modes",
+      "phase": "household",
+      "framing": "documentation-modes",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 1192,
+      "sha256": "bcb127fcc9d317b291b8bb86c53d2923d8f43df00ced80c6460f88e0d7099f0e"
+    },
+    {
+      "file": "modes-tablet.png",
+      "view": "modes",
+      "phase": "household",
+      "framing": "documentation-modes",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 2112,
+      "sha256": "c5e83c2892f214cfeda539dd7419652c7e905ea0a955373507ec399f4c54b829"
+    },
+    {
+      "file": "modes-mobile.png",
+      "view": "modes",
+      "phase": "household",
+      "framing": "documentation-modes",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 3138,
+      "sha256": "bc383fa7e30f19a9b76ec1713d4a057985e44eb15bd1e5678b2e19a7fe216172"
+    },
+    {
+      "file": "active-setup-change-desktop.png",
+      "view": "active-setup",
+      "phase": "household",
+      "framing": "documentation-active-setup",
+      "viewport": {
+        "width": 1440,
+        "height": 2100
+      },
+      "width": 2076,
+      "height": 1294,
+      "sha256": "de8d84a1f796cc2d1dd0e5fc3405f03f1fa78c2a9b6cf6019d3b56dd196351fd"
+    },
+    {
+      "file": "active-setup-change-tablet.png",
+      "view": "active-setup",
+      "phase": "household",
+      "framing": "documentation-active-setup",
+      "viewport": {
+        "width": 820,
+        "height": 2100
+      },
+      "width": 1476,
+      "height": 1294,
+      "sha256": "46baab855441423e49ce55e2e741f302cb05cd5c2607f208aa42d613caafa120"
+    },
+    {
+      "file": "active-setup-change-mobile.png",
+      "view": "active-setup",
+      "phase": "household",
+      "framing": "documentation-active-setup",
+      "viewport": {
+        "width": 390,
+        "height": 2100
+      },
+      "width": 1122,
+      "height": 1905,
+      "sha256": "6aecf9ac96de60dc8bfac3307fc48e97569a01442f91ac88f10bbeb374227626"
+    },
+    {
+      "file": "templates-desktop.png",
+      "view": "templates",
+      "phase": "household",
+      "framing": "documentation-templates",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 1180,
+      "sha256": "915d8572ad13cbb550455e46163915bb7ffd4d45525ad8d3fe90f78e7cd2e285"
+    },
+    {
+      "file": "templates-tablet.png",
+      "view": "templates",
+      "phase": "household",
+      "framing": "documentation-templates",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 1548,
+      "sha256": "0d6b3fbd9138d459c4404a64024d8103596d3e15571daf9b09a64d487e0f1b1d"
+    },
+    {
+      "file": "templates-mobile.png",
+      "view": "templates",
+      "phase": "household",
+      "framing": "documentation-templates",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 2733,
+      "sha256": "52dcbf022d4962b761589c3aecdbdcf0d511863dfafc3c6c441a0cfa6e2900ac"
+    },
+    {
+      "file": "room-assist-desktop-1.png",
+      "view": "sensors",
+      "phase": "household",
+      "framing": "documentation-sensors",
+      "viewport": {
+        "width": 1440,
+        "height": 2700
+      },
+      "width": 2024,
+      "height": 808,
+      "sha256": "028fd25e52a00ddb85fc0a391ab0079adce587a08ec5e053e3c80913a0a48173"
+    },
+    {
+      "file": "room-assist-tablet-1.png",
+      "view": "sensors",
+      "phase": "household",
+      "framing": "documentation-sensors",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1424,
+      "height": 808,
+      "sha256": "63c796d2ea50b2d882209b48bcbec93fd530912bab377e6cfaab77357cd11ea1"
+    },
+    {
+      "file": "room-assist-mobile-1.png",
+      "view": "sensors",
+      "phase": "household",
+      "framing": "documentation-sensors",
+      "viewport": {
+        "width": 390,
+        "height": 2700
+      },
+      "width": 1044,
+      "height": 1470,
+      "sha256": "7bc532658f371626a9662ea314f1e4eeb74ee7c1adf0a0b110ba4421e39ecd77"
+    },
+    {
+      "file": "room-assist-desktop-2.png",
+      "view": "sensors-holding",
+      "phase": "household",
+      "framing": "documentation-sensors-holding",
+      "viewport": {
+        "width": 1440,
+        "height": 2700
+      },
+      "width": 2024,
+      "height": 858,
+      "sha256": "c466bd3dccd8d673822d0e929c3fbd9b70dd89ebd1b925bf69d47e3c6ed29cbe"
+    },
+    {
+      "file": "room-assist-tablet-2.png",
+      "view": "sensors-holding",
+      "phase": "household",
+      "framing": "documentation-sensors-holding",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1424,
+      "height": 858,
+      "sha256": "ff89bdc7a02fa7c7cfff860bea33c2c033f83d3d33da1f4572e86dd039194567"
+    },
+    {
+      "file": "room-assist-mobile-2.png",
+      "view": "sensors-holding",
+      "phase": "household",
+      "framing": "documentation-sensors-holding",
+      "viewport": {
+        "width": 390,
+        "height": 2700
+      },
+      "width": 1044,
+      "height": 1545,
+      "sha256": "a14f21612cd6c26ec16414d83beac35fdb963972a6249d34c3fddeee951a9ddd"
+    },
+    {
+      "file": "preconditioning-desktop.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "framing": "documentation-preconditioning",
+      "viewport": {
+        "width": 1440,
+        "height": 2700
+      },
+      "width": 1004,
+      "height": 770,
+      "sha256": "e05ff399f9e59190aff168ed0f9ef237048a5f631ce3559f6ad9ca9815701d20"
+    },
+    {
+      "file": "preconditioning-tablet.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "framing": "documentation-preconditioning",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1424,
+      "height": 770,
+      "sha256": "95c97c80d2b03f2c6d1a36ff442d06189ddadb064542c752c6dcd5fbf9e40b80"
+    },
+    {
+      "file": "preconditioning-mobile.png",
+      "view": "preconditioning",
+      "phase": "household",
+      "framing": "documentation-preconditioning",
+      "viewport": {
+        "width": 390,
+        "height": 2700
+      },
+      "width": 1044,
+      "height": 1431,
+      "sha256": "3bf2a8c3c464ffff0920aa37ecba56a9e838e62b8327e0ea6025b44aa06cc3d7"
+    },
+    {
+      "file": "diagnostics-healthy-desktop.png",
+      "view": "diagnostics",
+      "phase": "household",
+      "framing": "documentation-diagnostics",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 2636,
+      "sha256": "f5df2c176585832786a734b5dbb7ed01d415f43d83e8343e3b264b3cf56f4714"
+    },
+    {
+      "file": "diagnostics-healthy-tablet.png",
+      "view": "diagnostics",
+      "phase": "household",
+      "framing": "documentation-diagnostics",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 2636,
+      "sha256": "d981379ffd4c248eddbf5ad67f91a12613a8d890b12efbb5345675dbf5ff78cd"
+    },
+    {
+      "file": "diagnostics-healthy-mobile.png",
+      "view": "diagnostics",
+      "phase": "household",
+      "framing": "documentation-diagnostics",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 5640,
+      "sha256": "9f946f97a5c22cccc6952f0336839a7e057bf29f90fd9bacabf755af0888abd6"
+    },
+    {
+      "file": "settings-desktop.png",
+      "view": "settings",
+      "phase": "household",
+      "framing": "documentation-settings",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 4236,
+      "sha256": "10a13d5fdb67e5e78ebb77c70e1efd7dafcfd4a7216b20f58a8b1c52de59613f"
+    },
+    {
+      "file": "settings-tablet.png",
+      "view": "settings",
+      "phase": "household",
+      "framing": "documentation-settings",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 4524,
+      "sha256": "df78bf5250db5a669b11cb9e3a05c232e95949b92bd83dff48bb2b3ba549082c"
+    },
+    {
+      "file": "settings-mobile.png",
+      "view": "settings",
+      "phase": "household",
+      "framing": "documentation-settings",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 6879,
+      "sha256": "4f6a2d5cbd582a43bb6250b894bc46c861efacdb5b08e7fe332a93cfed92a084"
+    },
+    {
+      "file": "external-settings-desktop.png",
+      "view": "external-settings",
+      "phase": "household",
+      "framing": "documentation-external-settings",
+      "viewport": {
+        "width": 1440,
+        "height": 2100
+      },
+      "width": 2076,
+      "height": 518,
+      "sha256": "f9d6f89bfa7aff4d051539ebe98db5589cfd27c4ce2089c7c67b976bcccb3165"
+    },
+    {
+      "file": "external-settings-tablet.png",
+      "view": "external-settings",
+      "phase": "household",
+      "framing": "documentation-external-settings",
+      "viewport": {
+        "width": 820,
+        "height": 2100
+      },
+      "width": 1476,
+      "height": 546,
+      "sha256": "9ec151c0229a84908b3bf9503815cf415be23e44459bc65c8b540776599a3f3f"
+    },
+    {
+      "file": "external-settings-mobile.png",
+      "view": "external-settings",
+      "phase": "household",
+      "framing": "documentation-external-settings",
+      "viewport": {
+        "width": 390,
+        "height": 2100
+      },
+      "width": 1122,
+      "height": 951,
+      "sha256": "73ba3a76550c33edc4365174487d3edcfe6248ec253084493058355e480c5672"
+    },
+    {
+      "file": "external-published-desktop.png",
+      "view": "external",
+      "phase": "household",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 1440,
+        "height": 2100
+      },
+      "width": 2024,
+      "height": 360,
+      "sha256": "ee2f78b8dfe462cc1eec5877ec2224847a9feb05dd3c17fcae514a6947262cf2"
+    },
+    {
+      "file": "external-published-tablet.png",
+      "view": "external",
+      "phase": "household",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 820,
+        "height": 2100
+      },
+      "width": 1424,
+      "height": 360,
+      "sha256": "e80a0200506ad776e236bab6262f7ce97f6738891635da7007ecb39d5719e00a"
+    },
+    {
+      "file": "external-published-mobile.png",
+      "view": "external",
+      "phase": "household",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 390,
+        "height": 2100
+      },
+      "width": 1044,
+      "height": 669,
+      "sha256": "e340099db3f6dc666445ffada128d6775c0e0979894e38e4edb4c16b5ddc02ef"
+    },
+    {
+      "file": "external-publishing-desktop.png",
+      "view": "external",
+      "phase": "external-publishing",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 1440,
+        "height": 2100
+      },
+      "width": 2024,
+      "height": 360,
+      "sha256": "77f82bbc58174379f9c3c80e93f440afb4bfef6cbf99b1a558b8d3b31ec86e8e"
+    },
+    {
+      "file": "external-publishing-tablet.png",
+      "view": "external",
+      "phase": "external-publishing",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 820,
+        "height": 2100
+      },
+      "width": 1424,
+      "height": 360,
+      "sha256": "34b3b96164a1b9521a3487bf90e2f72342e40d3beac12678ee3916fb7b5ea966"
+    },
+    {
+      "file": "external-publishing-mobile.png",
+      "view": "external",
+      "phase": "external-publishing",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 390,
+        "height": 2100
+      },
+      "width": 1044,
+      "height": 669,
+      "sha256": "2461da5aebb5c75f88fb24943b37218c27eacf053dd85e7dff6b885d2b31d0ee"
+    },
+    {
+      "file": "external-error-desktop.png",
+      "view": "external",
+      "phase": "external-error",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 1440,
+        "height": 2100
+      },
+      "width": 2024,
+      "height": 360,
+      "sha256": "85375c229ff3af80eee68ab9193ffa210c9ee625de8cdd226617235bce4eed82"
+    },
+    {
+      "file": "external-error-tablet.png",
+      "view": "external",
+      "phase": "external-error",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 820,
+        "height": 2100
+      },
+      "width": 1424,
+      "height": 360,
+      "sha256": "dc3e39e5fab378292c5c65a5e8d3c73a214b54ec929008dc25bfefbc39729050"
+    },
+    {
+      "file": "external-error-mobile.png",
+      "view": "external",
+      "phase": "external-error",
+      "framing": "documentation-external",
+      "viewport": {
+        "width": 390,
+        "height": 2100
+      },
+      "width": 1044,
+      "height": 669,
+      "sha256": "8a469704166afbaa5a7cc4cd3312c1d64cf70ee00e70f424f1a87c41b65c91d4"
+    },
+    {
+      "file": "diagnostics-errors-desktop.png",
+      "view": "diagnostics",
+      "phase": "diagnostics-errors",
+      "framing": "documentation-diagnostics",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "width": 2076,
+      "height": 2592,
+      "sha256": "1619d6c71d47c41c770f6aed6a5770f90ddf2488394497bb787bac8486cd0acf"
+    },
+    {
+      "file": "diagnostics-errors-tablet.png",
+      "view": "diagnostics",
+      "phase": "diagnostics-errors",
+      "framing": "documentation-diagnostics",
+      "viewport": {
+        "width": 820,
+        "height": 3100
+      },
+      "width": 1476,
+      "height": 2592,
+      "sha256": "4695ade5f0ae346feec40d0c17011ae622814a8b1ff82fafce9f40da502c634f"
+    },
+    {
+      "file": "diagnostics-errors-mobile.png",
+      "view": "diagnostics",
+      "phase": "diagnostics-errors",
+      "framing": "documentation-diagnostics",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 5460,
+      "sha256": "246c58176ac906453b526eb191c7be56e84df8223e930f8e92e9df5a1e58c39d"
+    },
+    {
+      "file": "planned-return-desktop.png",
+      "view": "planned-return",
+      "phase": "return",
+      "framing": "documentation-planned-return",
+      "viewport": {
+        "width": 1440,
+        "height": 2200
+      },
+      "width": 2076,
+      "height": 1214,
+      "sha256": "4c418e5eacd089795629eb57abeb15b7bc7f35c9c18b109056bb298b5e699a5f"
+    },
+    {
+      "file": "planned-return-tablet.png",
+      "view": "planned-return",
+      "phase": "return",
+      "framing": "documentation-planned-return",
+      "viewport": {
+        "width": 820,
+        "height": 2700
+      },
+      "width": 1476,
+      "height": 1250,
+      "sha256": "766a16e049aaf4afa84c82a54b325640a106fa846cc60fc3ad410f4b890d3ed2"
+    },
+    {
+      "file": "planned-return-mobile.png",
+      "view": "planned-return",
+      "phase": "return",
+      "framing": "documentation-planned-return",
+      "viewport": {
+        "width": 390,
+        "height": 3700
+      },
+      "width": 1122,
+      "height": 2751,
+      "sha256": "b7324f50d130ef7012c5527ff571ceb8babcd3688411e9391e12f0412a9beba0"
+    }
+  ],
+  "homeAssistantVersion": "2026.11.0",
+  "homeAssistantImage": "ghcr.io/home-assistant/home-assistant:2026.11.0@sha256:078222f9ea47cf47b172a301c2c45a1d2344b9d666827729b71fc3f7d7a57592",
+  "browserImage": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+  "componentSha256": "44fe371c72529d414b632513161f17bc872f5083d04b9acea59c84a1c02bdde9",
+  "bundleSha256": "dee698834f4bf7964746e2a8c689992e8c035710b458eb6dcd0589cb1045879d",
+  "data": "Fictional English household with virtual devices in real Home Assistant",
+  "scenarioProvenance": {
+    "devices": "Virtual HA entities in a disposable installation",
+    "learning": "Synthetic observations imported through the public portable-data API",
+    "external_controller": "Test-only service fixture; no physical controller delivery is claimed"
+  },
+  "responseOverrides": false
+}

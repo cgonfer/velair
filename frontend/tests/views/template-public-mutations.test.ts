@@ -59,6 +59,25 @@ describe("template mutations through the public component", () => {
     expect(card._data.templates[0].blocks).toEqual(saved);
   });
 
+  it("keeps incomplete decimals unsaved and sends comma decimals as numeric template targets", async () => {
+    vi.useFakeTimers();
+    const { card, preview } = await mount();
+    const input = card.shadowRoot!.querySelector<HTMLInputElement>(".template-editor input.temperature-input")!;
+    input.value = "19,";
+    input.dispatchEvent(new Event("input"));
+    await card.updateComplete;
+    await vi.advanceTimersByTimeAsync(300);
+    expect(preview).not.toHaveBeenCalled();
+    expect(input.value).toBe("19,");
+    input.value = "19,5";
+    input.dispatchEvent(new Event("input"));
+    await card.updateComplete;
+    await vi.advanceTimersByTimeAsync(300);
+    expect(preview).toHaveBeenCalledTimes(1);
+    expect(preview.mock.calls[0][2][0].temperature).toBe(19.5);
+    expect(card._templateDraftBlocks[0].temperature).toBe("19,5");
+  });
+
   it("edits time, mode and target on the real draft while retaining IDs and still adds blocks", async () => {
     vi.useFakeTimers();
     const { card, preview, save } = await mount();
@@ -66,7 +85,7 @@ describe("template mutations through the public component", () => {
     time.value = "08:00"; time.dispatchEvent(new Event("input")); await card.updateComplete;
     const mode = card.shadowRoot!.querySelector<HTMLSelectElement>(".template-editor select")!;
     mode.value = ""; mode.dispatchEvent(new Event("change")); await card.updateComplete;
-    const target = card.shadowRoot!.querySelector<HTMLInputElement>('.template-editor input[type="number"]')!;
+    const target = card.shadowRoot!.querySelector<HTMLInputElement>('.template-editor input.temperature-input')!;
     target.value = "24"; target.dispatchEvent(new Event("input")); await card.updateComplete;
     expect(card._templateDraftBlocks[0]).toMatchObject({ slot_id: "morning", start: "08:00", hvac_mode: "", temperature: "24" });
     expect(card._templateDirty).toBe(true);

@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](diagnostics.md) · [Español](dia
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.3 |
-| Ostatnia synchronizacja | 2026-10-21 |
+| Wersja odniesienia | 1.9.0-beta.10 |
+| Ostatnia synchronizacja | 2026-11-04 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -70,6 +70,10 @@ Zapisuje się tylko wybór kategorii. Historia zdarzeń istnieje wyłącznie w p
 Lokalna Diagnostyka używa przyjaznych nazw encji przy filtrowaniu, ale panel szczegółów celowo pokazuje ich lokalne identyfikatory. Przy domyślnej ochronie prywatności pobrane raporty zastępują zarówno identyfikatory strukturalne, jak i te w zachowanym tekście błędów deterministycznymi aliasami, np. `climate_unit_1` i `associated_entity_1`. Powtórzone odwołania zachowują ten sam alias, więc relacje nadal są użyteczne bez ujawniania oryginalnych identyfikatorów. Jeśli jawnie zachowasz surowe identyfikatory, pozostaną one w raporcie; identyfikatory Profili, Trybów i pauz nadal są usuwane. Sprawdź każdy raport przed udostępnieniem.
 
 Diagnostyka nie steruje harmonogramem, próbami, cofaniem zmian ani encjami. Konfiguracja i konserwacja pozostają w Ustawieniach; możliwości i stan urządzeń należą teraz do Diagnostyki.
+
+Szczegóły przekazywania poleceń wybranego urządzenia odróżniają przyjęcie wywołania usługi od zgłoszenia jego celu przez Home Assistant. Potwierdzenie może oczekiwać, być zakończone, uzyskane po ponowieniu lub nieuzyskane po wyczerpaniu limitu prób. Usunięty cichy błąd pozostaje w historii **Sterowanie encją klimatu** wraz z liczbą ponowień, dzięki czemu można zobaczyć, że Velair rozwiązał rozbieżność. Zgodne zgłoszenia nie tworzą wpisu historii dla każdego zwykłego polecenia. Pobrany raport zachowuje te same dane potwierdzenia.
+
+Odzyskiwanie działa w backendzie nawet po zamknięciu Diagnostyki. Gdy kilka niezależnych urządzeń jednocześnie zmienia blok, ponowienia wymaga tylko urządzenie nadal zgłaszające inny cel. Otwarcie lub odświeżenie tego widoku nigdy nie wysyła polecenia do urządzenia. Potwierdzone zgłoszenie świadczy o stanie w Home Assistant; nie stanowi niezależnej weryfikacji urządzenia zgłaszającego optymistyczne wartości.
 
 Każde zarządzane urządzenie zgłasza też niezapisywane dane o stabilizowaniu poleceń. Gdy niedawne polecenie Velair się stabilizuje, migawka Diagnostyki wymienia objęte pola sterowania. Jeśli urządzenie nie osiągnie zgodności przed ograniczonym terminem, następna świeża migawka oznacza je ostrzeżeniem `command_settling_mismatch`. Rozwiń ostrzeżenie w panelu Diagnostyki wybranego urządzenia, aby porównać oczekiwaną wartość każdego pola z wartością zgłoszoną przez termostat. Temperatury zawierają jednostkę urządzenia, tryby HVAC używają zwykłych etykiet, a brakujące wartości są jawnie oznaczone. To zapisane porównanie, nie bieżący harmonogram ani nowy odczyt. Pobrany raport zachowuje też blok `command_settling`. To dane do rozwiązywania problemów: Diagnostyka nie ponawia polecenia, nie zmienia urządzenia ani nie tworzy regulacji ręcznej. Dane są usuwane przez nowsze polecenie dla danego pola lub restart.
 

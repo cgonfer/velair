@@ -268,7 +268,7 @@ describe("templates view", () => {
       _modeLabel: (value: string) => value, _formatTemperature: (value: number) => `${value} C`,
     });
     render(renderTemplatesView(state), container);
-    const input = container.querySelector<HTMLInputElement>('.template-editor input[type="number"]')!;
+    const input = container.querySelector<HTMLInputElement>('.template-editor input.temperature-input')!;
     expect(input.value).toBe("99");
     expect(input.classList.contains("invalid")).toBe(false);
     expect(input.hasAttribute("min")).toBe(false);
@@ -319,8 +319,8 @@ describe("templates view", () => {
     }, "Daily");
     render(renderTemplatesView(state), container);
     const slot = container.querySelector(".template-assignment-slot")!;
-    expect(slot.querySelector<HTMLInputElement>('input[type="number"]')?.value).toBe("22");
-    expect(slot.querySelector<HTMLInputElement>('input[type="number"]')?.readOnly).toBe(false);
+    expect(slot.querySelector<HTMLInputElement>('input.temperature-input')?.value).toBe("22");
+    expect(slot.querySelector<HTMLInputElement>('input.temperature-input')?.readOnly).toBe(false);
     expect(slot.textContent).not.toContain("sharedPresetUnavailable");
     expect(slot.querySelector(".preset-preview-retry")).toBeNull();
   });

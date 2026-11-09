@@ -8,8 +8,8 @@ Traductions: [Original en anglais](manual-control.md) · [Español](manual-contr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.0-beta.9 |
+| Dernière synchronisation | 2026-11-02 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -94,9 +94,11 @@ Si une mise à jour anonyme pendant la stabilisation ne peut pas être distingu�
 
 Si l’appareil diffère encore de la valeur demandée en fin de stabilisation, Velair conserve le contrôle automatique et enregistre un avertissement de stabilisation pour l’exécution actuelle. Le prochain instantané à jour du Diagnostic l’expose ; son rapport comprend les valeurs attendues et observées. Velair ne réessaie pas aveuglément la commande et ne transforme pas l’écart en réglage manuel différé.
 
+Une exception distincte s’applique lorsque Velair maintient un appareil sous programmation automatique en `off`. Certains appareils signalent une consigne de substitution, par exemple `0 °C` alors que leur minimum publié est de `5 °C`. Si seules les consignes changent et que toutes les nouvelles valeurs se trouvent en dehors du minimum et du maximum explicitement signalés par l’appareil, Velair ignore la mise à jour, même lorsqu’elle arrive après la stabilisation. Aucun événement de changement externe n’est émis, aucun réglage manuel n’est créé et l’exécution de la programmation n’est pas interrompue. Les deux limites doivent être valides ; si l’une manque, la détection habituelle reste active. Les changements de consigne valides, les changements externes de mode HVAC, les actions identifiables d’un utilisateur ou d’une automatisation et les sessions manuelles existantes conservent leur comportement habituel.
+
 Le registre des valeurs attendues est limité, expire automatiquement, n’est jamais enregistré durablement et n’effectue aucune interrogation périodique. Une source n’a pas besoin de conserver le `Context` Home Assistant pour permettre le rapprochement, même si un contexte conservé le rend plus précis.
 
-Tout champ observé non rapproché d’une commande Velair est classé comme extérieur à Velair. Cela attribue la commande sans identifier son auteur : Velair ne prétend pas savoir si elle provient d’une personne, d’une télécommande, d’une automatisation, d’un service du fabricant ou du micrologiciel.
+Tout autre champ observé non rapproché d’une commande Velair est classé comme extérieur à Velair. Cela attribue la commande sans identifier son auteur : Velair ne prétend pas savoir si elle provient d’une personne, d’une télécommande, d’une automatisation, d’un service du fabricant ou du micrologiciel.
 
 <a id="choose-a-policy"></a>
 ## Choisir une politique

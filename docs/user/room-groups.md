@@ -245,7 +245,8 @@ Deleting the group makes all three independent. Neither operation restores their
 older pre-group histories automatically. In the editor, keep at least two members
 in a saved group; dissolve it if the devices should all become independent.
 
-## Before testing the beta
+<a id="before-testing-the-beta"></a>
+## Check the group configuration
 
 Back up the configuration and include preconditioning learning if you need it.
 After reviewing and saving a group, check:

@@ -12,6 +12,42 @@ export const timelineStyles = css`
     gap: 6px;
   }
 
+  .timeline-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 6px;
+    scrollbar-color: var(--secondary-text-color) var(--divider-color);
+    scrollbar-width: thin;
+  }
+
+  .timeline-scroll:focus-visible,
+  .overview-timeline-scroll:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  .timeline-canvas {
+    display: grid;
+    gap: 6px;
+    min-width: 960px;
+  }
+
+  .timeline-scroll-hint {
+    color: var(--secondary-text-color);
+    display: none;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  @container (max-width: 960px) {
+    .timeline-scroll-hint { display: block; }
+  }
+
+  @media (max-width: 960px) {
+    .timeline-scroll-hint { display: block; }
+  }
+
   .timeline-hours {
     color: var(--secondary-text-color);
     font-size: 11px;

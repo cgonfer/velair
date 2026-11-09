@@ -198,6 +198,7 @@ class PreconditioningData(TypedDict):
     use_outdoor_temperature: bool
     outdoor_temperature_entity_id: str | None
     room_temperature_entity_id: str | None
+    room_sensor_schedule: NotRequired[dict[str, Any]]
     room_sensor_assist_enabled: bool
     room_sensor_assist_deadband: float
     room_sensor_assist_max_delta: float
@@ -231,8 +232,10 @@ class ComfortData(TypedDict):
 
     enabled: bool
     temperature_entity_id: str | None
+    temperature_fallback_enabled: bool
     humidity_enabled: bool
     humidity_entity_id: str | None
+    humidity_fallback_enabled: bool
     co2_entity_id: str | None
     temperature_min: float
     temperature_max: float
@@ -283,6 +286,7 @@ class PreconditioningObservation(TypedDict, total=False):
     outdoor_temp_start: float | None
     outdoor_temp_target: float | None
     temperature_source: str
+    temperature_source_entity_id: NotRequired[str]
     room_temperature_entity_id: str | None
     delta_t: float
     startup_minutes: int
@@ -877,15 +881,19 @@ def normalize_schedule_data(
             and override.get("type") == "pause"
         ):
             override = zone_pause_override_from_reasons(pauses)
+        preconditioning = normalize_preconditioning_data(zone_data.get("preconditioning"))
         zones[entity_id] = {
             "enabled": bool(zone_data.get("enabled", True)),
             "schedule": schedule,
             "override": override,
             "pauses": pauses,
-            "preconditioning": normalize_preconditioning_data(
-                zone_data.get("preconditioning")
+            "preconditioning": preconditioning,
+            "comfort": normalize_comfort_data(
+                zone_data.get("comfort"),
+                temperature_default_entity_id=preconditioning.get("room_temperature_entity_id") or entity_id,
+                temperature_native_entity_id=entity_id,
+                humidity_default_entity_id=entity_id,
             ),
-            "comfort": normalize_comfort_data(zone_data.get("comfort")),
             "external_change_policy": normalize_external_change_policy(
                 zone_data.get("external_change_policy")
             ),
@@ -1061,7 +1069,10 @@ def normalize_schedule_data(
         "room_groups": room_groups,
         "member_comfort": {
             member: normalize_comfort_data(
-                (data["member_comfort"] if isinstance(data.get("member_comfort"), dict) else {}).get(member, zones[group_id]["comfort"])
+                (data["member_comfort"] if isinstance(data.get("member_comfort"), dict) else {}).get(member, zones[group_id]["comfort"]),
+                temperature_default_entity_id=member,
+                temperature_native_entity_id=member,
+                humidity_default_entity_id=member,
             )
             for group_id, group in room_groups.items()
             for member in group["members"]
@@ -1863,7 +1874,7 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         DEFAULT_PRECONDITIONING_MAX_LEAD_MINUTES,
     )
 
-    return {
+    normalized = {
         "enabled": bool(data.get("enabled", False)),
         "master_entity_id": _normalize_optional_entity_id(data.get("master_entity_id")),
         "max_lead_minutes": max_lead_minutes,
@@ -1941,8 +1952,17 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         ),
     }
 
+    if "room_sensor_schedule" in data:
+        from .room_sensor_schedule import normalize_room_sensor_schedule
+        normalized["room_sensor_schedule"] = normalize_room_sensor_schedule(data["room_sensor_schedule"])
+    return normalized
 
-def normalize_comfort_data(raw_data: Any) -> ComfortData:
+
+def normalize_comfort_data(
+    raw_data: Any, *, temperature_default_entity_id: str | None = None,
+    temperature_native_entity_id: str | None = None,
+    humidity_default_entity_id: str | None = None,
+) -> ComfortData:
     """Normalize stored comfort monitoring settings."""
     data = raw_data if isinstance(raw_data, dict) else {}
 
@@ -2032,14 +2052,34 @@ def normalize_comfort_data(raw_data: Any) -> ComfortData:
             ),
         }
 
+    temperature_source = _normalize_optional_entity_id(data.get("temperature_entity_id"))
+    preferred_temperature_source = temperature_source or temperature_default_entity_id
+    if temperature_native_entity_id is not None:
+        temperature_backup_allowed = (
+            preferred_temperature_source is not None
+            and preferred_temperature_source != temperature_native_entity_id
+        )
+    else:
+        temperature_backup_allowed = (
+            temperature_source is not None
+            and temperature_source != temperature_default_entity_id
+        )
+    humidity_source = _normalize_optional_entity_id(data.get("humidity_entity_id"))
+    humidity_enabled = bool(data.get("humidity_enabled", True))
     return {
         "enabled": bool(data.get("enabled", False)),
-        "temperature_entity_id": _normalize_optional_entity_id(
-            data.get("temperature_entity_id")
+        "temperature_entity_id": temperature_source,
+        "temperature_fallback_enabled": (
+            data.get("temperature_fallback_enabled") is True
+            and temperature_backup_allowed
         ),
-        "humidity_enabled": bool(data.get("humidity_enabled", True)),
-        "humidity_entity_id": _normalize_optional_entity_id(
-            data.get("humidity_entity_id")
+        "humidity_enabled": humidity_enabled,
+        "humidity_entity_id": humidity_source,
+        "humidity_fallback_enabled": (
+            data.get("humidity_fallback_enabled") is True
+            and humidity_enabled
+            and humidity_source is not None
+            and humidity_source != humidity_default_entity_id
         ),
         "co2_entity_id": _normalize_optional_entity_id(data.get("co2_entity_id")),
         "temperature_min": temperature_min,
@@ -2169,6 +2209,15 @@ def predict_preconditioning_lead(
         config,
     )
     if len(complete_samples) >= MIN_PRECONDITIONING_COMPLETE_SAMPLES:
+        # Past samples share the same exponential decay factor as time passes.
+        # Remove that common factor so an unchanged history cannot drift across
+        # the percentile's absolute tolerance or eventually underflow. Keep the
+        # actual clock while future-dated samples are still age-clamped to zero.
+        recency_reference = min(prediction_now, max(
+            (created for sample in complete_samples
+             if (created := _parse_datetime(str(sample["created_at"]))) is not None),
+            default=prediction_now,
+        ))
         complete_rate = _weighted_percentile(
             [
                 _preconditioning_minutes_per_degree(sample)
@@ -2177,7 +2226,7 @@ def predict_preconditioning_lead(
             [
                 _preconditioning_recency_weight(
                     str(sample["created_at"]),
-                    prediction_now,
+                    recency_reference,
                     config["recency_decay_days"],
                 )
                 * _preconditioning_similarity_weight(
@@ -2589,6 +2638,37 @@ def preconditioning_observations_for_direction(
     return observations if isinstance(observations, list) else []
 
 
+def preconditioning_prediction_time_input(
+    learning: Any,
+    config: PreconditioningData,
+    now: datetime,
+) -> tuple[tuple[bool, ...], datetime | None] | None:
+    """Describe time changes that can affect otherwise identical predictions.
+
+    Relative complete-sample weights are stable after their creation dates.
+    Partial samples retain the predictor's strict expiry boundary, including
+    after a clock rollback. Future complete samples conservatively keep the
+    exact clock until their age clamp no longer affects relative weights.
+    """
+    if not config.get("enabled"):
+        return None
+    expired_partials = []
+    future_complete = False
+    for direction in PRECONDITIONING_OBSERVATION_DIRECTIONS:
+        for sample in preconditioning_observations_for_direction(learning, direction):
+            if not _preconditioning_observation_is_valid(sample, direction, config):
+                continue
+            created = _parse_datetime(str(sample.get("created_at", "")))
+            if sample["quality"] == "partial":
+                expired_partials.append(
+                    created is None
+                    or (now - created).total_seconds() > config["partial_expiry_days"] * 86400
+                )
+            elif created is not None and created > now:
+                future_complete = True
+    return tuple(expired_partials), now if future_complete else None
+
+
 def trim_preconditioning_observations(
     observations: list[PreconditioningObservation],
     history_size: int = DEFAULT_PRECONDITIONING_HISTORY_SIZE,
@@ -2672,6 +2752,10 @@ def _normalize_preconditioning_observation(
         observation["target_temp_low"] = optional_low
         observation["target_temp_high"] = optional_high
         observation["target_boundary"] = target_boundary
+
+    source_identity = _normalize_optional_entity_id(raw_observation.get("temperature_source_entity_id"))
+    if source_identity is not None:
+        observation["temperature_source_entity_id"] = source_identity
 
     temperature_source = raw_observation.get("temperature_source")
     if isinstance(temperature_source, str) and temperature_source:

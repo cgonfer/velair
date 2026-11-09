@@ -1628,8 +1628,55 @@ it("keeps missing range-only Boost limits empty and requires both fields", () =>
   value._climateCardBoost = { entityId: "climate.office", durationMinutes: 60, targetKind: "range" };
   const container = document.createElement("div");
   render(renderClimateCard(value, "climate.office"), container);
-  const pending = [...container.querySelectorAll<HTMLInputElement>(".climate-card-boost-form input[type=number]")]
+  const pending = [...container.querySelectorAll<HTMLInputElement>(".climate-card-boost-form input.temperature-input")]
     .filter(input => input.value === "");
   expect(pending).toHaveLength(2);
   expect(pending.every(input => input.required && !input.checkValidity())).toBe(true);
+});
+
+it("steps range Boost on the climate-minimum grid even while the other draft is off-grid", () => {
+  const value = host() as any;
+  value._entityTemperatureLimits = () => [7.1, 35.1];
+  value._entityTemperatureStep = () => 0.2;
+  value._climateCardBoost = { entityId: "climate.office", durationMinutes: 60, targetKind: "range", low: "19.6", high: "20.1" };
+  const container = document.createElement("div");
+  const draw = () => render(renderClimateCard(value, "climate.office"), container);
+  value._updateClimateCardBoost = vi.fn((field: string, next: string) => {
+    value._climateCardBoost = { ...value._climateCardBoost, [field]: next };
+    draw();
+  });
+  draw();
+  const high = container.querySelector<HTMLInputElement>('input[data-target-field="high"]')!;
+  expect(high.getAttribute("aria-valuemin")).toBe("7.1");
+  const up = new KeyboardEvent("keydown", { key: "ArrowUp", cancelable: true });
+  high.dispatchEvent(up);
+  expect(up.defaultPrevented).toBe(true);
+  expect(value._updateClimateCardBoost).toHaveBeenLastCalledWith("high", "20.3");
+  expect(high.value).toBe("20.3");
+  high.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", cancelable: true }));
+  expect(value._updateClimateCardBoost).toHaveBeenLastCalledWith("high", "20.1");
+  high.value = "20,";
+  value._updateClimateCardBoost.mockClear();
+  high.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", cancelable: true }));
+  expect(value._updateClimateCardBoost).not.toHaveBeenCalled();
+  expect(high.value).toBe("20,");
+});
+
+it("provides negative Boost entry and preserves decimal keyboard and invalid accessibility states", () => {
+  const value = host() as any;
+  value._entityTemperatureLimits = () => [-10, 35];
+  value._climateCardBoost = { entityId: "climate.office", durationMinutes: 60, targetKind: "single", target: "-5," };
+  const container = document.createElement("div");
+  render(renderClimateCard(value, "climate.office"), container);
+  const input = container.querySelector<HTMLInputElement>("input.temperature-input")!;
+  expect(input.inputMode).toBe("text");
+  expect(input.getAttribute("role")).toBe("spinbutton");
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(input.hasAttribute("aria-valuenow")).toBe(false);
+  expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+  expect(container.querySelector('[role="alert"]')).not.toBeNull();
+  value._climateCardBoost.target = "-5,5";
+  render(renderClimateCard(value, "climate.office"), container);
+  expect(input.getAttribute("aria-valuenow")).toBe("-5.5");
+  expect(input.getAttribute("aria-invalid")).toBe("false");
 });

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 from datetime import timedelta
 import asyncio
 
@@ -1444,7 +1444,9 @@ class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):
             previous={"hvac_mode": "off"},
             current={"hvac_mode": "heat"},
             observed_snapshot={"hvac_mode": "heat", "temperature": 21.0},
+            reassert_if_current=ANY,
         )
+        self.assertTrue(callable(scheduler.async_handle_external_climate_change.call_args.kwargs["reassert_if_current"]))
 
     async def test_external_change_forwards_redaction_safe_ha_context(self) -> None:
         manager = SimpleNamespace(
@@ -1496,4 +1498,6 @@ class ClimateChangeMonitorTest(unittest.IsolatedAsyncioTestCase):
                 "has_parent_id": False,
                 "has_user_id": True,
             },
+            reassert_if_current=ANY,
         )
+        self.assertTrue(callable(scheduler.async_handle_external_climate_change.call_args.kwargs["reassert_if_current"]))

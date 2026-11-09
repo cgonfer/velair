@@ -9,7 +9,7 @@
 | Angabe | Status |
 | --- | --- |
 | Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Letzte Synchronisierung | 2026-11-08 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -145,7 +145,8 @@ Ein entferntes Mitglied erhält eine unabhängige Kopie der gemeinsamen Konfigur
 Entfernst du beispielsweise eines von drei Mitgliedern, bleiben zwei mit neuem Gruppenlernverlauf und ein unabhängiges Gerät mit neuem Verlauf. Löschen macht alle drei unabhängig. Keine der Aktionen stellt alte Verläufe aus der Zeit vor der Gruppe automatisch wieder her. Eine gespeicherte Gruppe benötigt mindestens zwei Mitglieder; löse sie auf, wenn alle unabhängig werden sollen.
 
 <a id="before-testing-the-beta"></a>
-## Vor dem Testen der Beta
+<a id="check-the-group-configuration"></a>
+## Gruppenkonfiguration prüfen
 
 Sichere die Konfiguration und bei Bedarf das Vorkonditionierungslernen. Prüfe nach dem bestätigten Speichern:
 

@@ -318,6 +318,7 @@ def _loaded_velair_integration(frontend_module):
     )
     install_module(
         "custom_components.velair.temperature_migration",
+        TemperatureMigrationNotifications=RuntimePlaceholder,
         async_dismiss_temperature_migration_notification=async_noop,
         async_notify_temperature_migration=async_noop,
     )
@@ -1214,14 +1215,11 @@ class FrontendSourceContractTest(unittest.TestCase):
             "minmax(96px, 0.72fr) 30px 30px",
             responsive_styles_source,
         )
-        self.assertIn("@container (max-width: 340px)", responsive_styles_source)
+        # Mobile dimensions and native time-field readability are verified by
+        # the real-browser visual journey, including a 320px viewport.
         self.assertIn("grid-template-areas:", responsive_styles_source)
         self.assertIn('"time time options delete"', responsive_styles_source)
         self.assertIn('"mode target target target"', responsive_styles_source)
-        self.assertIn(
-            "grid-template-columns: minmax(0, 1fr) 36px 36px 36px",
-            responsive_styles_source,
-        )
         self.assertIn(".editable-block > label:nth-child(2)", responsive_styles_source)
         self.assertIn("grid-area: mode", responsive_styles_source)
         self.assertIn(".editable-block > .temperature-range-fields", responsive_styles_source)
@@ -1246,10 +1244,6 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("updateDraftBlockDomain(blocks, index, field, value)", source)
         self.assertIn("export function draftBlocksFromScheduleBlocks", draft_blocks_domain_source)
         self.assertIn("export function addDraftBlock", draft_blocks_domain_source)
-        self.assertIn(
-            "temperature: Number(lastBlock?.temperature || defaultTargetTemperature(unit))",
-            draft_blocks_domain_source,
-        )
         self.assertIn('hvac_mode: ""', draft_blocks_domain_source)
         self.assertIn("export function updateDraftBlock", draft_blocks_domain_source)
         self.assertIn("export function isActiveBoostOverride", overrides_domain_source)

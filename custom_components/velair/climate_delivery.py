@@ -13,7 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import async_track_state_change_event
 
 from .climate_manager import STATE_UNAVAILABLE, STATE_UNKNOWN
-from .delivery_guard import DeliverySuperseded, check_delivery, delivery_guard
+from .delivery_guard import DeliverySuperseded, check_delivery, delivery_guard, capture_delivery_receipt
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,10 +30,12 @@ class Delivery:
     apply: AsyncStep
     commit: CommitStep | None = None
     is_current: CurrentGuard | None = None
+    commit_key: Any = None
 
 
 DeliveryResolver = Callable[[], Delivery | None]
 RETRY_DELAYS = (2.0, 10.0)
+FINAL_CONFIRMATION_DELAY = 5.0
 
 
 class ClimateDeliveryCoordinator:
@@ -46,6 +48,8 @@ class ClimateDeliveryCoordinator:
     ) -> None:
         self._hass = hass
         self._generations: dict[str, int] = {}
+        self._intent_tokens: dict[str, object] = {}
+        self._intent_changed: Callable[[str], None] | None = None
         self._locks: dict[str, asyncio.Lock] = {}
         self._tasks: dict[str, set[asyncio.Task[None]]] = {}
         self._owners: dict[str, asyncio.Task[object] | None] = {}
@@ -60,6 +64,14 @@ class ClimateDeliveryCoordinator:
         self._state_provider = hass.states.get
         self._entity_provider = lambda entity_id: [entity_id]
         self._target_valid = lambda _entity_id: True
+        self._receipt_matcher = lambda _receipt: {"matches": True}
+        self._receipt_confirmed = lambda _receipt: None
+        self._receipts: dict[str, dict[str, dict[str, Any]]] = {}
+        self._receipt_evidence: dict[str, dict[str, Any]] = {}
+        self._accepted: dict[str, tuple[int, Any]] = {}
+        self._retry_counts: dict[str, int] = {}
+        self._confirmation_events: dict[str, asyncio.Event] = {}
+        self._confirmation_deadlines: dict[str, asyncio.TimerHandle] = {}
 
     async def async_deliver(
         self,
@@ -68,11 +80,15 @@ class ClimateDeliveryCoordinator:
         *,
         resilient: bool = True,
         recovery_resolver: DeliveryResolver | None = None,
+        on_handoff: Callable[[CurrentGuard], None] | None = None,
     ) -> bool:
         """Attempt the newest intent once and arrange conservative recovery."""
         generation = self._replace(entity_id)
         if self._stopped:
             return False
+        if on_handoff is not None:
+            token = self._intent_tokens[entity_id]
+            on_handoff(lambda: not self._stopped and self._intent_tokens.get(entity_id) is token)
         current_resolver = recovery_resolver or resolver
         if resilient:
             self._set_eligible(entity_id, generation, current_resolver)
@@ -93,7 +109,9 @@ class ClimateDeliveryCoordinator:
             if self._pending_generations.get(entity_id) == generation:
                 self._pending_generations.pop(entity_id, None)
         if outcome == "success":
-            self._observe(entity_id, "success", {"retry_count": 0})
+            self._observe(entity_id, "success", self._success_details(entity_id, 0))
+            if resilient and entity_id in self._receipts:
+                self._schedule_confirmation_deadline(entity_id, generation, current_resolver)
             return True
         if outcome == "cancelled":
             self._observe_cancelled_once(entity_id, generation)
@@ -112,13 +130,18 @@ class ClimateDeliveryCoordinator:
         self._replace(entity_id, reason="cancelled")
         self._clear_eligibility(entity_id)
 
+    def set_intent_changed_callback(self, callback: Callable[[str], None]) -> None:
+        """Wake an intent producer when another delivery supersedes its handoff."""
+        self._intent_changed = callback
+
     def retry_current(self, entity_id: str) -> bool:
         """Back off after a recoverable failure outside the base delivery."""
         resolver = self._eligible.get(entity_id)
         if resolver is None or self._stopped:
             return False
-        generation = self._replace(entity_id)
-        self._eligible_generations[entity_id] = generation
+        generation = self._generations[entity_id]
+        if entity_id in self._confirmation_deadlines or any(not task.done() for task in self._tasks.get(entity_id, ())):
+            return True
         self._spawn(
             entity_id,
             self._async_recover(entity_id, generation, resolver, "failed")
@@ -146,7 +169,18 @@ class ClimateDeliveryCoordinator:
         async with self._locks.setdefault(entity_id, asyncio.Lock()):
             self._owners[entity_id] = current
             try:
-                await step()
+                with capture_delivery_receipt() as receipt:
+                    await step()
+                resolver = self._eligible.get(entity_id)
+                if receipt and resolver is not None and not self._stopped:
+                    previous_acceptance = self._accepted.get(entity_id)
+                    generation = self._replace(entity_id, notify=False, preserve_intent=True)
+                    self._eligible_generations[entity_id] = generation
+                    self._accepted[entity_id] = (generation, previous_acceptance[1] if previous_acceptance else None)
+                    self._set_receipt(entity_id, receipt)
+                    self._observe(entity_id, "success", self._success_details(entity_id, 0))
+                    if entity_id in self._receipts:
+                        self._schedule_confirmation_deadline(entity_id, generation, resolver)
             finally:
                 if self._owners.get(entity_id) is current:
                     self._owners.pop(entity_id, None)
@@ -159,6 +193,7 @@ class ClimateDeliveryCoordinator:
             | set(self._tasks)
             | set(self._owners)
             | set(self._pending_generations)
+            | set(self._confirmation_deadlines)
         ):
             if not self._has_active_work(entity_id):
                 continue
@@ -175,6 +210,14 @@ class ClimateDeliveryCoordinator:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        self._receipts.clear()
+        self._receipt_evidence.clear()
+        self._confirmation_events.clear()
+        self._accepted.clear()
+        self._retry_counts.clear()
+        for handle in self._confirmation_deadlines.values():
+            handle.cancel()
+        self._confirmation_deadlines.clear()
 
     def _replace(
         self,
@@ -182,6 +225,7 @@ class ClimateDeliveryCoordinator:
         *,
         reason: str = "replaced",
         notify: bool = True,
+        preserve_intent: bool = False,
     ) -> int:
         if (
             notify
@@ -195,6 +239,16 @@ class ClimateDeliveryCoordinator:
             )
         generation = self._generations.get(entity_id, 0) + 1
         self._generations[entity_id] = generation
+        if not preserve_intent:
+            self._intent_tokens[entity_id] = object()
+            if self._intent_changed is not None:
+                self._intent_changed(entity_id)
+        self._cancel_confirmation_deadline(entity_id)
+        self._receipts.pop(entity_id, None)
+        self._receipt_evidence.pop(entity_id, None)
+        self._confirmation_events.pop(entity_id, None)
+        self._retry_counts.pop(entity_id, None)
+        self._accepted.pop(entity_id, None)
         current = asyncio.current_task()
         for task in list(self._tasks.get(entity_id, ())):
             if task is not current:
@@ -205,6 +259,8 @@ class ClimateDeliveryCoordinator:
         """Return whether replacing the intent cancels actual delivery work."""
         tasks = self._tasks.get(entity_id, ())
         if any(not task.done() for task in tasks):
+            return True
+        if entity_id in self._confirmation_deadlines:
             return True
         if entity_id in self._owners:
             return True
@@ -276,7 +332,8 @@ class ClimateDeliveryCoordinator:
                 try:
                     with delivery_guard(lambda: is_current() and self._is_available(entity_id)):
                         check_delivery()
-                        await delivery.apply()
+                        with capture_delivery_receipt() as receipt:
+                            await delivery.apply()
                 except DeliverySuperseded:
                     if self._is_current(entity_id, generation) and not self._is_available(entity_id):
                         self._observe(entity_id, "unavailable", {"retry_count": retry_count})
@@ -311,7 +368,11 @@ class ClimateDeliveryCoordinator:
                     return "failed"
                 if not is_current():
                     return "cancelled"
-                if delivery.commit is not None:
+                acceptance_key = (generation, delivery.commit_key)
+                already_accepted = self._accepted.get(entity_id) == acceptance_key
+                self._accepted[entity_id] = acceptance_key
+                self._set_receipt(entity_id, receipt)
+                if delivery.commit is not None and not already_accepted:
                     try:
                         await delivery.commit(is_current)
                     except asyncio.CancelledError:
@@ -341,16 +402,36 @@ class ClimateDeliveryCoordinator:
 
         @callback
         def _state_changed(_event) -> None:
-            available = self._is_available(entity_id)
-            was_available = self._last_available.get(entity_id, available)
-            self._last_available[entity_id] = available
+            had_receipt = entity_id in self._receipts
             event_data = getattr(_event, "data", {})
             old_state = event_data.get("old_state")
             new_state = event_data.get("new_state")
+            if old_state is not None and new_state is not None and old_state.state == new_state.state:
+                expected = self._receipts.get(entity_id, {}).get(event_data.get("entity_id"), {})
+                if not any(old_state.attributes.get(field) != new_state.attributes.get(field)
+                           for field in expected if field not in ("hvac_mode", "__not_off__")):
+                    return
+            available = self._is_available(entity_id)
+            was_available = self._last_available.get(entity_id, available)
+            self._last_available[entity_id] = available
+            signal = self._confirmation_events.get(entity_id)
+            if signal is not None:
+                signal.set()
+            has_recovery_task = any(not task.done() for task in self._tasks.get(entity_id, ()))
+            # Until the first deadline, the existing listener owns confirmation.
+            # An actual recovery worker owns comparisons while it is active.
+            if not has_recovery_task and entity_id not in self._owners and entity_id in self._receipts:
+                evidence = self._receipt_matcher(self._receipts[entity_id])
+                if evidence["matches"]:
+                    self._confirm(entity_id, evidence)
             member_recovered = (len(self._entity_provider(entity_id)) > 1
                 and getattr(old_state, "state", "unavailable") in ("unknown", "unavailable")
                 and getattr(new_state, "state", "unavailable") not in ("unknown", "unavailable"))
-            if available and (not was_available or member_recovered) and entity_id in self._eligible:
+            if (available and (not was_available or member_recovered)
+                and entity_id in self._eligible
+                and not has_recovery_task
+                and entity_id not in self._confirmation_deadlines
+                and (not had_receipt or entity_id in self._receipts)):
                 self._spawn(
                     entity_id,
                     self._async_redeliver_current(entity_id)
@@ -371,6 +452,12 @@ class ClimateDeliveryCoordinator:
         ):
             return False
         self._eligible.pop(entity_id, None)
+        self._cancel_confirmation_deadline(entity_id)
+        self._receipt_evidence.pop(entity_id, None)
+        self._accepted.pop(entity_id, None)
+        self._retry_counts.pop(entity_id, None)
+        self._receipts.pop(entity_id, None)
+        self._confirmation_events.pop(entity_id, None)
         self._eligible_generations.pop(entity_id, None)
         self._last_available.pop(entity_id, None)
         unsub = self._availability_unsubs.pop(entity_id, None)
@@ -392,12 +479,43 @@ class ClimateDeliveryCoordinator:
 
         task.add_done_callback(_done)
 
+    def _cancel_confirmation_deadline(self, entity_id: str) -> None:
+        handle = self._confirmation_deadlines.pop(entity_id, None)
+        if handle is not None:
+            handle.cancel()
+
+    def _schedule_confirmation_deadline(
+        self, entity_id: str, generation: int, resolver: DeliveryResolver,
+    ) -> None:
+        """Let normal echoes confirm through the listener without a coroutine."""
+        self._cancel_confirmation_deadline(entity_id)
+
+        @callback
+        def expired() -> None:
+            if (not self._is_current(entity_id, generation)
+                    or self._confirmation_deadlines.get(entity_id) is not handle):
+                return
+            self._confirmation_deadlines.pop(entity_id, None)
+            receipt = self._receipts.get(entity_id)
+            if receipt is None:
+                return
+            evidence = self._receipt_matcher(receipt)
+            if evidence["matches"]:
+                self._confirm(entity_id, evidence)
+                return
+            self._spawn(entity_id, self._async_recover(
+                entity_id, generation, resolver, "pending", first_wait_elapsed=True,
+            ))
+
+        handle = asyncio.get_running_loop().call_later(RETRY_DELAYS[0] if RETRY_DELAYS else 0, expired)
+        self._confirmation_deadlines[entity_id] = handle
+
     async def _async_redeliver_current(self, entity_id: str) -> None:
         """Apply the latest eligible intent after an availability transition."""
         resolver = self._eligible.get(entity_id)
         if resolver is None or self._stopped:
             return
-        generation = self._replace(entity_id, notify=False)
+        generation = self._replace(entity_id, notify=False, preserve_intent=True)
         self._eligible_generations[entity_id] = generation
         try:
             outcome = await self._async_attempt(entity_id, generation, resolver)
@@ -416,65 +534,140 @@ class ClimateDeliveryCoordinator:
             )
             return
         if outcome == "success":
-            self._observe(entity_id, "success", {"retry_count": 0})
-        if outcome == "failed" and self._is_current(entity_id, generation):
+            self._observe(entity_id, "success", self._success_details(entity_id, 0))
+            if entity_id in self._receipts and self._is_current(entity_id, generation):
+                self._schedule_confirmation_deadline(entity_id, generation, resolver)
+        elif outcome == "failed" and self._is_current(entity_id, generation):
             self._spawn(
                 entity_id,
                 self._async_recover(entity_id, generation, resolver, outcome)
             )
 
+    def _set_receipt(self, entity_id: str, receipt: dict[str, dict[str, Any]]) -> None:
+        """Keep only an accepted target which has yet to be observed."""
+        self._receipts.pop(entity_id, None)
+        evidence = self._receipt_matcher(receipt) if receipt else None
+        if evidence is None:
+            self._receipt_evidence.pop(entity_id, None)
+        else:
+            self._receipt_evidence[entity_id] = evidence
+        if receipt and not evidence["matches"]:
+            self._receipts[entity_id] = receipt
+        elif receipt:
+            self._receipt_confirmed(receipt)
+
+    def _success_details(self, entity_id: str, retry_count: int) -> dict[str, Any]:
+        details = {"retry_count": retry_count}
+        evidence = self._receipt_evidence.get(entity_id)
+        if evidence:
+            details["confirmation"] = {**evidence, "status": "confirmed" if evidence["matches"] else "pending", "retry_count": retry_count}
+        return details
+
+    def _confirm(self, entity_id: str, evidence: dict[str, Any]) -> None:
+        receipt = self._receipts.pop(entity_id, None)
+        if receipt is None:
+            return
+        self._cancel_confirmation_deadline(entity_id)
+        retries = self._retry_counts.get(entity_id, 0)
+        self._receipt_evidence[entity_id] = evidence
+        self._receipt_confirmed(receipt)
+        self._observe(entity_id, "recovered" if retries else "confirmation_confirmed", {
+            **evidence, "retry_count": retries,
+        })
+
+    async def _async_wait_confirmation(self, entity_id: str, generation: int, delay: float) -> bool:
+        """Wait for existing state events within one fixed retry deadline."""
+        deadline = asyncio.get_running_loop().time() + delay
+        signal = self._confirmation_events.setdefault(entity_id, asyncio.Event())
+        while self._is_current(entity_id, generation):
+            receipt = self._receipts.get(entity_id)
+            if receipt is None:
+                return True
+            evidence = self._receipt_matcher(receipt)
+            if evidence["matches"]:
+                self._confirm(entity_id, evidence)
+                return True
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                return False
+            signal.clear()
+            try:
+                await asyncio.wait_for(signal.wait(), remaining)
+            except asyncio.TimeoutError:
+                return False
+        return True
+
     async def _async_recover(
-        self,
-        entity_id: str,
-        generation: int,
-        resolver: DeliveryResolver,
-        outcome: str,
+        self, entity_id: str, generation: int, resolver: DeliveryResolver, outcome: str,
+        *, first_wait_elapsed: bool = False,
     ) -> None:
-        retry_index = 0
+        retry_index = self._retry_counts.get(entity_id, 0)
         try:
             while self._is_current(entity_id, generation):
-                if retry_index >= len(RETRY_DELAYS):
-                    self._observe(
-                        entity_id,
-                        "exhausted",
-                        {
-                            "message": "Retry limit reached",
-                            "retry_count": retry_index,
-                        },
-                    )
+                has_receipt = entity_id in self._receipts
+                if self._accepted.get(entity_id, (None, None))[0] == generation and not has_receipt and outcome != "failed":
                     return
-                await asyncio.sleep(RETRY_DELAYS[retry_index])
+                if retry_index >= len(RETRY_DELAYS):
+                    if has_receipt:
+                        if await self._async_wait_confirmation(entity_id, generation, FINAL_CONFIRMATION_DELAY):
+                            return
+                        self._observe(entity_id, "unconfirmed", {
+                            **self._receipt_matcher(self._receipts[entity_id]), "retry_count": retry_index,
+                        })
+                    else:
+                        self._observe(entity_id, "exhausted", {"message": "Retry limit reached", "retry_count": retry_index})
+                    return
+                if has_receipt:
+                    # State may have changed after the deadline queued this task.
+                    # Revalidate before any retry without adding another wait.
+                    delay = 0 if first_wait_elapsed else RETRY_DELAYS[retry_index]
+                    first_wait_elapsed = False
+                    if await self._async_wait_confirmation(entity_id, generation, delay):
+                        return
+                else:
+                    await asyncio.sleep(RETRY_DELAYS[retry_index])
+                if not self._is_current(entity_id, generation):
+                    return
+                # Unavailability is event driven and never consumes the retry budget.
+                waited_for_availability = False
+                while not self._is_available(entity_id):
+                    waited_for_availability = True
+                    signal = self._confirmation_events.setdefault(entity_id, asyncio.Event())
+                    signal.clear()
+                    await signal.wait()
+                    if not self._is_current(entity_id, generation):
+                        return
+                if waited_for_availability and entity_id in self._receipts:
+                    evidence = self._receipt_matcher(self._receipts[entity_id])
+                    if evidence["matches"]:
+                        self._confirm(entity_id, evidence)
+                        return
+                previous_receipt = self._receipts.get(entity_id)
                 retry_index += 1
+                self._retry_counts[entity_id] = retry_index
                 self._observe(entity_id, "retrying", {"retry_count": retry_index})
                 try:
-                    outcome = await self._async_attempt(
-                        entity_id,
-                        generation,
-                        resolver,
-                        retry_count=retry_index,
-                    )
+                    outcome = await self._async_attempt(entity_id, generation, resolver, retry_count=retry_index)
                 except Exception:
                     self._clear_eligibility(entity_id, generation)
-                    _LOGGER.exception(
-                        "Current climate intent became invalid for %s", entity_id
-                    )
-                    self._observe(
-                        entity_id,
-                        "invalid_intent",
-                        {
-                            "message": "Current intent could not be resolved",
-                            "retry_count": retry_index,
-                        },
-                    )
+                    _LOGGER.exception("Current climate intent became invalid for %s", entity_id)
+                    self._observe(entity_id, "invalid_intent", {"message": "Current intent could not be resolved", "retry_count": retry_index})
                     return
-                if outcome != "failed":
-                    if outcome == "success":
-                        self._observe(
-                            entity_id,
-                            "success",
-                            {"retry_count": retry_index},
-                        )
+                if outcome == "success":
+                    evidence = self._receipt_evidence.get(entity_id)
+                    if previous_receipt and evidence and evidence["matches"]:
+                        self._observe(entity_id, "success", {"retry_count": retry_index})
+                        self._observe(entity_id, "recovered", {**evidence, "retry_count": retry_index})
+                        return
+                    self._observe(entity_id, "success", self._success_details(entity_id, retry_index))
+                    if entity_id not in self._receipts:
+                        return
+                elif outcome == "cancelled":
+                    self._observe_cancelled_once(entity_id, generation)
+                    self._clear_eligibility(entity_id, generation)
                     return
+                elif outcome == "unavailable":
+                    retry_index -= 1
         except asyncio.CancelledError:
             return
 

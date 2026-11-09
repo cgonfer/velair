@@ -9,7 +9,7 @@ Traducciones: [Original en inglés](room-groups.md) · [Español](room-groups.es
 | Dato | Estado |
 | --- | --- |
 | Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Última sincronización | 2026-11-08 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -145,11 +145,12 @@ Quitar un miembro le da una copia independiente de la configuración común. Dis
 Por ejemplo, quitar un equipo de un grupo de tres deja dos miembros con un nuevo historial del grupo y un equipo independiente con otro historial nuevo. Eliminar el grupo hace independientes a los tres. Ninguna operación restaura sus historiales anteriores al grupo. Conserva al menos dos miembros en un grupo guardado; disuélvelo si todos deben ser independientes.
 
 <a id="before-testing-the-beta"></a>
-## Antes de probar la beta
+<a id="check-the-group-configuration"></a>
+## Comprobar la configuración del grupo
 
 Exporta una copia e incluye el aprendizaje de preacondicionamiento si lo necesitas. Tras revisar y guardar un grupo, comprueba:
 
-- Aparece un grupo en Programación, Perfiles, Preacondicionamiento y Room Assist.
+- Aparece un grupo en Planificación, Perfiles, Preacondicionamiento y Room Assist.
 - Cada miembro sigue apareciendo individualmente en Resumen, Próximos eventos, Línea temporal de hoy, Confort y Diagnóstico.
 - El envío coincide con la instalación: órdenes directas a todos o al destinatario elegido para que la instalación las propague.
 - Cambiar Confort de un miembro deja intactos los demás.

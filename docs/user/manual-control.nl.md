@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](manual-control.md) · [Español](manual-control.
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.0-beta.9 |
+| Laatst gesynchroniseerd | 2026-11-02 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -92,9 +92,11 @@ Sommige apparaten melden tijdens één opdracht meerdere waarden: kort een ouder
 
 Als een anonieme update tijdens stabilisatie niet betrouwbaar van apparaatverwerking te onderscheiden is, behoudt Velair voorzichtig automatische besturing. Zo wordt een geweigerde of vertraagde eigen opdracht geen valse handmatige aanpassing. De stabilisatiestatus is runtimegebonden en wordt bij herstart gewist. Wijkt het apparaat na afloop nog af, dan blijft besturing automatisch en wordt een stabilisatiewaarschuwing vastgelegd. De volgende nieuwe Diagnose-momentopname toont verwacht en waargenomen resultaat. Velair herhaalt niet blind en maakt geen uitgestelde handmatige aanpassing.
 
+Een afzonderlijke uitzondering geldt zolang Velair een automatisch bestuurd klimaatapparaat in `off` houdt. Sommige apparaten melden een vervangende doeltemperatuur, bijvoorbeeld `0 °C` terwijl het gepubliceerde minimum `5 °C` is. Als alleen doeltemperaturen veranderen en alle nieuwe waarden buiten het expliciet door het apparaat gemelde minimum en maximum liggen, negeert Velair de update, ook wanneer die na de stabilisatieperiode binnenkomt. Er wordt geen externe-wijzigingsgebeurtenis verstuurd, geen handmatige aanpassing gestart en de uitvoering van het schema wordt niet onderbroken. Beide grenzen moeten geldig zijn; ontbreekt er één, dan blijft de gebruikelijke detectie actief. Geldige doelwijzigingen, externe HVAC-moduswijzigingen, herkenbare gebruikers- of automatiseringsacties en bestaande handmatige sessies behouden hun gebruikelijke gedrag.
+
 Het verwachtingsregister is begrensd, vervalt automatisch, wordt nooit opgeslagen en gebruikt geen polling. Een bron hoeft `Context` niet te behouden om koppeling mogelijk te maken, maar behouden context maakt herkenning nauwkeuriger.
 
-Elk waargenomen besturingsveld dat niet aan een Velair-opdracht kan worden gekoppeld, geldt als niet-Velair. Dit is toeschrijving, geen identiteit: Velair beweert niet te weten of persoon, afstandsbediening, automatisering, fabrikantservice of firmware de oorzaak was.
+Elk overig waargenomen besturingsveld dat niet aan een Velair-opdracht kan worden gekoppeld, geldt als niet-Velair. Dit is toeschrijving, geen identiteit: Velair beweert niet te weten of persoon, afstandsbediening, automatisering, fabrikantservice of firmware de oorzaak was.
 
 <a id="choose-a-policy"></a>
 ## Een beleid kiezen

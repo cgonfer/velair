@@ -12,6 +12,7 @@ import { renderDocumentationHelp } from "./documentation-links";
 import { html, nothing } from "lit";
 import { keyed } from "lit/directives/keyed.js";
 import { firstTemperatureStepAtOrAbove } from "../domain/climate";
+import { parseTemperatureInput, stepTemperatureInput } from "../domain/temperature-input";
 import { keepTargetMismatch } from "../domain/block-guidance";
 import { draftBlockHasClimateOptions, draftBlockUsesRange } from "../domain/draft-blocks";
 import { ACTION_SET_CLIMATE_OPTIONS, ACTION_SET_HVAC_MODE, ACTION_SET_TEMPERATURE, ACTION_TURN_OFF } from "../constants";
@@ -399,27 +400,32 @@ export function renderTimeline(
     <div class="timeline-panel">
       <div class="timeline-header">
         <span class="label">${host._t("timeline")}</span>
-        <div class="timeline-hours">
-          <span>00</span>
-          <span>06</span>
-          <span>12</span>
-          <span>18</span>
-          <span>24</span>
-          ${renderTimelineNowMarker(host)}
+      </div>
+      <div class="timeline-scroll" role="region" aria-label=${host._t("timeline")} tabindex="0">
+        <div class="timeline-canvas">
+          <div class="timeline-hours">
+            <span>00</span>
+            <span>06</span>
+            <span>12</span>
+            <span>18</span>
+            <span>24</span>
+            ${renderTimelineNowMarker(host)}
+          </div>
+          <div
+            class="timeline-track"
+            @dragover=${host._handleTimelineDragOver}
+            @drop=${(event: DragEvent) => host._handleTimelineDrop(event, source)}
+          >
+            ${timelineBlocks.length || carryOver
+              ? html`
+                  ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId, source, Boolean(weekly?.resolved && carryOver.sourceWeekday !== weekly.weekday), carryOverIndex ?? 0) : nothing}
+                  ${timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))}
+                `
+              : html`<span class="empty timeline-empty">${host._t("noBlocks")}</span>`}
+          </div>
         </div>
       </div>
-      <div
-        class="timeline-track"
-        @dragover=${host._handleTimelineDragOver}
-        @drop=${(event: DragEvent) => host._handleTimelineDrop(event, source)}
-      >
-        ${timelineBlocks.length || carryOver
-          ? html`
-              ${carryOver ? renderTimelineCarryOverBlock(host, carryOver, entityId, source, Boolean(weekly?.resolved && carryOver.sourceWeekday !== weekly.weekday), carryOverIndex ?? 0) : nothing}
-              ${timelineBlocks.map((block: TimelineBlock) => renderTimelineBlock(host, block, entityId, source))}
-            `
-          : html`<span class="empty timeline-empty">${host._t("noBlocks")}</span>`}
-      </div>
+      <span class="timeline-scroll-hint">${host._t("timelineScrollHint")}</span>
     </div>
   `;
 }
@@ -464,12 +470,12 @@ export function timelinePresentation(
   const off = Boolean(effective && block.action === ACTION_TURN_OFF);
   const modeOnly = Boolean(effective && block.action === ACTION_SET_HVAC_MODE);
   const optionsOnly = Boolean(effective && block.action === ACTION_SET_CLIMATE_OPTIONS);
-  const hasScalar = String(block.temperature ?? "").trim() !== "" && Number.isFinite(Number(block.temperature));
-  const hasRange = String(block.target_temp_low ?? "").trim() !== "" && String(block.target_temp_high ?? "").trim() !== "" && Number.isFinite(Number(block.target_temp_low)) && Number.isFinite(Number(block.target_temp_high));
+  const hasScalar = String(block.temperature ?? "").trim() !== "" && Number.isFinite(parseTemperatureInput(block.temperature));
+  const hasRange = String(block.target_temp_low ?? "").trim() !== "" && String(block.target_temp_high ?? "").trim() !== "" && Number.isFinite(parseTemperatureInput(block.target_temp_low)) && Number.isFinite(parseTemperatureInput(block.target_temp_high));
   const label = !effective ? host._t(!presetKey && link?.mode === "full" ? status === "loading" ? "linkedConfigurationLoading" : "linkedConfigurationUnavailable" : status === "loading" ? "presetSettingsLoading" : "sharedPresetUnavailable")
     : off ? host._t("off") : modeOnly ? host._t("deviceControlled") : optionsOnly ? host._t("climateOptionsOnly")
-      : draftBlockUsesRange(block) && hasRange ? formatRange(host, Number(block.target_temp_low), Number(block.target_temp_high), entityId)
-        : hasScalar ? host._formatTemperature(Number(block.temperature), entityId) : host._t("invalidTemperatureRange");
+      : draftBlockUsesRange(block) && hasRange ? formatRange(host, parseTemperatureInput(block.target_temp_low), parseTemperatureInput(block.target_temp_high), entityId)
+        : hasScalar ? host._formatTemperature(parseTemperatureInput(block.temperature), entityId) : host._t("invalidTemperatureRange");
   const mode = !effective || off || optionsOnly ? "" : block.temperature_only ? host._t("temperatureOnly") : block.hvac_mode ? (host._modeLabel?.(block.hvac_mode) ?? block.hvac_mode) : host._t("keep");
   const options = effective ? climateOptionSummaryItems(host, block) : [];
   const presetName = presetKey ? availableBlockPresets(host._data).find((item) => item.key === presetKey)?.name ?? host._t("missingPreset") : undefined;
@@ -919,9 +925,9 @@ function renderBlockCommandPreview(
     `;
   }
   const isRange = draftBlockUsesRange(block);
-  const low = Number(block.target_temp_low);
-  const high = Number(block.target_temp_high);
-  const temperature = Number(block.temperature);
+  const low = parseTemperatureInput(block.target_temp_low);
+  const high = parseTemperatureInput(block.target_temp_high);
+  const temperature = parseTemperatureInput(block.temperature);
   const validTarget = isRange
     ? Boolean(String(block.target_temp_low ?? "").trim() && String(block.target_temp_high ?? "").trim()) && Number.isFinite(low) && Number.isFinite(high) && low <= high
     : Boolean(String(block.temperature ?? "").trim()) && Number.isFinite(temperature);
@@ -986,8 +992,14 @@ function renderTargetInput(
       <label class="label" for=${inputId}>${host._t(labelKey)} (${unit})</label>
       <input
         id=${inputId}
-        class=${error ? "invalid" : ""}
-        type="number"
+        class=${error ? "temperature-input invalid" : "temperature-input"}
+        type="text"
+        inputmode=${host._unboundedTemperatureTargets || minimum < 0 ? "text" : "decimal"}
+        role="spinbutton"
+        aria-valuemin=${host._unboundedTemperatureTargets ? nothing : minimum}
+        aria-valuemax=${host._unboundedTemperatureTargets ? nothing : maximum}
+        aria-valuenow=${!disabled && !readonly && Number.isFinite(parseTemperatureInput(block[field])) ? parseTemperatureInput(block[field]) : nothing}
+        aria-invalid=${String(Boolean(error))}
         min=${host._unboundedTemperatureTargets ? nothing : String(minimum)}
         max=${host._unboundedTemperatureTargets ? nothing : String(maximum)}
         step=${step === undefined ? "any" : String(step)}
@@ -996,6 +1008,7 @@ function renderTargetInput(
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
         @change=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
+        @keydown=${(event: KeyboardEvent) => handleTemperatureKeydown(host, event, index, source, field, minimum, maximum, step)}
       />
       ${field === "temperature" && (!disabled || isTargetless)
         ? html`
@@ -1062,6 +1075,7 @@ function renderRangeTargetInputs(
           unit,
           isTargetless,
           readonly,
+          error,
         )}
         ${renderRangeTargetInput(
           host,
@@ -1078,6 +1092,7 @@ function renderRangeTargetInputs(
           unit,
           isTargetless,
           readonly,
+          error,
         )}
       </div>
       ${!disabled || isTargetless
@@ -1126,13 +1141,20 @@ function renderRangeTargetInput(
   unit: string,
   isTargetless = false,
   readonly = false,
+  error?: string,
 ) {
   return html`
     <label class="range-temperature-field">
       <span class="range-input-label" aria-hidden="true">${host._t(shortLabelKey)}</span>
       <input
-        type="number"
-        inputmode="decimal"
+        class="temperature-input"
+        type="text"
+        inputmode=${host._unboundedTemperatureTargets || minimum < 0 ? "text" : "decimal"}
+        role="spinbutton"
+        aria-valuemin=${host._unboundedTemperatureTargets ? nothing : minimum}
+        aria-valuemax=${host._unboundedTemperatureTargets ? nothing : maximum}
+        aria-valuenow=${!disabled && !readonly && Number.isFinite(parseTemperatureInput(block[field])) ? parseTemperatureInput(block[field]) : nothing}
+        aria-invalid=${String(Boolean(error))}
         min=${host._unboundedTemperatureTargets ? nothing : String(minimum)}
         max=${host._unboundedTemperatureTargets ? nothing : String(maximum)}
         step=${step === undefined ? "any" : String(step)}
@@ -1142,9 +1164,26 @@ function renderRangeTargetInput(
         .value=${disabled ? "" : String(block[field] ?? "")}
         @input=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
         @change=${(event: Event) => host._updateDraftBlock(index, field, host._inputValue(event), source)}
+        @keydown=${(event: KeyboardEvent) => handleTemperatureKeydown(host, event, index, source, field, minimum, maximum, step)}
       />
     </label>
   `;
+}
+
+function handleTemperatureKeydown(
+  host: ScheduleViewHost, event: KeyboardEvent, index: number, source: BlockDraftSource,
+  field: "temperature" | "target_temp_low" | "target_temp_high", minimum: number, maximum: number, step?: number,
+): void {
+  const input = event.currentTarget as HTMLInputElement;
+  if (input.disabled || input.readOnly || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
+    || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+  event.preventDefault();
+  const next = stepTemperatureInput(input.value, event.key === "ArrowUp" ? 1 : -1,
+    host._unboundedTemperatureTargets ? undefined : minimum,
+    host._unboundedTemperatureTargets ? undefined : maximum, step);
+  if (next === undefined) return;
+  input.value = next;
+  host._updateDraftBlock(index, field, next, source);
 }
 
 function formatRange(host: ScheduleViewHost, low: number, high: number, entityId?: string): string {

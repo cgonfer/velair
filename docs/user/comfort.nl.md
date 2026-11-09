@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](comfort.md) · [Español](comfort.es.md) · [Fra
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.0-beta.11 |
+| Laatst gesynchroniseerd | 2026-11-07 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -31,11 +31,14 @@ Het volgt lokaal beschikbare metingen van temperatuur, luchtvochtigheid en CO2. 
 <a id="sources"></a>
 ## Bronnen
 
-Voor temperatuur wordt de eerste beschikbare bron in deze volgorde gebruikt:
+Voor temperatuur wordt de ingestelde bron in deze volgorde gekozen:
 
 1. de temperatuursensor die in het tabblad Comfort is geselecteerd;
 2. de Room Assist-sensor die voor het klimaatapparaat is ingesteld;
 3. de `current_temperature` van de klimaatentiteit.
+
+Dit kiest een voorkeursbron; er wordt niet automatisch naar een andere bron
+overgeschakeld wanneer die bron geen bruikbare temperatuur meer levert.
 
 Voor groepsleden gebruikt automatische temperatuur het fysieke `current_temperature` van het lid; de Room Assist-sensor van de groep wordt niet overgenomen. Kies indien nodig expliciet een externe sensor in de Comfortconfiguratie van dat lid.
 
@@ -49,6 +52,55 @@ De standaardoptie `Automatische bron gebruiken` behoudt dit automatische gedrag.
 CO2 wordt alleen gevolgd wanneer een CO2-sensor is geselecteerd.
 
 De effectieve entiteits-ID verschijnt onder elke keuzelijst. Optionele metingen zonder bron gelden niet als fouten.
+
+<a id="backup-sensors"></a>
+
+### Reservesensoren
+
+Wanneer een temperatuur- of luchtvochtigheidsbron een afzonderlijke ondersteunde
+reservebron heeft, toont **Gegevensbronnen** een apart onderdeel
+**Reservesensoren**. Elke rij bevat een eigen selectievakje, de naam en het
+pictogram Temperatuur of Luchtvochtigheid en de exacte entiteits-ID van de
+reservebron. Beide selectievakjes staan standaard uit.
+
+- **Temperatuur** gebruikt de temperatuursensor die voor dat fysieke apparaat
+  is ingesteld als deze verschilt van de gekozen externe sensor. Als Comfort
+  deze ingestelde kamersensor al gebruikt, ook via **Automatische bron gebruiken**,
+  is de reservebron de eigen `current_temperature` van het apparaat. Als er geen
+  kamersensor is ingesteld, gebruikt een externe Comfortsensor die eigen meting
+  ook als reservebron.
+- **Luchtvochtigheid** gebruikt alleen de gemeten `current_humidity` van het
+  apparaat. Een reservebron voor luchtvochtigheid verschijnt alleen als die
+  gemeten bron wordt ondersteund; de doelinstelling `humidity` wordt nooit als
+  meting gebruikt.
+
+De temperatuurreserve blijft beschikbaar wanneer de automatische bron een externe
+kamersensor is. Als de voorkeursmeting al de eigen temperatuur van het apparaat
+is, verdwijnt de rij en wordt de opgeslagen reserve-instelling gewist. De
+ingestelde kamerbron terugzetten naar het apparaat wist de reservekeuze voor
+de automatische bron; opnieuw een externe kamersensor kiezen schakelt deze
+niet weer in.
+
+Een reservebron voor luchtvochtigheid vereist een expliciet gekozen externe
+bron. De automatische/eigen bron kiezen of de bewaking van luchtvochtigheid
+uitschakelen wist die opgeslagen reserve-instelling. Elke meting heeft hoogstens
+één reservebron; als ook die uitvalt, probeert Comfort geen andere bron.
+
+Met een ingeschakelde reservebron kan een ontbrekende, niet-beschikbare,
+onbekende of niet-numerieke gekozen meting die ene reservebron gebruiken als
+haar meting actueel en geldig is. **Reservesensor in gebruik** geeft de actieve
+reservebron aan. De gekozen sensor blijft opgeslagen en Comfort gebruikt deze
+weer zodra hij is hersteld. Een verouderde gekozen meting activeert geen
+reservebron en een verouderde reservebron wordt niet gebruikt. Als geen van
+beide bronnen een bruikbare meting heeft, blijft Comfort de ontbrekende of
+verouderde toestand tonen.
+
+Deze instellingen worden per fysiek apparaat opgeslagen en blijven behouden
+na herstart en draagbare export/import. Bestaande configuraties houden beide
+reservebronnen uitgeschakeld. Leden van kamergroepen behouden onafhankelijke
+instellingen en nemen de besturingssensor van de groep nooit over als
+reservebron. Reservebronnen beïnvloeden alleen Comfortwaarnemingen; ze wijzigen
+Room Assist, voorconditionering, klimaatbesturing of CO2-bewaking niet.
 
 <a id="comfort-models"></a>
 ## Comfortmodellen
@@ -191,7 +243,17 @@ Velair biedt één waarde voor gegevenskwaliteit:
 - `stale`: er is geen actuele meting en elke gevolgde bron is verouderd;
 - `unavailable`: om een andere reden kan geen actuele meting worden gebruikt.
 
-Comfort groepeert bruikbare metingen waarvan de actualiteit niet verifieerbaar is naast de sensorkeuzes bij **Configuratie → Gegevensbronnen**. Een rustige uitleg noemt de betrokken waarden en verduidelijkt dat een onbekend meettijdstip niet betekent dat waarden onjuist zijn of de kamer oncomfortabel is. Overzicht en Lovelace-kaarten laten deze routinestatus weg; Diagnostiek bewaart de technische context. Dit is een geldige automatische apparaatbron, geen configuratiefout. Ontbrekende of verouderde waarden blijven een waarschuwing in de zonelijst geven.
+Comfort groepeert bruikbare metingen waarvan de actualiteit niet verifieerbaar
+is naast de sensorkeuzes bij **Configuratie → Gegevensbronnen**. Een ingeklapt
+informatiegedeelte noemt de betrokken metingen. Open het voor de volledige
+uitleg: de metingen zijn bruikbaar, een onbekend meettijdstip betekent niet dat
+waarden onjuist zijn of de kamer oncomfortabel is, en de actualiteit van de
+thermostaatmeting kan niet afzonderlijk worden gecontroleerd wanneer die meting
+wordt gebruikt. Overzicht en Lovelace-kaarten laten deze routinestatus weg;
+Diagnostiek bewaart de technische context. Dit is een geldige automatische
+apparaatbron, geen configuratiefout. Ontbrekende of verouderde waarden blijven
+een waarschuwing in de zonelijst geven. De aparte bediening voor **Actualiteit
+gegevens** behoudt het bestaande gedrag.
 
 <a id="visual-status"></a>
 ## Visuele status

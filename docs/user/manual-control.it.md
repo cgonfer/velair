@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](manual-control.md) · [Español](manual-contr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Versione di riferimento | 1.9.0-beta.9 |
+| Ultima sincronizzazione | 2026-11-02 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -92,9 +92,11 @@ Alcuni dispositivi comunicano più valori elaborando un comando. Possono tornare
 
 Quando un aggiornamento anonimo durante l’assestamento non può essere distinto affidabilmente dalla convergenza del dispositivo, Velair mantiene prudentemente il controllo automatico. Evita così di trasformare un proprio comando rifiutato o ritardato in una falsa regolazione manuale. L’assestamento esiste solo in esecuzione ed è cancellato al riavvio. Se il dispositivo differisce ancora dal valore richiesto alla fine dell’assestamento, Velair mantiene il controllo automatico e registra un avviso di assestamento. La successiva istantanea aggiornata di Diagnostica espone l’avviso; il rapporto include valori attesi e osservati. Velair non riprova ciecamente il comando né trasforma la discordanza in una regolazione manuale differita.
 
+Si applica un’eccezione separata mentre Velair mantiene un dispositivo sotto programmazione automatica in `off`. Alcuni dispositivi comunicano un obiettivo sostitutivo, ad esempio `0 °C` quando il minimo pubblicato è `5 °C`. Se cambiano solo gli obiettivi e tutti i nuovi valori sono al di fuori del minimo e del massimo dichiarati esplicitamente dal dispositivo, Velair ignora l’aggiornamento, anche quando arriva dopo l’assestamento. Non emette un evento di modifica esterna, non avvia una regolazione manuale e non interrompe l’esecuzione della programmazione. Entrambi i limiti devono essere validi; se ne manca uno, resta attivo il rilevamento abituale. Le modifiche valide degli obiettivi, le modifiche esterne della modalità HVAC, le azioni identificabili di utenti o automazioni e le sessioni manuali esistenti mantengono il comportamento abituale.
+
 Il registro delle aspettative è limitato, scade automaticamente, non viene mai salvato e non interroga periodicamente i dispositivi. Una fonte non deve necessariamente conservare il `Context` Home Assistant per permettere la correlazione, anche se conservarlo rende più precisa la ricerca delle corrispondenze.
 
-Qualsiasi campo di controllo osservato non correlabile a un comando Velair è classificato come non-Velair. È attribuzione, non identità: Velair non afferma di sapere se la causa sia una persona, un telecomando, un’automazione, un servizio del produttore o il firmware.
+Qualsiasi altro campo di controllo osservato non correlabile a un comando Velair è classificato come non-Velair. È attribuzione, non identità: Velair non afferma di sapere se la causa sia una persona, un telecomando, un’automazione, un servizio del produttore o il firmware.
 
 <a id="choose-a-policy"></a>
 ## Scegliere un criterio

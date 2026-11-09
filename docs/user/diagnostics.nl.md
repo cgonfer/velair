@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](diagnostics.md) · [Español](diagnostics.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.3 |
-| Laatst gesynchroniseerd | 2026-10-21 |
+| Referentieversie | 1.9.0-beta.10 |
+| Laatst gesynchroniseerd | 2026-11-04 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -74,6 +74,10 @@ Rapportexport is verborgen op telefoonformaat, omdat downloads niet betrouwbaar 
 De lokale diagnoseweergave gebruikt de vriendelijke apparaatnamen van Home Assistant bij het filteren, maar toont bewust lokale entiteits-ID's in het detailpaneel om de configuratie te kunnen controleren. Met de standaardprivacyoptie vervangen gedownloade rapporten zowel gestructureerde ID's als ID's in bewaarde foutteksten door deterministische aliassen zoals `climate_unit_1` en `associated_entity_1`. Herhaalde verwijzingen behouden dezelfde alias, zodat verbanden bruikbaar blijven zonder de oorspronkelijke lokale ID's te tonen. Als je expliciet onbewerkte ID's behoudt, blijven die lokale identificatoren in het rapport; profiel-, modus- en pauze-ID's worden nog steeds verwijderd. Controleer elk rapport voordat je het deelt.
 
 Diagnose heeft geen bediening voor de planner, herhaalpogingen, terugdraaien of klimaatapparaten. De instellingen blijven de plaats voor configuratie en onderhoud; details over apparaatmogelijkheden en gezondheid staan nu onder Diagnose.
+
+De overdrachtsdetails van het geselecteerde klimaatapparaat onderscheiden een geaccepteerde serviceaanroep van de doelwaarde die Home Assistant meldt. Bevestiging kan in afwachting zijn, ontvangen zijn, na een herhaalpoging zijn hersteld of na het maximale aantal pogingen onbevestigd blijven. Een herstelde stille fout blijft met het aantal herhaalpogingen in de geschiedenis voor **Verzending naar de klimaatentiteit** staan, zodat je kunt zien dat Velair het verschil heeft opgelost. Overeenkomende meldingen voegen niet voor elke normale opdracht een geschiedenisvermelding toe. Het gedownloade rapport bewaart dezelfde bevestigingsgegevens.
+
+Herstel vindt in de backend plaats, ook wanneer Diagnostiek gesloten is. Als meerdere onafhankelijke klimaatapparaten tegelijk van blok veranderen, heeft alleen een apparaat dat een andere doelwaarde blijft melden een herhaalpoging nodig. Deze weergave openen of vernieuwen verstuurt nooit een klimaatopdracht. Een bevestigde melding bewijst de status in Home Assistant; ze controleert een apparaat dat optimistische waarden meldt niet onafhankelijk.
 
 Elk beheerd klimaatapparaat rapporteert ook runtimegegevens over het stabiliseren na opdrachten. Terwijl een recente Velair-opdracht stabiliseert, vermeldt Diagnostiek de betrokken besturingsvelden in de actuele momentopname. Bereikt het apparaat de verwachte waarden niet binnen de begrensde termijn, dan markeert de volgende nieuwe momentopname het met `command_settling_mismatch`. Vouw die waarschuwing in het Diagnostiek-paneel van de gekozen thermostaat uit om per veld de verwachte waarde te vergelijken met wat de thermostaat meldde. Temperaturen bevatten de eenheid van het apparaat, HVAC-modi gebruiken hun normale labels en ontbrekende waarden worden expliciet aangegeven. Dit gebruikt de vastgelegde vergelijking, niet het huidige schema of een nieuwe meting. Het gedownloade rapport behoudt ook het blok `command_settling`. Dit dient voor probleemoplossing: Diagnostiek herhaalt de opdracht niet, wijzigt het apparaat niet en maakt geen handmatige aanpassing. Een nieuwere opdracht voor dat veld of een herstart wist deze gegevens.
 

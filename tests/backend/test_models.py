@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from .helpers import (
     ACTION_SET_HVAC_MODE,
@@ -23,6 +23,7 @@ from custom_components.velair.models import (
     normalize_preconditioning_data,
     normalize_climate_profiles,
     normalize_schedule_templates,
+    preconditioning_prediction_time_input,
     predict_preconditioning_lead,
     validate_pause_id,
     zone_pause_override_from_reasons,
@@ -158,6 +159,117 @@ def _preconditioning_learning(
             ]
         },
     }
+
+
+class PreconditioningPredictionTimeTest(unittest.TestCase):
+    """Clock-only reuse preserves actual sample weighting and expiry changes."""
+
+    now = datetime(2026, 5, 20, 12, tzinfo=timezone.utc)
+
+    def config(self, **changes):
+        return normalize_preconditioning_data({
+            "enabled": True, "adaptive_percentile_enabled": False, **changes,
+        })
+
+    def history(self, samples, mode="heat"):
+        return {mode: {"observations": samples}}
+
+    def predict(self, samples, config, now, mode="heat"):
+        return predict_preconditioning_lead(
+            samples, mode, target_temp=21,
+            current_temp=19 if mode == "heat" else 23,
+            config=config, now=now,
+        )
+
+    def test_past_complete_predictions_and_time_inputs_are_stable(self):
+        config = self.config()
+        for mode in ("heat", "cool"):
+            with self.subTest(mode=mode):
+                samples = [_preconditioning_observation(
+                    minutes, quality="complete", mode=mode,
+                    created_at=(self.now - timedelta(days=index + 1)).isoformat(),
+                ) for index, minutes in enumerate((20, 40, 60, 80, 100))]
+                history = self.history(samples, mode)
+                expected = self.predict(samples, config, self.now, mode)
+                expected_input = preconditioning_prediction_time_input(history, config, self.now)
+                for delta in (timedelta(microseconds=1), timedelta(seconds=30), timedelta(days=40)):
+                    self.assertEqual(self.predict(samples, config, self.now + delta, mode), expected)
+                    self.assertEqual(preconditioning_prediction_time_input(
+                        history, config, self.now + delta), expected_input)
+
+    def test_ancient_complete_history_keeps_its_relative_percentile(self):
+        config = self.config(recency_decay_days=1)
+        for mode in ("heat", "cool"):
+            with self.subTest(mode=mode):
+                samples = [_preconditioning_observation(
+                    minutes, quality="complete", mode=mode,
+                    created_at="2020-01-01T00:00:00+00:00",
+                ) for minutes in (20, 40, 60, 80, 100)]
+                prediction = self.predict(samples, config, self.now, mode)
+                self.assertEqual(prediction["source"], "history")
+                self.assertEqual(prediction["recommended_lead_minutes"], 80)
+                self.assertEqual(self.predict(samples, config, self.now + timedelta(days=100), mode),
+                                 prediction)
+
+    def test_partial_input_and_prediction_change_only_after_exact_expiry(self):
+        config = self.config(partial_expiry_days=1)
+        for mode in ("heat", "cool"):
+            with self.subTest(mode=mode):
+                samples = [_preconditioning_observation(
+                    200, quality="partial", mode=mode,
+                    created_at=(self.now - timedelta(days=1)).isoformat(),
+                )]
+                history = self.history(samples, mode)
+                before = self.now - timedelta(microseconds=1)
+                after = self.now + timedelta(microseconds=1)
+                active = self.predict(samples, config, self.now, mode)
+                self.assertEqual(active["diagnostics"]["partial_floor_minutes"], 240)
+                self.assertEqual(self.predict(samples, config, before, mode), active)
+                expired = self.predict(samples, config, after, mode)
+                self.assertEqual(expired["diagnostics"]["partial_floor_minutes"], 0)
+                active_input = preconditioning_prediction_time_input(history, config, self.now)
+                self.assertEqual(preconditioning_prediction_time_input(history, config, before), active_input)
+                self.assertNotEqual(preconditioning_prediction_time_input(history, config, after), active_input)
+                # A rollback across the same boundary restores the active sample.
+                self.assertEqual(preconditioning_prediction_time_input(history, config, self.now), active_input)
+                self.assertEqual(self.predict(samples, config, self.now, mode), active)
+
+    def test_future_complete_samples_keep_clock_until_relative_weights_stabilize(self):
+        config = self.config(recency_decay_days=1, comfort_percentile=50)
+        for mode in ("heat", "cool"):
+            with self.subTest(mode=mode):
+                latest = self.now + timedelta(days=2)
+                samples = [_preconditioning_observation(
+                    minutes, quality="complete", mode=mode,
+                    created_at=(latest if minutes == 100 else self.now).isoformat(),
+                ) for minutes in (20, 40, 60, 80, 100)]
+                history = self.history(samples, mode)
+                initial = self.predict(samples, config, self.now, mode)
+                next_day = self.predict(samples, config, self.now + timedelta(days=1), mode)
+                self.assertEqual(initial["recommended_lead_minutes"], 60)
+                self.assertEqual(next_day["recommended_lead_minutes"], 80)
+                self.assertNotEqual(preconditioning_prediction_time_input(history, config, self.now),
+                                    preconditioning_prediction_time_input(history, config, self.now + timedelta(days=1)))
+                stable_input = preconditioning_prediction_time_input(history, config, latest)
+                self.assertEqual(preconditioning_prediction_time_input(history, config, latest + timedelta(days=1)),
+                                 stable_input)
+                self.assertEqual(self.predict(samples, config, latest, mode),
+                                 self.predict(samples, config, latest + timedelta(days=1), mode))
+                self.assertNotEqual(preconditioning_prediction_time_input(history, config, self.now), stable_input)
+                self.assertEqual(self.predict(samples, config, self.now, mode), initial)
+
+    def test_disabled_invalid_and_malformed_observations_do_not_require_clock(self):
+        config = self.config()
+        samples = [
+            _preconditioning_observation(50, quality="invalid", created_at=(self.now + timedelta(days=1)).isoformat()),
+            _preconditioning_observation(50, quality="partial", created_at="invalid"),
+            _preconditioning_observation(50, quality="complete", created_at="invalid"),
+        ]
+        history = self.history(samples)
+        expected = preconditioning_prediction_time_input(history, config, self.now)
+        self.assertEqual(expected, ((True,), None))
+        self.assertEqual(preconditioning_prediction_time_input(history, config, self.now + timedelta(days=1)), expected)
+        self.assertIsNone(preconditioning_prediction_time_input(history, self.config(enabled=False), self.now))
 
 
 class ScheduleBlockNormalizationTest(unittest.TestCase):
@@ -627,8 +739,10 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
             {
                 "enabled": True,
                 "temperature_entity_id": "sensor.salon_temperature",
+                "temperature_fallback_enabled": False,
                 "humidity_enabled": False,
                 "humidity_entity_id": "sensor.salon_humidity",
+                "humidity_fallback_enabled": False,
                 "co2_entity_id": "sensor.salon_co2",
                 "temperature_min": 19.0,
                 "temperature_max": 25.0,

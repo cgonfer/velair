@@ -107,7 +107,8 @@ class ReleaseMetadataTest(unittest.TestCase):
             workflow,
         )
         self.assertIn('if [ ! -f "$RELEASE_NOTES" ]', workflow)
-        self.assertIn('--notes-file "$RELEASE_NOTES"', workflow)
+        self.assertIn("run: node .github/scripts/publish-release.mjs", workflow)
+        self.assertIn("RELEASE_NOTES: .github/release-notes/v${{ needs.package-release.outputs.version }}.md", workflow)
 
     def test_release_workflow_marks_hyphenated_versions_as_prereleases(
         self,
@@ -116,13 +117,10 @@ class ReleaseMetadataTest(unittest.TestCase):
 
         self.assertIn('*-*) PRERELEASE="true"', workflow)
         self.assertIn('*) PRERELEASE="false"', workflow)
-        self.assertIn(
-            "RELEASE_PRERELEASE: ${{ steps.version.outputs.prerelease }}",
-            workflow,
-        )
-        self.assertIn('if [ "$RELEASE_PRERELEASE" = "true" ]; then', workflow)
-        self.assertIn("CREATE_ARGS+=(--prerelease)", workflow)
-        self.assertIn('gh release create "${CREATE_ARGS[@]}"', workflow)
+        publisher = (ROOT / ".github/scripts/publish-release.mjs").read_text(encoding="utf-8")
+        self.assertIn('prerelease: version.includes("-")', publisher)
+        self.assertIn("draft: true", publisher)
+        self.assertIn("draft: false", publisher)
 
     def test_installation_docs_use_the_default_hacs_store(self) -> None:
         readme = README.read_text(encoding="utf-8")

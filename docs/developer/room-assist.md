@@ -57,6 +57,81 @@ When Room Sensor Assist is disabled, the selected sensor remains stored but is n
 
 Stored Adaptive Preconditioning observations include `temperature_source: "room_sensor"` and `room_temperature_entity_id` only when a room sensor was actually used. Older observations and climate-temperature observations keep their compact shape.
 
+## Optional weekly temperature references
+
+The optional `preconditioning.room_sensor_schedule` configuration selects a
+temperature reference independently of thermal blocks. Absence of this field
+preserves the legacy fixed-sensor configuration and runtime path. A stored,
+disabled schedule is retained without enabling source-boundary processing.
+
+```json
+{
+  "room_sensor_schedule": {
+    "enabled": true,
+    "default_source": null,
+    "periods": [
+      {
+        "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "start": "08:00",
+        "end": "17:00",
+        "source": "sensor.office_temperature"
+      }
+    ]
+  }
+}
+```
+
+A source is a temperature `sensor.*` entity ID or `null` for the control unit's
+native temperature reference. Native group measurements retain their existing
+selected-member semantics. Native reference bypasses correction; it does not
+toggle persisted Room Assist enablement or configure device firmware. The
+original `room_temperature_entity_id` is preserved for fixed-sensor operation.
+
+Periods use half-open local-time intervals, with overnight intervals anchored
+to the selected start day. Reject overlaps, invalid days/times, zero-duration
+periods and invalid source IDs. Saving replaces the complete nested schedule
+atomically through the existing zone-settings boundary. Portable exports use
+model 26; older exports without a sensor schedule retain their fixed-source
+behavior.
+
+Prepare the schedule on configuration changes. Resolve a shared effective source
+and next real boundary for control, candidates, status, listeners and learning;
+do not independently select sources in each consumer. Reuse prepared results
+between boundaries and integrate the next boundary into the scheduler's existing
+deadline drain. Delayed wakeups resolve the latest reference once rather than
+replaying missed transitions. A source identity change matters even if both
+readings are equal.
+
+Before reconciling the current thermal intent, retire obsolete delivery work,
+correction/hysteresis state and learning sessions. Preserve all execution-authority
+gates and avoid duplicate delivery when thermal and reference boundaries coincide.
+Runtime transitions do not write configuration. Unavailable external references
+retain their identity and nominal-target fallback instead of selecting another
+room. Comfort and history retain their existing source-selection policies.
+
+In this beta, early thermal application cannot cross a reference boundary.
+Replanning at the boundary uses the newly effective source. Only zones that opt
+in use source-compatible learning samples; existing observations are retained.
+
+Routine schedule responses carry only the calendar summary: `enabled`,
+`default_source`, and `period_count`. Complete periods are read on demand through
+`velair/get_room_sensor_schedule` for a managed control unit. That endpoint reads
+the committed published configuration and returns a detached, mutable calendar
+or `null`. The editor must not interpret an omitted `periods` array as an empty
+calendar. It loads detail before editing, retains dirty drafts through live
+updates, and verifies the committed detail after saving. Failed detail loads or
+verification leave the draft available rather than replacing it with a summary.
+Storage and portable exports keep the complete calendar.
+
+The reference editor presents **Fixed sensor** and **By schedule** as mutually
+exclusive modes backed by the existing calendar `enabled` flag. The unit header
+retains the only Room Assist switch. Changing modes edits a detached draft;
+Save applies the selected mode and Cancel restores committed values. Both fixed
+and scheduled settings survive mode changes. Fixed-sensor edits save immediately
+only outside a pending mode draft. Valid calendar edits are retained when saving
+fixed mode; an invalid calendar draft falls back to the saved valid calendar.
+Read-only cards keep their existing effective-reference status.
+
 ## Runtime Status
 
 The schedule response exposes a runtime-only `room_sensor_assist` snapshot for the panel and Lovelace card. It is derived from Home Assistant state and scheduler state when the response is built. It is not persisted as history.
@@ -85,6 +160,15 @@ reused for a range.
 ## Assistance Lifecycle
 
 Assistance is active only while Velair has applied a managed schedule target for that climate.
+
+A scheduled scalar or native-range block calculates applicable Room Assist before
+sending its target. Delivery sends the assisted target once, with the block's
+HVAC mode and options; it does not send the nominal target first. When assistance
+is disabled or cannot calculate a target, delivery sends the nominal target once.
+A skipped initial calculation clears prior assistance without restoring an older
+block. Superseded work and service failures never trigger nominal-target fallback.
+No additional delay is introduced. Listener-driven recalculations retain their
+existing debounce and restoration behavior.
 
 During that time, Velair listens to state changes from:
 

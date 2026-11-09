@@ -1,3 +1,4 @@
+import { parseTemperatureInput } from "../domain/temperature-input";
 import { renderRoomGroupScheduleNotice } from "../views/room-group-summary";
 import { controlUnitIds, controlUnitName, controlUnitState, controlUnitStates } from "../domain/control-units";
 import { editorTargetFormats, initializeDraftTargetFormat, reconcileDraftTargetFormat } from "../domain/target-format-policy";
@@ -154,27 +155,44 @@ export class VelairProfilesView extends LitElement {
     return this._selectedDays[entityId] ?? (weekdays.includes(this.initialWeekday) ? this.initialWeekday : weekdays[0]);
   }
 
-  private _presetPreviewKey(entityId: string, weekday: string, block: DraftScheduleBlock, index: number, draft = this._draft): string {
+  private _presetPreviewKey(entityId: string, weekday: string, block: DraftScheduleBlock, index: number, draft = this._draft, profileFingerprint?: string): string {
     const zone = draft.zones[entityId];
-    return presetPreviewKey([this._selectedKey, this._selectedEntity, entityId, weekday, index, this.data?.configuration_revision, this.data?.temperature_unit, zone?.behavior === "schedule" ? zone.template_links?.[weekday] : undefined, zone?.behavior === "schedule" && zone.template_links?.[weekday]?.mode === "full" ? configurationFingerprint(climateProfileInput(draft).zones) : undefined], block);
+    return presetPreviewKey([this._selectedKey, this._selectedEntity, entityId, weekday, index, this.data?.configuration_revision, this.data?.temperature_unit, zone?.behavior === "schedule" ? zone.template_links?.[weekday] : undefined, zone?.behavior === "schedule" && zone.template_links?.[weekday]?.mode === "full" ? profileFingerprint ?? configurationFingerprint(climateProfileInput(draft).zones) : undefined], block);
   }
 
-  private _effectivePresetBlock(entityId: string, weekday: string, block: DraftScheduleBlock, index: number, draft = this._draft): ScheduleBlock | undefined {
-    const cached = this._presetPreviews.get(this._presetPreviewKey(entityId, weekday, block, index, draft))?.block;
+  private _effectivePresetBlock(entityId: string, weekday: string, block: DraftScheduleBlock, index: number, draft = this._draft, profileFingerprint?: string): ScheduleBlock | undefined {
+    const key = this._presetPreviewKey(entityId, weekday, block, index, draft, profileFingerprint);
+    const cached = this._presetPreviews.get(key)?.block;
     if (cached) return { ...cached, start: block.start };
     const resolved = block.preset_key ? resolvedResourceBlock(this.data, { source: "profile", profile_key: this._selectedKey, entity_id: entityId, weekday, start: block.start, slot_id: block.slot_id }, block.preset_key)?.block : undefined;
-    if (resolved) this._presetPreviews.remember(this._presetPreviewKey(entityId, weekday, block, index, draft), resolved);
+    if (resolved) this._presetPreviews.remember(key, resolved);
     return resolved ? { ...resolved, start: block.start } : undefined;
   }
 
   private _refreshPresetPreviews(): void {
+    // Share detached inputs only within this synchronous refresh. Async reply
+    // guards still calculate a fresh key from the current mutable draft.
+    const inputs = new Map<ClimateProfileDraft, ReturnType<typeof climateProfileInput>>();
+    const fingerprints = new Map<ClimateProfileDraft, string>();
+    const inputFor = (draft: ClimateProfileDraft) => {
+      let input = inputs.get(draft);
+      if (!input) { input = climateProfileInput(draft); inputs.set(draft, input); }
+      return input;
+    };
+    const fingerprintFor = (entityId: string, weekday: string, draft: ClimateProfileDraft) => {
+      const zone = draft.zones[entityId];
+      if (zone?.behavior !== "schedule" || zone.template_links?.[weekday]?.mode !== "full") return undefined;
+      let fingerprint = fingerprints.get(draft);
+      if (fingerprint === undefined) { fingerprint = configurationFingerprint(inputFor(draft).zones); fingerprints.set(draft, fingerprint); }
+      return fingerprint;
+    };
     const visible = Object.entries(this._draft.zones).filter(([entityId, zone]) => zone.behavior === "schedule" && (entityId === this._selectedEntity || (!this.scheduleWorkspace && this._expandedZones.has(entityId))));
     const contexts = visible.flatMap(([entityId]) => {
       const selectedDay = this._effectiveWeekday(entityId);
       const candidate = this._groupCandidates.get(this._candidateKey(entityId, selectedDay));
       const previewDraft = candidate?.draft ?? this._draft;
       const week = Object.fromEntries(WEEKDAYS.map((day) => [day, this._blocks(entityId, day, previewDraft)]));
-      const comparisonZone = climateProfileInput(previewDraft).zones[entityId];
+      const comparisonZone = inputFor(previewDraft).zones[entityId];
       const selectedGroup = this._groupDays(entityId, selectedDay);
       const mixed = Boolean(candidate) || (comparisonZone?.behavior === "schedule" && !schedulesEqual(comparisonZone, selectedGroup));
       const previewDays = mixed ? selectedGroup : [selectedDay];
@@ -188,19 +206,20 @@ export class VelairProfilesView extends LitElement {
       }
       return blocks;
     });
-    this._presetPreviews.retain(new Set(contexts.map(({ entityId, weekday, block, index, previewDraft }) => this._presetPreviewKey(entityId, weekday, block, index, previewDraft))));
+    this._presetPreviews.retain(new Set(contexts.map(({ entityId, weekday, block, index, previewDraft }) => this._presetPreviewKey(entityId, weekday, block, index, previewDraft, fingerprintFor(entityId, weekday, previewDraft)))));
     const profilePreviews = new Map<ClimateProfileDraft, ReturnType<VelairApiClient["previewProfile"]>>();
     for (const { entityId, weekday, selectedDay, block, index, previewDraft } of contexts) {
       const zone = previewDraft.zones[entityId];
       const full = zone?.behavior === "schedule" && zone.template_links?.[weekday]?.mode === "full";
-      if ((!block.preset_key && !full) || this._effectivePresetBlock(entityId, weekday, block, index, previewDraft)) continue;
-      const key = this._presetPreviewKey(entityId, weekday, block, index, previewDraft);
+      const fingerprint = fingerprintFor(entityId, weekday, previewDraft);
+      if ((!block.preset_key && !full) || this._effectivePresetBlock(entityId, weekday, block, index, previewDraft, fingerprint)) continue;
+      const key = this._presetPreviewKey(entityId, weekday, block, index, previewDraft, fingerprint);
       const start = block.start;
       this._presetPreviews.request(key, async () => {
         if (!this.hass) throw new Error(this._t("unableLoad"));
         if (full) {
           let preview = profilePreviews.get(previewDraft);
-          if (!preview) { preview = new VelairApiClient(this.hass).previewProfile(climateProfileInput(previewDraft)); profilePreviews.set(previewDraft, preview); }
+          if (!preview) { preview = new VelairApiClient(this.hass).previewProfile(inputFor(previewDraft)); profilePreviews.set(previewDraft, preview); }
           const response = await preview;
           if (response.configuration_revision !== this.data?.configuration_revision) throw new Error(this._t("linkedConfigurationUnavailable"));
           return response.resolved_schedules[entityId]?.[weekday]?.find((item) => item.start === start);
@@ -1989,8 +2008,8 @@ export class VelairProfilesView extends LitElement {
       if (block.action !== ACTION_SET_TEMPERATURE) return false;
       return Boolean(this._temperatureError(dialog.entityId, block))
         || (draftBlockUsesRange(block)
-          ? !Number.isFinite(Number(block.target_temp_low)) || !Number.isFinite(Number(block.target_temp_high))
-          : !Number.isFinite(Number(block.temperature)));
+          ? !Number.isFinite(parseTemperatureInput(block.target_temp_low)) || !Number.isFinite(parseTemperatureInput(block.target_temp_high))
+          : !Number.isFinite(parseTemperatureInput(block.temperature)));
     });
     if (invalid) {
       this._templateDialog = { ...dialog, error: this._t("profileInvalidSchedule") };

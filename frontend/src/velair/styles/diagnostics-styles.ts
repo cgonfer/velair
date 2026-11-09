@@ -76,6 +76,8 @@ export const diagnosticsStyles = css`
   .diagnostics-status-dot.error { background: var(--error-color, #c62828); }
   .diagnostics-issues { display: grid; gap: 6px; margin-top: 10px; }
   .diagnostics-issue { align-items: center; display: flex; gap: 8px; margin: 0; }
+  .diagnostics-issue > span { min-width: 0; overflow-wrap: anywhere; }
+  .diagnostics-issue > ha-icon { flex-shrink: 0; }
   .diagnostics-issue.warning ha-icon { color: var(--warning-color, #f9a825); }
   .diagnostics-issue.error ha-icon { color: var(--error-color, #c62828); }
   .diagnostics-privacy { color: var(--secondary-text-color); font-size: 12px; }

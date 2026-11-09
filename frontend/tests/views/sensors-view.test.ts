@@ -159,6 +159,8 @@ function host(options: {
             .map(([replacementKey, value]) => `${replacementKey}=${value}`)
             .join(",")}`
         : key,
+    _weekdayName: (day: string) => day,
+    _shortWeekdayName: (day: string) => day.slice(0, 3),
     _temperatureUnit: () => "°C",
     _togglePreconditioningZone: togglePreconditioningZone,
   } as unknown as VelairViewHost;
@@ -230,26 +232,20 @@ describe("sensors view", () => {
     expect(togglePreconditioningZone).toHaveBeenCalledWith("climate.first");
   });
 
-  it("keeps a saved room sensor selected when the view is rendered again", () => {
-    const { viewHost } = host({
-      expandedZoneIds: ["climate.first"],
-      roomTemperatureEntityId: "sensor.bedroom_temperature",
-    });
+  it("keeps a saved room sensor selected when the view is rendered again", async () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.first"], roomTemperatureEntityId: "sensor.bedroom_temperature" });
     const container = document.createElement("div");
-
+    document.body.append(container);
     render(renderSensorsView(viewHost, ["climate.first"]), container);
-
-    const select = container.querySelector(".sensor-picker-row select") as HTMLSelectElement;
-    expect(select.value).toBe("sensor.bedroom_temperature");
-    expect(select.selectedOptions[0]?.textContent?.trim()).toContain(
-      "Bedroom temperature",
-    );
-    expect(select.selectedOptions[0]?.textContent?.trim()).toContain(
-      "sensor.bedroom_temperature",
-    );
-    expect(container.querySelector(".sensor-selected-entity")?.textContent).toContain(
-      "sensor.bedroom_temperature",
-    );
+    const reference = container.querySelector("velair-room-sensor-schedule") as ReferenceElement;
+    await reference.updateComplete;
+    const picker = reference.shadowRoot!.querySelector<HTMLSelectElement>('[data-field="fixed-source"]')!;
+    expect(picker.value).toBe("sensor.bedroom_temperature");
+    expect(picker.selectedOptions[0]?.textContent).toContain("Bedroom temperature");
+    render(renderSensorsView(viewHost, ["climate.first"]), container);
+    await reference.updateComplete;
+    expect(picker.value).toBe("sensor.bedroom_temperature");
+    container.remove();
   });
 
   it("disables assist until a room sensor is configured", () => {
@@ -340,8 +336,8 @@ describe("sensors view", () => {
     expect(input.getAttribute("min")).toBe("0");
     expect(input.getAttribute("max")).toBe("5");
     expect(input.getAttribute("step")).toBe("0.1");
-    expect(input.closest("label")?.textContent).toContain("°C");
-    expect(input.closest("label")?.textContent).toContain("roomSensorAssistDeadbandHelp");
+    expect(input.closest(".sensor-config-row")?.textContent).toContain("°C");
+    expect(input.closest(".sensor-config-row")?.textContent).toContain("roomSensorAssistDeadbandHelp");
 
     for (const invalidValue of [
       "",
@@ -391,7 +387,7 @@ describe("sensors view", () => {
     expect(input.getAttribute("min")).toBe("0");
     expect(input.getAttribute("max")).toBe("9");
     expect(input.getAttribute("step")).toBe("0.1");
-    expect(input.closest("label")?.textContent).toContain("°F");
+    expect(input.closest(".sensor-config-row")?.textContent).toContain("°F");
 
     input.value = "9";
     input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1466,25 +1462,74 @@ describe("sensors view", () => {
     expect(container.textContent).toContain("°F");
   });
 
-  it("keeps maximum assist delta sizing guidance visible without a tooltip", () => {
+  it.each(["roomSensorAssistDeadbandHelp", "roomSensorAssistMaxDeltaHelp"].flatMap(helpKey =>
+    [true, false].map(assistEnabled => ({ helpKey, assistEnabled })),
+  ))("opens field help only from its icon: $helpKey (enabled=$assistEnabled)", ({ helpKey, assistEnabled }) => {
+    vi.useFakeTimers();
     const { viewHost } = host({
       expandedZoneIds: ["climate.first"],
       roomTemperatureEntityId: "sensor.bedroom_temperature",
-      assistEnabled: true,
+      assistEnabled,
     });
     const container = document.createElement("div");
+    try {
+      render(renderSensorsView(viewHost, ["climate.first"]), container);
+      const help = container.querySelector<HTMLButtonElement>(`.sensor-number-fields .inline-help[aria-label="${helpKey}"]`)!;
+      const row = help.closest<HTMLElement>(".sensor-config-row")!;
+      const input = row.querySelector<HTMLInputElement>("input[type=number]")!;
+      const label = row.querySelector<HTMLLabelElement>("label")!;
+      const tooltip = container.querySelector<HTMLElement>(`#${help.getAttribute("aria-controls")}`)!;
+      expect(label.htmlFor).toBe(input.id);
+      expect(input.labels).toHaveLength(1);
+      expect(container.querySelectorAll(".sensor-number-fields .inline-help")).toHaveLength(2);
+      expect(container.querySelector(".sensor-assist-settings h4 .inline-help")).toBeNull();
 
+      for (const outside of [row, label, input]) {
+        outside.click();
+        outside.dispatchEvent(new Event("pointerenter"));
+        vi.advanceTimersByTime(600);
+        expect(tooltip.classList.contains("visible")).toBe(false);
+      }
+
+      help.click();
+      expect(tooltip.classList.contains("visible")).toBe(true);
+      expect(tooltip.textContent).toContain(helpKey);
+      help.click();
+      expect(tooltip.classList.contains("visible")).toBe(false);
+      // Delayed hover remains attached to the existing icon button.
+      document.body.append(container);
+      help.dispatchEvent(new Event("pointerenter"));
+      vi.advanceTimersByTime(499);
+      expect(tooltip.classList.contains("visible")).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(tooltip.classList.contains("visible")).toBe(true);
+      help.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(tooltip.classList.contains("visible")).toBe(false);
+    } finally {
+      container.remove();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([true, false])("keeps every field description visible below its value (enabled=%s)", assistEnabled => {
+    const { viewHost, saveZonePreconditioning } = host({
+      expandedZoneIds: ["climate.first"],
+      roomTemperatureEntityId: "sensor.bedroom_temperature", assistEnabled,
+    });
+    const container = document.createElement("div");
     render(renderSensorsView(viewHost, ["climate.first"]), container);
-
-    const help = [...container.querySelectorAll<HTMLElement>(".sensor-config-help-text")]
-      .find((candidate) => candidate.textContent === "roomSensorAssistMaxDeltaHelp");
-    expect(help).not.toBeNull();
-    expect(help?.textContent).toBe("roomSensorAssistMaxDeltaHelp");
-    expect(
-      container.querySelector(
-        ".inline-help[aria-label='roomSensorAssistMaxDeltaHelp']",
-      ),
-    ).toBeNull();
+    const descriptions = ["roomSensorAssistDeadbandDescription", "roomSensorAssistMaxDeltaDescription", "roomSensorAssistDebounceDescription"];
+    const inputs = [...container.querySelectorAll<HTMLInputElement>(".sensor-number-fields input")];
+    expect(inputs).toHaveLength(3);
+    inputs.forEach((input, index) => {
+      const description = container.querySelector(`#${input.getAttribute("aria-describedby")}`)!;
+      expect(description.textContent).toBe(descriptions[index]);
+      expect(input.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+      expect(input.disabled).toBe(!assistEnabled);
+      expect(input.labels).toHaveLength(1);
+    });
+    expect(container.querySelector('[id$="room_sensor_assist_debounce_seconds-help-trigger"]')).toBeNull();
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
   });
 
   it("does not show runtime metrics before a room sensor is configured", () => {
@@ -1511,26 +1556,258 @@ it("shows the localized range thermal limitation in French and hides its tempera
   expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
 });
 
-describe("group Room Assist uses the ordinary external sensor configuration", () => {
-  it.each(["climate.first", "group.room"])("uses the same selection, save and clear path for %s", (entityId) => {
+type ReferenceElement = HTMLElement & {
+  updateComplete: Promise<boolean>;
+  settings?: { room_temperature_entity_id?: string | null };
+};
+
+function referenceStore(viewHost: VelairViewHost, save: ReturnType<typeof host>["saveZonePreconditioning"]) {
+  const read = vi.fn(async (request: { entity_id: string }) => {
+    const entity = viewHost._data?.member_to_unit?.[request.entity_id] ?? request.entity_id;
+    const value = viewHost._data!.zones[entity].preconditioning!.room_sensor_schedule;
+    const detail = value ? "periods" in value ? structuredClone(value)
+      : { enabled: value.enabled, default_source: value.default_source, periods: [] } : null;
+    return { entity_id: entity, room_sensor_schedule: detail };
+  });
+  Object.assign(viewHost.hass!, { connection: { sendMessagePromise: read } });
+  save.mockImplementation(async (...args: unknown[]) => {
+    const entity = args[0] as string;
+    Object.assign(viewHost._data!.zones[entity].preconditioning!, args[1]);
+  });
+  return read;
+}
+
+async function referenceClick(reference: ReferenceElement, action: string) {
+  reference.shadowRoot!.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)!.click();
+  await referenceFlush(reference);
+}
+
+async function referenceFlush(reference: ReferenceElement) {
+  for (let index = 0; index < 8; index++) { await Promise.resolve(); await reference.updateComplete; }
+}
+
+async function referenceMode(reference: ReferenceElement, scheduled: boolean) {
+  reference.shadowRoot!.querySelector<HTMLButtonElement>(`[data-action="mode-${scheduled ? "schedule" : "fixed"}"]`)!.click();
+  await referenceFlush(reference);
+}
+
+async function mountReference(viewHost: VelairViewHost, entityId = "climate.second") {
+  const container = document.createElement("div"); document.body.append(container);
+  render(renderSensorsView(viewHost, [entityId]), container);
+  const reference = container.querySelector("velair-room-sensor-schedule") as ReferenceElement;
+  await referenceFlush(reference);
+  const refresh = async () => {
+    render(renderSensorsView(viewHost, [entityId]), container);
+    await referenceFlush(reference);
+  };
+  return { container, reference, refresh };
+}
+
+describe("group Room Assist retains the ordinary fixed sensor configuration", () => {
+  it.each(["climate.first", "group.room"])("uses the same immediate selection and clear path for %s", async entityId => {
     const { viewHost, saveZonePreconditioning } = host({ assistEnabled: true, roomTemperatureEntityId: "sensor.bedroom_temperature", expandedZoneIds: [entityId] });
     if (entityId.startsWith("group.")) {
       viewHost._data!.zones[entityId] = viewHost._data!.zones["climate.first"];
       viewHost._data!.room_groups = { [entityId]: { id: entityId, name: "Room", members: ["climate.first", "climate.second"], temperature_entity_id: "climate.first", delivery_mode: "all" } };
     }
     viewHost.hass!.states!["sensor.external"] = { state: "21", attributes: { device_class: "temperature", friendly_name: "External room temperature", unit_of_measurement: "°C" } };
-    const container = document.createElement("div");
-    render(renderSensorsView(viewHost, [entityId]), container);
-    const select = container.querySelector<HTMLSelectElement>(".sensor-picker-row select")!;
-    expect(select).not.toBeNull();
-    expect(select.value).toBe("sensor.bedroom_temperature");
-    select.value = "sensor.external"; select.dispatchEvent(new Event("change"));
+    referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference, refresh } = await mountReference(viewHost, entityId);
+    let picker = reference.shadowRoot!.querySelector<HTMLSelectElement>('[data-field="fixed-source"]')!;
+    expect(picker.value).toBe("sensor.bedroom_temperature");
+    picker.value = "sensor.external"; picker.dispatchEvent(new Event("change"));
+    await referenceFlush(reference);
     expect(saveZonePreconditioning).toHaveBeenCalledWith(entityId, { room_temperature_entity_id: "sensor.external" });
-    select.value = ""; select.dispatchEvent(new Event("change"));
+    await refresh();
+    picker = reference.shadowRoot!.querySelector<HTMLSelectElement>('[data-field="fixed-source"]')!;
+    picker.value = ""; picker.dispatchEvent(new Event("change"));
+    await referenceFlush(reference);
     expect(saveZonePreconditioning).toHaveBeenCalledWith(entityId, { room_temperature_entity_id: null, room_sensor_assist_enabled: false });
     if (entityId.startsWith("group.")) expect(viewHost._data!.room_groups![entityId].temperature_entity_id).toBe("climate.first");
     viewHost._settingsSaving = true;
-    render(renderSensorsView(viewHost, [entityId]), container);
-    expect(container.querySelector<HTMLSelectElement>(".sensor-picker-row select")!.disabled).toBe(true);
+    await refresh();
+    picker = reference.shadowRoot!.querySelector<HTMLSelectElement>('[data-field="fixed-source"]')!;
+    expect(picker.disabled).toBe(true);
+    saveZonePreconditioning.mockClear();
+    picker.dispatchEvent(new Event("change"));
+    await referenceFlush(reference);
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    container.remove();
+  });
+});
+
+describe("scheduled Room Assist references", () => {
+  it.each(["absent", "disabled"])("shows the fixed picker without loading an %s calendar", async variant => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    if (variant === "disabled") viewHost._data!.zones["climate.second"].preconditioning!.room_sensor_schedule = { enabled: false, default_source: null, period_count: 1 };
+    const read = referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference } = await mountReference(viewHost);
+    expect(container.querySelectorAll("velair-room-sensor-schedule")).toHaveLength(1);
+    expect(container.querySelectorAll("ha-switch")).toHaveLength(1);
+    expect(reference.shadowRoot!.querySelector("ha-switch")).toBeNull();
+    expect(reference.shadowRoot!.querySelector('[data-field="fixed-source"]')).not.toBeNull();
+    expect(reference.shadowRoot!.querySelector(".schedule-fields")).toBeNull();
+    expect(reference.shadowRoot!.querySelector('[data-action="edit-schedule"]')).toBeNull();
+    expect(read).not.toHaveBeenCalled();
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    container.remove();
+  });
+
+  it.each([false, true])("shows the saved calendar with one master switch even when master=%s", async assistEnabled => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], assistEnabled });
+    const settings = viewHost._data!.zones["climate.second"].preconditioning!;
+    settings.room_sensor_assist_enabled = assistEnabled;
+    settings.room_sensor_schedule = { enabled: true, default_source: null, periods: [{ weekdays: ["monday"], start: "08:00", end: "17:00", source: "sensor.bedroom_temperature" }] };
+    const read = referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference } = await mountReference(viewHost);
+    expect(container.querySelectorAll("ha-switch")).toHaveLength(1);
+    expect(reference.shadowRoot!.querySelector("ha-switch")).toBeNull();
+    expect(reference.shadowRoot!.querySelector('[data-field="fixed-source"]')).toBeNull();
+    expect(reference.shadowRoot!.querySelectorAll("[data-period]")).toHaveLength(1);
+    expect(read).toHaveBeenCalledOnce();
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    container.remove();
+  });
+
+  it.each([false, true])("stages either reference mode and Cancel restores the saved mode (scheduled=%s)", async enabled => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    const settings = viewHost._data!.zones["climate.second"].preconditioning!;
+    settings.room_sensor_schedule = { enabled, default_source: null, periods: [{ weekdays: ["monday"], start: "08:00", end: "17:00", source: "sensor.bedroom_temperature" }] };
+    const read = referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference } = await mountReference(viewHost);
+    await referenceMode(reference, !enabled);
+    expect(settings.room_sensor_schedule.enabled).toBe(enabled);
+    expect(reference.shadowRoot!.querySelector('[data-action="cancel-schedule"]')).not.toBeNull();
+    expect(Boolean(reference.shadowRoot!.querySelector('[data-field="fixed-source"]'))).toBe(enabled);
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    await referenceClick(reference, "cancel-schedule");
+    expect(Boolean(reference.shadowRoot!.querySelector('[data-field="fixed-source"]'))).toBe(!enabled);
+    expect(settings.room_temperature_entity_id).toBe("sensor.bedroom_temperature");
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    expect(read).toHaveBeenCalledTimes(enabled ? 2 : 1);
+    container.remove();
+  });
+
+  it.each([false, true])("saves a mode change while preserving the other configuration (scheduled=%s)", async enabled => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    const settings = viewHost._data!.zones["climate.second"].preconditioning!;
+    const periods = [{ weekdays: ["monday"] as ["monday"], start: "08:00", end: "17:00", source: "sensor.bedroom_temperature" }];
+    settings.room_sensor_schedule = { enabled, default_source: null, periods };
+    referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference, refresh } = await mountReference(viewHost);
+    await referenceMode(reference, !enabled);
+    await referenceClick(reference, "save-schedule");
+    await refresh();
+    expect(saveZonePreconditioning).toHaveBeenCalledOnce();
+    expect(saveZonePreconditioning).toHaveBeenCalledWith("climate.second", { room_sensor_schedule: { enabled: !enabled, default_source: null, periods } });
+    expect(settings.room_sensor_schedule.enabled).toBe(!enabled);
+    expect(settings.room_temperature_entity_id).toBe("sensor.bedroom_temperature");
+    expect(settings.room_sensor_assist_enabled).toBe(true);
+    expect(Boolean(reference.shadowRoot!.querySelector('[data-field="fixed-source"]'))).toBe(enabled);
+    container.remove();
+  });
+
+  it("retains calendar edits and the fixed sensor while alternating before saving", async () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    const settings = viewHost._data!.zones["climate.second"].preconditioning!;
+    settings.room_sensor_schedule = { enabled: false, default_source: null, periods: [{ weekdays: ["monday"], start: "08:00", end: "17:00", source: "sensor.bedroom_temperature" }] };
+    referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference } = await mountReference(viewHost);
+    await referenceMode(reference, true);
+    const start = reference.shadowRoot!.querySelector<HTMLInputElement>('input[type="time"]')!;
+    start.value = "09:00"; start.dispatchEvent(new Event("input"));
+    await referenceMode(reference, false);
+    expect(reference.shadowRoot!.querySelector<HTMLSelectElement>('[data-field="fixed-source"]')!.value).toBe("sensor.bedroom_temperature");
+    await referenceMode(reference, true);
+    expect(reference.shadowRoot!.querySelector<HTMLInputElement>('input[type="time"]')!.value).toBe("09:00");
+    expect(settings.room_sensor_schedule).toMatchObject({ enabled: false, periods: [{ start: "08:00" }] });
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    container.remove();
+  });
+
+  it("retains load errors and hides configuration when the card requests it", async () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.first"] });
+    const read = vi.fn().mockRejectedValue(new Error("Offline"));
+    Object.assign(viewHost.hass!, { connection: { sendMessagePromise: read } });
+    const container = document.createElement("div"); document.body.append(container);
+    render(renderSensorsView(viewHost, ["climate.first"], { showRoomSensor: false }), container);
+    expect(container.querySelector("velair-room-sensor-schedule")).toBeNull();
+    render(renderSensorsView(viewHost, ["climate.first"]), container);
+    const reference = container.querySelector("velair-room-sensor-schedule") as ReferenceElement;
+    await referenceFlush(reference);
+    await referenceMode(reference, true);
+    expect(reference.shadowRoot!.textContent).toContain("roomSensorScheduleLoadError");
+    expect(reference.shadowRoot!.querySelector('[data-action="save-schedule"]')).toBeNull();
+    container.remove();
+  });
+
+  it("preserves blocked status with a native reference without a correction graph", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const settings = viewHost._data!.zones["climate.second"].preconditioning!;
+    settings.room_temperature_entity_id = null;
+    settings.room_sensor_schedule = { enabled: true, default_source: null, periods: [] };
+    Object.assign(viewHost._data!.room_sensor_assist!["climate.second"], { status: "blocked", reason: "zone_paused", room_sensor_schedule: { enabled: true, effective_source: null, next_change: null, next_source: null } });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    expect(container.textContent).toContain("roomSensorStatusBlocked");
+    expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
+  });
+
+  it("lets users turn assistance off after disabling a native-only schedule", () => {
+    const { viewHost, saveZonePreconditioning } = host({ assistEnabled: true });
+    viewHost._data!.zones["climate.first"].preconditioning!.room_sensor_schedule = { enabled: false, default_source: null, periods: [] };
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.first"]), container);
+    const toggle = container.querySelector(".sensor-zone-actions ha-switch") as HTMLElement & { checked: boolean };
+    expect(toggle.hasAttribute("disabled")).toBe(false);
+    toggle.checked = false; toggle.dispatchEvent(new Event("change"));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith("climate.first", { room_sensor_assist_enabled: false });
+  });
+
+  it("allows the master switch with an enabled schedule and no fixed sensor", async () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.first"] });
+    viewHost._data!.zones["climate.first"].preconditioning!.room_sensor_schedule = { enabled: true, default_source: null, periods: [] };
+    referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference } = await mountReference(viewHost, "climate.first");
+    expect(container.querySelector(".sensor-zone-actions ha-switch")!.hasAttribute("disabled")).toBe(false);
+    expect(reference.shadowRoot!.querySelector('[data-field="fixed-source"]')).toBeNull();
+    expect(reference.shadowRoot!.querySelector(".schedule-fields")).not.toBeNull();
+    container.remove();
+  });
+
+  it("restores the stored fixed selection when an external saved mode changes", async () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.first"], assistEnabled: true, roomTemperatureEntityId: "sensor.bedroom_temperature" });
+    const settings = viewHost._data!.zones["climate.first"].preconditioning!;
+    settings.room_sensor_schedule = { enabled: true, default_source: null, periods: [] };
+    referenceStore(viewHost, saveZonePreconditioning);
+    const { container, reference, refresh } = await mountReference(viewHost, "climate.first");
+    expect(reference.shadowRoot!.querySelector('[data-field="fixed-source"]')).toBeNull();
+    settings.room_sensor_schedule = { ...settings.room_sensor_schedule, enabled: false };
+    await refresh();
+    const picker = reference.shadowRoot!.querySelector<HTMLSelectElement>('[data-field="fixed-source"]')!;
+    expect(picker.disabled).toBe(false);
+    expect(picker.value).toBe("sensor.bedroom_temperature");
+    expect(picker.selectedOptions[0]?.textContent).toContain("Bedroom temperature");
+    expect(settings.room_temperature_entity_id).toBe("sensor.bedroom_temperature");
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    container.remove();
+  });
+
+  it("does not present native scheduled operation as a missing sensor or a correction graph", async () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"], assistEnabled: true });
+    const settings = viewHost._data!.zones["climate.second"].preconditioning!;
+    settings.room_temperature_entity_id = null;
+    settings.room_sensor_schedule = { enabled: true, default_source: null, periods: [] };
+    Object.assign(viewHost._data!.room_sensor_assist!["climate.second"], { status: "idle", configured: true, reason: "native_reference", room_sensor_schedule: { enabled: true, effective_source: null, next_change: null, next_source: null } });
+    const container = document.createElement("div"); document.body.append(container);
+    render(renderSensorsView(viewHost, ["climate.second"], { showRoomSensor: false }), container);
+    const editor = container.querySelector("velair-room-sensor-schedule") as ReferenceElement;
+    await referenceFlush(editor);
+    expect(editor.shadowRoot!.textContent).toContain("roomSensorScheduleCurrent:source=roomSensorScheduleNative");
+    expect(editor.shadowRoot!.textContent).not.toContain("roomSensorScheduleUnavailable");
+    expect(editor.shadowRoot!.querySelector("button")).toBeNull();
+    expect(container.querySelector(".sensor-runtime-section")).toBeNull();
+    expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
+    container.remove();
   });
 });

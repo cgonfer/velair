@@ -27,6 +27,21 @@ async function libraryFixture() {
 }
 
 describe("global preset library editor", () => {
+  it.each(["HTTPS", "local HTTP"])("creates and saves a new preset over %s without changing existing identifiers", async (access) => {
+    if (access === "local HTTP") vi.stubGlobal("crypto", { getRandomValues: crypto.getRandomValues.bind(crypto) });
+    const { library, sendMessagePromise } = await libraryFixture();
+    expect(library.shadowRoot!.querySelector(".preset-automation-id code")?.textContent).toBe("summer");
+    library.shadowRoot!.querySelector<HTMLButtonElement>('.template-list-heading button')!.click();
+    await library.updateComplete;
+    const newName = library.shadowRoot!.querySelector<HTMLInputElement>(".template-name-field input")!;
+    newName.value = "Local preset"; newName.dispatchEvent(new Event("input")); await library.updateComplete;
+    expect(sendMessagePromise).not.toHaveBeenCalled();
+    library.shadowRoot!.querySelector<HTMLButtonElement>('.template-detail-actions button')!.click();
+    await vi.waitFor(() => expect(sendMessagePromise).toHaveBeenCalledWith(expect.objectContaining({
+      type: "velair/set_block_preset", key: expect.stringMatching(/^preset_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/), name: "Local preset", expected_revision: 8,
+    })));
+    expect(library.data!.block_presets![0].key).toBe("summer");
+  });
   it("creates a new Preset with a pair when all climates require ranges", async () => {
     const { library } = await libraryFixture();
     (library as any)._cancel();

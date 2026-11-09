@@ -9,7 +9,7 @@ Tłumaczenia: [Oryginał w języku angielskim](room-groups.md) · [Español](roo
 | Informacja | Status |
 | --- | --- |
 | Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Ostatnia synchronizacja | 2026-11-08 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -145,7 +145,8 @@ Usunięte urządzenie otrzymuje niezależną kopię wspólnej konfiguracji. Rozw
 Przykładowo usunięcie jednego urządzenia z trzech pozostawia dwa z nową historią grupy oraz jedno niezależne z nową historią. Usunięcie grupy uniezależnia wszystkie trzy. Żadna operacja nie przywraca automatycznie historii sprzed grupowania. Zapisana grupa wymaga co najmniej dwóch urządzeń; rozwiąż ją, jeśli wszystkie mają stać się niezależne.
 
 <a id="before-testing-the-beta"></a>
-## Przed testowaniem bety
+<a id="check-the-group-configuration"></a>
+## Sprawdzenie konfiguracji grupy
 
 Zrób kopię konfiguracji, w razie potrzeby z uczeniem przygotowania. Po sprawdzeniu i zapisaniu grupy sprawdź:
 

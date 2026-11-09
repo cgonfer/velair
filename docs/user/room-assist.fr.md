@@ -9,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.0-beta.10 |
+| Dernière synchronisation | 2026-11-05 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -51,13 +51,32 @@ Avec **Non configurée**, les paires en mode fixe sont envoyées sans modificati
 
 1. Ouvrez l’onglet Room Assist.
 2. Développez l’appareil à configurer.
-3. Sélectionnez un capteur de température ambiante.
+3. Dans **Assistance du capteur ambiant**, choisissez **Capteur fixe** ou **Selon les horaires**, configurez l’option choisie et enregistrez tout changement de mode.
 4. Activez **Assistance du capteur ambiant**.
 5. Réglez la bande morte de Room Assist pour définir les limites basse et haute du chauffage ou refroidissement fixe autour de la cible unique ou de la référence de plage choisie, ou la marge neutre des modes automatiques à cible unique et des bandes natives `heat_cool`.
 6. Ajustez **Écart d’assistance maximal** si la valeur par défaut est trop faible pour la pièce ou inférieure à l’écart de consigne dont le thermostat peut avoir besoin pour arrêter de chauffer ou refroidir.
 7. Ajustez **Délai d’actualisation** si les mises à jour semblent trop lentes ou trop fréquentes.
 
-Sélectionner un capteur seul l’enregistre simplement. Velair l’utilise comme température effective de la pièce uniquement lorsque l’assistance est activée.
+Seule l’option sélectionnée est affichée. Lorsque **Capteur fixe** est déjà le mode enregistré, changer son capteur est enregistré immédiatement. Passer de **Capteur fixe** à **Selon les horaires**, ou inversement, modifie un brouillon : **Enregistrer** applique le mode et ses réglages, et **Annuler** rétablit la configuration enregistrée. Le capteur fixe et la programmation enregistrée sont conservés lors du changement ; les deux ne sont pas activés en même temps.
+
+
+<a id="optional-sensor-schedule-beta"></a>
+
+### Programmation facultative des capteurs (bêta)
+
+Room Assist peut suivre différentes références de température au cours de la semaine sans modifier vos programmations de température, profils ou modes. Choisissez **Selon les horaires** dans **Assistance du capteur ambiant** pour les configurer. Choisissez **Capteur fixe** pour revenir au capteur ambiant fixe.
+
+Choisissez une référence par défaut et ajoutez des périodes avec les jours de la semaine, les heures de début et de fin et une référence. Enregistrez le brouillon complet pour l’appliquer ; Annuler abandonne vos modifications. Les références peuvent être des capteurs de température disponibles dans Home Assistant ou la température propre de l’appareil. En dehors des périodes, la référence par défaut s’applique. Les périodes peuvent traverser minuit et sont rattachées aux jours de début sélectionnés ; les chevauchements sont refusés. L’heure de début est incluse et l’heure de fin est exclue. Les heures suivent le fuseau horaire configuré dans Home Assistant.
+
+Par exemple, choisissez **Sans correction Room Assist** par défaut et un capteur du bureau de 08:00 à 17:00, du lundi au vendredi. Vos programmations de température été/hiver continuent de déterminer la température souhaitée. Pendant les heures de travail, Room Assist calcule les corrections à partir du capteur du bureau. Sinon, Velair envoie la consigne programmée normale et le thermostat régule à partir de sa propre référence. Cela ne change pas le capteur physique utilisé en interne par le micrologiciel de l’appareil.
+
+L’unique interrupteur de Room Assist détermine si l’assistance est activée. Le désactiver conserve les deux configurations enregistrées. Choisir **Capteur fixe** et enregistrer rétablit le capteur ambiant fixe conservé. Si une référence externe est indisponible, Velair suspend sa correction et utilise la consigne programmée normale lorsqu’il détient le contrôle automatique ; il ne choisit pas discrètement une autre pièce et ne réutilise pas une ancienne mesure. L’assistance reprend lorsque cette référence redevient utilisable.
+
+Les changements de référence ne prennent pas la priorité sur l’ajustement manuel, le forçage ou les pauses. Lorsque le contrôle automatique reprend, Velair utilise la référence valable à ce moment-là. Pour les groupes de pièce, la température propre de l’appareil correspond à la référence de température configurée du groupe.
+
+**Limitation de la bêta :** une référence change exactement à l’heure programmée. Le préconditionnement adaptatif ne démarre pas de cible anticipée à travers un changement de référence ; il recalcule après cette transition. Changer de pièce ne demande pas de préparer la suivante en avance. Les observations d’apprentissage sont associées à leur source de température afin qu’un saut de mesure entre pièces ne soit pas interprété comme du chauffage ou du refroidissement.
+
+Toutes les mesures externes sélectionnées doivent être disponibles indépendamment dans Home Assistant. Pour Nest, une configuration utilisant l’intégration officielle pour le thermostat et une autre intégration pour un capteur distant doit être testée dans l’installation. Laissez la référence propre de Nest fixe si vous souhaitez utiliser la mesure du thermostat comme référence stable d’une pièce. Velair ne sélectionne pas le capteur actif interne de Nest. Un système HVAC partagé continue d’affecter toutes les pièces qu’il dessert ; choisir une référence ne crée pas de zones physiques indépendantes.
 
 <a id="room-groups"></a>
 ### Groupes de pièce

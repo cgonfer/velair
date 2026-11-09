@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from copy import copy, deepcopy
 import logging
 import math
@@ -34,7 +35,7 @@ from .const import (
 )
 from .temperature import absolute_temperature, snap_temperature_to_step, temperature_delta
 from .execution import ExecutionAuthority
-from .delivery_guard import check_delivery, delivery_guard_active
+from .delivery_guard import check_delivery, delivery_guard_active, record_delivery_receipt
 
 CLIMATE_DOMAIN = "climate"
 CLIMATE_SERVICE_SET_HVAC_MODE = "set_hvac_mode"
@@ -175,12 +176,44 @@ class ClimateManager:
                 await self._hass.services.async_call(
                     CLIMATE_DOMAIN, service, data, blocking=blocking
                 )
-        except Exception:
+        except (asyncio.CancelledError, Exception):
             if register_expected and isinstance(entity_id, str):
                 self._discard_expected_action(entity_id, context.id)
             raise
         if register_expected and isinstance(entity_id, str):
             self._mark_expected_action_delivered(entity_id, context.id)
+        if isinstance(entity_id, str):
+            record_delivery_receipt(entity_id, self._expected_for_service(service, data))
+
+    def compare_receipt(self, receipt: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        """Compare accepted physical targets using the ownership echo criterion."""
+        observed = {}
+        matches = True
+        for entity_id, expected in receipt.items():
+            state = self._hass.states.get(entity_id)
+            available = state is not None and state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+            observed[entity_id] = {
+                key: (getattr(state, "state", None) if key in (ATTR_HVAC_MODE, "__not_off__")
+                      else state.attributes.get(key) if state is not None else None)
+                for key in expected
+            }
+            matches = bool(available and self._expected_matches(entity_id, state, expected)) and matches
+        return {"matches": matches, "expected": deepcopy(receipt), "observed": observed}
+
+    def clear_confirmed_mismatches(self, receipt: dict[str, dict[str, Any]]) -> None:
+        """Retire fields just confirmed by a synchronous receipt comparison.
+
+        The coordinator calls this with no intervening await after matching the
+        entire receipt. Reuse that proof instead of reading and matching again.
+        """
+        for entity_id, expected in receipt.items():
+            mismatches = self._settling_mismatches.get(entity_id)
+            if not mismatches:
+                continue
+            for field in expected:
+                mismatches.pop(ATTR_HVAC_MODE if field == "__not_off__" else field, None)
+            if not mismatches:
+                self._settling_mismatches.pop(entity_id, None)
 
     @staticmethod
     def _new_owned_context() -> Any:
@@ -1101,7 +1134,6 @@ class ClimateManager:
     def _expected_matches(
         self, entity_id: str, new_state: Any, expected: dict[str, Any]
     ) -> bool:
-        step = max(0.001, self.temperature_step(entity_id) or 0.1)
         for key, value in expected.items():
             if key == "__not_off__":
                 if new_state.state == HVAC_MODE_OFF:
@@ -1118,7 +1150,7 @@ class ClimateManager:
                         return False
                     continue
                 try:
-                    if abs(float(actual) - float(value)) > (step / 2 + 1e-6):
+                    if not self._target_values_match(entity_id, actual, value):
                         return False
                 except (TypeError, ValueError):
                     return False
@@ -1138,7 +1170,7 @@ class ClimateManager:
         self, entity_id: str, observed: Any, expected: Any
     ) -> bool:
         """Return whether two finite targets match at the entity's native step."""
-        if not self._is_finite_observed_target(observed):
+        if not self._is_finite_observed_target(observed) or not self._is_finite_observed_target(expected):
             return False
         step = max(0.001, self.temperature_step(entity_id) or 0.1)
         return abs(float(observed) - float(expected)) <= (step / 2 + 1e-6)
@@ -1245,7 +1277,8 @@ class ClimateManager:
                 else actual == expected
             )
         elif expected is None:
-            matches = actual is None
+            # Null alternate-format fields are synthetic transport cleanup.
+            return
         else:
             matches = self._target_values_match(entity_id, actual, expected)
         if matches:
@@ -1455,7 +1488,7 @@ class ClimateManager:
                     context=context,
                     register_expected=False,
                 )
-            except Exception:
+            except (asyncio.CancelledError, Exception):
                 self._discard_expected_action(entity_id, context.id)
                 raise
         try:
@@ -1477,7 +1510,7 @@ class ClimateManager:
                 register_expected=False,
             )
             self._mark_expected_action_delivered(entity_id, context.id)
-        except Exception:
+        except (asyncio.CancelledError, Exception):
             if mode_service is None:
                 self._discard_expected_action(entity_id, context.id)
             else:

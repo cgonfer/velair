@@ -1,3 +1,5 @@
+import { climateCardBoostTemperatureError } from "../domain/climate-card-boost";
+import { parseTemperatureInput, stepTemperatureInput } from "../domain/temperature-input";
 import { controlUnitId, controlUnitZone, controlUnitState } from "../domain/control-units";
 import { targetFormatsForEntity } from "../domain/target-format-policy";
 import { renderPlannedReturn } from "./planned-return-view";
@@ -1353,13 +1355,18 @@ function renderBoostForm(host: VelairViewHost, entityId: string) {
   const step = host._entityTemperatureStep(entityId) ?? 0.5;
   const climateState = host.hass?.states?.[entityId];
   const formatChoice = targetFormatsForEntity(host._data, entityId, climateState, boost.hvacMode);
-  return html`<form class="climate-card-boost-form climate-card-control-pane" @submit=${(event: SubmitEvent) => { event.preventDefault(); void host._runClimateCardService("boost", entityId); }}>
+  const error = climateCardBoostTemperatureError(boost, minimum, maximum, step, {
+    rangeError: host._t("invalidTemperatureRange", { min: minimum, max: maximum }),
+    stepError: host._t("invalidTemperatureStep", { step }),
+    rangeOrderError: host._t("invalidTargetRangeOrder"),
+  });
+  return html`<form class="climate-card-boost-form climate-card-control-pane" @submit=${(event: SubmitEvent) => { event.preventDefault(); if (!error && (event.currentTarget as HTMLFormElement).reportValidity()) void host._runClimateCardService("boost", entityId); }}>
     <strong>${host._t("climateCardConfigureBoost")}</strong>
     <div>
       ${formatChoice.formats.length > 1 || formatChoice.uncertain ? html`<label><span>${host._t("boostTarget")}</span><select .value=${boost.targetKind} @change=${(event: Event) => host._updateClimateCardBoostOption("targetKind", (event.currentTarget as HTMLSelectElement).value)}><option value="single">${host._t("externalCapability_target_scalar")}</option><option value="range">${host._t("externalCapability_target_range")}</option></select></label>` : nothing}
       ${boost.targetKind === "range"
-        ? html`${boostInput(host, "low", boost.low, minimum, Math.min(maximum, boost.high ?? maximum), step)}${boostInput(host, "high", boost.high, Math.max(minimum, boost.low ?? minimum), maximum, step)}`
-        : boostInput(host, "target", boost.target, minimum, maximum, step)}
+        ? html`${boostInput(host, "low", boost.low, minimum, maximum, step, error)}${boostInput(host, "high", boost.high, minimum, maximum, step, error)}`
+        : boostInput(host, "target", boost.target, minimum, maximum, step, error)}
       <label><span>${host._t("durationMinutes")}</span><input type="number" min="1" max="10080" step="1" required .value=${String(boost.durationMinutes)} @input=${(event: Event) => host._updateClimateCardBoost("durationMinutes", (event.currentTarget as HTMLInputElement).value)}></label>
       ${boostSelect(host, "hvacMode", "mode", host._climateSupportedModes(entityId).filter((mode) => mode !== "off"), boost.hvacMode)}
       ${boostSelect(host, "fanMode", "fanMode", host._entityFanModeOptions(entityId), boost.fanMode)}
@@ -1368,7 +1375,8 @@ function renderBoostForm(host: VelairViewHost, entityId: string) {
       ${boostSelect(host, "swingHorizontalMode", "horizontalSwingMode", host._entitySwingHorizontalModeOptions(entityId), boost.swingHorizontalMode)}
       ${humidityInput(host, entityId, boost.humidity)}
     </div>
-    <footer><button type="button" @click=${host._cancelClimateCardBoost}>${host._t("cancel")}</button><button class="primary" type="submit">${host._t("apply")}</button></footer>
+    ${error ? html`<p class="climate-card-boost-error" role="alert">${error}</p>` : nothing}
+    <footer><button type="button" @click=${host._cancelClimateCardBoost}>${host._t("cancel")}</button><button class="primary" type="submit" ?disabled=${Boolean(error)}>${host._t("apply")}</button></footer>
   </form>`;
 }
 
@@ -1412,9 +1420,23 @@ function renderRuntimeState(host: VelairViewHost, runtime: { state: string; unti
   </div>`;
 }
 
-function boostInput(host: VelairViewHost, field: "target" | "low" | "high", value: number | undefined, minimum: number, maximum: number, step: number) {
+function boostInput(host: VelairViewHost, field: "target" | "low" | "high", value: number | string | undefined, minimum: number, maximum: number, step: number, error?: string) {
   const labels = { target: "targetTemperature", low: "minimumShort", high: "maximumShort" } as const;
-  return html`<label><span>${host._t(labels[field])}</span><input type="number" min=${minimum} max=${maximum} step=${step} required .value=${value === undefined ? "" : String(value)} @input=${(event: Event) => host._updateClimateCardBoost(field, (event.currentTarget as HTMLInputElement).value)}></label>`;
+  const parsed = parseTemperatureInput(value);
+  return html`<label><span>${host._t(labels[field])}</span><input class="temperature-input" data-target-field=${field} type="text" inputmode=${minimum < 0 ? "text" : "decimal"}
+    role="spinbutton" aria-valuemin=${minimum} aria-valuemax=${maximum} aria-valuenow=${Number.isFinite(parsed) ? parsed : nothing} aria-invalid=${String(Boolean(error))}
+    min=${minimum} max=${maximum} step=${step} required .value=${value === undefined ? "" : String(value)}
+    @input=${(event: Event) => host._updateClimateCardBoost(field, (event.currentTarget as HTMLInputElement).value)}
+    @keydown=${(event: KeyboardEvent) => {
+      const input = event.currentTarget as HTMLInputElement;
+      if (input.disabled || input.readOnly || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
+        || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+      event.preventDefault();
+      const next = stepTemperatureInput(input.value, event.key === "ArrowUp" ? 1 : -1, minimum, maximum, step);
+      if (next === undefined) return;
+      input.value = next;
+      host._updateClimateCardBoost(field, next);
+    }}></label>`;
 }
 
 function renderExternalOwner(host: VelairViewHost, entityId: string, provider?: string, external?: { available: boolean; publication: { state: "publishing" | "published" | "failed" } | null }) {

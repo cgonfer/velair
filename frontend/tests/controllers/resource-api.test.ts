@@ -3,6 +3,15 @@ import { VelairApiClient } from "../../src/velair/api/client";
 import type { HomeAssistant } from "../../src/velair/types";
 
 describe("resource wire contracts", () => {
+  it("reads detached sensor calendar detail without adding it to the live schedule", async () => {
+    const detail = { entity_id: "group.room", room_sensor_schedule: {
+      enabled: false, default_source: null, periods: [{ weekdays: ["monday"], start: "22:00", end: "07:00", source: "sensor.office" }],
+    } };
+    const sendMessagePromise = vi.fn().mockResolvedValue(detail);
+    const api = new VelairApiClient({ connection: { sendMessagePromise } } as unknown as HomeAssistant);
+    expect(await api.getRoomSensorSchedule("group.room")).toEqual(detail);
+    expect(sendMessagePromise).toHaveBeenCalledWith({ type: "velair/get_room_sensor_schedule", entity_id: "group.room" });
+  });
   it("sends a flat preset configuration with its captured revision", async () => {
     const sendMessagePromise = vi.fn().mockResolvedValue({});
     const api = new VelairApiClient({ connection: { sendMessagePromise } } as unknown as HomeAssistant);

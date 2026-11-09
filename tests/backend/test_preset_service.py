@@ -312,5 +312,5 @@ class PresetServiceRuntimeTest(unittest.IsolatedAsyncioTestCase):
         state = self.scheduler._room_sensor_assist_states["climate.salon"]
         self.assertIsNot(state, previous)
         self.assertEqual(state.target_temperature, 22)
-        self.assertIn(("set_temperature", "climate.salon", 22, True, "heat"), self.climate.calls)
+        self.assertEqual(self.climate.calls, [("set_temperature", "climate.salon", 19.0, True, "heat")])
 

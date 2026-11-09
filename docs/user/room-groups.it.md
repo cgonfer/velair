@@ -9,7 +9,7 @@ Traduzioni: [Originale in inglese](room-groups.md) · [Español](room-groups.es.
 | Voce | Stato |
 | --- | --- |
 | Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Ultima sincronizzazione | 2026-11-08 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -145,7 +145,8 @@ Rimuovere un membro gli assegna una copia indipendente della configurazione comu
 Ad esempio, rimuovere un dispositivo da un gruppo di tre lascia due membri con un nuovo storico del gruppo e un dispositivo indipendente con un nuovo storico. Eliminare il gruppo rende tutti indipendenti. Nessuna operazione ripristina automaticamente gli storici precedenti al gruppo. Mantieni almeno due membri in un gruppo salvato; scioglilo se tutti devono diventare indipendenti.
 
 <a id="before-testing-the-beta"></a>
-## Prima di provare la beta
+<a id="check-the-group-configuration"></a>
+## Verificare la configurazione del gruppo
 
 Salva una copia della configurazione includendo l’apprendimento se necessario. Dopo revisione e salvataggio, verifica che:
 

@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](diagnostics.md) · [Español](diagnostics.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.3 |
-| Última sincronización | 2026-10-21 |
+| Versión de referencia | 1.9.0-beta.10 |
+| Última sincronización | 2026-11-04 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -83,6 +83,10 @@ Revisa cualquier informe antes de publicarlo. Los identificadores de entidades d
 La vista local de Diagnóstico utiliza los nombres descriptivos de los equipos de Home Assistant al filtrar, pero su panel detallado muestra deliberadamente los identificadores locales de entidades para que el usuario pueda verificar la configuración. Con la opción de privacidad predeterminada activada, los informes descargados sustituyen tanto los identificadores estructurados como los incluidos en el texto de errores conservados por alias deterministas, como `climate_unit_1` y `associated_entity_1`. Las referencias repetidas mantienen el mismo alias para conservar relaciones útiles sin revelar los identificadores locales originales. Si eliges explícitamente conservar los identificadores originales, permanecerán en el informe; los de Perfiles, Modos y pausas se siguen eliminando. Revisa cada informe antes de compartirlo.
 
 Diagnóstico no ofrece controles del programador, reintentos, reversión ni climatización. Ajustes sigue conteniendo las acciones de configuración y mantenimiento; los detalles de capacidades y estado de los equipos ahora pertenecen a Diagnóstico.
+
+Los detalles de entrega del equipo seleccionado distinguen una llamada de servicio aceptada de la comunicación de su objetivo por Home Assistant. La confirmación puede estar pendiente, confirmada, recuperada tras un reintento o sin confirmar tras alcanzar el límite de reintentos. Un fallo silencioso recuperado permanece en el historial de **Entrega al termostato** con su número de reintentos, para que puedas comprobar que Velair resolvió la discrepancia. Los informes coincidentes no añaden una entrada al historial por cada orden normal. El informe descargado conserva la misma evidencia de confirmación.
+
+La recuperación se ejecuta en el backend aunque Diagnóstico esté cerrado. Si varios equipos independientes cambian de bloque a la vez, solo necesita un reintento el que sigue comunicando un objetivo distinto. Abrir o actualizar esta vista nunca envía una orden al equipo. Un informe confirmado demuestra el estado comunicado por Home Assistant; no verifica de forma independiente un dispositivo que comunica valores optimistas.
 
 Cada equipo gestionado también proporciona datos sobre la estabilización de las órdenes; estos datos solo existen durante la ejecución. Mientras una orden reciente de Velair se estabiliza, Diagnóstico enumera los campos de control afectados en su instantánea. Si el equipo no ha alcanzado el estado esperado dentro del plazo establecido, la siguiente instantánea actualizada marca el equipo con una advertencia `command_settling_mismatch`. Despliega esa advertencia en el panel de Diagnóstico del equipo seleccionado para comparar el valor esperado de cada campo afectado con el valor comunicado por el termostato. Las temperaturas incluyen la unidad del equipo, los modos HVAC usan sus etiquetas habituales y los valores ausentes se identifican explícitamente. Se utiliza la comparación registrada, no el horario actual ni una nueva lectura. El informe descargado también conserva el bloque `command_settling`. Es evidencia para resolver problemas: Diagnóstico no reintenta la orden, no cambia el equipo ni crea un ajuste Manual. La evidencia se borra con una orden más reciente para ese campo o al reiniciar.
 
