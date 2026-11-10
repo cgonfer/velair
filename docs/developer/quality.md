@@ -303,9 +303,10 @@ cannot become a fully checked action.
 Release execution preserves the committed integration for HACS-path testing,
 builds and packages once, and tests the extracted component ZIP separately.
 The Lovelace ZIP must contain the same JavaScript and source map as the tested
-component. Publication checks asset SHA-256 values, uploads into a draft, verifies
-the uploaded assets and only then publishes. A different asset cannot replace an
-already published file on a rerun.
+component. Publication checks asset SHA-256 values and verifies uploaded assets.
+It creates a draft when no release exists, or attaches missing files to an
+existing mutable draft or public release. Drafts are published only after
+verification. A different asset cannot replace an already published file on a rerun.
 
 Each release retains `quality-report.json` and `quality-report.md` as assets.
 The static Quality page is regenerated from those public assets, with stable and
@@ -343,11 +344,23 @@ the evidence available for each version.
 ## Release publication and recovery
 
 A version-tag push starts the Release workflow. It validates both the generated
-packages and the committed HACS installation, binds evidence to the exact archive
-hashes, uploads into a draft, and publishes only after successful verification.
-Create the tag without publishing an empty release first; the workflow reads the
-versioned notes from `.github/release-notes/v<version>.md`. Published assets cannot
-be added or replaced by the publisher's normal policy.
+packages and the committed HACS installation, and binds evidence to the exact
+archive hashes. You can push a tag alone, save a draft release, or publish a
+release directly in GitHub. When no release exists, the workflow creates a draft
+using `.github/release-notes/v<version>.md` and publishes it after verification.
+When a release already exists, it preserves the maintainer's title and notes,
+attaches missing validated files, and keeps identical existing files. A public
+release remains public throughout this process.
+
+All existing files are checked before uploads start. A differing public file,
+an unexpected attachment, or changed release identity/state stops publication;
+only drafts permit replacement of differing files. Uploads are verified by size
+and SHA-256. The release identity, state, tag and relevant assets are refreshed
+before each change. If an upload fails, already attached files remain and a rerun
+can add missing files when the existing files match its validated artifacts.
+GitHub immutable releases cannot accept additions or replacements; an identical,
+complete release can be verified without changing it. See
+[GitHub's release documentation](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository).
 
 If a workflow fails after the tag exists, rerunning that tag uses its original
 workflow revision. A workflow correction on main therefore needs the explicit
@@ -358,10 +371,11 @@ when a tag is selected as its workflow ref; incomplete recovery inputs fail.
 To recover an existing release:
 
 1. Put the corrected workflows on main and complete their CI checks.
-2. Verify the existing tag and its full commit SHA. If an existing release was
-   published prematurely, its maintainer must explicitly authorize and convert
-   that same mutable release to a draft. Keep its ID, notes and tag. Recovery
-   rejects an absent, still-public or immutable release; it never recreates one.
+2. Verify the existing tag and its full commit SHA. Keep the existing mutable
+   release's ID, notes and tag. Recovery accepts a draft or public release and
+   preserves public visibility; it rejects an absent or immutable release and
+   never recreates one. A differing public attachment still requires a separate
+   maintainer decision; recovery does not overwrite it.
 3. In **Actions > Release > Run workflow**, select **main** and provide all three
    recovery inputs: `release-tag`, `expected-commit` and `validation-run-id`.
    The last value identifies the original Release push run whose HACS/Hassfest
@@ -378,21 +392,13 @@ expected-commit: faa334fafb50c120de86938b265cd6bdbbd38261
 validation-run-id: 42809149433
 ```
 
-For that recovery, the maintainer can explicitly return the existing mutable
-release to draft with GitHub CLI before dispatching:
-
-```powershell
-gh release edit v1.9.0 --repo cgonfer/velair --draft=true
-```
-
-This temporarily withdraws the release from public listings while preserving
-the existing tag and notes. It is a separate authorized operation; the recovery
-workflow never changes a public release to draft automatically.
+There is no need to return a public mutable release to draft before dispatching.
+Recovery does not change its title, notes or visibility, and never moves the tag.
 
 The corrected workflow's SHA and the tagged product's SHA are separate: builds,
 quality, evidence and publication use the product SHA. Recovery verifies the
 original validation run's repository, event, tag, SHA, attempt and exact successful
 check names; it does not reuse failed quality results. The publisher checks the
-remote tag again and requires the same draft release ID before changing assets.
+remote tag again and requires the same release ID and unchanged state before changing assets.
 The existing notes are preserved. Publication is still an external action: review
 the identity and authorize the dispatch deliberately.

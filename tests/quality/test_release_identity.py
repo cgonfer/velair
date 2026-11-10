@@ -79,9 +79,16 @@ class ReleaseIdentityTest(unittest.TestCase):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 identity.resolve_identity({**self.env, **changes}, self.api)
 
-    def test_public_immutable_or_unidentified_release_is_rejected(self):
+    def test_public_mutable_release_is_accepted_without_changing_visibility(self):
+        self.release["draft"] = False
+        result = identity.resolve_identity(self.env, self.api)
+        self.assertEqual(result["release_id"], "17")
+        self.assertEqual(result["publish"], "true")
+        self.assertFalse(self.release["draft"])
+
+    def test_immutable_or_unidentified_release_is_rejected(self):
         original = deepcopy(self.release)
-        for changes in ({"draft": False}, {"immutable": True}, {"immutable": None}, {"id": 0}, {"tag_name": "v1.8.0"}):
+        for changes in ({"draft": None}, {"immutable": True}, {"immutable": None}, {"id": 0}, {"tag_name": "v1.8.0"}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 self.release = {**original, **changes}
                 identity.resolve_identity(self.env, self.api)

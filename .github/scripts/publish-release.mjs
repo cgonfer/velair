@@ -1,4 +1,4 @@
-/** Publish immutable, tested archives through a draft release. No shell execution. */
+/** Attach tested archives to a new, draft or public release. No shell execution. */
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -30,12 +30,10 @@ export function validatePublication(report, assets, { version, commit, tag }) {
   return true;
 }
 
-export function assetDecision(existing, expected, draft) {
-  if (!existing) {
-    if (!draft) throw new Error(`Published release is missing asset ${expected.name}; refusing to modify publication`);
-    return "upload";
-  }
-  if (existing.sha256 === expected.sha256) return "keep";
+export function assetDecision(existing, expected, draft, immutable = false) {
+  if (existing?.sha256 === expected.sha256) return "keep";
+  if (immutable) throw new Error(`Immutable release cannot change asset ${expected.name}`);
+  if (!existing) return "upload";
   if (!draft) throw new Error(`Published asset differs: ${expected.name}; refusing replacement`);
   return "replace-draft";
 }
@@ -99,20 +97,13 @@ export async function publishRelease({ repository, token, version, tag, commit, 
     }
   };
   verifyExistingAssets(release);
-  const verifyRecoveryDraft = (current) => {
+  const verifyRecoveryRelease = (current) => {
     if (expectedReleaseId !== undefined && (String(current?.id) !== String(expectedReleaseId)
-        || current?.tag_name !== tag || current?.draft !== true || current?.immutable !== false)) {
-      throw new Error("Recovery requires the same existing mutable draft release");
+        || current?.tag_name !== tag || typeof current?.draft !== "boolean" || current?.immutable !== false)) {
+      throw new Error("Recovery requires the same existing mutable release");
     }
   };
-  verifyRecoveryDraft(release);
-  const refreshRecoveryDraft = async () => {
-    if (expectedReleaseId !== undefined) {
-      const current = await (await api(`/releases/${expectedReleaseId}`)).json();
-      verifyRecoveryDraft(current);
-      verifyExistingAssets(current);
-    }
-  };
+  verifyRecoveryRelease(release);
   if (!release) {
     const notes = readFileSync(notesPath, "utf8");
     if (notes.length > 200_000 || !notes.startsWith(`# Velair ${version}\n`)) throw new Error("Invalid versioned release notes");
@@ -121,21 +112,53 @@ export async function publishRelease({ repository, token, version, tag, commit, 
       body: notes + `\n\nQuality evidence: see the attached quality-report.md and quality-report.json. Tested commit: ${commit}. Performance is informational; consult the report for visual-review status and limitations.\n`,
     }) })).json();
   }
-  for (const asset of assets) {
-    const existing = release.assets?.find((item) => item.name === asset.name);
+  const releaseId = release.id;
+  const startedDraft = release.draft;
+  const verifyRelease = (current) => {
+    if (!Number.isSafeInteger(releaseId) || releaseId <= 0 || current?.id !== releaseId
+        || current?.tag_name !== tag || typeof startedDraft !== "boolean" || current?.draft !== startedDraft
+        || typeof current?.immutable !== "boolean") throw new Error("Release identity or state changed during publication");
+    verifyRecoveryRelease(current);
+    verifyExistingAssets(current);
+  };
+  verifyRelease(release);
+  const decisionFor = async (current, asset) => {
+    const existing = current.assets?.find((item) => item.name === asset.name);
     const known = existing ? await remoteHash(existing) : undefined;
-    const decision = assetDecision(existing ? { ...existing, sha256: known } : null, asset, release.draft);
+    return { existing, decision: assetDecision(existing ? { ...existing, sha256: known } : null, asset, current.draft, current.immutable) };
+  };
+  const refreshRelease = async () => {
+    const current = await (await api(`/releases/${releaseId}`)).json();
+    verifyRelease(current);
+    await verifyTag();
+    return current;
+  };
+  // Reject any conflicting public asset before uploading even the first missing file.
+  for (const asset of assets) await decisionFor(release, asset);
+  for (const asset of assets) {
+    release = await refreshRelease();
+    const { existing, decision } = await decisionFor(release, asset);
     if (decision === "keep") continue;
-    await refreshRecoveryDraft();
-    if (decision === "replace-draft") await api(`/releases/assets/${existing.id}`, { method: "DELETE" });
+    if (decision === "replace-draft") {
+      await api(`/releases/assets/${existing.id}`, { method: "DELETE" });
+      release = await refreshRelease();
+      const replacement = await decisionFor(release, asset);
+      if (replacement.decision === "keep") continue;
+      if (replacement.existing) throw new Error("Release asset changed during replacement");
+    }
     const url = `https://uploads.github.com/repos/${repository}/releases/${release.id}/assets?name=${encodeURIComponent(asset.name)}`;
     const response = await request(url, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": asset.name.endsWith(".zip") ? "application/zip" : "application/octet-stream", "content-length": String(asset.bytes.length) }, body: asset.bytes });
-    if (!response.ok) throw new Error(`Release asset upload failed (${response.status}); release remains draft`);
+    if (!response.ok) throw new Error(`Release asset upload failed (${response.status}); rerun to attach missing files`);
     const uploaded = await response.json();
-    if (uploaded.size !== asset.bytes.length || await remoteHash(uploaded) !== asset.sha256) throw new Error("Uploaded asset identity mismatch; release remains draft");
+    if (uploaded.size !== asset.bytes.length || await remoteHash(uploaded) !== asset.sha256) throw new Error("Uploaded asset identity mismatch; publication stopped");
   }
-  await verifyTag();
-  await refreshRecoveryDraft();
+  release = await refreshRelease();
+  for (const asset of assets) {
+    if ((await decisionFor(release, asset)).decision !== "keep") throw new Error("Release assets changed after upload");
+  }
+  // Digest downloads can take time; check identity again immediately before publication.
+  release = await refreshRelease();
+  if (release.draft && release.immutable) throw new Error("Immutable release cannot be published by this workflow");
   if (release.draft) await api(`/releases/${release.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ draft: false }) });
   return release.html_url;
 }

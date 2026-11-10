@@ -300,7 +300,7 @@ jobs:
         with:
           name: validated-release-evidence
           path: ${{ runner.temp }}/release-evidence
-      - name: Upload into draft and publish after digest verification
+      - name: Attach validated assets and publish drafts after digest verification
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ needs.package-release.outputs.version }}

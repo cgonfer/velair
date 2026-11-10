@@ -45,8 +45,8 @@ def resolve_identity(env, api):
         if not TAG.fullmatch(tag) or not SHA.fullmatch(commit) or not re.fullmatch(r"[1-9]\d*", run_id):
             raise ValueError("Invalid recovery identity")
         release = api(f"/releases/tags/{quote(tag, safe='')}")
-        if release.get("tag_name") != tag or release.get("draft") is not True or release.get("immutable") is not False:
-            raise ValueError("Recovery requires the existing release to be a mutable draft")
+        if release.get("tag_name") != tag or not isinstance(release.get("draft"), bool) or release.get("immutable") is not False:
+            raise ValueError("Recovery requires an existing mutable release")
         if not isinstance(release.get("id"), int) or release["id"] <= 0:
             raise ValueError("Invalid existing release identity")
         run = api(f"/actions/runs/{run_id}")
@@ -102,7 +102,7 @@ def main():
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as stream:
         stream.write(f"Workflow commit: {os.environ['GITHUB_SHA']}\n\nTested product commit: {result['commit']}\n\n")
         if result["recovery"] == "true":
-            stream.write(f"Recovery of {result['tag']}, existing draft ID {result['release_id']}. "
+            stream.write(f"Recovery of {result['tag']}, existing release ID {result['release_id']}. "
                          f"HACS/Hassfest evidence: {result['validation_url']}. Both product journeys run again.\n")
 
 

@@ -167,9 +167,12 @@ integration version, builds the release frontend bundle, packages installable
 zips, uploads them as workflow artifacts, and publishes the versioned notes and
 assets when the workflow was triggered by a tag.
 
-Create the release tag without publishing an empty release manually; the
-workflow uploads validated assets into a draft before publication. Recovery of
-an existing tag uses explicit tag/SHA/run inputs from main, as described in
+You can push a tag, save a draft release, or publish the release directly in
+GitHub. The workflow attaches missing validated assets to an existing mutable
+release, preserving its notes and public visibility. It creates and publishes
+a draft when no release exists. Existing public files with different content
+are not overwritten, and GitHub immutable releases cannot accept new files.
+Recovery of an existing tag uses explicit tag/SHA/run inputs from main, as described in
 [Release publication and recovery](quality.md#release-publication-and-recovery).
 
 The validate workflow runs HACS validation and Hassfest on pushes, pull
