@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20261109224821", r = "1.9.0", i = [
+}, n = "20261110151701", r = "1.9.1", i = [
 	"monday",
 	"tuesday",
 	"wednesday",
@@ -40398,7 +40398,7 @@ var _d = "https://github.com/cgonfer/velair", vd = {
 		"pt-pt": "docs/user/shared-climate-supply.pt-pt.md",
 		ru: "docs/user/shared-climate-supply.ru.md"
 	}
-}, bd = "1.9.0";
+}, bd = "1.9.1";
 function xd(e, t, n = {}) {
 	let r = V(t), [i, a] = (e === "index" ? "docs/README.md" : vd[e]).split("#"), o = (n.availability ?? yd)[i]?.[r], s = r !== "en" && o ? o : i, c = n.releaseVersion ?? bd;
 	return {
@@ -50295,7 +50295,7 @@ var hv = 5, gv = class extends Er {
 		this._previewDrafts = new Map(this._days.flatMap((e) => dv(e).map((t) => [`${lv(e)}:${t}`, JSON.stringify(e.blocks[t])]))), t && (this._activeReviewDay = "", this._activeReviewGroup = "", this._reviewPage = 0);
 	}
 	_showFailure(e) {
-		this._error = e instanceof Error ? e.message : String(e);
+		this._error = N(e, this.host._t("unableSaveSettings"));
 		let t = this._reviewValidated();
 		this._days.some((e) => this._reviewState(e, t).invalid.length) && (this._error = this.host._t("targetRangeReviewIncomplete"), this._nextPending(!0));
 	}
@@ -50417,7 +50417,7 @@ var hv = 5, gv = class extends Er {
 		} catch (t) {
 			this._referenceError = {
 				entityId: e,
-				message: t instanceof Error ? t.message : String(t)
+				message: N(t, this.host._t("unableSaveSettings"))
 			};
 		} finally {
 			this._busy = !1;
@@ -50880,7 +50880,7 @@ function Cv(e) {
         ${wv(e._t("frontendBuild"), n)}
         ${wv(e._t("portableFormatVersion"), `v${r}`)}
         ${wv(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${wv(e._t("integrationVersion"), "1.9.0")}
+        ${wv(e._t("integrationVersion"), "1.9.1")}
       </div>
     </section>
 
