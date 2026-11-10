@@ -4,6 +4,7 @@ import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import type { TemplateResult } from "lit";
 import { VelairApiClient } from "../api/client";
+import { backendErrorMessage } from "../domain/backend-errors";
 import type { VelairViewHost } from "../host-types";
 import type { DraftScheduleBlock, ScheduleBlock, ScheduleResponse, TargetRangeReference, TargetRangePolicyCorrections, TargetRangePolicyDestination, TargetRangePolicyPreview } from "../types";
 import { cardStyles } from "../styles/card-styles";
@@ -183,7 +184,7 @@ export class VelairTargetRangeSettings extends LitElement {
   }
 
   private _showFailure(error: unknown): void {
-    this._error = error instanceof Error ? error.message : String(error);
+    this._error = backendErrorMessage(error, this.host!._t("unableSaveSettings"));
     const validated = this._reviewValidated();
     if (this._days.some((day) => this._reviewState(day, validated).invalid.length)) {
       this._error = this.host!._t("targetRangeReviewIncomplete");
@@ -334,7 +335,7 @@ export class VelairTargetRangeSettings extends LitElement {
       this.host._applyScheduleData(data);
       this.data = data;
     } catch (error) {
-      this._referenceError = { entityId, message: error instanceof Error ? error.message : String(error) };
+      this._referenceError = { entityId, message: backendErrorMessage(error, this.host._t("unableSaveSettings")) };
     } finally { this._busy = false; }
   }
 

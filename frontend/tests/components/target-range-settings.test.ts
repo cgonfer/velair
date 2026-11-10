@@ -6,6 +6,7 @@ import type { ScheduleResponse, TargetFormatPolicy } from "../../src/velair/type
 import { renderSettingsView, renderSettingsZoneOrderRow } from "../../src/velair/views/settings-view";
 import { render } from "lit";
 import { entityTemperatureStepForHost } from "../../src/velair/controllers/climate-display";
+import { dictionaryLabel, translate } from "../../src/velair/i18n";
 
 const single = { start: "08:00", action: "set_temperature", hvac_mode: "heat", temperature: 21 };
 const mapped: TargetFormatPolicy = { entity_id: "climate.room", kind: "mixed", configured_modes: ["heat"], range_modes: ["heat"], formats_by_mode: { heat: "range", cool: "single" }, invalid_modes: [], uncertain: false };
@@ -717,6 +718,41 @@ describe("target format Settings review", () => {
 
 
 describe("shared range reference settings", () => {
+  it.each([
+    [{ code: "configuration_conflict", message: "Reload and retry." }, "Reload and retry."],
+    [{ code: "unknown_error", message: "Unknown error" }, `${translate("fr", "unableSaveSettings")} (unknown_error)`],
+  ])("shows useful errors during target format reviews too", async (error, message) => {
+    const view = element();
+    view.host._t = translate.bind(null, "fr");
+    view._selectMode("climate.room", "heat", true);
+    vi.spyOn(VelairApiClient.prototype, "previewTargetRangePolicy").mockRejectedValue(error);
+    await view._check();
+    await view.updateComplete;
+    expect(view.shadowRoot.querySelector('[role="alert"]')?.textContent).toContain(message);
+    expect(view.shadowRoot.textContent).not.toContain("[object Object]");
+  });
+
+  it.each(["fr", "en"])("renders unconfigured heating and cooling references as localized text in %s", async (language) => {
+    const view = integrated(element());
+    view.host._t = translate.bind(null, language);
+    view.host._modeLabel = (mode: string) => dictionaryLabel(language, "hvacModes", mode);
+    view.data.zones["climate.room"].target_format_policy = {
+      ...mapped, kind: "range", formats_by_mode: { heat: "range", cool: "range" },
+    };
+    await view.updateComplete;
+
+    const root = view.shadowRoot as ShadowRoot;
+    const inputs = [...root.querySelectorAll<HTMLSelectElement>("select[data-range-reference-mode]")];
+    expect(inputs.map((input) => input.dataset.rangeReferenceMode)).toEqual(["heat", "cool"]);
+    for (const input of inputs) {
+      expect(input.value).toBe("");
+      expect(input.selectedOptions[0].textContent).toBe(translate(language, "targetRangeReferenceUnconfigured"));
+    }
+    expect(root.querySelector(".target-range-reference .inline-help-tooltip")?.textContent)
+      .toBe(translate(language, "targetRangeReferenceHelp"));
+    expect(root.textContent).not.toContain("[object Object]");
+  });
+
   it.each(["range", "mixed"])("offers fixed-mode references for %s entities only where ranges apply", async (kind) => {
     const view = element();
     view.data.zones["climate.room"].target_format_policy = { ...mapped, kind,
@@ -742,6 +778,40 @@ describe("shared range reference settings", () => {
     update.mockResolvedValue(saved);
     await view._saveReference("climate.room", "heat", "");
     expect(update).toHaveBeenLastCalledWith({ entity_id: "climate.room", target_range_reference: { cool: "high" }, expected_revision: 8 });
+  });
+
+  it.each(["heat", "cool"])("shows a WebSocket error message when saving the %s reference fails", async (mode) => {
+    const view = integrated(element());
+    view.host._t = translate.bind(null, "fr");
+    view.data.zones["climate.room"].target_format_policy = {
+      ...mapped, kind: "range", formats_by_mode: { heat: "range", cool: "range" },
+    };
+    const original = structuredClone(view.data);
+    vi.spyOn(VelairApiClient.prototype, "updateZoneRangeReference").mockRejectedValue({
+      code: "configuration_conflict", message: "Configuration changed. Reload and retry.",
+    });
+    await view.updateComplete;
+    const input = view.shadowRoot.querySelector(`select[data-range-reference-mode="${mode}"]`) as HTMLSelectElement;
+    input.value = "low";
+    input.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => expect(view.shadowRoot.querySelector('[role="alert"]')?.textContent)
+      .toBe("Configuration changed. Reload and retry."));
+
+    expect(view.shadowRoot.textContent).not.toContain("[object Object]");
+    expect(input.value).toBe("");
+    expect(view.data).toEqual(original);
+    expect(view.host._applyScheduleData).not.toHaveBeenCalled();
+  });
+
+  it("uses localized help when a reference save fails without a useful message", async () => {
+    const view = element();
+    view.host._t = translate.bind(null, "fr");
+    view.data.zones["climate.room"].target_format_policy = mapped;
+    vi.spyOn(VelairApiClient.prototype, "updateZoneRangeReference").mockRejectedValue({ code: "unknown_error" });
+    await view._saveReference("climate.room", "heat", "low");
+    await view.updateComplete;
+    expect(view.shadowRoot.querySelector('[role="alert"]')?.textContent)
+      .toBe(`${translate("fr", "unableSaveSettings")} (unknown_error)`);
   });
 
   it("retains the saved selection after a failed save and prevents concurrent writes", async () => {
