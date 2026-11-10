@@ -33,6 +33,10 @@ on:
         description: policy follows reviewed visual references independently of the PR blocking rollout
         type: string
         default: policy
+      tested-commit:
+        description: Exact product commit resolved by the release workflow
+        type: string
+        default: ""
     outputs:
       result:
         value: ${{ jobs.browser.outputs.result }}
@@ -48,13 +52,14 @@ jobs:
     outputs:
       result: ${{ steps.test.outcome }}
     env:
-      QUALITY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      QUALITY_HEAD_SHA: ${{ inputs.tested-commit || github.event.pull_request.head.sha || github.sha }}
       QUALITY_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
-      QUALITY_TESTED_SHA: ${{ github.sha }}
+      QUALITY_TESTED_SHA: ${{ inputs.tested-commit || github.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: ${{ inputs.compare-release && 0 || 1 }}
+          ref: ${{ inputs.tested-commit || github.sha }}
+          fetch-depth: ${{ inputs.compare-release && '0' || '1' }}
           persist-credentials: false
       - uses: actions/setup-python@v6
         with:
@@ -109,8 +114,11 @@ jobs:
               candidates.sort(key=lambda r: r['published_at'], reverse=True)
               previous = None
               for candidate in candidates:
-                  old = subprocess.check_output(['git', 'rev-parse', '--verify', '--end-of-options', candidate['tag_name'] + '^{commit}'], text=True).strip()
-                  if subprocess.call(['git', 'merge-base', '--is-ancestor', old, os.environ['GITHUB_SHA']]) == 0:
+                  revision = subprocess.run(['git', 'rev-parse', '--verify', '--end-of-options', candidate['tag_name'] + '^{commit}'], text=True, capture_output=True)
+                  if revision.returncode != 0:
+                      continue
+                  old = revision.stdout.strip()
+                  if subprocess.call(['git', 'merge-base', '--is-ancestor', old, os.environ['QUALITY_TESTED_SHA']]) == 0:
                       previous = candidate; os.environ['QUALITY_BASE_SHA'] = old; break
               if previous:
                   name = 'velair-custom-component-' + previous['tag_name'][1:] + '.zip'

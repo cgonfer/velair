@@ -2,20 +2,62 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Existing tag to recover (leave all recovery inputs empty for test-only)
+        type: string
+        default: ""
+      expected-commit:
+        description: Exact 40-character commit of the existing tag
+        type: string
+        default: ""
+      validation-run-id:
+        description: Completed original tag Release run with successful HACS and Hassfest checks
+        type: string
+        default: ""
   push:
     tags:
       - "v*"
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.release-tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
+  identity:
+    name: Resolve exact release identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.identity.outputs.commit }}
+      tag: ${{ steps.identity.outputs.tag }}
+      publish: ${{ steps.identity.outputs.publish }}
+      recovery: ${{ steps.identity.outputs.recovery }}
+      release_id: ${{ steps.identity.outputs.release_id }}
+      validation_url: ${{ steps.identity.outputs.validation_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Verify tag, manifest and recovery prerequisites
+        id: identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVERY_TAG: ${{ inputs.release-tag }}
+          RECOVERY_COMMIT: ${{ inputs.expected-commit }}
+          VALIDATION_RUN_ID: ${{ inputs.validation-run-id }}
+        run: python .github/scripts/release-identity.py
+
   package-release:
     name: Package release
+    needs: identity
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -25,6 +67,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.identity.outputs.commit }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -98,10 +143,10 @@ jobs:
           fi
 
       - name: Validate tag version
-        if: startsWith(github.ref, 'refs/tags/')
+        if: needs.identity.outputs.publish == 'true'
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ needs.identity.outputs.tag }}
         run: |
           EXPECTED_TAG="v${RELEASE_VERSION}"
           if [ "$RELEASE_TAG" != "$EXPECTED_TAG" ]; then
@@ -122,26 +167,35 @@ jobs:
 
   validate-hacs:
     name: Release HACS validation
+    needs: identity
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: hacs/action@main
+        if: needs.identity.outputs.recovery != 'true'
         with:
           category: integration
+      - name: Retain tag-bound HACS validation
+        if: needs.identity.outputs.recovery == 'true'
+        env:
+          VALIDATION_URL: ${{ needs.identity.outputs.validation_url }}
+        run: printf 'Reusing successful HACS validation for this exact tag and commit from %s\n' "$VALIDATION_URL" >> "$GITHUB_STEP_SUMMARY"
 
   validate-hassfest:
     name: Release Hassfest validation
+    needs: identity
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ needs.identity.outputs.commit }}
           persist-credentials: false
       - uses: home-assistant/actions/hassfest@master
 
   quality-package:
     name: Validate packaged release
-    needs: package-release
+    needs: [identity, package-release]
     uses: ./.github/workflows/quality-run.yml
     with:
       artifact: velair-release-${{ needs.package-release.outputs.version }}
@@ -150,25 +204,28 @@ jobs:
       label: package
       enforce: true
       compare-release: true
+      tested-commit: ${{ needs.identity.outputs.commit }}
 
   quality-hacs:
     name: Validate committed integration
-    needs: package-release
+    needs: [identity, package-release]
     uses: ./.github/workflows/quality-run.yml
     with:
       artifact: velair-committed-component
       suite: release
       label: hacs
       enforce: true
+      tested-commit: ${{ needs.identity.outputs.commit }}
 
   evidence:
     name: Bind release evidence to exact archives
-    needs: [package-release, quality-package, quality-hacs, validate-hacs, validate-hassfest]
+    needs: [identity, package-release, quality-package, quality-hacs, validate-hacs, validate-hassfest]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ needs.identity.outputs.commit }}
           persist-credentials: false
       - uses: actions/setup-python@v6
         with:
@@ -221,8 +278,8 @@ jobs:
 
   publish:
     name: Publish exact validated assets
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [package-release, evidence]
+    if: needs.identity.outputs.publish == 'true'
+    needs: [identity, package-release, evidence]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -230,6 +287,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
@@ -246,7 +304,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ needs.package-release.outputs.version }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ needs.identity.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.identity.outputs.commit }}
+          RELEASE_ID: ${{ needs.identity.outputs.release_id }}
           RELEASE_ARTIFACTS: ${{ runner.temp }}/release-assets
           RELEASE_REPORT: ${{ runner.temp }}/release-evidence
           RELEASE_NOTES: .github/release-notes/v${{ needs.package-release.outputs.version }}.md

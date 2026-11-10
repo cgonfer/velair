@@ -167,6 +167,11 @@ integration version, builds the release frontend bundle, packages installable
 zips, uploads them as workflow artifacts, and publishes the versioned notes and
 assets when the workflow was triggered by a tag.
 
+Create the release tag without publishing an empty release manually; the
+workflow uploads validated assets into a draft before publication. Recovery of
+an existing tag uses explicit tag/SHA/run inputs from main, as described in
+[Release publication and recovery](quality.md#release-publication-and-recovery).
+
 The validate workflow runs HACS validation and Hassfest on pushes, pull
 requests, a daily schedule, and manual dispatch. These checks protect Velair's
 compatibility with the default HACS store.
@@ -174,8 +179,8 @@ compatibility with the default HACS store.
 The separate Pages workflow publishes only `website/public` after website
 changes reach `main`. Before the first deployment, enable **GitHub Actions** as
 the publishing source under **Settings > Pages** in the repository. The static
-site uses relative asset paths and does not include the ignored local Screenshot
-Lab or website tests.
+site uses relative asset paths. Capture tooling and website tests remain outside
+the public directory.
 
 ## HACS Default Repository
 

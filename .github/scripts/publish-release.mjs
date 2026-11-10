@@ -6,6 +6,10 @@ import { pathToFileURL } from "node:url";
 
 const VERSION = /^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/;
 export function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
+export function releaseIdentityFromEnvironment(env) {
+  return { version: env.RELEASE_VERSION, tag: env.RELEASE_TAG,
+    commit: env.RELEASE_COMMIT || env.GITHUB_SHA, expectedReleaseId: env.RELEASE_ID || undefined };
+}
 
 export function validatePublication(report, assets, { version, commit, tag }) {
   if (!VERSION.test(version) || tag !== `v${version}` || !/^[a-f0-9]{40}$/.test(commit)) throw new Error("Invalid release identity");
@@ -49,8 +53,9 @@ export async function tagCommit(api, tag) {
   throw new Error("Release tag nesting exceeds limit");
 }
 
-export async function publishRelease({ repository, token, version, tag, commit, artifactsDirectory, reportDirectory, notesPath, request = fetch }) {
+export async function publishRelease({ repository, token, version, tag, commit, artifactsDirectory, reportDirectory, notesPath, expectedReleaseId, request = fetch }) {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository ?? "")) throw new Error("Invalid repository");
+  if (expectedReleaseId !== undefined && !/^[1-9]\d*$/.test(String(expectedReleaseId))) throw new Error("Invalid recovery release ID");
   const load = (path) => {
     const stat = lstatSync(path);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 100_000_000) throw new Error("Invalid release asset file");
@@ -88,6 +93,26 @@ export async function publishRelease({ repository, token, version, tag, commit, 
   await verifyTag();
   const previous = await api(`/releases/tags/${encodeURIComponent(tag)}`, {}, true);
   let release = previous ? await previous.json() : null;
+  const verifyExistingAssets = (current) => {
+    if (current?.assets?.some((asset) => !assets.some((expected) => expected.name === asset.name))) {
+      throw new Error("Release contains unexpected unvalidated assets; refusing publication");
+    }
+  };
+  verifyExistingAssets(release);
+  const verifyRecoveryDraft = (current) => {
+    if (expectedReleaseId !== undefined && (String(current?.id) !== String(expectedReleaseId)
+        || current?.tag_name !== tag || current?.draft !== true || current?.immutable !== false)) {
+      throw new Error("Recovery requires the same existing mutable draft release");
+    }
+  };
+  verifyRecoveryDraft(release);
+  const refreshRecoveryDraft = async () => {
+    if (expectedReleaseId !== undefined) {
+      const current = await (await api(`/releases/${expectedReleaseId}`)).json();
+      verifyRecoveryDraft(current);
+      verifyExistingAssets(current);
+    }
+  };
   if (!release) {
     const notes = readFileSync(notesPath, "utf8");
     if (notes.length > 200_000 || !notes.startsWith(`# Velair ${version}\n`)) throw new Error("Invalid versioned release notes");
@@ -101,6 +126,7 @@ export async function publishRelease({ repository, token, version, tag, commit, 
     const known = existing ? await remoteHash(existing) : undefined;
     const decision = assetDecision(existing ? { ...existing, sha256: known } : null, asset, release.draft);
     if (decision === "keep") continue;
+    await refreshRecoveryDraft();
     if (decision === "replace-draft") await api(`/releases/assets/${existing.id}`, { method: "DELETE" });
     const url = `https://uploads.github.com/repos/${repository}/releases/${release.id}/assets?name=${encodeURIComponent(asset.name)}`;
     const response = await request(url, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": asset.name.endsWith(".zip") ? "application/zip" : "application/octet-stream", "content-length": String(asset.bytes.length) }, body: asset.bytes });
@@ -109,13 +135,14 @@ export async function publishRelease({ repository, token, version, tag, commit, 
     if (uploaded.size !== asset.bytes.length || await remoteHash(uploaded) !== asset.sha256) throw new Error("Uploaded asset identity mismatch; release remains draft");
   }
   await verifyTag();
+  await refreshRecoveryDraft();
   if (release.draft) await api(`/releases/${release.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ draft: false }) });
   return release.html_url;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   publishRelease({ repository: process.env.GITHUB_REPOSITORY, token: process.env.GH_TOKEN,
-    version: process.env.RELEASE_VERSION, tag: process.env.RELEASE_TAG, commit: process.env.GITHUB_SHA,
+    ...releaseIdentityFromEnvironment(process.env),
     artifactsDirectory: process.env.RELEASE_ARTIFACTS, reportDirectory: process.env.RELEASE_REPORT,
     notesPath: process.env.RELEASE_NOTES,
   }).then((url) => console.log(`Published validated release: ${url}`))

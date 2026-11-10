@@ -339,3 +339,60 @@ those controls. Disclosures remain accessible with the keyboard.
 No report establishes compatibility with every physical climate device, theme,
 companion app or hardware platform. The recorded scenarios and limitations define
 the evidence available for each version.
+
+## Release publication and recovery
+
+A version-tag push starts the Release workflow. It validates both the generated
+packages and the committed HACS installation, binds evidence to the exact archive
+hashes, uploads into a draft, and publishes only after successful verification.
+Create the tag without publishing an empty release first; the workflow reads the
+versioned notes from `.github/release-notes/v<version>.md`. Published assets cannot
+be added or replaced by the publisher's normal policy.
+
+If a workflow fails after the tag exists, rerunning that tag uses its original
+workflow revision. A workflow correction on main therefore needs the explicit
+recovery dispatch below to test the existing product commit without moving its
+tag. A manual dispatch with all recovery inputs empty is test-only, including
+when a tag is selected as its workflow ref; incomplete recovery inputs fail.
+
+To recover an existing release:
+
+1. Put the corrected workflows on main and complete their CI checks.
+2. Verify the existing tag and its full commit SHA. If an existing release was
+   published prematurely, its maintainer must explicitly authorize and convert
+   that same mutable release to a draft. Keep its ID, notes and tag. Recovery
+   rejects an absent, still-public or immutable release; it never recreates one.
+3. In **Actions > Release > Run workflow**, select **main** and provide all three
+   recovery inputs: `release-tag`, `expected-commit` and `validation-run-id`.
+   The last value identifies the original Release push run whose HACS/Hassfest
+   validations passed for that exact tag and SHA, even if package quality failed.
+4. Wait for fresh package and committed-integration quality checks, evidence
+   binding and verified publication. Do not upload untested replacement archives
+   or disable validation gates to complete the release.
+
+For the initial 1.9.0 publication, the recovery identity is:
+
+```text
+release-tag: v1.9.0
+expected-commit: faa334fafb50c120de86938b265cd6bdbbd38261
+validation-run-id: 42809149433
+```
+
+For that recovery, the maintainer can explicitly return the existing mutable
+release to draft with GitHub CLI before dispatching:
+
+```powershell
+gh release edit v1.9.0 --repo cgonfer/velair --draft=true
+```
+
+This temporarily withdraws the release from public listings while preserving
+the existing tag and notes. It is a separate authorized operation; the recovery
+workflow never changes a public release to draft automatically.
+
+The corrected workflow's SHA and the tagged product's SHA are separate: builds,
+quality, evidence and publication use the product SHA. Recovery verifies the
+original validation run's repository, event, tag, SHA, attempt and exact successful
+check names; it does not reuse failed quality results. The publisher checks the
+remote tag again and requires the same draft release ID before changing assets.
+The existing notes are preserved. Publication is still an external action: review
+the identity and authorize the dispatch deliberately.
