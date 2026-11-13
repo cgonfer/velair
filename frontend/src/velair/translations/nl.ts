@@ -1,4 +1,9 @@
 export const nl = {
+  "entityNameDisplay": "Weergave van klimaatnamen",
+  "entityNameDisplayLegacy": "Huidige namen (standaard)",
+  "entityNameDisplayLegacyArea": "Huidige namen met ruimtecontext",
+  "entityNameDisplayEntityContext": "Entiteitsnamen met context",
+  "entityNameDisplayHelp": "‘Huidige namen’ behoudt de namen die Velair al weergeeft. De andere opties voegen afzonderlijke context toe wanneer beheerde klimaatapparaten dezelfde naam hebben. ‘Entiteitsnamen’ gebruikt de eigen naam van de entiteit, of de apparaatnaam als dit de hoofdentiteit is. Aangepaste kaartnamen en namen van kamergroepen behouden hun voorrang. Deze voorkeur geldt overal in Velair.",
   "supplyLiveCardView": "Toevoerregeling: livestatus",
   "supplyLiveCardSupply": "Toevoer",
   "supplyLiveCardChooseSupply": "Kies een toevoer in de kaarteditor.",

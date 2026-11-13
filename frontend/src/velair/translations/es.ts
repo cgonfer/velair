@@ -1,4 +1,9 @@
 export const es = {
+  "entityNameDisplay": "Mostrar nombres de climatización",
+  "entityNameDisplayLegacy": "Nombres actuales (predeterminado)",
+  "entityNameDisplayLegacyArea": "Nombres actuales con contexto de área",
+  "entityNameDisplayEntityContext": "Nombres de entidad con contexto",
+  "entityNameDisplayHelp": "«Nombres actuales» conserva los nombres que Velair ya muestra. Las otras opciones añaden contexto por separado cuando varios equipos gestionados tienen el mismo nombre. «Nombres de entidad» usa el nombre propio de la entidad o el del dispositivo si es su entidad principal. Los nombres personalizados de las tarjetas y de los grupos de habitación mantienen su prioridad. Esta preferencia se aplica a todo Velair.",
   "supplyLiveCardView": "Control de suministro: estado en directo",
   "supplyLiveCardSupply": "Suministro",
   "supplyLiveCardChooseSupply": "Elige un suministro en el editor de la tarjeta.",

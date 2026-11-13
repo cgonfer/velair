@@ -1,4 +1,9 @@
 export const en = {
+  "entityNameDisplay": "Climate name display",
+  "entityNameDisplayLegacy": "Current names (default)",
+  "entityNameDisplayLegacyArea": "Current names with area context",
+  "entityNameDisplayEntityContext": "Entity names with context",
+  "entityNameDisplayHelp": "Current names keeps the names Velair already displays. The other options add separate context when managed climates have the same name. Entity names uses the entity's own name, or its device name for a main entity. Custom card and room group names keep their priority. This preference applies across Velair.",
   "supplyLiveCardView": "Supply control: live status",
   "supplyLiveCardSupply": "Supply",
   "supplyLiveCardChooseSupply": "Choose a supply in the card editor.",

@@ -139,6 +139,53 @@ describe("group-filtered Home Assistant updates", () => {
   });
 });
 
+describe("Home Assistant naming updates", () => {
+  it.each(["overview-zones", "overview-timeline", "climate", "planned-return"] as const)("refreshes %s when naming context changes without a state event", view => {
+    const previous = hass(18);
+    previous.language = "en";
+    previous.entities = { "climate.office": { name: "Thermostat" } };
+    previous.devices = { office: { name: "Office thermostat" } };
+    previous.areas = { office: { name: "Office" } };
+    previous.floors = { first: { name: "First floor" } };
+    previous.formatEntityName = () => "Office thermostat";
+    const host = { _data: data(), _config: { view, selected_entity: "climate.office" } };
+
+    const changes: Array<Partial<HomeAssistant>> = [
+      { entities: { "climate.office": { name: "Local thermostat" } } },
+      { devices: { office: { name: "Local heating" } } },
+      { areas: { office: { name: "Study" } } },
+      { floors: { first: { name: "Upstairs" } } },
+      { formatEntityName: () => "Study local heating" },
+      { language: "es" },
+    ];
+    for (const change of changes) {
+      const next = { ...previous, ...change };
+      expect(next.states).toBe(previous.states);
+      expect(shouldUpdateForHass(host, next, previous)).toBe(true);
+    }
+    expect(shouldUpdateForHass(host, { ...previous }, previous)).toBe(false);
+  });
+
+  it("refreshes when the formatter becomes available or disappears", () => {
+    const previous = hass(18);
+    const native = { ...previous, formatEntityName: () => "Office heating" };
+    const host = { _data: data(), _config: {} };
+    expect(shouldUpdateForHass(host, native, previous)).toBe(true);
+    expect(shouldUpdateForHass(host, previous, native)).toBe(true);
+  });
+
+  it("continues ignoring unrelated state changes when naming context is unchanged", () => {
+    const previous = hass(18);
+    previous.formatEntityName = () => "Office heating";
+    previous.entities = {};
+    previous.devices = {};
+    previous.areas = {};
+    previous.floors = {};
+    const next = { ...previous, states: { ...previous.states, "sensor.unrelated": { state: "2" } } };
+    expect(shouldUpdateForHass({ _data: data(), _config: {} }, next, previous)).toBe(false);
+  });
+});
+
 describe("preconditioning input changes", () => {
   it("normalizes the legacy Profiles view to Modes", () => {
     expect(effectiveView("profiles", "overview-status")).toBe("modes");

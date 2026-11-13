@@ -1,4 +1,4 @@
-import { controlUnitId, controlUnitIds, controlUnitName, filteredPhysicalClimateIds } from "../domain/control-units";
+import { controlUnitId, controlUnitIds, controlUnitName, controlUnitLabel, filteredPhysicalClimateIds } from "../domain/control-units";
 import { LitElement, css, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LOVELACE_CARD_VIEWS, WEEKDAYS } from "../constants";
@@ -282,7 +282,7 @@ export class VelairCardEditor extends LitElement {
     return html`<section class="climate-card-options">
       <div><span class="section-label">${this._t("climateCardConfiguration")}</span><p>${this._t("climateCardConfigurationDescription")}</p></div>
       <label><span>${this._t("climateCardManagedClimate")}</span><select .value=${selected} @change=${(event: Event) => this._setClimateEntity(this._inputValue(event))}>
-        ${this._orderedEntities().map((entityId) => html`<option value=${entityId} ?selected=${entityId === selected}>${this._friendlyEntityName(entityId)}</option>`)}
+        ${this._orderedEntities().map((entityId) => html`<option value=${entityId} ?selected=${entityId === selected}>${controlUnitLabel(this._scheduleData, this.hass, entityId)}</option>`)}
       </select></label>
       <details class="climate-card-option-group climate-card-header-editor" open>
         <summary><span class="section-label">${this._t("climateCardHeaderOptions")}</span><ha-icon icon="mdi:chevron-down"></ha-icon></summary>
@@ -711,7 +711,7 @@ export class VelairCardEditor extends LitElement {
               this._toggleEntityVisibility(entityId, Boolean((event.currentTarget as HTMLInputElement).checked))}
           />
         </label>
-        <span>${this._friendlyEntityName(entityId)}</span>
+        <span>${controlUnitLabel(this._scheduleData, this.hass, entityId)}</span>
         <div class="row-actions">
           <button
             class="icon-button"

@@ -1,5 +1,10 @@
 import type { TranslationDictionary } from "./types";
 export const translationTemplate = {
+  "entityNameDisplay": "",
+  "entityNameDisplayLegacy": "",
+  "entityNameDisplayLegacyArea": "",
+  "entityNameDisplayEntityContext": "",
+  "entityNameDisplayHelp": "",
   "supplyLiveCardView": "",
   "supplyLiveCardSupply": "",
   "supplyLiveCardChooseSupply": "",

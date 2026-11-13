@@ -51,6 +51,7 @@ WEEKDAYS = (
 DEFAULT_MIN_TEMPERATURE = 5.0
 DEFAULT_MAX_TEMPERATURE = 35.0
 DEFAULT_TARGET_TEMP_STEP = 1.0
+ENTITY_NAME_DISPLAY_OPTIONS = ("legacy", "legacy_area", "entity_context")
 DEFAULT_SCHEDULE_TEMPLATES_VERSION = 2
 DEFAULT_SCHEDULE_TEMPLATE_MIGRATIONS = {
     2: ("clear_day",),
@@ -400,6 +401,7 @@ class PanelSettingsData(TypedDict):
     first_weekday: str
     zone_order: list[str]
     unit_order: NotRequired[list[str]]
+    entity_name_display: NotRequired[str]
     min_temperature: float
     max_temperature: float
     shared_demand_groups: NotRequired[list[dict[str, Any]]]
@@ -1790,6 +1792,11 @@ def normalize_panel_settings(
     return {
         "first_weekday": str(first_weekday),
         "zone_order": zone_order,
+        **({"entity_name_display": (
+            settings["entity_name_display"]
+            if settings["entity_name_display"] in ENTITY_NAME_DISPLAY_OPTIONS
+            else "legacy"
+        )} if "entity_name_display" in settings else {}),
         **({"unit_order": list(dict.fromkeys(entity for entity in settings["unit_order"]
                                         if isinstance(entity, str) and entity in known_entities))}
            if isinstance(settings.get("unit_order"), list) else {}),

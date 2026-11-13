@@ -1,4 +1,6 @@
 import { climateCardBoostTemperatureError } from "../domain/climate-card-boost";
+import { entityName } from "../domain/entity-name";
+import { renderEntityNameContext } from "./entity-name";
 import { parseTemperatureInput, stepTemperatureInput } from "../domain/temperature-input";
 import { controlUnitId, controlUnitZone, controlUnitState } from "../domain/control-units";
 import { targetFormatsForEntity } from "../domain/target-format-policy";
@@ -107,7 +109,7 @@ export function renderClimateCard(host: VelairViewHost, entityId?: string) {
         ></ha-icon>` : nothing}
         ${showName || showOperation || group ? html`<div class="climate-card-header-content">
           ${showName ? html`<div class="climate-card-title">
-            <h2>${host._config.climate_name === undefined ? host._friendlyEntityName(entityId) : host._config.climate_name}</h2>
+            <h2>${host._config.climate_name === undefined ? host._friendlyEntityName(entityId) : host._config.climate_name}${host._config.climate_name === undefined ? renderEntityNameContext(host._data, host.hass, entityId) : nothing}</h2>
             <ha-icon
               class=${available ? "available" : "unavailable"}
               icon=${available ? "mdi:check-circle" : "mdi:alert-circle"}
@@ -468,7 +470,7 @@ function renderCurrentStateSummary(
   const closed = windows.filter((window) => window.state === "closed").length;
   const unavailable = windows.length - open - closed;
   const outdoorName = outdoorEntity
-    ? host.hass?.states?.[outdoorEntity]?.attributes?.friendly_name ?? host._t("climateCardOutdoor")
+    ? entityName(host.hass, outdoorEntity, host._t("climateCardOutdoor"))
     : undefined;
   const delta = typeof outdoor === "number" && typeof current === "number" ? outdoor - current : undefined;
   const outdoorTitle = outdoorName && typeof delta === "number"
@@ -563,7 +565,7 @@ function renderOutdoor(
   current: number | undefined,
 ) {
   const delta = typeof outdoor === "number" && typeof current === "number" ? outdoor - current : undefined;
-  const name = host.hass?.states?.[outdoorEntity]?.attributes?.friendly_name ?? host._t("climateCardOutdoor");
+  const name = entityName(host.hass, outdoorEntity, host._t("climateCardOutdoor"));
   const historyLabel = host._t("climateCardOpenMetricHistory", { metric: name });
   return html`<div class="climate-card-context-item outdoor with-history">
     <ha-icon icon="mdi:home-export-outline"></ha-icon>

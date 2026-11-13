@@ -1,6 +1,7 @@
 import { parseTemperatureInput } from "../domain/temperature-input";
+import { renderEntityNameContext } from "../views/entity-name";
 import { renderRoomGroupScheduleNotice } from "../views/room-group-summary";
-import { controlUnitIds, controlUnitName, controlUnitState, controlUnitStates } from "../domain/control-units";
+import { controlUnitIds, controlUnitName, controlUnitLabel, controlUnitState, controlUnitStates } from "../domain/control-units";
 import { editorTargetFormats, initializeDraftTargetFormat, reconcileDraftTargetFormat } from "../domain/target-format-policy";
 import { activeSetupSummary } from "../domain/active-setup";
 import { timelinePresentation } from "../views/schedule-view";
@@ -1241,6 +1242,7 @@ export class VelairProfilesView extends LitElement {
             >
               <span class="profile-workspace-zone-copy">
                 <strong>${climateName}</strong>
+                ${renderEntityNameContext(this.data, this.hass, id)}
                 <small>${label}</small>
               </span>
             </button>
@@ -1253,6 +1255,7 @@ export class VelairProfilesView extends LitElement {
             <ha-icon icon="mdi:thermostat"></ha-icon>
             <span class="profile-zone-identity">
               <strong>${controlUnitName(this.data, this.hass, entityId)}</strong>
+              ${renderEntityNameContext(this.data, this.hass, entityId)}
               <span>${entityId}</span>
             </span>
           </span>
@@ -1328,6 +1331,7 @@ export class VelairProfilesView extends LitElement {
             <ha-icon icon=${expanded ? "mdi:chevron-down" : "mdi:chevron-right"}></ha-icon>
             <span class="profile-zone-identity">
               <strong title=${climateName}>${climateName}</strong>
+              ${renderEntityNameContext(this.data, this.hass, entityId)}
               <span>${entityId}</span>
             </span>
           </button>
@@ -1615,7 +1619,7 @@ export class VelairProfilesView extends LitElement {
                       (event.currentTarget as HTMLInputElement).checked,
                     )}
                   />
-                  <span>${controlUnitName(this.data, this.hass, targetEntityId)}</span>
+                  <span>${controlUnitLabel(this.data, this.hass, targetEntityId)}</span>
                 </label>
               `)}
             </div>
@@ -2142,7 +2146,7 @@ export class VelairProfilesView extends LitElement {
 
   private _cloneCompatibilityError(blocks: DraftScheduleBlock[], entityId: string): string | undefined {
     const state = controlUnitState(this.data, this.hass, entityId);
-    const name = state?.attributes?.friendly_name ?? entityId;
+    const name = controlUnitName(this.data, this.hass, entityId);
     for (const block of blocks) {
       if (block.hvac_mode && !climateSupportedModes(state).includes(block.hvac_mode)) return this._t("profileCloneDayIncompatibleMode", { entity: name, value: block.hvac_mode, start: block.start });
       if (block.action === ACTION_SET_CLIMATE_OPTIONS) continue;
@@ -2380,7 +2384,7 @@ export class VelairProfilesView extends LitElement {
           ));
         if (unsupportedRange) {
           return this._t("unsupportedRangeTargetForClimateOnWeekday", {
-            entity: state?.attributes?.friendly_name ?? entityId,
+            entity: controlUnitName(this.data, this.hass, entityId),
             start: unsupportedRange.start,
             weekday: weekdayName(languageFromHass(this.hass), weekday),
           });
@@ -2388,7 +2392,7 @@ export class VelairProfilesView extends LitElement {
         const unsupported = firstUnsupportedModeBlock(blocks, climateSupportedModes(state));
         if (unsupported?.hvac_mode) {
           return this._t("unsupportedModeForClimateOnWeekday", {
-            entity: state?.attributes?.friendly_name ?? entityId,
+            entity: controlUnitName(this.data, this.hass, entityId),
             mode: dictionaryLabel(
               languageFromHass(this.hass),
               "hvacModes",
@@ -2408,7 +2412,7 @@ export class VelairProfilesView extends LitElement {
           ));
         if (unsupportedScalar) {
           return this._t("unsupportedSingleTargetForClimateOnWeekday", {
-            entity: state?.attributes?.friendly_name ?? entityId,
+            entity: controlUnitName(this.data, this.hass, entityId),
             start: unsupportedScalar.start,
             weekday: weekdayName(languageFromHass(this.hass), weekday),
           });

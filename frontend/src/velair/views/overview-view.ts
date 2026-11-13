@@ -1,4 +1,5 @@
-import { controlUnitId, controlUnitZone } from "../domain/control-units";
+import { controlUnitId, controlUnitZone, controlUnitNameContext } from "../domain/control-units";
+import { renderEntityNameContext } from "./entity-name";
 import { climateRequiresRangeTarget } from "../domain/climate";
 import { renderOverviewTimelineGraphic, overviewTimelineGraphicClasses } from "./timeline-block-graphic";
 import { dependencyReasonDetailKeys, dependencyReasonKeys, renderPreconditioningDependency } from "./preconditioning-dependency";
@@ -180,7 +181,7 @@ export function renderOverviewActiveBoosts(host: OverviewViewHost, zoneIds?: str
                 return html`
                   <div class="event">
                     <div>
-                      <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>
+                      <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>${renderEntityNameContext(host._data, host.hass, entityId)}
                     </div>
                     ${override ? renderBoostEventDetails(host, entityId, override) : html`<span>${host._t("boostActive")}</span>`}
                   </div>
@@ -310,7 +311,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     <article class=${`overview-zone-card state-${displayStatus.state}`}>
       <div class="overview-zone-card-heading">
         <div class="overview-zone-card-name">
-          <strong>${host._friendlyEntityName(entityId)}</strong><span>${entityId}</span>${renderGroupOwnership(host, entityId)}
+          <strong>${host._friendlyEntityName(entityId)}</strong>${renderEntityNameContext(host._data, host.hass, entityId)}<span>${entityId}</span>${renderGroupOwnership(host, entityId)}
         </div>
         ${externallyManaged ? nothing : renderManualControlSelector(
           host,
@@ -734,7 +735,7 @@ function renderOverviewZoneRow(host: OverviewViewHost, entityId: string, zone?: 
   return html`
     <div class="overview-zone-table-row" role="row">
       <div class="overview-zone-cell sticky name" role="cell">
-        <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>
+        <strong class="overview-climate-name">${host._friendlyEntityName(entityId)}</strong>${renderEntityNameContext(host._data, host.hass, entityId)}
         <span>${entityId}</span>${renderGroupOwnership(host, entityId)}
       </div>
       <div class="overview-zone-cell" role="cell">
@@ -949,12 +950,14 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
   const now = host._currentTimelineNow();
   const marker = timelineNowMarker(now, host.hass?.config?.time_zone);
   const weekday = todayWeekday(host.hass, now);
+  const hasNameContext = zoneIds.some(id => controlUnitNameContext(host._data, host.hass, id));
 
   return html`
     <section class="overview-timeline-panel">
       ${renderOverviewSectionHeading(host._t("todayTimeline"), "mdi:timeline-clock-outline")}
       <div class="overview-timeline-scroll" role="region" aria-label=${host._t("todayTimeline")} tabindex="0">
-        <div class="overview-timeline-layout">
+        <div class=${`overview-timeline-layout${hasNameContext ? " has-name-context" : ""}`}
+          style=${hasNameContext ? `--overview-timeline-row-count: ${zoneIds.length + 1};` : nothing}>
           <div class="overview-timeline-names">
             <div class="overview-timeline-axis-spacer"></div>
             ${zoneIds.map((entityId: string) => renderOverviewTimelineName(host, entityId))}
@@ -1096,7 +1099,7 @@ export function renderOverviewTimelineName(host: OverviewViewHost, entityId: str
       ${showProfile && effect
         ? html`<ha-icon icon=${effect.profile.icon || "mdi:account-outline"} aria-hidden="true"></ha-icon>`
         : nothing}
-      <span class="overview-climate-identity"><span class="overview-climate-name">${name}</span>${renderGroupOwnership(host, entityId, true)}</span>
+      <span class="overview-climate-identity"><span class="overview-climate-name">${name}</span>${renderEntityNameContext(host._data, host.hass, entityId)}${renderGroupOwnership(host, entityId, true)}</span>
     </div>
   `;
 }
@@ -1390,7 +1393,7 @@ export function renderEvent(host: OverviewViewHost, event: ScheduleEvent) {
   return html`
     <div class="event">
       <div class="event-identity">
-        <strong class="overview-climate-name">${host._friendlyEntityName(event.entity_id)}</strong>
+        <strong class="overview-climate-name">${host._friendlyEntityName(event.entity_id)}</strong>${renderEntityNameContext(host._data, host.hass, event.entity_id)}
       </div>
       ${renderEventDetails(host, event)}
     </div>

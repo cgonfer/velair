@@ -7,6 +7,7 @@ import type {
   DerivedComfortMetric,
 } from "../types";
 import { convertAbsoluteTemperature, isFahrenheit } from "./temperature-units";
+import { entityName } from "./entity-name";
 
 export const DERIVED_COMFORT_METRIC_ORDER: readonly DerivedComfortMetric[] = [
   "humidex",
@@ -365,9 +366,9 @@ export function derivedMetricSensorOptions(
       }
       return unit === "°c" || unit === "°f";
     })
-    .map(([entityId, state]) => ({
+    .map(([entityId]) => ({
       entityId,
-      label: state.attributes?.friendly_name || entityId,
+      label: entityName(hass, entityId),
     }))
     .sort((first, second) => first.label.localeCompare(second.label));
 
@@ -421,9 +422,9 @@ export function comfortSensorOptions(
       }
       return deviceClass === "carbon_dioxide" || unit === "ppm";
     })
-    .map(([entityId, state]) => ({
+    .map(([entityId]) => ({
       entityId,
-      label: state.attributes?.friendly_name || entityId,
+      label: entityName(hass, entityId),
     }))
     .sort((first, second) => first.label.localeCompare(second.label));
 

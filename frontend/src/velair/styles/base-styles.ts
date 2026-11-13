@@ -1,6 +1,17 @@
 import { css } from "lit";
 
 export const baseStyles = css`
+  .entity-name-identity { display: grid; gap: 2px; min-width: 0; text-align: inherit; }
+  .entity-name-context {
+    display: block;
+    color: var(--secondary-text-color);
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
   .day-layout-controls { display: grid; gap: 12px; margin: 12px 0; }
   .day-layout-controls label { display: grid; gap: 6px; }
 

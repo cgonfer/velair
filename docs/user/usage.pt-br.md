@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.10 |
-| Última sincronização | 2026-11-05 |
+| Versão de referência | 1.9.2 |
+| Última sincronização | 2026-11-12 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -21,6 +21,16 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 Este guia explica o Velair do ponto de vista de quem usa o Home Assistant.
 
 Use [Grupos de cômodo](room-groups.pt-br.md) quando vários dispositivos controlam o mesmo cômodo. O grupo tem uma programação, atribuição de Perfil e modelo de aprendizado; a Visão geral continua mostrando os dispositivos individuais. Configure os membros na aba Grupos de cômodo e a ordem de exibição em Configurações.
+
+<a id="climate-name-display"></a>
+
+## Exibição dos nomes dos dispositivos de climatização
+
+Em **Configurações** do painel da barra lateral, **Exibição dos nomes dos dispositivos de climatização** permite escolher como os dispositivos gerenciados são identificados em todo o Velair. **Nomes atuais (padrão)** mantém os nomes que o Velair já exibe, incluindo combinações dos nomes do dispositivo e da entidade. As instalações existentes mantêm esse formato automaticamente.
+
+**Nomes atuais com contexto de área** mantém esses nomes e adiciona separadamente a área efetiva do Home Assistant quando dispositivos gerenciados compartilham um nome. **Nomes das entidades com contexto** usa o nome próprio da entidade, ou o nome do dispositivo se ela for a entidade principal dele, com contexto separado do Home Assistant para nomes repetidos. Para um dispositivo chamado `Test` e uma entidade chamada `Test 2`, o formato atual é `Test Test 2`; o formato de entidade é `Test 2`, com contexto de área ou dispositivo quando necessário. A área própria da entidade tem prioridade sobre a área do dispositivo.
+
+Quando o contexto de área ou dispositivo não consegue distinguir nomes repetidos, o ID da entidade continua disponível como referência. As opções dos menus suspensos nativos mostram o contexto na mesma linha. Os nomes personalizados dos cartões e os nomes dos Grupos de cômodo mantêm a prioridade. O Velair salva essa preferência e a compartilha entre navegadores e cartões; altere-a nas Configurações do painel da barra lateral. Ela não renomeia entidades do Home Assistant nem altera seus IDs, programações ou comandos de climatização. Versões anteriores do Home Assistant mantêm os nomes existentes quando os metadados estruturados de nomes não estão disponíveis.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navegação do painel e links diretos

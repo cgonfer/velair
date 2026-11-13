@@ -12,6 +12,29 @@ The group owns one schedule, Profile assignment and learning model; Overview
 continues to show the individual devices. Configure membership in the Room groups
 tab and display order in Settings.
 
+## Climate name display
+
+In the sidebar panel's **Settings**, **Climate name display** chooses how managed
+climates are labelled throughout Velair. **Current names (default)** preserves
+the names Velair already displays, including combined device and entity names.
+Existing installations keep this format automatically.
+
+**Current names with area context** keeps those names and adds the effective
+Home Assistant area separately when managed climates share a name. **Entity
+names with context** uses the entity's own name, or its device name when it is
+the device's main entity, with separate Home Assistant context for repeated
+names. For a device named `Test` and an entity named `Test 2`, the current format
+is `Test Test 2`; the entity format is `Test 2`, with area/device context when
+needed. An entity's own area takes precedence over its device's area.
+
+When area or device context cannot distinguish repeated names, the entity ID
+remains available as a reference. Native dropdown options show context in the
+same line. Custom card names and Room group names keep their priority. The
+preference is saved by Velair and shared across browsers and cards; change it
+from the sidebar Settings. It does not rename Home Assistant entities or change
+their IDs, schedules or climate commands. Earlier Home Assistant versions retain
+their existing names when structured naming metadata is unavailable.
+
 ## Panel navigation and direct links
 
 The sidebar panel updates its URL when you change tabs or switch between the

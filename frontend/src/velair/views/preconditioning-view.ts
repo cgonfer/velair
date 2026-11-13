@@ -1,4 +1,4 @@
-import { controlUnitState } from "../domain/control-units";
+import { controlUnitState, controlUnitLabel } from "../domain/control-units";
 import { effectiveClimateHvacModeForEnsureOn } from "../domain/climate";
 import { html, nothing } from "lit";
 import { preconditioningMasterCandidates, preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
@@ -629,7 +629,7 @@ function renderMasterSelector(host: PreconditioningViewHost, entityId: string, s
       @change=${(event: Event) => host._saveZonePreconditioning(entityId, { master_entity_id: (event.target as HTMLSelectElement).value || null })}>
       <option value="" ?selected=${!selected}>${host._t("preconditioningIndependent")}</option>
       ${selected && !valid ? html`<option value=${selected} selected>${selected}</option>` : nothing}
-      ${candidates.map(candidate => html`<option value=${candidate} ?selected=${candidate === selected}>${host._friendlyEntityName(candidate)}</option>`)}
+      ${candidates.map(candidate => html`<option value=${candidate} ?selected=${candidate === selected}>${controlUnitLabel(host._data, host.hass, candidate)}</option>`)}
     </select>
     </span>
   </label><p id=${helpId} class="preconditioning-master-help">${host._t(helpKey)}</p>`;

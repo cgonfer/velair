@@ -1,7 +1,7 @@
 import { activeOverrideEntityIds } from "../../src/velair/controllers/overview-data";
 import { portableSectionsWithDependencies, unmatchedPreconditioningLearningEntities } from "../../src/velair/domain/portable";
 import { describe, expect, it } from "vitest";
-import { controlUnitId, controlUnitIds, controlUnitState, expandedControlUnitIds, orderedControlUnitIds, filteredPhysicalClimateIds } from "../../src/velair/domain/control-units";
+import { controlUnitId, controlUnitIds, controlUnitName, controlUnitNameContext, controlUnitLabel, controlUnitState, expandedControlUnitIds, orderedControlUnitIds, filteredPhysicalClimateIds } from "../../src/velair/domain/control-units";
 import { effectiveClimateSchedule, effectiveZoneProfileId } from "../../src/velair/domain/climate-profiles";
 import { climateCardOwner } from "../../src/velair/domain/climate-card";
 import { orderedZoneIdsForHost, visibleZoneIdsForHost, preconditioningInputsChanged } from "../../src/velair/controllers/card-context";
@@ -18,6 +18,33 @@ const data = () => ({
 }) as unknown as ScheduleResponse;
 
 describe("control-unit identities", () => {
+  it("keeps custom room-group names ahead of all climate naming preferences", () => {
+    const value = data();
+    value.settings.entity_name_display = "entity_context";
+    const hass = { states: { "group.room": { attributes: { friendly_name: "Unexpected HA name" } } },
+      formatEntityName: () => "Unexpected native name" } as unknown as HomeAssistant;
+    expect(controlUnitName(value, hass, "group.room")).toBe("Room");
+    expect(controlUnitNameContext(value, hass, "group.room")).toBeUndefined();
+    expect(controlUnitLabel(value, hass, "group.room")).toBe("Room");
+  });
+
+  it("keeps primary names separate from area context for grouped physical climates", () => {
+    const value = data();
+    value.settings.entity_name_display = "legacy_area";
+    const hass = {
+      states: {
+        "climate.a": { attributes: { friendly_name: "Valve" } },
+        "climate.b": { attributes: { friendly_name: "Valve" } },
+      },
+      entities: { "climate.a": { area_id: "front" }, "climate.b": { area_id: "back" } },
+      areas: { front: { name: "Front room" }, back: { name: "Back room" } },
+    } as unknown as HomeAssistant;
+    expect(controlUnitName(value, hass, "climate.a")).toBe("Valve");
+    expect(controlUnitNameContext(value, hass, "climate.a")).toBe("Front room");
+    expect(controlUnitLabel(value, hass, "climate.a")).toBe("Valve · Front room");
+    expect(controlUnitName(value, hass, "group.room")).toBe("Room");
+  });
+
   it("filters physical Comfort climates without widening an explicit member to its entire group", () => {
     const value = data();
     expect(filteredPhysicalClimateIds(value)).toEqual(["climate.middle", "climate.b", "climate.a"]);

@@ -1,4 +1,9 @@
 export const fr = {
+  "entityNameDisplay": "Affichage des noms des équipements climatiques",
+  "entityNameDisplayLegacy": "Noms actuels (par défaut)",
+  "entityNameDisplayLegacyArea": "Noms actuels avec contexte de zone",
+  "entityNameDisplayEntityContext": "Noms des entités avec contexte",
+  "entityNameDisplayHelp": "« Noms actuels » conserve les noms déjà affichés par Velair. Les autres options ajoutent un contexte séparé lorsque plusieurs équipements gérés portent le même nom. « Noms des entités » utilise le nom propre de l’entité, ou celui de l’appareil s’il s’agit de son entité principale. Les noms personnalisés des cartes et des groupes de pièce restent prioritaires. Cette préférence s’applique à tout Velair.",
   "supplyLiveCardView": "Contrôle de l’alimentation : état en direct",
   "supplyLiveCardSupply": "Alimentation",
   "supplyLiveCardChooseSupply": "Choisissez une alimentation dans l’éditeur de la carte.",

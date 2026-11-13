@@ -14,6 +14,8 @@ import type { VelairViewHost } from "../host-types";
 import { renderInlineHelp } from "./inline-help";
 import { COMMUNITY_LINKS, documentationDestination } from "../domain/documentation";
 import { renderDocumentationHelp } from "./documentation-links";
+import { renderEntityNameContext } from "./entity-name";
+import type { EntityNameDisplay } from "../types";
 import type { ExternalExecutionInfo, PortableSection } from "../types";
 
 type SettingsViewHost = VelairViewHost;
@@ -25,6 +27,8 @@ export function renderSettingsView(host: SettingsViewHost, zoneIds: string[]) {
   return html`
     <section class="settings-view">
       ${renderTemperatureUnitSettings(host)}
+
+      ${host._hasExternalConfig ? nothing : renderEntityNameSettings(host)}
 
       <label class="settings-field">
         <span class="label">${host._t("firstWeekday")}</span>
@@ -85,6 +89,25 @@ export function renderSettingsView(host: SettingsViewHost, zoneIds: string[]) {
       ${renderMaintenanceSettings(host)}
     </section>
   `;
+}
+
+export function renderEntityNameSettings(host: SettingsViewHost) {
+  const mode = host._data?.settings?.entity_name_display ?? "legacy";
+  return html`<section class="entity-name-settings">
+    <div class="settings-field">
+      <div class="settings-policy-heading">
+        <label class="label" for="entity-name-display">${host._t("entityNameDisplay")}</label>
+        ${renderInlineHelp("entity-name-display-help", host._t("entityNameDisplay"), host._t("entityNameDisplayHelp"))}
+      </div>
+      <span class="select-wrap"><select id="entity-name-display" data-setting="entity_name_display" .value=${mode}
+        ?disabled=${host._settingsSaving}
+        @change=${(event: Event) => host._saveSettings({ entity_name_display: host._inputValue(event) as EntityNameDisplay })}>
+        <option value="legacy" ?selected=${mode === "legacy"}>${host._t("entityNameDisplayLegacy")}</option>
+        <option value="legacy_area" ?selected=${mode === "legacy_area"}>${host._t("entityNameDisplayLegacyArea")}</option>
+        <option value="entity_context" ?selected=${mode === "entity_context"}>${host._t("entityNameDisplayEntityContext")}</option>
+      </select></span>
+    </div>
+  </section>`;
 }
 
 export function renderHelpCommunitySettings(host: SettingsViewHost) {
@@ -148,7 +171,7 @@ export function renderExternalSystemsSettings(host: SettingsViewHost) {
             return html`
               <label class="settings-field external-system-zone">
                 <span class="external-system-zone-identity">
-                  <strong>${host._friendlyEntityName(entityId)}</strong>
+                  <strong>${host._friendlyEntityName(entityId)}</strong>${renderEntityNameContext(host._data, host.hass, entityId)}
                 </span>
                 <span class="select-wrap external-system-zone-select">
                   <select
@@ -563,7 +586,7 @@ export function renderSettingsZoneOrderRow(
       </button>
         <div class="settings-zone-identity">
           <div class="settings-zone-title">
-            <strong title=${host._friendlyEntityName(entityId)}>${host._friendlyEntityName(entityId)}</strong>
+            <strong title=${host._friendlyEntityName(entityId)}>${host._friendlyEntityName(entityId)}</strong>${renderEntityNameContext(host._data, host.hass, entityId)}
           </div>
           <span>${entityId}</span>
         </div>
