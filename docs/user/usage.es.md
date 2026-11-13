@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](usage.md) · [Español](usage.es.md) · [Fra
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.10 |
-| Última sincronización | 2026-11-05 |
+| Versión de referencia | 1.9.2 |
+| Última sincronización | 2026-11-12 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -22,6 +22,16 @@ Traducciones: [Original en inglés](usage.md) · [Español](usage.es.md) · [Fra
 Esta guía explica Velair desde el punto de vista de un usuario de Home Assistant.
 
 Usa [Grupos de habitación](room-groups.es.md) cuando varios equipos controlan la misma habitación. El grupo tiene una programación, asignación de Perfil y modelo de aprendizaje; Resumen sigue mostrando los dispositivos individuales. Configura los miembros en Grupos de habitación y el orden de aparición en Ajustes.
+
+<a id="climate-name-display"></a>
+
+## Mostrar nombres de climatización
+
+En **Ajustes** del panel lateral, **Mostrar nombres de climatización** permite elegir cómo se identifican los equipos gestionados en todo Velair. **Nombres actuales (predeterminado)** conserva los nombres que Velair ya muestra, incluidas las combinaciones de nombres de dispositivo y entidad. Las instalaciones existentes mantienen este formato automáticamente.
+
+**Nombres actuales con contexto de área** conserva esos nombres y añade por separado el área efectiva de Home Assistant cuando varios equipos gestionados comparten un nombre. **Nombres de entidad con contexto** utiliza el nombre propio de la entidad, o el del dispositivo si es su entidad principal, y añade contexto separado de Home Assistant cuando se repiten nombres. Para un dispositivo llamado `Test` y una entidad llamada `Test 2`, el formato actual es `Test Test 2`; el formato de entidad es `Test 2`, con contexto de área o dispositivo cuando hace falta. El área propia de una entidad tiene prioridad sobre la de su dispositivo.
+
+Cuando el contexto de área o dispositivo no permite distinguir nombres repetidos, el ID de entidad sigue disponible como referencia. Las opciones de los desplegables nativos muestran el contexto en la misma línea. Los nombres personalizados de las tarjetas y los nombres de los Grupos de habitación mantienen su prioridad. Velair guarda la preferencia y la comparte entre navegadores y tarjetas; cámbiala desde Ajustes del panel lateral. No cambia los nombres ni los ID de las entidades de Home Assistant, sus horarios ni las órdenes de climatización. Las versiones anteriores de Home Assistant conservan sus nombres existentes cuando no hay metadatos de nombres estructurados disponibles.
 
 <a id="panel-navigation-and-direct-links"></a>
 

@@ -272,6 +272,14 @@ class SharedDemandController:
         """Refresh configuration and demand after a scheduler control change."""
         self.reconfigure()
 
+    async def _async_save_configuration(self) -> None:
+        """Publish supply settings only after their storage write succeeds."""
+        with getattr(self._scheduler, "_projection_save_scope", nullcontext)():
+            await self._save()
+        prepare = getattr(self._scheduler, "_prepare_runtime_projection", None)
+        if prepare is not None:
+            prepare(configuration=True)
+
     async def async_update_groups(self, value: object, *, _resume_group_id: str | None = None) -> list[dict]:
         """Validate and persist a complete replacement before applying effects."""
         async with getattr(self._scheduler, "_profile_mutation_lock", nullcontext()), self._lock:
@@ -309,7 +317,7 @@ class SharedDemandController:
             self._data["configuration_revision"] = revision + 1
             settings["shared_demand_groups"] = groups
             try:
-                await self._save()
+                await self._async_save_configuration()
             except BaseException:
                 settings["shared_demand_groups"] = previous
                 if cleanup_present:
@@ -529,7 +537,10 @@ class SharedDemandController:
         settings["shared_demand_cleanup"] = updated
         self._cleanup_save_attempts += 1
         try:
-            await self._save()
+            await self._async_save_configuration()
+        except asyncio.CancelledError:
+            settings["shared_demand_cleanup"] = previous
+            raise
         except Exception:
             settings["shared_demand_cleanup"] = previous
             _LOGGER.exception("Could not persist completed shared supply cleanup")
@@ -576,7 +587,7 @@ class SharedDemandController:
         revision = self._data.get("configuration_revision", 0)
         self._data["configuration_revision"] = revision + 1
         try:
-            await self._save()
+            await self._async_save_configuration()
         except asyncio.CancelledError:
             self._data["configuration_revision"] = revision
             self._data["settings"]["shared_demand_groups"] = previous

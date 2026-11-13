@@ -1120,6 +1120,14 @@ export const profileStyles = css`
     font-size: 10px;
   }
 
+  .profile-zone-identity .entity-name-context {
+    font-family: inherit;
+    font-size: 12px;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+
   .profile-zone-actions,
   .profile-pause-action {
     display: grid;

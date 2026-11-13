@@ -65,6 +65,7 @@ from .models import (
     DEFAULT_PRECONDITIONING_MINIMUM_DELTA,
     DEFAULT_ROOM_SENSOR_ASSIST_DEADBAND,
     DEFAULT_ROOM_SENSOR_ASSIST_MAX_DELTA,
+    ENTITY_NAME_DISPLAY_OPTIONS,
     WEEKDAYS,
     ClimateEvent,
     MIN_PRECONDITIONING_COMPLETE_SAMPLES,
@@ -1389,17 +1390,26 @@ async def _shared_demand_mutation(hass, connection, msg, *, resume: bool) -> Non
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
 
-@websocket_api.websocket_command(
-    {
-        vol.Required("type"): f"{DOMAIN}/update_settings",
-        vol.Optional("first_weekday"): vol.In(WEEKDAYS),
-        vol.Optional("zone_order"): vol.All(cv.ensure_list, [cv.entity_id]),
-        vol.Optional("unit_order"): vol.All(cv.ensure_list, [climate_entity_id]),
-        vol.Optional("min_temperature"): vol.Coerce(float),
-        vol.Optional("max_temperature"): vol.Coerce(float),
-        vol.Optional(CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP): bool,
-    }
-)
+def _entity_name_display(value: Any) -> str:
+    """Reject unsupported climate naming preferences at the API boundary."""
+    if not isinstance(value, str) or value not in ENTITY_NAME_DISPLAY_OPTIONS:
+        raise vol.Invalid("Unsupported climate name display format")
+    return value
+
+
+PANEL_SETTINGS_WS_SCHEMA = {
+    vol.Required("type"): f"{DOMAIN}/update_settings",
+    vol.Optional("first_weekday"): vol.In(WEEKDAYS),
+    vol.Optional("zone_order"): vol.All(cv.ensure_list, [cv.entity_id]),
+    vol.Optional("unit_order"): vol.All(cv.ensure_list, [climate_entity_id]),
+    vol.Optional("entity_name_display"): _entity_name_display,
+    vol.Optional("min_temperature"): vol.Coerce(float),
+    vol.Optional("max_temperature"): vol.Coerce(float),
+    vol.Optional(CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP): bool,
+}
+
+
+@websocket_api.websocket_command(PANEL_SETTINGS_WS_SCHEMA)
 @websocket_api.async_response
 async def ws_update_settings(
     hass: HomeAssistant,
@@ -1430,6 +1440,7 @@ async def ws_update_settings(
             "first_weekday",
             "zone_order",
             "unit_order",
+            "entity_name_display",
             "min_temperature",
             "max_temperature",
         )
@@ -2476,7 +2487,7 @@ def _build_schedule_response_snapshot(runtime: dict[str, Any]) -> dict[str, Any]
         "zones": {entity: {**zone, "target_format_policy": scheduler.get_target_format_policy(entity)}
                   for entity, zone in stored_data["zones"].items()} if hasattr(scheduler, "get_target_format_policy") else stored_data["zones"],
         "external_execution": (
-            runtime["external_execution"].describe()
+            runtime["external_execution"].describe(configuration)
             if runtime.get("external_execution") is not None
             else {"systems": [], "zones": {}}
         ),

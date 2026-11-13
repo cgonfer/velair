@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.10 |
-| Dernière synchronisation | 2026-11-05 |
+| Version de référence | 1.9.2 |
+| Dernière synchronisation | 2026-11-12 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -22,6 +22,16 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 Ce guide présente Velair du point de vue d’un utilisateur de Home Assistant.
 
 Utilisez les [Groupes de pièce](room-groups.fr.md) lorsque plusieurs équipements contrôlent une même pièce. Le groupe possède une programmation, une affectation de Profil et un modèle d’apprentissage ; la Vue d’ensemble conserve les appareils individuels. Configurez les membres dans Groupes de pièce et l’ordre d’affichage dans Paramètres.
+
+<a id="climate-name-display"></a>
+
+## Affichage des noms des équipements climatiques
+
+Dans les **Réglages** du panneau latéral, **Affichage des noms des équipements climatiques** permet de choisir comment les équipements gérés sont nommés dans tout Velair. **Noms actuels (par défaut)** conserve les noms déjà affichés par Velair, y compris les combinaisons des noms de l’appareil et de l’entité. Les installations existantes conservent automatiquement ce format.
+
+**Noms actuels avec contexte de zone** conserve ces noms et ajoute séparément la zone Home Assistant effective lorsque plusieurs équipements gérés portent le même nom. **Noms des entités avec contexte** utilise le nom propre de l’entité, ou celui de l’appareil s’il s’agit de son entité principale, avec un contexte Home Assistant séparé pour les noms répétés. Pour un appareil nommé `Test` et une entité nommée `Test 2`, le format actuel est `Test Test 2` ; le format d’entité est `Test 2`, avec le contexte de zone ou d’appareil si nécessaire. La zone propre à l’entité est prioritaire sur celle de son appareil.
+
+Lorsque le contexte de zone ou d’appareil ne suffit pas à distinguer des noms identiques, l’identifiant de l’entité reste disponible comme référence. Les options des listes déroulantes natives affichent le contexte sur la même ligne. Les noms personnalisés des cartes et les noms des Groupes de pièce restent prioritaires. Velair enregistre cette préférence et la partage entre les navigateurs et les cartes ; modifiez-la depuis les Réglages du panneau latéral. Elle ne renomme pas les entités Home Assistant et ne modifie ni leurs identifiants, ni leurs programmations, ni les commandes climatiques. Les anciennes versions de Home Assistant conservent leurs noms existants lorsque les métadonnées structurées de nommage ne sont pas disponibles.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation du panneau et liens directs

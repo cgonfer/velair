@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.10 |
-| Ostatnia synchronizacja | 2026-11-05 |
+| Wersja odniesienia | 1.9.2 |
+| Ostatnia synchronizacja | 2026-11-12 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -21,6 +21,16 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 Ten poradnik opisuje Velair z perspektywy użytkownika Home Assistant.
 
 Używaj [Grup pomieszczeń](room-groups.pl.md), gdy kilka urządzeń steruje jednym pokojem. Grupa ma jeden harmonogram, przypisanie profilu i model uczenia; przegląd nadal pokazuje urządzenia indywidualnie. Skład ustawisz na karcie Grupy pomieszczeń, a kolejność w Ustawieniach.
+
+<a id="climate-name-display"></a>
+
+## Wyświetlanie nazw urządzeń klimatycznych
+
+W sekcji **Ustawienia** panelu bocznego opcja **Wyświetlanie nazw urządzeń klimatycznych** określa sposób nazywania zarządzanych urządzeń w całym Velair. Opcja **Obecne nazwy (domyślnie)** zachowuje nazwy już wyświetlane przez Velair, w tym połączone nazwy urządzenia i encji. Istniejące instalacje automatycznie zachowują ten format.
+
+Opcja **Obecne nazwy z kontekstem obszaru** zachowuje te nazwy i dodaje osobno właściwy obszar Home Assistant, gdy zarządzane urządzenia mają tę samą nazwę. Opcja **Nazwy encji z kontekstem** używa własnej nazwy encji lub nazwy urządzenia, jeśli jest to jego główna encja, z osobnym kontekstem Home Assistant dla powtarzających się nazw. Dla urządzenia o nazwie `Test` i encji o nazwie `Test 2` obecny format to `Test Test 2`; format encji to `Test 2`, w razie potrzeby z kontekstem obszaru lub urządzenia. Własny obszar encji ma pierwszeństwo przed obszarem jej urządzenia.
+
+Gdy kontekst obszaru lub urządzenia nie pozwala odróżnić powtarzających się nazw, identyfikator encji pozostaje dostępny jako odniesienie. Opcje natywnych list rozwijanych pokazują kontekst w tym samym wierszu. Własne nazwy kart i nazwy Grup pomieszczeń zachowują pierwszeństwo. Velair zapisuje tę preferencję i współdzieli ją między przeglądarkami i kartami; zmienisz ją w Ustawieniach panelu bocznego. Nie zmienia ona nazw encji Home Assistant, ich identyfikatorów, harmonogramów ani poleceń klimatycznych. Starsze wersje Home Assistant zachowują istniejące nazwy, gdy uporządkowane metadane nazw nie są dostępne.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Nawigacja panelu i bezpośrednie odnośniki

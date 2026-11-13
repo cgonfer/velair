@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import ExitStack, asynccontextmanager, contextmanager
 from collections.abc import Awaitable, Callable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass, replace
@@ -4740,32 +4740,37 @@ class VelairScheduler:
                 async def transition() -> None:
                     self._invalidate_climate_delivery(entity_id)
                     try:
-                        if provider is not None:
-                            self._room_sensor_assist_suppressed.add(entity_id)
-                            self._schedule_projection.update_candidates(dt_util.now(), (entity_id,))
-                            # Temporary Velair actions must not remain latent and revive
-                            # if the zone later returns to local ownership.
-                            zone["override"] = None
-                            zone["pauses"] = []
-                        else:
-                            self._room_sensor_assist_suppressed.discard(entity_id)
-                            self._schedule_projection.update_candidates(dt_util.now(), (entity_id,))
-                        await self._external_execution.async_set_execution(
-                            entity_id,
-                            provider,
-                            schedule=(
-                                deepcopy(effective_schedule)
-                                if effective_schedule is not None
-                                else None
-                            ),
-                            async_after_persist=(
-                                lambda: self._async_clear_room_sensor_assist_after_external_commit(
-                                    entity_id
-                                )
+                        with ExitStack() as pending:
+                            pending.enter_context(self._projection_save_scope((entity_id,)))
+
+                            async def committed() -> None:
+                                # Provider publication may be slow or fail after storage
+                                # succeeds. Publish durable ownership before awaiting it.
+                                pending.close()
+                                self._prepare_runtime_projection(configuration=True)
+                                if provider is not None:
+                                    await self._async_clear_room_sensor_assist_after_external_commit(entity_id)
+
+                            if provider is not None:
+                                self._room_sensor_assist_suppressed.add(entity_id)
+                                self._schedule_projection.update_candidates(dt_util.now(), (entity_id,))
+                                # Temporary Velair actions must not remain latent and revive
+                                # if the zone later returns to local ownership.
+                                zone["override"] = None
+                                zone["pauses"] = []
+                            else:
+                                self._room_sensor_assist_suppressed.discard(entity_id)
+                                self._schedule_projection.update_candidates(dt_util.now(), (entity_id,))
+                            await self._external_execution.async_set_execution(
+                                entity_id,
+                                provider,
+                                schedule=(
+                                    deepcopy(effective_schedule)
+                                    if effective_schedule is not None
+                                    else None
+                                ),
+                                async_after_persist=committed,
                             )
-                            if provider is not None
-                            else None,
-                        )
                     except (asyncio.CancelledError, Exception):
                         ownership_committed = (
                             provider is not None
@@ -10281,6 +10286,7 @@ class VelairScheduler:
         async def refresh() -> None:
             nonlocal result
             async with self._room_sensor_assist_lock(entity_id):
+                target_accepted = False
                 if generation != self._room_sensor_assist_generation(entity_id):
                     return
                 if force_apply:
@@ -10305,16 +10311,29 @@ class VelairScheduler:
                                  if target_temp_low is not None and target_temp_high is not None
                                  else self._room_sensor_assist_effective_hvac_mode(entity_id, hvac_mode, temperature_only=temperature_only))
 
-                def still_current():
+                def authority_current() -> bool:
                     return (
                         generation == self._room_sensor_assist_generation(entity_id)
                         and request_is_authoritative()
                         and (entity_id not in self._room_sensor_schedules.entries
-                             or room_id == self._prepared_preconditioning(entity_id).get("room_temperature_entity_id"))
-                        and reading == (
-                            self._external_temperature(entity_id, room_id) if room_id else None,
-                            self._climate_current_temperature(entity_id))
+                             or room_id == self._prepared_preconditioning(entity_id).get("room_temperature_entity_id")))
+
+                def readings_current() -> bool:
+                    return reading == (
+                        self._external_temperature(entity_id, room_id) if room_id else None,
+                        self._climate_current_temperature(entity_id))
+
+                def still_current() -> bool:
+                    return (
+                        authority_current()
+                        and (target_accepted or readings_current())
                         and self._current_hvac_mode(entity_id) in (initial_mode, expected_mode))
+
+                def on_target_accepted() -> None:
+                    nonlocal target_accepted
+                    # New readings must not erase a fully accepted target. The
+                    # next debounced refresh evaluates them under current control.
+                    target_accepted = True
 
                 with delivery_guard(still_current):
                     result = await self._async_refresh_room_sensor_assist_locked(
@@ -10330,6 +10349,7 @@ class VelairScheduler:
                         restore_on_skip=restore_on_skip,
                         climate_options=climate_options,
                         temperature_only=temperature_only,
+                        on_target_accepted=on_target_accepted,
                     )
 
         # Always acquire delivery before the Room Assist lock. The coordinator
@@ -10358,6 +10378,7 @@ class VelairScheduler:
         restore_on_skip: bool = True,
         climate_options: dict[str, object] | None = None,
         temperature_only: bool | None = None,
+        on_target_accepted: Callable[[], None],
     ) -> _RoomSensorAssistRefreshResult:
         """Apply a dynamic target while holding the entity Room Assist lock."""
         temperature_only = (self._temperature_only_target(entity_id)
@@ -10447,6 +10468,7 @@ class VelairScheduler:
                 restore_on_skip=restore_on_skip,
                 climate_options=climate_options,
                 temperature_only=temperature_only,
+                on_target_accepted=on_target_accepted,
             )
 
         if target_temperature is None:
@@ -10655,6 +10677,7 @@ class VelairScheduler:
                 hvac_mode=None if temperature_only else hvac_mode,
             ),
         )
+        on_target_accepted()
         if generation != self._room_sensor_assist_generation(entity_id):
             return "superseded"
         self._room_sensor_assist_inflight.pop(entity_id, None)
@@ -10711,6 +10734,7 @@ class VelairScheduler:
         restore_on_skip: bool = True,
         climate_options: dict[str, object] | None = None,
         temperature_only: bool | None = None,
+        on_target_accepted: Callable[[], None],
     ) -> _RoomSensorAssistRefreshResult:
         """Apply a Room Sensor Assist shift to one native target range."""
         temperature_only = (self._temperature_only_target(entity_id)
@@ -10833,6 +10857,7 @@ class VelairScheduler:
                 **climate_options,
             ),
         )
+        on_target_accepted()
         if generation != self._room_sensor_assist_generation(entity_id):
             return "superseded"
         self._room_sensor_assist_inflight.pop(entity_id, None)

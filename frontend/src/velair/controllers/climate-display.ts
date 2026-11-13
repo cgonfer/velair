@@ -1,4 +1,4 @@
-import { controlUnitState, controlUnitId } from "../domain/control-units";
+import { controlUnitState, controlUnitId, controlUnitName } from "../domain/control-units";
 import {
   climateCapabilities,
   climateFanModeOptions,
@@ -115,7 +115,7 @@ export function entityExists(host: ClimateDisplayHost, entityId: string): boolea
 }
 
 export function friendlyEntityName(host: ClimateDisplayHost, entityId: string): string {
-  return host._data?.room_groups?.[entityId]?.name ?? host.hass?.states?.[entityId]?.attributes?.friendly_name ?? entityId;
+  return controlUnitName(host._data, host.hass, entityId);
 }
 
 export function climateSupportedModesForHost(host: ClimateDisplayHost, entityId: string): string[] {

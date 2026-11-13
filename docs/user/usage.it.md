@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](usage.md) · [Español](usage.es.md) · [Fran
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.10 |
-| Ultima sincronizzazione | 2026-11-05 |
+| Versione di riferimento | 1.9.2 |
+| Ultima sincronizzazione | 2026-11-12 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -22,6 +22,16 @@ Traduzioni: [Originale in inglese](usage.md) · [Español](usage.es.md) · [Fran
 Questa guida spiega Velair dal punto di vista di un utente Home Assistant.
 
 Usa [Gruppi stanza](room-groups.it.md) quando più dispositivi controllano la stessa stanza. Il gruppo possiede una programmazione, un’assegnazione di Profilo e un modello di apprendimento; la Panoramica continua a mostrare i singoli dispositivi. Configura i membri in Gruppi stanza e l’ordine di visualizzazione nelle Impostazioni.
+
+<a id="climate-name-display"></a>
+
+## Visualizzazione dei nomi dei dispositivi climatici
+
+Nelle **Impostazioni** del pannello laterale, **Visualizzazione dei nomi dei dispositivi climatici** permette di scegliere come vengono identificati i dispositivi gestiti in tutto Velair. **Nomi attuali (predefinito)** mantiene i nomi già visualizzati da Velair, comprese le combinazioni dei nomi del dispositivo e dell’entità. Le installazioni esistenti mantengono automaticamente questo formato.
+
+**Nomi attuali con contesto dell’area** mantiene questi nomi e aggiunge separatamente l’area effettiva di Home Assistant quando più dispositivi gestiti condividono un nome. **Nomi delle entità con contesto** usa il nome proprio dell’entità, o quello del dispositivo se è la sua entità principale, con un contesto Home Assistant separato per i nomi ripetuti. Per un dispositivo chiamato `Test` e un’entità chiamata `Test 2`, il formato attuale è `Test Test 2`; il formato dell’entità è `Test 2`, con il contesto dell’area o del dispositivo quando necessario. L’area propria dell’entità ha la precedenza su quella del suo dispositivo.
+
+Quando il contesto dell’area o del dispositivo non permette di distinguere nomi ripetuti, l’ID dell’entità rimane disponibile come riferimento. Le opzioni dei menu a discesa nativi mostrano il contesto sulla stessa riga. I nomi personalizzati delle schede e i nomi dei Gruppi stanza mantengono la priorità. Velair salva la preferenza e la condivide tra browser e schede; modificala dalle Impostazioni del pannello laterale. Non rinomina le entità di Home Assistant e non ne cambia gli ID, le programmazioni o i comandi climatici. Le versioni precedenti di Home Assistant mantengono i nomi esistenti quando i metadati strutturati dei nomi non sono disponibili.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigazione del pannello e collegamenti diretti

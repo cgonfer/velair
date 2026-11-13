@@ -1,4 +1,5 @@
 import { draftBlocksFromScheduleBlocks } from "../domain/draft-blocks";
+import { controlUnitLabel } from "../domain/control-units";
 import { renderDayScheduleConflict } from "./day-layout-controls";
 
 import { html, nothing } from "lit";
@@ -78,7 +79,7 @@ export function renderTemplateApplication(host: VelairViewHost, template: Schedu
           }}>${label(days)}</button></th>`;
       })}</tr></thead>
 
-      <tbody>${entities.map(entity => html`<tr class="template-application-target"><th scope="row"><strong>${host._friendlyEntityName(entity)}</strong></th>
+      <tbody>${entities.map(entity => html`<tr class="template-application-target"><th scope="row"><strong>${controlUnitLabel(host._data, host.hass, entity)}</strong></th>
 
         ${groups.map(days => {
 
@@ -86,7 +87,7 @@ export function renderTemplateApplication(host: VelairViewHost, template: Schedu
 
           return html`<td class="template-application-choices"><label><input type="checkbox" .checked=${host._templateApplyTargets.has(host._templateApplyTargetKey(entity, representative))} ?disabled=${host._applyingTemplateTargets}
 
-            @change=${(event: Event) => host._toggleTemplateApplyTarget(entity, representative, (event.target as HTMLInputElement).checked)} aria-label=${`${host._friendlyEntityName(entity)}: ${label(days)}`} /></label></td>`;
+            @change=${(event: Event) => host._toggleTemplateApplyTarget(entity, representative, (event.target as HTMLInputElement).checked)} aria-label=${`${controlUnitLabel(host._data, host.hass, entity)}: ${label(days)}`} /></label></td>`;
 
         })}</tr>`)}</tbody>
       </table>

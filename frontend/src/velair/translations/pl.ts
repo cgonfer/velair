@@ -1,4 +1,9 @@
 export const pl = {
+  "entityNameDisplay": "Wyświetlanie nazw urządzeń klimatycznych",
+  "entityNameDisplayLegacy": "Obecne nazwy (domyślnie)",
+  "entityNameDisplayLegacyArea": "Obecne nazwy z kontekstem obszaru",
+  "entityNameDisplayEntityContext": "Nazwy encji z kontekstem",
+  "entityNameDisplayHelp": "„Obecne nazwy” zachowuje nazwy już wyświetlane przez Velair. Pozostałe opcje dodają osobny kontekst, gdy zarządzane urządzenia mają tę samą nazwę. „Nazwy encji” używa własnej nazwy encji lub nazwy urządzenia, jeśli jest to jego główna encja. Własne nazwy kart i grup pomieszczeń zachowują pierwszeństwo. To ustawienie obowiązuje w całym Velair.",
   "supplyLiveCardView": "Sterowanie zasilaniem: stan na żywo",
   "supplyLiveCardSupply": "Zasilanie",
   "supplyLiveCardChooseSupply": "Wybierz zasilanie w edytorze karty.",

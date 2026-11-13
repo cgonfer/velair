@@ -1,4 +1,9 @@
 export const pt_br = {
+  "entityNameDisplay": "Exibição dos nomes dos dispositivos de climatização",
+  "entityNameDisplayLegacy": "Nomes atuais (padrão)",
+  "entityNameDisplayLegacyArea": "Nomes atuais com contexto de área",
+  "entityNameDisplayEntityContext": "Nomes das entidades com contexto",
+  "entityNameDisplayHelp": "“Nomes atuais” mantém os nomes que o Velair já exibe. As outras opções adicionam contexto separado quando dispositivos gerenciados têm o mesmo nome. “Nomes das entidades” usa o nome próprio da entidade ou o nome do dispositivo se ela for a entidade principal dele. Os nomes personalizados dos cartões e dos grupos de cômodo mantêm a prioridade. Esta preferência se aplica a todo o Velair.",
   "supplyLiveCardView": "Controle do fornecimento: status ao vivo",
   "supplyLiveCardSupply": "Fornecimento",
   "supplyLiveCardChooseSupply": "Escolha um fornecimento no editor do cartão.",

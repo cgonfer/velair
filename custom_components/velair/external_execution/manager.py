@@ -71,19 +71,20 @@ class ExternalExecutionManager:
             if self._update_callback is not None:
                 self._update_callback()
 
-    def describe(self) -> dict[str, Any]:
-        """Describe provider availability separately from publication attempts."""
+    def describe(self, configuration: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Describe availability and publication for the supplied committed inputs."""
+        configured_zones = (self._data if configuration is None else configuration)["zones"]
         systems: list[dict[str, Any]] = []
         eligible: dict[str, list[str]] = {}
         selected_providers = {
             execution.get("provider")
-            for zone in self._data["zones"].values()
+            for zone in configured_zones.values()
             if isinstance((execution := zone.get("execution")), dict)
         }
         for key, provider in self._providers.items():
             if not self._supports_velair_contract(provider):
                 continue
-            entities = provider.compatible_entities(list(self._data["zones"]))
+            entities = provider.compatible_entities(list(configured_zones))
             if not entities and key not in selected_providers:
                 continue
             eligible[key] = entities
@@ -94,7 +95,7 @@ class ExternalExecutionManager:
                 "capabilities": provider.capabilities.as_dict(),
             })
         zones: dict[str, Any] = {}
-        for entity_id, zone in self._data["zones"].items():
+        for entity_id, zone in configured_zones.items():
             execution = zone.get("execution")
             if not isinstance(execution, dict):
                 continue
@@ -257,31 +258,29 @@ class ExternalExecutionManager:
         if zone is None:
             raise ValueError(f"Unmanaged climate entity: {entity_id}")
         previous_execution = deepcopy(zone.get("execution"))
-        previous_publication = self._publications.get(entity_id)
         if provider_key is None:
             # Removing ownership from the persisted model is necessary for the
             # storage write, but physical actions must stay denied until that
             # write has completed successfully.
             self.authority.hold_external(entity_id)
             zone.pop("execution", None)
-            self._clear_publication(entity_id)
             try:
                 await self._async_save()
             except (asyncio.CancelledError, Exception):
                 if previous_execution is not None:
                     zone["execution"] = previous_execution
-                if previous_publication is not None:
-                    self._set_publication(entity_id, previous_publication)
                 raise
             finally:
                 self.authority.release_external(entity_id)
+            self._clear_publication(entity_id)
+            if async_after_persist is not None:
+                await async_after_persist()
             return
         self.ensure_provider_available(entity_id, provider_key)
         if schedule is None:
             raise ValueError("An effective schedule is required for external execution")
         self.ensure_schedule_supported(entity_id, schedule, provider_key)
         zone["execution"] = {"type": "external", "provider": provider_key}
-        self._clear_publication(entity_id)
         try:
             await self._async_save()
         except (asyncio.CancelledError, Exception):
@@ -289,11 +288,8 @@ class ExternalExecutionManager:
                 zone.pop("execution", None)
             else:
                 zone["execution"] = previous_execution
-            if previous_publication is None:
-                self._clear_publication(entity_id)
-            else:
-                self._set_publication(entity_id, previous_publication)
             raise
+        self._clear_publication(entity_id)
         if async_after_persist is not None:
             await async_after_persist()
         await self._async_publish_locked(entity_id, schedule)

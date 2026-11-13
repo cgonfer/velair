@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.10 |
-| Letzte Synchronisierung | 2026-11-05 |
+| Referenzversion | 1.9.2 |
+| Letzte Synchronisierung | 2026-11-12 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -21,6 +21,16 @@
 Dieses Handbuch erklärt Velair aus Sicht eines Home-Assistant-Nutzers.
 
 Verwende [Raumgruppen](room-groups.de.md), wenn mehrere Geräte denselben Raum steuern. Die Gruppe besitzt einen Zeitplan, eine Profilzuordnung und ein Lernmodell; die Übersicht zeigt weiterhin Einzelgeräte. Mitgliedschaft wird im Tab Raumgruppen, Anzeigereihenfolge in den Einstellungen konfiguriert.
+
+<a id="climate-name-display"></a>
+
+## Anzeige der Klimagerätenamen
+
+In den **Einstellungen** des Seitenleisten-Panels legt **Anzeige der Klimagerätenamen** fest, wie verwaltete Klimageräte in ganz Velair bezeichnet werden. **Aktuelle Namen (Standard)** behält die Namen bei, die Velair bereits anzeigt, einschließlich kombinierter Geräte- und Entitätsnamen. Bestehende Installationen behalten dieses Format automatisch.
+
+**Aktuelle Namen mit Bereichsangabe** behält diese Namen bei und ergänzt den wirksamen Home-Assistant-Bereich separat, wenn verwaltete Klimageräte denselben Namen haben. **Entitätsnamen mit Kontext** verwendet den eigenen Namen der Entität oder bei der Hauptentität eines Geräts den Gerätenamen. Bei wiederholten Namen wird separater Home-Assistant-Kontext angezeigt. Bei einem Gerät namens `Test` und einer Entität namens `Test 2` lautet das aktuelle Format `Test Test 2`; das Entitätsformat lautet `Test 2`, bei Bedarf mit Bereichs- oder Gerätekontext. Der eigene Bereich einer Entität hat Vorrang vor dem Bereich ihres Geräts.
+
+Wenn der Bereichs- oder Gerätekontext wiederholte Namen nicht unterscheiden kann, bleibt die Entitäts-ID als Referenz verfügbar. Native Auswahllisten zeigen den Kontext in derselben Zeile. Benutzerdefinierte Kartennamen und Raumgruppennamen behalten Vorrang. Velair speichert diese Einstellung und teilt sie zwischen Browsern und Karten; ändere sie in den Einstellungen des Seitenleisten-Panels. Sie benennt keine Home-Assistant-Entitäten um und verändert weder deren IDs noch Zeitpläne oder Klimabefehle. Frühere Home-Assistant-Versionen behalten die bisherigen Namen bei, wenn strukturierte Namensmetadaten fehlen.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation im Panel und direkte Links

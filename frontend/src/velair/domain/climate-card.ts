@@ -1,4 +1,5 @@
 import { controlUnitId } from "./control-units";
+import { entityName } from "./entity-name";
 import type {
   ComfortAssessment,
   HassState,
@@ -60,7 +61,7 @@ export function climateCardWindows(hass: HomeAssistant | undefined, entityIds: s
     const state = entity?.state;
     return {
       entityId,
-      name: entity?.attributes?.friendly_name ?? entityId,
+      name: entityName(hass, entityId),
       state: state === "on" || state === "open"
         ? "open"
         : state === "off" || state === "closed"

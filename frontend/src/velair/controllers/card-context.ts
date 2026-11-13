@@ -79,6 +79,14 @@ export function shouldUpdateForHass(
   if (!oldValue) {
     return true;
   }
+  if (value.formatEntityName !== oldValue.formatEntityName
+    || value.entities !== oldValue.entities
+    || value.devices !== oldValue.devices
+    || value.areas !== oldValue.areas
+    || value.floors !== oldValue.floors
+    || languageFromHass(value) !== languageFromHass(oldValue)) {
+    return true;
+  }
   if (host._config.view === "planned-return" || host._config.view === "climate" && climateCardConfiguredActions(host._config).some((action) => action.type === "planned-return" && action.enabled !== false)) {
     if (value.connection !== oldValue.connection
       || languageFromHass(value) !== languageFromHass(oldValue)

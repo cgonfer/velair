@@ -9,6 +9,7 @@ export type HassConnection = {
 };
 
 export type HassState = {
+  entity_id?: string;
   state?: string;
   attributes?: {
     current_temperature?: number;
@@ -43,6 +44,11 @@ export type HassState = {
 export type HomeAssistant = {
   callService(domain: string, service: string, serviceData?: Record<string, unknown>): Promise<void>;
   connection: HassConnection;
+  formatEntityName?(state: HassState, name?: string | HassEntityNameItem | HassEntityNameItem[], options?: { separator?: string }): string;
+  entities?: Record<string, HassEntityRegistryEntry>;
+  devices?: Record<string, HassDeviceRegistryEntry>;
+  areas?: Record<string, HassAreaRegistryEntry>;
+  floors?: Record<string, { name?: string | null }>;
   config?: {
     time_zone?: string;
     unit_system?: {
@@ -59,6 +65,29 @@ export type HomeAssistant = {
 };
 
 export type ActiveSetupControls = "both" | "modes" | "profiles";
+
+export type HassEntityNameItem = { type: "entity" | "device" | "parent_device" | "area" | "floor" }
+  | { type: "text"; text: string };
+
+export type HassEntityRegistryEntry = {
+  name?: string | null;
+  original_name?: string | null;
+  device_id?: string | null;
+  area_id?: string | null;
+  next_name_part?: "device" | "area" | null;
+};
+
+export type HassDeviceRegistryEntry = {
+  name?: string | null;
+  name_by_user?: string | null;
+  area_id?: string | null;
+  parent_device_id?: string | null;
+  next_name_part?: "parent_device" | "area" | null;
+};
+
+export type HassAreaRegistryEntry = { name?: string | null; floor_id?: string | null };
+
+export type EntityNameDisplay = "legacy" | "legacy_area" | "entity_context";
 
 export type ClimateCardActionPlacement = "auto" | "more";
 
@@ -931,6 +960,7 @@ export type RoomGroupPreview = {
 };
 
 export type PanelSettings = {
+  entity_name_display?: EntityNameDisplay;
   unit_order?: string[];
   first_weekday: string;
   zone_order: string[];

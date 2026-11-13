@@ -1,4 +1,5 @@
 import { controlUnitIds } from "./control-units";
+import { entityName } from "./entity-name";
 import type { HomeAssistant, PreconditioningSettings, ScheduleResponse } from "../types";
 import {
   defaultMinimumDelta,
@@ -31,7 +32,7 @@ export function temperatureSensorOptions(
       );
     })
     .map(([entityId, state]) => {
-      const name = state.attributes?.friendly_name ?? entityId;
+      const name = entityName(hass, entityId);
       const unit = state.attributes?.unit_of_measurement ?? "";
       const reading = numericStateLabel(state.state, unit);
       return {

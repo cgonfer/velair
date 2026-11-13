@@ -452,7 +452,7 @@ its absence when using an older backend.
     "portable_model": 26,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.1"
+    "integration": "1.9.2"
   }
 }
 ```
@@ -969,9 +969,17 @@ await hass.connection.sendMessagePromise({
   type: "velair/update_settings",
   first_weekday: "sunday",
   zone_order: ["climate.living_room"],
+  entity_name_display: "legacy_area",
   apply_active_schedule_on_startup: true
 });
 ```
+
+`entity_name_display` is optional: `legacy` preserves current labels (the default
+when absent), `legacy_area` adds separate area context for repeated managed
+climate names, and `entity_context` uses entity names with disambiguating Home
+Assistant context. Invalid API values are rejected. The preference is persisted
+with the other panel settings and included in settings exports/imports; it never
+changes climate identifiers or scheduler behavior.
 
 Templates are capability-neutral storage. They can contain optional climate
 settings from any managed climate. Filtering happens later when a template is

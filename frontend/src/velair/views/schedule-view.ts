@@ -1,4 +1,6 @@
 import { renderRoomGroupScheduleNotice } from "./room-group-summary";
+import { renderEntityNameContext } from "./entity-name";
+import { controlUnitLabel } from "../domain/control-units";
 import { renderAddListButton } from "./add-list-button";
 import { controlUnitState } from "../domain/control-units";
 import { editorTargetFormats } from "../domain/target-format-policy";
@@ -189,7 +191,7 @@ export function renderZones(host: ScheduleViewHost, zoneIds: string[], selectedE
             ?disabled=${host._saving}
             @click=${() => host._selectEntity(entityId)}
           >
-            ${host._friendlyEntityName(entityId)}
+            <span class="entity-name-identity">${host._friendlyEntityName(entityId)}${renderEntityNameContext(host._data, host.hass, entityId)}</span>
           </button>
         `,
       )}
@@ -1419,7 +1421,7 @@ export function renderZoneTargets(host: ScheduleViewHost) {
                 @change=${(event: Event) =>
                   host._toggleZoneTarget(entityId, (event.currentTarget as HTMLInputElement).checked)}
               />
-              <span>${host._friendlyEntityName(entityId)}</span>
+              <span>${controlUnitLabel(host._data, host.hass, entityId)}</span>
             </label>
           `,
         )}

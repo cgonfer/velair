@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.10 |
-| Laatst gesynchroniseerd | 2026-11-05 |
+| Referentieversie | 1.9.2 |
+| Laatst gesynchroniseerd | 2026-11-12 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -21,6 +21,16 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 Deze handleiding legt Velair uit vanuit het perspectief van een Home Assistant-gebruiker.
 
 Gebruik [Kamergroepen](room-groups.nl.md) als meerdere apparaten dezelfde kamer regelen. De groep bezit één schema, profieltoewijzing en leermodel; Overzicht blijft individuele apparaten tonen. Stel leden in bij Kamergroepen en weergavevolgorde bij Instellingen.
+
+<a id="climate-name-display"></a>
+
+## Weergave van klimaatnamen
+
+In **Instellingen** van het zijbalkpaneel bepaalt **Weergave van klimaatnamen** hoe beheerde klimaatapparaten in heel Velair worden benoemd. **Huidige namen (standaard)** behoudt de namen die Velair al weergeeft, inclusief gecombineerde apparaat- en entiteitsnamen. Bestaande installaties behouden dit formaat automatisch.
+
+**Huidige namen met ruimtecontext** behoudt die namen en voegt de effectieve Home Assistant-ruimte afzonderlijk toe wanneer beheerde klimaatapparaten dezelfde naam hebben. **Entiteitsnamen met context** gebruikt de eigen naam van de entiteit, of de apparaatnaam als dit de hoofdentiteit van het apparaat is, met afzonderlijke Home Assistant-context bij herhaalde namen. Bij een apparaat met de naam `Test` en een entiteit met de naam `Test 2` is het huidige formaat `Test Test 2`; het entiteitsformaat is `Test 2`, waar nodig met ruimte- of apparaatcontext. De eigen ruimte van een entiteit heeft voorrang op de ruimte van het apparaat.
+
+Als ruimte- of apparaatcontext herhaalde namen niet kan onderscheiden, blijft de entiteits-ID beschikbaar als referentie. Opties in native keuzelijsten tonen de context op dezelfde regel. Aangepaste kaartnamen en namen van Kamergroepen behouden hun voorrang. Velair slaat de voorkeur op en deelt deze tussen browsers en kaarten; wijzig deze via Instellingen van het zijbalkpaneel. De voorkeur hernoemt geen Home Assistant-entiteiten en verandert hun ID's, schema's of klimaatopdrachten niet. Oudere Home Assistant-versies behouden hun bestaande namen wanneer gestructureerde naammetadata niet beschikbaar zijn.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Paneelnavigatie en rechtstreekse links

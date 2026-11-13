@@ -348,6 +348,25 @@ ${plannedReturnDepartureStatusStyles}
   z-index: 7;
 }
 
+/* Share row sizing across both columns when names need more than two lines. */
+.overview-timeline-layout.has-name-context {
+  grid-template-rows: repeat(var(--overview-timeline-row-count), minmax(34px, auto));
+  row-gap: var(--overview-timeline-row-gap);
+}
+.overview-timeline-layout.has-name-context > .overview-timeline-names,
+.overview-timeline-layout.has-name-context > .overview-timeline-rows {
+  grid-row: span var(--overview-timeline-row-count);
+  grid-template-rows: subgrid;
+}
+.overview-timeline-layout.has-name-context .overview-timeline-name {
+  box-sizing: border-box;
+  padding-block: 4px;
+}
+.overview-timeline-name .entity-name-context {
+  overflow: visible;
+  white-space: normal;
+}
+
 .overview-timeline-axis,
 .overview-timeline-axis-spacer {
   min-height: 22px;
@@ -782,6 +801,7 @@ ${plannedReturnDepartureStatusStyles}
 .overview-zone-card-name { display: grid; gap: 2px; min-width: 0; }
 .overview-zone-card-name strong, .overview-zone-card-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .overview-zone-card-name span { color: var(--secondary-text-color); font-size: 11px; }
+.overview-zone-card-name .entity-name-context { font-size: 12px; overflow: visible; white-space: normal; }
 .overview-zone-activity { align-items: center; align-self: start; box-sizing: border-box; display: grid; gap: 8px; grid-column: 3; grid-template-columns: 32px minmax(0, max-content); justify-self: end; max-width: 220px; min-width: 0; width: fit-content; }
 .overview-manual-control { align-items: center; display: grid; gap: 4px; grid-column: 2; justify-self: start; min-width: 0; }
 .manual-control-segmented { background: var(--secondary-background-color); border: 1px solid color-mix(in srgb, var(--primary-text-color) 24%, var(--divider-color)); border-radius: 8px; display: grid; grid-template-columns: repeat(2, max-content); max-width: 100%; min-width: 0; overflow: hidden; width: fit-content; }

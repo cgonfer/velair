@@ -1,4 +1,9 @@
 export const de = {
+  "entityNameDisplay": "Anzeige der Klimagerätenamen",
+  "entityNameDisplayLegacy": "Aktuelle Namen (Standard)",
+  "entityNameDisplayLegacyArea": "Aktuelle Namen mit Bereichsangabe",
+  "entityNameDisplayEntityContext": "Entitätsnamen mit Kontext",
+  "entityNameDisplayHelp": "„Aktuelle Namen“ behält die Namen bei, die Velair bereits anzeigt. Die anderen Optionen ergänzen einen separaten Kontext, wenn verwaltete Klimageräte denselben Namen haben. „Entitätsnamen“ verwendet den eigenen Namen der Entität oder bei einer Hauptentität den Gerätenamen. Benutzerdefinierte Karten- und Raumgruppennamen behalten Vorrang. Diese Einstellung gilt für ganz Velair.",
   "supplyLiveCardView": "Versorgungssteuerung: Live-Status",
   "supplyLiveCardSupply": "Versorgung",
   "supplyLiveCardChooseSupply": "Wähle im Karteneditor eine Versorgung aus.",

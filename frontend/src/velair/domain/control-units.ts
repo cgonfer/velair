@@ -1,5 +1,6 @@
 import type { HassState, HomeAssistant, ScheduleResponse } from "../types";
 import { orderedZoneIds } from "./settings";
+import { entityName, entityNameContext } from "./entity-name";
 
 /** Physical inventory stays distinct from the backend-owned policy identities. */
 export function controlUnitId(data: ScheduleResponse | undefined, entityId: string): string {
@@ -35,7 +36,17 @@ export function controlUnitZone(data: ScheduleResponse | undefined, entityId: st
 }
 
 export function controlUnitName(data: ScheduleResponse | undefined, hass: HomeAssistant | undefined, id: string): string {
-  return data?.room_groups?.[id]?.name ?? hass?.states?.[id]?.attributes?.friendly_name ?? id;
+  return data?.room_groups?.[id]?.name ?? entityName(hass, id, undefined, data);
+}
+
+export function controlUnitNameContext(data: ScheduleResponse | undefined, hass: HomeAssistant | undefined, id: string): string | undefined {
+  return data?.room_groups?.[id] ? undefined : entityNameContext(hass, id, data);
+}
+
+export function controlUnitLabel(data: ScheduleResponse | undefined, hass: HomeAssistant | undefined, id: string): string {
+  const name = controlUnitName(data, hass, id);
+  const context = controlUnitNameContext(data, hass, id);
+  return context ? `${name} · ${context}` : name;
 }
 
 /** Read-only view inputs; these are not registered Home Assistant entities. */

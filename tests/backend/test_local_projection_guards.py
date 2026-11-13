@@ -125,7 +125,7 @@ class LocalProjectionGuardTest(unittest.IsolatedAsyncioTestCase):
         f.s._async_write_state()
         self.assertEqual(self.payload(f)["room_sensor_assist"][SIBLING]["room_temperature"], 17)
 
-    async def test_local_guard_revalidates_temperature_and_clock_after_await(self):
+    async def test_local_guard_records_accepted_target_but_revalidates_clock_after_await(self):
         for changed in ("temperature", "time"):
             with self.subTest(changed=changed):
                 clock = [NOW]
@@ -154,7 +154,20 @@ class LocalProjectionGuardTest(unittest.IsolatedAsyncioTestCase):
                             release.set()
                             await asyncio.wait_for(task, 2)
                         self.assertEqual(len(f.manager.calls), 1)
-                        self.assertNotIn(LOCAL, f.s._room_sensor_assist_states)
+                        if changed == "temperature":
+                            accepted = f.s._room_sensor_assist_states[LOCAL].applied_temperature
+                            self.assertEqual(accepted, f.manager.calls[-1][2])
+                            f.manager.async_set_temperature = original
+                            with self.local_reads(f):
+                                await f.s._async_refresh_room_sensor_assist(
+                                    LOCAL, target_temperature=target.temperature, hvac_mode=target.hvac_mode,
+                                    weekday=target.weekday, start=target.start, reason="local-fresh-reading")
+                            self.assertEqual(len(f.manager.calls), 2)
+                            self.assertNotEqual(f.manager.calls[-1][2], accepted)
+                            self.assertEqual(f.s._room_sensor_assist_states[LOCAL].applied_temperature,
+                                             f.manager.calls[-1][2])
+                        else:
+                            self.assertNotIn(LOCAL, f.s._room_sensor_assist_states)
                         self.assertNotIn(LOCAL, f.s._room_sensor_assist_inflight)
                     finally:
                         release.set()
