@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](sensors.md) · [Español](sensors.es.md) · [
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.1 |
-| Ultima sincronizzazione | 2026-10-11 |
+| Versione di riferimento | 1.9.3-beta.1 |
+| Ultima sincronizzazione | 2026-11-14 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -141,7 +141,7 @@ triggers:
 <a id="per-climate-sensors"></a>
 ## Sensori per dispositivo climatico
 
-Per un dispositivo gestito come `climate.living_room`, Home Assistant crea normalmente ID associati come `sensor.velair_control_living_room`. Usa gli ID reali del registro in dashboard e automazioni.
+Per un dispositivo gestito come `climate.living_room`, Home Assistant crea normalmente nuovi ID entità associati come `sensor.velair_living_room_control`. Gli ID già registrati vengono conservati. Gli amministratori possono esaminarli facoltativamente in **Impostazioni → Manutenzione → Verifica gli ID entità dei sensori**, come spiegato nella [guida all’uso](usage.it.md#sensor-entity-ids). Usa gli ID reali del registro in dashboard e automazioni.
 
 <a id="zone-active-target-temperature"></a>
 ### Temperatura obiettivo attiva della zona
@@ -237,7 +237,7 @@ Attributi principali:
 Esempio:
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -315,8 +315,8 @@ Attributi principali:
 Esempio:
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -358,7 +358,7 @@ Esempio:
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

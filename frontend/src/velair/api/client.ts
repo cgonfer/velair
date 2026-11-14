@@ -24,6 +24,14 @@ import type {
 export class VelairApiClient {
   public constructor(private readonly hass: HomeAssistant) {}
 
+  public previewSensorEntityIds(): Promise<import("../types").SensorEntityIdsPreview> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/preview_sensor_entity_ids" });
+  }
+
+  public applySensorEntityIds(request: { preview_id: string; entity_ids: string[] }): Promise<import("../types").SensorEntityIdsResult> {
+    return this.hass.connection.sendMessagePromise({ type: "velair/apply_sensor_entity_ids", ...request });
+  }
+
   public previewRoomGroup(request: { group: import("../types").RoomGroup; expected_revision: number; source_entity_id?: string }): Promise<import("../types").RoomGroupPreview> {
     return this.hass.connection.sendMessagePromise({ type: "velair/preview_room_group", ...request });
   }

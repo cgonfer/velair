@@ -17,6 +17,14 @@ _CAPABILITY_FIELDS = (
 )
 
 
+def capability_state_signature(state):
+    """Ignore ordinary readings while observing capability/availability changes."""
+    attributes = state.attributes if state is not None else {}
+    return (getattr(state, "state", None) in (None, "unknown", "unavailable"),
+            tuple((key, input_value(attributes.get(key))) for key in _CAPABILITY_FIELDS),
+            target_feature_presence(attributes))
+
+
 def _past(value, now):
     try:
         instant = datetime.fromisoformat(value)
@@ -45,6 +53,7 @@ class RuntimeScheduleProjection:
         self.parse_start = parse_start
         self.make_event = make_event
         self.schedules = {}
+        self.schedule_resolution = {}
         self.preconditioning = {}
         self.configuration_revision = 0
         self.configuration_data = None
@@ -94,7 +103,9 @@ class RuntimeScheduleProjection:
         return (
             source.get("schedule", {}), links, templates, resources,
             behavior.get("behavior"), zone.get("target_range_modes"),
-            zone.get("target_range_reference"), owner.get_temperature_step(entity),
+            zone.get("target_range_reference"),
+            getattr(state, "state", None) in (None, "unknown", "unavailable"),
+            owner.get_temperature_step(entity),
             owner.get_temperature_limits(entity),
             (tuple((key, input_value(attrs.get(key))) for key in _CAPABILITY_FIELDS), target_feature_presence(attrs)),
         )
@@ -120,6 +131,7 @@ class RuntimeScheduleProjection:
         configured = set(owner._data["zones"])
         for entity in set(self.schedules) - configured:
             self.schedules.pop(entity, None)
+            self.schedule_resolution.pop(entity, None)
             self.preconditioning.pop(entity, None)
             owner._room_sensor_schedules.entries.pop(entity, None)
             self._configuration_inputs.pop(entity, None)
@@ -136,7 +148,8 @@ class RuntimeScheduleProjection:
             previous = self.schedules.get(entity)
             different = signature != self._configuration_inputs.get(entity)
             if different or previous is None:
-                schedule = owner._effective_schedule(entity, zone)
+                schedule, resolution = owner._resolve_effective_schedule(entity, zone)
+                self.schedule_resolution[entity] = resolution
                 self.schedules[entity] = PreparedSchedule(
                     entity, schedule, now, self.resolve_occurrences, self.parse_start, self.make_event)
                 self._configuration_inputs[entity] = deepcopy(signature)

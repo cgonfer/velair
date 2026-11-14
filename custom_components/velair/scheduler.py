@@ -26,7 +26,7 @@ from homeassistant.util import dt as dt_util
 
 from .climate_delivery import ClimateDeliveryCoordinator, CurrentGuard, Delivery
 from .planned_return import PlannedReturnRuntime
-from .runtime_projection import RuntimeScheduleProjection
+from .runtime_projection import RuntimeScheduleProjection, capability_state_signature
 from .prepared_configuration import PreparedConfiguration
 from .comfort_projection import ComfortProjection
 from .delivery_guard import DeliverySuperseded, check_delivery, delivery_guard, delivery_guard_active
@@ -481,7 +481,12 @@ class VelairScheduler:
         self._projection_save_finished.set()
         self._projection_started = False
         self._projection_capability_dirty = set()
+        self._projection_capability_apply = set()
         self._projection_capability_task = None
+        self._unsub_capability_listener = None
+        self._capability_entities = ()
+        self._capability_waiting_cursors = {}
+        self._startup_pending = set()
         self._unsub_projection_horizon = None
         self._projection_horizon_generation = 0
         self._projection_horizon_refresh_pending = False
@@ -817,9 +822,13 @@ class VelairScheduler:
                 self._preconditioning_sessions.pop(entity_id, None)
 
     @callback
-    def _request_projection_capability_refresh(self, entity_id):
+    def _request_projection_capability_refresh(self, entity_id, *, apply_current_schedule=True):
         """Rebuild changed capabilities in a producer task, outside delivery."""
+        if self._stopped:
+            return
         self._projection_capability_dirty.add(entity_id)
+        if apply_current_schedule:
+            self._projection_capability_apply.add(entity_id)
         if self._projection_capability_task is not None and not self._projection_capability_task.done():
             return
         try:
@@ -834,10 +843,27 @@ class VelairScheduler:
                     self._projection_capability_dirty.clear()
                     while self._projection_save_depth:
                         await self._projection_save_finished.wait()
-                    self._prepare_runtime_projection(configuration=True)
-                    self._refresh_room_sensor_assist_listener()
+                    if self._stopped:
+                        return
+                    async with self._profile_mutation_lock:
+                        self.async_schedule_next_event()
+                    recovered = []
                     for entity in entities:
-                        if entity in self._data["zones"] and not self._stopped:
+                        if (entity not in self._data["zones"] or self._climate_capabilities_pending(entity)
+                                or self.get_schedule_resolution_status(entity)["status"] != "ready"):
+                            continue
+                        cursor = self._capability_waiting_cursors.pop(entity, None)
+                        if cursor is not None and not self._climate_delivery.is_deferred(entity):
+                            self._defer_timer_entity(entity, cursor)
+                            recovered.append(entity)
+                    if recovered:
+                        await self._handle_timer(dt_util.now(), drain_deferred=True)
+                    await self._async_apply_pending_startup(entities)
+                    for entity in entities & self._projection_capability_apply:
+                        if (entity in self._data["zones"] and not self._stopped
+                                and not self._climate_capabilities_pending(entity)
+                                and self.get_schedule_resolution_status(entity)["status"] == "ready"):
+                            self._projection_capability_apply.discard(entity)
                             await self.async_apply_current_schedule(entity, source="capabilities_changed")
                     self._async_write_state()
             finally:
@@ -845,6 +871,83 @@ class VelairScheduler:
 
         task = self._hass.async_create_task(refresh())
         self._projection_capability_task = None if task.done() else task
+
+    def _climate_capabilities_pending(self, entity_id):
+        """Wait for delivery-member modes and target capability observations."""
+        prepared = self._schedule_projection.schedules.get(entity_id)
+        requires_target = (prepared is None
+                           or prepared.week is None and self._profile_zone_behavior(entity_id)["behavior"] != "pause"
+                           or prepared.has_temperature_target)
+        for member in self.physical_members(entity_id):
+            state = self._hass.states.get(member)
+            if state is None or state.state in ("unknown", "unavailable"):
+                return True
+            if not self._physical_climate_manager.supported_hvac_modes(member):
+                return True
+            attributes = state.attributes
+            if (requires_target and "supported_features" not in attributes
+                    and not any(attributes.get(key) is not None
+                                for key in ("temperature", "target_temp_low", "target_temp_high"))):
+                return True
+        return False
+
+    def _startup_application_allowed(self, entity_id):
+        zone = self._data["zones"].get(entity_id)
+        return bool(zone is not None and zone["enabled"] and self.mode == MODE_AUTO
+                    and not self._stopped and not self._temperature_migration_blocked
+                    and not self._is_external_execution(entity_id)
+                    and not self._is_zone_override_active(entity_id, dt_util.now()))
+
+    async def _async_apply_pending_startup(self, entities=None):
+        """Consume each startup permission once, after resolving fresh authority."""
+        epoch = self._timer_epoch
+        selected = self._startup_pending if entities is None else self._startup_pending & set(entities)
+        for entity in sorted(selected):
+            if self._stopped or epoch != self._timer_epoch:
+                return
+            if entity not in self._startup_pending:
+                continue
+            if not self._startup_application_allowed(entity):
+                self._startup_pending.discard(entity)
+                continue
+            if (self._climate_capabilities_pending(entity)
+                    or self.get_schedule_resolution_status(entity)["status"] != "ready"):
+                continue
+            self._startup_pending.discard(entity)
+            await self.async_apply_current_schedule(entity, source="startup")
+
+    @callback
+    def _refresh_capability_listener(self):
+        """Observe physical capability changes independently of delivery intent."""
+        if self._stopped or not self._projection_started:
+            return
+        entities = tuple(sorted(self._configured_physical_entities()))
+        if entities != self._capability_entities:
+            if self._unsub_capability_listener is not None:
+                self._unsub_capability_listener()
+                self._unsub_capability_listener = None
+            self._capability_entities = entities
+            if entities:
+                @callback
+                def changed(event):
+                    if self._stopped or capability_state_signature(event.data.get("old_state")) == capability_state_signature(event.data.get("new_state")):
+                        return
+                    entity = self.owner_for_entity(event.data.get("entity_id"))
+                    if entity in self._data["zones"]:
+                        self._request_projection_capability_refresh(entity, apply_current_schedule=False)
+                self._unsub_capability_listener = async_track_state_change_event(self._hass, list(entities), changed)
+        self._startup_pending.intersection_update(self._data["zones"])
+        for entity in list(self._capability_waiting_cursors):
+            if entity not in self._data["zones"] or not self._startup_application_allowed(entity):
+                self._capability_waiting_cursors.pop(entity, None)
+        for entity in self._data["zones"]:
+            if not self._startup_application_allowed(entity):
+                self._startup_pending.discard(entity)
+            elif (self._climate_capabilities_pending(entity)
+                    or self.get_schedule_resolution_status(entity)["status"] == "waiting_capabilities"):
+                # A new period starts now, rather than at a possibly stale
+                # global timer cursor from before a configuration mutation.
+                self._capability_waiting_cursors.setdefault(entity, dt_util.as_utc(dt_util.now()))
 
     def is_maintaining_off(self, entity_id: str) -> bool:
         """Read conclusive prepared Off authority without refreshing projections.
@@ -1266,6 +1369,10 @@ class VelairScheduler:
         self._timer_cursor = None
         self._attempted_preconditioning_events.clear()
         self._deferred_timer_cursors.clear()
+        self._capability_waiting_cursors.clear()
+        self._startup_pending = (set(self._data["zones"])
+                                 if apply_current_schedule and self.mode == MODE_AUTO else set())
+        self._refresh_capability_listener()
         for entity_id in sorted(self._data["zones"]):
             if entity_id in self._room_sensor_assist_notification_cleanup_done:
                 continue
@@ -1277,13 +1384,18 @@ class VelairScheduler:
             self.async_schedule_next_event()
             return
         self.async_schedule_next_event()
-        if apply_current_schedule and self.mode == MODE_AUTO:
-            await self.async_apply_current_schedule(source="startup")
+        await self._async_apply_pending_startup()
 
     async def async_stop(self) -> None:
         """Stop scheduling events."""
         self._stopped = True
         self._projection_started = False
+        self._startup_pending.clear()
+        self._capability_waiting_cursors.clear()
+        if self._unsub_capability_listener is not None:
+            self._unsub_capability_listener()
+            self._unsub_capability_listener = None
+        self._capability_entities = ()
         self._deferred_timer_cursors.clear()
         self._room_sensor_assist_worker_token = None
         for attribute in ("_deferred_timer_task", "_room_sensor_assist_task"):
@@ -1300,6 +1412,7 @@ class VelairScheduler:
             await asyncio.gather(task, return_exceptions=True)
         self._projection_capability_task = None
         self._projection_capability_dirty.clear()
+        self._projection_capability_apply.clear()
         task = self._projection_ready_publication_task
         self._projection_ready_publication_task = None
         if task is not None and task is not asyncio.current_task():
@@ -1930,18 +2043,47 @@ class VelairScheduler:
     def _effective_schedule(
         self, entity_id: str, zone: ZoneData
     ) -> dict[str, list[ScheduleBlock]] | None:
+        return self._resolve_effective_schedule(entity_id, zone)[0]
+
+    def get_schedule_resolution_status(self, entity_id: str) -> dict:
+        """Read the last prepared outcome without rebuilding or authorizing work."""
+        return deepcopy(self._schedule_projection.schedule_resolution.get(
+            self.owner_for_entity(entity_id), {"status": "ready"}))
+
+    def _resolve_effective_schedule(self, entity_id, zone):
+        """Resolve nominal authority and distinguish incomplete observations."""
         behavior = self._profile_zone_behavior(entity_id)
         if behavior["behavior"] == "pause":
-            return None
+            return None, {"status": "ready"}
         if behavior["behavior"] == "schedule":
             source = behavior
         else:
             source = zone
         try:
-            return self._resolved_resource_week(self._data, entity_id, source)
+            return self._resolved_resource_week(self._data, entity_id, source), {"status": "ready"}
         except (ValueError, KeyError, TypeError, AttributeError) as err:
-            _LOGGER.error("Invalid schedule references for %s: %s", entity_id, err)
-            return None
+            pending = False
+            if isinstance(err, ValueError) and not isinstance(err, ConfigurationResourceError):
+                pending = self._climate_capabilities_pending(entity_id)
+                state = self.climate_state(entity_id)
+                attributes = state.attributes if state is not None else {}
+                if ("supported_features" not in attributes
+                        and not any(key in attributes for key in ("temperature", "target_temp_low", "target_temp_high"))):
+                    pending = True
+                modes = self._climate_manager.supported_hvac_modes(entity_id)
+                try:
+                    raw = self._raw_resource_week(self._data, source)
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    pending = False
+                else:
+                    if modes and any(block.get("hvac_mode") and block["hvac_mode"] not in modes
+                                     for blocks in raw.values() for block in blocks):
+                        pending = False
+            if not pending:
+                _LOGGER.error("Invalid schedule references for %s: %s", entity_id, err)
+            return None, {"status": "waiting_capabilities" if pending else "invalid",
+                          "code": getattr(err, "code", "schedule_waiting_for_capabilities" if pending else "schedule_incompatible"),
+                          "message": str(err)}
 
     def _effective_schedule_from_profiles(
         self,
@@ -2989,6 +3131,9 @@ class VelairScheduler:
 
     def _invalidate_climate_delivery(self, entity_id: str) -> None:
         """Synchronously supersede physical and Room Assist work."""
+        self._startup_pending.discard(entity_id)
+        self._projection_capability_apply.discard(entity_id)
+        self._capability_waiting_cursors.pop(entity_id, None)
         self._climate_delivery.cancel(entity_id)
         self._attempted_preconditioning_events = {
             key for key in self._attempted_preconditioning_events if key[0] != entity_id
@@ -6807,6 +6952,7 @@ class VelairScheduler:
         now = dt_util.now()
         configuration = configuration or self._sensor_replan_configuration_required(now)
         self._prepare_runtime_projection(now, configuration=configuration, refresh_horizon=configuration)
+        self._refresh_capability_listener()
         self._refresh_group_listener()
         self._clear_timer()
         if self._temperature_migration_blocked:
@@ -8095,6 +8241,8 @@ class VelairScheduler:
         on_handoff: Callable[[CurrentGuard], None] | None = None,
     ) -> bool:
         """Deliver the current authoritative scheduler event."""
+        if source != "startup":
+            self._startup_pending.discard(event.entity_id)
         self._refresh_control_projection(event.entity_id)
         preparation = (self._planned_return.target(event.entity_id)
                        or self._planned_return.preparation_for_delivery(event))

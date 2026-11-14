@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.2 |
-| Letzte Synchronisierung | 2026-11-12 |
+| Referenzversion | 1.9.3-beta.1 |
+| Letzte Synchronisierung | 2026-11-14 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -31,6 +31,17 @@ In den **Einstellungen** des Seitenleisten-Panels legt **Anzeige der Klimagerät
 **Aktuelle Namen mit Bereichsangabe** behält diese Namen bei und ergänzt den wirksamen Home-Assistant-Bereich separat, wenn verwaltete Klimageräte denselben Namen haben. **Entitätsnamen mit Kontext** verwendet den eigenen Namen der Entität oder bei der Hauptentität eines Geräts den Gerätenamen. Bei wiederholten Namen wird separater Home-Assistant-Kontext angezeigt. Bei einem Gerät namens `Test` und einer Entität namens `Test 2` lautet das aktuelle Format `Test Test 2`; das Entitätsformat lautet `Test 2`, bei Bedarf mit Bereichs- oder Gerätekontext. Der eigene Bereich einer Entität hat Vorrang vor dem Bereich ihres Geräts.
 
 Wenn der Bereichs- oder Gerätekontext wiederholte Namen nicht unterscheiden kann, bleibt die Entitäts-ID als Referenz verfügbar. Native Auswahllisten zeigen den Kontext in derselben Zeile. Benutzerdefinierte Kartennamen und Raumgruppennamen behalten Vorrang. Velair speichert diese Einstellung und teilt sie zwischen Browsern und Karten; ändere sie in den Einstellungen des Seitenleisten-Panels. Sie benennt keine Home-Assistant-Entitäten um und verändert weder deren IDs noch Zeitpläne oder Klimabefehle. Frühere Home-Assistant-Versionen behalten die bisherigen Namen bei, wenn strukturierte Namensmetadaten fehlen.
+
+<a id="sensor-entity-ids"></a>
+## Entitäts-IDs der Sensoren
+
+Neue Velair-Sensoren verwenden die Entitäts-ID des zugehörigen Klimageräts und den Zweck des Sensors als Grundlage für ihre anfänglichen IDs. Home Assistant wendet seine Namensregeln an und löst Konflikte mit bereits belegten IDs. Klimageräte mit demselben sichtbaren Namen können dadurch unterscheidbare Sensor-IDs erhalten. Sensornamen bleiben wie bisher übersetzt.
+
+Bestehende Sensoren behalten ihre registrierten IDs, einschließlich benutzerdefinierter IDs. Das Ändern von **Anzeige der Klimagerätenamen**, das Importieren von Einstellungen oder ein Neustart benennt sie nicht um.
+
+Administratoren können unter **Einstellungen → Wartung → Sensor-Entitäts-IDs prüfen** bestehende Sensoren überprüfen. Die Übersicht zeigt das zugehörige Klimagerät sowie die aktuelle und die vorgeschlagene ID, auch für Sensoren ohne numerisches Suffix und deaktivierte Diagnosesensoren. Nichts wird automatisch ausgewählt. Wähle die gewünschten Änderungen aus und bestätige die Umbenennung; du kannst die Übersicht auch ohne Änderungen schließen. Beim Aktualisieren der Übersicht wird die Auswahl aufgehoben. Ein geänderter oder veralteter Vorschlag muss vor dem Anwenden erneut geprüft werden.
+
+Das Ändern einer Entitäts-ID kann Anpassungen an Automationen, Dashboards, Vorlagen und externen Verweisen erfordern. Prüfe diese Verweise vor dem Bestätigen; Velair verspricht nicht, sie umzuschreiben. Sensornamen, interne Identitäten, Einstellungen und Klimabefehle bleiben dabei unverändert. Schlägt eine Stapeländerung fehl, versucht Velair, die vorherigen IDs wiederherzustellen, und meldet verbleibende Änderungen.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation im Panel und direkte Links

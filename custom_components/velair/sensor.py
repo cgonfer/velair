@@ -16,6 +16,7 @@ from . import VelairConfigEntry
 from .config_helpers import get_configured_climate_entities
 from .const import SIGNAL_COMFORT_UPDATED, SIGNAL_DIAGNOSTICS_UPDATED
 from .entity import VelairEntity
+from .entity_registry import zone_sensor_object_id
 
 
 async def async_setup_entry(
@@ -221,11 +222,17 @@ class _ZoneSensor(VelairEntity, SensorEntity):
     ) -> None:
         """Initialize a zone sensor."""
         self._climate_entity_id = climate_entity_id
+        self._sensor_key = key
         zone_key = climate_entity_id.replace(".", "_")
         super().__init__(entry, f"{zone_key}_{key}")
         self._attr_translation_placeholders = {
             "zone": zone_name or climate_entity_id
         }
+
+    @property
+    def suggested_object_id(self) -> str:
+        """Suggest descriptive IDs for new entities; preserve registry identity."""
+        return zone_sensor_object_id(self._climate_entity_id, self._sensor_key)
 
     @property
     def available(self) -> bool:
@@ -567,9 +574,6 @@ class ZoneControlSensor(_ZoneSensor):
             "control",
             zone_name=zone_name,
         )
-        self._attr_suggested_object_id = (
-            f"velair_control_{climate_entity_id.partition('.')[2]}"
-        )
 
     @property
     def native_value(self) -> str:
@@ -653,10 +657,6 @@ class ZoneDeliveryDiagnosticsSensor(_ZoneSensor):
             climate_entity_id,
             "delivery_diagnostics",
             zone_name=zone_name,
-        )
-        self._attr_suggested_object_id = (
-            "velair_delivery_diagnostics_"
-            f"{climate_entity_id.partition('.')[2]}"
         )
 
     def _status(self) -> dict[str, object]:

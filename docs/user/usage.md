@@ -35,6 +35,30 @@ from the sidebar Settings. It does not rename Home Assistant entities or change
 their IDs, schedules or climate commands. Earlier Home Assistant versions retain
 their existing names when structured naming metadata is unavailable.
 
+## Sensor entity IDs
+
+New Velair sensors use the source climate's entity ID and the sensor's purpose
+as the basis for their initial IDs. Home Assistant applies its naming rules and
+resolves any occupied IDs. Climates with the same visible name can therefore
+receive distinguishable sensor IDs. Sensor names remain translated as before.
+
+Existing sensors keep their registered IDs, including custom IDs. Changing
+**Climate name display**, importing Settings or restarting does not rename them.
+
+Administrators can open **Settings → Maintenance → Review sensor entity IDs** to review
+existing sensors. The review shows each source climate, current ID and proposed
+ID, including sensors without a numeric suffix and disabled diagnostic sensors.
+Nothing is selected automatically. Select the changes you want and confirm the
+rename; you can also close the review without making changes. Refreshing the
+review clears its selections. A changed or outdated proposal must be reviewed
+again before it can be applied.
+
+Changing an entity ID can require updates to automations, dashboards, templates
+and external references. Review those references before confirming; Velair does
+not promise to rewrite them. Sensor names, internal identities, settings and
+climate commands are unchanged by this operation. If a batch fails, Velair
+attempts to restore the previous IDs and reports any changes that remain.
+
 ## Panel navigation and direct links
 
 The sidebar panel updates its URL when you change tabs or switch between the

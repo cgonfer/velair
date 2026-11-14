@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.2 |
-| Laatst gesynchroniseerd | 2026-11-12 |
+| Referentieversie | 1.9.3-beta.1 |
+| Laatst gesynchroniseerd | 2026-11-14 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -31,6 +31,18 @@ In **Instellingen** van het zijbalkpaneel bepaalt **Weergave van klimaatnamen** 
 **Huidige namen met ruimtecontext** behoudt die namen en voegt de effectieve Home Assistant-ruimte afzonderlijk toe wanneer beheerde klimaatapparaten dezelfde naam hebben. **Entiteitsnamen met context** gebruikt de eigen naam van de entiteit, of de apparaatnaam als dit de hoofdentiteit van het apparaat is, met afzonderlijke Home Assistant-context bij herhaalde namen. Bij een apparaat met de naam `Test` en een entiteit met de naam `Test 2` is het huidige formaat `Test Test 2`; het entiteitsformaat is `Test 2`, waar nodig met ruimte- of apparaatcontext. De eigen ruimte van een entiteit heeft voorrang op de ruimte van het apparaat.
 
 Als ruimte- of apparaatcontext herhaalde namen niet kan onderscheiden, blijft de entiteits-ID beschikbaar als referentie. Opties in native keuzelijsten tonen de context op dezelfde regel. Aangepaste kaartnamen en namen van Kamergroepen behouden hun voorrang. Velair slaat de voorkeur op en deelt deze tussen browsers en kaarten; wijzig deze via Instellingen van het zijbalkpaneel. De voorkeur hernoemt geen Home Assistant-entiteiten en verandert hun ID's, schema's of klimaatopdrachten niet. Oudere Home Assistant-versies behouden hun bestaande namen wanneer gestructureerde naammetadata niet beschikbaar zijn.
+
+<a id="sensor-entity-ids"></a>
+
+## Entiteits-ID’s van sensoren
+
+Nieuwe Velair-sensoren gebruiken de entiteits-ID van het bronklimaatapparaat en de functie van de sensor als basis voor hun oorspronkelijke ID’s. Home Assistant past zijn naamgevingsregels toe en handelt reeds bezette ID’s af. Klimaatapparaten met dezelfde zichtbare naam kunnen daardoor onderscheidbare sensor-ID’s krijgen. Sensornamen blijven zoals voorheen vertaald.
+
+Bestaande sensoren behouden hun geregistreerde ID’s, inclusief aangepaste ID’s. Het wijzigen van **Weergave van klimaatnamen**, het importeren van Instellingen of een herstart hernoemt ze niet.
+
+Beheerders kunnen **Instellingen → Onderhoud → Entiteits-ID’s van sensoren controleren** openen om bestaande sensoren te bekijken. Het overzicht toont elk bronklimaatapparaat, de huidige ID en de voorgestelde ID, ook voor sensoren zonder numeriek achtervoegsel en uitgeschakelde diagnostische sensoren. Er wordt niets automatisch geselecteerd. Selecteer de gewenste wijzigingen en bevestig het hernoemen; je kunt het overzicht ook sluiten zonder wijzigingen aan te brengen. Het vernieuwen van het overzicht wist de selecties. Een gewijzigd of verouderd voorstel moet opnieuw worden gecontroleerd voordat het kan worden toegepast.
+
+Het wijzigen van een entiteits-ID kan aanpassingen vereisen aan automatiseringen, dashboards, sjablonen en externe verwijzingen. Controleer die verwijzingen voordat je bevestigt; Velair garandeert niet dat ze worden herschreven. Deze bewerking verandert geen sensornamen, interne identiteiten, instellingen of klimaatopdrachten. Als een reeks wijzigingen mislukt, probeert Velair de vorige ID’s te herstellen en meldt het welke wijzigingen overblijven.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Paneelnavigatie en rechtstreekse links

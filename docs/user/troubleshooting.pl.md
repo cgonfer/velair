@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](troubleshooting.md) · [Español]
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.3-beta.1 |
+| Ostatnia synchronizacja | 2026-11-14 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -87,6 +87,10 @@ Na razie eksport jest celowo dostępny tylko na komputerze, ponieważ aplikacje 
 Domyślnie Velair przywraca stan po uruchomieniu Home Assistant, nie wymuszając ustawień na urządzeniach.
 
 Włącz **Zastosuj aktywny harmonogram po uruchomieniu** w Ustawieniach, jeśli chcesz stosować aktywny harmonogram po restarcie.
+
+Ta opcja steruje blokiem aktywnym już w chwili uruchomienia. Przyszłe bloki są planowane przy obu ustawieniach. Jeśli encja klimatyczna nadal ładuje tryby HVAC lub możliwości obsługi wartości docelowych, Velair odbudowuje jej harmonogram i rejestruje następne zdarzenie, gdy te informacje się pojawią. Przy włączonym stosowaniu harmonogramu po uruchomieniu bieżący blok zostanie zastosowany, gdy będzie można go ustalić, z uwzględnieniem bieżącego sterowania strefą i tymczasowych zmian. Przy wyłączonej opcji blok aktywny przed uruchomieniem nie jest stosowany tylko dlatego, że encja stała się gotowa. Nadal można jednak wykonać pominięte przejście do bloku, którego zaplanowana godzina nastąpiła po uruchomieniu.
+
+Diagnostyka zgłasza `schedule_waiting_for_capabilities`, gdy do ustalenia harmonogramu potrzeba dalszych informacji o możliwościach urządzenia, oraz `schedule_incompatible`, gdy zgłaszane możliwości lub zapisane odwołania nie pozwalają użyć harmonogramu. Sprawdź wyeksportowane szczegóły `schedule_resolution` dotyczące danego urządzenia klimatycznego.
 
 <a id="reset-to-defaults"></a>
 ## Przywrócenie ustawień domyślnych
