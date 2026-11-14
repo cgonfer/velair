@@ -8,8 +8,8 @@ Traductions: [Original en anglais](troubleshooting.md) · [Español](troubleshoo
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.3-beta.1 |
+| Dernière synchronisation | 2026-11-14 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -87,6 +87,10 @@ Pour l’instant, l’export est volontairement affiché uniquement sur ordinate
 Par défaut, Velair restaure son état sans imposer de consigne aux appareils après le démarrage de Home Assistant.
 
 Activez **Appliquer la programmation active après le démarrage** dans Paramètres si vous souhaitez que Velair applique la programmation active après un redémarrage.
+
+Ce réglage concerne le bloc déjà actif au démarrage. Les blocs futurs sont programmés dans les deux cas. Si une entité climatique charge encore ses modes HVAC ou ses capacités de température cible, Velair reconstruit sa programmation et enregistre le prochain événement lorsque ces capacités sont disponibles. Lorsque l’application au démarrage est activée, le bloc courant est appliqué dès qu’il peut être résolu, dans le respect du contrôle de zone et des dérogations en vigueur. Lorsqu’elle est désactivée, le bloc antérieur au démarrage n’est pas appliqué simplement parce que l’entité devient prête ; un bloc dont la transition programmée a eu lieu après le démarrage peut néanmoins être récupéré.
+
+Diagnostic signale `schedule_waiting_for_capabilities` lorsque la résolution de la programmation nécessite davantage d’informations sur les capacités, et `schedule_incompatible` lorsque les capacités publiées ou les références enregistrées rendent la programmation incompatible. Consultez les détails `schedule_resolution` exportés pour l’équipement concerné.
 
 <a id="reset-to-defaults"></a>
 ## Rétablir les valeurs par défaut

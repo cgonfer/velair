@@ -1144,65 +1144,65 @@
       "translations": {
         "es": {
           "path": "docs/user/sensors.es.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/sensors.fr.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/sensors.de.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/sensors.it.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/sensors.nl.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/sensors.pl.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/sensors.pt-br.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/sensors.pt-pt.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/sensors.ru.md",
-          "sourceHash": "3dddea1d93d545dbc420c27eb76691a0e7765cb6667c9baa6cc3b03d415ab597",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "33b547495c49e59c0e835ad7e8e3381a9decf935307d7f977a511705feeaaf3d",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         }
       }
@@ -1278,65 +1278,65 @@
       "translations": {
         "es": {
           "path": "docs/user/troubleshooting.es.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/troubleshooting.fr.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/troubleshooting.de.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/troubleshooting.it.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/troubleshooting.nl.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/troubleshooting.pl.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/troubleshooting.pt-br.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/troubleshooting.pt-pt.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/troubleshooting.ru.md",
-          "sourceHash": "5bf9a246dc5e738d80219deca945156701571a8c01cc0259621bdbbd617d24cb",
-          "synchronizedAt": "2026-10-28",
-          "referenceVersion": "1.9.0-beta.6",
+          "sourceHash": "263ee8453f80cf98f0f757b2165d7f239c68b742d9c0f8fd1e587f56f9c213d1",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         }
       }
@@ -1345,65 +1345,65 @@
       "translations": {
         "es": {
           "path": "docs/user/usage.es.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/usage.fr.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/usage.de.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/usage.it.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/usage.nl.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/usage.pl.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/usage.pt-br.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/usage.pt-pt.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/usage.ru.md",
-          "sourceHash": "bacdbf2db3e530599a17d52138c13b02f27bbbdae45be612be73d4af47d7521f",
-          "synchronizedAt": "2026-11-12",
-          "referenceVersion": "1.9.2",
+          "sourceHash": "0e9ed677ec37b97f848cdf15f464e01926e720226e409c35e3dbe4c6f0de0c00",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         }
       }
@@ -1412,65 +1412,65 @@
       "translations": {
         "es": {
           "path": "docs/user/zone-sensors.es.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/zone-sensors.fr.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/zone-sensors.de.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/zone-sensors.it.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/zone-sensors.nl.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/zone-sensors.pl.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/zone-sensors.pt-br.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/zone-sensors.pt-pt.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/zone-sensors.ru.md",
-          "sourceHash": "3f91d43b977c3844ed4bdbdca9ce33b9de54d8b6486015abcf04fe90728c27ca",
-          "synchronizedAt": "2026-10-11",
-          "referenceVersion": "1.9.0-beta.1",
+          "sourceHash": "a3e062a012c9e88ae0a1352daa1aaa1f8a972ee81f5ed6f515858bec99207c6a",
+          "synchronizedAt": "2026-11-14",
+          "referenceVersion": "1.9.3-beta.1",
           "reviewStatus": "automatic"
         }
       }

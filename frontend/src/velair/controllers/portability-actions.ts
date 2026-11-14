@@ -1,3 +1,4 @@
+import { backendErrorMessage } from "../domain/backend-errors";
 import { PORTABLE_SECTIONS } from "../constants";
 import { directPresetUseCount } from "../domain/preset-usages";
 import {
@@ -253,4 +254,81 @@ export function downloadPortablePayload(payload: VelairPortablePayload): void {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+
+type SensorEntityIdsHost = Pick<import("../host-types").VelairViewHost,
+  "hass" | "_sensorIdsPreview" | "_sensorIdsResult" | "_sensorIdsSelected" | "_sensorIdsAction" | "_sensorIdsError" | "_api" | "_t">;
+
+export function asSensorEntityIdsHost(host: unknown): SensorEntityIdsHost {
+  return host as SensorEntityIdsHost;
+}
+
+const sensorIdsRequests = new WeakMap<SensorEntityIdsHost, object>();
+
+export function resetSensorEntityIdsReview(host: SensorEntityIdsHost): void {
+  sensorIdsRequests.delete(host);
+  host._sensorIdsPreview = undefined;
+  host._sensorIdsResult = undefined;
+  host._sensorIdsSelected = new Set();
+  host._sensorIdsError = undefined;
+  host._sensorIdsAction = undefined;
+}
+
+function sensorIdsRequestCurrent(host: SensorEntityIdsHost) {
+  const request = {};
+  const connection = host.hass?.connection;
+  sensorIdsRequests.set(host, request);
+  return () => sensorIdsRequests.get(host) === request && host.hass?.connection === connection;
+}
+
+export async function previewSensorEntityIds(host: SensorEntityIdsHost): Promise<void> {
+  const api = host._api();
+  if (!api || !host.hass?.user?.is_admin || host._sensorIdsAction) return;
+  host._sensorIdsSelected = new Set();
+  host._sensorIdsPreview = undefined;
+  host._sensorIdsResult = undefined;
+  host._sensorIdsError = undefined;
+  host._sensorIdsAction = "preview";
+  const current = sensorIdsRequestCurrent(host);
+  try {
+    const preview = await api.previewSensorEntityIds();
+    if (current()) host._sensorIdsPreview = preview;
+  } catch (error) {
+    if (current()) host._sensorIdsError = backendErrorMessage(error, host._t("sensorIdsUnablePreview"));
+  } finally {
+    if (current()) host._sensorIdsAction = undefined;
+  }
+}
+
+export function toggleSensorEntityId(host: SensorEntityIdsHost, entityId: string, checked: boolean): void {
+  if (host._sensorIdsAction || !host._sensorIdsPreview?.rows.some(row => row.entity_id === entityId && row.status === "ready")) return;
+  const selected = new Set(host._sensorIdsSelected);
+  if (checked) selected.add(entityId);
+  else selected.delete(entityId);
+  host._sensorIdsSelected = selected;
+}
+
+export async function applySensorEntityIds(host: SensorEntityIdsHost): Promise<void> {
+  const api = host._api();
+  const preview = host._sensorIdsPreview;
+  const selected = preview?.rows.filter(row => row.status === "ready" && host._sensorIdsSelected.has(row.entity_id)).map(row => row.entity_id) ?? [];
+  if (!api || !host.hass?.user?.is_admin || host._sensorIdsAction || !preview || !selected.length) return;
+  host._sensorIdsAction = "apply";
+  const current = sensorIdsRequestCurrent(host);
+  host._sensorIdsError = undefined;
+  host._sensorIdsResult = undefined;
+  host._sensorIdsSelected = new Set();
+  try {
+    const result = await api.applySensorEntityIds({ preview_id: preview.preview_id, entity_ids: selected });
+    if (!current()) return;
+    host._sensorIdsResult = result;
+    host._sensorIdsPreview = result.preview;
+  } catch (error) {
+    if (!current()) return;
+    host._sensorIdsPreview = undefined;
+    host._sensorIdsError = `${backendErrorMessage(error, host._t("sensorIdsUnableApply"))} ${host._t("sensorIdsRefreshRequired")}`;
+  } finally {
+    if (current()) host._sensorIdsAction = undefined;
+  }
 }

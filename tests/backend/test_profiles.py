@@ -38,7 +38,7 @@ def _available_hass(*entity_ids: str) -> FakeHass:
     hass = FakeHass()
     for entity_id in entity_ids:
         hass.states[entity_id] = SimpleNamespace(
-            state="heat", attributes={"current_temperature": 20}
+            state="heat", attributes={"current_temperature": 20, "supported_features": 1}
         )
     return hass
 

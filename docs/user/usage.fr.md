@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.2 |
-| Dernière synchronisation | 2026-11-12 |
+| Version de référence | 1.9.3-beta.1 |
+| Dernière synchronisation | 2026-11-14 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -32,6 +32,18 @@ Dans les **Réglages** du panneau latéral, **Affichage des noms des équipement
 **Noms actuels avec contexte de zone** conserve ces noms et ajoute séparément la zone Home Assistant effective lorsque plusieurs équipements gérés portent le même nom. **Noms des entités avec contexte** utilise le nom propre de l’entité, ou celui de l’appareil s’il s’agit de son entité principale, avec un contexte Home Assistant séparé pour les noms répétés. Pour un appareil nommé `Test` et une entité nommée `Test 2`, le format actuel est `Test Test 2` ; le format d’entité est `Test 2`, avec le contexte de zone ou d’appareil si nécessaire. La zone propre à l’entité est prioritaire sur celle de son appareil.
 
 Lorsque le contexte de zone ou d’appareil ne suffit pas à distinguer des noms identiques, l’identifiant de l’entité reste disponible comme référence. Les options des listes déroulantes natives affichent le contexte sur la même ligne. Les noms personnalisés des cartes et les noms des Groupes de pièce restent prioritaires. Velair enregistre cette préférence et la partage entre les navigateurs et les cartes ; modifiez-la depuis les Réglages du panneau latéral. Elle ne renomme pas les entités Home Assistant et ne modifie ni leurs identifiants, ni leurs programmations, ni les commandes climatiques. Les anciennes versions de Home Assistant conservent leurs noms existants lorsque les métadonnées structurées de nommage ne sont pas disponibles.
+
+<a id="sensor-entity-ids"></a>
+
+## Identifiants d’entité des capteurs
+
+Les nouveaux capteurs Velair utilisent l’identifiant d’entité de l’équipement climatique source et la fonction du capteur comme base de leurs identifiants initiaux. Home Assistant applique ses règles de nommage et résout les identifiants déjà occupés. Des équipements portant le même nom visible peuvent ainsi recevoir des identifiants de capteurs distincts. Les noms des capteurs restent traduits comme auparavant.
+
+Les capteurs existants conservent leurs identifiants enregistrés, y compris les identifiants personnalisés. Modifier **Affichage des noms des équipements climatiques**, importer les Réglages ou redémarrer ne les renomme pas.
+
+Les administrateurs peuvent ouvrir **Réglages → Maintenance → Vérifier les identifiants d’entité des capteurs** pour examiner les capteurs existants. La vérification affiche l’équipement source, l’identifiant actuel et l’identifiant proposé, y compris pour les capteurs sans suffixe numérique et les capteurs de diagnostic désactivés. Rien n’est sélectionné automatiquement. Sélectionnez les changements souhaités et confirmez le renommage ; vous pouvez aussi fermer la vérification sans rien modifier. Actualiser la vérification efface ses sélections. Une proposition modifiée ou périmée doit être vérifiée de nouveau avant de pouvoir être appliquée.
+
+Modifier un identifiant d’entité peut nécessiter la mise à jour des automatisations, tableaux de bord, modèles et références externes. Vérifiez ces références avant de confirmer ; Velair ne garantit pas leur réécriture. Cette opération ne modifie ni les noms des capteurs, ni leurs identités internes, ni les réglages, ni les commandes climatiques. Si un lot échoue, Velair tente de rétablir les identifiants précédents et signale les changements qui subsistent.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation du panneau et liens directs

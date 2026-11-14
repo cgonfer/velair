@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.2 |
-| Última sincronização | 2026-11-12 |
+| Versão de referência | 1.9.3-beta.1 |
+| Última sincronização | 2026-11-14 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -31,6 +31,17 @@ Em **Configurações** do painel da barra lateral, **Exibição dos nomes dos di
 **Nomes atuais com contexto de área** mantém esses nomes e adiciona separadamente a área efetiva do Home Assistant quando dispositivos gerenciados compartilham um nome. **Nomes das entidades com contexto** usa o nome próprio da entidade, ou o nome do dispositivo se ela for a entidade principal dele, com contexto separado do Home Assistant para nomes repetidos. Para um dispositivo chamado `Test` e uma entidade chamada `Test 2`, o formato atual é `Test Test 2`; o formato de entidade é `Test 2`, com contexto de área ou dispositivo quando necessário. A área própria da entidade tem prioridade sobre a área do dispositivo.
 
 Quando o contexto de área ou dispositivo não consegue distinguir nomes repetidos, o ID da entidade continua disponível como referência. As opções dos menus suspensos nativos mostram o contexto na mesma linha. Os nomes personalizados dos cartões e os nomes dos Grupos de cômodo mantêm a prioridade. O Velair salva essa preferência e a compartilha entre navegadores e cartões; altere-a nas Configurações do painel da barra lateral. Ela não renomeia entidades do Home Assistant nem altera seus IDs, programações ou comandos de climatização. Versões anteriores do Home Assistant mantêm os nomes existentes quando os metadados estruturados de nomes não estão disponíveis.
+
+<a id="sensor-entity-ids"></a>
+## IDs de entidade dos sensores
+
+Os novos sensores do Velair usam o ID da entidade de climatização de origem e a finalidade do sensor como base para seus IDs iniciais. O Home Assistant aplica suas regras de nomenclatura e resolve conflitos com IDs já ocupados. Assim, dispositivos com o mesmo nome visível podem receber IDs de sensores que permitem distingui-los. Os nomes dos sensores continuam traduzidos como antes.
+
+Os sensores existentes mantêm os IDs registrados, inclusive IDs personalizados. Alterar **Exibição dos nomes dos dispositivos de climatização**, importar Configurações ou reiniciar não muda esses IDs.
+
+Administradores podem abrir **Configurações → Manutenção → Revisar IDs de entidade dos sensores** para revisar os sensores existentes. A revisão mostra o dispositivo de origem, o ID atual e o ID proposto, incluindo sensores sem sufixo numérico e sensores de diagnóstico desativados. Nada é selecionado automaticamente. Selecione as alterações desejadas e confirme a renomeação; você também pode fechar a revisão sem fazer alterações. Atualizar a revisão limpa as seleções. Uma proposta alterada ou desatualizada precisa ser revisada novamente antes de ser aplicada.
+
+Alterar um ID de entidade pode exigir atualizações em automações, painéis, modelos e referências externas. Revise essas referências antes de confirmar; o Velair não garante que irá reescrevê-las. Essa operação não altera nomes dos sensores, identidades internas, configurações nem comandos de climatização. Se uma operação em lote falhar, o Velair tenta restaurar os IDs anteriores e informa as alterações que permanecerem.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navegação do painel e links diretos

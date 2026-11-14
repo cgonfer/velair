@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](usage.md) · [Español](usage.es.md) · [Fra
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.2 |
-| Última sincronización | 2026-11-12 |
+| Versión de referencia | 1.9.3-beta.1 |
+| Última sincronización | 2026-11-14 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -32,6 +32,18 @@ En **Ajustes** del panel lateral, **Mostrar nombres de climatización** permite 
 **Nombres actuales con contexto de área** conserva esos nombres y añade por separado el área efectiva de Home Assistant cuando varios equipos gestionados comparten un nombre. **Nombres de entidad con contexto** utiliza el nombre propio de la entidad, o el del dispositivo si es su entidad principal, y añade contexto separado de Home Assistant cuando se repiten nombres. Para un dispositivo llamado `Test` y una entidad llamada `Test 2`, el formato actual es `Test Test 2`; el formato de entidad es `Test 2`, con contexto de área o dispositivo cuando hace falta. El área propia de una entidad tiene prioridad sobre la de su dispositivo.
 
 Cuando el contexto de área o dispositivo no permite distinguir nombres repetidos, el ID de entidad sigue disponible como referencia. Las opciones de los desplegables nativos muestran el contexto en la misma línea. Los nombres personalizados de las tarjetas y los nombres de los Grupos de habitación mantienen su prioridad. Velair guarda la preferencia y la comparte entre navegadores y tarjetas; cámbiala desde Ajustes del panel lateral. No cambia los nombres ni los ID de las entidades de Home Assistant, sus horarios ni las órdenes de climatización. Las versiones anteriores de Home Assistant conservan sus nombres existentes cuando no hay metadatos de nombres estructurados disponibles.
+
+<a id="sensor-entity-ids"></a>
+
+## ID de entidad de los sensores
+
+Los sensores nuevos de Velair utilizan el ID de entidad del equipo de climatización de origen y la función del sensor como base para sus ID iniciales. Home Assistant aplica sus reglas de nombres y resuelve los ID que ya estén ocupados. Por tanto, los equipos con el mismo nombre visible pueden recibir ID de sensores que permitan distinguirlos. Los nombres de los sensores siguen traduciéndose como antes.
+
+Los sensores existentes conservan sus ID registrados, incluidos los personalizados. Cambiar **Mostrar nombres de climatización**, importar Ajustes o reiniciar no los renombra.
+
+Los administradores pueden abrir **Ajustes → Mantenimiento → Revisar IDs de entidad de los sensores** para revisar los sensores existentes. La revisión muestra el equipo de origen, el ID actual y el propuesto, incluidos los sensores sin sufijo numérico y los sensores de diagnóstico desactivados. No se selecciona nada automáticamente. Selecciona los cambios que quieras y confirma el cambio de ID; también puedes cerrar la revisión sin hacer cambios. Al actualizar la revisión se borran sus selecciones. Una propuesta modificada o desactualizada debe revisarse de nuevo antes de poder aplicarla.
+
+Cambiar un ID de entidad puede requerir actualizar automatizaciones, paneles, plantillas y referencias externas. Revisa esas referencias antes de confirmar; Velair no garantiza que vaya a reescribirlas. Esta operación no cambia los nombres de los sensores, sus identidades internas, los ajustes ni las órdenes de climatización. Si falla un lote, Velair intenta restaurar los ID anteriores e informa de los cambios que permanezcan.
 
 <a id="panel-navigation-and-direct-links"></a>
 

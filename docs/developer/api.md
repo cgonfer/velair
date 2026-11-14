@@ -452,7 +452,7 @@ its absence when using an older backend.
     "portable_model": 26,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.2"
+    "integration": "1.9.3-beta.1"
   }
 }
 ```
@@ -690,6 +690,15 @@ These events share the existing 100-entry runtime-only history. Newly introduced
 category preferences default to enabled while retaining previous choices.
 Exports remove `away_mode_id`, `destination_mode_id` and related operational
 Mode/Profile identifiers even when raw entity IDs are requested.
+
+Per-climate `schedule_resolution` describes the last prepared effective
+schedule: `status` is `ready`, `waiting_capabilities`, or `invalid`; unresolved
+results also include a `code` and `message`. Waiting adds the warning issue
+`schedule_waiting_for_capabilities`; invalid resolution adds the error issue
+`schedule_incompatible`. Physical members use their room group's logical
+resolution. Capability updates rebuild and re-arm the scheduler independently
+of the startup-application setting. Reading Diagnostics does not authorize a
+delivery or consume a pending startup application.
 
 Per-climate `preconditioning_learning.heat` and `.cool` diagnostics retain their
 observation counts and can expose current `activity` and `last_transition`.
@@ -1655,6 +1664,49 @@ request and revision only if the new preview permits it. Apply still revalidates
 inside the backend transaction, including blockers that changed after preview.
 Changing the proposed modes requires a new discovery; retained UI drafts do not
 grant correction ownership over destinations unaffected by the new selection.
+
+## Sensor entity ID review
+
+Both commands require administrator access and operate only on registered Velair
+zone sensors for currently configured physical climates. They do not alter
+schedule data or restart the scheduler.
+
+```ts
+const preview = await hass.connection.sendMessagePromise({
+  type: "velair/preview_sensor_entity_ids"
+});
+```
+
+The read-only response contains `preview_id` and `rows`. Each row contains
+`entity_id`, `proposed_entity_id`, `climate_entity_id`, `sensor_key`, `name` and
+`status` (`ready`, `unchanged` or `conflict`). Proposals use the same source-based
+ID policy as new sensors and Home Assistant's native naming and collision rules.
+Custom IDs are included for explicit review rather than inferred from suffixes.
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/apply_sensor_entity_ids",
+  preview_id: preview.preview_id,
+  entity_ids: selectedCurrentEntityIds
+});
+```
+
+The backend recomputes the plan and rejects stale previews, empty or duplicate
+selections, conflicts and foreign or unmanaged sensors before writing. Clients
+must not submit destination IDs; those are derived from the authoritative plan.
+The frontend must require explicit selection and explain that references may
+need updating before applying a rename.
+
+The result contains `status` (`applied`, `rolled_back` or `recovery_required`),
+`renamed` mappings with `old_entity_id` and `new_entity_id`, `failed` items with
+`entity_id`, `code` and `message`, and a fresh `preview`. An unsuccessful batch
+attempts reverse rollback and reports the mappings that actually remain. Treat
+rollback/recovery results as failures and clear selections before another review.
+This is not a guarantee of durable multi-entry transactions or automatic repair
+of references in YAML, templates, dashboards or external consumers.
+
+Registered unique IDs, custom names and sensor behavior are preserved. No review,
+preference change, import or restart automatically renames existing entities.
 
 ## Export Data
 

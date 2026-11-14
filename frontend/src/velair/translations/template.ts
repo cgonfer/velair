@@ -1,5 +1,21 @@
 import type { TranslationDictionary } from "./types";
 export const translationTemplate = {
+  "sensorIdsReview": "",
+  "sensorIdsDescription": "",
+  "sensorIdsWarning": "",
+  "sensorIdsUnablePreview": "",
+  "sensorIdsUnableApply": "",
+  "sensorIdsRefreshRequired": "",
+  "sensorIdsRefresh": "",
+  "sensorIdsApply": "",
+  "sensorIdsEmpty": "",
+  "sensorIdsConflict": "",
+  "sensorIdsUnchanged": "",
+  "sensorIdsApplied": "",
+  "sensorIdsRolledBack": "",
+  "sensorIdsRecoveryRequired": "",
+  "sensorIdsRemainingRenamed": "",
+
   "entityNameDisplay": "",
   "entityNameDisplayLegacy": "",
   "entityNameDisplayLegacyArea": "",

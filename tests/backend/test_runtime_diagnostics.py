@@ -324,6 +324,53 @@ class RuntimeDiagnosticsTest(unittest.TestCase):
         self.assertEqual("weekday", unit["effective_setup"]["profile_owner_id"])
         self.assertEqual("profile", unit["effective_setup"]["schedule_source"])
 
+    def test_schedule_waiting_and_invalid_resolution_reach_overall_diagnostics(self) -> None:
+        entity = "climate.living_room"
+        resolution = {"status": "waiting_capabilities", "message": "HVAC modes not yet reported"}
+        reader = Mock(side_effect=lambda _entity: resolution)
+        self.runtime["scheduler"].get_schedule_resolution_status = reader
+        for state, severity, code in (
+            ("waiting_capabilities", "warning", "schedule_waiting_for_capabilities"),
+            ("invalid", "error", "schedule_incompatible"),
+        ):
+            with self.subTest(state=state):
+                resolution["status"] = state
+                snapshot = self.manager.snapshot(self.runtime)
+                unit = snapshot["units"][entity]
+                self.assertEqual(snapshot["overall"]["status"], severity)
+                self.assertEqual(unit["status"], severity)
+                self.assertIn({"code": code, "severity": severity,
+                               "message": resolution["message"]}, unit["issues"])
+                self.assertEqual(unit["schedule_resolution"], resolution)
+                unit["schedule_resolution"]["status"] = "changed_by_reader"
+                self.assertEqual(resolution["status"], state)
+        reader.assert_called_with(entity)
+
+    def test_recovered_resolution_clears_schedule_issue_without_delivery(self) -> None:
+        resolution = {"status": "waiting_capabilities", "message": "Capabilities unavailable"}
+        self.runtime["scheduler"].get_schedule_resolution_status = lambda _: resolution
+        self.assertEqual(self.manager.snapshot(self.runtime)["overall"]["status"], "warning")
+        resolution.clear()
+        resolution["status"] = "ready"
+        snapshot = self.manager.snapshot(self.runtime)
+        self.assertEqual(snapshot["overall"]["status"], "ok")
+        unit = snapshot["units"]["climate.living_room"]
+        self.assertEqual(unit["delivery"]["status"], "idle")
+        self.assertEqual(unit["issues"], [])
+
+    def test_group_members_use_logical_schedule_resolution(self) -> None:
+        reader = Mock(return_value={"status": "invalid", "message": "Group target is incompatible"})
+        self.runtime["scheduler"].owner_for_entity = lambda _: "group.room"
+        self.runtime["scheduler"].get_schedule_resolution_status = reader
+        self.manager._runtime = self.runtime
+        # Exercise the per-member reader with the physical state and logical zone.
+        zone = self.runtime["storage"].data["zones"]["climate.living_room"]
+        unit = self.manager._unit_snapshot("climate.living_room", zone,
+            self.runtime["storage"].data, {}, {}, {}, self.runtime["scheduler"])
+        reader.assert_called_once_with("group.room")
+        self.assertEqual(unit["status"], "error")
+        self.assertIn("schedule_incompatible", [issue["code"] for issue in unit["issues"]])
+
     def test_snapshot_surfaces_persistent_command_settling_mismatch(self) -> None:
         self.runtime["climate_manager"] = SimpleNamespace(
             command_settling_diagnostics=lambda _entity_id: {

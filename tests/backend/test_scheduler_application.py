@@ -4663,6 +4663,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
         )
 
     async def test_start_can_apply_current_schedule_when_enabled(self) -> None:
+        self.hass.states[self.entity_id].attributes["supported_features"] = 1
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
             {
                 "start": "17:00",

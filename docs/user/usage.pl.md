@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.2 |
-| Ostatnia synchronizacja | 2026-11-12 |
+| Wersja odniesienia | 1.9.3-beta.1 |
+| Ostatnia synchronizacja | 2026-11-14 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -31,6 +31,17 @@ W sekcji **Ustawienia** panelu bocznego opcja **Wyświetlanie nazw urządzeń kl
 Opcja **Obecne nazwy z kontekstem obszaru** zachowuje te nazwy i dodaje osobno właściwy obszar Home Assistant, gdy zarządzane urządzenia mają tę samą nazwę. Opcja **Nazwy encji z kontekstem** używa własnej nazwy encji lub nazwy urządzenia, jeśli jest to jego główna encja, z osobnym kontekstem Home Assistant dla powtarzających się nazw. Dla urządzenia o nazwie `Test` i encji o nazwie `Test 2` obecny format to `Test Test 2`; format encji to `Test 2`, w razie potrzeby z kontekstem obszaru lub urządzenia. Własny obszar encji ma pierwszeństwo przed obszarem jej urządzenia.
 
 Gdy kontekst obszaru lub urządzenia nie pozwala odróżnić powtarzających się nazw, identyfikator encji pozostaje dostępny jako odniesienie. Opcje natywnych list rozwijanych pokazują kontekst w tym samym wierszu. Własne nazwy kart i nazwy Grup pomieszczeń zachowują pierwszeństwo. Velair zapisuje tę preferencję i współdzieli ją między przeglądarkami i kartami; zmienisz ją w Ustawieniach panelu bocznego. Nie zmienia ona nazw encji Home Assistant, ich identyfikatorów, harmonogramów ani poleceń klimatycznych. Starsze wersje Home Assistant zachowują istniejące nazwy, gdy uporządkowane metadane nazw nie są dostępne.
+
+<a id="sensor-entity-ids"></a>
+## Identyfikatory encji czujników
+
+Początkowe identyfikatory nowych czujników Velair opierają się na identyfikatorze źródłowej encji klimatycznej i przeznaczeniu czujnika. Home Assistant stosuje własne reguły nazewnictwa i rozwiązuje konflikty z zajętymi identyfikatorami. Dzięki temu urządzenia o tej samej widocznej nazwie mogą otrzymać rozróżnialne identyfikatory czujników. Nazwy czujników pozostają przetłumaczone tak jak dotąd.
+
+Istniejące czujniki zachowują identyfikatory zapisane w rejestrze, także własne identyfikatory użytkownika. Zmiana opcji **Wyświetlanie nazw urządzeń klimatycznych**, import Ustawień ani restart nie zmieniają tych identyfikatorów.
+
+Administratorzy mogą otworzyć **Ustawienia → Konserwacja → Sprawdź identyfikatory encji czujników**, aby przejrzeć istniejące czujniki. Przegląd pokazuje źródłowe urządzenie klimatyczne oraz obecny i proponowany identyfikator, również dla czujników bez przyrostka liczbowego i wyłączonych czujników diagnostycznych. Nic nie jest wybierane automatycznie. Wybierz żądane zmiany i potwierdź zmianę identyfikatorów; możesz też zamknąć przegląd bez wprowadzania zmian. Odświeżenie przeglądu usuwa zaznaczenia. Zmienioną lub nieaktualną propozycję trzeba ponownie sprawdzić przed zastosowaniem.
+
+Zmiana identyfikatora encji może wymagać aktualizacji automatyzacji, pulpitów, szablonów i odwołań zewnętrznych. Sprawdź te odwołania przed potwierdzeniem; Velair nie gwarantuje ich przepisania. Ta operacja nie zmienia nazw czujników, ich wewnętrznych identyfikatorów, ustawień ani poleceń klimatycznych. Jeśli operacja zbiorcza się nie powiedzie, Velair próbuje przywrócić poprzednie identyfikatory i zgłasza zmiany, które pozostały.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Nawigacja panelu i bezpośrednie odnośniki

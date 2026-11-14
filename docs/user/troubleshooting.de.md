@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.3-beta.1 |
+| Letzte Synchronisierung | 2026-11-14 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -87,6 +87,10 @@ Der Export wird derzeit bewusst nur auf Desktopgeräten angezeigt, da mobile Com
 Standardmäßig stellt Velair nach dem Start von Home Assistant den Zustand wieder her, ohne Befehle an Klimageräte zu erzwingen.
 
 Aktiviere in den Einstellungen **Aktiven Zeitplan nach dem Start anwenden**, wenn Velair den aktiven Zeitplan nach einem Neustart anwenden soll.
+
+Diese Einstellung steuert den beim Start bereits aktiven Block. Zukünftige Blöcke werden unabhängig von dieser Einstellung eingeplant. Lädt eine Klimaentität ihre HVAC-Modi oder Sollwertfähigkeiten noch, baut Velair ihren Zeitplan neu auf und registriert das nächste Ereignis, sobald diese Informationen vorliegen. Ist die Anwendung beim Start aktiviert, wird der aktuelle Block angewendet, sobald er aufgelöst werden kann; die aktuelle Zonensteuerung und temporäre Anpassungen werden dabei berücksichtigt. Ist sie deaktiviert, wird der vor dem Start aktive Block nicht allein deshalb angewendet, weil die Entität bereit ist. Ein Block, dessen geplanter Wechsel nach dem Start stattfand, kann dennoch nachgeholt werden.
+
+Die Diagnose meldet `schedule_waiting_for_capabilities`, solange zum Auflösen des Zeitplans weitere Informationen über Gerätefähigkeiten fehlen, und `schedule_incompatible`, wenn die gemeldeten Fähigkeiten oder gespeicherten Verweise den Zeitplan nicht zulassen. Prüfe die exportierten `schedule_resolution`-Details für das betroffene Klimagerät.
 
 <a id="reset-to-defaults"></a>
 ## Auf Standardwerte zurücksetzen

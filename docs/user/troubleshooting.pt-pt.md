@@ -8,8 +8,8 @@ Traduções: [Original em inglês](troubleshooting.md) · [Español](troubleshoo
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Versão de referência | 1.9.3-beta.1 |
+| Última sincronização | 2026-11-14 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -85,6 +85,10 @@ Por agora, a exportação só aparece em computadores, pois as aplicações comp
 Por predefinição, o Velair restaura o seu estado sem enviar comandos aos equipamentos depois de o Home Assistant arrancar.
 
 Ative **Aplicar programação ativo após arranque** em Definições se pretender que o Velair aplique a programação ativa após reiniciar.
+
+Esta definição controla o bloco que já estava ativo no arranque. Os blocos futuros são agendados com qualquer uma das opções. Se uma entidade de climatização ainda estiver a carregar os modos HVAC ou as capacidades dos valores-alvo, o Velair reconstrói a programação e regista o próximo evento quando essas informações chegam. Com a aplicação no arranque ativada, o bloco atual é aplicado assim que puder ser determinado, respeitando o controlo atual da zona e as alterações temporárias. Com a opção desativada, o bloco anterior ao arranque não é aplicado apenas porque a entidade ficou pronta; uma transição de bloco cuja hora ocorreu após o arranque ainda pode ser recuperada.
+
+O Diagnóstico indica `schedule_waiting_for_capabilities` enquanto a resolução da programação necessita de mais informações sobre as capacidades do equipamento, e `schedule_incompatible` quando as capacidades comunicadas ou as referências guardadas impedem a utilização da programação. Revê os detalhes `schedule_resolution` exportados para o equipamento afetado.
 
 <a id="reset-to-defaults"></a>
 ## Restaurar os valores predefinidos

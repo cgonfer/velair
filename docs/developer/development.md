@@ -13,8 +13,14 @@ This guide covers local development for Velair.
 Run from the repository root:
 
 ```powershell
+python -m pip install -r tests/requirements.txt
 python -m unittest discover -s tests
 ```
+
+Install these standalone test dependencies in your development virtual
+environment. They include the registry-entry library used by the fixtures and,
+on Windows, timezone data. The separate real Home Assistant blueprint suite has
+its own dependency file.
 
 Backend tests are split by responsibility under `tests/backend/`:
 

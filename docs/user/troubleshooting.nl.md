@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](troubleshooting.md) · [Español](troubleshootin
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.3-beta.1 |
+| Laatst gesynchroniseerd | 2026-11-14 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -87,6 +87,10 @@ Export is voorlopig bewust alleen op desktop beschikbaar, omdat mobiele companio
 Standaard herstelt Velair de status zonder klimaatapparaten opdrachten te geven wanneer Home Assistant opstart.
 
 Schakel **Actief schema toepassen na opstarten** in de instellingen in als je wilt dat Velair het actieve schema na een herstart toepast.
+
+Deze instelling bepaalt wat er gebeurt met het blok dat bij het opstarten al actief was. Toekomstige blokken worden bij beide opties gepland. Als een klimaatentiteit nog HVAC-modi of mogelijkheden voor doeltemperaturen laadt, bouwt Velair het schema opnieuw op en registreert het de volgende gebeurtenis zodra die mogelijkheden beschikbaar zijn. Als toepassen bij het opstarten is ingeschakeld, wordt het huidige blok toegepast zodra het kan worden bepaald, met inachtneming van de huidige zonebesturing en tijdelijke aanpassingen. Als dit is uitgeschakeld, wordt het blok van vóór het opstarten niet toegepast alleen omdat de entiteit gereed komt; een blok waarvan de geplande overgang na het opstarten plaatsvond, kan nog wel worden ingehaald.
+
+Diagnostiek meldt `schedule_waiting_for_capabilities` zolang er meer informatie over mogelijkheden nodig is om het schema te bepalen, en `schedule_incompatible` wanneer de gemelde mogelijkheden of opgeslagen verwijzingen niet met het schema verenigbaar zijn. Bekijk de geëxporteerde details onder `schedule_resolution` voor het betreffende klimaatapparaat.
 
 <a id="reset-to-defaults"></a>
 ## Standaardwaarden herstellen

@@ -41,7 +41,27 @@ export type HassState = {
   };
 };
 
+export type SensorEntityIdsPreview = {
+  preview_id: string;
+  rows: Array<{
+    entity_id: string;
+    proposed_entity_id: string;
+    climate_entity_id: string;
+    sensor_key: string;
+    name: string;
+    status: "ready" | "unchanged" | "conflict";
+  }>;
+};
+
+export type SensorEntityIdsResult = {
+  status: "applied" | "rolled_back" | "recovery_required";
+  renamed: Array<{ old_entity_id: string; new_entity_id: string }>;
+  failed: Array<{ entity_id: string; code: "rename_failed" | "rollback_failed"; message: string }>;
+  preview: SensorEntityIdsPreview;
+};
+
 export type HomeAssistant = {
+  user?: { is_admin?: boolean };
   callService(domain: string, service: string, serviceData?: Record<string, unknown>): Promise<void>;
   connection: HassConnection;
   formatEntityName?(state: HassState, name?: string | HassEntityNameItem | HassEntityNameItem[], options?: { separator?: string }): string;
