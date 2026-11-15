@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](automation-events.md) · [Español](automation-e
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.3-beta.2 |
+| Laatst gesynchroniseerd | 2026-11-15 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -694,7 +694,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Bij een vaste enkele doeltemperatuur voor `heat` of `cool` met een dode band groter dan nul beschrijven de vier hysteresevelden de vastgelegde uitvoeringsfase, de actieve grens en de volledige schakelband. Ze ontbreken bij een dode band van nul, automatische modi met één doeltemperatuur en oorspronkelijke bereiken. De fase verandert niet wanneer de kamertemperatuur het geplande midden passeert; ze keert pas om wanneer de externe sensor de tegenovergestelde grens bereikt.
+Bij een vaste enkele doeltemperatuur voor `heat` of `cool` met een dode band groter dan nul beschrijven de vier hysteresevelden de vastgelegde uitvoeringsfase, de actieve grens en de nominale band. Ze ontbreken bij een dode band van nul, automatische modi met één doeltemperatuur en oorspronkelijke bereiken. Bij de afremniveaus Standaard of Gemiddeld verandert de fase niet wanneer de kamertemperatuur het geplande midden passeert; ze keert pas om wanneer de externe sensor de tegenovergestelde grens bereikt. Hoog begint de fase zonder warmtevraag of koelvraag bij de geplande doeltemperatuur en behoudt de bestaande herinschakelgrens.
+
+Een updategebeurtenis kan ook aanvullende `braking`-metadata over het vastgelegde beleid bevatten, ook wanneer een bereik in een vaste modus een ingestelde referentie gebruikt:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Dit voorbeeld beschrijft verwarming met een doel van `20.5 °C`, een dode band van `0.5 °C` en een apparaatstap van `0.5 °C`. Het effectieve niveau is `default` wanneer extra afremming niet kan worden toegepast; het ingestelde niveau blijft behouden en `reason` verklaart waarom. Drempels of de grens voor de ingestelde temperatuur kunnen `null` zijn wanneer ze niet beschikbaar zijn. De metadata beschrijft het terugnemen van de vraag, niet een bevestigde fysieke stop van het apparaat. Bestaande gebeurtenisverwerkers kunnen het object negeren. Zie [Optionele afremming](room-assist.nl.md#optional-braking) voor de schakelregels.
 
 Wanneer de geplande doeltemperatuur een vast verwarmings- of koelresultaat beschermt, voegt een update met één doeltemperatuur twee optionele velden toe:
 

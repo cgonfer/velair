@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](troubleshooting.md) · [Español](troublesho
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.3-beta.1 |
+| Última sincronización | 2026-11-14 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -94,6 +94,10 @@ Por ahora, la exportación solo se muestra en escritorio porque las aplicaciones
 Por defecto, Velair restaura el estado sin forzar los equipos de climatización después de iniciar Home Assistant.
 
 Activa **Aplicar la planificación activa al arrancar** en Ajustes si quieres que Velair aplique el horario activo después de reiniciar.
+
+Este ajuste controla el bloque que ya estaba activo al arrancar. Los bloques futuros se programan con cualquiera de las dos opciones. Si una entidad de climatización todavía está cargando sus modos HVAC o sus capacidades de temperatura objetivo, Velair reconstruye el horario y registra el próximo evento cuando recibe esas capacidades. Con la aplicación al inicio activada, aplica el bloque vigente cuando puede resolverlo, respetando el control y las anulaciones actuales de la zona. Con ella desactivada, no aplica el bloque anterior al arranque solo porque la entidad pase a estar preparada; sí puede recuperar un bloque cuya transición programada haya ocurrido después del arranque.
+
+Diagnóstico muestra `schedule_waiting_for_capabilities` mientras la resolución del horario necesita más información de capacidades, y `schedule_incompatible` cuando las capacidades publicadas o las referencias guardadas rechazan el horario. Revisa los detalles de `schedule_resolution` en la exportación del equipo afectado.
 
 <a id="reset-to-defaults"></a>
 

@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](linked-schedule-examples.md) · [Español](linke
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.10 |
-| Laatst gesynchroniseerd | 2026-11-05 |
+| Referentieversie | 1.9.3-beta.2 |
+| Laatst gesynchroniseerd | 2026-11-15 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -246,6 +246,6 @@ Niet-ondersteunde optionele instellingen kunnen uit de effectieve bestemming wor
 <a id="back-up-the-whole-setup"></a>
 ## De hele configuratie back-uppen
 
-Gebruik Velair-export in plaats van alleen een zichtbare opgeloste dag te kopiëren. Model 26 bewaart beide koppeltypen, presets en blokidentiteiten. Zone-instellingen behouden ook optionele Room Assist-sensorschema’s. Schema's of profielen exporteren neemt benodigde sjablonen en presets mee; het scherm toont de automatisch toegevoegde onderdelen.
+Gebruik Velair-export in plaats van alleen een zichtbare opgeloste dag te kopiëren. Model 27 bewaart beide koppeltypen, presets en blokidentiteiten. Zone-instellingen behouden ook optionele Room Assist-sensorschema’s en het gekozen afremniveau. Schema's of profielen exporteren neemt benodigde sjablonen en presets mee; het scherm toont de automatisch toegevoegde onderdelen.
 
-Controleer vervangingen vóór importbevestiging. Een gedeelde bron vervangen kan ook bestaande lokale toepassingen raken. De gecombineerde configuratie moet geldig zijn; nieuwe profielen worden niet door import geactiveerd. Oude back-ups blijven importeerbaar, maar oudere Velair-versies kunnen model 26 niet importeren. Bewaar een back-up van de vorige versie als je mogelijk wilt teruggaan. Zie [Overdraagbaarheid](usage.nl.md#portability).
+Controleer vervangingen vóór importbevestiging. Een gedeelde bron vervangen kan ook bestaande lokale toepassingen raken. De gecombineerde configuratie moet geldig zijn; nieuwe profielen worden niet door import geactiveerd. Oude back-ups blijven importeerbaar, maar oudere Velair-versies kunnen model 27 niet importeren. Bewaar een back-up van de vorige versie als je mogelijk wilt teruggaan. Zie [Overdraagbaarheid](usage.nl.md#portability).

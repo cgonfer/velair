@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.10 |
-| Ultima sincronizzazione | 2026-11-05 |
+| Versione di riferimento | 1.9.3-beta.2 |
+| Ultima sincronizzazione | 2026-11-15 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -34,7 +34,7 @@ Room Assist è locale e basato su eventi. Velair non interroga continuamente i s
 
 Velair mantiene l’obiettivo programmato come vero obiettivo dell’utente, ma corregge temporaneamente quello inviato all’entità climatica usando il sensore ambiente separato e la lettura del dispositivo.
 
-Per un obiettivo singolo in `heat` o `cool` fisso, una fascia di tolleranza diversa da zero crea due limiti di commutazione. Room Assist ricorda verso quale limite si sta dirigendo e cambia direzione solo quando il sensore ambiente separato raggiunge il limite opposto. Questo crea un vero ciclo di isteresi del sensore ambiente separato, anziché permettere al sensore interno di avviare un nuovo ciclo vicino all’obiettivo centrale. Il delta massimo di assistenza limita la correzione con segno calcolata dal limite attivo.
+Per un obiettivo singolo in `heat` o `cool` fisso, una fascia di tolleranza diversa da zero crea due limiti di commutazione. Con la frenata **Predefinito**, Room Assist ricorda verso quale limite si dirige e cambia direzione solo quando il sensore ambiente separato raggiunge il limite opposto. Questo crea un vero ciclo di isteresi basato sul sensore esterno, anziché lasciare che quello interno avvii un nuovo ciclo vicino all’obiettivo centrale. Il delta massimo di assistenza limita la correzione con segno calcolata dal limite attivo. I livelli facoltativi di frenata riducono la richiesta con maggiore decisione; **Alto** inizia a ridurla all’obiettivo programmato anziché al limite di commutazione più lontano.
 
 Gli obiettivi singoli `auto` e `heat_cool` e gli intervalli nativi `heat_cool` mantengono il comportamento neutro o di margine dell’intervallo. Velair non forza queste modalità ad alternare attivamente riscaldamento e raffrescamento attraverso un ciclo di isteresi a obiettivo singolo.
 
@@ -55,10 +55,45 @@ Con **Non configurato**, le coppie in modalità fissa vengono inviate invariate 
 4. Abilita l’assistenza con sensore ambiente.
 5. Regola la banda morta di Room Assist per definire i limiti inferiore e superiore del riscaldamento o raffrescamento fisso intorno all’obiettivo singolo o al riferimento di intervallo scelto, oppure il margine neutro delle modalità automatiche a obiettivo singolo e delle bande native `heat_cool`.
 6. Regola **Delta assistenza massimo** se il valore predefinito è troppo piccolo per la stanza o inferiore alla differenza di obiettivo necessaria al termostato per interrompere riscaldamento o raffrescamento.
-7. Regola **Ritardo aggiornamento** se gli aggiornamenti del sensore sembrano troppo lenti o troppo frequenti.
+7. Scegli facoltativamente **Frenata: Moderato** o **Alto** per ridurre la richiesta con maggiore decisione. Questi livelli richiedono una fascia di tolleranza Room Assist maggiore di zero. **Predefinito** mantiene il comportamento esistente.
+8. Regola **Ritardo aggiornamento** se gli aggiornamenti del sensore sembrano troppo lenti o troppo frequenti.
 
 Viene mostrata solo l’opzione selezionata. Quando **Sensore fisso** è già la modalità salvata, cambiarne il sensore viene salvato immediatamente. Passare da **Sensore fisso** a **Per orario**, o viceversa, modifica una bozza: **Salva** applica la modalità e le relative impostazioni, mentre **Annulla** ripristina la configurazione salvata. Il sensore fisso e la programmazione salvata vengono conservati durante il cambio; non si attivano entrambi contemporaneamente.
 
+
+<a id="optional-braking"></a>
+
+### Frenata facoltativa
+
+La frenata modifica il setpoint inviato al dispositivo mantenendo la temperatura programmata come obiettivo reale della stanza. È disponibile in **Riscaldamento** e **Raffreddamento** fissi, anche per dispositivi a due setpoint con un riferimento configurato. Non modifica le modalità automatiche a obiettivo singolo né le fasce native `heat_cool`.
+
+**T** è l’obiettivo programmato, **H** la fascia di tolleranza Room Assist e **S** il passo effettivo del setpoint del dispositivo:
+
+| Frenata | Riscaldamento: ridurre la richiesta | Riscaldamento: richiedere nuovamente calore | Raffreddamento: ridurre la richiesta | Raffreddamento: richiedere nuovamente freddo |
+| --- | --- | --- | --- | --- |
+| Predefinito | Comportamento esistente | Comportamento esistente | Comportamento esistente | Comportamento esistente |
+| Moderato | A T + H | A T − H | A T − H | A T + H |
+| Alto | A T | A T − H | A T | A T + H |
+
+Durante la riduzione della richiesta, **Moderato** limita il setpoint di riscaldamento a un massimo di **T − S**, oppure quello di raffreddamento a un minimo di **T + S**. **Alto** usa **due passi**. Se il calcolo esistente riduce già maggiormente la richiesta, Velair mantiene quel risultato più incisivo. Sono limiti fissi finché la frenata è attiva: ogni aggiornamento del sensore non aggiunge o sottrae un altro passo.
+
+Per esempio, con obiettivo di riscaldamento `20.5 °C`, tolleranza `0.5 °C` e passo del dispositivo `0.5 °C`:
+
+- **Moderato** riduce la richiesta a `21 °C`, con un setpoint del dispositivo non superiore a `20 °C`.
+- **Alto** riduce la richiesta a `20.5 °C`, con un setpoint non superiore a `19.5 °C`.
+- Entrambi richiedono nuovamente calore quando il sensore esterno raggiunge `20 °C`.
+
+Prima della riduzione, il calcolo di assistenza esistente rimane invariato. La frenata resta attiva fino al limite di riattivazione, anche quando la stanza attraversa l’obiettivo centrale. Se l’assistenza si avvia o riparte con la stanza già nella fascia, mantiene l’inizializzazione prudente esistente senza avviare intenzionalmente un ciclo di climatizzazione.
+
+Lo stato in tempo reale mostra le temperature effettive di riduzione e riattivazione. Il grafico mantiene visibile la fascia nominale e distingue le soglie effettive di frenata. La richiesta dell’alimentazione condivisa segue la stessa fase confermata.
+
+Scegli **Predefinito** prima di portare la tolleranza a zero. Il livello salvato viene conservato quando la modalità o il riferimento di temperatura attuali non consentono di usarlo; lo stato spiega perché la frenata aggiuntiva non è attiva. Combinazioni salvate non valide sospendono la frenata aggiuntiva senza modificare silenziosamente la tolleranza.
+
+I setpoint fisici minimo e massimo possono limitare la frenata disponibile. Con due setpoint si sposta l’intera coppia e ciascun limite può restringere lo spostamento. Gli avvisi esistenti descrivono il risultato richiesto e applicato.
+
+La frenata riduce la richiesta di riscaldamento o raffreddamento; non conferma l’arresto di valvola, compressore o termostato. Il controllo del dispositivo, i tempi minimi di funzionamento e l’inerzia termica possono comunque causare un superamento. Questa impostazione non apprende i cicli e non riduce la richiesta prima dell’obiettivo programmato. Verificala con cicli reali prima di affidarti a un livello per una stanza specifica.
+
+Le esportazioni portabili usano il modello **27** per conservare la frenata. Mantieni un backup della versione precedente se devi tornare indietro; le vecchie versioni di Velair non possono importare il modello 27.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -93,7 +128,7 @@ Il ritardo di aggiornamento è il debounce applicato dopo una variazione del sen
 
 La fascia di tolleranza Room Assist è indipendente dal delta minimo del precondizionamento adattivo. Il valore predefinito è `0.3 °C` o `1 °F`, accetta `0` per disabilitarla ed è configurabile a passi di `0.1` gradi fino a `5 °C` o `9 °F`. Salvarla durante l’assistenza aggiorna subito l’obiettivo assistito.
 
-La scala in tempo reale disegna la tolleranza configurata come fascia neutra a righe. Per un obiettivo singolo fisso, i due estremi sono i limiti di commutazione dell’isteresi e lo stato identifica il limite verso cui si dirige Room Assist. Per modalità automatiche singole, la fascia resta un margine neutro. Per un intervallo nativo `heat_cool`, va dal limite inferiore meno la tolleranza a quello superiore più la tolleranza. La scala si espande per mantenere visibili entrambi gli estremi. La legenda tradotta completa resta centrata sull’intervallo reale anche se più stretta del testo, così il significato non cambia con la larghezza del grafico. La spiegazione completa resta disponibile alle tecnologie assistive e al passaggio del puntatore. Con tolleranza `0` non viene disegnata una superficie e la legenda dichiara esplicitamente l’assenza di tolleranza. Grafico e legenda seguono il valore salvato dal backend; nascondere `show_room_assist_deadband` in una scheda Lovelace nasconde insieme impostazione, fascia e legenda.
+La scala in tempo reale disegna la tolleranza configurata come fascia neutra a righe. Per un obiettivo singolo fisso con frenata Predefinito o Moderato, i due estremi sono i limiti di commutazione dell’isteresi e lo stato identifica quello verso cui si dirige Room Assist. Alto conserva questa fascia nominale e indica separatamente la riduzione anticipata all’obiettivo programmato. Per modalità automatiche singole, la fascia resta un margine neutro. Per un intervallo nativo `heat_cool`, va dal limite inferiore meno la tolleranza a quello superiore più la tolleranza. La scala si espande per mantenere visibili entrambi gli estremi. La legenda tradotta completa resta centrata sull’intervallo reale anche se più stretta del testo, così il significato non cambia con la larghezza del grafico. La spiegazione completa resta disponibile alle tecnologie assistive e al passaggio del puntatore. Con tolleranza `0` non viene disegnata una superficie e la legenda dichiara esplicitamente l’assenza di tolleranza. Grafico e legenda seguono il valore salvato dal backend; nascondere `show_room_assist_deadband` in una scheda Lovelace nasconde insieme impostazione, fascia e legenda.
 
 Aggiornando da una versione in cui Room Assist condivideva il delta minimo del precondizionamento adattivo, Velair copia una volta il valore esistente nella nuova tolleranza Room Assist. Preserva l’ampiezza già configurata, incluso un valore storico non allineato al nuovo passo di input di 0,1 gradi; `heat` e `cool` fissi usano poi quel valore nel ciclo di isteresi descritto sotto. Dopo la migrazione le impostazioni sono indipendenti: modificarne una non cambia l’altra. Una zona nuova o ripristinata usa il valore predefinito legato all’unità indicato sopra.
 
@@ -118,7 +153,7 @@ Quando Room Assist è attivo, la panoramica sintetizza in **Verso il limite infe
 <a id="fixed-heating-hysteresis-example"></a>
 ## Esempio di isteresi nel riscaldamento fisso
 
-Situazione:
+Scenario con frenata **Predefinito**:
 
 - Blocco programmato: `21 °C`, `heat`
 - Tolleranza Room Assist: `±0.3 °C`
@@ -188,7 +223,7 @@ Questo impedisce di inviare obiettivi irrealistici mantenendo il termostato suff
 <a id="fixed-cooling-hysteresis-example"></a>
 ## Esempio di isteresi nel raffrescamento fisso
 
-Situazione:
+Scenario con frenata **Predefinito**:
 
 - Blocco programmato: `24 °C`, `cool`
 - Tolleranza Room Assist: `±0.5 °C`
@@ -259,6 +294,8 @@ Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
 Impostare `3 °C` non applica subito una correzione di `3 °C`. Permette soltanto a Room Assist di raggiungerla quando la differenza esterna lo richiede.
+
+Questa impostazione limita la correzione proporzionale, non il setpoint finale dopo la protezione dell’obiettivo programmato. La frenata facoltativa rafforza tale protezione con il limite di uno o due passi; non modifica il delta massimo di assistenza né applica tutto il massimo a ogni aggiornamento.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Perché l’obiettivo del dispositivo può differire dal calcolo
@@ -347,6 +384,8 @@ Quando l’assistenza con sensore ambiente è abilitata, anche il precondizionam
 
 <a id="automation-events"></a>
 ## Eventi per le automazioni
+
+Gli eventi di aggiornamento possono includere anche un oggetto `braking` con il livello configurato ed effettivo, la fase attiva, le temperature effettive di frenata e ripresa, il limite del setpoint e l’eventuale motivo di inattività. Questi campi aggiuntivi descrivono la politica di richiesta confermata, non l’attività fisica del dispositivo. Vedi [Aggiornamento di Room Sensor Assist](automation-events.it.md#room-sensor-assist-updated) per un esempio.
 
 Velair emette l’evento standard Home Assistant `velair_event`.
 

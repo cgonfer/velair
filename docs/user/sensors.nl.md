@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](sensors.md) · [Español](sensors.es.md) · [Fra
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.1 |
-| Laatst gesynchroniseerd | 2026-10-11 |
+| Referentieversie | 1.9.3-beta.1 |
+| Laatst gesynchroniseerd | 2026-11-14 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -141,7 +141,7 @@ triggers:
 <a id="per-climate-sensors"></a>
 ## Sensoren per klimaatapparaat
 
-Voor een beheerd apparaat zoals `climate.living_room` maakt Home Assistant doorgaans gerelateerde ID's aan, zoals `sensor.velair_control_living_room`. Gebruik jouw werkelijke register-ID's in dashboards en automatiseringen.
+Voor een beheerd apparaat zoals `climate.living_room` maakt Home Assistant doorgaans nieuwe gerelateerde entiteits-ID’s aan, zoals `sensor.velair_living_room_control`. Bestaande geregistreerde ID’s blijven behouden. Beheerders kunnen ze desgewenst controleren via **Instellingen → Onderhoud → Entiteits-ID’s van sensoren controleren**, zoals uitgelegd in de [gebruikershandleiding](usage.nl.md#sensor-entity-ids). Gebruik jouw werkelijke register-ID’s in dashboards en automatiseringen.
 
 <a id="zone-active-target-temperature"></a>
 ### Actieve doeltemperatuur van de zone
@@ -237,7 +237,7 @@ Belangrijkste attributen:
 Voorbeeld:
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -315,8 +315,8 @@ Belangrijkste attributen:
 Voorbeeld:
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -358,7 +358,7 @@ Voorbeeld:
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

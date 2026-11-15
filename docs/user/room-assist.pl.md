@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.10 |
-| Ostatnia synchronizacja | 2026-11-05 |
+| Wersja odniesienia | 1.9.3-beta.2 |
+| Ostatnia synchronizacja | 2026-11-15 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -33,7 +33,7 @@ W bloku **Tylko temperatura** Room Assist jest wstrzymany, gdy termostat jest wy
 
 Temperatura z harmonogramu pozostaje rzeczywistą temperaturą docelową użytkownika. Velair tymczasowo koryguje wartość wysyłaną do urządzenia na podstawie czujnika pokojowego i odczytu samego urządzenia.
 
-Dla pojedynczej temperatury w stałym trybie `heat` lub `cool` niezerowa strefa nieczułości wyznacza dwie granice przełączania. Room Assist pamięta, do której granicy zmierza, i zmienia kierunek dopiero po osiągnięciu przeciwnej granicy przez czujnik pokojowy. Tworzy to cykl histerezy oparty na osobnym czujniku pokojowym, zamiast pozwalać czujnikowi wewnętrznemu rozpoczynać nowy cykl przy środkowej temperaturze docelowej. Maksymalna różnica wspomagania ogranicza korektę ze znakiem obliczoną względem aktywnej granicy.
+Dla pojedynczej temperatury w stałym trybie `heat` lub `cool` niezerowa strefa nieczułości wyznacza dwie granice przełączania. Przy hamowaniu **Domyślne** Room Assist pamięta, do której granicy zmierza, i zmienia kierunek dopiero po osiągnięciu przeciwnej granicy przez czujnik pokojowy. Tworzy to cykl histerezy oparty na osobnym czujniku, zamiast pozwalać czujnikowi wewnętrznemu rozpoczynać nowy cykl przy środkowej temperaturze docelowej. Maksymalna różnica wspomagania ogranicza korektę ze znakiem obliczoną względem aktywnej granicy. Opcjonalne poziomy hamowania mocniej ograniczają zapotrzebowanie; **Silne** rozpoczyna ograniczanie przy zaplanowanej temperaturze zamiast na dalszej granicy przełączania.
 
 Pojedyncze temperatury w trybach `auto` i `heat_cool` oraz natywne zakresy `heat_cool` zachowują działanie neutralne lub margines wokół zakresu. Velair nie wymusza w tych trybach naprzemiennego ogrzewania i chłodzenia według cyklu histerezy dla pojedynczej temperatury.
 
@@ -54,7 +54,8 @@ Przy **Nie skonfigurowano** pary stałego trybu są wysyłane bez zmian i bez ko
 4. Włącz **Asystent czujnika pokojowego**.
 5. Ustaw strefę nieczułości Room Assist dla stałego ogrzewania lub chłodzenia wokół pojedynczego celu lub wybranego odniesienia zakresu; dla automatycznych pojedynczych celów i natywnych pasm `heat_cool` określa ona neutralny margines.
 6. Zwiększ ustawienie **Maksymalna delta wspomagania**, jeśli domyślna wartość jest za mała dla pomieszczenia lub dla różnicy temperatur, której termostat potrzebuje do zatrzymania ogrzewania albo chłodzenia.
-7. Dostosuj opóźnienie odświeżania, jeśli odczyty są uwzględniane zbyt wolno lub zbyt często.
+7. Opcjonalnie wybierz **Hamowanie: Umiarkowane** lub **Silne**, aby mocniej ograniczać zapotrzebowanie. Te poziomy wymagają strefy nieczułości Room Assist większej od zera. **Domyślne** zachowuje dotychczasowe działanie.
+8. Dostosuj opóźnienie odświeżania, jeśli odczyty są uwzględniane zbyt wolno lub zbyt często.
 
 Samo wybranie czujnika zapisuje jedynie jego przypisanie. Velair zaczyna używać go jako źródła rzeczywistej temperatury pomieszczenia dopiero po włączeniu wspomagania.
 
@@ -66,10 +67,44 @@ Opóźnienie odświeżania grupuje zmiany odczytów czujnika pokojowego lub urz�
 
 Strefa nieczułości jest niezależna od minimalnej różnicy adaptacyjnego przygotowania. Domyślnie wynosi `0.3 °C` lub `1 °F`. Wartość `0` ją wyłącza; regulacja odbywa się co `0.1` stopnia, do `5 °C` lub `9 °F`. Zapisanie ustawienia podczas działania Room Assist natychmiast odświeża korygowaną temperaturę.
 
-Skala temperatury pokazuje strefę nieczułości jako neutralny, kreskowany pas. Dla pojedynczej temperatury w stałym trybie jego krawędzie oznaczają granice histerezy, a stan wskazuje, do której granicy zmierza Room Assist. Dla pojedynczych temperatur w trybach automatycznych pas pozostaje marginesem neutralnym. Dla natywnego zakresu `heat_cool` rozciąga się od dolnej granicy pomniejszonej o strefę nieczułości do górnej granicy powiększonej o nią. Skala rozszerza się, aby obie krawędzie były widoczne. Pełna, przetłumaczona legenda pozostaje wyśrodkowana względem rzeczywistego pasa, nawet jeśli tekst jest szerszy, więc znaczenie nie zależy od szerokości wykresu. Pełne objaśnienie jest także dostępne dla technologii wspomagających i po najechaniu kursorem. Przy wartości `0` pas nie jest rysowany, a legenda wyraźnie informuje o braku strefy nieczułości. Wykres i legenda korzystają z wartości zapisanej w backendzie. Ukrycie `show_room_assist_deadband` w karcie Lovelace ukrywa jednocześnie ustawienie, pas i legendę.
+Skala temperatury pokazuje strefę nieczułości jako neutralny, kreskowany pas. Dla pojedynczej temperatury w stałym trybie z hamowaniem Domyślne lub Umiarkowane jego krawędzie oznaczają granice histerezy, a stan wskazuje aktywny kierunek. Silne zachowuje pas nominalny i oddzielnie oznacza wcześniejsze ograniczenie przy zaplanowanej temperaturze. Dla pojedynczych temperatur w trybach automatycznych pas pozostaje marginesem neutralnym. Dla natywnego zakresu `heat_cool` rozciąga się od dolnej granicy pomniejszonej o strefę nieczułości do górnej granicy powiększonej o nią. Skala rozszerza się, aby obie krawędzie były widoczne. Pełna, przetłumaczona legenda pozostaje wyśrodkowana względem rzeczywistego pasa, nawet jeśli tekst jest szerszy, więc znaczenie nie zależy od szerokości wykresu. Pełne objaśnienie jest także dostępne dla technologii wspomagających i po najechaniu kursorem. Przy wartości `0` pas nie jest rysowany, a legenda wyraźnie informuje o braku strefy nieczułości. Wykres i legenda korzystają z wartości zapisanej w backendzie. Ukrycie `show_room_assist_deadband` w karcie Lovelace ukrywa jednocześnie ustawienie, pas i legendę.
 
 Wyświetlana jest tylko wybrana opcja. Gdy **Stały czujnik** jest już zapisanym sposobem działania, zmiana jego czujnika zapisuje się natychmiast. Przełączanie między **Stały czujnik** a **Według harmonogramu** zmienia wersję roboczą: **Zapisz** stosuje wybór i jego ustawienia, a **Anuluj** przywraca zapisaną konfigurację. Przy przełączaniu zachowywane są stały czujnik i zapisany harmonogram; obie opcje nie są aktywne jednocześnie.
 
+
+<a id="optional-braking"></a>
+
+### Opcjonalne hamowanie
+
+Hamowanie zmienia nastawę wysyłaną do urządzenia, zachowując zaplanowaną temperaturę jako rzeczywisty cel dla pomieszczenia. Jest dostępne w stałych trybach **Ogrzewanie** i **Chłodzenie**, również dla urządzeń z dwiema nastawami i skonfigurowaną nastawą odniesienia. Nie zmienia automatycznych trybów z jedną nastawą ani natywnych pasm `heat_cool`.
+
+**T** oznacza zaplanowaną temperaturę, **H** strefę nieczułości Room Assist, a **S** efektywny krok nastawy urządzenia:
+
+| Hamowanie | Ogrzewanie: ograniczenie zapotrzebowania | Ogrzewanie: ponowne żądanie ciepła | Chłodzenie: ograniczenie zapotrzebowania | Chłodzenie: ponowne żądanie chłodu |
+| --- | --- | --- | --- | --- |
+| Domyślne | Dotychczasowe działanie | Dotychczasowe działanie | Dotychczasowe działanie | Dotychczasowe działanie |
+| Umiarkowane | Przy T + H | Przy T − H | Przy T − H | Przy T + H |
+| Silne | Przy T | Przy T − H | Przy T | Przy T + H |
+
+Podczas ograniczania zapotrzebowania **Umiarkowane** ogranicza nastawę ogrzewania do najwyżej **T − S**, a chłodzenia do co najmniej **T + S**. **Silne** wykorzystuje **dwa kroki**. Jeżeli dotychczasowe obliczenie ogranicza zapotrzebowanie jeszcze bardziej, Velair zachowuje ten silniejszy wynik. Są to stałe ograniczenia podczas aktywnego hamowania: każda aktualizacja czujnika nie dodaje ani nie odejmuje kolejnego kroku.
+
+Przykład dla temperatury ogrzewania `20.5 °C`, strefy nieczułości `0.5 °C` i kroku urządzenia `0.5 °C`:
+
+- **Umiarkowane** ogranicza zapotrzebowanie przy `21 °C`, przy nastawie urządzenia nie wyższej niż `20 °C`.
+- **Silne** ogranicza je przy `20.5 °C`, przy nastawie nie wyższej niż `19.5 °C`.
+- Oba poziomy ponownie żądają ciepła, gdy zewnętrzny czujnik osiągnie `20 °C`.
+
+Przed ograniczeniem zapotrzebowania dotychczasowe obliczanie wspomagania nie zmienia się. Hamowanie trwa do osiągnięcia granicy ponownej aktywacji, również po przekroczeniu centralnej temperatury. Jeśli wspomaganie startuje lub uruchamia się ponownie, gdy temperatura jest już w paśmie, zachowuje dotychczasową ostrożną inicjalizację bez celowego rozpoczynania cyklu ogrzewania lub chłodzenia.
+
+Stan na żywo pokazuje efektywne temperatury ograniczenia i ponownej aktywacji. Wykres zachowuje nominalną strefę nieczułości i odróżnia efektywne progi hamowania. Zapotrzebowanie wspólnego źródła podąża za tą samą zatwierdzoną fazą.
+
+Wybierz **Domyślne** przed ustawieniem strefy nieczułości na zero. Zapisany poziom pozostaje zachowany, jeśli aktualny tryb lub źródło temperatury nie pozwala go użyć; stan wyjaśnia brak dodatkowego hamowania. Nieprawidłowe zapisane kombinacje wstrzymują dodatkowe hamowanie zamiast po cichu zmieniać strefę nieczułości.
+
+Fizyczna minimalna i maksymalna nastawa mogą ograniczyć dostępne hamowanie. Przy dwóch nastawach przesuwana jest cała para, a każda granica może ograniczyć przesunięcie. Istniejące ostrzeżenia pokazują wynik żądany i zastosowany.
+
+Hamowanie zmniejsza żądanie ogrzewania lub chłodzenia; nie potwierdza zatrzymania zaworu, sprężarki ani termostatu. Sterowanie urządzeniem, minimalne czasy pracy i bezwładność cieplna nadal mogą powodować przekroczenie temperatury. Ta opcja nie uczy się cykli ani nie ogranicza zapotrzebowania przed zaplanowaną temperaturą. Sprawdź ją w rzeczywistych cyklach, zanim zaczniesz polegać na danym poziomie w konkretnym pomieszczeniu.
+
+Przenośne eksporty używają modelu **27**, aby zachować hamowanie. Zachowaj kopię z poprzedniej wersji, jeśli potrzebujesz możliwości powrotu; starsze wersje Velair nie importują modelu 27.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -117,7 +152,7 @@ Podczas działania Room Assist przegląd pokazuje skrócony stan: zmierzanie do 
 <a id="fixed-heating-hysteresis-example"></a>
 ## Przykład histerezy przy stałym ogrzewaniu
 
-Założenia:
+Przykład z hamowaniem **Domyślne**:
 
 - Blok harmonogramu: `21 °C`, `heat`
 - Strefa nieczułości: `±0.3 °C`
@@ -187,7 +222,7 @@ Zapobiega to wysyłaniu nierealistycznych nastaw, nadal pozwalając urządzeniu 
 <a id="fixed-cooling-hysteresis-example"></a>
 ## Przykład histerezy przy stałym chłodzeniu
 
-Założenia:
+Przykład z hamowaniem **Domyślne**:
 
 - Blok harmonogramu: `24 °C`, `cool`
 - Strefa nieczułości: `±0.5 °C`
@@ -258,6 +293,8 @@ Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
 Ustawienie `3 °C` nie powoduje natychmiastowej korekty o `3 °C`. Jedynie pozwala osiągnąć tę wartość, gdy wymaga tego różnica temperatury w pokoju.
+
+Ta opcja ogranicza korektę proporcjonalną, a nie końcową nastawę po ochronie zaplanowanej temperatury. Opcjonalne hamowanie wzmacnia tę ochronę ograniczeniem jednego lub dwóch kroków; nie zmienia maksymalnej różnicy wspomagania ani nie stosuje całej maksymalnej wartości przy każdej aktualizacji.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Dlaczego nastawa urządzenia może różnić się od obliczeń
@@ -346,6 +383,8 @@ Przy włączonym wspomaganiu adaptacyjne przygotowanie także korzysta z wybrane
 
 <a id="automation-events"></a>
 ## Zdarzenia automatyzacji
+
+Zdarzenia aktualizacji mogą również zawierać obiekt `braking` z poziomem skonfigurowanym i efektywnym, aktywną fazą, efektywnymi temperaturami zatrzymania i wznowienia, ograniczeniem nastawy oraz ewentualną przyczyną nieaktywności. Te dodatkowe pola opisują zatwierdzoną politykę zapotrzebowania, a nie fizyczną aktywność urządzenia. Przykład: [Aktualizacja Room Sensor Assist](automation-events.pl.md#room-sensor-assist-updated).
 
 Velair emituje standardowe zdarzenie Home Assistant `velair_event`.
 

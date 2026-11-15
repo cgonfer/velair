@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.1 |
-| Letzte Synchronisierung | 2026-10-11 |
+| Referenzversion | 1.9.3-beta.1 |
+| Letzte Synchronisierung | 2026-11-14 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -141,7 +141,7 @@ triggers:
 <a id="per-climate-sensors"></a>
 ## Sensoren je Klimagerät
 
-Für ein verwaltetes Klimagerät wie `climate.living_room` erstellt Home Assistant normalerweise zugehörige IDs wie `sensor.velair_control_living_room`. Verwende in Dashboards und Automationen die tatsächlichen IDs deiner Registrierung.
+Für ein verwaltetes Klimagerät wie `climate.living_room` erstellt Home Assistant normalerweise neue zugehörige Entitäts-IDs wie `sensor.velair_living_room_control`. Bestehende registrierte IDs bleiben erhalten. Administratoren können sie optional unter **Einstellungen → Wartung → Sensor-Entitäts-IDs prüfen** überprüfen, wie in der [Bedienungsanleitung](usage.de.md#sensor-entity-ids) beschrieben. Verwende in Dashboards und Automationen die tatsächlichen IDs deiner Registrierung.
 
 <a id="zone-active-target-temperature"></a>
 ### Aktive Zieltemperatur der Zone
@@ -237,7 +237,7 @@ Wichtigste Attribute:
 Beispiel:
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -315,8 +315,8 @@ Wichtigste Attribute:
 Beispiel:
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -358,7 +358,7 @@ Beispiel:
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.2 |
-| Última sincronização | 2026-11-12 |
+| Versão de referência | 1.9.3-beta.2 |
+| Última sincronização | 2026-11-15 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -31,6 +31,17 @@ Em **Configurações** do painel da barra lateral, **Exibição dos nomes dos di
 **Nomes atuais com contexto de área** mantém esses nomes e adiciona separadamente a área efetiva do Home Assistant quando dispositivos gerenciados compartilham um nome. **Nomes das entidades com contexto** usa o nome próprio da entidade, ou o nome do dispositivo se ela for a entidade principal dele, com contexto separado do Home Assistant para nomes repetidos. Para um dispositivo chamado `Test` e uma entidade chamada `Test 2`, o formato atual é `Test Test 2`; o formato de entidade é `Test 2`, com contexto de área ou dispositivo quando necessário. A área própria da entidade tem prioridade sobre a área do dispositivo.
 
 Quando o contexto de área ou dispositivo não consegue distinguir nomes repetidos, o ID da entidade continua disponível como referência. As opções dos menus suspensos nativos mostram o contexto na mesma linha. Os nomes personalizados dos cartões e os nomes dos Grupos de cômodo mantêm a prioridade. O Velair salva essa preferência e a compartilha entre navegadores e cartões; altere-a nas Configurações do painel da barra lateral. Ela não renomeia entidades do Home Assistant nem altera seus IDs, programações ou comandos de climatização. Versões anteriores do Home Assistant mantêm os nomes existentes quando os metadados estruturados de nomes não estão disponíveis.
+
+<a id="sensor-entity-ids"></a>
+## IDs de entidade dos sensores
+
+Os novos sensores do Velair usam o ID da entidade de climatização de origem e a finalidade do sensor como base para seus IDs iniciais. O Home Assistant aplica suas regras de nomenclatura e resolve conflitos com IDs já ocupados. Assim, dispositivos com o mesmo nome visível podem receber IDs de sensores que permitem distingui-los. Os nomes dos sensores continuam traduzidos como antes.
+
+Os sensores existentes mantêm os IDs registrados, inclusive IDs personalizados. Alterar **Exibição dos nomes dos dispositivos de climatização**, importar Configurações ou reiniciar não muda esses IDs.
+
+Administradores podem abrir **Configurações → Manutenção → Revisar IDs de entidade dos sensores** para revisar os sensores existentes. A revisão mostra o dispositivo de origem, o ID atual e o ID proposto, incluindo sensores sem sufixo numérico e sensores de diagnóstico desativados. Nada é selecionado automaticamente. Selecione as alterações desejadas e confirme a renomeação; você também pode fechar a revisão sem fazer alterações. Atualizar a revisão limpa as seleções. Uma proposta alterada ou desatualizada precisa ser revisada novamente antes de ser aplicada.
+
+Alterar um ID de entidade pode exigir atualizações em automações, painéis, modelos e referências externas. Revise essas referências antes de confirmar; o Velair não garante que irá reescrevê-las. Essa operação não altera nomes dos sensores, identidades internas, configurações nem comandos de climatização. Se uma operação em lote falhar, o Velair tenta restaurar os IDs anteriores e informa as alterações que permanecerem.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navegação do painel e links diretos
@@ -533,7 +544,7 @@ O Velair armazena valores térmicos sem conversão, na unidade registrada com se
 
 A atualização única de dados publicados do Velair que usavam apenas Celsius é diferente. Se o Home Assistant já usa Fahrenheit, o Velair assume que os dados antigos estão em Celsius sem perguntar, mantém o agendador interrompido e direciona o usuário a **Redefinir Velair**. A redefinição descarta a configuração antiga e cria atomicamente novos padrões Fahrenheit. Após essa atualização, mudanças futuras de unidade no Home Assistant usam a conversão explícita completa descrita acima e preservam os dados.
 
-Exportações atuais do modelo portátil v26 preservam os valores sem conversão e declaram sua unidade. Versões anteriores do Velair não conseguem importar exportações v26; use uma versão com suporte a v26 para restaurá-las. Arquivos antigos suportados, incluindo v4, v5, v8 e v9, continuam podendo ser importados. Importações convertem os dados térmicos selecionados quando a unidade do arquivo difere da unidade atual do Home Assistant. Arquivos antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo salvar uma cópia de referência antes da redefinição e importá-la depois.
+Exportações atuais do modelo portátil v27 preservam os valores sem conversão e declaram sua unidade. Versões anteriores do Velair não conseguem importar exportações v27; use uma versão com suporte a v27 para restaurá-las. Arquivos antigos suportados, incluindo v4, v5, v8 e v9, continuam podendo ser importados. Importações convertem os dados térmicos selecionados quando a unidade do arquivo difere da unidade atual do Home Assistant. Arquivos antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo salvar uma cópia de referência antes da redefinição e importá-la depois.
 
 Se um termostato estava indisponível durante a migração ou importação, o Velair verifica seus limites e seu incremento efetivo de temperatura. Um `target_temp_step` válido publicado pelo Home Assistant tem prioridade sobre o último incremento informado e depois sobre a alternativa manual por zona. O painel avisa quando uma temperatura-alvo armazenada já não é compatível, para que seja editada antes de depender dessa programação.
 
@@ -712,7 +723,7 @@ O arquivo pode conter:
 - definições de perfis de climatização;
 - definições de modos.
 
-As exportações atuais do modelo 26 preservam os dois tipos de vínculo de modelos, referências de presets, relações de Mestre do pré-condicionamento, políticas de formato e referência de alvo e a autoridade e configuração compartilhada dos grupos de cômodo. As configurações de zona também preservam programações opcionais de sensores do Room Assist, independentemente das programações de temperatura e dos Perfis. Âncoras aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como seções adicionais selecionadas. Quando há dados de grupo, grupos, programações e Perfis necessários também são incluídos, mesmo começando por uma exportação de aprendizado. Importações validam a configuração combinada, incluindo consumidores existentes de recursos compartilhados substituídos. Presets são mesclados pela chave estável: os correspondentes são substituídos, enquanto os locais ausentes do arquivo permanecem. Backups existentes continuam importáveis; versões antigas do Velair não importam arquivos do modelo 26. Mantenha um backup da versão anterior caso precise voltar a ela. Consulte [o exemplo de backup](linked-schedule-examples.pt-br.md#back-up-the-whole-setup).
+As exportações atuais do modelo 27 preservam os dois tipos de vínculo de modelos, referências de presets, relações de Mestre do pré-condicionamento, políticas de formato e referência de alvo e a autoridade e configuração compartilhada dos grupos de cômodo. As configurações de zona também preservam programações opcionais de sensores do Room Assist e o nível de frenagem selecionado, independentemente das programações de temperatura e dos Perfis. Âncoras aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como seções adicionais selecionadas. Quando há dados de grupo, grupos, programações e Perfis necessários também são incluídos, mesmo começando por uma exportação de aprendizado. Importações validam a configuração combinada, incluindo consumidores existentes de recursos compartilhados substituídos. Presets são mesclados pela chave estável: os correspondentes são substituídos, enquanto os locais ausentes do arquivo permanecem. Backups existentes continuam importáveis; versões antigas do Velair não importam arquivos do modelo 27. Mantenha um backup da versão anterior caso precise voltar a ela. Consulte [o exemplo de backup](linked-schedule-examples.pt-br.md#back-up-the-whole-setup).
 
 Ao importar, o Velair permite escolher quais seções sobrescrever. A importação substitui os dados selecionados; exporte antes se precisar de um ponto de recuperação. Definições de perfis e modos são portáteis, mas sua seleção ativa não é. O Velair mantém IDs de perfis ativos que ainda existam e volta às programações padrão apenas quando nenhum deles permanece.
 

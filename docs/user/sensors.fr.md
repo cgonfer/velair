@@ -8,8 +8,8 @@ Traductions: [Original en anglais](sensors.md) · [Español](sensors.es.md) · [
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.1 |
-| Dernière synchronisation | 2026-10-11 |
+| Version de référence | 1.9.3-beta.1 |
+| Dernière synchronisation | 2026-11-14 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -141,7 +141,7 @@ triggers:
 <a id="per-climate-sensors"></a>
 ## Capteurs par équipement climatique
 
-Pour un équipement géré tel que `climate.living_room`, Home Assistant crée normalement des ID liés tels que `sensor.velair_control_living_room`. Utilisez les ID réels de votre registre dans les tableaux de bord et automatisations.
+Pour un équipement géré tel que `climate.living_room`, Home Assistant crée normalement de nouveaux identifiants d’entité associés tels que `sensor.velair_living_room_control`. Les identifiants déjà enregistrés sont conservés. Les administrateurs peuvent les vérifier de manière facultative dans **Réglages → Maintenance → Vérifier les identifiants d’entité des capteurs**, comme expliqué dans le [guide d’utilisation](usage.fr.md#sensor-entity-ids). Utilisez les identifiants réels de votre registre dans les tableaux de bord et automatisations.
 
 <a id="zone-active-target-temperature"></a>
 ### Température cible active de la zone
@@ -237,7 +237,7 @@ Attributs principaux :
 Exemple :
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -315,8 +315,8 @@ Attributs principaux :
 Exemple :
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -358,7 +358,7 @@ Exemple :
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

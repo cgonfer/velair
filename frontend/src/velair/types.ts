@@ -41,7 +41,27 @@ export type HassState = {
   };
 };
 
+export type SensorEntityIdsPreview = {
+  preview_id: string;
+  rows: Array<{
+    entity_id: string;
+    proposed_entity_id: string;
+    climate_entity_id: string;
+    sensor_key: string;
+    name: string;
+    status: "ready" | "unchanged" | "conflict";
+  }>;
+};
+
+export type SensorEntityIdsResult = {
+  status: "applied" | "rolled_back" | "recovery_required";
+  renamed: Array<{ old_entity_id: string; new_entity_id: string }>;
+  failed: Array<{ entity_id: string; code: "rename_failed" | "rollback_failed"; message: string }>;
+  preview: SensorEntityIdsPreview;
+};
+
 export type HomeAssistant = {
+  user?: { is_admin?: boolean };
   callService(domain: string, service: string, serviceData?: Record<string, unknown>): Promise<void>;
   connection: HassConnection;
   formatEntityName?(state: HassState, name?: string | HassEntityNameItem | HassEntityNameItem[], options?: { separator?: string }): string;
@@ -345,6 +365,8 @@ export type RoomSensorScheduleDetail = {
   room_sensor_schedule: RoomSensorSchedule | null;
 };
 
+export type RoomAssistBrakingLevel = "default" | "moderate" | "high";
+
 export type PreconditioningSettings = {
   master_entity_id?: string | null;
   enabled: boolean;
@@ -364,6 +386,7 @@ export type PreconditioningSettings = {
   room_sensor_schedule?: RoomSensorSchedule | RoomSensorScheduleSummary;
   room_sensor_assist_enabled: boolean;
   room_sensor_assist_deadband: number;
+  room_sensor_assist_braking_level?: RoomAssistBrakingLevel;
   room_sensor_assist_max_delta: number;
   room_sensor_assist_debounce_seconds: number;
 };
@@ -627,6 +650,15 @@ export type PreconditioningLearningSummary = {
 };
 
 export type RoomSensorAssistStatus = {
+  braking?: {
+    configured_level: RoomAssistBrakingLevel;
+    effective_level: RoomAssistBrakingLevel;
+    active: boolean;
+    stop_temperature: number | null;
+    resume_temperature: number | null;
+    setpoint_bound: number | null;
+    reason: string | null;
+  };
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;

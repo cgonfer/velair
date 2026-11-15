@@ -8,8 +8,8 @@ Traduções: [Original em inglês](zone-sensors.md) · [Español](zone-sensors.e
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.3-beta.1 |
+| Última sincronização | 2026-11-14 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -161,12 +161,12 @@ Atributos incluem `evaluation_scope`, `potential_effects`, `blocked_by`, `reason
 Para um dispositivo como `climate.living_room`, uma nova entrada no registro normalmente usa um ID como:
 
 ```text
-sensor.velair_ventilation_opportunity_living_room
-sensor.velair_control_living_room
-sensor.velair_delivery_diagnostics_living_room
+sensor.velair_living_room_ventilation_opportunity
+sensor.velair_living_room_control
+sensor.velair_living_room_delivery_diagnostics
 ```
 
-São IDs sugeridos, não uma API permanente. O Home Assistant pode acrescentar um sufixo para evitar conflitos, e usuários podem renomear entidades. Selecione pelos IDs reais do seu registro. O nome mostrado usa o nome amigável do dispositivo; o ID sugerido usa o identificador de objeto da entidade. Nome e área do dispositivo de serviços do Velair não fazem parte dele.
+São IDs de entidade sugeridos, não uma API permanente. O Home Assistant pode acrescentar um sufixo para evitar conflitos, e usuários podem renomear uma entidade. Selecione entidades pelos IDs reais do seu registro do Home Assistant. O nome exibido usa o nome amigável do dispositivo de climatização gerenciado, enquanto a base do ID inicial usa o identificador de objeto da entidade de climatização e a finalidade do sensor. O Home Assistant aplica a essa base suas regras configuradas de nomenclatura de dispositivos e áreas. Os IDs já registrados são preservados, inclusive IDs personalizados. Administradores podem revisá-los opcionalmente em **Configurações → Manutenção → Revisar IDs de entidade dos sensores**; consulte o [guia de uso](usage.pt-br.md#sensor-entity-ids) antes de renomear IDs usados por automações ou outros consumidores.
 
 <a id="zone-control"></a>
 ## Controle da zona
@@ -263,7 +263,7 @@ A automação abaixo notifica somente após esgotar as tentativas limitadas. Sub
 alias: Velair living room delivery exhausted
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 actions:
   - action: persistent_notification.create
@@ -279,8 +279,8 @@ Esta condição por template verifica se o Velair tem controle automático atual
 ```yaml
 condition: template
 value_template: >-
-  {{ is_state('sensor.velair_control_living_room', 'automatic')
-     and state_attr('sensor.velair_control_living_room', 'runtime_state')
+  {{ is_state('sensor.velair_living_room_control', 'automatic')
+     and state_attr('sensor.velair_living_room_control', 'runtime_state')
          == 'scheduled' }}
 ```
 

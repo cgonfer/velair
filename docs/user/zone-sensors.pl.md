@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](zone-sensors.md) · [Español](zo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.3-beta.1 |
+| Ostatnia synchronizacja | 2026-11-14 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -161,12 +161,12 @@ Stałe kody `reason`: `monitoring_off`, `outdoor_comparison_disabled`, `indoor_t
 Dla urządzenia takiego jak `climate.living_room` nowo utworzone wpisy w rejestrze zwykle otrzymują identyfikatory takie jak:
 
 ```text
-sensor.velair_ventilation_opportunity_living_room
-sensor.velair_control_living_room
-sensor.velair_delivery_diagnostics_living_room
+sensor.velair_living_room_ventilation_opportunity
+sensor.velair_living_room_control
+sensor.velair_living_room_delivery_diagnostics
 ```
 
-To sugerowany identyfikator, nie stałe API. Home Assistant może dodać końcówkę, aby uniknąć kolizji, a użytkownik może zmienić nazwę. Korzystaj z rzeczywistych identyfikatorów rejestru. Wyświetlana nazwa zawiera przyjazną nazwę urządzenia, a sugerowane ID jego identyfikator obiektu. Urządzenie usługowe Velair ani przypisanie do obszaru nie są częścią ID.
+Są to sugerowane identyfikatory encji, a nie stałe API. Home Assistant może dodać przyrostek, aby uniknąć konfliktu, a użytkownik może zmienić identyfikator encji. Wybieraj encje na podstawie rzeczywistych identyfikatorów we własnym rejestrze Home Assistant. Wyświetlana nazwa encji korzysta z przyjaznej nazwy zarządzanego urządzenia klimatycznego, natomiast podstawa początkowego identyfikatora obejmuje identyfikator obiektu encji klimatycznej i przeznaczenie czujnika. Home Assistant stosuje do tej podstawy skonfigurowane reguły nazw urządzeń i obszarów. Istniejące identyfikatory w rejestrze, także własne identyfikatory użytkownika, zostają zachowane. Administratorzy mogą opcjonalnie przejrzeć je w sekcji **Ustawienia → Konserwacja → Sprawdź identyfikatory encji czujników**. Przed zmianą identyfikatorów używanych przez automatyzacje lub inne systemy przeczytaj [instrukcję użytkowania](usage.pl.md#sensor-entity-ids).
 
 <a id="zone-control"></a>
 ## Sterowanie strefą
@@ -261,7 +261,7 @@ Ta automatyzacja powiadamia dopiero po wyczerpaniu ograniczonej liczby ponownych
 alias: Velair living room delivery exhausted
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 actions:
   - action: persistent_notification.create
@@ -277,8 +277,8 @@ Ten warunek szablonowy sprawdza, czy Velair obecnie odpowiada za automatyczne st
 ```yaml
 condition: template
 value_template: >-
-  {{ is_state('sensor.velair_control_living_room', 'automatic')
-     and state_attr('sensor.velair_control_living_room', 'runtime_state')
+  {{ is_state('sensor.velair_living_room_control', 'automatic')
+     and state_attr('sensor.velair_living_room_control', 'runtime_state')
          == 'scheduled' }}
 ```
 

@@ -32,22 +32,22 @@ const TOPIC_COPY: Record<DocumentationTopic, { title: TranslationKey; summary: T
   roomGroups: { title: "roomGroups", summary: "roomGroupsDescription" },
 };
 
-function openDocumentationDialog(event: Event) {
+export function openDocumentationDialog(event: Event) {
   event.stopPropagation();
   const trigger = event.currentTarget as HTMLButtonElement;
   const dialog = trigger.parentElement?.querySelector<HTMLDialogElement>("dialog");
   if (dialog && !dialog.open) dialog.showModal();
 }
 
-function closeDocumentationDialog(event: Event) {
+export function closeDocumentationDialog(event: Event) {
   event.stopPropagation();
   (event.currentTarget as HTMLElement).closest<HTMLDialogElement>("dialog")?.close();
 }
 
-function restoreTriggerFocus(event: Event) {
+export function restoreTriggerFocus(event: Event) {
   event.stopPropagation();
   const dialog = event.currentTarget as HTMLDialogElement;
-  const trigger = dialog.parentElement?.querySelector<HTMLButtonElement>(".documentation-help-button");
+  const trigger = dialog.parentElement?.querySelector<HTMLButtonElement>(".documentation-help-button, [data-dialog-trigger]");
   if (trigger?.isConnected) trigger.focus();
 }
 
@@ -60,10 +60,10 @@ export function handleDialogClick(event: MouseEvent) {
     || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
 }
 
-function handleDialogKeydown(event: KeyboardEvent) {
+export function handleDialogKeydown(event: KeyboardEvent) {
   if (event.key !== "Tab") return;
   const dialog = event.currentTarget as HTMLDialogElement;
-  const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]"));
+  const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])"));
   const first = focusable[0];
   const last = focusable.at(-1);
   const target = event.composedPath()[0];

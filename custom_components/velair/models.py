@@ -202,6 +202,7 @@ class PreconditioningData(TypedDict):
     room_sensor_schedule: NotRequired[dict[str, Any]]
     room_sensor_assist_enabled: bool
     room_sensor_assist_deadband: float
+    room_sensor_assist_braking_level: str
     room_sensor_assist_max_delta: float
     room_sensor_assist_debounce_seconds: int
 
@@ -1942,6 +1943,11 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
             data.get("room_temperature_entity_id")
         ),
         "room_sensor_assist_enabled": bool(data.get("room_sensor_assist_enabled", False)),
+        "room_sensor_assist_braking_level": (
+            data.get("room_sensor_assist_braking_level", "default")
+            if data.get("room_sensor_assist_braking_level", "default") in ("default", "moderate", "high")
+            else "default"
+        ),
         "room_sensor_assist_deadband": _normalize_room_sensor_assist_deadband(
             data.get("room_sensor_assist_deadband")
         ),

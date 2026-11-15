@@ -8,8 +8,8 @@ Traduções: [Original em inglês](sensors.md) · [Español](sensors.es.md) · [
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.1 |
-| Última sincronização | 2026-10-11 |
+| Versão de referência | 1.9.3-beta.1 |
+| Última sincronização | 2026-11-14 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -141,7 +141,7 @@ triggers:
 <a id="per-climate-sensors"></a>
 ## Sensores por dispositivo
 
-Para um dispositivo gerenciado como `climate.living_room`, o Home Assistant normalmente cria IDs relacionados, como `sensor.velair_control_living_room`. Use os IDs reais do registro em painéis e automações.
+Para um dispositivo gerenciado como `climate.living_room`, o Home Assistant normalmente cria novos IDs de entidade relacionados, como `sensor.velair_living_room_control`. Os IDs já registrados são preservados. Administradores podem revisá-los opcionalmente em **Configurações → Manutenção → Revisar IDs de entidade dos sensores**, conforme explicado no [guia de uso](usage.pt-br.md#sensor-entity-ids). Use os IDs reais do registro em painéis e automações.
 
 <a id="zone-active-target-temperature"></a>
 ### Temperatura-alvo ativa da zona
@@ -237,7 +237,7 @@ Atributos principais:
 Exemplo:
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -315,8 +315,8 @@ Atributos principais:
 Exemplo:
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -358,7 +358,7 @@ Exemplo:
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

@@ -200,17 +200,21 @@ For a climate such as `climate.living_room`, a newly created registry entry will
 normally use an entity ID such as:
 
 ```text
-sensor.velair_ventilation_opportunity_living_room
-sensor.velair_control_living_room
-sensor.velair_delivery_diagnostics_living_room
+sensor.velair_living_room_ventilation_opportunity
+sensor.velair_living_room_control
+sensor.velair_living_room_delivery_diagnostics
 ```
 
 These are suggested entity IDs, not a permanent API. Home Assistant may add a
 suffix to avoid a collision, and users can rename an entity. Select entities by
 their actual entity IDs in your own Home Assistant registry. The displayed
-entity name uses the managed climate's friendly name, while the suggested ID
-uses the climate entity's object ID. The Velair service device name and its area
-do not form part of that suggested ID.
+entity name uses the managed climate's friendly name, while the initial ID base
+uses the climate entity's object ID and sensor purpose. Home Assistant applies
+its configured device/area naming rules to that base. Existing registered IDs
+are preserved, including custom IDs. Administrators can optionally review them
+in **Settings → Maintenance → Review sensor entity IDs**; see the
+[usage guide](usage.md#sensor-entity-ids) before renaming IDs used by automations
+or other consumers.
 
 ## Zone Control
 
@@ -332,7 +336,7 @@ retries. Replace the example entity ID with the one in your entity registry:
 alias: Velair living room delivery exhausted
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 actions:
   - action: persistent_notification.create
@@ -349,8 +353,8 @@ and has an active scheduled block:
 ```yaml
 condition: template
 value_template: >-
-  {{ is_state('sensor.velair_control_living_room', 'automatic')
-     and state_attr('sensor.velair_control_living_room', 'runtime_state')
+  {{ is_state('sensor.velair_living_room_control', 'automatic')
+     and state_attr('sensor.velair_living_room_control', 'runtime_state')
          == 'scheduled' }}
 ```
 

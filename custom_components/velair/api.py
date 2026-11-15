@@ -105,7 +105,7 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 26
+EXPORT_MODEL_VERSION = 27
 EXPORT_SECTIONS = (
     "member_comfort",
     "room_groups",
@@ -247,6 +247,7 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("room_temperature_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("room_sensor_schedule"): normalize_room_sensor_schedule,
         vol.Optional("room_sensor_assist_enabled"): bool,
+        vol.Optional("room_sensor_assist_braking_level"): vol.In(("default", "moderate", "high")),
         vol.Optional("room_sensor_assist_deadband"): vol.All(
             _room_sensor_assist_deadband,
             vol.Range(min=0, max=9.0),
@@ -409,7 +410,57 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_import_data)
     websocket_api.async_register_command(hass, ws_reset_data)
     websocket_api.async_register_command(hass, ws_subscribe_updates)
+    websocket_api.async_register_command(hass, ws_preview_sensor_entity_ids)
+    websocket_api.async_register_command(hass, ws_apply_sensor_entity_ids)
     hass.data[API_REGISTERED] = True
+
+
+def _sensor_id_review_runtime(hass, connection, msg):
+    """Authorize registry maintenance without touching scheduler lifecycle."""
+    if not getattr(getattr(connection, "user", None), "is_admin", False):
+        connection.send_error(msg["id"], "unauthorized", "Administrator access is required")
+        return None
+    runtime = _get_runtime(hass, synchronize_blocking=False)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return None
+    if runtime.get("operation_active") or runtime.get("operation_recovery"):
+        _reject_temperature_migration_mutation(runtime, connection, msg)
+        return None
+    return runtime
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/preview_sensor_entity_ids"})
+@callback
+def ws_preview_sensor_entity_ids(hass, connection, msg) -> None:
+    """Review native sensor ID proposals for the active integration."""
+    from .entity_registry import preview_sensor_entity_ids
+
+    runtime = _sensor_id_review_runtime(hass, connection, msg)
+    if runtime is not None:
+        connection.send_result(msg["id"], preview_sensor_entity_ids(hass, runtime["entry"]))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/apply_sensor_entity_ids",
+    vol.Required("preview_id"): str,
+    vol.Required("entity_ids"): [cv.entity_id],
+})
+@callback
+def ws_apply_sensor_entity_ids(hass, connection, msg) -> None:
+    """Apply only explicitly selected, freshly reviewed registry ID changes."""
+    from .entity_registry import apply_sensor_entity_ids
+
+    runtime = _sensor_id_review_runtime(hass, connection, msg)
+    if runtime is None:
+        return
+    try:
+        result = apply_sensor_entity_ids(hass, runtime["entry"], msg["preview_id"], msg["entity_ids"])
+    except ValueError as err:
+        code = str(err)
+        connection.send_error(msg["id"], code, "Review sensor entity IDs again" if code == "sensor_entity_ids_stale" else "Select valid sensor entity IDs from the current review")
+        return
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/subscribe_shared_demand"})
@@ -2027,7 +2078,7 @@ async def ws_delete_schedule_template(
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
 
-def _get_runtime(hass: HomeAssistant) -> dict[str, Any] | None:
+def _get_runtime(hass: HomeAssistant, *, synchronize_blocking: bool = True) -> dict[str, Any] | None:
     """Return the active runtime dictionary."""
     entries = hass.data.get(DOMAIN, {})
     entry_runtimes = [
@@ -2036,7 +2087,7 @@ def _get_runtime(hass: HomeAssistant) -> dict[str, Any] | None:
         if isinstance(key, str) and key != API_REGISTERED
     ]
     runtime = entry_runtimes[0] if entry_runtimes else None
-    if runtime is not None:
+    if runtime is not None and synchronize_blocking:
         runtime["scheduler"].set_temperature_migration_blocked(bool(
             runtime["storage"].temperature_migration_required
             or runtime.get("operation_active")
@@ -3350,6 +3401,9 @@ def _validate_portable_zone_schedules(
                 raise ValueError(
                     f"Room Assist deadband for {entity_id} must be between 0 and {maximum:g}"
                 )
+        if isinstance(preconditioning, dict):
+            from .room_assist_braking import validate_braking_settings
+            validate_braking_settings(preconditioning)
         comfort = zone.get("comfort")
         if comfort is not None and not isinstance(comfort, dict):
             raise ValueError(f"Comfort settings for {entity_id} are not valid")

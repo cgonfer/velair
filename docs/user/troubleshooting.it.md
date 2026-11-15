@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](troubleshooting.md) · [Español](troubleshoo
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Versione di riferimento | 1.9.3-beta.1 |
+| Ultima sincronizzazione | 2026-11-14 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -87,6 +87,10 @@ Per ora l’esportazione viene mostrata intenzionalmente solo su desktop, perch�
 Per impostazione predefinita, Velair ripristina lo stato senza imporre comandi ai dispositivi climatici dopo l’avvio di Home Assistant.
 
 Abilita **Applica la programmazione attiva dopo l’avvio** nelle impostazioni se vuoi che Velair applichi la programmazione attiva dopo un riavvio.
+
+Questa impostazione controlla il blocco già attivo all’avvio. I blocchi futuri vengono programmati con entrambe le opzioni. Se un’entità climatica sta ancora caricando le modalità HVAC o le capacità relative alla temperatura obiettivo, Velair ricostruisce la programmazione e registra l’evento successivo quando queste capacità diventano disponibili. Con l’applicazione all’avvio abilitata, il blocco corrente viene applicato quando può essere risolto, rispettando il controllo e le sostituzioni attuali della zona. Se è disabilitata, il blocco precedente all’avvio non viene applicato solo perché l’entità diventa pronta; è comunque possibile recuperare un blocco la cui transizione programmata è avvenuta dopo l’avvio.
+
+Diagnostica segnala `schedule_waiting_for_capabilities` mentre la risoluzione della programmazione richiede ulteriori informazioni sulle capacità, e `schedule_incompatible` quando le capacità pubblicate o i riferimenti salvati rendono la programmazione incompatibile. Esamina i dettagli `schedule_resolution` esportati per il dispositivo interessato.
 
 <a id="reset-to-defaults"></a>
 ## Ripristino dei valori predefiniti

@@ -95,6 +95,20 @@ By default, Velair restores state without forcing climate devices after Home Ass
 
 Enable **Apply active schedule after startup** in Settings if you want Velair to apply the active schedule after restart.
 
+This setting controls the block already active at startup. Future blocks are
+scheduled with either setting. If a climate entity is still loading its HVAC
+modes or target capabilities, Velair rebuilds its schedule and registers the
+next event when those capabilities arrive. With startup application enabled,
+the current block is applied once it can be resolved, subject to the current
+zone control and overrides. With it disabled, the pre-start block is not
+applied merely because the entity becomes ready; a block whose scheduled
+transition occurred after startup can still be recovered.
+
+Diagnostics reports `schedule_waiting_for_capabilities` while schedule
+resolution needs more capability information, and `schedule_incompatible`
+when the reported capabilities or stored references reject the schedule.
+Review the exported `schedule_resolution` details for the affected climate.
+
 ## Reset To Defaults
 
 Use **Settings > Maintenance > Reset Velair**. This clears all stored Velair data, including schedules, templates, panel preferences, active boosts and pauses, Comfort and Room Assist settings, Adaptive Preconditioning settings and learning, and startup behavior. It then recreates unit-aware defaults for the currently managed climates.

@@ -356,8 +356,8 @@ back to local climate execution.
 ## Back up the whole setup
 
 Use Velair's export rather than copying only a visible resolved day. Current
-model 26 exports preserve both link types, presets, and block identities; zone
-settings also retain optional Room Assist sensor schedules. Exporting
+model 27 exports preserve both link types, presets, and block identities; zone
+settings also retain optional Room Assist sensor schedules and braking levels. Exporting
 schedules or Profiles includes the templates and presets they depend on;
 the export screen shows the sections added automatically.
 
@@ -365,5 +365,5 @@ On import, inspect replacements before confirming. Replacing a shared resource
 can also affect existing local consumers. The combined configuration must be
 valid; new Profiles are not activated just because they were imported.
 Older backups remain importable, while older Velair versions cannot import a
-model 26 export. Keep an earlier backup if you might need to downgrade. See
+model 27 export. Keep an earlier backup if you might need to downgrade. See
 [Portability](usage.md#portability).

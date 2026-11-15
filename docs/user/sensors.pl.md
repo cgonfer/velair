@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](sensors.md) · [Español](sensors
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.1 |
-| Ostatnia synchronizacja | 2026-10-11 |
+| Wersja odniesienia | 1.9.3-beta.1 |
+| Ostatnia synchronizacja | 2026-11-14 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -141,7 +141,7 @@ triggers:
 <a id="per-climate-sensors"></a>
 ## Czujniki poszczególnych encji
 
-Dla `climate.living_room` HA zwykle tworzy np. `sensor.velair_control_living_room`. Używaj rzeczywistych ID.
+Dla zarządzanego urządzenia takiego jak `climate.living_room` Home Assistant zwykle tworzy nowe powiązane identyfikatory encji, np. `sensor.velair_living_room_control`. Istniejące identyfikatory w rejestrze zostają zachowane. Administratorzy mogą opcjonalnie przejrzeć je w sekcji **Ustawienia → Konserwacja → Sprawdź identyfikatory encji czujników**, zgodnie z [instrukcją użytkowania](usage.pl.md#sensor-entity-ids). W pulpitach i automatyzacjach używaj rzeczywistych identyfikatorów ze swojego rejestru.
 
 <a id="zone-active-target-temperature"></a>
 ### Aktywna temperatura docelowa strefy
@@ -237,7 +237,7 @@ Atrybuty:
 Przykład:
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -315,8 +315,8 @@ Atrybuty:
 Przykład:
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -358,7 +358,7 @@ Przykład:
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

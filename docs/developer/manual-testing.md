@@ -53,7 +53,7 @@ Home Assistant installation before treating physical-device recovery as verified
    no silent change to a different room.
 6. Verify advance preparation does not cross a source boundary and is recalculated
    afterward. Learning readiness and samples must match the effective source.
-7. Export/import portable model v26, including a saved disabled schedule. Reject
+7. Export/import portable model v27, including a saved disabled schedule. Reject
    overlapping periods without replacing configuration. Verify native group
    references and preserve the fixed sensor when disabling the schedule.
 8. Switch between **Fixed sensor** and **By schedule**, edit both setups, and
@@ -65,6 +65,46 @@ Home Assistant installation before treating physical-device recovery as verified
    Check the editor, Save/Cancel and source status in mobile/tablet layouts and
    the optional Room Assist card. Verify responsiveness in the actual Home
    Assistant installation, including schedule transitions and editor interactions.
+
+## Room Assist braking
+
+1. In fixed Heat and Cool, exercise Default, Moderate and High with a known
+   external room sensor, target T, positive deadband H and effective step S.
+   Default must preserve existing regulation. Moderate withdraws heat at T + H
+   or cooling at T − H; High withdraws at T. Both request heat again at T − H
+   or cooling at T + H. Include equality, crossing the center and repeated
+   identical readings. Before withdrawal, assistance must remain unchanged.
+2. Check the non-driving equipment target: Moderate uses a heating ceiling
+   T − S or cooling floor T + S; High uses two steps. Existing stronger inverse
+   corrections must remain unchanged, and repeated updates must not accumulate
+   more braking. Test physical min/max limits and fixed-mode ranges with a
+   selected reference; preserve pair width and show requested/applied limits.
+3. Require a positive deadband before selecting Moderate or High. Return to
+   Default before saving band zero. Fail a settings write and confirm the saved
+   level and phase remain authoritative. Level changes reset phase; H-only
+   changes reset Moderate/High while Default retains its established phase
+   behavior. Reload and round-trip portable model v27, including missing-level
+   older data that defaults to Default and opposite-unit imports.
+4. Compare the panel, narrow Room Assist card, shared graph and Supply live
+   demand. Nominal band limits remain centered on T; High's effective stop and
+   both levels' resume temperatures must match the committed backend phase.
+   Opening or refreshing status views must not send commands or advance phase.
+   Check phone/tablet widths, keyboard access and explanatory text.
+5. Switch to a native temperature reference or an unsupported automatic mode.
+   Retain the saved level while explaining why additional braking is inactive.
+   Remove room-sensor and climate-temperature readings separately; expose an
+   explicit inactivity reason instead of an active prediction. Restore readings
+   and verify current intent resumes without replaying an obsolete correction.
+6. Change the effective equipment step while a target is committed. Until the
+   control refresh succeeds, show the accepted braking bound rather than a
+   preview based on the new step. Exercise failed and superseded delivery,
+   pause/Boost/manual control and source changes without duplicate orders or
+   stale metadata. Additional braking must introduce no periodic polling,
+   history reads or per-reading configuration writes.
+7. Observe physical heating and cooling cycles separately from command reports.
+   Confirm the help describes demand withdrawal without promising compressor,
+   relay or valve shutdown. Record remaining overshoot and device limitations;
+   no synthetic or command-acceptance result proves real thermal performance.
 
 ## Room groups
 
@@ -87,7 +127,7 @@ Home Assistant installation before treating physical-device recovery as verified
    the entire room is targeted once. Reject unmanaged climates. Remove members
    and dissolve the group; check inherited schedules/Profiles and cleared
    temporary actions. Options must reject removal of a still-grouped climate.
-7. Export/import portable model v26, including empty groups, the same group graph,
+7. Export/import portable model v27, including empty groups, the same group graph,
    imported learning, changed Profiles and active selection reconciliation. Test
    restart/reload, temperature conversion and per-member boost restoration.
 8. Reorder groups and members; reload and check Settings, scheduling selectors

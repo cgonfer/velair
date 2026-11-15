@@ -13,7 +13,7 @@ import { entityTemperatureStep } from "../domain/climate";
 import type { VelairViewHost } from "../host-types";
 import { renderInlineHelp } from "./inline-help";
 import { COMMUNITY_LINKS, documentationDestination } from "../domain/documentation";
-import { renderDocumentationHelp } from "./documentation-links";
+import { openDocumentationDialog, closeDocumentationDialog, restoreTriggerFocus, handleDialogClick, handleDialogKeydown, renderDocumentationHelp } from "./documentation-links";
 import { renderEntityNameContext } from "./entity-name";
 import type { EntityNameDisplay } from "../types";
 import type { ExternalExecutionInfo, PortableSection } from "../types";
@@ -360,6 +360,7 @@ export function renderMaintenanceSettings(host: SettingsViewHost) {
         </div>
       </div>
 
+      ${host.hass?.user?.is_admin ? renderSensorEntityIdsReview(host) : nothing}
       <div class="maintenance-grid">
         ${renderMaintenanceItem(host._t("frontendBuild"), VELAIR_FRONTEND_BUILD)}
         ${renderMaintenanceItem(host._t("portableFormatVersion"), `v${portableVersion}`)}
@@ -733,4 +734,59 @@ export function renderSettingsExternalChangePolicy(host: SettingsViewHost, entit
       </div>
     </div>
   `;
+}
+
+function renderSensorEntityIdChange(currentId: string, proposedId: string) {
+  return html`<span class="sensor-ids-map"><code>${currentId}</code>
+    <ha-icon class="sensor-ids-arrow" icon="mdi:arrow-right" aria-hidden="true"></ha-icon>
+    <code>${proposedId}</code></span>`;
+}
+
+export function renderSensorEntityIdsReview(host: SettingsViewHost) {
+  const busy = Boolean(host._sensorIdsAction);
+  const result = host._sensorIdsResult;
+  return html`<div class="sensor-ids-maintenance-action">
+    <button class="documentation-link help-community-link sensor-ids-review-trigger" type="button" data-dialog-trigger aria-haspopup="dialog"
+      aria-label=${host._t("sensorIdsReview")} aria-describedby="sensor-ids-maintenance-description"
+      @click=${(event: Event) => { openDocumentationDialog(event); void host._previewSensorEntityIds(); }}>
+      <ha-icon icon="mdi:identifier" aria-hidden="true"></ha-icon>
+      <span><strong>${host._t("sensorIdsReview")}</strong>
+        <small id="sensor-ids-maintenance-description">${host._t("sensorIdsDescription")}</small></span>
+    </button>
+    <dialog class="documentation-dialog sensor-ids-dialog" aria-labelledby="sensor-ids-title" aria-describedby="sensor-ids-warning"
+      aria-busy=${String(busy)} @click=${(event: MouseEvent) => { if (!busy) handleDialogClick(event); }}
+      @keydown=${handleDialogKeydown} @cancel=${(event: Event) => { if (busy) event.preventDefault(); }} @close=${restoreTriggerFocus}>
+      <header class="documentation-dialog-header">
+        <h2 id="sensor-ids-title">${host._t("sensorIdsReview")}</h2>
+        <button class="documentation-close" type="button" autofocus aria-label=${host._t("close")} ?disabled=${busy}
+          @click=${(event: Event) => { if (!busy) closeDocumentationDialog(event); }}><ha-icon icon="mdi:close" aria-hidden="true"></ha-icon></button>
+      </header>
+      <div class="sensor-ids-dialog-body">
+        <p id="sensor-ids-warning">${host._t("sensorIdsWarning")}</p>
+        ${host._sensorIdsAction === "preview" ? html`<p role="status">${host._t("loading")}</p>` : nothing}
+        ${host._sensorIdsError ? html`<p role="alert">${host._sensorIdsError}</p>` : nothing}
+        ${result ? html`<section role=${result.status === "applied" ? "status" : "alert"}>
+          <p>${host._t(result.status === "applied" ? "sensorIdsApplied" : result.status === "rolled_back" ? "sensorIdsRolledBack" : "sensorIdsRecoveryRequired")}</p>
+          ${result.renamed.length ? html`<p>${host._t("sensorIdsRemainingRenamed")}</p><ul>${result.renamed.map(row => html`<li>${renderSensorEntityIdChange(row.old_entity_id, row.new_entity_id)}</li>`)}</ul>` : nothing}
+          ${result.failed.map(row => html`<p><code>${row.entity_id}</code>: ${row.message}</p>`)}
+        </section>` : nothing}
+        ${host._sensorIdsPreview ? html`<div class="sensor-ids-rows">
+          ${!host._sensorIdsPreview.rows.length ? html`<p>${host._t("sensorIdsEmpty")}</p>` : nothing}
+          ${host._sensorIdsPreview.rows.map(row => html`<label class="sensor-ids-row">
+            <input type="checkbox" .checked=${host._sensorIdsSelected.has(row.entity_id)} ?disabled=${busy || row.status !== "ready"}
+              @change=${(event: Event) => host._toggleSensorEntityId(row.entity_id, (event.currentTarget as HTMLInputElement).checked)} />
+            <span><strong>${row.name}</strong><small>${host._friendlyEntityName(row.climate_entity_id)} · ${row.climate_entity_id}</small>
+              ${renderSensorEntityIdChange(row.entity_id, row.proposed_entity_id)}
+              ${row.status !== "ready" ? html`<small>${host._t(row.status === "conflict" ? "sensorIdsConflict" : "sensorIdsUnchanged")}</small>` : nothing}
+            </span>
+          </label>`)}
+        </div>` : nothing}
+      </div>
+      <footer class="documentation-dialog-footer">
+        <button class="command-button compact" type="button" ?disabled=${busy} @click=${() => host._previewSensorEntityIds()}>${host._t("sensorIdsRefresh")}</button>
+        <button class="command-button primary compact" type="button" ?disabled=${busy || !host._sensorIdsPreview || !host._sensorIdsSelected.size}
+          @click=${() => host._applySensorEntityIds()}>${host._t(host._sensorIdsAction === "apply" ? "applying" : "sensorIdsApply")}</button>
+      </footer>
+    </dialog>
+  </div>`;
 }

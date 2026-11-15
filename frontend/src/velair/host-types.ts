@@ -129,6 +129,14 @@ export type VelairViewHost = {
   _importSections: Set<PortableSection>;
   _loading: boolean;
   _showInitialLoading: boolean;
+  _sensorIdsPreview?: import("./types").SensorEntityIdsPreview;
+  _sensorIdsResult?: import("./types").SensorEntityIdsResult;
+  _sensorIdsSelected: Set<string>;
+  _sensorIdsAction?: "preview" | "apply";
+  _sensorIdsError?: string;
+  _previewSensorEntityIds(): Promise<void>;
+  _applySensorEntityIds(): Promise<void>;
+  _toggleSensorEntityId(entityId: string, checked: boolean): void;
   _maintenanceAction?: "reset";
   _nextEventsOpen: boolean;
   _nextEventChangeRevision: number;

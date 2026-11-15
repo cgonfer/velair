@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.10 |
-| Letzte Synchronisierung | 2026-11-05 |
+| Referenzversion | 1.9.3-beta.2 |
+| Letzte Synchronisierung | 2026-11-15 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -246,6 +246,6 @@ Nicht unterstützte optionale Geräteeinstellungen können aus der wirksamen Zie
 <a id="back-up-the-whole-setup"></a>
 ## Die gesamte Konfiguration sichern
 
-Verwende den Velair-Export statt nur einen sichtbaren aufgelösten Tag zu kopieren. Modell-26-Exporte behalten beide Verknüpfungstypen, Presets und Blockkennungen. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne. Exportierte Zeitpläne oder Profile enthalten ihre erforderlichen Vorlagen und Presets; der Exportbildschirm zeigt automatisch ergänzte Bereiche.
+Verwende den Velair-Export statt nur einen sichtbaren aufgelösten Tag zu kopieren. Modell-27-Exporte behalten beide Verknüpfungstypen, Presets und Blockkennungen. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne und die gewählte Bremsstufe. Exportierte Zeitpläne oder Profile enthalten ihre erforderlichen Vorlagen und Presets; der Exportbildschirm zeigt automatisch ergänzte Bereiche.
 
-Prüfe beim Import Ersetzungen vor der Bestätigung. Das Ersetzen einer gemeinsamen Ressource kann vorhandene lokale Verwendungen beeinflussen. Die kombinierte Konfiguration muss gültig sein; neue Profile werden nicht allein durch den Import aktiviert. Ältere Sicherungen bleiben importierbar, ältere Velair-Versionen können jedoch keinen Modell-26-Export importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Übertragbarkeit](usage.de.md#portability).
+Prüfe beim Import Ersetzungen vor der Bestätigung. Das Ersetzen einer gemeinsamen Ressource kann vorhandene lokale Verwendungen beeinflussen. Die kombinierte Konfiguration muss gültig sein; neue Profile werden nicht allein durch den Import aktiviert. Ältere Sicherungen bleiben importierbar, ältere Velair-Versionen können jedoch keinen Modell-27-Export importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Übertragbarkeit](usage.de.md#portability).

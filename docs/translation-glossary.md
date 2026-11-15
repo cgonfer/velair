@@ -2,6 +2,19 @@
 
 Use these terms consistently when translating Velair user documentation. Keep Home Assistant entity IDs, service names, attributes, YAML keys, code samples, and external URLs unchanged. Interface labels may be translated to match the maintained locale; identifiers such as `Room Assist`, `Humidex`, and `HVAC` remain recognizable.
 
+The Room Assist selector **Braking** uses the canonical English options
+**Default**, **Moderate** and **High**. Here, braking means withdrawing heating
+or cooling demand more firmly around the room target; it does not mean an
+explicit physical shutdown or predictive preconditioning. These new labels
+use the maintained panel translations; the Spanish and French labels are:
+
+| English | Spanish | French |
+| --- | --- | --- |
+| Braking | Frenado | Freinage |
+| Default | Predeterminado | Par défaut |
+| Moderate | Moderado | Modéré |
+| High | Alto | Élevé |
+
 | English | Spanish | French |
 | --- | --- | --- |
 | sidebar panel | panel de la barra lateral | panneau de la barre latérale |

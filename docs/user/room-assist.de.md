@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.10 |
-| Letzte Synchronisierung | 2026-11-05 |
+| Referenzversion | 1.9.3-beta.2 |
+| Letzte Synchronisierung | 2026-11-15 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -33,7 +33,7 @@ Bei einem Block mit **Nur Temperatur** wird Room Assist ausgesetzt, solange das 
 
 Velair behält das Zeitplanziel als tatsächliches Benutzerziel bei, passt aber das an die Klimaentität gesendete Ziel vorübergehend anhand des separaten Raumsensors und des geräteeigenen Messwerts an.
 
-Bei einem Einzelziel in festem `heat` oder `cool` erzeugt ein Totband ungleich null zwei Schaltgrenzen. Room Assist merkt, auf welche Grenze es hinarbeitet, und wechselt die Richtung erst, wenn der separate Raumsensor die gegenüberliegende Grenze erreicht. Damit entsteht ein echter Hysteresezyklus mit separatem Raumsensor, statt den internen Gerätesensor nahe dem zentralen Ziel einen neuen Zyklus beginnen zu lassen. Die maximale Unterstützungsdifferenz begrenzt die vorzeichenbehaftete, aus der aktiven Grenze berechnete Korrektur.
+Bei einem Einzelziel in festem `heat` oder `cool` erzeugt ein Totband ungleich null zwei Schaltgrenzen. Mit der Bremsung **Standard** merkt sich Room Assist die angesteuerte Grenze und wechselt die Richtung erst, wenn der separate Raumsensor die gegenüberliegende Grenze erreicht. Damit entsteht ein echter Hysteresezyklus mit separatem Raumsensor, statt den internen Gerätesensor nahe dem zentralen Ziel einen neuen Zyklus beginnen zu lassen. Die maximale Unterstützungsdifferenz begrenzt die vorzeichenbehaftete, aus der aktiven Grenze berechnete Korrektur. Optionale Bremsstufen nehmen die Anforderung stärker zurück; **Stark** beginnt damit am geplanten Ziel statt an der weiter entfernten Schaltgrenze.
 
 Einzelziele in `auto` und `heat_cool` sowie native `heat_cool`-Bereiche behalten ihr neutrales Verhalten beziehungsweise die Randbereiche. Velair zwingt diese Modi nicht, innerhalb eines Einzelziel-Hysteresezyklus abwechselnd aktiv zu heizen und zu kühlen.
 
@@ -54,7 +54,8 @@ Bei **Nicht konfiguriert** werden Festmoduspaare ohne Room-Assist-Korrektur gese
 4. Aktiviere die Raumsensorunterstützung.
 5. Stelle das Room-Assist-Totband für festes Heizen oder Kühlen um den Einzelwert oder die gewählte Bereichsreferenz ein; bei automatischen Einzelwertmodi und nativen `heat_cool`-Bändern bestimmt es den neutralen Abstand.
 6. Passe die maximale Unterstützungsdifferenz an, wenn der Standard für den Raum zu klein ist oder unter der Zielabweichung liegt, die das Thermostat zum Beenden von Heizen/Kühlen benötigt.
-7. Passe die Aktualisierungsverzögerung an, wenn Sensoraktualisierungen zu langsam oder zu häufig erscheinen.
+7. Wähle optional **Bremsung: Moderat** oder **Stark**, um die Anforderung stärker zurückzunehmen. Diese Stufen benötigen ein Room-Assist-Totband größer als null. **Standard** erhält das bisherige Verhalten.
+8. Passe die Aktualisierungsverzögerung an, wenn Sensoraktualisierungen zu langsam oder zu häufig erscheinen.
 
 Die Auswahl eines Raumsensors allein speichert nur den Sensor. Velair verwendet ihn erst bei aktivierter Raumsensorunterstützung als wirksame Raumtemperatur.
 
@@ -66,10 +67,44 @@ Die Aktualisierungsverzögerung fasst Änderungen des Raumsensors oder der Klima
 
 Das Room-Assist-Totband ist unabhängig von der Mindestdifferenz der adaptiven Vorkonditionierung. Standard sind `0.3 °C` oder `1 °F`. Mit `0` wird das Totband deaktiviert; die Einstellung ist in `0.1`-Grad-Schritten bis `5 °C` oder `9 °F` möglich. Speichern bei aktivem Room Assist aktualisiert das unterstützte Ziel sofort.
 
-Die aktuelle Temperaturskala zeichnet das konfigurierte Totband als neutrales schraffiertes Band. Bei einem festen Einzelziel sind seine beiden Ränder Hysterese-Schaltgrenzen; der aktuelle Status nennt die Grenze, auf die Room Assist hinarbeitet. Bei Einzelziel-Automatikmodi bleibt das Band ein neutraler Rand. Bei einem nativen `heat_cool`-Bereich reicht es von der unteren Grenze minus Totband bis zur oberen Grenze plus Totband. Die Skala erweitert sich, damit beide Ränder sichtbar bleiben. Die vollständige übersetzte Legende bleibt am tatsächlichen Totband zentriert, auch wenn dieses schmaler als ihr Text ist. Ihre Bedeutung hängt dadurch nicht von der Grafikbreite ab. Die vollständige Erklärung bleibt außerdem für Hilfstechnologien und als Hovertext verfügbar. Bei Totband `0` wird keine Fläche gezeichnet; die statische Legende sagt ausdrücklich, dass kein Totband vorliegt. Grafik und Legende verwenden den gespeicherten Backend-Wert. Ausblenden von `show_room_assist_deadband` in einer Lovelace-Room-Assist-Karte blendet Einstellung, Band und Legende gemeinsam aus.
+Die aktuelle Temperaturskala zeichnet das konfigurierte Totband als neutrales schraffiertes Band. Bei einem festen Einzelziel mit Bremsung Standard oder Moderat sind seine Ränder Hysterese-Schaltgrenzen; der Status nennt die angesteuerte Grenze. Stark behält dieses nominale Band bei und kennzeichnet die frühere Rücknahme am geplanten Ziel getrennt. Bei Einzelziel-Automatikmodi bleibt das Band ein neutraler Rand. Bei einem nativen `heat_cool`-Bereich reicht es von der unteren Grenze minus Totband bis zur oberen Grenze plus Totband. Die Skala erweitert sich, damit beide Ränder sichtbar bleiben. Die vollständige übersetzte Legende bleibt am tatsächlichen Totband zentriert, auch wenn dieses schmaler als ihr Text ist. Ihre Bedeutung hängt dadurch nicht von der Grafikbreite ab. Die vollständige Erklärung bleibt außerdem für Hilfstechnologien und als Hovertext verfügbar. Bei Totband `0` wird keine Fläche gezeichnet; die statische Legende sagt ausdrücklich, dass kein Totband vorliegt. Grafik und Legende verwenden den gespeicherten Backend-Wert. Ausblenden von `show_room_assist_deadband` in einer Lovelace-Room-Assist-Karte blendet Einstellung, Band und Legende gemeinsam aus.
 
 Es wird nur die gewählte Option angezeigt. Wenn **Fester Sensor** bereits die gespeicherte Variante ist, wird ein anderer Sensor sofort gespeichert. Der Wechsel zwischen **Fester Sensor** und **Nach Zeitplan** ändert einen Entwurf: **Speichern** übernimmt die Variante und ihre Einstellungen, **Abbrechen** stellt die gespeicherte Konfiguration wieder her. Der feste Sensor und der gespeicherte Zeitplan bleiben beim Wechsel erhalten; beide werden nicht gleichzeitig aktiviert.
 
+
+<a id="optional-braking"></a>
+
+### Optionale Bremsung
+
+Die Bremsung ändert den an das Gerät gesendeten Sollwert; die geplante Temperatur bleibt das tatsächliche Raumziel. Sie ist in festem **Heizen** und **Kühlen** verfügbar, auch bei Geräten mit zwei Sollwerten und konfiguriertem Referenzsollwert. Automatische Einzelzielmodi und native `heat_cool`-Bänder bleiben unverändert.
+
+**T** ist das geplante Ziel, **H** das Room-Assist-Totband und **S** die effektive Sollwertschrittweite des Geräts:
+
+| Bremsung | Heizen: Anforderung zurücknehmen | Heizen: erneut Wärme anfordern | Kühlen: Anforderung zurücknehmen | Kühlen: erneut Kühlung anfordern |
+| --- | --- | --- | --- | --- |
+| Standard | Bisheriges Verhalten | Bisheriges Verhalten | Bisheriges Verhalten | Bisheriges Verhalten |
+| Moderat | Bei T + H | Bei T − H | Bei T − H | Bei T + H |
+| Stark | Bei T | Bei T − H | Bei T | Bei T + H |
+
+Während der Rücknahme begrenzt **Moderat** den Heizsollwert auf höchstens **T − S** oder den Kühlsollwert auf mindestens **T + S**. **Stark** verwendet **zwei Schritte**. Nimmt die bestehende Berechnung bereits mehr Anforderung zurück, behält Velair dieses stärkere Ergebnis. Die Grenzen bleiben während der Bremsung fest: Sensoraktualisierungen addieren oder subtrahieren nicht jedes Mal einen weiteren Schritt.
+
+Beispiel mit Heizungsziel `20.5 °C`, Totband `0.5 °C` und Geräteschrittweite `0.5 °C`:
+
+- **Moderat** nimmt bei `21 °C` die Anforderung zurück; der Gerätesollwert beträgt höchstens `20 °C`.
+- **Stark** nimmt sie bei `20.5 °C` zurück; der Gerätesollwert beträgt höchstens `19.5 °C`.
+- Beide fordern erneut Wärme an, wenn der separate Raumsensor `20 °C` erreicht.
+
+Vor der Rücknahme bleibt die bestehende Unterstützungsberechnung unverändert. Die Bremsung bleibt bis zur Wiedereinschaltgrenze aktiv, auch beim Überqueren des zentralen Ziels. Startet die Unterstützung innerhalb des Bandes neu, bleibt die bisherige vorsichtige Initialisierung erhalten, ohne absichtlich einen Heiz- oder Kühlzyklus zu starten.
+
+Der aktuelle Status zeigt die effektiven Rücknahme- und Wiedereinschalttemperaturen. Die Grafik behält das nominale Totband bei und kennzeichnet die effektiven Bremsschwellen getrennt. Die Anforderung der gemeinsamen Versorgung folgt derselben bestätigten Phase.
+
+Wähle **Standard**, bevor du das Totband auf null setzt. Kann der aktuelle Modus oder die Temperaturreferenz die gespeicherte Bremsstufe nicht verwenden, bleibt sie gespeichert und der Status erklärt die Inaktivität. Ungültige gespeicherte Kombinationen setzen die zusätzliche Bremsung aus, statt das Totband unbemerkt zu ändern.
+
+Physische Mindest- und Höchstsollwerte können die Bremsung begrenzen. Bei zwei Sollwerten wird das vollständige Paar gemeinsam verschoben; beide Grenzen können die Verschiebung einschränken. Bestehende Grenzwarnungen zeigen angefordertes und angewendetes Ergebnis.
+
+Die Bremsung reduziert die Heiz- oder Kühlanforderung; sie bestätigt keinen Stillstand von Ventil, Kompressor oder Thermostat. Gerätesteuerung, Mindestlaufzeiten und thermische Trägheit können weiterhin ein Überschwingen verursachen. Diese Einstellung lernt keine Zyklen und nimmt die Anforderung nicht vor dem geplanten Ziel zurück. Prüfe sie mit echten Heiz- und Kühlzyklen, bevor du dich für einen bestimmten Raum auf eine Stufe verlässt.
+
+Portable Exporte verwenden Modell **27**, um die Bremsstufe zu erhalten. Bewahre für ein mögliches Downgrade eine Sicherung der früheren Version auf; ältere Velair-Versionen können Modell 27 nicht importieren.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -117,7 +152,7 @@ Bei aktivem Room Assist fasst die Übersicht dies je nach Fall als **Zur unteren
 <a id="fixed-heating-hysteresis-example"></a>
 ## Beispiel: Hysterese bei festem Heizen
 
-Ausgangslage:
+Szenario mit Bremsung **Standard**:
 
 - Zeitplanblock: `21 °C`, `heat`
 - Room-Assist-Totband: `±0.3 °C`
@@ -187,7 +222,7 @@ Das verhindert unrealistische Thermostatzielwerte, ohne die zum Heizen des Raums
 <a id="fixed-cooling-hysteresis-example"></a>
 ## Beispiel: Hysterese bei festem Kühlen
 
-Ausgangslage:
+Szenario mit Bremsung **Standard**:
 
 - Zeitplanblock: `24 °C`, `cool`
 - Room-Assist-Totband: `±0.5 °C`
@@ -258,6 +293,8 @@ Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
 Die Einstellung `3 °C` wendet nicht sofort eine Korrektur von `3 °C` an. Sie erlaubt Room Assist nur, diesen Wert bei einer entsprechenden Temperaturabweichung am separaten Raumsensor zu erreichen.
+
+Diese Einstellung begrenzt die proportionale Korrektur, nicht den endgültigen Sollwert nach dem Schutz des geplanten Ziels. Die optionale Bremsung verstärkt diesen Schutz mit einer Grenze von einem oder zwei Schritten; sie ändert die maximale Unterstützungsdifferenz nicht und wendet nicht bei jeder Aktualisierung den gesamten Höchstwert an.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Warum das Geräteziel von der Berechnung abweichen kann
@@ -346,6 +383,8 @@ Bei aktivierter Raumsensorunterstützung verwendet die adaptive Vorkonditionieru
 
 <a id="automation-events"></a>
 ## Automationsereignisse
+
+Aktualisierungsereignisse können außerdem ein Objekt `braking` mit konfigurierter und effektiver Stufe, aktiver Phase, effektiven Stopp- und Wiederanlauftemperaturen, Sollwertgrenze und gegebenenfalls Inaktivitätsgrund enthalten. Diese zusätzlichen Felder beschreiben die bestätigte Anforderungsregel, nicht den physischen HVAC-Betrieb. Ein Beispiel steht unter [Room Sensor Assist aktualisiert](automation-events.de.md#room-sensor-assist-updated).
 
 Velair sendet das normale Home-Assistant-Ereignis `velair_event`.
 

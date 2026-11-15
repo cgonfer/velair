@@ -1,6 +1,30 @@
 import { css } from "lit";
 
 export const settingsStyles = css`
+.sensor-ids-maintenance-action { margin: 8px 0 12px; min-width: 0; }
+.sensor-ids-review-trigger.help-community-link { background: none; box-sizing: border-box; cursor: pointer; font: inherit; grid-template-columns: 18px minmax(0, 1fr); text-align: start; width: 100%; }
+.sensor-ids-review-trigger.help-community-link:focus-visible { border-radius: 6px; outline-offset: -2px; }
+.sensor-ids-review-trigger > span { min-width: 0; }
+.documentation-dialog.sensor-ids-dialog { width: min(680px, calc(100vw - 32px)); }
+.sensor-ids-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.sensor-ids-dialog .documentation-dialog-header, .sensor-ids-dialog .documentation-dialog-footer { flex-shrink: 0; }
+.sensor-ids-dialog-body { min-height: 0; overflow-y: auto; overflow-wrap: anywhere; }
+.sensor-ids-rows { display: grid; gap: 8px; padding: 4px 0 12px; }
+.sensor-ids-row { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 8px; padding: 8px; border: 1px solid var(--divider-color); border-radius: 8px; }
+.sensor-ids-row input { min-width: 16px; min-height: 20px; }
+.sensor-ids-row > span { min-width: 0; overflow-wrap: anywhere; }
+.sensor-ids-row strong, .sensor-ids-row small { display: block; }
+.sensor-ids-row small { color: var(--secondary-text-color); margin: 4px 0; }
+.sensor-ids-dialog code { font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+.sensor-ids-map { align-items: center; display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); min-width: 0; }
+.sensor-ids-map code { min-width: 0; }
+.sensor-ids-arrow { --mdc-icon-size: 18px; color: var(--secondary-text-color); display: inline-flex; height: 18px; justify-self: start; width: 18px; }
+@media (max-width: 600px) {
+  .sensor-ids-map { grid-template-columns: minmax(0, 1fr); }
+  .sensor-ids-arrow { transform: rotate(90deg); }
+}
+.sensor-ids-dialog .documentation-dialog-footer { padding-top: 12px; }
+
 .settings-view {
   display: grid;
   gap: 12px;

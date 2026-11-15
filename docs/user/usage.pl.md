@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.2 |
-| Ostatnia synchronizacja | 2026-11-12 |
+| Wersja odniesienia | 1.9.3-beta.2 |
+| Ostatnia synchronizacja | 2026-11-15 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -31,6 +31,17 @@ W sekcji **Ustawienia** panelu bocznego opcja **Wyświetlanie nazw urządzeń kl
 Opcja **Obecne nazwy z kontekstem obszaru** zachowuje te nazwy i dodaje osobno właściwy obszar Home Assistant, gdy zarządzane urządzenia mają tę samą nazwę. Opcja **Nazwy encji z kontekstem** używa własnej nazwy encji lub nazwy urządzenia, jeśli jest to jego główna encja, z osobnym kontekstem Home Assistant dla powtarzających się nazw. Dla urządzenia o nazwie `Test` i encji o nazwie `Test 2` obecny format to `Test Test 2`; format encji to `Test 2`, w razie potrzeby z kontekstem obszaru lub urządzenia. Własny obszar encji ma pierwszeństwo przed obszarem jej urządzenia.
 
 Gdy kontekst obszaru lub urządzenia nie pozwala odróżnić powtarzających się nazw, identyfikator encji pozostaje dostępny jako odniesienie. Opcje natywnych list rozwijanych pokazują kontekst w tym samym wierszu. Własne nazwy kart i nazwy Grup pomieszczeń zachowują pierwszeństwo. Velair zapisuje tę preferencję i współdzieli ją między przeglądarkami i kartami; zmienisz ją w Ustawieniach panelu bocznego. Nie zmienia ona nazw encji Home Assistant, ich identyfikatorów, harmonogramów ani poleceń klimatycznych. Starsze wersje Home Assistant zachowują istniejące nazwy, gdy uporządkowane metadane nazw nie są dostępne.
+
+<a id="sensor-entity-ids"></a>
+## Identyfikatory encji czujników
+
+Początkowe identyfikatory nowych czujników Velair opierają się na identyfikatorze źródłowej encji klimatycznej i przeznaczeniu czujnika. Home Assistant stosuje własne reguły nazewnictwa i rozwiązuje konflikty z zajętymi identyfikatorami. Dzięki temu urządzenia o tej samej widocznej nazwie mogą otrzymać rozróżnialne identyfikatory czujników. Nazwy czujników pozostają przetłumaczone tak jak dotąd.
+
+Istniejące czujniki zachowują identyfikatory zapisane w rejestrze, także własne identyfikatory użytkownika. Zmiana opcji **Wyświetlanie nazw urządzeń klimatycznych**, import Ustawień ani restart nie zmieniają tych identyfikatorów.
+
+Administratorzy mogą otworzyć **Ustawienia → Konserwacja → Sprawdź identyfikatory encji czujników**, aby przejrzeć istniejące czujniki. Przegląd pokazuje źródłowe urządzenie klimatyczne oraz obecny i proponowany identyfikator, również dla czujników bez przyrostka liczbowego i wyłączonych czujników diagnostycznych. Nic nie jest wybierane automatycznie. Wybierz żądane zmiany i potwierdź zmianę identyfikatorów; możesz też zamknąć przegląd bez wprowadzania zmian. Odświeżenie przeglądu usuwa zaznaczenia. Zmienioną lub nieaktualną propozycję trzeba ponownie sprawdzić przed zastosowaniem.
+
+Zmiana identyfikatora encji może wymagać aktualizacji automatyzacji, pulpitów, szablonów i odwołań zewnętrznych. Sprawdź te odwołania przed potwierdzeniem; Velair nie gwarantuje ich przepisania. Ta operacja nie zmienia nazw czujników, ich wewnętrznych identyfikatorów, ustawień ani poleceń klimatycznych. Jeśli operacja zbiorcza się nie powiedzie, Velair próbuje przywrócić poprzednie identyfikatory i zgłasza zmiany, które pozostały.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Nawigacja panelu i bezpośrednie odnośniki
@@ -538,7 +549,7 @@ Velair zapisuje wartości związane z temperaturą bez przeliczania, w jednostce
 
 Jednorazowa aktualizacja z opublikowanych wersji Velair zapisujących wyłącznie Celsjusza przebiega inaczej. Jeśli Home Assistant już używa Fahrenheita, Velair bez pytania uznaje dawne dane za zapisane w Celsjuszu, pozostawia harmonogram zatrzymany i kieruje do **Zresetuj Velair**. Reset usuwa dawną konfigurację i atomowo tworzy nowe ustawienia domyślne w Fahrenheitach. Po tej aktualizacji kolejne zmiany jednostki Home Assistant korzystają z pełnego jawnego przeliczenia opisanego wyżej, z zachowaniem danych.
 
-Eksporty przenośnego modelu v26 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v26; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
+Eksporty przenośnego modelu v27 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v27; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
 
 Jeśli urządzenie było niedostępne podczas migracji lub importu, Velair sprawdza jego limity i efektywny krok temperatury po odzyskaniu dostępności. Prawidłowy `target_temp_step` ma pierwszeństwo przed ostatnim zgłoszonym i ręcznym zastępczym. Panel ostrzega o niezgodnych celach do edycji przed użyciem. Pełne zasady w [Jednostkach temperatury i migracji](temperature-units.pl.md).
 
@@ -695,7 +706,7 @@ Ustawienia eksportują/importują wersjonowany JSON zawierający:
 - definicje Profili;
 - definicje Trybów.
 
-Bieżący model eksportu 26 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist, niezależnie od harmonogramów temperatury i profili. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 26. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
+Bieżący model eksportu 27 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist oraz wybrany poziom hamowania, niezależnie od harmonogramów temperatury i profili. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 27. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
 
 Podczas importu możesz wybrać sekcje do nadpisania. Import zastępuje wybrane dane, więc najpierw wykonaj eksport, jeśli potrzebujesz punktu odzyskania. Definicje Profili i Trybów są przenośne, ale ich aktywny wybór nie jest. Velair zachowuje aktywne identyfikatory Profili, które nadal istnieją, i wraca do harmonogramów domyślnych tylko wtedy, gdy żaden z nich nie pozostał.
 

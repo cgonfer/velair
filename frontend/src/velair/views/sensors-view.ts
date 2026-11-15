@@ -13,7 +13,7 @@ import { preconditioningSettings } from "../domain/preconditioning";
 import { temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
 import type { VelairViewHost } from "../host-types";
 import type { TranslationKey } from "../translations";
-import type { PreconditioningSettings, RoomSensorAssistStatus } from "../types";
+import type { PreconditioningSettings, RoomAssistBrakingLevel, RoomSensorAssistStatus } from "../types";
 import { renderInlineHelp } from "./inline-help";
 import { renderDocumentationHelp } from "./documentation-links";
 
@@ -275,6 +275,7 @@ function renderSensorConfiguration(
         ${options.showDeadband || options.showMaxDelta || options.showDebounce ? html`
         <section class="sensor-assist-settings" aria-label=${host._t("roomSensorAssistSettings")}>
           <h4>${host._t("roomSensorAssistSettings")}</h4>
+        ${options.showDeadband ? renderBrakingConfiguration(host, entityId, settings) : nothing}
           <div class="sensor-number-fields">
         ${options.showDeadband
           ? renderSensorNumber(
@@ -335,6 +336,53 @@ function renderSensorConfiguration(
       </div>
     </section>
   `;
+}
+
+function renderBrakingConfiguration(host: SensorsViewHost, entityId: string, settings: PreconditioningSettings) {
+  const level = settings.room_sensor_assist_braking_level ?? "default";
+  const inactive = !(settings.room_temperature_entity_id || settings.room_sensor_schedule?.enabled)
+    || !settings.room_sensor_assist_enabled;
+  const disabled = host._settingsSaving || inactive;
+  const inputId = `room-sensor-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}-braking`;
+  const braking = host._data?.room_sensor_assist?.[entityId]?.braking;
+  return html`
+    <div class=${`sensor-config-row sensor-braking-row ${inactive ? "inactive" : ""}`}>
+      ${renderSensorLabel(host, "roomSensorAssistBraking", { inputId, showHelp: false })}
+      <span class="select-wrap sensor-braking-control">
+      <select id=${inputId} class="sensor-braking-select" .value=${level}
+        aria-describedby=${`${inputId}-description`} ?disabled=${disabled}
+        @change=${(event: Event) => {
+          const input = event.currentTarget as HTMLSelectElement;
+          const next = input.value;
+          // Keep the committed value visible until the existing save flow returns new data.
+          input.value = level;
+          if (disabled || !["default", "moderate", "high"].includes(next)
+            || (next !== "default" && settings.room_sensor_assist_deadband <= 0)) return;
+          void host._saveZonePreconditioning(entityId, {
+            room_sensor_assist_braking_level: next as RoomAssistBrakingLevel,
+          });
+        }}>
+        <option value="default">${host._t("roomSensorAssistBrakingDefault")}</option>
+        <option value="moderate" ?disabled=${settings.room_sensor_assist_deadband <= 0}>${host._t("roomSensorAssistBrakingModerate")}</option>
+        <option value="high" ?disabled=${settings.room_sensor_assist_deadband <= 0}>${host._t("roomSensorAssistBrakingHigh")}</option>
+      </select>
+      </span>
+      <small class="sensor-field-description" id=${`${inputId}-description`}>
+        ${host._t("roomSensorAssistBrakingDescription")}
+        <span class="sensor-braking-explanation">${host._t("roomSensorAssistBrakingHelp")}</span>
+        ${settings.room_sensor_assist_deadband <= 0 || level !== "default"
+          ? html`<span class="sensor-braking-requirement">${host._t("roomSensorAssistBrakingRequiresBand")}</span>` : nothing}
+        ${braking?.reason && braking.configured_level !== "default"
+          ? html`<span class="sensor-braking-inactive">${brakingInactiveText(host, braking.reason)}</span>` : nothing}
+      </small>
+    </div>`;
+}
+
+function brakingInactiveText(host: SensorsViewHost, reason: string): string {
+  if (reason === "zero_deadband") return host._t("roomSensorAssistBrakingRequiresBand");
+  if (reason === "unsupported_mode") return host._t("roomSensorAssistBrakingUnsupported");
+  if (reason === "native_reference") return host._t("roomSensorAssistBrakingNative");
+  return host._t("roomSensorAssistBrakingInactive");
 }
 
 function renderSensorInactiveNotice(host: SensorsViewHost, scheduled = false) {
@@ -564,7 +612,16 @@ function renderTemperatureScale(
   const deadbandAriaLabel = deadbandBounds
     ? `${deadbandLabel}. ${deadbandBounds}. ${deadbandHelp}`
     : `${deadbandLabel}. ${deadbandHelp}`;
+  const braking = status.braking;
+  const brakingThresholds = braking && braking.effective_level !== "default"
+    ? [
+        { key: "stop", value: braking.stop_temperature, label: host._t("roomSensorBrakingStop") },
+        { key: "resume", value: braking.resume_temperature, label: host._t("roomSensorBrakingResume") },
+      ].filter((threshold): threshold is { key: string; value: number; label: string } =>
+        typeof threshold.value === "number" && Number.isFinite(threshold.value))
+    : [];
   return html`
+    <div class="sensor-temperature-display">
     <div class=${`sensor-temperature-scale ${modeClass} ${hasRangeBands ? "has-range" : ""}`}>
       <div
         class="sensor-scale-track"
@@ -581,6 +638,12 @@ function renderTemperatureScale(
             `
           : nothing}
         <span class="sensor-scale-line"></span>
+        ${brakingThresholds.map(threshold => html`
+          <span class=${`sensor-scale-braking-threshold braking-${threshold.key}`}
+            style=${`left: ${temperatureScalePosition(threshold.value, scale).toFixed(2)}%;`}
+            role="img" aria-label=${`${threshold.label}: ${host._formatTemperature(threshold.value, entityId)}`}
+            title=${`${threshold.label}: ${host._formatTemperature(threshold.value, entityId)}`}>
+          </span>`)}
         ${roomGap
           ? html`
               <span
@@ -693,7 +756,30 @@ function renderTemperatureScale(
           `
         : nothing}
     </div>
+    ${renderBrakingSummary(host, entityId, status)}
+    </div>
   `;
+}
+
+function renderBrakingSummary(host: SensorsViewHost, entityId: string, status: RoomSensorAssistStatus) {
+  const braking = status.braking;
+  if (!braking || braking.configured_level === "default") return nothing;
+  if (braking.reason) return html`<div class="sensor-braking-summary" role="note">${brakingInactiveText(host, braking.reason)}</div>`;
+  if (braking.effective_level === "default") return nothing;
+  const mode = status.effective_hvac_mode ?? status.hvac_mode ?? status.direction;
+  return html`<div class="sensor-braking-summary" role="note">
+    <strong>${host._t(braking.active ? "roomSensorBrakingActive" : "roomSensorBrakingWaiting")}</strong>
+    ${typeof braking.stop_temperature === "number" && typeof braking.resume_temperature === "number"
+      ? html`<span>${host._t(mode === "cool" ? "roomSensorBrakingThresholdsCool" : "roomSensorBrakingThresholdsHeat", {
+          stop: host._formatTemperature(braking.stop_temperature, entityId),
+          resume: host._formatTemperature(braking.resume_temperature, entityId),
+        })}</span>` : nothing}
+    ${typeof braking.setpoint_bound === "number"
+      ? html`<span>${host._t(mode === "cool" ? "roomSensorBrakingFloor" : "roomSensorBrakingCeiling", {
+          value: host._formatTemperature(braking.setpoint_bound, entityId),
+        })}</span>` : nothing}
+    <span>${host._t("roomSensorBrakingEquipmentControl")}</span>
+  </div>`;
 }
 
 function renderRoomAssistLimitWarning(
@@ -1022,6 +1108,8 @@ function renderSensorNumber(
   options: { inactive?: boolean } = {},
 ) {
   const disabled = host._settingsSaving || Boolean(options.inactive);
+  const brakingRequiresBand = field === "room_sensor_assist_deadband"
+    && (preconditioningSettings(host._data?.zones[entityId]?.preconditioning).room_sensor_assist_braking_level ?? "default") !== "default";
   const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
   const inputId = `room-sensor-${safeEntityId}-${field}`;
   const descriptionKey = field === "room_sensor_assist_deadband" ? "roomSensorAssistDeadbandDescription"
@@ -1039,7 +1127,7 @@ function renderSensorNumber(
           id=${inputId}
           aria-describedby=${`${inputId}-description`}
           type="number"
-          min=${String(min)}
+          min=${String(brakingRequiresBand ? Math.max(min, step) : min)}
           max=${String(max)}
           step=${String(step)}
           .value=${String(value)}
@@ -1055,6 +1143,7 @@ function renderSensorNumber(
                 inputValue === ""
                 || !Number.isFinite(rawValue)
                 || rawValue < min
+                || (brakingRequiresBand && rawValue <= 0)
                 || rawValue > max
                 || !temperatureMatchesStep(rawValue, min, step, 0.000001)
               ) {
@@ -1292,6 +1381,10 @@ function buildTemperatureScale(
   const values = [
     ...markerInputs.map((marker) => marker.value),
     ...(deadbandZone ? [deadbandZone.low, deadbandZone.high] : []),
+    ...(status.braking?.effective_level !== "default"
+      ? [status.braking?.stop_temperature, status.braking?.resume_temperature]
+          .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+      : []),
   ];
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);

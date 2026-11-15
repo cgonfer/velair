@@ -1,0 +1,5 @@
+# Standalone unittest dependencies; Home Assistant itself is not required.
+# Registry fixtures mirror the attrs-based entries used by Home Assistant.
+attrs==24.2.0
+# Windows does not provide the system timezone database used by zoneinfo.
+tzdata==2026.6; sys_platform == "win32"

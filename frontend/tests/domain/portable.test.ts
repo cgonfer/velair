@@ -32,7 +32,21 @@ describe("portable preconditioning learning", () => {
     } } } as unknown as VelairPortablePayload;
     expect(validatePortablePayload(current)).toEqual({ ok: true, sections: ["zones"] });
     expect(JSON.parse(JSON.stringify(current)).sections.zones["climate.office"].preconditioning.room_sensor_schedule).toEqual(sensorSchedule);
-    expect(validatePortablePayload({ ...current, model_version: 27 })).toEqual({ ok: false, errorKey: "invalidImportFile" });
+    expect(validatePortablePayload({ ...current, model_version: 28 })).toEqual({ ok: false, errorKey: "invalidImportFile" });
+  });
+  it("accepts model27 braking settings while retaining model26 compatibility and rejecting model28", () => {
+    const braking = { room_sensor_assist_deadband: 0.5, room_sensor_assist_braking_level: "high" };
+    const current = { ...payload, model_version: 27, sections: { zones: {
+      "climate.office": { preconditioning: braking },
+    } } } as unknown as VelairPortablePayload;
+    const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
+    expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
+    expect(roundTrip.sections.zones?.["climate.office"].preconditioning).toEqual(braking);
+    const legacy = { ...current, model_version: 26, sections: { zones: {
+      "climate.office": { preconditioning: { room_sensor_assist_deadband: 0.5 } },
+    } } } as unknown as VelairPortablePayload;
+    expect(validatePortablePayload(legacy)).toEqual({ ok: true, sections: ["zones"] });
+    expect(validatePortablePayload({ ...current, model_version: 28 })).toEqual({ ok: false, errorKey: "invalidImportFile" });
   });
   it("preserves internal member Comfort data without adding a selectable portable section", () => {
     const memberComfort = { "climate.office": { enabled: true, temperature_min: 19 } };
@@ -142,7 +156,7 @@ describe("portable preconditioning learning", () => {
     };
     const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(26);
+    expect(PORTABLE_MODEL_VERSION).toBe(27);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
     expect(roundTrip.sections.zones).toEqual(current.sections.zones);
     expect(validatePortablePayload({ ...roundTrip, model_version: 13 })).toEqual({ ok: true, sections: ["zones"] });

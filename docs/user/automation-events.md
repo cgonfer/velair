@@ -795,10 +795,33 @@ reason: scheduled_event
 
 For a fixed scalar `heat` or `cool` target with a non-zero deadband, the four
 hysteresis fields identify the committed runtime phase, its active edge, and
-the complete switching band. They are omitted for a zero deadband, scalar
-automatic modes, and native ranges. The phase remains unchanged while the room
-crosses the scheduled center and reverses only after the external sensor
-reaches the opposite edge.
+the nominal band. They are omitted for a zero deadband, scalar automatic modes,
+and native ranges. With Default or Moderate braking, the phase remains unchanged
+while the room crosses the scheduled center and reverses only after the
+external sensor reaches the opposite edge. High starts the non-driving phase
+at the scheduled target while retaining the existing reactivation limit.
+
+An updated event can also include additive `braking` metadata for the committed
+policy, including when a fixed-mode range uses a configured reference:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+This example describes heating with a `20.5 °C` target, `0.5 °C` deadband and
+`0.5 °C` equipment step. The effective level is `default` when additional
+braking cannot apply; the configured level is retained and `reason` explains
+why. Thresholds or the setpoint bound can be `null` when unavailable. The
+metadata describes demand withdrawal, not a confirmed physical HVAC stop.
+Consumers of older events can ignore the object. See
+[Optional braking](room-assist.md#optional-braking) for switching rules.
 
 When the scheduled target protects a fixed heating or cooling result, the
 scalar update adds two optional fields:

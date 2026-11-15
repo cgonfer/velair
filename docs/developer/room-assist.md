@@ -28,6 +28,7 @@ Room Assist configuration is stored per managed climate together with the climat
   "room_temperature_entity_id": "sensor.living_room_temperature",
   "room_sensor_assist_enabled": true,
   "room_sensor_assist_deadband": 0.3,
+  "room_sensor_assist_braking_level": "default",
   "room_sensor_assist_max_delta": 2.0,
   "room_sensor_assist_debounce_seconds": 20
 }
@@ -38,7 +39,8 @@ Key meanings:
 - `room_temperature_entity_id`: optional Home Assistant `sensor.*` temperature entity selected from the Room Assist tab.
 - `room_sensor_assist_enabled`: enables runtime target assistance. Selecting a sensor alone does not make it operational.
 - `room_sensor_assist_deadband`: defines the lower and upper runtime-hysteresis limits for fixed `heat` and `cool` around the scalar target or configured range reference, and the neutral margin for scalar automatic modes and native `heat_cool` ranges. A zero value preserves the legacy signed correction without phase state. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
-- `room_sensor_assist_max_delta`: caps how far Velair may temporarily move the target sent to the climate entity while preserving the scheduled target as the real user target. It must be large enough to permit any known target gap the device may need to stop heating or cooling; the cap is not applied in full unless the external room error requires it.
+- `room_sensor_assist_braking_level`: `default`, `moderate`, or `high`; omission means `default`. Additional braking requires a positive deadband and a fixed heating or cooling mode with a scalar target or selected range reference. Normal settings updates validate the final merged configuration, so a non-default level with zero deadband is rejected. Inconsistent stored combinations retain their settings but suspend additional braking with an explicit runtime reason.
+- `room_sensor_assist_max_delta`: caps the proportional signed correction from the active room limit, not the final setpoint after scheduled-target protection. It must be large enough to permit any known target gap the device may need to stop heating or cooling; the cap is not applied in full unless the external room error requires it. Optional braking strengthens the scheduled-target guard without redefining this proportional cap.
 - `room_sensor_assist_debounce_seconds`: waits this many seconds after relevant room sensor or climate state changes before recalculating assistance. The supported range is `0` to `300` seconds.
 
 All runtime targets, readings, steps, limits, signed corrections, and range widths use the managed climate entity's native Home Assistant temperature unit. Only an external sensor that declares a different unit is converted before calculation. Absolute temperatures use offset-and-scale conversion, while the Room Assist deadband and maximum assist delta use scale-only conversion. The maximum assist delta is normalized with a broad bound so Celsius and Fahrenheit installations can both configure useful limits. The frontend should display values using the managed climate's unit.
@@ -91,7 +93,7 @@ Periods use half-open local-time intervals, with overnight intervals anchored
 to the selected start day. Reject overlaps, invalid days/times, zero-duration
 periods and invalid source IDs. Saving replaces the complete nested schedule
 atomically through the existing zone-settings boundary. Portable exports use
-model 26; older exports without a sensor schedule retain their fixed-source
+model 27; older exports without a sensor schedule retain their fixed-source
 behavior.
 
 Prepare the schedule on configuration changes. Resolve a shared effective source
@@ -151,6 +153,28 @@ This status can include:
   `hysteresis_target`, `deadband_low`, and `deadband_high` fields. The phase is
   `towards_lower` or `towards_upper`; the target is the active edge.
 
+The additive `braking` object describes the configured and effective braking
+policy: `configured_level`, `effective_level`, `active`, `stop_temperature`,
+`resume_temperature`, `setpoint_bound`, and `reason`. Thresholds and bound are
+temperatures or `null`; an inactivity reason is a string or `null`. Additional
+braking is active only in the committed non-driving phase of an applicable
+non-default policy. Unsupported contexts retain the configured level while
+exposing the effective default policy and an explanation. Older payloads without
+the object retain their existing frontend behavior.
+
+The nominal `deadband_low` and `deadband_high` remain centered on the scheduled
+target. Effective braking thresholds are separate: neither a graph nor Supply
+may infer High's stop threshold from those nominal bounds. Status reads do not
+advance phases, commit a preview, or send climate commands. Published active
+metadata remains tied to the committed control state until a control refresh
+succeeds.
+
+Missing room-sensor or climate-temperature readings suspend additional braking
+with `room_sensor_unavailable` or `climate_temperature_unavailable`, rather than
+presenting an active braking prediction from incomplete inputs. When the device's
+effective target step changes, committed braking bounds remain those of the
+accepted delivery until the next control refresh commits the new calculation.
+
 For a native range it includes `target_temp_low` and `target_temp_high`, the
 corresponding `applied_target_temp_low` and `applied_target_temp_high`, the live
 `climate_target_temp_low` and `climate_target_temp_high` reported by Home
@@ -180,6 +204,11 @@ Those listeners exist only while assistance is relevant. They are removed when t
 When assistance refreshes during active Adaptive Preconditioning, an already-applied early target is authoritative until `target_when`. Otherwise the current schedule event is authoritative. Stored Room Assist runtime state is only a record of the last target sent; it must never select an older schedule block after a transition.
 
 ## Target Calculation
+
+The calculation below describes **Default** braking. Moderate retains its
+switching thresholds and strengthens the non-driving scheduled guard. High
+changes the driving-to-non-driving switch to the central target, as described
+in [Optional braking policy](#optional-braking-policy).
 
 Fixed scalar `heat` and `cool` with a non-zero deadband use stateful
 hysteresis. First derive the two room limits:
@@ -236,10 +265,14 @@ if mode is fixed cool and the room no longer requests cooling:
 
 A positive correction raises the climate target; a negative correction lowers
 it. In the legacy and automatic paths, crossing the scheduled target reverses
-the sign outside the neutral deadband. Saving a deadband refreshes active
-assistance immediately. A matching fixed-mode cycle retains its phase, uses
-the new limits, and changes phase immediately only when the current room
-reading has already reached the newly active edge.
+the sign outside the neutral deadband. Saving changed deadband or braking
+settings refreshes active assistance after a successful save. A braking-level
+change invalidates the previous phase. For Moderate and High, a deadband change
+also invalidates it so obsolete switching rules are not reused. Default keeps
+its established deadband-edit behavior: a matching fixed-mode cycle retains its
+phase, uses the new limits and reverses when the room has reached the newly
+active edge. A failed save leaves the previous committed configuration and
+control state authoritative.
 
 For explicit `heat` and `cool`, the HVAC direction remains fixed: hysteresis
 changes the temporary target but never asks fixed heat to cool or fixed cool to
@@ -322,6 +355,55 @@ uses its persisted last-reported step, followed by the manual per-zone fallback.
 Missing fallback data resolves to `1` in the active temperature unit; Settings
 exposes the effective fallback so the user can match the physical device.
 
+### Optional braking policy
+
+Resolve one pure policy from the saved level, effective mode, target, positive
+deadband, effective target step and committed phase. Use it in scalar control,
+fixed-mode range adaptation, runtime presentation and Supply threshold reporting.
+Do not duplicate switching comparisons in the frontend.
+
+With target **T**, deadband **H** and step **S**:
+
+| Level | Heat stop / resume | Cool stop / resume | Non-driving setpoint guard |
+| --- | --- | --- | --- |
+| Default | Existing T + H / T − H | Existing T − H / T + H | Existing scheduled guard |
+| Moderate | T + H / T − H | T − H / T + H | Heat ceiling T − S; cool floor T + S |
+| High | T / T − H | T / T + H | Heat ceiling T − 2S; cool floor T + 2S |
+
+Equality completes a phase. High changes only the stop threshold, not the
+driving error target: heat still calculates assistance towards the original
+upper nominal edge and cool towards the original lower nominal edge until
+withdrawal begins. In the non-driving phase, retain the opposite nominal edge
+as the correction target and strengthen the scheduled guard. Preserve a
+candidate already farther into the non-driving side. The guard is a fixed
+total bound, never a repeated increment or decrement.
+
+Initialize within the band on the non-driving side as before. Reuse a phase
+only while its intent, source, mode, target and braking level still match;
+Moderate and High additionally require an unchanged deadband. Default preserves
+its existing phase reuse for deadband-only edits as described above. No braking
+state is persisted. There are no new periodic tasks, timers,
+historical queries or runtime configuration writes; the existing grouped refresh
+and authoritative delivery path applies the result, including suppression of
+target changes smaller than one effective step.
+
+For fixed-mode ranges with a configured reference, pass this policy through
+the shared scalar calculation and translate the complete pair by its result.
+Preserve range width and clamp the shift against both physical boundaries.
+Default, scalar automatic modes and native bidirectional ranges retain their
+existing behavior. Invalid stored zero-band/non-default combinations keep the
+saved level, expose an inactivity reason and use the legacy zero-band path.
+
+Physical clamping can prevent a one-step or two-step guard from being reached;
+the existing requested/applied limit metadata must report that outcome. Braking
+does not inspect `hvac_action`, guarantee a physical stop, anticipate residual
+temperature rise before the target, learn cycles, or add a recovery controller.
+
+Portable model 27 carries `room_sensor_assist_braking_level`; older imports
+default it when absent. The Home Assistant storage helper version is unchanged.
+Older portable-model consumers reject model 27 rather than silently losing the
+saved policy.
+
 ### Native Range Calculation
 
 For a scheduled range `[low, high]`, Room Assist treats both boundaries as one
@@ -385,7 +467,7 @@ Room Assist emits:
 - `room_sensor_assist_updated`: Velair applied a temporary assisted climate target.
 - `room_sensor_assist_restored`: Velair stopped managing the temporary assisted target and restored the normal scheduled target where possible.
 
-The event payload includes the climate entity, room sensor entity, scheduled target, applied target, measured temperatures, the absolute logical correction (`assist_delta`), direction, HVAC mode, and reason. Scalar events use `target_temperature`, `applied_temperature`, and signed `applied_offset`. A fixed scalar hysteresis event update can additionally include `hysteresis_phase`, `hysteresis_target`, `deadband_low`, and `deadband_high`. When scheduled protection changes a scalar result, the update also includes `scheduled_target_guard` and `calculated_temperature`; older consumers can ignore these additive fields. Range events use the complete scheduled and applied boundary pairs plus signed `range_shift`; they omit hysteresis fields even when a configured fixed-mode reference exposes those fields in live runtime status. Restoration events return the scheduled target form and report correction or shift as zero. All hysteresis fields are optional so older consumers and non-hysteresis paths remain compatible.
+The event payload includes the climate entity, room sensor entity, scheduled target, applied target, measured temperatures, the absolute logical correction (`assist_delta`), direction, HVAC mode, and reason. Scalar events use `target_temperature`, `applied_temperature`, and signed `applied_offset`. A fixed scalar hysteresis event update can additionally include `hysteresis_phase`, `hysteresis_target`, `deadband_low`, and `deadband_high`. When scheduled protection changes a scalar result, the update also includes `scheduled_target_guard` and `calculated_temperature`; older consumers can ignore these additive fields. Range events use the complete scheduled and applied boundary pairs plus signed `range_shift`; they omit hysteresis fields even when a configured fixed-mode reference exposes those fields in live runtime status. Updated events also carry the additive `braking` policy metadata described above, including for fixed-mode ranges. Restoration events return the scheduled target form and report correction or shift as zero; they do not require braking metadata. All hysteresis fields are optional so older consumers and non-hysteresis paths remain compatible.
 
 The public payload contract is centralized in
 [Automation Events](../user/automation-events.md#room-sensor-assist-state-changed).
@@ -402,6 +484,7 @@ await hass.connection.sendMessagePromise({
     room_temperature_entity_id: "sensor.living_room_temperature",
     room_sensor_assist_enabled: true,
     room_sensor_assist_deadband: 0.3,
+    room_sensor_assist_braking_level: "moderate",
     room_sensor_assist_max_delta: 2.0,
     room_sensor_assist_debounce_seconds: 20
   }

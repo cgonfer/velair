@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.10 |
-| Laatst gesynchroniseerd | 2026-11-05 |
+| Referentieversie | 1.9.3-beta.2 |
+| Laatst gesynchroniseerd | 2026-11-15 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -33,7 +33,7 @@ Bij een blok met **Alleen temperatuur** wordt Room Assist onderbroken zolang het
 
 Velair behoudt het geplande doel als werkelijk gebruikersdoel, maar corrigeert tijdelijk de naar het apparaat gestuurde doeltemperatuur op basis van externe kamersensor en eigen apparaatmeting.
 
-Bij één doel in vaste `heat` of `cool` maakt een niet-nul dode band twee schakelgrenzen. Room Assist onthoudt naar welke grens het beweegt en wisselt pas wanneer de externe kamersensor de tegenoverliggende grens bereikt. Zo ontstaat een echte hysterese op basis van de externe sensor, in plaats van een interne sensor die rond het centrale doel een nieuwe cyclus begint. Maximale correctie begrenst de correctie met teken die vanaf de actieve grens wordt berekend.
+Bij één doel in vaste `heat` of `cool` maakt een niet-nul dode band twee schakelgrenzen. Met afremming **Standaard** onthoudt Room Assist naar welke grens het beweegt en wisselt het pas wanneer de externe kamersensor de tegenoverliggende grens bereikt. Zo ontstaat een echte hysterese op basis van de externe sensor, in plaats van een interne sensor die rond het centrale doel een nieuwe cyclus begint. Maximale correctie begrenst de correctie met teken die vanaf de actieve grens wordt berekend. Optionele afremniveaus nemen de vraag sterker terug; **Hoog** begint daarmee bij het geplande doel in plaats van de verder gelegen schakelgrens.
 
 Afzonderlijke doelen in `auto` en `heat_cool` en oorspronkelijke `heat_cool`-bereiken behouden hun neutrale of bereikmargegedrag. Velair dwingt deze modi niet om tijdens een hysterese voor één doel afwisselend actief te verwarmen en koelen.
 
@@ -54,7 +54,8 @@ Bij **Niet ingesteld** worden vaste paren ongewijzigd zonder Room Assist-correct
 4. Schakel Ondersteuning via kamersensor in.
 5. Stel de Room Assist-dode band in voor vast verwarmen of koelen rond het enkele doel of de gekozen bereikreferentie; bij automatische enkeldoelmodi en oorspronkelijke `heat_cool`-banden bepaalt deze de neutrale marge.
 6. Pas Maximale correctie aan als de standaard te klein is voor die kamer of onder het verschil ligt dat de thermostaat nodig kan hebben om verwarmen/koelen te stoppen.
-7. Pas Vernieuwingsvertraging aan als sensorupdates te traag of te frequent aanvoelen.
+7. Kies eventueel **Afremming: Gemiddeld** of **Hoog** om de vraag sterker terug te nemen. Deze niveaus vereisen een Room Assist-dode band groter dan nul. **Standaard** behoudt het bestaande gedrag.
+8. Pas Vernieuwingsvertraging aan als sensorupdates te traag of te frequent aanvoelen.
 
 Alleen een kamersensor kiezen bewaart die sensor. Velair gebruikt deze pas als effectieve kamertemperatuur wanneer Ondersteuning via kamersensor is ingeschakeld.
 
@@ -66,12 +67,46 @@ Vernieuwingsvertraging is de wachttijd om snelle wijzigingen na kamer- of appara
 
 De Room Assist-dode band staat los van het minimumverschil voor adaptieve voorconditionering. Standaard is deze `0.3 °C` of `1 °F`, `0` schakelt haar uit en instellen kan in stappen van `0.1` graad tot `5 °C` of `9 °F`. Opslaan tijdens actieve Room Assist ververst het gecorrigeerde doel onmiddellijk.
 
-De actuele temperatuurschaal toont de dode band als neutrale gestreepte zone. Bij een vast enkel doel zijn de randen hysteresegrenzen en noemt de status de actieve richting. Bij afzonderlijke automatische doelen blijft het een neutrale marge. Voor een oorspronkelijk `heat_cool`-bereik loopt deze van ondergrens min dode band tot bovengrens plus dode band. De schaal vergroot om beide randen te tonen. De volledige vertaalde legenda blijft op het werkelijke bereik gecentreerd, ook als tekst breder is, zodat betekenis niet van grafiekbreedte afhangt. De uitleg blijft beschikbaar voor ondersteunende technologie en als aanwijstekst.
+De actuele temperatuurschaal toont de dode band als neutrale gestreepte zone. Bij een vast enkel doel met afremming Standaard of Gemiddeld zijn de randen hysteresegrenzen en noemt de status de actieve richting. Hoog behoudt deze nominale band en markeert het eerdere afremmen bij het geplande doel afzonderlijk. Bij afzonderlijke automatische doelen blijft het een neutrale marge. Voor een oorspronkelijk `heat_cool`-bereik loopt deze van ondergrens min dode band tot bovengrens plus dode band. De schaal vergroot om beide randen te tonen. De volledige vertaalde legenda blijft op het werkelijke bereik gecentreerd, ook als tekst breder is, zodat betekenis niet van grafiekbreedte afhangt. De uitleg blijft beschikbaar voor ondersteunende technologie en als aanwijstekst.
 
 Bij dode band `0` wordt geen vlak getekend en noemt de vaste legenda expliciet dat er geen dode band is. Grafiek en legenda volgen de opgeslagen backendwaarde; `show_room_assist_deadband` verbergen op een Lovelace-kaart verbergt instelling, band en legenda samen.
 
 Alleen de gekozen optie wordt getoond. Wanneer **Vaste sensor** al de opgeslagen werkwijze is, wordt een andere sensor direct opgeslagen. Wisselen tussen **Vaste sensor** en **Volgens schema** wijzigt een concept: **Opslaan** past de werkwijze en de instellingen toe, en **Annuleren** herstelt de opgeslagen configuratie. De vaste sensor en het opgeslagen schema blijven bij het wisselen bewaard; beide worden niet tegelijk ingeschakeld.
 
+
+<a id="optional-braking"></a>
+
+### Optioneel afremmen
+
+Afremming wijzigt het instelpunt dat naar het apparaat wordt gestuurd; de geplande temperatuur blijft het echte kamerdoel. Het is beschikbaar in vaste **Verwarmen** en **Koelen**, ook voor apparaten met twee instelpunten en een ingestelde referentie. Afzonderlijke automatische doelen en oorspronkelijke `heat_cool`-banden blijven ongewijzigd.
+
+**T** is het geplande doel, **H** de Room Assist-dode band en **S** de effectieve instelpuntstap van het apparaat:
+
+| Afremming | Verwarmen: vraag terugnemen | Verwarmen: opnieuw warmte vragen | Koelen: vraag terugnemen | Koelen: opnieuw koeling vragen |
+| --- | --- | --- | --- | --- |
+| Standaard | Bestaand gedrag | Bestaand gedrag | Bestaand gedrag | Bestaand gedrag |
+| Gemiddeld | Bij T + H | Bij T − H | Bij T − H | Bij T + H |
+| Hoog | Bij T | Bij T − H | Bij T | Bij T + H |
+
+Tijdens het terugnemen beperkt **Gemiddeld** het verwarmingsinstelpunt tot maximaal **T − S**, of het koelinstelpunt tot minimaal **T + S**. **Hoog** gebruikt **twee stappen**. Als de bestaande berekening al meer vraag terugneemt, behoudt Velair dat sterkere resultaat. Dit zijn vaste grenzen zolang afremming actief is: sensorupdates tellen niet telkens nog een stap op of af.
+
+Bijvoorbeeld met een verwarmingsdoel van `20.5 °C`, een dode band van `0.5 °C` en een apparaatstap van `0.5 °C`:
+
+- **Gemiddeld** neemt de vraag terug bij `21 °C`, met een apparaatinstelpunt van maximaal `20 °C`.
+- **Hoog** neemt de vraag terug bij `20.5 °C`, met een instelpunt van maximaal `19.5 °C`.
+- Beide vragen opnieuw warmte wanneer de externe sensor `20 °C` bereikt.
+
+Vóór het terugnemen blijft de bestaande ondersteuningsberekening ongewijzigd. Afremming blijft actief tot de hervattingsgrens, ook wanneer de kamer het centrale doel passeert. Wanneer ondersteuning start of herstart terwijl de kamer al binnen de band ligt, blijft de bestaande voorzichtige initialisatie behouden zonder bewust een verwarmings- of koelcyclus te beginnen.
+
+De actuele status toont de effectieve temperaturen voor afremmen en hervatten. De grafiek houdt de nominale dode band zichtbaar en onderscheidt de effectieve afremdrempels. De gedeelde toevoervraag volgt dezelfde bevestigde fase.
+
+Kies **Standaard** voordat je de dode band op nul zet. Het opgeslagen niveau blijft bewaard als de huidige modus of temperatuurreferentie het niet kan gebruiken; de status legt uit waarom extra afremming niet actief is. Ongeldige opgeslagen combinaties onderbreken extra afremming in plaats van stilzwijgend de dode band te wijzigen.
+
+Fysieke minimum- en maximuminstelpunten kunnen de beschikbare afremming beperken. Bij twee instelpunten verschuift het volledige paar samen en kan elke grens de verschuiving beperken. Bestaande grenswaarschuwingen tonen het aangevraagde en toegepaste resultaat.
+
+Afremming vermindert de gevraagde verwarming of koeling; het bevestigt niet dat klep, compressor of thermostaat gestopt is. Apparaatregeling, minimale looptijden en thermische traagheid kunnen nog steeds overschrijding veroorzaken. Deze instelling leert geen cycli en neemt de vraag niet vóór het geplande doel terug. Controleer haar met echte verwarmings- en koelcycli voordat je voor een bepaalde kamer op een niveau vertrouwt.
+
+Draagbare exports gebruiken model **27** om de afremming te bewaren. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 27 niet importeren.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -119,7 +154,7 @@ Bij actieve Room Assist vat Overzicht dit zo nodig samen als **Naar de ondergren
 <a id="fixed-heating-hysteresis-example"></a>
 ## Voorbeeld van hysterese bij vaste verwarming
 
-Situatie:
+Voorbeeld met afremming **Standaard**:
 
 - Gepland blok: `21 °C`, `heat`
 - Dode band: `±0.3 °C`
@@ -189,7 +224,7 @@ Zo verstuurt Room Assist geen onrealistische doelen, maar blijft de thermostaat 
 <a id="fixed-cooling-hysteresis-example"></a>
 ## Voorbeeld van hysterese bij vaste koeling
 
-Situatie:
+Voorbeeld met afremming **Standaard**:
 
 - Gepland blok: `24 °C`, `cool`
 - Dode band: `±0.5 °C`
@@ -260,6 +295,8 @@ Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
 `3 °C` instellen past niet meteen `3 °C` correctie toe. Het staat alleen toe dat Room Assist die waarde bereikt wanneer het externe kamerverschil dit vereist.
+
+Deze instelling begrenst de proportionele correctie, niet het uiteindelijke instelpunt na bescherming van het geplande doel. Optionele afremming versterkt die bescherming met een grens van één of twee stappen; het wijzigt Maximale correctie niet en past niet bij elke update het volledige maximum toe.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Waarom het apparaatdoel kan afwijken van de berekening
@@ -348,6 +385,8 @@ Bij ingeschakelde Ondersteuning via kamersensor gebruikt adaptieve voorcondition
 
 <a id="automation-events"></a>
 ## Gebeurtenissen voor automatiseringen
+
+Updategebeurtenissen kunnen ook een object `braking` bevatten met het ingestelde en effectieve niveau, de actieve fase, effectieve stop- en hervattingstemperaturen, instelpuntgrens en een eventuele reden voor inactiviteit. Deze extra velden beschrijven de bevestigde vraagregeling, niet de fysieke HVAC-activiteit. Zie [Room Sensor Assist bijgewerkt](automation-events.nl.md#room-sensor-assist-updated) voor een voorbeeld.
 
 Velair verstuurt het standaard Home Assistant-gebeurtenistype `velair_event`.
 

@@ -728,16 +728,17 @@ unique id and expected revision under a lock, converts all thermal scopes, and
 persists before replacing runtime data. An exact retry is a no-op and a failed
 write leaves the original runtime untouched.
 
-Model 26 includes optional Room Assist reference schedules in zone configuration.
+Model 27 includes optional Room Assist reference schedules and braking levels
+in zone configuration.
 This does not change the internal storage version. Earlier supported portable
-models remain importable; older Velair versions cannot import model 26 exports.
+models remain importable; older Velair versions cannot import model 27 exports.
 
 The current export format is:
 
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 26,
+  "model_version": 27,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {

@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.2 |
-| Letzte Synchronisierung | 2026-11-12 |
+| Referenzversion | 1.9.3-beta.2 |
+| Letzte Synchronisierung | 2026-11-15 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -31,6 +31,17 @@ In den **Einstellungen** des Seitenleisten-Panels legt **Anzeige der Klimagerät
 **Aktuelle Namen mit Bereichsangabe** behält diese Namen bei und ergänzt den wirksamen Home-Assistant-Bereich separat, wenn verwaltete Klimageräte denselben Namen haben. **Entitätsnamen mit Kontext** verwendet den eigenen Namen der Entität oder bei der Hauptentität eines Geräts den Gerätenamen. Bei wiederholten Namen wird separater Home-Assistant-Kontext angezeigt. Bei einem Gerät namens `Test` und einer Entität namens `Test 2` lautet das aktuelle Format `Test Test 2`; das Entitätsformat lautet `Test 2`, bei Bedarf mit Bereichs- oder Gerätekontext. Der eigene Bereich einer Entität hat Vorrang vor dem Bereich ihres Geräts.
 
 Wenn der Bereichs- oder Gerätekontext wiederholte Namen nicht unterscheiden kann, bleibt die Entitäts-ID als Referenz verfügbar. Native Auswahllisten zeigen den Kontext in derselben Zeile. Benutzerdefinierte Kartennamen und Raumgruppennamen behalten Vorrang. Velair speichert diese Einstellung und teilt sie zwischen Browsern und Karten; ändere sie in den Einstellungen des Seitenleisten-Panels. Sie benennt keine Home-Assistant-Entitäten um und verändert weder deren IDs noch Zeitpläne oder Klimabefehle. Frühere Home-Assistant-Versionen behalten die bisherigen Namen bei, wenn strukturierte Namensmetadaten fehlen.
+
+<a id="sensor-entity-ids"></a>
+## Entitäts-IDs der Sensoren
+
+Neue Velair-Sensoren verwenden die Entitäts-ID des zugehörigen Klimageräts und den Zweck des Sensors als Grundlage für ihre anfänglichen IDs. Home Assistant wendet seine Namensregeln an und löst Konflikte mit bereits belegten IDs. Klimageräte mit demselben sichtbaren Namen können dadurch unterscheidbare Sensor-IDs erhalten. Sensornamen bleiben wie bisher übersetzt.
+
+Bestehende Sensoren behalten ihre registrierten IDs, einschließlich benutzerdefinierter IDs. Das Ändern von **Anzeige der Klimagerätenamen**, das Importieren von Einstellungen oder ein Neustart benennt sie nicht um.
+
+Administratoren können unter **Einstellungen → Wartung → Sensor-Entitäts-IDs prüfen** bestehende Sensoren überprüfen. Die Übersicht zeigt das zugehörige Klimagerät sowie die aktuelle und die vorgeschlagene ID, auch für Sensoren ohne numerisches Suffix und deaktivierte Diagnosesensoren. Nichts wird automatisch ausgewählt. Wähle die gewünschten Änderungen aus und bestätige die Umbenennung; du kannst die Übersicht auch ohne Änderungen schließen. Beim Aktualisieren der Übersicht wird die Auswahl aufgehoben. Ein geänderter oder veralteter Vorschlag muss vor dem Anwenden erneut geprüft werden.
+
+Das Ändern einer Entitäts-ID kann Anpassungen an Automationen, Dashboards, Vorlagen und externen Verweisen erfordern. Prüfe diese Verweise vor dem Bestätigen; Velair verspricht nicht, sie umzuschreiben. Sensornamen, interne Identitäten, Einstellungen und Klimabefehle bleiben dabei unverändert. Schlägt eine Stapeländerung fehl, versucht Velair, die vorherigen IDs wiederherzustellen, und meldet verbleibende Änderungen.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation im Panel und direkte Links
@@ -561,7 +572,7 @@ Zeitpläne, Vorlagen, aktuelle und vorherige Übersteuerungssollwerte, Komfortgr
 
 Das einmalige Upgrade früher veröffentlichter, ausschließlich Celsius unterstützender Velair-Daten ist anders. Verwendet Home Assistant bereits Fahrenheit, nimmt Velair für die Altdaten ohne Rückfrage Celsius an, hält den Zeitplaner gestoppt und verweist auf **Velair zurücksetzen**. Dies verwirft die alte Konfiguration und erstellt atomar neue Fahrenheit-Standardwerte. Spätere Home-Assistant-Einheitenwechsel nach diesem Upgrade verwenden die vollständige ausdrückliche Umrechnung oben und erhalten Daten.
 
-Aktuelle Exporte des portablen Modells v26 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v26 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
+Aktuelle Exporte des portablen Modells v27 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v27 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
 
 War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren können.
 
@@ -741,7 +752,7 @@ Die Einstellungen können eine versionierte JSON-Datei exportieren und importier
 - Klimaprofildefinitionen;
 - Modusdefinitionen.
 
-Aktuelle Exporte des Modells 26 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne, unabhängig von Temperaturzeitplänen und Profilen. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 26 nicht importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
+Aktuelle Exporte des Modells 27 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne und die gewählte Bremsstufe, unabhängig von Temperaturzeitplänen und Profilen. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 27 nicht importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
 
 Beim Import wählst du die zu überschreibenden Bereiche. Ausgewählte Daten werden ersetzt; exportiere vorher, wenn ein Wiederherstellungspunkt nötig ist. Profil- und Modusdefinitionen sind portabel, ihre aktive Auswahl nicht. Velair behält aktive Profil-IDs, die noch existieren, und kehrt nur dann zu Standardzeitplänen zurück, wenn keine übrig bleiben.
 

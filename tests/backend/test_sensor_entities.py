@@ -25,6 +25,8 @@ def _load_sensor_module():
         "homeassistant.helpers.entity",
         "homeassistant.helpers.entity_platform",
         "custom_components.velair.entity",
+        "homeassistant.helpers.entity_registry",
+        "custom_components.velair.entity_registry",
     )
     previous_modules = {
         name: sys.modules.get(name)
@@ -52,6 +54,7 @@ def _load_sensor_module():
             return self._entry.runtime_data.scheduler
 
     try:
+        sys.modules.setdefault("homeassistant.helpers.entity_registry", ModuleType("homeassistant.helpers.entity_registry"))
         homeassistant_const.UnitOfTemperature = SimpleNamespace(
             CELSIUS="°C",
             FAHRENHEIT="°F",
@@ -191,12 +194,12 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            "velair_control_living_room",
-            control._attr_suggested_object_id,
+            "living_room_control",
+            control.suggested_object_id,
         )
         self.assertEqual(
-            "velair_delivery_diagnostics_living_room",
-            diagnostics._attr_suggested_object_id,
+            "living_room_delivery_diagnostics",
+            diagnostics.suggested_object_id,
         )
 
     async def test_setup_creates_three_global_and_nine_sensors_per_climate(
@@ -271,6 +274,16 @@ class SensorEntitiesTest(unittest.IsolatedAsyncioTestCase):
             2,
         )
         living_prefix = "entry_climate_living_room_"
+        for entity in entities:
+            if isinstance(entity, sensor_module._ZoneSensor):
+                self.assertEqual(
+                    f"{entity._climate_entity_id.partition('.')[2]}_{entity._sensor_key}",
+                    entity.suggested_object_id,
+                )
+                self.assertEqual(
+                    f"entry_{entity._climate_entity_id.replace('.', '_')}_{entity._sensor_key}",
+                    entity._attr_unique_id,
+                )
         self.assertEqual(
             {
                 entity._attr_unique_id.removeprefix(living_prefix)
