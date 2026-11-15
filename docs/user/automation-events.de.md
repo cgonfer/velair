@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.3-beta.2 |
+| Letzte Synchronisierung | 2026-11-15 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -690,7 +690,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Bei festem Einzelziel `heat` oder `cool` mit Totband ungleich null nennen vier Hysteresefelder die übernommene Laufzeitphase, aktive Grenze und vollständiges Schaltband. Sie fehlen bei null Totband, Einzelziel-Automatikmodi und nativen Bereichen. Die Phase bleibt beim Durchlaufen des Zeitplanzentrums gleich und kehrt erst an der gegenüberliegenden externen Sensorgrenze um.
+Bei einem festen Einzelziel `heat` oder `cool` mit einem Totband ungleich null identifizieren die vier Hysteresefelder die übernommene Laufzeitphase, ihre aktive Grenze und das nominelle Band. Sie fehlen bei einem Totband von null, automatischen Modi mit Einzelziel und nativen Bereichen. Bei den Bremsstufen Standard und Moderat bleibt die Phase beim Durchlaufen des geplanten Zentrums unverändert und kehrt erst um, wenn der externe Sensor die gegenüberliegende Grenze erreicht. Stark beginnt die nicht anfordernde Phase bereits am geplanten Ziel und behält die bisherige Reaktivierungsgrenze bei.
+
+Ein Aktualisierungsereignis kann außerdem ergänzende `braking`-Metadaten für die übernommene Regelung enthalten, auch wenn ein Bereich im festen Modus eine konfigurierte Referenz verwendet:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Dieses Beispiel beschreibt Heizen mit einem Ziel von `20.5 °C`, einem Totband von `0.5 °C` und einem Geräteschritt von `0.5 °C`. Kann die zusätzliche Bremsung nicht angewendet werden, lautet die effektive Stufe `default`; die konfigurierte Stufe bleibt erhalten und `reason` erklärt den Grund. Schwellenwerte oder die Sollwertgrenze können `null` sein, wenn sie nicht verfügbar sind. Die Metadaten beschreiben das Zurücknehmen der Anforderung, nicht einen bestätigten physischen Stopp der Klimaanlage. Bestehende Ereignisempfänger können das Objekt ignorieren. Die Schaltregeln stehen unter [Optionale Bremsung](room-assist.de.md#optional-braking).
 
 Schützt das Zeitplanziel ein festes Heiz-/Kühlergebnis, ergänzt das Einzelzielupdate zwei optionale Felder:
 

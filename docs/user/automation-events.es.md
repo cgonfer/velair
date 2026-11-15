@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](automation-events.md) · [Español](automati
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.2 |
-| Última sincronización | 2026-10-17 |
+| Versión de referencia | 1.9.3-beta.2 |
+| Última sincronización | 2026-11-15 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -703,7 +703,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Para un objetivo único fijo `heat` o `cool` con banda muerta distinta de cero, los cuatro campos de histéresis identifican la fase de ejecución establecida, su límite activo y la banda completa de conmutación. Se omiten con banda muerta cero, modos automáticos de temperatura única e intervalos nativos. La fase no cambia al cruzar el centro programado y solo se invierte cuando el sensor externo alcanza el límite opuesto.
+Para un objetivo único fijo `heat` o `cool` con banda muerta distinta de cero, los cuatro campos de histéresis identifican la fase de ejecución establecida, su límite activo y la banda nominal. Se omiten con banda muerta cero, modos automáticos de temperatura única e intervalos nativos. Con los niveles de frenado Predeterminado o Moderado, la fase no cambia al cruzar el centro programado y solo se invierte cuando el sensor externo alcanza el límite opuesto. Alto inicia la fase sin demanda en el objetivo programado y mantiene el límite de reactivación existente.
+
+Un evento de actualización también puede incluir metadatos adicionales `braking` sobre la política aplicada, incluso cuando un intervalo en modo fijo utiliza una referencia configurada:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Este ejemplo describe calefacción con un objetivo de `20.5 °C`, una banda muerta de `0.5 °C` y un paso del equipo de `0.5 °C`. El nivel efectivo es `default` cuando no se puede aplicar el frenado adicional; se conserva el nivel configurado y `reason` explica el motivo. Los umbrales o el límite de consigna pueden ser `null` cuando no están disponibles. Los metadatos describen la retirada de demanda, no una parada física confirmada del equipo. Los consumidores de eventos existentes pueden ignorar el objeto. Consulta [Frenado opcional](room-assist.es.md#optional-braking) para conocer las reglas de conmutación.
 
 Cuando el objetivo programado protege el resultado de calefacción o refrigeración fija, la actualización de temperatura única añade dos campos opcionales:
 

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.10 |
-| Última sincronização | 2026-11-05 |
+| Versão de referência | 1.9.3-beta.2 |
+| Última sincronização | 2026-11-15 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -33,7 +33,7 @@ O Room Assist é local e acionado por eventos. O Velair não consulta continuame
 
 O Velair mantém o alvo programado como o verdadeiro alvo do usuário, mas ajusta temporariamente o valor enviado à entidade de climatização usando o sensor ambiente separado e a leitura do próprio dispositivo.
 
-Para um alvo único em `heat` ou `cool` fixo, uma zona morta diferente de zero cria dois limites de comutação. O Room Assist lembra qual limite está buscando e só muda de direção quando o sensor ambiente separado atinge o limite oposto. Isso cria um ciclo real de histerese baseado no sensor separado, em vez de permitir que o sensor interno inicie outro ciclo perto do alvo central. O delta máximo de assistência limita a correção com sinal calculada a partir do limite ativo.
+Para um alvo único em `heat` ou `cool` fixo, uma zona morta diferente de zero cria dois limites de comutação. Com a frenagem **Padrão**, o Room Assist lembra qual limite está buscando e só muda de direção quando o sensor ambiente separado atinge o limite oposto. Isso cria um ciclo real de histerese baseado no sensor separado, em vez de permitir que o sensor interno inicie outro ciclo perto do alvo central. O delta máximo de assistência limita a correção com sinal calculada a partir do limite ativo. Os níveis opcionais de frenagem retiram a demanda com mais firmeza; **Alta** inicia essa retirada no alvo programado, em vez de esperar pelo limite de comutação mais distante.
 
 Alvos escalares de `auto` e `heat_cool` e faixas nativas de `heat_cool` mantêm seu comportamento neutro ou de margem da faixa. O Velair não força esses modos a alternar aquecimento e resfriamento ativos em um ciclo escalar de histerese.
 
@@ -54,10 +54,45 @@ Com **Não configurado**, pares em modo fixo são entregues sem alteração nem 
 4. Habilite a assistência com sensor ambiente.
 5. Ajuste a banda morta do Room Assist para os limites inferior e superior em aquecimento ou resfriamento fixo ao redor do alvo escalar ou referência de faixa selecionada, ou a margem neutra em modos automáticos escalares e bandas nativas `heat_cool`.
 6. Ajuste o delta máximo de assistência se o padrão for pequeno ou grande demais para o cômodo.
-7. Opcionalmente, ajuste a reavaliação periódica de segurança. Use `0` para desabilitá-la.
+7. Opcionalmente, escolha **Frenagem: Moderada** ou **Alta** para retirar a demanda com mais firmeza. Esses níveis exigem uma zona morta do Room Assist maior que zero. **Padrão** mantém o comportamento existente.
+8. Opcionalmente, ajuste a reavaliação periódica de segurança. Use `0` para desabilitá-la.
 
 Apenas a opção selecionada é mostrada. Quando **Sensor fixo** já é a modalidade salva, a alteração do seu sensor é salva imediatamente. Alternar entre **Sensor fixo** e **Por horário** muda um rascunho: **Salvar** aplica a modalidade e suas configurações, e **Cancelar** restaura a configuração salva. O sensor fixo e a programação salva são mantidos ao alternar; os dois não são ativados ao mesmo tempo.
 
+
+<a id="optional-braking"></a>
+
+### Frenagem opcional
+
+A frenagem altera o alvo enviado ao equipamento, mantendo a temperatura programada como o alvo real do cômodo. Está disponível em **Aquecimento** e **Refrigeração** fixos, incluindo dispositivos de dois alvos com um alvo de referência configurado. Não altera modos automáticos de alvo único nem faixas nativas `heat_cool`.
+
+**T** é o alvo programado, **H** a zona morta do Room Assist e **S** o incremento efetivo de alvo do equipamento:
+
+| Frenagem | Aquecimento: retirar demanda | Aquecimento: solicitar calor novamente | Refrigeração: retirar demanda | Refrigeração: solicitar refrigeração novamente |
+| --- | --- | --- | --- | --- |
+| Padrão | Comportamento existente | Comportamento existente | Comportamento existente | Comportamento existente |
+| Moderada | Em T + H | Em T − H | Em T − H | Em T + H |
+| Alta | Em T | Em T − H | Em T | Em T + H |
+
+Durante a retirada, **Moderada** limita o alvo de aquecimento a no máximo **T − S**, ou o de refrigeração a no mínimo **T + S**. **Alta** usa **dois incrementos**. Se o cálculo existente já retira mais demanda, o Velair mantém esse resultado mais forte. São limites fixos enquanto a frenagem está ativa: atualizações do sensor não continuam somando ou subtraindo mais um incremento.
+
+Por exemplo, com alvo de aquecimento de `20.5 °C`, zona morta de `0.5 °C` e incremento do equipamento de `0.5 °C`:
+
+- **Moderada** retira demanda em `21 °C`, com alvo do equipamento não superior a `20 °C`.
+- **Alta** retira demanda em `20.5 °C`, com alvo não superior a `19.5 °C`.
+- Ambas solicitam calor novamente quando o sensor externo atinge `20 °C`.
+
+Antes da retirada, o cálculo de assistência existente permanece inalterado. A frenagem continua ativa até atingir o limite de reativação, mesmo quando o cômodo cruza o alvo central. Se a assistência inicia ou reinicia com o cômodo já dentro da faixa, mantém a inicialização prudente existente sem iniciar deliberadamente um ciclo de climatização.
+
+O estado em tempo real mostra as temperaturas efetivas de retirada e reativação. O gráfico mantém a zona morta nominal visível e diferencia os limites efetivos de frenagem. A demanda do fornecimento compartilhado segue a mesma fase confirmada.
+
+Escolha **Padrão** antes de definir a zona morta como zero. O nível salvo é mantido quando o modo ou a referência de temperatura atual não permite usá-lo, e o estado explica por que a frenagem adicional está inativa. Combinações salvas inválidas suspendem a frenagem adicional em vez de alterar silenciosamente a zona morta.
+
+Os alvos físicos mínimo e máximo podem limitar a frenagem disponível. Com dois alvos, o par completo se move junto e qualquer limite pode restringir o deslocamento. Os avisos existentes mostram o resultado solicitado e aplicado.
+
+A frenagem reduz a solicitação de aquecimento ou refrigeração; não confirma que válvula, compressor ou termostato pararam. O controle do equipamento, os tempos mínimos de funcionamento e a inércia térmica ainda podem causar ultrapassagem. Este ajuste não aprende ciclos nem retira demanda antes do alvo programado. Valide-o com ciclos reais antes de confiar em um nível para um cômodo específico.
+
+As exportações portáveis usam o modelo **27** para preservar a frenagem. Mantenha um backup da versão anterior se precisar voltar a ela; versões antigas do Velair não podem importar o modelo 27.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -92,7 +127,7 @@ O atraso de atualização agrupa mudanças próximas do sensor ambiente ou tempe
 
 A zona morta do Room Assist é independente do delta mínimo do pré-condicionamento adaptativo. O padrão é `0.3 °C` ou `1 °F`; aceita `0` para desabilitar e passos de `0.1` grau até `5 °C` ou `9 °F`. Salvar com o Room Assist ativo atualiza imediatamente o alvo assistido.
 
-A escala em tempo real desenha a zona morta configurada como uma faixa neutra listrada. Para um alvo único fixo, suas bordas são os limites de comutação da histerese, e o estado identifica qual o Room Assist busca. Em modos automáticos escalares, ela permanece uma margem neutra. Para uma faixa nativa `heat_cool`, vai do limite inferior menos a zona morta ao superior mais a zona morta. A escala se expande para manter ambas as bordas visíveis. A legenda traduzida completa permanece centralizada na faixa real, mesmo se ela for mais estreita que o texto, preservando o significado em qualquer largura do gráfico. A explicação completa também fica disponível para tecnologias assistivas e ao passar o ponteiro. Com zona morta `0`, nenhuma área é desenhada e a legenda estática informa explicitamente que não há zona morta. Gráfico e legenda acompanham o valor salvo no backend; ocultar `show_room_assist_deadband` em um cartão Lovelace oculta juntos configuração, faixa e legenda.
+A escala em tempo real desenha a zona morta configurada como uma faixa neutra listrada. Para um alvo único fixo com frenagem Padrão ou Moderada, suas bordas são os limites de comutação da histerese, e o estado identifica qual o Room Assist busca. Alta mantém essa faixa nominal e marca separadamente a retirada antecipada no alvo programado. Em modos automáticos escalares, ela permanece uma margem neutra. Para uma faixa nativa `heat_cool`, vai do limite inferior menos a zona morta ao superior mais a zona morta. A escala se expande para manter ambas as bordas visíveis. A legenda traduzida completa permanece centralizada na faixa real, mesmo se ela for mais estreita que o texto, preservando o significado em qualquer largura do gráfico. A explicação completa também fica disponível para tecnologias assistivas e ao passar o ponteiro. Com zona morta `0`, nenhuma área é desenhada e a legenda estática informa explicitamente que não há zona morta. Gráfico e legenda acompanham o valor salvo no backend; ocultar `show_room_assist_deadband` em um cartão Lovelace oculta juntos configuração, faixa e legenda.
 
 Ao atualizar uma versão em que o Room Assist compartilhava o delta mínimo do pré-condicionamento, o Velair copia o valor existente uma única vez para a nova zona morta. Isso preserva a largura configurada, inclusive um valor histórico fora do novo passo de entrada de 0,1 grau; `heat` e `cool` fixos passam a usar esse valor no ciclo descrito abaixo. Após migrar, as duas configurações são independentes: mudar uma nunca muda a outra. Uma zona nova ou redefinida usa o padrão correspondente à unidade indicado acima.
 
@@ -117,7 +152,7 @@ Quando ativo, Visão geral resume em **Em direção ao limite inferior**, **Em d
 <a id="fixed-heating-hysteresis-example"></a>
 ## Exemplo de histerese de aquecimento fixo
 
-Cenário:
+Cenário com frenagem **Padrão**:
 
 - Bloco programado: `21 °C`, `heat`
 - Zona morta Room Assist: `±0.3 °C`
@@ -187,7 +222,7 @@ Isso impede alvos irreais no termostato, mantendo-o suficientemente ativo para a
 <a id="fixed-cooling-hysteresis-example"></a>
 ## Exemplo de histerese de resfriamento fixo
 
-Cenário:
+Cenário com frenagem **Padrão**:
 
 - Bloco programado: `24 °C`, `cool`
 - Zona morta Room Assist: `±0.5 °C`
@@ -258,6 +293,8 @@ Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
 Definir `3 °C` não aplica imediatamente uma correção de `3 °C`. Apenas permite atingir esse valor quando a diferença medida pelo sensor ambiente separado exigir.
+
+Este ajuste limita a correção proporcional, não o alvo final após a proteção do alvo programado. A frenagem opcional reforça essa proteção com seu limite de um ou dois incrementos; não altera o delta máximo de assistência nem aplica todo o máximo em cada atualização.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Por que o alvo da climatização pode diferir do cálculo
@@ -346,6 +383,8 @@ Com a assistência habilitada, o pré-condicionamento adaptativo também usa o s
 
 <a id="automation-events"></a>
 ## Eventos de automação
+
+Os eventos de atualização também podem incluir um objeto `braking` com os níveis configurado e efetivo, a fase ativa, as temperaturas efetivas de retirada e retomada, o limite do alvo e qualquer motivo de inatividade. Esses campos adicionais descrevem a política de demanda confirmada, não a atividade física do equipamento. Veja [Atualização do Room Sensor Assist](automation-events.pt-br.md#room-sensor-assist-updated) para um exemplo.
 
 O Velair emite o evento padrão `velair_event` do Home Assistant.
 

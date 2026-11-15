@@ -272,6 +272,64 @@ export const sensorsStyles = css`
   line-height: 1.45;
 }
 
+.sensor-braking-row {
+  border-top: 0;
+  border-bottom: 1px solid var(--divider-color);
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  margin-bottom: 18px;
+  padding: 0 0 18px;
+  min-width: 0;
+}
+
+.sensor-braking-row .sensor-braking-control {
+  margin-top: 0;
+  min-width: 0;
+}
+
+.sensor-braking-control select {
+  min-height: 44px;
+  padding-inline-end: 32px;
+  width: 100%;
+}
+
+.sensor-braking-explanation,
+.sensor-braking-requirement,
+.sensor-braking-inactive {
+  display: block;
+  margin-top: 4px;
+}
+
+.sensor-braking-summary {
+  color: var(--secondary-text-color);
+  display: grid;
+  font-size: 12px;
+  gap: 4px;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sensor-temperature-display {
+  display: grid;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sensor-scale-braking-threshold {
+  border-left: 2px dashed var(--primary-color, #03a9f4);
+  display: block;
+  height: 32px;
+  position: absolute;
+  top: 53px;
+  width: 0;
+  z-index: 2;
+}
+
+.sensor-scale-braking-threshold.braking-resume {
+  border-left-style: dotted;
+}
+
 @supports not (grid-template-rows: subgrid) {
   .sensor-number-fields .sensor-config-row {
     grid-row: auto;
@@ -280,6 +338,11 @@ export const sensorsStyles = css`
 }
 
 @container (max-width: 640px) {
+  .sensor-braking-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
   .sensor-number-fields {
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;

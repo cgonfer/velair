@@ -449,10 +449,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 26,
+    "portable_model": 27,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.3-beta.1"
+    "integration": "1.9.3-beta.2"
   }
 }
 ```
@@ -1722,7 +1722,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 26,
+  "model_version": 27,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1731,9 +1731,11 @@ Returns a versioned portable JSON payload:
 
 ## Import Data
 
-Model 26 preserves optional Room Assist sensor schedules in zone configuration.
+Model 27 preserves optional Room Assist sensor schedules and the selected
+Room Assist braking level in zone configuration.
 Existing supported backups remain importable; older Velair versions reject new
-model 26 exports, including exports created without an enabled sensor schedule.
+model 27 exports, including exports created without an enabled sensor schedule
+or non-default braking level.
 
 ```ts
 await hass.connection.sendMessagePromise({

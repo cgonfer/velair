@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](automation-events.md) · [Españo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.3-beta.2 |
+| Ostatnia synchronizacja | 2026-11-15 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -694,7 +694,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Dla stałej pojedynczej temperatury `heat` lub `cool` z niezerową strefą nieczułości cztery pola histerezy opisują zastosowaną fazę, aktywną krawędź i pełny pas przełączania. Są pomijane przy zerowej strefie, pojedynczych temperaturach automatycznych i natywnych zakresach. Faza nie zmienia się przy przekraczaniu środkowej temperatury harmonogramu, lecz dopiero po osiągnięciu przeciwnej krawędzi przez osobny czujnik pokojowy.
+Dla stałej pojedynczej temperatury `heat` lub `cool` z niezerową strefą nieczułości cztery pola histerezy opisują zastosowaną fazę, aktywną krawędź i nominalny zakres. Są pomijane przy zerowej strefie, w trybach automatycznych z pojedynczą temperaturą i w natywnych zakresach. Przy poziomach hamowania Domyślne lub Umiarkowane faza nie zmienia się przy przekraczaniu środkowej temperatury harmonogramu, lecz dopiero po osiągnięciu przeciwnej krawędzi przez osobny czujnik pokojowy. Silne rozpoczyna fazę bez zapotrzebowania przy temperaturze zadanej w harmonogramie, zachowując dotychczasowy próg ponownego uruchomienia.
+
+Zdarzenie aktualizacji może także zawierać dodatkowe metadane `braking` opisujące zastosowaną politykę, również wtedy, gdy zakres w stałym trybie korzysta ze skonfigurowanej temperatury odniesienia:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Ten przykład opisuje ogrzewanie z temperaturą docelową `20.5 °C`, strefą nieczułości `0.5 °C` i krokiem urządzenia `0.5 °C`. Efektywny poziom to `default`, gdy dodatkowe hamowanie nie może być zastosowane; skonfigurowany poziom pozostaje zachowany, a `reason` podaje przyczynę. Progi lub ograniczenie nastawy mogą mieć wartość `null`, jeśli są niedostępne. Metadane opisują wycofanie zapotrzebowania, a nie potwierdzone fizyczne zatrzymanie urządzenia. Dotychczasowi odbiorcy zdarzeń mogą zignorować ten obiekt. Reguły przełączania opisuje [Opcjonalne hamowanie](room-assist.pl.md#optional-braking).
 
 Gdy temperatura harmonogramu chroni wynik stałego ogrzewania lub chłodzenia, aktualizacja dodaje dwa opcjonalne pola:
 

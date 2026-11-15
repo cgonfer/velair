@@ -7,9 +7,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { VelairViewHost } from "../../src/velair/host-types";
 import { inlineHelpStyles } from "../../src/velair/styles/inline-help-styles";
 import { sensorsStyles } from "../../src/velair/styles/sensors-styles";
-import { renderSensorsView } from "../../src/velair/views/sensors-view";
+import { renderRoomAssistTemperatureScale, renderSensorsView } from "../../src/velair/views/sensors-view";
+import type { RoomAssistBrakingLevel, RoomSensorAssistStatus } from "../../src/velair/types";
 
 function host(options: {
+  brakingLevel?: RoomAssistBrakingLevel;
+  braking?: RoomSensorAssistStatus["braking"];
   activeFrom?: string | null;
   appliedOffset?: number | null;
   appliedRange?: [number, number];
@@ -56,6 +59,7 @@ function host(options: {
             room_temperature_entity_id: options.roomTemperatureEntityId ?? null,
             room_sensor_assist_enabled: options.assistEnabled ?? false,
             room_sensor_assist_deadband: options.deadband ?? 0.3,
+            room_sensor_assist_braking_level: options.brakingLevel,
             room_sensor_assist_max_delta: options.maxDelta ?? 5,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
           },
@@ -67,6 +71,7 @@ function host(options: {
             room_temperature_entity_id: "sensor.bedroom_temperature",
             room_sensor_assist_enabled: true,
             room_sensor_assist_deadband: options.deadband ?? 0.3,
+            room_sensor_assist_braking_level: options.brakingLevel,
             room_sensor_assist_max_delta: 2,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
           },
@@ -75,6 +80,7 @@ function host(options: {
       },
       room_sensor_assist: {
         "climate.second": {
+          braking: options.braking,
           status: options.roomAssistStatus ?? "assisting",
           enabled: true,
           configured: true,
@@ -173,6 +179,138 @@ function host(options: {
 }
 
 describe("sensors view", () => {
+  it("shows braking in its own row with the shared select and visible explanation", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const container = document.createElement("div");
+    document.body.append(container);
+    try {
+      render(renderSensorsView(viewHost, ["climate.second"]), container);
+      const select = container.querySelector<HTMLSelectElement>(".sensor-braking-select")!;
+      const row = select.closest(".sensor-config-row")!;
+      expect(row.classList.contains("sensor-braking-row")).toBe(true);
+      expect(row.parentElement?.classList.contains("sensor-assist-settings")).toBe(true);
+      expect(row.nextElementSibling?.classList.contains("sensor-number-fields")).toBe(true);
+      expect(row.querySelector(".select-wrap > select")).toBe(select);
+      expect(row.querySelector(".inline-help")).toBeNull();
+      const description = row.querySelector(".sensor-field-description")!;
+      expect(select.getAttribute("aria-describedby")).toBe(description.id);
+      expect(description.textContent).toContain("roomSensorAssistBrakingDescription");
+      expect(description.textContent).toContain("roomSensorAssistBrakingHelp");
+      expect(row.querySelector("label")?.htmlFor).toBe(select.id);
+      expect(container.querySelector(".sensor-number-fields .sensor-braking-select")).toBeNull();
+    } finally {
+      container.remove();
+    }
+  });
+  it("saves braking through the existing flow without presenting an unconfirmed selection", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const select = container.querySelector<HTMLSelectElement>(".sensor-braking-select")!;
+    expect(select.value).toBe("default");
+    select.value = "high";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith("climate.second", { room_sensor_assist_braking_level: "high" });
+    expect(select.value).toBe("default");
+    viewHost._data!.zones["climate.second"].preconditioning!.room_sensor_assist_braking_level = "high";
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    expect(select.value).toBe("high");
+  });
+
+  it("requires a positive deadband before selecting additional braking", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], deadband: 0 });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const select = container.querySelector<HTMLSelectElement>(".sensor-braking-select")!;
+    expect(select.querySelector<HTMLOptionElement>("option[value='moderate']")!.disabled).toBe(true);
+    expect(select.querySelector<HTMLOptionElement>("option[value='high']")!.disabled).toBe(true);
+    select.value = "high";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    expect(select.value).toBe("default");
+    expect(container.textContent).toContain("roomSensorAssistBrakingRequiresBand");
+  });
+
+  it("requires returning to Default before saving zero deadband", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], brakingLevel: "high" });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const deadband = container.querySelector<HTMLInputElement>("#room-sensor-climate-second-room_sensor_assist_deadband")!;
+    expect(deadband.min).toBe("0.1");
+    deadband.value = "0";
+    deadband.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(deadband.value).toBe("0.3");
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    const select = container.querySelector<HTMLSelectElement>(".sensor-braking-select")!;
+    select.value = "default";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith("climate.second", { room_sensor_assist_braking_level: "default" });
+  });
+
+  it.each(["heat", "cool"] as const)("draws backend braking thresholds separately from the nominal band in %s", (direction) => {
+    const braking = { configured_level: "high", effective_level: "high", active: true,
+      stop_temperature: 20.5, resume_temperature: direction === "heat" ? 20 : 21,
+      setpoint_bound: direction === "heat" ? 19.5 : 21.5, reason: null } as const;
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"], brakingLevel: "high", braking,
+      direction, hvacMode: direction, deadband: 0.5, scheduledTargetTemperature: 20.5 });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const track = container.querySelector(".sensor-temperature-scale")!;
+    expect(track.querySelector(".braking-stop")!.getAttribute("aria-label")).toBe("roomSensorBrakingStop: 20.5 °C");
+    expect(track.querySelector(".braking-resume")!.getAttribute("aria-label")).toBe(`roomSensorBrakingResume: ${braking.resume_temperature} °C`);
+    expect(track.querySelector(".sensor-scale-deadband-zone")).not.toBeNull();
+    const summary = container.querySelector(".sensor-braking-summary")!;
+    expect(track.contains(summary)).toBe(false);
+    expect(summary.textContent).toContain(direction === "heat" ? "roomSensorBrakingThresholdsHeat" : "roomSensorBrakingThresholdsCool");
+    expect(summary.textContent).toContain("roomSensorBrakingActive");
+    expect(summary.textContent).toContain("roomSensorBrakingEquipmentControl");
+  });
+
+  it.each(["unsupported_mode", "native_reference", "disabled", "zero_deadband"])("retains a saved level and explains %s", (reason) => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"], brakingLevel: "high",
+      braking: { configured_level: "high", effective_level: "default", active: false,
+        stop_temperature: null, resume_temperature: null, setpoint_bound: null, reason } });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    expect(container.querySelector<HTMLSelectElement>(".sensor-braking-select")!.value).toBe("high");
+    expect(container.querySelector(".sensor-braking-inactive")?.textContent?.trim()).not.toBe("");
+    expect(container.querySelector(".sensor-scale-braking-threshold")).toBeNull();
+  });
+
+  it("keeps older runtime responses usable without inventing braking thresholds", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    expect(container.querySelector(".sensor-scale-deadband-zone")).not.toBeNull();
+    expect(container.querySelector(".sensor-braking-summary")).toBeNull();
+    expect(container.querySelector(".sensor-scale-braking-threshold")).toBeNull();
+  });
+
+  it("uses the same backend thresholds in the graph shared with Lovelace cards", () => {
+    const { viewHost } = host({ brakingLevel: "high", scheduledTargetTemperature: 20.5, deadband: 0.5,
+      braking: { configured_level: "high", effective_level: "high", active: false,
+        stop_temperature: 20.4, resume_temperature: 20.1, setpoint_bound: 19.5, reason: null } });
+    const container = document.createElement("div");
+    render(renderRoomAssistTemperatureScale(viewHost, "climate.second",
+      viewHost._data!.room_sensor_assist!["climate.second"], viewHost._data!.zones["climate.second"].preconditioning), container);
+    expect(container.querySelector(".braking-stop")!.getAttribute("aria-label")).toBe("roomSensorBrakingStop: 20.4 °C");
+    expect(container.querySelector(".braking-resume")!.getAttribute("aria-label")).toBe("roomSensorBrakingResume: 20.1 °C");
+    expect(container.textContent).toContain("roomSensorBrakingWaiting");
+  });
+
+  it("disables braking changes while the backend save is pending", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    viewHost._settingsSaving = true;
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const select = container.querySelector<HTMLSelectElement>(".sensor-braking-select")!;
+    expect(select.disabled).toBe(true);
+    select.value = "high";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    expect(select.value).toBe("default");
+  });
+
   it("contains the wide temperature track inside the Room Assist card", () => {
     const styles = sensorsStyles.cssText;
 

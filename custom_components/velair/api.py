@@ -105,7 +105,7 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 26
+EXPORT_MODEL_VERSION = 27
 EXPORT_SECTIONS = (
     "member_comfort",
     "room_groups",
@@ -247,6 +247,7 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("room_temperature_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("room_sensor_schedule"): normalize_room_sensor_schedule,
         vol.Optional("room_sensor_assist_enabled"): bool,
+        vol.Optional("room_sensor_assist_braking_level"): vol.In(("default", "moderate", "high")),
         vol.Optional("room_sensor_assist_deadband"): vol.All(
             _room_sensor_assist_deadband,
             vol.Range(min=0, max=9.0),
@@ -3400,6 +3401,9 @@ def _validate_portable_zone_schedules(
                 raise ValueError(
                     f"Room Assist deadband for {entity_id} must be between 0 and {maximum:g}"
                 )
+        if isinstance(preconditioning, dict):
+            from .room_assist_braking import validate_braking_settings
+            validate_braking_settings(preconditioning)
         comfort = zone.get("comfort")
         if comfort is not None and not isinstance(comfort, dict):
             raise ValueError(f"Comfort settings for {entity_id} are not valid")

@@ -8,8 +8,8 @@ Traduções: [Original em inglês](automation-events.md) · [Español](automatio
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.3-beta.2 |
+| Última sincronização | 2026-11-15 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -692,7 +692,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Para um alvo fixo de temperatura única em `heat` ou `cool` com zona morta diferente de zero, os quatro campos de histerese identificam a fase efetivamente ativa, seu limite ativo e toda a faixa de comutação. Eles são omitidos com zona morta zero, em modos automáticos de temperatura única e em faixas nativas. A fase permanece igual enquanto o ambiente cruza o centro programado e só se inverte depois que o sensor separado do ambiente atinge o limite oposto.
+Para um alvo fixo de temperatura única em `heat` ou `cool` com zona morta diferente de zero, os quatro campos de histerese identificam a fase efetivamente ativa, seu limite ativo e a faixa nominal. Eles são omitidos com zona morta zero, em modos automáticos de temperatura única e em faixas nativas. Com os níveis de frenagem Padrão ou Moderada, a fase permanece igual enquanto o ambiente cruza o centro programado e só se inverte quando o sensor separado do ambiente atinge o limite oposto. Alta inicia a fase sem demanda no alvo programado, mantendo o limite de reativação existente.
+
+Um evento de atualização também pode incluir metadados adicionais `braking` sobre a política aplicada, inclusive quando uma faixa em modo fixo utiliza uma referência configurada:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Este exemplo descreve aquecimento com um alvo de `20.5 °C`, zona morta de `0.5 °C` e passo do equipamento de `0.5 °C`. O nível efetivo é `default` quando a frenagem adicional não pode ser aplicada; o nível configurado é mantido e `reason` explica o motivo. Os limiares ou o limite da temperatura definida no equipamento podem ser `null` quando indisponíveis. Os metadados descrevem a retirada de demanda, não uma parada física confirmada do equipamento. Os consumidores de eventos existentes podem ignorar o objeto. Consulte [Frenagem opcional](room-assist.pt-br.md#optional-braking) para conhecer as regras de comutação.
 
 Quando o alvo programado protege um resultado fixo de aquecimento ou resfriamento, a atualização de temperatura única adiciona dois campos opcionais:
 

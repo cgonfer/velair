@@ -365,6 +365,8 @@ export type RoomSensorScheduleDetail = {
   room_sensor_schedule: RoomSensorSchedule | null;
 };
 
+export type RoomAssistBrakingLevel = "default" | "moderate" | "high";
+
 export type PreconditioningSettings = {
   master_entity_id?: string | null;
   enabled: boolean;
@@ -384,6 +386,7 @@ export type PreconditioningSettings = {
   room_sensor_schedule?: RoomSensorSchedule | RoomSensorScheduleSummary;
   room_sensor_assist_enabled: boolean;
   room_sensor_assist_deadband: number;
+  room_sensor_assist_braking_level?: RoomAssistBrakingLevel;
   room_sensor_assist_max_delta: number;
   room_sensor_assist_debounce_seconds: number;
 };
@@ -647,6 +650,15 @@ export type PreconditioningLearningSummary = {
 };
 
 export type RoomSensorAssistStatus = {
+  braking?: {
+    configured_level: RoomAssistBrakingLevel;
+    effective_level: RoomAssistBrakingLevel;
+    active: boolean;
+    stop_temperature: number | null;
+    resume_temperature: number | null;
+    setpoint_bound: number | null;
+    reason: string | null;
+  };
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;

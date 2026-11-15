@@ -93,6 +93,7 @@ from .schedule_resources import (
     referenced_resource, updated_preset_config,
 )
 from .template_assignments import allocate_template_update, destination_identity
+from .room_assist_braking import LEVEL_KEY, braking_policy, validate_braking_settings
 from .models import (
     validate_preconditioning_dependencies,
     normalize_schedule_blocks,
@@ -311,6 +312,7 @@ class _RoomSensorAssistState:
     requested_temperature: float | None = None
     calculated_temperature: float | None = None
     scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None = None
+    braking: dict | None = None
     requested_target_temp_low: float | None = None
     requested_target_temp_high: float | None = None
     hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None
@@ -336,6 +338,7 @@ class _RoomSensorAssistTargetResult:
     scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None
     limited_by: Literal["minimum", "maximum"] | None
     limit_temperature: float | None
+    braking: dict | None = None
     hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None
     hysteresis_target: float | None = None
     deadband_low: float | None = None
@@ -2358,6 +2361,11 @@ class VelairScheduler:
                 thresholds[direction] = {"target": state.target_temperature,
                     "start_temperature": low if direction == "heat" else high,
                     "stop_temperature": high if direction == "heat" else low}
+        if state.braking and state.braking["effective_level"] != "default" and direction in thresholds:
+            thresholds[direction].update(
+                start_temperature=state.braking["resume_temperature"],
+                stop_temperature=state.braking["stop_temperature"],
+            )
         return {**result, "valid": True, "direction": direction, "demand": demand,
                 "temperature": self._external_temperature(entity_id, sensor),
                 "temperature_unit": self._comfort_temperature_unit(entity_id),
@@ -2727,6 +2735,8 @@ class VelairScheduler:
         self, entity_id: str, preconditioning: dict
     ) -> None:
         """Reject explicitly supplied thermal tuning outside runtime-unit bounds."""
+        if LEVEL_KEY in preconditioning and preconditioning[LEVEL_KEY] not in ("default", "moderate", "high"):
+            raise ValueError("Room Assist braking must be default, moderate, or high")
         if "room_sensor_schedule" in preconditioning:
             normalize_room_sensor_schedule(preconditioning["room_sensor_schedule"])
         unit_getter = getattr(self._climate_manager, "temperature_unit", None)
@@ -5018,6 +5028,7 @@ class VelairScheduler:
                 **preconditioning,
             }
         )
+        validate_braking_settings(next_preconditioning)
         normalize_physical_comfort = (
             entity_id in self._configured_physical_entities()
             and previous_preconditioning.get("room_temperature_entity_id")
@@ -9756,6 +9767,14 @@ class VelairScheduler:
         """Return whether a runtime assist state belongs to a target event."""
         if state is None or target_event is None:
             return False
+        config = self._prepared_preconditioning(state.entity_id)
+        if (state.braking or {}).get("configured_level", "default") != config.get(LEVEL_KEY, "default"):
+            return False
+        if state.hysteresis_phase is not None and config.get(LEVEL_KEY, "default") != "default":
+            center = state.target_temperature if state.target_temperature is not None else state.range_reference_temperature
+            if center is not None and (state.deadband_low != round(center - config["room_sensor_assist_deadband"], 6)
+                                       or state.deadband_high != round(center + config["room_sensor_assist_deadband"], 6)):
+                return False
         if state.temperature_only != target_event.temperature_only:
             return False
         if state.weekday != target_event.weekday or state.start != target_event.start:
@@ -9970,6 +9989,7 @@ class VelairScheduler:
                 committed_hysteresis_matches = (
                     self._room_sensor_assist_hysteresis_state_matches(
                         runtime_state,
+                        config=config,
                         target_temperature=target_temperature,
                         fixed_mode=hysteresis_mode,
                         room_temperature_entity_id=room_entity_id,
@@ -10199,6 +10219,22 @@ class VelairScheduler:
                     status_data.update(status="idle", reason="native_reference")
                 elif room_temperature is None:
                     status_data.update(status="unavailable", reason="room_sensor_unavailable")
+        braking_target = (target_temp_low if range_reference == "low" else target_temp_high) if range_reference else target_temperature
+        braking_mode = range_mode if range_reference else self._room_sensor_assist_fixed_direction_mode(
+            entity_id, hvac_mode, temperature_only=temperature_only)
+        braking_reason = (
+            "disabled" if not config["room_sensor_assist_enabled"] else
+            "native_reference" if status_data.get("reason") == "native_reference" else
+            "missing_target" if braking_target is None else
+            "blocked" if status_data["status"] == "blocked" else
+            "room_sensor_unavailable" if room_temperature is None else
+            "climate_temperature_unavailable" if climate_temperature is None else None)
+        status_data["braking"] = (
+            dict(runtime_state.braking)
+            if runtime_state is not None and runtime_state.braking is not None and braking_reason is None
+            else braking_policy(config, braking_mode, braking_target, self.get_temperature_step(entity_id),
+                                reason=braking_reason)
+        )
         return status_data
 
     def _room_sensor_assist_lock(self, entity_id: str) -> asyncio.Lock:
@@ -10741,6 +10777,7 @@ class VelairScheduler:
             requested_temperature=target_result.requested_temperature,
             calculated_temperature=target_result.calculated_temperature,
             scheduled_target_guard=target_result.scheduled_target_guard,
+            braking=target_result.braking,
             hysteresis_phase=hysteresis_phase,
             hysteresis_target=hysteresis_target,
             deadband_low=deadband_low,
@@ -10781,6 +10818,7 @@ class VelairScheduler:
                 requested_temperature=target_result.requested_temperature,
                 calculated_temperature=target_result.calculated_temperature,
                 scheduled_target_guard=target_result.scheduled_target_guard,
+                braking=target_result.braking,
                 hysteresis_phase=hysteresis_phase,
                 hysteresis_target=hysteresis_target,
                 deadband_low=deadband_low,
@@ -10856,6 +10894,7 @@ class VelairScheduler:
             applied_offset=applied_offset,
             calculated_temperature=target_result.calculated_temperature,
             scheduled_target_guard=target_result.scheduled_target_guard,
+            braking=target_result.braking,
             hysteresis_phase=hysteresis_phase,
             hysteresis_target=hysteresis_target,
             deadband_low=deadband_low,
@@ -10955,6 +10994,7 @@ class VelairScheduler:
             applied_target_temp_low=applied_low,
             applied_target_temp_high=applied_high,
             range_shift=range_shift,
+            braking=scalar_result.braking if scalar_result else None,
             limited_by=range_result.limited_by,
             limit_temperature=range_result.limit_temperature,
             requested_target_temp_low=range_result.requested_low,
@@ -11025,6 +11065,7 @@ class VelairScheduler:
             applied_target_temp_low=applied_low,
             applied_target_temp_high=applied_high,
             range_shift=range_shift,
+            braking=scalar_result.braking if scalar_result else None,
             room_temperature=room_temperature,
             climate_temperature=climate_temperature,
             assist_delta=assist_delta,
@@ -11160,9 +11201,12 @@ class VelairScheduler:
 
         deadband_low = round(target_temperature - deadband, 6)
         deadband_high = round(target_temperature + deadband, 6)
+        policy = braking_policy(config, fixed_mode, target_temperature, self.get_temperature_step(entity_id))
+        stop = policy["stop_temperature"]
         retained_phase = None
         if self._room_sensor_assist_hysteresis_state_matches(
             current_state,
+            config=config,
             target_temperature=target_temperature,
             fixed_mode=fixed_mode,
             room_temperature_entity_id=room_temperature_entity_id,
@@ -11174,13 +11218,13 @@ class VelairScheduler:
         if retained_phase == "towards_lower":
             phase: Literal["towards_lower", "towards_upper"] = (
                 "towards_upper"
-                if room_temperature <= deadband_low + 0.000001
+                if room_temperature <= (stop if fixed_mode == "cool" else deadband_low) + 0.000001
                 else "towards_lower"
             )
         elif retained_phase == "towards_upper":
             phase = (
                 "towards_lower"
-                if room_temperature >= deadband_high - 0.000001
+                if room_temperature >= (stop if fixed_mode == "heat" else deadband_high) - 0.000001
                 else "towards_upper"
             )
         elif room_temperature <= deadband_low + 0.000001:
@@ -11211,10 +11255,17 @@ class VelairScheduler:
         room_temperature_entity_id: str,
         weekday: str | None,
         start: str | None,
+        config: dict | None = None,
     ) -> bool:
         """Return whether a committed phase belongs to the current intent."""
         return bool(
             state is not None
+            and (config is None or (
+                (state.braking or {}).get("configured_level", "default") == config.get(LEVEL_KEY, "default")
+                and (config.get(LEVEL_KEY, "default") == "default" or (
+                    state.deadband_low is not None and state.deadband_high is not None
+                    and abs(state.deadband_low - (target_temperature - config["room_sensor_assist_deadband"])) < .000001
+                    and abs(state.deadband_high - (target_temperature + config["room_sensor_assist_deadband"])) < .000001))))
             and fixed_mode is not None
             and state.hysteresis_phase in ("towards_lower", "towards_upper")
             and state.hysteresis_mode == fixed_mode
@@ -11270,6 +11321,8 @@ class VelairScheduler:
                 min_temperature,
             )
         )
+        policy = braking_policy(config, direction if fixed_direction else None, target_temperature, temperature_step, hysteresis_phase)
+        guard_target = policy["setpoint_bound"] if policy["active"] else target_temperature
         scheduled_target_guard: Literal[
             "heating_ceiling", "cooling_floor"
         ] | None = None
@@ -11292,18 +11345,18 @@ class VelairScheduler:
             fixed_direction
             and direction == "cool"
             and non_driving_cooling
-            and calculated_temperature < target_temperature - 0.000001
+            and calculated_temperature < guard_target - 0.000001
         ):
             scheduled_target_guard = "cooling_floor"
-            desired_temperature = max(desired_temperature, target_temperature)
+            desired_temperature = max(desired_temperature, guard_target)
         elif (
             fixed_direction
             and direction == "heat"
             and non_driving_heating
-            and calculated_temperature > target_temperature + 0.000001
+            and calculated_temperature > guard_target + 0.000001
         ):
             scheduled_target_guard = "heating_ceiling"
-            desired_temperature = min(desired_temperature, target_temperature)
+            desired_temperature = min(desired_temperature, guard_target)
 
         requested = (
             _room_sensor_assist_nearest_step_temperature(
@@ -11363,6 +11416,7 @@ class VelairScheduler:
             requested_temperature=round(requested, 6),
             calculated_temperature=round(calculated_temperature, 6),
             scheduled_target_guard=scheduled_target_guard,
+            braking=policy,
             limited_by=limited_by,
             limit_temperature=limit_temperature,
             hysteresis_phase=hysteresis_phase,
@@ -14060,6 +14114,7 @@ class VelairScheduler:
         hysteresis_target: float | None = None,
         deadband_low: float | None = None,
         deadband_high: float | None = None,
+        braking: dict | None = None,
     ) -> None:
         """Fire a room sensor assist automation event."""
         data = {
@@ -14102,6 +14157,8 @@ class VelairScheduler:
                         "deadband_high": deadband_high,
                     }
                 )
+        if braking is not None:
+            data["braking"] = dict(braking)
         self._async_fire_event(event_name, data)
 
     def _async_fire_room_sensor_assist_state_changed(

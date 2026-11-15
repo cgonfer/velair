@@ -4,6 +4,10 @@ import { preconditioningMasterCandidates, preconditioningSettings } from "../../
 import type { ScheduleResponse } from "../../src/velair/types";
 
 describe("preconditioning settings", () => {
+  it("defaults missing braking to the existing regulation and retains saved levels", () => {
+    expect(preconditioningSettings().room_sensor_assist_braking_level).toBe("default");
+    expect(preconditioningSettings({ room_sensor_assist_braking_level: "high" }).room_sensor_assist_braking_level).toBe("high");
+  });
   it("preserves optional saved relations and excludes self, dependent and external masters", () => {
     expect(preconditioningSettings().master_entity_id).toBeNull();
     expect(preconditioningSettings({ master_entity_id: "climate.missing" }).master_entity_id).toBe("climate.missing");
