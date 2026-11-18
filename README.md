@@ -137,6 +137,10 @@ For automated changes to shared targets and device settings, see
 The [development guide](docs/developer/development.md) covers the repository and
 contribution workflow.
 
+## Related
+
+* [velair-schedule-sync](https://github.com/samsk/velair-schedule-sync) declarative YAML schedules (specifiers, lints, apply) for Velair, tuned by AI agents.
+
 ## Contributing
 
 I'm Cristian Gonzalez Fernandez, and I maintain Velair in my free time. Reports
